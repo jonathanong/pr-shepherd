@@ -422,7 +422,11 @@ describe("runIterate — fix_code agent projection", () => {
         threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [] },
       }),
     );
-    mockUpdateReadyDelay.mockResolvedValue({ isReady: false, shouldCancel: false, remainingSeconds: 600 });
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
 
     const result = await runIterate(makeOpts());
 
@@ -454,7 +458,11 @@ describe("runIterate — fix_code agent projection", () => {
         comments: { actionable: [comment] },
       }),
     );
-    mockUpdateReadyDelay.mockResolvedValue({ isReady: false, shouldCancel: false, remainingSeconds: 600 });
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
 
     const result = await runIterate(makeOpts());
 
@@ -485,8 +493,14 @@ describe("runIterate — fix_code agent projection", () => {
         },
       }),
     );
-    mockUpdateReadyDelay.mockResolvedValue({ isReady: false, shouldCancel: false, remainingSeconds: 600 });
-    mockTriageFailingChecks.mockResolvedValue([{ ...check, failureKind: "actionable", logExcerpt: "some log" }]);
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockTriageFailingChecks.mockResolvedValue([
+      { ...check, failureKind: "actionable", logExcerpt: "some log" },
+    ]);
 
     const result = await runIterate(makeOpts());
 
