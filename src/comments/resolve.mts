@@ -43,7 +43,6 @@ export async function applyResolveOptions(
   repo: RepoInfo,
   opts: ResolveOptions,
 ): Promise<ResolveResult> {
-  const CONCURRENCY = loadConfig().resolve.concurrency;
   // Require --message when dismissing reviews.
   if ((opts.dismissReviewIds?.length ?? 0) > 0 && !opts.dismissMessage) {
     throw new Error("--message is required when dismissing reviews");
