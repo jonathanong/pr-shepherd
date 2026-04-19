@@ -1,7 +1,7 @@
 test-results/
 coverage/
 node_modules/
-dist/
+bin/
 .DS_Store
 *.log
 .pr-shepherdrc.yml
