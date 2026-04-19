@@ -386,9 +386,7 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
       shouldCancel: false,
       remainingSeconds: 600,
     });
-    mockExecFile.mockRejectedValue(
-      new Error("Cannot cancel a workflow run that is completed"),
-    );
+    mockExecFile.mockRejectedValue(new Error("Cannot cancel a workflow run that is completed"));
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
 
     try {
@@ -398,9 +396,7 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
       if (result.action === "fix_code") {
         expect(result.cancelled).toEqual([]);
       }
-      expect(stderrSpy).not.toHaveBeenCalledWith(
-        expect.stringContaining("gh run cancel run-400 failed (ignored)"),
-      );
+      expect(stderrSpy).not.toHaveBeenCalled();
     } finally {
       stderrSpy.mockRestore();
     }

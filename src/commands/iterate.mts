@@ -296,7 +296,7 @@ async function tryCancelRun(runId: string): Promise<string | null> {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     // gh returns this when the run reached a terminal state — expected, not worth logging.
-    if (/cannot cancel a workflow run that is completed/i.test(msg)) return null;
+    if (/already completed|cannot cancel a workflow run that is completed/i.test(msg)) return null;
     process.stderr.write(`pr-shepherd: gh run cancel ${runId} failed (ignored): ${msg}\n`);
     return null;
   }
