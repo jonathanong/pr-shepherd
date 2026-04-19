@@ -56,7 +56,10 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   // Auto-resolve outdated.
   const outdated = getOutdatedThreads(unresolvedThreads);
   if (outdated.length > 0) {
-    await autoResolveOutdated(outdated.map((t) => t.id));
+    const { errors } = await autoResolveOutdated(outdated.map((t) => t.id));
+    if (errors.length > 0) {
+      throw new Error(`Failed to auto-resolve outdated threads: ${errors.join(", ")}`);
+    }
   }
 
   const activeThreads = unresolvedThreads.filter((t) => !t.isOutdated);
