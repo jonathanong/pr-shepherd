@@ -1,0 +1,130 @@
+query BatchPr(
+  $owner: String!
+  $repo: String!
+  $pr: Int!
+  $threadsCursor: String
+  $checksCursor: String
+  $commentsCursor: String
+  $reviewsCursor: String
+) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $pr) {
+      number
+      state
+      isDraft
+      mergeable
+      mergeStateStatus
+      reviewDecision
+      headRefOid
+      # Not paginated — capped at 50; PRs with more pending reviewers truncate silently.
+      reviewRequests(last: 50) {
+        nodes {
+          requestedReviewer {
+            ... on Bot {
+              login
+            }
+            ... on User {
+              login
+            }
+            ... on Team {
+              name
+            }
+          }
+        }
+      }
+      latestReviews(last: 100) {
+        nodes {
+          author {
+            login
+          }
+          state
+        }
+      }
+      reviewThreads(last: 100, before: $threadsCursor) {
+        pageInfo {
+          hasPreviousPage
+          startCursor
+        }
+        nodes {
+          id
+          isResolved
+          isOutdated
+          # first: 1 — we want the reviewer's original comment, not the latest reply.
+          comments(first: 1) {
+            nodes {
+              id
+              author {
+                login
+              }
+              body
+              path
+              line
+              createdAt
+            }
+          }
+        }
+      }
+      comments(last: 100, before: $commentsCursor) {
+        pageInfo {
+          hasPreviousPage
+          startCursor
+        }
+        nodes {
+          id
+          isMinimized
+          author {
+            login
+          }
+          body
+          createdAt
+        }
+      }
+      reviews(states: CHANGES_REQUESTED, last: 50, before: $reviewsCursor) {
+        pageInfo {
+          hasPreviousPage
+          startCursor
+        }
+        nodes {
+          id
+          author {
+            login
+          }
+          body
+        }
+      }
+      commits(last: 1) {
+        nodes {
+          commit {
+            statusCheckRollup {
+              contexts(first: 100, after: $checksCursor) {
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                }
+                nodes {
+                  __typename
+                  ... on CheckRun {
+                    name
+                    status
+                    conclusion
+                    detailsUrl
+                    checkSuite {
+                      workflowRun {
+                        event
+                      }
+                    }
+                  }
+                  ... on StatusContext {
+                    context
+                    state
+                    targetUrl
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

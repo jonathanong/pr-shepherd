@@ -1,0 +1,73 @@
+/**
+ * Derives a shepherd `MergeStatusResult` from raw PR data.
+ *
+ * `pr.state` is passed through unchanged; `iterate` handles the cancel action
+ * for non-OPEN (merged/closed) PRs — this function does not branch on it.
+ *
+ * Interpretation order for `status` — first match wins:
+ *   1. mergeable == CONFLICTING       → CONFLICTS
+ *   2. mergeStateStatus DIRTY         → CONFLICTS (GitHub merge conflicts)
+ *   3. copilotReviewInProgress        → BLOCKED
+ *   4. mergeStateStatus BEHIND        → BEHIND
+ *   5. mergeStateStatus BLOCKED / HAS_HOOKS → BLOCKED
+ *   6. mergeStateStatus UNSTABLE      → UNSTABLE
+ *   7. isDraft                        → DRAFT
+ *   8. mergeStateStatus UNKNOWN       → UNKNOWN
+ *   9. mergeStateStatus CLEAN         → CLEAN
+ */
+
+import type { BatchPrData, MergeStatusResult } from '../types.mts'
+
+export function deriveMergeStatus(pr: BatchPrData): MergeStatusResult {
+  const copilotReviewInProgress = detectCopilotReview(pr)
+
+  let status: MergeStatusResult['status']
+
+  if (pr.mergeable === 'CONFLICTING') {
+    status = 'CONFLICTS'
+  } else if (copilotReviewInProgress) {
+    status = 'BLOCKED'
+  } else if (pr.mergeStateStatus === 'DIRTY') {
+    // DIRTY means GitHub detected merge conflicts in the branch.
+    status = 'CONFLICTS'
+  } else if (pr.mergeStateStatus === 'BEHIND') {
+    status = 'BEHIND'
+  } else if (pr.mergeStateStatus === 'BLOCKED' || pr.mergeStateStatus === 'HAS_HOOKS') {
+    status = 'BLOCKED'
+  } else if (pr.mergeStateStatus === 'UNSTABLE') {
+    status = 'UNSTABLE'
+  } else if (pr.isDraft || pr.mergeStateStatus === 'DRAFT') {
+    status = 'DRAFT'
+  } else if (pr.mergeStateStatus === 'UNKNOWN') {
+    status = 'UNKNOWN'
+  } else {
+    status = 'CLEAN'
+  }
+
+  return {
+    status,
+    state: pr.state,
+    isDraft: pr.isDraft,
+    mergeable: pr.mergeable,
+    reviewDecision: pr.reviewDecision,
+    copilotReviewInProgress,
+    mergeStateStatus: pr.mergeStateStatus,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Copilot review detection
+// ---------------------------------------------------------------------------
+
+function detectCopilotReview(pr: BatchPrData): boolean {
+  // A Copilot review is "in progress" when:
+  //   1. Any reviewRequest has a login starting with "copilot", OR
+  //   2. Any latestReview has login starting with "copilot" AND state == "PENDING"
+  const requestedCopilot = pr.reviewRequests.some(r => r.login.toLowerCase().startsWith('copilot'))
+
+  const pendingCopilotReview = pr.latestReviews.some(
+    r => r.login.toLowerCase().startsWith('copilot') && r.state === 'PENDING',
+  )
+
+  return requestedCopilot || pendingCopilotReview
+}

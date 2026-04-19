@@ -1,0 +1,14 @@
+{
+  "name": "pr-shepherd",
+  "description": "Autonomous PR CI monitor and review-comment resolver for Claude Code",
+  "version": "0.1.0",
+  "author": {
+    "name": "Jonathan Ong",
+    "email": "jonathanrichardong@gmail.com"
+  },
+  "homepage": "https://github.com/jonathanong/pr-shepherd",
+  "repository": "https://github.com/jonathanong/pr-shepherd",
+  "license": "MIT",
+  "keywords": ["github", "pull-request", "ci", "code-review", "automation"],
+  "skills": "./skills/"
+}

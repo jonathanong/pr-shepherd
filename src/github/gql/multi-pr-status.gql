@@ -1,0 +1,32 @@
+query MultiPrStatus($owner: String!, $repo: String!, $pr: Int!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $pr) {
+      number
+      state
+      isDraft
+      title
+      mergeStateStatus
+      reviewDecision
+      # totalCount lets callers detect truncation; pageInfo enables backward pagination.
+      reviewThreads(last: 100) {
+        totalCount
+        pageInfo {
+          hasPreviousPage
+          startCursor
+        }
+        nodes {
+          isResolved
+        }
+      }
+      commits(last: 1) {
+        nodes {
+          commit {
+            statusCheckRollup {
+              state
+            }
+          }
+        }
+      }
+    }
+  }
+}

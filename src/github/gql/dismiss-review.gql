@@ -1,0 +1,7 @@
+mutation DismissReview($reviewId: ID!, $message: String!) {
+  dismissPullRequestReview(input: { pullRequestReviewId: $reviewId, message: $message }) {
+    pullRequestReview {
+      state
+    }
+  }
+}

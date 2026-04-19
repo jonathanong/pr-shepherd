@@ -1,0 +1,29 @@
+src:
+  - changed-files:
+      - any-glob-to-any-file: 'src/**'
+
+skills:
+  - changed-files:
+      - any-glob-to-any-file: 'skills/**'
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'docs/**'
+          - 'README.md'
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file: '.github/**'
+
+plugin:
+  - changed-files:
+      - any-glob-to-any-file: '.claude-plugin/**'
+
+config:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'package.json'
+          - 'tsconfig.json'
+          - 'vitest.config.*'
+          - '.oxlintrc.json'

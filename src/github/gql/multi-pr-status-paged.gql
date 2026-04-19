@@ -1,0 +1,31 @@
+query MultiPrStatusPaged($owner: String!, $repo: String!, $pr: Int!, $cursor: String) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $pr) {
+      number
+      title
+      state
+      isDraft
+      mergeStateStatus
+      reviewDecision
+      reviewThreads(last: 100, before: $cursor) {
+        totalCount
+        pageInfo {
+          hasPreviousPage
+          startCursor
+        }
+        nodes {
+          isResolved
+        }
+      }
+      commits(last: 1) {
+        nodes {
+          commit {
+            statusCheckRollup {
+              state
+            }
+          }
+        }
+      }
+    }
+  }
+}

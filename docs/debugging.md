@@ -1,0 +1,108 @@
+# shepherd — debugging
+
+[← README.md](README.md)
+
+## Common failure modes
+
+---
+
+### "Loop stuck in WAIT after merge"
+
+**Symptom:** PR was merged but shepherd keeps emitting `action: wait`.
+
+**Cause:** GitHub returns `mergeable: UNKNOWN` and `mergeStateStatus: UNKNOWN` for merged PRs. Before the fix in this repo, shepherd had no branch for `state !== OPEN`, so it fell through to `wait`.
+
+**Fix:** Verify the fix is deployed. Check the iterate output:
+
+```bash
+pr-shepherd iterate <PR> --no-cache --format=json
+```
+
+Should return `{"action":"cancel","state":"MERGED",...}`.
+
+If it still returns `wait`, check that `report.mergeStatus.state` is being set correctly in the JSON output.
+
+---
+
+### "Loop stuck in WAIT, status UNKNOWN"
+
+**Symptom:** The loop keeps emitting `action: wait` with `status: UNKNOWN`.
+
+**Cause:** Stale cache. The `batch-read.json` file has a stale UNKNOWN value locked in.
+
+**Fix:** Clear the cache and rerun:
+
+```bash
+rm -rf $TMPDIR/pr-shepherd-cache
+pr-shepherd iterate <PR> --no-cache --format=json
+```
+
+If UNKNOWN persists without cache, GitHub may still be computing the merge state. Wait a minute and retry.
+
+---
+
+### "Loop fires cancel immediately"
+
+**Symptom:** The loop emits `action: cancel` on the very first tick, before 10 minutes of READY.
+
+**Cause:** A stale `ready-since.txt` from a previous run. The timestamp is old enough to trigger `shouldCancel`.
+
+**Fix:** Delete the ready-since file:
+
+```bash
+rm $TMPDIR/pr-shepherd-cache/<owner>-<repo>/<pr>/ready-since.txt
+```
+
+Replace `<owner>-<repo>` and `<pr>` with actual values. Example:
+
+```bash
+rm $TMPDIR/pr-shepherd-cache/acme-myrepo/42/ready-since.txt
+```
+
+---
+
+### "Rate limit exhaustion"
+
+**Symptom:** Shepherd errors with `API rate limit exceeded` or `secondary rate limit`.
+
+**Cause:** Too many API calls. Common when the cache is bypassed frequently or the cron interval is very short.
+
+**Fix options:**
+
+1. Increase the cache TTL: `--cache-ttl 600` (10 minutes)
+2. Increase the cron interval: `--interval 8m`
+3. Check `x-ratelimit-remaining` in the reporter JSON output to monitor consumption
+
+---
+
+### "GraphQL UNKNOWN for mergeable — persists after retry"
+
+**Symptom:** The REST fallback (`getMergeableState`) also returns UNKNOWN.
+
+**Cause:** Normal for OPEN PRs while GitHub is computing merge state. Usually resolves within 30 seconds.
+
+**Diagnosis:**
+
+```bash
+gh pr view <PR> --json state,mergeable,mergeStateStatus
+```
+
+If `state` is `OPEN` and both `mergeable` and `mergeStateStatus` are `UNKNOWN` after several minutes, there may be a GitHub backend issue.
+
+---
+
+## Replay an iteration manually
+
+To replay a single iteration with full output:
+
+```bash
+pr-shepherd iterate <PR> --no-cache --format=json
+```
+
+For human-readable output:
+
+```bash
+pr-shepherd check <PR> --no-cache
+```
+
+To bypass cache and see the raw GraphQL batch response, add `--no-cache` to any command.

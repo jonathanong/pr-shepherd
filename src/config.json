@@ -1,0 +1,38 @@
+{
+  "cache": {
+    "ttlSeconds": 300
+  },
+  "iterate": {
+    "cooldownSeconds": 30,
+    "maxFixAttempts": 3
+  },
+  "watch": {
+    "intervalDefault": "4m",
+    "readyDelayMinutesDefault": 10,
+    "expiresHoursDefault": 8,
+    "maxTurns": 50
+  },
+  "resolve": {
+    "concurrency": 4,
+    "shaPollIntervalMs": 2000,
+    "shaPollMaxAttempts": 10
+  },
+  "checks": {
+    "relevantEvents": ["pull_request", "pull_request_target"],
+    "timeoutPatterns": [
+      "cancel timeout",
+      "exceeded the maximum execution time",
+      "job was cancelled"
+    ],
+    "infraPatterns": [
+      "runner error",
+      "service unavailable",
+      "ETIMEOUT",
+      "ECONNRESET",
+      "lost communication with the server",
+      "the hosted runner lost connection"
+    ],
+    "logLinesKept": 50,
+    "logExcerptMaxChars": 3000
+  }
+}
