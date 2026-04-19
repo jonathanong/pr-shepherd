@@ -136,7 +136,8 @@ function applyCompat(raw: Record<string, unknown>): Record<string, unknown> {
       process.stderr.write(
         `pr-shepherd: config key "watch.readyDelayMinutesDefault" renamed to "watch.readyDelayMinutes".\n`,
       );
-      watchOut["readyDelayMinutes"] = watchOut["readyDelayMinutes"] ?? watch["readyDelayMinutesDefault"];
+      watchOut["readyDelayMinutes"] =
+        watchOut["readyDelayMinutes"] ?? watch["readyDelayMinutesDefault"];
       delete watchOut["readyDelayMinutesDefault"];
     }
     if ("expiresHoursDefault" in watch) {
