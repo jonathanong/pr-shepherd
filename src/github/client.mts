@@ -129,7 +129,6 @@ export async function getCurrentPrNumber(): Promise<number | null> {
 }
 
 async function getCurrentBranch(): Promise<string> {
-  await runGh(["--version"]); // warm up gh CLI before git call
   // Use git directly for branch name — gh doesn't expose it.
   const { stdout } = await execFile("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
   return stdout.trim();

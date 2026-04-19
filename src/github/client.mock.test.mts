@@ -158,16 +158,13 @@ describe("graphqlWithRateLimit — header parsing", () => {
 
 describe("getCurrentPrNumber", () => {
   it("returns null when branch is HEAD (detached)", async () => {
-    // First call: gh --version (warmup), second call: git rev-parse
-    mockExecFile
-      .mockResolvedValueOnce({ stdout: "gh version 2.0.0" })
-      .mockResolvedValueOnce({ stdout: "HEAD\n" });
+    // First call: git rev-parse
+    mockExecFile.mockResolvedValueOnce({ stdout: "HEAD\n" });
     expect(await getCurrentPrNumber()).toBeNull();
   });
 
   it("returns null when gh pr list returns empty string", async () => {
     mockExecFile
-      .mockResolvedValueOnce({ stdout: "gh version 2.0.0" })
       .mockResolvedValueOnce({ stdout: "my-branch\n" })
       .mockResolvedValueOnce({ stdout: "\n" });
     expect(await getCurrentPrNumber()).toBeNull();
@@ -175,7 +172,6 @@ describe("getCurrentPrNumber", () => {
 
   it("returns null when gh pr list returns 'null'", async () => {
     mockExecFile
-      .mockResolvedValueOnce({ stdout: "gh version 2.0.0" })
       .mockResolvedValueOnce({ stdout: "my-branch\n" })
       .mockResolvedValueOnce({ stdout: "null\n" });
     expect(await getCurrentPrNumber()).toBeNull();
@@ -183,7 +179,6 @@ describe("getCurrentPrNumber", () => {
 
   it("returns PR number on success", async () => {
     mockExecFile
-      .mockResolvedValueOnce({ stdout: "gh version 2.0.0" })
       .mockResolvedValueOnce({ stdout: "my-branch\n" })
       .mockResolvedValueOnce({ stdout: "123\n" });
     expect(await getCurrentPrNumber()).toBe(123);
