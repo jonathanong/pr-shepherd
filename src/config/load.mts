@@ -114,7 +114,10 @@ function applyCompat(raw: Record<string, unknown>): Record<string, unknown> {
     process.stderr.write(
       `pr-shepherd: config key "iterate.maxFixAttempts" renamed to "iterate.fixAttemptsPerThread".\n`,
     );
-    out["iterate"] = { fixAttemptsPerThread: iterate["maxFixAttempts"], ...iterate };
+    out["iterate"] = {
+      ...iterate,
+      fixAttemptsPerThread: iterate["fixAttemptsPerThread"] ?? iterate["maxFixAttempts"],
+    };
     delete (out["iterate"] as Record<string, unknown>)["maxFixAttempts"];
   }
 
@@ -126,21 +129,21 @@ function applyCompat(raw: Record<string, unknown>): Record<string, unknown> {
       process.stderr.write(
         `pr-shepherd: config key "watch.intervalDefault" renamed to "watch.interval".\n`,
       );
-      watchOut["interval"] = watch["intervalDefault"];
+      watchOut["interval"] = watchOut["interval"] ?? watch["intervalDefault"];
       delete watchOut["intervalDefault"];
     }
     if ("readyDelayMinutesDefault" in watch) {
       process.stderr.write(
         `pr-shepherd: config key "watch.readyDelayMinutesDefault" renamed to "watch.readyDelayMinutes".\n`,
       );
-      watchOut["readyDelayMinutes"] = watch["readyDelayMinutesDefault"];
+      watchOut["readyDelayMinutes"] = watchOut["readyDelayMinutes"] ?? watch["readyDelayMinutesDefault"];
       delete watchOut["readyDelayMinutesDefault"];
     }
     if ("expiresHoursDefault" in watch) {
       process.stderr.write(
         `pr-shepherd: config key "watch.expiresHoursDefault" renamed to "watch.expiresHours".\n`,
       );
-      watchOut["expiresHours"] = watch["expiresHoursDefault"];
+      watchOut["expiresHours"] = watchOut["expiresHours"] ?? watch["expiresHoursDefault"];
       delete watchOut["expiresHoursDefault"];
     }
     out["watch"] = watchOut;
@@ -156,7 +159,9 @@ function applyCompat(raw: Record<string, unknown>): Record<string, unknown> {
       process.stderr.write(
         `pr-shepherd: config key "resolve.shaPollIntervalMs" moved to "resolve.shaPoll.intervalMs".\n`,
       );
-      shaPollOut["intervalMs"] = resolve["shaPollIntervalMs"];
+      shaPollOut["intervalMs"] =
+        (resolve["shaPoll"] as Record<string, unknown> | undefined)?.["intervalMs"] ??
+        resolve["shaPollIntervalMs"];
       delete resolveOut["shaPollIntervalMs"];
       shaPollChanged = true;
     }
@@ -164,7 +169,9 @@ function applyCompat(raw: Record<string, unknown>): Record<string, unknown> {
       process.stderr.write(
         `pr-shepherd: config key "resolve.shaPollMaxAttempts" moved to "resolve.shaPoll.maxAttempts".\n`,
       );
-      shaPollOut["maxAttempts"] = resolve["shaPollMaxAttempts"];
+      shaPollOut["maxAttempts"] =
+        (resolve["shaPoll"] as Record<string, unknown> | undefined)?.["maxAttempts"] ??
+        resolve["shaPollMaxAttempts"];
       delete resolveOut["shaPollMaxAttempts"];
       shaPollChanged = true;
     }
@@ -185,21 +192,21 @@ function applyCompat(raw: Record<string, unknown>): Record<string, unknown> {
       process.stderr.write(
         `pr-shepherd: config key "checks.relevantEvents" renamed to "checks.ciTriggerEvents".\n`,
       );
-      checksOut["ciTriggerEvents"] = checks["relevantEvents"];
+      checksOut["ciTriggerEvents"] = checksOut["ciTriggerEvents"] ?? checks["relevantEvents"];
       delete checksOut["relevantEvents"];
     }
     if ("logLinesKept" in checks) {
       process.stderr.write(
         `pr-shepherd: config key "checks.logLinesKept" renamed to "checks.logMaxLines".\n`,
       );
-      checksOut["logMaxLines"] = checks["logLinesKept"];
+      checksOut["logMaxLines"] = checksOut["logMaxLines"] ?? checks["logLinesKept"];
       delete checksOut["logLinesKept"];
     }
     if ("logExcerptMaxChars" in checks) {
       process.stderr.write(
         `pr-shepherd: config key "checks.logExcerptMaxChars" renamed to "checks.logMaxChars".\n`,
       );
-      checksOut["logMaxChars"] = checks["logExcerptMaxChars"];
+      checksOut["logMaxChars"] = checksOut["logMaxChars"] ?? checks["logExcerptMaxChars"];
       delete checksOut["logExcerptMaxChars"];
     }
     out["checks"] = checksOut;
