@@ -21,13 +21,13 @@ Autonomous PR CI monitor and review-comment resolver for Claude Code.
 
 ## Install
 
-> **Note:** Skill and plugin install methods add the skill definitions only — they do not install the `pr-shepherd` CLI. The skills invoke `npx pr-shepherd`, so you also need the CLI available. Add it to your project's dev dependencies so `npx` resolves it without prompting:
+> **Note:** Skill and plugin install methods add the skill definitions only — they do not install the `pr-shepherd` CLI. The skills invoke `npx pr-shepherd`, so you also need the CLI available. If you're using `pr-shepherd` as development tooling for your repo, install it as a dev dependency so `npx` resolves it without prompting:
 >
 > ```bash
 > npm install --save-dev pr-shepherd
 > ```
 >
-> Or install globally: `npm i -g pr-shepherd`.
+> A plain `npm install pr-shepherd` adds it to regular dependencies instead; use that only if you specifically want it under `dependencies`. Or install globally: `npm install -g pr-shepherd`.
 
 ### As individual skills via `npx skills`
 
