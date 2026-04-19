@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { parse } from "yaml";
@@ -53,11 +53,8 @@ function findRcFile(startDir: string): string | null {
   let current = startDir;
   while (true) {
     const candidate = join(current, RC_FILENAME);
-    try {
-      readFileSync(candidate);
+    if (statSync(candidate, { throwIfNoEntry: false })) {
       return candidate;
-    } catch {
-      // not found here
     }
     if (current === home || current === dirname(current)) return null;
     current = dirname(current);
