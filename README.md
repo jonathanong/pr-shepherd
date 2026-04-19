@@ -2,45 +2,28 @@
 
 Autonomous PR CI monitor and review-comment resolver for Claude Code.
 
-## Goals
+## Design principles
 
-- **Reduced context** — shifts more logic to the CLI instead of the agent
-- **Reduced GitHub rate limit exhaustion** — all GraphQL queries are batched
-- **Reduced agent tool calls** — batching comment resolutions means fewer tool calls and less context used
-- **No MCP** — less reasoning and much faster than using the GitHub MCP
-- **CI cancellation on failure** — avoids wasted CI runs when actionable failures exist
-- **Auto-resolution of all inline comments** — including bot and AI reviewer comments
-- **Automatic resolution of outdated comments** — happens before the agent is involved
-- **Automatic pagination and filtering** — resolved comments never reach the agent
-- **Aggressively hides bot comments** — keeps PR noise low
-- **Waits for pending Copilot reviews** — avoids premature marking as ready
-- **Rebases on conflict** — automatically rebases on the PR base branch when there are merge conflicts
-- **4-minute watch cadence** — keeps Claude's prompt cache warm (5-minute TTL)
-- **10-minute settle window** — waits after the PR is clean before exiting, in case of pending reviews
-- **Draft → ready-for-review** — automatically converts draft PRs when CI passes
-- **Skips non-PR CI checks** — only `pull_request` / `pull_request_target` events count toward readiness
+- **Reduced agent context** — logic lives in the CLI, not the prompt
+- **Reduced GitHub rate-limit exhaustion** — all reads go through one batched GraphQL query
+- **Fewer tool calls** — comment resolutions are batched; resolved threads never reach the agent
+- **No MCP** — smaller reasoning surface, much faster than the GitHub MCP
+- **No vendor lock-in** — runs against `gh` + `git`; no hosted service required
+- **Skills over subagents** — subagents reload all CLAUDE.md context on every turn; skills inject into the main conversation instead, keeping cost low
+
+## Features
+
+- **CI handling** — cancels runs on actionable failures, reruns on transient/infra failures, skips non-PR trigger events
+- **Comments** — resolves inline threads (including bot and AI reviewer comments), auto-resolves outdated threads before the agent sees them, aggressively hides bot comments, paginates and filters server-side
+- **Readiness** — converts draft → ready-for-review when CI passes, waits for pending Copilot reviews, settles for a configurable window (default 10 min) before exiting
+- **Rebases on conflict** — automatically rebases on the PR base branch when merge conflicts appear
 - **Intended as a PR merge blocker** — pair with a GitHub Actions required check that verifies all threads are resolved
-
-## Why it's built this way
-
-Claude's cloud autofix requires CI to verify changes for apps that can't run in the cloud. Running targeted tests locally and letting Claude Code drive is cheaper and avoids vendor lock-in. Skills are used (not subagents) because subagents load all CLAUDE.md context, increasing cost; skills inject into the main conversation instead.
-
-## Requirements
-
-- Node.js ≥ 24.0.0
-- `gh` CLI authenticated (`gh auth login`)
-- `git`
 
 ## Install
 
-```bash
-npm install pr-shepherd
-```
-
-### As a Claude Code plugin
+### As a Claude Code plugin (recommended)
 
 ```bash
-# Install from marketplace
 claude /plugin marketplace add jonathanong/pr-shepherd
 claude /plugin install pr-shepherd
 ```
@@ -106,6 +89,12 @@ the CLI invocation changed to `npx pr-shepherd iterate ...` or
 `npx pr-shepherd resolve ...`. To drive the CLI without Claude at all, see
 [docs/usage.md](docs/usage.md).
 
+### As a global CLI
+
+```bash
+npm install -g pr-shepherd
+```
+
 ## Usage
 
 ### Monitor a PR
@@ -147,53 +136,7 @@ See [docs/skills.md](docs/skills.md) for full argument reference.
 
 ## Workflow
 
-```mermaid
-flowchart TD
-  U(["/pr-shepherd:monitor PR"]) --> SC["monitor skill"]
-  SC -->|CronList| EX{Loop exists<br/>for this PR?}
-  EX -->|yes| NOW[Run iterate once<br/>inline and act]
-  EX -->|no| CREATE["/loop 4m --max-turns 50 --expires 8h"]
-  CREATE --> CRON[(cron tick every 4m)]
-  NOW --> ITER
-  CRON --> ITER["pr-shepherd iterate PR --format=json"]
-
-  ITER --> S1{1. last commit<br/>age &lt; cooldown?}
-  S1 -->|yes| A_COOL([action: cooldown])
-  S1 -->|no| S2["2. runCheck — one GraphQL batch<br/>classify + deriveMergeStatus<br/>+ autoResolveOutdated"]
-
-  S2 --> S25{2.5 state != OPEN?}
-  S25 -->|yes| A_CAN([action: cancel])
-  S25 -->|no| S3["3. updateReadyDelay<br/>ready-since.txt"]
-  S3 --> S3C{shouldCancel?}
-  S3C -->|yes| A_CAN
-  S3C -->|no| S4{4. CONFLICTS or actionable<br/>threads/comments/CI/reviews?}
-  S4 -->|yes| S4X["gh run cancel actionable runIds"]
-  S4X --> A_FIX([action: fix_code])
-  S4 -->|no| S5{5. transient<br/>timeout/infra?}
-  S5 -->|yes| S5X["gh run rerun runId --failed"]
-  S5X --> A_RR([action: rerun_ci])
-  S5 -->|no| S6{6. flaky + BEHIND?}
-  S6 -->|yes| A_REB([action: rebase])
-  S6 -->|no| S7{7. READY + CLEAN<br/>+ isDraft + !copilot?}
-  S7 -->|yes| A_MR([action: mark_ready])
-  S7 -->|no| A_W([action: wait])
-
-  A_COOL --> DEC{skill acts on action}
-  A_CAN --> DEC
-  A_REB --> DEC
-  A_FIX --> DEC
-  A_RR --> DEC
-  A_MR --> DEC
-  A_W --> DEC
-
-  DEC -->|cancel| STOP["/loop cancel"]
-  DEC -->|rebase| REB["git fetch && rebase origin/BASE &&<br/>push --force-with-lease"]
-  DEC -->|fix_code| FIX["Edit files →<br/>git add + commit →<br/>fetch + rebase + push →<br/>pr-shepherd resolve --require-sha HEAD"]
-  FIX --> NEXT[Wait for next tick]
-  REB --> NEXT
-  DEC -->|other| NEXT
-  NEXT --> CRON
-```
+On each 4-minute tick: fetch PR state in one GraphQL batch → classify CI, comments, and merge status → take one action (fix code, rebase, rerun CI, mark ready, or wait). See [docs/flow.md](docs/flow.md) for the full decision tree.
 
 ## CLI
 
@@ -219,29 +162,35 @@ Create a `.pr-shepherdrc.yml` in your project root (or any parent directory) to 
 
 ```yaml
 iterate:
-  cooldownSeconds: 60 # wait longer after a push before reading CI
-  fixAttemptsPerThread: 5 # raise before escalating to manual review
+  cooldownSeconds: 60       # wait longer after a push before reading CI
 checks:
   ciTriggerEvents:
     - pull_request
     - pull_request_target
-    - merge_group # add for merge-queue repos
-mergeStatus:
-  blockingReviewerLogins:
-    - copilot # add other review bots here
+    - merge_group           # add for merge-queue repos
 actions:
-  autoRebase: false # disable for repos that enforce merge commits
+  autoRebase: false         # disable for repos that enforce merge commits
 ```
 
 See [docs/configuration.md](docs/configuration.md) for all options.
 
+## Requirements
+
+- Node.js ≥ 24.0.0
+- `gh` CLI authenticated (`gh auth login`) with `repo` scope; add `read:org` for organization-restricted Copilot reviews
+- `git`
+
+## Docs
+
+Full reference: [docs/README.md](docs/README.md) — CLI usage, skills, configuration, architecture, actions, debugging, and more.
+
 ## Architecture
 
-See [docs/architecture.md](docs/architecture.md) and [docs/](docs/) for full reference docs.
+See [docs/architecture.md](docs/architecture.md) for the module map and dependency rules.
 
 ## Forking
 
-If you want to customize pr-shepherd for your own use or team, see [docs/forking.md](docs/forking.md).
+See [docs/forking.md](docs/forking.md) if you want to customize pr-shepherd for your own use or team.
 
 ## License
 
