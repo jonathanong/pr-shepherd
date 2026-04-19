@@ -42,7 +42,8 @@ Parse the JSON output and report all three:
 
 The CLI already determines whether a rebase is warranted. Read `report.mergeStatus.status` directly:
 
-- `CONFLICTS` or `BEHIND` — rebase may be appropriate; combine with `failureKind` values on failing checks (a `flaky` failure while `BEHIND` is the canonical rebase signal).
+- `CONFLICTS` — a rebase is required to resolve the merge conflict before the PR can land.
+- `BEHIND` — a rebase may be appropriate; a `flaky` failure while `BEHIND` is the canonical rebase signal. If all checks pass but the PR is `BEHIND`, a rebase is optional.
 - Any other status — no rebase needed.
 
 Do not re-derive these conditions from raw branch state. For automated monitoring that acts on these signals, use `/pr-shepherd:monitor` — it handles rebase decisions end-to-end.
