@@ -11,6 +11,7 @@ beforeEach(() => {
   origCwd = process.cwd();
   tmpDir = mkdtempSync(join(tmpdir(), "shepherd-load-test-"));
   vi.stubEnv("HOME", tmpDir);
+  vi.stubEnv("USERPROFILE", tmpDir);
   vi.resetModules();
   process.chdir(tmpDir);
 });
@@ -18,7 +19,8 @@ beforeEach(() => {
 afterEach(() => {
   process.chdir(origCwd);
   vi.unstubAllEnvs();
-  rmSync(tmpDir, { recursive: true, force: true });
+  vi.restoreAllMocks();
+  if (tmpDir) rmSync(tmpDir, { recursive: true, force: true });
 });
 
 async function freshLoadConfig() {
@@ -83,7 +85,7 @@ describe("loadConfig — malformed YAML", () => {
     expect(result.resolve.concurrency).toBe(4);
     const output = stderrSpy.mock.calls.map((c) => c[0]).join("");
     expect(output).toContain("failed to parse");
-    stderrSpy.mockRestore();
+
   });
 });
 
@@ -102,7 +104,7 @@ describe("loadConfig — removed keys", () => {
       expect(result[key]).toBeUndefined();
       const output = stderrSpy.mock.calls.map((c) => c[0]).join("");
       expect(output).toContain(`"${key}" has been removed`);
-      stderrSpy.mockRestore();
+  
     },
   );
 });
@@ -123,7 +125,7 @@ describe("loadConfig — iterate renames", () => {
     expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain(
       '"iterate.maxFixAttempts" renamed',
     );
-    stderrSpy.mockRestore();
+
   });
 });
 
@@ -139,7 +141,7 @@ describe("loadConfig — watch renames", () => {
     expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain(
       '"watch.intervalDefault" renamed',
     );
-    stderrSpy.mockRestore();
+
   });
 
   it("maps readyDelayMinutesDefault → readyDelayMinutes and warns", async () => {
@@ -151,7 +153,7 @@ describe("loadConfig — watch renames", () => {
     expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain(
       '"watch.readyDelayMinutesDefault" renamed',
     );
-    stderrSpy.mockRestore();
+
   });
 
   it("maps expiresHoursDefault → expiresHours and warns", async () => {
@@ -163,7 +165,7 @@ describe("loadConfig — watch renames", () => {
     expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain(
       '"watch.expiresHoursDefault" renamed',
     );
-    stderrSpy.mockRestore();
+
   });
 });
 
@@ -184,7 +186,7 @@ describe("loadConfig — resolve renames", () => {
     const output = stderrSpy.mock.calls.map((c) => c[0]).join("");
     expect(output).toContain('"resolve.shaPollIntervalMs" moved');
     expect(output).toContain('"resolve.shaPollMaxAttempts" moved');
-    stderrSpy.mockRestore();
+
   });
 });
 
@@ -198,7 +200,7 @@ describe("loadConfig — checks renames", () => {
     expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain(
       '"checks.relevantEvents" renamed',
     );
-    stderrSpy.mockRestore();
+
   });
 
   it("maps logLinesKept → logMaxLines and warns", async () => {
@@ -210,7 +212,7 @@ describe("loadConfig — checks renames", () => {
     expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain(
       '"checks.logLinesKept" renamed',
     );
-    stderrSpy.mockRestore();
+
   });
 
   it("maps logExcerptMaxChars → logMaxChars and warns", async () => {
@@ -222,7 +224,7 @@ describe("loadConfig — checks renames", () => {
     expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain(
       '"checks.logExcerptMaxChars" renamed',
     );
-    stderrSpy.mockRestore();
+
   });
 });
 
