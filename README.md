@@ -5,7 +5,7 @@ Autonomous PR CI monitor and review-comment resolver for Claude Code.
 ## Design principles
 
 - **Reduced agent context** — logic lives in the CLI, not the prompt
-- **Reduced GitHub rate-limit exhaustion** — all reads go through one batched GraphQL query
+- **Reduced GitHub rate-limit exhaustion** — primary PR state is fetched via a batched GraphQL query
 - **Fewer tool calls** — comment resolutions are batched; resolved threads never reach the agent
 - **No MCP** — smaller reasoning surface, much faster than the GitHub MCP
 - **No vendor lock-in** — runs against `gh` + `git`; no hosted service required
