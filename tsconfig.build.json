@@ -3,9 +3,9 @@
   "compilerOptions": {
     "noEmit": false,
     "rootDir": "./src",
-    "outDir": "./dist",
+    "outDir": "./bin",
     "declaration": false,
     "sourceMap": false
   },
-  "exclude": ["node_modules", "dist", "src/**/*.test.mts", "src/**/*.mock.test.mts"]
+  "exclude": ["node_modules", "bin", "src/**/*.test.mts", "src/**/*.mock.test.mts"]
 }
