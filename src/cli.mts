@@ -117,7 +117,9 @@ async function handleIterate(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
 
   const lastPushTimeStr = getFlag(extra, "--last-push-time");
-  const lastPushTime = lastPushTimeStr ? parseIntStrict(lastPushTimeStr, "--last-push-time") : undefined;
+  const lastPushTime = lastPushTimeStr
+    ? parseIntStrict(lastPushTimeStr, "--last-push-time")
+    : undefined;
   const readyDelayStr = getFlag(extra, "--ready-delay");
   const cfg = loadConfig();
   const readyDelaySeconds =

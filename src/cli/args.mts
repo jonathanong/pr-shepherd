@@ -60,7 +60,9 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
   const format = (values.format ?? "text") as string as "text" | "json";
   const noCache = (values["no-cache"] ?? false) as boolean;
   const cacheTtlStr = values["cache-ttl"] as string | undefined;
-  const cacheTtlSeconds = cacheTtlStr ? parseIntStrict(cacheTtlStr, "--cache-ttl") : config.cache.ttlSeconds;
+  const cacheTtlSeconds = cacheTtlStr
+    ? parseIntStrict(cacheTtlStr, "--cache-ttl")
+    : config.cache.ttlSeconds;
 
   // Build the set of arg indices consumed by global flags so we can strip
   // them from `extra`.  Subcommand-specific flags are left untouched.
