@@ -28,7 +28,7 @@ Claude's cloud autofix requires CI to verify changes for apps that can't run in 
 ## Install
 
 ```bash
-npm install -g pr-shepherd
+npm install pr-shepherd
 ```
 
 ### As a Claude Code plugin

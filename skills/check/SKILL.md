@@ -27,7 +27,7 @@ If `MERGED`, output: `PR #N is already merged. Nothing to check.` and skip.
 ## Run the check
 
 ```bash
-pr-shepherd check <N> --format=json
+npx pr-shepherd check <N> --format=json
 ```
 
 ## Reporting

@@ -40,7 +40,7 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
 2. **Fetch comments:**
 
    ```bash
-   pr-shepherd resolve <N> --fetch --last-push-time "$LAST_PUSH" --format=json
+   npx pr-shepherd resolve <N> --fetch --last-push-time "$LAST_PUSH" --format=json
    ```
 
    The CLI auto-resolves outdated threads.
@@ -65,7 +65,7 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
 6. **Resolve all verified items** — **only after the push:**
 
    ```bash
-   pr-shepherd resolve <N> \
+   npx pr-shepherd resolve <N> \
      --resolve-thread-ids <comma-separated-IDs> \
      --minimize-comment-ids <comma-separated-IDs> \
      --dismiss-review-ids <comma-separated-IDs> \
