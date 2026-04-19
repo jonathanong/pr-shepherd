@@ -365,6 +365,81 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
     }
   });
 
+  it("silently swallows 'Cannot cancel a workflow run that is completed' — no stderr", async () => {
+    const actionableCheck = makeActionableCheck("run-400");
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        checks: {
+          passing: [],
+          failing: [actionableCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockExecFile.mockRejectedValue(
+      new Error("Cannot cancel a workflow run that is completed"),
+    );
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
+    try {
+      const result = await runIterate(makeOpts());
+
+      expect(result.action).toBe("fix_code");
+      if (result.action === "fix_code") {
+        expect(result.cancelled).toEqual([]);
+      }
+      expect(stderrSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("gh run cancel run-400 failed (ignored)"),
+      );
+    } finally {
+      stderrSpy.mockRestore();
+    }
+  });
+
+  it("still logs stderr for unexpected gh run cancel errors", async () => {
+    const actionableCheck = makeActionableCheck("run-401");
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        checks: {
+          passing: [],
+          failing: [actionableCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockExecFile.mockRejectedValue(new Error("HTTP 403 Forbidden"));
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
+    try {
+      await runIterate(makeOpts());
+      expect(stderrSpy).toHaveBeenCalledWith(
+        expect.stringContaining("gh run cancel run-401 failed (ignored)"),
+      );
+    } finally {
+      stderrSpy.mockRestore();
+    }
+  });
+
   it("deduplicates runIds — two checks sharing a runId emit one AgentCheck and call gh run cancel once", async () => {
     const check1 = makeActionableCheck("run-300", "typecheck");
     const check2 = makeActionableCheck("run-300", "lint");
