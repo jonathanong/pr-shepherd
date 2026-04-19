@@ -78,7 +78,7 @@ slash command that wraps the CLI directly.
    ## Run the check
 
    ```bash
-   npx pr-shepherd check <N> --format=json
+   npx pr-shepherd check <PR_NUMBER> --format=json
    ```
 
    Parse the JSON and report:
