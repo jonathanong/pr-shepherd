@@ -149,14 +149,148 @@ pr-shepherd iterate [PR] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-
 pr-shepherd status PR1 [PR2 …]                        # multi-PR table
 ```
 
-Common flags:
+Common flags (all subcommands):
 
-| Flag                  | Default | Description                     |
-| --------------------- | ------- | ------------------------------- |
-| `--format text\|json` | `text`  | Output format                   |
-| `--no-cache`          | false   | Bypass the 5-minute file cache  |
-| `--cache-ttl N`       | 300     | Cache TTL in seconds            |
-| `--ready-delay Nm`    | `10m`   | Settle window before loop exits |
+| Flag                  | Default | Description                                                                    |
+| --------------------- | ------- | ------------------------------------------------------------------------------ |
+| `--format text\|json` | `text`  | Output format                                                                  |
+| `--no-cache`          | false   | Bypass the 5-minute file cache                                                 |
+| `--cache-ttl N`       | `300`   | Cache TTL in seconds; `PR_SHEPHERD_CACHE_TTL_SECONDS` env var takes precedence |
+
+### pr-shepherd check [PR]
+
+Read-only PR status snapshot. Fetches CI results, merge state, and review comments in one GraphQL batch. PR number is inferred from the current branch when omitted.
+
+```sh
+pr-shepherd check           # infer PR from current branch
+pr-shepherd check 42
+pr-shepherd check 42 --format=json
+pr-shepherd check 42 --no-cache
+```
+
+Exit codes: `0` READY · `2` IN_PROGRESS · `3` UNRESOLVED_COMMENTS · `1` all other statuses
+
+**Example output:**
+
+```
+PR #42 — owner/repo
+Status: UNRESOLVED_COMMENTS
+
+Merge Status: CLEAN
+  mergeStateStatus:       CLEAN
+  mergeable:              MERGEABLE
+  reviewDecision:         APPROVED
+  isDraft:                false
+  copilotReviewInProgress:false
+
+CI Checks: 3/3 passed
+
+Actionable Review Threads (1):
+  - threadId=RT_kwDOBxyz123 src/api.ts:47 (@reviewer)
+    Please add error handling here
+
+Summary: 1 actionable item(s) remaining
+```
+
+### pr-shepherd resolve [PR]
+
+Two modes: **fetch** (default) auto-resolves outdated threads and returns actionable items; **mutate** resolves/minimizes/dismisses specific IDs after you push fixes.
+
+**Fetch mode:**
+
+```sh
+pr-shepherd resolve           # fetch + auto-resolve outdated threads
+pr-shepherd resolve 42 --fetch --format=json
+```
+
+```
+Actionable Review Threads (2):
+  - threadId=RT_kwDOabc src/api.ts:47 (@reviewer): Please add error handling here
+  - threadId=RT_kwDOdef src/utils.ts:12 (@bot): Consider using a const here
+
+Summary: 2 actionable item(s)
+```
+
+**Mutate mode** (after pushing fixes):
+
+```sh
+pr-shepherd resolve 42 \
+  --resolve-thread-ids RT_kwDOabc,RT_kwDOdef \
+  --minimize-comment-ids IC_kwDOxyz \
+  --dismiss-review-ids PRR_kwDO123 \
+  --message "Addressed in $(git rev-parse HEAD)" \
+  --require-sha $(git rev-parse HEAD)
+```
+
+```
+Resolved threads (2): RT_kwDOabc, RT_kwDOdef
+Minimized comments (1): IC_kwDOxyz
+Dismissed reviews (1): PRR_kwDO123
+```
+
+`--require-sha` polls GitHub until the PR head matches the SHA before mutating — ensures reviewers see the fix before threads are closed. Exit code: always `0`.
+
+### pr-shepherd iterate [PR]
+
+One monitor tick: classifies current PR state and emits a single action. Used by the cron loop; the monitor skill calls this every 4 minutes and acts on the result. See [docs/iterate-flow.md](docs/iterate-flow.md) for the full decision tree.
+
+```sh
+pr-shepherd iterate 42 --no-cache --format=json \
+  --ready-delay 10m \
+  --last-push-time "$(git log -1 --format=%ct HEAD)"
+```
+
+Flags:
+
+| Flag                          | Default | Description                                       |
+| ----------------------------- | ------- | ------------------------------------------------- |
+| `--ready-delay Nm`            | `10m`   | Settle window before the loop cancels after READY |
+| `--cooldown-seconds N`        | `30`    | Wait after a push before reading CI               |
+| `--last-push-time N`          | —       | Unix timestamp hint embedded in the result        |
+| `--no-auto-rerun`             | false   | Return `wait` instead of rerunning transient CI   |
+| `--no-auto-mark-ready`        | false   | Skip converting draft → ready-for-review          |
+| `--no-auto-cancel-actionable` | false   | Skip cancelling actionable failing runs           |
+
+**Text output** (one line per action):
+
+```
+PR #42 [COOLDOWN] status=UNKNOWN merge=UNKNOWN (cooldown: CI still starting)
+PR #42 [WAIT] status=READY merge=CLEAN (540s until cancel)
+PR #42 [RERUN_CI] status=FAILING merge=UNSTABLE reran=12345,67890
+PR #42 [FIX_CODE] status=UNRESOLVED_COMMENTS merge=BLOCKED threads=2 comments=0 checks=1 cancelled=1
+PR #42 [REBASE] status=FAILING merge=BEHIND (branch is behind main)
+PR #42 [MARK_READY] status=READY merge=CLEAN markedReady=true
+PR #42 [CANCEL] status=READY merge=CLEAN (ready-delay elapsed)
+PR #42 [ESCALATE] status=UNRESOLVED_COMMENTS merge=BLOCKED triggers=fix-thrash — Same thread(s) attempted multiple times without resolution — fix manually then rerun /pr-shepherd:monitor
+```
+
+**JSON output** (`--format=json`, compact single line):
+
+```json
+{"pr":42,"repo":"owner/repo","status":"READY","state":"OPEN","mergeStateStatus":"CLEAN","copilotReviewInProgress":false,"isDraft":false,"shouldCancel":false,"remainingSeconds":540,"summary":{"passing":3,"skipped":0,"filtered":0,"inProgress":0},"action":"wait"}
+```
+
+Exit codes: `0` wait/cooldown/rerun\_ci/mark\_ready · `1` fix\_code/rebase · `2` cancel · `3` escalate
+
+### pr-shepherd status PR1 [PR2 …]
+
+Multi-PR summary table. One lightweight GraphQL query per PR, run in parallel.
+
+```sh
+pr-shepherd status 41 42 43
+pr-shepherd status 100 --format=json
+```
+
+```
+
+# owner/repo — PR status (3)
+
+PR #41    Add new feature for user authentication           READY        SUCCESS
+PR #42    Refactor internal module                          IN PROGRESS  PENDING
+PR #43    Fix edge case in parser                           BLOCKED      SUCCESS (threads truncated — run shepherd check for full count)
+```
+
+Exit code: `0` if every PR is READY, `1` otherwise.
 
 ## Configuration
 
@@ -178,7 +312,7 @@ See [docs/configuration.md](docs/configuration.md) for all options.
 
 ## Requirements
 
-- Node.js ≥ 24.0.0
+- Node.js ≥ 22.0.0
 - `gh` CLI authenticated (`gh auth login`); `repo` scope is required for private repositories (public repositories may not need it)
 - `git`
 
