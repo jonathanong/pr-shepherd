@@ -25,6 +25,7 @@ import {
   parseList,
   parseStatusPrNumbers,
   parseDurationToMinutes,
+  parseIntStrict,
   statusToExitCode,
   iterateActionToExitCode,
   deriveSimpleReady,
@@ -118,14 +119,16 @@ async function handleIterate(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
 
   const lastPushTimeStr = getFlag(extra, "--last-push-time");
-  const lastPushTime = lastPushTimeStr ? parseInt(lastPushTimeStr, 10) : undefined;
+  const lastPushTime = lastPushTimeStr
+    ? parseIntStrict(lastPushTimeStr, "--last-push-time")
+    : undefined;
   const readyDelayStr = getFlag(extra, "--ready-delay");
   const cfg = loadConfig();
   const readyDelaySeconds =
     parseDurationToMinutes(readyDelayStr ?? "", cfg.watch.readyDelayMinutes) * 60;
   const cooldownSecondsStr = getFlag(extra, "--cooldown-seconds");
   const cooldownSeconds = cooldownSecondsStr
-    ? parseInt(cooldownSecondsStr, 10)
+    ? parseIntStrict(cooldownSecondsStr, "--cooldown-seconds")
     : cfg.iterate.cooldownSeconds;
   const noAutoRerun = hasFlag(extra, "--no-auto-rerun");
   const noAutoMarkReady = hasFlag(extra, "--no-auto-mark-ready");
