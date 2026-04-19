@@ -25,20 +25,25 @@ export function toAgentComment(c: PrComment): AgentComment {
 }
 
 export function toAgentCheck(c: TriagedCheck): AgentCheck {
-  return { name: c.name, runId: c.runId, failureKind: c.failureKind };
+  return { name: c.name, runId: c.runId, detailsUrl: c.detailsUrl, failureKind: c.failureKind };
 }
 
 /**
- * Project and deduplicate checks by runId so the agent makes one
- * `gh run view` call per run rather than one per matrix step.
+ * Project and deduplicate checks so the agent makes one `gh run view` call
+ * per run (dedup by runId) and skips duplicate external status checks (dedup
+ * by name when runId is null).
  */
 export function toAgentChecks(checks: TriagedCheck[]): AgentCheck[] {
-  const seen = new Set<string>();
+  const seenRunIds = new Set<string>();
+  const seenNames = new Set<string>();
   const result: AgentCheck[] = [];
   for (const c of checks) {
     if (c.runId !== null) {
-      if (seen.has(c.runId)) continue;
-      seen.add(c.runId);
+      if (seenRunIds.has(c.runId)) continue;
+      seenRunIds.add(c.runId);
+    } else {
+      if (seenNames.has(c.name)) continue;
+      seenNames.add(c.name);
     }
     result.push(toAgentCheck(c));
   }

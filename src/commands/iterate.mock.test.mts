@@ -509,9 +509,9 @@ describe("runIterate — fix_code agent projection", () => {
       const c = result.fix.checks[0]!;
       expect(c.name).toBe("typecheck");
       expect(c.runId).toBe("run-55");
+      expect(c.detailsUrl).toBeDefined();
       expect(c.failureKind).toBe("actionable");
       expect(c).not.toHaveProperty("logExcerpt");
-      expect(c).not.toHaveProperty("detailsUrl");
       expect(c).not.toHaveProperty("conclusion");
       expect(c).not.toHaveProperty("category");
     }

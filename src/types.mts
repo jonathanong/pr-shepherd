@@ -212,12 +212,15 @@ export interface AgentComment {
 
 /**
  * Check shape emitted to the monitor agent — no log excerpt.
- * The agent fetches logs on demand via `gh run view <runId> --log-failed`.
+ * The agent fetches logs on demand via `gh run view <runId> --log-failed`
+ * when `runId` is available, and falls back to `detailsUrl` otherwise.
  */
 export interface AgentCheck {
   name: string;
   runId: string | null;
-  failureKind: FailureKind | undefined;
+  /** Fallback for checks where runId is null (e.g. external status checks). */
+  detailsUrl: string | null;
+  failureKind?: FailureKind;
 }
 
 // ---------------------------------------------------------------------------

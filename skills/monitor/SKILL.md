@@ -77,7 +77,9 @@ Parse the `action` field and act:
 
 - `fix_code` → do the following, then stop this iteration (CI needs time):
   1. For each item in `fix.threads` and `fix.comments`: read the referenced file/line and apply the fix (Edit/Write tools).
-  2. For each item in `fix.checks`: fetch the failure log with `gh run view <runId> --log-failed` (dangerouslyDisableSandbox: true), scan the output to identify the failure (e.g. grep for `FAIL` for test failures, `error:` for type/compile errors, lint rule names for lint failures), then read the relevant file and apply the fix (Edit/Write tools).
+  2. For each item in `fix.checks`:
+     - If `runId` is non-null: fetch the failure log with `gh run view <runId> --log-failed` (dangerouslyDisableSandbox: true), scan the output to identify the failure (e.g. grep for `FAIL` for test failures, `error:` for type/compile errors, lint rule names for lint failures), then read the relevant file and apply the fix (Edit/Write tools).
+     - If `runId` is null: the failed check is an external status check that cannot be inspected via run logs. Escalate — tell the user to open `detailsUrl` in the PR checks UI, inspect the failure manually, and rerun `/pr-shepherd:monitor 13` after addressing it. Do not attempt to fix these automatically.
   3. For each item in `fix.changesRequestedReviews`: read the review body and apply the requested changes.
   4. If files were changed, `git add <files> && git commit -m "<appropriate commit message>"`
   5. `git fetch origin && git rebase origin/<BASE_BRANCH> && git push --force-with-lease` (dangerouslyDisableSandbox: true)

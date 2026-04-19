@@ -61,13 +61,23 @@ describe("toAgentComment", () => {
 });
 
 describe("toAgentCheck", () => {
-  it("keeps name/runId/failureKind and drops logExcerpt/detailsUrl/conclusion/category", () => {
+  it("keeps name/runId/detailsUrl/failureKind and drops logExcerpt/conclusion/category", () => {
     const result = toAgentCheck(makeCheck("run-1"));
-    expect(result).toEqual({ name: "typecheck", runId: "run-1", failureKind: "actionable" });
+    expect(result).toEqual({
+      name: "typecheck",
+      runId: "run-1",
+      detailsUrl: "https://github.com/owner/repo/actions/runs/run-1",
+      failureKind: "actionable",
+    });
     expect(result).not.toHaveProperty("logExcerpt");
-    expect(result).not.toHaveProperty("detailsUrl");
     expect(result).not.toHaveProperty("conclusion");
     expect(result).not.toHaveProperty("category");
+  });
+
+  it("includes detailsUrl when runId is null", () => {
+    const result = toAgentCheck(makeCheck(null, "external-check"));
+    expect(result.runId).toBeNull();
+    expect(result.detailsUrl).toBe("https://github.com/owner/repo/actions/runs/null");
   });
 });
 
@@ -84,7 +94,13 @@ describe("toAgentChecks", () => {
     expect(result).toHaveLength(2);
   });
 
-  it("keeps checks with null runId without deduplication", () => {
+  it("deduplicates null-runId checks by name", () => {
+    const result = toAgentChecks([makeCheck(null, "ext-check"), makeCheck(null, "ext-check")]);
+    expect(result).toHaveLength(1);
+    expect(result[0]?.name).toBe("ext-check");
+  });
+
+  it("keeps distinct null-runId checks with different names", () => {
     const result = toAgentChecks([
       makeCheck(null, "status-check-1"),
       makeCheck(null, "status-check-2"),
