@@ -47,7 +47,8 @@ export async function cacheGet<T>(key: CacheKey, opts: CacheOptions = {}): Promi
 }
 
 /**
- * Write a value to the cache (fire-and-forget — never throws).
+ * Write a value to the cache. Errors are swallowed — callers can await
+ * to know when the write is done, but the write never rejects.
  */
 export async function cacheSet<T>(key: CacheKey, value: T, opts: CacheOptions = {}): Promise<void> {
   if (opts.disabled) return;
