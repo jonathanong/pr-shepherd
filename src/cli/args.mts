@@ -46,7 +46,7 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
     },
   });
 
-  const format = ((values.format ?? "text") as string) as "text" | "json";
+  const format = (values.format ?? "text") as string as "text" | "json";
   const noCache = (values["no-cache"] ?? false) as boolean;
   const cacheTtlStr = values["cache-ttl"] as string | undefined;
   const cacheTtlSeconds = cacheTtlStr ? parseInt(cacheTtlStr, 10) : config.cache.ttlSeconds;
