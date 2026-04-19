@@ -1,0 +1,18 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "jonathanong",
+  "description": "Jonathan Ong's Claude Code plugins",
+  "owner": {
+    "name": "Jonathan Ong",
+    "email": "jonathanrichardong@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "pr-shepherd",
+      "description": "Autonomous PR CI monitor and review-comment resolver",
+      "source": ".",
+      "category": "productivity",
+      "homepage": "https://github.com/jonathanong/pr-shepherd"
+    }
+  ]
+}
