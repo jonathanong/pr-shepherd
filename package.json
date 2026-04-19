@@ -1,6 +1,6 @@
 {
   "name": "pr-shepherd",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Autonomous PR CI monitor and review-comment resolver for Claude Code",
   "license": "MIT",
   "author": "Jonathan Ong",
