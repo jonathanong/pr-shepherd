@@ -12,15 +12,15 @@ Each check run is assigned a `CheckCategory`:
 
 | `CheckCategory` | Condition                                                                                                        |
 | --------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `passed`        | `status === 'COMPLETED'` and `conclusion` in `{SUCCESS, NEUTRAL, SKIPPED}`                                       |
+| `passed`        | `status === 'COMPLETED'` and `conclusion === 'SUCCESS'`                                                          |
 | `failing`       | `status === 'COMPLETED'` and `conclusion` in `{FAILURE, TIMED_OUT, CANCELLED, STARTUP_FAILURE, ACTION_REQUIRED}` |
 | `in_progress`   | `status` in `{IN_PROGRESS, QUEUED, WAITING, PENDING, REQUESTED}`                                                 |
-| `skipped`       | `conclusion === 'SKIPPED'` (also in `passed` set for verdicts)                                                   |
+| `skipped`       | `conclusion` in `{SKIPPED, NEUTRAL}` — reported but do not block readiness                                       |
 | `filtered`      | Triggered by a non-PR event (see event filter below)                                                             |
 
 ### Event filter
 
-Only checks triggered by `pull_request` or `pull_request_target` events count toward the CI verdict. Checks triggered by `push`, `schedule`, `merge_group`, `workflow_dispatch`, or any other event are classified as `filtered`.
+Only checks triggered by events in `checks.ciTriggerEvents` (default: `pull_request`, `pull_request_target`) count toward the CI verdict. Checks triggered by `push`, `schedule`, `merge_group`, `workflow_dispatch`, or any other event are classified as `filtered`.
 
 Filtered checks appear in `report.checks.filtered` and `report.checks.filteredNames` but do not block the READY verdict. The `blockedByFilteredCheck` flag is set when the merge state is BLOCKED and the only failing checks are filtered ones — this surfaces as a hint in the reporter output.
 
@@ -41,12 +41,12 @@ Returns:
 
 Failing checks are further classified by `FailureKind`:
 
-| `FailureKind`    | Condition                                                                                              |
-| ---------------- | ------------------------------------------------------------------------------------------------------ |
-| `timeout`        | `conclusion === 'TIMED_OUT'`                                                                           |
-| `infrastructure` | `conclusion === 'STARTUP_FAILURE'` OR log excerpt matches infra patterns (runner not found, OOM, etc.) |
-| `flaky`          | Log excerpt matches known-flaky patterns (test retry noise, network blips)                             |
-| `actionable`     | Everything else — code failures, type errors, lint, test logic errors                                  |
+| `FailureKind`    | Condition                                                                                         |
+| ---------------- | ------------------------------------------------------------------------------------------------- |
+| `timeout`        | `conclusion === 'TIMED_OUT'`                                                                      |
+| `infrastructure` | `conclusion === 'CANCELLED'` AND log excerpt matches infra patterns (runner not found, OOM, etc.) |
+| `flaky`          | Log excerpt matches known-flaky patterns (test retry noise, network blips)                        |
+| `actionable`     | Everything else — code failures, type errors, lint, test logic errors                             |
 
 Triage fetches the first N lines of the failure log for each failing check. The log excerpt is stored in `check.logExcerpt` and surfaced in the `fix_code` payload so the main agent can read it without making additional API calls.
 

@@ -18,8 +18,8 @@ Four recipes for common extension patterns.
 
    ```ts
    export interface IterateResultMyAction extends IterateResultBase {
-     action: 'my_action'
-     myField: string
+     action: "my_action";
+     myField: string;
    }
    ```
 
@@ -48,7 +48,7 @@ Four recipes for common extension patterns.
 2. **Add the classification branch** — in `checks/classify.mts`, add a branch in the `classifyCheck` function:
 
    ```ts
-   if (someCondition(check)) return { ...check, category: 'my_category' }
+   if (someCondition(check)) return { ...check, category: "my_category" };
    ```
 
 3. **Update `getCiVerdict`** — decide whether the new category counts as failing, in-progress, or neither.
@@ -64,7 +64,7 @@ Four recipes for common extension patterns.
 2. **Add the loader** — in `github/queries.mts`, load and export the new mutation:
 
    ```ts
-   export const myMutation = loadGql('my-mutation.gql')
+   export const myMutation = gql("my-mutation.gql");
    ```
 
 3. **Add the function** — in `comments/resolve.mts`, add a new exported function that calls the mutation via `graphqlWithRateLimit`.
@@ -82,11 +82,11 @@ All tunable constants live in `src/config.json`. Edit there — do not hardcode 
 ```json
 {
   "cache": { "ttlSeconds": 300 },
-  "iterate": { "cooldownSeconds": 30 },
-  "watch": { "intervalMinutesDefault": 4, "readyDelayMinutesDefault": 10 },
-  "checks": { "logExcerptLines": 50 },
-  "resolve": { "maxAttempts": 10, "pollIntervalMs": 3000 }
+  "iterate": { "cooldownSeconds": 30, "fixAttemptsPerThread": 3 },
+  "watch": { "interval": "4m", "readyDelayMinutes": 10 },
+  "checks": { "logMaxLines": 50, "logMaxChars": 3000 },
+  "resolve": { "shaPoll": { "maxAttempts": 10, "intervalMs": 2000 } }
 }
 ```
 
-The `config.json` is imported using `with { type: 'json' }` in the files that need it.
+Modules that need config should call `loadConfig()` from `src/config/load.mts` rather than importing `config.json` directly. This ensures `.pr-shepherdrc.yml` overrides are honoured.

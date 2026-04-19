@@ -11,15 +11,15 @@
  */
 
 export interface PageInfo {
-  hasNextPage?: boolean
-  hasPreviousPage?: boolean
-  endCursor?: string | null
-  startCursor?: string | null
+  hasNextPage?: boolean;
+  hasPreviousPage?: boolean;
+  endCursor?: string | null;
+  startCursor?: string | null;
 }
 
 export interface Connection<T> {
-  pageInfo: PageInfo
-  nodes: T[]
+  pageInfo: PageInfo;
+  nodes: T[];
 }
 
 /**
@@ -35,20 +35,20 @@ export async function paginateForward<T>(
   fetchFn: (cursor: string | null) => Promise<Connection<T>>,
   initialCursor?: string | null,
 ): Promise<T[]> {
-  const all: T[] = []
-  let cursor: string | null = initialCursor ?? null
+  const all: T[] = [];
+  let cursor: string | null = initialCursor ?? null;
 
   for (;;) {
     // eslint-disable-next-line no-await-in-loop
-    const conn = await fetchFn(cursor)
+    const conn = await fetchFn(cursor);
 
-    all.push(...conn.nodes)
+    all.push(...conn.nodes);
 
-    if (!conn.pageInfo.hasNextPage || !conn.pageInfo.endCursor) break
-    cursor = conn.pageInfo.endCursor
+    if (!conn.pageInfo.hasNextPage || !conn.pageInfo.endCursor) break;
+    cursor = conn.pageInfo.endCursor;
   }
 
-  return all
+  return all;
 }
 
 /**
@@ -67,20 +67,20 @@ export async function paginateBackward<T>(
   fetchFn: (cursor: string | null) => Promise<Connection<T>>,
   initialCursor?: string | null,
 ): Promise<T[]> {
-  const all: T[] = []
-  let cursor: string | null = initialCursor ?? null
+  const all: T[] = [];
+  let cursor: string | null = initialCursor ?? null;
 
   for (;;) {
     // eslint-disable-next-line no-await-in-loop
-    const conn = await fetchFn(cursor)
+    const conn = await fetchFn(cursor);
 
     // Backward pagination returns items oldest-first within each page but pages
     // go from newest-to-oldest. Prepend each page so final array is oldest-first.
-    all.unshift(...conn.nodes)
+    all.unshift(...conn.nodes);
 
-    if (!conn.pageInfo.hasPreviousPage || !conn.pageInfo.startCursor) break
-    cursor = conn.pageInfo.startCursor
+    if (!conn.pageInfo.hasPreviousPage || !conn.pageInfo.startCursor) break;
+    cursor = conn.pageInfo.startCursor;
   }
 
-  return all
+  return all;
 }

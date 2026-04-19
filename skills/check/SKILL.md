@@ -1,9 +1,9 @@
 ---
 name: check
-description: 'Check GitHub CI status and review comments for the current PR'
-argument-hint: '[PR number or URL ...]'
+description: "Check GitHub CI status and review comments for the current PR"
+argument-hint: "[PR number or URL ...]"
 user-invocable: true
-allowed-tools: ['Bash', 'Read', 'Grep']
+allowed-tools: ["Bash", "Read", "Grep"]
 ---
 
 # pr-shepherd check — PR Status

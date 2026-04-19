@@ -10,9 +10,9 @@
  * are visually collapsed on GitHub and are safe to resolve programmatically.
  */
 
-import type { ReviewThread } from '../types.mts'
+import type { ReviewThread } from "../types.mts";
 
 /** Returns the subset of threads that should be auto-resolved as outdated. */
 export function getOutdatedThreads(threads: ReviewThread[]): ReviewThread[] {
-  return threads.filter(t => t.isOutdated && !t.isResolved)
+  return threads.filter((t) => t.isOutdated && !t.isResolved);
 }

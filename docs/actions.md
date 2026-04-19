@@ -39,7 +39,7 @@ Each iteration of `shepherd iterate` returns exactly one action. The cron prompt
 
 **Side-effects:** None. The file `ready-since.txt` is left in place (prevents countdown restart if loop somehow continues).
 
-**Next step:** Cron invokes `/loop cancel` which stops the cron loop. See `.claude/commands/shepherd.md`.
+**Next step:** The monitor skill invokes `/loop cancel` which stops the cron loop. See `skills/monitor/SKILL.md`.
 
 ---
 

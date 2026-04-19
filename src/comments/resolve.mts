@@ -12,30 +12,29 @@
  *   (which could allow auto-merge before reviewers see the fix).
  */
 
-import { graphql, getPrHeadSha, type RepoInfo } from '../github/client.mts'
+import { graphql, getPrHeadSha, type RepoInfo } from "../github/client.mts";
 import {
   RESOLVE_THREAD_MUTATION,
   MINIMIZE_COMMENT_MUTATION,
   DISMISS_REVIEW_MUTATION,
-} from '../github/queries.mts'
-import type { ResolveOptions } from '../types.mts'
-import config from '../config.json' with { type: 'json' }
+} from "../github/queries.mts";
+import type { ResolveOptions } from "../types.mts";
+import { loadConfig } from "../config/load.mts";
 
-const {
-  concurrency: CONCURRENCY,
-  shaPollIntervalMs: SHA_POLL_INTERVAL_MS,
-  shaPollMaxAttempts: SHA_POLL_MAX_ATTEMPTS,
-} = config.resolve
+const config = loadConfig();
+const CONCURRENCY = config.resolve.concurrency;
+const SHA_POLL_INTERVAL_MS = config.resolve.shaPoll.intervalMs;
+const SHA_POLL_MAX_ATTEMPTS = config.resolve.shaPoll.maxAttempts;
 
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
 export interface ResolveResult {
-  resolvedThreads: string[]
-  minimizedComments: string[]
-  dismissedReviews: string[]
-  errors: string[]
+  resolvedThreads: string[];
+  minimizedComments: string[];
+  dismissedReviews: string[];
+  errors: string[];
 }
 
 /**
@@ -51,12 +50,12 @@ export async function applyResolveOptions(
 ): Promise<ResolveResult> {
   // Require --message when dismissing reviews.
   if ((opts.dismissReviewIds?.length ?? 0) > 0 && !opts.dismissMessage) {
-    throw new Error('--message is required when dismissing reviews')
+    throw new Error("--message is required when dismissing reviews");
   }
 
   // Safety check: verify the push landed before resolving.
   if (opts.requireSha) {
-    await waitForSha(pr, repo, opts.requireSha)
+    await waitForSha(pr, repo, opts.requireSha);
   }
 
   const result: ResolveResult = {
@@ -64,28 +63,28 @@ export async function applyResolveOptions(
     minimizedComments: [],
     dismissedReviews: [],
     errors: [],
-  }
+  };
 
   await runBatched(
     opts.resolveThreadIds ?? [],
-    id => resolveThread(id),
+    (id) => resolveThread(id),
     result.resolvedThreads,
     result.errors,
-  )
+  );
   await runBatched(
     opts.minimizeCommentIds ?? [],
-    id => minimizeComment(id, 'RESOLVED'),
+    (id) => minimizeComment(id, "RESOLVED"),
     result.minimizedComments,
     result.errors,
-  )
+  );
   await runBatched(
     opts.dismissReviewIds ?? [],
-    id => dismissReview(id, opts.dismissMessage!),
+    (id) => dismissReview(id, opts.dismissMessage!),
     result.dismissedReviews,
     result.errors,
-  )
+  );
 
-  return result
+  return result;
 }
 
 /**
@@ -94,10 +93,10 @@ export async function applyResolveOptions(
 export async function autoResolveOutdated(
   threadIds: string[],
 ): Promise<{ resolved: string[]; errors: string[] }> {
-  const resolved: string[] = []
-  const errors: string[] = []
-  await runBatched(threadIds, id => resolveThread(id), resolved, errors)
-  return { resolved, errors }
+  const resolved: string[] = [];
+  const errors: string[] = [];
+  await runBatched(threadIds, (id) => resolveThread(id), resolved, errors);
+  return { resolved, errors };
 }
 
 // ---------------------------------------------------------------------------
@@ -105,18 +104,18 @@ export async function autoResolveOutdated(
 // ---------------------------------------------------------------------------
 
 async function resolveThread(threadId: string): Promise<void> {
-  await graphql(RESOLVE_THREAD_MUTATION, { threadId })
+  await graphql(RESOLVE_THREAD_MUTATION, { threadId });
 }
 
 async function minimizeComment(
   commentId: string,
-  classifier: 'RESOLVED' | 'OFF_TOPIC',
+  classifier: "RESOLVED" | "OFF_TOPIC",
 ): Promise<void> {
-  await graphql(MINIMIZE_COMMENT_MUTATION, { commentId, classifier })
+  await graphql(MINIMIZE_COMMENT_MUTATION, { commentId, classifier });
 }
 
 async function dismissReview(reviewId: string, message: string): Promise<void> {
-  await graphql(DISMISS_REVIEW_MUTATION, { reviewId, message })
+  await graphql(DISMISS_REVIEW_MUTATION, { reviewId, message });
 }
 
 // ---------------------------------------------------------------------------
@@ -131,18 +130,18 @@ async function runBatched(
 ): Promise<void> {
   // Process in chunks of CONCURRENCY.
   for (let i = 0; i < ids.length; i += CONCURRENCY) {
-    const chunk = ids.slice(i, i + CONCURRENCY)
+    const chunk = ids.slice(i, i + CONCURRENCY);
     // eslint-disable-next-line no-await-in-loop
     await Promise.all(
-      chunk.map(async id => {
+      chunk.map(async (id) => {
         try {
-          await fn(id)
-          successList.push(id)
+          await fn(id);
+          successList.push(id);
         } catch (err) {
-          errorList.push(`${id}: ${err instanceof Error ? err.message : String(err)}`)
+          errorList.push(`${id}: ${err instanceof Error ? err.message : String(err)}`);
         }
       }),
-    )
+    );
   }
 }
 
@@ -154,16 +153,16 @@ async function waitForSha(pr: number, repo: RepoInfo, expectedSha: string): Prom
   for (let attempt = 0; attempt < SHA_POLL_MAX_ATTEMPTS; attempt++) {
     try {
       // eslint-disable-next-line no-await-in-loop
-      const currentSha = await getPrHeadSha(pr, repo.owner, repo.name)
-      if (currentSha === expectedSha) return
+      const currentSha = await getPrHeadSha(pr, repo.owner, repo.name);
+      if (currentSha === expectedSha) return;
     } catch (err) {
       // Transient network / 5xx error — keep polling unless this is the last attempt.
-      if (attempt === SHA_POLL_MAX_ATTEMPTS - 1) throw err
+      if (attempt === SHA_POLL_MAX_ATTEMPTS - 1) throw err;
     }
 
     if (attempt < SHA_POLL_MAX_ATTEMPTS - 1) {
       // eslint-disable-next-line no-await-in-loop
-      await sleep(SHA_POLL_INTERVAL_MS)
+      await sleep(SHA_POLL_INTERVAL_MS);
     }
   }
 
@@ -172,9 +171,9 @@ async function waitForSha(pr: number, repo: RepoInfo, expectedSha: string): Prom
     `Timeout: GitHub PR #${pr} head SHA has not updated to ${expectedSha} after ${
       ((SHA_POLL_MAX_ATTEMPTS - 1) * SHA_POLL_INTERVAL_MS) / 1000
     }s. Push may still be in transit — retry shortly.`,
-  )
+  );
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

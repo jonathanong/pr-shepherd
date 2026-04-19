@@ -9,11 +9,11 @@ The `/pr-shepherd:monitor <PR>` slash command starts a cron loop that polls PR s
 ## Lifecycle
 
 1. **User runs `/pr-shepherd:monitor <PR>`**
-   - The `/shepherd` slash command calls `CronCreate` to schedule a cron job that fires every 4 minutes.
+   - The `/pr-shepherd:monitor` skill invokes the `/loop` skill to schedule a cron job that fires every 4 minutes.
    - Each cron tick runs `shepherd iterate` inline and acts on the JSON result.
 
-2. **`CronCreate` schedules cron ticks**
-   - `CronCreate` schedules a tick every 4 minutes (configurable via `every <interval>`).
+2. **`/loop` schedules cron ticks**
+   - `/loop` schedules a tick every 4 minutes (configurable via `watch.interval`).
    - The loop runs until the `cancel` action fires or the user cancels manually.
 
 3. **Each tick runs `shepherd iterate`**
@@ -21,7 +21,7 @@ The `/pr-shepherd:monitor <PR>` slash command starts a cron loop that polls PR s
      ```bash
      pr-shepherd iterate <PR> --ready-delay <READY_DELAY> --last-push-time "$(git log -1 --format=%ct HEAD)" --format=json
      ```
-   - Exit codes 0, 1, and 2 are all valid (not errors).
+   - Exit codes 0, 1, 2, and 3 are all valid (not errors).
 
 4. **Cron prompt parses JSON and acts**
    - Reads the `action` field from stdout.

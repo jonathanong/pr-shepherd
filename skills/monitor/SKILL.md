@@ -1,10 +1,10 @@
 ---
 name: monitor
-description: 'Start continuous CI monitoring — marks PR ready for review when all checks pass'
-argument-hint: '[PR number or URL] [every <interval>] [--ready-delay <duration>]'
+description: "Start continuous CI monitoring — marks PR ready for review when all checks pass"
+argument-hint: "[PR number or URL] [every <interval>] [--ready-delay <duration>]"
 user-invocable: true
 allowed-tools:
-  ['Bash', 'Read', 'Grep', 'Edit', 'Write', 'Glob', 'Skill', 'CronCreate', 'CronList', 'CronDelete']
+  ["Bash", "Read", "Grep", "Edit", "Write", "Glob", "Skill", "CronCreate", "CronList", "CronDelete"]
 ---
 
 # pr-shepherd monitor — Continuous PR Monitor

@@ -5,8 +5,8 @@
  * without string-scraping the human-readable text reporter.
  */
 
-import type { ShepherdReport } from '../types.mts'
+import type { ShepherdReport } from "../types.mts";
 
 export function formatJson(report: ShepherdReport): string {
-  return JSON.stringify(report, null, 2)
+  return JSON.stringify(report, null, 2);
 }

@@ -39,7 +39,7 @@ If the timestamp in `ready-since.txt` is in the future (e.g., due to a system cl
 
 ## Configuration
 
-| Parameter            | Default                  | How to change                         |
-| -------------------- | ------------------------ | ------------------------------------- |
-| `readyDelaySeconds`  | 600 (10 minutes)         | `--ready-delay 10m` flag on `iterate` |
-| Base cache directory | `$TMPDIR/pr-shepherd-cache` | `PR_SHEPHERD_CACHE_DIR` env var          |
+| Parameter            | Default                     | How to change                         |
+| -------------------- | --------------------------- | ------------------------------------- |
+| `readyDelaySeconds`  | 600 (10 minutes)            | `--ready-delay 10m` flag on `iterate` |
+| Base cache directory | `$TMPDIR/pr-shepherd-cache` | `PR_SHEPHERD_CACHE_DIR` env var       |

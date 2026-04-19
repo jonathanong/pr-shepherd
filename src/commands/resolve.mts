@@ -14,60 +14,60 @@
  *     has landed on GitHub before mutating (--require-sha).
  */
 
-import { getRepoInfo, getCurrentPrNumber } from '../github/client.mts'
-import { fetchPrBatch } from '../github/batch.mts'
-import { getOutdatedThreads } from '../comments/outdated.mts'
-import { autoResolveOutdated, applyResolveOptions } from '../comments/resolve.mts'
-import type { GlobalOptions, ResolveOptions, ReviewThread, PrComment, Review } from '../types.mts'
+import { getRepoInfo, getCurrentPrNumber } from "../github/client.mts";
+import { fetchPrBatch } from "../github/batch.mts";
+import { getOutdatedThreads } from "../comments/outdated.mts";
+import { autoResolveOutdated, applyResolveOptions } from "../comments/resolve.mts";
+import type { GlobalOptions, ResolveOptions, ReviewThread, PrComment, Review } from "../types.mts";
 
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
 export interface FetchResult {
-  autoResolved: ReviewThread[]
-  actionableThreads: ReviewThread[]
-  actionableComments: PrComment[]
-  changesRequestedReviews: Review[]
+  autoResolved: ReviewThread[];
+  actionableThreads: ReviewThread[];
+  actionableComments: PrComment[];
+  changesRequestedReviews: Review[];
 }
 
 export interface ResolveCommandOptions extends GlobalOptions {
   /** When true, run in fetch mode regardless of other flags. */
-  fetch?: boolean
+  fetch?: boolean;
 }
 
 /**
  * Fetch mode: auto-resolve outdated threads and return all active items for LLM triage.
  */
 export async function runResolveFetch(opts: ResolveCommandOptions): Promise<FetchResult> {
-  const repo = await getRepoInfo()
-  const prNumber = opts.prNumber ?? (await getCurrentPrNumber())
+  const repo = await getRepoInfo();
+  const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
   if (prNumber === null) {
-    throw new Error('No open PR found for current branch. Pass a PR number explicitly.')
+    throw new Error("No open PR found for current branch. Pass a PR number explicitly.");
   }
 
   // Always bypass cache for resolve — we need fresh data before mutating.
-  const { data } = await fetchPrBatch(prNumber, repo)
+  const { data } = await fetchPrBatch(prNumber, repo);
 
-  const unresolvedThreads = data.reviewThreads.filter(t => !t.isResolved)
-  const visibleComments = data.comments.filter(c => !c.isMinimized)
+  const unresolvedThreads = data.reviewThreads.filter((t) => !t.isResolved);
+  const visibleComments = data.comments.filter((c) => !c.isMinimized);
 
   // Auto-resolve outdated.
-  const outdated = getOutdatedThreads(unresolvedThreads)
-  let autoResolved: ReviewThread[] = []
+  const outdated = getOutdatedThreads(unresolvedThreads);
+  let autoResolved: ReviewThread[] = [];
   if (outdated.length > 0) {
-    const { resolved: resolvedIds } = await autoResolveOutdated(outdated.map(t => t.id))
-    autoResolved = outdated.filter(t => resolvedIds.includes(t.id))
+    const { resolved: resolvedIds } = await autoResolveOutdated(outdated.map((t) => t.id));
+    autoResolved = outdated.filter((t) => resolvedIds.includes(t.id));
   }
 
-  const activeThreads = unresolvedThreads.filter(t => !t.isOutdated)
+  const activeThreads = unresolvedThreads.filter((t) => !t.isOutdated);
 
   return {
     autoResolved,
     actionableThreads: activeThreads,
     actionableComments: visibleComments,
     changesRequestedReviews: data.changesRequestedReviews,
-  }
+  };
 }
 
 /**
@@ -75,11 +75,11 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
  */
 export async function runResolveMutate(
   opts: ResolveCommandOptions & ResolveOptions,
-): Promise<import('../comments/resolve.mts').ResolveResult> {
-  const repo = await getRepoInfo()
-  const prNumber = opts.prNumber ?? (await getCurrentPrNumber())
+): Promise<import("../comments/resolve.mts").ResolveResult> {
+  const repo = await getRepoInfo();
+  const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
   if (prNumber === null) {
-    throw new Error('No open PR found for current branch. Pass a PR number explicitly.')
+    throw new Error("No open PR found for current branch. Pass a PR number explicitly.");
   }
 
   return applyResolveOptions(prNumber, repo, {
@@ -88,5 +88,5 @@ export async function runResolveMutate(
     dismissReviewIds: opts.dismissReviewIds,
     dismissMessage: opts.dismissMessage,
     requireSha: opts.requireSha,
-  })
+  });
 }

@@ -16,32 +16,33 @@
  *   9. mergeStateStatus CLEAN         → CLEAN
  */
 
-import type { BatchPrData, MergeStatusResult } from '../types.mts'
+import type { BatchPrData, MergeStatusResult } from "../types.mts";
+import { loadConfig } from "../config/load.mts";
 
 export function deriveMergeStatus(pr: BatchPrData): MergeStatusResult {
-  const copilotReviewInProgress = detectCopilotReview(pr)
+  const copilotReviewInProgress = detectCopilotReview(pr);
 
-  let status: MergeStatusResult['status']
+  let status: MergeStatusResult["status"];
 
-  if (pr.mergeable === 'CONFLICTING') {
-    status = 'CONFLICTS'
+  if (pr.mergeable === "CONFLICTING") {
+    status = "CONFLICTS";
   } else if (copilotReviewInProgress) {
-    status = 'BLOCKED'
-  } else if (pr.mergeStateStatus === 'DIRTY') {
+    status = "BLOCKED";
+  } else if (pr.mergeStateStatus === "DIRTY") {
     // DIRTY means GitHub detected merge conflicts in the branch.
-    status = 'CONFLICTS'
-  } else if (pr.mergeStateStatus === 'BEHIND') {
-    status = 'BEHIND'
-  } else if (pr.mergeStateStatus === 'BLOCKED' || pr.mergeStateStatus === 'HAS_HOOKS') {
-    status = 'BLOCKED'
-  } else if (pr.mergeStateStatus === 'UNSTABLE') {
-    status = 'UNSTABLE'
-  } else if (pr.isDraft || pr.mergeStateStatus === 'DRAFT') {
-    status = 'DRAFT'
-  } else if (pr.mergeStateStatus === 'UNKNOWN') {
-    status = 'UNKNOWN'
+    status = "CONFLICTS";
+  } else if (pr.mergeStateStatus === "BEHIND") {
+    status = "BEHIND";
+  } else if (pr.mergeStateStatus === "BLOCKED" || pr.mergeStateStatus === "HAS_HOOKS") {
+    status = "BLOCKED";
+  } else if (pr.mergeStateStatus === "UNSTABLE") {
+    status = "UNSTABLE";
+  } else if (pr.isDraft || pr.mergeStateStatus === "DRAFT") {
+    status = "DRAFT";
+  } else if (pr.mergeStateStatus === "UNKNOWN") {
+    status = "UNKNOWN";
   } else {
-    status = 'CLEAN'
+    status = "CLEAN";
   }
 
   return {
@@ -52,7 +53,7 @@ export function deriveMergeStatus(pr: BatchPrData): MergeStatusResult {
     reviewDecision: pr.reviewDecision,
     copilotReviewInProgress,
     mergeStateStatus: pr.mergeStateStatus,
-  }
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -60,14 +61,14 @@ export function deriveMergeStatus(pr: BatchPrData): MergeStatusResult {
 // ---------------------------------------------------------------------------
 
 function detectCopilotReview(pr: BatchPrData): boolean {
-  // A Copilot review is "in progress" when:
-  //   1. Any reviewRequest has a login starting with "copilot", OR
-  //   2. Any latestReview has login starting with "copilot" AND state == "PENDING"
-  const requestedCopilot = pr.reviewRequests.some(r => r.login.toLowerCase().startsWith('copilot'))
+  // A blocking bot review is "in progress" when:
+  //   1. Any reviewRequest has a login starting with one of the configured prefixes, OR
+  //   2. Any latestReview has such a login AND state == "PENDING"
+  const prefixes = loadConfig().mergeStatus.blockingReviewerLogins.map((l) => l.toLowerCase());
+  const isBlocking = (login: string) => prefixes.some((p) => login.toLowerCase().startsWith(p));
 
-  const pendingCopilotReview = pr.latestReviews.some(
-    r => r.login.toLowerCase().startsWith('copilot') && r.state === 'PENDING',
-  )
+  const requested = pr.reviewRequests.some((r) => isBlocking(r.login));
+  const pendingReview = pr.latestReviews.some((r) => isBlocking(r.login) && r.state === "PENDING");
 
-  return requestedCopilot || pendingCopilotReview
+  return requested || pendingReview;
 }

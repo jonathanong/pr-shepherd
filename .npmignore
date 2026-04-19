@@ -1,9 +1,0 @@
-.github/
-docs/
-vitest.config.ts
-tsconfig.json
-.gitignore
-.npmignore
-.oxlintrc.json
-src/**/*.test.mts
-src/**/*.mock.test.mts

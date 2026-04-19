@@ -47,7 +47,7 @@ The generic paginator is in `github/pagination.mts`. It accepts a `direction` pa
 
 ## Rate limiting
 
-`graphqlWithRateLimit` (in `github/client.mts`) parses the `x-ratelimit-remaining` header from GitHub's response. When the remaining quota drops below a threshold, shepherd logs a warning.
+`graphqlWithRateLimit` (in `github/client.mts`) parses the `x-ratelimit-remaining` header from GitHub's response and returns it in `BatchResult.rateLimit`. The value is available for callers to inspect; shepherd does not log warnings at any threshold by default.
 
 The 5-minute cache means a typical idle watch loop costs **zero API calls** per tick when nothing has changed.
 

@@ -9,10 +9,10 @@
  *      pass/fail tally. Report them as "skipped" for transparency but don't block on them.
  */
 
-import type { CheckRun, ClassifiedCheck } from '../types.mts'
-import config from '../config.json' with { type: 'json' }
+import type { CheckRun, ClassifiedCheck } from "../types.mts";
+import { loadConfig } from "../config/load.mts";
 
-const RELEVANT_EVENTS = new Set(config.checks.relevantEvents)
+const RELEVANT_EVENTS = new Set(loadConfig().checks.ciTriggerEvents);
 
 /**
  * Classify a list of raw check runs into shepherd categories.
@@ -21,34 +21,34 @@ const RELEVANT_EVENTS = new Set(config.checks.relevantEvents)
  * @returns Classified checks. "filtered" items were excluded from the tally.
  */
 export function classifyChecks(checks: CheckRun[]): ClassifiedCheck[] {
-  return checks.map(c => classify(c))
+  return checks.map((c) => classify(c));
 }
 
 function classify(check: CheckRun): ClassifiedCheck {
   // Filter: runs from non-PR events don't count toward PR readiness.
   if (check.event !== null && !RELEVANT_EVENTS.has(check.event)) {
-    return { ...check, category: 'filtered' }
+    return { ...check, category: "filtered" };
   }
 
-  const { status, conclusion } = check
+  const { status, conclusion } = check;
 
   // Not yet finished.
-  if (status !== 'COMPLETED') {
-    return { ...check, category: 'in_progress' }
+  if (status !== "COMPLETED") {
+    return { ...check, category: "in_progress" };
   }
 
   // Skipped / neutral — report but don't block.
-  if (conclusion === 'SKIPPED' || conclusion === 'NEUTRAL') {
-    return { ...check, category: 'skipped' }
+  if (conclusion === "SKIPPED" || conclusion === "NEUTRAL") {
+    return { ...check, category: "skipped" };
   }
 
   // Success.
-  if (conclusion === 'SUCCESS') {
-    return { ...check, category: 'passed' }
+  if (conclusion === "SUCCESS") {
+    return { ...check, category: "passed" };
   }
 
   // Everything else (FAILURE, TIMED_OUT, CANCELLED, ACTION_REQUIRED, STARTUP_FAILURE, STALE).
-  return { ...check, category: 'failing' }
+  return { ...check, category: "failing" };
 }
 
 // ---------------------------------------------------------------------------
@@ -57,24 +57,24 @@ function classify(check: CheckRun): ClassifiedCheck {
 
 export interface CiVerdict {
   /** True when all relevant (non-filtered, non-skipped) checks passed. */
-  allPassed: boolean
+  allPassed: boolean;
   /** True when at least one check is still running/queued. */
-  anyInProgress: boolean
+  anyInProgress: boolean;
   /** True when at least one check failed. */
-  anyFailing: boolean
+  anyFailing: boolean;
   /** Names of checks that were filtered out (triggered by non-PR events). */
-  filteredNames: string[]
+  filteredNames: string[];
 }
 
 /** Compute a high-level CI verdict from a list of classified checks. */
 export function getCiVerdict(classified: ClassifiedCheck[]): CiVerdict {
-  const relevant = classified.filter(c => c.category !== 'filtered' && c.category !== 'skipped')
-  const anyInProgress = relevant.some(c => c.category === 'in_progress')
-  const anyFailing = relevant.some(c => c.category === 'failing')
+  const relevant = classified.filter((c) => c.category !== "filtered" && c.category !== "skipped");
+  const anyInProgress = relevant.some((c) => c.category === "in_progress");
+  const anyFailing = relevant.some((c) => c.category === "failing");
   // When there are no relevant checks (e.g. docs-only PR where all checks are filtered/skipped),
   // treat as allPassed rather than blocking — there's nothing to fail.
-  const allPassed = !anyInProgress && !anyFailing
-  const filteredNames = classified.filter(c => c.category === 'filtered').map(c => c.name)
+  const allPassed = !anyInProgress && !anyFailing;
+  const filteredNames = classified.filter((c) => c.category === "filtered").map((c) => c.name);
 
-  return { allPassed, anyInProgress, anyFailing, filteredNames }
+  return { allPassed, anyInProgress, anyFailing, filteredNames };
 }

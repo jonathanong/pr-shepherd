@@ -1,8 +1,9 @@
 {
   "name": "pr-shepherd",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Autonomous PR CI monitor and review-comment resolver for Claude Code",
   "license": "MIT",
+  "author": "Jonathan Ong",
   "type": "module",
   "bin": {
     "pr-shepherd": "./src/index.mts"
@@ -31,6 +32,7 @@
     "vitest": "^4.1.4"
   },
   "scripts": {
+    "prepublishOnly": "npm run typecheck && npm test",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint src/ skills/",
     "format": "oxfmt src/ skills/ docs/ README.md",
@@ -49,7 +51,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/jonathanong/pr-shepherd"
+    "url": "git+https://github.com/jonathanong/pr-shepherd.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jonathanong/pr-shepherd/issues"
   },
   "homepage": "https://github.com/jonathanong/pr-shepherd"
 }

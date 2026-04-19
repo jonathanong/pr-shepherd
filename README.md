@@ -40,6 +40,7 @@ claude /plugin install pr-shepherd
 ```
 
 Then use:
+
 - `/pr-shepherd:monitor [PR]` — start continuous monitoring
 - `/pr-shepherd:check [PR]` — one-shot status check
 - `/pr-shepherd:resolve [PR]` — fetch, fix, and resolve review comments
@@ -87,7 +88,7 @@ flowchart TD
 
   DEC -->|cancel| STOP["/loop cancel"]
   DEC -->|rebase| REB["git fetch && rebase origin/BASE &&<br/>push --force-with-lease"]
-  DEC -->|fix_code| FIX["Edit files → pr-shepherd postfix →<br/>git add + commit →<br/>fetch + rebase + push →<br/>pr-shepherd resolve --require-sha HEAD"]
+  DEC -->|fix_code| FIX["Edit files →<br/>git add + commit →<br/>fetch + rebase + push →<br/>pr-shepherd resolve --require-sha HEAD"]
   FIX --> NEXT[Wait for next tick]
   REB --> NEXT
   DEC -->|other| NEXT
@@ -105,21 +106,31 @@ pr-shepherd status PR1 [PR2 …]                        # multi-PR table
 
 Common flags:
 
-| Flag | Default | Description |
-| --- | --- | --- |
-| `--format text\|json` | `text` | Output format |
-| `--no-cache` | false | Bypass the 5-minute file cache |
-| `--cache-ttl N` | 300 | Cache TTL in seconds |
-| `--ready-delay Nm` | `10m` | Settle window before loop exits |
+| Flag                  | Default | Description                     |
+| --------------------- | ------- | ------------------------------- |
+| `--format text\|json` | `text`  | Output format                   |
+| `--no-cache`          | false   | Bypass the 5-minute file cache  |
+| `--cache-ttl N`       | 300     | Cache TTL in seconds            |
+| `--ready-delay Nm`    | `10m`   | Settle window before loop exits |
 
 ## Configuration
 
 Create a `.pr-shepherdrc.yml` in your project root (or any parent directory) to override defaults:
 
 ```yaml
-# baseBranch: null  # auto-detect from PR (default)
-cancelCiOnFailure: true
-minimizeBots: true
+iterate:
+  cooldownSeconds: 60 # wait longer after a push before reading CI
+  fixAttemptsPerThread: 5 # raise before escalating to manual review
+checks:
+  ciTriggerEvents:
+    - pull_request
+    - pull_request_target
+    - merge_group # add for merge-queue repos
+mergeStatus:
+  blockingReviewerLogins:
+    - copilot # add other review bots here
+actions:
+  autoRebase: false # disable for repos that enforce merge commits
 ```
 
 See [docs/configuration.md](docs/configuration.md) for all options.

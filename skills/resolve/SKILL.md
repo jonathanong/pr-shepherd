@@ -1,9 +1,9 @@
 ---
 name: resolve
-description: 'Resolve all inline review comments on the current PR'
-argument-hint: '[PR number or URL] [--thread-id ID | --comment-id ID] [--require-sha SHA]'
+description: "Resolve all inline review comments on the current PR"
+argument-hint: "[PR number or URL] [--thread-id ID | --comment-id ID] [--require-sha SHA]"
 user-invocable: true
-allowed-tools: ['Bash', 'Read', 'Grep', 'Edit', 'Write', 'Glob', 'Skill']
+allowed-tools: ["Bash", "Read", "Grep", "Edit", "Write", "Glob", "Skill"]
 ---
 
 # pr-shepherd resolve — Fix and Resolve Review Comments

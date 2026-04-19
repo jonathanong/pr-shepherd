@@ -4,21 +4,23 @@
   },
   "iterate": {
     "cooldownSeconds": 30,
-    "maxFixAttempts": 3
+    "fixAttemptsPerThread": 3
   },
   "watch": {
-    "intervalDefault": "4m",
-    "readyDelayMinutesDefault": 10,
-    "expiresHoursDefault": 8,
+    "interval": "4m",
+    "readyDelayMinutes": 10,
+    "expiresHours": 8,
     "maxTurns": 50
   },
   "resolve": {
     "concurrency": 4,
-    "shaPollIntervalMs": 2000,
-    "shaPollMaxAttempts": 10
+    "shaPoll": {
+      "intervalMs": 2000,
+      "maxAttempts": 10
+    }
   },
   "checks": {
-    "relevantEvents": ["pull_request", "pull_request_target"],
+    "ciTriggerEvents": ["pull_request", "pull_request_target"],
     "timeoutPatterns": [
       "cancel timeout",
       "exceeded the maximum execution time",
@@ -32,7 +34,19 @@
       "lost communication with the server",
       "the hosted runner lost connection"
     ],
-    "logLinesKept": 50,
-    "logExcerptMaxChars": 3000
+    "logMaxLines": 50,
+    "logMaxChars": 3000
+  },
+  "mergeStatus": {
+    "blockingReviewerLogins": ["copilot"]
+  },
+  "execution": {
+    "maxBufferMb": 10,
+    "triageLogBufferMb": 5
+  },
+  "actions": {
+    "autoResolveOutdated": true,
+    "autoRebase": true,
+    "autoMarkReady": true
   }
 }

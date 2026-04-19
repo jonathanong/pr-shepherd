@@ -40,7 +40,7 @@ When `shepherd resolve --require-sha <SHA>` is used, shepherd polls `GET /repos/
 
 **Why:** Without this guard, shepherd might auto-merge before the reviewer sees the fix. The polling ensures GitHub has received the push and updated the PR head before any mutations fire.
 
-**Polling:** Retries up to `(maxAttempts − 1)` times with `pollIntervalMs` delay. Transient 5xx errors are retried; 4xx errors are fatal.
+**Polling:** Retries up to `resolve.shaPoll.maxAttempts` times with `resolve.shaPoll.intervalMs` delay. Any exception is retried; on the last attempt it is re-thrown.
 
 ## Mutation types
 

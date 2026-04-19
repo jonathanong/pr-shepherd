@@ -47,9 +47,9 @@ The atomic rename is sufficient for single-machine safety. Multiple shepherd pro
 
 ## Flags and overrides
 
-| Flag / env var               | Effect                                                       |
-| ---------------------------- | ------------------------------------------------------------ |
-| `--no-cache`                 | Bypass read and write for this invocation                    |
-| `--cache-ttl <N>`            | Set TTL in seconds (overrides `$PR_SHEPHERD_CACHE_TTL_SECONDS`) |
+| Flag / env var                  | Effect                                                          |
+| ------------------------------- | --------------------------------------------------------------- |
+| `--no-cache`                    | Bypass read and write for this invocation                       |
+| `--cache-ttl <N>`               | Set TTL in seconds (overrides `$PR_SHEPHERD_CACHE_TTL_SECONDS`) |
 | `PR_SHEPHERD_CACHE_DIR`         | Replace `$TMPDIR/pr-shepherd-cache` base directory              |
-| `PR_SHEPHERD_CACHE_TTL_SECONDS` | Set TTL in seconds (env var override)                        |
+| `PR_SHEPHERD_CACHE_TTL_SECONDS` | Set TTL in seconds (env var override)                           |

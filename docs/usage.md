@@ -63,12 +63,12 @@ pr-shepherd status 41 42 43
 
 ## Common flags
 
-| Flag | Default | Description |
-| --- | --- | --- |
-| `--format text\|json` | `text` | Output format |
-| `--no-cache` | false | Bypass the 5-minute file cache |
-| `--cache-ttl N` | 300 | Cache TTL in seconds |
-| `--ready-delay Nm` | `10m` | Settle window before the loop cancels after READY |
+| Flag                  | Default | Description                                       |
+| --------------------- | ------- | ------------------------------------------------- |
+| `--format text\|json` | `text`  | Output format                                     |
+| `--no-cache`          | false   | Bypass the 5-minute file cache                    |
+| `--cache-ttl N`       | 300     | Cache TTL in seconds                              |
+| `--ready-delay Nm`    | `10m`   | Settle window before the loop cancels after READY |
 
 ## Manual iteration
 

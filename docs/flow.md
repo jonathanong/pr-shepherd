@@ -42,7 +42,7 @@ flowchart TD
 
   DEC -->|cancel| STOP["/loop cancel"]
   DEC -->|rebase| REB[git fetch && rebase &&<br/>push --force-with-lease]
-  DEC -->|fix_code| FIX[Edit files →<br/>pr-shepherd postfix →<br/>git add + commit →<br/>fetch + rebase + push →<br/>pr-shepherd resolve --require-sha HEAD]
+  DEC -->|fix_code| FIX[Edit files →<br/>git add + commit →<br/>fetch + rebase + push →<br/>pr-shepherd resolve --require-sha HEAD]
   FIX --> NEXT[Wait for next tick]
   REB --> NEXT
   DEC -->|other| NEXT
