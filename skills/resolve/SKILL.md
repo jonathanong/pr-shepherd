@@ -53,13 +53,12 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
 
 4. **Fix actionable items.** For each Actionable item:
    - Read the relevant file(s) and apply the fix (Edit/Write tools)
-   - Run `pr-shepherd postfix` (dangerouslyDisableSandbox: true)
    - Re-classify as **Fixed**
    - If too complex: leave as Actionable, report to user
 
 5. **Commit and push** (only if code was changed):
    - `git add <file1> <file2> …` (NOT `git add -A`)
-   - `git commit -m "fix: address review comments"`
+   - `git commit -m "<appropriate commit message>"`
    - `git fetch origin && git rebase origin/$BASE_BRANCH && git push --force-with-lease`
    - Cancel stale CI runs: `gh run list --branch "$BRANCH" --status in_progress --json databaseId --jq '.[].databaseId' | xargs -I{} gh run cancel {}`
 

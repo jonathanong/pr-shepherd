@@ -61,14 +61,6 @@ Multi-PR summary table.
 pr-shepherd status 41 42 43
 ```
 
-### `pr-shepherd postfix`
-
-Runs the configured `postFixCommands` from `.pr-shepherdrc.yml`. Each command is run sequentially; fails fast on first non-zero exit. No-op if `postFixCommands` is empty (the default).
-
-```sh
-pr-shepherd postfix
-```
-
 ## Common flags
 
 | Flag | Default | Description |

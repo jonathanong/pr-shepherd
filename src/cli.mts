@@ -8,11 +8,8 @@
  *                            [--last-push-time N]
  *   pr-shepherd iterate [PR] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
  *   pr-shepherd status PR1 [PR2 …]
- *   pr-shepherd postfix
  */
 
-import { execFile as execFileCb } from 'node:child_process'
-import { promisify } from 'node:util'
 import { runCheck } from './commands/check.mts'
 import { runResolveFetch, runResolveMutate } from './commands/resolve.mts'
 import { runIterate } from './commands/iterate.mts'
@@ -22,8 +19,6 @@ import { formatJson } from './reporters/json.mts'
 import { formatText } from './reporters/text.mts'
 import { loadConfig } from './config/load.mts'
 import type { GlobalOptions } from './types.mts'
-
-const execFile = promisify(execFileCb)
 
 // Loaded once at startup in main() before any subcommand runs.
 // eslint-disable-next-line prefer-const
@@ -54,14 +49,9 @@ export async function main(argv: string[]): Promise<void> {
     case 'status':
       await handleStatus(args.slice(1))
       break
-    case 'postfix':
-      await handlePostfix()
-      break
     default:
       process.stderr.write(`Unknown subcommand: ${subcommand ?? '(none)'}\n`)
-      process.stderr.write(
-        'Usage: pr-shepherd <check|resolve|iterate|status|postfix> [options]\n',
-      )
+      process.stderr.write('Usage: pr-shepherd <check|resolve|iterate|status> [options]\n')
       process.exit(1)
   }
 }
@@ -177,23 +167,6 @@ async function handleStatus(args: string[]): Promise<void> {
 
   const allReady = summaries.every(s => deriveSimpleReady(s))
   process.exit(allReady ? 0 : 1)
-}
-
-async function handlePostfix(): Promise<void> {
-  const commands = config.postFixCommands ?? []
-  if (commands.length === 0) return
-  for (const cmd of commands) {
-    const [bin, ...rest] = cmd.split(/\s+/)
-    if (!bin) continue
-    try {
-      await execFile(bin, rest, { shell: false })
-    } catch (err) {
-      process.stderr.write(
-        `pr-shepherd postfix: ${cmd} failed: ${err instanceof Error ? err.message : String(err)}\n`,
-      )
-      process.exit(1)
-    }
-  }
 }
 
 // ---------------------------------------------------------------------------

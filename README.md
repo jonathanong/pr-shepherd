@@ -101,7 +101,6 @@ pr-shepherd check [PR]                                # read-only PR status snap
 pr-shepherd resolve [PR] [--fetch | --resolve-thread-ids …]
 pr-shepherd iterate [PR] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
 pr-shepherd status PR1 [PR2 …]                        # multi-PR table
-pr-shepherd postfix                                   # run configured postFixCommands
 ```
 
 Common flags:
@@ -115,16 +114,12 @@ Common flags:
 
 ## Configuration
 
-Create a `.pr-shepherdrc.yml` in your project root (or any parent directory):
+Create a `.pr-shepherdrc.yml` in your project root (or any parent directory) to override defaults:
 
 ```yaml
-postFixCommands:
-  - npx oxlint --fix
-  - npx oxfmt
-
-commitMessage: 'fix: address review comments'
-
 # baseBranch: null  # auto-detect from PR (default)
+cancelCiOnFailure: true
+minimizeBots: true
 ```
 
 See [docs/configuration.md](docs/configuration.md) for all options.

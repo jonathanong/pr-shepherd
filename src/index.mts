@@ -7,7 +7,6 @@
  *   pr-shepherd resolve [PR]
  *   pr-shepherd iterate [PR]
  *   pr-shepherd status PR1 [PR2 …]
- *   pr-shepherd postfix
  */
 
 import { main } from './cli.mts'

@@ -30,8 +30,6 @@ export interface PrShepherdConfig {
     logLinesKept: number
     logExcerptMaxChars: number
   }
-  postFixCommands: string[]
-  commitMessage: string
   baseBranch: string | null
   minimizeBots: boolean
   cancelCiOnFailure: boolean
@@ -55,7 +53,10 @@ function findRcFile(startDir: string): string | null {
   }
 }
 
-function deepMerge(base: Record<string, unknown>, override: Record<string, unknown>): Record<string, unknown> {
+function deepMerge(
+  base: Record<string, unknown>,
+  override: Record<string, unknown>,
+): Record<string, unknown> {
   const result: Record<string, unknown> = { ...base }
   for (const key of Object.keys(override)) {
     const overVal = override[key]
@@ -68,7 +69,10 @@ function deepMerge(base: Record<string, unknown>, override: Record<string, unkno
       baseVal !== null &&
       !Array.isArray(baseVal)
     ) {
-      result[key] = deepMerge(baseVal as Record<string, unknown>, overVal as Record<string, unknown>)
+      result[key] = deepMerge(
+        baseVal as Record<string, unknown>,
+        overVal as Record<string, unknown>,
+      )
     } else if (overVal !== undefined) {
       result[key] = overVal
     }
@@ -78,8 +82,6 @@ function deepMerge(base: Record<string, unknown>, override: Record<string, unkno
 
 const defaults: PrShepherdConfig = {
   ...builtins,
-  postFixCommands: [],
-  commitMessage: 'fix: address review comments',
   baseBranch: null,
   minimizeBots: true,
   cancelCiOnFailure: true,
@@ -99,7 +101,10 @@ export function loadConfig(): PrShepherdConfig {
   try {
     const raw = readFileSync(rcPath, 'utf8')
     const parsed = (parse(raw) ?? {}) as Record<string, unknown>
-    cached = deepMerge(defaults as unknown as Record<string, unknown>, parsed) as unknown as PrShepherdConfig
+    cached = deepMerge(
+      defaults as unknown as Record<string, unknown>,
+      parsed,
+    ) as unknown as PrShepherdConfig
     return cached
   } catch (err) {
     process.stderr.write(

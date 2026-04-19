@@ -7,14 +7,6 @@ pr-shepherd looks for a `.pr-shepherdrc.yml` file starting from the current work
 ## Example
 
 ```yaml
-# Post-fix commands run after Claude edits files (before commit).
-postFixCommands:
-  - npx oxlint --fix
-  - npx oxfmt
-
-# Commit message used when fixing review comments.
-commitMessage: 'fix: address review comments'
-
 # Base branch to rebase onto. null = auto-detect from PR (recommended).
 baseBranch: null
 
@@ -61,16 +53,6 @@ checks:
   logLinesKept: 50
   logExcerptMaxChars: 3000
 ```
-
-## `postFixCommands`
-
-A list of shell commands run sequentially by `pr-shepherd postfix` after Claude edits files. Each command is split on whitespace and executed without a shell — no pipes or redirects. If any command fails, `pr-shepherd postfix` exits with a non-zero status and the commit is not made.
-
-Default: `[]` (no-op).
-
-## `commitMessage`
-
-The commit message used when `fix_code` commits changes. Default: `'fix: address review comments'`.
 
 ## `baseBranch`
 

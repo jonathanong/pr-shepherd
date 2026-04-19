@@ -77,11 +77,10 @@ Parse the `action` field and act:
 
 - `fix_code` → do the following, then stop this iteration (CI needs time):
   1. For each item in `fix.threads`, `fix.comments`, `fix.checks`, and `fix.changesRequestedReviews`: read the referenced file/line and apply the fix (Edit/Write tools).
-  2. Run `pr-shepherd postfix` (dangerouslyDisableSandbox: true) — runs the configured post-fix commands (linting, formatting, etc.).
-  3. If files were changed, `git add <files> && git commit -m "fix: address review comments"`
-  4. `git fetch origin && git rebase origin/<BASE_BRANCH> && git push --force-with-lease` (dangerouslyDisableSandbox: true)
-  5. `HEAD_SHA=$(git rev-parse HEAD)`
-  6. `pr-shepherd resolve <PR_NUMBER> --resolve-thread-ids <IDs> --minimize-comment-ids <IDs> --dismiss-review-ids <IDs> --message "address review comments" --require-sha "$HEAD_SHA"` (dangerouslyDisableSandbox: true). Omit any flag whose ID list is empty.
+  2. If files were changed, `git add <files> && git commit -m "<appropriate commit message>"`
+  3. `git fetch origin && git rebase origin/<BASE_BRANCH> && git push --force-with-lease` (dangerouslyDisableSandbox: true)
+  4. `HEAD_SHA=$(git rev-parse HEAD)`
+  5. `pr-shepherd resolve <PR_NUMBER> --resolve-thread-ids <IDs> --minimize-comment-ids <IDs> --dismiss-review-ids <IDs> --message "address review comments" --require-sha "$HEAD_SHA"` (dangerouslyDisableSandbox: true). Omit any flag whose ID list is empty.
 
 ````
 
