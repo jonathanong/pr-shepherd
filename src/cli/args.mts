@@ -26,11 +26,10 @@ const FLAGS_WITH_VALUES = new Set([
 // ---------------------------------------------------------------------------
 
 export function parseIntStrict(value: string, flag: string): number {
-  const n = parseInt(value, 10);
-  if (!Number.isFinite(n)) {
+  if (!/^-?\d+$/.test(value.trim())) {
     throw new Error(`Invalid value for ${flag}: "${value}" is not an integer`);
   }
-  return n;
+  return parseInt(value, 10);
 }
 
 // ---------------------------------------------------------------------------
