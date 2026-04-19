@@ -29,6 +29,7 @@ import { triageFailingChecks } from "../checks/triage.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { getCurrentPrNumber } from "../github/client.mts";
 import { readFixAttempts, writeFixAttempts } from "../cache/fix-attempts.mts";
+import { toAgentThread, toAgentComment, toAgentChecks } from "../reporters/agent.mts";
 import type {
   EscalateDetails,
   IterateCommandOptions,
@@ -176,8 +177,8 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
         action: "escalate",
         escalate: {
           triggers: escalateTriggers.triggers,
-          unresolvedThreads: report.threads.actionable,
-          ambiguousComments: report.comments.actionable,
+          unresolvedThreads: report.threads.actionable.map(toAgentThread),
+          ambiguousComments: report.comments.actionable.map(toAgentComment),
           changesRequestedReviews: report.changesRequestedReviews,
           attemptHistory: escalateTriggers.thrashHistory,
           suggestion: buildEscalateSuggestion(escalateTriggers.triggers),
@@ -204,9 +205,9 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       ...base,
       action: "fix_code",
       fix: {
-        threads: report.threads.actionable,
-        comments: report.comments.actionable,
-        checks: actionableChecks,
+        threads: report.threads.actionable.map(toAgentThread),
+        comments: report.comments.actionable.map(toAgentComment),
+        checks: toAgentChecks(actionableChecks),
         changesRequestedReviews: report.changesRequestedReviews,
       },
       cancelled,

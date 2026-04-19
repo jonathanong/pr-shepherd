@@ -76,11 +76,13 @@ Parse the `action` field and act:
   After fixing manually, rerun /pr-shepherd:monitor <PR> to resume.
 
 - `fix_code` → do the following, then stop this iteration (CI needs time):
-  1. For each item in `fix.threads`, `fix.comments`, `fix.checks`, and `fix.changesRequestedReviews`: read the referenced file/line and apply the fix (Edit/Write tools).
-  2. If files were changed, `git add <files> && git commit -m "<appropriate commit message>"`
-  3. `git fetch origin && git rebase origin/<BASE_BRANCH> && git push --force-with-lease` (dangerouslyDisableSandbox: true)
-  4. `HEAD_SHA=$(git rev-parse HEAD)`
-  5. `npx pr-shepherd resolve <PR_NUMBER> --resolve-thread-ids <IDs> --minimize-comment-ids <IDs> --dismiss-review-ids <IDs> --message "address review comments" --require-sha "$HEAD_SHA"` (dangerouslyDisableSandbox: true). Omit any flag whose ID list is empty.
+  1. For each item in `fix.threads` and `fix.comments`: read the referenced file/line and apply the fix (Edit/Write tools).
+  2. For each item in `fix.checks`: fetch the failure log with `gh run view <runId> --log-failed` (dangerouslyDisableSandbox: true), scan the output to identify the failure (e.g. grep for `FAIL` for test failures, `error:` for type/compile errors, lint rule names for lint failures), then read the relevant file and apply the fix (Edit/Write tools).
+  3. For each item in `fix.changesRequestedReviews`: read the review body and apply the requested changes.
+  4. If files were changed, `git add <files> && git commit -m "<appropriate commit message>"`
+  5. `git fetch origin && git rebase origin/<BASE_BRANCH> && git push --force-with-lease` (dangerouslyDisableSandbox: true)
+  6. `HEAD_SHA=$(git rev-parse HEAD)`
+  7. `npx pr-shepherd resolve <PR_NUMBER> --resolve-thread-ids <IDs> --minimize-comment-ids <IDs> --dismiss-review-ids <IDs> --message "address review comments" --require-sha "$HEAD_SHA"` (dangerouslyDisableSandbox: true). Omit any flag whose ID list is empty.
 
 ````
 
