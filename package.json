@@ -31,7 +31,8 @@
     "@vitest/coverage-v8": "^4.1.4"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.build.json && cp src/config.json dist/ && cp -r src/github/gql dist/github/",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && cp src/config.json dist/ && mkdir -p dist/github && cp -r src/github/gql dist/github/",
+    "prepare": "npm run build",
     "prepublishOnly": "npm run typecheck && npm test && npm run build",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint src/ skills/",
