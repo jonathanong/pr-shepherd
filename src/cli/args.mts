@@ -85,19 +85,14 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
     }
   }
 
-  const prArg = args.find(
+  const prIndex = args.findIndex(
     (a, index) => !skipForPrDetect.has(index) && !a.startsWith("--") && /^\d+$/.test(a),
   );
-  const prNumber = prArg ? parseInt(prArg, 10) : undefined;
+  const prNumber = prIndex !== -1 ? parseInt(args[prIndex]!, 10) : undefined;
 
   // Remove consumed global-flag indices (and the PR number itself) from extra.
-  if (prArg !== undefined) {
-    for (let i = 0; i < args.length; i += 1) {
-      if (args[i] === prArg && !consumedIndices.has(i)) {
-        consumedIndices.add(i);
-        break;
-      }
-    }
+  if (prIndex !== -1) {
+    consumedIndices.add(prIndex);
   }
 
   const extra = args.filter((_, i) => !consumedIndices.has(i));
