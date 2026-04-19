@@ -53,7 +53,7 @@ function findRcFile(startDir: string): string | null {
   let current = startDir;
   while (true) {
     const candidate = join(current, RC_FILENAME);
-    if (statSync(candidate, { throwIfNoEntry: false })) {
+    if (statSync(candidate, { throwIfNoEntry: false })?.isFile()) {
       return candidate;
     }
     if (current === home || current === dirname(current)) return null;
