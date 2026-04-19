@@ -162,14 +162,14 @@ Create a `.pr-shepherdrc.yml` in your project root (or any parent directory) to 
 
 ```yaml
 iterate:
-  cooldownSeconds: 60       # wait longer after a push before reading CI
+  cooldownSeconds: 60 # wait longer after a push before reading CI
 checks:
   ciTriggerEvents:
     - pull_request
     - pull_request_target
-    - merge_group           # add for merge-queue repos
+    - merge_group # add for merge-queue repos
 actions:
-  autoRebase: false         # disable for repos that enforce merge commits
+  autoRebase: false # disable for repos that enforce merge commits
 ```
 
 See [docs/configuration.md](docs/configuration.md) for all options.
