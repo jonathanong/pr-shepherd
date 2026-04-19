@@ -24,9 +24,10 @@ import type { GlobalOptions, ResolveOptions, ReviewThread, PrComment, Review } f
 // Public API
 // ---------------------------------------------------------------------------
 
+export type FetchThread = Omit<ReviewThread, "isResolved" | "isOutdated">;
+
 export interface FetchResult {
-  autoResolved: ReviewThread[];
-  actionableThreads: ReviewThread[];
+  actionableThreads: FetchThread[];
   actionableComments: PrComment[];
   changesRequestedReviews: Review[];
 }
@@ -54,17 +55,17 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
 
   // Auto-resolve outdated.
   const outdated = getOutdatedThreads(unresolvedThreads);
-  let autoResolved: ReviewThread[] = [];
   if (outdated.length > 0) {
-    const { resolved: resolvedIds } = await autoResolveOutdated(outdated.map((t) => t.id));
-    autoResolved = outdated.filter((t) => resolvedIds.includes(t.id));
+    const { errors } = await autoResolveOutdated(outdated.map((t) => t.id));
+    if (errors.length > 0) {
+      throw new Error(`Failed to auto-resolve outdated threads: ${errors.join(", ")}`);
+    }
   }
 
   const activeThreads = unresolvedThreads.filter((t) => !t.isOutdated);
 
   return {
-    autoResolved,
-    actionableThreads: activeThreads,
+    actionableThreads: activeThreads.map(({ isResolved, isOutdated, ...rest }) => rest),
     actionableComments: visibleComments,
     changesRequestedReviews: data.changesRequestedReviews,
   };

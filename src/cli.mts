@@ -179,13 +179,6 @@ async function handleStatus(args: string[]): Promise<void> {
 function formatFetchResult(result: Awaited<ReturnType<typeof runResolveFetch>>): string {
   const lines: string[] = [];
 
-  if (result.autoResolved.length > 0) {
-    lines.push(`Auto-resolved outdated (${result.autoResolved.length}):`);
-    for (const t of result.autoResolved) {
-      lines.push(`  - threadId=${t.id} ${t.path ?? ""}:${t.line ?? "?"} (@${t.author})`);
-    }
-  }
-
   if (result.actionableThreads.length > 0) {
     lines.push(`\nActionable Review Threads (${result.actionableThreads.length}):`);
     for (const t of result.actionableThreads) {
