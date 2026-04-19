@@ -40,24 +40,21 @@ Parse the JSON output and report all three:
 
 ## Rebase policy
 
-```bash
-BASE_BRANCH=$(gh pr view <N> --json baseRefName --jq '.baseRefName')
-```
+The CLI already determines whether a rebase is warranted. Read `report.mergeStatus.status` directly:
 
-Rebase (`git fetch origin && git rebase origin/<BASE_BRANCH> && git push --force-with-lease`) when:
+- `CONFLICTS` or `BEHIND` — rebase may be appropriate; combine with `failureKind` values on failing checks (a `flaky` failure while `BEHIND` is the canonical rebase signal).
+- Any other status — no rebase needed.
 
-- Merge conflicts with main (`report.mergeStatus.status == 'CONFLICTS'`), OR
-- About to push commits and branch is behind main, OR
-- `failureKind == 'flaky'` AND branch is behind main
-
-Do NOT rebase when nothing to push, no conflicts, and no flaky failures.
+Do not re-derive these conditions from raw branch state. For automated monitoring that acts on these signals, use `/pr-shepherd:monitor` — it handles rebase decisions end-to-end.
 
 ## CI budget policy
 
-- **actionable**: Summarize errors. Fix in next step.
-- **infrastructure**: Re-run: `gh run rerun <runId> --failed`
-- **timeout**: Re-run: `gh run rerun <runId> --failed`
-- **flaky**: Do NOT cancel. Rebase if behind main.
+Each entry in `report.checks` carries a `failureKind` field. Read it directly rather than re-classifying failures:
+
+- `actionable` — the failure is code-level and needs a fix.
+- `infrastructure` — transient infra problem; re-run with `gh run rerun <runId> --failed`.
+- `timeout` — job exceeded the time limit; re-run with `gh run rerun <runId> --failed`.
+- `flaky` — known-flaky test; do NOT cancel. Rebase first if `mergeStatus.status` is `BEHIND`.
 
 ## Never declare ready to merge
 
