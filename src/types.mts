@@ -167,8 +167,6 @@ export interface ShepherdReport {
   }
   comments: {
     actionable: PrComment[]
-    autoMinimized: PrComment[]
-    autoMinimizeErrors: string[]
   }
   changesRequestedReviews: Review[]
   lastPushTime?: number

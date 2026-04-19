@@ -93,35 +93,6 @@ export async function graphqlWithRateLimit<T = unknown>(
 }
 
 // ---------------------------------------------------------------------------
-// REST
-// ---------------------------------------------------------------------------
-
-/** GET a REST endpoint via `gh api`. Returns parsed JSON. */
-export async function rest<T = unknown>(path: string): Promise<T> {
-  const raw = await runGh(['api', path])
-  return JSON.parse(raw) as T
-}
-
-/**
- * POST / PATCH / DELETE to a REST endpoint.
- *
- * @param method HTTP method (POST, PATCH, DELETE).
- * @param path   REST path (e.g. `/repos/owner/repo/actions/runs/123/cancel`).
- * @param fields Optional body fields (`-f key=value`).
- */
-export async function restMutate(
-  method: 'POST' | 'PATCH' | 'DELETE',
-  path: string,
-  fields: Record<string, string> = {},
-): Promise<void> {
-  const args: string[] = ['api', '--method', method, path]
-  for (const [k, v] of Object.entries(fields)) {
-    args.push('-f', `${k}=${v}`)
-  }
-  await runGh(args)
-}
-
-// ---------------------------------------------------------------------------
 // Repo / PR lookup helpers
 // ---------------------------------------------------------------------------
 

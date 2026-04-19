@@ -151,8 +151,6 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
     },
     comments: {
       actionable: actionableComments,
-      autoMinimized: [],
-      autoMinimizeErrors: [],
     },
     changesRequestedReviews: batchData.changesRequestedReviews,
     lastPushTime: opts.lastPushTime,

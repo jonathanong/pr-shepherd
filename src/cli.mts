@@ -306,13 +306,6 @@ function formatFetchResult(result: Awaited<ReturnType<typeof runResolveFetch>>):
     }
   }
 
-  if (result.autoMinimized.length > 0) {
-    lines.push(`Auto-minimized informational (${result.autoMinimized.length}):`)
-    for (const c of result.autoMinimized) {
-      lines.push(`  - commentId=${c.id} (@${c.author})`)
-    }
-  }
-
   if (result.actionableThreads.length > 0) {
     lines.push(`\nActionable Review Threads (${result.actionableThreads.length}):`)
     for (const t of result.actionableThreads) {

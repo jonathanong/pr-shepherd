@@ -100,18 +100,6 @@ export async function autoResolveOutdated(
   return { resolved, errors }
 }
 
-/**
- * Auto-minimize informational PR comments (uses OFF_TOPIC classifier).
- */
-export async function autoMinimizeInformational(
-  commentIds: string[],
-): Promise<{ minimized: string[]; errors: string[] }> {
-  const minimized: string[] = []
-  const errors: string[] = []
-  await runBatched(commentIds, id => minimizeComment(id, 'OFF_TOPIC'), minimized, errors)
-  return { minimized, errors }
-}
-
 // ---------------------------------------------------------------------------
 // Mutation helpers
 // ---------------------------------------------------------------------------

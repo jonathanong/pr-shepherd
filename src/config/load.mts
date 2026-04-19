@@ -31,8 +31,6 @@ export interface PrShepherdConfig {
     logExcerptMaxChars: number
   }
   baseBranch: string | null
-  minimizeBots: boolean
-  cancelCiOnFailure: boolean
 }
 
 const RC_FILENAME = '.pr-shepherdrc.yml'
@@ -83,8 +81,6 @@ function deepMerge(
 const defaults: PrShepherdConfig = {
   ...builtins,
   baseBranch: null,
-  minimizeBots: true,
-  cancelCiOnFailure: true,
 }
 
 let cached: PrShepherdConfig | null = null

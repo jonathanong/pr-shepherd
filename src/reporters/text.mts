@@ -96,23 +96,7 @@ export function formatText(report: ShepherdReport): string {
   }
 
   // PR comments
-  const { actionable: actionableComments, autoMinimized, autoMinimizeErrors } = report.comments
-  if (autoMinimized.length > 0) {
-    lines.push(`Auto-minimized comments (${autoMinimized.length}):`)
-    for (const c of autoMinimized) {
-      lines.push(`  - commentId=${c.id} (@${c.author}): ${firstLine(c.body)}`)
-    }
-    lines.push('')
-  }
-
-  if (autoMinimizeErrors.length > 0) {
-    lines.push(`Auto-minimize errors (${autoMinimizeErrors.length}):`)
-    for (const e of autoMinimizeErrors) {
-      lines.push(`  - ${e}`)
-    }
-    lines.push('')
-  }
-
+  const { actionable: actionableComments } = report.comments
   if (actionableComments.length > 0) {
     lines.push(`Actionable PR Comments (${actionableComments.length}):`)
     for (const c of actionableComments) {

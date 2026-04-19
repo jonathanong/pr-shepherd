@@ -11,11 +11,9 @@ describe('client module', () => {
   it('exports the expected functions', async () => {
     const module = await import('./client.mts')
     expect(typeof module.graphql).toBe('function')
-    expect(typeof module.rest).toBe('function')
     expect(typeof module.getRepoInfo).toBe('function')
     expect(typeof module.getCurrentPrNumber).toBe('function')
     expect(typeof module.getPrHeadSha).toBe('function')
-    expect(typeof module.restMutate).toBe('function')
     expect(typeof module.graphqlWithRateLimit).toBe('function')
   })
 })

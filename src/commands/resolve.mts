@@ -26,7 +26,6 @@ import type { GlobalOptions, ResolveOptions, ReviewThread, PrComment, Review } f
 
 export interface FetchResult {
   autoResolved: ReviewThread[]
-  autoMinimized: PrComment[]
   actionableThreads: ReviewThread[]
   actionableComments: PrComment[]
   changesRequestedReviews: Review[]
@@ -65,7 +64,6 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
 
   return {
     autoResolved,
-    autoMinimized: [],
     actionableThreads: activeThreads,
     actionableComments: visibleComments,
     changesRequestedReviews: data.changesRequestedReviews,

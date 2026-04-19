@@ -95,7 +95,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       blockedByFilteredCheck: false,
     },
     threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
-    comments: { actionable: [], autoMinimized: [], autoMinimizeErrors: [] },
+    comments: { actionable: [] },
     changesRequestedReviews: [],
     lastPushTime: undefined,
     ...overrides,
@@ -978,7 +978,7 @@ describe('runIterate — escalate (pr-level-changes-requested)', () => {
         status: 'UNRESOLVED_COMMENTS',
         changesRequestedReviews: [{ id: 'review-1', author: 'boss', body: 'Needs rework' }],
         threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
-        comments: { actionable: [], autoMinimized: [], autoMinimizeErrors: [] },
+        comments: { actionable: [] },
       }),
     )
     mockUpdateReadyDelay.mockResolvedValue({
@@ -1013,7 +1013,7 @@ describe('runIterate — escalate (pr-level-changes-requested suppressed during 
         },
         changesRequestedReviews: [{ id: 'review-1', author: 'boss', body: 'Needs rework' }],
         threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
-        comments: { actionable: [], autoMinimized: [], autoMinimizeErrors: [] },
+        comments: { actionable: [] },
       }),
     )
     mockUpdateReadyDelay.mockResolvedValue({
@@ -1045,8 +1045,6 @@ describe('runIterate — escalate (pr-level-changes-requested with actionable co
               createdAtUnix: NOW - 100,
             },
           ],
-          autoMinimized: [],
-          autoMinimizeErrors: [],
         },
       }),
     )
