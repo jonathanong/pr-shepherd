@@ -1,5 +1,6 @@
 /**
- * Pure CLI argument-parsing helpers extracted from cli.mts for testability.
+ * CLI argument-parsing helpers extracted from cli.mts for testability.
+ * Note: parseCommonArgs calls loadConfig() for cache TTL defaults.
  */
 
 import { loadConfig } from "../config/load.mts";
@@ -59,8 +60,15 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
       skipForPrDetect.add(i);
       if (i + 1 < args.length) skipForPrDetect.add(i + 1);
       i += 1;
-    } else if ([...FLAGS_WITH_VALUES].some((f) => arg.startsWith(`${f}=`))) {
-      skipForPrDetect.add(i);
+    } else {
+      const eqIdx = arg.indexOf("=");
+      if (eqIdx > 0) {
+        const flagName = arg.slice(0, eqIdx);
+        if (FLAGS_WITH_VALUES.has(flagName)) {
+          skipForPrDetect.add(i);
+          if (globalFlagsWithValues.has(flagName)) excludeFromExtra.add(i);
+        }
+      }
     }
   }
 

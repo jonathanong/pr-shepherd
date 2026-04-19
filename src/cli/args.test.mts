@@ -145,6 +145,12 @@ describe("parseCommonArgs — PR number detection", () => {
     expect(extra).not.toContain("json");
     expect(extra).not.toContain("--no-cache");
   });
+
+  it("strips inline --format=json form from extra", () => {
+    const { extra } = parseCommonArgs(["--format=json", "--cooldown-seconds", "30"]);
+    expect(extra).not.toContain("--format=json");
+    expect(extra).toContain("--cooldown-seconds");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -176,12 +182,11 @@ describe("parseDurationToMinutes", () => {
     expect(parseDurationToMinutes("1hours")).toBe(60);
   });
 
-  it("returns config default (10) for invalid input", () => {
-    // Default config watch.readyDelayMinutes=10
-    expect(parseDurationToMinutes("notaduration")).toBe(10);
+  it("uses explicit defaultMinutes for invalid input", () => {
+    expect(parseDurationToMinutes("notaduration", 10)).toBe(10);
   });
 
-  it("uses explicit defaultMinutes when provided and input is invalid", () => {
+  it("uses a different explicit defaultMinutes value", () => {
     expect(parseDurationToMinutes("notaduration", 15)).toBe(15);
   });
 });
