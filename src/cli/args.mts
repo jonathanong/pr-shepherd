@@ -22,6 +22,18 @@ const FLAGS_WITH_VALUES = new Set([
 ]);
 
 // ---------------------------------------------------------------------------
+// Strict integer parsing
+// ---------------------------------------------------------------------------
+
+export function parseIntStrict(value: string, flag: string): number {
+  const n = parseInt(value, 10);
+  if (!Number.isFinite(n)) {
+    throw new Error(`Invalid value for ${flag}: "${value}" is not an integer`);
+  }
+  return n;
+}
+
+// ---------------------------------------------------------------------------
 // Common arg parsing
 // ---------------------------------------------------------------------------
 
@@ -49,7 +61,7 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
   const format = (values.format ?? "text") as string as "text" | "json";
   const noCache = (values["no-cache"] ?? false) as boolean;
   const cacheTtlStr = values["cache-ttl"] as string | undefined;
-  const cacheTtlSeconds = cacheTtlStr ? parseInt(cacheTtlStr, 10) : config.cache.ttlSeconds;
+  const cacheTtlSeconds = cacheTtlStr ? parseIntStrict(cacheTtlStr, "--cache-ttl") : config.cache.ttlSeconds;
 
   // Build the set of arg indices consumed by global flags so we can strip
   // them from `extra`.  Subcommand-specific flags are left untouched.
