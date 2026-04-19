@@ -21,11 +21,6 @@ import {
 import type { ResolveOptions } from "../types.mts";
 import { loadConfig } from "../config/load.mts";
 
-const config = loadConfig();
-const CONCURRENCY = config.resolve.concurrency;
-const SHA_POLL_INTERVAL_MS = config.resolve.shaPoll.intervalMs;
-const SHA_POLL_MAX_ATTEMPTS = config.resolve.shaPoll.maxAttempts;
-
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -48,6 +43,7 @@ export async function applyResolveOptions(
   repo: RepoInfo,
   opts: ResolveOptions,
 ): Promise<ResolveResult> {
+  const CONCURRENCY = loadConfig().resolve.concurrency;
   // Require --message when dismissing reviews.
   if ((opts.dismissReviewIds?.length ?? 0) > 0 && !opts.dismissMessage) {
     throw new Error("--message is required when dismissing reviews");
@@ -128,6 +124,7 @@ async function runBatched(
   successList: string[],
   errorList: string[],
 ): Promise<void> {
+  const CONCURRENCY = loadConfig().resolve.concurrency;
   // Process in chunks of CONCURRENCY.
   for (let i = 0; i < ids.length; i += CONCURRENCY) {
     const chunk = ids.slice(i, i + CONCURRENCY);
@@ -150,6 +147,8 @@ async function runBatched(
 // ---------------------------------------------------------------------------
 
 async function waitForSha(pr: number, repo: RepoInfo, expectedSha: string): Promise<void> {
+  const { intervalMs: SHA_POLL_INTERVAL_MS, maxAttempts: SHA_POLL_MAX_ATTEMPTS } =
+    loadConfig().resolve.shaPoll;
   for (let attempt = 0; attempt < SHA_POLL_MAX_ATTEMPTS; attempt++) {
     try {
       // eslint-disable-next-line no-await-in-loop
