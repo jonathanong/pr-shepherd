@@ -177,7 +177,7 @@ See [docs/configuration.md](docs/configuration.md) for all options.
 ## Requirements
 
 - Node.js ≥ 24.0.0
-- `gh` CLI authenticated (`gh auth login`) with `repo` scope; add `read:org` for organization-restricted Copilot reviews
+- `gh` CLI authenticated (`gh auth login`); `repo` scope is required for private repositories (public repositories may not need it)
 - `git`
 
 ## Docs
