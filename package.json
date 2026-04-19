@@ -29,7 +29,8 @@
     "oxfmt": "latest",
     "oxlint": "latest",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "@vitest/coverage-v8": "^4.1.4"
   },
   "scripts": {
     "prepublishOnly": "npm run typecheck && npm test",
@@ -38,6 +39,7 @@
     "format": "oxfmt src/ skills/ docs/ README.md",
     "format:check": "oxfmt --check src/ skills/ docs/ README.md",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest"
   },
   "keywords": [
