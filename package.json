@@ -6,7 +6,7 @@
   "author": "Jonathan Ong",
   "type": "module",
   "bin": {
-    "pr-shepherd": "./dist/index.mjs"
+    "pr-shepherd": "dist/index.mjs"
   },
   "files": [
     "dist/**",
@@ -31,7 +31,7 @@
     "@vitest/coverage-v8": "^4.1.4"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.build.json && cp src/config.json dist/ && mkdir -p dist/github && cp -r src/github/gql dist/github/",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && cp src/config.json dist/ && mkdir -p dist/github && cp -r src/github/gql dist/github/ && chmod +x dist/index.mjs",
     "prepare": "npm run build",
     "prepublishOnly": "npm run typecheck && npm test && npm run build",
     "typecheck": "tsc --noEmit",
