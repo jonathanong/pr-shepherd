@@ -267,10 +267,22 @@ PR #42 [ESCALATE] status=UNRESOLVED_COMMENTS merge=BLOCKED triggers=fix-thrash �
 **JSON output** (`--format=json`, compact single line):
 
 ```json
-{"pr":42,"repo":"owner/repo","status":"READY","state":"OPEN","mergeStateStatus":"CLEAN","copilotReviewInProgress":false,"isDraft":false,"shouldCancel":false,"remainingSeconds":540,"summary":{"passing":3,"skipped":0,"filtered":0,"inProgress":0},"action":"wait"}
+{
+  "pr": 42,
+  "repo": "owner/repo",
+  "status": "READY",
+  "state": "OPEN",
+  "mergeStateStatus": "CLEAN",
+  "copilotReviewInProgress": false,
+  "isDraft": false,
+  "shouldCancel": false,
+  "remainingSeconds": 540,
+  "summary": { "passing": 3, "skipped": 0, "filtered": 0, "inProgress": 0 },
+  "action": "wait"
+}
 ```
 
-Exit codes: `0` wait/cooldown/rerun\_ci/mark\_ready · `1` fix\_code/rebase · `2` cancel · `3` escalate
+Exit codes: `0` wait/cooldown/rerun_ci/mark_ready · `1` fix_code/rebase · `2` cancel · `3` escalate
 
 ### pr-shepherd status PR1 [PR2 …]
 
