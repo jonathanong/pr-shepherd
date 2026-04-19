@@ -12,8 +12,6 @@ jobs:
     strategy:
       matrix:
         node-version: ['24.x']
-    env:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -25,13 +23,15 @@ jobs:
       - run: npm run format:check
       - run: npm run typecheck
       - run: npm run test:coverage
+      - id: token-check
+        run: echo "has_codecov=${{ secrets.CODECOV_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
       - name: Upload test results to Codecov
-        if: ${{ !cancelled() && env.CODECOV_TOKEN != '' }}
+        if: ${{ always() && !cancelled() && steps.token-check.outputs.has_codecov == 'true' }}
         uses: codecov/test-results-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: Upload coverage to Codecov
-        if: ${{ !cancelled() && env.CODECOV_TOKEN != '' }}
+        if: ${{ always() && !cancelled() && steps.token-check.outputs.has_codecov == 'true' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
