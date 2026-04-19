@@ -52,7 +52,7 @@ jobs:
         run: |
           npm version "${{ inputs.bump }}" --no-git-tag-version
           VERSION=$(node -p "require('./package.json').version")
-          node -e "const fs=require('fs');const p='.claude-plugin/plugin.json';const m=JSON.parse(fs.readFileSync(p));m.version='$VERSION';fs.writeFileSync(p,JSON.stringify(m,null,2)+'\n')"
+          node .github/scripts/sync-plugin-version.mjs
           git add package.json package-lock.json .claude-plugin/plugin.json
           git commit -m "chore(release): v$VERSION"
           git tag -a "v$VERSION" -m "v$VERSION"
