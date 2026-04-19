@@ -4,7 +4,19 @@
 
 import { loadConfig } from "../config/load.mts";
 import type { GlobalOptions, ShepherdAction } from "../types.mts";
+import { deriveVerdict } from "../commands/status.mts";
 import type { PrSummary } from "../commands/status.mts";
+
+// Flags that consume the next argument as their value.
+const FLAGS_WITH_VALUES = new Set([
+  "--format",
+  "--cache-ttl",
+  "--last-push-time",
+  "--ready-delay",
+  "--cooldown-seconds",
+  "--require-sha",
+  "--message",
+]);
 
 // ---------------------------------------------------------------------------
 // Common arg parsing
@@ -23,17 +35,6 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
   const cacheTtlStr = getFlag(args, "--cache-ttl");
   const cacheTtlSeconds = cacheTtlStr ? parseInt(cacheTtlStr, 10) : config.cache.ttlSeconds;
 
-  // All flags that take a value — used only to prevent their numeric values
-  // from being mistaken as the PR number.
-  const allFlagsWithValues = new Set([
-    "--format",
-    "--cache-ttl",
-    "--last-push-time",
-    "--ready-delay",
-    "--cooldown-seconds",
-    "--require-sha",
-    "--message",
-  ]);
   // Only global flags are stripped from `extra`; subcommand-specific flags
   // must remain so handlers like handleIterate/handleResolve can read them.
   const globalFlagsWithValues = new Set(["--format", "--cache-ttl"]);
@@ -54,11 +55,11 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
         excludeFromExtra.add(i + 1);
       }
       i += 1;
-    } else if (allFlagsWithValues.has(arg)) {
+    } else if (FLAGS_WITH_VALUES.has(arg)) {
       skipForPrDetect.add(i);
       if (i + 1 < args.length) skipForPrDetect.add(i + 1);
       i += 1;
-    } else if ([...allFlagsWithValues].some((f) => arg.startsWith(`${f}=`))) {
+    } else if ([...FLAGS_WITH_VALUES].some((f) => arg.startsWith(`${f}=`))) {
       skipForPrDetect.add(i);
     }
   }
@@ -102,11 +103,10 @@ export function parseList(value: string | null): string[] {
 }
 
 export function parseStatusPrNumbers(args: string[]): number[] {
-  const flagsWithValues = new Set(["--format", "--cache-ttl"]);
   const prNumbers: number[] = [];
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i]!;
-    if (flagsWithValues.has(arg)) {
+    if (FLAGS_WITH_VALUES.has(arg)) {
       i += 1;
       continue;
     }
@@ -121,10 +121,9 @@ export function parseStatusPrNumbers(args: string[]): number[] {
 // Duration parsing
 // ---------------------------------------------------------------------------
 
-export function parseDurationToMinutes(s: string): number {
-  const config = loadConfig();
+export function parseDurationToMinutes(s: string, defaultMinutes?: number): number {
   const m = /^(\d+)(m|min|minutes?|h|hours?)?$/.exec(s.trim());
-  if (!m) return config.watch.readyDelayMinutes;
+  if (!m) return defaultMinutes ?? loadConfig().watch.readyDelayMinutes;
   const n = parseInt(m[1]!, 10);
   const unit = m[2] ?? "m";
   if (unit.startsWith("h")) return n * 60;
@@ -163,11 +162,5 @@ export function iterateActionToExitCode(action: ShepherdAction): number {
 }
 
 export function deriveSimpleReady(s: PrSummary): boolean {
-  return (
-    s.mergeStateStatus === "CLEAN" &&
-    s.ciState === "SUCCESS" &&
-    s.unresolvedThreads === 0 &&
-    s.reviewDecision !== "CHANGES_REQUESTED" &&
-    !s.isDraft
-  );
+  return deriveVerdict(s) === "READY";
 }

@@ -6,10 +6,14 @@ vi.mock("./commands/resolve.mts", () => ({
   runResolveMutate: vi.fn(),
 }));
 vi.mock("./commands/iterate.mts", () => ({ runIterate: vi.fn() }));
-vi.mock("./commands/status.mts", () => ({
-  runStatus: vi.fn(),
-  formatStatusTable: vi.fn().mockReturnValue("status table"),
-}));
+vi.mock("./commands/status.mts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./commands/status.mts")>();
+  return {
+    ...actual,
+    runStatus: vi.fn(),
+    formatStatusTable: vi.fn().mockReturnValue("status table"),
+  };
+});
 vi.mock("./github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
 }));

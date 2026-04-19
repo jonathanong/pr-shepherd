@@ -119,9 +119,8 @@ async function handleIterate(args: string[]): Promise<void> {
   const lastPushTime = lastPushTimeStr ? parseInt(lastPushTimeStr, 10) : undefined;
   const readyDelayStr = getFlag(extra, "--ready-delay");
   const cfg = loadConfig();
-  const readyDelaySeconds = readyDelayStr
-    ? parseDurationToMinutes(readyDelayStr) * 60
-    : cfg.watch.readyDelayMinutes * 60;
+  const readyDelaySeconds =
+    parseDurationToMinutes(readyDelayStr ?? "", cfg.watch.readyDelayMinutes) * 60;
   const cooldownSecondsStr = getFlag(extra, "--cooldown-seconds");
   const cooldownSeconds = cooldownSecondsStr
     ? parseInt(cooldownSecondsStr, 10)

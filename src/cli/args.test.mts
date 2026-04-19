@@ -180,6 +180,10 @@ describe("parseDurationToMinutes", () => {
     // Default config watch.readyDelayMinutes=10
     expect(parseDurationToMinutes("notaduration")).toBe(10);
   });
+
+  it("uses explicit defaultMinutes when provided and input is invalid", () => {
+    expect(parseDurationToMinutes("notaduration", 15)).toBe(15);
+  });
 });
 
 // ---------------------------------------------------------------------------
