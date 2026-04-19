@@ -62,14 +62,7 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   const activeThreads = unresolvedThreads.filter((t) => !t.isOutdated);
 
   return {
-    actionableThreads: activeThreads.map(({ id, path, line, author, body, createdAtUnix }) => ({
-      id,
-      path,
-      line,
-      author,
-      body,
-      createdAtUnix,
-    })),
+    actionableThreads: activeThreads.map(({ isResolved, isOutdated, ...rest }) => rest),
     actionableComments: visibleComments,
     changesRequestedReviews: data.changesRequestedReviews,
   };
