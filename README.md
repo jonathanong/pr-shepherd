@@ -21,6 +21,22 @@ Autonomous PR CI monitor and review-comment resolver for Claude Code.
 
 ## Install
 
+> **Note:** All install methods add the skill definitions only — they do not install the `pr-shepherd` CLI. The skills invoke `npx pr-shepherd`, so you also need the CLI available. Add it to your project's dev dependencies so `npx` resolves it without prompting:
+>
+> ```bash
+> npm install --save-dev pr-shepherd
+> ```
+>
+> Or install globally: `npm i -g pr-shepherd`.
+
+### As individual skills via `npx skills`
+
+```bash
+npx skills add jonathanong/pr-shepherd
+```
+
+Installs the three skills (`check`, `monitor`, `resolve`) into your agent's skill directory (`.claude/skills/` for project scope, `~/.claude/skills/` with `-g` for global scope). Powered by [skills.sh](https://skills.sh).
+
 ### As a Claude Code plugin (recommended)
 
 ```bash
