@@ -31,7 +31,7 @@
     "@vitest/coverage-v8": "^4.1.4"
   },
   "scripts": {
-    "build": "rm -rf bin && tsc -p tsconfig.build.json && cp src/config.json bin/ && mkdir -p bin/github && cp -r src/github/gql bin/github/ && mv bin/index.mjs bin/pr-shepherd && node -e \"require('fs').chmodSync('bin/pr-shepherd', 0o755)\"",
+    "build": "rm -rf bin && tsc -p tsconfig.build.json && cp src/config.json bin/ && mkdir -p bin/github && cp -r src/github/gql bin/github/ && node -e \"const fs=require('fs');fs.renameSync('bin/index.mjs','bin/pr-shepherd');fs.chmodSync('bin/pr-shepherd',0o755)\"",
     "prepare": "npm run build",
     "prepublishOnly": "npm run typecheck && npm test && npm run build",
     "typecheck": "tsc --noEmit",
