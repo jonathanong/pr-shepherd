@@ -32,6 +32,6 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: Upload coverage to Codecov
         if: ${{ always() && !cancelled() && steps.token-check.outputs.has_codecov == 'true' }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
