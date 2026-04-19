@@ -31,7 +31,7 @@
     "@vitest/coverage-v8": "^4.1.4"
   },
   "scripts": {
-    "build": "rm -rf bin && tsc -p tsconfig.build.json && cp src/config.json bin/ && mkdir -p bin/github && cp -r src/github/gql bin/github/ && chmod +x bin/index.mjs",
+    "build": "node scripts/build.mjs",
     "prepare": "npm run build",
     "prepublishOnly": "npm run typecheck && npm test && npm run build",
     "typecheck": "tsc --noEmit",
