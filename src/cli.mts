@@ -55,7 +55,7 @@ export async function main(argv: string[]): Promise<void> {
     default:
       process.stderr.write(`Unknown subcommand: ${subcommand ?? "(none)"}\n`);
       process.stderr.write("Usage: pr-shepherd <check|resolve|iterate|status> [options]\n");
-      process.exit(1);
+      process.exitCode = 1; return;
   }
 }
 
@@ -70,7 +70,7 @@ async function handleCheck(args: string[]): Promise<void> {
   const output = globalOpts.format === "json" ? formatJson(report) : formatText(report);
   process.stdout.write(`${output}\n`);
 
-  process.exit(statusToExitCode(report.status));
+  process.exitCode = statusToExitCode(report.status); return;
 }
 
 async function handleResolve(args: string[]): Promise<void> {
@@ -146,7 +146,7 @@ async function handleIterate(args: string[]): Promise<void> {
     process.stdout.write(`${formatIterateResult(result)}\n`);
   }
 
-  process.exit(iterateActionToExitCode(result.action));
+  process.exitCode = iterateActionToExitCode(result.action); return;
 }
 
 async function handleStatus(args: string[]): Promise<void> {
@@ -156,7 +156,7 @@ async function handleStatus(args: string[]): Promise<void> {
 
   if (prNumbers.length === 0) {
     process.stderr.write("Usage: pr-shepherd status PR1 [PR2 …]\n");
-    process.exit(1);
+    process.exitCode = 1; return;
   }
 
   const repo = await getRepoInfo();
@@ -169,7 +169,7 @@ async function handleStatus(args: string[]): Promise<void> {
   process.stdout.write(`${output}\n`);
 
   const allReady = summaries.every((s) => deriveSimpleReady(s));
-  process.exit(allReady ? 0 : 1);
+  process.exitCode = allReady ? 0 : 1; return;
 }
 
 // ---------------------------------------------------------------------------
