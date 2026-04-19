@@ -108,13 +108,16 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
 
   // Step 3: Ready-delay state machine.
   const [repoOwner, repoName] = report.repo.split("/");
+  if (!repoOwner || !repoName) {
+    throw new Error(`Unexpected repo format: "${report.repo}" (expected "owner/name")`);
+  }
   const isReady = report.status === "READY";
   const readyState = await updateReadyDelay(
     report.pr,
     isReady,
     readyDelaySeconds,
-    repoOwner!,
-    repoName!,
+    repoOwner,
+    repoName,
   );
 
   const base: IterateResultBase = {
@@ -155,7 +158,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   if (hasActionableWork) {
     // Load fix-attempt counts, resetting if HEAD SHA changed (new commit pushed).
     const headSha = await getCurrentHeadSha();
-    const attemptsKey = { owner: repoOwner!, repo: repoName!, pr: prNumber };
+    const attemptsKey = { owner: repoOwner, repo: repoName, pr: prNumber };
     const stored = await readFixAttempts(attemptsKey);
     const attempts =
       stored?.headSha === headSha
