@@ -85,7 +85,6 @@ describe("loadConfig — malformed YAML", () => {
     expect(result.resolve.concurrency).toBe(4);
     const output = stderrSpy.mock.calls.map((c) => c[0]).join("");
     expect(output).toContain("failed to parse");
-
   });
 });
 
@@ -104,7 +103,6 @@ describe("loadConfig — removed keys", () => {
       expect(result[key]).toBeUndefined();
       const output = stderrSpy.mock.calls.map((c) => c[0]).join("");
       expect(output).toContain(`"${key}" has been removed`);
-  
     },
   );
 });
@@ -125,7 +123,6 @@ describe("loadConfig — iterate renames", () => {
     expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain(
       '"iterate.maxFixAttempts" renamed',
     );
-
   });
 });
 
@@ -141,7 +138,6 @@ describe("loadConfig — watch renames", () => {
     expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain(
       '"watch.intervalDefault" renamed',
     );
-
   });
 
   it("maps readyDelayMinutesDefault → readyDelayMinutes and warns", async () => {
@@ -153,7 +149,6 @@ describe("loadConfig — watch renames", () => {
     expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain(
       '"watch.readyDelayMinutesDefault" renamed',
     );
-
   });
 
   it("maps expiresHoursDefault → expiresHours and warns", async () => {
@@ -165,7 +160,6 @@ describe("loadConfig — watch renames", () => {
     expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain(
       '"watch.expiresHoursDefault" renamed',
     );
-
   });
 });
 
@@ -186,7 +180,6 @@ describe("loadConfig — resolve renames", () => {
     const output = stderrSpy.mock.calls.map((c) => c[0]).join("");
     expect(output).toContain('"resolve.shaPollIntervalMs" moved');
     expect(output).toContain('"resolve.shaPollMaxAttempts" moved');
-
   });
 });
 
@@ -200,7 +193,6 @@ describe("loadConfig — checks renames", () => {
     expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain(
       '"checks.relevantEvents" renamed',
     );
-
   });
 
   it("maps logLinesKept → logMaxLines and warns", async () => {
@@ -212,7 +204,6 @@ describe("loadConfig — checks renames", () => {
     expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain(
       '"checks.logLinesKept" renamed',
     );
-
   });
 
   it("maps logExcerptMaxChars → logMaxChars and warns", async () => {
@@ -224,7 +215,6 @@ describe("loadConfig — checks renames", () => {
     expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain(
       '"checks.logExcerptMaxChars" renamed',
     );
-
   });
 });
 
