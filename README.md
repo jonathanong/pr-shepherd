@@ -28,6 +28,8 @@ claude /plugin marketplace add jonathanong/pr-shepherd
 claude /plugin install pr-shepherd
 ```
 
+This repo ships two `marketplace.json` files that serve different install flows: the root `marketplace.json` resolves the plugin from the npm registry (used by the `claude /plugin marketplace add` command above); `.claude-plugin/marketplace.json` is the owner-level registry manifest that resolves the plugin from the local plugin directory (used when Claude Code installs from a local or git-based source). Both files are needed to support these two install paths.
+
 See [Usage](#usage) below.
 
 ### Without the plugin — custom slash command
