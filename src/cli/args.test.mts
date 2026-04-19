@@ -6,12 +6,45 @@ import {
   parseStatusPrNumbers,
   parseCommonArgs,
   parseDurationToMinutes,
+  parseIntStrict,
   statusToExitCode,
   iterateActionToExitCode,
   deriveSimpleReady,
 } from "./args.mts";
 import type { PrSummary } from "../commands/status.mts";
 import type { ShepherdAction } from "../types.mts";
+
+// ---------------------------------------------------------------------------
+// parseIntStrict
+// ---------------------------------------------------------------------------
+
+describe("parseIntStrict", () => {
+  it("returns an integer for a valid integer string", () => {
+    expect(parseIntStrict("42", "--flag")).toBe(42);
+  });
+
+  it("accepts negative integers", () => {
+    expect(parseIntStrict("-5", "--flag")).toBe(-5);
+  });
+
+  it("throws for a float string like '10.5'", () => {
+    expect(() => parseIntStrict("10.5", "--cache-ttl")).toThrow(
+      'Invalid value for --cache-ttl: "10.5" is not an integer',
+    );
+  });
+
+  it("throws for a partial integer like '10abc'", () => {
+    expect(() => parseIntStrict("10abc", "--cache-ttl")).toThrow(
+      'Invalid value for --cache-ttl: "10abc" is not an integer',
+    );
+  });
+
+  it("throws for a non-numeric string", () => {
+    expect(() => parseIntStrict("abc", "--cache-ttl")).toThrow(
+      'Invalid value for --cache-ttl: "abc" is not an integer',
+    );
+  });
+});
 
 // ---------------------------------------------------------------------------
 // getFlag
