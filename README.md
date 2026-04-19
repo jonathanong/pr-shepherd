@@ -50,7 +50,9 @@ See [Usage](#usage) below.
 ### Without the plugin — custom slash command
 
 If you don't want the full plugin, create a project-local (or user-scope)
-slash command that wraps the CLI directly.
+slash command that wraps the CLI directly. This still requires `pr-shepherd`
+to be installed in the repository first (`npm install pr-shepherd`), so that
+`npx pr-shepherd ...` runs without prompting to install the package.
 
 1. **Create the command file:**
    - Project-scope: `.claude/commands/pr-check.md`
@@ -95,10 +97,14 @@ slash command that wraps the CLI directly.
    /pr-check 42
    ```
 
-For `monitor` and `resolve` equivalents, copy
-[`skills/monitor/SKILL.md`](skills/monitor/SKILL.md) and
-[`skills/resolve/SKILL.md`](skills/resolve/SKILL.md) the same way. To drive
-the CLI without Claude at all, see [docs/usage.md](docs/usage.md).
+For `monitor` and `resolve` custom commands, do **not** copy the
+[`skills/`](skills/) files directly — those contain skill/plugin-specific
+frontmatter that is not valid for `.claude/commands/` files. Instead, create
+`.claude/commands/pr-monitor.md` and/or `.claude/commands/pr-resolve.md`
+using the same command-file structure as the `pr-check` example above, with
+the CLI invocation changed to `npx pr-shepherd iterate ...` or
+`npx pr-shepherd resolve ...`. To drive the CLI without Claude at all, see
+[docs/usage.md](docs/usage.md).
 
 ## Usage
 
