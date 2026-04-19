@@ -25,6 +25,12 @@ Autonomous PR CI monitor and review-comment resolver for Claude Code.
 
 Claude's cloud autofix requires CI to verify changes for apps that can't run in the cloud. Running targeted tests locally and letting Claude Code drive is cheaper and avoids vendor lock-in. Skills are used (not subagents) because subagents load all CLAUDE.md context, increasing cost; skills inject into the main conversation instead.
 
+## Requirements
+
+- Node.js ≥ 24.0.0
+- `gh` CLI authenticated (`gh auth login`)
+- `git`
+
 ## Install
 
 ```bash
@@ -39,11 +45,99 @@ claude /plugin marketplace add jonathanong/pr-shepherd
 claude /plugin install pr-shepherd
 ```
 
-Then use:
+See [Usage](#usage) below.
 
-- `/pr-shepherd:monitor [PR]` — start continuous monitoring
-- `/pr-shepherd:check [PR]` — one-shot status check
-- `/pr-shepherd:resolve [PR]` — fetch, fix, and resolve review comments
+### Without the plugin — custom slash command
+
+If you don't want the full plugin, create a project-local (or user-scope)
+slash command that wraps the CLI directly.
+
+1. **Create the command file:**
+   - Project-scope: `.claude/commands/pr-check.md`
+   - User-scope: `~/.claude/commands/pr-check.md`
+
+2. **Paste this as the file contents:**
+
+   ````markdown
+   ---
+   description: "Check GitHub CI status and review comments for the current PR"
+   argument-hint: "[PR number or URL ...]"
+   allowed-tools: ["Bash", "Read", "Grep"]
+   ---
+
+   # PR Status Check
+
+   ## Arguments: $ARGUMENTS
+
+   ## Resolve PR number(s)
+
+   1. If `$ARGUMENTS` contains PR numbers or GitHub PR URLs, extract the number(s).
+   2. Otherwise, infer: `gh pr list --head "$(git rev-parse --abbrev-ref HEAD)" --json number --jq '.[0].number'`
+   3. If no PR found, report an error and stop.
+
+   ## Run the check
+
+   ```bash
+   npx pr-shepherd check <N> --format=json
+   ```
+
+   Parse the JSON and report:
+
+   - **Merge status** (`report.mergeStatus.status`): CLEAN | BEHIND | CONFLICTS | BLOCKED | UNSTABLE | DRAFT | UNKNOWN
+   - **CI check results** (`report.checks`): passing count, failing names, in-progress names
+   - **Unresolved review comments** (`report.threads.actionable` + `report.comments.actionable`): count + details
+   ````
+
+3. **Use it in Claude Code:**
+
+   ```
+   /pr-check
+   /pr-check 42
+   ```
+
+For `monitor` and `resolve` equivalents, copy
+[`skills/monitor/SKILL.md`](skills/monitor/SKILL.md) and
+[`skills/resolve/SKILL.md`](skills/resolve/SKILL.md) the same way. To drive
+the CLI without Claude at all, see [docs/usage.md](docs/usage.md).
+
+## Usage
+
+### Monitor a PR
+
+Creates a cron loop that fires every 4 minutes, checks CI and review
+comments, fixes issues, and marks the PR ready for review when clean. The
+loop cancels automatically when the PR is merged or closed.
+
+```
+/pr-shepherd:monitor                     # infer PR from current branch
+/pr-shepherd:monitor 42
+/pr-shepherd:monitor 42 every 8m
+/pr-shepherd:monitor 42 --ready-delay 15m
+```
+
+### Check a PR
+
+One-shot status snapshot — merge state, CI results, and unresolved comments.
+Accepts multiple PR numbers.
+
+```
+/pr-shepherd:check        # infer from branch
+/pr-shepherd:check 42
+/pr-shepherd:check 41 42 43
+```
+
+### Resolve review comments
+
+Fetches all actionable threads and comments, triages them, applies fixes,
+pushes, then resolves/minimizes/dismisses via `--require-sha` (waits until
+GitHub has seen the push before resolving).
+
+```
+/pr-shepherd:resolve       # infer from branch
+/pr-shepherd:resolve 42
+```
+
+See [docs/skills.md](docs/skills.md) for full argument reference.
 
 ## Workflow
 
@@ -134,12 +228,6 @@ actions:
 ```
 
 See [docs/configuration.md](docs/configuration.md) for all options.
-
-## Requirements
-
-- Node.js ≥ 24.0.0
-- `gh` CLI authenticated (`gh auth login`)
-- `git`
 
 ## Architecture
 
