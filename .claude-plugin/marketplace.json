@@ -10,7 +10,7 @@
     {
       "name": "pr-shepherd",
       "description": "Autonomous PR CI monitor and review-comment resolver",
-      "source": ".",
+      "source": ".claude-plugin",
       "category": "productivity",
       "homepage": "https://github.com/jonathanong/pr-shepherd"
     }
