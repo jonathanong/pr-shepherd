@@ -40,7 +40,7 @@ Invoke `/loop <INTERVAL> --max-turns 50 --expires 8h` via the Skill tool. Use th
 ````
 # pr-shepherd-loop:pr=<PR_NUMBER>
 Run the following in a single Bash invocation (dangerouslyDisableSandbox: true):
-  npx pr-shepherd iterate <PR_NUMBER> --ready-delay <READY_DELAY> --no-cache --last-push-time "$(git log -1 --format=%ct HEAD)" --format=json
+  $([ -f dist/index.mjs ] && echo "node dist/index.mjs" || echo "npx pr-shepherd") iterate <PR_NUMBER> --ready-delay <READY_DELAY> --no-cache --last-push-time "$(git log -1 --format=%ct HEAD)" --format=json
 
 Exit codes 0, 1, 2, and 3 are all valid signals — always try to parse stdout as JSON first. If the command exits non-zero and stdout is not parseable JSON (e.g. a crash), log the first line of stderr and continue (do not cancel the loop).
 
@@ -84,7 +84,7 @@ Parse the `action` field and act:
   4. If files were changed, `git add <files> && git commit -m "<appropriate commit message>"`
   5. `git fetch origin && git rebase origin/<BASE_BRANCH> && git push --force-with-lease` (dangerouslyDisableSandbox: true)
   6. `HEAD_SHA=$(git rev-parse HEAD)`
-  7. `npx pr-shepherd resolve <PR_NUMBER> --resolve-thread-ids <IDs> --minimize-comment-ids <IDs> --dismiss-review-ids <IDs> --message "address review comments" --require-sha "$HEAD_SHA"` (dangerouslyDisableSandbox: true). Omit any flag whose ID list is empty.
+  7. `$([ -f dist/index.mjs ] && echo "node dist/index.mjs" || echo "npx pr-shepherd") resolve <PR_NUMBER> --resolve-thread-ids <IDs> --minimize-comment-ids <IDs> --dismiss-review-ids <IDs> --message "address review comments" --require-sha "$HEAD_SHA"` (dangerouslyDisableSandbox: true). Omit any flag whose ID list is empty.
 
 ````
 
@@ -100,7 +100,7 @@ The default 4-minute interval is chosen for two reasons:
 The loop prompt above handles each iteration directly — no subagent is spawned. The same iterate command can be run manually at any time:
 
 ```bash
-npx pr-shepherd iterate <PR_NUMBER> --ready-delay <READY_DELAY> --no-cache --last-push-time "$(git log -1 --format=%ct HEAD)" --format=json
+$([ -f dist/index.mjs ] && echo "node dist/index.mjs" || echo "npx pr-shepherd") iterate <PR_NUMBER> --ready-delay <READY_DELAY> --no-cache --last-push-time "$(git log -1 --format=%ct HEAD)" --format=json
 ```
 
 To stop monitoring manually, use `/loop cancel` or close the session.

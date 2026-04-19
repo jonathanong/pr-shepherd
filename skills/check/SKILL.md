@@ -27,7 +27,7 @@ If `MERGED`, output: `PR #N is already merged. Nothing to check.` and skip.
 ## Run the check
 
 ```bash
-npx pr-shepherd check <N> --format=json
+$([ -f dist/index.mjs ] && echo "node dist/index.mjs" || echo "npx pr-shepherd") check <N> --format=json
 ```
 
 ## Reporting
