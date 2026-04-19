@@ -142,6 +142,8 @@ beforeEach(() => {
   mockUpdateReadyDelay.mockResolvedValue(READY_STATE_DEFAULT);
   mockReadFixAttempts.mockResolvedValue(null);
   mockWriteFixAttempts.mockResolvedValue(undefined);
+  // Pass checks through unchanged — failureKind is pre-set by test fixtures.
+  mockTriageFailingChecks.mockImplementation((checks) => Promise.resolve(checks));
 });
 
 afterEach(() => {
@@ -245,21 +247,21 @@ describe("runIterate — fix_code (actionable threads)", () => {
   });
 });
 
-describe("runIterate — fix_code (actionable CI failure)", () => {
-  function makeActionableCheck(runId: string, name = "typecheck") {
-    return {
-      name,
-      status: "COMPLETED" as const,
-      conclusion: "FAILURE" as const,
-      detailsUrl: `https://github.com/owner/repo/actions/runs/${runId}`,
-      event: "pull_request",
-      runId,
-      category: "failing" as const,
-      failureKind: "actionable" as const,
-      logExcerpt: "error TS2345: type mismatch",
-    };
-  }
+function makeActionableCheck(runId: string, name = "typecheck") {
+  return {
+    name,
+    status: "COMPLETED" as const,
+    conclusion: "FAILURE" as const,
+    detailsUrl: `https://github.com/owner/repo/actions/runs/${runId}`,
+    event: "pull_request",
+    runId,
+    category: "failing" as const,
+    failureKind: "actionable" as const,
+    logExcerpt: "error TS2345: type mismatch",
+  };
+}
 
+describe("runIterate — fix_code (actionable CI failure)", () => {
   it("calls gh run cancel and returns action: fix_code (all succeed)", async () => {
     const actionableCheck = makeActionableCheck("run-99");
     mockRunCheck.mockResolvedValue(
@@ -363,7 +365,7 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
     }
   });
 
-  it("deduplicates runIds — two checks sharing a runId call gh run cancel only once", async () => {
+  it("deduplicates runIds — two checks sharing a runId emit one AgentCheck and call gh run cancel once", async () => {
     const check1 = makeActionableCheck("run-300", "typecheck");
     const check2 = makeActionableCheck("run-300", "lint");
     mockRunCheck.mockResolvedValue(
@@ -390,13 +392,129 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
 
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
-      expect(result.fix.checks).toHaveLength(2);
+      // Deduped by runId — only one AgentCheck emitted.
+      expect(result.fix.checks).toHaveLength(1);
+      expect(result.fix.checks[0]?.runId).toBe("run-300");
       expect(result.cancelled).toEqual(["run-300"]);
     }
     const cancelCalls = mockExecFile.mock.calls.filter(
       (call) => call[1]?.[0] === "run" && call[1]?.[1] === "cancel",
     );
     expect(cancelCalls).toHaveLength(1);
+  });
+});
+
+describe("runIterate — fix_code agent projection", () => {
+  it("emits AgentThread shape — no isResolved/isOutdated/createdAtUnix on fix.threads", async () => {
+    const thread = {
+      id: "t-1",
+      isResolved: false,
+      isOutdated: false,
+      path: "src/foo.mts",
+      line: 5,
+      author: "alice",
+      body: "Please fix this",
+      createdAtUnix: 1700000000,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      const t = result.fix.threads[0]!;
+      expect(t.id).toBe("t-1");
+      expect(t.path).toBe("src/foo.mts");
+      expect(t.line).toBe(5);
+      expect(t.author).toBe("alice");
+      expect(t.body).toBe("Please fix this");
+      expect(t).not.toHaveProperty("isResolved");
+      expect(t).not.toHaveProperty("isOutdated");
+      expect(t).not.toHaveProperty("createdAtUnix");
+    }
+  });
+
+  it("emits AgentComment shape — no isMinimized/createdAtUnix on fix.comments", async () => {
+    const comment = {
+      id: "c-1",
+      isMinimized: false,
+      author: "bob",
+      body: "Consider renaming this",
+      createdAtUnix: 1700000000,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        comments: { actionable: [comment] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      const c = result.fix.comments[0]!;
+      expect(c.id).toBe("c-1");
+      expect(c.author).toBe("bob");
+      expect(c.body).toBe("Consider renaming this");
+      expect(c).not.toHaveProperty("isMinimized");
+      expect(c).not.toHaveProperty("createdAtUnix");
+    }
+  });
+
+  it("emits AgentCheck shape — no logExcerpt/detailsUrl/conclusion on fix.checks", async () => {
+    const check = makeActionableCheck("run-55");
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        checks: {
+          passing: [],
+          failing: [check],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockTriageFailingChecks.mockResolvedValue([
+      { ...check, failureKind: "actionable", logExcerpt: "some log" },
+    ]);
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      const c = result.fix.checks[0]!;
+      expect(c.name).toBe("typecheck");
+      expect(c.runId).toBe("run-55");
+      expect(c.detailsUrl).toBeDefined();
+      expect(c.failureKind).toBe("actionable");
+      expect(c).not.toHaveProperty("logExcerpt");
+      expect(c).not.toHaveProperty("conclusion");
+      expect(c).not.toHaveProperty("category");
+    }
   });
 });
 

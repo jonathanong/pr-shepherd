@@ -191,6 +191,39 @@ export interface ResolveOptions {
 }
 
 // ---------------------------------------------------------------------------
+// Agent-facing projections (used by iterate output, not check output)
+// ---------------------------------------------------------------------------
+
+/** Thread shape emitted to the monitor agent — stripped of always-false flags. */
+export interface AgentThread {
+  id: string;
+  path: string | null;
+  line: number | null;
+  author: string;
+  body: string;
+}
+
+/** Comment shape emitted to the monitor agent — stripped of always-false flags. */
+export interface AgentComment {
+  id: string;
+  author: string;
+  body: string;
+}
+
+/**
+ * Check shape emitted to the monitor agent — no log excerpt.
+ * The agent fetches logs on demand via `gh run view <runId> --log-failed`
+ * when `runId` is available, and falls back to `detailsUrl` otherwise.
+ */
+export interface AgentCheck {
+  name: string;
+  runId: string | null;
+  /** Fallback for checks where runId is null (e.g. external status checks). */
+  detailsUrl: string | null;
+  failureKind?: FailureKind;
+}
+
+// ---------------------------------------------------------------------------
 // Iterate command types
 // ---------------------------------------------------------------------------
 
@@ -206,8 +239,8 @@ export type ShepherdAction =
 
 export interface EscalateDetails {
   triggers: string[];
-  unresolvedThreads: ReviewThread[];
-  ambiguousComments: PrComment[];
+  unresolvedThreads: AgentThread[];
+  ambiguousComments: AgentComment[];
   changesRequestedReviews: Review[];
   /** Populated when fix-thrash triggered — threads that have been attempted too many times. */
   attemptHistory?: Array<{ threadId: string; attempts: number }>;
@@ -251,9 +284,9 @@ export interface IterateResultCancel extends IterateResultBase {
 export interface IterateResultFixCode extends IterateResultBase {
   action: "fix_code";
   fix: {
-    threads: ReviewThread[];
-    comments: PrComment[];
-    checks: TriagedCheck[];
+    threads: AgentThread[];
+    comments: AgentComment[];
+    checks: AgentCheck[];
     changesRequestedReviews: Review[];
   };
   cancelled: string[];
