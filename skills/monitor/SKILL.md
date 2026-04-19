@@ -4,7 +4,7 @@ description: "Start continuous CI monitoring — marks PR ready for review when 
 argument-hint: "[PR number or URL] [every <interval>] [--ready-delay <duration>]"
 user-invocable: true
 allowed-tools:
-  ["Bash", "Read", "Grep", "Edit", "Write", "Glob", "Skill", "CronList"]
+  ["Bash", "Read", "Grep", "Edit", "Write", "Skill", "CronList"]
   # CronCreate and CronDelete are intentionally omitted: they are invoked
   # internally by /loop (via the Skill tool), never called directly by this skill.
   # CronList is kept because the skill explicitly calls it to check for an
