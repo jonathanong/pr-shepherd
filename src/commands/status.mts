@@ -124,7 +124,7 @@ export function formatStatusTable(summaries: PrSummary[], repoFull: string): str
   return lines.join("\n");
 }
 
-function deriveVerdict(s: PrSummary): string {
+export function deriveVerdict(s: PrSummary): string {
   if (s.state === "MERGED") return "MERGED";
   if (s.state === "CLOSED") return "CLOSED";
   if (s.isDraft) return "DRAFT";
