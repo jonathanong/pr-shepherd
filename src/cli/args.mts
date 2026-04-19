@@ -3,12 +3,14 @@
  * Note: parseCommonArgs calls loadConfig() for cache TTL defaults.
  */
 
+import { parseArgs } from "node:util";
 import { loadConfig } from "../config/load.mts";
 import type { GlobalOptions, ShepherdAction } from "../types.mts";
 import { deriveVerdict } from "../commands/status.mts";
 import type { PrSummary } from "../commands/status.mts";
 
-// Flags that consume the next argument as their value.
+// Flags that consume the next argument as their value (used for PR-number
+// detection only — prevents a flag's value from being mistaken for a PR number).
 const FLAGS_WITH_VALUES = new Set([
   "--format",
   "--cache-ttl",
@@ -31,55 +33,74 @@ export interface ParsedArgs {
 
 export function parseCommonArgs(args: string[]): ParsedArgs {
   const config = loadConfig();
-  const format = (getFlag(args, "--format") ?? "text") as "text" | "json";
-  const noCache = hasFlag(args, "--no-cache");
-  const cacheTtlStr = getFlag(args, "--cache-ttl");
+
+  const { values, tokens } = parseArgs({
+    args,
+    strict: false,
+    allowPositionals: true,
+    tokens: true,
+    options: {
+      format: { type: "string" },
+      "cache-ttl": { type: "string" },
+      "no-cache": { type: "boolean" },
+    },
+  });
+
+  const format = ((values.format ?? "text") as string) as "text" | "json";
+  const noCache = (values["no-cache"] ?? false) as boolean;
+  const cacheTtlStr = values["cache-ttl"] as string | undefined;
   const cacheTtlSeconds = cacheTtlStr ? parseInt(cacheTtlStr, 10) : config.cache.ttlSeconds;
 
-  // Only global flags are stripped from `extra`; subcommand-specific flags
-  // must remain so handlers like handleIterate/handleResolve can read them.
-  const globalFlagsWithValues = new Set(["--format", "--cache-ttl"]);
+  // Build the set of arg indices consumed by global flags so we can strip
+  // them from `extra`.  Subcommand-specific flags are left untouched.
+  const consumedIndices = new Set<number>();
+  for (const tok of tokens ?? []) {
+    if (
+      tok.kind === "option" &&
+      (tok.name === "format" || tok.name === "cache-ttl" || tok.name === "no-cache")
+    ) {
+      consumedIndices.add(tok.index);
+      // When the value is a separate arg (--flag value, not --flag=value),
+      // inlineValue is false and the value occupies tok.index + 1.
+      if ("inlineValue" in tok && tok.inlineValue === false && tok.value != null) {
+        consumedIndices.add(tok.index + 1);
+      }
+    }
+  }
 
-  const skipForPrDetect = new Set<number>(); // indices to skip when finding PR number
-  const excludeFromExtra = new Set<number>(); // indices to strip from extra (global only)
-
+  // Find the first positional arg that looks like a PR number, skipping values
+  // that belong to flags in FLAGS_WITH_VALUES (subcommand flags included).
+  const skipForPrDetect = new Set<number>();
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i]!;
-    if (arg === "--no-cache") {
-      skipForPrDetect.add(i);
-      excludeFromExtra.add(i);
-    } else if (globalFlagsWithValues.has(arg)) {
-      skipForPrDetect.add(i);
-      excludeFromExtra.add(i);
-      if (i + 1 < args.length) {
-        skipForPrDetect.add(i + 1);
-        excludeFromExtra.add(i + 1);
-      }
-      i += 1;
-    } else if (FLAGS_WITH_VALUES.has(arg)) {
+    if (FLAGS_WITH_VALUES.has(arg)) {
       skipForPrDetect.add(i);
       if (i + 1 < args.length) skipForPrDetect.add(i + 1);
       i += 1;
     } else {
       const eqIdx = arg.indexOf("=");
-      if (eqIdx > 0) {
-        const flagName = arg.slice(0, eqIdx);
-        if (FLAGS_WITH_VALUES.has(flagName)) {
-          skipForPrDetect.add(i);
-          if (globalFlagsWithValues.has(flagName)) excludeFromExtra.add(i);
-        }
+      if (eqIdx > 0 && FLAGS_WITH_VALUES.has(arg.slice(0, eqIdx))) {
+        skipForPrDetect.add(i);
       }
     }
   }
 
-  // First non-skipped positional arg that looks like a PR number.
   const prArg = args.find(
     (a, index) => !skipForPrDetect.has(index) && !a.startsWith("--") && /^\d+$/.test(a),
   );
   const prNumber = prArg ? parseInt(prArg, 10) : undefined;
 
-  // Only strip global flags from extra — subcommand flags are passed through.
-  const extra = args.filter((_, index) => !excludeFromExtra.has(index));
+  // Remove consumed global-flag indices (and the PR number itself) from extra.
+  if (prArg !== undefined) {
+    for (let i = 0; i < args.length; i += 1) {
+      if (args[i] === prArg && !consumedIndices.has(i)) {
+        consumedIndices.add(i);
+        break;
+      }
+    }
+  }
+
+  const extra = args.filter((_, i) => !consumedIndices.has(i));
 
   return {
     prNumber,
