@@ -1,0 +1,218 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+vi.mock("../github/batch.mts", () => ({ fetchPrBatch: vi.fn() }));
+vi.mock("../github/client.mts", () => ({
+  getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
+  getCurrentPrNumber: vi.fn().mockResolvedValue(42),
+  getMergeableState: vi.fn(),
+}));
+vi.mock("../cache/file-cache.mts", () => ({ cacheGet: vi.fn(), cacheSet: vi.fn() }));
+vi.mock("../checks/triage.mts", () => ({
+  triageFailingChecks: vi.fn((checks: unknown[]) => Promise.resolve(checks)),
+}));
+vi.mock("../comments/resolve.mts", () => ({
+  autoResolveOutdated: vi.fn().mockResolvedValue({ resolved: [], errors: [] }),
+}));
+
+import { runCheck } from "./check.mts";
+import { fetchPrBatch } from "../github/batch.mts";
+import { getCurrentPrNumber, getMergeableState } from "../github/client.mts";
+import { cacheGet, cacheSet } from "../cache/file-cache.mts";
+import { triageFailingChecks } from "../checks/triage.mts";
+import type { BatchPrData, ClassifiedCheck } from "../types.mts";
+
+const mockFetchPrBatch = vi.mocked(fetchPrBatch);
+const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
+const mockGetMergeableState = vi.mocked(getMergeableState);
+const mockCacheGet = vi.mocked(cacheGet);
+const mockCacheSet = vi.mocked(cacheSet);
+const mockTriageFailingChecks = vi.mocked(triageFailingChecks);
+
+const BASE_OPTS = { format: "text" as const, noCache: false, cacheTtlSeconds: 300 };
+
+function makeCheck(overrides: Partial<ClassifiedCheck> = {}): ClassifiedCheck {
+  return {
+    name: "tests",
+    status: "COMPLETED",
+    conclusion: "SUCCESS",
+    detailsUrl: "",
+    event: "pull_request",
+    runId: null,
+    category: "passed",
+    ...overrides,
+  };
+}
+
+function makeBatchData(overrides: Partial<BatchPrData> = {}): BatchPrData {
+  return {
+    number: 42,
+    state: "OPEN",
+    isDraft: false,
+    mergeable: "MERGEABLE",
+    mergeStateStatus: "CLEAN",
+    reviewDecision: "APPROVED",
+    headRefOid: "abc123",
+    reviewRequests: [],
+    latestReviews: [],
+    reviewThreads: [],
+    comments: [],
+    changesRequestedReviews: [],
+    checks: [makeCheck()],
+    ...overrides,
+  };
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockCacheGet.mockResolvedValue(null);
+  mockCacheSet.mockResolvedValue(undefined);
+  mockFetchPrBatch.mockResolvedValue({ data: makeBatchData() });
+  mockGetMergeableState.mockResolvedValue({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" });
+});
+
+// ---------------------------------------------------------------------------
+// No PR found
+// ---------------------------------------------------------------------------
+
+describe("runCheck — no PR", () => {
+  it("throws when no PR number is found", async () => {
+    mockGetCurrentPrNumber.mockResolvedValueOnce(null);
+    await expect(runCheck(BASE_OPTS)).rejects.toThrow("No open PR found");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Caching
+// ---------------------------------------------------------------------------
+
+describe("runCheck — caching", () => {
+  it("uses cached data and skips fetchPrBatch on cache hit", async () => {
+    mockCacheGet.mockResolvedValue(makeBatchData());
+    await runCheck(BASE_OPTS);
+    expect(mockFetchPrBatch).not.toHaveBeenCalled();
+  });
+
+  it("calls fetchPrBatch and caches result on miss", async () => {
+    await runCheck(BASE_OPTS);
+    expect(mockFetchPrBatch).toHaveBeenCalledTimes(1);
+    expect(mockCacheSet).toHaveBeenCalledTimes(1);
+  });
+
+  it("bypasses cache when autoResolve=true (cacheGet called with disabled=true)", async () => {
+    await runCheck({ ...BASE_OPTS, autoResolve: true });
+    expect(mockCacheGet).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ disabled: true }),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// UNKNOWN merge state fallback
+// ---------------------------------------------------------------------------
+
+describe("runCheck — UNKNOWN merge state", () => {
+  it("calls getMergeableState REST fallback when mergeStateStatus=UNKNOWN + state=OPEN", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ mergeable: "UNKNOWN", mergeStateStatus: "UNKNOWN" }),
+    });
+    await runCheck(BASE_OPTS);
+    expect(mockGetMergeableState).toHaveBeenCalledTimes(1);
+  });
+
+  it("does NOT call getMergeableState when state=MERGED", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ state: "MERGED", mergeable: "UNKNOWN", mergeStateStatus: "UNKNOWN" }),
+    });
+    await runCheck(BASE_OPTS);
+    expect(mockGetMergeableState).not.toHaveBeenCalled();
+  });
+
+  it("does NOT cache UNKNOWN merge result", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ mergeStateStatus: "UNKNOWN" }),
+    });
+    await runCheck(BASE_OPTS);
+    expect(mockCacheSet).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// skipTriage
+// ---------------------------------------------------------------------------
+
+describe("runCheck — skipTriage", () => {
+  it("skips triageFailingChecks when skipTriage=true", async () => {
+    const failingCheck = makeCheck({ category: "failing", conclusion: "FAILURE" });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ checks: [failingCheck] }),
+    });
+    await runCheck({ ...BASE_OPTS, skipTriage: true });
+    expect(mockTriageFailingChecks).not.toHaveBeenCalled();
+  });
+
+  it("calls triageFailingChecks when failing checks exist and skipTriage is absent", async () => {
+    const failingCheck = makeCheck({ category: "failing", conclusion: "FAILURE" });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ checks: [failingCheck] }),
+    });
+    await runCheck(BASE_OPTS);
+    expect(mockTriageFailingChecks).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// blockedByFilteredCheck ghost flag
+// ---------------------------------------------------------------------------
+
+describe("runCheck — blockedByFilteredCheck", () => {
+  it("sets blockedByFilteredCheck=true when BLOCKED + no failing/in-progress + filtered checks exist", async () => {
+    const filteredCheck = makeCheck({ category: "filtered", event: "push" });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        mergeStateStatus: "BLOCKED",
+        checks: [filteredCheck],
+      }),
+    });
+    const report = await runCheck(BASE_OPTS);
+    expect(report.checks.blockedByFilteredCheck).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeStatus precedence
+// ---------------------------------------------------------------------------
+
+describe("runCheck — computeStatus precedence", () => {
+  it("returns FAILING when mergeStateStatus=DIRTY (CONFLICTS)", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ mergeStateStatus: "DIRTY" }),
+    });
+    const report = await runCheck(BASE_OPTS);
+    expect(report.status).toBe("FAILING");
+  });
+
+  it("returns FAILING when anyFailing", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ checks: [makeCheck({ category: "failing", conclusion: "FAILURE" })] }),
+    });
+    const report = await runCheck(BASE_OPTS);
+    expect(report.status).toBe("FAILING");
+  });
+
+  it("returns IN_PROGRESS before BLOCKED", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        mergeStateStatus: "BLOCKED",
+        checks: [makeCheck({ category: "in_progress", status: "IN_PROGRESS", conclusion: null })],
+      }),
+    });
+    const report = await runCheck(BASE_OPTS);
+    expect(report.status).toBe("IN_PROGRESS");
+  });
+
+  it("returns READY when CI passed and merge is clean", async () => {
+    const report = await runCheck(BASE_OPTS);
+    expect(report.status).toBe("READY");
+  });
+});
