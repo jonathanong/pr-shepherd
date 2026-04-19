@@ -1,4 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/oxc-project/oxlint/main/npm/oxlint/configuration_schema.json",
-  "rules": {}
+  "rules": {
+    "unicorn/prefer-node-protocol": "error",
+    "radix": "error"
+  }
 }
