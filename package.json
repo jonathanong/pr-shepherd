@@ -38,6 +38,7 @@
     "format": "oxfmt src/ skills/ docs/ README.md",
     "format:check": "oxfmt --check src/ skills/ docs/ README.md",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest"
   },
   "keywords": [
