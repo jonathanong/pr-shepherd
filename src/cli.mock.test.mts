@@ -31,9 +31,7 @@ const mockRunResolveMutate = vi.mocked(runResolveMutate);
 const mockRunIterate = vi.mocked(runIterate);
 const mockRunStatus = vi.mocked(runStatus);
 
-// Spy on process.exit to avoid actually exiting.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-let exitSpy: any;
 let stdoutSpy: any;
 let stderrSpy: any;
 
@@ -108,15 +106,14 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
 
 beforeEach(() => {
   vi.clearAllMocks();
-  exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {}) as () => never);
+  process.exitCode = undefined;
   stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-  // Default: return empty arrays so code doesn't crash after mocked process.exit.
   mockRunStatus.mockResolvedValue([]);
 });
 
 afterEach(() => {
-  exitSpy.mockRestore();
+  process.exitCode = undefined;
   stdoutSpy.mockRestore();
   stderrSpy.mockRestore();
 });
@@ -130,13 +127,13 @@ describe("main — check", () => {
     mockRunCheck.mockResolvedValue(makeReport({ status: "READY" }));
     await main(["node", "shepherd", "check", "42"]);
     expect(mockRunCheck).toHaveBeenCalledTimes(1);
-    expect(exitSpy).toHaveBeenCalledWith(0);
+    expect(process.exitCode).toBe(0);
   });
 
   it("exits with code 1 for FAILING status", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ status: "FAILING" }));
     await main(["node", "shepherd", "check", "42"]);
-    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(process.exitCode).toBe(1);
   });
 });
 
@@ -176,13 +173,13 @@ describe("main — iterate", () => {
   it("exits with iterateActionToExitCode(fix_code)=1", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("fix_code"));
     await main(["node", "shepherd", "iterate", "42"]);
-    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(process.exitCode).toBe(1);
   });
 
   it("exits with 0 for wait action", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
     await main(["node", "shepherd", "iterate", "42"]);
-    expect(exitSpy).toHaveBeenCalledWith(0);
+    expect(process.exitCode).toBe(0);
   });
 });
 
@@ -195,7 +192,7 @@ describe("main — status", () => {
     await main(["node", "shepherd", "status"]);
     const stderrOutput = stderrSpy.mock.calls.map((c: unknown[]) => c[0]).join("");
     expect(stderrOutput).toContain("Usage");
-    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(process.exitCode).toBe(1);
   });
 
   it("calls runStatus and exits 0 when all PRs are ready", async () => {
@@ -214,7 +211,7 @@ describe("main — status", () => {
     ]);
     await main(["node", "shepherd", "status", "1"]);
     expect(mockRunStatus).toHaveBeenCalledTimes(1);
-    expect(exitSpy).toHaveBeenCalledWith(0);
+    expect(process.exitCode).toBe(0);
   });
 });
 
@@ -227,6 +224,6 @@ describe("main — unknown subcommand", () => {
     await main(["node", "shepherd", "unknown-command"]);
     const stderrOutput = stderrSpy.mock.calls.map((c: unknown[]) => c[0]).join("");
     expect(stderrOutput).toContain("Unknown subcommand");
-    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(process.exitCode).toBe(1);
   });
 });
