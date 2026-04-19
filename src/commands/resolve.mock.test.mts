@@ -103,10 +103,8 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     });
     mockAutoResolveOutdated.mockResolvedValue({ resolved: ["outdated-1"], errors: [] });
 
-    const result = await runResolveFetch(BASE_OPTS);
+    await runResolveFetch(BASE_OPTS);
     expect(mockAutoResolveOutdated).toHaveBeenCalledWith(["outdated-1"]);
-    expect(result.autoResolved).toHaveLength(1);
-    expect(result.autoResolved[0]!.id).toBe("outdated-1");
   });
 
   it("activeThreads excludes outdated threads", async () => {

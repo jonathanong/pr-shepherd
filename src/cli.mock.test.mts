@@ -147,7 +147,6 @@ describe("main — check", () => {
 describe("main — resolve", () => {
   it("calls runResolveFetch when no mutation flags are given (fetch mode)", async () => {
     mockRunResolveFetch.mockResolvedValue({
-      autoResolved: [],
       actionableThreads: [],
       actionableComments: [],
       changesRequestedReviews: [],
