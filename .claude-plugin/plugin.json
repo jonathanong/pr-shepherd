@@ -1,7 +1,7 @@
 {
   "name": "pr-shepherd",
   "description": "Autonomous PR CI monitor and review-comment resolver for Claude Code",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "author": {
     "name": "Jonathan Ong",
     "email": "jonathanrichardong@gmail.com"
