@@ -62,16 +62,18 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
    - `git fetch origin && git rebase origin/$BASE_BRANCH && git push --force-with-lease`
    - Cancel stale CI runs: `gh run list --branch "$BRANCH" --status in_progress --json databaseId --jq '.[].databaseId' | xargs -I{} gh run cancel {}`
 
-6. **Resolve all verified items** — **only after the push:**
+6. **Resolve all verified items** — **only after the push, and only if at least one of the three ID lists is non-empty.** If all lists are empty, skip this step entirely (running resolve with no mutation IDs enters fetch mode as a side effect). Build the command from the non-empty ID lists; omit any flag whose list is empty:
 
    ```bash
    npx pr-shepherd resolve <N> \
      --resolve-thread-ids <comma-separated-IDs> \
      --minimize-comment-ids <comma-separated-IDs> \
      --dismiss-review-ids <comma-separated-IDs> \
-     --message "Addressed in $(git rev-parse HEAD)" \
+     --message "<specific description of the fix that addressed this review>" \
      --require-sha $(git rev-parse HEAD)
    ```
+
+   `--message` belongs **only** with `--dismiss-review-ids`. Omit it entirely when not dismissing a review. When you are dismissing, write one sentence describing the actual fix — the text is sent to GitHub as the dismissal reason and is shown to the reviewer. Generic text like `"Addressed in <SHA>"` or `"address review comments"` is not acceptable.
 
    The `--require-sha` flag ensures pr-shepherd verifies GitHub has the new commit before resolving.
 
@@ -82,4 +84,4 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
 - NEVER resolve threads before pushing fixes (use `--require-sha`).
 - NEVER blindly resolve items — always read and verify first.
 - Resolve from ALL authors — bots, AI reviewers, and humans alike.
-- `--message` is required when using `--dismiss-review-ids`. The CLI will throw if it is missing.
+- `--message` is required when using `--dismiss-review-ids`, and must NOT be passed otherwise. The CLI throws if it is missing during dismissal. The message must describe the specific change that addressed the review (e.g. `"Added null check in handler.ts:42"`); generic boilerplate like `"address review comments"` or `"Addressed in <SHA>"` is reviewer-hostile and forbidden.

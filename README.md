@@ -234,7 +234,7 @@ pr-shepherd resolve 42 \
   --resolve-thread-ids RT_kwDOabc,RT_kwDOdef \
   --minimize-comment-ids IC_kwDOxyz \
   --dismiss-review-ids PRR_kwDO123 \
-  --message "Addressed in $(git rev-parse HEAD)" \
+  --message "Switched query to parameterized form in src/db.ts" \
   --require-sha $(git rev-parse HEAD)
 ```
 
@@ -244,7 +244,7 @@ Minimized comments (1): IC_kwDOxyz
 Dismissed reviews (1): PRR_kwDO123
 ```
 
-`--require-sha` polls GitHub until the PR head matches the SHA before mutating — ensures reviewers see the fix before threads are closed. Exit code: always `0`.
+`--require-sha` polls GitHub until the PR head matches the SHA before mutating — ensures reviewers see the fix before threads are closed. Exit code: always `0`. `--message` is required only when `--dismiss-review-ids` is set, and should describe the specific fix — it is shown to the reviewer on GitHub.
 
 ### pr-shepherd iterate [PR]
 

@@ -88,7 +88,14 @@ Parse the `action` field and act:
   4. If files were changed, `git add <files> && git commit -m "<appropriate commit message>"`
   5. If files were changed: `git fetch origin && git rebase origin/<BASE_BRANCH> && git push --force-with-lease` (dangerouslyDisableSandbox: true), then `HEAD_SHA=$(git rev-parse HEAD)`.
   6. If **only noise** was found (no files changed, no threads/checks/reviews to act on): skip commit/push and omit `--require-sha` in the next step.
-  7. `npx pr-shepherd resolve <PR_NUMBER> --resolve-thread-ids <IDs> --minimize-comment-ids <NOISE_COMMENT_IDS plus any other comment IDs> --dismiss-review-ids <IDs> --message "address review comments" --require-sha "$HEAD_SHA"` (dangerouslyDisableSandbox: true). Omit any flag whose ID list is empty. Omit `--require-sha` when no push occurred.
+  7. Resolve the items on GitHub (dangerouslyDisableSandbox: true). Build the command from the non-empty ID lists only — always start with:
+     `npx pr-shepherd resolve <PR_NUMBER>`
+     Then append:
+     - `--resolve-thread-ids <IDs>` only if `fix.threads` was non-empty.
+     - `--minimize-comment-ids <IDs>` if any comments exist (use `NOISE_COMMENT_IDS` plus IDs of any other comments to minimize).
+     - `--dismiss-review-ids <IDs> --message "<specific description of what you changed>"` only if `fix.changesRequestedReviews` was non-empty. The message is shown to the reviewer on GitHub — write one sentence describing the actual fix (e.g. `"Switched to parameterized query in src/db.ts"`). Never use generic text like `"address review comments"`.
+     - `--require-sha "$HEAD_SHA"` only if a push occurred (omit when only noise was handled).
+     Omit any flag whose ID list is empty.
 
 ````
 
