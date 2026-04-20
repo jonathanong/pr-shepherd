@@ -53,6 +53,7 @@ query BatchPr(
           comments(first: 1) {
             nodes {
               id
+              isMinimized
               author {
                 login
               }

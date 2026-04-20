@@ -75,6 +75,7 @@ export interface ReviewThread {
   id: string;
   isResolved: boolean;
   isOutdated: boolean;
+  isMinimized: boolean;
   path: string | null;
   line: number | null;
   author: string;

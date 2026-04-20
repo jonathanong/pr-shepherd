@@ -50,7 +50,7 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   // Always bypass cache for resolve — we need fresh data before mutating.
   const { data } = await fetchPrBatch(prNumber, repo);
 
-  const unresolvedThreads = data.reviewThreads.filter((t) => !t.isResolved);
+  const unresolvedThreads = data.reviewThreads.filter((t) => !t.isResolved && !t.isMinimized);
   const visibleComments = data.comments.filter((c) => !c.isMinimized);
 
   // Auto-resolve outdated.

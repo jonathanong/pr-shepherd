@@ -150,6 +150,7 @@ function parseRawPr(
       id: t.id,
       isResolved: t.isResolved,
       isOutdated: t.isOutdated,
+      isMinimized: comment?.isMinimized ?? false,
       path: comment?.path ?? null,
       line: comment?.line ?? null,
       author: comment?.author?.login ?? "unknown",
@@ -311,6 +312,7 @@ interface RawThread {
   comments: {
     nodes: Array<{
       id: string;
+      isMinimized: boolean;
       author: { login: string } | null;
       body: string;
       path: string | null;

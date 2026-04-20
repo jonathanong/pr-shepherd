@@ -216,3 +216,43 @@ describe("runCheck — computeStatus precedence", () => {
     expect(report.status).toBe("READY");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Thread minimization filtering
+// ---------------------------------------------------------------------------
+
+describe("runCheck — minimized thread filtering", () => {
+  it("excludes threads whose top comment is minimized from actionable threads", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        reviewThreads: [
+          {
+            id: "t-visible",
+            isResolved: false,
+            isOutdated: false,
+            isMinimized: false,
+            path: "src/foo.ts",
+            line: 1,
+            author: "alice",
+            body: "fix this",
+            createdAtUnix: 0,
+          },
+          {
+            id: "t-minimized",
+            isResolved: false,
+            isOutdated: false,
+            isMinimized: true,
+            path: "src/bar.ts",
+            line: 2,
+            author: "gemini-code-assist",
+            body: "You have reached your daily quota limit.",
+            createdAtUnix: 0,
+          },
+        ],
+      }),
+    });
+    const report = await runCheck(BASE_OPTS);
+    expect(report.threads.actionable).toHaveLength(1);
+    expect(report.threads.actionable[0]?.id).toBe("t-visible");
+  });
+});
