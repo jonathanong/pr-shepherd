@@ -39,7 +39,7 @@ Invoke `/loop <INTERVAL> --max-turns 50 --expires 8h` via the Skill tool. Use th
 
 ````
 # pr-shepherd-loop:pr=<PR_NUMBER>
-Run the following in a single Bash invocation (dangerouslyDisableSandbox: true):
+Run the following in a single Bash invocation:
   npx pr-shepherd iterate <PR_NUMBER> --ready-delay <READY_DELAY> --no-cache --last-push-time "$(git log -1 --format=%ct HEAD)" --format=json
 
 Exit codes 0, 1, 2, and 3 are all valid signals — always try to parse stdout as JSON first. If the command exits non-zero and stdout is not parseable JSON (e.g. a crash), log the first line of stderr and continue (do not cancel the loop).
@@ -51,7 +51,7 @@ Parse the `action` field and act:
 - `rerun_ci` → log: `RERAN <N> CI checks: <reran joined by space>`
 - `mark_ready` → log: `MARKED READY: PR <pr>`
 - `cancel` → invoke `/loop cancel` and stop
-- `rebase` → run (dangerouslyDisableSandbox: true):
+- `rebase` → run:
   ```bash
   if ! git diff --quiet || ! git diff --cached --quiet; then
     echo "SKIP rebase: dirty worktree (uncommitted changes present)"
@@ -82,13 +82,13 @@ Parse the `action` field and act:
      All items in `fix.threads` are always actionable (they carry a file path and line by construction).
   1. For each item in `fix.threads` and each **actionable** `fix.comments`: read the referenced file/line and apply the fix (Edit/Write tools).
   2. For each item in `fix.checks`:
-     - If `runId` is non-null: fetch the failure log with `gh run view <runId> --log-failed` (dangerouslyDisableSandbox: true), scan the output to identify the failure (e.g. grep for `FAIL` for test failures, `error:` for type/compile errors, lint rule names for lint failures), then read the relevant file and apply the fix (Edit/Write tools).
+     - If `runId` is non-null: fetch the failure log with `gh run view <runId> --log-failed`, scan the output to identify the failure (e.g. grep for `FAIL` for test failures, `error:` for type/compile errors, lint rule names for lint failures), then read the relevant file and apply the fix (Edit/Write tools).
      - If `runId` is null: the failed check is an external status check that cannot be inspected via run logs. Escalate — tell the user to open `detailsUrl` in the PR checks UI, inspect the failure manually, and rerun `/pr-shepherd:monitor <PR_NUMBER>` after addressing it. Do not attempt to fix these automatically.
   3. For each item in `fix.changesRequestedReviews`: read the review body and apply the requested changes.
   4. If files were changed, `git add <files> && git commit -m "<appropriate commit message>"`
-  5. If files were changed: `git fetch origin && git rebase origin/<BASE_BRANCH> && git push --force-with-lease` (dangerouslyDisableSandbox: true), then `HEAD_SHA=$(git rev-parse HEAD)`.
+  5. If files were changed: `git fetch origin && git rebase origin/<BASE_BRANCH> && git push --force-with-lease`, then `HEAD_SHA=$(git rev-parse HEAD)`.
   6. If **only noise** was found (no files changed, no threads/checks/reviews to act on): skip commit/push and omit `--require-sha` in the next step.
-  7. Resolve the items on GitHub (dangerouslyDisableSandbox: true). Build the command from the non-empty ID lists only — always start with:
+  7. Resolve the items on GitHub. Build the command from the non-empty ID lists only — always start with:
      `npx pr-shepherd resolve <PR_NUMBER>`
      Then append:
      - `--resolve-thread-ids <IDs>` only if `fix.threads` was non-empty.
