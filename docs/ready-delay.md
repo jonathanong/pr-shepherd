@@ -6,6 +6,8 @@
 
 The ready-delay prevents shepherd from cancelling the loop the instant CI goes green. It waits for a configurable window of consecutive READY status before emitting `action: cancel`. This gives reviewers time to post comments before the loop exits.
 
+The timer also starts when the PR is READY solely because a human reviewer hasn't approved yet (`reviewDecision === REVIEW_REQUIRED` with all CI green and no unresolved work). From shepherd's perspective the PR is ready for human review — it has nothing more to do — so the same ready-delay countdown applies and the loop cancels once it elapses.
+
 ## The `updateReadyDelay` function
 
 Located in `commands/ready-delay.mts`, called from `iterate.mts` (step 3).

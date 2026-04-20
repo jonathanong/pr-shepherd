@@ -1257,6 +1257,42 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
   });
 });
 
+// ---------------------------------------------------------------------------
+// Human approval pending — cancel after ready-delay elapses
+// ---------------------------------------------------------------------------
+
+describe("runIterate — human approval pending (BLOCKED + REVIEW_REQUIRED)", () => {
+  const blockedApprovalReport = makeReport({
+    status: "READY",
+    mergeStatus: {
+      status: "BLOCKED",
+      state: "OPEN" as const,
+      isDraft: false,
+      mergeable: "MERGEABLE",
+      reviewDecision: "REVIEW_REQUIRED",
+      copilotReviewInProgress: false,
+      mergeStateStatus: "BLOCKED",
+    },
+  });
+
+  it("returns action: wait during the ready-delay window", async () => {
+    mockRunCheck.mockResolvedValue(blockedApprovalReport);
+    mockUpdateReadyDelay.mockResolvedValue({ isReady: true, shouldCancel: false, remainingSeconds: 300 });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("wait");
+  });
+
+  it("returns action: cancel when ready-delay has elapsed", async () => {
+    mockRunCheck.mockResolvedValue(blockedApprovalReport);
+    mockUpdateReadyDelay.mockResolvedValue({ isReady: true, shouldCancel: true, remainingSeconds: 0 });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("cancel");
+    expect(result.shouldCancel).toBe(true);
+  });
+});
+
 describe("runIterate — malformed repo format", () => {
   it("throws when report.repo has no slash (e.g. 'badformat')", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ repo: "badformat" }));
