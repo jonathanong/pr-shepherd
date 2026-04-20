@@ -35,11 +35,11 @@ pr-shepherd resolve 42 \
   --resolve-thread-ids RT_abc,RT_def \
   --minimize-comment-ids IC_xyz \
   --dismiss-review-ids PRR_123 \
-  --message "Addressed in $(git rev-parse HEAD)" \
+  --message "Switched query to parameterized form in src/db.ts" \
   --require-sha $(git rev-parse HEAD)
 ```
 
-`--require-sha` polls GitHub until the PR head matches the SHA before mutating — prevents resolving before reviewers see the fix.
+`--require-sha` polls GitHub until the PR head matches the SHA before mutating — prevents resolving before reviewers see the fix. `--message` is required only when `--dismiss-review-ids` is set, and should describe the specific fix — it is shown to the reviewer on GitHub.
 
 ### `pr-shepherd iterate [PR]`
 
