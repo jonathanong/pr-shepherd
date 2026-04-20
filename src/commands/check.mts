@@ -22,6 +22,7 @@ import { autoResolveOutdated } from "../comments/resolve.mts";
 import { deriveMergeStatus } from "../merge-status/derive.mts";
 import type {
   GlobalOptions,
+  MergeStatusResult,
   ShepherdReport,
   ShepherdStatus,
   ClassifiedCheck,
@@ -129,7 +130,7 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
     verdict,
     actionableThreads.length,
     actionableComments.length,
-    mergeStatus.status,
+    mergeStatus,
     batchData.changesRequestedReviews.length,
   );
 
@@ -168,21 +169,39 @@ function computeStatus(
   verdict: ReturnType<typeof getCiVerdict>,
   unresolvedThreads: number,
   unresolvedComments: number,
-  mergeStatus: string,
+  mergeStatus: MergeStatusResult,
   changesRequestedReviews: number,
 ): ShepherdStatus {
   // Merge conflicts are always terminal regardless of CI state.
-  if (mergeStatus === "CONFLICTS") return "FAILING";
+  if (mergeStatus.status === "CONFLICTS") return "FAILING";
   // Check CI state before merge-blocking states: BLOCKED/UNSTABLE/BEHIND are
   // often caused by CI not having passed yet, so they shouldn't mask IN_PROGRESS.
   if (verdict.anyFailing) return "FAILING";
   if (verdict.anyInProgress) return "IN_PROGRESS";
-  if (mergeStatus === "BLOCKED" || mergeStatus === "UNSTABLE" || mergeStatus === "BEHIND")
+  // BLOCKED solely because a human reviewer hasn't approved yet — shepherd is done, hand off.
+  // copilotReviewInProgress means a bot still owes a review, which is not this case.
+  if (
+    verdict.allPassed &&
+    unresolvedThreads === 0 &&
+    unresolvedComments === 0 &&
+    changesRequestedReviews === 0 &&
+    mergeStatus.status === "BLOCKED" &&
+    !mergeStatus.copilotReviewInProgress &&
+    mergeStatus.reviewDecision === "REVIEW_REQUIRED"
+  ) {
+    return "READY";
+  }
+  if (
+    mergeStatus.status === "BLOCKED" ||
+    mergeStatus.status === "UNSTABLE" ||
+    mergeStatus.status === "BEHIND"
+  )
     return "FAILING";
-  if (mergeStatus === "UNKNOWN") return "UNKNOWN";
+  if (mergeStatus.status === "UNKNOWN") return "UNKNOWN";
   if (changesRequestedReviews > 0) return "UNRESOLVED_COMMENTS";
   if (unresolvedThreads > 0 || unresolvedComments > 0) return "UNRESOLVED_COMMENTS";
   // DRAFT is treated the same as CLEAN for readiness — marking the PR ready resolves it.
-  if ((mergeStatus === "CLEAN" || mergeStatus === "DRAFT") && verdict.allPassed) return "READY";
+  if ((mergeStatus.status === "CLEAN" || mergeStatus.status === "DRAFT") && verdict.allPassed)
+    return "READY";
   return "UNKNOWN";
 }

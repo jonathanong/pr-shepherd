@@ -42,6 +42,18 @@ GitHub sometimes updates `mergeStateStatus` to `'DRAFT'` before the `isDraft` bo
 
 `state` (OPEN/MERGED/CLOSED) is passed through directly from `BatchPrData` without any transformation. It is used by `iterate.mts` at step 2.5 to cancel the loop for terminal PRs. The merge status derivation logic itself does not branch on `state` — it always derives a `status` regardless of PR state.
 
+### BLOCKED + REVIEW_REQUIRED → ShepherdStatus READY
+
+`deriveMergeStatus` sets `status: "BLOCKED"` whenever `mergeStateStatus` is `BLOCKED`. However, `computeStatus` in `check.mts` overrides this to `ShepherdStatus: "READY"` when all of the following are true:
+
+- `verdict.allPassed` — no failing or in-progress CI checks.
+- No unresolved threads, comments, or changes-requested reviews.
+- `mergeStatus.status === "BLOCKED"` (from `deriveMergeStatus`).
+- `mergeStatus.copilotReviewInProgress === false` — bot review pending means the blocking reason is not solely a human.
+- `mergeStatus.reviewDecision === "REVIEW_REQUIRED"` — explicitly awaiting human approval.
+
+In this case `mergeStatus.status` in the report is still `BLOCKED` (truthful about the GitHub merge state), but the top-level `ShepherdStatus` is `READY`, signalling that shepherd has nothing more to do. The ready-delay timer starts, and `action: cancel` is emitted after it elapses.
+
 ## Copilot detection
 
 `detectCopilotReview(pr)` returns true when:

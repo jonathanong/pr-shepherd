@@ -218,6 +218,78 @@ describe("runCheck — computeStatus precedence", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Human approval pending — BLOCKED + REVIEW_REQUIRED
+// ---------------------------------------------------------------------------
+
+describe("runCheck — BLOCKED + REVIEW_REQUIRED (human approval pending)", () => {
+  it("returns READY when CI passed and only human approval is missing", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ mergeStateStatus: "BLOCKED", reviewDecision: "REVIEW_REQUIRED" }),
+    });
+    const report = await runCheck(BASE_OPTS);
+    expect(report.status).toBe("READY");
+    expect(report.mergeStatus.status).toBe("BLOCKED");
+    expect(report.mergeStatus.reviewDecision).toBe("REVIEW_REQUIRED");
+  });
+
+  it("returns FAILING when a CI check is also failing", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        mergeStateStatus: "BLOCKED",
+        reviewDecision: "REVIEW_REQUIRED",
+        checks: [makeCheck({ category: "failing", conclusion: "FAILURE" })],
+      }),
+    });
+    const report = await runCheck(BASE_OPTS);
+    expect(report.status).toBe("FAILING");
+  });
+
+  it("returns FAILING when an unresolved thread also exists (iterate handles it via actionable check)", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        mergeStateStatus: "BLOCKED",
+        reviewDecision: "REVIEW_REQUIRED",
+        reviewThreads: [
+          {
+            id: "t1",
+            isResolved: false,
+            isOutdated: false,
+            isMinimized: false,
+            path: "src/foo.ts",
+            line: 1,
+            author: "alice",
+            body: "fix this",
+            createdAtUnix: 0,
+          },
+        ],
+      }),
+    });
+    const report = await runCheck(BASE_OPTS);
+    expect(report.status).toBe("FAILING");
+  });
+
+  it("returns FAILING when copilot review is also in progress", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        mergeStateStatus: "BLOCKED",
+        reviewDecision: "REVIEW_REQUIRED",
+        reviewRequests: [{ login: "copilot-pull-request-reviewer[bot]" }],
+      }),
+    });
+    const report = await runCheck(BASE_OPTS);
+    expect(report.status).toBe("FAILING");
+  });
+
+  it("returns FAILING when BLOCKED but reviewDecision is null (other branch protection)", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ mergeStateStatus: "BLOCKED", reviewDecision: null }),
+    });
+    const report = await runCheck(BASE_OPTS);
+    expect(report.status).toBe("FAILING");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Thread minimization filtering
 // ---------------------------------------------------------------------------
 
