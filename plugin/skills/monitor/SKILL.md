@@ -39,6 +39,14 @@ Invoke `/loop <INTERVAL> --max-turns 50 --expires 8h` via the Skill tool. Use th
 
 ````
 # pr-shepherd-loop:pr=<PR_NUMBER>
+
+**IMPORTANT — recurrence rules for this session:**
+- **Do NOT call `ScheduleWakeup`.** This session was fired by a recurring cron job. Calling `ScheduleWakeup` (with a `/loop` prompt) would create a duplicate cron job, leading to concurrent git operations and `.git/index.lock` collisions.
+- **Do NOT invoke `/loop`.** Same reason — `/loop` with an interval calls `CronCreate`, which creates a second recurrent runner.
+- After completing the actions below, end the turn cleanly. The cron job handles the next fire automatically.
+
+**Self-dedup:** Run `CronList`. If more than one job has a prompt containing `# pr-shepherd-loop:pr=<PR_NUMBER>`, duplicate runners exist. Keep the job with the lowest job ID and `CronDelete` the rest (ignore errors if a job is already gone — another concurrent runner may have deleted it first), then continue this iteration.
+
 Run the following in a single Bash invocation:
   npx pr-shepherd iterate <PR_NUMBER> --ready-delay <READY_DELAY> --no-cache --last-push-time "$(git log -1 --format=%ct HEAD)" --format=json
 
