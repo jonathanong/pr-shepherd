@@ -305,6 +305,7 @@ describe("fetchPrBatch — parseCreatedAt", () => {
               nodes: [
                 {
                   id: "c",
+                  isMinimized: false,
                   author: { login: "alice" },
                   body: "hi",
                   path: "foo.ts",

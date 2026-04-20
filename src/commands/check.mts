@@ -95,7 +95,7 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
     failing.length > 0 && !opts.skipTriage ? await triageFailingChecks(failing) : failing;
 
   // Resolve threads and comments.
-  const unresolvedThreads = batchData.reviewThreads.filter((t) => !t.isResolved);
+  const unresolvedThreads = batchData.reviewThreads.filter((t) => !t.isResolved && !t.isMinimized);
   const visibleComments = batchData.comments.filter((c) => !c.isMinimized);
 
   // Auto-resolve outdated threads.

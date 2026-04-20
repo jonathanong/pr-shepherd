@@ -7,6 +7,7 @@ function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
     id: "thread-1",
     isResolved: false,
     isOutdated: false,
+    isMinimized: false,
     path: "src/foo.ts",
     line: 10,
     author: "alice",
