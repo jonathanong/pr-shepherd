@@ -201,10 +201,7 @@ function computeStatus(
   if (changesRequestedReviews > 0) return "UNRESOLVED_COMMENTS";
   if (unresolvedThreads > 0 || unresolvedComments > 0) return "UNRESOLVED_COMMENTS";
   // DRAFT is treated the same as CLEAN for readiness — marking the PR ready resolves it.
-  if (
-    (mergeStatus.status === "CLEAN" || mergeStatus.status === "DRAFT") &&
-    verdict.allPassed
-  )
+  if ((mergeStatus.status === "CLEAN" || mergeStatus.status === "DRAFT") && verdict.allPassed)
     return "READY";
   return "UNKNOWN";
 }

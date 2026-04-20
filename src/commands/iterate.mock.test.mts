@@ -1277,7 +1277,11 @@ describe("runIterate — human approval pending (BLOCKED + REVIEW_REQUIRED)", ()
 
   it("returns action: wait during the ready-delay window", async () => {
     mockRunCheck.mockResolvedValue(blockedApprovalReport);
-    mockUpdateReadyDelay.mockResolvedValue({ isReady: true, shouldCancel: false, remainingSeconds: 300 });
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: false,
+      remainingSeconds: 300,
+    });
 
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("wait");
@@ -1285,7 +1289,11 @@ describe("runIterate — human approval pending (BLOCKED + REVIEW_REQUIRED)", ()
 
   it("returns action: cancel when ready-delay has elapsed", async () => {
     mockRunCheck.mockResolvedValue(blockedApprovalReport);
-    mockUpdateReadyDelay.mockResolvedValue({ isReady: true, shouldCancel: true, remainingSeconds: 0 });
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
 
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("cancel");
