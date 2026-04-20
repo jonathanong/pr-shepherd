@@ -62,7 +62,7 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
    - `git fetch origin && git rebase origin/$BASE_BRANCH && git push --force-with-lease`
    - Cancel stale CI runs: `gh run list --branch "$BRANCH" --status in_progress --json databaseId --jq '.[].databaseId' | xargs -I{} gh run cancel {}`
 
-6. **Resolve all verified items** — **only after the push.** Build the command from the non-empty ID lists; omit any flag whose list is empty:
+6. **Resolve all verified items** — **only after the push, and only if at least one of the three ID lists is non-empty.** If all lists are empty, skip this step entirely (running resolve with no mutation IDs enters fetch mode as a side effect). Build the command from the non-empty ID lists; omit any flag whose list is empty:
 
    ```bash
    npx pr-shepherd resolve <N> \
