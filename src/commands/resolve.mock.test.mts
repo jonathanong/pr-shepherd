@@ -127,6 +127,17 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     const result = await runResolveFetch(BASE_OPTS);
     expect(result.actionableComments.map((c) => c.id)).toEqual(["c-visible"]);
   });
+
+  it("actionableThreads excludes threads whose top comment is minimized", async () => {
+    const visible = makeThread({ id: "t-visible", isMinimized: false });
+    const minimized = makeThread({ id: "t-minimized", isMinimized: true });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ reviewThreads: [visible, minimized] }),
+    });
+
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.actionableThreads.map((t) => t.id)).toEqual(["t-visible"]);
+  });
 });
 
 // ---------------------------------------------------------------------------
