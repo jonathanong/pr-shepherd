@@ -355,7 +355,7 @@ Exit code: `0` if every PR is READY, `1` otherwise.
 
 ## Configuration
 
-Create a `.pr-shepherdrc.yml` in your project root (or any parent directory) to override defaults. The loader walks up from `cwd` to `$HOME`, first match wins.
+Create a `.pr-shepherdrc.yml` in your project root (or any parent directory) to override defaults. The loader walks up from `cwd` to `$HOME` (if `$HOME` is on that path) or the filesystem root; the first match wins.
 
 ```yaml
 iterate:
