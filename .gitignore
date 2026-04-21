@@ -6,3 +6,4 @@ bin/
 *.log
 .pr-shepherdrc.yml
 .claude/worktrees/
+.claude/scheduled_tasks.lock

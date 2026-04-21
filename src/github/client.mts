@@ -2,7 +2,8 @@
  * High-level GitHub client — wraps http.mts for application-level concerns.
  *
  * All GitHub I/O goes through native fetch (via http.mts); the `gh` CLI is no
- * longer used for any runtime call.
+ * longer used for GitHub API calls, but may be invoked as an auth-token
+ * fallback via `gh auth token` when neither GH_TOKEN nor GITHUB_TOKEN is set.
  */
 
 import { execFile as execFileCb } from "node:child_process";
@@ -98,8 +99,8 @@ async function getCurrentBranch(): Promise<string> {
 }
 
 function parseRemoteUrl(url: string): RepoInfo {
-  // Strip trailing .git
-  const stripped = url.replace(/\.git$/, "");
+  // Strip trailing .git and trailing slash
+  const stripped = url.replace(/\.git$/, "").replace(/\/$/, "");
 
   // ssh: git@host:owner/repo
   const sshMatch = /^git@[^:]+:([^/]+)\/(.+)$/.exec(stripped);

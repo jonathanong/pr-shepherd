@@ -87,8 +87,7 @@ async function fetchFailedLogs(runId: string, repo: RepoInfo): Promise<string> {
     );
 
     const combined = logParts.filter(Boolean).join("\n");
-    // eslint-disable-next-line no-control-regex
-    const ansiEscapes = /\[[0-9;]*m/g;
+    const ansiEscapes = /\u001B\[[0-9;]*m/g;
     return combined
       .replace(ansiEscapes, "")
       .split("\n")
