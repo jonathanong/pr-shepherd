@@ -6,10 +6,11 @@
  *
  * Exit codes:
  *   0  READY — all checks passed, no unresolved threads, CLEAN merge status.
- *   1  FAILING — one or more CI checks failed.
+ *   1  FAILING — CI has red checks, or merge has conflicts.
+ *   1  PENDING — CI passing but merge blocked (BLOCKED, UNSTABLE, or BEHIND).
+ *   1  UNKNOWN — merge state unresolvable.
  *   2  IN_PROGRESS — CI checks still running.
  *   3  UNRESOLVED_COMMENTS — CI ok but actionable threads remain.
- *   1  (also) BLOCKED/CONFLICTS/UNKNOWN merge status.
  */
 
 import { fetchPrBatch } from "../github/batch.mts";
