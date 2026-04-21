@@ -144,7 +144,7 @@ Rebases the branch on top of its base to clear flaky failures caused by being be
 PR #42 [REBASE] Branch is behind main — rebasing to pick up latest changes and clear flaky failures
 if ! git diff --quiet || ! git diff --cached --quiet; then
   echo "SKIP rebase: dirty worktree (uncommitted changes present)"
-  exit 0
+  exit 1
 fi
 git fetch origin && git rebase origin/main && git push --force-with-lease
 ```

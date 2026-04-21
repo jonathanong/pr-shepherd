@@ -264,7 +264,7 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
       break;
 
     case "fix_code": {
-      lines.push(base);
+      lines.push(`${base} status=${result.status} merge=${result.mergeStateStatus}`);
       for (const t of result.fix.threads) {
         const loc = t.path ? `${t.path}:${t.line ?? "?"}` : "(no location)";
         lines.push(

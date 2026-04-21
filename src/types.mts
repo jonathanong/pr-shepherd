@@ -288,7 +288,7 @@ export interface IterateResultCancel extends IterateResultBase {
 }
 
 export interface ResolveCommand {
-  /** Argv ready to shell-join and run. Contains $DISMISS_MESSAGE placeholder when requiresDismissMessage. */
+  /** Argv array for spawn-style execution. Contains $DISMISS_MESSAGE placeholder (a multi-word sentence) when requiresDismissMessage — not safe for naive string-join without quoting. */
   argv: string[];
   /** Whether to append `--require-sha <HEAD_SHA>` after a successful push. */
   requiresHeadSha: boolean;

@@ -185,17 +185,19 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       report.mergeStatus.status === "CONFLICTS",
     );
     if (escalateTriggers.triggers.length > 0) {
-      const escalateDetails: EscalateDetails = {
+      const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
         triggers: escalateTriggers.triggers,
         unresolvedThreads: report.threads.actionable.map(toAgentThread),
         ambiguousComments: report.comments.actionable.map(toAgentComment),
         changesRequestedReviews: report.changesRequestedReviews,
         attemptHistory: escalateTriggers.thrashHistory,
         suggestion: buildEscalateSuggestion(escalateTriggers.triggers),
-        humanMessage: "",
       };
-      escalateDetails.humanMessage = buildEscalateHumanMessage(escalateDetails, prNumber);
-      return { ...base, action: "escalate", escalate: escalateDetails };
+      return {
+        ...base,
+        action: "escalate",
+        escalate: { ...escalateBase, humanMessage: buildEscalateHumanMessage(escalateBase, prNumber) },
+      };
     }
 
     // Increment attempt counts for this dispatch cycle.
@@ -224,6 +226,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     const allCommentIds = [...actionableComments.map((c) => c.id), ...noiseCommentIds];
     const resolveCommand = buildResolveCommand(
       threads,
+      actionableComments,
       allCommentIds,
       changesRequestedReviews,
       checks,
@@ -449,7 +452,13 @@ async function getBaseBranch(prNumber: number): Promise<string> {
       "--jq",
       ".baseRefName",
     ]);
-    return stdout.trim() || "main";
+    const branch = stdout.trim() || "main";
+    // GitHub ref names can include '/' but reject anything outside safe chars
+    // to prevent shell interpolation issues in buildRebaseShellScript.
+    if (!/^[A-Za-z0-9._/-]+$/.test(branch)) {
+      return "main";
+    }
+    return branch;
   } catch {
     return "main";
   }
@@ -459,7 +468,7 @@ function buildRebaseShellScript(baseBranch: string): string {
   return [
     `if ! git diff --quiet || ! git diff --cached --quiet; then`,
     `  echo "SKIP rebase: dirty worktree (uncommitted changes present)"`,
-    `  exit 0`,
+    `  exit 1`,
     `fi`,
     `git fetch origin && git rebase origin/${baseBranch} && git push --force-with-lease`,
   ].join("\n");
@@ -497,6 +506,7 @@ function classifyComments(comments: AgentComment[]): {
 
 function buildResolveCommand(
   threads: AgentThread[],
+  actionableComments: AgentComment[],
   allCommentIds: string[],
   reviews: Review[],
   checks: import("../types.mts").AgentCheck[],
@@ -516,9 +526,10 @@ function buildResolveCommand(
     argv.push("--message", "$DISMISS_MESSAGE");
   }
 
-  // A push only happens when there is code to change — threads, CI checks, or review requests.
+  // A push happens when there is code to change — threads, actionable comments, CI checks, or reviews.
   // Noise-only comment minimization skips commit/push, so requiresHeadSha must be false.
-  const requiresHeadSha = threads.length > 0 || checks.length > 0 || reviews.length > 0;
+  const requiresHeadSha =
+    threads.length > 0 || actionableComments.length > 0 || checks.length > 0 || reviews.length > 0;
 
   return { argv, requiresHeadSha, requiresDismissMessage: hasDismiss };
 }
@@ -559,9 +570,12 @@ function buildFixInstructions(
       `Rebase and push: git fetch origin && git rebase origin/${baseBranch} && git push --force-with-lease — capture HEAD_SHA=$(git rev-parse HEAD)`,
     );
   }
-  instructions.push(
-    `Run the resolve command (substitute $HEAD_SHA with the pushed commit SHA${resolveCommand.requiresDismissMessage ? `; substitute $DISMISS_MESSAGE with a one-sentence description of what you changed` : ""}): ${resolveCmd}`,
-  );
+  const substituteHint = resolveCommand.requiresHeadSha
+    ? ` (substitute "$HEAD_SHA" with the pushed commit SHA${resolveCommand.requiresDismissMessage ? "; substitute $DISMISS_MESSAGE with a one-sentence description of what you changed" : ""})`
+    : resolveCommand.requiresDismissMessage
+      ? " (substitute $DISMISS_MESSAGE with a one-sentence description of what you changed)"
+      : "";
+  instructions.push(`Run the resolve command${substituteHint}: ${resolveCmd}`);
 
   return instructions;
 }
@@ -611,6 +625,10 @@ function buildEscalateHumanMessage(
   for (const r of escalate.changesRequestedReviews) {
     const firstLine = r.body.split("\n")[0] ?? "";
     lines.push(`- reviewId=${r.id} (@${r.author}): ${firstLine}`);
+  }
+  for (const c of escalate.ambiguousComments) {
+    const firstLine = c.body.split("\n")[0] ?? "";
+    lines.push(`- commentId=${c.id} (@${c.author}): ${firstLine}`);
   }
   if (escalate.attemptHistory && escalate.attemptHistory.length > 0) {
     lines.push("");
