@@ -17,6 +17,7 @@ function makePr(overrides: Partial<BatchPrData>): BatchPrData {
     reviewThreads: [],
     comments: [],
     changesRequestedReviews: [],
+    reviewSummaries: [],
     checks: [],
     ...overrides,
   };
