@@ -1699,7 +1699,7 @@ describe("runIterate — prescriptive fields: rebase", () => {
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("rebase");
     if (result.action === "rebase") {
-      expect(result.rebase.baseBranch).toBe("main");
+      expect(result.baseBranch).toBe("main");
       expect(result.rebase.reason).toMatch(/behind main/i);
       expect(result.rebase.shellScript).toMatch(/git diff --quiet/);
       expect(result.rebase.shellScript).toMatch(/git rebase origin\/main/);

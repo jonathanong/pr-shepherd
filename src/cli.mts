@@ -338,7 +338,7 @@ function formatFixCodeResult(
   sections.push("## Rebase");
   sections.push(
     [
-      `- base: \`${result.fix.baseBranch}\``,
+      `- base: \`${result.baseBranch}\``,
       `- resolve: \`${renderResolveCommand(result.fix.resolveCommand)}\``,
     ].join("\n"),
   );

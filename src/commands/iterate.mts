@@ -81,6 +81,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       shouldCancel: false,
       remainingSeconds: readyDelaySeconds,
       summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 0 },
+      baseBranch: "",
       log: "SKIP: CI still starting — waiting for first check to appear",
     };
   }
@@ -107,6 +108,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       remainingSeconds: 0,
       state: report.mergeStatus.state,
       summary: buildSummary(report),
+      baseBranch: report.baseBranch,
       action: "cancel",
       log: `CANCEL: PR #${report.pr} is ${state} — stopping monitor`,
     };
@@ -137,6 +139,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     shouldCancel: readyState.shouldCancel,
     remainingSeconds: readyState.remainingSeconds,
     summary: buildSummary(report),
+    baseBranch: report.baseBranch,
   };
 
   // Step 3 cont.: cancel if ready-delay elapsed.
@@ -271,6 +274,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
 
     return {
       ...base,
+      baseBranch: baseLookup.branch,
       action: "fix_code",
       fix: {
         threads,
@@ -278,7 +282,6 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
         noiseCommentIds,
         checks,
         changesRequestedReviews,
-        baseBranch: baseLookup.branch,
         resolveCommand,
         instructions,
       },
@@ -343,9 +346,9 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     }
     return {
       ...base,
+      baseBranch: baseLookup.branch,
       action: "rebase",
       rebase: {
-        baseBranch: baseLookup.branch,
         reason: `Branch is behind ${baseLookup.branch} — rebasing to pick up latest changes and clear flaky failures`,
         shellScript: buildRebaseShellScript(baseLookup.branch),
       },

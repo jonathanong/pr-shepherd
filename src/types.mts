@@ -273,6 +273,8 @@ export interface IterateResultBase {
   shouldCancel: boolean;
   remainingSeconds: number;
   summary: IterateResultSummary;
+  /** Validated base branch (e.g. "main") for this PR. Echoed from `ShepherdReport.baseBranch` after `validateBaseBranch` for actions that need a rebase target (fix_code, rebase); `""` for actions where no sweep has run (cooldown) or where the branch isn't relevant. */
+  baseBranch: string;
 }
 
 export interface IterateResultCooldown extends IterateResultBase {
@@ -311,8 +313,6 @@ export interface IterateResultFixCode extends IterateResultBase {
     noiseCommentIds: string[];
     checks: AgentCheck[];
     changesRequestedReviews: Review[];
-    /** Base branch to rebase onto (e.g. "main"). */
-    baseBranch: string;
     /** Pre-built resolve command. Run after committing and pushing. */
     resolveCommand: ResolveCommand;
     /** Ordered steps for the model to follow. */
@@ -337,7 +337,6 @@ export interface IterateResultRerunCi extends IterateResultBase {
 export interface IterateResultRebase extends IterateResultBase {
   action: "rebase";
   rebase: {
-    baseBranch: string;
     /** Human-readable explanation of why a rebase is needed. */
     reason: string;
     /** Complete shell script to run (includes dirty-worktree guard). */

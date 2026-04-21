@@ -81,6 +81,7 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
     shouldCancel: false,
     remainingSeconds: 60,
     summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 1 },
+    baseBranch: "main",
   };
   if (action === "cooldown") return { ...base, action: "cooldown", log: "SKIP: CI still starting" };
   if (action === "wait") return { ...base, action: "wait", log: "WAIT: 0 passing, 1 in-progress" };
@@ -93,7 +94,6 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
       ...base,
       action: "rebase",
       rebase: {
-        baseBranch: "main",
         reason: "BEHIND + flaky CI — rebasing onto origin/main",
         shellScript:
           'if ! git diff --quiet || ! git diff --cached --quiet; then\n  echo "SKIP rebase: dirty worktree"\n  exit 1\nfi\ngit fetch origin && git rebase origin/main && git push --force-with-lease',
@@ -109,7 +109,6 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
         noiseCommentIds: [],
         checks: [],
         changesRequestedReviews: [],
-        baseBranch: "main",
         resolveCommand: {
           argv: ["npx", "pr-shepherd", "resolve", "42"],
           requiresHeadSha: true,
@@ -345,7 +344,6 @@ describe("main — iterate text format", () => {
         },
       ],
       changesRequestedReviews: [{ id: "REV_1", author: "reviewer", body: "please rework this" }],
-      baseBranch: "main",
       resolveCommand: {
         argv: [
           "npx",
