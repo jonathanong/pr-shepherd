@@ -150,6 +150,7 @@ export interface BatchPrData {
 export type ShepherdStatus =
   | "READY"
   | "FAILING"
+  | "PENDING"
   | "IN_PROGRESS"
   | "UNRESOLVED_COMMENTS"
   | "UNKNOWN";
