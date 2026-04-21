@@ -6,13 +6,13 @@
  *   pr-shepherd resolve [PR] [--fetch] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]
  *                            [--dismiss-review-ids Q] [--message MSG] [--require-sha SHA]
  *                            [--last-push-time N]
- *   pr-shepherd iterate [PR] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
+ *   pr-shepherd iterate [PR] [--format text|json] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
  *   pr-shepherd status PR1 [PR2 …]
  */
 
 import { runCheck } from "./commands/check.mts";
 import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
-import { runIterate } from "./commands/iterate.mts";
+import { runIterate, renderResolveCommand } from "./commands/iterate.mts";
 import { runStatus, formatStatusTable } from "./commands/status.mts";
 import { getRepoInfo } from "./github/client.mts";
 import { formatJson } from "./reporters/json.mts";
@@ -241,24 +241,119 @@ function formatMutateResult(result: Awaited<ReturnType<typeof runResolveMutate>>
   return `${lines.join("\n")}\n`;
 }
 
+/**
+ * Format an IterateResult as human-readable Markdown.
+ *
+ * Load-bearing conventions the monitor SKILL relies on:
+ *   1. The H1 heading on line 1 contains `[<ACTION>]` — the SKILL greps this tag.
+ *   2. The `resolve` bullet under `## Rebase` wraps the command in backticks —
+ *      the SKILL extracts the backticked content for execution.
+ *   3. The shell script under `[REBASE]` is inside a ```bash fenced block.
+ *   4. `## Instructions` items are numbered `1.`, `2.`, … and executed in order.
+ */
 function formatIterateResult(result: import("./types.mts").IterateResult): string {
-  const base = `PR #${result.pr} [${result.action.toUpperCase()}] status=${result.status} merge=${result.mergeStateStatus}`;
+  const heading = `# PR #${result.pr} [${result.action.toUpperCase()}]`;
+  const baseLine = `**status** \`${result.status}\` · **merge** \`${result.mergeStateStatus}\` · **state** \`${result.state}\` · **repo** \`${result.repo}\``;
+  const summaryLine = `**summary** ${result.summary.passing} passing, ${result.summary.skipped} skipped, ${result.summary.filtered} filtered, ${result.summary.inProgress} inProgress · **remainingSeconds** ${result.remainingSeconds} · **copilotReviewInProgress** ${result.copilotReviewInProgress} · **isDraft** ${result.isDraft} · **shouldCancel** ${result.shouldCancel}`;
+  const header = [heading, "", baseLine, summaryLine].join("\n");
+
   switch (result.action) {
     case "cooldown":
-      return `${base} (cooldown: CI still starting)`;
     case "wait":
-      return `${base} (${result.remainingSeconds}s until cancel)`;
     case "cancel":
-      return `${base} (ready-delay elapsed)`;
-    case "fix_code":
-      return `${base} threads=${result.fix.threads.length} comments=${result.fix.comments.length} checks=${result.fix.checks.length} cancelled=${result.cancelled.length}`;
     case "rerun_ci":
-      return `${base} reran=${result.reran.join(",")}`;
-    case "rebase":
-      return `${base} (branch is behind main)`;
     case "mark_ready":
-      return `${base} markedReady=${result.markedReady}`;
+      return [header, "", result.log].join("\n");
+
+    case "rebase":
+      return [
+        header,
+        "",
+        result.rebase.reason,
+        "",
+        "```bash",
+        result.rebase.shellScript,
+        "```",
+      ].join("\n");
+
     case "escalate":
-      return `${base} triggers=${result.escalate.triggers.join(",")} — ${result.escalate.suggestion}`;
+      return [header, "", result.escalate.humanMessage].join("\n");
+
+    case "fix_code":
+      return formatFixCodeResult(header, result);
   }
+}
+
+function formatFixCodeResult(
+  header: string,
+  result: import("./types.mts").IterateResultFixCode,
+): string {
+  const sections: string[] = [header];
+
+  if (result.fix.threads.length > 0) {
+    sections.push("## Review threads");
+    for (const t of result.fix.threads) {
+      const loc = t.path ? `\`${t.path}:${t.line ?? "?"}\`` : "(no location)";
+      sections.push(`### \`${t.id}\` — ${loc} (@${t.author})`);
+      sections.push(blockquote(t.body));
+    }
+  }
+
+  if (result.fix.actionableComments.length > 0) {
+    sections.push("## Actionable comments");
+    for (const c of result.fix.actionableComments) {
+      sections.push(`### \`${c.id}\` (@${c.author})`);
+      sections.push(blockquote(c.body));
+    }
+  }
+
+  if (result.fix.checks.length > 0) {
+    sections.push("## Failing checks");
+    const bullets = result.fix.checks.map((ch) => {
+      const kind = ch.failureKind ?? "actionable";
+      if (ch.runId) return `- \`${ch.runId}\` — \`${ch.name}\` (${kind})`;
+      if (ch.detailsUrl) return `- external \`${ch.detailsUrl}\` — \`${ch.name}\` (${kind})`;
+      return `- (no runId) — \`${ch.name}\` (${kind})`;
+    });
+    sections.push(bullets.join("\n"));
+  }
+
+  if (result.fix.changesRequestedReviews.length > 0) {
+    sections.push("## Changes-requested reviews");
+    sections.push(
+      result.fix.changesRequestedReviews.map((r) => `- \`${r.id}\` (@${r.author})`).join("\n"),
+    );
+  }
+
+  if (result.fix.noiseCommentIds.length > 0) {
+    sections.push("## Noise (minimize only)");
+    sections.push(result.fix.noiseCommentIds.map((id) => `\`${id}\``).join(", "));
+  }
+
+  if (result.cancelled.length > 0) {
+    sections.push("## Cancelled runs");
+    sections.push(result.cancelled.map((id) => `\`${id}\``).join(", "));
+  }
+
+  sections.push("## Rebase");
+  sections.push(
+    [
+      `- base: \`${result.baseBranch}\``,
+      `- resolve: \`${renderResolveCommand(result.fix.resolveCommand)}\``,
+    ].join("\n"),
+  );
+
+  if (result.fix.instructions.length > 0) {
+    sections.push("## Instructions");
+    sections.push(result.fix.instructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n"));
+  }
+
+  return sections.join("\n\n");
+}
+
+function blockquote(body: string): string {
+  return body
+    .split("\n")
+    .map((line) => (line === "" ? ">" : `> ${line}`))
+    .join("\n");
 }

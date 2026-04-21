@@ -7,6 +7,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
     pr: 42,
     repo: "owner/repo",
     status: "READY",
+    baseBranch: "main",
     mergeStatus: {
       status: "CLEAN",
       state: "OPEN",

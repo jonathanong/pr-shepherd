@@ -99,7 +99,7 @@ to be installed in the repository first (`npm install pr-shepherd`), so that
    ```
 
 For `monitor` and `resolve` custom commands, do **not** copy the
-[`skills/`](skills/) files directly — those contain skill/plugin-specific
+[`plugin/skills/`](plugin/skills/) files directly — those contain skill/plugin-specific
 frontmatter that is not valid for `.claude/commands/` files. Instead, create
 `.claude/commands/pr-monitor.md` and/or `.claude/commands/pr-resolve.md`
 using the same command-file structure as the `pr-check` example above, with
@@ -267,18 +267,20 @@ Flags:
 | `--no-auto-mark-ready`        | false   | Skip converting draft → ready-for-review          |
 | `--no-auto-cancel-actionable` | false   | Skip cancelling actionable failing runs           |
 
-**Text output** (one line per action):
+**Markdown output** (default). The monitor SKILL reads the `[ACTION]` tag from the H1 heading to decide what to do. Every action emits an H1, a bolded base-fields line, a bolded summary line, then an action-specific body. Example for `[WAIT]`:
 
+```markdown
+# PR #42 [WAIT]
+
+**status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**summary** 3 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 540 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
+
+WAIT: 3 passing, 0 in-progress — 540s until auto-cancel
 ```
-PR #42 [COOLDOWN] status=UNKNOWN merge=UNKNOWN (cooldown: CI still starting)
-PR #42 [WAIT] status=READY merge=CLEAN (540s until cancel)
-PR #42 [RERUN_CI] status=FAILING merge=UNSTABLE reran=12345,67890
-PR #42 [FIX_CODE] status=UNRESOLVED_COMMENTS merge=BLOCKED threads=2 comments=0 checks=1 cancelled=1
-PR #42 [REBASE] status=FAILING merge=BEHIND (branch is behind main)
-PR #42 [MARK_READY] status=READY merge=CLEAN markedReady=true
-PR #42 [CANCEL] status=READY merge=CLEAN (ready-delay elapsed)
-PR #42 [ESCALATE] status=UNRESOLVED_COMMENTS merge=BLOCKED triggers=fix-thrash — Same thread(s) attempted multiple times without resolution — fix manually then rerun /pr-shepherd:monitor
-```
+
+See [docs/actions.md](docs/actions.md) for the other seven actions — `cooldown`, `rerun_ci`, `mark_ready`, `cancel`, `rebase`, `fix_code`, `escalate`. `fix_code` is the richest: it emits sections for `## Review threads`, `## Actionable comments`, `## Failing checks`, `## Changes-requested reviews`, `## Noise (minimize only)`, `## Cancelled runs`, `## Rebase`, and `## Instructions`.
+
+Both `--format=text` (default Markdown) and `--format=json` carry equivalent information — every field exposed in JSON has a corresponding Markdown representation, and vice versa.
 
 **JSON output** (`--format=json`, compact single line):
 

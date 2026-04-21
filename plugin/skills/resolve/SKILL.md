@@ -46,10 +46,14 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
    The CLI auto-resolves outdated threads.
    Parse the JSON for `actionableThreads`, `actionableComments`, `changesRequestedReviews`.
 
-3. **Triage each actionable item.** For each unresolved thread or visible comment:
-   - Read the comment body to understand what it's asking
-   - For review threads: read the referenced file and line
-   - Classify as: **Fixed** (already addressed), **Not relevant**, **Outdated**, or **Actionable** (real issue, not yet fixed)
+3. **Triage each actionable item** into exactly one of these five buckets. Before classifying, read the comment body and — for threads — the referenced file and line.
+   - **Fixed** — already addressed in a prior commit; no new work needed.
+   - **Actionable** — real issue, not yet fixed; proceed to step 4.
+   - **Not relevant** — does not apply to this PR (e.g. comment is about unrelated code).
+   - **Outdated** — refers to code that no longer exists.
+   - **Acknowledge** — real comment, intentionally not acting on it (e.g. reviewer flagged it as "won't fix" or "not worth it," scope-out decision, deferring to a follow-up PR). Record the one-sentence reason — you will include it in the step 7 report so the user can override.
+
+   Every item returned by step 2 **must** land in one of these buckets. Do not carry an item forward as "unclassified" or silently skip it. If you genuinely can't decide, that's the Acknowledge bucket with reason "unclear — flagging for human review."
 
 4. **Fix actionable items.** For each Actionable item:
    - Read the relevant file(s) and apply the fix (Edit/Write tools)
@@ -62,26 +66,33 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
    - `git fetch origin && git rebase origin/$BASE_BRANCH && git push --force-with-lease`
    - Cancel stale CI runs: `gh run list --branch "$BRANCH" --status in_progress --json databaseId --jq '.[].databaseId' | xargs -I{} gh run cancel {}`
 
-6. **Resolve all verified items** — **only after the push, and only if at least one of the three ID lists is non-empty.** If all lists are empty, skip this step entirely (running resolve with no mutation IDs enters fetch mode as a side effect). Build the command from the non-empty ID lists; omit any flag whose list is empty:
+6. **Resolve all verified items** — **only if at least one of the three ID lists is non-empty.** If all lists are empty, skip this step entirely (running resolve with no mutation IDs enters fetch mode as a side effect). Build the command from the non-empty ID lists; omit any flag whose list is empty. For Fixed items, this step runs only after the push; Acknowledge / Not relevant / Outdated items can be resolved without a push (and therefore without `--require-sha`).
+
+   Each bucket maps to a mutation flag:
+   - **Fixed** threads → `--resolve-thread-ids`; Fixed comments → `--minimize-comment-ids`; Fixed reviews → `--dismiss-review-ids --message "<what you changed>"`.
+   - **Acknowledge / Not relevant / Outdated** threads → `--resolve-thread-ids`; same-bucket comments → `--minimize-comment-ids`; same-bucket reviews → `--dismiss-review-ids --message "<why you're not acting>"`.
 
    ```bash
    npx pr-shepherd resolve <N> \
      --resolve-thread-ids <comma-separated-IDs> \
      --minimize-comment-ids <comma-separated-IDs> \
      --dismiss-review-ids <comma-separated-IDs> \
-     --message "<specific description of the fix that addressed this review>" \
+     --message "<specific description of the fix OR the reason you're not acting>" \
      --require-sha $(git rev-parse HEAD)
    ```
 
-   `--message` belongs **only** with `--dismiss-review-ids`. Omit it entirely when not dismissing a review. When you are dismissing, write one sentence describing the actual fix — the text is sent to GitHub as the dismissal reason and is shown to the reviewer. Generic text like `"Addressed in <SHA>"` or `"address review comments"` is not acceptable.
+   `--message` belongs **only** with `--dismiss-review-ids`. Omit it entirely when not dismissing a review. When you are dismissing, write one sentence — either describing the actual fix (for Fixed) or the concrete reason for not acting (for Acknowledge). The text is sent to GitHub as the dismissal reason and is shown to the reviewer. Generic text like `"Addressed in <SHA>"` or `"address review comments"` is not acceptable.
 
-   The `--require-sha` flag ensures pr-shepherd verifies GitHub has the new commit before resolving.
+   Include `--require-sha $(git rev-parse HEAD)` whenever a push happened in step 5 (it gates the whole command, not per-item — safe to mix Fixed and Acknowledge IDs under one `--require-sha`). Omit it when no code changed.
 
-7. **Report results** from the CLI output.
+7. **Report results.** Echo the CLI's output, then append a one-line summary per Acknowledge item: `Acknowledged <threadId|commentId|reviewId> (@<author>): <reason>`. This surfaces the decisions so the user can override any that were wrong.
+
+   If any fetched item was neither resolved nor acknowledged (step 3 is supposed to prevent this, but guard against it), **stop and escalate** to the user: `<N> item(s) fetched but not acted on or acknowledged — need human direction before closing`. Do not silently drop items.
 
 ## Rules
 
-- NEVER resolve threads before pushing fixes (use `--require-sha`).
+- NEVER resolve **Fixed** threads before pushing the fix (use `--require-sha`). Acknowledge / Not relevant / Outdated do not require a push and omit `--require-sha`.
 - NEVER blindly resolve items — always read and verify first.
+- NEVER silently skip a fetched item. Every item must be resolved, acknowledged with a reason, or escalated.
 - Resolve from ALL authors — bots, AI reviewers, and humans alike.
-- `--message` is required when using `--dismiss-review-ids`, and must NOT be passed otherwise. The CLI throws if it is missing during dismissal. The message must describe the specific change that addressed the review (e.g. `"Added null check in handler.ts:42"`); generic boilerplate like `"address review comments"` or `"Addressed in <SHA>"` is reviewer-hostile and forbidden.
+- `--message` is required when using `--dismiss-review-ids`, and must NOT be passed otherwise. The CLI throws if it is missing during dismissal. The message must describe the specific change that addressed the review or the concrete reason for not acting (e.g. `"Added null check in handler.ts:42"`, or `"Acknowledged as won't-fix — reviewer noted not worth refactoring"`); generic boilerplate like `"address review comments"` or `"Addressed in <SHA>"` is reviewer-hostile and forbidden.

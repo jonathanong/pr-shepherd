@@ -10,7 +10,7 @@ The `/pr-shepherd:monitor <PR>` slash command starts a cron loop that polls PR s
 
 1. **User runs `/pr-shepherd:monitor <PR>`**
    - The `/pr-shepherd:monitor` skill invokes the `/loop` skill to schedule a cron job that fires every 4 minutes.
-   - Each cron tick runs `shepherd iterate` inline and acts on the JSON result.
+   - Each cron tick runs `shepherd iterate` inline and acts on the text output.
 
 2. **`/loop` schedules cron ticks**
    - `/loop` schedules a tick every 4 minutes (configurable via `watch.interval`).
@@ -19,12 +19,12 @@ The `/pr-shepherd:monitor <PR>` slash command starts a cron loop that polls PR s
 3. **Each tick runs `shepherd iterate`**
    - The cron prompt runs (single Bash invocation):
      ```bash
-     pr-shepherd iterate <PR> --ready-delay <READY_DELAY> --last-push-time "$(git log -1 --format=%ct HEAD)" --format=json
+     pr-shepherd iterate <PR> --ready-delay <READY_DELAY> --last-push-time "$(git log -1 --format=%ct HEAD)"
      ```
    - Exit codes 0, 1, 2, and 3 are all valid (not errors).
 
-4. **Cron prompt parses JSON and acts**
-   - Reads the `action` field from stdout.
+4. **Cron prompt reads text output and acts**
+   - Reads the `[ACTION]` tag in the first line of stdout (see [actions.md](actions.md) for the output shape).
    - Acts on it inline — no subagent is spawned.
 
 5. **Loop cancels**
@@ -47,7 +47,7 @@ User                    Main Agent              shepherd iterate
  |                          |                        |-- GraphQL fetch
  |                          |                        |-- classify
  |                          |                        |-- dispatch
- |                          |<-- JSON {action} ------|
+ |                          |<-- text [ACTION] ------|
  |                          |                        |
  |           [if cancel]    |                        |
  |                          |-- /loop cancel ------> |
@@ -61,7 +61,7 @@ User                    Main Agent              shepherd iterate
 
 ## Notes
 
-- The cron prompt does not fetch GitHub directly — it consumes only the structured JSON emitted by `shepherd iterate`. The `fix_code` action includes GitHub-derived excerpts (threads, comments, check output), but the full GraphQL response is never read by the loop.
+- The cron prompt does not fetch GitHub directly — it consumes only the structured output emitted by `shepherd iterate` (text by default, or JSON with `--format=json`; both carry the same information). The `fix_code` action includes GitHub-derived excerpts (threads, comments, check output), but the full GraphQL response is never read by the loop.
 - Code changes (fix_code, rebase) are handled inline by the cron prompt — no separate agent is spawned.
 - The 4-minute interval is the default and can be overridden with `every <interval>` in the `/shepherd` argument.
 - The ready-delay (default 10 minutes) is passed through as `--ready-delay`. See [ready-delay.md](ready-delay.md).

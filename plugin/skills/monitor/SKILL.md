@@ -9,23 +9,17 @@ allowed-tools:
 
 # pr-shepherd monitor — Continuous PR Monitor
 
+> Action reference (all 8 actions, JSON fields, examples): [docs/actions.md](../../../docs/actions.md)
+
 ## Arguments: $ARGUMENTS
 
 ## Resolve PR number
 
 1. Strip any trailing `every <N> <unit>` interval clause from `$ARGUMENTS` first.
-2. Extract `--ready-delay <duration>` if present (e.g. `--ready-delay 15m`). Default: `10m`.
+2. Extract `--ready-delay <duration>` if present (e.g. `--ready-delay 15m`). Default: `10m`. Keep the raw duration string (e.g. `10m`) — do **not** convert to seconds.
 3. If the remaining text contains a PR number or GitHub PR URL, extract the number.
 4. Otherwise, infer: `gh pr list --head "$(git rev-parse --abbrev-ref HEAD)" --json number --jq '.[0].number'`
 5. If no PR found, report an error and stop.
-
-## Detect base branch
-
-```bash
-BASE_BRANCH=$(gh pr view <PR_NUMBER> --json baseRefName --jq '.baseRefName')
-```
-
-Default to `main` if the command fails.
 
 ## Start the loop
 
@@ -40,70 +34,25 @@ Invoke `/loop <INTERVAL> --max-turns 50 --expires 8h` via the Skill tool. Use th
 ````
 # pr-shepherd-loop:pr=<PR_NUMBER>
 
-**IMPORTANT — recurrence rules for this session:**
-- **Do NOT call `ScheduleWakeup`.** This session was fired by a recurring cron job. Calling `ScheduleWakeup` (with a `/loop` prompt) would create a duplicate cron job, leading to concurrent git operations and `.git/index.lock` collisions.
-- **Do NOT invoke `/loop`.** Same reason — `/loop` with an interval calls `CronCreate`, which creates a second recurrent runner.
-- After completing the actions below, end the turn cleanly. The cron job handles the next fire automatically.
+**IMPORTANT — recurrence rules:**
+- **Do NOT call `ScheduleWakeup` or `/loop`.** This session is fired by a recurring cron job. Either call creates a duplicate runner, causing concurrent git operations and `.git/index.lock` collisions.
+- End the turn cleanly after completing the actions below. The cron job handles the next fire.
 
-**Self-dedup:** Run `CronList`. If more than one job has a prompt containing `# pr-shepherd-loop:pr=<PR_NUMBER>`, duplicate runners exist. Keep the job with the lowest job ID and `CronDelete` the rest (ignore errors if a job is already gone — another concurrent runner may have deleted it first), then continue this iteration.
+**Self-dedup:** Run `CronList`. If more than one job contains `# pr-shepherd-loop:pr=<PR_NUMBER>`, keep the lowest job ID and `CronDelete` the rest (ignore errors — a concurrent runner may have already deleted them).
 
-Run the following in a single Bash invocation:
-  npx pr-shepherd iterate <PR_NUMBER> --ready-delay <READY_DELAY> --no-cache --last-push-time "$(git log -1 --format=%ct HEAD)" --format=json
+Run in a single Bash call:
+  npx pr-shepherd iterate <PR_NUMBER> --ready-delay <READY_DELAY_DURATION> --no-cache --last-push-time "$(git log -1 --format=%ct HEAD)"
+(`<READY_DELAY_DURATION>` is the raw duration string, e.g. `10m` — never a bare number of seconds)
 
-Exit codes 0, 1, 2, and 3 are all valid signals — always try to parse stdout as JSON first. If the command exits non-zero and stdout is not parseable JSON (e.g. a crash), log the first line of stderr and continue (do not cancel the loop).
+Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with `# PR #<N> [`), log the first line of stderr and continue — do not cancel the loop. The next cron fire will retry.
 
-Parse the `action` field and act:
+The output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Read the `[<ACTION>]` tag to decide what to do (see [docs/actions.md](../../../docs/actions.md) for full output shapes):
 
-- `cooldown` → log: `SKIP: CI still starting`
-- `wait` → log: `WAIT: <summary.passing> passing, <summary.inProgress> in-progress (merge state: <mergeStateStatus>, <remainingSeconds>s cooldown remaining)`
-- `rerun_ci` → log: `RERAN <N> CI checks: <reran joined by space>`
-- `mark_ready` → log: `MARKED READY: PR <pr>`
-- `cancel` → invoke `/loop cancel` and stop
-- `rebase` → run:
-  ```bash
-  if ! git diff --quiet || ! git diff --cached --quiet; then
-    echo "SKIP rebase: dirty worktree (uncommitted changes present)"
-    exit 0
-  fi
-  git fetch origin && git rebase origin/<BASE_BRANCH> && git push --force-with-lease
-  ```
-
-- `escalate` → invoke `/loop cancel` via Skill tool, then print:
-
-  ⚠️ /pr-shepherd:monitor paused — needs human direction
-
-  Triggers: <escalate.triggers joined by ", ">
-  <escalate.suggestion>
-
-  Items needing attention:
-  <for each thread in escalate.unresolvedThreads: "- threadId=<id> <path ?? '(no location)'>:<line ?? '?'> (@<author>): <body first line>">
-  <if escalate.changesRequestedReviews.length > 0: for each "- reviewId=<id> (@<author>): <body first line>">
-  <if escalate.attemptHistory: "Fix attempts: " + each "threadId=<id> attempted <N> times">
-
-  Run /pr-shepherd:check <PR> to see current state.
-  After fixing manually, rerun /pr-shepherd:monitor <PR> to resume.
-
-- `fix_code` → do the following, then stop this iteration (CI needs time):
-  0. **Triage `fix.comments`** into two buckets before taking any action:
-     - **Noise** (`NOISE_COMMENT_IDS`): bot-authored comments with no actionable code feedback — e.g. quota/rate-limit warnings ("you have reached your daily quota", "please wait up to N hours"), "resuming" notices, bare acknowledgements, or any comment whose body contains no file path, line number, or concrete code suggestion. Collect their `id`s.
-     - **Actionable**: everything else. When in doubt, treat as actionable.
-     All items in `fix.threads` are always actionable (they carry a file path and line by construction).
-  1. For each item in `fix.threads` and each **actionable** `fix.comments`: read the referenced file/line and apply the fix (Edit/Write tools).
-  2. For each item in `fix.checks`:
-     - If `runId` is non-null: fetch the failure log with `gh run view <runId> --log-failed`, scan the output to identify the failure (e.g. grep for `FAIL` for test failures, `error:` for type/compile errors, lint rule names for lint failures), then read the relevant file and apply the fix (Edit/Write tools).
-     - If `runId` is null: the failed check is an external status check that cannot be inspected via run logs. Escalate — tell the user to open `detailsUrl` in the PR checks UI, inspect the failure manually, and rerun `/pr-shepherd:monitor <PR_NUMBER>` after addressing it. Do not attempt to fix these automatically.
-  3. For each item in `fix.changesRequestedReviews`: read the review body and apply the requested changes.
-  4. If files were changed, `git add <files> && git commit -m "<appropriate commit message>"`
-  5. If files were changed: `git fetch origin && git rebase origin/<BASE_BRANCH> && git push --force-with-lease`, then `HEAD_SHA=$(git rev-parse HEAD)`.
-  6. If **only noise** was found (no files changed, no threads/checks/reviews to act on): skip commit/push and omit `--require-sha` in the next step.
-  7. Resolve the items on GitHub. Build the command from the non-empty ID lists only — always start with:
-     `npx pr-shepherd resolve <PR_NUMBER>`
-     Then append:
-     - `--resolve-thread-ids <IDs>` only if `fix.threads` was non-empty.
-     - `--minimize-comment-ids <IDs>` if any comments exist (use `NOISE_COMMENT_IDS` plus IDs of any other comments to minimize).
-     - `--dismiss-review-ids <IDs> --message "<specific description of what you changed>"` only if `fix.changesRequestedReviews` was non-empty. The message is shown to the reviewer on GitHub — write one sentence describing the actual fix (e.g. `"Switched to parameterized query in src/db.ts"`). Never use generic text like `"address review comments"`.
-     - `--require-sha "$HEAD_SHA"` only if a push occurred (omit when only noise was handled).
-     Omit any flag whose ID list is empty.
+- `[COOLDOWN]` | `[WAIT]` | `[RERUN_CI]` | `[MARK_READY]` → print the output, continue.
+- `[CANCEL]`   → print the output, then invoke `/loop cancel` via Skill tool and stop.
+- `[REBASE]`   → print the output, then extract the shell script from the ` ```bash ` fenced block and run it in Bash.
+- `[ESCALATE]` → print the output, then invoke `/loop cancel` via Skill tool and stop.
+- `[FIX_CODE]` → follow the numbered items under `## Instructions` in order. Only run a `resolve` command if those instructions explicitly include a "Run the `resolve:` command…" step, or if the provided resolve command includes mutation flags. In that case, the `resolve` bullet under `## Rebase` holds the final resolve command inside backticks — strip the backticks and run it, substituting `"$HEAD_SHA"` with the pushed SHA and `$DISMISS_MESSAGE` with a one-sentence description of the actual fix (never generic text like "address review comments"). **Never manually run `gh run cancel` after your push** — stale runs listed under `## Cancelled runs` were already cancelled by the CLI (using the pre-push run IDs, as required by the "cancel CI runs before fixing and pushing" rule); running it again post-push would hit the NEW runs your push just triggered. If you run the resolve command, stop this iteration afterward — CI needs time before the next tick.
 
 ````
 
@@ -119,7 +68,7 @@ The default 4-minute interval is chosen for two reasons:
 The loop prompt above handles each iteration directly — no subagent is spawned. The same iterate command can be run manually at any time:
 
 ```bash
-npx pr-shepherd iterate <PR_NUMBER> --ready-delay <READY_DELAY> --no-cache --last-push-time "$(git log -1 --format=%ct HEAD)" --format=json
+npx pr-shepherd iterate <PR_NUMBER> --ready-delay <READY_DELAY_DURATION> --no-cache --last-push-time "$(git log -1 --format=%ct HEAD)"
 ```
 
 To stop monitoring manually, use `/loop cancel` or close the session.

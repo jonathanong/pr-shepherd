@@ -44,7 +44,7 @@ vi.mock("../cache/fix-attempts.mts", () => ({
   writeFixAttempts: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { runIterate } from "./iterate.mts";
+import { runIterate, renderResolveCommand } from "./iterate.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { triageFailingChecks } from "../checks/triage.mts";
@@ -66,6 +66,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
     pr: 42,
     repo: "owner/repo",
     status: "READY",
+    baseBranch: "main",
     mergeStatus: {
       status: "CLEAN",
       state: "OPEN" as const,
@@ -242,7 +243,8 @@ describe("runIterate — fix_code (actionable threads)", () => {
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       expect(result.fix.threads).toHaveLength(2);
-      expect(result.fix.comments).toHaveLength(0);
+      expect(result.fix.actionableComments).toHaveLength(0);
+      expect(result.fix.noiseCommentIds).toHaveLength(0);
       expect(result.fix.checks).toHaveLength(0);
       expect(result.cancelled).toHaveLength(0);
     }
@@ -318,9 +320,12 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
       shouldCancel: false,
       remainingSeconds: 600,
     });
-    mockExecFile.mockImplementation((_cmd: string, args: string[]) => {
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
       if (args[0] === "run" && args[1] === "cancel" && args[2] === "run-100") {
         return Promise.reject(new Error("run already completed"));
+      }
+      if (cmd === "gh" && args[0] === "pr" && args[1] === "view") {
+        return Promise.resolve({ stdout: "main\n", stderr: "" });
       }
       return Promise.resolve({ stdout: "", stderr: "" });
     });
@@ -355,7 +360,12 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
       shouldCancel: false,
       remainingSeconds: 600,
     });
-    mockExecFile.mockRejectedValue(new Error("this run has already completed"));
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "gh" && args[0] === "pr" && args[1] === "view") {
+        return Promise.resolve({ stdout: "main\n", stderr: "" });
+      }
+      return Promise.reject(new Error("this run has already completed"));
+    });
 
     const result = await runIterate(makeOpts());
 
@@ -388,7 +398,15 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
       shouldCancel: false,
       remainingSeconds: 600,
     });
-    mockExecFile.mockRejectedValue(new Error("Cannot cancel a workflow run that is completed"));
+    mockExecFile.mockImplementation((_cmd: string, args: string[]) => {
+      if (args[0] === "run" && args[1] === "cancel") {
+        return Promise.reject(new Error("Cannot cancel a workflow run that is completed"));
+      }
+      if (args[0] === "pr" && args[1] === "view") {
+        return Promise.resolve({ stdout: "main\n", stderr: "" });
+      }
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
 
     try {
@@ -518,7 +536,7 @@ describe("runIterate — fix_code agent projection", () => {
     }
   });
 
-  it("emits AgentComment shape — no isMinimized/createdAtUnix on fix.comments", async () => {
+  it("emits AgentComment shape — no isMinimized/createdAtUnix on fix.actionableComments", async () => {
     const comment = {
       id: "c-1",
       isMinimized: false,
@@ -542,7 +560,7 @@ describe("runIterate — fix_code agent projection", () => {
 
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
-      const c = result.fix.comments[0]!;
+      const c = result.fix.actionableComments[0]!;
       expect(c.id).toBe("c-1");
       expect(c.author).toBe("bob");
       expect(c.body).toBe("Consider renaming this");
@@ -588,6 +606,166 @@ describe("runIterate — fix_code agent projection", () => {
       expect(c).not.toHaveProperty("logExcerpt");
       expect(c).not.toHaveProperty("conclusion");
       expect(c).not.toHaveProperty("category");
+    }
+  });
+
+  it("external status check (runId=null) — instructions split by runId presence", async () => {
+    const externalCheck = {
+      name: "codecov/patch",
+      status: "COMPLETED" as const,
+      conclusion: "FAILURE" as const,
+      detailsUrl: "https://app.codecov.io/...",
+      event: "pull_request",
+      runId: null,
+      category: "failing" as const,
+    };
+    const ghActionsCheck = makeActionableCheck("run-77", "lint");
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        checks: {
+          passing: [],
+          failing: [externalCheck, ghActionsCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockTriageFailingChecks.mockResolvedValue([
+      { ...externalCheck, failureKind: "actionable", category: "failing" as const },
+      { ...ghActionsCheck, failureKind: "actionable" },
+    ]);
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      const instructionsJoined = result.fix.instructions.join("\n");
+      expect(instructionsJoined).toContain("GitHub Actions");
+      expect(instructionsJoined).toContain("gh run view <runId> --log-failed");
+      expect(instructionsJoined).toContain("external status check");
+      expect(instructionsJoined).toContain("open the linked URL");
+      // No bare-check bullets in this test, so the `(no runId)` instruction is omitted.
+      expect(instructionsJoined).not.toContain("(no runId)");
+    }
+  });
+
+  it("bare check (runId=null, no detailsUrl) — emits escalate-to-human instruction", async () => {
+    const bareCheck = {
+      name: "mystery",
+      status: "COMPLETED" as const,
+      conclusion: "FAILURE" as const,
+      detailsUrl: "",
+      event: "pull_request",
+      runId: null,
+      category: "failing" as const,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        checks: {
+          passing: [],
+          failing: [bareCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockTriageFailingChecks.mockResolvedValue([
+      { ...bareCheck, failureKind: "actionable", category: "failing" as const },
+    ]);
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      const instructionsJoined = result.fix.instructions.join("\n");
+      expect(instructionsJoined).toContain("(no runId)");
+      expect(instructionsJoined).toMatch(/escalate/i);
+      // external-check instruction is gated separately and must NOT appear for a bare check.
+      expect(instructionsJoined).not.toContain("external status check");
+    }
+  });
+
+  it("combined runId + external + bare checks — all three instruction variants coexist", async () => {
+    // Guards against a filter-predicate drift between buildFixInstructions
+    // (which buckets checks by truthiness) and the CLI formatter (which emits
+    // bullets by the same truthiness). If either side stops agreeing, an
+    // emitted bullet shape would have no matching instruction.
+    const ghActionsCheck = makeActionableCheck("run-77", "lint");
+    const externalCheck = {
+      name: "codecov/patch",
+      status: "COMPLETED" as const,
+      conclusion: "FAILURE" as const,
+      detailsUrl: "https://app.codecov.io/...",
+      event: "pull_request",
+      runId: null,
+      category: "failing" as const,
+    };
+    const bareCheck = {
+      name: "mystery",
+      status: "COMPLETED" as const,
+      conclusion: "FAILURE" as const,
+      detailsUrl: "",
+      event: "pull_request",
+      runId: null,
+      category: "failing" as const,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        checks: {
+          passing: [],
+          failing: [ghActionsCheck, externalCheck, bareCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockTriageFailingChecks.mockResolvedValue([
+      { ...ghActionsCheck, failureKind: "actionable" },
+      { ...externalCheck, failureKind: "actionable", category: "failing" as const },
+      { ...bareCheck, failureKind: "actionable", category: "failing" as const },
+    ]);
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.checks).toHaveLength(3);
+      const joined = result.fix.instructions.join("\n");
+      // All three instruction variants present:
+      expect(joined).toContain("numeric runId (GitHub Actions)");
+      expect(joined).toContain("external status check");
+      expect(joined).toContain("(no runId)");
+      // And each appears exactly once:
+      expect(joined.match(/GitHub Actions/g)).toHaveLength(1);
+      expect(joined.match(/external status check/g)).toHaveLength(1);
+      expect(joined.match(/\(no runId\)/g)).toHaveLength(1);
     }
   });
 });
@@ -638,8 +816,11 @@ describe("runIterate — rerun_ci", () => {
 
     expect(result.action).toBe("rerun_ci");
     if (result.action === "rerun_ci") {
-      expect(result.reran).toContain("run-10");
-      expect(result.reran).toContain("run-11");
+      expect(result.reran.map((r) => r.runId)).toContain("run-10");
+      expect(result.reran.map((r) => r.runId)).toContain("run-11");
+      expect(result.reran.find((r) => r.runId === "run-10")?.checkNames).toEqual(["test-1"]);
+      expect(result.reran.find((r) => r.runId === "run-11")?.checkNames).toEqual(["test-2"]);
+      expect(result.reran.find((r) => r.runId === "run-10")?.failureKind).toBe("timeout");
     }
 
     // Verify gh run rerun was called for both
@@ -693,7 +874,9 @@ describe("runIterate — rerun_ci", () => {
     expect(result.action).toBe("rerun_ci");
     if (result.action === "rerun_ci") {
       expect(result.reran).toHaveLength(1);
-      expect(result.reran[0]).toBe("run-20");
+      expect(result.reran[0].runId).toBe("run-20");
+      expect(result.reran[0].checkNames).toEqual(["test-step-1", "test-step-2"]);
+      expect(result.reran[0].failureKind).toBe("infrastructure");
     }
   });
 });
@@ -774,6 +957,14 @@ describe("runIterate — fix_code (merge conflicts)", () => {
     if (result.action === "fix_code") {
       expect(result.fix.threads).toHaveLength(0);
       expect(result.fix.checks).toHaveLength(0);
+      // CONFLICTS-only: no commit step (nothing to commit), but we still
+      // emit a rebase-with-conflict-resolution instruction and no resolve step.
+      const joined = result.fix.instructions.join("\n");
+      expect(joined).not.toContain("git commit");
+      expect(joined).toContain("Rebase with conflict resolution");
+      expect(joined).toContain("git rebase --continue");
+      expect(joined).toContain("git push --force-with-lease");
+      expect(joined).not.toContain("resolve:");
     }
   });
 
@@ -816,6 +1007,14 @@ describe("runIterate — fix_code (merge conflicts)", () => {
     if (result.action === "fix_code") {
       expect(result.fix.threads).toHaveLength(1);
       expect(result.fix.threads[0]?.id).toBe("thread-1");
+      // Threads + CONFLICTS: commit step, rebase-with-conflict-resolution (not
+      // the clean `&& git push` one-liner), and resolve step all present.
+      const joined = result.fix.instructions.join("\n");
+      expect(joined).toContain("git commit");
+      expect(joined).toContain("Rebase with conflict resolution");
+      expect(joined).toContain("git rebase --continue");
+      expect(joined).not.toMatch(/rebase origin\/\w+ && git push/);
+      expect(joined).toContain("resolve:");
     }
   });
 });
@@ -1298,6 +1497,739 @@ describe("runIterate — human approval pending (BLOCKED + REVIEW_REQUIRED)", ()
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("cancel");
     expect(result.shouldCancel).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Prescriptive fields
+// ---------------------------------------------------------------------------
+
+describe("runIterate — prescriptive fields: log strings", () => {
+  it("cooldown.log mentions CI starting", async () => {
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "log")
+        return Promise.resolve({ stdout: String(NOW - 5), stderr: "" });
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+
+    const result = await runIterate(makeOpts({ cooldownSeconds: 30 }));
+    expect(result.action).toBe("cooldown");
+    if (result.action === "cooldown") {
+      expect(result.log).toMatch(/SKIP/);
+      expect(result.log).toMatch(/CI/i);
+    }
+  });
+
+  it("wait.log includes passing count and merge state", async () => {
+    mockRunCheck.mockResolvedValue(makeReport());
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: false,
+      remainingSeconds: 300,
+    });
+
+    const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
+    expect(result.action).toBe("wait");
+    if (result.action === "wait") {
+      expect(result.log).toMatch(/WAIT/);
+      expect(result.log).toMatch(/passing/);
+      expect(result.log).toMatch(/300s/);
+    }
+  });
+
+  it("cancel.log mentions PR state when PR is merged", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        mergeStatus: {
+          status: "CLEAN",
+          state: "MERGED",
+          isDraft: false,
+          mergeable: "MERGEABLE",
+          reviewDecision: "APPROVED",
+          copilotReviewInProgress: false,
+          mergeStateStatus: "CLEAN",
+        },
+      }),
+    );
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("cancel");
+    if (result.action === "cancel") {
+      expect(result.log).toMatch(/CANCEL/);
+      expect(result.log).toMatch(/merged/i);
+    }
+  });
+
+  it("cancel.log mentions ready-delay when shouldCancel from ready-delay", async () => {
+    mockRunCheck.mockResolvedValue(makeReport());
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("cancel");
+    if (result.action === "cancel") {
+      expect(result.log).toMatch(/CANCEL/);
+      expect(result.log).toMatch(/ready/i);
+    }
+  });
+
+  it("rerun_ci.log includes count and run IDs", async () => {
+    const timeoutCheck = {
+      name: "test",
+      status: "COMPLETED" as const,
+      conclusion: "TIMED_OUT" as const,
+      detailsUrl: "https://github.com/owner/repo/actions/runs/99",
+      event: "pull_request",
+      runId: "run-99",
+      category: "failing" as const,
+      failureKind: "timeout" as const,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        checks: {
+          passing: [],
+          failing: [timeoutCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("rerun_ci");
+    if (result.action === "rerun_ci") {
+      expect(result.log).toMatch(/RERAN/);
+      expect(result.log).toMatch(/run-99/);
+      expect(result.log).toMatch(/test/);
+      expect(result.log).toMatch(/timeout/);
+    }
+  });
+
+  it("mark_ready.log mentions PR number", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        mergeStatus: {
+          status: "CLEAN",
+          state: "OPEN",
+          isDraft: true,
+          mergeable: "MERGEABLE",
+          reviewDecision: "APPROVED",
+          copilotReviewInProgress: false,
+          mergeStateStatus: "DRAFT",
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("mark_ready");
+    if (result.action === "mark_ready") {
+      expect(result.log).toMatch(/MARKED READY/);
+      expect(result.log).toMatch(/42/);
+    }
+  });
+});
+
+describe("runIterate — prescriptive fields: rebase", () => {
+  it("rebase result includes baseBranch, reason, and shellScript with dirty-worktree guard", async () => {
+    const flakyCheck = {
+      name: "flaky",
+      status: "COMPLETED" as const,
+      conclusion: "FAILURE" as const,
+      detailsUrl: "https://github.com/owner/repo/actions/runs/30",
+      event: "pull_request",
+      runId: "run-30",
+      category: "failing" as const,
+      failureKind: "flaky" as const,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        mergeStatus: {
+          status: "BEHIND",
+          state: "OPEN",
+          isDraft: false,
+          mergeable: "MERGEABLE",
+          reviewDecision: null,
+          copilotReviewInProgress: false,
+          mergeStateStatus: "BEHIND",
+        },
+        checks: {
+          passing: [],
+          failing: [flakyCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "log")
+        return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
+      if (cmd === "git" && args[0] === "rev-parse")
+        return Promise.resolve({ stdout: "abc123\n", stderr: "" });
+      if (cmd === "gh" && args[1] === "view")
+        return Promise.resolve({ stdout: "main\n", stderr: "" });
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("rebase");
+    if (result.action === "rebase") {
+      expect(result.baseBranch).toBe("main");
+      expect(result.rebase.reason).toMatch(/behind main/i);
+      expect(result.rebase.shellScript).toMatch(/git diff --quiet/);
+      expect(result.rebase.shellScript).toMatch(/git rebase origin\/main/);
+      expect(result.rebase.shellScript).toMatch(/--force-with-lease/);
+    }
+  });
+});
+
+describe("runIterate — prescriptive fields: fix_code noise/actionable split", () => {
+  it("classifies quota-warning comment as noise, real review comment as actionable", async () => {
+    const noiseComment = {
+      id: "c-noise",
+      isMinimized: false,
+      author: "bot",
+      body: "You have reached your daily quota",
+      createdAtUnix: NOW,
+    };
+    const realComment = {
+      id: "c-real",
+      isMinimized: false,
+      author: "reviewer",
+      body: "Please add a null check here before calling .value()",
+      createdAtUnix: NOW,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        comments: { actionable: [noiseComment, realComment] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "log")
+        return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
+      if (cmd === "git" && args[0] === "rev-parse")
+        return Promise.resolve({ stdout: "abc123\n", stderr: "" });
+      if (cmd === "gh" && args[1] === "view")
+        return Promise.resolve({ stdout: "main\n", stderr: "" });
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.actionableComments).toHaveLength(1);
+      expect(result.fix.actionableComments[0]!.id).toBe("c-real");
+      expect(result.fix.noiseCommentIds).toEqual(["c-noise"]);
+    }
+  });
+
+  it("classifies rate-limit noise across em-dash, ASCII hyphen, and colon variants", async () => {
+    const emDash = {
+      id: "c-em",
+      isMinimized: false,
+      author: "bot",
+      body: "rate-limited — try again later",
+      createdAtUnix: NOW,
+    };
+    const asciiHyphen = {
+      id: "c-hy",
+      isMinimized: false,
+      author: "bot",
+      body: "rate-limited - try again in a few minutes",
+      createdAtUnix: NOW,
+    };
+    const colon = {
+      id: "c-co",
+      isMinimized: false,
+      author: "bot",
+      body: "rate limited: try again later",
+      createdAtUnix: NOW,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        comments: { actionable: [emDash, asciiHyphen, colon] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "gh" && args[1] === "view")
+        return Promise.resolve({ stdout: "main\n", stderr: "" });
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.noiseCommentIds.sort()).toEqual(["c-co", "c-em", "c-hy"]);
+      expect(result.fix.actionableComments).toHaveLength(0);
+    }
+  });
+
+  it("resolveCommand includes thread IDs and comment IDs with $HEAD_SHA flag", async () => {
+    const thread = { ...THREAD };
+    const comment = {
+      id: "c-1",
+      isMinimized: false,
+      author: "reviewer",
+      body: "Fix the types here",
+      createdAtUnix: NOW,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [] },
+        comments: { actionable: [comment] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "log")
+        return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
+      if (cmd === "git" && args[0] === "rev-parse")
+        return Promise.resolve({ stdout: "abc123\n", stderr: "" });
+      if (cmd === "gh" && args[1] === "view")
+        return Promise.resolve({ stdout: "main\n", stderr: "" });
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      const { resolveCommand } = result.fix;
+      expect(resolveCommand.argv).toContain("--resolve-thread-ids");
+      expect(resolveCommand.argv.join(" ")).toContain("thread-1");
+      expect(resolveCommand.argv).toContain("--minimize-comment-ids");
+      expect(resolveCommand.argv.join(" ")).toContain("c-1");
+      expect(resolveCommand.requiresHeadSha).toBe(true);
+      expect(resolveCommand.requiresDismissMessage).toBe(false);
+    }
+  });
+
+  it("resolveCommand includes dismiss-review-ids and $DISMISS_MESSAGE when changesRequested", async () => {
+    const review = { id: "r-1", author: "reviewer", body: "Please address the naming" };
+    const thread = { ...THREAD };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [] },
+        changesRequestedReviews: [review],
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "log")
+        return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
+      if (cmd === "git" && args[0] === "rev-parse")
+        return Promise.resolve({ stdout: "abc123\n", stderr: "" });
+      if (cmd === "gh" && args[1] === "view")
+        return Promise.resolve({ stdout: "main\n", stderr: "" });
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      const { resolveCommand } = result.fix;
+      expect(resolveCommand.argv).toContain("--dismiss-review-ids");
+      expect(resolveCommand.argv.join(" ")).toContain("r-1");
+      expect(resolveCommand.argv).toContain("$DISMISS_MESSAGE");
+      expect(resolveCommand.requiresDismissMessage).toBe(true);
+    }
+  });
+});
+
+describe("runIterate — prescriptive fields: escalate humanMessage", () => {
+  it("escalate.humanMessage contains triggers, suggestion, and thread details", async () => {
+    mockReadFixAttempts.mockResolvedValue({ headSha: "abc123", threadAttempts: { "thread-1": 3 } });
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "log")
+        return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
+      if (cmd === "git" && args[0] === "rev-parse")
+        return Promise.resolve({ stdout: "abc123\n", stderr: "" });
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      const { humanMessage } = result.escalate;
+      expect(humanMessage).toMatch(/paused/i);
+      expect(humanMessage).toMatch(/fix-thrash/);
+      expect(humanMessage).toMatch(/thread-1/);
+      expect(humanMessage).toMatch(/src\/foo\.mts/);
+      expect(humanMessage).toMatch(/pr-shepherd:check 42/);
+      expect(humanMessage).toMatch(/pr-shepherd:monitor 42` to resume/);
+    }
+  });
+
+  it("escalates with base-branch-unknown when fix_code needs a push but baseBranch is empty", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        baseBranch: "",
+        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toContain("base-branch-unknown");
+      expect(result.escalate.suggestion).toMatch(/empty base branch name/);
+      expect(result.escalate.humanMessage).toMatch(/base-branch-unknown/);
+    }
+  });
+
+  it("escalates with base-branch-unknown when rebase would run but baseBranch is empty", async () => {
+    const flakyCheck = {
+      name: "flaky",
+      status: "COMPLETED" as const,
+      conclusion: "FAILURE" as const,
+      detailsUrl: "https://github.com/owner/repo/actions/runs/30",
+      event: "pull_request",
+      runId: "run-30",
+      category: "failing" as const,
+      failureKind: "flaky" as const,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        baseBranch: "",
+        mergeStatus: {
+          status: "BEHIND",
+          state: "OPEN",
+          isDraft: false,
+          mergeable: "MERGEABLE",
+          reviewDecision: null,
+          copilotReviewInProgress: false,
+          mergeStateStatus: "BEHIND",
+        },
+        checks: {
+          passing: [],
+          failing: [flakyCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toEqual(["base-branch-unknown"]);
+    }
+  });
+
+  it("escalates with base-branch-unknown on CONFLICTS-only when baseBranch is empty (no resolve IDs, but rebase still needed)", async () => {
+    // Guards the `|| hasConflicts` branch of the fix_code base-branch-unknown
+    // gate. Without it, a CONFLICTS-only PR with no threads/comments/checks/
+    // reviews would silently rebase onto `main` when the base branch was
+    // invalid, because resolveCommand.requiresHeadSha is false (nothing to
+    // resolve).
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        baseBranch: "",
+        mergeStatus: {
+          status: "CONFLICTS",
+          state: "OPEN" as const,
+          isDraft: false,
+          mergeable: "CONFLICTING",
+          reviewDecision: null,
+          copilotReviewInProgress: false,
+          mergeStateStatus: "DIRTY",
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toEqual(["base-branch-unknown"]);
+      expect(result.escalate.suggestion).toMatch(/empty base branch name/);
+    }
+  });
+
+  it("escalates with base-branch-unknown when baseBranch contains unsafe characters", async () => {
+    // Prevents shell interpolation via validateBaseBranch — a ref like
+    // `main;rm -rf /` must not flow into buildRebaseShellScript.
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        baseBranch: "main; rm -rf /",
+        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toContain("base-branch-unknown");
+      expect(result.escalate.suggestion).toMatch(/unsafe characters/);
+      expect(result.escalate.suggestion).toContain("main; rm -rf /");
+    }
+  });
+});
+
+describe("renderResolveCommand", () => {
+  it("quotes $DISMISS_MESSAGE so a substituted sentence stays one argument", () => {
+    const joined = renderResolveCommand({
+      argv: [
+        "npx",
+        "pr-shepherd",
+        "resolve",
+        "42",
+        "--dismiss-review-ids",
+        "r-1",
+        "--message",
+        "$DISMISS_MESSAGE",
+      ],
+      requiresHeadSha: false,
+      requiresDismissMessage: true,
+      hasMutations: true,
+    });
+    expect(joined).toBe(
+      'npx pr-shepherd resolve 42 --dismiss-review-ids r-1 --message "$DISMISS_MESSAGE"',
+    );
+  });
+
+  it('appends --require-sha "$HEAD_SHA" when requiresHeadSha is true', () => {
+    const joined = renderResolveCommand({
+      argv: ["npx", "pr-shepherd", "resolve", "42", "--resolve-thread-ids", "t-1"],
+      requiresHeadSha: true,
+      requiresDismissMessage: false,
+      hasMutations: true,
+    });
+    expect(joined).toBe(
+      'npx pr-shepherd resolve 42 --resolve-thread-ids t-1 --require-sha "$HEAD_SHA"',
+    );
+  });
+
+  it("omits --require-sha when requiresHeadSha is false (noise-only path)", () => {
+    const joined = renderResolveCommand({
+      argv: ["npx", "pr-shepherd", "resolve", "42", "--minimize-comment-ids", "c-noise"],
+      requiresHeadSha: false,
+      requiresDismissMessage: false,
+      hasMutations: true,
+    });
+    expect(joined).toBe("npx pr-shepherd resolve 42 --minimize-comment-ids c-noise");
+  });
+
+  it("quotes whitespace-bearing args defensively", () => {
+    const joined = renderResolveCommand({
+      argv: ["npx", "pr-shepherd", "resolve", "42", "--message", "hello world"],
+      requiresHeadSha: false,
+      requiresDismissMessage: false,
+      hasMutations: false,
+    });
+    expect(joined).toBe('npx pr-shepherd resolve 42 --message "hello world"');
+  });
+
+  it("leaves thread-IDs, flag names, and plain alphanumeric args unquoted", () => {
+    const joined = renderResolveCommand({
+      argv: [
+        "npx",
+        "pr-shepherd",
+        "resolve",
+        "42",
+        "--resolve-thread-ids",
+        "PRRT_kwDOSGizTs58XpO6,PRRT_kwDOSGizTs58XpPD",
+        "--minimize-comment-ids",
+        "c-1,c-2",
+      ],
+      requiresHeadSha: false,
+      requiresDismissMessage: false,
+      hasMutations: true,
+    });
+    expect(joined).not.toMatch(/"/);
+    expect(joined).toBe(
+      "npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XpO6,PRRT_kwDOSGizTs58XpPD --minimize-comment-ids c-1,c-2",
+    );
+  });
+
+  it('emits placeholders as exactly `"$PLACEHOLDER"` so callers replace the whole token', () => {
+    const joined = renderResolveCommand({
+      argv: [
+        "npx",
+        "pr-shepherd",
+        "resolve",
+        "42",
+        "--dismiss-review-ids",
+        "r-1",
+        "--message",
+        "$DISMISS_MESSAGE",
+      ],
+      requiresHeadSha: true,
+      requiresDismissMessage: true,
+      hasMutations: true,
+    });
+    // Both placeholders appear with their quotes attached as a single token —
+    // this is the contract consumers rely on when doing literal-text substitution.
+    expect(joined).toContain('"$DISMISS_MESSAGE"');
+    expect(joined).toContain('"$HEAD_SHA"');
+    expect(joined.endsWith('--require-sha "$HEAD_SHA"')).toBe(true);
+  });
+
+  it("never emits an unquoted $HEAD_SHA (regardless of requiresHeadSha)", () => {
+    const withSha = renderResolveCommand({
+      argv: ["npx", "pr-shepherd", "resolve", "42"],
+      requiresHeadSha: true,
+      requiresDismissMessage: false,
+      hasMutations: false,
+    });
+    const withoutSha = renderResolveCommand({
+      argv: ["npx", "pr-shepherd", "resolve", "42"],
+      requiresHeadSha: false,
+      requiresDismissMessage: false,
+      hasMutations: false,
+    });
+    // Whenever $HEAD_SHA appears it is always quoted.
+    expect(withSha).not.toMatch(/(?<!")\$HEAD_SHA(?!")/);
+    expect(withoutSha).not.toContain("$HEAD_SHA");
+  });
+
+  it("never emits a backtick (would break the Markdown `resolve:` fence)", () => {
+    // Rendered output is embedded inside a backtick-delimited inline span in
+    // the Markdown emitter (cli.mts). An unescaped backtick here would close
+    // the fence early and corrupt the rest of the line for downstream parsers.
+    const rendered = renderResolveCommand({
+      argv: [
+        "npx",
+        "pr-shepherd",
+        "resolve",
+        "42",
+        "--resolve-thread-ids",
+        "PRRT_kwDOSGizTs58XpO6",
+        "--minimize-comment-ids",
+        "c-1,c-2",
+        "--dismiss-review-ids",
+        "REV_1",
+        "--message",
+        "$DISMISS_MESSAGE",
+      ],
+      requiresHeadSha: true,
+      requiresDismissMessage: true,
+      hasMutations: true,
+    });
+    expect(rendered).not.toContain("`");
+  });
+});
+
+describe("buildResolveCommand (via runIterate) — argv shape invariants", () => {
+  it("never puts $HEAD_SHA or --require-sha into argv (they're appended by renderResolveCommand)", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: {
+          actionable: [
+            {
+              id: "t-1",
+              isResolved: false,
+              isOutdated: false,
+              isMinimized: false,
+              path: "src/foo.mts",
+              line: 10,
+              author: "reviewer",
+              body: "fix me",
+              createdAtUnix: NOW - 3600,
+            },
+          ],
+          autoResolved: [],
+          autoResolveErrors: [],
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.resolveCommand.argv).not.toContain("$HEAD_SHA");
+      expect(result.fix.resolveCommand.argv).not.toContain("--require-sha");
+      expect(result.fix.resolveCommand.requiresHeadSha).toBe(true);
+    }
   });
 });
 

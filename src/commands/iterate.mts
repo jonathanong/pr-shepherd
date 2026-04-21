@@ -31,14 +31,17 @@ import { getCurrentPrNumber } from "../github/client.mts";
 import { readFixAttempts, writeFixAttempts } from "../cache/fix-attempts.mts";
 import { toAgentThread, toAgentComment, toAgentChecks } from "../reporters/agent.mts";
 import type {
+  AgentComment,
+  AgentThread,
   EscalateDetails,
   IterateCommandOptions,
   IterateResult,
   IterateResultBase,
   IterateResultSummary,
   PrComment,
-  ReviewThread,
+  ResolveCommand,
   Review,
+  ReviewThread,
   TriagedCheck,
 } from "../types.mts";
 import { loadConfig } from "../config/load.mts";
@@ -78,6 +81,8 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       shouldCancel: false,
       remainingSeconds: readyDelaySeconds,
       summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 0 },
+      baseBranch: "",
+      log: "SKIP: CI still starting — waiting for first check to appear",
     };
   }
 
@@ -91,6 +96,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
 
   // Step 2.5: Cancel if PR is merged or closed — no longer actionable.
   if (report.mergeStatus.state !== "OPEN") {
+    const state = report.mergeStatus.state.toLowerCase();
     return {
       pr: report.pr,
       repo: report.repo,
@@ -102,7 +108,9 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       remainingSeconds: 0,
       state: report.mergeStatus.state,
       summary: buildSummary(report),
+      baseBranch: report.baseBranch,
       action: "cancel",
+      log: `CANCEL: PR #${report.pr} is ${state} — stopping monitor`,
     };
   }
 
@@ -131,11 +139,16 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     shouldCancel: readyState.shouldCancel,
     remainingSeconds: readyState.remainingSeconds,
     summary: buildSummary(report),
+    baseBranch: report.baseBranch,
   };
 
   // Step 3 cont.: cancel if ready-delay elapsed.
   if (readyState.shouldCancel) {
-    return { ...base, action: "cancel" };
+    return {
+      ...base,
+      action: "cancel",
+      log: `CANCEL: PR #${base.pr} has been ready for review — ready-delay elapsed, stopping monitor`,
+    };
   }
 
   // Triage failing checks now that we know we need failureKind for steps 4–6.
@@ -175,16 +188,20 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       report.mergeStatus.status === "CONFLICTS",
     );
     if (escalateTriggers.triggers.length > 0) {
+      const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
+        triggers: escalateTriggers.triggers,
+        unresolvedThreads: report.threads.actionable.map(toAgentThread),
+        ambiguousComments: report.comments.actionable.map(toAgentComment),
+        changesRequestedReviews: report.changesRequestedReviews,
+        attemptHistory: escalateTriggers.thrashHistory,
+        suggestion: buildEscalateSuggestion(escalateTriggers.triggers),
+      };
       return {
         ...base,
         action: "escalate",
         escalate: {
-          triggers: escalateTriggers.triggers,
-          unresolvedThreads: report.threads.actionable.map(toAgentThread),
-          ambiguousComments: report.comments.actionable.map(toAgentComment),
-          changesRequestedReviews: report.changesRequestedReviews,
-          attemptHistory: escalateTriggers.thrashHistory,
-          suggestion: buildEscalateSuggestion(escalateTriggers.triggers),
+          ...escalateBase,
+          humanMessage: buildEscalateHumanMessage(escalateBase, prNumber),
         },
       };
     }
@@ -204,14 +221,69 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       const results = await Promise.all(uniqueRunIds.map((id) => tryCancelRun(id)));
       cancelled = results.filter((id): id is string => id !== null);
     }
+
+    const baseLookup = validateBaseBranch(report.baseBranch);
+    const threads = report.threads.actionable.map(toAgentThread);
+    const { actionable: actionableComments, noiseIds: noiseCommentIds } = classifyComments(
+      report.comments.actionable.map(toAgentComment),
+    );
+    const checks = toAgentChecks(actionableChecks);
+    const { changesRequestedReviews } = report;
+    const allCommentIds = [...actionableComments.map((c) => c.id), ...noiseCommentIds];
+    const resolveCommand = buildResolveCommand(
+      threads,
+      actionableComments,
+      allCommentIds,
+      changesRequestedReviews,
+      checks,
+      prNumber,
+    );
+    const hasConflicts = report.mergeStatus.status === "CONFLICTS";
+
+    // Guard: if the emitted flow requires a push (code fixes or conflict
+    // resolution rebase) but we could not confirm the PR's base branch, refuse
+    // to emit fix_code — a wrong-base rebase would rewrite history onto the
+    // wrong target. Escalate for human direction.
+    if (baseLookup.isFallback && (resolveCommand.requiresHeadSha || hasConflicts)) {
+      const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
+        triggers: ["base-branch-unknown"],
+        unresolvedThreads: threads,
+        ambiguousComments: actionableComments,
+        changesRequestedReviews,
+        suggestion: buildEscalateSuggestion(["base-branch-unknown"], baseLookup.failureReason),
+      };
+      return {
+        ...base,
+        action: "escalate",
+        escalate: {
+          ...fallbackEscalateBase,
+          humanMessage: buildEscalateHumanMessage(fallbackEscalateBase, prNumber),
+        },
+      };
+    }
+
+    const instructions = buildFixInstructions(
+      threads,
+      actionableComments,
+      checks,
+      changesRequestedReviews,
+      baseLookup.branch,
+      resolveCommand,
+      hasConflicts,
+    );
+
     return {
       ...base,
+      baseBranch: baseLookup.branch,
       action: "fix_code",
       fix: {
-        threads: report.threads.actionable.map(toAgentThread),
-        comments: report.comments.actionable.map(toAgentComment),
-        checks: toAgentChecks(actionableChecks),
-        changesRequestedReviews: report.changesRequestedReviews,
+        threads,
+        actionableComments,
+        noiseCommentIds,
+        checks,
+        changesRequestedReviews,
+        resolveCommand,
+        instructions,
       },
       cancelled,
     };
@@ -222,20 +294,65 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     (f) => f.failureKind === "timeout" || f.failureKind === "infrastructure",
   );
   if (transientChecks.length > 0 && !opts.noAutoRerun) {
-    // Deduplicate runIds — multiple failed steps can share the same runId.
-    const uniqueRunIds = [
-      ...new Set(transientChecks.map((c) => c.runId).filter((id) => id !== null)),
-    ];
-    await Promise.all(
-      uniqueRunIds.map((runId) => runGhCommand(["run", "rerun", runId, "--failed"])),
+    // Group checks by runId — multiple failed steps can share one run.
+    const runMap = new Map<string, import("../types.mts").ReranRun>();
+    for (const c of transientChecks) {
+      if (c.runId === null) continue;
+      const existing = runMap.get(c.runId);
+      if (existing) {
+        existing.checkNames.push(c.name);
+      } else {
+        runMap.set(c.runId, {
+          runId: c.runId,
+          checkNames: [c.name],
+          failureKind: c.failureKind as "timeout" | "infrastructure",
+        });
+      }
+    }
+    const reran = [...runMap.values()];
+    await Promise.all(reran.map(({ runId }) => runGhCommand(["run", "rerun", runId, "--failed"])));
+    const runSummaries = reran.map(
+      ({ runId, checkNames, failureKind }) =>
+        `${runId} (${checkNames.join(", ")} — ${failureKind})`,
     );
-    return { ...base, action: "rerun_ci", reran: uniqueRunIds };
+    return {
+      ...base,
+      action: "rerun_ci",
+      reran,
+      log: `RERAN ${reran.length} CI run${reran.length === 1 ? "" : "s"}: ${runSummaries.join(", ")}`,
+    };
   }
 
   // Step 6: Flaky + behind — rebase needed.
   const hasFlaky = report.checks.failing.some((f) => f.failureKind === "flaky");
   if (hasFlaky && report.mergeStatus.status === "BEHIND" && config.actions.autoRebase) {
-    return { ...base, action: "rebase" };
+    const baseLookup = validateBaseBranch(report.baseBranch);
+    if (baseLookup.isFallback) {
+      const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
+        triggers: ["base-branch-unknown"],
+        unresolvedThreads: [],
+        ambiguousComments: [],
+        changesRequestedReviews: [],
+        suggestion: buildEscalateSuggestion(["base-branch-unknown"], baseLookup.failureReason),
+      };
+      return {
+        ...base,
+        action: "escalate",
+        escalate: {
+          ...fallbackEscalateBase,
+          humanMessage: buildEscalateHumanMessage(fallbackEscalateBase, prNumber),
+        },
+      };
+    }
+    return {
+      ...base,
+      baseBranch: baseLookup.branch,
+      action: "rebase",
+      rebase: {
+        reason: `Branch is behind ${baseLookup.branch} — rebasing to pick up latest changes and clear flaky failures`,
+        shellScript: buildRebaseShellScript(baseLookup.branch),
+      },
+    };
   }
 
   // Step 7: Mark ready for review.
@@ -253,11 +370,20 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
 
   if (canMarkReady && !opts.noAutoMarkReady && config.actions.autoMarkReady) {
     await runGhCommand(["pr", "ready", String(report.pr)]);
-    return { ...base, action: "mark_ready", markedReady: true };
+    return {
+      ...base,
+      action: "mark_ready",
+      markedReady: true,
+      log: `MARKED READY: PR #${report.pr} converted from draft to ready for review`,
+    };
   }
 
   // Step 8: Nothing to do.
-  return { ...base, action: "wait" };
+  return {
+    ...base,
+    action: "wait",
+    log: buildWaitLog(base),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -363,7 +489,308 @@ function checkEscalateTriggers(
   };
 }
 
-function buildEscalateSuggestion(triggers: string[]): string {
+interface BaseBranchLookup {
+  branch: string;
+  /** True when we could not confirm the branch name from GitHub. Callers must
+   * escalate rather than emitting a rebase against a potentially-wrong base. */
+  isFallback: boolean;
+  /** Populated when `isFallback`; one-line reason shown in escalate output. */
+  failureReason?: string;
+}
+
+/**
+ * Validate the base branch name from the GraphQL batch (`report.baseBranch`)
+ * and fall back safely if it's missing/unsafe. The branch is interpolated into
+ * shell commands by `buildRebaseShellScript` and `buildFixInstructions`, so we
+ * reject anything outside `[A-Za-z0-9._/-]` to prevent shell injection.
+ *
+ * Previously a separate `gh pr view --json baseRefName` subprocess — eliminated
+ * per review feedback since the batch GraphQL query now returns it directly.
+ */
+function validateBaseBranch(raw: string): BaseBranchLookup {
+  const trimmed = raw.trim();
+  if (trimmed === "") {
+    return {
+      branch: "main",
+      isFallback: true,
+      failureReason: "GraphQL batch returned an empty base branch name",
+    };
+  }
+  if (!/^[A-Za-z0-9._/-]+$/.test(trimmed)) {
+    return {
+      branch: "main",
+      isFallback: true,
+      failureReason: `base branch ${JSON.stringify(trimmed)} contains unsafe characters`,
+    };
+  }
+  return { branch: trimmed, isFallback: false };
+}
+
+function buildRebaseShellScript(baseBranch: string): string {
+  return [
+    `if ! git diff --quiet || ! git diff --cached --quiet; then`,
+    `  echo "SKIP rebase: dirty worktree (uncommitted changes present)"`,
+    `  exit 1`,
+    `fi`,
+    `git fetch origin && git rebase origin/${baseBranch} && git push --force-with-lease`,
+  ].join("\n");
+}
+
+// Patterns that indicate a comment is bot-generated noise rather than actionable feedback.
+// Conservative: only match explicit known patterns to avoid accidentally suppressing real reviews.
+const NOISE_PATTERNS = [
+  /you have reached your daily quota/i,
+  /please wait up to \d+ hours?/i,
+  /rate[\s\-]?limit(?:ed)?\s*[—\-:]\s*try again/i,
+  /resuming (monitoring|watch|checking)/i,
+  /restarting (monitoring|watch)/i,
+];
+
+function isNoiseComment(comment: AgentComment): boolean {
+  return NOISE_PATTERNS.some((p) => p.test(comment.body));
+}
+
+function classifyComments(comments: AgentComment[]): {
+  actionable: AgentComment[];
+  noiseIds: string[];
+} {
+  const actionable: AgentComment[] = [];
+  const noiseIds: string[] = [];
+  for (const c of comments) {
+    if (isNoiseComment(c)) {
+      noiseIds.push(c.id);
+    } else {
+      actionable.push(c);
+    }
+  }
+  return { actionable, noiseIds };
+}
+
+function buildResolveCommand(
+  threads: AgentThread[],
+  actionableComments: AgentComment[],
+  allCommentIds: string[],
+  reviews: Review[],
+  checks: import("../types.mts").AgentCheck[],
+  prNumber: number,
+): ResolveCommand {
+  const argv = ["npx", "pr-shepherd", "resolve", String(prNumber)];
+
+  if (threads.length > 0) {
+    argv.push("--resolve-thread-ids", threads.map((t) => t.id).join(","));
+  }
+  if (allCommentIds.length > 0) {
+    argv.push("--minimize-comment-ids", allCommentIds.join(","));
+  }
+  const hasDismiss = reviews.length > 0;
+  if (hasDismiss) {
+    argv.push("--dismiss-review-ids", reviews.map((r) => r.id).join(","));
+    argv.push("--message", "$DISMISS_MESSAGE");
+  }
+
+  // A push happens when there is code to change — threads, actionable comments, CI checks, or reviews.
+  // Noise-only comment minimization skips commit/push, so requiresHeadSha must be false.
+  const requiresHeadSha =
+    threads.length > 0 || actionableComments.length > 0 || checks.length > 0 || reviews.length > 0;
+
+  // hasMutations = we appended at least one of --resolve-thread-ids,
+  // --minimize-comment-ids, or --dismiss-review-ids. Returned explicitly
+  // (rather than derived from argv.length) so callers don't couple to the
+  // base-argv shape.
+  const hasMutations = threads.length > 0 || allCommentIds.length > 0 || reviews.length > 0;
+
+  return { argv, requiresHeadSha, requiresDismissMessage: hasDismiss, hasMutations };
+}
+
+/**
+ * Render a ResolveCommand as a single-line command string for the monitor loop
+ * to print or execute. This is NOT a general-purpose POSIX escaper — it wraps
+ * the two known placeholders ($DISMISS_MESSAGE, $HEAD_SHA) and any whitespace-
+ * bearing arg in double quotes so multi-word values don't split across flags.
+ *
+ * Contract for callers substituting placeholders: replace the entire quoted
+ * token (including the surrounding `"`) with a properly shell-quoted literal.
+ * Do not splice raw text inside the existing quotes — the output would then
+ * re-expand `$…` / `$(…)` / embedded `"` and break.
+ */
+export function renderResolveCommand(rc: ResolveCommand): string {
+  // `$HEAD_SHA` is never in `rc.argv` — it is appended pre-quoted below when
+  // `requiresHeadSha`. Only `$DISMISS_MESSAGE` (or whitespace-bearing values)
+  // need quoting here.
+  const needsQuoting = (arg: string) => arg === "$DISMISS_MESSAGE" || /\s/.test(arg);
+  const parts = rc.argv.map((a) => (needsQuoting(a) ? `"${a}"` : a));
+  if (rc.requiresHeadSha) {
+    parts.push("--require-sha", '"$HEAD_SHA"');
+  }
+  return parts.join(" ");
+}
+
+function buildFixInstructions(
+  threads: AgentThread[],
+  actionableComments: AgentComment[],
+  checks: import("../types.mts").AgentCheck[],
+  reviews: Review[],
+  baseBranch: string,
+  resolveCommand: ResolveCommand,
+  hasConflicts: boolean,
+): string[] {
+  const instructions: string[] = [];
+
+  if (threads.length > 0 || actionableComments.length > 0) {
+    instructions.push(
+      `Apply code fixes: read and edit each file referenced under \`## Review threads\` and \`## Actionable comments\` above.`,
+    );
+  }
+  // Mirror the truthiness checks in `formatIterateResult` (cli.mts) so each
+  // AgentCheck maps to the same bullet shape here as there: runId → runId
+  // bullet, else detailsUrl → external bullet, else `(no runId)` bullet.
+  const checksWithRunId = checks.filter((c) => c.runId);
+  const externalChecks = checks.filter((c) => !c.runId && c.detailsUrl);
+  const bareChecks = checks.filter((c) => !c.runId && !c.detailsUrl);
+  if (checksWithRunId.length > 0) {
+    instructions.push(
+      `For each bullet in \`## Failing checks\` whose backticked locator is a numeric runId (GitHub Actions): run \`gh run view <runId> --log-failed\`, identify the failure, and apply the fix.`,
+    );
+  }
+  if (externalChecks.length > 0) {
+    instructions.push(
+      `For each bullet in \`## Failing checks\` starting with \`external\` (external status check): open the linked URL in a browser to inspect the failure — \`gh run view\` cannot fetch logs for external checks.`,
+    );
+  }
+  if (bareChecks.length > 0) {
+    instructions.push(
+      `For each bullet in \`## Failing checks\` starting with \`(no runId)\`: there is no run or details URL to inspect. Escalate these to a human — they require manual investigation outside the pr-shepherd flow.`,
+    );
+  }
+  if (reviews.length > 0) {
+    instructions.push(
+      `For each bullet under \`## Changes-requested reviews\` above: read the review body and apply the requested changes.`,
+    );
+  }
+
+  const hasCodeChanges =
+    threads.length > 0 || actionableComments.length > 0 || checks.length > 0 || reviews.length > 0;
+  const needsPush = hasCodeChanges || hasConflicts;
+
+  if (hasCodeChanges) {
+    instructions.push(
+      `Commit changed files: \`git add <files> && git commit -m "<descriptive message>"\``,
+    );
+  }
+
+  if (needsPush) {
+    const captureHint = resolveCommand.requiresHeadSha
+      ? ` — capture \`HEAD_SHA=$(git rev-parse HEAD)\``
+      : "";
+    if (hasConflicts) {
+      instructions.push(
+        `Rebase with conflict resolution: run \`git fetch origin && git rebase origin/${baseBranch}\`. If the rebase halts with conflicts, edit the conflicted files to resolve them, \`git add <files>\`, then \`git rebase --continue\`. Repeat until the rebase completes, then \`git push --force-with-lease\`${captureHint}.`,
+      );
+    } else {
+      instructions.push(
+        `Rebase and push: \`git fetch origin && git rebase origin/${baseBranch} && git push --force-with-lease\`${captureHint}`,
+      );
+    }
+  }
+
+  // Only tell the agent to run `resolve:` if the command actually mutates
+  // GitHub state. A CONFLICTS-only flow has nothing to mutate on GitHub.
+  if (resolveCommand.hasMutations) {
+    const substituteParts: string[] = [];
+    if (resolveCommand.requiresHeadSha) {
+      substituteParts.push(`"$HEAD_SHA" with the pushed commit SHA`);
+    }
+    if (resolveCommand.requiresDismissMessage) {
+      substituteParts.push(`$DISMISS_MESSAGE with a one-sentence description of what you changed`);
+    }
+    const substituteHint =
+      substituteParts.length > 0 ? `, substituting ${substituteParts.join(" and ")}` : "";
+    instructions.push(`Run the \`resolve:\` command shown above${substituteHint}.`);
+  }
+
+  return instructions;
+}
+
+function buildWaitLog(base: IterateResultBase): string {
+  const { summary, mergeStateStatus, remainingSeconds } = base;
+  const parts: string[] = [`WAIT: ${summary.passing} passing, ${summary.inProgress} in-progress`];
+
+  switch (mergeStateStatus) {
+    case "BEHIND":
+      parts.push("branch is behind base");
+      break;
+    case "BLOCKED":
+      parts.push("blocked by pending reviews or required status checks");
+      break;
+    case "DRAFT":
+      parts.push("PR is a draft");
+      break;
+    case "UNSTABLE":
+      parts.push("some checks are unstable");
+      break;
+  }
+
+  if (remainingSeconds > 0) {
+    parts.push(`${remainingSeconds}s until auto-cancel`);
+  }
+
+  return parts.join(" — ");
+}
+
+function buildEscalateHumanMessage(
+  escalate: Omit<EscalateDetails, "humanMessage">,
+  pr: number,
+): string {
+  const lines: string[] = [];
+  lines.push("⚠️  /pr-shepherd:monitor paused — needs human direction");
+  lines.push("");
+  lines.push(`**Triggers:** ${escalate.triggers.map((t) => `\`${t}\``).join(", ")}`);
+  lines.push("");
+  lines.push(escalate.suggestion);
+
+  const hasItems =
+    escalate.unresolvedThreads.length > 0 ||
+    escalate.changesRequestedReviews.length > 0 ||
+    escalate.ambiguousComments.length > 0;
+  if (hasItems) {
+    lines.push("");
+    lines.push("## Items needing attention");
+    for (const t of escalate.unresolvedThreads) {
+      const loc = t.path ? `\`${t.path}:${t.line ?? "?"}\`` : "(no location)";
+      const firstLine = t.body.split("\n")[0] ?? "";
+      lines.push(`- thread \`${t.id}\` — ${loc} (@${t.author}): ${firstLine}`);
+    }
+    for (const r of escalate.changesRequestedReviews) {
+      const firstLine = r.body.split("\n")[0] ?? "";
+      lines.push(`- review \`${r.id}\` (@${r.author}): ${firstLine}`);
+    }
+    for (const c of escalate.ambiguousComments) {
+      const firstLine = c.body.split("\n")[0] ?? "";
+      lines.push(`- comment \`${c.id}\` (@${c.author}): ${firstLine}`);
+    }
+  }
+
+  if (escalate.attemptHistory && escalate.attemptHistory.length > 0) {
+    lines.push("");
+    lines.push("## Fix attempts");
+    for (const a of escalate.attemptHistory) {
+      lines.push(`- thread \`${a.threadId}\` attempted ${a.attempts} times`);
+    }
+  }
+
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+  lines.push(`Run \`/pr-shepherd:check ${pr}\` to see current state.`);
+  lines.push(`After fixing manually, rerun \`/pr-shepherd:monitor ${pr}\` to resume.`);
+  return lines.join("\n");
+}
+
+function buildEscalateSuggestion(triggers: string[], failureReason?: string): string {
+  if (triggers.includes("base-branch-unknown")) {
+    const reason = failureReason ? ` (${failureReason})` : "";
+    return `Could not determine the PR's base branch${reason} — refusing to emit a rebase that could force-push onto the wrong base. Run the rebase manually against the PR's real target branch.`;
+  }
   if (triggers.includes("fix-thrash")) {
     return "Same thread(s) attempted multiple times without resolution — fix manually then rerun /pr-shepherd:monitor";
   }
