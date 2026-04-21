@@ -219,7 +219,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       cancelled = results.filter((id): id is string => id !== null);
     }
 
-    const baseBranch = await getBaseBranch(prNumber);
+    const baseLookup = await getBaseBranch(prNumber);
     const threads = report.threads.actionable.map(toAgentThread);
     const { actionable: actionableComments, noiseIds: noiseCommentIds } = classifyComments(
       report.comments.actionable.map(toAgentComment),
@@ -235,12 +235,34 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       checks,
       prNumber,
     );
+
+    // Guard: if the emitted resolve requires a push but we could not confirm
+    // the PR's base branch, refuse to emit fix_code — a wrong-base rebase would
+    // rewrite history onto the wrong target. Escalate for human direction.
+    if (baseLookup.isFallback && resolveCommand.requiresHeadSha) {
+      const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
+        triggers: ["base-branch-unknown"],
+        unresolvedThreads: threads,
+        ambiguousComments: actionableComments,
+        changesRequestedReviews,
+        suggestion: buildEscalateSuggestion(["base-branch-unknown"], baseLookup.failureReason),
+      };
+      return {
+        ...base,
+        action: "escalate",
+        escalate: {
+          ...fallbackEscalateBase,
+          humanMessage: buildEscalateHumanMessage(fallbackEscalateBase, prNumber),
+        },
+      };
+    }
+
     const instructions = buildFixInstructions(
       threads,
       actionableComments,
       checks,
       changesRequestedReviews,
-      baseBranch,
+      baseLookup.branch,
       resolveCommand,
     );
 
@@ -253,7 +275,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
         noiseCommentIds,
         checks,
         changesRequestedReviews,
-        baseBranch,
+        baseBranch: baseLookup.branch,
         resolveCommand,
         instructions,
       },
@@ -298,14 +320,31 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   // Step 6: Flaky + behind — rebase needed.
   const hasFlaky = report.checks.failing.some((f) => f.failureKind === "flaky");
   if (hasFlaky && report.mergeStatus.status === "BEHIND" && config.actions.autoRebase) {
-    const baseBranch = await getBaseBranch(prNumber);
+    const baseLookup = await getBaseBranch(prNumber);
+    if (baseLookup.isFallback) {
+      const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
+        triggers: ["base-branch-unknown"],
+        unresolvedThreads: [],
+        ambiguousComments: [],
+        changesRequestedReviews: [],
+        suggestion: buildEscalateSuggestion(["base-branch-unknown"], baseLookup.failureReason),
+      };
+      return {
+        ...base,
+        action: "escalate",
+        escalate: {
+          ...fallbackEscalateBase,
+          humanMessage: buildEscalateHumanMessage(fallbackEscalateBase, prNumber),
+        },
+      };
+    }
     return {
       ...base,
       action: "rebase",
       rebase: {
-        baseBranch,
-        reason: `Branch is behind ${baseBranch} — rebasing to pick up latest changes and clear flaky failures`,
-        shellScript: buildRebaseShellScript(baseBranch),
+        baseBranch: baseLookup.branch,
+        reason: `Branch is behind ${baseLookup.branch} — rebasing to pick up latest changes and clear flaky failures`,
+        shellScript: buildRebaseShellScript(baseLookup.branch),
       },
     };
   }
@@ -444,7 +483,16 @@ function checkEscalateTriggers(
   };
 }
 
-async function getBaseBranch(prNumber: number): Promise<string> {
+interface BaseBranchLookup {
+  branch: string;
+  /** True when we could not confirm the branch name from GitHub. Callers must
+   * escalate rather than emitting a rebase against a potentially-wrong base. */
+  isFallback: boolean;
+  /** Populated when `isFallback`; one-line reason shown in escalate output. */
+  failureReason?: string;
+}
+
+async function getBaseBranch(prNumber: number): Promise<BaseBranchLookup> {
   try {
     const { stdout } = await execFile("gh", [
       "pr",
@@ -455,22 +503,27 @@ async function getBaseBranch(prNumber: number): Promise<string> {
       "--jq",
       ".baseRefName",
     ]);
-    const branch = stdout.trim() || "main";
+    const trimmed = stdout.trim();
+    if (trimmed === "") {
+      return { branch: "main", isFallback: false };
+    }
     // GitHub ref names can include '/' but reject anything outside safe chars
     // to prevent shell interpolation issues in buildRebaseShellScript.
-    if (!/^[A-Za-z0-9._/-]+$/.test(branch)) {
-      process.stderr.write(
-        `pr-shepherd: base branch ${JSON.stringify(branch)} for PR #${prNumber} contains unsafe characters — falling back to 'main' for rebase. If this PR targets a non-main branch, run the rebase manually against the real base.\n`,
-      );
-      return "main";
+    if (!/^[A-Za-z0-9._/-]+$/.test(trimmed)) {
+      return {
+        branch: "main",
+        isFallback: true,
+        failureReason: `gh pr view returned base branch ${JSON.stringify(trimmed)} containing unsafe characters`,
+      };
     }
-    return branch;
+    return { branch: trimmed, isFallback: false };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    process.stderr.write(
-      `pr-shepherd: could not determine base branch for PR #${prNumber} (gh pr view failed: ${msg}) — falling back to 'main'. If this PR targets a non-main branch, the emitted rebase command will be wrong; run it manually against the real base.\n`,
-    );
-    return "main";
+    return {
+      branch: "main",
+      isFallback: true,
+      failureReason: `gh pr view failed: ${msg}`,
+    };
   }
 }
 
@@ -489,7 +542,7 @@ function buildRebaseShellScript(baseBranch: string): string {
 const NOISE_PATTERNS = [
   /you have reached your daily quota/i,
   /please wait up to \d+ hours?/i,
-  /rate.?limit(?:ed)? — try again/i,
+  /rate.?limit(?:ed)?\s*[—\-:]\s*try again/i,
   /resuming (monitoring|watch|checking)/i,
   /restarting (monitoring|watch)/i,
 ];
@@ -579,24 +632,24 @@ function buildFixInstructions(
 
   if (threads.length > 0 || actionableComments.length > 0) {
     instructions.push(
-      `Apply code fixes: read and edit each file referenced in the \`thread\` / \`comment\` items above.`,
+      `Apply code fixes: read and edit each file referenced under \`## Review threads\` and \`## Actionable comments\` above.`,
     );
   }
   const checksWithRunId = checks.filter((c) => c.runId !== null);
   const checksWithoutRunId = checks.filter((c) => c.runId === null);
   if (checksWithRunId.length > 0) {
     instructions.push(
-      `For each \`check <runId>\` item above with a runId (GitHub Actions): run \`gh run view <runId> --log-failed\`, identify the failure, and apply the fix.`,
+      `For each bullet in \`## Failing checks\` whose backticked locator is a numeric runId (GitHub Actions): run \`gh run view <runId> --log-failed\`, identify the failure, and apply the fix.`,
     );
   }
   if (checksWithoutRunId.length > 0) {
     instructions.push(
-      `For each \`check external <url>\` item above (external status check): open the URL in the browser to inspect the failure — \`gh run view\` cannot fetch logs for external checks.`,
+      `For each bullet in \`## Failing checks\` starting with \`external\` (external status check): open the linked URL in a browser to inspect the failure — \`gh run view\` cannot fetch logs for external checks.`,
     );
   }
   if (reviews.length > 0) {
     instructions.push(
-      `For each \`review\` item above: read the review body and apply the requested changes.`,
+      `For each bullet under \`## Changes-requested reviews\` above: read the review body and apply the requested changes.`,
     );
   }
   if (resolveCommand.requiresHeadSha) {
@@ -696,7 +749,11 @@ function buildEscalateHumanMessage(
   return lines.join("\n");
 }
 
-function buildEscalateSuggestion(triggers: string[]): string {
+function buildEscalateSuggestion(triggers: string[], failureReason?: string): string {
+  if (triggers.includes("base-branch-unknown")) {
+    const reason = failureReason ? ` (${failureReason})` : "";
+    return `Could not determine the PR's base branch${reason} — refusing to emit a rebase that could force-push onto the wrong base. Run the rebase manually against the PR's real target branch.`;
+  }
   if (triggers.includes("fix-thrash")) {
     return "Same thread(s) attempted multiple times without resolution — fix manually then rerun /pr-shepherd:monitor";
   }

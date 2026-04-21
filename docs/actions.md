@@ -193,7 +193,7 @@ git fetch origin && git rebase origin/main && git push --force-with-lease
 
 The dirty-worktree guard exits 1 on skip, so the monitor SKILL sees a non-zero exit rather than silently counting the iteration as successful.
 
-**Base branch determination:** The CLI runs `gh pr view <PR> --json baseRefName` to find the rebase target. If that command fails (network error, auth issue) or returns a branch name containing characters outside `[A-Za-z0-9._/-]`, the CLI logs a warning to stderr and falls back to `main`. If your PR targets a non-`main` branch (e.g. `release/2026.04`) and you see the stderr warning, run the rebase manually against the real base instead of executing the emitted shell script — the script will otherwise rebase onto `origin/main` and force-push, which is almost certainly wrong for your PR.
+**Base branch determination:** The CLI runs `gh pr view <PR> --json baseRefName` to find the rebase target. If that command fails (network error, auth issue) or returns a branch name containing characters outside `[A-Za-z0-9._/-]`, the CLI emits `[ESCALATE]` with trigger `base-branch-unknown` instead of a rebase — force-pushing onto the wrong base would be catastrophic for a PR that actually targets e.g. `release/2026.04`.
 
 **What the monitor does:** Print the heading + base fields + reason, then extract the shell script from the ```bash fenced block and run it in Bash.
 
@@ -255,9 +255,9 @@ Actionable work needs a code fix, commit, and push.
 
 ## Instructions
 
-1. Apply code fixes: read and edit each file referenced in the `thread` / `comment` items above.
-2. For each `check <runId>` item above with a runId (GitHub Actions): run `gh run view <runId> --log-failed`, identify the failure, and apply the fix.
-3. For each `review` item above: read the review body and apply the requested changes.
+1. Apply code fixes: read and edit each file referenced under `## Review threads` and `## Actionable comments` above.
+2. For each bullet in `## Failing checks` whose backticked locator is a numeric runId (GitHub Actions): run `gh run view <runId> --log-failed`, identify the failure, and apply the fix.
+3. For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.
 4. Commit changed files: `git add <files> && git commit -m "<descriptive message>"`
 5. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
 6. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
@@ -303,6 +303,7 @@ Ambiguous state that requires human judgement — the monitor stops and surfaces
 - **`fix-thrash`** — same thread dispatched ≥ `config.iterate.fixAttemptsPerThread` times (default 3) without resolving.
 - **`pr-level-changes-requested`** — reviewer requested changes but left no inline threads, comments, or CI failures to act on (not triggered when merge conflicts are present).
 - **`thread-missing-location`** — an actionable review thread has no file or line reference, so the code location cannot be found automatically.
+- **`base-branch-unknown`** — `gh pr view --json baseRefName` failed (network/auth error) or returned a ref name with unsafe characters. Preempts both `[REBASE]` and any `[FIX_CODE]` that would require a push, since rebasing onto the wrong base is worse than pausing the monitor.
 
 **CLI side-effects:** None.
 

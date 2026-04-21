@@ -356,7 +356,12 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
       shouldCancel: false,
       remainingSeconds: 600,
     });
-    mockExecFile.mockRejectedValue(new Error("this run has already completed"));
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "gh" && args[0] === "pr" && args[1] === "view") {
+        return Promise.resolve({ stdout: "main\n", stderr: "" });
+      }
+      return Promise.reject(new Error("this run has already completed"));
+    });
 
     const result = await runIterate(makeOpts());
 
@@ -643,7 +648,7 @@ describe("runIterate — fix_code agent projection", () => {
       expect(instructionsJoined).toContain("GitHub Actions");
       expect(instructionsJoined).toContain("gh run view <runId> --log-failed");
       expect(instructionsJoined).toContain("external status check");
-      expect(instructionsJoined).toContain("open the URL");
+      expect(instructionsJoined).toContain("open the linked URL");
     }
   });
 });
@@ -1616,6 +1621,53 @@ describe("runIterate — prescriptive fields: fix_code noise/actionable split", 
     }
   });
 
+  it("classifies rate-limit noise across em-dash, ASCII hyphen, and colon variants", async () => {
+    const emDash = {
+      id: "c-em",
+      isMinimized: false,
+      author: "bot",
+      body: "rate-limited — try again later",
+      createdAtUnix: NOW,
+    };
+    const asciiHyphen = {
+      id: "c-hy",
+      isMinimized: false,
+      author: "bot",
+      body: "rate-limited - try again in a few minutes",
+      createdAtUnix: NOW,
+    };
+    const colon = {
+      id: "c-co",
+      isMinimized: false,
+      author: "bot",
+      body: "rate limited: try again later",
+      createdAtUnix: NOW,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        comments: { actionable: [emDash, asciiHyphen, colon] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "gh" && args[1] === "view")
+        return Promise.resolve({ stdout: "main\n", stderr: "" });
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.noiseCommentIds.sort()).toEqual(["c-co", "c-em", "c-hy"]);
+      expect(result.fix.actionableComments).toHaveLength(0);
+    }
+  });
+
   it("resolveCommand includes thread IDs and comment IDs with $HEAD_SHA flag", async () => {
     const thread = { ...THREAD };
     const comment = {
@@ -1729,6 +1781,89 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
       expect(humanMessage).toMatch(/src\/foo\.mts/);
       expect(humanMessage).toMatch(/pr-shepherd:check 42/);
       expect(humanMessage).toMatch(/pr-shepherd:monitor 42` to resume/);
+    }
+  });
+
+  it("escalates with base-branch-unknown when fix_code needs a push but gh pr view fails", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      // Only gh pr view is expected to fail; other commands should resolve normally.
+      if (cmd === "gh" && args[0] === "pr" && args[1] === "view") {
+        return Promise.reject(new Error("HTTP 404 Not Found"));
+      }
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toContain("base-branch-unknown");
+      expect(result.escalate.suggestion).toMatch(/could not determine/i);
+      expect(result.escalate.suggestion).toMatch(/HTTP 404/);
+      expect(result.escalate.humanMessage).toMatch(/base-branch-unknown/);
+    }
+  });
+
+  it("escalates with base-branch-unknown when rebase would run but gh pr view fails", async () => {
+    const flakyCheck = {
+      name: "flaky",
+      status: "COMPLETED" as const,
+      conclusion: "FAILURE" as const,
+      detailsUrl: "https://github.com/owner/repo/actions/runs/30",
+      event: "pull_request",
+      runId: "run-30",
+      category: "failing" as const,
+      failureKind: "flaky" as const,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        mergeStatus: {
+          status: "BEHIND",
+          state: "OPEN",
+          isDraft: false,
+          mergeable: "MERGEABLE",
+          reviewDecision: null,
+          copilotReviewInProgress: false,
+          mergeStateStatus: "BEHIND",
+        },
+        checks: {
+          passing: [],
+          failing: [flakyCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "gh" && args[0] === "pr" && args[1] === "view") {
+        return Promise.reject(new Error("network unreachable"));
+      }
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toEqual(["base-branch-unknown"]);
     }
   });
 });

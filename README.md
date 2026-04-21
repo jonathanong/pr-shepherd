@@ -267,20 +267,20 @@ Flags:
 | `--no-auto-mark-ready`        | false   | Skip converting draft → ready-for-review          |
 | `--no-auto-cancel-actionable` | false   | Skip cancelling actionable failing runs           |
 
-**Text output** (default; one headline per action plus a trailing `info:` line with the remaining base fields). Representative headlines — see [docs/actions.md](docs/actions.md) for full multi-line examples:
+**Markdown output** (default). The monitor SKILL reads the `[ACTION]` tag from the H1 heading to decide what to do. Every action emits an H1, a bolded base-fields line, a bolded summary line, then an action-specific body. Example for `[WAIT]`:
 
-```
-PR #42 [COOLDOWN] status=UNKNOWN merge=UNKNOWN state=UNKNOWN — SKIP: CI still starting — waiting for first check to appear
-PR #42 [WAIT] status=READY merge=CLEAN state=OPEN — WAIT: 3 passing, 0 in-progress — 540s until auto-cancel
-PR #42 [RERUN_CI] status=FAILING merge=UNSTABLE state=OPEN — RERAN 2 CI runs: 12345 (test (22.x) — timeout), 67890 (build — infrastructure)
-PR #42 [FIX_CODE] status=UNRESOLVED_COMMENTS merge=BLOCKED state=OPEN
-PR #42 [REBASE] status=FAILING merge=BEHIND state=OPEN — Branch is behind main — rebasing to pick up latest changes and clear flaky failures
-PR #42 [MARK_READY] status=READY merge=DRAFT state=OPEN — MARKED READY: PR #42 converted from draft to ready for review
-PR #42 [CANCEL] status=READY merge=CLEAN state=OPEN — CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping monitor
-PR #42 [ESCALATE] status=UNRESOLVED_COMMENTS merge=BLOCKED state=OPEN
+```markdown
+# PR #42 [WAIT]
+
+**status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**summary** 3 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 540 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
+
+WAIT: 3 passing, 0 in-progress — 540s until auto-cancel
 ```
 
-Both `--format=text` (default) and `--format=json` carry equivalent information — the `info:` line in text output surfaces the same base fields that JSON exposes as top-level keys.
+See [docs/actions.md](docs/actions.md) for the other seven actions — `cooldown`, `rerun_ci`, `mark_ready`, `cancel`, `rebase`, `fix_code`, `escalate`. `fix_code` is the richest: it emits sections for `## Review threads`, `## Actionable comments`, `## Failing checks`, `## Changes-requested reviews`, `## Noise (minimize only)`, `## Cancelled runs`, `## Rebase`, and `## Instructions`.
+
+Both `--format=text` (default Markdown) and `--format=json` carry equivalent information — every field exposed in JSON has a corresponding Markdown representation, and vice versa.
 
 **JSON output** (`--format=json`, compact single line):
 
