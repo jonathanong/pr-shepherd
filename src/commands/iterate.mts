@@ -549,7 +549,7 @@ function buildRebaseShellScript(baseBranch: string): string {
 const NOISE_PATTERNS = [
   /you have reached your daily quota/i,
   /please wait up to \d+ hours?/i,
-  /rate.?limit(?:ed)?\s*[—\-:]\s*try again/i,
+  /rate[\s\-]?limit(?:ed)?\s*[—\-:]\s*try again/i,
   /resuming (monitoring|watch|checking)/i,
   /restarting (monitoring|watch)/i,
 ];
@@ -601,7 +601,13 @@ function buildResolveCommand(
   const requiresHeadSha =
     threads.length > 0 || actionableComments.length > 0 || checks.length > 0 || reviews.length > 0;
 
-  return { argv, requiresHeadSha, requiresDismissMessage: hasDismiss };
+  // hasMutations = we appended at least one of --resolve-thread-ids,
+  // --minimize-comment-ids, or --dismiss-review-ids. Returned explicitly
+  // (rather than derived from argv.length) so callers don't couple to the
+  // base-argv shape.
+  const hasMutations = threads.length > 0 || allCommentIds.length > 0 || reviews.length > 0;
+
+  return { argv, requiresHeadSha, requiresDismissMessage: hasDismiss, hasMutations };
 }
 
 /**
@@ -615,7 +621,7 @@ function buildResolveCommand(
  * Do not splice raw text inside the existing quotes — the output would then
  * re-expand `$…` / `$(…)` / embedded `"` and break.
  */
-export function shellJoinArgv(rc: ResolveCommand): string {
+export function renderResolveCommand(rc: ResolveCommand): string {
   // `$HEAD_SHA` is never in `rc.argv` — it is appended pre-quoted below when
   // `requiresHeadSha`. Only `$DISMISS_MESSAGE` (or whitespace-bearing values)
   // need quoting here.
@@ -696,11 +702,8 @@ function buildFixInstructions(
   }
 
   // Only tell the agent to run `resolve:` if the command actually mutates
-  // GitHub state — argv beyond `npx pr-shepherd resolve <pr>` means at least
-  // one of --resolve-thread-ids / --minimize-comment-ids / --dismiss-review-ids
-  // was appended. A CONFLICTS-only flow has nothing to mutate on GitHub.
-  const hasMutations = resolveCommand.argv.length > 4;
-  if (hasMutations) {
+  // GitHub state. A CONFLICTS-only flow has nothing to mutate on GitHub.
+  if (resolveCommand.hasMutations) {
     const substituteParts: string[] = [];
     if (resolveCommand.requiresHeadSha) {
       substituteParts.push(`"$HEAD_SHA" with the pushed commit SHA`);

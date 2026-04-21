@@ -44,7 +44,7 @@ vi.mock("../cache/fix-attempts.mts", () => ({
   writeFixAttempts: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { runIterate, shellJoinArgv } from "./iterate.mts";
+import { runIterate, renderResolveCommand } from "./iterate.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { triageFailingChecks } from "../checks/triage.mts";
@@ -2100,9 +2100,9 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
   });
 });
 
-describe("shellJoinArgv", () => {
+describe("renderResolveCommand", () => {
   it("quotes $DISMISS_MESSAGE so a substituted sentence stays one argument", () => {
-    const joined = shellJoinArgv({
+    const joined = renderResolveCommand({
       argv: [
         "npx",
         "pr-shepherd",
@@ -2115,6 +2115,7 @@ describe("shellJoinArgv", () => {
       ],
       requiresHeadSha: false,
       requiresDismissMessage: true,
+      hasMutations: true,
     });
     expect(joined).toBe(
       'npx pr-shepherd resolve 42 --dismiss-review-ids r-1 --message "$DISMISS_MESSAGE"',
@@ -2122,10 +2123,11 @@ describe("shellJoinArgv", () => {
   });
 
   it('appends --require-sha "$HEAD_SHA" when requiresHeadSha is true', () => {
-    const joined = shellJoinArgv({
+    const joined = renderResolveCommand({
       argv: ["npx", "pr-shepherd", "resolve", "42", "--resolve-thread-ids", "t-1"],
       requiresHeadSha: true,
       requiresDismissMessage: false,
+      hasMutations: true,
     });
     expect(joined).toBe(
       'npx pr-shepherd resolve 42 --resolve-thread-ids t-1 --require-sha "$HEAD_SHA"',
@@ -2133,25 +2135,27 @@ describe("shellJoinArgv", () => {
   });
 
   it("omits --require-sha when requiresHeadSha is false (noise-only path)", () => {
-    const joined = shellJoinArgv({
+    const joined = renderResolveCommand({
       argv: ["npx", "pr-shepherd", "resolve", "42", "--minimize-comment-ids", "c-noise"],
       requiresHeadSha: false,
       requiresDismissMessage: false,
+      hasMutations: true,
     });
     expect(joined).toBe("npx pr-shepherd resolve 42 --minimize-comment-ids c-noise");
   });
 
   it("quotes whitespace-bearing args defensively", () => {
-    const joined = shellJoinArgv({
+    const joined = renderResolveCommand({
       argv: ["npx", "pr-shepherd", "resolve", "42", "--message", "hello world"],
       requiresHeadSha: false,
       requiresDismissMessage: false,
+      hasMutations: false,
     });
     expect(joined).toBe('npx pr-shepherd resolve 42 --message "hello world"');
   });
 
   it("leaves thread-IDs, flag names, and plain alphanumeric args unquoted", () => {
-    const joined = shellJoinArgv({
+    const joined = renderResolveCommand({
       argv: [
         "npx",
         "pr-shepherd",
@@ -2164,6 +2168,7 @@ describe("shellJoinArgv", () => {
       ],
       requiresHeadSha: false,
       requiresDismissMessage: false,
+      hasMutations: true,
     });
     expect(joined).not.toMatch(/"/);
     expect(joined).toBe(
@@ -2172,7 +2177,7 @@ describe("shellJoinArgv", () => {
   });
 
   it('emits placeholders as exactly `"$PLACEHOLDER"` so callers replace the whole token', () => {
-    const joined = shellJoinArgv({
+    const joined = renderResolveCommand({
       argv: [
         "npx",
         "pr-shepherd",
@@ -2185,6 +2190,7 @@ describe("shellJoinArgv", () => {
       ],
       requiresHeadSha: true,
       requiresDismissMessage: true,
+      hasMutations: true,
     });
     // Both placeholders appear with their quotes attached as a single token —
     // this is the contract consumers rely on when doing literal-text substitution.
@@ -2194,24 +2200,52 @@ describe("shellJoinArgv", () => {
   });
 
   it("never emits an unquoted $HEAD_SHA (regardless of requiresHeadSha)", () => {
-    const withSha = shellJoinArgv({
+    const withSha = renderResolveCommand({
       argv: ["npx", "pr-shepherd", "resolve", "42"],
       requiresHeadSha: true,
       requiresDismissMessage: false,
+      hasMutations: false,
     });
-    const withoutSha = shellJoinArgv({
+    const withoutSha = renderResolveCommand({
       argv: ["npx", "pr-shepherd", "resolve", "42"],
       requiresHeadSha: false,
       requiresDismissMessage: false,
+      hasMutations: false,
     });
     // Whenever $HEAD_SHA appears it is always quoted.
     expect(withSha).not.toMatch(/(?<!")\$HEAD_SHA(?!")/);
     expect(withoutSha).not.toContain("$HEAD_SHA");
   });
+
+  it("never emits a backtick (would break the Markdown `resolve:` fence)", () => {
+    // Rendered output is embedded inside a backtick-delimited inline span in
+    // the Markdown emitter (cli.mts). An unescaped backtick here would close
+    // the fence early and corrupt the rest of the line for downstream parsers.
+    const rendered = renderResolveCommand({
+      argv: [
+        "npx",
+        "pr-shepherd",
+        "resolve",
+        "42",
+        "--resolve-thread-ids",
+        "PRRT_kwDOSGizTs58XpO6",
+        "--minimize-comment-ids",
+        "c-1,c-2",
+        "--dismiss-review-ids",
+        "REV_1",
+        "--message",
+        "$DISMISS_MESSAGE",
+      ],
+      requiresHeadSha: true,
+      requiresDismissMessage: true,
+      hasMutations: true,
+    });
+    expect(rendered).not.toContain("`");
+  });
 });
 
 describe("buildResolveCommand (via runIterate) — argv shape invariants", () => {
-  it("never puts $HEAD_SHA or --require-sha into argv (they're appended by shellJoinArgv)", async () => {
+  it("never puts $HEAD_SHA or --require-sha into argv (they're appended by renderResolveCommand)", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",

@@ -12,7 +12,7 @@
 
 import { runCheck } from "./commands/check.mts";
 import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
-import { runIterate, shellJoinArgv } from "./commands/iterate.mts";
+import { runIterate, renderResolveCommand } from "./commands/iterate.mts";
 import { runStatus, formatStatusTable } from "./commands/status.mts";
 import { getRepoInfo } from "./github/client.mts";
 import { formatJson } from "./reporters/json.mts";
@@ -339,7 +339,7 @@ function formatFixCodeResult(
   sections.push(
     [
       `- base: \`${result.fix.baseBranch}\``,
-      `- resolve: \`${shellJoinArgv(result.fix.resolveCommand)}\``,
+      `- resolve: \`${renderResolveCommand(result.fix.resolveCommand)}\``,
     ].join("\n"),
   );
 

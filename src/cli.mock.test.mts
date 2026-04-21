@@ -113,6 +113,7 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
           argv: ["npx", "pr-shepherd", "resolve", "42"],
           requiresHeadSha: true,
           requiresDismissMessage: false,
+          hasMutations: false,
         },
         instructions: [],
       },
@@ -357,6 +358,7 @@ describe("main — iterate text format", () => {
         ],
         requiresHeadSha: true,
         requiresDismissMessage: true,
+        hasMutations: true,
       },
       instructions: ["step one", "step two"],
     };
@@ -481,6 +483,26 @@ describe("main — iterate text format", () => {
     const parsed = JSON.parse(out);
     expect(parsed.action).toBe("wait");
     expect(parsed.pr).toBe(42);
+  });
+
+  // Per CLAUDE.md output-format invariant: text and JSON must surface equivalent
+  // information. This is a smoke test for the scalar base fields — adding a new
+  // field to IterateResultBase without a text representation should fail here.
+  it("format parity: text output surfaces every scalar base field that JSON carries", async () => {
+    const result = makeIterateResult("wait");
+    mockRunIterate.mockResolvedValue(result);
+    await main(["node", "shepherd", "iterate", "42"]);
+    const text = getStdout();
+    // pr, status, mergeStateStatus, state, summary counts, remainingSeconds
+    // are the scalars the cron runner + docs rely on. If any of these are
+    // silently dropped from the text path a downstream parser breaks.
+    expect(text).toContain(`# PR #${result.pr}`);
+    expect(text).toContain(`\`${result.status}\``);
+    expect(text).toContain(`\`${result.mergeStateStatus}\``);
+    expect(text).toContain(`\`${result.state}\``);
+    expect(text).toContain(`${result.summary.passing} passing`);
+    expect(text).toContain(`${result.summary.inProgress} inProgress`);
+    expect(text).toContain(`**remainingSeconds** ${result.remainingSeconds}`);
   });
 });
 
