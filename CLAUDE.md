@@ -16,4 +16,4 @@ The `bin/` directory is gitignored and must be built before `npx pr-shepherd` wo
 
 ## Dogfooding
 
-During development, use the local CLI and the local skills.
+During development, use the local CLI and the skills in plugin/skills/.
