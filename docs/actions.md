@@ -9,12 +9,13 @@ The default output format is text — what you see when running `npx pr-shepherd
 **Output shape (every action):**
 
 ```
-PR #<N> [ACTION] status=<…> merge=<…> state=<…> — <action-specific body…>
-<optional additional lines>
+PR #<N> [ACTION] status=<…> merge=<…> state=<…>[ — <short action-specific summary>]
 info: repo=<…> passing=<N> skipped=<N> filtered=<N> inProgress=<N> remainingSeconds=<N> copilotReviewInProgress=<bool> isDraft=<bool> shouldCancel=<bool>
+
+<optional additional body, separated by a blank line>
 ```
 
-The first token after `PR #<N>` is always the `[ACTION]` tag — the monitor SKILL reads this to decide what to do. The final `info:` line always contains the remaining base fields that don't fit on the headline, so text output is never a lossy view of JSON.
+The first token after `PR #<N>` is always the `[ACTION]` tag — the monitor SKILL reads this to decide what to do. Line 2 is always the `info:` line with the remaining base fields, so text output is never a lossy view of JSON. Simple actions (`cooldown`, `wait`, `rerun_ci`, `mark_ready`, `cancel`) are two lines. Rich actions (`rebase`, `fix_code`, `escalate`) follow with a blank line and an action-specific body.
 
 ---
 
@@ -163,17 +164,18 @@ Rebases the branch on top of its base to clear flaky failures caused by being be
 
 ```
 PR #42 [REBASE] status=FAILING merge=BEHIND state=OPEN — Branch is behind main — rebasing to pick up latest changes and clear flaky failures
+info: repo=owner/repo passing=2 skipped=0 filtered=0 inProgress=0 remainingSeconds=600 copilotReviewInProgress=false isDraft=false shouldCancel=false
+
 if ! git diff --quiet || ! git diff --cached --quiet; then
   echo "SKIP rebase: dirty worktree (uncommitted changes present)"
   exit 1
 fi
 git fetch origin && git rebase origin/main && git push --force-with-lease
-info: repo=owner/repo passing=2 skipped=0 filtered=0 inProgress=0 remainingSeconds=600 copilotReviewInProgress=false isDraft=false shouldCancel=false
 ```
 
 The dirty-worktree guard exits 1 on skip, so the monitor SKILL sees a non-zero exit rather than silently counting the iteration as successful.
 
-**What the monitor does:** Print the headline, then run the shell script lines (everything after the headline, before `info:`) in Bash.
+**What the monitor does:** Print the headline + `info:` line, then run the shell script lines (everything after the blank line) in Bash.
 
 ---
 
@@ -191,34 +193,50 @@ Actionable work needs a code fix, commit, and push.
 
 ```
 PR #42 [FIX_CODE] status=UNRESOLVED_COMMENTS merge=BLOCKED state=OPEN
-  thread PRRT_kwDOSGizTs58XB1L src/commands/iterate.mts:42 (@alice): The variable name is misleading
-  comment IC_kwDOSGizTs7_ajT8 (@bob): Consider using a more descriptive name here
-  noise (minimize only): IC_kwDOSGizTs7_ajT9
+info: repo=owner/repo passing=3 skipped=0 filtered=0 inProgress=0 remainingSeconds=600 copilotReviewInProgress=false isDraft=false shouldCancel=false
+
+  thread PRRT_kwDOSGizTs58XB1L src/commands/iterate.mts:42 (@alice):
+    The variable name is misleading.
+
+    Consider renaming `x` to `remainingSeconds` so readers don't have to
+    trace back to the declaration to understand its meaning.
+  comment IC_kwDOSGizTs7_ajT8 (@bob):
+    Consider using a more descriptive name here.
   check 24697658766 — lint / typecheck / test (22.x) (actionable)
   review PRR_kwDOSGizTs58XB1R (@alice): changes requested
+  noise (minimize only): IC_kwDOSGizTs7_ajT9
   cancelled runs: 24697658765
+
   base: main
   resolve: npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"
+
   1. Apply code fixes: read and edit each file referenced in fix.threads and fix.actionableComments.
   2. For each fix.checks[].runId: run gh run view <runId> --log-failed, identify the failure, and apply the fix.
   3. For each fix.changesRequestedReviews: read the review body and apply the requested changes.
   4. Commit changed files: git add <files> && git commit -m "<descriptive message>"
   5. Rebase and push: git fetch origin && git rebase origin/main && git push --force-with-lease — capture HEAD_SHA=$(git rev-parse HEAD)
-  6. Run the resolve command (substitute "$HEAD_SHA" with the pushed commit SHA; substitute $DISMISS_MESSAGE with a one-sentence description of what you changed): npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"
-info: repo=owner/repo passing=3 skipped=0 filtered=0 inProgress=0 remainingSeconds=600 copilotReviewInProgress=false isDraft=false shouldCancel=false
+  6. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
 ```
 
-**Body lines, in order:**
+Layout (in order), with blank lines separating the section groups:
 
-- `  thread <id> <path>:<line> (@<author>): <first line of body (≤120 chars)>` — one per actionable review thread.
-- `  comment <id> (@<author>): <first line of body (≤120 chars)>` — one per actionable PR-level comment.
-- `  noise (minimize only): <id>, <id>, …` — comments classified as bot noise (quota warnings, rate-limit acks). Minimize on GitHub but do not act on them.
+1. Headline `PR #<N> [FIX_CODE] status=… merge=… state=…`.
+2. `info:` line with the remaining base fields.
+3. **Items** (if any): threads, actionable comments, checks, reviews, noise, cancelled runs.
+4. **Rebase target + resolve command**.
+5. **Numbered instructions** to execute.
+
+**Body lines, in order within the items section:**
+
+- `  thread <id> <path>:<line> (@<author>):` then the full body on subsequent lines indented four spaces — one per actionable review thread. Multi-paragraph bodies are preserved verbatim (empty lines preserved), so code blocks and `\`\`\`suggestion\`\`\`` blocks survive intact.
+- `  comment <id> (@<author>):` then the full body on subsequent lines indented four spaces — one per actionable PR-level comment.
 - `  check <runId|(no runId)> — <name> (<failureKind|actionable>)` — one per actionable failing check.
 - `  review <id> (@<author>): changes requested` — one per `CHANGES_REQUESTED` review.
+- `  noise (minimize only): <id>, <id>, …` — comments classified as bot noise (quota warnings, rate-limit acks). Minimize on GitHub but do not act on them.
 - `  cancelled runs: <id>, <id>, …` — emitted only when CLI-side `gh run cancel` succeeded for at least one run.
 - `  base: <branch>` — rebase target for the push step.
 - `  resolve: <argv>` — fully-quoted resolve command. `$DISMISS_MESSAGE` and `$HEAD_SHA` are always quoted so substituting a multi-word sentence keeps it as one argument. `--require-sha "$HEAD_SHA"` is appended only when a push is expected (threads/actionableComments/checks/reviews present); noise-only dispatches omit it.
-- `  1. …` — ordered instructions to execute. Always trust this list — it is generated from the same inputs and won't drift from the resolve line.
+- `  1. …` — ordered instructions to execute. Instruction #6 refers back to the `resolve:` line above rather than duplicating it — always follow that single source of truth.
 
 The JSON payload exposes the same data under `fix.{threads, actionableComments, noiseCommentIds, checks, changesRequestedReviews, baseBranch, resolveCommand, instructions}` plus top-level `cancelled`.
 
@@ -249,6 +267,8 @@ Ambiguous state that requires human judgement — the monitor stops and surfaces
 
 ```
 PR #42 [ESCALATE] status=UNRESOLVED_COMMENTS merge=BLOCKED state=OPEN
+info: repo=owner/repo passing=0 skipped=0 filtered=0 inProgress=0 remainingSeconds=600 copilotReviewInProgress=false isDraft=false shouldCancel=false
+
 ⚠️  /pr-shepherd:monitor paused — needs human direction
 
 Triggers: fix-thrash
@@ -261,9 +281,8 @@ Fix attempts: threadId=PRRT_kwDOSGizTs58XB1L attempted 3 times
 
 Run /pr-shepherd:check 42 to see current state.
 After fixing manually, rerun /pr-shepherd:monitor 42 to resume.
-info: repo=owner/repo passing=0 skipped=0 filtered=0 inProgress=0 remainingSeconds=600 copilotReviewInProgress=false isDraft=false shouldCancel=false
 ```
 
-The block between the `[ESCALATE]` headline and the `info:` line is `escalate.humanMessage` in JSON — ready to print verbatim.
+The block after the `info:` line (separated by a blank line) is `escalate.humanMessage` in JSON — ready to print verbatim.
 
-**What the monitor does:** Print everything up to and including `info:`, then invoke `/loop cancel` via Skill tool to stop the cron job.
+**What the monitor does:** Print the full output, then invoke `/loop cancel` via Skill tool to stop the cron job.
