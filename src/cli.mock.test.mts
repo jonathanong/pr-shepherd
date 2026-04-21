@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("./commands/check.mts", () => ({ runCheck: vi.fn() }));
@@ -563,5 +565,29 @@ describe("main — unknown subcommand", () => {
     const stderrOutput = stderrSpy.mock.calls.map((c: unknown[]) => c[0]).join("");
     expect(stderrOutput).toContain("Unknown subcommand");
     expect(process.exitCode).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// --version / -v
+// ---------------------------------------------------------------------------
+
+describe("main — --version", () => {
+  const pkgVersion = (
+    JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
+      version: string;
+    }
+  ).version;
+
+  it("prints the exact package.json version followed by a newline for --version", async () => {
+    await main(["node", "shepherd", "--version"]);
+    expect(getStdout()).toBe(`${pkgVersion}\n`);
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  it("also accepts -v with identical output", async () => {
+    await main(["node", "shepherd", "-v"]);
+    expect(getStdout()).toBe(`${pkgVersion}\n`);
+    expect(process.exitCode).toBeUndefined();
   });
 });

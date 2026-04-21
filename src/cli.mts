@@ -2,6 +2,7 @@
  * CLI argument parsing and subcommand dispatch for pr-shepherd.
  *
  * Usage:
+ *   pr-shepherd --version
  *   pr-shepherd check [PR] [--format text|json] [--no-cache] [--cache-ttl N]
  *   pr-shepherd resolve [PR] [--fetch] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]
  *                            [--dismiss-review-ids Q] [--message MSG] [--require-sha SHA]
@@ -9,6 +10,8 @@
  *   pr-shepherd iterate [PR] [--format text|json] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
  *   pr-shepherd status PR1 [PR2 …]
  */
+
+import { readFileSync } from "node:fs";
 
 import { runCheck } from "./commands/check.mts";
 import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
@@ -40,6 +43,11 @@ export async function main(argv: string[]): Promise<void> {
 
   const subcommand = args[0];
 
+  if (subcommand === "--version" || subcommand === "-v") {
+    process.stdout.write(`${readVersion()}\n`);
+    return;
+  }
+
   switch (subcommand) {
     case "check":
       await handleCheck(args.slice(1));
@@ -55,10 +63,19 @@ export async function main(argv: string[]): Promise<void> {
       break;
     default:
       process.stderr.write(`Unknown subcommand: ${subcommand ?? "(none)"}\n`);
-      process.stderr.write("Usage: pr-shepherd <check|resolve|iterate|status> [options]\n");
+      process.stderr.write(
+        "Usage: pr-shepherd <check|resolve|iterate|status> [options]\n" +
+          "       pr-shepherd --version | -v\n",
+      );
       process.exitCode = 1;
       return;
   }
+}
+
+function readVersion(): string {
+  const pkgUrl = new URL("../package.json", import.meta.url);
+  const pkg = JSON.parse(readFileSync(pkgUrl, "utf8")) as { version: string };
+  return pkg.version;
 }
 
 // ---------------------------------------------------------------------------

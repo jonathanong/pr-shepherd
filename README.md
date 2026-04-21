@@ -190,6 +190,7 @@ On each tick (4-minute default, tunable via `watch.interval`): fetch PR state in
 ## CLI
 
 ```sh
+pr-shepherd -v|--version                              # print installed version
 pr-shepherd check [PR]                                # read-only PR status snapshot
 pr-shepherd resolve [PR] [--fetch | --resolve-thread-ids …]
 pr-shepherd iterate [PR] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
