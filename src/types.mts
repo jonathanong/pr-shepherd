@@ -125,6 +125,7 @@ export interface MergeStatusResult {
 // ---------------------------------------------------------------------------
 
 export interface BatchPrData {
+  nodeId: string;
   number: number;
   state: "OPEN" | "CLOSED" | "MERGED";
   isDraft: boolean;
@@ -157,9 +158,11 @@ export type ShepherdStatus =
 
 export interface ShepherdReport {
   pr: number;
+  /** GitHub node ID of the PR — used for mutations (e.g. markPullRequestReadyForReview). */
+  nodeId: string;
   repo: string;
   status: ShepherdStatus;
-  /** PR base branch from the GraphQL batch — used by `iterate` to avoid a second `gh pr view` round-trip. */
+  /** PR base branch from the GraphQL batch. */
   baseBranch: string;
   mergeStatus: MergeStatusResult;
   checks: {

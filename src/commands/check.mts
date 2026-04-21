@@ -94,7 +94,7 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
 
   // Triage failures (fetch logs) — skipped when caller will short-circuit before needing failureKind.
   const triaged =
-    failing.length > 0 && !opts.skipTriage ? await triageFailingChecks(failing) : failing;
+    failing.length > 0 && !opts.skipTriage ? await triageFailingChecks(failing, repo) : failing;
 
   // Resolve threads and comments.
   const unresolvedThreads = batchData.reviewThreads.filter((t) => !t.isResolved && !t.isMinimized);
@@ -137,6 +137,7 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
 
   return {
     pr: prNumber,
+    nodeId: batchData.nodeId,
     repo: `${repo.owner}/${repo.name}`,
     status,
     baseBranch: batchData.baseRefName,

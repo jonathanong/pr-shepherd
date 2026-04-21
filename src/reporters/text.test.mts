@@ -40,6 +40,7 @@ function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
 function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
   return {
     pr: 42,
+    nodeId: "PR_kgDOAAA",
     repo: "owner/repo",
     status: "READY",
     baseBranch: "main",

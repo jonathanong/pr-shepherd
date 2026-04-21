@@ -45,6 +45,7 @@ function makeCheck(overrides: Partial<ClassifiedCheck> = {}): ClassifiedCheck {
 
 function makeBatchData(overrides: Partial<BatchPrData> = {}): BatchPrData {
   return {
+    nodeId: "PR_kgDOAAA",
     number: 42,
     state: "OPEN",
     isDraft: false,

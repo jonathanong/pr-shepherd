@@ -28,6 +28,8 @@ import { runCheck } from "./check.mts";
 import { triageFailingChecks } from "../checks/triage.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { getCurrentPrNumber } from "../github/client.mts";
+import { rest, graphql } from "../github/http.mts";
+import { MARK_PR_READY_MUTATION } from "../github/queries.mts";
 import { readFixAttempts, writeFixAttempts } from "../cache/fix-attempts.mts";
 import { toAgentThread, toAgentComment, toAgentChecks } from "../reporters/agent.mts";
 import type {
@@ -153,7 +155,10 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
 
   // Triage failing checks now that we know we need failureKind for steps 4–6.
   if (report.checks.failing.length > 0) {
-    const triaged = await triageFailingChecks(report.checks.failing);
+    const triaged = await triageFailingChecks(report.checks.failing, {
+      owner: repoOwner,
+      name: repoName,
+    });
     report = { ...report, checks: { ...report.checks, failing: triaged } };
   }
 
@@ -218,7 +223,9 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       const uniqueRunIds = [
         ...new Set(actionableChecks.map((c) => c.runId).filter((id): id is string => id !== null)),
       ];
-      const results = await Promise.all(uniqueRunIds.map((id) => tryCancelRun(id)));
+      const results = await Promise.all(
+        uniqueRunIds.map((id) => tryCancelRun(id, repoOwner, repoName)),
+      );
       cancelled = results.filter((id): id is string => id !== null);
     }
 
@@ -311,7 +318,11 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       }
     }
     const reran = [...runMap.values()];
-    await Promise.all(reran.map(({ runId }) => runGhCommand(["run", "rerun", runId, "--failed"])));
+    await Promise.all(
+      reran.map(({ runId }) =>
+        rest("POST", `/repos/${repoOwner}/${repoName}/actions/runs/${runId}/rerun-failed-jobs`),
+      ),
+    );
     const runSummaries = reran.map(
       ({ runId, checkNames, failureKind }) =>
         `${runId} (${checkNames.join(", ")} — ${failureKind})`,
@@ -370,7 +381,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     report.mergeStatus.isDraft;
 
   if (canMarkReady && !opts.noAutoMarkReady && config.actions.autoMarkReady) {
-    await runGhCommand(["pr", "ready", String(report.pr)]);
+    await graphql(MARK_PR_READY_MUTATION, { pullRequestId: report.nodeId });
     return {
       ...base,
       action: "mark_ready",
@@ -409,25 +420,17 @@ async function getLastCommitTime(): Promise<number> {
   }
 }
 
-async function runGhCommand(args: string[]): Promise<void> {
-  try {
-    await execFile("gh", args);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`gh ${args.join(" ")} failed: ${msg}`, { cause: err });
-  }
-}
-
 // Best-effort: cancelling a completed run is a no-op, not an error.
-async function tryCancelRun(runId: string): Promise<string | null> {
+async function tryCancelRun(runId: string, owner: string, repo: string): Promise<string | null> {
   try {
-    await execFile("gh", ["run", "cancel", runId]);
+    await rest("POST", `/repos/${owner}/${repo}/actions/runs/${runId}/cancel`);
     return runId;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    // gh returns this when the run reached a terminal state — expected, not worth logging.
-    if (/already completed|cannot cancel a workflow run that is completed/i.test(msg)) return null;
-    process.stderr.write(`pr-shepherd: gh run cancel ${runId} failed (ignored): ${msg}\n`);
+    // GitHub returns 409 when the run reached a terminal state — expected, not worth logging.
+    if (/409|already completed|cannot cancel a workflow run that is completed/i.test(msg))
+      return null;
+    process.stderr.write(`pr-shepherd: cancel run ${runId} failed (ignored): ${msg}\n`);
     return null;
   }
 }
