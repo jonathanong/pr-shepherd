@@ -63,6 +63,7 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
 5. **Commit and push** (only if code was changed):
    - `git add <file1> <file2> …` (NOT `git add -A`)
    - `git commit -m "<appropriate commit message>"`
+   - If the fixes alter the PR's scope or intent, run `gh pr edit <N> --title "<new title>" --body "<new body>"` to keep the PR title and description in sync with what was committed. Skip if the existing text still accurately describes the PR.
    - `git fetch origin && git rebase origin/$BASE_BRANCH && git push --force-with-lease`
    - Cancel stale CI runs: `gh run list --branch "$BRANCH" --status in_progress --json databaseId --jq '.[].databaseId' | xargs -I{} gh run cancel {}`
 
