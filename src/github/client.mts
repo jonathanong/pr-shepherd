@@ -7,12 +7,7 @@
 
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
-import {
-  graphql as httpGraphql,
-  rest,
-  type RateLimitInfo,
-  type GraphQlResult,
-} from "./http.mts";
+import { graphql as httpGraphql, rest, type RateLimitInfo, type GraphQlResult } from "./http.mts";
 import { PR_NUMBER_BY_BRANCH_QUERY } from "./queries.mts";
 import type { MergeableState, MergeStateStatus } from "../types.mts";
 

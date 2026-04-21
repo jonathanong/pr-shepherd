@@ -59,9 +59,7 @@ async function resolveToken(): Promise<string> {
     // fall through to error
   }
 
-  throw new Error(
-    "No GitHub token found. Set GH_TOKEN or GITHUB_TOKEN, or run `gh auth login`.",
-  );
+  throw new Error("No GitHub token found. Set GH_TOKEN or GITHUB_TOKEN, or run `gh auth login`.");
 }
 
 async function makeHeaders(): Promise<Record<string, string>> {
@@ -125,11 +123,7 @@ export async function graphqlWithRateLimit<T = unknown>(
 // REST
 // ---------------------------------------------------------------------------
 
-export async function rest<T = unknown>(
-  method: string,
-  path: string,
-  body?: unknown,
-): Promise<T> {
+export async function rest<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
     headers: await makeHeaders(),
@@ -138,9 +132,7 @@ export async function rest<T = unknown>(
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(
-      `GitHub REST ${method} ${path} failed: ${res.status} ${text.slice(0, 300)}`,
-    );
+    throw new Error(`GitHub REST ${method} ${path} failed: ${res.status} ${text.slice(0, 300)}`);
   }
 
   const ct = res.headers.get("content-type") ?? "";
@@ -175,9 +167,7 @@ export async function restText(method: string, path: string): Promise<string> {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(
-      `GitHub REST ${method} ${path} failed: ${res.status} ${text.slice(0, 300)}`,
-    );
+    throw new Error(`GitHub REST ${method} ${path} failed: ${res.status} ${text.slice(0, 300)}`);
   }
 
   return res.text();

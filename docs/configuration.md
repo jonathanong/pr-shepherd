@@ -209,29 +209,29 @@ Disable if your team uses the draft state as a deliberate gate that requires a h
 
 ## Environment variables
 
-| Variable                        | Effect                                                                                                 |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `PR_SHEPHERD_CACHE_DIR`         | Override the cache base directory (default `$TMPDIR/pr-shepherd-cache`)                                |
-| `PR_SHEPHERD_CACHE_TTL_SECONDS` | Override `cache.ttlSeconds`; takes precedence over both the RC file and `--cache-ttl`                  |
+| Variable                        | Effect                                                                                                           |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `PR_SHEPHERD_CACHE_DIR`         | Override the cache base directory (default `$TMPDIR/pr-shepherd-cache`)                                          |
+| `PR_SHEPHERD_CACHE_TTL_SECONDS` | Override `cache.ttlSeconds`; takes precedence over both the RC file and `--cache-ttl`                            |
 | `GH_TOKEN` / `GITHUB_TOKEN`     | GitHub auth token. Resolution order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` fallback (requires `gh` CLI). |
 
 ## Deprecated keys
 
 The following keys from earlier versions are still accepted but emit a deprecation warning to stderr. They will be removed in v0.3.0.
 
-| Old key                          | New key                             |
-| -------------------------------- | ----------------------------------- |
-| `iterate.maxFixAttempts`         | `iterate.fixAttemptsPerThread`      |
-| `watch.intervalDefault`          | `watch.interval`                    |
-| `watch.readyDelayMinutesDefault` | `watch.readyDelayMinutes`           |
-| `watch.expiresHoursDefault`      | `watch.expiresHours`                |
-| `resolve.shaPollIntervalMs`      | `resolve.shaPoll.intervalMs`        |
-| `resolve.shaPollMaxAttempts`     | `resolve.shaPoll.maxAttempts`       |
-| `checks.relevantEvents`          | `checks.ciTriggerEvents`            |
-| `checks.logLinesKept`            | `checks.logMaxLines`                |
-| `checks.logExcerptMaxChars`      | `checks.logMaxChars`                |
-| `baseBranch`                     | _(removed — auto-detected from PR)_ |
-| `minimizeBots`                   | _(removed)_                         |
+| Old key                          | New key                                                   |
+| -------------------------------- | --------------------------------------------------------- |
+| `iterate.maxFixAttempts`         | `iterate.fixAttemptsPerThread`                            |
+| `watch.intervalDefault`          | `watch.interval`                                          |
+| `watch.readyDelayMinutesDefault` | `watch.readyDelayMinutes`                                 |
+| `watch.expiresHoursDefault`      | `watch.expiresHours`                                      |
+| `resolve.shaPollIntervalMs`      | `resolve.shaPoll.intervalMs`                              |
+| `resolve.shaPollMaxAttempts`     | `resolve.shaPoll.maxAttempts`                             |
+| `checks.relevantEvents`          | `checks.ciTriggerEvents`                                  |
+| `checks.logLinesKept`            | `checks.logMaxLines`                                      |
+| `checks.logExcerptMaxChars`      | `checks.logMaxChars`                                      |
+| `baseBranch`                     | _(removed — auto-detected from PR)_                       |
+| `minimizeBots`                   | _(removed)_                                               |
 | `cancelCiOnFailure`              | _(removed)_                                               |
 | `execution.maxBufferMb`          | _(removed — no subprocess buffer caps with native fetch)_ |
 | `execution.triageLogBufferMb`    | _(removed — no subprocess buffer caps with native fetch)_ |

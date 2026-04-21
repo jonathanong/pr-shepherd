@@ -214,9 +214,7 @@ describe("getCurrentPrNumber", () => {
     mockExecFile
       .mockResolvedValueOnce({ stdout: "my-branch\n", stderr: "" }) // rev-parse
       .mockResolvedValueOnce({ stdout: "https://github.com/owner/repo.git\n", stderr: "" }); // remote get-url
-    mockFetch.mockResolvedValue(
-      gqlOk({ repository: { pullRequests: { nodes: [] } } }),
-    );
+    mockFetch.mockResolvedValue(gqlOk({ repository: { pullRequests: { nodes: [] } } }));
     expect(await getCurrentPrNumber()).toBeNull();
   });
 

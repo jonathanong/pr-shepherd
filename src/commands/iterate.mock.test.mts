@@ -348,7 +348,12 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
           text: () => Promise.resolve("Cannot cancel a workflow run that is completed"),
         });
       }
-      return Promise.resolve({ ok: true, status: 202, headers: new Headers(), text: () => Promise.resolve("") });
+      return Promise.resolve({
+        ok: true,
+        status: 202,
+        headers: new Headers(),
+        text: () => Promise.resolve(""),
+      });
     });
 
     const result = await runIterate(makeOpts());

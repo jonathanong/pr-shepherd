@@ -78,10 +78,7 @@ async function fetchFailedLogs(runId: string, repo: RepoInfo): Promise<string> {
     const logParts = await Promise.all(
       failedJobs.map(async (job) => {
         try {
-          const logs = await restText(
-            "GET",
-            `/repos/${owner}/${name}/actions/jobs/${job.id}/logs`,
-          );
+          const logs = await restText("GET", `/repos/${owner}/${name}/actions/jobs/${job.id}/logs`);
           return logs.trim() ? `===== job: ${job.name} =====\n${logs}` : "";
         } catch {
           return "";

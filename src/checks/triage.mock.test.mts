@@ -29,9 +29,7 @@ function makeCheck(overrides: Partial<ClassifiedCheck> = {}): ClassifiedCheck {
   };
 }
 
-function makeJobsResponse(
-  jobs: Array<{ id: number; name: string; conclusion: string }>,
-): Response {
+function makeJobsResponse(jobs: Array<{ id: number; name: string; conclusion: string }>): Response {
   return {
     ok: true,
     status: 200,
@@ -61,9 +59,7 @@ function makeErrorResponse(status: number): Response {
 
 function setupFetch(logs: string, conclusion = "failure"): void {
   // First call: list jobs
-  mockFetch.mockResolvedValueOnce(
-    makeJobsResponse([{ id: 42, name: "test-job", conclusion }]),
-  );
+  mockFetch.mockResolvedValueOnce(makeJobsResponse([{ id: 42, name: "test-job", conclusion }]));
   // Second call: fetch logs for that job
   mockFetch.mockResolvedValueOnce(makeLogsResponse(logs));
 }
