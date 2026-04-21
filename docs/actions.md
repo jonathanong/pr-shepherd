@@ -289,7 +289,7 @@ Actionable work needs a code fix, commit, and push.
 - `Commit changed files:` is only emitted when there are actual code changes to commit (threads/comments/checks/reviews present). A `CONFLICTS`-only state skips this step.
 - `Keep the PR title and description current:` is emitted immediately after the commit step and uses the same gate (`hasCodeChanges`). A `CONFLICTS`-only dispatch (no code to commit) omits it.
 - The rebase step switches wording based on `mergeStatus.status`. When conflicts are present it emits "Rebase with conflict resolution" and walks through `git rebase --continue` loops; otherwise it emits the clean one-liner `git fetch origin && git rebase origin/<base> && git push --force-with-lease`.
-- `Run the \`resolve:\` command`is only emitted when the resolve command actually mutates GitHub state (at least one of threads/comments/reviews is non-empty). A`CONFLICTS`-only dispatch omits it.
+- The `resolve:` instruction is only emitted when the resolve command actually mutates GitHub state (at least one of threads/comments/reviews is non-empty). A `CONFLICTS`-only dispatch omits it.
 
 The JSON payload exposes the same data under `fix.{threads, actionableComments, noiseCommentIds, checks, changesRequestedReviews, baseBranch, resolveCommand, instructions}` plus top-level `cancelled`.
 
