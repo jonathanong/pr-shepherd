@@ -565,3 +565,23 @@ describe("main — unknown subcommand", () => {
     expect(process.exitCode).toBe(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// --version / -v
+// ---------------------------------------------------------------------------
+
+describe("main — --version", () => {
+  it("prints the package.json version and exits cleanly for --version", async () => {
+    await main(["node", "shepherd", "--version"]);
+    const out = getStdout().trim();
+    expect(out).toMatch(/^\d+\.\d+\.\d+/);
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  it("also accepts -v", async () => {
+    await main(["node", "shepherd", "-v"]);
+    const out = getStdout().trim();
+    expect(out).toMatch(/^\d+\.\d+\.\d+/);
+    expect(process.exitCode).toBeUndefined();
+  });
+});
