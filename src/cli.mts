@@ -6,7 +6,7 @@
  *   pr-shepherd resolve [PR] [--fetch] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]
  *                            [--dismiss-review-ids Q] [--message MSG] [--require-sha SHA]
  *                            [--last-push-time N]
- *   pr-shepherd iterate [PR] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
+ *   pr-shepherd iterate [PR] [--format text] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
  *   pr-shepherd status PR1 [PR2 …]
  */
 
@@ -117,6 +117,9 @@ async function handleResolve(args: string[]): Promise<void> {
 
 async function handleIterate(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
+  // iterate defaults to JSON so agents work without an explicit --format flag.
+  // Pass --format=text for human-readable output.
+  const format = globalOpts.format === "text" ? "text" : "json";
 
   const lastPushTimeStr = getFlag(extra, "--last-push-time");
   const lastPushTime = lastPushTimeStr
@@ -145,7 +148,7 @@ async function handleIterate(args: string[]): Promise<void> {
     noAutoCancelActionable,
   });
 
-  if (globalOpts.format === "json") {
+  if (format === "json") {
     process.stdout.write(`${JSON.stringify(result)}\n`);
   } else {
     process.stdout.write(`${formatIterateResult(result)}\n`);
@@ -243,6 +246,8 @@ function formatMutateResult(result: Awaited<ReturnType<typeof runResolveMutate>>
 
 function formatIterateResult(result: import("./types.mts").IterateResult): string {
   const base = `PR #${result.pr} [${result.action.toUpperCase()}]`;
+  const lines: string[] = [];
+
   switch (result.action) {
     case "cooldown":
     case "wait":
@@ -250,11 +255,54 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
     case "rerun_ci":
     case "mark_ready":
       return `${base} ${result.log}`;
-    case "fix_code":
-      return `${base} threads=${result.fix.threads.length} actionableComments=${result.fix.actionableComments.length} noiseComments=${result.fix.noiseCommentIds.length} checks=${result.fix.checks.length} cancelled=${result.cancelled.length}`;
+
     case "rebase":
-      return `${base} ${result.rebase.reason}`;
+      lines.push(`${base} ${result.rebase.reason}`);
+      lines.push(result.rebase.shellScript);
+      break;
+
     case "escalate":
-      return `${base} ${result.escalate.humanMessage.split("\n")[0]}`;
+      lines.push(base);
+      lines.push(result.escalate.humanMessage);
+      break;
+
+    case "fix_code": {
+      lines.push(base);
+      for (const t of result.fix.threads) {
+        const loc = t.path ? `${t.path}:${t.line ?? "?"}` : "(no location)";
+        lines.push(
+          `  thread ${t.id} ${loc} (@${t.author}): ${t.body.split("\n")[0]?.slice(0, 120) ?? ""}`,
+        );
+      }
+      for (const c of result.fix.actionableComments) {
+        lines.push(
+          `  comment ${c.id} (@${c.author}): ${c.body.split("\n")[0]?.slice(0, 120) ?? ""}`,
+        );
+      }
+      if (result.fix.noiseCommentIds.length > 0) {
+        lines.push(`  noise (minimize only): ${result.fix.noiseCommentIds.join(", ")}`);
+      }
+      for (const ch of result.fix.checks) {
+        lines.push(
+          `  check ${ch.runId ?? "(no runId)"} — ${ch.name} (${ch.failureKind ?? "actionable"})`,
+        );
+      }
+      for (const r of result.fix.changesRequestedReviews) {
+        lines.push(`  review ${r.id} (@${r.author}): changes requested`);
+      }
+      if (result.cancelled.length > 0) {
+        lines.push(`  cancelled runs: ${result.cancelled.join(", ")}`);
+      }
+      lines.push(`  base: ${result.fix.baseBranch}`);
+      lines.push(
+        `  resolve: ${result.fix.resolveCommand.argv.join(" ")}${result.fix.resolveCommand.requiresHeadSha ? ' --require-sha "$HEAD_SHA"' : ""}`,
+      );
+      for (const [i, inst] of result.fix.instructions.entries()) {
+        lines.push(`  ${i + 1}. ${inst}`);
+      }
+      break;
+    }
   }
+
+  return lines.join("\n");
 }
