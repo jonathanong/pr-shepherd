@@ -538,10 +538,15 @@ function buildResolveCommand(
 }
 
 /**
- * Render a ResolveCommand as a shell-safe single-line command string.
- * Quotes placeholders ($DISMISS_MESSAGE, $HEAD_SHA) and any whitespace-bearing
- * arg so the model can substitute multi-word values (like a real dismiss
- * message sentence) without splitting across flags.
+ * Render a ResolveCommand as a single-line command string for the monitor loop
+ * to print or execute. This is NOT a general-purpose POSIX escaper — it wraps
+ * the two known placeholders ($DISMISS_MESSAGE, $HEAD_SHA) and any whitespace-
+ * bearing arg in double quotes so multi-word values don't split across flags.
+ *
+ * Contract for callers substituting placeholders: replace the entire quoted
+ * token (including the surrounding `"`) with a properly shell-quoted literal.
+ * Do not splice raw text inside the existing quotes — the output would then
+ * re-expand `$…` / `$(…)` / embedded `"` and break.
  */
 export function shellJoinArgv(rc: ResolveCommand): string {
   const needsQuoting = (arg: string) =>

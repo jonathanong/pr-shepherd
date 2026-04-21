@@ -288,9 +288,9 @@ export interface IterateResultCancel extends IterateResultBase {
 }
 
 export interface ResolveCommand {
-  /** Argv array for spawn-style execution. Contains `$DISMISS_MESSAGE` / `$HEAD_SHA` placeholders — use `shellJoinArgv` from `commands/iterate.mts` to render as a shell-safe string; don't naive-join. */
+  /** Argv for spawn-style execution. May contain a `$DISMISS_MESSAGE` placeholder. `$HEAD_SHA` is never in `argv` — `shellJoinArgv` (from `commands/iterate.mts`) appends `--require-sha "$HEAD_SHA"` when rendering if `requiresHeadSha` is true. Use `shellJoinArgv` to render as a command string; don't naive-join. */
   argv: string[];
-  /** Whether to append `--require-sha <HEAD_SHA>` after a successful push. */
+  /** When true, `shellJoinArgv` appends `--require-sha "$HEAD_SHA"` to the rendered command. */
   requiresHeadSha: boolean;
   /** Whether the model must substitute $DISMISS_MESSAGE with a specific description of the fix. */
   requiresDismissMessage: boolean;
