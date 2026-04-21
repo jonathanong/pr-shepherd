@@ -1309,7 +1309,8 @@ describe("runIterate — human approval pending (BLOCKED + REVIEW_REQUIRED)", ()
 describe("runIterate — prescriptive fields: log strings", () => {
   it("cooldown.log mentions CI starting", async () => {
     mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "log") return Promise.resolve({ stdout: String(NOW - 5), stderr: "" });
+      if (cmd === "git" && args[0] === "log")
+        return Promise.resolve({ stdout: String(NOW - 5), stderr: "" });
       return Promise.resolve({ stdout: "", stderr: "" });
     });
 
@@ -1323,7 +1324,11 @@ describe("runIterate — prescriptive fields: log strings", () => {
 
   it("wait.log includes passing count and merge state", async () => {
     mockRunCheck.mockResolvedValue(makeReport());
-    mockUpdateReadyDelay.mockResolvedValue({ isReady: true, shouldCancel: false, remainingSeconds: 300 });
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: false,
+      remainingSeconds: 300,
+    });
 
     const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
     expect(result.action).toBe("wait");
@@ -1349,7 +1354,11 @@ describe("runIterate — prescriptive fields: log strings", () => {
         },
       }),
     );
-    mockUpdateReadyDelay.mockResolvedValue({ isReady: false, shouldCancel: false, remainingSeconds: 0 });
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 0,
+    });
 
     // No actionable work, no failing checks → wait
     const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
@@ -1385,7 +1394,11 @@ describe("runIterate — prescriptive fields: log strings", () => {
 
   it("cancel.log mentions ready-delay when shouldCancel from ready-delay", async () => {
     mockRunCheck.mockResolvedValue(makeReport());
-    mockUpdateReadyDelay.mockResolvedValue({ isReady: true, shouldCancel: true, remainingSeconds: 0 });
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
 
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("cancel");
@@ -1406,8 +1419,25 @@ describe("runIterate — prescriptive fields: log strings", () => {
       category: "failing" as const,
       failureKind: "timeout" as const,
     };
-    mockRunCheck.mockResolvedValue(makeReport({ status: "FAILING", checks: { passing: [], failing: [timeoutCheck], inProgress: [], skipped: [], filtered: [], filteredNames: [], blockedByFilteredCheck: false } }));
-    mockUpdateReadyDelay.mockResolvedValue({ isReady: false, shouldCancel: false, remainingSeconds: 600 });
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        checks: {
+          passing: [],
+          failing: [timeoutCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
 
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("rerun_ci");
@@ -1419,9 +1449,23 @@ describe("runIterate — prescriptive fields: log strings", () => {
 
   it("mark_ready.log mentions PR number", async () => {
     mockRunCheck.mockResolvedValue(
-      makeReport({ mergeStatus: { status: "CLEAN", state: "OPEN", isDraft: true, mergeable: "MERGEABLE", reviewDecision: "APPROVED", copilotReviewInProgress: false, mergeStateStatus: "DRAFT" } }),
+      makeReport({
+        mergeStatus: {
+          status: "CLEAN",
+          state: "OPEN",
+          isDraft: true,
+          mergeable: "MERGEABLE",
+          reviewDecision: "APPROVED",
+          copilotReviewInProgress: false,
+          mergeStateStatus: "DRAFT",
+        },
+      }),
     );
-    mockUpdateReadyDelay.mockResolvedValue({ isReady: true, shouldCancel: false, remainingSeconds: 600 });
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
 
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("mark_ready");
@@ -1444,16 +1488,41 @@ describe("runIterate — prescriptive fields: rebase", () => {
       category: "failing" as const,
       failureKind: "flaky" as const,
     };
-    mockRunCheck.mockResolvedValue(makeReport({
-      status: "FAILING",
-      mergeStatus: { status: "BEHIND", state: "OPEN", isDraft: false, mergeable: "MERGEABLE", reviewDecision: null, copilotReviewInProgress: false, mergeStateStatus: "BEHIND" },
-      checks: { passing: [], failing: [flakyCheck], inProgress: [], skipped: [], filtered: [], filteredNames: [], blockedByFilteredCheck: false },
-    }));
-    mockUpdateReadyDelay.mockResolvedValue({ isReady: false, shouldCancel: false, remainingSeconds: 600 });
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        mergeStatus: {
+          status: "BEHIND",
+          state: "OPEN",
+          isDraft: false,
+          mergeable: "MERGEABLE",
+          reviewDecision: null,
+          copilotReviewInProgress: false,
+          mergeStateStatus: "BEHIND",
+        },
+        checks: {
+          passing: [],
+          failing: [flakyCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
     mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "log") return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
-      if (cmd === "git" && args[0] === "rev-parse") return Promise.resolve({ stdout: "abc123\n", stderr: "" });
-      if (cmd === "gh" && args[1] === "view") return Promise.resolve({ stdout: "main\n", stderr: "" });
+      if (cmd === "git" && args[0] === "log")
+        return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
+      if (cmd === "git" && args[0] === "rev-parse")
+        return Promise.resolve({ stdout: "abc123\n", stderr: "" });
+      if (cmd === "gh" && args[1] === "view")
+        return Promise.resolve({ stdout: "main\n", stderr: "" });
       return Promise.resolve({ stdout: "", stderr: "" });
     });
 
@@ -1471,17 +1540,38 @@ describe("runIterate — prescriptive fields: rebase", () => {
 
 describe("runIterate — prescriptive fields: fix_code noise/actionable split", () => {
   it("classifies quota-warning comment as noise, real review comment as actionable", async () => {
-    const noiseComment = { id: "c-noise", isMinimized: false, author: "bot", body: "You have reached your daily quota", createdAtUnix: NOW };
-    const realComment = { id: "c-real", isMinimized: false, author: "reviewer", body: "Please add a null check here before calling .value()", createdAtUnix: NOW };
-    mockRunCheck.mockResolvedValue(makeReport({
-      status: "UNRESOLVED_COMMENTS",
-      comments: { actionable: [noiseComment, realComment] },
-    }));
-    mockUpdateReadyDelay.mockResolvedValue({ isReady: false, shouldCancel: false, remainingSeconds: 600 });
+    const noiseComment = {
+      id: "c-noise",
+      isMinimized: false,
+      author: "bot",
+      body: "You have reached your daily quota",
+      createdAtUnix: NOW,
+    };
+    const realComment = {
+      id: "c-real",
+      isMinimized: false,
+      author: "reviewer",
+      body: "Please add a null check here before calling .value()",
+      createdAtUnix: NOW,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        comments: { actionable: [noiseComment, realComment] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
     mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "log") return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
-      if (cmd === "git" && args[0] === "rev-parse") return Promise.resolve({ stdout: "abc123\n", stderr: "" });
-      if (cmd === "gh" && args[1] === "view") return Promise.resolve({ stdout: "main\n", stderr: "" });
+      if (cmd === "git" && args[0] === "log")
+        return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
+      if (cmd === "git" && args[0] === "rev-parse")
+        return Promise.resolve({ stdout: "abc123\n", stderr: "" });
+      if (cmd === "gh" && args[1] === "view")
+        return Promise.resolve({ stdout: "main\n", stderr: "" });
       return Promise.resolve({ stdout: "", stderr: "" });
     });
 
@@ -1496,17 +1586,32 @@ describe("runIterate — prescriptive fields: fix_code noise/actionable split", 
 
   it("resolveCommand includes thread IDs and comment IDs with $HEAD_SHA flag", async () => {
     const thread = { ...THREAD };
-    const comment = { id: "c-1", isMinimized: false, author: "reviewer", body: "Fix the types here", createdAtUnix: NOW };
-    mockRunCheck.mockResolvedValue(makeReport({
-      status: "UNRESOLVED_COMMENTS",
-      threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [] },
-      comments: { actionable: [comment] },
-    }));
-    mockUpdateReadyDelay.mockResolvedValue({ isReady: false, shouldCancel: false, remainingSeconds: 600 });
+    const comment = {
+      id: "c-1",
+      isMinimized: false,
+      author: "reviewer",
+      body: "Fix the types here",
+      createdAtUnix: NOW,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [] },
+        comments: { actionable: [comment] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
     mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "log") return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
-      if (cmd === "git" && args[0] === "rev-parse") return Promise.resolve({ stdout: "abc123\n", stderr: "" });
-      if (cmd === "gh" && args[1] === "view") return Promise.resolve({ stdout: "main\n", stderr: "" });
+      if (cmd === "git" && args[0] === "log")
+        return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
+      if (cmd === "git" && args[0] === "rev-parse")
+        return Promise.resolve({ stdout: "abc123\n", stderr: "" });
+      if (cmd === "gh" && args[1] === "view")
+        return Promise.resolve({ stdout: "main\n", stderr: "" });
       return Promise.resolve({ stdout: "", stderr: "" });
     });
 
@@ -1526,16 +1631,25 @@ describe("runIterate — prescriptive fields: fix_code noise/actionable split", 
   it("resolveCommand includes dismiss-review-ids and $DISMISS_MESSAGE when changesRequested", async () => {
     const review = { id: "r-1", author: "reviewer", body: "Please address the naming" };
     const thread = { ...THREAD };
-    mockRunCheck.mockResolvedValue(makeReport({
-      status: "UNRESOLVED_COMMENTS",
-      threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [] },
-      changesRequestedReviews: [review],
-    }));
-    mockUpdateReadyDelay.mockResolvedValue({ isReady: false, shouldCancel: false, remainingSeconds: 600 });
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [] },
+        changesRequestedReviews: [review],
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
     mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "log") return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
-      if (cmd === "git" && args[0] === "rev-parse") return Promise.resolve({ stdout: "abc123\n", stderr: "" });
-      if (cmd === "gh" && args[1] === "view") return Promise.resolve({ stdout: "main\n", stderr: "" });
+      if (cmd === "git" && args[0] === "log")
+        return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
+      if (cmd === "git" && args[0] === "rev-parse")
+        return Promise.resolve({ stdout: "abc123\n", stderr: "" });
+      if (cmd === "gh" && args[1] === "view")
+        return Promise.resolve({ stdout: "main\n", stderr: "" });
       return Promise.resolve({ stdout: "", stderr: "" });
     });
 
@@ -1554,14 +1668,22 @@ describe("runIterate — prescriptive fields: fix_code noise/actionable split", 
 describe("runIterate — prescriptive fields: escalate humanMessage", () => {
   it("escalate.humanMessage contains triggers, suggestion, and thread details", async () => {
     mockReadFixAttempts.mockResolvedValue({ headSha: "abc123", threadAttempts: { "thread-1": 3 } });
-    mockRunCheck.mockResolvedValue(makeReport({
-      status: "UNRESOLVED_COMMENTS",
-      threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
-    }));
-    mockUpdateReadyDelay.mockResolvedValue({ isReady: false, shouldCancel: false, remainingSeconds: 600 });
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
     mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "log") return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
-      if (cmd === "git" && args[0] === "rev-parse") return Promise.resolve({ stdout: "abc123\n", stderr: "" });
+      if (cmd === "git" && args[0] === "log")
+        return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
+      if (cmd === "git" && args[0] === "rev-parse")
+        return Promise.resolve({ stdout: "abc123\n", stderr: "" });
       return Promise.resolve({ stdout: "", stderr: "" });
     });
 

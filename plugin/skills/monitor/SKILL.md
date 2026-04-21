@@ -31,7 +31,7 @@ allowed-tools:
 
 Invoke `/loop <INTERVAL> --max-turns 50 --expires 8h` via the Skill tool. Use the interval from the argument if provided (e.g. `every 30 minutes` → `30m`), otherwise use `4m`. The loop prompt should be:
 
-````
+```
 # pr-shepherd-loop:pr=<PR_NUMBER>
 
 **IMPORTANT — recurrence rules:**
@@ -62,7 +62,7 @@ Act on the `action` field:
      - `$HEAD_SHA` with the pushed SHA (omit `--require-sha` flag entirely if no push occurred)
      - `$DISMISS_MESSAGE` (if present) with one sentence describing the actual fix — never generic text like "address review comments"
 
-````
+```
 
 **Do NOT call ScheduleWakeup** — the cron job handles its own recurrence. Calling ScheduleWakeup with a `/loop` prompt would create a duplicate cron job on the next fire.
 

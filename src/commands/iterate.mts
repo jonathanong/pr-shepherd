@@ -221,12 +221,21 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     );
     const checks = toAgentChecks(actionableChecks);
     const { changesRequestedReviews } = report;
-    const allCommentIds = [
-      ...actionableComments.map((c) => c.id),
-      ...noiseCommentIds,
-    ];
-    const resolveCommand = buildResolveCommand(threads, allCommentIds, changesRequestedReviews, prNumber);
-    const instructions = buildFixInstructions(threads, actionableComments, checks, changesRequestedReviews, baseBranch, resolveCommand);
+    const allCommentIds = [...actionableComments.map((c) => c.id), ...noiseCommentIds];
+    const resolveCommand = buildResolveCommand(
+      threads,
+      allCommentIds,
+      changesRequestedReviews,
+      prNumber,
+    );
+    const instructions = buildFixInstructions(
+      threads,
+      actionableComments,
+      checks,
+      changesRequestedReviews,
+      baseBranch,
+      resolveCommand,
+    );
 
     return {
       ...base,
@@ -536,9 +545,7 @@ function buildFixInstructions(
 
 function buildWaitLog(base: IterateResultBase): string {
   const { summary, mergeStateStatus, remainingSeconds } = base;
-  const parts: string[] = [
-    `WAIT: ${summary.passing} passing, ${summary.inProgress} in-progress`,
-  ];
+  const parts: string[] = [`WAIT: ${summary.passing} passing, ${summary.inProgress} in-progress`];
 
   switch (mergeStateStatus) {
     case "BEHIND":
@@ -565,7 +572,10 @@ function buildWaitLog(base: IterateResultBase): string {
   return parts.join(" — ");
 }
 
-function buildEscalateHumanMessage(escalate: Omit<EscalateDetails, "humanMessage">, pr: number): string {
+function buildEscalateHumanMessage(
+  escalate: Omit<EscalateDetails, "humanMessage">,
+  pr: number,
+): string {
   const lines: string[] = [];
   lines.push("⚠️  /pr-shepherd:monitor paused — needs human direction");
   lines.push("");

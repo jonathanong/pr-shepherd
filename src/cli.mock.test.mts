@@ -89,13 +89,18 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
         noiseCommentIds: [],
         checks: [],
         changesRequestedReviews: [],
-        resolveCommand: { argv: ["npx", "pr-shepherd", "resolve", "42"], requiresHeadSha: true, requiresDismissMessage: false },
+        resolveCommand: {
+          argv: ["npx", "pr-shepherd", "resolve", "42"],
+          requiresHeadSha: true,
+          requiresDismissMessage: false,
+        },
         instructions: [],
       },
       cancelled: [],
     };
   }
-  if (action === "cancel") return { ...base, action: "cancel", log: "CANCEL: PR #42 — stopping monitor" };
+  if (action === "cancel")
+    return { ...base, action: "cancel", log: "CANCEL: PR #42 — stopping monitor" };
   if (action === "escalate") {
     return {
       ...base,

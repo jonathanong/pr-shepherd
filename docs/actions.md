@@ -20,11 +20,12 @@ Skips all work because the last commit is too fresh for CI checks to have starte
 
 **Key fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
+| Field | Type     | Description                 |
+| ----- | -------- | --------------------------- |
 | `log` | `string` | Ready-to-print summary line |
 
 **Example `log`:**
+
 ```
 SKIP: CI still starting — waiting for first check to appear
 ```
@@ -45,17 +46,17 @@ Nothing actionable to do; all CI is passing or in-progress.
 
 **Key fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
+| Field | Type     | Description                                                                   |
+| ----- | -------- | ----------------------------------------------------------------------------- |
 | `log` | `string` | Summary line including passing count, merge state, and time until auto-cancel |
 
 **Example `log` values:**
 
-| Scenario | Log |
-|----------|-----|
-| Normal wait | `WAIT: 3 passing, 2 in-progress — 120s until auto-cancel` |
-| Branch behind base | `WAIT: 2 passing, 0 in-progress — branch is behind base — 300s until auto-cancel` |
-| Blocked | `WAIT: 4 passing, 0 in-progress — blocked by pending reviews or required status checks` |
+| Scenario                             | Log                                                                                                       |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| Normal wait                          | `WAIT: 3 passing, 2 in-progress — 120s until auto-cancel`                                                 |
+| Branch behind base                   | `WAIT: 2 passing, 0 in-progress — branch is behind base — 300s until auto-cancel`                         |
+| Blocked                              | `WAIT: 4 passing, 0 in-progress — blocked by pending reviews or required status checks`                   |
 | Merge conflicts (no actionable work) | `WAIT: 0 passing, 0 in-progress — merge conflicts — rebase on next push, or now if no pushes are planned` |
 
 **What the loop does:** Print `result.log` and wait for the next cron fire.
@@ -74,12 +75,13 @@ Re-triggers CI runs that failed due to transient infrastructure or timeout issue
 
 **Key fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
+| Field   | Type       | Description                    |
+| ------- | ---------- | ------------------------------ |
 | `reran` | `string[]` | Run IDs that were re-triggered |
-| `log` | `string` | Ready-to-print summary line |
+| `log`   | `string`   | Ready-to-print summary line    |
 
 **Example `log`:**
+
 ```
 RERAN 2 CI checks: run-100 run-101
 ```
@@ -100,12 +102,13 @@ Converts a draft PR to ready for review.
 
 **Key fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
+| Field         | Type      | Description                      |
+| ------------- | --------- | -------------------------------- |
 | `markedReady` | `boolean` | Whether `gh pr ready` was called |
-| `log` | `string` | Ready-to-print summary line |
+| `log`         | `string`  | Ready-to-print summary line      |
 
 **Example `log`:**
+
 ```
 MARKED READY: PR #42 converted from draft to ready for review
 ```
@@ -126,16 +129,16 @@ Stops the monitor loop — no further iterations needed.
 
 **Key fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
+| Field | Type     | Description                        |
+| ----- | -------- | ---------------------------------- |
 | `log` | `string` | Human-readable reason for stopping |
 
 **Example `log` values:**
 
-| Scenario | Log |
-|----------|-----|
-| PR merged | `CANCEL: PR #42 is merged — stopping monitor` |
-| PR closed | `CANCEL: PR #42 is closed — stopping monitor` |
+| Scenario            | Log                                                                                |
+| ------------------- | ---------------------------------------------------------------------------------- |
+| PR merged           | `CANCEL: PR #42 is merged — stopping monitor`                                      |
+| PR closed           | `CANCEL: PR #42 is closed — stopping monitor`                                      |
 | Ready-delay elapsed | `CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping monitor` |
 
 **What the loop does:** Print `result.log`, then invoke `/loop cancel` via Skill tool to stop the cron job.
@@ -156,18 +159,20 @@ Rebases the branch on top of its base to clear flaky failures caused by being be
 
 **Key fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `rebase.baseBranch` | `string` | The base branch name (e.g. `main`) |
-| `rebase.reason` | `string` | Human-readable explanation |
+| Field                | Type     | Description                                          |
+| -------------------- | -------- | ---------------------------------------------------- |
+| `rebase.baseBranch`  | `string` | The base branch name (e.g. `main`)                   |
+| `rebase.reason`      | `string` | Human-readable explanation                           |
 | `rebase.shellScript` | `string` | Complete shell script including dirty-worktree guard |
 
 **Example `reason`:**
+
 ```
 Branch is behind main — rebasing to pick up latest changes and clear flaky failures
 ```
 
 **Example `shellScript`:**
+
 ```bash
 if ! git diff --quiet || ! git diff --cached --quiet; then
   echo "SKIP rebase: dirty worktree (uncommitted changes present)"
@@ -192,26 +197,27 @@ Actionable work needs a code fix, commit, and push.
 
 **Key fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `fix.threads` | `AgentThread[]` | Inline review threads (always actionable) |
-| `fix.actionableComments` | `AgentComment[]` | PR-level comments classified as real feedback |
-| `fix.noiseCommentIds` | `string[]` | Comment IDs classified as noise (quota warnings, bot acks) — minimize, do not act on |
-| `fix.checks` | `AgentCheck[]` | Actionable CI failures (deduplicated by run ID) |
-| `fix.changesRequestedReviews` | `Review[]` | Reviews with CHANGES_REQUESTED state |
-| `fix.resolveCommand` | `ResolveCommand` | Pre-built resolve argv — run after pushing |
-| `fix.instructions` | `string[]` | Ordered steps for the model to follow |
-| `cancelled` | `string[]` | Run IDs successfully cancelled by the CLI |
+| Field                         | Type             | Description                                                                          |
+| ----------------------------- | ---------------- | ------------------------------------------------------------------------------------ |
+| `fix.threads`                 | `AgentThread[]`  | Inline review threads (always actionable)                                            |
+| `fix.actionableComments`      | `AgentComment[]` | PR-level comments classified as real feedback                                        |
+| `fix.noiseCommentIds`         | `string[]`       | Comment IDs classified as noise (quota warnings, bot acks) — minimize, do not act on |
+| `fix.checks`                  | `AgentCheck[]`   | Actionable CI failures (deduplicated by run ID)                                      |
+| `fix.changesRequestedReviews` | `Review[]`       | Reviews with CHANGES_REQUESTED state                                                 |
+| `fix.resolveCommand`          | `ResolveCommand` | Pre-built resolve argv — run after pushing                                           |
+| `fix.instructions`            | `string[]`       | Ordered steps for the model to follow                                                |
+| `cancelled`                   | `string[]`       | Run IDs successfully cancelled by the CLI                                            |
 
 **`ResolveCommand` fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `argv` | `string[]` | Shell-join and run; contains `$DISMISS_MESSAGE` placeholder when applicable |
-| `requiresHeadSha` | `boolean` | Whether to append `--require-sha <HEAD_SHA>` after a successful push |
-| `requiresDismissMessage` | `boolean` | Whether to substitute `$DISMISS_MESSAGE` with a specific one-sentence description |
+| Field                    | Type       | Description                                                                       |
+| ------------------------ | ---------- | --------------------------------------------------------------------------------- |
+| `argv`                   | `string[]` | Shell-join and run; contains `$DISMISS_MESSAGE` placeholder when applicable       |
+| `requiresHeadSha`        | `boolean`  | Whether to append `--require-sha <HEAD_SHA>` after a successful push              |
+| `requiresDismissMessage` | `boolean`  | Whether to substitute `$DISMISS_MESSAGE` with a specific one-sentence description |
 
 **Example resolve command argv** (threads + comment + review):
+
 ```
 ["npx", "pr-shepherd", "resolve", "42",
  "--resolve-thread-ids", "t-1,t-2",
@@ -219,9 +225,11 @@ Actionable work needs a code fix, commit, and push.
  "--dismiss-review-ids", "r-1",
  "--message", "$DISMISS_MESSAGE"]
 ```
+
 Append `--require-sha <HEAD_SHA>` if a push occurred; omit if only noise was handled.
 
 **What the loop does:** Follow `fix.instructions` in order:
+
 1. Apply code fixes for each `fix.threads` and `fix.actionableComments` item.
 2. For each `fix.checks[].runId`, fetch the log via `gh run view <runId> --log-failed` and fix the failure. If `runId` is null, tell the user to inspect the check URL manually.
 3. Apply changes from each `fix.changesRequestedReviews` item.
@@ -237,6 +245,7 @@ Append `--require-sha <HEAD_SHA>` if a push occurred; omit if only noise was han
 Ambiguous state that requires human judgement — the monitor stops and surfaces details.
 
 **Trigger:** Any of:
+
 - **`fix-thrash`** — same thread dispatched ≥ `config.iterate.fixAttemptsPerThread` times (default 3) without resolving.
 - **`pr-level-changes-requested`** — reviewer requested changes but left no inline threads, comments, or CI failures to act on (not triggered when merge conflicts are present).
 - **`thread-missing-location`** — an actionable review thread has no file or line reference, so the code location cannot be found automatically.
@@ -247,16 +256,17 @@ Ambiguous state that requires human judgement — the monitor stops and surfaces
 
 **Key fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `escalate.triggers` | `string[]` | Which conditions fired (`"fix-thrash"`, `"pr-level-changes-requested"`, `"thread-missing-location"`) |
-| `escalate.suggestion` | `string` | One-line action hint |
-| `escalate.unresolvedThreads` | `AgentThread[]` | Threads needing attention |
-| `escalate.changesRequestedReviews` | `Review[]` | Reviews with CHANGES_REQUESTED state |
-| `escalate.attemptHistory` | `Array<{threadId, attempts}>?` | Populated for `fix-thrash` |
-| `escalate.humanMessage` | `string` | Full printable block ready to show to the human |
+| Field                              | Type                           | Description                                                                                          |
+| ---------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `escalate.triggers`                | `string[]`                     | Which conditions fired (`"fix-thrash"`, `"pr-level-changes-requested"`, `"thread-missing-location"`) |
+| `escalate.suggestion`              | `string`                       | One-line action hint                                                                                 |
+| `escalate.unresolvedThreads`       | `AgentThread[]`                | Threads needing attention                                                                            |
+| `escalate.changesRequestedReviews` | `Review[]`                     | Reviews with CHANGES_REQUESTED state                                                                 |
+| `escalate.attemptHistory`          | `Array<{threadId, attempts}>?` | Populated for `fix-thrash`                                                                           |
+| `escalate.humanMessage`            | `string`                       | Full printable block ready to show to the human                                                      |
 
 **Example `humanMessage`:**
+
 ```
 ⚠️  /pr-shepherd:monitor paused — needs human direction
 
