@@ -18,6 +18,7 @@ import { getRepoInfo, getCurrentPrNumber } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { getOutdatedThreads } from "../comments/outdated.mts";
 import { autoResolveOutdated, applyResolveOptions } from "../comments/resolve.mts";
+import { loadConfig } from "../config/load.mts";
 import type { GlobalOptions, ResolveOptions, ReviewThread, PrComment, Review } from "../types.mts";
 
 // ---------------------------------------------------------------------------
@@ -30,6 +31,7 @@ export interface FetchResult {
   actionableThreads: FetchThread[];
   actionableComments: PrComment[];
   changesRequestedReviews: Review[];
+  reviewSummaries: Review[];
 }
 
 export interface ResolveCommandOptions extends GlobalOptions {
@@ -64,10 +66,13 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
 
   const activeThreads = unresolvedThreads.filter((t) => !t.isOutdated);
 
+  const cfg = loadConfig();
+
   return {
     actionableThreads: activeThreads.map(({ isResolved: _r, isOutdated: _o, ...rest }) => rest),
     actionableComments: visibleComments,
     changesRequestedReviews: data.changesRequestedReviews,
+    reviewSummaries: cfg.resolve.fetchReviewSummaries ? data.reviewSummaries : [],
   };
 }
 

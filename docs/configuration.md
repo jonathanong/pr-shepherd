@@ -124,6 +124,14 @@ Maximum number of parallel GraphQL mutations when resolving threads, minimizing 
 - **Lower** if you see `HTTP 403: secondary rate limit` errors.
 - **Raise** cautiously for PRs with many threads.
 
+### `resolve.fetchReviewSummaries` — default `true`
+
+When `true`, `pr-shepherd resolve --fetch` includes COMMENTED review summaries (PR-level overview bodies, like those produced by `copilot-pull-request-reviewer` and `gemini-code-assist`) in the `reviewSummaries` array returned to the agent. The agent classifies each one through the normal triage flow and minimizes it via `--minimize-comment-ids` as appropriate.
+
+Set to `false` to opt out entirely — the agent will not see or act on review summaries for this repository.
+
+Note: the GraphQL batch query always fetches review summaries regardless of this flag; only their exposure to the agent is gated. This keeps the shared batch query simple.
+
 ### `resolve.shaPoll`
 
 Controls the push-safety polling used when `--require-sha <SHA>` is passed to `pr-shepherd resolve`.

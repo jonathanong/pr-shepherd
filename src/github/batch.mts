@@ -82,21 +82,41 @@ export async function fetchPrBatch(pr: number, repo: RepoInfo): Promise<BatchRes
     rawCommentNodes = [...extra, ...rawCommentNodes];
   }
 
-  // Paginate reviews backward if the first page is incomplete.
-  let rawReviewNodes = raw.reviews.nodes;
-  if (raw.reviews.pageInfo.hasPreviousPage && raw.reviews.pageInfo.startCursor) {
+  // Paginate CHANGES_REQUESTED reviews backward if the first page is incomplete.
+  let rawReviewNodes = raw.changesRequestedReviews.nodes;
+  if (
+    raw.changesRequestedReviews.pageInfo.hasPreviousPage &&
+    raw.changesRequestedReviews.pageInfo.startCursor
+  ) {
     const extra = await paginateBackward<RawReview>(async (cursor) => {
       const res = await graphql<RawBatchResponse>(BATCH_PR_QUERY, {
         owner: repo.owner,
         repo: repo.name,
         pr,
-        ...(cursor ? { reviewsCursor: cursor } : {}),
+        ...(cursor ? { changesRequestedCursor: cursor } : {}),
       });
       const pr2 = res.data.repository.pullRequest;
       if (!pr2) throw new Error(`PR #${pr} not found`);
-      return pr2.reviews;
-    }, raw.reviews.pageInfo.startCursor);
+      return pr2.changesRequestedReviews;
+    }, raw.changesRequestedReviews.pageInfo.startCursor);
     rawReviewNodes = [...extra, ...rawReviewNodes];
+  }
+
+  // Paginate COMMENTED review summaries backward if the first page is incomplete.
+  let rawReviewSummaryNodes = raw.reviewSummaries.nodes;
+  if (raw.reviewSummaries.pageInfo.hasPreviousPage && raw.reviewSummaries.pageInfo.startCursor) {
+    const extra = await paginateBackward<RawReviewSummary>(async (cursor) => {
+      const res = await graphql<RawBatchResponse>(BATCH_PR_QUERY, {
+        owner: repo.owner,
+        repo: repo.name,
+        pr,
+        ...(cursor ? { reviewSummariesCursor: cursor } : {}),
+      });
+      const pr2 = res.data.repository.pullRequest;
+      if (!pr2) throw new Error(`PR #${pr} not found`);
+      return pr2.reviewSummaries;
+    }, raw.reviewSummaries.pageInfo.startCursor);
+    rawReviewSummaryNodes = [...extra, ...rawReviewSummaryNodes];
   }
 
   // Paginate check contexts forward if the first page is incomplete.
@@ -119,7 +139,14 @@ export async function fetchPrBatch(pr: number, repo: RepoInfo): Promise<BatchRes
     rawCheckNodes = [...rawCheckNodes, ...extra];
   }
 
-  const data = parseRawPr(raw, rawThreadPages, rawCommentNodes, rawReviewNodes, rawCheckNodes);
+  const data = parseRawPr(
+    raw,
+    rawThreadPages,
+    rawCommentNodes,
+    rawReviewNodes,
+    rawReviewSummaryNodes,
+    rawCheckNodes,
+  );
   return { data, rateLimit: result.rateLimit };
 }
 
@@ -132,6 +159,7 @@ function parseRawPr(
   rawThreadPages: RawThread[],
   rawCommentNodes: RawComment[],
   rawReviewNodes: RawReview[],
+  rawReviewSummaryNodes: RawReviewSummary[],
   rawCheckNodes: RawContextNode[],
 ): BatchPrData {
   const reviewRequests = (raw.reviewRequests?.nodes ?? []).flatMap((n) => {
@@ -172,6 +200,14 @@ function parseRawPr(
     author: r.author?.login ?? "unknown",
     body: r.body,
   }));
+
+  const reviewSummaries: Review[] = rawReviewSummaryNodes
+    .filter((r) => !r.isMinimized && r.body.trim() !== "")
+    .map((r) => ({
+      id: r.id,
+      author: r.author?.login ?? "unknown",
+      body: r.body,
+    }));
 
   const checks: CheckRun[] = rawCheckNodes.flatMap((node) => {
     if (node.__typename === "CheckRun") {
@@ -218,6 +254,7 @@ function parseRawPr(
     reviewThreads,
     comments,
     changesRequestedReviews,
+    reviewSummaries,
     checks,
   };
 }
@@ -289,9 +326,13 @@ interface RawPr {
     pageInfo: { hasPreviousPage: boolean; startCursor: string | null };
     nodes: RawComment[];
   };
-  reviews: {
+  changesRequestedReviews: {
     pageInfo: { hasPreviousPage: boolean; startCursor: string | null };
     nodes: RawReview[];
+  };
+  reviewSummaries: {
+    pageInfo: { hasPreviousPage: boolean; startCursor: string | null };
+    nodes: RawReviewSummary[];
   };
   commits: {
     nodes: Array<{
@@ -334,6 +375,13 @@ interface RawComment {
 
 interface RawReview {
   id: string;
+  author: { login: string } | null;
+  body: string;
+}
+
+interface RawReviewSummary {
+  id: string;
+  isMinimized: boolean;
   author: { login: string } | null;
   body: string;
 }

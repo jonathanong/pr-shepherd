@@ -14,16 +14,28 @@ vi.mock("../comments/resolve.mts", () => ({
   applyResolveOptions: vi.fn(),
 }));
 
+vi.mock("../config/load.mts", () => ({
+  loadConfig: vi.fn().mockReturnValue({
+    resolve: {
+      concurrency: 4,
+      shaPoll: { intervalMs: 2000, maxAttempts: 10 },
+      fetchReviewSummaries: true,
+    },
+  }),
+}));
+
 import { runResolveFetch, runResolveMutate } from "./resolve.mts";
 import { getCurrentPrNumber } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { autoResolveOutdated, applyResolveOptions } from "../comments/resolve.mts";
+import { loadConfig } from "../config/load.mts";
 import type { BatchPrData, ReviewThread, PrComment } from "../types.mts";
 
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockFetchPrBatch = vi.mocked(fetchPrBatch);
 const mockAutoResolveOutdated = vi.mocked(autoResolveOutdated);
 const mockApplyResolveOptions = vi.mocked(applyResolveOptions);
+const mockLoadConfig = vi.mocked(loadConfig);
 
 const BASE_OPTS = { format: "text" as const, noCache: false, cacheTtlSeconds: 300 };
 
@@ -42,6 +54,7 @@ function makeBatchData(overrides: Partial<BatchPrData> = {}): BatchPrData {
     reviewThreads: [],
     comments: [],
     changesRequestedReviews: [],
+    reviewSummaries: [],
     checks: [],
     ...overrides,
   };
@@ -138,6 +151,35 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
 
     const result = await runResolveFetch(BASE_OPTS);
     expect(result.actionableThreads.map((t) => t.id)).toEqual(["t-visible"]);
+  });
+
+  it("surfaces reviewSummaries when fetchReviewSummaries is true", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        reviewSummaries: [{ id: "PRR_1", author: "copilot", body: "overview" }],
+      }),
+    });
+
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.reviewSummaries).toEqual([{ id: "PRR_1", author: "copilot", body: "overview" }]);
+  });
+
+  it("returns empty reviewSummaries when fetchReviewSummaries is false", async () => {
+    mockLoadConfig.mockReturnValueOnce({
+      resolve: {
+        concurrency: 4,
+        shaPoll: { intervalMs: 2000, maxAttempts: 10 },
+        fetchReviewSummaries: false,
+      },
+    } as ReturnType<typeof loadConfig>);
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        reviewSummaries: [{ id: "PRR_1", author: "copilot", body: "overview" }],
+      }),
+    });
+
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.reviewSummaries).toEqual([]);
   });
 });
 

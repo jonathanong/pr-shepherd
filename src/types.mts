@@ -138,6 +138,8 @@ export interface BatchPrData {
   reviewThreads: ReviewThread[];
   comments: PrComment[];
   changesRequestedReviews: Review[];
+  /** COMMENTED reviews with a non-empty, non-minimized body — surfaced for agent-driven minimize. */
+  reviewSummaries: Review[];
   checks: CheckRun[];
 }
 

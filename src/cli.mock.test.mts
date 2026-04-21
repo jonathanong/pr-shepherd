@@ -186,10 +186,25 @@ describe("main — resolve", () => {
       actionableThreads: [],
       actionableComments: [],
       changesRequestedReviews: [],
+      reviewSummaries: [],
     });
     await main(["node", "shepherd", "resolve", "42"]);
     expect(mockRunResolveFetch).toHaveBeenCalledTimes(1);
     expect(mockRunResolveMutate).not.toHaveBeenCalled();
+  });
+
+  it("formatFetchResult renders reviewSummaries section and includes them in total", async () => {
+    mockRunResolveFetch.mockResolvedValue({
+      actionableThreads: [],
+      actionableComments: [],
+      changesRequestedReviews: [],
+      reviewSummaries: [{ id: "PRR_1", author: "copilot", body: "## PR overview\nsome detail" }],
+    });
+    await main(["node", "shepherd", "resolve", "42"]);
+    const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
+    expect(out).toContain("Review summaries (1):");
+    expect(out).toContain("reviewId=PRR_1 (@copilot): ## PR overview");
+    expect(out).toContain("1 actionable item(s)");
   });
 
   it("calls runResolveMutate when --resolve-thread-ids is given", async () => {

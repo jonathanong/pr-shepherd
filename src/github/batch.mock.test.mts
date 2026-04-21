@@ -36,7 +36,11 @@ function makeRawPr(overrides: Record<string, unknown> = {}) {
       pageInfo: { hasPreviousPage: false, startCursor: null },
       nodes: [],
     },
-    reviews: {
+    changesRequestedReviews: {
+      pageInfo: { hasPreviousPage: false, startCursor: null },
+      nodes: [],
+    },
+    reviewSummaries: {
       pageInfo: { hasPreviousPage: false, startCursor: null },
       nodes: [],
     },
@@ -416,6 +420,91 @@ describe("fetchPrBatch — team reviewer fallback", () => {
 });
 
 // ---------------------------------------------------------------------------
+// reviewSummaries — COMMENTED reviews surfaced for agent-driven minimize
+// ---------------------------------------------------------------------------
+
+describe("fetchPrBatch — reviewSummaries", () => {
+  it("surfaces non-minimized COMMENTED reviews with a body", async () => {
+    const pr = makeRawPr({
+      reviewSummaries: {
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: [
+          { id: "PRR_1", isMinimized: false, author: { login: "copilot" }, body: "Overview text" },
+        ],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.reviewSummaries).toHaveLength(1);
+    expect(data.reviewSummaries[0]!.id).toBe("PRR_1");
+    expect(data.reviewSummaries[0]!.author).toBe("copilot");
+    expect(data.reviewSummaries[0]!.body).toBe("Overview text");
+  });
+
+  it("drops already-minimized COMMENTED review summaries", async () => {
+    const pr = makeRawPr({
+      reviewSummaries: {
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: [
+          { id: "PRR_1", isMinimized: true, author: { login: "copilot" }, body: "Already hidden" },
+          { id: "PRR_2", isMinimized: false, author: { login: "bot" }, body: "Visible" },
+        ],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.reviewSummaries).toHaveLength(1);
+    expect(data.reviewSummaries[0]!.id).toBe("PRR_2");
+  });
+
+  it("drops COMMENTED reviews with empty bodies", async () => {
+    const pr = makeRawPr({
+      reviewSummaries: {
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: [
+          { id: "PRR_1", isMinimized: false, author: { login: "bot" }, body: "" },
+          { id: "PRR_2", isMinimized: false, author: { login: "bot" }, body: "   " },
+          { id: "PRR_3", isMinimized: false, author: { login: "bot" }, body: "Real content" },
+        ],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.reviewSummaries).toHaveLength(1);
+    expect(data.reviewSummaries[0]!.id).toBe("PRR_3");
+  });
+
+  it("falls back to 'unknown' when author is null", async () => {
+    const pr = makeRawPr({
+      reviewSummaries: {
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: [{ id: "PRR_1", isMinimized: false, author: null, body: "text" }],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.reviewSummaries[0]!.author).toBe("unknown");
+  });
+
+  it("CHANGES_REQUESTED reviews are not mixed into reviewSummaries", async () => {
+    const pr = makeRawPr({
+      changesRequestedReviews: {
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: [{ id: "PRR_CR", author: { login: "alice" }, body: "Please fix this" }],
+      },
+      reviewSummaries: {
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: [{ id: "PRR_CM", isMinimized: false, author: { login: "bot" }, body: "Overview" }],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.changesRequestedReviews.map((r) => r.id)).toEqual(["PRR_CR"]);
+    expect(data.reviewSummaries.map((r) => r.id)).toEqual(["PRR_CM"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Pagination — threads backward
 // ---------------------------------------------------------------------------
 
@@ -438,5 +527,61 @@ describe("fetchPrBatch — thread pagination", () => {
 
     const { data } = await fetchPrBatch(42, REPO);
     expect(data.reviewThreads.map((t) => t.id)).toEqual(["t-1", "t-2"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Pagination — changesRequestedReviews backward
+// ---------------------------------------------------------------------------
+
+describe("fetchPrBatch — changesRequestedReviews pagination", () => {
+  it("paginates backward when hasPreviousPage is true", async () => {
+    const firstPage = makeRawPr({
+      changesRequestedReviews: {
+        pageInfo: { hasPreviousPage: true, startCursor: "cursor-cr" },
+        nodes: [{ id: "PRR_CR_2", author: { login: "alice" }, body: "Fix this" }],
+      },
+    });
+    const prevPage = makeRawPr({
+      changesRequestedReviews: {
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: [{ id: "PRR_CR_1", author: { login: "bob" }, body: "Fix that" }],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
+    mockGraphql.mockResolvedValue(makeResponse(prevPage));
+
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.changesRequestedReviews.map((r) => r.id)).toEqual(["PRR_CR_1", "PRR_CR_2"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Pagination — reviewSummaries backward
+// ---------------------------------------------------------------------------
+
+describe("fetchPrBatch — reviewSummaries pagination", () => {
+  it("paginates backward when hasPreviousPage is true", async () => {
+    const firstPage = makeRawPr({
+      reviewSummaries: {
+        pageInfo: { hasPreviousPage: true, startCursor: "cursor-rs" },
+        nodes: [
+          { id: "PRR_2", isMinimized: false, author: { login: "bot" }, body: "Second summary" },
+        ],
+      },
+    });
+    const prevPage = makeRawPr({
+      reviewSummaries: {
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: [
+          { id: "PRR_1", isMinimized: false, author: { login: "bot" }, body: "First summary" },
+        ],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
+    mockGraphql.mockResolvedValue(makeResponse(prevPage));
+
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.reviewSummaries.map((r) => r.id)).toEqual(["PRR_1", "PRR_2"]);
   });
 });
