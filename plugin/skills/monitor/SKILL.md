@@ -16,7 +16,7 @@ allowed-tools:
 ## Resolve PR number
 
 1. Strip any trailing `every <N> <unit>` interval clause from `$ARGUMENTS` first.
-2. Extract `--ready-delay <duration>` if present (e.g. `--ready-delay 15m`). Default: `10m`.
+2. Extract `--ready-delay <duration>` if present (e.g. `--ready-delay 15m`). Default: `10m`. Keep the raw duration string (e.g. `10m`) — do **not** convert to seconds.
 3. If the remaining text contains a PR number or GitHub PR URL, extract the number.
 4. Otherwise, infer: `gh pr list --head "$(git rev-parse --abbrev-ref HEAD)" --json number --jq '.[0].number'`
 5. If no PR found, report an error and stop.
@@ -41,7 +41,9 @@ Invoke `/loop <INTERVAL> --max-turns 50 --expires 8h` via the Skill tool. Use th
 **Self-dedup:** Run `CronList`. If more than one job contains `# pr-shepherd-loop:pr=<PR_NUMBER>`, keep the lowest job ID and `CronDelete` the rest (ignore errors — a concurrent runner may have already deleted them).
 
 Run in a single Bash call:
-  npx pr-shepherd iterate <PR_NUMBER> --ready-delay <READY_DELAY> --no-cache --last-push-time "$(git log -1 --format=%ct HEAD)" --format=json
+  npx pr-shepherd iterate <PR_NUMBER> --ready-delay <READY_DELAY_DURATION> --no-cache --last-push-time "$(git log -1 --format=%ct HEAD)" --format=json
+
+(`<READY_DELAY_DURATION>` is the raw duration string, e.g. `10m` — never a bare number of seconds)
 
 Exit codes 0–3 are all valid — always parse stdout as JSON first. If stdout is not valid JSON (crash), log the first line of stderr and stop.
 
@@ -76,7 +78,7 @@ The default 4-minute interval is chosen for two reasons:
 The loop prompt above handles each iteration directly — no subagent is spawned. The same iterate command can be run manually at any time:
 
 ```bash
-npx pr-shepherd iterate <PR_NUMBER> --ready-delay <READY_DELAY> --no-cache --last-push-time "$(git log -1 --format=%ct HEAD)" --format=json
+npx pr-shepherd iterate <PR_NUMBER> --ready-delay <READY_DELAY_DURATION> --no-cache --last-push-time "$(git log -1 --format=%ct HEAD)" --format=json
 ```
 
 To stop monitoring manually, use `/loop cancel` or close the session.
