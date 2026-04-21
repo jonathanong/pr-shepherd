@@ -95,7 +95,7 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
         baseBranch: "main",
         reason: "BEHIND + flaky CI — rebasing onto origin/main",
         shellScript:
-          'if ! git diff --quiet || ! git diff --cached --quiet; then\n  echo "SKIP rebase: dirty worktree"\n  exit 0\nfi\ngit fetch origin && git rebase origin/main && git push --force-with-lease',
+          'if ! git diff --quiet || ! git diff --cached --quiet; then\n  echo "SKIP rebase: dirty worktree"\n  exit 1\nfi\ngit fetch origin && git rebase origin/main && git push --force-with-lease',
       },
     };
   if (action === "fix_code") {

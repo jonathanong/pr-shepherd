@@ -508,7 +508,11 @@ async function getBaseBranch(prNumber: number): Promise<BaseBranchLookup> {
     ]);
     const trimmed = stdout.trim();
     if (trimmed === "") {
-      return { branch: "main", isFallback: false };
+      return {
+        branch: "main",
+        isFallback: true,
+        failureReason: "gh pr view returned an empty base branch name",
+      };
     }
     // GitHub ref names can include '/' but reject anything outside safe chars
     // to prevent shell interpolation issues in buildRebaseShellScript.
@@ -639,16 +643,25 @@ function buildFixInstructions(
       `Apply code fixes: read and edit each file referenced under \`## Review threads\` and \`## Actionable comments\` above.`,
     );
   }
-  const checksWithRunId = checks.filter((c) => c.runId !== null);
-  const checksWithoutRunId = checks.filter((c) => c.runId === null);
+  // Mirror the truthiness checks in `formatIterateResult` (cli.mts) so each
+  // AgentCheck maps to the same bullet shape here as there: runId → runId
+  // bullet, else detailsUrl → external bullet, else `(no runId)` bullet.
+  const checksWithRunId = checks.filter((c) => c.runId);
+  const externalChecks = checks.filter((c) => !c.runId && c.detailsUrl);
+  const bareChecks = checks.filter((c) => !c.runId && !c.detailsUrl);
   if (checksWithRunId.length > 0) {
     instructions.push(
       `For each bullet in \`## Failing checks\` whose backticked locator is a numeric runId (GitHub Actions): run \`gh run view <runId> --log-failed\`, identify the failure, and apply the fix.`,
     );
   }
-  if (checksWithoutRunId.length > 0) {
+  if (externalChecks.length > 0) {
     instructions.push(
       `For each bullet in \`## Failing checks\` starting with \`external\` (external status check): open the linked URL in a browser to inspect the failure — \`gh run view\` cannot fetch logs for external checks.`,
+    );
+  }
+  if (bareChecks.length > 0) {
+    instructions.push(
+      `For each bullet in \`## Failing checks\` starting with \`(no runId)\`: there is no run or details URL to inspect. Escalate these to a human — they require manual investigation outside the pr-shepherd flow.`,
     );
   }
   if (reviews.length > 0) {

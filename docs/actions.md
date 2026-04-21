@@ -112,7 +112,7 @@ Each comma-separated entry on the body line has shape `<runId> (<check names joi
 
 Converts a draft PR to ready for review.
 
-**Trigger:** All of: `status === "READY"`, `mergeStateStatus === "CLEAN"` (or `"DRAFT"` when `isDraft`), Copilot review not in progress, `isDraft === true`, ready-delay elapsed.
+**Trigger:** All of: `status === "READY"`, `mergeStateStatus === "CLEAN"` (or `"DRAFT"` when `isDraft`), Copilot review not in progress, `isDraft === true`, ready-delay not elapsed (`readyState.shouldCancel === false`). Once the delay elapses, the action flips to `cancel`.
 
 **CLI side-effects:** Calls `gh pr ready <PR>` before returning.
 

@@ -135,6 +135,9 @@ beforeEach(() => {
     if (cmd === "git" && args[0] === "rev-parse") {
       return Promise.resolve({ stdout: "abc123", stderr: "" });
     }
+    if (cmd === "gh" && args[0] === "pr" && args[1] === "view" && args.includes("baseRefName")) {
+      return Promise.resolve({ stdout: "main\n", stderr: "" });
+    }
     return Promise.resolve({ stdout: "", stderr: "" });
   });
   vi.useFakeTimers();
@@ -319,9 +322,12 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
       shouldCancel: false,
       remainingSeconds: 600,
     });
-    mockExecFile.mockImplementation((_cmd: string, args: string[]) => {
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
       if (args[0] === "run" && args[1] === "cancel" && args[2] === "run-100") {
         return Promise.reject(new Error("run already completed"));
+      }
+      if (cmd === "gh" && args[0] === "pr" && args[1] === "view") {
+        return Promise.resolve({ stdout: "main\n", stderr: "" });
       }
       return Promise.resolve({ stdout: "", stderr: "" });
     });
@@ -649,6 +655,53 @@ describe("runIterate — fix_code agent projection", () => {
       expect(instructionsJoined).toContain("gh run view <runId> --log-failed");
       expect(instructionsJoined).toContain("external status check");
       expect(instructionsJoined).toContain("open the linked URL");
+      // No bare-check bullets in this test, so the `(no runId)` instruction is omitted.
+      expect(instructionsJoined).not.toContain("(no runId)");
+    }
+  });
+
+  it("bare check (runId=null, no detailsUrl) — emits escalate-to-human instruction", async () => {
+    const bareCheck = {
+      name: "mystery",
+      status: "COMPLETED" as const,
+      conclusion: "FAILURE" as const,
+      detailsUrl: "",
+      event: "pull_request",
+      runId: null,
+      category: "failing" as const,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        checks: {
+          passing: [],
+          failing: [bareCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockTriageFailingChecks.mockResolvedValue([
+      { ...bareCheck, failureKind: "actionable", category: "failing" as const },
+    ]);
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      const instructionsJoined = result.fix.instructions.join("\n");
+      expect(instructionsJoined).toContain("(no runId)");
+      expect(instructionsJoined).toMatch(/escalate/i);
+      // external-check instruction is gated separately and must NOT appear for a bare check.
+      expect(instructionsJoined).not.toContain("external status check");
     }
   });
 });
@@ -1880,6 +1933,34 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
     expect(result.action).toBe("escalate");
     if (result.action === "escalate") {
       expect(result.escalate.triggers).toEqual(["base-branch-unknown"]);
+    }
+  });
+
+  it("escalates with base-branch-unknown when gh pr view returns empty stdout", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "gh" && args[0] === "pr" && args[1] === "view") {
+        // Simulate transient gh output glitch — command succeeds but emits empty stdout.
+        return Promise.resolve({ stdout: "", stderr: "" });
+      }
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toContain("base-branch-unknown");
+      expect(result.escalate.suggestion).toMatch(/empty base branch name/);
     }
   });
 });
