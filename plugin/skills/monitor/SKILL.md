@@ -44,7 +44,7 @@ Run in a single Bash call:
   npx pr-shepherd iterate <PR_NUMBER> --ready-delay <READY_DELAY_DURATION> --no-cache --last-push-time "$(git log -1 --format=%ct HEAD)"
 (`<READY_DELAY_DURATION>` is the raw duration string, e.g. `10m` — never a bare number of seconds)
 
-Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no output), log the first line of stderr and stop.
+Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no output that starts with `PR #<N> [`), log the first line of stderr and continue — do not cancel the loop. The next cron fire will retry.
 
 Read the output and act on the `[ACTION]` tag in the first line (see [docs/actions.md](../../../docs/actions.md) for full output shapes):
 

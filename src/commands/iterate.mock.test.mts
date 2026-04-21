@@ -591,6 +591,52 @@ describe("runIterate — fix_code agent projection", () => {
       expect(c).not.toHaveProperty("category");
     }
   });
+
+  it("external status check (runId=null) — instructions split by runId presence", async () => {
+    const externalCheck = {
+      name: "codecov/patch",
+      status: "COMPLETED" as const,
+      conclusion: "FAILURE" as const,
+      detailsUrl: "https://app.codecov.io/...",
+      event: "pull_request",
+      runId: null,
+      category: "failing" as const,
+    };
+    const ghActionsCheck = makeActionableCheck("run-77", "lint");
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        checks: {
+          passing: [],
+          failing: [externalCheck, ghActionsCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockTriageFailingChecks.mockResolvedValue([
+      { ...externalCheck, failureKind: "actionable", category: "failing" as const },
+      { ...ghActionsCheck, failureKind: "actionable" },
+    ]);
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      const instructionsJoined = result.fix.instructions.join("\n");
+      expect(instructionsJoined).toContain("with a runId: run gh run view");
+      expect(instructionsJoined).toContain("runId=null");
+      expect(instructionsJoined).toContain("open detailsUrl");
+    }
+  });
 });
 
 describe("runIterate — rerun_ci", () => {

@@ -371,7 +371,7 @@ describe("main — iterate text format", () => {
     expect(lines[6]).toBe("  comment PRRC_1 (@bot):");
     expect(lines[7]).toBe("    please address");
     expect(lines[8]).toBe("  check run-42 — lint (actionable)");
-    expect(lines[9]).toBe("  check (no runId) — codecov/patch (actionable)");
+    expect(lines[9]).toBe("  check external https://app.codecov.io — codecov/patch (actionable)");
     expect(lines[10]).toBe("  review REV_1 (@reviewer): changes requested");
     expect(lines[11]).toBe("  noise (minimize only): c-noise-1, c-noise-2");
     expect(lines[12]).toBe("  cancelled runs: run-99");
@@ -425,6 +425,33 @@ describe("main — iterate text format", () => {
     expect(lines[headerIdx + 5]).toBe(
       "    Third paragraph with a ```suggestion``` block that must survive.",
     );
+  });
+
+  it("fix_code: check with runId=null + detailsUrl renders 'external <url>', without detailsUrl falls back to '(no runId)'", async () => {
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    result.fix.checks = [
+      {
+        name: "codecov/patch",
+        runId: null,
+        detailsUrl: "https://app.codecov.io/a/b",
+        failureKind: "actionable",
+      },
+      {
+        name: "mystery-check",
+        runId: null,
+        detailsUrl: null,
+        failureKind: "actionable",
+      },
+    ];
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    expect(out).toContain(
+      "  check external https://app.codecov.io/a/b — codecov/patch (actionable)",
+    );
+    expect(out).toContain("  check (no runId) — mystery-check (actionable)");
   });
 
   it("json format: emits a single JSON.stringify(result)+newline, no formatter output", async () => {

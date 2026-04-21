@@ -280,9 +280,8 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
       }
       // Compact one-liners for checks, reviews, noise, cancelled runs.
       for (const ch of result.fix.checks) {
-        items.push(
-          `  check ${ch.runId ?? "(no runId)"} — ${ch.name} (${ch.failureKind ?? "actionable"})`,
-        );
+        const locator = ch.runId ?? (ch.detailsUrl ? `external ${ch.detailsUrl}` : "(no runId)");
+        items.push(`  check ${locator} — ${ch.name} (${ch.failureKind ?? "actionable"})`);
       }
       for (const r of result.fix.changesRequestedReviews) {
         items.push(`  review ${r.id} (@${r.author}): changes requested`);

@@ -230,7 +230,7 @@ Layout (in order), with blank lines separating the section groups:
 
 - `  thread <id> <path>:<line> (@<author>):` then the full body on subsequent lines indented four spaces — one per actionable review thread. Multi-paragraph bodies are preserved verbatim (empty lines preserved), so code blocks and `\`\`\`suggestion\`\`\`` blocks survive intact.
 - `  comment <id> (@<author>):` then the full body on subsequent lines indented four spaces — one per actionable PR-level comment.
-- `  check <runId|(no runId)> — <name> (<failureKind|actionable>)` — one per actionable failing check.
+- `  check <locator> — <name> (<failureKind|actionable>)` — one per actionable failing check. `<locator>` is the runId for GitHub Actions checks, `external <detailsUrl>` for external status checks (e.g. codecov, vercel) where `runId` is null but a URL is available, and `(no runId)` only when both are null. The numbered instructions split accordingly: `gh run view <runId> --log-failed` for GitHub Actions, open `detailsUrl` manually for external checks.
 - `  review <id> (@<author>): changes requested` — one per `CHANGES_REQUESTED` review.
 - `  noise (minimize only): <id>, <id>, …` — comments classified as bot noise (quota warnings, rate-limit acks). Minimize on GitHub but do not act on them.
 - `  cancelled runs: <id>, <id>, …` — emitted only when CLI-side `gh run cancel` succeeded for at least one run.

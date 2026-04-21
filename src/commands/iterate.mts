@@ -573,9 +573,16 @@ function buildFixInstructions(
       `Apply code fixes: read and edit each file referenced in fix.threads and fix.actionableComments.`,
     );
   }
-  if (checks.length > 0) {
+  const checksWithRunId = checks.filter((c) => c.runId !== null);
+  const checksWithoutRunId = checks.filter((c) => c.runId === null);
+  if (checksWithRunId.length > 0) {
     instructions.push(
-      `For each fix.checks[].runId: run gh run view <runId> --log-failed, identify the failure, and apply the fix.`,
+      `For each fix.checks[] with a runId: run gh run view <runId> --log-failed, identify the failure, and apply the fix.`,
+    );
+  }
+  if (checksWithoutRunId.length > 0) {
+    instructions.push(
+      `For each fix.checks[] with runId=null (external status check): open detailsUrl in the browser to inspect the failure — gh run view cannot fetch logs for external checks.`,
     );
   }
   if (reviews.length > 0) {
