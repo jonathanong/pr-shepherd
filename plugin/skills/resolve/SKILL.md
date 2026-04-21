@@ -47,7 +47,6 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
    Parse the JSON for `actionableThreads`, `actionableComments`, `changesRequestedReviews`.
 
 3. **Triage each actionable item** into exactly one of these five buckets. Before classifying, read the comment body and — for threads — the referenced file and line.
-
    - **Fixed** — already addressed in a prior commit; no new work needed.
    - **Actionable** — real issue, not yet fixed; proceed to step 4.
    - **Not relevant** — does not apply to this PR (e.g. comment is about unrelated code).
