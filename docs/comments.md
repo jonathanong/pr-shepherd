@@ -4,10 +4,11 @@
 
 ## Review threads vs PR comments
 
-| Type          | Description                                            | GraphQL field               |
-| ------------- | ------------------------------------------------------ | --------------------------- |
-| Review thread | Inline code comment attached to a specific file + line | `pullRequest.reviewThreads` |
-| PR comment    | Top-level comment on the PR (not attached to a file)   | `pullRequest.comments`      |
+| Type           | Description                                                               | GraphQL field                                        |
+| -------------- | ------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Review thread  | Inline code comment attached to a specific file + line                    | `pullRequest.reviewThreads`                          |
+| PR comment     | Top-level comment on the PR (not attached to a file)                      | `pullRequest.comments`                               |
+| Review summary | PR-level body of a COMMENTED review (e.g. bot overview)                  | `pullRequest.reviews(states: COMMENTED)` (new)       |
 
 Shepherd reports both types in the `report.threads` and `report.comments` fields respectively.
 
@@ -49,5 +50,7 @@ All mutations live in `comments/resolve.mts`:
 | Mutation         | GraphQL file                      | What it does                                        |
 | ---------------- | --------------------------------- | --------------------------------------------------- |
 | Resolve thread   | `github/gql/resolve-thread.gql`   | Marks a review thread resolved                      |
-| Minimize comment | `github/gql/minimize-comment.gql` | Hides a PR comment (marks it as spam/resolved)      |
+| Minimize comment | `github/gql/minimize-comment.gql` | Hides a PR comment or review summary (`PullRequestReview` implements `Minimizable`) |
 | Dismiss review   | `github/gql/dismiss-review.gql`   | Dismisses a CHANGES_REQUESTED review with a message |
+
+Review summary IDs (`PRR_…` from `reviewSummaries`) go through `--minimize-comment-ids`, not `--dismiss-review-ids`. The `dismiss` path is reserved for CHANGES_REQUESTED reviews.

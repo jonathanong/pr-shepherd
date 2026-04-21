@@ -212,10 +212,20 @@ function formatFetchResult(result: Awaited<ReturnType<typeof runResolveFetch>>):
     }
   }
 
+  if (result.reviewSummaries.length > 0) {
+    lines.push(`\nReview summaries (${result.reviewSummaries.length}):`);
+    for (const r of result.reviewSummaries) {
+      lines.push(
+        `  - reviewId=${r.id} (@${r.author}): ${r.body.split("\n")[0]?.slice(0, 100) ?? ""}`,
+      );
+    }
+  }
+
   const total =
     result.actionableThreads.length +
     result.actionableComments.length +
-    result.changesRequestedReviews.length;
+    result.changesRequestedReviews.length +
+    result.reviewSummaries.length;
   lines.push(
     `\nSummary: ${total === 0 ? "0 actionable — all threads resolved/minimized" : `${total} actionable item(s)`}`,
   );

@@ -44,7 +44,7 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
    ```
 
    The CLI auto-resolves outdated threads.
-   Parse the JSON for `actionableThreads`, `actionableComments`, `changesRequestedReviews`.
+   Parse the JSON for `actionableThreads`, `actionableComments`, `changesRequestedReviews`, `reviewSummaries`.
 
 3. **Triage each actionable item** into exactly one of these five buckets. Before classifying, read the comment body and — for threads — the referenced file and line.
    - **Fixed** — already addressed in a prior commit; no new work needed.
@@ -54,6 +54,8 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
    - **Acknowledge** — real comment, intentionally not acting on it (e.g. reviewer flagged it as "won't fix" or "not worth it," scope-out decision, deferring to a follow-up PR). Record the one-sentence reason — you will include it in the step 7 report so the user can override.
 
    Every item returned by step 2 **must** land in one of these buckets. Do not carry an item forward as "unclassified" or silently skip it. If you genuinely can't decide, that's the Acknowledge bucket with reason "unclear — flagging for human review."
+
+   **Review summaries** (`reviewSummaries`): these are PR-level overview bodies from COMMENTED reviews. Bot-generated summaries (authors like `copilot-pull-request-reviewer`, `gemini-code-assist`, or other bot accounts) are almost always noise — default them to **Acknowledge** with reason "bot summary — no actionable content" unless the body explicitly calls out an unaddressed issue. Human-authored review summaries should be read carefully and classified like any other item.
 
 4. **Fix actionable items.** For each Actionable item:
    - Read the relevant file(s) and apply the fix (Edit/Write tools)
@@ -70,8 +72,9 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
 6. **Resolve all verified items** — **only if at least one of the three ID lists is non-empty.** If all lists are empty, skip this step entirely (running resolve with no mutation IDs enters fetch mode as a side effect). Build the command from the non-empty ID lists; omit any flag whose list is empty. For Fixed items, this step runs only after the push; Acknowledge / Not relevant / Outdated items can be resolved without a push (and therefore without `--require-sha`).
 
    Each bucket maps to a mutation flag:
-   - **Fixed** threads → `--resolve-thread-ids`; Fixed comments → `--minimize-comment-ids`; Fixed reviews → `--dismiss-review-ids --message "<what you changed>"`.
-   - **Acknowledge / Not relevant / Outdated** threads → `--resolve-thread-ids`; same-bucket comments → `--minimize-comment-ids`; same-bucket reviews → `--dismiss-review-ids --message "<why you're not acting>"`.
+   - **Fixed** threads → `--resolve-thread-ids`; Fixed comments → `--minimize-comment-ids`; Fixed reviews (CHANGES_REQUESTED) → `--dismiss-review-ids --message "<what you changed>"`.
+   - **Acknowledge / Not relevant / Outdated** threads → `--resolve-thread-ids`; same-bucket comments → `--minimize-comment-ids`; same-bucket reviews (CHANGES_REQUESTED) → `--dismiss-review-ids --message "<why you're not acting>"`.
+   - **Review summaries** in any bucket (Fixed, Acknowledge, Not relevant, Outdated) → `--minimize-comment-ids`. Review summary IDs (`PRR_…` from `reviewSummaries`) are passed here, not to `--dismiss-review-ids`. Do not pass review summary IDs to `--dismiss-review-ids` — that flag is only for CHANGES_REQUESTED reviews.
 
    ```bash
    npx pr-shepherd resolve <N> \

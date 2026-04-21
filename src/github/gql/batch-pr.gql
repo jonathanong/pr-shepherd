@@ -5,7 +5,8 @@ query BatchPr(
   $threadsCursor: String
   $checksCursor: String
   $commentsCursor: String
-  $reviewsCursor: String
+  $changesRequestedCursor: String
+  $reviewSummariesCursor: String
 ) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
@@ -81,13 +82,27 @@ query BatchPr(
           createdAt
         }
       }
-      reviews(states: CHANGES_REQUESTED, last: 50, before: $reviewsCursor) {
+      changesRequestedReviews: reviews(states: CHANGES_REQUESTED, last: 50, before: $changesRequestedCursor) {
         pageInfo {
           hasPreviousPage
           startCursor
         }
         nodes {
           id
+          author {
+            login
+          }
+          body
+        }
+      }
+      reviewSummaries: reviews(states: COMMENTED, last: 50, before: $reviewSummariesCursor) {
+        pageInfo {
+          hasPreviousPage
+          startCursor
+        }
+        nodes {
+          id
+          isMinimized
           author {
             login
           }

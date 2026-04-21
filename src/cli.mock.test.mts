@@ -186,6 +186,7 @@ describe("main — resolve", () => {
       actionableThreads: [],
       actionableComments: [],
       changesRequestedReviews: [],
+      reviewSummaries: [],
     });
     await main(["node", "shepherd", "resolve", "42"]);
     expect(mockRunResolveFetch).toHaveBeenCalledTimes(1);

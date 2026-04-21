@@ -24,6 +24,8 @@ export interface PrShepherdConfig {
       intervalMs: number;
       maxAttempts: number;
     };
+    /** When false, COMMENTED review summaries are not surfaced in resolve --fetch output. */
+    fetchReviewSummaries: boolean;
   };
   checks: {
     ciTriggerEvents: string[];
