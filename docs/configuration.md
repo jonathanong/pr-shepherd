@@ -212,7 +212,7 @@ Disable if your team uses the draft state as a deliberate gate that requires a h
 | Variable                        | Effect                                                                                                           |
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | `PR_SHEPHERD_CACHE_DIR`         | Override the cache base directory (default `$TMPDIR/pr-shepherd-cache`)                                          |
-| `PR_SHEPHERD_CACHE_TTL_SECONDS` | Override `cache.ttlSeconds`; takes precedence over both the RC file and `--cache-ttl`                            |
+| `PR_SHEPHERD_CACHE_TTL_SECONDS` | Override `cache.ttlSeconds`. Precedence: `--cache-ttl` > this env var > RC/config value.                         |
 | `GH_TOKEN` / `GITHUB_TOKEN`     | GitHub auth token. Resolution order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` fallback (requires `gh` CLI). |
 
 ## Deprecated keys

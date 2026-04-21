@@ -198,11 +198,11 @@ pr-shepherd status PR1 [PR2 …]                        # multi-PR table
 
 Common flags (all subcommands):
 
-| Flag                  | Default | Description                                                                    |
-| --------------------- | ------- | ------------------------------------------------------------------------------ |
-| `--format text\|json` | `text`  | Output format                                                                  |
-| `--no-cache`          | false   | Bypass the 5-minute file cache                                                 |
-| `--cache-ttl N`       | `300`   | Cache TTL in seconds; `PR_SHEPHERD_CACHE_TTL_SECONDS` env var takes precedence |
+| Flag                  | Default | Description                                                                         |
+| --------------------- | ------- | ----------------------------------------------------------------------------------- |
+| `--format text\|json` | `text`  | Output format                                                                       |
+| `--no-cache`          | false   | Bypass the 5-minute file cache                                                      |
+| `--cache-ttl N`       | `300`   | Cache TTL in seconds; takes precedence over `PR_SHEPHERD_CACHE_TTL_SECONDS` env var |
 
 ### pr-shepherd check [PR]
 
@@ -394,7 +394,7 @@ All supported keys:
 | `actions.autoRebase`                 | `true`                                    | Emit `rebase` for flaky failures when the branch is behind base                  |
 | `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR's CI goes clean                                |
 
-Environment variables: `GH_TOKEN` / `GITHUB_TOKEN` (auth; falls back to `gh auth token`), `PR_SHEPHERD_CACHE_DIR` (override cache base dir), `PR_SHEPHERD_CACHE_TTL_SECONDS` (override cache TTL, takes precedence over RC file and `--cache-ttl`).
+Environment variables: `GH_TOKEN` / `GITHUB_TOKEN` (auth; falls back to `gh auth token`), `PR_SHEPHERD_CACHE_DIR` (override cache base dir), `PR_SHEPHERD_CACHE_TTL_SECONDS` (override cache TTL; `--cache-ttl` takes precedence over this env var, which in turn takes precedence over the RC/config value).
 
 See [docs/configuration.md](docs/configuration.md) for full semantics and deprecated-key migration.
 
