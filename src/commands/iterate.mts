@@ -566,7 +566,6 @@ function buildFixInstructions(
   baseBranch: string,
   resolveCommand: ResolveCommand,
 ): string[] {
-  const resolveCmd = shellJoinArgv(resolveCommand);
   const instructions: string[] = [];
 
   if (threads.length > 0 || actionableComments.length > 0) {
@@ -592,12 +591,16 @@ function buildFixInstructions(
       `Rebase and push: git fetch origin && git rebase origin/${baseBranch} && git push --force-with-lease — capture HEAD_SHA=$(git rev-parse HEAD)`,
     );
   }
-  const substituteHint = resolveCommand.requiresHeadSha
-    ? ` (substitute "$HEAD_SHA" with the pushed commit SHA${resolveCommand.requiresDismissMessage ? "; substitute $DISMISS_MESSAGE with a one-sentence description of what you changed" : ""})`
-    : resolveCommand.requiresDismissMessage
-      ? " (substitute $DISMISS_MESSAGE with a one-sentence description of what you changed)"
-      : "";
-  instructions.push(`Run the resolve command${substituteHint}: ${resolveCmd}`);
+  const substituteParts: string[] = [];
+  if (resolveCommand.requiresHeadSha) {
+    substituteParts.push(`"$HEAD_SHA" with the pushed commit SHA`);
+  }
+  if (resolveCommand.requiresDismissMessage) {
+    substituteParts.push(`$DISMISS_MESSAGE with a one-sentence description of what you changed`);
+  }
+  const substituteHint =
+    substituteParts.length > 0 ? `, substituting ${substituteParts.join(" and ")}` : "";
+  instructions.push(`Run the \`resolve:\` command shown above${substituteHint}.`);
 
   return instructions;
 }

@@ -244,7 +244,6 @@ function formatMutateResult(result: Awaited<ReturnType<typeof runResolveMutate>>
 function formatIterateResult(result: import("./types.mts").IterateResult): string {
   const basePrefix = `PR #${result.pr} [${result.action.toUpperCase()}] status=${result.status} merge=${result.mergeStateStatus} state=${result.state}`;
   const infoLine = `info: repo=${result.repo} passing=${result.summary.passing} skipped=${result.summary.skipped} filtered=${result.summary.filtered} inProgress=${result.summary.inProgress} remainingSeconds=${result.remainingSeconds} copilotReviewInProgress=${result.copilotReviewInProgress} isDraft=${result.isDraft} shouldCancel=${result.shouldCancel}`;
-  const lines: string[] = [];
 
   switch (result.action) {
     case "cooldown":
@@ -252,55 +251,61 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
     case "cancel":
     case "rerun_ci":
     case "mark_ready":
-      lines.push(`${basePrefix} — ${result.log}`);
-      break;
+      return [`${basePrefix} — ${result.log}`, infoLine].join("\n");
 
     case "rebase":
-      lines.push(`${basePrefix} — ${result.rebase.reason}`);
-      lines.push(result.rebase.shellScript);
-      break;
+      return [
+        `${basePrefix} — ${result.rebase.reason}`,
+        infoLine,
+        "",
+        result.rebase.shellScript,
+      ].join("\n");
 
     case "escalate":
-      lines.push(basePrefix);
-      lines.push(result.escalate.humanMessage);
-      break;
+      return [basePrefix, infoLine, "", result.escalate.humanMessage].join("\n");
 
     case "fix_code": {
-      lines.push(basePrefix);
+      const sections: string[][] = [];
+      const items: string[] = [];
+
+      // Threads and actionable comments — full body, indented, not truncated.
       for (const t of result.fix.threads) {
         const loc = t.path ? `${t.path}:${t.line ?? "?"}` : "(no location)";
-        lines.push(
-          `  thread ${t.id} ${loc} (@${t.author}): ${t.body.split("\n")[0]?.slice(0, 120) ?? ""}`,
-        );
+        items.push(`  thread ${t.id} ${loc} (@${t.author}):`);
+        for (const line of t.body.split("\n")) items.push(`    ${line}`);
       }
       for (const c of result.fix.actionableComments) {
-        lines.push(
-          `  comment ${c.id} (@${c.author}): ${c.body.split("\n")[0]?.slice(0, 120) ?? ""}`,
-        );
+        items.push(`  comment ${c.id} (@${c.author}):`);
+        for (const line of c.body.split("\n")) items.push(`    ${line}`);
       }
-      if (result.fix.noiseCommentIds.length > 0) {
-        lines.push(`  noise (minimize only): ${result.fix.noiseCommentIds.join(", ")}`);
-      }
+      // Compact one-liners for checks, reviews, noise, cancelled runs.
       for (const ch of result.fix.checks) {
-        lines.push(
+        items.push(
           `  check ${ch.runId ?? "(no runId)"} — ${ch.name} (${ch.failureKind ?? "actionable"})`,
         );
       }
       for (const r of result.fix.changesRequestedReviews) {
-        lines.push(`  review ${r.id} (@${r.author}): changes requested`);
+        items.push(`  review ${r.id} (@${r.author}): changes requested`);
+      }
+      if (result.fix.noiseCommentIds.length > 0) {
+        items.push(`  noise (minimize only): ${result.fix.noiseCommentIds.join(", ")}`);
       }
       if (result.cancelled.length > 0) {
-        lines.push(`  cancelled runs: ${result.cancelled.join(", ")}`);
+        items.push(`  cancelled runs: ${result.cancelled.join(", ")}`);
       }
-      lines.push(`  base: ${result.fix.baseBranch}`);
-      lines.push(`  resolve: ${shellJoinArgv(result.fix.resolveCommand)}`);
-      for (const [i, inst] of result.fix.instructions.entries()) {
-        lines.push(`  ${i + 1}. ${inst}`);
+      if (items.length > 0) sections.push(items);
+
+      sections.push([
+        `  base: ${result.fix.baseBranch}`,
+        `  resolve: ${shellJoinArgv(result.fix.resolveCommand)}`,
+      ]);
+
+      if (result.fix.instructions.length > 0) {
+        sections.push(result.fix.instructions.map((inst, i) => `  ${i + 1}. ${inst}`));
       }
-      break;
+
+      const body = sections.map((s) => s.join("\n")).join("\n\n");
+      return [basePrefix, infoLine, "", body].join("\n");
     }
   }
-
-  lines.push(infoLine);
-  return lines.join("\n");
 }
