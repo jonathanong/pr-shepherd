@@ -82,7 +82,11 @@ query BatchPr(
           createdAt
         }
       }
-      changesRequestedReviews: reviews(states: CHANGES_REQUESTED, last: 50, before: $changesRequestedCursor) {
+      changesRequestedReviews: reviews(
+        states: CHANGES_REQUESTED
+        last: 50
+        before: $changesRequestedCursor
+      ) {
         pageInfo {
           hasPreviousPage
           startCursor

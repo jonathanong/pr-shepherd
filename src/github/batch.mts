@@ -104,10 +104,7 @@ export async function fetchPrBatch(pr: number, repo: RepoInfo): Promise<BatchRes
 
   // Paginate COMMENTED review summaries backward if the first page is incomplete.
   let rawReviewSummaryNodes = raw.reviewSummaries.nodes;
-  if (
-    raw.reviewSummaries.pageInfo.hasPreviousPage &&
-    raw.reviewSummaries.pageInfo.startCursor
-  ) {
+  if (raw.reviewSummaries.pageInfo.hasPreviousPage && raw.reviewSummaries.pageInfo.startCursor) {
     const extra = await paginateBackward<RawReviewSummary>(async (cursor) => {
       const res = await graphql<RawBatchResponse>(BATCH_PR_QUERY, {
         owner: repo.owner,
@@ -142,7 +139,14 @@ export async function fetchPrBatch(pr: number, repo: RepoInfo): Promise<BatchRes
     rawCheckNodes = [...rawCheckNodes, ...extra];
   }
 
-  const data = parseRawPr(raw, rawThreadPages, rawCommentNodes, rawReviewNodes, rawReviewSummaryNodes, rawCheckNodes);
+  const data = parseRawPr(
+    raw,
+    rawThreadPages,
+    rawCommentNodes,
+    rawReviewNodes,
+    rawReviewSummaryNodes,
+    rawCheckNodes,
+  );
   return { data, rateLimit: result.rateLimit };
 }
 

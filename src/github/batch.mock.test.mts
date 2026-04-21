@@ -478,9 +478,7 @@ describe("fetchPrBatch — reviewSummaries", () => {
     const pr = makeRawPr({
       reviewSummaries: {
         pageInfo: { hasPreviousPage: false, startCursor: null },
-        nodes: [
-          { id: "PRR_1", isMinimized: false, author: null, body: "text" },
-        ],
+        nodes: [{ id: "PRR_1", isMinimized: false, author: null, body: "text" }],
       },
     });
     mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
@@ -496,9 +494,7 @@ describe("fetchPrBatch — reviewSummaries", () => {
       },
       reviewSummaries: {
         pageInfo: { hasPreviousPage: false, startCursor: null },
-        nodes: [
-          { id: "PRR_CM", isMinimized: false, author: { login: "bot" }, body: "Overview" },
-        ],
+        nodes: [{ id: "PRR_CM", isMinimized: false, author: { login: "bot" }, body: "Overview" }],
       },
     });
     mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));

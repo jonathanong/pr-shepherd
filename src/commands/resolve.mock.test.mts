@@ -16,7 +16,11 @@ vi.mock("../comments/resolve.mts", () => ({
 
 vi.mock("../config/load.mts", () => ({
   loadConfig: vi.fn().mockReturnValue({
-    resolve: { concurrency: 4, shaPoll: { intervalMs: 2000, maxAttempts: 10 }, fetchReviewSummaries: true },
+    resolve: {
+      concurrency: 4,
+      shaPoll: { intervalMs: 2000, maxAttempts: 10 },
+      fetchReviewSummaries: true,
+    },
   }),
 }));
 
