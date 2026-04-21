@@ -63,7 +63,10 @@ export async function main(argv: string[]): Promise<void> {
       break;
     default:
       process.stderr.write(`Unknown subcommand: ${subcommand ?? "(none)"}\n`);
-      process.stderr.write("Usage: pr-shepherd <check|resolve|iterate|status> [options]\n");
+      process.stderr.write(
+        "Usage: pr-shepherd <check|resolve|iterate|status> [options]\n" +
+          "       pr-shepherd --version | -v\n",
+      );
       process.exitCode = 1;
       return;
   }

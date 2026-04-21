@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("./commands/check.mts", () => ({ runCheck: vi.fn() }));
@@ -571,17 +573,21 @@ describe("main — unknown subcommand", () => {
 // ---------------------------------------------------------------------------
 
 describe("main — --version", () => {
-  it("prints the package.json version and exits cleanly for --version", async () => {
+  const pkgVersion = (
+    JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
+      version: string;
+    }
+  ).version;
+
+  it("prints the exact package.json version followed by a newline for --version", async () => {
     await main(["node", "shepherd", "--version"]);
-    const out = getStdout().trim();
-    expect(out).toMatch(/^\d+\.\d+\.\d+/);
+    expect(getStdout()).toBe(`${pkgVersion}\n`);
     expect(process.exitCode).toBeUndefined();
   });
 
-  it("also accepts -v", async () => {
+  it("also accepts -v with identical output", async () => {
     await main(["node", "shepherd", "-v"]);
-    const out = getStdout().trim();
-    expect(out).toMatch(/^\d+\.\d+\.\d+/);
+    expect(getStdout()).toBe(`${pkgVersion}\n`);
     expect(process.exitCode).toBeUndefined();
   });
 });
