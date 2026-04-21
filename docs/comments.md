@@ -10,7 +10,7 @@
 | PR comment     | Top-level comment on the PR (not attached to a file)    | `pullRequest.comments`                         |
 | Review summary | PR-level body of a COMMENTED review (e.g. bot overview) | `pullRequest.reviews(states: COMMENTED)` (new) |
 
-Shepherd reports both types in the `report.threads` and `report.comments` fields respectively.
+Shepherd surfaces review threads and PR comments in the `report.threads` and `report.comments` fields respectively. Review summaries are not part of the `ShepherdReport` — they are surfaced only via `resolve --fetch` in the `reviewSummaries` array.
 
 ## `isOutdated` flag
 
