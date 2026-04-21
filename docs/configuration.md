@@ -217,7 +217,7 @@ Disable if your team uses the draft state as a deliberate gate that requires a h
 
 ## Deprecated keys
 
-The following keys from earlier versions are still accepted but emit a deprecation warning to stderr. They will be removed in v0.3.0.
+The following keys from earlier versions are still accepted but emit a deprecation warning to stderr. They will be removed in a future release.
 
 | Old key                          | New key                                                   |
 | -------------------------------- | --------------------------------------------------------- |
