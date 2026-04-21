@@ -153,13 +153,13 @@ Common additions:
 - `merge_group` — for repos using GitHub's merge queue.
 - Remove `pull_request_target` for repos that don't use it (reduces noise).
 
-### `checks.timeoutPatterns` — default: see `config.json`
+### `checks.timeoutPatterns` — default: see [`src/config.json`](../src/config.json)
 
 Case-insensitive strings matched against the trimmed failure log. If any pattern matches, the check is classified as `timeout` and shepherd retries the run (`rerun_ci` action) rather than treating it as an actionable failure.
 
 Example: adding `"operation timed out"` classifies any run whose log contains that phrase as a transient timeout.
 
-### `checks.infraPatterns` — default: see `config.json`
+### `checks.infraPatterns` — default: see [`src/config.json`](../src/config.json)
 
 Same matching logic as `timeoutPatterns`, but classifies the check as `infrastructure` (e.g. a runner crashed). These are also retried via `rerun_ci`.
 
