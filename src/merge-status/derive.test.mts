@@ -4,6 +4,7 @@ import type { BatchPrData } from "../types.mts";
 
 function makePr(overrides: Partial<BatchPrData>): BatchPrData {
   return {
+    nodeId: "PR_kgDOAAA",
     number: 42,
     state: "OPEN",
     isDraft: false,

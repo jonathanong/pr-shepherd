@@ -41,6 +41,7 @@ const BASE_OPTS = { format: "text" as const, noCache: false, cacheTtlSeconds: 30
 
 function makeBatchData(overrides: Partial<BatchPrData> = {}): BatchPrData {
   return {
+    nodeId: "PR_kgDOAAA",
     number: 42,
     state: "OPEN",
     isDraft: false,

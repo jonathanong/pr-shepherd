@@ -343,7 +343,7 @@ See [docs/configuration.md](docs/configuration.md) for all options.
 ## Requirements
 
 - Node.js ≥ 22.0.0
-- `gh` CLI authenticated (`gh auth login`); `repo` scope is required for private repositories (public repositories may not need it)
+- A GitHub token: set `GH_TOKEN` or `GITHUB_TOKEN`, **or** install and authenticate the `gh` CLI (`gh auth login`) — pr-shepherd uses `gh auth token` as a fallback. The `repo` scope is required for private repositories.
 - `git`
 
 ## Docs

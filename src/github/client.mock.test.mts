@@ -1,9 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ---------------------------------------------------------------------------
-// Hoist mock BEFORE any imports so node:child_process is replaced before
-// client.mts captures execFile via promisify().
+// Stub fetch globally so http.mts uses our mock.
+// child_process is still used by client.mts for `git` calls, so mock those too.
 // ---------------------------------------------------------------------------
+
+const mockFetch = vi.fn();
+vi.stubGlobal("fetch", mockFetch);
 
 const { mockExecFile } = vi.hoisted(() => ({ mockExecFile: vi.fn() }));
 
@@ -29,22 +32,51 @@ import {
   getCurrentPrNumber,
   getMergeableState,
   getPrHeadSha,
+  getRepoInfo,
 } from "./client.mts";
+import { _resetTokenCache } from "./http.mts";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function ghJson(data: unknown): { stdout: string } {
-  return { stdout: JSON.stringify({ data }) };
+function gqlOk(data: unknown): Response {
+  return {
+    ok: true,
+    status: 200,
+    headers: new Headers({
+      "content-type": "application/json",
+    }),
+    json: () => Promise.resolve({ data }),
+    text: () => Promise.resolve(JSON.stringify({ data })),
+  } as unknown as Response;
 }
 
-function ghJsonErrors(errors: Array<{ message: string }>): { stdout: string } {
-  return { stdout: JSON.stringify({ data: null, errors }) };
+function gqlErrors(errors: Array<{ message: string }>): Response {
+  return {
+    ok: true,
+    status: 200,
+    headers: new Headers({ "content-type": "application/json" }),
+    json: () => Promise.resolve({ data: null, errors }),
+    text: () => Promise.resolve(JSON.stringify({ data: null, errors })),
+  } as unknown as Response;
+}
+
+function restOk(data: unknown): Response {
+  return {
+    ok: true,
+    status: 200,
+    headers: new Headers({ "content-type": "application/json" }),
+    json: () => Promise.resolve(data),
+    text: () => Promise.resolve(JSON.stringify(data)),
+  } as unknown as Response;
 }
 
 beforeEach(() => {
+  mockFetch.mockReset();
   mockExecFile.mockReset();
+  _resetTokenCache();
+  process.env["GH_TOKEN"] = "test-token";
 });
 
 // ---------------------------------------------------------------------------
@@ -52,37 +84,37 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("graphql — arg building", () => {
-  it("passes string vars with -f", async () => {
-    mockExecFile.mockResolvedValue(ghJson({ repository: null }));
+  it("sends query as JSON body to /graphql", async () => {
+    mockFetch.mockResolvedValue(gqlOk({ repository: null }));
     await graphql("{ q }", { owner: "acme", repo: "widget" });
-    const [, args] = mockExecFile.mock.calls[0] as [string, string[]];
-    expect(args).toContain("-f");
-    expect(args).toContain("owner=acme");
-    expect(args).toContain("repo=widget");
-    expect(args).not.toContain("-F");
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("/graphql");
+    const body = JSON.parse(init.body as string) as { variables: Record<string, unknown> };
+    expect(body.variables).toMatchObject({ owner: "acme", repo: "widget" });
   });
 
-  it("passes number vars with -F", async () => {
-    mockExecFile.mockResolvedValue(ghJson({ repository: null }));
+  it("includes string vars in variables", async () => {
+    mockFetch.mockResolvedValue(gqlOk({}));
+    await graphql("{ q }", { owner: "acme", repo: "widget" });
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string) as { variables: Record<string, unknown> };
+    expect(body.variables["owner"]).toBe("acme");
+  });
+
+  it("includes number vars in variables", async () => {
+    mockFetch.mockResolvedValue(gqlOk({}));
     await graphql("{ q }", { pr: 42 });
-    const [, args] = mockExecFile.mock.calls[0] as [string, string[]];
-    expect(args).toContain("-F");
-    expect(args).toContain("pr=42");
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string) as { variables: Record<string, unknown> };
+    expect(body.variables["pr"]).toBe(42);
   });
 
-  it("passes boolean vars with -F", async () => {
-    mockExecFile.mockResolvedValue(ghJson({}));
-    await graphql("{ q }", { dry: true });
-    const [, args] = mockExecFile.mock.calls[0] as [string, string[]];
-    expect(args).toContain("-F");
-    expect(args).toContain("dry=true");
-  });
-
-  it("embeds the query as -f query=…", async () => {
-    mockExecFile.mockResolvedValue(ghJson({}));
+  it("embeds the query string in the body", async () => {
+    mockFetch.mockResolvedValue(gqlOk({}));
     await graphql("query MyQ { viewer { login } }");
-    const [, args] = mockExecFile.mock.calls[0] as [string, string[]];
-    expect(args).toContain("query=query MyQ { viewer { login } }");
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string) as { query: string };
+    expect(body.query).toContain("query MyQ");
   });
 });
 
@@ -92,19 +124,22 @@ describe("graphql — arg building", () => {
 
 describe("graphql — error handling", () => {
   it("throws when response contains errors[]", async () => {
-    mockExecFile.mockResolvedValue(
-      ghJsonErrors([{ message: "Field does not exist" }, { message: "Syntax error" }]),
+    mockFetch.mockResolvedValue(
+      gqlErrors([{ message: "Field does not exist" }, { message: "Syntax error" }]),
     );
     await expect(graphql("{ q }")).rejects.toThrow("Field does not exist; Syntax error");
   });
 
-  it("wraps gh exec failure as 'gh api failed: …'", async () => {
-    const cause = new Error("exit status 1");
-    mockExecFile.mockRejectedValue(cause);
+  it("wraps fetch failure as 'GitHub GraphQL request failed'", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 401,
+      headers: new Headers(),
+      text: () => Promise.resolve("Unauthorized"),
+    });
     const err = await graphql("{ q }").catch((e: unknown) => e);
     expect(err).toBeInstanceOf(Error);
-    expect((err as Error).message).toMatch(/^gh api failed:/);
-    expect((err as Error & { cause: unknown }).cause).toBe(cause);
+    expect((err as Error).message).toMatch(/GitHub GraphQL request failed: 401/);
   });
 });
 
@@ -113,42 +148,55 @@ describe("graphql — error handling", () => {
 // ---------------------------------------------------------------------------
 
 describe("graphqlWithRateLimit — header parsing", () => {
-  function makeRawWithCRLF(remaining: number, limit: number, reset: number, data: unknown): string {
-    const headers = [
-      "HTTP/1.1 200 OK",
-      `x-ratelimit-remaining: ${remaining}`,
-      `x-ratelimit-limit: ${limit}`,
-      `x-ratelimit-reset: ${reset}`,
-    ].join("\r\n");
-    return `${headers}\r\n\r\n${JSON.stringify({ data })}`;
-  }
-
-  function makeRawWithLF(remaining: number, limit: number, reset: number, data: unknown): string {
-    const headers = [
-      "HTTP/1.1 200 OK",
-      `x-ratelimit-remaining: ${remaining}`,
-      `x-ratelimit-limit: ${limit}`,
-      `x-ratelimit-reset: ${reset}`,
-    ].join("\n");
-    return `${headers}\n\n${JSON.stringify({ data })}`;
-  }
-
-  it("parses rateLimit when headers use CRLF separator", async () => {
-    mockExecFile.mockResolvedValue({ stdout: makeRawWithCRLF(50, 5000, 1700000000, {}) });
+  it("parses x-ratelimit-* response headers", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({
+        "content-type": "application/json",
+        "x-ratelimit-remaining": "50",
+        "x-ratelimit-limit": "5000",
+        "x-ratelimit-reset": "1700000000",
+      }),
+      json: () => Promise.resolve({ data: {} }),
+    });
     const result = await graphqlWithRateLimit("{ q }");
     expect(result.rateLimit).toEqual({ remaining: 50, limit: 5000, resetAt: 1700000000 });
   });
 
-  it("parses rateLimit when headers use LF separator", async () => {
-    mockExecFile.mockResolvedValue({ stdout: makeRawWithLF(100, 5000, 1700000001, {}) });
-    const result = await graphqlWithRateLimit("{ q }");
-    expect(result.rateLimit).toEqual({ remaining: 100, limit: 5000, resetAt: 1700000001 });
-  });
-
-  it("returns rateLimit: undefined when no headers are present", async () => {
-    mockExecFile.mockResolvedValue({ stdout: JSON.stringify({ data: {} }) });
+  it("returns rateLimit: undefined when no rate-limit headers present", async () => {
+    mockFetch.mockResolvedValue(gqlOk({}));
     const result = await graphqlWithRateLimit("{ q }");
     expect(result.rateLimit).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getRepoInfo — remote URL parsing
+// ---------------------------------------------------------------------------
+
+describe("getRepoInfo — remote URL parsing", () => {
+  it("parses git@github.com:owner/repo.git", async () => {
+    mockExecFile.mockResolvedValue({ stdout: "git@github.com:owner/repo.git\n", stderr: "" });
+    expect(await getRepoInfo()).toEqual({ owner: "owner", name: "repo" });
+  });
+
+  it("parses https://github.com/owner/repo.git", async () => {
+    mockExecFile.mockResolvedValue({ stdout: "https://github.com/owner/repo.git\n", stderr: "" });
+    expect(await getRepoInfo()).toEqual({ owner: "owner", name: "repo" });
+  });
+
+  it("parses https://github.com/owner/repo (no .git)", async () => {
+    mockExecFile.mockResolvedValue({ stdout: "https://github.com/owner/repo\n", stderr: "" });
+    expect(await getRepoInfo()).toEqual({ owner: "owner", name: "repo" });
+  });
+
+  it("parses ssh://git@github.com/owner/repo.git", async () => {
+    mockExecFile.mockResolvedValue({
+      stdout: "ssh://git@github.com/owner/repo.git\n",
+      stderr: "",
+    });
+    expect(await getRepoInfo()).toEqual({ owner: "owner", name: "repo" });
   });
 });
 
@@ -158,33 +206,31 @@ describe("graphqlWithRateLimit — header parsing", () => {
 
 describe("getCurrentPrNumber", () => {
   it("returns null when branch is HEAD (detached)", async () => {
-    // First call: git rev-parse
-    mockExecFile.mockResolvedValueOnce({ stdout: "HEAD\n" });
+    mockExecFile.mockResolvedValueOnce({ stdout: "HEAD\n", stderr: "" });
     expect(await getCurrentPrNumber()).toBeNull();
   });
 
-  it("returns null when gh pr list returns empty string", async () => {
+  it("returns null when GraphQL returns no PR for branch", async () => {
     mockExecFile
-      .mockResolvedValueOnce({ stdout: "my-branch\n" })
-      .mockResolvedValueOnce({ stdout: "\n" });
-    expect(await getCurrentPrNumber()).toBeNull();
-  });
-
-  it("returns null when gh pr list returns 'null'", async () => {
-    mockExecFile
-      .mockResolvedValueOnce({ stdout: "my-branch\n" })
-      .mockResolvedValueOnce({ stdout: "null\n" });
+      .mockResolvedValueOnce({ stdout: "my-branch\n", stderr: "" }) // rev-parse
+      .mockResolvedValueOnce({ stdout: "https://github.com/owner/repo.git\n", stderr: "" }); // remote get-url
+    mockFetch.mockResolvedValue(
+      gqlOk({ repository: { pullRequests: { nodes: [] } } }),
+    );
     expect(await getCurrentPrNumber()).toBeNull();
   });
 
   it("returns PR number on success", async () => {
     mockExecFile
-      .mockResolvedValueOnce({ stdout: "my-branch\n" })
-      .mockResolvedValueOnce({ stdout: "123\n" });
+      .mockResolvedValueOnce({ stdout: "my-branch\n", stderr: "" }) // rev-parse
+      .mockResolvedValueOnce({ stdout: "https://github.com/owner/repo.git\n", stderr: "" }); // remote get-url
+    mockFetch.mockResolvedValue(
+      gqlOk({ repository: { pullRequests: { nodes: [{ number: 123 }] } } }),
+    );
     expect(await getCurrentPrNumber()).toBe(123);
   });
 
-  it("returns null when any exec call throws", async () => {
+  it("returns null when any call throws", async () => {
     mockExecFile.mockRejectedValue(new Error("not authenticated"));
     expect(await getCurrentPrNumber()).toBeNull();
   });
@@ -195,11 +241,22 @@ describe("getCurrentPrNumber", () => {
 // ---------------------------------------------------------------------------
 
 describe("getMergeableState", () => {
-  it("returns parsed mergeable and mergeStateStatus", async () => {
-    const payload = { mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" };
-    mockExecFile.mockResolvedValue({ stdout: JSON.stringify(payload) });
+  it("maps REST true/clean to MERGEABLE/CLEAN", async () => {
+    mockFetch.mockResolvedValue(restOk({ mergeable: true, mergeable_state: "clean" }));
     const result = await getMergeableState(42, "owner", "repo");
-    expect(result).toEqual(payload);
+    expect(result).toEqual({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" });
+  });
+
+  it("maps REST false/dirty to CONFLICTING/DIRTY", async () => {
+    mockFetch.mockResolvedValue(restOk({ mergeable: false, mergeable_state: "dirty" }));
+    const result = await getMergeableState(42, "owner", "repo");
+    expect(result).toEqual({ mergeable: "CONFLICTING", mergeStateStatus: "DIRTY" });
+  });
+
+  it("maps REST null to UNKNOWN", async () => {
+    mockFetch.mockResolvedValue(restOk({ mergeable: null, mergeable_state: "unknown" }));
+    const result = await getMergeableState(42, "owner", "repo");
+    expect(result).toEqual({ mergeable: "UNKNOWN", mergeStateStatus: "UNKNOWN" });
   });
 });
 
@@ -208,8 +265,8 @@ describe("getMergeableState", () => {
 // ---------------------------------------------------------------------------
 
 describe("getPrHeadSha", () => {
-  it("trims whitespace from stdout", async () => {
-    mockExecFile.mockResolvedValue({ stdout: "  abc123def456  \n" });
+  it("returns head.sha from REST response", async () => {
+    mockFetch.mockResolvedValue(restOk({ head: { sha: "abc123def456" } }));
     const sha = await getPrHeadSha(42, "owner", "repo");
     expect(sha).toBe("abc123def456");
   });

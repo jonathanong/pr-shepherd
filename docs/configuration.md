@@ -40,10 +40,6 @@ mergeStatus:
     - copilot
     - sonar # add other review bots here
 
-execution:
-  maxBufferMb: 10
-  triageLogBufferMb: 5
-
 actions:
   autoResolveOutdated: true
   autoRebase: true
@@ -189,18 +185,6 @@ Add other review bots (e.g. `sonar`, `codeclimate`, `reviewdog`) if they submit 
 
 ---
 
-## `execution`
-
-### `execution.maxBufferMb` — default `10`
-
-Maximum output buffer size (in megabytes) for `gh` CLI calls. Increase if shepherd throws `stdout maxBuffer exceeded` on large GraphQL responses (e.g. PRs with thousands of threads).
-
-### `execution.triageLogBufferMb` — default `5`
-
-Maximum output buffer size (in megabytes) for `gh run view --log-failed` calls. Increase if shepherd throws `stdout maxBuffer exceeded` when fetching CI failure logs.
-
----
-
 ## `actions`
 
 These flags control whether shepherd automatically performs each class of mutation during an `iterate` tick. The corresponding `--no-auto-*` CLI flags provide per-invocation overrides.
@@ -229,7 +213,7 @@ Disable if your team uses the draft state as a deliberate gate that requires a h
 | ------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `PR_SHEPHERD_CACHE_DIR`         | Override the cache base directory (default `$TMPDIR/pr-shepherd-cache`)                                |
 | `PR_SHEPHERD_CACHE_TTL_SECONDS` | Override `cache.ttlSeconds`; takes precedence over both the RC file and `--cache-ttl`                  |
-| `GH_TOKEN` / `GITHUB_TOKEN`     | Read by the `gh` CLI for authentication — see [`gh` docs](https://cli.github.com/manual/gh_auth_login) |
+| `GH_TOKEN` / `GITHUB_TOKEN`     | GitHub auth token. Resolution order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` fallback (requires `gh` CLI). |
 
 ## Deprecated keys
 
@@ -248,4 +232,6 @@ The following keys from earlier versions are still accepted but emit a deprecati
 | `checks.logExcerptMaxChars`      | `checks.logMaxChars`                |
 | `baseBranch`                     | _(removed — auto-detected from PR)_ |
 | `minimizeBots`                   | _(removed)_                         |
-| `cancelCiOnFailure`              | _(removed)_                         |
+| `cancelCiOnFailure`              | _(removed)_                                               |
+| `execution.maxBufferMb`          | _(removed — no subprocess buffer caps with native fetch)_ |
+| `execution.triageLogBufferMb`    | _(removed — no subprocess buffer caps with native fetch)_ |

@@ -1,0 +1,9 @@
+query PrNumberByBranch($owner: String!, $repo: String!, $branch: String!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequests(headRefName: $branch, states: OPEN, first: 1) {
+      nodes {
+        number
+      }
+    }
+  }
+}

@@ -28,3 +28,9 @@ export const MULTI_PR_STATUS_QUERY = gql("multi-pr-status.gql");
 
 /** Paginated version — used when reviewThreads is truncated (totalCount > 100). */
 export const MULTI_PR_STATUS_QUERY_WITH_CURSOR = gql("multi-pr-status-paged.gql");
+
+/** Look up PR number by branch name (for getCurrentPrNumber). */
+export const PR_NUMBER_BY_BRANCH_QUERY = gql("pr-number-by-branch.gql");
+
+/** Convert a draft PR to ready for review. */
+export const MARK_PR_READY_MUTATION = gql("mark-pr-ready.gql");

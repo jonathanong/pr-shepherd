@@ -41,10 +41,6 @@
   "mergeStatus": {
     "blockingReviewerLogins": ["copilot"]
   },
-  "execution": {
-    "maxBufferMb": 10,
-    "triageLogBufferMb": 5
-  },
   "actions": {
     "autoResolveOutdated": true,
     "autoRebase": true,

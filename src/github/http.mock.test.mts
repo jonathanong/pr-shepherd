@@ -1,0 +1,245 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+// ---------------------------------------------------------------------------
+// Stub fetch and child_process globally before any imports.
+// ---------------------------------------------------------------------------
+
+const mockFetch = vi.fn();
+vi.stubGlobal("fetch", mockFetch);
+
+const { mockExecFile } = vi.hoisted(() => ({ mockExecFile: vi.fn() }));
+
+vi.mock("node:child_process", () => ({
+  execFile: (
+    cmd: string,
+    args: string[],
+    optsOrCb:
+      | Record<string, unknown>
+      | ((err: Error | null, result: { stdout: string; stderr: string }) => void),
+    maybeCb?: (err: Error | null, result: { stdout: string; stderr: string }) => void,
+  ) => {
+    const cb = typeof optsOrCb === "function" ? optsOrCb : maybeCb!;
+    mockExecFile(cmd, args)
+      .then((result: { stdout: string; stderr: string }) => cb(null, result))
+      .catch((err: Error) => cb(err, { stdout: "", stderr: "" }));
+  },
+}));
+
+import { graphql, graphqlWithRateLimit, rest, restText, _resetTokenCache } from "./http.mts";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function jsonOk(data: unknown): Response {
+  return {
+    ok: true,
+    status: 200,
+    headers: new Headers({ "content-type": "application/json" }),
+    json: () => Promise.resolve(data),
+    text: () => Promise.resolve(JSON.stringify(data)),
+  } as unknown as Response;
+}
+
+function gqlOk(data: unknown): Response {
+  return {
+    ok: true,
+    status: 200,
+    headers: new Headers({ "content-type": "application/json" }),
+    json: () => Promise.resolve({ data }),
+    text: () => Promise.resolve(JSON.stringify({ data })),
+  } as unknown as Response;
+}
+
+beforeEach(() => {
+  mockFetch.mockReset();
+  mockExecFile.mockReset();
+  _resetTokenCache();
+  delete process.env["GH_TOKEN"];
+  delete process.env["GITHUB_TOKEN"];
+});
+
+// ---------------------------------------------------------------------------
+// Token resolution
+// ---------------------------------------------------------------------------
+
+describe("token resolution", () => {
+  it("uses GH_TOKEN when set", async () => {
+    process.env["GH_TOKEN"] = "my-gh-token";
+    mockFetch.mockResolvedValue(gqlOk({}));
+    await graphql("{ q }");
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect((init.headers as Record<string, string>)["Authorization"]).toBe("Bearer my-gh-token");
+  });
+
+  it("falls back to GITHUB_TOKEN when GH_TOKEN is absent", async () => {
+    process.env["GITHUB_TOKEN"] = "my-github-token";
+    mockFetch.mockResolvedValue(gqlOk({}));
+    await graphql("{ q }");
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect((init.headers as Record<string, string>)["Authorization"]).toBe(
+      "Bearer my-github-token",
+    );
+  });
+
+  it("falls back to `gh auth token` when no env var is set", async () => {
+    mockExecFile.mockResolvedValue({ stdout: "fallback-token\n", stderr: "" });
+    mockFetch.mockResolvedValue(gqlOk({}));
+    await graphql("{ q }");
+    expect(mockExecFile).toHaveBeenCalledWith("gh", ["auth", "token"]);
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect((init.headers as Record<string, string>)["Authorization"]).toBe("Bearer fallback-token");
+  });
+
+  it("throws a helpful error when no token is available", async () => {
+    mockExecFile.mockRejectedValue(new Error("not authenticated"));
+    await expect(graphql("{ q }")).rejects.toThrow(/No GitHub token found/);
+  });
+
+  it("caches the resolved token across calls", async () => {
+    process.env["GH_TOKEN"] = "cached-token";
+    mockFetch.mockResolvedValue(gqlOk({}));
+    await graphql("{ q }");
+    await graphql("{ q }");
+    // execFile should never be called — token came from env
+    expect(mockExecFile).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// graphql — error handling
+// ---------------------------------------------------------------------------
+
+describe("graphql — error handling", () => {
+  it("throws on non-2xx responses", async () => {
+    process.env["GH_TOKEN"] = "tok";
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 401,
+      headers: new Headers(),
+      text: () => Promise.resolve("Unauthorized"),
+    });
+    await expect(graphql("{ q }")).rejects.toThrow(/GitHub GraphQL request failed: 401/);
+  });
+
+  it("throws on GraphQL errors[] in payload", async () => {
+    process.env["GH_TOKEN"] = "tok";
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: () => Promise.resolve({ data: null, errors: [{ message: "bad field" }] }),
+    });
+    await expect(graphql("{ q }")).rejects.toThrow(/bad field/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// graphqlWithRateLimit — header parsing
+// ---------------------------------------------------------------------------
+
+describe("graphqlWithRateLimit — header parsing", () => {
+  beforeEach(() => {
+    process.env["GH_TOKEN"] = "tok";
+  });
+
+  it("returns rateLimit when headers are present", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({
+        "content-type": "application/json",
+        "x-ratelimit-remaining": "42",
+        "x-ratelimit-limit": "5000",
+        "x-ratelimit-reset": "1700000000",
+      }),
+      json: () => Promise.resolve({ data: {} }),
+    });
+    const result = await graphqlWithRateLimit("{ q }");
+    expect(result.rateLimit).toEqual({ remaining: 42, limit: 5000, resetAt: 1700000000 });
+  });
+
+  it("returns rateLimit: undefined when rate-limit headers are absent", async () => {
+    mockFetch.mockResolvedValue(gqlOk({}));
+    const result = await graphqlWithRateLimit("{ q }");
+    expect(result.rateLimit).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// rest — JSON parsing and error handling
+// ---------------------------------------------------------------------------
+
+describe("rest", () => {
+  beforeEach(() => {
+    process.env["GH_TOKEN"] = "tok";
+  });
+
+  it("returns parsed JSON when content-type is application/json", async () => {
+    mockFetch.mockResolvedValue(jsonOk({ id: 1, name: "widget" }));
+    const data = await rest<{ id: number; name: string }>("GET", "/repos/o/r/pulls/1");
+    expect(data).toEqual({ id: 1, name: "widget" });
+  });
+
+  it("returns undefined when no content-type header", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 204,
+      headers: new Headers(),
+      text: () => Promise.resolve(""),
+    });
+    const result = await rest("POST", "/repos/o/r/actions/runs/1/cancel");
+    expect(result).toBeUndefined();
+  });
+
+  it("throws on non-2xx with method and path in message", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 409,
+      headers: new Headers(),
+      text: () => Promise.resolve("conflict"),
+    });
+    await expect(rest("POST", "/repos/o/r/actions/runs/1/cancel")).rejects.toThrow(
+      /GitHub REST POST \/repos\/o\/r\/actions\/runs\/1\/cancel failed: 409/,
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// restText — redirect handling
+// ---------------------------------------------------------------------------
+
+describe("restText — redirect handling", () => {
+  beforeEach(() => {
+    process.env["GH_TOKEN"] = "tok";
+  });
+
+  it("follows 302 redirect and returns text from redirect target", async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 302,
+        headers: new Headers({ location: "https://storage.example.com/logs/job-1.txt" }),
+        text: () => Promise.resolve(""),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        text: () => Promise.resolve("log content here"),
+      });
+    const text = await restText("GET", "/repos/o/r/actions/jobs/1/logs");
+    expect(text).toBe("log content here");
+  });
+
+  it("returns text directly for 200 responses", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      text: () => Promise.resolve("direct log content"),
+    });
+    const text = await restText("GET", "/repos/o/r/actions/jobs/1/logs");
+    expect(text).toBe("direct log content");
+  });
+});

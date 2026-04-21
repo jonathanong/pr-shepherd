@@ -10,6 +10,7 @@ query BatchPr(
 ) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
+      id
       number
       state
       isDraft

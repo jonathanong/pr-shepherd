@@ -241,6 +241,7 @@ function parseRawPr(
   });
 
   return {
+    nodeId: raw.id,
     number: raw.number,
     state: raw.state as BatchPrData["state"],
     isDraft: raw.isDraft,
@@ -299,6 +300,7 @@ interface RawBatchResponse {
 }
 
 interface RawPr {
+  id: string;
   number: number;
   state: string;
   isDraft: boolean;

@@ -2,7 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Hoist mocks BEFORE any imports so modules capture the mocked versions.
+// child_process is still used by iterate.mts for `git` calls only.
+// GitHub API mutations now go through fetch (http.mts).
 // ---------------------------------------------------------------------------
+
+const mockFetch = vi.fn();
+vi.stubGlobal("fetch", mockFetch);
 
 const { mockExecFile } = vi.hoisted(() => ({ mockExecFile: vi.fn() }));
 
@@ -64,6 +69,7 @@ const mockWriteFixAttempts = vi.mocked(writeFixAttempts);
 function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
   return {
     pr: 42,
+    nodeId: "PR_kgDOAAA",
     repo: "owner/repo",
     status: "READY",
     baseBranch: "main",
@@ -128,6 +134,7 @@ const READY_STATE_DEFAULT = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  process.env["GH_TOKEN"] = "test-token";
   // Default: last commit was 60s ago (outside cooldown)
   mockExecFile.mockImplementation((cmd: string, args: string[]) => {
     if (cmd === "git" && args[0] === "log") {
@@ -137,6 +144,14 @@ beforeEach(() => {
       return Promise.resolve({ stdout: "abc123", stderr: "" });
     }
     return Promise.resolve({ stdout: "", stderr: "" });
+  });
+  // Default: all fetch calls succeed (mutations return 2xx with no body)
+  mockFetch.mockResolvedValue({
+    ok: true,
+    status: 204,
+    headers: new Headers(),
+    json: () => Promise.resolve({}),
+    text: () => Promise.resolve(""),
   });
   vi.useFakeTimers();
   vi.setSystemTime(NOW * 1000);
@@ -295,7 +310,11 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
       expect(result.fix.checks).toHaveLength(1);
       expect(result.cancelled).toEqual(["run-99"]);
     }
-    expect(mockExecFile).toHaveBeenCalledWith("gh", ["run", "cancel", "run-99"]);
+    const cancelCall = (mockFetch.mock.calls as Array<[string, RequestInit]>).find(([url]) =>
+      url.includes("run-99/cancel"),
+    );
+    expect(cancelCall).toBeDefined();
+    expect(cancelCall![1].method).toBe("POST");
   });
 
   it("returns fix_code with partial cancelled when one gh run cancel fails", async () => {
@@ -320,14 +339,16 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
       shouldCancel: false,
       remainingSeconds: 600,
     });
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (args[0] === "run" && args[1] === "cancel" && args[2] === "run-100") {
-        return Promise.reject(new Error("run already completed"));
+    mockFetch.mockImplementation((url: string) => {
+      if ((url as string).includes("run-100/cancel")) {
+        return Promise.resolve({
+          ok: false,
+          status: 409,
+          headers: new Headers(),
+          text: () => Promise.resolve("Cannot cancel a workflow run that is completed"),
+        });
       }
-      if (cmd === "gh" && args[0] === "pr" && args[1] === "view") {
-        return Promise.resolve({ stdout: "main\n", stderr: "" });
-      }
-      return Promise.resolve({ stdout: "", stderr: "" });
+      return Promise.resolve({ ok: true, status: 202, headers: new Headers(), text: () => Promise.resolve("") });
     });
 
     const result = await runIterate(makeOpts());
@@ -360,11 +381,11 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
       shouldCancel: false,
       remainingSeconds: 600,
     });
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "gh" && args[0] === "pr" && args[1] === "view") {
-        return Promise.resolve({ stdout: "main\n", stderr: "" });
-      }
-      return Promise.reject(new Error("this run has already completed"));
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 409,
+      headers: new Headers(),
+      text: () => Promise.resolve("Cannot cancel a workflow run that is completed"),
     });
 
     const result = await runIterate(makeOpts());
@@ -398,14 +419,11 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
       shouldCancel: false,
       remainingSeconds: 600,
     });
-    mockExecFile.mockImplementation((_cmd: string, args: string[]) => {
-      if (args[0] === "run" && args[1] === "cancel") {
-        return Promise.reject(new Error("Cannot cancel a workflow run that is completed"));
-      }
-      if (args[0] === "pr" && args[1] === "view") {
-        return Promise.resolve({ stdout: "main\n", stderr: "" });
-      }
-      return Promise.resolve({ stdout: "", stderr: "" });
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 409,
+      headers: new Headers(),
+      text: () => Promise.resolve("Cannot cancel a workflow run that is completed"),
     });
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
 
@@ -443,13 +461,18 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
       shouldCancel: false,
       remainingSeconds: 600,
     });
-    mockExecFile.mockRejectedValue(new Error("HTTP 403 Forbidden"));
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 403,
+      headers: new Headers(),
+      text: () => Promise.resolve("Forbidden"),
+    });
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
 
     try {
       await runIterate(makeOpts());
       expect(stderrSpy).toHaveBeenCalledWith(
-        expect.stringContaining("gh run cancel run-401 failed (ignored)"),
+        expect.stringContaining("cancel run run-401 failed (ignored)"),
       );
     } finally {
       stderrSpy.mockRestore();
@@ -488,8 +511,8 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
       expect(result.fix.checks[0]?.runId).toBe("run-300");
       expect(result.cancelled).toEqual(["run-300"]);
     }
-    const cancelCalls = mockExecFile.mock.calls.filter(
-      (call) => call[1]?.[0] === "run" && call[1]?.[1] === "cancel",
+    const cancelCalls = (mockFetch.mock.calls as Array<[string, RequestInit]>).filter(([url]) =>
+      url.includes("/cancel"),
     );
     expect(cancelCalls).toHaveLength(1);
   });
@@ -823,9 +846,10 @@ describe("runIterate — rerun_ci", () => {
       expect(result.reran.find((r) => r.runId === "run-10")?.failureKind).toBe("timeout");
     }
 
-    // Verify gh run rerun was called for both
-    expect(mockExecFile).toHaveBeenCalledWith("gh", ["run", "rerun", "run-10", "--failed"]);
-    expect(mockExecFile).toHaveBeenCalledWith("gh", ["run", "rerun", "run-11", "--failed"]);
+    // Verify rerun-failed-jobs was called for both via fetch
+    const fetchUrls = (mockFetch.mock.calls as Array<[string, RequestInit]>).map(([url]) => url);
+    expect(fetchUrls.some((u) => u.includes("run-10/rerun-failed-jobs"))).toBe(true);
+    expect(fetchUrls.some((u) => u.includes("run-11/rerun-failed-jobs"))).toBe(true);
   });
 
   it("deduplicates runIds when multiple failing steps share the same run", async () => {
@@ -1050,7 +1074,11 @@ describe("runIterate — mark_ready", () => {
       expect(result.markedReady).toBe(true);
     }
 
-    expect(mockExecFile).toHaveBeenCalledWith("gh", ["pr", "ready", "42"]);
+    // markPullRequestReadyForReview is a GraphQL mutation — verify a /graphql fetch was made
+    const graphqlCalls = (mockFetch.mock.calls as Array<[string, RequestInit]>).filter(([url]) =>
+      url.endsWith("/graphql"),
+    );
+    expect(graphqlCalls).toHaveLength(1);
   });
 
   it("does NOT mark ready when copilotReviewInProgress", async () => {
@@ -1077,7 +1105,10 @@ describe("runIterate — mark_ready", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("wait");
-    expect(mockExecFile).not.toHaveBeenCalledWith("gh", expect.arrayContaining(["pr", "ready"]));
+    const graphqlCalls = (mockFetch.mock.calls as Array<[string, RequestInit]>).filter(([url]) =>
+      url.endsWith("/graphql"),
+    );
+    expect(graphqlCalls).toHaveLength(0);
   });
 });
 

@@ -37,10 +37,6 @@ export interface PrShepherdConfig {
   mergeStatus: {
     blockingReviewerLogins: string[];
   };
-  execution: {
-    maxBufferMb: number;
-    triageLogBufferMb: number;
-  };
   actions: {
     autoResolveOutdated: boolean;
     autoRebase: boolean;
@@ -96,6 +92,14 @@ function deepMerge(
 
 function applyCompat(raw: Record<string, unknown>): Record<string, unknown> {
   const out = { ...raw };
+
+  // Removed top-level sections — warn and strip.
+  if ("execution" in out) {
+    process.stderr.write(
+      `pr-shepherd: config section "execution" (maxBufferMb, triageLogBufferMb) has been removed and has no effect.\n`,
+    );
+    delete out["execution"];
+  }
 
   // Removed keys — warn and strip.
   for (const gone of ["baseBranch", "minimizeBots", "cancelCiOnFailure", "autoMinimize"]) {
