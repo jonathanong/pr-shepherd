@@ -459,10 +459,17 @@ async function getBaseBranch(prNumber: number): Promise<string> {
     // GitHub ref names can include '/' but reject anything outside safe chars
     // to prevent shell interpolation issues in buildRebaseShellScript.
     if (!/^[A-Za-z0-9._/-]+$/.test(branch)) {
+      process.stderr.write(
+        `pr-shepherd: base branch ${JSON.stringify(branch)} for PR #${prNumber} contains unsafe characters — falling back to 'main' for rebase. If this PR targets a non-main branch, run the rebase manually against the real base.\n`,
+      );
       return "main";
     }
     return branch;
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(
+      `pr-shepherd: could not determine base branch for PR #${prNumber} (gh pr view failed: ${msg}) — falling back to 'main'. If this PR targets a non-main branch, the emitted rebase command will be wrong; run it manually against the real base.\n`,
+    );
     return "main";
   }
 }
@@ -549,8 +556,10 @@ function buildResolveCommand(
  * re-expand `$…` / `$(…)` / embedded `"` and break.
  */
 export function shellJoinArgv(rc: ResolveCommand): string {
-  const needsQuoting = (arg: string) =>
-    arg === "$DISMISS_MESSAGE" || arg === "$HEAD_SHA" || /\s/.test(arg);
+  // `$HEAD_SHA` is never in `rc.argv` — it is appended pre-quoted below when
+  // `requiresHeadSha`. Only `$DISMISS_MESSAGE` (or whitespace-bearing values)
+  // need quoting here.
+  const needsQuoting = (arg: string) => arg === "$DISMISS_MESSAGE" || /\s/.test(arg);
   const parts = rc.argv.map((a) => (needsQuoting(a) ? `"${a}"` : a));
   if (rc.requiresHeadSha) {
     parts.push("--require-sha", '"$HEAD_SHA"');
@@ -570,24 +579,24 @@ function buildFixInstructions(
 
   if (threads.length > 0 || actionableComments.length > 0) {
     instructions.push(
-      `Apply code fixes: read and edit each file referenced in fix.threads and fix.actionableComments.`,
+      `Apply code fixes: read and edit each file referenced in the \`thread\` / \`comment\` items above.`,
     );
   }
   const checksWithRunId = checks.filter((c) => c.runId !== null);
   const checksWithoutRunId = checks.filter((c) => c.runId === null);
   if (checksWithRunId.length > 0) {
     instructions.push(
-      `For each fix.checks[] with a runId: run gh run view <runId> --log-failed, identify the failure, and apply the fix.`,
+      `For each \`check <runId>\` item above with a runId (GitHub Actions): run gh run view <runId> --log-failed, identify the failure, and apply the fix.`,
     );
   }
   if (checksWithoutRunId.length > 0) {
     instructions.push(
-      `For each fix.checks[] with runId=null (external status check): open detailsUrl in the browser to inspect the failure — gh run view cannot fetch logs for external checks.`,
+      `For each \`check external <url>\` item above (external status check): open the URL in the browser to inspect the failure — gh run view cannot fetch logs for external checks.`,
     );
   }
   if (reviews.length > 0) {
     instructions.push(
-      `For each fix.changesRequestedReviews: read the review body and apply the requested changes.`,
+      `For each \`review\` item above: read the review body and apply the requested changes.`,
     );
   }
   if (resolveCommand.requiresHeadSha) {

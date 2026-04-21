@@ -50,9 +50,9 @@ Read the output and act on the `[ACTION]` tag in the first line (see [docs/actio
 
 - `[COOLDOWN]` | `[WAIT]` | `[RERUN_CI]` | `[MARK_READY]` → print the output, continue.
 - `[CANCEL]`   → print the output, then invoke `/loop cancel` via Skill tool and stop.
-- `[REBASE]`   → print the headline, then run the shell script lines (everything between the headline and the `info:` line) in Bash.
+- `[REBASE]`   → print the headline + `info:` line, then run the shell script lines (everything after the blank separator that follows `info:`) in Bash.
 - `[ESCALATE]` → print the full output, then invoke `/loop cancel` via Skill tool and stop.
-- `[FIX_CODE]` → follow the numbered instructions printed in the output in order, using the `  resolve: …` line verbatim as the final resolve command. Substitute `"$HEAD_SHA"` with the pushed SHA and `$DISMISS_MESSAGE` with a one-sentence description of the actual fix (never generic text like "address review comments"). Stop this iteration after running the resolve command — CI needs time before the next tick.
+- `[FIX_CODE]` → follow the numbered instructions printed in the output in order, using the `  resolve: …` line verbatim as the final resolve command. Substitute `"$HEAD_SHA"` with the pushed SHA and `$DISMISS_MESSAGE` with a one-sentence description of the actual fix (never generic text like "address review comments"). **Never manually run `gh run cancel` after your push** — stale runs listed in `cancelled runs: …` were already cancelled by the CLI (using the pre-push run IDs, as required by the "cancel CI runs before fixing and pushing" rule); running it again post-push would hit the NEW runs your push just triggered. Stop this iteration after running the resolve command — CI needs time before the next tick.
 
 ```
 

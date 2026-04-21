@@ -175,6 +175,8 @@ git fetch origin && git rebase origin/main && git push --force-with-lease
 
 The dirty-worktree guard exits 1 on skip, so the monitor SKILL sees a non-zero exit rather than silently counting the iteration as successful.
 
+**Base branch determination:** The CLI runs `gh pr view <PR> --json baseRefName` to find the rebase target. If that command fails (network error, auth issue) or returns a branch name containing characters outside `[A-Za-z0-9._/-]`, the CLI logs a warning to stderr and falls back to `main`. If your PR targets a non-`main` branch (e.g. `release/2026.04`) and you see the stderr warning, run the rebase manually against the real base instead of executing the emitted shell script — the script will otherwise rebase onto `origin/main` and force-push, which is almost certainly wrong for your PR.
+
 **What the monitor does:** Print the headline + `info:` line, then run the shell script lines (everything after the blank line) in Bash.
 
 ---

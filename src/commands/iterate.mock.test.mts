@@ -389,7 +389,15 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
       shouldCancel: false,
       remainingSeconds: 600,
     });
-    mockExecFile.mockRejectedValue(new Error("Cannot cancel a workflow run that is completed"));
+    mockExecFile.mockImplementation((_cmd: string, args: string[]) => {
+      if (args[0] === "run" && args[1] === "cancel") {
+        return Promise.reject(new Error("Cannot cancel a workflow run that is completed"));
+      }
+      if (args[0] === "pr" && args[1] === "view") {
+        return Promise.resolve({ stdout: "main\n", stderr: "" });
+      }
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
 
     try {
@@ -632,9 +640,10 @@ describe("runIterate — fix_code agent projection", () => {
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       const instructionsJoined = result.fix.instructions.join("\n");
-      expect(instructionsJoined).toContain("with a runId: run gh run view");
-      expect(instructionsJoined).toContain("runId=null");
-      expect(instructionsJoined).toContain("open detailsUrl");
+      expect(instructionsJoined).toContain("GitHub Actions");
+      expect(instructionsJoined).toContain("gh run view <runId> --log-failed");
+      expect(instructionsJoined).toContain("external status check");
+      expect(instructionsJoined).toContain("open the URL");
     }
   });
 });
