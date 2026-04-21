@@ -78,6 +78,8 @@ async function fetchFailedLogs(runId: string, repo: RepoInfo): Promise<string> {
     const logParts = await Promise.all(
       failedJobs.map(async (job) => {
         try {
+          // Job-level endpoint (jobs/{id}/logs) redirects to plain text, unlike
+          // run-level (runs/{id}/logs) which returns a ZIP archive.
           const logs = await restText("GET", `/repos/${owner}/${name}/actions/jobs/${job.id}/logs`);
           return logs.trim() ? `===== job: ${job.name} =====\n${logs}` : "";
         } catch {
