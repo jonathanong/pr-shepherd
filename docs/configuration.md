@@ -153,13 +153,13 @@ Common additions:
 - `merge_group` — for repos using GitHub's merge queue.
 - Remove `pull_request_target` for repos that don't use it (reduces noise).
 
-### `checks.timeoutPatterns` — default: see `config.json`
+### `checks.timeoutPatterns` — default: see [`src/config.json`](../src/config.json)
 
 Case-insensitive strings matched against the trimmed failure log. If any pattern matches, the check is classified as `timeout` and shepherd retries the run (`rerun_ci` action) rather than treating it as an actionable failure.
 
 Example: adding `"operation timed out"` classifies any run whose log contains that phrase as a transient timeout.
 
-### `checks.infraPatterns` — default: see `config.json`
+### `checks.infraPatterns` — default: see [`src/config.json`](../src/config.json)
 
 Same matching logic as `timeoutPatterns`, but classifies the check as `infrastructure` (e.g. a runner crashed). These are also retried via `rerun_ci`.
 
@@ -212,12 +212,12 @@ Disable if your team uses the draft state as a deliberate gate that requires a h
 | Variable                        | Effect                                                                                                           |
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | `PR_SHEPHERD_CACHE_DIR`         | Override the cache base directory (default `$TMPDIR/pr-shepherd-cache`)                                          |
-| `PR_SHEPHERD_CACHE_TTL_SECONDS` | Override `cache.ttlSeconds`; takes precedence over both the RC file and `--cache-ttl`                            |
+| `PR_SHEPHERD_CACHE_TTL_SECONDS` | Override `cache.ttlSeconds`. Precedence: `--cache-ttl` > this env var > RC/config value.                         |
 | `GH_TOKEN` / `GITHUB_TOKEN`     | GitHub auth token. Resolution order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` fallback (requires `gh` CLI). |
 
 ## Deprecated keys
 
-The following keys from earlier versions are still accepted but emit a deprecation warning to stderr. They will be removed in v0.3.0.
+The following keys from earlier versions are still accepted but emit a deprecation warning to stderr. They will be removed in a future release.
 
 | Old key                          | New key                                                   |
 | -------------------------------- | --------------------------------------------------------- |

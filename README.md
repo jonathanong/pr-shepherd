@@ -2,6 +2,19 @@
 
 Autonomous PR CI monitor and review-comment resolver for Claude Code.
 
+## Why pr-shepherd
+
+Concrete improvements to an agentic PR-review workflow:
+
+- **Faster monitor loops** — one batched GraphQL query per tick (see [docs/graphql.md](docs/graphql.md)) instead of N REST round-trips
+- **Lower context usage per iteration** — classification lives in TypeScript; the agent receives one decision per tick and never sees raw GraphQL payloads or resolved threads
+- **Deterministic output** — `--format=json` and `--format=text` surface equivalent information, so both scripts and agents see the same state
+- **Prompt-cache friendly** — the 4-minute default tick is tuned to Claude's 5-minute prompt-cache TTL (tunable via `watch.interval`)
+- **Reduced GitHub rate-limit exposure** — read results share a 5-minute file cache with atomic writes (see [docs/cache.md](docs/cache.md))
+- **No MCP surface** — skills call the CLI via `npx`; no long-lived MCP server, no extra auth boundary, smaller reasoning surface
+- **Skills over subagents** — skill prompts inject into the main conversation rather than spawning a subagent that reloads CLAUDE.md every turn
+- **Safe to interrupt** — all state lives in the PR on GitHub; the cron loop self-terminates when the PR is merged, closed, or settles after ready-delay
+
 ## Design principles
 
 - **Reduced agent context** — logic lives in the CLI, not the prompt
@@ -10,14 +23,32 @@ Autonomous PR CI monitor and review-comment resolver for Claude Code.
 - **No MCP** — smaller reasoning surface, much faster than the GitHub MCP
 - **No vendor lock-in** — runs against `gh` + `git`; no hosted service required
 - **Skills over subagents** — subagents reload all CLAUDE.md context on every turn; skills inject into the main conversation instead, keeping cost low
+- **JSON/text parity** — `--format=json` and `--format=text` carry equivalent information; every field in one has a representation in the other
 
 ## Features
 
-- **CI handling** — cancels runs on actionable failures, reruns on transient/infra failures, skips non-PR trigger events
-- **Comments** — resolves inline threads (including bot and AI reviewer comments), auto-resolves outdated threads before the agent sees them, aggressively hides bot comments, paginates and filters server-side
-- **Readiness** — converts draft → ready-for-review when CI passes, waits for pending Copilot reviews, settles for a configurable window (default 10 min) before exiting
-- **Rebases on conflict** — automatically rebases on the PR base branch when merge conflicts appear
-- **Intended as a PR merge blocker** — pair with a GitHub Actions required check that verifies all threads are resolved
+pr-shepherd is split into a CLI (deterministic, pure GitHub I/O) and three Claude Code skills that wrap the CLI with model-driven flow and mutation.
+
+### What the CLI does
+
+Deterministic commands that fetch, classify, and mutate PR state without invoking the model:
+
+- **`check`** — one-shot PR snapshot (merge state, CI results, unresolved comments) via a single batched GraphQL query
+- **`resolve`** — fetch/triage mode auto-resolves outdated threads and returns actionable items; mutate mode batch-resolves threads, minimizes comments, and dismisses reviews by ID, polling `--require-sha` so reviewers see the push before threads close
+- **`iterate`** — classifies current PR state and emits exactly one of eight actions: `cooldown`, `wait`, `rerun_ci`, `mark_ready`, `rebase`, `fix_code`, `cancel`, `escalate` (see [docs/actions.md](docs/actions.md))
+- **`status`** — multi-PR summary table, one lightweight GraphQL query per PR in parallel
+
+Cross-cutting machinery: file cache with atomic writes ([docs/cache.md](docs/cache.md)), merge-status derivation ([docs/merge-status.md](docs/merge-status.md)), CI failure classification into `actionable` / `infrastructure` / `timeout` / `flaky` ([docs/checks.md](docs/checks.md)), outdated-thread detection ([docs/comments.md](docs/comments.md)), deprecation-warning-aware RC loader.
+
+### What the skills do
+
+Claude Code skills that wrap the CLI with model-driven triage, code edits, and flow control:
+
+- **`/pr-shepherd:check`** — calls `check --format=json` and prints a human summary; never declares "ready to merge" unless every gate passes (merge status CLEAN, status READY, Copilot review not in progress)
+- **`/pr-shepherd:monitor`** — creates a `/loop` cron job (4-minute default, 8-hour expiry, 50-turn cap), deduplicates via a `# pr-shepherd-loop:pr=<N>` tag in `CronList`, dispatches on the `[ACTION]` H1 tag each tick, runs rebase scripts and fix instructions in the main conversation
+- **`/pr-shepherd:resolve`** — runs `resolve --fetch`, triages every returned item into Fixed / Actionable / Not-relevant / Outdated / Acknowledge (no silent drops — this is a project invariant), applies edits, cancels stale CI runs, pushes, then calls `resolve` in mutate mode with `--require-sha`
+
+See [docs/skills.md](docs/skills.md) for full skill reference.
 
 ## Install
 
@@ -154,7 +185,7 @@ See [docs/skills.md](docs/skills.md) for full argument reference.
 
 ## Workflow
 
-On each 4-minute tick: fetch PR state in one GraphQL batch → classify CI, comments, and merge status → take one action (fix code, rebase, rerun CI, mark ready, or wait). See [docs/flow.md](docs/flow.md) for the full decision tree.
+On each tick (4-minute default, tunable via `watch.interval`): fetch PR state in one GraphQL batch → classify CI, comments, and merge status → take one action (fix code, rebase, rerun CI, mark ready, or wait). See [docs/flow.md](docs/flow.md) for the full decision tree.
 
 ## CLI
 
@@ -167,11 +198,11 @@ pr-shepherd status PR1 [PR2 …]                        # multi-PR table
 
 Common flags (all subcommands):
 
-| Flag                  | Default | Description                                                                    |
-| --------------------- | ------- | ------------------------------------------------------------------------------ |
-| `--format text\|json` | `text`  | Output format                                                                  |
-| `--no-cache`          | false   | Bypass the 5-minute file cache                                                 |
-| `--cache-ttl N`       | `300`   | Cache TTL in seconds; `PR_SHEPHERD_CACHE_TTL_SECONDS` env var takes precedence |
+| Flag                  | Default | Description                                                                         |
+| --------------------- | ------- | ----------------------------------------------------------------------------------- |
+| `--format text\|json` | `text`  | Output format                                                                       |
+| `--no-cache`          | false   | Bypass the 5-minute file cache                                                      |
+| `--cache-ttl N`       | `300`   | Cache TTL in seconds; takes precedence over `PR_SHEPHERD_CACHE_TTL_SECONDS` env var |
 
 ### pr-shepherd check [PR]
 
@@ -324,7 +355,7 @@ Exit code: `0` if every PR is READY, `1` otherwise.
 
 ## Configuration
 
-Create a `.pr-shepherdrc.yml` in your project root (or any parent directory) to override defaults:
+Create a `.pr-shepherdrc.yml` in your project root (or any parent directory) to override defaults. The loader walks up from `cwd` to `$HOME` (if `$HOME` is on that path) or the filesystem root; the first match wins.
 
 ```yaml
 iterate:
@@ -338,7 +369,34 @@ actions:
   autoRebase: false # disable for repos that enforce merge commits
 ```
 
-See [docs/configuration.md](docs/configuration.md) for all options.
+All supported keys:
+
+| Key                                  | Default                                   | Purpose                                                                          |
+| ------------------------------------ | ----------------------------------------- | -------------------------------------------------------------------------------- |
+| `cache.ttlSeconds`                   | `300`                                     | File-cache TTL for read operations                                               |
+| `iterate.cooldownSeconds`            | `30`                                      | Wait after a push before reading CI                                              |
+| `iterate.fixAttemptsPerThread`       | `3`                                       | Max fix attempts per unresolved thread before `escalate`                         |
+| `watch.interval`                     | `"4m"`                                    | Monitor tick interval (tuned to Claude's 5-min prompt-cache TTL)                 |
+| `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                        |
+| `watch.expiresHours`                 | `8`                                       | Max lifetime of a monitor cron job                                               |
+| `watch.maxTurns`                     | `50`                                      | Max monitor ticks per session                                                    |
+| `resolve.concurrency`                | `4`                                       | Parallel fanout for per-thread GraphQL fetches                                   |
+| `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                 |
+| `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                       |
+| `resolve.fetchReviewSummaries`       | `true`                                    | Surface `COMMENTED` review summaries in `resolve --fetch` output                 |
+| `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos) |
+| `checks.timeoutPatterns`             | see [`src/config.json`](src/config.json)  | Log patterns that classify a failure as `timeout`                                |
+| `checks.infraPatterns`               | see [`src/config.json`](src/config.json)  | Log patterns that classify a failure as `infrastructure`                         |
+| `checks.logMaxLines`                 | `50`                                      | Max log lines kept per failing check                                             |
+| `checks.logMaxChars`                 | `3000`                                    | Max log characters kept per failing check                                        |
+| `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review blocks `mark_ready`                         |
+| `actions.autoResolveOutdated`        | `true`                                    | Auto-resolve threads that point to code no longer in the PR diff                 |
+| `actions.autoRebase`                 | `true`                                    | Emit `rebase` for flaky failures when the branch is behind base                  |
+| `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR's CI goes clean                                |
+
+Environment variables: `GH_TOKEN` / `GITHUB_TOKEN` (auth; falls back to `gh auth token`), `PR_SHEPHERD_CACHE_DIR` (override cache base dir), `PR_SHEPHERD_CACHE_TTL_SECONDS` (override cache TTL; `--cache-ttl` takes precedence over this env var, which in turn takes precedence over the RC/config value).
+
+See [docs/configuration.md](docs/configuration.md) for full semantics and deprecated-key migration.
 
 ## Requirements
 
