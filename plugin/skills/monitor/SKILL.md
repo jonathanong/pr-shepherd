@@ -44,23 +44,23 @@ Run in a single Bash call:
   npx pr-shepherd iterate <PR_NUMBER> --ready-delay <READY_DELAY_DURATION> --no-cache --last-push-time "$(git log -1 --format=%ct HEAD)"
 (`<READY_DELAY_DURATION>` is the raw duration string, e.g. `10m` — never a bare number of seconds)
 
-Exit codes 0–3 are all valid — always parse stdout as JSON first. If stdout is not valid JSON (crash), log the first line of stderr and stop.
+Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no output), log the first line of stderr and stop.
 
-Act on the `action` field:
-- `cooldown` | `wait` | `rerun_ci` | `mark_ready` → print `result.log`
-- `cancel`   → print `result.log`, then invoke `/loop cancel` via Skill tool and stop
-- `rebase`   → print `result.rebase.reason`, then run `result.rebase.shellScript` in Bash
-- `escalate` → print `result.escalate.humanMessage`, then invoke `/loop cancel` via Skill tool and stop
-- `fix_code` → follow `result.fix.instructions` in order, then stop this iteration (CI needs time):
-  1. Apply code fixes from `fix.threads` and `fix.actionableComments` (Edit/Write tools).
-  2. For each `fix.checks[].runId`: `gh run view <runId> --log-failed` — identify and fix the failure.
-     If `runId` is null: tell the user to open `detailsUrl` and inspect manually.
-  3. Apply changes from `fix.changesRequestedReviews`.
+Read the output and act on the `[ACTION]` tag in the first line:
+- `[COOLDOWN]` | `[WAIT]` | `[RERUN_CI]` | `[MARK_READY]` → print the output line
+- `[CANCEL]`   → print the output, then invoke `/loop cancel` via Skill tool and stop
+- `[REBASE]`   → print the reason line, then run the shell script shown in the output in Bash
+- `[ESCALATE]` → print the full output, then invoke `/loop cancel` via Skill tool and stop
+- `[FIX_CODE]` → follow the numbered instructions shown in the output, then stop this iteration (CI needs time):
+  1. Apply code fixes for each listed thread and comment (Edit/Write tools).
+  2. For each listed check run ID: `gh run view <runId> --log-failed` — identify and fix the failure.
+     If run ID is "(no runId)": tell the user to inspect the check URL manually.
+  3. Apply changes from each listed review.
   4. Commit: `git add <files> && git commit -m "<descriptive message>"`
-  5. Push: `git fetch origin && git rebase origin/<fix.baseBranch> && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
-  6. If `fix.noiseCommentIds` only (no code changes): skip commit/push; omit `--require-sha`.
-  7. Run `result.fix.resolveCommand.argv` joined as a shell command, substituting:
-     - `$HEAD_SHA` with the pushed SHA (omit `--require-sha` flag entirely if no push occurred)
+  5. Push: `git fetch origin && git rebase origin/<base shown in output> && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
+  6. If only noise comment IDs listed (no code changes): skip commit/push; omit `--require-sha`.
+  7. Run the resolve command shown in the output, substituting:
+     - `"$HEAD_SHA"` with the pushed SHA (omit `--require-sha` entirely if no push occurred)
      - `$DISMISS_MESSAGE` (if present) with one sentence describing the actual fix — never generic text like "address review comments"
 
 ```

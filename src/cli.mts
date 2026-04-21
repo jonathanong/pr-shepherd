@@ -6,7 +6,7 @@
  *   pr-shepherd resolve [PR] [--fetch] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]
  *                            [--dismiss-review-ids Q] [--message MSG] [--require-sha SHA]
  *                            [--last-push-time N]
- *   pr-shepherd iterate [PR] [--format text] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
+ *   pr-shepherd iterate [PR] [--format text|json] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
  *   pr-shepherd status PR1 [PR2 …]
  */
 
@@ -117,9 +117,6 @@ async function handleResolve(args: string[]): Promise<void> {
 
 async function handleIterate(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
-  // iterate defaults to JSON so agents work without an explicit --format flag.
-  // Pass --format=text for human-readable output.
-  const format = globalOpts.format === "text" ? "text" : "json";
 
   const lastPushTimeStr = getFlag(extra, "--last-push-time");
   const lastPushTime = lastPushTimeStr
@@ -148,7 +145,7 @@ async function handleIterate(args: string[]): Promise<void> {
     noAutoCancelActionable,
   });
 
-  if (format === "json") {
+  if (globalOpts.format === "json") {
     process.stdout.write(`${JSON.stringify(result)}\n`);
   } else {
     process.stdout.write(`${formatIterateResult(result)}\n`);
