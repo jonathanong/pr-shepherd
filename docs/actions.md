@@ -4,7 +4,7 @@
 
 Each iteration of `shepherd iterate` returns exactly one action. See [docs/iterate-flow.md](iterate-flow.md) for the decision order.
 
-The JSON output now includes **prescriptive fields** — pre-built log lines, shell scripts, and resolve commands — so the monitor loop can act without constructing them from raw state.
+The default output format is text — what you see when running `npx pr-shepherd iterate <PR>`. Pass `--format=json` to get structured output for scripting. Both formats carry equivalent information.
 
 ---
 
@@ -18,19 +18,13 @@ Skips all work because the last commit is too fresh for CI checks to have starte
 
 **Exit code:** 0
 
-**Key fields:**
-
-| Field | Type     | Description                 |
-| ----- | -------- | --------------------------- |
-| `log` | `string` | Ready-to-print summary line |
-
-**Example `log`:**
+**Text output:**
 
 ```
-SKIP: CI still starting — waiting for first check to appear
+PR #42 [COOLDOWN] SKIP: CI still starting — waiting for first check to appear
 ```
 
-**What the loop does:** Print `result.log` and wait for the next cron fire.
+**What the monitor does:** Print the output line and wait for the next cron fire.
 
 ---
 
@@ -44,21 +38,15 @@ Nothing actionable to do; all CI is passing or in-progress.
 
 **Exit code:** 0
 
-**Key fields:**
+**Text output examples:**
 
-| Field | Type     | Description                                                                   |
-| ----- | -------- | ----------------------------------------------------------------------------- |
-| `log` | `string` | Summary line including passing count, merge state, and time until auto-cancel |
+| Scenario           | Output                                                                                                |
+| ------------------ | ----------------------------------------------------------------------------------------------------- |
+| Normal wait        | `PR #42 [WAIT] WAIT: 3 passing, 2 in-progress — 120s until auto-cancel`                               |
+| Branch behind base | `PR #42 [WAIT] WAIT: 2 passing, 0 in-progress — branch is behind base — 300s until auto-cancel`       |
+| Blocked            | `PR #42 [WAIT] WAIT: 4 passing, 0 in-progress — blocked by pending reviews or required status checks` |
 
-**Example `log` values:**
-
-| Scenario           | Log                                                                                     |
-| ------------------ | --------------------------------------------------------------------------------------- |
-| Normal wait        | `WAIT: 3 passing, 2 in-progress — 120s until auto-cancel`                               |
-| Branch behind base | `WAIT: 2 passing, 0 in-progress — branch is behind base — 300s until auto-cancel`       |
-| Blocked            | `WAIT: 4 passing, 0 in-progress — blocked by pending reviews or required status checks` |
-
-**What the loop does:** Print `result.log` and wait for the next cron fire.
+**What the monitor does:** Print the output line and wait for the next cron fire.
 
 ---
 
@@ -72,12 +60,17 @@ Re-triggers CI runs that failed due to transient infrastructure or timeout issue
 
 **Exit code:** 0
 
-**Key fields:**
+**Text output:**
+
+```
+PR #42 [RERUN_CI] RERAN 2 CI runs: 24697658766 (lint / typecheck / test (22.x) — timeout), 24697658767 (build — infrastructure)
+```
+
+**JSON-only fields** (`--format=json`):
 
 | Field   | Type         | Description                                             |
 | ------- | ------------ | ------------------------------------------------------- |
 | `reran` | `ReranRun[]` | One entry per re-triggered run (deduplicated by run ID) |
-| `log`   | `string`     | Ready-to-print summary line                             |
 
 **`ReranRun` fields:**
 
@@ -87,13 +80,7 @@ Re-triggers CI runs that failed due to transient infrastructure or timeout issue
 | `checkNames`  | `string[]`                      | Check names within this run that triggered the rerun |
 | `failureKind` | `"timeout" \| "infrastructure"` | Why the rerun was triggered                          |
 
-**Example `log`:**
-
-```
-RERAN 2 CI runs: 24697658766 (lint / typecheck / test (22.x) — timeout), 24697658767 (build — infrastructure)
-```
-
-**What the loop does:** Print `result.log` and wait for CI to re-queue.
+**What the monitor does:** Print the output line and wait for CI to re-queue.
 
 ---
 
@@ -107,20 +94,13 @@ Converts a draft PR to ready for review.
 
 **Exit code:** 0
 
-**Key fields:**
-
-| Field         | Type      | Description                      |
-| ------------- | --------- | -------------------------------- |
-| `markedReady` | `boolean` | Whether `gh pr ready` was called |
-| `log`         | `string`  | Ready-to-print summary line      |
-
-**Example `log`:**
+**Text output:**
 
 ```
-MARKED READY: PR #42 converted from draft to ready for review
+PR #42 [MARK_READY] MARKED READY: PR #42 converted from draft to ready for review
 ```
 
-**What the loop does:** Print `result.log` and continue monitoring.
+**What the monitor does:** Print the output line and continue monitoring.
 
 ---
 
@@ -134,21 +114,15 @@ Stops the monitor loop — no further iterations needed.
 
 **Exit code:** 2
 
-**Key fields:**
+**Text output examples:**
 
-| Field | Type     | Description                        |
-| ----- | -------- | ---------------------------------- |
-| `log` | `string` | Human-readable reason for stopping |
+| Scenario            | Output                                                                                             |
+| ------------------- | -------------------------------------------------------------------------------------------------- |
+| PR merged           | `PR #42 [CANCEL] CANCEL: PR #42 is merged — stopping monitor`                                      |
+| PR closed           | `PR #42 [CANCEL] CANCEL: PR #42 is closed — stopping monitor`                                      |
+| Ready-delay elapsed | `PR #42 [CANCEL] CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping monitor` |
 
-**Example `log` values:**
-
-| Scenario            | Log                                                                                |
-| ------------------- | ---------------------------------------------------------------------------------- |
-| PR merged           | `CANCEL: PR #42 is merged — stopping monitor`                                      |
-| PR closed           | `CANCEL: PR #42 is closed — stopping monitor`                                      |
-| Ready-delay elapsed | `CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping monitor` |
-
-**What the loop does:** Print `result.log`, then invoke `/loop cancel` via Skill tool to stop the cron job.
+**What the monitor does:** Print the output line, then invoke `/loop cancel` via Skill tool to stop the cron job.
 
 ---
 
@@ -164,23 +138,10 @@ Rebases the branch on top of its base to clear flaky failures caused by being be
 
 **Exit code:** 1
 
-**Key fields:**
-
-| Field                | Type     | Description                                          |
-| -------------------- | -------- | ---------------------------------------------------- |
-| `rebase.baseBranch`  | `string` | The base branch name (e.g. `main`)                   |
-| `rebase.reason`      | `string` | Human-readable explanation                           |
-| `rebase.shellScript` | `string` | Complete shell script including dirty-worktree guard |
-
-**Example `reason`:**
+**Text output:**
 
 ```
-Branch is behind main — rebasing to pick up latest changes and clear flaky failures
-```
-
-**Example `shellScript`:**
-
-```bash
+PR #42 [REBASE] Branch is behind main — rebasing to pick up latest changes and clear flaky failures
 if ! git diff --quiet || ! git diff --cached --quiet; then
   echo "SKIP rebase: dirty worktree (uncommitted changes present)"
   exit 0
@@ -188,7 +149,7 @@ fi
 git fetch origin && git rebase origin/main && git push --force-with-lease
 ```
 
-**What the loop does:** Print `result.rebase.reason`, then run `result.rebase.shellScript` in Bash.
+**What the monitor does:** Print the reason line, then run the shell script shown in the output in Bash.
 
 ---
 
@@ -202,49 +163,34 @@ Actionable work needs a code fix, commit, and push.
 
 **Exit code:** 1
 
-**Key fields:**
-
-| Field                         | Type             | Description                                                                          |
-| ----------------------------- | ---------------- | ------------------------------------------------------------------------------------ |
-| `fix.threads`                 | `AgentThread[]`  | Inline review threads (always actionable)                                            |
-| `fix.actionableComments`      | `AgentComment[]` | PR-level comments classified as real feedback                                        |
-| `fix.noiseCommentIds`         | `string[]`       | Comment IDs classified as noise (quota warnings, bot acks) — minimize, do not act on |
-| `fix.checks`                  | `AgentCheck[]`   | Actionable CI failures (deduplicated by run ID)                                      |
-| `fix.changesRequestedReviews` | `Review[]`       | Reviews with CHANGES_REQUESTED state                                                 |
-| `fix.baseBranch`              | `string`         | Base branch to rebase onto (e.g. `"main"`)                                           |
-| `fix.resolveCommand`          | `ResolveCommand` | Pre-built resolve argv — run after pushing                                           |
-| `fix.instructions`            | `string[]`       | Ordered steps for the model to follow                                                |
-| `cancelled`                   | `string[]`       | Run IDs successfully cancelled by the CLI                                            |
-
-**`ResolveCommand` fields:**
-
-| Field                    | Type       | Description                                                                                                |
-| ------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------- |
-| `argv`                   | `string[]` | Shell-join and run; contains `$DISMISS_MESSAGE` placeholder when applicable                                |
-| `requiresHeadSha`        | `boolean`  | `true` when a push will occur (threads/checks/reviews present); `false` for noise-only (no commit or push) |
-| `requiresDismissMessage` | `boolean`  | Whether to substitute `$DISMISS_MESSAGE` with a specific one-sentence description                          |
-
-**Example resolve command argv** (threads + comment + review):
+**Text output:**
 
 ```
-["npx", "pr-shepherd", "resolve", "42",
- "--resolve-thread-ids", "t-1,t-2",
- "--minimize-comment-ids", "c-1,c-noise",
- "--dismiss-review-ids", "r-1",
- "--message", "$DISMISS_MESSAGE"]
+PR #42 [FIX_CODE]
+  thread PRRT_kwDOSGizTs58XB1L src/commands/iterate.mts:42 (@alice): The variable name is misleading
+  comment IC_kwDOSGizTs7_ajT8 (@bob): Consider using a more descriptive name here
+  noise (minimize only): IC_kwDOSGizTs7_ajT9
+  check 24697658766 — lint / typecheck / test (22.x) (actionable)
+  review PRR_kwDOSGizTs58XB1R (@alice): changes requested
+  cancelled runs: 24697658765
+  base: main
+  resolve: npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message $DISMISS_MESSAGE --require-sha "$HEAD_SHA"
+  1. Apply code fixes from fix.threads and fix.actionableComments.
+  2. For each fix.checks[].runId: run gh run view <runId> --log-failed, identify the failure, and apply the fix.
+  3. For each fix.changesRequestedReviews: read the review body and apply the requested changes.
+  4. Commit changed files: git add <files> && git commit -m "<descriptive message>"
+  5. Rebase and push: git fetch origin && git rebase origin/main && git push --force-with-lease — capture HEAD_SHA=$(git rev-parse HEAD)
+  6. Run the resolve command (substitute "$HEAD_SHA" with the pushed commit SHA; substitute $DISMISS_MESSAGE with a one-sentence description of what you changed): npx pr-shepherd resolve 42 ...
 ```
 
-Append `--require-sha <HEAD_SHA>` if a push occurred; omit if only noise was handled.
+**Resolve command rules:**
 
-**What the loop does:** Follow `fix.instructions` in order:
+- `--require-sha "$HEAD_SHA"` is appended only when a push occurred (threads/checks/reviews present). Omit entirely for noise-only.
+- `$DISMISS_MESSAGE` must be one specific sentence describing what changed — never generic text like "address review comments".
 
-1. Apply code fixes for each `fix.threads` and `fix.actionableComments` item.
-2. For each `fix.checks[].runId`, fetch the log via `gh run view <runId> --log-failed` and fix the failure. If `runId` is null, tell the user to inspect the check URL manually.
-3. Apply changes from each `fix.changesRequestedReviews` item.
-4. Commit changed files.
-5. Rebase and push; capture `HEAD_SHA`.
-6. If only `fix.noiseCommentIds` (no code changes), skip commit/push and omit `--require-sha`.
-7. Run the resolve command, substituting `$HEAD_SHA` and (if needed) `$DISMISS_MESSAGE` with a specific description of what you changed. Never use generic text like "address review comments".
+**JSON-only fields** (`--format=json`): `fix.threads`, `fix.actionableComments`, `fix.noiseCommentIds`, `fix.checks`, `fix.changesRequestedReviews`, `fix.baseBranch`, `fix.resolveCommand`, `fix.instructions`, `cancelled`.
+
+**What the monitor does:** Follow the numbered instructions shown in the output, then stop the iteration to let CI run.
 
 ---
 
@@ -262,32 +208,22 @@ Ambiguous state that requires human judgement — the monitor stops and surfaces
 
 **Exit code:** 3
 
-**Key fields:**
-
-| Field                              | Type                           | Description                                                                                          |
-| ---------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| `escalate.triggers`                | `string[]`                     | Which conditions fired (`"fix-thrash"`, `"pr-level-changes-requested"`, `"thread-missing-location"`) |
-| `escalate.suggestion`              | `string`                       | One-line action hint                                                                                 |
-| `escalate.unresolvedThreads`       | `AgentThread[]`                | Threads needing attention                                                                            |
-| `escalate.changesRequestedReviews` | `Review[]`                     | Reviews with CHANGES_REQUESTED state                                                                 |
-| `escalate.attemptHistory`          | `Array<{threadId, attempts}>?` | Populated for `fix-thrash`                                                                           |
-| `escalate.humanMessage`            | `string`                       | Full printable block ready to show to the human                                                      |
-
-**Example `humanMessage`:**
+**Text output:**
 
 ```
+PR #42 [ESCALATE]
 ⚠️  /pr-shepherd:monitor paused — needs human direction
 
 Triggers: fix-thrash
 Same thread(s) attempted multiple times without resolution — fix manually then rerun /pr-shepherd:monitor
 
 Items needing attention:
-- threadId=t-1 src/foo.mts:10 (@alice): The variable name is misleading
+- threadId=PRRT_kwDOSGizTs58XB1L src/commands/iterate.mts:42 (@alice): The variable name is misleading
 
-Fix attempts: threadId=t-1 attempted 3 times
+Fix attempts: threadId=PRRT_kwDOSGizTs58XB1L attempted 3 times
 
 Run /pr-shepherd:check 42 to see current state.
-After fixing manually, rerun /pr-shepherd:monitor to resume.
+After fixing manually, rerun /pr-shepherd:monitor 42 to resume.
 ```
 
-**What the loop does:** Print `result.escalate.humanMessage`, then invoke `/loop cancel` via Skill tool to stop the cron job.
+**What the monitor does:** Print the full output, then invoke `/loop cancel` via Skill tool to stop the cron job.
