@@ -143,13 +143,13 @@ export async function rest<T = unknown>(method: string, path: string, body?: unk
 }
 
 /**
- * REST request that returns plain text.
+ * GET request that returns plain text.
  * Handles the 302 redirect pattern used by the GitHub Actions job-logs endpoint —
  * the redirect target (a signed storage URL) is fetched without auth headers.
  */
-export async function restText(method: string, path: string): Promise<string> {
+export async function restText(path: string): Promise<string> {
   const res = await fetch(`${BASE_URL}${path}`, {
-    method,
+    method: "GET",
     headers: await makeHeaders(),
     redirect: "manual",
   });
@@ -167,7 +167,7 @@ export async function restText(method: string, path: string): Promise<string> {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`GitHub REST ${method} ${path} failed: ${res.status} ${text.slice(0, 300)}`);
+    throw new Error(`GitHub REST GET ${path} failed: ${res.status} ${text.slice(0, 300)}`);
   }
 
   return res.text();

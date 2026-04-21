@@ -228,7 +228,7 @@ describe("restText — redirect handling", () => {
         headers: new Headers(),
         text: () => Promise.resolve("log content here"),
       });
-    const text = await restText("GET", "/repos/o/r/actions/jobs/1/logs");
+    const text = await restText("/repos/o/r/actions/jobs/1/logs");
     expect(text).toBe("log content here");
   });
 
@@ -239,7 +239,7 @@ describe("restText — redirect handling", () => {
       headers: new Headers(),
       text: () => Promise.resolve("direct log content"),
     });
-    const text = await restText("GET", "/repos/o/r/actions/jobs/1/logs");
+    const text = await restText("/repos/o/r/actions/jobs/1/logs");
     expect(text).toBe("direct log content");
   });
 
@@ -257,7 +257,7 @@ describe("restText — redirect handling", () => {
         headers: new Headers(),
         text: () => Promise.resolve("Forbidden"),
       });
-    await expect(restText("GET", "/repos/o/r/actions/jobs/1/logs")).rejects.toThrow(
+    await expect(restText("/repos/o/r/actions/jobs/1/logs")).rejects.toThrow(
       /redirect target.*failed: 403/,
     );
   });
@@ -269,7 +269,7 @@ describe("restText — redirect handling", () => {
       headers: new Headers(),
       text: () => Promise.resolve("Not Found"),
     });
-    await expect(restText("GET", "/repos/o/r/actions/jobs/1/logs")).rejects.toThrow(
+    await expect(restText("/repos/o/r/actions/jobs/1/logs")).rejects.toThrow(
       /GitHub REST GET.*failed: 404/,
     );
   });

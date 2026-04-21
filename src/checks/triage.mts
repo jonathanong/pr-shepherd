@@ -64,12 +64,19 @@ interface JobsResponse {
 async function fetchFailedLogs(runId: string, repo: RepoInfo): Promise<string> {
   try {
     const { owner, name } = repo;
-    const jobsData = await rest<JobsResponse>(
-      "GET",
-      `/repos/${owner}/${name}/actions/runs/${runId}/jobs?filter=latest&per_page=100`,
-    );
+    const perPage = 100;
+    const allJobs: JobsResponse["jobs"] = [];
 
-    const failedJobs = jobsData.jobs.filter((j) =>
+    for (let page = 1; ; page++) {
+      const jobsData = await rest<JobsResponse>(
+        "GET",
+        `/repos/${owner}/${name}/actions/runs/${runId}/jobs?filter=latest&per_page=${perPage}&page=${page}`,
+      );
+      allJobs.push(...jobsData.jobs);
+      if (jobsData.jobs.length < perPage) break;
+    }
+
+    const failedJobs = allJobs.filter((j) =>
       ["failure", "timed_out", "cancelled"].includes(j.conclusion ?? ""),
     );
 
@@ -80,7 +87,7 @@ async function fetchFailedLogs(runId: string, repo: RepoInfo): Promise<string> {
         try {
           // Job-level endpoint (jobs/{id}/logs) redirects to plain text, unlike
           // run-level (runs/{id}/logs) which returns a ZIP archive.
-          const logs = await restText("GET", `/repos/${owner}/${name}/actions/jobs/${job.id}/logs`);
+          const logs = await restText(`/repos/${owner}/${name}/actions/jobs/${job.id}/logs`);
           return logs.trim() ? `===== job: ${job.name} =====\n${logs}` : "";
         } catch {
           return "";
