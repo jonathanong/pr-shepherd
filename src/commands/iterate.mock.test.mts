@@ -704,6 +704,72 @@ describe("runIterate — fix_code agent projection", () => {
       expect(instructionsJoined).not.toContain("external status check");
     }
   });
+
+  it("combined runId + external + bare checks — all three instruction variants coexist", async () => {
+    // Guards against a filter-predicate drift between buildFixInstructions
+    // (which buckets checks by truthiness) and the CLI formatter (which emits
+    // bullets by the same truthiness). If either side stops agreeing, an
+    // emitted bullet shape would have no matching instruction.
+    const ghActionsCheck = makeActionableCheck("run-77", "lint");
+    const externalCheck = {
+      name: "codecov/patch",
+      status: "COMPLETED" as const,
+      conclusion: "FAILURE" as const,
+      detailsUrl: "https://app.codecov.io/...",
+      event: "pull_request",
+      runId: null,
+      category: "failing" as const,
+    };
+    const bareCheck = {
+      name: "mystery",
+      status: "COMPLETED" as const,
+      conclusion: "FAILURE" as const,
+      detailsUrl: "",
+      event: "pull_request",
+      runId: null,
+      category: "failing" as const,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        checks: {
+          passing: [],
+          failing: [ghActionsCheck, externalCheck, bareCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockTriageFailingChecks.mockResolvedValue([
+      { ...ghActionsCheck, failureKind: "actionable" },
+      { ...externalCheck, failureKind: "actionable", category: "failing" as const },
+      { ...bareCheck, failureKind: "actionable", category: "failing" as const },
+    ]);
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.checks).toHaveLength(3);
+      const joined = result.fix.instructions.join("\n");
+      // All three instruction variants present:
+      expect(joined).toContain("numeric runId (GitHub Actions)");
+      expect(joined).toContain("external status check");
+      expect(joined).toContain("(no runId)");
+      // And each appears exactly once:
+      expect(joined.match(/GitHub Actions/g)).toHaveLength(1);
+      expect(joined.match(/external status check/g)).toHaveLength(1);
+      expect(joined.match(/\(no runId\)/g)).toHaveLength(1);
+    }
+  });
 });
 
 describe("runIterate — rerun_ci", () => {
@@ -1961,6 +2027,75 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
     if (result.action === "escalate") {
       expect(result.escalate.triggers).toContain("base-branch-unknown");
       expect(result.escalate.suggestion).toMatch(/empty base branch name/);
+    }
+  });
+
+  it("escalates with base-branch-unknown on CONFLICTS-only when gh pr view fails (no resolve IDs, but rebase still needed)", async () => {
+    // Guards the `|| hasConflicts` branch of the fix_code base-branch-unknown
+    // gate. Without it, a CONFLICTS-only PR with no threads/comments/checks/
+    // reviews would silently rebase onto `main` even when gh pr view failed,
+    // because resolveCommand.requiresHeadSha is false (nothing to resolve).
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        mergeStatus: {
+          status: "CONFLICTS",
+          state: "OPEN" as const,
+          isDraft: false,
+          mergeable: "CONFLICTING",
+          reviewDecision: null,
+          copilotReviewInProgress: false,
+          mergeStateStatus: "DIRTY",
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "gh" && args[0] === "pr" && args[1] === "view") {
+        return Promise.reject(new Error("network unreachable"));
+      }
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toEqual(["base-branch-unknown"]);
+      expect(result.escalate.suggestion).toMatch(/network unreachable/);
+    }
+  });
+
+  it("escalates with base-branch-unknown when gh pr view returns unsafe characters in the ref name", async () => {
+    // Prevents shell interpolation via getBaseBranch — a ref like
+    // `main;rm -rf /` must not flow into buildRebaseShellScript.
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "gh" && args[0] === "pr" && args[1] === "view") {
+        return Promise.resolve({ stdout: "main; rm -rf /\n", stderr: "" });
+      }
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toContain("base-branch-unknown");
+      expect(result.escalate.suggestion).toMatch(/unsafe characters/);
+      expect(result.escalate.suggestion).toContain("main; rm -rf /");
     }
   });
 });
