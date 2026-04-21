@@ -18,7 +18,7 @@ on:
           - prerelease
 
 permissions:
-  contents: write
+  contents: read
   id-token: write
 
 concurrency:
@@ -29,6 +29,13 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      - name: Check RELEASE_TOKEN is set
+        run: |
+          if [ -z "${{ secrets.RELEASE_TOKEN }}" ]; then
+            echo "::error::RELEASE_TOKEN secret is not set. This workflow requires a PAT whose owner is in the main branch ruleset bypass list." >&2
+            exit 1
+          fi
+
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
