@@ -242,4 +242,35 @@ describe("restText — redirect handling", () => {
     const text = await restText("GET", "/repos/o/r/actions/jobs/1/logs");
     expect(text).toBe("direct log content");
   });
+
+  it("throws when redirect target returns non-2xx", async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 302,
+        headers: new Headers({ location: "https://storage.example.com/logs/job-1.txt" }),
+        text: () => Promise.resolve(""),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        headers: new Headers(),
+        text: () => Promise.resolve("Forbidden"),
+      });
+    await expect(restText("GET", "/repos/o/r/actions/jobs/1/logs")).rejects.toThrow(
+      /redirect target.*failed: 403/,
+    );
+  });
+
+  it("throws on non-2xx non-redirect responses", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 404,
+      headers: new Headers(),
+      text: () => Promise.resolve("Not Found"),
+    });
+    await expect(restText("GET", "/repos/o/r/actions/jobs/1/logs")).rejects.toThrow(
+      /GitHub REST GET.*failed: 404/,
+    );
+  });
 });

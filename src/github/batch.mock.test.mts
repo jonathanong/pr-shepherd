@@ -19,6 +19,7 @@ const REPO = { owner: "owner", name: "repo" };
 
 function makeRawPr(overrides: Record<string, unknown> = {}) {
   return {
+    id: "PR_kgDOAAA",
     number: 42,
     state: "OPEN",
     isDraft: false,
@@ -26,6 +27,7 @@ function makeRawPr(overrides: Record<string, unknown> = {}) {
     mergeStateStatus: "CLEAN",
     reviewDecision: "APPROVED",
     headRefOid: "abc123",
+    baseRefName: "main",
     reviewRequests: { nodes: [] },
     latestReviews: { nodes: [] },
     reviewThreads: {
@@ -583,5 +585,236 @@ describe("fetchPrBatch — reviewSummaries pagination", () => {
 
     const { data } = await fetchPrBatch(42, REPO);
     expect(data.reviewSummaries.map((r) => r.id)).toEqual(["PRR_1", "PRR_2"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Pagination — comments backward
+// ---------------------------------------------------------------------------
+
+describe("fetchPrBatch — comment pagination", () => {
+  it("paginates backward when hasPreviousPage is true", async () => {
+    const makeComment = (id: string) => ({
+      id,
+      isMinimized: false,
+      author: { login: "alice" },
+      body: "body",
+      createdAt: "2024-01-01T00:00:00Z",
+    });
+    const firstPage = makeRawPr({
+      comments: {
+        pageInfo: { hasPreviousPage: true, startCursor: "cursor-c1" },
+        nodes: [makeComment("c-2")],
+      },
+    });
+    const prevPage = makeRawPr({
+      comments: {
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: [makeComment("c-1")],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
+    mockGraphql.mockResolvedValue(makeResponse(prevPage));
+
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.comments.map((c) => c.id)).toEqual(["c-1", "c-2"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Pagination — checks forward
+// ---------------------------------------------------------------------------
+
+describe("fetchPrBatch — checks pagination", () => {
+  it("paginates forward when hasNextPage is true", async () => {
+    const makeCheckNode = (name: string) => ({
+      __typename: "CheckRun",
+      name,
+      status: "COMPLETED",
+      conclusion: "SUCCESS",
+      detailsUrl: null,
+      checkSuite: null,
+    });
+    const firstPage = makeRawPr({
+      commits: {
+        nodes: [
+          {
+            commit: {
+              statusCheckRollup: {
+                contexts: {
+                  pageInfo: { hasNextPage: true, endCursor: "cursor-ch1" },
+                  nodes: [makeCheckNode("check-1")],
+                },
+              },
+            },
+          },
+        ],
+      },
+    });
+    const nextPage = makeRawPr({
+      commits: {
+        nodes: [
+          {
+            commit: {
+              statusCheckRollup: {
+                contexts: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [makeCheckNode("check-2")],
+                },
+              },
+            },
+          },
+        ],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
+    mockGraphql.mockResolvedValue(makeResponse(nextPage));
+
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.checks.map((c) => c.name)).toEqual(["check-1", "check-2"]);
+  });
+
+  it("falls back to empty page when statusCheckRollup is null in callback", async () => {
+    const firstPage = makeRawPr({
+      commits: {
+        nodes: [
+          {
+            commit: {
+              statusCheckRollup: {
+                contexts: {
+                  pageInfo: { hasNextPage: true, endCursor: "cur-1" },
+                  nodes: [
+                    {
+                      __typename: "CheckRun",
+                      name: "check-1",
+                      status: "COMPLETED",
+                      conclusion: "SUCCESS",
+                      detailsUrl: null,
+                      checkSuite: null,
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      },
+    });
+    const nullRollupPage = makeRawPr({
+      commits: { nodes: [{ commit: { statusCheckRollup: null } }] },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
+    mockGraphql.mockResolvedValue(makeResponse(nullRollupPage));
+
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.checks.map((c) => c.name)).toEqual(["check-1"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Pagination — PR not found errors in callbacks
+// ---------------------------------------------------------------------------
+
+describe("fetchPrBatch — PR not found in pagination callbacks", () => {
+  it("throws when thread pagination callback receives null PR", async () => {
+    const firstPage = makeRawPr({
+      reviewThreads: {
+        pageInfo: { hasPreviousPage: true, startCursor: "cursor-t" },
+        nodes: [{ id: "t-2", isResolved: false, isOutdated: false, comments: { nodes: [] } }],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
+    mockGraphql.mockResolvedValue(makeResponse(null));
+    await expect(fetchPrBatch(42, REPO)).rejects.toThrow("PR #42 not found");
+  });
+
+  it("throws when comment pagination callback receives null PR", async () => {
+    const firstPage = makeRawPr({
+      comments: {
+        pageInfo: { hasPreviousPage: true, startCursor: "cursor-c" },
+        nodes: [],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
+    mockGraphql.mockResolvedValue(makeResponse(null));
+    await expect(fetchPrBatch(42, REPO)).rejects.toThrow("PR #42 not found");
+  });
+
+  it("throws when changesRequestedReviews pagination callback receives null PR", async () => {
+    const firstPage = makeRawPr({
+      changesRequestedReviews: {
+        pageInfo: { hasPreviousPage: true, startCursor: "cursor-cr" },
+        nodes: [],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
+    mockGraphql.mockResolvedValue(makeResponse(null));
+    await expect(fetchPrBatch(42, REPO)).rejects.toThrow("PR #42 not found");
+  });
+
+  it("throws when reviewSummaries pagination callback receives null PR", async () => {
+    const firstPage = makeRawPr({
+      reviewSummaries: {
+        pageInfo: { hasPreviousPage: true, startCursor: "cursor-rs" },
+        nodes: [],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
+    mockGraphql.mockResolvedValue(makeResponse(null));
+    await expect(fetchPrBatch(42, REPO)).rejects.toThrow("PR #42 not found");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseRawPr — null author fallbacks and reviewDecision null
+// ---------------------------------------------------------------------------
+
+describe("fetchPrBatch — null author fallbacks", () => {
+  it("defaults latestReview author to 'unknown' when null", async () => {
+    const pr = makeRawPr({
+      latestReviews: { nodes: [{ author: null, state: "APPROVED" }] },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.latestReviews[0]!.login).toBe("unknown");
+  });
+
+  it("defaults comment author to 'unknown' when null", async () => {
+    const pr = makeRawPr({
+      comments: {
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: [
+          {
+            id: "c-1",
+            isMinimized: false,
+            author: null,
+            body: "hello",
+            createdAt: "2024-01-01T00:00:00Z",
+          },
+        ],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.comments[0]!.author).toBe("unknown");
+  });
+
+  it("defaults changesRequestedReview author to 'unknown' when null", async () => {
+    const pr = makeRawPr({
+      changesRequestedReviews: {
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: [{ id: "r-1", author: null, body: "needs work" }],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.changesRequestedReviews[0]!.author).toBe("unknown");
+  });
+
+  it("maps reviewDecision: null to null", async () => {
+    const pr = makeRawPr({ reviewDecision: null });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.reviewDecision).toBeNull();
   });
 });
