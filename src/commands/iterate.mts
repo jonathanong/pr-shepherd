@@ -586,12 +586,12 @@ function buildFixInstructions(
   const checksWithoutRunId = checks.filter((c) => c.runId === null);
   if (checksWithRunId.length > 0) {
     instructions.push(
-      `For each \`check <runId>\` item above with a runId (GitHub Actions): run gh run view <runId> --log-failed, identify the failure, and apply the fix.`,
+      `For each \`check <runId>\` item above with a runId (GitHub Actions): run \`gh run view <runId> --log-failed\`, identify the failure, and apply the fix.`,
     );
   }
   if (checksWithoutRunId.length > 0) {
     instructions.push(
-      `For each \`check external <url>\` item above (external status check): open the URL in the browser to inspect the failure — gh run view cannot fetch logs for external checks.`,
+      `For each \`check external <url>\` item above (external status check): open the URL in the browser to inspect the failure — \`gh run view\` cannot fetch logs for external checks.`,
     );
   }
   if (reviews.length > 0) {
@@ -601,10 +601,10 @@ function buildFixInstructions(
   }
   if (resolveCommand.requiresHeadSha) {
     instructions.push(
-      `Commit changed files: git add <files> && git commit -m "<descriptive message>"`,
+      `Commit changed files: \`git add <files> && git commit -m "<descriptive message>"\``,
     );
     instructions.push(
-      `Rebase and push: git fetch origin && git rebase origin/${baseBranch} && git push --force-with-lease — capture HEAD_SHA=$(git rev-parse HEAD)`,
+      `Rebase and push: \`git fetch origin && git rebase origin/${baseBranch} && git push --force-with-lease\` — capture \`HEAD_SHA=$(git rev-parse HEAD)\``,
     );
   }
   const substituteParts: string[] = [];
@@ -654,35 +654,45 @@ function buildEscalateHumanMessage(
   const lines: string[] = [];
   lines.push("⚠️  /pr-shepherd:monitor paused — needs human direction");
   lines.push("");
-  lines.push(`Triggers: ${escalate.triggers.join(", ")}`);
-  lines.push(escalate.suggestion);
+  lines.push(`**Triggers:** ${escalate.triggers.map((t) => `\`${t}\``).join(", ")}`);
   lines.push("");
-  lines.push("Items needing attention:");
-  for (const t of escalate.unresolvedThreads) {
-    const loc = t.path ? `${t.path}:${t.line ?? "?"}` : "(no location)";
-    const firstLine = t.body.split("\n")[0] ?? "";
-    lines.push(`- threadId=${t.id} ${loc} (@${t.author}): ${firstLine}`);
+  lines.push(escalate.suggestion);
+
+  const hasItems =
+    escalate.unresolvedThreads.length > 0 ||
+    escalate.changesRequestedReviews.length > 0 ||
+    escalate.ambiguousComments.length > 0;
+  if (hasItems) {
+    lines.push("");
+    lines.push("## Items needing attention");
+    for (const t of escalate.unresolvedThreads) {
+      const loc = t.path ? `\`${t.path}:${t.line ?? "?"}\`` : "(no location)";
+      const firstLine = t.body.split("\n")[0] ?? "";
+      lines.push(`- thread \`${t.id}\` — ${loc} (@${t.author}): ${firstLine}`);
+    }
+    for (const r of escalate.changesRequestedReviews) {
+      const firstLine = r.body.split("\n")[0] ?? "";
+      lines.push(`- review \`${r.id}\` (@${r.author}): ${firstLine}`);
+    }
+    for (const c of escalate.ambiguousComments) {
+      const firstLine = c.body.split("\n")[0] ?? "";
+      lines.push(`- comment \`${c.id}\` (@${c.author}): ${firstLine}`);
+    }
   }
-  for (const r of escalate.changesRequestedReviews) {
-    const firstLine = r.body.split("\n")[0] ?? "";
-    lines.push(`- reviewId=${r.id} (@${r.author}): ${firstLine}`);
-  }
-  for (const c of escalate.ambiguousComments) {
-    const firstLine = c.body.split("\n")[0] ?? "";
-    lines.push(`- commentId=${c.id} (@${c.author}): ${firstLine}`);
-  }
+
   if (escalate.attemptHistory && escalate.attemptHistory.length > 0) {
     lines.push("");
-    lines.push(
-      "Fix attempts: " +
-        escalate.attemptHistory
-          .map((a) => `threadId=${a.threadId} attempted ${a.attempts} times`)
-          .join(", "),
-    );
+    lines.push("## Fix attempts");
+    for (const a of escalate.attemptHistory) {
+      lines.push(`- thread \`${a.threadId}\` attempted ${a.attempts} times`);
+    }
   }
+
   lines.push("");
-  lines.push(`Run /pr-shepherd:check ${pr} to see current state.`);
-  lines.push(`After fixing manually, rerun /pr-shepherd:monitor ${pr} to resume.`);
+  lines.push("---");
+  lines.push("");
+  lines.push(`Run \`/pr-shepherd:check ${pr}\` to see current state.`);
+  lines.push(`After fixing manually, rerun \`/pr-shepherd:monitor ${pr}\` to resume.`);
   return lines.join("\n");
 }
 

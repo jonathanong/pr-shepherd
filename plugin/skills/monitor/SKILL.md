@@ -31,7 +31,7 @@ allowed-tools:
 
 Invoke `/loop <INTERVAL> --max-turns 50 --expires 8h` via the Skill tool. Use the interval from the argument if provided (e.g. `every 30 minutes` → `30m`), otherwise use `4m`. The loop prompt should be:
 
-```
+````
 # pr-shepherd-loop:pr=<PR_NUMBER>
 
 **IMPORTANT — recurrence rules:**
@@ -44,17 +44,17 @@ Run in a single Bash call:
   npx pr-shepherd iterate <PR_NUMBER> --ready-delay <READY_DELAY_DURATION> --no-cache --last-push-time "$(git log -1 --format=%ct HEAD)"
 (`<READY_DELAY_DURATION>` is the raw duration string, e.g. `10m` — never a bare number of seconds)
 
-Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no output that starts with `PR #<N> [`), log the first line of stderr and continue — do not cancel the loop. The next cron fire will retry.
+Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with `# PR #<N> [`), log the first line of stderr and continue — do not cancel the loop. The next cron fire will retry.
 
-Read the output and act on the `[ACTION]` tag in the first line (see [docs/actions.md](../../../docs/actions.md) for full output shapes):
+The output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Read the `[<ACTION>]` tag to decide what to do (see [docs/actions.md](../../../docs/actions.md) for full output shapes):
 
 - `[COOLDOWN]` | `[WAIT]` | `[RERUN_CI]` | `[MARK_READY]` → print the output, continue.
 - `[CANCEL]`   → print the output, then invoke `/loop cancel` via Skill tool and stop.
-- `[REBASE]`   → print the headline + `info:` line, then run the shell script lines (everything after the blank separator that follows `info:`) in Bash.
-- `[ESCALATE]` → print the full output, then invoke `/loop cancel` via Skill tool and stop.
-- `[FIX_CODE]` → follow the numbered instructions printed in the output in order, using the `  resolve: …` line verbatim as the final resolve command. Substitute `"$HEAD_SHA"` with the pushed SHA and `$DISMISS_MESSAGE` with a one-sentence description of the actual fix (never generic text like "address review comments"). **Never manually run `gh run cancel` after your push** — stale runs listed in `cancelled runs: …` were already cancelled by the CLI (using the pre-push run IDs, as required by the "cancel CI runs before fixing and pushing" rule); running it again post-push would hit the NEW runs your push just triggered. Stop this iteration after running the resolve command — CI needs time before the next tick.
+- `[REBASE]`   → print the output, then extract the shell script from the ` ```bash ` fenced block and run it in Bash.
+- `[ESCALATE]` → print the output, then invoke `/loop cancel` via Skill tool and stop.
+- `[FIX_CODE]` → follow the numbered items under `## Instructions` in order. The `resolve` bullet under `## Rebase` holds the final resolve command inside backticks — strip the backticks and run it, substituting `"$HEAD_SHA"` with the pushed SHA and `$DISMISS_MESSAGE` with a one-sentence description of the actual fix (never generic text like "address review comments"). **Never manually run `gh run cancel` after your push** — stale runs listed under `## Cancelled runs` were already cancelled by the CLI (using the pre-push run IDs, as required by the "cancel CI runs before fixing and pushing" rule); running it again post-push would hit the NEW runs your push just triggered. Stop this iteration after running the resolve command — CI needs time before the next tick.
 
-```
+````
 
 **Do NOT call ScheduleWakeup** — the cron job handles its own recurrence. Calling ScheduleWakeup with a `/loop` prompt would create a duplicate cron job on the next fire.
 

@@ -1728,7 +1728,7 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
       expect(humanMessage).toMatch(/thread-1/);
       expect(humanMessage).toMatch(/src\/foo\.mts/);
       expect(humanMessage).toMatch(/pr-shepherd:check 42/);
-      expect(humanMessage).toMatch(/pr-shepherd:monitor 42 to resume/);
+      expect(humanMessage).toMatch(/pr-shepherd:monitor 42` to resume/);
     }
   });
 });
