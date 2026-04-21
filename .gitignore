@@ -1,5 +1,6 @@
 test-results/
 coverage/
+dist/
 node_modules/
 bin/
 .DS_Store
