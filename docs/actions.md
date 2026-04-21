@@ -52,12 +52,11 @@ Nothing actionable to do; all CI is passing or in-progress.
 
 **Example `log` values:**
 
-| Scenario                             | Log                                                                                                       |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| Normal wait                          | `WAIT: 3 passing, 2 in-progress — 120s until auto-cancel`                                                 |
-| Branch behind base                   | `WAIT: 2 passing, 0 in-progress — branch is behind base — 300s until auto-cancel`                         |
-| Blocked                              | `WAIT: 4 passing, 0 in-progress — blocked by pending reviews or required status checks`                   |
-| Merge conflicts (no actionable work) | `WAIT: 0 passing, 0 in-progress — merge conflicts — rebase on next push, or now if no pushes are planned` |
+| Scenario           | Log                                                                                     |
+| ------------------ | --------------------------------------------------------------------------------------- |
+| Normal wait        | `WAIT: 3 passing, 2 in-progress — 120s until auto-cancel`                               |
+| Branch behind base | `WAIT: 2 passing, 0 in-progress — branch is behind base — 300s until auto-cancel`       |
+| Blocked            | `WAIT: 4 passing, 0 in-progress — blocked by pending reviews or required status checks` |
 
 **What the loop does:** Print `result.log` and wait for the next cron fire.
 

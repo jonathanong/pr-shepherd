@@ -1339,36 +1339,6 @@ describe("runIterate — prescriptive fields: log strings", () => {
     }
   });
 
-  it("wait.log includes 'merge conflicts' description for DIRTY mergeStateStatus", async () => {
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "FAILING",
-        mergeStatus: {
-          status: "CLEAN",
-          state: "OPEN",
-          isDraft: false,
-          mergeable: "CONFLICTING",
-          reviewDecision: null,
-          copilotReviewInProgress: false,
-          mergeStateStatus: "DIRTY",
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 0,
-    });
-
-    // No actionable work, no failing checks → wait
-    const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
-    expect(result.action).toBe("wait");
-    if (result.action === "wait") {
-      expect(result.log).toMatch(/merge conflicts/i);
-      expect(result.log).toMatch(/rebase/i);
-    }
-  });
-
   it("cancel.log mentions PR state when PR is merged", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({

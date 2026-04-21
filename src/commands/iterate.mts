@@ -554,9 +554,6 @@ function buildWaitLog(base: IterateResultBase): string {
     case "BLOCKED":
       parts.push("blocked by pending reviews or required status checks");
       break;
-    case "DIRTY":
-      parts.push("merge conflicts — rebase on next push, or now if no pushes are planned");
-      break;
     case "DRAFT":
       parts.push("PR is a draft");
       break;
