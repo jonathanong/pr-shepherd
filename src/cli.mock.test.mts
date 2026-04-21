@@ -89,6 +89,7 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
         noiseCommentIds: [],
         checks: [],
         changesRequestedReviews: [],
+        baseBranch: "main",
         resolveCommand: {
           argv: ["npx", "pr-shepherd", "resolve", "42"],
           requiresHeadSha: true,

@@ -56,7 +56,7 @@ Act on the `action` field:
      If `runId` is null: tell the user to open `detailsUrl` and inspect manually.
   3. Apply changes from `fix.changesRequestedReviews`.
   4. Commit: `git add <files> && git commit -m "<descriptive message>"`
-  5. Push: `git fetch origin && git rebase origin/<baseBranch> && git push --force-with-lease` (baseBranch is in `fix.instructions[4]`) — capture `HEAD_SHA=$(git rev-parse HEAD)`
+  5. Push: `git fetch origin && git rebase origin/<fix.baseBranch> && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
   6. If `fix.noiseCommentIds` only (no code changes): skip commit/push; omit `--require-sha`.
   7. Run `result.fix.resolveCommand.argv` joined as a shell command, substituting:
      - `$HEAD_SHA` with the pushed SHA (omit `--require-sha` flag entirely if no push occurred)

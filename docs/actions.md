@@ -203,17 +203,18 @@ Actionable work needs a code fix, commit, and push.
 | `fix.noiseCommentIds`         | `string[]`       | Comment IDs classified as noise (quota warnings, bot acks) — minimize, do not act on |
 | `fix.checks`                  | `AgentCheck[]`   | Actionable CI failures (deduplicated by run ID)                                      |
 | `fix.changesRequestedReviews` | `Review[]`       | Reviews with CHANGES_REQUESTED state                                                 |
+| `fix.baseBranch`              | `string`         | Base branch to rebase onto (e.g. `"main"`)                                           |
 | `fix.resolveCommand`          | `ResolveCommand` | Pre-built resolve argv — run after pushing                                           |
 | `fix.instructions`            | `string[]`       | Ordered steps for the model to follow                                                |
 | `cancelled`                   | `string[]`       | Run IDs successfully cancelled by the CLI                                            |
 
 **`ResolveCommand` fields:**
 
-| Field                    | Type       | Description                                                                       |
-| ------------------------ | ---------- | --------------------------------------------------------------------------------- |
-| `argv`                   | `string[]` | Shell-join and run; contains `$DISMISS_MESSAGE` placeholder when applicable       |
-| `requiresHeadSha`        | `boolean`  | Whether to append `--require-sha <HEAD_SHA>` after a successful push              |
-| `requiresDismissMessage` | `boolean`  | Whether to substitute `$DISMISS_MESSAGE` with a specific one-sentence description |
+| Field                    | Type       | Description                                                                                                |
+| ------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------- |
+| `argv`                   | `string[]` | Shell-join and run; contains `$DISMISS_MESSAGE` placeholder when applicable                                |
+| `requiresHeadSha`        | `boolean`  | `true` when a push will occur (threads/checks/reviews present); `false` for noise-only (no commit or push) |
+| `requiresDismissMessage` | `boolean`  | Whether to substitute `$DISMISS_MESSAGE` with a specific one-sentence description                          |
 
 **Example resolve command argv** (threads + comment + review):
 

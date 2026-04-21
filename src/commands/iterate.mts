@@ -226,6 +226,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       threads,
       allCommentIds,
       changesRequestedReviews,
+      checks,
       prNumber,
     );
     const instructions = buildFixInstructions(
@@ -246,6 +247,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
         noiseCommentIds,
         checks,
         changesRequestedReviews,
+        baseBranch,
         resolveCommand,
         instructions,
       },
@@ -483,6 +485,7 @@ function buildResolveCommand(
   threads: AgentThread[],
   allCommentIds: string[],
   reviews: Review[],
+  checks: import("../types.mts").AgentCheck[],
   prNumber: number,
 ): ResolveCommand {
   const argv = ["npx", "pr-shepherd", "resolve", String(prNumber)];
@@ -499,7 +502,11 @@ function buildResolveCommand(
     argv.push("--message", "$DISMISS_MESSAGE");
   }
 
-  return { argv, requiresHeadSha: true, requiresDismissMessage: hasDismiss };
+  // A push only happens when there is code to change — threads, CI checks, or review requests.
+  // Noise-only comment minimization skips commit/push, so requiresHeadSha must be false.
+  const requiresHeadSha = threads.length > 0 || checks.length > 0 || reviews.length > 0;
+
+  return { argv, requiresHeadSha, requiresDismissMessage: hasDismiss };
 }
 
 function buildFixInstructions(
@@ -512,7 +519,7 @@ function buildFixInstructions(
 ): string[] {
   const resolveCmd =
     resolveCommand.argv.join(" ") +
-    (resolveCommand.requiresHeadSha ? " --require-sha $HEAD_SHA" : "");
+    (resolveCommand.requiresHeadSha ? ' --require-sha "$HEAD_SHA"' : "");
   const instructions: string[] = [];
 
   if (threads.length > 0 || actionableComments.length > 0) {
@@ -530,14 +537,16 @@ function buildFixInstructions(
       `For each fix.changesRequestedReviews: read the review body and apply the requested changes.`,
     );
   }
+  if (resolveCommand.requiresHeadSha) {
+    instructions.push(
+      `Commit changed files: git add <files> && git commit -m "<descriptive message>"`,
+    );
+    instructions.push(
+      `Rebase and push: git fetch origin && git rebase origin/${baseBranch} && git push --force-with-lease — capture HEAD_SHA=$(git rev-parse HEAD)`,
+    );
+  }
   instructions.push(
-    `Commit changed files: git add <files> && git commit -m "<descriptive message>"`,
-  );
-  instructions.push(
-    `Rebase and push: git fetch origin && git rebase origin/${baseBranch} && git push --force-with-lease — capture HEAD_SHA=$(git rev-parse HEAD)`,
-  );
-  instructions.push(
-    `Run the resolve command (substitute $HEAD_SHA with the pushed commit SHA${resolveCommand.requiresDismissMessage ? "; substitute $DISMISS_MESSAGE with a one-sentence description of what you changed" : ""}): ${resolveCmd}`,
+    `Run the resolve command (substitute $HEAD_SHA with the pushed commit SHA${resolveCommand.requiresDismissMessage ? `; substitute $DISMISS_MESSAGE with a one-sentence description of what you changed` : ""}): ${resolveCmd}`,
   );
 
   return instructions;

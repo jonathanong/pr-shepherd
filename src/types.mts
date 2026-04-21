@@ -306,6 +306,8 @@ export interface IterateResultFixCode extends IterateResultBase {
     noiseCommentIds: string[];
     checks: AgentCheck[];
     changesRequestedReviews: Review[];
+    /** Base branch to rebase onto (e.g. "main"). */
+    baseBranch: string;
     /** Pre-built resolve command. Run after committing and pushing. */
     resolveCommand: ResolveCommand;
     /** Ordered steps for the model to follow. */
