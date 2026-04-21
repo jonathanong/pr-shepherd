@@ -316,9 +316,16 @@ export interface IterateResultFixCode extends IterateResultBase {
   cancelled: string[];
 }
 
+export interface ReranRun {
+  runId: string;
+  /** Check names within this run that triggered the rerun (multiple steps can share a run). */
+  checkNames: string[];
+  failureKind: "timeout" | "infrastructure";
+}
+
 export interface IterateResultRerunCi extends IterateResultBase {
   action: "rerun_ci";
-  reran: string[];
+  reran: ReranRun[];
   log: string;
 }
 

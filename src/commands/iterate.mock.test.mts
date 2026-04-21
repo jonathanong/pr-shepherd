@@ -639,8 +639,11 @@ describe("runIterate — rerun_ci", () => {
 
     expect(result.action).toBe("rerun_ci");
     if (result.action === "rerun_ci") {
-      expect(result.reran).toContain("run-10");
-      expect(result.reran).toContain("run-11");
+      expect(result.reran.map((r) => r.runId)).toContain("run-10");
+      expect(result.reran.map((r) => r.runId)).toContain("run-11");
+      expect(result.reran.find((r) => r.runId === "run-10")?.checkNames).toEqual(["test-1"]);
+      expect(result.reran.find((r) => r.runId === "run-11")?.checkNames).toEqual(["test-2"]);
+      expect(result.reran.find((r) => r.runId === "run-10")?.failureKind).toBe("timeout");
     }
 
     // Verify gh run rerun was called for both
@@ -694,7 +697,9 @@ describe("runIterate — rerun_ci", () => {
     expect(result.action).toBe("rerun_ci");
     if (result.action === "rerun_ci") {
       expect(result.reran).toHaveLength(1);
-      expect(result.reran[0]).toBe("run-20");
+      expect(result.reran[0].runId).toBe("run-20");
+      expect(result.reran[0].checkNames).toEqual(["test-step-1", "test-step-2"]);
+      expect(result.reran[0].failureKind).toBe("infrastructure");
     }
   });
 });
@@ -1414,6 +1419,8 @@ describe("runIterate — prescriptive fields: log strings", () => {
     if (result.action === "rerun_ci") {
       expect(result.log).toMatch(/RERAN/);
       expect(result.log).toMatch(/run-99/);
+      expect(result.log).toMatch(/test/);
+      expect(result.log).toMatch(/timeout/);
     }
   });
 

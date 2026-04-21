@@ -260,18 +260,32 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     (f) => f.failureKind === "timeout" || f.failureKind === "infrastructure",
   );
   if (transientChecks.length > 0 && !opts.noAutoRerun) {
-    // Deduplicate runIds — multiple failed steps can share the same runId.
-    const uniqueRunIds = [
-      ...new Set(transientChecks.map((c) => c.runId).filter((id) => id !== null)),
-    ];
-    await Promise.all(
-      uniqueRunIds.map((runId) => runGhCommand(["run", "rerun", runId, "--failed"])),
+    // Group checks by runId — multiple failed steps can share one run.
+    const runMap = new Map<string, import("../types.mts").ReranRun>();
+    for (const c of transientChecks) {
+      if (c.runId === null) continue;
+      const existing = runMap.get(c.runId);
+      if (existing) {
+        existing.checkNames.push(c.name);
+      } else {
+        runMap.set(c.runId, {
+          runId: c.runId,
+          checkNames: [c.name],
+          failureKind: c.failureKind as "timeout" | "infrastructure",
+        });
+      }
+    }
+    const reran = [...runMap.values()];
+    await Promise.all(reran.map(({ runId }) => runGhCommand(["run", "rerun", runId, "--failed"])));
+    const runSummaries = reran.map(
+      ({ runId, checkNames, failureKind }) =>
+        `${runId} (${checkNames.join(", ")} — ${failureKind})`,
     );
     return {
       ...base,
       action: "rerun_ci",
-      reran: uniqueRunIds,
-      log: `RERAN ${uniqueRunIds.length} CI check${uniqueRunIds.length === 1 ? "" : "s"}: ${uniqueRunIds.join(" ")}`,
+      reran,
+      log: `RERAN ${reran.length} CI run${reran.length === 1 ? "" : "s"}: ${runSummaries.join(", ")}`,
     };
   }
 

@@ -74,15 +74,23 @@ Re-triggers CI runs that failed due to transient infrastructure or timeout issue
 
 **Key fields:**
 
-| Field   | Type       | Description                    |
-| ------- | ---------- | ------------------------------ |
-| `reran` | `string[]` | Run IDs that were re-triggered |
-| `log`   | `string`   | Ready-to-print summary line    |
+| Field   | Type         | Description                                             |
+| ------- | ------------ | ------------------------------------------------------- |
+| `reran` | `ReranRun[]` | One entry per re-triggered run (deduplicated by run ID) |
+| `log`   | `string`     | Ready-to-print summary line                             |
+
+**`ReranRun` fields:**
+
+| Field         | Type                            | Description                                          |
+| ------------- | ------------------------------- | ---------------------------------------------------- |
+| `runId`       | `string`                        | GitHub Actions run ID                                |
+| `checkNames`  | `string[]`                      | Check names within this run that triggered the rerun |
+| `failureKind` | `"timeout" \| "infrastructure"` | Why the rerun was triggered                          |
 
 **Example `log`:**
 
 ```
-RERAN 2 CI checks: run-100 run-101
+RERAN 2 CI runs: 24697658766 (lint / typecheck / test (22.x) — timeout), 24697658767 (build — infrastructure)
 ```
 
 **What the loop does:** Print `result.log` and wait for CI to re-queue.
