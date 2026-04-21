@@ -66,6 +66,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
     pr: 42,
     repo: "owner/repo",
     status: "READY",
+    baseBranch: "main",
     mergeStatus: {
       status: "CLEAN",
       state: "OPEN" as const,
@@ -134,9 +135,6 @@ beforeEach(() => {
     }
     if (cmd === "git" && args[0] === "rev-parse") {
       return Promise.resolve({ stdout: "abc123", stderr: "" });
-    }
-    if (cmd === "gh" && args[0] === "pr" && args[1] === "view" && args.includes("baseRefName")) {
-      return Promise.resolve({ stdout: "main\n", stderr: "" });
     }
     return Promise.resolve({ stdout: "", stderr: "" });
   });
@@ -1919,10 +1917,11 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
     }
   });
 
-  it("escalates with base-branch-unknown when fix_code needs a push but gh pr view fails", async () => {
+  it("escalates with base-branch-unknown when fix_code needs a push but baseBranch is empty", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
+        baseBranch: "",
         threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
       }),
     );
@@ -1931,25 +1930,17 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
       shouldCancel: false,
       remainingSeconds: 600,
     });
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      // Only gh pr view is expected to fail; other commands should resolve normally.
-      if (cmd === "gh" && args[0] === "pr" && args[1] === "view") {
-        return Promise.reject(new Error("HTTP 404 Not Found"));
-      }
-      return Promise.resolve({ stdout: "", stderr: "" });
-    });
 
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("escalate");
     if (result.action === "escalate") {
       expect(result.escalate.triggers).toContain("base-branch-unknown");
-      expect(result.escalate.suggestion).toMatch(/could not determine/i);
-      expect(result.escalate.suggestion).toMatch(/HTTP 404/);
+      expect(result.escalate.suggestion).toMatch(/empty base branch name/);
       expect(result.escalate.humanMessage).toMatch(/base-branch-unknown/);
     }
   });
 
-  it("escalates with base-branch-unknown when rebase would run but gh pr view fails", async () => {
+  it("escalates with base-branch-unknown when rebase would run but baseBranch is empty", async () => {
     const flakyCheck = {
       name: "flaky",
       status: "COMPLETED" as const,
@@ -1963,6 +1954,7 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "FAILING",
+        baseBranch: "",
         mergeStatus: {
           status: "BEHIND",
           state: "OPEN",
@@ -1988,12 +1980,6 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
       shouldCancel: false,
       remainingSeconds: 600,
     });
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "gh" && args[0] === "pr" && args[1] === "view") {
-        return Promise.reject(new Error("network unreachable"));
-      }
-      return Promise.resolve({ stdout: "", stderr: "" });
-    });
 
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("escalate");
@@ -2002,42 +1988,16 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
     }
   });
 
-  it("escalates with base-branch-unknown when gh pr view returns empty stdout", async () => {
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "gh" && args[0] === "pr" && args[1] === "view") {
-        // Simulate transient gh output glitch — command succeeds but emits empty stdout.
-        return Promise.resolve({ stdout: "", stderr: "" });
-      }
-      return Promise.resolve({ stdout: "", stderr: "" });
-    });
-
-    const result = await runIterate(makeOpts());
-    expect(result.action).toBe("escalate");
-    if (result.action === "escalate") {
-      expect(result.escalate.triggers).toContain("base-branch-unknown");
-      expect(result.escalate.suggestion).toMatch(/empty base branch name/);
-    }
-  });
-
-  it("escalates with base-branch-unknown on CONFLICTS-only when gh pr view fails (no resolve IDs, but rebase still needed)", async () => {
+  it("escalates with base-branch-unknown on CONFLICTS-only when baseBranch is empty (no resolve IDs, but rebase still needed)", async () => {
     // Guards the `|| hasConflicts` branch of the fix_code base-branch-unknown
     // gate. Without it, a CONFLICTS-only PR with no threads/comments/checks/
-    // reviews would silently rebase onto `main` even when gh pr view failed,
-    // because resolveCommand.requiresHeadSha is false (nothing to resolve).
+    // reviews would silently rebase onto `main` when the base branch was
+    // invalid, because resolveCommand.requiresHeadSha is false (nothing to
+    // resolve).
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "FAILING",
+        baseBranch: "",
         mergeStatus: {
           status: "CONFLICTS",
           state: "OPEN" as const,
@@ -2054,27 +2014,22 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
       shouldCancel: false,
       remainingSeconds: 600,
     });
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "gh" && args[0] === "pr" && args[1] === "view") {
-        return Promise.reject(new Error("network unreachable"));
-      }
-      return Promise.resolve({ stdout: "", stderr: "" });
-    });
 
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("escalate");
     if (result.action === "escalate") {
       expect(result.escalate.triggers).toEqual(["base-branch-unknown"]);
-      expect(result.escalate.suggestion).toMatch(/network unreachable/);
+      expect(result.escalate.suggestion).toMatch(/empty base branch name/);
     }
   });
 
-  it("escalates with base-branch-unknown when gh pr view returns unsafe characters in the ref name", async () => {
-    // Prevents shell interpolation via getBaseBranch — a ref like
+  it("escalates with base-branch-unknown when baseBranch contains unsafe characters", async () => {
+    // Prevents shell interpolation via validateBaseBranch — a ref like
     // `main;rm -rf /` must not flow into buildRebaseShellScript.
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
+        baseBranch: "main; rm -rf /",
         threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
       }),
     );
@@ -2082,12 +2037,6 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
       isReady: false,
       shouldCancel: false,
       remainingSeconds: 600,
-    });
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "gh" && args[0] === "pr" && args[1] === "view") {
-        return Promise.resolve({ stdout: "main; rm -rf /\n", stderr: "" });
-      }
-      return Promise.resolve({ stdout: "", stderr: "" });
     });
 
     const result = await runIterate(makeOpts());

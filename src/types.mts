@@ -132,6 +132,7 @@ export interface BatchPrData {
   mergeStateStatus: MergeStateStatus;
   reviewDecision: ReviewDecision;
   headRefOid: string;
+  baseRefName: string;
   reviewRequests: Array<{ login: string }>;
   latestReviews: Array<{ login: string; state: string }>;
   reviewThreads: ReviewThread[];
@@ -155,6 +156,8 @@ export interface ShepherdReport {
   pr: number;
   repo: string;
   status: ShepherdStatus;
+  /** PR base branch from the GraphQL batch — used by `iterate` to avoid a second `gh pr view` round-trip. */
+  baseBranch: string;
   mergeStatus: MergeStatusResult;
   checks: {
     passing: ClassifiedCheck[];

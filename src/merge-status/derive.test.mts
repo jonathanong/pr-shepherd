@@ -11,6 +11,7 @@ function makePr(overrides: Partial<BatchPrData>): BatchPrData {
     mergeStateStatus: "CLEAN",
     reviewDecision: null,
     headRefOid: "abc123",
+    baseRefName: "main",
     reviewRequests: [],
     latestReviews: [],
     reviewThreads: [],

@@ -219,7 +219,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       cancelled = results.filter((id): id is string => id !== null);
     }
 
-    const baseLookup = await getBaseBranch(prNumber);
+    const baseLookup = validateBaseBranch(report.baseBranch);
     const threads = report.threads.actionable.map(toAgentThread);
     const { actionable: actionableComments, noiseIds: noiseCommentIds } = classifyComments(
       report.comments.actionable.map(toAgentComment),
@@ -323,7 +323,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   // Step 6: Flaky + behind — rebase needed.
   const hasFlaky = report.checks.failing.some((f) => f.failureKind === "flaky");
   if (hasFlaky && report.mergeStatus.status === "BEHIND" && config.actions.autoRebase) {
-    const baseLookup = await getBaseBranch(prNumber);
+    const baseLookup = validateBaseBranch(report.baseBranch);
     if (baseLookup.isFallback) {
       const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
         triggers: ["base-branch-unknown"],
@@ -495,43 +495,32 @@ interface BaseBranchLookup {
   failureReason?: string;
 }
 
-async function getBaseBranch(prNumber: number): Promise<BaseBranchLookup> {
-  try {
-    const { stdout } = await execFile("gh", [
-      "pr",
-      "view",
-      String(prNumber),
-      "--json",
-      "baseRefName",
-      "--jq",
-      ".baseRefName",
-    ]);
-    const trimmed = stdout.trim();
-    if (trimmed === "") {
-      return {
-        branch: "main",
-        isFallback: true,
-        failureReason: "gh pr view returned an empty base branch name",
-      };
-    }
-    // GitHub ref names can include '/' but reject anything outside safe chars
-    // to prevent shell interpolation issues in buildRebaseShellScript.
-    if (!/^[A-Za-z0-9._/-]+$/.test(trimmed)) {
-      return {
-        branch: "main",
-        isFallback: true,
-        failureReason: `gh pr view returned base branch ${JSON.stringify(trimmed)} containing unsafe characters`,
-      };
-    }
-    return { branch: trimmed, isFallback: false };
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+/**
+ * Validate the base branch name from the GraphQL batch (`report.baseBranch`)
+ * and fall back safely if it's missing/unsafe. The branch is interpolated into
+ * shell commands by `buildRebaseShellScript` and `buildFixInstructions`, so we
+ * reject anything outside `[A-Za-z0-9._/-]` to prevent shell injection.
+ *
+ * Previously a separate `gh pr view --json baseRefName` subprocess — eliminated
+ * per review feedback since the batch GraphQL query now returns it directly.
+ */
+function validateBaseBranch(raw: string): BaseBranchLookup {
+  const trimmed = raw.trim();
+  if (trimmed === "") {
     return {
       branch: "main",
       isFallback: true,
-      failureReason: `gh pr view failed: ${msg}`,
+      failureReason: "GraphQL batch returned an empty base branch name",
     };
   }
+  if (!/^[A-Za-z0-9._/-]+$/.test(trimmed)) {
+    return {
+      branch: "main",
+      isFallback: true,
+      failureReason: `base branch ${JSON.stringify(trimmed)} contains unsafe characters`,
+    };
+  }
+  return { branch: trimmed, isFallback: false };
 }
 
 function buildRebaseShellScript(baseBranch: string): string {

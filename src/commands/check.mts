@@ -138,6 +138,7 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
     pr: prNumber,
     repo: `${repo.owner}/${repo.name}`,
     status,
+    baseBranch: batchData.baseRefName,
     mergeStatus,
     checks: {
       passing,

@@ -16,6 +16,7 @@ query BatchPr(
       mergeStateStatus
       reviewDecision
       headRefOid
+      baseRefName
       # Not paginated — capped at 50; PRs with more pending reviewers truncate silently.
       reviewRequests(last: 50) {
         nodes {

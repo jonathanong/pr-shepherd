@@ -212,6 +212,7 @@ function parseRawPr(
     mergeStateStatus: raw.mergeStateStatus as BatchPrData["mergeStateStatus"],
     reviewDecision: (raw.reviewDecision ?? null) as BatchPrData["reviewDecision"],
     headRefOid: raw.headRefOid,
+    baseRefName: raw.baseRefName,
     reviewRequests,
     latestReviews,
     reviewThreads,
@@ -268,6 +269,7 @@ interface RawPr {
   mergeStateStatus: string;
   reviewDecision: string | null;
   headRefOid: string;
+  baseRefName: string;
   reviewRequests: {
     nodes: Array<{
       requestedReviewer: { login?: string; name?: string } | null;
