@@ -99,7 +99,7 @@ to be installed in the repository first (`npm install pr-shepherd`), so that
    ```
 
 For `monitor` and `resolve` custom commands, do **not** copy the
-[`skills/`](skills/) files directly — those contain skill/plugin-specific
+[`plugin/skills/`](plugin/skills/) files directly — those contain skill/plugin-specific
 frontmatter that is not valid for `.claude/commands/` files. Instead, create
 `.claude/commands/pr-monitor.md` and/or `.claude/commands/pr-resolve.md`
 using the same command-file structure as the `pr-check` example above, with
