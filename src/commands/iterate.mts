@@ -270,6 +270,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       baseLookup.branch,
       resolveCommand,
       hasConflicts,
+      prNumber,
     );
 
     return {
@@ -633,6 +634,7 @@ function buildFixInstructions(
   baseBranch: string,
   resolveCommand: ResolveCommand,
   hasConflicts: boolean,
+  prNumber: number,
 ): string[] {
   const instructions: string[] = [];
 
@@ -675,6 +677,9 @@ function buildFixInstructions(
   if (hasCodeChanges) {
     instructions.push(
       `Commit changed files: \`git add <files> && git commit -m "<descriptive message>"\``,
+    );
+    instructions.push(
+      `Keep the PR title and description current: if the changes alter the PR's scope or intent, run \`gh pr edit ${prNumber} --title "<new title>" --body "<new body>"\` to reflect them. Skip if the existing title/body still accurately describe the PR.`,
     );
   }
 

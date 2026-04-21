@@ -961,6 +961,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       // emit a rebase-with-conflict-resolution instruction and no resolve step.
       const joined = result.fix.instructions.join("\n");
       expect(joined).not.toContain("git commit");
+      expect(joined).not.toContain("gh pr edit");
       expect(joined).toContain("Rebase with conflict resolution");
       expect(joined).toContain("git rebase --continue");
       expect(joined).toContain("git push --force-with-lease");
@@ -1011,6 +1012,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       // the clean `&& git push` one-liner), and resolve step all present.
       const joined = result.fix.instructions.join("\n");
       expect(joined).toContain("git commit");
+      expect(joined).toContain("gh pr edit");
       expect(joined).toContain("Rebase with conflict resolution");
       expect(joined).toContain("git rebase --continue");
       expect(joined).not.toMatch(/rebase origin\/\w+ && git push/);
