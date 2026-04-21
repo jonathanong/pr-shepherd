@@ -177,6 +177,7 @@ function computeStatus(
   if (mergeStatus.status === "CONFLICTS") return "FAILING";
   // Check CI state before merge-blocking states: BLOCKED/UNSTABLE/BEHIND are
   // often caused by CI not having passed yet, so they shouldn't mask IN_PROGRESS.
+  // These merge-blocking states become PENDING (not FAILING) once CI is resolved.
   if (verdict.anyFailing) return "FAILING";
   if (verdict.anyInProgress) return "IN_PROGRESS";
   // BLOCKED solely because a human reviewer hasn't approved yet — shepherd is done, hand off.
@@ -197,7 +198,7 @@ function computeStatus(
     mergeStatus.status === "UNSTABLE" ||
     mergeStatus.status === "BEHIND"
   )
-    return "FAILING";
+    return "PENDING";
   if (mergeStatus.status === "UNKNOWN") return "UNKNOWN";
   if (changesRequestedReviews > 0) return "UNRESOLVED_COMMENTS";
   if (unresolvedThreads > 0 || unresolvedComments > 0) return "UNRESOLVED_COMMENTS";

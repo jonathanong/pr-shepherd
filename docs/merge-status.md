@@ -54,6 +54,8 @@ GitHub sometimes updates `mergeStateStatus` to `'DRAFT'` before the `isDraft` bo
 
 In this case `mergeStatus.status` in the report is still `BLOCKED` (truthful about the GitHub merge state), but the top-level `ShepherdStatus` is `READY`, signalling that shepherd has nothing more to do. The ready-delay timer starts, and `action: cancel` is emitted after it elapses.
 
+Any BLOCKED case that does not satisfy all of the above conditions (e.g. Copilot review in progress, unresolved threads, or `reviewDecision` is null) maps to `ShepherdStatus: "PENDING"` rather than `"FAILING"`. `FAILING` is reserved for red CI checks and merge conflicts.
+
 ## Copilot detection
 
 `detectCopilotReview(pr)` returns true when:

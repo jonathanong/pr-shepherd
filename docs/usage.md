@@ -15,7 +15,7 @@ pr-shepherd check 42 --format=json
 pr-shepherd check 42 --no-cache
 ```
 
-**Exit codes:** 0=READY, 1=FAILING/BLOCKED/CONFLICTS/UNKNOWN, 2=IN_PROGRESS, 3=UNRESOLVED_COMMENTS
+**Exit codes:** 0=READY, 1=FAILING/PENDING/UNKNOWN, 2=IN_PROGRESS, 3=UNRESOLVED_COMMENTS
 
 ### `pr-shepherd resolve [PR]`
 

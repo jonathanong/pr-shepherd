@@ -246,7 +246,7 @@ describe("runCheck — BLOCKED + REVIEW_REQUIRED (human approval pending)", () =
     expect(report.status).toBe("FAILING");
   });
 
-  it("returns FAILING when an unresolved thread also exists (iterate handles it via actionable check)", async () => {
+  it("returns PENDING when an unresolved thread also exists (iterate handles it via actionable check)", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
         mergeStateStatus: "BLOCKED",
@@ -267,10 +267,10 @@ describe("runCheck — BLOCKED + REVIEW_REQUIRED (human approval pending)", () =
       }),
     });
     const report = await runCheck(BASE_OPTS);
-    expect(report.status).toBe("FAILING");
+    expect(report.status).toBe("PENDING");
   });
 
-  it("returns FAILING when copilot review is also in progress", async () => {
+  it("returns PENDING when copilot review is also in progress", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
         mergeStateStatus: "BLOCKED",
@@ -279,15 +279,15 @@ describe("runCheck — BLOCKED + REVIEW_REQUIRED (human approval pending)", () =
       }),
     });
     const report = await runCheck(BASE_OPTS);
-    expect(report.status).toBe("FAILING");
+    expect(report.status).toBe("PENDING");
   });
 
-  it("returns FAILING when BLOCKED but reviewDecision is null (other branch protection)", async () => {
+  it("returns PENDING when BLOCKED but reviewDecision is null (other branch protection)", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({ mergeStateStatus: "BLOCKED", reviewDecision: null }),
     });
     const report = await runCheck(BASE_OPTS);
-    expect(report.status).toBe("FAILING");
+    expect(report.status).toBe("PENDING");
   });
 });
 

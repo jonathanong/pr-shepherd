@@ -96,7 +96,7 @@ Re-triggers CI runs that failed due to transient infrastructure or timeout issue
 ```markdown
 # PR #42 [RERUN_CI]
 
-**status** `FAILING` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
+**status** `PENDING` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 0 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 600 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
 
 RERAN 2 CI runs: 24697658766 (lint / typecheck / test (22.x) — timeout), 24697658767 (build — infrastructure)
@@ -177,7 +177,7 @@ Rebases the branch on top of its base to clear flaky failures caused by being be
 ````markdown
 # PR #42 [REBASE]
 
-**status** `FAILING` · **merge** `BEHIND` · **state** `OPEN` · **repo** `owner/repo`
+**status** `PENDING` · **merge** `BEHIND` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 2 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 600 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
 
 Branch is behind main — rebasing to pick up latest changes and clear flaky failures
