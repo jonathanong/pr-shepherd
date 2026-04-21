@@ -196,7 +196,10 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       return {
         ...base,
         action: "escalate",
-        escalate: { ...escalateBase, humanMessage: buildEscalateHumanMessage(escalateBase, prNumber) },
+        escalate: {
+          ...escalateBase,
+          humanMessage: buildEscalateHumanMessage(escalateBase, prNumber),
+        },
       };
     }
 

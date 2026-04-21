@@ -1699,7 +1699,7 @@ describe("shellJoinArgv", () => {
     );
   });
 
-  it("appends --require-sha \"$HEAD_SHA\" when requiresHeadSha is true", () => {
+  it('appends --require-sha "$HEAD_SHA" when requiresHeadSha is true', () => {
     const joined = shellJoinArgv({
       argv: ["npx", "pr-shepherd", "resolve", "42", "--resolve-thread-ids", "t-1"],
       requiresHeadSha: true,
