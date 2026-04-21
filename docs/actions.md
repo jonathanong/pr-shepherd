@@ -166,7 +166,7 @@ Rebases the branch on top of its base to clear flaky failures caused by being be
 
 **Trigger:** A failing check has `failureKind === "flaky"` AND `mergeStatus.status === "BEHIND"` AND `config.actions.autoRebase` is enabled.
 
-> Note: merge conflicts (`CONFLICTS`) are handled by `fix_code`, not `rebase`.
+> Note: merge conflicts (`CONFLICTS`) route to `fix_code`, not `rebase` — conflicts need manual resolution during the rebase. The `fix_code` runbook always emits a rebase step when the PR is in `CONFLICTS`, even without any threads/comments/checks/reviews; the wording switches from the clean `rebase && push` one-liner to an explicit "Rebase with conflict resolution" step that handles `git rebase --continue` loops before pushing.
 
 **CLI side-effects:** None. The CLI fetches the base branch name via `gh pr view` and pre-builds the shell script.
 
@@ -282,6 +282,12 @@ Actionable work needs a code fix, commit, and push.
    - ``- base: `<branch>` `` — rebase target for the push step.
    - ``- resolve: `<argv>` `` — fully-quoted resolve command. `$DISMISS_MESSAGE` and `$HEAD_SHA` are always quoted so substituting a multi-word sentence keeps it as one argument. `--require-sha "$HEAD_SHA"` is appended only when a push is expected (threads/actionableComments/checks/reviews present); noise-only dispatches omit it.
 9. `## Instructions` — numbered list to execute in order. The final instruction always refers back to the `resolve:` bullet rather than duplicating the command — that single source of truth is what the monitor executes.
+
+**Instruction variants:**
+
+- `Commit changed files:` is only emitted when there are actual code changes to commit (threads/comments/checks/reviews present). A `CONFLICTS`-only state skips this step.
+- The rebase step switches wording based on `mergeStatus.status`. When conflicts are present it emits "Rebase with conflict resolution" and walks through `git rebase --continue` loops; otherwise it emits the clean one-liner `git fetch origin && git rebase origin/<base> && git push --force-with-lease`.
+- `Run the \`resolve:\` command`is only emitted when the resolve command actually mutates GitHub state (at least one of threads/comments/reviews is non-empty). A`CONFLICTS`-only dispatch omits it.
 
 The JSON payload exposes the same data under `fix.{threads, actionableComments, noiseCommentIds, checks, changesRequestedReviews, baseBranch, resolveCommand, instructions}` plus top-level `cancelled`.
 

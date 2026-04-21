@@ -840,6 +840,14 @@ describe("runIterate — fix_code (merge conflicts)", () => {
     if (result.action === "fix_code") {
       expect(result.fix.threads).toHaveLength(0);
       expect(result.fix.checks).toHaveLength(0);
+      // CONFLICTS-only: no commit step (nothing to commit), but we still
+      // emit a rebase-with-conflict-resolution instruction and no resolve step.
+      const joined = result.fix.instructions.join("\n");
+      expect(joined).not.toContain("git commit");
+      expect(joined).toContain("Rebase with conflict resolution");
+      expect(joined).toContain("git rebase --continue");
+      expect(joined).toContain("git push --force-with-lease");
+      expect(joined).not.toContain("resolve:");
     }
   });
 
@@ -882,6 +890,14 @@ describe("runIterate — fix_code (merge conflicts)", () => {
     if (result.action === "fix_code") {
       expect(result.fix.threads).toHaveLength(1);
       expect(result.fix.threads[0]?.id).toBe("thread-1");
+      // Threads + CONFLICTS: commit step, rebase-with-conflict-resolution (not
+      // the clean `&& git push` one-liner), and resolve step all present.
+      const joined = result.fix.instructions.join("\n");
+      expect(joined).toContain("git commit");
+      expect(joined).toContain("Rebase with conflict resolution");
+      expect(joined).toContain("git rebase --continue");
+      expect(joined).not.toMatch(/rebase origin\/\w+ && git push/);
+      expect(joined).toContain("resolve:");
     }
   });
 });

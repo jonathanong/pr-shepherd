@@ -235,11 +235,13 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       checks,
       prNumber,
     );
+    const hasConflicts = report.mergeStatus.status === "CONFLICTS";
 
-    // Guard: if the emitted resolve requires a push but we could not confirm
-    // the PR's base branch, refuse to emit fix_code — a wrong-base rebase would
-    // rewrite history onto the wrong target. Escalate for human direction.
-    if (baseLookup.isFallback && resolveCommand.requiresHeadSha) {
+    // Guard: if the emitted flow requires a push (code fixes or conflict
+    // resolution rebase) but we could not confirm the PR's base branch, refuse
+    // to emit fix_code — a wrong-base rebase would rewrite history onto the
+    // wrong target. Escalate for human direction.
+    if (baseLookup.isFallback && (resolveCommand.requiresHeadSha || hasConflicts)) {
       const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
         triggers: ["base-branch-unknown"],
         unresolvedThreads: threads,
@@ -264,6 +266,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       changesRequestedReviews,
       baseLookup.branch,
       resolveCommand,
+      hasConflicts,
     );
 
     return {
@@ -627,6 +630,7 @@ function buildFixInstructions(
   reviews: Review[],
   baseBranch: string,
   resolveCommand: ResolveCommand,
+  hasConflicts: boolean,
 ): string[] {
   const instructions: string[] = [];
 
@@ -652,24 +656,49 @@ function buildFixInstructions(
       `For each bullet under \`## Changes-requested reviews\` above: read the review body and apply the requested changes.`,
     );
   }
-  if (resolveCommand.requiresHeadSha) {
+
+  const hasCodeChanges =
+    threads.length > 0 || actionableComments.length > 0 || checks.length > 0 || reviews.length > 0;
+  const needsPush = hasCodeChanges || hasConflicts;
+
+  if (hasCodeChanges) {
     instructions.push(
       `Commit changed files: \`git add <files> && git commit -m "<descriptive message>"\``,
     );
-    instructions.push(
-      `Rebase and push: \`git fetch origin && git rebase origin/${baseBranch} && git push --force-with-lease\` — capture \`HEAD_SHA=$(git rev-parse HEAD)\``,
-    );
   }
-  const substituteParts: string[] = [];
-  if (resolveCommand.requiresHeadSha) {
-    substituteParts.push(`"$HEAD_SHA" with the pushed commit SHA`);
+
+  if (needsPush) {
+    const captureHint = resolveCommand.requiresHeadSha
+      ? ` — capture \`HEAD_SHA=$(git rev-parse HEAD)\``
+      : "";
+    if (hasConflicts) {
+      instructions.push(
+        `Rebase with conflict resolution: run \`git fetch origin && git rebase origin/${baseBranch}\`. If the rebase halts with conflicts, edit the conflicted files to resolve them, \`git add <files>\`, then \`git rebase --continue\`. Repeat until the rebase completes, then \`git push --force-with-lease\`${captureHint}.`,
+      );
+    } else {
+      instructions.push(
+        `Rebase and push: \`git fetch origin && git rebase origin/${baseBranch} && git push --force-with-lease\`${captureHint}`,
+      );
+    }
   }
-  if (resolveCommand.requiresDismissMessage) {
-    substituteParts.push(`$DISMISS_MESSAGE with a one-sentence description of what you changed`);
+
+  // Only tell the agent to run `resolve:` if the command actually mutates
+  // GitHub state — argv beyond `npx pr-shepherd resolve <pr>` means at least
+  // one of --resolve-thread-ids / --minimize-comment-ids / --dismiss-review-ids
+  // was appended. A CONFLICTS-only flow has nothing to mutate on GitHub.
+  const hasMutations = resolveCommand.argv.length > 4;
+  if (hasMutations) {
+    const substituteParts: string[] = [];
+    if (resolveCommand.requiresHeadSha) {
+      substituteParts.push(`"$HEAD_SHA" with the pushed commit SHA`);
+    }
+    if (resolveCommand.requiresDismissMessage) {
+      substituteParts.push(`$DISMISS_MESSAGE with a one-sentence description of what you changed`);
+    }
+    const substituteHint =
+      substituteParts.length > 0 ? `, substituting ${substituteParts.join(" and ")}` : "";
+    instructions.push(`Run the \`resolve:\` command shown above${substituteHint}.`);
   }
-  const substituteHint =
-    substituteParts.length > 0 ? `, substituting ${substituteParts.join(" and ")}` : "";
-  instructions.push(`Run the \`resolve:\` command shown above${substituteHint}.`);
 
   return instructions;
 }
