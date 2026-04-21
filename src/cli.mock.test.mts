@@ -81,7 +81,23 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
     remainingSeconds: 60,
     summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 1 },
   };
+  if (action === "cooldown") return { ...base, action: "cooldown", log: "SKIP: CI still starting" };
   if (action === "wait") return { ...base, action: "wait", log: "WAIT: 0 passing, 1 in-progress" };
+  if (action === "rerun_ci")
+    return { ...base, action: "rerun_ci", log: "RERAN: run-99 (typecheck — transient)", reran: [] };
+  if (action === "mark_ready")
+    return { ...base, action: "mark_ready", markedReady: true, log: "MARKED READY: PR 42" };
+  if (action === "rebase")
+    return {
+      ...base,
+      action: "rebase",
+      rebase: {
+        baseBranch: "main",
+        reason: "BEHIND + flaky CI — rebasing onto origin/main",
+        shellScript:
+          'if ! git diff --quiet || ! git diff --cached --quiet; then\n  echo "SKIP rebase: dirty worktree"\n  exit 0\nfi\ngit fetch origin && git rebase origin/main && git push --force-with-lease',
+      },
+    };
   if (action === "fix_code") {
     return {
       ...base,
@@ -120,6 +136,10 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
     };
   }
   return { ...base, action: "wait", log: "WAIT: 0 passing, 1 in-progress" };
+}
+
+function getStdout(): string {
+  return stdoutSpy.mock.calls.map((c: unknown[]) => c[0]).join("");
 }
 
 beforeEach(() => {
@@ -198,6 +218,192 @@ describe("main — iterate", () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
     await main(["node", "shepherd", "iterate", "42"]);
     expect(process.exitCode).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatIterateResult — text output shape (via main + stdout spy)
+// ---------------------------------------------------------------------------
+
+describe("main — iterate text format", () => {
+  it("cooldown: first line has base prefix and log; ends with info line", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("cooldown"));
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    expect(out.startsWith("PR #42 [COOLDOWN] status=IN_PROGRESS merge=BLOCKED state=OPEN —")).toBe(
+      true,
+    );
+    expect(out).toContain("— SKIP: CI still starting");
+    expect(out).toContain(
+      "info: repo=owner/repo passing=0 skipped=0 filtered=0 inProgress=1 remainingSeconds=60 copilotReviewInProgress=false isDraft=false shouldCancel=false",
+    );
+  });
+
+  it("wait: base prefix includes [WAIT] tag", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
+    await main(["node", "shepherd", "iterate", "42"]);
+    expect(getStdout()).toMatch(/^PR #42 \[WAIT\] .* — WAIT: 0 passing, 1 in-progress/);
+  });
+
+  it("rerun_ci: base prefix includes [RERUN_CI] tag and log", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("rerun_ci"));
+    await main(["node", "shepherd", "iterate", "42"]);
+    expect(getStdout()).toContain("[RERUN_CI]");
+    expect(getStdout()).toContain("— RERAN: run-99 (typecheck — transient)");
+  });
+
+  it("mark_ready: base prefix includes [MARK_READY] tag", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("mark_ready"));
+    await main(["node", "shepherd", "iterate", "42"]);
+    expect(getStdout()).toContain("[MARK_READY]");
+    expect(getStdout()).toContain("— MARKED READY: PR 42");
+  });
+
+  it("cancel: base prefix includes [CANCEL] tag", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
+    await main(["node", "shepherd", "iterate", "42"]);
+    expect(getStdout()).toContain("[CANCEL]");
+  });
+
+  it("rebase: emits base prefix with reason, then the shell script, then info line", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("rebase"));
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    const lines = out.trimEnd().split("\n");
+    expect(lines[0]).toMatch(/^PR #42 \[REBASE\] .* — BEHIND \+ flaky CI/);
+    expect(out).toContain(
+      "git fetch origin && git rebase origin/main && git push --force-with-lease",
+    );
+    expect(lines[lines.length - 1]).toMatch(/^info: repo=owner\/repo /);
+  });
+
+  it("escalate: base prefix on its own line, then humanMessage, then info line", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("escalate"));
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    const lines = out.trimEnd().split("\n");
+    expect(lines[0]).toBe("PR #42 [ESCALATE] status=IN_PROGRESS merge=BLOCKED state=OPEN");
+    expect(out).toContain("⚠️  /pr-shepherd:monitor paused — needs human direction");
+    expect(lines[lines.length - 1]).toMatch(/^info: repo=owner\/repo /);
+  });
+
+  it("fix_code (empty payload): base prefix, base branch, resolve line, info line", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("fix_code"));
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    expect(out).toContain("PR #42 [FIX_CODE] status=IN_PROGRESS merge=BLOCKED state=OPEN");
+    expect(out).toContain("  base: main");
+    // shellJoinArgv appends --require-sha "$HEAD_SHA" since requiresHeadSha is true
+    expect(out).toContain('  resolve: npx pr-shepherd resolve 42 --require-sha "$HEAD_SHA"');
+    // Nothing to do: no threads, no comments, no noise, no checks, no reviews, no cancelled
+    expect(out).not.toContain("  thread ");
+    expect(out).not.toContain("  comment ");
+    expect(out).not.toContain("  noise ");
+    expect(out).not.toContain("  check ");
+    expect(out).not.toContain("  review ");
+    expect(out).not.toContain("  cancelled runs");
+  });
+
+  it("fix_code (rich payload): renders threads, actionable comments, noise, checks, reviews, cancelled in order", async () => {
+    const result: IterateResult = {
+      ...makeIterateResult("fix_code"),
+    };
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    result.fix = {
+      threads: [
+        {
+          id: "PRRT_1",
+          path: "src/foo.ts",
+          line: 10,
+          author: "reviewer",
+          body: "fix\nsecond line should be dropped",
+        },
+      ],
+      actionableComments: [{ id: "PRRC_1", author: "bot", body: "please address" }],
+      noiseCommentIds: ["c-noise-1", "c-noise-2"],
+      checks: [
+        { name: "lint", runId: "run-42", detailsUrl: "https://x", failureKind: "actionable" },
+        {
+          name: "codecov/patch",
+          runId: null,
+          detailsUrl: "https://app.codecov.io",
+          failureKind: "actionable",
+        },
+      ],
+      changesRequestedReviews: [{ id: "REV_1", author: "reviewer", body: "please rework this" }],
+      baseBranch: "main",
+      resolveCommand: {
+        argv: [
+          "npx",
+          "pr-shepherd",
+          "resolve",
+          "42",
+          "--dismiss-review-ids",
+          "REV_1",
+          "--message",
+          "$DISMISS_MESSAGE",
+        ],
+        requiresHeadSha: true,
+        requiresDismissMessage: true,
+      },
+      instructions: ["step one", "step two"],
+    };
+    result.cancelled = ["run-99"];
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    const lines = out.trimEnd().split("\n");
+
+    // Line-by-line ordering invariants:
+    expect(lines[0]).toBe("PR #42 [FIX_CODE] status=IN_PROGRESS merge=BLOCKED state=OPEN");
+    expect(lines[1]).toBe("  thread PRRT_1 src/foo.ts:10 (@reviewer): fix");
+    expect(lines[2]).toBe("  comment PRRC_1 (@bot): please address");
+    expect(lines[3]).toBe("  noise (minimize only): c-noise-1, c-noise-2");
+    expect(lines[4]).toBe("  check run-42 — lint (actionable)");
+    expect(lines[5]).toBe("  check (no runId) — codecov/patch (actionable)");
+    expect(lines[6]).toBe("  review REV_1 (@reviewer): changes requested");
+    expect(lines[7]).toBe("  cancelled runs: run-99");
+    expect(lines[8]).toBe("  base: main");
+    expect(lines[9]).toBe(
+      '  resolve: npx pr-shepherd resolve 42 --dismiss-review-ids REV_1 --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"',
+    );
+    expect(lines[10]).toBe("  1. step one");
+    expect(lines[11]).toBe("  2. step two");
+    expect(lines[lines.length - 1]).toMatch(/^info: repo=owner\/repo /);
+  });
+
+  it("fix_code: thread body is truncated to first-line prefix (120 chars)", async () => {
+    const longBody = "a".repeat(300);
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    result.fix.threads = [
+      {
+        id: "t-long",
+        path: "src/x.ts",
+        line: 1,
+        author: "r",
+        body: longBody,
+      },
+    ];
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    const threadLine = out.split("\n").find((l) => l.startsWith("  thread t-long "));
+    expect(threadLine).toBeDefined();
+    // The ": " prefix plus 120 body chars — no more.
+    expect(threadLine!.split(": ").at(-1)!.length).toBe(120);
+  });
+
+  it("json format: emits a single JSON.stringify(result)+newline, no formatter output", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
+    await main(["node", "shepherd", "iterate", "42", "--format", "json"]);
+    const out = getStdout().trimEnd();
+    expect(() => JSON.parse(out)).not.toThrow();
+    const parsed = JSON.parse(out);
+    expect(parsed.action).toBe("wait");
+    expect(parsed.pr).toBe(42);
   });
 });
 
