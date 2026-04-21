@@ -273,7 +273,7 @@ export interface IterateResultBase {
   shouldCancel: boolean;
   remainingSeconds: number;
   summary: IterateResultSummary;
-  /** Validated base branch (e.g. "main") for this PR. Echoed from `ShepherdReport.baseBranch` after `validateBaseBranch` for actions that need a rebase target (fix_code, rebase); `""` for actions where no sweep has run (cooldown) or where the branch isn't relevant. */
+  /** Validated base branch (e.g. "main") for this PR. Echoed from `ShepherdReport.baseBranch` after `validateBaseBranch` whenever a sweep/report has run; `""` only for early-return cases where no sweep has run yet (for example, cooldown). */
   baseBranch: string;
 }
 

@@ -168,7 +168,7 @@ Rebases the branch on top of its base to clear flaky failures caused by being be
 
 > Note: merge conflicts (`CONFLICTS`) route to `fix_code`, not `rebase` — conflicts need manual resolution during the rebase. The `fix_code` runbook always emits a rebase step when the PR is in `CONFLICTS`, even without any threads/comments/checks/reviews; the wording switches from the clean `rebase && push` one-liner to an explicit "Rebase with conflict resolution" step that handles `git rebase --continue` loops before pushing.
 
-**CLI side-effects:** None. The CLI fetches the base branch name via `gh pr view` and pre-builds the shell script.
+**CLI side-effects:** None. The CLI uses the base branch already returned in the GraphQL batch (`baseRefName` → `ShepherdReport.baseBranch`), validates it locally, and pre-builds the shell script. If the base branch is unknown (`base-branch-unknown`), it does not do an extra `gh pr view` fetch.
 
 **Exit code:** 1
 
@@ -309,7 +309,7 @@ Ambiguous state that requires human judgement — the monitor stops and surfaces
 - **`fix-thrash`** — same thread dispatched ≥ `config.iterate.fixAttemptsPerThread` times (default 3) without resolving.
 - **`pr-level-changes-requested`** — reviewer requested changes but left no inline threads, comments, or CI failures to act on (not triggered when merge conflicts are present).
 - **`thread-missing-location`** — an actionable review thread has no file or line reference, so the code location cannot be found automatically.
-- **`base-branch-unknown`** — `gh pr view --json baseRefName` failed (network/auth error) or returned a ref name with unsafe characters. Preempts both `[REBASE]` and any `[FIX_CODE]` that would require a push, since rebasing onto the wrong base is worse than pausing the monitor.
+- **`base-branch-unknown`** — the GraphQL batch did not yield a usable base branch name: the derived value was empty or contained unsafe characters. Preempts both `[REBASE]` and any `[FIX_CODE]` that would require a push, since rebasing onto the wrong base is worse than pausing the monitor.
 
 **CLI side-effects:** None.
 
