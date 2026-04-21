@@ -16,4 +16,6 @@ The `bin/` directory is gitignored and must be built before `npx pr-shepherd` wo
 
 ## Dogfooding
 
-During development, use the local CLI and the skills in plugin/skills/.
+During development, run the CLI from this repository root with `npx pr-shepherd` (after `npm install && npm run build`).
+This ensures you are using the built local CLI from this checkout rather than any globally installed version.
+Use it from the same worktree/repository so it picks up the skills and configuration checked into this local checkout.
