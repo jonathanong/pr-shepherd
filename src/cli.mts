@@ -242,23 +242,19 @@ function formatMutateResult(result: Awaited<ReturnType<typeof runResolveMutate>>
 }
 
 function formatIterateResult(result: import("./types.mts").IterateResult): string {
-  const base = `PR #${result.pr} [${result.action.toUpperCase()}] status=${result.status} merge=${result.mergeStateStatus}`;
+  const base = `PR #${result.pr} [${result.action.toUpperCase()}]`;
   switch (result.action) {
     case "cooldown":
-      return `${base} (cooldown: CI still starting)`;
     case "wait":
-      return `${base} (${result.remainingSeconds}s until cancel)`;
     case "cancel":
-      return `${base} (ready-delay elapsed)`;
-    case "fix_code":
-      return `${base} threads=${result.fix.threads.length} comments=${result.fix.comments.length} checks=${result.fix.checks.length} cancelled=${result.cancelled.length}`;
     case "rerun_ci":
-      return `${base} reran=${result.reran.join(",")}`;
-    case "rebase":
-      return `${base} (branch is behind main)`;
     case "mark_ready":
-      return `${base} markedReady=${result.markedReady}`;
+      return `${base} ${result.log}`;
+    case "fix_code":
+      return `${base} threads=${result.fix.threads.length} actionableComments=${result.fix.actionableComments.length} noiseComments=${result.fix.noiseCommentIds.length} checks=${result.fix.checks.length} cancelled=${result.cancelled.length}`;
+    case "rebase":
+      return `${base} ${result.rebase.reason}`;
     case "escalate":
-      return `${base} triggers=${result.escalate.triggers.join(",")} — ${result.escalate.suggestion}`;
+      return `${base} ${result.escalate.humanMessage.split("\n")[0]}`;
   }
 }

@@ -247,6 +247,8 @@ export interface EscalateDetails {
   attemptHistory?: Array<{ threadId: string; attempts: number }>;
   /** One-line hint for the human on what to do. */
   suggestion: string;
+  /** Full human-readable block ready to print: headline, triggers, suggestions, thread list. */
+  humanMessage: string;
 }
 
 export interface IterateResultSummary {
@@ -272,23 +274,42 @@ export interface IterateResultBase {
 
 export interface IterateResultCooldown extends IterateResultBase {
   action: "cooldown";
+  log: string;
 }
 
 export interface IterateResultWait extends IterateResultBase {
   action: "wait";
+  log: string;
 }
 
 export interface IterateResultCancel extends IterateResultBase {
   action: "cancel";
+  log: string;
+}
+
+export interface ResolveCommand {
+  /** Argv ready to shell-join and run. Contains $DISMISS_MESSAGE placeholder when requiresDismissMessage. */
+  argv: string[];
+  /** Whether to append `--require-sha <HEAD_SHA>` after a successful push. */
+  requiresHeadSha: boolean;
+  /** Whether the model must substitute $DISMISS_MESSAGE with a specific description of the fix. */
+  requiresDismissMessage: boolean;
 }
 
 export interface IterateResultFixCode extends IterateResultBase {
   action: "fix_code";
   fix: {
     threads: AgentThread[];
-    comments: AgentComment[];
+    /** Comments classified as actionable — require code changes. */
+    actionableComments: AgentComment[];
+    /** IDs of comments classified as noise (quota warnings, bot acks, etc.) — minimize but do not act on. */
+    noiseCommentIds: string[];
     checks: AgentCheck[];
     changesRequestedReviews: Review[];
+    /** Pre-built resolve command. Run after committing and pushing. */
+    resolveCommand: ResolveCommand;
+    /** Ordered steps for the model to follow. */
+    instructions: string[];
   };
   cancelled: string[];
 }
@@ -296,15 +317,24 @@ export interface IterateResultFixCode extends IterateResultBase {
 export interface IterateResultRerunCi extends IterateResultBase {
   action: "rerun_ci";
   reran: string[];
+  log: string;
 }
 
 export interface IterateResultRebase extends IterateResultBase {
   action: "rebase";
+  rebase: {
+    baseBranch: string;
+    /** Human-readable explanation of why a rebase is needed. */
+    reason: string;
+    /** Complete shell script to run (includes dirty-worktree guard). */
+    shellScript: string;
+  };
 }
 
 export interface IterateResultMarkReady extends IterateResultBase {
   action: "mark_ready";
   markedReady: boolean;
+  log: string;
 }
 
 export interface IterateResultEscalate extends IterateResultBase {

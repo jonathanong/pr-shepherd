@@ -11,7 +11,7 @@ Quick entry point. For a command overview see [`../README.md`](../README.md).
 | [flow.md](flow.md)                   | End-to-end mermaid flow diagram                              |
 | [architecture.md](architecture.md)   | Module map, dependency rules, where to put new code          |
 | [iterate-flow.md](iterate-flow.md)   | Full 8-step dispatch walkthrough inside `iterate`            |
-| [actions.md](actions.md)             | Every action: trigger, side-effects, cron log                |
+| [actions.md](actions.md)             | Every action: trigger, side-effects, prescriptive output fields |
 | [watch-loop.md](watch-loop.md)       | How the monitor skill + `/loop` + `iterate` interact         |
 | [ready-delay.md](ready-delay.md)     | The `ready-since.txt` state machine                          |
 | [cache.md](cache.md)                 | File layout, atomic writes, TTL, bypass paths                |

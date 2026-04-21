@@ -242,7 +242,8 @@ describe("runIterate — fix_code (actionable threads)", () => {
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       expect(result.fix.threads).toHaveLength(2);
-      expect(result.fix.comments).toHaveLength(0);
+      expect(result.fix.actionableComments).toHaveLength(0);
+      expect(result.fix.noiseCommentIds).toHaveLength(0);
       expect(result.fix.checks).toHaveLength(0);
       expect(result.cancelled).toHaveLength(0);
     }
@@ -518,7 +519,7 @@ describe("runIterate — fix_code agent projection", () => {
     }
   });
 
-  it("emits AgentComment shape — no isMinimized/createdAtUnix on fix.comments", async () => {
+  it("emits AgentComment shape — no isMinimized/createdAtUnix on fix.actionableComments", async () => {
     const comment = {
       id: "c-1",
       isMinimized: false,
@@ -542,7 +543,7 @@ describe("runIterate — fix_code agent projection", () => {
 
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
-      const c = result.fix.comments[0]!;
+      const c = result.fix.actionableComments[0]!;
       expect(c.id).toBe("c-1");
       expect(c.author).toBe("bob");
       expect(c.body).toBe("Consider renaming this");
@@ -1298,6 +1299,282 @@ describe("runIterate — human approval pending (BLOCKED + REVIEW_REQUIRED)", ()
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("cancel");
     expect(result.shouldCancel).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Prescriptive fields
+// ---------------------------------------------------------------------------
+
+describe("runIterate — prescriptive fields: log strings", () => {
+  it("cooldown.log mentions CI starting", async () => {
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "log") return Promise.resolve({ stdout: String(NOW - 5), stderr: "" });
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+
+    const result = await runIterate(makeOpts({ cooldownSeconds: 30 }));
+    expect(result.action).toBe("cooldown");
+    if (result.action === "cooldown") {
+      expect(result.log).toMatch(/SKIP/);
+      expect(result.log).toMatch(/CI/i);
+    }
+  });
+
+  it("wait.log includes passing count and merge state", async () => {
+    mockRunCheck.mockResolvedValue(makeReport());
+    mockUpdateReadyDelay.mockResolvedValue({ isReady: true, shouldCancel: false, remainingSeconds: 300 });
+
+    const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
+    expect(result.action).toBe("wait");
+    if (result.action === "wait") {
+      expect(result.log).toMatch(/WAIT/);
+      expect(result.log).toMatch(/passing/);
+      expect(result.log).toMatch(/300s/);
+    }
+  });
+
+  it("wait.log includes 'merge conflicts' description for DIRTY mergeStateStatus", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        mergeStatus: {
+          status: "CLEAN",
+          state: "OPEN",
+          isDraft: false,
+          mergeable: "CONFLICTING",
+          reviewDecision: null,
+          copilotReviewInProgress: false,
+          mergeStateStatus: "DIRTY",
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({ isReady: false, shouldCancel: false, remainingSeconds: 0 });
+
+    // No actionable work, no failing checks → wait
+    const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
+    expect(result.action).toBe("wait");
+    if (result.action === "wait") {
+      expect(result.log).toMatch(/merge conflicts/i);
+      expect(result.log).toMatch(/rebase/i);
+    }
+  });
+
+  it("cancel.log mentions PR state when PR is merged", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        mergeStatus: {
+          status: "CLEAN",
+          state: "MERGED",
+          isDraft: false,
+          mergeable: "MERGEABLE",
+          reviewDecision: "APPROVED",
+          copilotReviewInProgress: false,
+          mergeStateStatus: "CLEAN",
+        },
+      }),
+    );
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("cancel");
+    if (result.action === "cancel") {
+      expect(result.log).toMatch(/CANCEL/);
+      expect(result.log).toMatch(/merged/i);
+    }
+  });
+
+  it("cancel.log mentions ready-delay when shouldCancel from ready-delay", async () => {
+    mockRunCheck.mockResolvedValue(makeReport());
+    mockUpdateReadyDelay.mockResolvedValue({ isReady: true, shouldCancel: true, remainingSeconds: 0 });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("cancel");
+    if (result.action === "cancel") {
+      expect(result.log).toMatch(/CANCEL/);
+      expect(result.log).toMatch(/ready/i);
+    }
+  });
+
+  it("rerun_ci.log includes count and run IDs", async () => {
+    const timeoutCheck = {
+      name: "test",
+      status: "COMPLETED" as const,
+      conclusion: "TIMED_OUT" as const,
+      detailsUrl: "https://github.com/owner/repo/actions/runs/99",
+      event: "pull_request",
+      runId: "run-99",
+      category: "failing" as const,
+      failureKind: "timeout" as const,
+    };
+    mockRunCheck.mockResolvedValue(makeReport({ status: "FAILING", checks: { passing: [], failing: [timeoutCheck], inProgress: [], skipped: [], filtered: [], filteredNames: [], blockedByFilteredCheck: false } }));
+    mockUpdateReadyDelay.mockResolvedValue({ isReady: false, shouldCancel: false, remainingSeconds: 600 });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("rerun_ci");
+    if (result.action === "rerun_ci") {
+      expect(result.log).toMatch(/RERAN/);
+      expect(result.log).toMatch(/run-99/);
+    }
+  });
+
+  it("mark_ready.log mentions PR number", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({ mergeStatus: { status: "CLEAN", state: "OPEN", isDraft: true, mergeable: "MERGEABLE", reviewDecision: "APPROVED", copilotReviewInProgress: false, mergeStateStatus: "DRAFT" } }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({ isReady: true, shouldCancel: false, remainingSeconds: 600 });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("mark_ready");
+    if (result.action === "mark_ready") {
+      expect(result.log).toMatch(/MARKED READY/);
+      expect(result.log).toMatch(/42/);
+    }
+  });
+});
+
+describe("runIterate — prescriptive fields: rebase", () => {
+  it("rebase result includes baseBranch, reason, and shellScript with dirty-worktree guard", async () => {
+    const flakyCheck = {
+      name: "flaky",
+      status: "COMPLETED" as const,
+      conclusion: "FAILURE" as const,
+      detailsUrl: "https://github.com/owner/repo/actions/runs/30",
+      event: "pull_request",
+      runId: "run-30",
+      category: "failing" as const,
+      failureKind: "flaky" as const,
+    };
+    mockRunCheck.mockResolvedValue(makeReport({
+      status: "FAILING",
+      mergeStatus: { status: "BEHIND", state: "OPEN", isDraft: false, mergeable: "MERGEABLE", reviewDecision: null, copilotReviewInProgress: false, mergeStateStatus: "BEHIND" },
+      checks: { passing: [], failing: [flakyCheck], inProgress: [], skipped: [], filtered: [], filteredNames: [], blockedByFilteredCheck: false },
+    }));
+    mockUpdateReadyDelay.mockResolvedValue({ isReady: false, shouldCancel: false, remainingSeconds: 600 });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "log") return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
+      if (cmd === "git" && args[0] === "rev-parse") return Promise.resolve({ stdout: "abc123\n", stderr: "" });
+      if (cmd === "gh" && args[1] === "view") return Promise.resolve({ stdout: "main\n", stderr: "" });
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("rebase");
+    if (result.action === "rebase") {
+      expect(result.rebase.baseBranch).toBe("main");
+      expect(result.rebase.reason).toMatch(/behind main/i);
+      expect(result.rebase.shellScript).toMatch(/git diff --quiet/);
+      expect(result.rebase.shellScript).toMatch(/git rebase origin\/main/);
+      expect(result.rebase.shellScript).toMatch(/--force-with-lease/);
+    }
+  });
+});
+
+describe("runIterate — prescriptive fields: fix_code noise/actionable split", () => {
+  it("classifies quota-warning comment as noise, real review comment as actionable", async () => {
+    const noiseComment = { id: "c-noise", isMinimized: false, author: "bot", body: "You have reached your daily quota", createdAtUnix: NOW };
+    const realComment = { id: "c-real", isMinimized: false, author: "reviewer", body: "Please add a null check here before calling .value()", createdAtUnix: NOW };
+    mockRunCheck.mockResolvedValue(makeReport({
+      status: "UNRESOLVED_COMMENTS",
+      comments: { actionable: [noiseComment, realComment] },
+    }));
+    mockUpdateReadyDelay.mockResolvedValue({ isReady: false, shouldCancel: false, remainingSeconds: 600 });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "log") return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
+      if (cmd === "git" && args[0] === "rev-parse") return Promise.resolve({ stdout: "abc123\n", stderr: "" });
+      if (cmd === "gh" && args[1] === "view") return Promise.resolve({ stdout: "main\n", stderr: "" });
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.actionableComments).toHaveLength(1);
+      expect(result.fix.actionableComments[0]!.id).toBe("c-real");
+      expect(result.fix.noiseCommentIds).toEqual(["c-noise"]);
+    }
+  });
+
+  it("resolveCommand includes thread IDs and comment IDs with $HEAD_SHA flag", async () => {
+    const thread = { ...THREAD };
+    const comment = { id: "c-1", isMinimized: false, author: "reviewer", body: "Fix the types here", createdAtUnix: NOW };
+    mockRunCheck.mockResolvedValue(makeReport({
+      status: "UNRESOLVED_COMMENTS",
+      threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [] },
+      comments: { actionable: [comment] },
+    }));
+    mockUpdateReadyDelay.mockResolvedValue({ isReady: false, shouldCancel: false, remainingSeconds: 600 });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "log") return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
+      if (cmd === "git" && args[0] === "rev-parse") return Promise.resolve({ stdout: "abc123\n", stderr: "" });
+      if (cmd === "gh" && args[1] === "view") return Promise.resolve({ stdout: "main\n", stderr: "" });
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      const { resolveCommand } = result.fix;
+      expect(resolveCommand.argv).toContain("--resolve-thread-ids");
+      expect(resolveCommand.argv.join(" ")).toContain("thread-1");
+      expect(resolveCommand.argv).toContain("--minimize-comment-ids");
+      expect(resolveCommand.argv.join(" ")).toContain("c-1");
+      expect(resolveCommand.requiresHeadSha).toBe(true);
+      expect(resolveCommand.requiresDismissMessage).toBe(false);
+    }
+  });
+
+  it("resolveCommand includes dismiss-review-ids and $DISMISS_MESSAGE when changesRequested", async () => {
+    const review = { id: "r-1", author: "reviewer", body: "Please address the naming" };
+    const thread = { ...THREAD };
+    mockRunCheck.mockResolvedValue(makeReport({
+      status: "UNRESOLVED_COMMENTS",
+      threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [] },
+      changesRequestedReviews: [review],
+    }));
+    mockUpdateReadyDelay.mockResolvedValue({ isReady: false, shouldCancel: false, remainingSeconds: 600 });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "log") return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
+      if (cmd === "git" && args[0] === "rev-parse") return Promise.resolve({ stdout: "abc123\n", stderr: "" });
+      if (cmd === "gh" && args[1] === "view") return Promise.resolve({ stdout: "main\n", stderr: "" });
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      const { resolveCommand } = result.fix;
+      expect(resolveCommand.argv).toContain("--dismiss-review-ids");
+      expect(resolveCommand.argv.join(" ")).toContain("r-1");
+      expect(resolveCommand.argv).toContain("$DISMISS_MESSAGE");
+      expect(resolveCommand.requiresDismissMessage).toBe(true);
+    }
+  });
+});
+
+describe("runIterate — prescriptive fields: escalate humanMessage", () => {
+  it("escalate.humanMessage contains triggers, suggestion, and thread details", async () => {
+    mockReadFixAttempts.mockResolvedValue({ headSha: "abc123", threadAttempts: { "thread-1": 3 } });
+    mockRunCheck.mockResolvedValue(makeReport({
+      status: "UNRESOLVED_COMMENTS",
+      threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
+    }));
+    mockUpdateReadyDelay.mockResolvedValue({ isReady: false, shouldCancel: false, remainingSeconds: 600 });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "log") return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
+      if (cmd === "git" && args[0] === "rev-parse") return Promise.resolve({ stdout: "abc123\n", stderr: "" });
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      const { humanMessage } = result.escalate;
+      expect(humanMessage).toMatch(/paused/i);
+      expect(humanMessage).toMatch(/fix-thrash/);
+      expect(humanMessage).toMatch(/thread-1/);
+      expect(humanMessage).toMatch(/src\/foo\.mts/);
+      expect(humanMessage).toMatch(/pr-shepherd:check/);
+    }
   });
 });
 

@@ -31,14 +31,17 @@ import { getCurrentPrNumber } from "../github/client.mts";
 import { readFixAttempts, writeFixAttempts } from "../cache/fix-attempts.mts";
 import { toAgentThread, toAgentComment, toAgentChecks } from "../reporters/agent.mts";
 import type {
+  AgentComment,
+  AgentThread,
   EscalateDetails,
   IterateCommandOptions,
   IterateResult,
   IterateResultBase,
   IterateResultSummary,
   PrComment,
-  ReviewThread,
+  ResolveCommand,
   Review,
+  ReviewThread,
   TriagedCheck,
 } from "../types.mts";
 import { loadConfig } from "../config/load.mts";
@@ -78,6 +81,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       shouldCancel: false,
       remainingSeconds: readyDelaySeconds,
       summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 0 },
+      log: "SKIP: CI still starting — waiting for first check to appear",
     };
   }
 
@@ -91,6 +95,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
 
   // Step 2.5: Cancel if PR is merged or closed — no longer actionable.
   if (report.mergeStatus.state !== "OPEN") {
+    const state = report.mergeStatus.state.toLowerCase();
     return {
       pr: report.pr,
       repo: report.repo,
@@ -103,6 +108,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       state: report.mergeStatus.state,
       summary: buildSummary(report),
       action: "cancel",
+      log: `CANCEL: PR #${report.pr} is ${state} — stopping monitor`,
     };
   }
 
@@ -135,7 +141,11 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
 
   // Step 3 cont.: cancel if ready-delay elapsed.
   if (readyState.shouldCancel) {
-    return { ...base, action: "cancel" };
+    return {
+      ...base,
+      action: "cancel",
+      log: `CANCEL: PR #${base.pr} has been ready for review — ready-delay elapsed, stopping monitor`,
+    };
   }
 
   // Triage failing checks now that we know we need failureKind for steps 4–6.
@@ -175,18 +185,17 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       report.mergeStatus.status === "CONFLICTS",
     );
     if (escalateTriggers.triggers.length > 0) {
-      return {
-        ...base,
-        action: "escalate",
-        escalate: {
-          triggers: escalateTriggers.triggers,
-          unresolvedThreads: report.threads.actionable.map(toAgentThread),
-          ambiguousComments: report.comments.actionable.map(toAgentComment),
-          changesRequestedReviews: report.changesRequestedReviews,
-          attemptHistory: escalateTriggers.thrashHistory,
-          suggestion: buildEscalateSuggestion(escalateTriggers.triggers),
-        },
+      const escalateDetails: EscalateDetails = {
+        triggers: escalateTriggers.triggers,
+        unresolvedThreads: report.threads.actionable.map(toAgentThread),
+        ambiguousComments: report.comments.actionable.map(toAgentComment),
+        changesRequestedReviews: report.changesRequestedReviews,
+        attemptHistory: escalateTriggers.thrashHistory,
+        suggestion: buildEscalateSuggestion(escalateTriggers.triggers),
+        humanMessage: "",
       };
+      escalateDetails.humanMessage = buildEscalateHumanMessage(escalateDetails, prNumber);
+      return { ...base, action: "escalate", escalate: escalateDetails };
     }
 
     // Increment attempt counts for this dispatch cycle.
@@ -204,14 +213,32 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       const results = await Promise.all(uniqueRunIds.map((id) => tryCancelRun(id)));
       cancelled = results.filter((id): id is string => id !== null);
     }
+
+    const baseBranch = await getBaseBranch(prNumber);
+    const threads = report.threads.actionable.map(toAgentThread);
+    const { actionable: actionableComments, noiseIds: noiseCommentIds } = classifyComments(
+      report.comments.actionable.map(toAgentComment),
+    );
+    const checks = toAgentChecks(actionableChecks);
+    const { changesRequestedReviews } = report;
+    const allCommentIds = [
+      ...actionableComments.map((c) => c.id),
+      ...noiseCommentIds,
+    ];
+    const resolveCommand = buildResolveCommand(threads, allCommentIds, changesRequestedReviews, prNumber);
+    const instructions = buildFixInstructions(threads, actionableComments, checks, changesRequestedReviews, baseBranch, resolveCommand);
+
     return {
       ...base,
       action: "fix_code",
       fix: {
-        threads: report.threads.actionable.map(toAgentThread),
-        comments: report.comments.actionable.map(toAgentComment),
-        checks: toAgentChecks(actionableChecks),
-        changesRequestedReviews: report.changesRequestedReviews,
+        threads,
+        actionableComments,
+        noiseCommentIds,
+        checks,
+        changesRequestedReviews,
+        resolveCommand,
+        instructions,
       },
       cancelled,
     };
@@ -229,13 +256,27 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     await Promise.all(
       uniqueRunIds.map((runId) => runGhCommand(["run", "rerun", runId, "--failed"])),
     );
-    return { ...base, action: "rerun_ci", reran: uniqueRunIds };
+    return {
+      ...base,
+      action: "rerun_ci",
+      reran: uniqueRunIds,
+      log: `RERAN ${uniqueRunIds.length} CI check${uniqueRunIds.length === 1 ? "" : "s"}: ${uniqueRunIds.join(" ")}`,
+    };
   }
 
   // Step 6: Flaky + behind — rebase needed.
   const hasFlaky = report.checks.failing.some((f) => f.failureKind === "flaky");
   if (hasFlaky && report.mergeStatus.status === "BEHIND" && config.actions.autoRebase) {
-    return { ...base, action: "rebase" };
+    const baseBranch = await getBaseBranch(prNumber);
+    return {
+      ...base,
+      action: "rebase",
+      rebase: {
+        baseBranch,
+        reason: `Branch is behind ${baseBranch} — rebasing to pick up latest changes and clear flaky failures`,
+        shellScript: buildRebaseShellScript(baseBranch),
+      },
+    };
   }
 
   // Step 7: Mark ready for review.
@@ -253,11 +294,20 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
 
   if (canMarkReady && !opts.noAutoMarkReady && config.actions.autoMarkReady) {
     await runGhCommand(["pr", "ready", String(report.pr)]);
-    return { ...base, action: "mark_ready", markedReady: true };
+    return {
+      ...base,
+      action: "mark_ready",
+      markedReady: true,
+      log: `MARKED READY: PR #${report.pr} converted from draft to ready for review`,
+    };
   }
 
   // Step 8: Nothing to do.
-  return { ...base, action: "wait" };
+  return {
+    ...base,
+    action: "wait",
+    log: buildWaitLog(base),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -361,6 +411,190 @@ function checkEscalateTriggers(
         ? thrashThreads.map((t) => ({ threadId: t.id, attempts: threadAttempts[t.id] ?? 0 }))
         : undefined,
   };
+}
+
+async function getBaseBranch(prNumber: number): Promise<string> {
+  try {
+    const { stdout } = await execFile("gh", [
+      "pr",
+      "view",
+      String(prNumber),
+      "--json",
+      "baseRefName",
+      "--jq",
+      ".baseRefName",
+    ]);
+    return stdout.trim() || "main";
+  } catch {
+    return "main";
+  }
+}
+
+function buildRebaseShellScript(baseBranch: string): string {
+  return [
+    `if ! git diff --quiet || ! git diff --cached --quiet; then`,
+    `  echo "SKIP rebase: dirty worktree (uncommitted changes present)"`,
+    `  exit 0`,
+    `fi`,
+    `git fetch origin && git rebase origin/${baseBranch} && git push --force-with-lease`,
+  ].join("\n");
+}
+
+// Patterns that indicate a comment is bot-generated noise rather than actionable feedback.
+// Conservative: only match explicit known patterns to avoid accidentally suppressing real reviews.
+const NOISE_PATTERNS = [
+  /you have reached your daily quota/i,
+  /please wait up to \d+ hours?/i,
+  /rate.?limit(?:ed)? — try again/i,
+  /resuming (monitoring|watch|checking)/i,
+  /restarting (monitoring|watch)/i,
+];
+
+function isNoiseComment(comment: AgentComment): boolean {
+  return NOISE_PATTERNS.some((p) => p.test(comment.body));
+}
+
+function classifyComments(comments: AgentComment[]): {
+  actionable: AgentComment[];
+  noiseIds: string[];
+} {
+  const actionable: AgentComment[] = [];
+  const noiseIds: string[] = [];
+  for (const c of comments) {
+    if (isNoiseComment(c)) {
+      noiseIds.push(c.id);
+    } else {
+      actionable.push(c);
+    }
+  }
+  return { actionable, noiseIds };
+}
+
+function buildResolveCommand(
+  threads: AgentThread[],
+  allCommentIds: string[],
+  reviews: Review[],
+  prNumber: number,
+): ResolveCommand {
+  const argv = ["npx", "pr-shepherd", "resolve", String(prNumber)];
+
+  if (threads.length > 0) {
+    argv.push("--resolve-thread-ids", threads.map((t) => t.id).join(","));
+  }
+  if (allCommentIds.length > 0) {
+    argv.push("--minimize-comment-ids", allCommentIds.join(","));
+  }
+  const hasDismiss = reviews.length > 0;
+  if (hasDismiss) {
+    argv.push("--dismiss-review-ids", reviews.map((r) => r.id).join(","));
+    argv.push("--message", "$DISMISS_MESSAGE");
+  }
+
+  return { argv, requiresHeadSha: true, requiresDismissMessage: hasDismiss };
+}
+
+function buildFixInstructions(
+  threads: AgentThread[],
+  actionableComments: AgentComment[],
+  checks: import("../types.mts").AgentCheck[],
+  reviews: Review[],
+  baseBranch: string,
+  resolveCommand: ResolveCommand,
+): string[] {
+  const resolveCmd =
+    resolveCommand.argv.join(" ") +
+    (resolveCommand.requiresHeadSha ? " --require-sha $HEAD_SHA" : "");
+  const instructions: string[] = [];
+
+  if (threads.length > 0 || actionableComments.length > 0) {
+    instructions.push(
+      `Apply code fixes: read and edit each file referenced in fix.threads and fix.actionableComments.`,
+    );
+  }
+  if (checks.length > 0) {
+    instructions.push(
+      `For each fix.checks[].runId: run gh run view <runId> --log-failed, identify the failure, and apply the fix.`,
+    );
+  }
+  if (reviews.length > 0) {
+    instructions.push(
+      `For each fix.changesRequestedReviews: read the review body and apply the requested changes.`,
+    );
+  }
+  instructions.push(
+    `Commit changed files: git add <files> && git commit -m "<descriptive message>"`,
+  );
+  instructions.push(
+    `Rebase and push: git fetch origin && git rebase origin/${baseBranch} && git push --force-with-lease — capture HEAD_SHA=$(git rev-parse HEAD)`,
+  );
+  instructions.push(
+    `Run the resolve command (substitute $HEAD_SHA with the pushed commit SHA${resolveCommand.requiresDismissMessage ? "; substitute $DISMISS_MESSAGE with a one-sentence description of what you changed" : ""}): ${resolveCmd}`,
+  );
+
+  return instructions;
+}
+
+function buildWaitLog(base: IterateResultBase): string {
+  const { summary, mergeStateStatus, remainingSeconds } = base;
+  const parts: string[] = [
+    `WAIT: ${summary.passing} passing, ${summary.inProgress} in-progress`,
+  ];
+
+  switch (mergeStateStatus) {
+    case "BEHIND":
+      parts.push("branch is behind base");
+      break;
+    case "BLOCKED":
+      parts.push("blocked by pending reviews or required status checks");
+      break;
+    case "DIRTY":
+      parts.push("merge conflicts — rebase on next push, or now if no pushes are planned");
+      break;
+    case "DRAFT":
+      parts.push("PR is a draft");
+      break;
+    case "UNSTABLE":
+      parts.push("some checks are unstable");
+      break;
+  }
+
+  if (remainingSeconds > 0) {
+    parts.push(`${remainingSeconds}s until auto-cancel`);
+  }
+
+  return parts.join(" — ");
+}
+
+function buildEscalateHumanMessage(escalate: Omit<EscalateDetails, "humanMessage">, pr: number): string {
+  const lines: string[] = [];
+  lines.push("⚠️  /pr-shepherd:monitor paused — needs human direction");
+  lines.push("");
+  lines.push(`Triggers: ${escalate.triggers.join(", ")}`);
+  lines.push(escalate.suggestion);
+  lines.push("");
+  lines.push("Items needing attention:");
+  for (const t of escalate.unresolvedThreads) {
+    const loc = t.path ? `${t.path}:${t.line ?? "?"}` : "(no location)";
+    const firstLine = t.body.split("\n")[0] ?? "";
+    lines.push(`- threadId=${t.id} ${loc} (@${t.author}): ${firstLine}`);
+  }
+  for (const r of escalate.changesRequestedReviews) {
+    const firstLine = r.body.split("\n")[0] ?? "";
+    lines.push(`- reviewId=${r.id} (@${r.author}): ${firstLine}`);
+  }
+  if (escalate.attemptHistory && escalate.attemptHistory.length > 0) {
+    lines.push("");
+    lines.push(
+      "Fix attempts: " +
+        escalate.attemptHistory
+          .map((a) => `threadId=${a.threadId} attempted ${a.attempts} times`)
+          .join(", "),
+    );
+  }
+  lines.push("");
+  lines.push(`Run /pr-shepherd:check ${pr} to see current state.`);
+  lines.push("After fixing manually, rerun /pr-shepherd:monitor to resume.");
+  return lines.join("\n");
 }
 
 function buildEscalateSuggestion(triggers: string[]): string {

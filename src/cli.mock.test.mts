@@ -78,16 +78,24 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
     remainingSeconds: 60,
     summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 1 },
   };
-  if (action === "wait") return { ...base, action: "wait" };
+  if (action === "wait") return { ...base, action: "wait", log: "WAIT: 0 passing, 1 in-progress" };
   if (action === "fix_code") {
     return {
       ...base,
       action: "fix_code",
-      fix: { threads: [], comments: [], checks: [], changesRequestedReviews: [] },
+      fix: {
+        threads: [],
+        actionableComments: [],
+        noiseCommentIds: [],
+        checks: [],
+        changesRequestedReviews: [],
+        resolveCommand: { argv: ["npx", "pr-shepherd", "resolve", "42"], requiresHeadSha: true, requiresDismissMessage: false },
+        instructions: [],
+      },
       cancelled: [],
     };
   }
-  if (action === "cancel") return { ...base, action: "cancel" };
+  if (action === "cancel") return { ...base, action: "cancel", log: "CANCEL: PR #42 — stopping monitor" };
   if (action === "escalate") {
     return {
       ...base,
@@ -98,10 +106,11 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
         ambiguousComments: [],
         changesRequestedReviews: [],
         suggestion: "check manually",
+        humanMessage: "⚠️  /pr-shepherd:monitor paused — needs human direction",
       },
     };
   }
-  return { ...base, action: "wait" };
+  return { ...base, action: "wait", log: "WAIT: 0 passing, 1 in-progress" };
 }
 
 beforeEach(() => {
