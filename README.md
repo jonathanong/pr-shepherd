@@ -267,18 +267,20 @@ Flags:
 | `--no-auto-mark-ready`        | false   | Skip converting draft → ready-for-review          |
 | `--no-auto-cancel-actionable` | false   | Skip cancelling actionable failing runs           |
 
-**Text output** (one line per action):
+**Text output** (default; one headline per action plus a trailing `info:` line with the remaining base fields). Representative headlines — see [docs/actions.md](docs/actions.md) for full multi-line examples:
 
 ```
-PR #42 [COOLDOWN] status=UNKNOWN merge=UNKNOWN (cooldown: CI still starting)
-PR #42 [WAIT] status=READY merge=CLEAN (540s until cancel)
-PR #42 [RERUN_CI] status=FAILING merge=UNSTABLE reran=12345,67890
-PR #42 [FIX_CODE] status=UNRESOLVED_COMMENTS merge=BLOCKED threads=2 comments=0 checks=1 cancelled=1
-PR #42 [REBASE] status=FAILING merge=BEHIND (branch is behind main)
-PR #42 [MARK_READY] status=READY merge=CLEAN markedReady=true
-PR #42 [CANCEL] status=READY merge=CLEAN (ready-delay elapsed)
-PR #42 [ESCALATE] status=UNRESOLVED_COMMENTS merge=BLOCKED triggers=fix-thrash — Same thread(s) attempted multiple times without resolution — fix manually then rerun /pr-shepherd:monitor
+PR #42 [COOLDOWN] status=UNKNOWN merge=UNKNOWN state=UNKNOWN — SKIP: CI still starting — waiting for first check to appear
+PR #42 [WAIT] status=READY merge=CLEAN state=OPEN — WAIT: 3 passing, 0 in-progress — 540s until auto-cancel
+PR #42 [RERUN_CI] status=FAILING merge=UNSTABLE state=OPEN — RERAN 2 CI runs: 12345 (test (22.x) — timeout), 67890 (build — infrastructure)
+PR #42 [FIX_CODE] status=UNRESOLVED_COMMENTS merge=BLOCKED state=OPEN
+PR #42 [REBASE] status=FAILING merge=BEHIND state=OPEN — Branch is behind main — rebasing to pick up latest changes and clear flaky failures
+PR #42 [MARK_READY] status=READY merge=DRAFT state=OPEN — MARKED READY: PR #42 converted from draft to ready for review
+PR #42 [CANCEL] status=READY merge=CLEAN state=OPEN — CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping monitor
+PR #42 [ESCALATE] status=UNRESOLVED_COMMENTS merge=BLOCKED state=OPEN
 ```
+
+Both `--format=text` (default) and `--format=json` carry equivalent information — the `info:` line in text output surfaces the same base fields that JSON exposes as top-level keys.
 
 **JSON output** (`--format=json`, compact single line):
 

@@ -5,7 +5,10 @@ vi.mock("./commands/resolve.mts", () => ({
   runResolveFetch: vi.fn(),
   runResolveMutate: vi.fn(),
 }));
-vi.mock("./commands/iterate.mts", () => ({ runIterate: vi.fn() }));
+vi.mock("./commands/iterate.mts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./commands/iterate.mts")>();
+  return { ...actual, runIterate: vi.fn() };
+});
 vi.mock("./commands/status.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./commands/status.mts")>();
   return {

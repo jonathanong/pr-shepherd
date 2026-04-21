@@ -8,7 +8,7 @@ flowchart TD
   EX -->|no| CREATE[CronCreate:<br/>every 4m,<br/>maxTurns 50,<br/>expires 8h]
   CREATE --> CRON[(cron tick)]
   NOW --> ITER
-  CRON --> ITER[pr-shepherd<br/>iterate PR --format=json]
+  CRON --> ITER[pr-shepherd<br/>iterate PR]
 
   ITER --> S1{1. last commit<br/>age lt cooldown?}
   S1 -->|yes| A_COOL([action: cooldown])

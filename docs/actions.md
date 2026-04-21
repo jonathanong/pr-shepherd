@@ -4,7 +4,17 @@
 
 Each iteration of `shepherd iterate` returns exactly one action. See [docs/iterate-flow.md](iterate-flow.md) for the decision order.
 
-The default output format is text — what you see when running `npx pr-shepherd iterate <PR>`. Pass `--format=json` to get structured output for scripting. Both formats carry equivalent information.
+The default output format is text — what you see when running `npx pr-shepherd iterate <PR>`, and what the monitor SKILL reads each cron tick. `--format=json` emits the same information as a single JSON object for scripting. Every example below shows what the agent actually sees.
+
+**Output shape (every action):**
+
+```
+PR #<N> [ACTION] status=<…> merge=<…> state=<…> — <action-specific body…>
+<optional additional lines>
+info: repo=<…> passing=<N> skipped=<N> filtered=<N> inProgress=<N> remainingSeconds=<N> copilotReviewInProgress=<bool> isDraft=<bool> shouldCancel=<bool>
+```
+
+The first token after `PR #<N>` is always the `[ACTION]` tag — the monitor SKILL reads this to decide what to do. The final `info:` line always contains the remaining base fields that don't fit on the headline, so text output is never a lossy view of JSON.
 
 ---
 
@@ -21,10 +31,13 @@ Skips all work because the last commit is too fresh for CI checks to have starte
 **Text output:**
 
 ```
-PR #42 [COOLDOWN] SKIP: CI still starting — waiting for first check to appear
+PR #42 [COOLDOWN] status=UNKNOWN merge=UNKNOWN state=UNKNOWN — SKIP: CI still starting — waiting for first check to appear
+info: repo= passing=0 skipped=0 filtered=0 inProgress=0 remainingSeconds=600 copilotReviewInProgress=false isDraft=false shouldCancel=false
 ```
 
-**What the monitor does:** Print the output line and wait for the next cron fire.
+`status`, `merge`, `state` are `UNKNOWN` and `repo=` is blank because the early return happens before any GitHub sweep.
+
+**What the monitor does:** Print the output and wait for the next cron fire.
 
 ---
 
@@ -40,13 +53,22 @@ Nothing actionable to do; all CI is passing or in-progress.
 
 **Text output examples:**
 
-| Scenario           | Output                                                                                                |
-| ------------------ | ----------------------------------------------------------------------------------------------------- |
-| Normal wait        | `PR #42 [WAIT] WAIT: 3 passing, 2 in-progress — 120s until auto-cancel`                               |
-| Branch behind base | `PR #42 [WAIT] WAIT: 2 passing, 0 in-progress — branch is behind base — 300s until auto-cancel`       |
-| Blocked            | `PR #42 [WAIT] WAIT: 4 passing, 0 in-progress — blocked by pending reviews or required status checks` |
+```
+PR #42 [WAIT] status=IN_PROGRESS merge=BLOCKED state=OPEN — WAIT: 3 passing, 2 in-progress — 120s until auto-cancel
+info: repo=owner/repo passing=3 skipped=0 filtered=0 inProgress=2 remainingSeconds=120 copilotReviewInProgress=false isDraft=false shouldCancel=false
+```
 
-**What the monitor does:** Print the output line and wait for the next cron fire.
+```
+PR #42 [WAIT] status=IN_PROGRESS merge=BEHIND state=OPEN — WAIT: 2 passing, 0 in-progress — branch is behind base — 300s until auto-cancel
+info: repo=owner/repo passing=2 skipped=0 filtered=0 inProgress=0 remainingSeconds=300 copilotReviewInProgress=false isDraft=false shouldCancel=false
+```
+
+```
+PR #42 [WAIT] status=BLOCKED merge=BLOCKED state=OPEN — WAIT: 4 passing, 0 in-progress — blocked by pending reviews or required status checks
+info: repo=owner/repo passing=4 skipped=0 filtered=0 inProgress=0 remainingSeconds=0 copilotReviewInProgress=false isDraft=false shouldCancel=false
+```
+
+**What the monitor does:** Print the output and wait for the next cron fire.
 
 ---
 
@@ -63,24 +85,13 @@ Re-triggers CI runs that failed due to transient infrastructure or timeout issue
 **Text output:**
 
 ```
-PR #42 [RERUN_CI] RERAN 2 CI runs: 24697658766 (lint / typecheck / test (22.x) — timeout), 24697658767 (build — infrastructure)
+PR #42 [RERUN_CI] status=FAILING merge=BLOCKED state=OPEN — RERAN 2 CI runs: 24697658766 (lint / typecheck / test (22.x) — timeout), 24697658767 (build — infrastructure)
+info: repo=owner/repo passing=0 skipped=0 filtered=0 inProgress=0 remainingSeconds=600 copilotReviewInProgress=false isDraft=false shouldCancel=false
 ```
 
-**JSON-only fields** (`--format=json`):
+Each comma-separated entry on the headline has shape `<runId> (<check names joined by ", "> — <failureKind>)`. JSON surfaces the same information as `reran: ReranRun[]`.
 
-| Field   | Type         | Description                                             |
-| ------- | ------------ | ------------------------------------------------------- |
-| `reran` | `ReranRun[]` | One entry per re-triggered run (deduplicated by run ID) |
-
-**`ReranRun` fields:**
-
-| Field         | Type                            | Description                                          |
-| ------------- | ------------------------------- | ---------------------------------------------------- |
-| `runId`       | `string`                        | GitHub Actions run ID                                |
-| `checkNames`  | `string[]`                      | Check names within this run that triggered the rerun |
-| `failureKind` | `"timeout" \| "infrastructure"` | Why the rerun was triggered                          |
-
-**What the monitor does:** Print the output line and wait for CI to re-queue.
+**What the monitor does:** Print the output and wait for CI to re-queue.
 
 ---
 
@@ -90,17 +101,18 @@ Converts a draft PR to ready for review.
 
 **Trigger:** All of: `status === "READY"`, `mergeStateStatus === "CLEAN"` (or `"DRAFT"` when `isDraft`), Copilot review not in progress, `isDraft === true`, ready-delay not elapsed.
 
-**CLI side-effects:** Calls `gh pr ready <PR>` before returning. `markedReady: true` indicates the mutation succeeded.
+**CLI side-effects:** Calls `gh pr ready <PR>` before returning.
 
 **Exit code:** 0
 
 **Text output:**
 
 ```
-PR #42 [MARK_READY] MARKED READY: PR #42 converted from draft to ready for review
+PR #42 [MARK_READY] status=READY merge=DRAFT state=OPEN — MARKED READY: PR #42 converted from draft to ready for review
+info: repo=owner/repo passing=5 skipped=0 filtered=0 inProgress=0 remainingSeconds=600 copilotReviewInProgress=false isDraft=true shouldCancel=false
 ```
 
-**What the monitor does:** Print the output line and continue monitoring.
+**What the monitor does:** Print the output and continue monitoring.
 
 ---
 
@@ -116,13 +128,22 @@ Stops the monitor loop — no further iterations needed.
 
 **Text output examples:**
 
-| Scenario            | Output                                                                                             |
-| ------------------- | -------------------------------------------------------------------------------------------------- |
-| PR merged           | `PR #42 [CANCEL] CANCEL: PR #42 is merged — stopping monitor`                                      |
-| PR closed           | `PR #42 [CANCEL] CANCEL: PR #42 is closed — stopping monitor`                                      |
-| Ready-delay elapsed | `PR #42 [CANCEL] CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping monitor` |
+```
+PR #42 [CANCEL] status=READY merge=CLEAN state=MERGED — CANCEL: PR #42 is merged — stopping monitor
+info: repo=owner/repo passing=5 skipped=0 filtered=0 inProgress=0 remainingSeconds=0 copilotReviewInProgress=false isDraft=false shouldCancel=true
+```
 
-**What the monitor does:** Print the output line, then invoke `/loop cancel` via Skill tool to stop the cron job.
+```
+PR #42 [CANCEL] status=READY merge=CLEAN state=CLOSED — CANCEL: PR #42 is closed — stopping monitor
+info: repo=owner/repo passing=5 skipped=0 filtered=0 inProgress=0 remainingSeconds=0 copilotReviewInProgress=false isDraft=false shouldCancel=true
+```
+
+```
+PR #42 [CANCEL] status=READY merge=CLEAN state=OPEN — CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping monitor
+info: repo=owner/repo passing=5 skipped=0 filtered=0 inProgress=0 remainingSeconds=0 copilotReviewInProgress=false isDraft=false shouldCancel=true
+```
+
+**What the monitor does:** Print the output, then invoke `/loop cancel` via Skill tool to stop the cron job.
 
 ---
 
@@ -141,15 +162,18 @@ Rebases the branch on top of its base to clear flaky failures caused by being be
 **Text output:**
 
 ```
-PR #42 [REBASE] Branch is behind main — rebasing to pick up latest changes and clear flaky failures
+PR #42 [REBASE] status=FAILING merge=BEHIND state=OPEN — Branch is behind main — rebasing to pick up latest changes and clear flaky failures
 if ! git diff --quiet || ! git diff --cached --quiet; then
   echo "SKIP rebase: dirty worktree (uncommitted changes present)"
   exit 1
 fi
 git fetch origin && git rebase origin/main && git push --force-with-lease
+info: repo=owner/repo passing=2 skipped=0 filtered=0 inProgress=0 remainingSeconds=600 copilotReviewInProgress=false isDraft=false shouldCancel=false
 ```
 
-**What the monitor does:** Print the reason line, then run the shell script shown in the output in Bash.
+The dirty-worktree guard exits 1 on skip, so the monitor SKILL sees a non-zero exit rather than silently counting the iteration as successful.
+
+**What the monitor does:** Print the headline, then run the shell script lines (everything after the headline, before `info:`) in Bash.
 
 ---
 
@@ -159,14 +183,14 @@ Actionable work needs a code fix, commit, and push.
 
 **Trigger:** Any of: unresolved inline review threads, actionable PR-level comments, `CHANGES_REQUESTED` reviews, actionable CI failures (`failureKind === "actionable"`), or merge conflicts (`mergeStatus.status === "CONFLICTS"`). Evaluated at step 4, before rerun/rebase.
 
-**CLI side-effects:** Calls `gh run cancel <runId>` for each unique run ID of actionable CI failures (best-effort; already-completed runs are silently ignored). `cancelled` lists the run IDs where cancellation succeeded.
+**CLI side-effects:** Calls `gh run cancel <runId>` for each unique run ID of actionable CI failures (best-effort; already-completed runs are silently ignored).
 
 **Exit code:** 1
 
 **Text output:**
 
 ```
-PR #42 [FIX_CODE]
+PR #42 [FIX_CODE] status=UNRESOLVED_COMMENTS merge=BLOCKED state=OPEN
   thread PRRT_kwDOSGizTs58XB1L src/commands/iterate.mts:42 (@alice): The variable name is misleading
   comment IC_kwDOSGizTs7_ajT8 (@bob): Consider using a more descriptive name here
   noise (minimize only): IC_kwDOSGizTs7_ajT9
@@ -174,23 +198,36 @@ PR #42 [FIX_CODE]
   review PRR_kwDOSGizTs58XB1R (@alice): changes requested
   cancelled runs: 24697658765
   base: main
-  resolve: npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message $DISMISS_MESSAGE --require-sha "$HEAD_SHA"
-  1. Apply code fixes from fix.threads and fix.actionableComments.
+  resolve: npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"
+  1. Apply code fixes: read and edit each file referenced in fix.threads and fix.actionableComments.
   2. For each fix.checks[].runId: run gh run view <runId> --log-failed, identify the failure, and apply the fix.
   3. For each fix.changesRequestedReviews: read the review body and apply the requested changes.
   4. Commit changed files: git add <files> && git commit -m "<descriptive message>"
   5. Rebase and push: git fetch origin && git rebase origin/main && git push --force-with-lease — capture HEAD_SHA=$(git rev-parse HEAD)
-  6. Run the resolve command (substitute "$HEAD_SHA" with the pushed commit SHA; substitute $DISMISS_MESSAGE with a one-sentence description of what you changed): npx pr-shepherd resolve 42 ...
+  6. Run the resolve command (substitute "$HEAD_SHA" with the pushed commit SHA; substitute $DISMISS_MESSAGE with a one-sentence description of what you changed): npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"
+info: repo=owner/repo passing=3 skipped=0 filtered=0 inProgress=0 remainingSeconds=600 copilotReviewInProgress=false isDraft=false shouldCancel=false
 ```
 
-**Resolve command rules:**
+**Body lines, in order:**
 
-- `--require-sha "$HEAD_SHA"` is appended only when a push occurred (threads/checks/reviews present). Omit entirely for noise-only.
+- `  thread <id> <path>:<line> (@<author>): <first line of body (≤120 chars)>` — one per actionable review thread.
+- `  comment <id> (@<author>): <first line of body (≤120 chars)>` — one per actionable PR-level comment.
+- `  noise (minimize only): <id>, <id>, …` — comments classified as bot noise (quota warnings, rate-limit acks). Minimize on GitHub but do not act on them.
+- `  check <runId|(no runId)> — <name> (<failureKind|actionable>)` — one per actionable failing check.
+- `  review <id> (@<author>): changes requested` — one per `CHANGES_REQUESTED` review.
+- `  cancelled runs: <id>, <id>, …` — emitted only when CLI-side `gh run cancel` succeeded for at least one run.
+- `  base: <branch>` — rebase target for the push step.
+- `  resolve: <argv>` — fully-quoted resolve command. `$DISMISS_MESSAGE` and `$HEAD_SHA` are always quoted so substituting a multi-word sentence keeps it as one argument. `--require-sha "$HEAD_SHA"` is appended only when a push is expected (threads/actionableComments/checks/reviews present); noise-only dispatches omit it.
+- `  1. …` — ordered instructions to execute. Always trust this list — it is generated from the same inputs and won't drift from the resolve line.
+
+The JSON payload exposes the same data under `fix.{threads, actionableComments, noiseCommentIds, checks, changesRequestedReviews, baseBranch, resolveCommand, instructions}` plus top-level `cancelled`.
+
+**Resolve command rules (same in text and JSON):**
+
+- `--require-sha "$HEAD_SHA"` is appended only when a push occurred. Noise-only minimizations omit it.
 - `$DISMISS_MESSAGE` must be one specific sentence describing what changed — never generic text like "address review comments".
 
-**JSON-only fields** (`--format=json`): `fix.threads`, `fix.actionableComments`, `fix.noiseCommentIds`, `fix.checks`, `fix.changesRequestedReviews`, `fix.baseBranch`, `fix.resolveCommand`, `fix.instructions`, `cancelled`.
-
-**What the monitor does:** Follow the numbered instructions shown in the output, then stop the iteration to let CI run.
+**What the monitor does:** Follow the numbered instructions in order, then stop this iteration to let CI run.
 
 ---
 
@@ -211,7 +248,7 @@ Ambiguous state that requires human judgement — the monitor stops and surfaces
 **Text output:**
 
 ```
-PR #42 [ESCALATE]
+PR #42 [ESCALATE] status=UNRESOLVED_COMMENTS merge=BLOCKED state=OPEN
 ⚠️  /pr-shepherd:monitor paused — needs human direction
 
 Triggers: fix-thrash
@@ -224,6 +261,9 @@ Fix attempts: threadId=PRRT_kwDOSGizTs58XB1L attempted 3 times
 
 Run /pr-shepherd:check 42 to see current state.
 After fixing manually, rerun /pr-shepherd:monitor 42 to resume.
+info: repo=owner/repo passing=0 skipped=0 filtered=0 inProgress=0 remainingSeconds=600 copilotReviewInProgress=false isDraft=false shouldCancel=false
 ```
 
-**What the monitor does:** Print the full output, then invoke `/loop cancel` via Skill tool to stop the cron job.
+The block between the `[ESCALATE]` headline and the `info:` line is `escalate.humanMessage` in JSON — ready to print verbatim.
+
+**What the monitor does:** Print everything up to and including `info:`, then invoke `/loop cancel` via Skill tool to stop the cron job.

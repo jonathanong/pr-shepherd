@@ -46,22 +46,13 @@ Run in a single Bash call:
 
 Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no output), log the first line of stderr and stop.
 
-Read the output and act on the `[ACTION]` tag in the first line:
-- `[COOLDOWN]` | `[WAIT]` | `[RERUN_CI]` | `[MARK_READY]` → print the output line
-- `[CANCEL]`   → print the output, then invoke `/loop cancel` via Skill tool and stop
-- `[REBASE]`   → print the reason line, then run the shell script shown in the output in Bash
-- `[ESCALATE]` → print the full output, then invoke `/loop cancel` via Skill tool and stop
-- `[FIX_CODE]` → follow the numbered instructions shown in the output, then stop this iteration (CI needs time):
-  1. Apply code fixes for each listed thread and comment (Edit/Write tools).
-  2. For each listed check run ID: `gh run view <runId> --log-failed` — identify and fix the failure.
-     If run ID is "(no runId)": tell the user to inspect the check URL manually.
-  3. Apply changes from each listed review.
-  4. Commit: `git add <files> && git commit -m "<descriptive message>"`
-  5. Push: `git fetch origin && git rebase origin/<base shown in output> && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
-  6. If only noise comment IDs listed (no code changes): skip commit/push; omit `--require-sha`.
-  7. Run the resolve command shown in the output, substituting:
-     - `"$HEAD_SHA"` with the pushed SHA (omit `--require-sha` entirely if no push occurred)
-     - `$DISMISS_MESSAGE` (if present) with one sentence describing the actual fix — never generic text like "address review comments"
+Read the output and act on the `[ACTION]` tag in the first line (see [docs/actions.md](../../../docs/actions.md) for full output shapes):
+
+- `[COOLDOWN]` | `[WAIT]` | `[RERUN_CI]` | `[MARK_READY]` → print the output, continue.
+- `[CANCEL]`   → print the output, then invoke `/loop cancel` via Skill tool and stop.
+- `[REBASE]`   → print the headline, then run the shell script lines (everything between the headline and the `info:` line) in Bash.
+- `[ESCALATE]` → print the full output, then invoke `/loop cancel` via Skill tool and stop.
+- `[FIX_CODE]` → follow the numbered instructions printed in the output in order, using the `  resolve: …` line verbatim as the final resolve command. Substitute `"$HEAD_SHA"` with the pushed SHA and `$DISMISS_MESSAGE` with a one-sentence description of the actual fix (never generic text like "address review comments"). Stop this iteration after running the resolve command — CI needs time before the next tick.
 
 ```
 

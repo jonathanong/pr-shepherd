@@ -12,7 +12,7 @@
 
 import { runCheck } from "./commands/check.mts";
 import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
-import { runIterate } from "./commands/iterate.mts";
+import { runIterate, shellJoinArgv } from "./commands/iterate.mts";
 import { runStatus, formatStatusTable } from "./commands/status.mts";
 import { getRepoInfo } from "./github/client.mts";
 import { formatJson } from "./reporters/json.mts";
@@ -242,7 +242,8 @@ function formatMutateResult(result: Awaited<ReturnType<typeof runResolveMutate>>
 }
 
 function formatIterateResult(result: import("./types.mts").IterateResult): string {
-  const base = `PR #${result.pr} [${result.action.toUpperCase()}]`;
+  const basePrefix = `PR #${result.pr} [${result.action.toUpperCase()}] status=${result.status} merge=${result.mergeStateStatus} state=${result.state}`;
+  const infoLine = `info: repo=${result.repo} passing=${result.summary.passing} skipped=${result.summary.skipped} filtered=${result.summary.filtered} inProgress=${result.summary.inProgress} remainingSeconds=${result.remainingSeconds} copilotReviewInProgress=${result.copilotReviewInProgress} isDraft=${result.isDraft} shouldCancel=${result.shouldCancel}`;
   const lines: string[] = [];
 
   switch (result.action) {
@@ -251,20 +252,21 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
     case "cancel":
     case "rerun_ci":
     case "mark_ready":
-      return `${base} ${result.log}`;
+      lines.push(`${basePrefix} — ${result.log}`);
+      break;
 
     case "rebase":
-      lines.push(`${base} ${result.rebase.reason}`);
+      lines.push(`${basePrefix} — ${result.rebase.reason}`);
       lines.push(result.rebase.shellScript);
       break;
 
     case "escalate":
-      lines.push(base);
+      lines.push(basePrefix);
       lines.push(result.escalate.humanMessage);
       break;
 
     case "fix_code": {
-      lines.push(`${base} status=${result.status} merge=${result.mergeStateStatus}`);
+      lines.push(basePrefix);
       for (const t of result.fix.threads) {
         const loc = t.path ? `${t.path}:${t.line ?? "?"}` : "(no location)";
         lines.push(
@@ -291,9 +293,7 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
         lines.push(`  cancelled runs: ${result.cancelled.join(", ")}`);
       }
       lines.push(`  base: ${result.fix.baseBranch}`);
-      lines.push(
-        `  resolve: ${result.fix.resolveCommand.argv.join(" ")}${result.fix.resolveCommand.requiresHeadSha ? ' --require-sha "$HEAD_SHA"' : ""}`,
-      );
+      lines.push(`  resolve: ${shellJoinArgv(result.fix.resolveCommand)}`);
       for (const [i, inst] of result.fix.instructions.entries()) {
         lines.push(`  ${i + 1}. ${inst}`);
       }
@@ -301,5 +301,6 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
     }
   }
 
+  lines.push(infoLine);
   return lines.join("\n");
 }

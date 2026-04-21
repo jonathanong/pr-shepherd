@@ -44,7 +44,7 @@ vi.mock("../cache/fix-attempts.mts", () => ({
   writeFixAttempts: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { runIterate } from "./iterate.mts";
+import { runIterate, shellJoinArgv } from "./iterate.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { triageFailingChecks } from "../checks/triage.mts";
@@ -1672,8 +1672,60 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
       expect(humanMessage).toMatch(/fix-thrash/);
       expect(humanMessage).toMatch(/thread-1/);
       expect(humanMessage).toMatch(/src\/foo\.mts/);
-      expect(humanMessage).toMatch(/pr-shepherd:check/);
+      expect(humanMessage).toMatch(/pr-shepherd:check 42/);
+      expect(humanMessage).toMatch(/pr-shepherd:monitor 42 to resume/);
     }
+  });
+});
+
+describe("shellJoinArgv", () => {
+  it("quotes $DISMISS_MESSAGE so a substituted sentence stays one argument", () => {
+    const joined = shellJoinArgv({
+      argv: [
+        "npx",
+        "pr-shepherd",
+        "resolve",
+        "42",
+        "--dismiss-review-ids",
+        "r-1",
+        "--message",
+        "$DISMISS_MESSAGE",
+      ],
+      requiresHeadSha: false,
+      requiresDismissMessage: true,
+    });
+    expect(joined).toBe(
+      'npx pr-shepherd resolve 42 --dismiss-review-ids r-1 --message "$DISMISS_MESSAGE"',
+    );
+  });
+
+  it("appends --require-sha \"$HEAD_SHA\" when requiresHeadSha is true", () => {
+    const joined = shellJoinArgv({
+      argv: ["npx", "pr-shepherd", "resolve", "42", "--resolve-thread-ids", "t-1"],
+      requiresHeadSha: true,
+      requiresDismissMessage: false,
+    });
+    expect(joined).toBe(
+      'npx pr-shepherd resolve 42 --resolve-thread-ids t-1 --require-sha "$HEAD_SHA"',
+    );
+  });
+
+  it("omits --require-sha when requiresHeadSha is false (noise-only path)", () => {
+    const joined = shellJoinArgv({
+      argv: ["npx", "pr-shepherd", "resolve", "42", "--minimize-comment-ids", "c-noise"],
+      requiresHeadSha: false,
+      requiresDismissMessage: false,
+    });
+    expect(joined).toBe("npx pr-shepherd resolve 42 --minimize-comment-ids c-noise");
+  });
+
+  it("quotes whitespace-bearing args defensively", () => {
+    const joined = shellJoinArgv({
+      argv: ["npx", "pr-shepherd", "resolve", "42", "--message", "hello world"],
+      requiresHeadSha: false,
+      requiresDismissMessage: false,
+    });
+    expect(joined).toBe('npx pr-shepherd resolve 42 --message "hello world"');
   });
 });
 

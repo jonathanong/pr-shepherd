@@ -534,6 +534,22 @@ function buildResolveCommand(
   return { argv, requiresHeadSha, requiresDismissMessage: hasDismiss };
 }
 
+/**
+ * Render a ResolveCommand as a shell-safe single-line command string.
+ * Quotes placeholders ($DISMISS_MESSAGE, $HEAD_SHA) and any whitespace-bearing
+ * arg so the model can substitute multi-word values (like a real dismiss
+ * message sentence) without splitting across flags.
+ */
+export function shellJoinArgv(rc: ResolveCommand): string {
+  const needsQuoting = (arg: string) =>
+    arg === "$DISMISS_MESSAGE" || arg === "$HEAD_SHA" || /\s/.test(arg);
+  const parts = rc.argv.map((a) => (needsQuoting(a) ? `"${a}"` : a));
+  if (rc.requiresHeadSha) {
+    parts.push("--require-sha", '"$HEAD_SHA"');
+  }
+  return parts.join(" ");
+}
+
 function buildFixInstructions(
   threads: AgentThread[],
   actionableComments: AgentComment[],
@@ -542,9 +558,7 @@ function buildFixInstructions(
   baseBranch: string,
   resolveCommand: ResolveCommand,
 ): string[] {
-  const resolveCmd =
-    resolveCommand.argv.join(" ") +
-    (resolveCommand.requiresHeadSha ? ' --require-sha "$HEAD_SHA"' : "");
+  const resolveCmd = shellJoinArgv(resolveCommand);
   const instructions: string[] = [];
 
   if (threads.length > 0 || actionableComments.length > 0) {
@@ -641,7 +655,7 @@ function buildEscalateHumanMessage(
   }
   lines.push("");
   lines.push(`Run /pr-shepherd:check ${pr} to see current state.`);
-  lines.push("After fixing manually, rerun /pr-shepherd:monitor to resume.");
+  lines.push(`After fixing manually, rerun /pr-shepherd:monitor ${pr} to resume.`);
   return lines.join("\n");
 }
 
