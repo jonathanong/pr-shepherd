@@ -131,6 +131,12 @@ describe("runCommitSuggestions — validation", () => {
     ).rejects.toThrow("uncommitted changes");
   });
 
+  it("throws when threadIds contains duplicates", async () => {
+    await expect(
+      runCommitSuggestions({ ...GLOBAL_OPTS, prNumber: 42, threadIds: ["t1", "t2", "t1"] }),
+    ).rejects.toThrow(/duplicate ID\(s\): t1/);
+  });
+
   it("throws when no PR is given and none can be inferred from the branch", async () => {
     const { getCurrentPrNumber } = await import("../github/client.mts");
     vi.mocked(getCurrentPrNumber).mockResolvedValueOnce(null);

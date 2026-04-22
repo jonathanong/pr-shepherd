@@ -55,6 +55,22 @@ export async function runCommitSuggestions(
     throw new Error("--thread-ids is required and must contain at least one ID");
   }
 
+  // Reject duplicate IDs up front — otherwise the result array would collapse
+  // them (reorderByInput is keyed by ID) and callers would silently lose an
+  // entry. Requiring uniqueness also removes ambiguity about which of the two
+  // "applications" lands and which is skipped-for-overlap.
+  const seen = new Set<string>();
+  const duplicates = opts.threadIds.filter((id) => {
+    if (seen.has(id)) return true;
+    seen.add(id);
+    return false;
+  });
+  if (duplicates.length > 0) {
+    throw new Error(
+      `--thread-ids contains duplicate ID(s): ${[...new Set(duplicates)].join(", ")}. Each thread may only be specified once.`,
+    );
+  }
+
   await assertWorktreeClean();
 
   const repo = await getRepoInfo();
