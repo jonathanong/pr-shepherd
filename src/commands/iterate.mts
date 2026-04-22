@@ -239,12 +239,12 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     const { changesRequestedReviews } = report;
     const hasConflicts = report.mergeStatus.status === "CONFLICTS";
 
-    // Shortcut: when every actionable thread carries a parseable ```suggestion
-    // block and there is nothing else to fix, hand the agent a pre-built
-    // `commit-suggestions` invocation. The CLI will create one server-side
-    // commit, then resolve the applied threads — no rebase, no force-push,
-    // no manual resolve ceremony. `noiseCommentIds` is part of the gate
-    // because there is no minimize-only mutation in this shortcut.
+    // Shortcut: when every actionable thread carries a parseable
+    // `` ```suggestion `` block and there is nothing else to fix, hand the
+    // agent a pre-built `commit-suggestions` invocation. The CLI will create
+    // one server-side commit, then resolve the applied threads — no rebase,
+    // no force-push, no manual resolve ceremony. `noiseCommentIds` is part
+    // of the gate because there is no minimize-only mutation in this shortcut.
     const allThreadsHaveSuggestions =
       threads.length > 0 &&
       report.threads.actionable.every((t) => parseSuggestion(t.body) !== null);

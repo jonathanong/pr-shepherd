@@ -354,12 +354,12 @@ export interface FixRebaseAndPush {
 }
 
 /**
- * Shortcut variant: every actionable thread carries a parseable ```suggestion
- * block and there is nothing else to fix. The CLI hands the agent a pre-built
- * `commit-suggestions` invocation that creates one server-side commit, then
- * resolves the affected threads via subsequent mutations. Emitted under
- * `## Commit suggestions`. No rebase, no force-push, and no separate manual
- * resolve step.
+ * Shortcut variant: every actionable thread carries a parseable
+ * `` ```suggestion `` block and there is nothing else to fix. The CLI hands
+ * the agent a pre-built `commit-suggestions` invocation that creates one
+ * server-side commit, then resolves the affected threads via subsequent
+ * mutations. Emitted under `## Commit suggestions`. No rebase, no force-push,
+ * and no separate manual resolve step.
  */
 export interface FixCommitSuggestions {
   mode: "commit-suggestions";
