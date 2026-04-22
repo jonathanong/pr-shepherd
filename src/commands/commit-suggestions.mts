@@ -203,15 +203,17 @@ export async function runCommitSuggestions(
     throw new Error("createCommitOnBranch returned no commit — branch may have diverged.");
   }
 
-  // Phase 4: resolve applied threads.
+  // Phase 4: resolve applied threads. applyResolveOptions collects per-ID
+  // failures into its `errors` array instead of throwing; surface them here
+  // so commit-suggestions doesn't silently report success when some threads
+  // were committed but not resolved.
   const resolveResult = await applyResolveOptions(prNumber, repo, {
     resolveThreadIds: [...appliedIds],
   });
   if (resolveResult.errors.length > 0) {
-    const message = resolveResult.errors
-      .map((err) => (err instanceof Error ? err.message : String(err)))
-      .join("; ");
-    throw new Error(`commit created, but failed to resolve one or more applied threads: ${message}`);
+    throw new Error(
+      `commit created (${commit.oid}), but failed to resolve one or more applied threads: ${resolveResult.errors.join("; ")}`,
+    );
   }
 
   return buildResult(

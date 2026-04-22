@@ -418,6 +418,19 @@ describe("runCommitSuggestions — applied", () => {
     expect(result.postActionInstruction).toMatch(/git pull --ff-only/);
   });
 
+  it("throws when applyResolveOptions reports per-thread failures after the commit lands", async () => {
+    mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread({ id: "t1" })]) });
+    mockApplyResolveOptions.mockResolvedValueOnce({
+      resolvedThreads: [],
+      minimizedComments: [],
+      dismissedReviews: [],
+      errors: ["t1: rate limited"],
+    });
+    await expect(
+      runCommitSuggestions({ ...GLOBAL_OPTS, prNumber: 42, threadIds: ["t1"] }),
+    ).rejects.toThrow(/commit created \(newsha\).*failed to resolve.*t1: rate limited/);
+  });
+
   it("skips the thread and does not commit when the file fetch fails", async () => {
     mockFetchBatch.mockResolvedValue({
       data: makeBatch([makeThread({ id: "t1", path: "missing.ts" })]),
