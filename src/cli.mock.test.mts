@@ -112,6 +112,7 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
       ...base,
       action: "fix_code",
       fix: {
+        mode: "rebase-and-push",
         threads: [],
         actionableComments: [],
         noiseCommentIds: [],
@@ -418,12 +419,13 @@ describe("main — iterate text format", () => {
     expect(out).toContain("⚠️  /pr-shepherd:monitor paused — needs human direction");
   });
 
-  it("fix_code (empty payload): heading + base/summary + Rebase section only (no items, no Instructions)", async () => {
+  it("fix_code (empty payload): heading + base/summary + Post-fix push section only (no items, no Instructions)", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("fix_code"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain("# PR #42 [FIX_CODE]");
-    expect(out).toContain("## Rebase");
+    expect(out).toContain("## Post-fix push");
+    expect(out).not.toContain("## Rebase");
     expect(out).toContain("- base: `main`");
     expect(out).toContain('- resolve: `npx pr-shepherd resolve 42 --require-sha "$HEAD_SHA"`');
     // No item sections, no instructions (empty fix + no instructions in fixture).
@@ -442,6 +444,7 @@ describe("main — iterate text format", () => {
     };
     if (result.action !== "fix_code") throw new Error("unreachable");
     result.fix = {
+      mode: "rebase-and-push",
       threads: [
         {
           id: "PRRT_1",
@@ -486,7 +489,7 @@ describe("main — iterate text format", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
 
-    // Section ordering: threads → comments → checks → reviews → noise → cancelled → Rebase → Instructions.
+    // Section ordering: threads → comments → checks → reviews → noise → cancelled → Post-fix push → Instructions.
     const order = [
       "## Review threads",
       "## Actionable comments",
@@ -494,7 +497,7 @@ describe("main — iterate text format", () => {
       "## Changes-requested reviews",
       "## Noise (minimize only)",
       "## Cancelled runs",
-      "## Rebase",
+      "## Post-fix push",
       "## Instructions",
     ];
     let cursor = 0;
@@ -520,7 +523,7 @@ describe("main — iterate text format", () => {
     expect(out).toContain("`c-noise-1`, `c-noise-2`");
     // Cancelled runs
     expect(out).toContain("`run-99`");
-    // Rebase section uses backticked base + resolve command with --require-sha appended.
+    // Post-fix push section uses backticked base + resolve command with --require-sha appended.
     expect(out).toContain("- base: `main`");
     expect(out).toContain(
       '- resolve: `npx pr-shepherd resolve 42 --dismiss-review-ids REV_1 --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`',
@@ -570,7 +573,9 @@ describe("main — iterate text format", () => {
 
   it("fix_code: check with runId=null + detailsUrl renders 'external `<url>`', without detailsUrl falls back to '(no runId)'", async () => {
     const result = makeIterateResult("fix_code");
-    if (result.action !== "fix_code") throw new Error("unreachable");
+    if (result.action !== "fix_code" || result.fix.mode !== "rebase-and-push") {
+      throw new Error("unreachable");
+    }
     result.fix.checks = [
       {
         name: "codecov/patch",
@@ -591,6 +596,133 @@ describe("main — iterate text format", () => {
     const out = getStdout();
     expect(out).toContain("- external `https://app.codecov.io/a/b` — `codecov/patch` (actionable)");
     expect(out).toContain("- (no runId) — `mystery-check` (actionable)");
+  });
+
+  it("fix_code (commit-suggestions mode): emits ## Commit suggestions and two-step instructions", async () => {
+    const result: IterateResult = {
+      ...makeIterateResult("fix_code"),
+    };
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    result.fix = {
+      mode: "commit-suggestions",
+      threads: [
+        {
+          id: "PRRT_x",
+          path: "src/foo.ts",
+          line: 10,
+          author: "reviewer",
+          body: "use a const\n\n```suggestion\nconst x = 1;\n```",
+        },
+        {
+          id: "PRRT_y",
+          path: "src/bar.ts",
+          line: 20,
+          author: "reviewer2",
+          body: "rename it\n\n```suggestion\nconst better = 2;\n```",
+        },
+      ],
+      commitSuggestionsCommand: {
+        argv: ["npx", "pr-shepherd", "commit-suggestions", "42", "--thread-ids", "PRRT_x,PRRT_y"],
+      },
+      instructions: [
+        "Run the `commit-suggestions:` command above — it applies all reviewer suggestion blocks server-side as a single commit and resolves the threads.",
+        "Run `git pull --ff-only` to sync your local checkout with the new commit before any further edits.",
+      ],
+    };
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+
+    // Heading is the new shortcut variant — never the rebase-and-push variant.
+    expect(out).toContain("# PR #42 [FIX_CODE]");
+    expect(out).toContain("## Review threads");
+    expect(out).toContain("## Commit suggestions");
+    expect(out).not.toContain("## Post-fix push");
+    expect(out).not.toContain("## Rebase");
+    // No ceremony sections from the rebase-and-push path.
+    expect(out).not.toContain("## Actionable comments");
+    expect(out).not.toContain("## Failing checks");
+    expect(out).not.toContain("## Changes-requested reviews");
+    expect(out).not.toContain("## Cancelled runs");
+    // Bundle bullets — both wrapped in backticks for the monitor SKILL to extract.
+    expect(out).toContain(
+      "- commit-suggestions: `npx pr-shepherd commit-suggestions 42 --thread-ids PRRT_x,PRRT_y`",
+    );
+    expect(out).toContain("- after: `git pull --ff-only`");
+    // Two-step numbered instructions.
+    expect(out).toContain("1. Run the `commit-suggestions:` command above");
+    expect(out).toContain("2. Run `git pull --ff-only`");
+  });
+
+  it("fix_code (commit-suggestions mode): defensively quotes whitespace-bearing argv entries", async () => {
+    // The argv shape produced by `runIterate` never contains whitespace
+    // (PR number, thread IDs are alphanumeric/comma-separated), but the
+    // formatter's quoting branch is defense-in-depth — exercise it directly
+    // to keep the coverage signal on this safety check.
+    const result: IterateResult = { ...makeIterateResult("fix_code") };
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    result.fix = {
+      mode: "commit-suggestions",
+      threads: [
+        {
+          id: "PRRT_x",
+          path: "src/foo.ts",
+          line: 10,
+          author: "reviewer",
+          body: "use a const\n\n```suggestion\nconst x = 1;\n```",
+        },
+      ],
+      commitSuggestionsCommand: {
+        argv: ["npx", "pr-shepherd", "commit-suggestions", "42", "--thread-ids", "PRRT a b"],
+      },
+      instructions: ["one"],
+    };
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    expect(out).toContain(
+      `- commit-suggestions: \`npx pr-shepherd commit-suggestions 42 --thread-ids "PRRT a b"\``,
+    );
+  });
+
+  it("fix_code (commit-suggestions mode): JSON parity — fix.mode and argv round-trip", async () => {
+    const result: IterateResult = {
+      ...makeIterateResult("fix_code"),
+    };
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    result.fix = {
+      mode: "commit-suggestions",
+      threads: [
+        {
+          id: "PRRT_x",
+          path: "src/foo.ts",
+          line: 10,
+          author: "reviewer",
+          body: "use a const\n\n```suggestion\nconst x = 1;\n```",
+        },
+      ],
+      commitSuggestionsCommand: {
+        argv: ["npx", "pr-shepherd", "commit-suggestions", "42", "--thread-ids", "PRRT_x"],
+      },
+      instructions: ["one", "two"],
+    };
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42", "--format", "json"]);
+    const parsed = JSON.parse(getStdout().trimEnd());
+    expect(parsed.action).toBe("fix_code");
+    expect(parsed.fix.mode).toBe("commit-suggestions");
+    expect(parsed.fix.commitSuggestionsCommand.argv).toEqual([
+      "npx",
+      "pr-shepherd",
+      "commit-suggestions",
+      "42",
+      "--thread-ids",
+      "PRRT_x",
+    ]);
+    expect(parsed.fix.instructions).toEqual(["one", "two"]);
   });
 
   it("json format: emits a single JSON.stringify(result)+newline, no formatter output", async () => {

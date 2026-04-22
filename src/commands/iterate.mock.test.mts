@@ -49,6 +49,9 @@ vi.mock("../cache/fix-attempts.mts", () => ({
   writeFixAttempts: vi.fn().mockResolvedValue(undefined),
 }));
 
+const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
+vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
+
 import { runIterate, renderResolveCommand } from "./iterate.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
@@ -132,8 +135,36 @@ const READY_STATE_DEFAULT = {
 // Tests
 // ---------------------------------------------------------------------------
 
+function defaultConfig() {
+  return {
+    cache: { ttlSeconds: 300 },
+    iterate: { cooldownSeconds: 30, fixAttemptsPerThread: 3 },
+    watch: { interval: "4m", readyDelayMinutes: 10, expiresHours: 8, maxTurns: 50 },
+    resolve: {
+      concurrency: 4,
+      shaPoll: { intervalMs: 2000, maxAttempts: 10 },
+      fetchReviewSummaries: true,
+    },
+    checks: {
+      ciTriggerEvents: ["pull_request", "pull_request_target"],
+      timeoutPatterns: [],
+      infraPatterns: [],
+      logMaxLines: 50,
+      logMaxChars: 3000,
+    },
+    mergeStatus: { blockingReviewerLogins: ["copilot"] },
+    actions: {
+      autoResolveOutdated: true,
+      autoRebase: true,
+      autoMarkReady: true,
+      commitSuggestions: true,
+    },
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+  mockLoadConfig.mockReturnValue(defaultConfig());
   process.env["GH_TOKEN"] = "test-token";
   // Default: last commit was 60s ago (outside cooldown)
   mockExecFile.mockImplementation((cmd: string, args: string[]) => {
@@ -258,7 +289,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       expect(result.fix.threads).toHaveLength(2);
       expect(result.fix.actionableComments).toHaveLength(0);
       expect(result.fix.noiseCommentIds).toHaveLength(0);
@@ -308,7 +339,7 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       expect(result.fix.checks).toHaveLength(1);
       expect(result.cancelled).toEqual(["run-99"]);
     }
@@ -361,7 +392,7 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       expect(result.fix.checks).toHaveLength(2);
       expect(result.cancelled).toEqual(["run-101"]);
     }
@@ -399,7 +430,7 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
 
     // The fix_code decision must survive even when cancel side-effect fails entirely.
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       expect(result.fix.checks).toHaveLength(1);
       expect(result.cancelled).toEqual([]);
     }
@@ -438,7 +469,7 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
       const result = await runIterate(makeOpts());
 
       expect(result.action).toBe("fix_code");
-      if (result.action === "fix_code") {
+      if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
         expect(result.cancelled).toEqual([]);
       }
       expect(stderrSpy).not.toHaveBeenCalled();
@@ -512,7 +543,7 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       // Deduped by runId — only one AgentCheck emitted.
       expect(result.fix.checks).toHaveLength(1);
       expect(result.fix.checks[0]?.runId).toBe("run-300");
@@ -554,7 +585,7 @@ describe("runIterate — fix_code agent projection", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       const t = result.fix.threads[0]!;
       expect(t.id).toBe("t-1");
       expect(t.path).toBe("src/foo.mts");
@@ -590,7 +621,7 @@ describe("runIterate — fix_code agent projection", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       const c = result.fix.actionableComments[0]!;
       expect(c.id).toBe("c-1");
       expect(c.author).toBe("bob");
@@ -628,7 +659,7 @@ describe("runIterate — fix_code agent projection", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       const c = result.fix.checks[0]!;
       expect(c.name).toBe("typecheck");
       expect(c.runId).toBe("run-55");
@@ -678,7 +709,7 @@ describe("runIterate — fix_code agent projection", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       const instructionsJoined = result.fix.instructions.join("\n");
       expect(instructionsJoined).toContain("GitHub Actions");
       expect(instructionsJoined).toContain("gh run view <runId> --log-failed");
@@ -725,7 +756,7 @@ describe("runIterate — fix_code agent projection", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       const instructionsJoined = result.fix.instructions.join("\n");
       expect(instructionsJoined).toContain("(no runId)");
       expect(instructionsJoined).toMatch(/escalate/i);
@@ -786,7 +817,7 @@ describe("runIterate — fix_code agent projection", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       expect(result.fix.checks).toHaveLength(3);
       const joined = result.fix.instructions.join("\n");
       // All three instruction variants present:
@@ -986,7 +1017,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       expect(result.fix.threads).toHaveLength(0);
       expect(result.fix.checks).toHaveLength(0);
       // CONFLICTS-only: no commit step (nothing to commit), but we still
@@ -1038,7 +1069,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       expect(result.fix.threads).toHaveLength(1);
       expect(result.fix.threads[0]?.id).toBe("thread-1");
       // Threads + CONFLICTS: commit step, rebase-with-conflict-resolution (not
@@ -1294,7 +1325,7 @@ describe("runIterate — deferred triage", () => {
 
     expect(mockTriageFailingChecks).toHaveBeenCalledOnce();
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       expect(result.fix.checks).toHaveLength(1);
       expect(result.fix.checks[0]?.failureKind).toBe("actionable");
     }
@@ -1790,7 +1821,7 @@ describe("runIterate — prescriptive fields: fix_code noise/actionable split", 
 
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       expect(result.fix.actionableComments).toHaveLength(1);
       expect(result.fix.actionableComments[0]!.id).toBe("c-real");
       expect(result.fix.noiseCommentIds).toEqual(["c-noise"]);
@@ -1838,7 +1869,7 @@ describe("runIterate — prescriptive fields: fix_code noise/actionable split", 
 
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       expect(result.fix.noiseCommentIds.sort()).toEqual(["c-co", "c-em", "c-hy"]);
       expect(result.fix.actionableComments).toHaveLength(0);
     }
@@ -1877,7 +1908,7 @@ describe("runIterate — prescriptive fields: fix_code noise/actionable split", 
 
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       const { resolveCommand } = result.fix;
       expect(resolveCommand.argv).toContain("--resolve-thread-ids");
       expect(resolveCommand.argv.join(" ")).toContain("thread-1");
@@ -1915,7 +1946,7 @@ describe("runIterate — prescriptive fields: fix_code noise/actionable split", 
 
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       const { resolveCommand } = result.fix;
       expect(resolveCommand.argv).toContain("--dismiss-review-ids");
       expect(resolveCommand.argv.join(" ")).toContain("r-1");
@@ -2269,7 +2300,7 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
 
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       expect(result.fix.resolveCommand.argv).not.toContain("$HEAD_SHA");
       expect(result.fix.resolveCommand.argv).not.toContain("--require-sha");
       expect(result.fix.resolveCommand.requiresHeadSha).toBe(true);
@@ -2339,5 +2370,196 @@ describe("runIterate — escalate (thread-missing-location)", () => {
     if (result.action === "escalate") {
       expect(result.escalate.triggers).toContain("thread-missing-location");
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Commit-suggestions shortcut (issue #66)
+//
+// Gate: every actionable thread carries a parseable ```suggestion block, no
+// other actionable items (comments, noise, checks, reviews, conflicts), and
+// both `actions.commitSuggestions` and (not) `--no-commit-suggestions` allow
+// the shortcut. When the gate passes, fix.mode === "commit-suggestions" and
+// the agent gets a pre-built `commit-suggestions` invocation instead of the
+// rebase + push + resolve ceremony.
+// ---------------------------------------------------------------------------
+
+const SUGGESTION_BODY = "Use a const here.\n\n```suggestion\nconst foo = 1;\n```";
+const NON_SUGGESTION_BODY = "Just rename it — no code attached.";
+
+function makeSuggestionThread(id: string, body = SUGGESTION_BODY) {
+  return {
+    id,
+    isResolved: false,
+    isOutdated: false,
+    isMinimized: false,
+    path: "src/foo.mts",
+    line: 10,
+    startLine: null,
+    author: "reviewer",
+    body,
+    createdAtUnix: NOW - 3600,
+  };
+}
+
+describe("runIterate — fix_code commit-suggestions shortcut", () => {
+  it("emits mode: commit-suggestions when every thread has a parseable suggestion and nothing else is actionable", async () => {
+    const t1 = makeSuggestionThread("PRRT_x");
+    const t2 = makeSuggestionThread("PRRT_y");
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [t1, t2], autoResolved: [], autoResolveErrors: [] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.mode).toBe("commit-suggestions");
+    if (result.fix.mode !== "commit-suggestions") return;
+    expect(result.fix.threads.map((t) => t.id)).toEqual(["PRRT_x", "PRRT_y"]);
+    expect(result.fix.commitSuggestionsCommand.argv).toEqual([
+      "npx",
+      "pr-shepherd",
+      "commit-suggestions",
+      "42",
+      "--thread-ids",
+      "PRRT_x,PRRT_y",
+    ]);
+    expect(result.fix.instructions).toHaveLength(2);
+    expect(result.fix.instructions[0]).toContain("commit-suggestions");
+    expect(result.fix.instructions[1]).toContain("git pull --ff-only");
+    expect(result.cancelled).toEqual([]);
+  });
+
+  it("falls back to mode: rebase-and-push when one thread has a suggestion and another does not", async () => {
+    const t1 = makeSuggestionThread("PRRT_x");
+    const t2 = makeSuggestionThread("PRRT_y", NON_SUGGESTION_BODY);
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [t1, t2], autoResolved: [], autoResolveErrors: [] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.mode).toBe("rebase-and-push");
+  });
+
+  it("falls back to mode: rebase-and-push when an actionable comment is also present", async () => {
+    const t1 = makeSuggestionThread("PRRT_x");
+    const comment = {
+      id: "PRRC_1",
+      author: "bot",
+      body: "please address",
+      isMinimized: false,
+      createdAtUnix: NOW - 3600,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [t1], autoResolved: [], autoResolveErrors: [] },
+        comments: { actionable: [comment] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.mode).toBe("rebase-and-push");
+  });
+
+  it("falls back to mode: rebase-and-push when --no-commit-suggestions is set", async () => {
+    const t1 = makeSuggestionThread("PRRT_x");
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [t1], autoResolved: [], autoResolveErrors: [] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts({ noCommitSuggestions: true }));
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.mode).toBe("rebase-and-push");
+  });
+
+  it("falls back to mode: rebase-and-push when actions.commitSuggestions is false in config", async () => {
+    const cfg = defaultConfig();
+    cfg.actions.commitSuggestions = false;
+    mockLoadConfig.mockReturnValue(cfg);
+    const t1 = makeSuggestionThread("PRRT_x");
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [t1], autoResolved: [], autoResolveErrors: [] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.mode).toBe("rebase-and-push");
+  });
+
+  it("does not trigger the shortcut for a CONFLICTS-only state with zero threads", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        mergeStatus: {
+          status: "CONFLICTS",
+          state: "OPEN",
+          isDraft: false,
+          mergeable: "CONFLICTING",
+          reviewDecision: "APPROVED",
+          copilotReviewInProgress: false,
+          mergeStateStatus: "DIRTY",
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.mode).toBe("rebase-and-push");
   });
 });

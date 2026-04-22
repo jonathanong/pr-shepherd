@@ -195,7 +195,7 @@ pr-shepherd -v|--version                              # print installed version
 pr-shepherd check [PR]                                # read-only PR status snapshot
 pr-shepherd resolve [PR] [--fetch | --resolve-thread-ids …]
 pr-shepherd commit-suggestions [PR] --thread-ids A,B  # apply reviewer ```suggestion blocks as one commit
-pr-shepherd iterate [PR] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
+pr-shepherd iterate [PR] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N] [--no-commit-suggestions]
 pr-shepherd status PR1 [PR2 …]                        # multi-PR table
 ````
 
@@ -331,6 +331,7 @@ Flags:
 | `--no-auto-rerun`             | false   | Return `wait` instead of rerunning transient CI   |
 | `--no-auto-mark-ready`        | false   | Skip converting draft → ready-for-review          |
 | `--no-auto-cancel-actionable` | false   | Skip cancelling actionable failing runs           |
+| `--no-commit-suggestions`     | false   | Suppress the all-suggestions `fix_code` shortcut  |
 
 **Markdown output** (default). The monitor SKILL reads the `[ACTION]` tag from the H1 heading to decide what to do. Every action emits an H1, a bolded base-fields line, a bolded summary line, then an action-specific body. Example for `[WAIT]`:
 
@@ -343,7 +344,7 @@ Flags:
 WAIT: 3 passing, 0 in-progress — 540s until auto-cancel
 ```
 
-See [docs/actions.md](docs/actions.md) for the other seven actions — `cooldown`, `rerun_ci`, `mark_ready`, `cancel`, `rebase`, `fix_code`, `escalate`. `fix_code` is the richest: it emits sections for `## Review threads`, `## Actionable comments`, `## Failing checks`, `## Changes-requested reviews`, `## Noise (minimize only)`, `## Cancelled runs`, `## Rebase`, and `## Instructions`.
+See [docs/actions.md](docs/actions.md) for the other seven actions — `cooldown`, `rerun_ci`, `mark_ready`, `cancel`, `rebase`, `fix_code`, `escalate`. `fix_code` is the richest: it emits sections for `## Review threads`, `## Actionable comments`, `## Failing checks`, `## Changes-requested reviews`, `## Noise (minimize only)`, `## Cancelled runs`, `## Post-fix push`, and `## Instructions`. When every actionable thread carries a parseable ` ```suggestion ` block, `fix_code` short-circuits to a `## Commit suggestions` bundle (`commit-suggestions:` + `git pull --ff-only`) instead of the rebase-and-push ceremony — pass `--no-commit-suggestions` to disable.
 
 Both `--format=text` (default Markdown) and `--format=json` carry equivalent information — every field exposed in JSON has a corresponding Markdown representation, and vice versa.
 
