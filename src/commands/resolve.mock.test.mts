@@ -21,6 +21,12 @@ vi.mock("../config/load.mts", () => ({
       shaPoll: { intervalMs: 2000, maxAttempts: 10 },
       fetchReviewSummaries: true,
     },
+    actions: {
+      autoResolveOutdated: true,
+      autoRebase: true,
+      autoMarkReady: true,
+      commitSuggestions: true,
+    },
   }),
 }));
 
@@ -69,6 +75,7 @@ function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
     isMinimized: false,
     path: "src/foo.ts",
     line: 1,
+    startLine: null,
     author: "alice",
     body: "fix this",
     createdAtUnix: 1_700_000_000,
@@ -134,6 +141,98 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     expect(result.actionableThreads.map((t) => t.id)).toEqual(["t-active"]);
   });
 
+  it("attaches a parsed suggestion block to threads whose body contains one", async () => {
+    const thread = makeThread({
+      id: "t-with-suggestion",
+      path: "src/foo.ts",
+      line: 10,
+      startLine: null,
+      author: "reviewer",
+      body: "Consider this change:\n\n```suggestion\nconst x = 42;\n```",
+    });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
+
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.actionableThreads[0]?.suggestion).toEqual({
+      startLine: 10,
+      endLine: 10,
+      lines: ["const x = 42;"],
+      author: "reviewer",
+    });
+  });
+
+  it("uses thread.startLine for multi-line suggestion ranges", async () => {
+    const thread = makeThread({
+      id: "t-multi",
+      path: "src/foo.ts",
+      line: 12,
+      startLine: 10,
+      body: "```suggestion\nA\nB\nC\n```",
+    });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
+
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.actionableThreads[0]?.suggestion).toMatchObject({
+      startLine: 10,
+      endLine: 12,
+      lines: ["A", "B", "C"],
+    });
+  });
+
+  it('losslessly distinguishes deletion (lines: []) from blank-line replacement (lines: [""])', async () => {
+    const deletion = makeThread({
+      id: "t-del",
+      path: "a.ts",
+      line: 3,
+      body: "```suggestion\n```",
+    });
+    const blank = makeThread({
+      id: "t-blank",
+      path: "b.ts",
+      line: 3,
+      body: "```suggestion\n\n```",
+    });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ reviewThreads: [deletion, blank] }),
+    });
+    const result = await runResolveFetch(BASE_OPTS);
+    const byId = Object.fromEntries(result.actionableThreads.map((t) => [t.id, t]));
+    expect(byId["t-del"]!.suggestion?.lines).toEqual([]);
+    expect(byId["t-blank"]!.suggestion?.lines).toEqual([""]);
+  });
+
+  it("omits suggestion for threads without a ```suggestion block", async () => {
+    const thread = makeThread({
+      id: "t-plain",
+      path: "src/foo.ts",
+      line: 5,
+      body: "please rename this variable",
+    });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
+
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.actionableThreads[0]?.suggestion).toBeUndefined();
+  });
+
+  it("omits suggestion for threads with no file/line anchor even when body has a suggestion block", async () => {
+    const thread = makeThread({
+      id: "t-no-anchor",
+      path: null,
+      line: null,
+      body: "```suggestion\nconst x = 10;\n```",
+    });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
+
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.actionableThreads[0]?.suggestion).toBeUndefined();
+  });
+
+  it("surfaces commitSuggestionsEnabled mirroring the config flag", async () => {
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({}) });
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.commitSuggestionsEnabled).toBe(true);
+  });
+
   it("actionableComments excludes minimized comments", async () => {
     const visible = makeComment({ id: "c-visible", isMinimized: false });
     const minimized = makeComment({ id: "c-min", isMinimized: true });
@@ -171,6 +270,12 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
         concurrency: 4,
         shaPoll: { intervalMs: 2000, maxAttempts: 10 },
         fetchReviewSummaries: false,
+      },
+      actions: {
+        autoResolveOutdated: true,
+        autoRebase: true,
+        autoMarkReady: true,
+        commitSuggestions: true,
       },
     } as ReturnType<typeof loadConfig>);
     mockFetchPrBatch.mockResolvedValue({

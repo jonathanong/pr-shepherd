@@ -78,9 +78,34 @@ export interface ReviewThread {
   isMinimized: boolean;
   path: string | null;
   line: number | null;
+  /** Start of the comment's line range. Null for single-line comments (use `line` for both). */
+  startLine: number | null;
   author: string;
   body: string;
   createdAtUnix: number;
+}
+
+/**
+ * Parsed GitHub ```suggestion block, attached to a review thread when the
+ * reviewer left a machine-applicable replacement. The `lines` are the
+ * exact text the agent (or the CLI's commit-suggestions path) would write
+ * into the file in place of lines [startLine..endLine].
+ */
+export interface SuggestionBlock {
+  /** 1-indexed inclusive start line. Equal to `endLine` for single-line suggestions. */
+  startLine: number;
+  /** 1-indexed inclusive end line. */
+  endLine: number;
+  /**
+   * Replacement lines verbatim — the exact text that would be spliced in for
+   * lines [startLine..endLine]. Lossless: empty array means "delete these
+   * lines", `[""]` means "replace with a single blank line", and a trailing
+   * `""` means "replacement keeps a trailing blank line". To display as a
+   * single string, callers should `lines.join("\n")` themselves.
+   */
+  lines: readonly string[];
+  /** Reviewer login, surfaced so callers can co-credit them in commits. */
+  author: string;
 }
 
 export interface PrComment {
@@ -378,6 +403,38 @@ export interface IterateCommandOptions extends GlobalOptions {
   noAutoRerun?: boolean;
   noAutoMarkReady?: boolean;
   noAutoCancelActionable?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Commit-suggestions command
+// ---------------------------------------------------------------------------
+
+export type CommitSuggestionStatus = "applied" | "skipped";
+
+export interface CommitSuggestionThreadResult {
+  id: string;
+  status: CommitSuggestionStatus;
+  /** Populated for skipped threads. Not set when applied successfully. */
+  reason?: string;
+  /** File path the suggestion targeted. */
+  path?: string;
+  /** The reviewer who authored the suggestion. */
+  author?: string;
+}
+
+export interface CommitSuggestionsResult {
+  pr: number;
+  repo: string;
+  /** New HEAD SHA after the commit lands. Null when no threads applied. */
+  newHeadSha: string | null;
+  /** URL of the resulting commit on GitHub. Null when no threads applied. */
+  commitUrl: string | null;
+  /** One entry per thread requested, preserving input order. */
+  threads: CommitSuggestionThreadResult[];
+  /** Whether at least one suggestion was applied (commit exists on remote). */
+  applied: boolean;
+  /** Instruction the agent MUST follow after applied=true to sync local. */
+  postActionInstruction: string;
 }
 
 // ---------------------------------------------------------------------------

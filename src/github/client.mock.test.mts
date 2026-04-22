@@ -31,6 +31,8 @@ import {
   graphqlWithRateLimit,
   getCurrentPrNumber,
   getMergeableState,
+  getPrHead,
+  getFileContents,
   getPrHeadSha,
   getRepoInfo,
 } from "./client.mts";
@@ -267,5 +269,95 @@ describe("getPrHeadSha", () => {
     mockFetch.mockResolvedValue(restOk({ head: { sha: "abc123def456" } }));
     const sha = await getPrHeadSha(42, "owner", "repo");
     expect(sha).toBe("abc123def456");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getPrHead
+// ---------------------------------------------------------------------------
+
+describe("getPrHead", () => {
+  it("returns sha, ref, and repoWithOwner from REST response", async () => {
+    mockFetch.mockResolvedValue(
+      restOk({
+        head: {
+          sha: "abc123",
+          ref: "feature-branch",
+          repo: { full_name: "owner/repo" },
+        },
+      }),
+    );
+    const result = await getPrHead(42, "owner", "repo");
+    expect(result).toEqual({
+      sha: "abc123",
+      ref: "feature-branch",
+      repoWithOwner: "owner/repo",
+    });
+  });
+
+  it("returns the fork's full_name for cross-fork PRs", async () => {
+    mockFetch.mockResolvedValue(
+      restOk({
+        head: {
+          sha: "abc123",
+          ref: "contributor-branch",
+          repo: { full_name: "contributor/fork" },
+        },
+      }),
+    );
+    const result = await getPrHead(42, "owner", "repo");
+    expect(result.repoWithOwner).toBe("contributor/fork");
+  });
+
+  it("throws when head.repo is null (deleted fork)", async () => {
+    mockFetch.mockResolvedValue(restOk({ head: { sha: "abc123", ref: "whatever", repo: null } }));
+    await expect(getPrHead(42, "owner", "repo")).rejects.toThrow(/head repository is unavailable/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getFileContents
+// ---------------------------------------------------------------------------
+
+describe("getFileContents", () => {
+  it("decodes base64-encoded file content", async () => {
+    const content = "line one\nline two\n";
+    const encoded = Buffer.from(content, "utf8").toString("base64");
+    mockFetch.mockResolvedValue(restOk({ content: encoded, encoding: "base64" }));
+    const result = await getFileContents("owner/repo", "src/foo.ts", "abc123");
+    expect(result).toBe(content);
+  });
+
+  it("percent-encodes path segments but preserves slashes", async () => {
+    const content = "ok";
+    mockFetch.mockResolvedValue(
+      restOk({ content: Buffer.from(content).toString("base64"), encoding: "base64" }),
+    );
+    await getFileContents("owner/repo", "src/needs encoding/foo.ts", "main");
+    const [url] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("/contents/src/needs%20encoding/foo.ts?ref=main");
+  });
+
+  it("percent-encodes the ref (branch names with slashes, hash characters)", async () => {
+    mockFetch.mockResolvedValue(
+      restOk({ content: Buffer.from("x").toString("base64"), encoding: "base64" }),
+    );
+    await getFileContents("owner/repo", "a.ts", "refs/heads/feature");
+    const [url] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("?ref=refs%2Fheads%2Ffeature");
+  });
+
+  it("throws when the response is missing base64 content", async () => {
+    mockFetch.mockResolvedValue(restOk({ encoding: "none" }));
+    await expect(getFileContents("owner/repo", "a.ts", "main")).rejects.toThrow(
+      /could not be read as text/,
+    );
+  });
+
+  it("throws when encoding is not base64", async () => {
+    mockFetch.mockResolvedValue(restOk({ content: "raw text", encoding: "utf8" }));
+    await expect(getFileContents("owner/repo", "a.ts", "main")).rejects.toThrow(
+      /could not be read as text/,
+    );
   });
 });

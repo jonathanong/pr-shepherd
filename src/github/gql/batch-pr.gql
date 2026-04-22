@@ -63,6 +63,7 @@ query BatchPr(
               body
               path
               line
+              startLine
               createdAt
             }
           }

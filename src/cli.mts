@@ -7,6 +7,7 @@
  *   pr-shepherd resolve [PR] [--fetch] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]
  *                            [--dismiss-review-ids Q] [--message MSG] [--require-sha SHA]
  *                            [--last-push-time N]
+ *   pr-shepherd commit-suggestions [PR] --thread-ids A,B [--format text|json]
  *   pr-shepherd iterate [PR] [--format text|json] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
  *   pr-shepherd status PR1 [PR2 …]
  */
@@ -15,6 +16,7 @@ import { readFileSync } from "node:fs";
 
 import { runCheck } from "./commands/check.mts";
 import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
+import { runCommitSuggestions } from "./commands/commit-suggestions.mts";
 import { runIterate, renderResolveCommand } from "./commands/iterate.mts";
 import { runStatus, formatStatusTable } from "./commands/status.mts";
 import { getRepoInfo } from "./github/client.mts";
@@ -55,6 +57,9 @@ export async function main(argv: string[]): Promise<void> {
     case "resolve":
       await handleResolve(args.slice(1));
       break;
+    case "commit-suggestions":
+      await handleCommitSuggestions(args.slice(1));
+      break;
     case "iterate":
       await handleIterate(args.slice(1));
       break;
@@ -64,7 +69,7 @@ export async function main(argv: string[]): Promise<void> {
     default:
       process.stderr.write(`Unknown subcommand: ${subcommand ?? "(none)"}\n`);
       process.stderr.write(
-        "Usage: pr-shepherd <check|resolve|iterate|status> [options]\n" +
+        "Usage: pr-shepherd <check|resolve|commit-suggestions|iterate|status> [options]\n" +
           "       pr-shepherd --version | -v\n",
       );
       process.exitCode = 1;
@@ -130,6 +135,28 @@ async function handleResolve(args: string[]): Promise<void> {
         : formatMutateResult(result),
     );
   }
+}
+
+async function handleCommitSuggestions(args: string[]): Promise<void> {
+  const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
+
+  const threadIds = parseList(getFlag(extra, "--thread-ids"));
+  if (threadIds.length === 0) {
+    process.stderr.write("Usage: pr-shepherd commit-suggestions [PR] --thread-ids ID1,ID2,...\n");
+    process.exitCode = 1;
+    return;
+  }
+
+  const result = await runCommitSuggestions({ ...globalOpts, prNumber, threadIds });
+
+  process.stdout.write(
+    globalOpts.format === "json"
+      ? `${JSON.stringify(result, null, 2)}\n`
+      : formatCommitSuggestionsResult(result),
+  );
+
+  // Exit 0 on any applied commit; 1 when every requested thread was skipped.
+  process.exitCode = result.applied ? 0 : 1;
 }
 
 async function handleIterate(args: string[]): Promise<void> {
@@ -205,10 +232,15 @@ function formatFetchResult(result: Awaited<ReturnType<typeof runResolveFetch>>):
   const lines: string[] = [];
 
   if (result.actionableThreads.length > 0) {
-    lines.push(`\nActionable Review Threads (${result.actionableThreads.length}):`);
+    lines.push(
+      `\nActionable Review Threads (${result.actionableThreads.length})` +
+        (result.commitSuggestionsEnabled ? " [commit-suggestions: enabled]" : "") +
+        ":",
+    );
     for (const t of result.actionableThreads) {
+      const suggestionMarker = t.suggestion ? " [suggestion]" : "";
       lines.push(
-        `  - threadId=${t.id} ${t.path ?? ""}:${t.line ?? "?"} (@${t.author}): ${t.body.split("\n")[0]?.slice(0, 100) ?? ""}`,
+        `  - threadId=${t.id} ${t.path ?? ""}:${t.line ?? "?"} (@${t.author})${suggestionMarker}: ${t.body.split("\n")[0]?.slice(0, 100) ?? ""}`,
       );
     }
   }
@@ -245,6 +277,34 @@ function formatFetchResult(result: Awaited<ReturnType<typeof runResolveFetch>>):
     `\nSummary: ${total === 0 ? "0 actionable — all threads resolved/minimized" : `${total} actionable item(s)`}`,
   );
 
+  return `${lines.join("\n")}\n`;
+}
+
+function formatCommitSuggestionsResult(
+  result: Awaited<ReturnType<typeof runCommitSuggestions>>,
+): string {
+  const lines: string[] = [];
+  const applied = result.threads.filter((t) => t.status === "applied");
+  const skipped = result.threads.filter((t) => t.status === "skipped");
+
+  if (applied.length > 0) {
+    lines.push(`Applied ${applied.length} suggestion(s):`);
+    for (const t of applied) {
+      lines.push(`  - ${t.id} ${t.path ? `→ ${t.path}` : ""}`);
+    }
+  }
+  if (skipped.length > 0) {
+    lines.push(`Skipped ${skipped.length} thread(s):`);
+    for (const t of skipped) {
+      lines.push(`  - ${t.id}: ${t.reason ?? "unknown reason"}`);
+    }
+  }
+  if (result.commitUrl) {
+    lines.push(`Commit: ${result.commitUrl}`);
+    lines.push(`New HEAD: ${result.newHeadSha}`);
+  }
+  lines.push("");
+  lines.push(result.postActionInstruction);
   return `${lines.join("\n")}\n`;
 }
 

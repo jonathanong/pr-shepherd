@@ -54,3 +54,9 @@ All mutations live in `comments/resolve.mts`:
 | Dismiss review   | `github/gql/dismiss-review.gql`   | Dismisses a CHANGES_REQUESTED review with a message                                 |
 
 Review summary IDs (`PRR_…` from `reviewSummaries`) go through `--minimize-comment-ids`, not `--dismiss-review-ids`. The `dismiss` path is reserved for CHANGES_REQUESTED reviews.
+
+## Applying reviewer suggestions
+
+For review threads whose body contains a ` ```suggestion ` fenced block, `resolve --fetch` attaches a parsed `suggestion` field (`{ startLine, endLine, lines, author }`, where `lines: string[]` losslessly carries the replacement — `[]` means "delete these lines", `[""]` means "replace with one blank line") and emits `commitSuggestionsEnabled` mirroring `actions.commitSuggestions`. The agent can then invoke [`pr-shepherd commit-suggestions`](usage.md#pr-shepherd-commit-suggestions-pr---thread-ids-ab) to apply and resolve the threads in one shot via a server-side commit (`createCommitOnBranch`), co-crediting each reviewer with a `Co-authored-by` trailer. There is no GitHub API for this operation — shepherd parses the block and writes the commit itself, matching what the "Commit suggestion" UI button does.
+
+After the mutation lands the local checkout is behind remote, so the command's output includes a `postActionInstruction` telling the agent to run `git pull --ff-only` before editing anything else.

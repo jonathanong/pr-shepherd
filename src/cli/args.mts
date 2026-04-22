@@ -19,6 +19,10 @@ const FLAGS_WITH_VALUES = new Set([
   "--cooldown-seconds",
   "--require-sha",
   "--message",
+  "--thread-ids",
+  "--resolve-thread-ids",
+  "--minimize-comment-ids",
+  "--dismiss-review-ids",
 ]);
 
 // ---------------------------------------------------------------------------

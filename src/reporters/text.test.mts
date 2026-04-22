@@ -30,6 +30,7 @@ function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
     isMinimized: false,
     path: "src/foo.ts",
     line: 10,
+    startLine: null,
     author: "alice",
     body: "please fix this",
     createdAtUnix: 1_700_000_000,

@@ -44,6 +44,7 @@ actions:
   autoResolveOutdated: true
   autoRebase: true
   autoMarkReady: true
+  commitSuggestions: true
 ```
 
 ---
@@ -204,6 +205,12 @@ Disable for repos that enforce merge commits or use a merge queue where rebasing
 When `true`, shepherd converts a draft PR to ready-for-review once all checks pass and the ready-delay has elapsed.
 
 Disable if your team uses the draft state as a deliberate gate that requires a human to promote.
+
+### `actions.commitSuggestions` — default `true`
+
+When `true`, the `/pr-shepherd:resolve` skill prefers applying reviewer-authored ` ```suggestion ` blocks via [`pr-shepherd commit-suggestions`](usage.md#pr-shepherd-commit-suggestions-pr---thread-ids-ab) — creating a single remote commit that co-credits each reviewer — rather than having the agent re-type the fix. Each `actionableThread` returned by `resolve --fetch` is annotated with a parsed `suggestion` field, and the fetch payload exposes `commitSuggestionsEnabled` mirroring this flag.
+
+Disable if you want the agent to read and re-implement every suggestion (e.g. because your team prefers all commits to come from a single author, or because you want an extra human-ish review pass over every change). Flipping this to `false` still surfaces `suggestion` blocks in the fetch payload so the agent has the reviewer's exact proposal available as context; the skill just falls through to its manual-edit path.
 
 ---
 

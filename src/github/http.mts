@@ -78,7 +78,7 @@ async function makeHeaders(): Promise<Record<string, string>> {
 
 async function graphqlInner<T>(
   query: string,
-  vars: Record<string, string | number | boolean>,
+  vars: Record<string, unknown>,
 ): Promise<{ data: T; rateLimit: RateLimitInfo | null }> {
   const res = await fetch(`${BASE_URL}/graphql`, {
     method: "POST",
@@ -105,7 +105,7 @@ async function graphqlInner<T>(
 
 export async function graphql<T = unknown>(
   query: string,
-  vars: Record<string, string | number | boolean> = {},
+  vars: Record<string, unknown> = {},
 ): Promise<GraphQlResult<T>> {
   const { data } = await graphqlInner<T>(query, vars);
   return { data };
@@ -113,7 +113,7 @@ export async function graphql<T = unknown>(
 
 export async function graphqlWithRateLimit<T = unknown>(
   query: string,
-  vars: Record<string, string | number | boolean> = {},
+  vars: Record<string, unknown> = {},
 ): Promise<GraphQlResult<T>> {
   const { data, rateLimit } = await graphqlInner<T>(query, vars);
   return { data, rateLimit: rateLimit ?? undefined };

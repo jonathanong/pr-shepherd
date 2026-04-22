@@ -9,6 +9,7 @@ const thread: ReviewThread = {
   isMinimized: false,
   path: "src/foo.mts",
   line: 10,
+  startLine: null,
   author: "alice",
   body: "Please fix this method.",
   createdAtUnix: 1700000000,
