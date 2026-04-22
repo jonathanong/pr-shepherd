@@ -268,7 +268,7 @@ Actionable work needs a code fix, commit, and push.
 
 ### Commit-suggestions shortcut
 
-When **every** actionable thread carries a parseable ` ```suggestion ` block and there are no actionable comments, noise comments, failing checks, changes-requested reviews, or merge conflicts (and `actions.commitSuggestions` is true and `--no-commit-suggestions` was not passed), `fix_code` short-circuits the rebase ceremony. The CLI hands the agent a pre-built `commit-suggestions` invocation that creates one server-side commit (co-crediting each reviewer) and resolves the affected threads in a single mutation.
+When **every** actionable thread carries a parseable ` 
 
 ````markdown
 # PR #42 [FIX_CODE]
