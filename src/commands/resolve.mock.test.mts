@@ -179,6 +179,28 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     });
   });
 
+  it("encodes deletion as replacement='' and blank-line as replacement='\\n'", async () => {
+    const deletion = makeThread({
+      id: "t-del",
+      path: "a.ts",
+      line: 3,
+      body: "```suggestion\n```",
+    });
+    const blank = makeThread({
+      id: "t-blank",
+      path: "b.ts",
+      line: 3,
+      body: "```suggestion\n\n```",
+    });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ reviewThreads: [deletion, blank] }),
+    });
+    const result = await runResolveFetch(BASE_OPTS);
+    const byId = Object.fromEntries(result.actionableThreads.map((t) => [t.id, t]));
+    expect(byId["t-del"]!.suggestion?.replacement).toBe("");
+    expect(byId["t-blank"]!.suggestion?.replacement).toBe("\n");
+  });
+
   it("omits suggestion for threads without a ```suggestion block", async () => {
     const thread = makeThread({
       id: "t-plain",

@@ -112,9 +112,7 @@ function extractSuggestion(
   if (!parsed) return null;
   const startLine = thread.startLine ?? thread.line;
   const replacement =
-    parsed.lines.length === 1 && parsed.lines[0] === ""
-      ? "\n"
-      : parsed.lines.join("\n");
+    parsed.lines.length === 1 && parsed.lines[0] === "" ? "\n" : parsed.lines.join("\n");
   return {
     startLine,
     endLine: thread.line,
