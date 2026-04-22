@@ -57,6 +57,25 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
 
    **Review summaries** (`reviewSummaries`): these are PR-level overview bodies from COMMENTED reviews. Bot-generated summaries (authors like `copilot-pull-request-reviewer`, `gemini-code-assist`, or other bot accounts) are almost always noise — default them to **Acknowledge** with reason "bot summary — no actionable content" unless the body explicitly calls out an unaddressed issue. Human-authored review summaries should be read carefully and classified like any other item.
 
+3a. **Prefer commit-suggestion when available.**
+
+For each **Actionable** thread where the fetch payload returned a `suggestion` field **and** the top-level `commitSuggestionsEnabled` is `true`, let the CLI apply the reviewer's change verbatim instead of re-typing it by hand. This preserves the reviewer's exact text and co-credits them in the commit.
+
+Collect the thread IDs of all such threads, then run:
+
+```bash
+npx pr-shepherd commit-suggestions <N> --thread-ids <comma-separated-IDs> --format=json
+```
+
+The CLI creates one remote commit with all suggestions applied and resolves the threads it landed. Parse the JSON output:
+
+- `threads[].status == "applied"` — mark these as **Fixed**; do **not** pass their IDs to `--resolve-thread-ids` in step 6 (already resolved).
+- `threads[].status == "skipped"` — fall through to manual fixing in step 4. The `reason` tells you why (no parseable suggestion, file changed, overlapping range, etc.).
+
+After a successful run, **your working copy is one commit behind remote**. You MUST run `git pull --ff-only` before making any further local edits in this session — otherwise subsequent commits will either fail to push or clobber the applied suggestion.
+
+If `commitSuggestionsEnabled` is `false`, skip this step and go straight to manual fixing in step 4.
+
 4. **Fix actionable items.** For each Actionable item:
    - Read the relevant file(s) and apply the fix (Edit/Write tools)
    - Re-classify as **Fixed**
@@ -99,4 +118,5 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
 - NEVER blindly resolve items — always read and verify first.
 - NEVER silently skip a fetched item. Every item must be resolved, acknowledged with a reason, or escalated.
 - Resolve from ALL authors — bots, AI reviewers, and humans alike.
+- Prefer `commit-suggestions` over manual edits when a thread carries a `suggestion` block and `commitSuggestionsEnabled` is true — applies the reviewer's change verbatim and co-credits them. After it runs, `git pull --ff-only` **before** any other local edit.
 - `--message` is required when using `--dismiss-review-ids`, and must NOT be passed otherwise. The CLI throws if it is missing during dismissal. The message must describe the specific change that addressed the review or the concrete reason for not acting (e.g. `"Added null check in handler.ts:42"`, or `"Acknowledged as won't-fix — reviewer noted not worth refactoring"`); generic boilerplate like `"address review comments"` or `"Addressed in <SHA>"` is reviewer-hostile and forbidden.

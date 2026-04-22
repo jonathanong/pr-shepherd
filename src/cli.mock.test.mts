@@ -190,6 +190,7 @@ describe("main — resolve", () => {
       actionableComments: [],
       changesRequestedReviews: [],
       reviewSummaries: [],
+      commitSuggestionsEnabled: true,
     });
     await main(["node", "shepherd", "resolve", "42"]);
     expect(mockRunResolveFetch).toHaveBeenCalledTimes(1);
@@ -202,6 +203,7 @@ describe("main — resolve", () => {
       actionableComments: [],
       changesRequestedReviews: [],
       reviewSummaries: [{ id: "PRR_1", author: "copilot", body: "## PR overview\nsome detail" }],
+      commitSuggestionsEnabled: true,
     });
     await main(["node", "shepherd", "resolve", "42"]);
     const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");

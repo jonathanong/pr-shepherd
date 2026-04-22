@@ -21,6 +21,12 @@ vi.mock("../config/load.mts", () => ({
       shaPoll: { intervalMs: 2000, maxAttempts: 10 },
       fetchReviewSummaries: true,
     },
+    actions: {
+      autoResolveOutdated: true,
+      autoRebase: true,
+      autoMarkReady: true,
+      commitSuggestions: true,
+    },
   }),
 }));
 
@@ -69,6 +75,7 @@ function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
     isMinimized: false,
     path: "src/foo.ts",
     line: 1,
+    startLine: null,
     author: "alice",
     body: "fix this",
     createdAtUnix: 1_700_000_000,
@@ -171,6 +178,12 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
         concurrency: 4,
         shaPoll: { intervalMs: 2000, maxAttempts: 10 },
         fetchReviewSummaries: false,
+      },
+      actions: {
+        autoResolveOutdated: true,
+        autoRebase: true,
+        autoMarkReady: true,
+        commitSuggestions: true,
       },
     } as ReturnType<typeof loadConfig>);
     mockFetchPrBatch.mockResolvedValue({

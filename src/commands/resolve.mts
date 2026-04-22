@@ -19,19 +19,32 @@ import { fetchPrBatch } from "../github/batch.mts";
 import { getOutdatedThreads } from "../comments/outdated.mts";
 import { autoResolveOutdated, applyResolveOptions } from "../comments/resolve.mts";
 import { loadConfig } from "../config/load.mts";
-import type { GlobalOptions, ResolveOptions, ReviewThread, PrComment, Review } from "../types.mts";
+import { parseSuggestion } from "../suggestions/parse.mts";
+import type {
+  GlobalOptions,
+  ResolveOptions,
+  ReviewThread,
+  PrComment,
+  Review,
+  SuggestionBlock,
+} from "../types.mts";
 
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
-export type FetchThread = Omit<ReviewThread, "isResolved" | "isOutdated">;
+export type FetchThread = Omit<ReviewThread, "isResolved" | "isOutdated"> & {
+  /** Present when the comment body contains a parseable ```suggestion block. */
+  suggestion?: SuggestionBlock;
+};
 
 export interface FetchResult {
   actionableThreads: FetchThread[];
   actionableComments: PrComment[];
   changesRequestedReviews: Review[];
   reviewSummaries: Review[];
+  /** Mirrors `actions.commitSuggestions` config. When true, the resolve skill prefers the commit-suggestions path for threads with a suggestion block. */
+  commitSuggestionsEnabled: boolean;
 }
 
 export interface ResolveCommandOptions extends GlobalOptions {
@@ -68,11 +81,41 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
 
   const cfg = loadConfig();
 
+  const actionableThreads: FetchThread[] = activeThreads.map(
+    ({ isResolved: _r, isOutdated: _o, ...rest }) => {
+      const thread: FetchThread = rest;
+      const suggestion = extractSuggestion(rest);
+      if (suggestion) thread.suggestion = suggestion;
+      return thread;
+    },
+  );
+
   return {
-    actionableThreads: activeThreads.map(({ isResolved: _r, isOutdated: _o, ...rest }) => rest),
+    actionableThreads,
     actionableComments: visibleComments,
     changesRequestedReviews: data.changesRequestedReviews,
     reviewSummaries: cfg.resolve.fetchReviewSummaries ? data.reviewSummaries : [],
+    commitSuggestionsEnabled: cfg.actions.commitSuggestions,
+  };
+}
+
+/**
+ * Attach a parsed suggestion block to a thread if the comment body contains one
+ * and the thread has a resolvable line anchor. Threads without `path`/`line`
+ * (rare — usually file-level comments) can't accept a suggestion commit.
+ */
+function extractSuggestion(
+  thread: Omit<ReviewThread, "isResolved" | "isOutdated">,
+): SuggestionBlock | null {
+  if (!thread.path || thread.line === null) return null;
+  const parsed = parseSuggestion(thread.body);
+  if (!parsed) return null;
+  const startLine = thread.startLine ?? thread.line;
+  return {
+    startLine,
+    endLine: thread.line,
+    replacement: parsed.replacement,
+    author: thread.author,
   };
 }
 

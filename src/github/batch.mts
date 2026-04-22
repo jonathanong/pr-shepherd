@@ -181,6 +181,7 @@ function parseRawPr(
       isMinimized: comment?.isMinimized ?? false,
       path: comment?.path ?? null,
       line: comment?.line ?? null,
+      startLine: comment?.startLine ?? null,
       author: comment?.author?.login ?? "unknown",
       body: comment?.body ?? "",
       createdAtUnix: comment ? parseCreatedAt(comment.createdAt) : 0,
@@ -362,6 +363,7 @@ interface RawThread {
       body: string;
       path: string | null;
       line: number | null;
+      startLine: number | null;
       createdAt: string;
     }>;
   };
