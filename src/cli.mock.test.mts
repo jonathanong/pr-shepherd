@@ -622,14 +622,7 @@ describe("main — iterate text format", () => {
         },
       ],
       commitSuggestionsCommand: {
-        argv: [
-          "npx",
-          "pr-shepherd",
-          "commit-suggestions",
-          "42",
-          "--thread-ids",
-          "PRRT_x,PRRT_y",
-        ],
+        argv: ["npx", "pr-shepherd", "commit-suggestions", "42", "--thread-ids", "PRRT_x,PRRT_y"],
       },
       instructions: [
         "Run the `commit-suggestions:` command above — it applies all reviewer suggestion blocks server-side as a single commit and resolves the threads.",

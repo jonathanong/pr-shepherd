@@ -270,7 +270,7 @@ Actionable work needs a code fix, commit, and push.
 
 When **every** actionable thread carries a parseable ` ```suggestion ` block and there are no actionable comments, noise comments, failing checks, changes-requested reviews, or merge conflicts (and `actions.commitSuggestions` is true and `--no-commit-suggestions` was not passed), `fix_code` short-circuits the rebase ceremony. The CLI hands the agent a pre-built `commit-suggestions` invocation that creates one server-side commit (co-crediting each reviewer) and resolves the affected threads in a single mutation.
 
-```markdown
+````markdown
 # PR #42 [FIX_CODE]
 
 **status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
@@ -295,7 +295,7 @@ When **every** actionable thread carries a parseable ` ```suggestion ` block and
 
 1. Run the `commit-suggestions:` command above — it applies all reviewer suggestion blocks server-side as a single commit and resolves the threads.
 2. Run `git pull --ff-only` to sync your local checkout with the new commit before any further edits.
-```
+````
 
 The JSON payload for this variant carries `fix.mode === "commit-suggestions"` plus `fix.threads`, `fix.commitSuggestionsCommand.argv`, and `fix.instructions`. The rebase-and-push fields (`actionableComments`, `noiseCommentIds`, `checks`, `changesRequestedReviews`, `resolveCommand`) are absent — the discriminator on `mode` tells consumers which shape to expect.
 
