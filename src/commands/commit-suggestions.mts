@@ -204,7 +204,15 @@ export async function runCommitSuggestions(
   }
 
   // Phase 4: resolve applied threads.
-  await applyResolveOptions(prNumber, repo, { resolveThreadIds: [...appliedIds] });
+  const resolveResult = await applyResolveOptions(prNumber, repo, {
+    resolveThreadIds: [...appliedIds],
+  });
+  if (resolveResult.errors.length > 0) {
+    const message = resolveResult.errors
+      .map((err) => (err instanceof Error ? err.message : String(err)))
+      .join("; ");
+    throw new Error(`commit created, but failed to resolve one or more applied threads: ${message}`);
+  }
 
   return buildResult(
     prNumber,
