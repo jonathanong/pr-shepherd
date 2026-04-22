@@ -202,6 +202,28 @@ describe("runCommitSuggestions — skipped cases", () => {
     expect(mockGraphql).not.toHaveBeenCalled();
   });
 
+  it("skips threads whose suggestion body contains a nested fence (issue #68)", async () => {
+    const nestedFenceBody = [
+      "```suggestion",
+      "text with ```suggestion inside",
+      "```",
+    ].join("\n");
+    mockFetchBatch.mockResolvedValue({
+      data: makeBatch([makeThread({ id: "t1", body: nestedFenceBody })]),
+    });
+    const result = await runCommitSuggestions({
+      ...GLOBAL_OPTS,
+      prNumber: 42,
+      threadIds: ["t1"],
+    });
+    expect(result.applied).toBe(false);
+    expect(result.threads[0]).toMatchObject({
+      status: "skipped",
+      reason: /nested fence/,
+    });
+    expect(mockGraphql).not.toHaveBeenCalled();
+  });
+
   it("skips threads without a parseable suggestion block", async () => {
     mockFetchBatch.mockResolvedValue({
       data: makeBatch([makeThread({ id: "t1", body: "just a plain comment, no suggestion" })]),

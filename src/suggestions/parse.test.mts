@@ -65,10 +65,28 @@ describe("parseSuggestion", () => {
   });
 
   it("tolerates a body without a trailing newline before the closing fence", () => {
-    // GitHub renders suggestions when the closing fence is inline — the regex
-    // accepts this and the body is taken verbatim (no trailing \n to strip).
+    // Inline close: the parser's fallback path for bodies like "```suggestion\nfoo```".
     const body = "```suggestion\nfoo```";
     expect(parseSuggestion(body)).toEqual({ lines: ["foo"] });
+  });
+
+  it("preserves a nested ```suggestion substring in the body content (issue #68)", () => {
+    // The old regex stopped at the inner ``` and silently truncated the body.
+    // The new line-based parser treats mid-line ``` as content, not a closer.
+    const body = ["```suggestion", "text with ```suggestion inside", "```"].join("\n");
+    expect(parseSuggestion(body)).toEqual({ lines: ["text with ```suggestion inside"] });
+  });
+
+  it("preserves a stray ``` run mid-line in the body content (issue #68)", () => {
+    const body = ["```suggestion", "here is a fence: ```", "and more text", "```"].join("\n");
+    expect(parseSuggestion(body)).toEqual({
+      lines: ["here is a fence: ```", "and more text"],
+    });
+  });
+
+  it("supports a 4-backtick outer fence to wrap content containing ```", () => {
+    const body = ["````suggestion", "body with ``` in it", "````"].join("\n");
+    expect(parseSuggestion(body)).toEqual({ lines: ["body with ``` in it"] });
   });
 });
 

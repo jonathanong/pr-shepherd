@@ -32,7 +32,7 @@ import { rest, graphql } from "../github/http.mts";
 import { MARK_PR_READY_MUTATION } from "../github/queries.mts";
 import { readFixAttempts, writeFixAttempts } from "../cache/fix-attempts.mts";
 import { toAgentThread, toAgentComment, toAgentChecks } from "../reporters/agent.mts";
-import { parseSuggestion } from "../suggestions/parse.mts";
+import { parseSuggestion, isCommittableSuggestion } from "../suggestions/parse.mts";
 import type {
   AgentComment,
   AgentThread,
@@ -247,7 +247,10 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     // of the gate because there is no minimize-only mutation in this shortcut.
     const allThreadsHaveSuggestions =
       threads.length > 0 &&
-      report.threads.actionable.every((t) => parseSuggestion(t.body) !== null);
+      report.threads.actionable.every((t) => {
+        const p = parseSuggestion(t.body);
+        return p !== null && isCommittableSuggestion(p);
+      });
     const canShortcut =
       config.actions.commitSuggestions &&
       !opts.noCommitSuggestions &&

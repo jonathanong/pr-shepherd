@@ -30,7 +30,11 @@ import {
 import { fetchPrBatch } from "../github/batch.mts";
 import { applyResolveOptions } from "../comments/resolve.mts";
 import { CREATE_COMMIT_ON_BRANCH_MUTATION } from "../github/queries.mts";
-import { parseSuggestion, applySuggestionToFile } from "../suggestions/parse.mts";
+import {
+  parseSuggestion,
+  applySuggestionToFile,
+  isCommittableSuggestion,
+} from "../suggestions/parse.mts";
 import type {
   CommitSuggestionsResult,
   CommitSuggestionThreadResult,
@@ -121,6 +125,15 @@ export async function runCommitSuggestions(
     const parsed = parseSuggestion(thread.body);
     if (!parsed) {
       perThread.push({ id, status: "skipped", reason: "no suggestion block in comment body" });
+      continue;
+    }
+    if (!isCommittableSuggestion(parsed)) {
+      perThread.push({
+        id,
+        status: "skipped",
+        reason:
+          "suggestion body contains a nested fence — refusing to apply (would silently truncate)",
+      });
       continue;
     }
     applicable.push({
