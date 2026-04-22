@@ -23,8 +23,8 @@ export interface ParsedSuggestion {
   /**
    * Replacement lines to splice in. Empty array means "delete these lines".
    * `[""]` means "replace with a single blank line". Array length equals the
-   * number of lines in the resulting file (not including any implicit trailing
-   * newline from the original file).
+   * number of replacement lines in the suggestion snippet (not the number of
+   * lines in the resulting file).
    */
   lines: readonly string[];
 }

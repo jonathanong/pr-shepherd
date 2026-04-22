@@ -111,13 +111,19 @@ function extractSuggestion(
   const parsed = parseSuggestion(thread.body);
   if (!parsed) return null;
   const startLine = thread.startLine ?? thread.line;
+  const replacement =
+    parsed.lines.length === 1 && parsed.lines[0] === ""
+      ? "\n"
+      : parsed.lines.join("\n");
   return {
     startLine,
     endLine: thread.line,
     // For the external JSON/text output the informational view is a string.
+    // Preserve the distinction between deletion (`[]` => "") and
+    // blank-line replacement (`[""]` => "\n") to match SuggestionBlock docs.
     // The actual per-line array is re-parsed by the commit-suggestions CLI
     // when it runs; callers don't need to reconstruct it here.
-    replacement: parsed.lines.join("\n"),
+    replacement,
     author: thread.author,
   };
 }
