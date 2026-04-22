@@ -203,11 +203,7 @@ describe("runCommitSuggestions — skipped cases", () => {
   });
 
   it("skips threads whose suggestion body contains a nested fence (issue #68)", async () => {
-    const nestedFenceBody = [
-      "```suggestion",
-      "text with ```suggestion inside",
-      "```",
-    ].join("\n");
+    const nestedFenceBody = ["```suggestion", "text with ```suggestion inside", "```"].join("\n");
     mockFetchBatch.mockResolvedValue({
       data: makeBatch([makeThread({ id: "t1", body: nestedFenceBody })]),
     });
