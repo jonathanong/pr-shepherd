@@ -41,6 +41,18 @@ pr-shepherd resolve 42 \
 
 `--require-sha` polls GitHub until the PR head matches the SHA before mutating — prevents resolving before reviewers see the fix. `--message` is required only when `--dismiss-review-ids` is set, and should describe the specific fix — it is shown to the reviewer on GitHub.
 
+### `pr-shepherd commit-suggestions [PR] --thread-ids A,B,...`
+
+Agent-side equivalent of GitHub's "Commit suggestion" and "Add suggestion to batch" buttons. Parses reviewer-authored ` ```suggestion ` blocks from the given threads, applies them to their target files, and creates a single remote commit via the `createCommitOnBranch` GraphQL mutation — co-crediting each distinct reviewer. The threads it applies are resolved in the same run.
+
+```sh
+pr-shepherd commit-suggestions 42 --thread-ids PRRT_abc,PRRT_def --format=json
+```
+
+Requires a clean working tree (the command errors out early if `git status --porcelain` is non-empty). After a successful run **the local checkout is one commit behind remote** — run `git pull --ff-only` before any further local edits. Threads without a parseable suggestion, threads already resolved, or suggestions whose range overlaps another on the same file are reported as `skipped` so the caller can fall back to a manual fix.
+
+The resolve skill surfaces this command automatically for threads that carry a `suggestion` block when `actions.commitSuggestions` is `true` (the default — see [configuration.md](configuration.md)).
+
 ### `pr-shepherd iterate [PR]`
 
 Used by the cron loop. Returns compact JSON action, consumed by the monitor skill. See [iterate-flow.md](iterate-flow.md) for the full dispatch logic.

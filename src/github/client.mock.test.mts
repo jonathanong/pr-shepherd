@@ -310,12 +310,8 @@ describe("getPrHead", () => {
   });
 
   it("throws when head.repo is null (deleted fork)", async () => {
-    mockFetch.mockResolvedValue(
-      restOk({ head: { sha: "abc123", ref: "whatever", repo: null } }),
-    );
-    await expect(getPrHead(42, "owner", "repo")).rejects.toThrow(
-      /head repository is unavailable/,
-    );
+    mockFetch.mockResolvedValue(restOk({ head: { sha: "abc123", ref: "whatever", repo: null } }));
+    await expect(getPrHead(42, "owner", "repo")).rejects.toThrow(/head repository is unavailable/);
   });
 });
 

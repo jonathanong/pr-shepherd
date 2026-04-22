@@ -252,14 +252,7 @@ describe("main — commit-suggestions", () => {
       applied: true,
       postActionInstruction: "Run `git pull --ff-only` before editing.",
     });
-    await main([
-      "node",
-      "shepherd",
-      "commit-suggestions",
-      "42",
-      "--thread-ids",
-      "t1,t2",
-    ]);
+    await main(["node", "shepherd", "commit-suggestions", "42", "--thread-ids", "t1,t2"]);
     expect(mockRunCommitSuggestions).toHaveBeenCalledWith(
       expect.objectContaining({ prNumber: 42, threadIds: ["t1", "t2"] }),
     );
