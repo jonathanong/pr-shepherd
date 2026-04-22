@@ -87,7 +87,7 @@ export interface ReviewThread {
 
 /**
  * Parsed GitHub ```suggestion block, attached to a review thread when the
- * reviewer left a machine-applicable replacement. The `replacement` is the
+ * reviewer left a machine-applicable replacement. The `lines` are the
  * exact text the agent (or the CLI's commit-suggestions path) would write
  * into the file in place of lines [startLine..endLine].
  */
