@@ -22,4 +22,4 @@ Use it from the same worktree/repository so it picks up the skills and configura
 
 ## Documentation
 
-When making changes, always update [`docs/`](docs/) and [`README.md`](README.md) to reflect the new behavior. Docs and README are part of the change, not a follow-up.
+When making changes, review [`docs/`](docs/) and [`README.md`](README.md) for impact. Update them when the change affects user-facing behavior, commands, configuration, or workflows so the documentation stays in sync as part of the same change, not as a follow-up. If no documentation updates are needed, it is OK to leave them unchanged (optionally noting `docs: n/a`).
