@@ -19,3 +19,7 @@ The `bin/` directory is gitignored and must be built before `npx pr-shepherd` wo
 During development, run the CLI from this repository root with `npx pr-shepherd` (after `npm install && npm run build`).
 This ensures you are using the built local CLI from this checkout rather than any globally installed version.
 Use it from the same worktree/repository so it picks up the skills and configuration checked into this local checkout.
+
+## Documentation
+
+When making changes, always update [`docs/`](docs/) and [`README.md`](README.md) to reflect the new behavior. Docs and README are part of the change, not a follow-up.
