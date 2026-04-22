@@ -96,8 +96,14 @@ export interface SuggestionBlock {
   startLine: number;
   /** 1-indexed inclusive end line. */
   endLine: number;
-  /** Replacement text (lines joined by \n). Empty string means "delete these lines"; a single \n means "replace with a blank line". Informational for agents — the CLI uses the full ParsedSuggestion internally. */
-  replacement: string;
+  /**
+   * Replacement lines verbatim — the exact text that would be spliced in for
+   * lines [startLine..endLine]. Lossless: empty array means "delete these
+   * lines", `[""]` means "replace with a single blank line", and a trailing
+   * `""` means "replacement keeps a trailing blank line". To display as a
+   * single string, callers should `lines.join("\n")` themselves.
+   */
+  lines: readonly string[];
   /** Reviewer login, surfaced so callers can co-credit them in commits. */
   author: string;
 }

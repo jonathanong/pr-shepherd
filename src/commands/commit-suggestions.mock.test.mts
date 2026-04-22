@@ -189,6 +189,19 @@ describe("runCommitSuggestions — skipped cases", () => {
     expect(result.threads[0]).toMatchObject({ status: "skipped", reason: /outdated/ });
   });
 
+  it("skips minimized threads (mirrors resolve --fetch's filter)", async () => {
+    mockFetchBatch.mockResolvedValue({
+      data: makeBatch([makeThread({ id: "t1", isMinimized: true })]),
+    });
+    const result = await runCommitSuggestions({
+      ...GLOBAL_OPTS,
+      prNumber: 42,
+      threadIds: ["t1"],
+    });
+    expect(result.threads[0]).toMatchObject({ status: "skipped", reason: /minimized/ });
+    expect(mockGraphql).not.toHaveBeenCalled();
+  });
+
   it("skips threads without a parseable suggestion block", async () => {
     mockFetchBatch.mockResolvedValue({
       data: makeBatch([makeThread({ id: "t1", body: "just a plain comment, no suggestion" })]),

@@ -156,7 +156,7 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     expect(result.actionableThreads[0]?.suggestion).toEqual({
       startLine: 10,
       endLine: 10,
-      replacement: "const x = 42;",
+      lines: ["const x = 42;"],
       author: "reviewer",
     });
   });
@@ -175,11 +175,11 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     expect(result.actionableThreads[0]?.suggestion).toMatchObject({
       startLine: 10,
       endLine: 12,
-      replacement: "A\nB\nC",
+      lines: ["A", "B", "C"],
     });
   });
 
-  it("encodes deletion as replacement='' and blank-line as replacement='\\n'", async () => {
+  it('losslessly distinguishes deletion (lines: []) from blank-line replacement (lines: [""])', async () => {
     const deletion = makeThread({
       id: "t-del",
       path: "a.ts",
@@ -197,8 +197,8 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     });
     const result = await runResolveFetch(BASE_OPTS);
     const byId = Object.fromEntries(result.actionableThreads.map((t) => [t.id, t]));
-    expect(byId["t-del"]!.suggestion?.replacement).toBe("");
-    expect(byId["t-blank"]!.suggestion?.replacement).toBe("\n");
+    expect(byId["t-del"]!.suggestion?.lines).toEqual([]);
+    expect(byId["t-blank"]!.suggestion?.lines).toEqual([""]);
   });
 
   it("omits suggestion for threads without a ```suggestion block", async () => {

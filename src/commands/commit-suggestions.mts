@@ -107,6 +107,13 @@ export async function runCommitSuggestions(
       perThread.push({ id, status: "skipped", reason: "thread is outdated" });
       continue;
     }
+    if (thread.isMinimized) {
+      // Mirror resolve --fetch's filter: a minimized thread is intentionally
+      // hidden from the active set, and applying its suggestion would
+      // resurrect feedback the user explicitly chose to dismiss.
+      perThread.push({ id, status: "skipped", reason: "thread is minimized" });
+      continue;
+    }
     if (!thread.path || thread.line === null) {
       perThread.push({ id, status: "skipped", reason: "thread has no file/line anchor" });
       continue;
