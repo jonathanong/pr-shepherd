@@ -132,7 +132,7 @@ export async function runCommitSuggestions(
         id,
         status: "skipped",
         reason:
-          "suggestion body contains a nested fence — refusing to apply (would silently truncate)",
+          "suggestion body contains nested suggestion fencing or unbalanced 3+ backtick fences — refusing to apply (could silently truncate)",
       });
       continue;
     }

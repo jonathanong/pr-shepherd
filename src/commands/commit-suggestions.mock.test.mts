@@ -215,7 +215,27 @@ describe("runCommitSuggestions — skipped cases", () => {
     expect(result.applied).toBe(false);
     expect(result.threads[0]).toMatchObject({
       status: "skipped",
-      reason: /nested fence/,
+      reason: /nested suggestion fencing/,
+    });
+    expect(mockGraphql).not.toHaveBeenCalled();
+  });
+
+  it("skips threads whose suggestion body has an unbalanced ``` run (issue #68)", async () => {
+    // Replacement text "foo ``` bar" has one ``` run (odd count) — the guard fires
+    // even though the body contains no nested ```suggestion marker.
+    const oddBacktickBody = ["```suggestion", "foo ``` bar", "```"].join("\n");
+    mockFetchBatch.mockResolvedValue({
+      data: makeBatch([makeThread({ id: "t1", body: oddBacktickBody })]),
+    });
+    const result = await runCommitSuggestions({
+      ...GLOBAL_OPTS,
+      prNumber: 42,
+      threadIds: ["t1"],
+    });
+    expect(result.applied).toBe(false);
+    expect(result.threads[0]).toMatchObject({
+      status: "skipped",
+      reason: /unbalanced 3\+ backtick fences/,
     });
     expect(mockGraphql).not.toHaveBeenCalled();
   });
