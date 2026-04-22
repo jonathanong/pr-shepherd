@@ -160,6 +160,8 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
       actionable: actionableComments,
     },
     changesRequestedReviews: batchData.changesRequestedReviews,
+    reviewSummaries: batchData.reviewSummaries,
+    approvedReviews: batchData.approvedReviews,
     lastPushTime: opts.lastPushTime,
   };
 }

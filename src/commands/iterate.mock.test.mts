@@ -107,6 +107,8 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
     threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
     comments: { actionable: [] },
     changesRequestedReviews: [],
+    reviewSummaries: [],
+    approvedReviews: [],
     lastPushTime: undefined,
     ...overrides,
   };
@@ -138,7 +140,11 @@ const READY_STATE_DEFAULT = {
 function defaultConfig() {
   return {
     cache: { ttlSeconds: 300 },
-    iterate: { cooldownSeconds: 30, fixAttemptsPerThread: 3 },
+    iterate: {
+      cooldownSeconds: 30,
+      fixAttemptsPerThread: 3,
+      minimizeReviewSummaries: { bots: true, humans: true, approvals: false },
+    },
     watch: { interval: "4m", readyDelayMinutes: 10, expiresHours: 8, maxTurns: 50 },
     resolve: {
       concurrency: 4,
@@ -2561,5 +2567,179 @@ describe("runIterate — fix_code commit-suggestions shortcut", () => {
     expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") return;
     expect(result.fix.mode).toBe("rebase-and-push");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Review summary minimize — issue #70
+// ---------------------------------------------------------------------------
+
+describe("runIterate — review summary auto-minimize", () => {
+  const botSummary = { id: "PRR_BOT", author: "copilot-pull-request-reviewer", body: "overview" };
+  const genericBotSummary = { id: "PRR_GEM", author: "gemini-code-assist", body: "overview" };
+  const bracketBotSummary = { id: "PRR_BRK", author: "github-actions[bot]", body: "overview" };
+  const humanSummary = { id: "PRR_HUMAN", author: "alice", body: "nice work" };
+
+  it("emits fix_code with reviewSummaryIds when only a bot summary exists", async () => {
+    mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary] }));
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.mode).toBe("rebase-and-push");
+    if (result.fix.mode !== "rebase-and-push") return;
+    expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
+    expect(result.fix.surfacedHumanSummaries).toEqual([]);
+    expect(result.fix.resolveCommand.argv).toContain("--minimize-comment-ids");
+    expect(result.fix.resolveCommand.argv).toContain("PRR_BOT");
+    expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
+  });
+
+  it("classifies the `*[bot]` login suffix as a bot", async () => {
+    mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [bracketBotSummary] }));
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    const result = await runIterate(makeOpts());
+    if (result.action !== "fix_code") return;
+    if (result.fix.mode !== "rebase-and-push") return;
+    expect(result.fix.reviewSummaryIds).toEqual(["PRR_BRK"]);
+  });
+
+  it("classifies known bot logins (gemini-code-assist) as bots", async () => {
+    mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [genericBotSummary] }));
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    const result = await runIterate(makeOpts());
+    if (result.action !== "fix_code") return;
+    if (result.fix.mode !== "rebase-and-push") return;
+    expect(result.fix.reviewSummaryIds).toEqual(["PRR_GEM"]);
+  });
+
+  it("auto-minimizes human summaries when cfg.humans is true (default)", async () => {
+    mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [humanSummary] }));
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    const result = await runIterate(makeOpts());
+    if (result.action !== "fix_code") return;
+    if (result.fix.mode !== "rebase-and-push") return;
+    expect(result.fix.reviewSummaryIds).toEqual(["PRR_HUMAN"]);
+    expect(result.fix.surfacedHumanSummaries).toEqual([]);
+  });
+
+  it("surfaces (without minimizing) human summaries when cfg.humans is false", async () => {
+    const cfg = defaultConfig();
+    cfg.iterate.minimizeReviewSummaries.humans = false;
+    mockLoadConfig.mockReturnValue(cfg);
+    mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary, humanSummary] }));
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    const result = await runIterate(makeOpts());
+    if (result.action !== "fix_code") return;
+    if (result.fix.mode !== "rebase-and-push") return;
+    expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
+    expect(result.fix.surfacedHumanSummaries).toEqual([humanSummary]);
+  });
+
+  it("does not minimize bots when cfg.bots is false", async () => {
+    const cfg = defaultConfig();
+    cfg.iterate.minimizeReviewSummaries.bots = false;
+    mockLoadConfig.mockReturnValue(cfg);
+    mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary] }));
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    const result = await runIterate(makeOpts());
+    // No actionable work anywhere → wait.
+    expect(result.action).toBe("wait");
+  });
+
+  it("omits APPROVED reviews from minimize list by default (approvals: false)", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        approvedReviews: [{ id: "PRR_AP", author: "alice", body: "" }],
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("wait");
+  });
+
+  it("includes APPROVED reviews in minimize list when cfg.approvals is true", async () => {
+    const cfg = defaultConfig();
+    cfg.iterate.minimizeReviewSummaries.approvals = true;
+    mockLoadConfig.mockReturnValue(cfg);
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        approvedReviews: [{ id: "PRR_AP", author: "alice", body: "" }],
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    const result = await runIterate(makeOpts());
+    if (result.action !== "fix_code") return;
+    if (result.fix.mode !== "rebase-and-push") return;
+    expect(result.fix.reviewSummaryIds).toEqual(["PRR_AP"]);
+  });
+
+  it("summary-only PR triggers fix_code (not wait) so the summary can be minimized", async () => {
+    mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary] }));
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("fix_code");
+  });
+
+  it("blocks the commit-suggestions shortcut when a bot summary is pending", async () => {
+    const t1 = makeSuggestionThread("PRRT_x");
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [t1], autoResolved: [], autoResolveErrors: [] },
+        reviewSummaries: [botSummary],
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.mode).toBe("rebase-and-push");
+    if (result.fix.mode !== "rebase-and-push") return;
+    expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
   });
 });

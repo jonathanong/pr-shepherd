@@ -10,7 +10,7 @@
 | PR comment     | Top-level comment on the PR (not attached to a file)    | `pullRequest.comments`                         |
 | Review summary | PR-level body of a COMMENTED review (e.g. bot overview) | `pullRequest.reviews(states: COMMENTED)` (new) |
 
-Shepherd surfaces review threads and PR comments in the `report.threads` and `report.comments` fields respectively. Review summaries are not part of the `ShepherdReport` — they are surfaced only via `resolve --fetch` in the `reviewSummaries` array.
+Shepherd surfaces review threads and PR comments in the `report.threads` and `report.comments` fields respectively. Review summaries are also surfaced on `ShepherdReport` — as `reviewSummaries` (COMMENTED reviews) and `approvedReviews` (APPROVED-state reviews) — so the `iterate` / monitor loop can auto-minimize them via `--minimize-comment-ids`. The exposure is gated by [`iterate.minimizeReviewSummaries.{bots, humans, approvals}`](configuration.md#iterateminimizereviewsummaries). The manual `/pr-shepherd:resolve` skill reads summaries from `resolve --fetch`'s `reviewSummaries` array, which in turn is gated by `resolve.fetchReviewSummaries`.
 
 ## `isOutdated` flag
 

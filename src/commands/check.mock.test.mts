@@ -60,6 +60,7 @@ function makeBatchData(overrides: Partial<BatchPrData> = {}): BatchPrData {
     comments: [],
     changesRequestedReviews: [],
     reviewSummaries: [],
+    approvedReviews: [],
     checks: [makeCheck()],
     ...overrides,
   };
@@ -296,6 +297,29 @@ describe("runCheck — BLOCKED + REVIEW_REQUIRED (human approval pending)", () =
 // ---------------------------------------------------------------------------
 // Thread minimization filtering
 // ---------------------------------------------------------------------------
+
+describe("runCheck — reviewSummaries + approvedReviews pass-through", () => {
+  it("surfaces reviewSummaries and approvedReviews on the report", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        reviewSummaries: [{ id: "PRR_SUM", author: "copilot", body: "overview" }],
+        approvedReviews: [{ id: "PRR_AP", author: "alice", body: "" }],
+      }),
+    });
+    const report = await runCheck(BASE_OPTS);
+    expect(report.reviewSummaries).toEqual([
+      { id: "PRR_SUM", author: "copilot", body: "overview" },
+    ]);
+    expect(report.approvedReviews).toEqual([{ id: "PRR_AP", author: "alice", body: "" }]);
+  });
+
+  it("defaults to empty arrays when batch has none", async () => {
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData() });
+    const report = await runCheck(BASE_OPTS);
+    expect(report.reviewSummaries).toEqual([]);
+    expect(report.approvedReviews).toEqual([]);
+  });
+});
 
 describe("runCheck — minimized thread filtering", () => {
   it("excludes threads whose top comment is minimized from actionable threads", async () => {

@@ -119,6 +119,23 @@ export async function fetchPrBatch(pr: number, repo: RepoInfo): Promise<BatchRes
     rawReviewSummaryNodes = [...extra, ...rawReviewSummaryNodes];
   }
 
+  // Paginate APPROVED reviews backward if the first page is incomplete.
+  let rawApprovedReviewNodes = raw.approvedReviews.nodes;
+  if (raw.approvedReviews.pageInfo.hasPreviousPage && raw.approvedReviews.pageInfo.startCursor) {
+    const extra = await paginateBackward<RawReviewSummary>(async (cursor) => {
+      const res = await graphql<RawBatchResponse>(BATCH_PR_QUERY, {
+        owner: repo.owner,
+        repo: repo.name,
+        pr,
+        ...(cursor ? { approvedReviewsCursor: cursor } : {}),
+      });
+      const pr2 = res.data.repository.pullRequest;
+      if (!pr2) throw new Error(`PR #${pr} not found`);
+      return pr2.approvedReviews;
+    }, raw.approvedReviews.pageInfo.startCursor);
+    rawApprovedReviewNodes = [...extra, ...rawApprovedReviewNodes];
+  }
+
   // Paginate check contexts forward if the first page is incomplete.
   let rawCheckNodes = raw.commits.nodes[0]?.commit.statusCheckRollup?.contexts.nodes ?? [];
   const checksPageInfo = raw.commits.nodes[0]?.commit.statusCheckRollup?.contexts.pageInfo;
@@ -145,6 +162,7 @@ export async function fetchPrBatch(pr: number, repo: RepoInfo): Promise<BatchRes
     rawCommentNodes,
     rawReviewNodes,
     rawReviewSummaryNodes,
+    rawApprovedReviewNodes,
     rawCheckNodes,
   );
   return { data, rateLimit: result.rateLimit };
@@ -160,6 +178,7 @@ function parseRawPr(
   rawCommentNodes: RawComment[],
   rawReviewNodes: RawReview[],
   rawReviewSummaryNodes: RawReviewSummary[],
+  rawApprovedReviewNodes: RawReviewSummary[],
   rawCheckNodes: RawContextNode[],
 ): BatchPrData {
   const reviewRequests = (raw.reviewRequests?.nodes ?? []).flatMap((n) => {
@@ -204,6 +223,17 @@ function parseRawPr(
 
   const reviewSummaries: Review[] = rawReviewSummaryNodes
     .filter((r) => !r.isMinimized && r.body.trim() !== "")
+    .map((r) => ({
+      id: r.id,
+      author: r.author?.login ?? "unknown",
+      body: r.body,
+    }));
+
+  // APPROVED reviews often have empty bodies (clicking "Approve" without a comment), so
+  // we keep them — only the isMinimized filter applies. Monitor/iterate uses these IDs
+  // when the user opts in to minimizing approvals.
+  const approvedReviews: Review[] = rawApprovedReviewNodes
+    .filter((r) => !r.isMinimized)
     .map((r) => ({
       id: r.id,
       author: r.author?.login ?? "unknown",
@@ -257,6 +287,7 @@ function parseRawPr(
     comments,
     changesRequestedReviews,
     reviewSummaries,
+    approvedReviews,
     checks,
   };
 }
@@ -334,6 +365,10 @@ interface RawPr {
     nodes: RawReview[];
   };
   reviewSummaries: {
+    pageInfo: { hasPreviousPage: boolean; startCursor: string | null };
+    nodes: RawReviewSummary[];
+  };
+  approvedReviews: {
     pageInfo: { hasPreviousPage: boolean; startCursor: string | null };
     nodes: RawReviewSummary[];
   };

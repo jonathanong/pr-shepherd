@@ -166,6 +166,8 @@ export interface BatchPrData {
   changesRequestedReviews: Review[];
   /** COMMENTED reviews with a non-empty, non-minimized body — surfaced for agent-driven minimize. */
   reviewSummaries: Review[];
+  /** APPROVED reviews that are not minimized — opt-in minimize target for the monitor loop. */
+  approvedReviews: Review[];
   checks: CheckRun[];
 }
 
@@ -209,6 +211,10 @@ export interface ShepherdReport {
     actionable: PrComment[];
   };
   changesRequestedReviews: Review[];
+  /** COMMENTED reviews with a non-empty, non-minimized body — surfaced for agent-driven minimize. */
+  reviewSummaries: Review[];
+  /** APPROVED reviews not yet minimized — opt-in minimize target. */
+  approvedReviews: Review[];
   lastPushTime?: number;
 }
 
@@ -345,6 +351,10 @@ export interface FixRebaseAndPush {
   actionableComments: AgentComment[];
   /** IDs of comments classified as noise (quota warnings, bot acks, etc.) — minimize but do not act on. */
   noiseCommentIds: string[];
+  /** Review IDs (COMMENTED summaries and, if opted in, APPROVED reviews) to minimize — no code change needed. */
+  reviewSummaryIds: string[];
+  /** Human-authored COMMENTED review summaries surfaced for visibility when the humans toggle is off. Not minimized. */
+  surfacedHumanSummaries: Review[];
   checks: AgentCheck[];
   changesRequestedReviews: Review[];
   /** Pre-built resolve command. Run after committing and pushing. */

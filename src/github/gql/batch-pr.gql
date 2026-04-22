@@ -7,6 +7,7 @@ query BatchPr(
   $commentsCursor: String
   $changesRequestedCursor: String
   $reviewSummariesCursor: String
+  $approvedReviewsCursor: String
 ) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
@@ -102,6 +103,20 @@ query BatchPr(
         }
       }
       reviewSummaries: reviews(states: COMMENTED, last: 50, before: $reviewSummariesCursor) {
+        pageInfo {
+          hasPreviousPage
+          startCursor
+        }
+        nodes {
+          id
+          isMinimized
+          author {
+            login
+          }
+          body
+        }
+      }
+      approvedReviews: reviews(states: APPROVED, last: 50, before: $approvedReviewsCursor) {
         pageInfo {
           hasPreviousPage
           startCursor

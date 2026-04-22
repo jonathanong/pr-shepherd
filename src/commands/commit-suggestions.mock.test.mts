@@ -92,6 +92,7 @@ function makeBatch(threads: ReviewThread[]): BatchPrData {
     comments: [],
     changesRequestedReviews: [],
     reviewSummaries: [],
+    approvedReviews: [],
     checks: [],
   };
 }

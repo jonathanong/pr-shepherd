@@ -313,11 +313,13 @@ The JSON payload for this variant carries `fix.mode === "commit-suggestions"` pl
 
 5. `## Changes-requested reviews` — one bullet per `CHANGES_REQUESTED` review: ``- `<reviewId>` (@<author>)``.
 6. `## Noise (minimize only)` — backticked IDs of bot-noise comments (quota warnings, rate-limit acks). Minimize on GitHub but do not act on them.
-7. `## Cancelled runs` — backticked IDs, emitted only when CLI-side `gh run cancel` succeeded for at least one run.
-8. `## Post-fix push`:
-   - ``- base: `<branch>` `` — rebase target for the push step.
-   - ``- resolve: `<argv>` `` — fully-quoted resolve command. `$DISMISS_MESSAGE` and `$HEAD_SHA` are always quoted so substituting a multi-word sentence keeps it as one argument. `--require-sha "$HEAD_SHA"` is appended only when a push is expected (threads/actionableComments/checks/reviews present); noise-only dispatches omit it.
-9. `## Instructions` — numbered list to execute in order. The final instruction always refers back to the `resolve:` bullet rather than duplicating the command — that single source of truth is what the monitor executes.
+7. `## Review summaries (minimize only)` — backticked review IDs (`PRR_…`) of `COMMENTED` review summaries (and, if `iterate.minimizeReviewSummaries.approvals` is `true`, `APPROVED` reviews) that will be minimized by the resolve command. Gated by `iterate.minimizeReviewSummaries.{bots, humans, approvals}`. Not emitted if the list is empty.
+8. `## Review summaries (surfaced — not minimized)` — only emitted when `iterate.minimizeReviewSummaries.humans` is `false` and a human-authored summary exists. Same H3-plus-blockquote shape as `## Review threads`; surfaced for human visibility, but NOT included in `--minimize-comment-ids`.
+9. `## Cancelled runs` — backticked IDs, emitted only when CLI-side `gh run cancel` succeeded for at least one run.
+10. `## Post-fix push`:
+    - ``- base: `<branch>` `` — rebase target for the push step.
+    - ``- resolve: `<argv>` `` — fully-quoted resolve command. `$DISMISS_MESSAGE` and `$HEAD_SHA` are always quoted so substituting a multi-word sentence keeps it as one argument. `--require-sha "$HEAD_SHA"` is appended only when a push is expected (threads/actionableComments/checks/reviews present); noise/summary-only dispatches omit it.
+11. `## Instructions` — numbered list to execute in order. The final instruction always refers back to the `resolve:` bullet rather than duplicating the command — that single source of truth is what the monitor executes.
 
 **Section order (commit-suggestions variant):** only `## Review threads`, `## Commit suggestions`, and `## Instructions` — by gate, no comments / checks / reviews / noise / cancelled.
 
@@ -329,7 +331,7 @@ The JSON payload for this variant carries `fix.mode === "commit-suggestions"` pl
 - The `resolve:` instruction is only emitted when the resolve command actually mutates GitHub state (at least one of threads/comments/reviews is non-empty). A `CONFLICTS`-only dispatch omits it.
 - The commit-suggestions variant always emits exactly two instructions: run the `commit-suggestions:` command, then `git pull --ff-only`.
 
-The JSON payload exposes the same data under `fix.{threads, actionableComments, noiseCommentIds, checks, changesRequestedReviews, baseBranch, resolveCommand, instructions}` plus top-level `cancelled` for the rebase-and-push variant; the commit-suggestions variant carries `fix.{mode, threads, commitSuggestionsCommand, instructions}` plus `cancelled: []`.
+The JSON payload exposes the same data under `fix.{threads, actionableComments, noiseCommentIds, reviewSummaryIds, surfacedHumanSummaries, checks, changesRequestedReviews, baseBranch, resolveCommand, instructions}` plus top-level `cancelled` for the rebase-and-push variant; the commit-suggestions variant carries `fix.{mode, threads, commitSuggestionsCommand, instructions}` plus `cancelled: []`. `reviewSummaryIds` are merged into `--minimize-comment-ids` inside `resolveCommand.argv`; `surfacedHumanSummaries` are informational only.
 
 **Flags:**
 

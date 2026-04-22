@@ -30,6 +30,8 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
     threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
     comments: { actionable: [] },
     changesRequestedReviews: [],
+    reviewSummaries: [],
+    approvedReviews: [],
     ...overrides,
   };
 }
