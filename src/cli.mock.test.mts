@@ -655,6 +655,38 @@ describe("main — iterate text format", () => {
     expect(out).toContain("2. Run `git pull --ff-only`");
   });
 
+  it("fix_code (commit-suggestions mode): defensively quotes whitespace-bearing argv entries", async () => {
+    // The argv shape produced by `runIterate` never contains whitespace
+    // (PR number, thread IDs are alphanumeric/comma-separated), but the
+    // formatter's quoting branch is defense-in-depth — exercise it directly
+    // to keep the coverage signal on this safety check.
+    const result: IterateResult = { ...makeIterateResult("fix_code") };
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    result.fix = {
+      mode: "commit-suggestions",
+      threads: [
+        {
+          id: "PRRT_x",
+          path: "src/foo.ts",
+          line: 10,
+          author: "reviewer",
+          body: "use a const\n\n```suggestion\nconst x = 1;\n```",
+        },
+      ],
+      commitSuggestionsCommand: {
+        argv: ["npx", "pr-shepherd", "commit-suggestions", "42", "--thread-ids", "PRRT a b"],
+      },
+      instructions: ["one"],
+    };
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    expect(out).toContain(
+      `- commit-suggestions: \`npx pr-shepherd commit-suggestions 42 --thread-ids "PRRT a b"\``,
+    );
+  });
+
   it("fix_code (commit-suggestions mode): JSON parity — fix.mode and argv round-trip", async () => {
     const result: IterateResult = {
       ...makeIterateResult("fix_code"),
