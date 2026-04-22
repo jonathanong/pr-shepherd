@@ -9,6 +9,8 @@
  *                            [--last-push-time N]
  *   pr-shepherd commit-suggestions [PR] --thread-ids A,B [--format text|json]
  *   pr-shepherd iterate [PR] [--format text|json] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
+ *                              [--no-auto-rerun] [--no-auto-mark-ready] [--no-auto-cancel-actionable]
+ *                              [--no-commit-suggestions]
  *   pr-shepherd status PR1 [PR2 …]
  */
 
@@ -177,6 +179,7 @@ async function handleIterate(args: string[]): Promise<void> {
   const noAutoRerun = hasFlag(extra, "--no-auto-rerun");
   const noAutoMarkReady = hasFlag(extra, "--no-auto-mark-ready");
   const noAutoCancelActionable = hasFlag(extra, "--no-auto-cancel-actionable");
+  const noCommitSuggestions = hasFlag(extra, "--no-commit-suggestions");
 
   const result = await runIterate({
     ...globalOpts,
@@ -187,6 +190,7 @@ async function handleIterate(args: string[]): Promise<void> {
     noAutoRerun,
     noAutoMarkReady,
     noAutoCancelActionable,
+    noCommitSuggestions,
   });
 
   if (globalOpts.format === "json") {
@@ -331,8 +335,13 @@ function formatMutateResult(result: Awaited<ReturnType<typeof runResolveMutate>>
  *
  * Load-bearing conventions the monitor SKILL relies on:
  *   1. The H1 heading on line 1 contains `[<ACTION>]` — the SKILL greps this tag.
- *   2. The `resolve` bullet under `## Rebase` wraps the command in backticks —
- *      the SKILL extracts the backticked content for execution.
+ *   2. `[FIX_CODE]` has two variants discriminated by `fix.mode`:
+ *        2a. `rebase-and-push`: the `resolve` bullet under `## Post-fix push`
+ *            wraps the resolve command in backticks — the SKILL extracts the
+ *            backticked content for execution.
+ *        2b. `commit-suggestions`: the `commit-suggestions` bullet under
+ *            `## Commit suggestions` wraps the CLI invocation in backticks,
+ *            and the `after` bullet wraps `git pull --ff-only` in backticks.
  *   3. The shell script under `[REBASE]` is inside a ```bash fenced block.
  *   4. `## Instructions` items are numbered `1.`, `2.`, … and executed in order.
  */
@@ -375,6 +384,8 @@ function formatFixCodeResult(
 ): string {
   const sections: string[] = [header];
 
+  // Threads section is shared between both fix modes — render it first so the
+  // human/agent sees what is about to be applied.
   if (result.fix.threads.length > 0) {
     sections.push("## Review threads");
     for (const t of result.fix.threads) {
@@ -382,6 +393,21 @@ function formatFixCodeResult(
       sections.push(`### \`${t.id}\` — ${loc} (@${t.author})`);
       sections.push(blockquote(t.body));
     }
+  }
+
+  if (result.fix.mode === "commit-suggestions") {
+    sections.push("## Commit suggestions");
+    sections.push(
+      [
+        `- commit-suggestions: \`${result.fix.commitSuggestionsCommand.argv.join(" ")}\``,
+        `- after: \`git pull --ff-only\``,
+      ].join("\n"),
+    );
+    if (result.fix.instructions.length > 0) {
+      sections.push("## Instructions");
+      sections.push(result.fix.instructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n"));
+    }
+    return sections.join("\n\n");
   }
 
   if (result.fix.actionableComments.length > 0) {
@@ -420,7 +446,7 @@ function formatFixCodeResult(
     sections.push(result.cancelled.map((id) => `\`${id}\``).join(", "));
   }
 
-  sections.push("## Rebase");
+  sections.push("## Post-fix push");
   sections.push(
     [
       `- base: \`${result.baseBranch}\``,

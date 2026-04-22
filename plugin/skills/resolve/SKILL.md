@@ -59,6 +59,8 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
 
 3a. **Prefer commit-suggestion when available.**
 
+> Note: `pr-shepherd iterate` already emits a pre-built `commit-suggestions` invocation under its own `## Commit suggestions` heading when **every** actionable thread carries a suggestion (and nothing else needs fixing). The monitor skill handles that shortcut directly. The logic below applies to the manual `/pr-shepherd:resolve` flow, which fetches via `resolve --fetch` and decides per-thread.
+
 For each **Actionable** thread where the fetch payload returned a `suggestion` field **and** the top-level `commitSuggestionsEnabled` is `true`, let the CLI apply the reviewer's change verbatim instead of re-typing it by hand. This preserves the reviewer's exact text and co-credits them in the commit.
 
 Collect the thread IDs of all such threads, then run:

@@ -32,6 +32,7 @@ import { rest, graphql } from "../github/http.mts";
 import { MARK_PR_READY_MUTATION } from "../github/queries.mts";
 import { readFixAttempts, writeFixAttempts } from "../cache/fix-attempts.mts";
 import { toAgentThread, toAgentComment, toAgentChecks } from "../reporters/agent.mts";
+import { parseSuggestion } from "../suggestions/parse.mts";
 import type {
   AgentComment,
   AgentThread,
@@ -236,6 +237,51 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     );
     const checks = toAgentChecks(actionableChecks);
     const { changesRequestedReviews } = report;
+    const hasConflicts = report.mergeStatus.status === "CONFLICTS";
+
+    // Shortcut: when every actionable thread carries a parseable ```suggestion
+    // block and there is nothing else to fix, hand the agent a pre-built
+    // `commit-suggestions` invocation. The CLI will create the commit
+    // server-side and resolve the threads in one mutation — no rebase, no
+    // force-push, no resolve ceremony. `noiseCommentIds` is part of the gate
+    // because there is no minimize-only mutation in this shortcut.
+    const allThreadsHaveSuggestions =
+      threads.length > 0 &&
+      report.threads.actionable.every((t) => parseSuggestion(t.body) !== null);
+    const canShortcut =
+      config.actions.commitSuggestions &&
+      !opts.noCommitSuggestions &&
+      allThreadsHaveSuggestions &&
+      actionableComments.length === 0 &&
+      noiseCommentIds.length === 0 &&
+      changesRequestedReviews.length === 0 &&
+      checks.length === 0 &&
+      !hasConflicts;
+
+    if (canShortcut) {
+      return {
+        ...base,
+        baseBranch: baseLookup.branch,
+        action: "fix_code",
+        fix: {
+          mode: "commit-suggestions",
+          threads,
+          commitSuggestionsCommand: {
+            argv: [
+              "npx",
+              "pr-shepherd",
+              "commit-suggestions",
+              String(prNumber),
+              "--thread-ids",
+              threads.map((t) => t.id).join(","),
+            ],
+          },
+          instructions: buildCommitSuggestionsInstructions(),
+        },
+        cancelled,
+      };
+    }
+
     const allCommentIds = [...actionableComments.map((c) => c.id), ...noiseCommentIds];
     const resolveCommand = buildResolveCommand(
       threads,
@@ -245,7 +291,6 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       checks,
       prNumber,
     );
-    const hasConflicts = report.mergeStatus.status === "CONFLICTS";
 
     // Guard: if the emitted flow requires a push (code fixes or conflict
     // resolution rebase) but we could not confirm the PR's base branch, refuse
@@ -285,6 +330,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       baseBranch: baseLookup.branch,
       action: "fix_code",
       fix: {
+        mode: "rebase-and-push",
         threads,
         actionableComments,
         noiseCommentIds,
@@ -717,6 +763,19 @@ function buildFixInstructions(
   }
 
   return instructions;
+}
+
+/**
+ * Two-step instruction list emitted with the `## Commit suggestions` shortcut.
+ * The CLI's `commit-suggestions` subcommand creates one server-side commit and
+ * resolves the threads it landed, so the agent only needs to invoke it and
+ * then sync the local checkout.
+ */
+function buildCommitSuggestionsInstructions(): string[] {
+  return [
+    "Run the `commit-suggestions:` command above — it applies all reviewer suggestion blocks server-side as a single commit and resolves the threads.",
+    "Run `git pull --ff-only` to sync your local checkout with the new commit before any further edits.",
+  ];
 }
 
 function buildWaitLog(base: IterateResultBase): string {

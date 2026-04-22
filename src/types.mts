@@ -334,21 +334,46 @@ export interface ResolveCommand {
   hasMutations: boolean;
 }
 
+/**
+ * Default fix_code variant: agent applies edits locally, commits, pushes,
+ * then runs the pre-built resolve command. Emitted under `## Post-fix push`.
+ */
+export interface FixRebaseAndPush {
+  mode: "rebase-and-push";
+  threads: AgentThread[];
+  /** Comments classified as actionable — require code changes. */
+  actionableComments: AgentComment[];
+  /** IDs of comments classified as noise (quota warnings, bot acks, etc.) — minimize but do not act on. */
+  noiseCommentIds: string[];
+  checks: AgentCheck[];
+  changesRequestedReviews: Review[];
+  /** Pre-built resolve command. Run after committing and pushing. */
+  resolveCommand: ResolveCommand;
+  /** Ordered steps for the model to follow. */
+  instructions: string[];
+}
+
+/**
+ * Shortcut variant: every actionable thread carries a parseable ```suggestion
+ * block and there is nothing else to fix. The CLI hands the agent a pre-built
+ * `commit-suggestions` invocation that creates one server-side commit and
+ * resolves the affected threads in a single mutation. Emitted under
+ * `## Commit suggestions`. No rebase, no force-push, no resolve ceremony.
+ */
+export interface FixCommitSuggestions {
+  mode: "commit-suggestions";
+  /** Threads that all carry parseable suggestion blocks (gate invariant). */
+  threads: AgentThread[];
+  /** Pre-built `npx pr-shepherd commit-suggestions <PR> --thread-ids …` argv. */
+  commitSuggestionsCommand: { argv: string[] };
+  /** Two-step instruction list (run command, then `git pull --ff-only`). */
+  instructions: string[];
+}
+
 export interface IterateResultFixCode extends IterateResultBase {
   action: "fix_code";
-  fix: {
-    threads: AgentThread[];
-    /** Comments classified as actionable — require code changes. */
-    actionableComments: AgentComment[];
-    /** IDs of comments classified as noise (quota warnings, bot acks, etc.) — minimize but do not act on. */
-    noiseCommentIds: string[];
-    checks: AgentCheck[];
-    changesRequestedReviews: Review[];
-    /** Pre-built resolve command. Run after committing and pushing. */
-    resolveCommand: ResolveCommand;
-    /** Ordered steps for the model to follow. */
-    instructions: string[];
-  };
+  fix: FixRebaseAndPush | FixCommitSuggestions;
+  /** CLI-cancelled run IDs. Always empty in commit-suggestions mode (no checks by gate). */
   cancelled: string[];
 }
 
@@ -403,6 +428,8 @@ export interface IterateCommandOptions extends GlobalOptions {
   noAutoRerun?: boolean;
   noAutoMarkReady?: boolean;
   noAutoCancelActionable?: boolean;
+  /** When true, suppress the all-suggestions shortcut and always emit the rebase-and-push variant. Mirrors `actions.commitSuggestions: false` for one-off invocations. */
+  noCommitSuggestions?: boolean;
 }
 
 // ---------------------------------------------------------------------------
