@@ -37,3 +37,5 @@ Fetch all actionable review threads and comments, triage them, fix the code, pus
 /pr-shepherd:resolve       # infer from branch
 /pr-shepherd:resolve 42
 ```
+
+**Commit-suggestion shortcut.** For every actionable thread whose body contains a ` ```suggestion ` fenced block, `resolve --fetch` now attaches a parsed `suggestion` field and exposes a top-level `commitSuggestionsEnabled` flag (see [`actions.commitSuggestions`](configuration.md#actionscommitsuggestions--default-true)). When the flag is `true` (the default), the skill prefers invoking [`pr-shepherd commit-suggestions`](usage.md#pr-shepherd-commit-suggestions-pr---thread-ids-ab) in a single batch over re-typing each fix — this applies the reviewer's change verbatim, co-credits them with a `Co-authored-by` trailer, and resolves the threads it lands. After the CLI returns, the skill runs `git pull --ff-only` to sync the local checkout with the new remote commit before touching any other files. Threads the CLI reports as `skipped` (no parseable block, range conflict, file moved since the comment) fall through to the manual-edit path.

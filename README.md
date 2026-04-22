@@ -34,7 +34,8 @@ pr-shepherd is split into a CLI (deterministic, pure GitHub I/O) and three Claud
 Deterministic commands that fetch, classify, and mutate PR state without invoking the model:
 
 - **`check`** — one-shot PR snapshot (merge state, CI results, unresolved comments) via a single batched GraphQL query
-- **`resolve`** — fetch/triage mode auto-resolves outdated threads and returns actionable items; mutate mode batch-resolves threads, minimizes comments, and dismisses reviews by ID, polling `--require-sha` so reviewers see the push before threads close
+- **`resolve`** — fetch/triage mode auto-resolves outdated threads and returns actionable items (each annotated with any parseable ` ```suggestion ` block); mutate mode batch-resolves threads, minimizes comments, and dismisses reviews by ID, polling `--require-sha` so reviewers see the push before threads close
+- **`commit-suggestions`** — agent-side equivalent of GitHub's "Commit suggestion" / "Add suggestion to batch" buttons: parses reviewer ` ```suggestion ` blocks, creates a single remote commit via `createCommitOnBranch` (co-crediting each reviewer), and resolves the applied threads
 - **`iterate`** — classifies current PR state and emits exactly one of eight actions: `cooldown`, `wait`, `rerun_ci`, `mark_ready`, `rebase`, `fix_code`, `cancel`, `escalate` (see [docs/actions.md](docs/actions.md))
 - **`status`** — multi-PR summary table, one lightweight GraphQL query per PR in parallel
 
@@ -46,7 +47,7 @@ Claude Code skills that wrap the CLI with model-driven triage, code edits, and f
 
 - **`/pr-shepherd:check`** — calls `check --format=json` and prints a human summary; never declares "ready to merge" unless every gate passes (merge status CLEAN, status READY, Copilot review not in progress)
 - **`/pr-shepherd:monitor`** — creates a `/loop` cron job (4-minute default, 8-hour expiry, 50-turn cap), deduplicates via a `# pr-shepherd-loop:pr=<N>` tag in `CronList`, dispatches on the `[ACTION]` H1 tag each tick, runs rebase scripts and fix instructions in the main conversation
-- **`/pr-shepherd:resolve`** — runs `resolve --fetch`, triages every returned item into Fixed / Actionable / Not-relevant / Outdated / Acknowledge (no silent drops — this is a project invariant), applies edits, cancels stale CI runs, pushes, then calls `resolve` in mutate mode with `--require-sha`
+- **`/pr-shepherd:resolve`** — runs `resolve --fetch`, triages every returned item into Fixed / Actionable / Not-relevant / Outdated / Acknowledge (no silent drops — this is a project invariant), prefers `commit-suggestions` for threads carrying a ` ```suggestion ` block so the reviewer's change is applied verbatim and co-credited, applies any remaining edits by hand, cancels stale CI runs, pushes, then calls `resolve` in mutate mode with `--require-sha`
 
 See [docs/skills.md](docs/skills.md) for full skill reference.
 
@@ -189,13 +190,14 @@ On each tick (4-minute default, tunable via `watch.interval`): fetch PR state in
 
 ## CLI
 
-```sh
+````sh
 pr-shepherd -v|--version                              # print installed version
 pr-shepherd check [PR]                                # read-only PR status snapshot
 pr-shepherd resolve [PR] [--fetch | --resolve-thread-ids …]
+pr-shepherd commit-suggestions [PR] --thread-ids A,B  # apply reviewer ```suggestion blocks as one commit
 pr-shepherd iterate [PR] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
 pr-shepherd status PR1 [PR2 …]                        # multi-PR table
-```
+````
 
 Common flags (all subcommands):
 
@@ -277,6 +279,37 @@ Dismissed reviews (1): PRR_kwDO123
 ```
 
 `--require-sha` polls GitHub until the PR head matches the SHA before mutating — ensures reviewers see the fix before threads are closed. Exit code: always `0`. `--message` is required only when `--dismiss-review-ids` is set, and should describe the specific fix — it is shown to the reviewer on GitHub.
+
+### pr-shepherd commit-suggestions [PR] --thread-ids A,B,…
+
+Agent-side equivalent of GitHub's "Commit suggestion" and "Add suggestion to batch" buttons. Parses the ` ```suggestion ` block on each specified thread, applies each suggestion to its target file, and creates a single remote commit via the `createCommitOnBranch` GraphQL mutation — co-crediting every distinct reviewer with a `Co-authored-by` trailer. The threads it applies are resolved in the same run.
+
+```sh
+pr-shepherd commit-suggestions 42 --thread-ids PRRT_abc,PRRT_def --format=json
+```
+
+Requires a clean working tree (errors out if `git status --porcelain` is non-empty). After a successful run, **your local checkout is one commit behind remote** — the output's `postActionInstruction` tells the agent to `git pull --ff-only` before editing anything else. Threads whose body lacks a parseable suggestion, that are already resolved or outdated, or whose line range overlaps another applied suggestion on the same file are reported as `skipped` so callers can fall back to a manual fix.
+
+Gated by `actions.commitSuggestions` (default `true`) — `/pr-shepherd:resolve` invokes this automatically for threads that `resolve --fetch` annotates with a `suggestion` field.
+
+Example JSON output:
+
+```json
+{
+  "pr": 42,
+  "repo": "owner/repo",
+  "newHeadSha": "207bb9d…",
+  "commitUrl": "https://github.com/owner/repo/commit/207bb9d…",
+  "threads": [
+    { "id": "PRRT_abc", "status": "applied", "path": "src/foo.ts", "author": "alice" },
+    { "id": "PRRT_def", "status": "skipped", "reason": "no suggestion block in comment body" }
+  ],
+  "applied": true,
+  "postActionInstruction": "Your local checkout is now one commit behind remote. Run `git pull --ff-only` before making any further edits."
+}
+```
+
+Exit codes: `0` at least one suggestion applied · `1` every requested thread skipped.
 
 ### pr-shepherd iterate [PR]
 
@@ -372,28 +405,29 @@ actions:
 
 All supported keys:
 
-| Key                                  | Default                                   | Purpose                                                                          |
-| ------------------------------------ | ----------------------------------------- | -------------------------------------------------------------------------------- |
-| `cache.ttlSeconds`                   | `300`                                     | File-cache TTL for read operations                                               |
-| `iterate.cooldownSeconds`            | `30`                                      | Wait after a push before reading CI                                              |
-| `iterate.fixAttemptsPerThread`       | `3`                                       | Max fix attempts per unresolved thread before `escalate`                         |
-| `watch.interval`                     | `"4m"`                                    | Monitor tick interval (tuned to Claude's 5-min prompt-cache TTL)                 |
-| `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                        |
-| `watch.expiresHours`                 | `8`                                       | Max lifetime of a monitor cron job                                               |
-| `watch.maxTurns`                     | `50`                                      | Max monitor ticks per session                                                    |
-| `resolve.concurrency`                | `4`                                       | Parallel fanout for per-thread GraphQL fetches                                   |
-| `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                 |
-| `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                       |
-| `resolve.fetchReviewSummaries`       | `true`                                    | Surface `COMMENTED` review summaries in `resolve --fetch` output                 |
-| `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos) |
-| `checks.timeoutPatterns`             | see [`src/config.json`](src/config.json)  | Log patterns that classify a failure as `timeout`                                |
-| `checks.infraPatterns`               | see [`src/config.json`](src/config.json)  | Log patterns that classify a failure as `infrastructure`                         |
-| `checks.logMaxLines`                 | `50`                                      | Max log lines kept per failing check                                             |
-| `checks.logMaxChars`                 | `3000`                                    | Max log characters kept per failing check                                        |
-| `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review blocks `mark_ready`                         |
-| `actions.autoResolveOutdated`        | `true`                                    | Auto-resolve threads that point to code no longer in the PR diff                 |
-| `actions.autoRebase`                 | `true`                                    | Emit `rebase` for flaky failures when the branch is behind base                  |
-| `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR's CI goes clean                                |
+| Key                                  | Default                                   | Purpose                                                                                              |
+| ------------------------------------ | ----------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `cache.ttlSeconds`                   | `300`                                     | File-cache TTL for read operations                                                                   |
+| `iterate.cooldownSeconds`            | `30`                                      | Wait after a push before reading CI                                                                  |
+| `iterate.fixAttemptsPerThread`       | `3`                                       | Max fix attempts per unresolved thread before `escalate`                                             |
+| `watch.interval`                     | `"4m"`                                    | Monitor tick interval (tuned to Claude's 5-min prompt-cache TTL)                                     |
+| `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                            |
+| `watch.expiresHours`                 | `8`                                       | Max lifetime of a monitor cron job                                                                   |
+| `watch.maxTurns`                     | `50`                                      | Max monitor ticks per session                                                                        |
+| `resolve.concurrency`                | `4`                                       | Parallel fanout for per-thread GraphQL fetches                                                       |
+| `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                     |
+| `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                           |
+| `resolve.fetchReviewSummaries`       | `true`                                    | Surface `COMMENTED` review summaries in `resolve --fetch` output                                     |
+| `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos)                     |
+| `checks.timeoutPatterns`             | see [`src/config.json`](src/config.json)  | Log patterns that classify a failure as `timeout`                                                    |
+| `checks.infraPatterns`               | see [`src/config.json`](src/config.json)  | Log patterns that classify a failure as `infrastructure`                                             |
+| `checks.logMaxLines`                 | `50`                                      | Max log lines kept per failing check                                                                 |
+| `checks.logMaxChars`                 | `3000`                                    | Max log characters kept per failing check                                                            |
+| `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review blocks `mark_ready`                                             |
+| `actions.autoResolveOutdated`        | `true`                                    | Auto-resolve threads that point to code no longer in the PR diff                                     |
+| `actions.autoRebase`                 | `true`                                    | Emit `rebase` for flaky failures when the branch is behind base                                      |
+| `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR's CI goes clean                                                    |
+| `actions.commitSuggestions`          | `true`                                    | Route `/pr-shepherd:resolve` through `commit-suggestions` for threads with a ` ```suggestion ` block |
 
 Environment variables: `GH_TOKEN` / `GITHUB_TOKEN` (auth; falls back to `gh auth token`), `PR_SHEPHERD_CACHE_DIR` (override cache base dir), `PR_SHEPHERD_CACHE_TTL_SECONDS` (override cache TTL; `--cache-ttl` takes precedence over this env var, which in turn takes precedence over the RC/config value).
 
