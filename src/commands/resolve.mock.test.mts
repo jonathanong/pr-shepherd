@@ -141,6 +141,76 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     expect(result.actionableThreads.map((t) => t.id)).toEqual(["t-active"]);
   });
 
+  it("attaches a parsed suggestion block to threads whose body contains one", async () => {
+    const thread = makeThread({
+      id: "t-with-suggestion",
+      path: "src/foo.ts",
+      line: 10,
+      startLine: null,
+      author: "reviewer",
+      body: "Consider this change:\n\n```suggestion\nconst x = 42;\n```",
+    });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
+
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.actionableThreads[0]?.suggestion).toEqual({
+      startLine: 10,
+      endLine: 10,
+      replacement: "const x = 42;",
+      author: "reviewer",
+    });
+  });
+
+  it("uses thread.startLine for multi-line suggestion ranges", async () => {
+    const thread = makeThread({
+      id: "t-multi",
+      path: "src/foo.ts",
+      line: 12,
+      startLine: 10,
+      body: "```suggestion\nA\nB\nC\n```",
+    });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
+
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.actionableThreads[0]?.suggestion).toMatchObject({
+      startLine: 10,
+      endLine: 12,
+      replacement: "A\nB\nC",
+    });
+  });
+
+  it("omits suggestion for threads without a ```suggestion block", async () => {
+    const thread = makeThread({
+      id: "t-plain",
+      path: "src/foo.ts",
+      line: 5,
+      body: "please rename this variable",
+    });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
+
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.actionableThreads[0]?.suggestion).toBeUndefined();
+  });
+
+  it("omits suggestion for threads with no file/line anchor even when body has a suggestion block", async () => {
+    const thread = makeThread({
+      id: "t-no-anchor",
+      path: null,
+      line: null,
+      body: "```suggestion\nconst x = 10;\n```",
+    });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
+
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.actionableThreads[0]?.suggestion).toBeUndefined();
+  });
+
+  it("surfaces commitSuggestionsEnabled mirroring the config flag", async () => {
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({}) });
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.commitSuggestionsEnabled).toBe(true);
+  });
+
   it("actionableComments excludes minimized comments", async () => {
     const visible = makeComment({ id: "c-visible", isMinimized: false });
     const minimized = makeComment({ id: "c-min", isMinimized: true });

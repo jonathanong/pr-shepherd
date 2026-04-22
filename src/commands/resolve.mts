@@ -114,7 +114,10 @@ function extractSuggestion(
   return {
     startLine,
     endLine: thread.line,
-    replacement: parsed.replacement,
+    // For the external JSON/text output the informational view is a string.
+    // The actual per-line array is re-parsed by the commit-suggestions CLI
+    // when it runs; callers don't need to reconstruct it here.
+    replacement: parsed.lines.join("\n"),
     author: thread.author,
   };
 }

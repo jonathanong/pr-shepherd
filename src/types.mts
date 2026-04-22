@@ -96,7 +96,7 @@ export interface SuggestionBlock {
   startLine: number;
   /** 1-indexed inclusive end line. */
   endLine: number;
-  /** Replacement text verbatim. Empty string means "delete these lines". */
+  /** Replacement text (lines joined by \n). Empty string means "delete these lines"; a single \n means "replace with a blank line". Informational for agents — the CLI uses the full ParsedSuggestion internally. */
   replacement: string;
   /** Reviewer login, surfaced so callers can co-credit them in commits. */
   author: string;

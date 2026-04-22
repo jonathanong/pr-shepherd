@@ -73,7 +73,7 @@ export async function runCommitSuggestions(
     path: string;
     startLine: number;
     endLine: number;
-    replacement: string;
+    lines: readonly string[];
     author: string;
   }> = [];
 
@@ -105,7 +105,7 @@ export async function runCommitSuggestions(
       path: thread.path,
       startLine: thread.startLine ?? thread.line,
       endLine: thread.line,
-      replacement: parsed.replacement,
+      lines: parsed.lines,
       author: thread.author,
     });
   }
@@ -163,7 +163,7 @@ export async function runCommitSuggestions(
         continue;
       }
       try {
-        fileContent = applySuggestionToFile(fileContent, s.startLine, s.endLine, s.replacement);
+        fileContent = applySuggestionToFile(fileContent, s.startLine, s.endLine, s.lines);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         perThread.push({ id: s.id, status: "skipped", reason: msg, path, author: s.author });

@@ -10,49 +10,77 @@
  * button (this one included) must parse + commit themselves.
  */
 
-// Allow ```suggestion (with optional trailing chars on the same line, and
-// optional leading whitespace for nested/indented blocks in quoted replies).
-// [\s\S] matches any char including newline; non-greedy so the first closing
-// ``` wins (matches GitHub's "take the first block" behaviour).
-const SUGGESTION_BLOCK = /(^|\n)[ \t>]*```suggestion[^\n]*\n([\s\S]*?)\n[ \t>]*```/;
+// Capture the opening prefix (indent / `>` quote markers) so the same prefix
+// can be required before the closing fence via a backreference. Lazy on the
+// prefix so same-line-indent blocks outside a quote aren't swallowed.
+// Lazy body with no mandatory newline before the closing fence — this lets
+// empty blocks (deletion) match and preserves the body's own trailing \n so
+// the caller can distinguish "delete these lines" from "replace with a blank
+// line" (raw="" vs raw="\n").
+const SUGGESTION_BLOCK = /(^|\n)([ \t>]*?)```suggestion[^\n]*\n([\s\S]*?)\2```/;
 
 export interface ParsedSuggestion {
-  /** Replacement text verbatim, with the fenced block's trailing newline stripped. May be the empty string (means: delete these lines). */
-  replacement: string;
+  /**
+   * Replacement lines to splice in. Empty array means "delete these lines".
+   * `[""]` means "replace with a single blank line". Array length equals the
+   * number of lines in the resulting file (not including any implicit trailing
+   * newline from the original file).
+   */
+  lines: readonly string[];
 }
 
 /**
  * Return the first ```suggestion block from a review-comment body, or null if none.
  *
- * The returned `replacement` is the block body with the terminating newline
- * (the one immediately before the closing ```) stripped — matching GitHub's
- * own commit-suggestion semantics where the closing fence is syntax, not content.
+ * Handles three distinct cases:
+ *   - Empty block (` ```suggestion\n``` `) → `lines: []` (deletion).
+ *   - Blank-line-only body (` ```suggestion\n\n``` `) → `lines: [""]`.
+ *   - Non-empty body → split into lines, dropping the single trailing `\n`
+ *     that acts as a line terminator rather than an extra blank line.
+ *
+ * When the block is embedded in a quoted reply (e.g. `> ```suggestion …`),
+ * the leading prefix captured from the opening fence is stripped from each
+ * body line — but only when that exact prefix is present, so legitimate `>`
+ * characters inside the suggested code survive.
  */
 export function parseSuggestion(body: string): ParsedSuggestion | null {
   const match = SUGGESTION_BLOCK.exec(body);
   if (!match) return null;
-  // Strip leading `> ` markers that appear when a suggestion is inside a
-  // quoted reply (e.g. when bots embed the original review comment).
-  const raw = match[2] ?? "";
-  const cleaned = raw
-    .split("\n")
-    .map((line) => line.replace(/^[ \t]*>[ \t]?/, ""))
-    .join("\n");
-  return { replacement: cleaned };
+  const prefix = match[2] ?? "";
+  const raw = match[3] ?? "";
+
+  // Raw truly empty → the block had no body at all, which GitHub treats as
+  // "delete the commented lines".
+  if (raw === "") return { lines: [] };
+
+  const unindented =
+    prefix === ""
+      ? raw
+      : raw
+          .split("\n")
+          .map((line) => (line.startsWith(prefix) ? line.slice(prefix.length) : line))
+          .join("\n");
+
+  // Strip exactly one trailing \n — it's the line terminator of the last body
+  // line, not an extra blank line. An explicit trailing blank is represented
+  // by two trailing \ns, which leave one behind after this strip.
+  const stripped = unindented.endsWith("\n") ? unindented.slice(0, -1) : unindented;
+  return { lines: stripped.split("\n") };
 }
 
 /**
  * Apply a suggestion to a file's full contents by replacing lines
- * [startLine..endLine] (1-indexed, inclusive) with the replacement text.
+ * [startLine..endLine] (1-indexed, inclusive) with the given replacement lines.
  *
- * If the suggestion replacement is the empty string, the lines are deleted.
- * The file's trailing-newline state is preserved.
+ * Pass `[]` to delete the range, `[""]` to replace with a single blank line,
+ * or `["a", "b", ...]` for arbitrary replacements. The file's trailing-newline
+ * state is preserved exactly.
  */
 export function applySuggestionToFile(
   fileContent: string,
   startLine: number,
   endLine: number,
-  replacement: string,
+  replacementLines: readonly string[],
 ): string {
   if (startLine < 1 || endLine < startLine) {
     throw new Error(`Invalid line range: start=${startLine}, end=${endLine}`);
@@ -66,8 +94,6 @@ export function applySuggestionToFile(
   }
   const before = lines.slice(0, startLine - 1);
   const after = lines.slice(endLine);
-  // An empty replacement means "delete these lines" — don't splice an empty string in.
-  const replacementLines = replacement === "" ? [] : replacement.split("\n");
   const result = [...before, ...replacementLines, ...after].join("\n");
   return endsWithNewline ? `${result}\n` : result;
 }
