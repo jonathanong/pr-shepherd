@@ -130,6 +130,14 @@ describe("runCommitSuggestions — validation", () => {
       runCommitSuggestions({ ...GLOBAL_OPTS, prNumber: 42, threadIds: ["t1"] }),
     ).rejects.toThrow("uncommitted changes");
   });
+
+  it("throws when no PR is given and none can be inferred from the branch", async () => {
+    const { getCurrentPrNumber } = await import("../github/client.mts");
+    vi.mocked(getCurrentPrNumber).mockResolvedValueOnce(null);
+    await expect(
+      runCommitSuggestions({ ...GLOBAL_OPTS, prNumber: undefined, threadIds: ["t1"] }),
+    ).rejects.toThrow("No open PR found");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -416,6 +424,35 @@ describe("runCommitSuggestions — applied", () => {
       threadIds: ["t1"],
     });
     expect(result.postActionInstruction).toMatch(/git pull --ff-only/);
+  });
+
+  it("skips a suggestion whose line range is out of bounds for the fetched file", async () => {
+    // Thread anchored on line 10 but the file only has 3 lines (headsha fetch).
+    mockFetchBatch.mockResolvedValue({
+      data: makeBatch([
+        makeThread({ id: "t1", path: "src/foo.ts", line: 10, body: "```suggestion\nX\n```" }),
+      ]),
+    });
+    mockGetFileContents.mockResolvedValue("a\nb\nc\n");
+
+    const result = await runCommitSuggestions({
+      ...GLOBAL_OPTS,
+      prNumber: 42,
+      threadIds: ["t1"],
+    });
+
+    expect(result.applied).toBe(false);
+    expect(result.threads[0]).toMatchObject({ status: "skipped", reason: /out of range/ });
+    expect(mockGraphql).not.toHaveBeenCalled();
+  });
+
+  it("throws when createCommitOnBranch returns a null commit (branch diverged)", async () => {
+    mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread({ id: "t1" })]) });
+    mockGraphql.mockResolvedValueOnce({ data: { createCommitOnBranch: { commit: null } } });
+
+    await expect(
+      runCommitSuggestions({ ...GLOBAL_OPTS, prNumber: 42, threadIds: ["t1"] }),
+    ).rejects.toThrow(/branch may have diverged/);
   });
 
   it("throws when applyResolveOptions reports per-thread failures after the commit lands", async () => {

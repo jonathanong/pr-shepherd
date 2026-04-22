@@ -63,6 +63,13 @@ describe("parseSuggestion", () => {
     const body = "```js\nconst x = 1;\n```";
     expect(parseSuggestion(body)).toBeNull();
   });
+
+  it("tolerates a body without a trailing newline before the closing fence", () => {
+    // GitHub renders suggestions when the closing fence is inline — the regex
+    // accepts this and the body is taken verbatim (no trailing \n to strip).
+    const body = "```suggestion\nfoo```";
+    expect(parseSuggestion(body)).toEqual({ lines: ["foo"] });
+  });
 });
 
 describe("applySuggestionToFile", () => {
