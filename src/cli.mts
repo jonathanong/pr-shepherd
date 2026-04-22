@@ -399,7 +399,7 @@ function formatFixCodeResult(
     sections.push("## Commit suggestions");
     sections.push(
       [
-        `- commit-suggestions: \`${result.fix.commitSuggestionsCommand.argv.join(" ")}\``,
+        `- commit-suggestions: \`${result.fix.commitSuggestionsCommand.argv.map((a) => (/\s/.test(a) ? `"${a}"` : a)).join(" ")}\``,
         `- after: \`git pull --ff-only\``,
       ].join("\n"),
     );
