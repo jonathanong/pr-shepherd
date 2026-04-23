@@ -464,20 +464,26 @@ function buildSummary(report: Awaited<ReturnType<typeof runCheck>>): IterateResu
  * Includes both passing and failing. Failing entries carry failureKind + errorExcerpt.
  */
 function buildRelevantChecks(report: Awaited<ReturnType<typeof runCheck>>): RelevantCheck[] {
-  const passing: RelevantCheck[] = report.checks.passing.map((c) => ({
-    name: c.name,
-    conclusion: c.conclusion as RelevantCheck["conclusion"],
-    runId: c.runId,
-    detailsUrl: c.detailsUrl || null,
-  }));
-  const failing: RelevantCheck[] = report.checks.failing.map((c) => ({
-    name: c.name,
-    conclusion: c.conclusion as RelevantCheck["conclusion"],
-    runId: c.runId,
-    detailsUrl: c.detailsUrl || null,
-    failureKind: c.failureKind,
-    errorExcerpt: c.errorExcerpt,
-  }));
+  const excluded = new Set([null, "SKIPPED", "NEUTRAL"]);
+  const passing: RelevantCheck[] = report.checks.passing.flatMap((c) => {
+    if (excluded.has(c.conclusion)) return [];
+    const conclusion = c.conclusion as RelevantCheck["conclusion"];
+    return [{ name: c.name, conclusion, runId: c.runId, detailsUrl: c.detailsUrl || null }];
+  });
+  const failing: RelevantCheck[] = report.checks.failing.flatMap((c) => {
+    if (excluded.has(c.conclusion)) return [];
+    const conclusion = c.conclusion as RelevantCheck["conclusion"];
+    return [
+      {
+        name: c.name,
+        conclusion,
+        runId: c.runId,
+        detailsUrl: c.detailsUrl || null,
+        failureKind: c.failureKind,
+        errorExcerpt: c.errorExcerpt,
+      },
+    ];
+  });
   return [...passing, ...failing];
 }
 

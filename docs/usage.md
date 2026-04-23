@@ -163,7 +163,6 @@ Flags:
 | `--ready-delay Nm`            | `10m`   | Settle window before the loop cancels after READY |
 | `--cooldown-seconds N`        | `30`    | Wait after a push before reading CI               |
 | `--last-push-time N`          | —       | Unix timestamp hint embedded in the result        |
-| `--no-auto-rerun`             | false   | Return `wait` instead of rerunning transient CI   |
 | `--no-auto-mark-ready`        | false   | Skip converting draft → ready-for-review          |
 | `--no-auto-cancel-actionable` | false   | Skip cancelling actionable failing runs           |
 
