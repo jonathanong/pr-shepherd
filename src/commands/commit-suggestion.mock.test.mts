@@ -18,7 +18,9 @@ vi.mock("node:child_process", () => ({
     const cb = typeof optsOrCb === "function" ? optsOrCb : maybeCb!;
     mockExecFile(cmd, args)
       .then((result: { stdout: string; stderr: string }) => cb(null, result))
-      .catch((err: Error & { stderr?: string }) => cb(err, { stdout: "", stderr: err.stderr ?? "" }));
+      .catch((err: Error & { stderr?: string }) =>
+        cb(err, { stdout: "", stderr: err.stderr ?? "" }),
+      );
   },
 }));
 
@@ -31,7 +33,9 @@ vi.mock("node:fs/promises", () => ({
 vi.mock("../github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
-  getPrHead: vi.fn().mockResolvedValue({ sha: "headsha", ref: "feature/foo", repoWithOwner: "owner/repo" }),
+  getPrHead: vi
+    .fn()
+    .mockResolvedValue({ sha: "headsha", ref: "feature/foo", repoWithOwner: "owner/repo" }),
   getCurrentBranch: vi.fn().mockResolvedValue("feature/foo"),
 }));
 
@@ -140,7 +144,11 @@ function setupHappyPath(): void {
 describe("runCommitSuggestion — validation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetPrHead.mockResolvedValue({ sha: "headsha", ref: "feature/foo", repoWithOwner: "owner/repo" });
+    mockGetPrHead.mockResolvedValue({
+      sha: "headsha",
+      ref: "feature/foo",
+      repoWithOwner: "owner/repo",
+    });
     mockGetCurrentBranch.mockResolvedValue("feature/foo");
     mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
     mockExecFile.mockImplementation(() => makeGitSuccess(""));
@@ -172,7 +180,11 @@ describe("runCommitSuggestion — validation", () => {
 describe("runCommitSuggestion — preflight", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetPrHead.mockResolvedValue({ sha: "headsha", ref: "feature/foo", repoWithOwner: "owner/repo" });
+    mockGetPrHead.mockResolvedValue({
+      sha: "headsha",
+      ref: "feature/foo",
+      repoWithOwner: "owner/repo",
+    });
     mockGetCurrentBranch.mockResolvedValue("feature/foo");
     mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
   });
@@ -203,7 +215,11 @@ describe("runCommitSuggestion — preflight", () => {
 describe("runCommitSuggestion — thread classification", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetPrHead.mockResolvedValue({ sha: "headsha", ref: "feature/foo", repoWithOwner: "owner/repo" });
+    mockGetPrHead.mockResolvedValue({
+      sha: "headsha",
+      ref: "feature/foo",
+      repoWithOwner: "owner/repo",
+    });
     mockGetCurrentBranch.mockResolvedValue("feature/foo");
     mockExecFile.mockImplementation(() => makeGitSuccess(""));
   });
@@ -284,7 +300,11 @@ describe("runCommitSuggestion — thread classification", () => {
 describe("runCommitSuggestion — successful apply", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetPrHead.mockResolvedValue({ sha: "headsha", ref: "feature/foo", repoWithOwner: "owner/repo" });
+    mockGetPrHead.mockResolvedValue({
+      sha: "headsha",
+      ref: "feature/foo",
+      repoWithOwner: "owner/repo",
+    });
     mockGetCurrentBranch.mockResolvedValue("feature/foo");
     setupHappyPath();
   });
@@ -370,13 +390,21 @@ describe("runCommitSuggestion — successful apply", () => {
       ]),
     });
 
-    const result = await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" });
+    const result = await runCommitSuggestion({
+      ...GLOBAL_OPTS,
+      threadId: "PRRT_x",
+      message: "fix",
+    });
     expect(result.startLine).toBe(4);
     expect(result.endLine).toBe(6);
   });
 
   it("postActionInstruction mentions git push", async () => {
-    const result = await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" });
+    const result = await runCommitSuggestion({
+      ...GLOBAL_OPTS,
+      threadId: "PRRT_x",
+      message: "fix",
+    });
     expect(result.postActionInstruction).toContain("git push");
   });
 });
@@ -388,7 +416,11 @@ describe("runCommitSuggestion — successful apply", () => {
 describe("runCommitSuggestion — patch failure", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetPrHead.mockResolvedValue({ sha: "headsha", ref: "feature/foo", repoWithOwner: "owner/repo" });
+    mockGetPrHead.mockResolvedValue({
+      sha: "headsha",
+      ref: "feature/foo",
+      repoWithOwner: "owner/repo",
+    });
     mockGetCurrentBranch.mockResolvedValue("feature/foo");
     mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -408,7 +440,11 @@ describe("runCommitSuggestion — patch failure", () => {
       return makeGitSuccess("");
     });
 
-    const result = await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" });
+    const result = await runCommitSuggestion({
+      ...GLOBAL_OPTS,
+      threadId: "PRRT_x",
+      message: "fix",
+    });
 
     expect(result.applied).toBe(false);
     expect(result.reason).toContain("git apply rejected");
@@ -456,7 +492,11 @@ describe("runCommitSuggestion — patch failure", () => {
 describe("runCommitSuggestion — resolve failure", () => {
   it("throws (with commit SHA in message) when resolve fails after commit lands", async () => {
     vi.clearAllMocks();
-    mockGetPrHead.mockResolvedValue({ sha: "headsha", ref: "feature/foo", repoWithOwner: "owner/repo" });
+    mockGetPrHead.mockResolvedValue({
+      sha: "headsha",
+      ref: "feature/foo",
+      repoWithOwner: "owner/repo",
+    });
     mockGetCurrentBranch.mockResolvedValue("feature/foo");
     setupHappyPath();
     mockApplyResolveOptions.mockResolvedValue({

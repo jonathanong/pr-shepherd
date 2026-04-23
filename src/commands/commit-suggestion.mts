@@ -158,7 +158,7 @@ export async function runCommitSuggestion(
   }
 
   // Stage and commit
-  await execFile("git", ["add", filePath]);
+  await execFile("git", ["add", "--", filePath]);
 
   const coAuthor = `Co-authored-by: ${thread.author} <${thread.author}@users.noreply.github.com>`;
   const commitBody = opts.description ? `${opts.description}\n\n${coAuthor}` : coAuthor;
