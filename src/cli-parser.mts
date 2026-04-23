@@ -368,9 +368,10 @@ function formatMutateResult(result: Awaited<ReturnType<typeof runResolveMutate>>
  *      bullet under `## Post-fix push` wraps the resolve command in backticks —
  *      the SKILL extracts the backticked content for execution.
  *   3. The shell script under `[REBASE]` is inside a ```bash fenced block.
- *   4. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, …
- *      — that tells the monitor exactly what to do with this output. The SKILL
- *      simply follows those steps; it does not need its own dispatch table.
+ *   4. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … —
+ *      that tells the monitor exactly what to do with this output. The section is
+ *      unconditional: every action, every variant, always emits at least one step.
+ *      The SKILL simply follows those steps; it does not need its own dispatch table.
  */
 function formatIterateResult(result: import("./types.mts").IterateResult): string {
   const heading = `# PR #${result.pr} [${result.action.toUpperCase()}]`;
@@ -485,6 +486,20 @@ function formatFixCodeResult(
     }
   }
 
+  if (result.fix.mode === "commit-suggestions") {
+    sections.push("## Commit suggestions");
+    sections.push(
+      [
+        `- commit-suggestions: \`${result.fix.commitSuggestionsCommand.argv.map((a) => (/\s/.test(a) ? `"${a}"` : a)).join(" ")}\``,
+        `- after: \`git pull --ff-only\``,
+      ].join("\n"),
+    );
+    sections.push("## Instructions");
+    sections.push(result.fix.instructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n"));
+    return sections.join("\n\n");
+  }
+
+
   if (result.fix.actionableComments.length > 0) {
     sections.push("## Actionable comments");
     for (const c of result.fix.actionableComments) {
@@ -542,10 +557,8 @@ function formatFixCodeResult(
     ].join("\n"),
   );
 
-  if (result.fix.instructions.length > 0) {
-    sections.push("## Instructions");
-    sections.push(result.fix.instructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n"));
-  }
+  sections.push("## Instructions");
+  sections.push(result.fix.instructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n"));
 
   return sections.join("\n\n");
 }

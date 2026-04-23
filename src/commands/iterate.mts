@@ -811,10 +811,12 @@ function buildFixInstructions(
     );
   }
 
-  if (needsPush || resolveCommand.hasMutations) {
+  if (needsPush) {
     instructions.push(
       `Stop this iteration — CI needs time to run on the new push before the next tick.`,
     );
+  } else if (resolveCommand.hasMutations) {
+    instructions.push(`Stop this iteration before the next tick.`);
   } else {
     instructions.push(`End this iteration.`);
   }
