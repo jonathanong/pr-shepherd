@@ -17,6 +17,7 @@ const FLAGS_WITH_VALUES = new Set([
   "--last-push-time",
   "--ready-delay",
   "--cooldown-seconds",
+  "--stall-timeout",
   "--require-sha",
   "--message",
   "--thread-ids",

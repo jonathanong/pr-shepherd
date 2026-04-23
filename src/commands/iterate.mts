@@ -31,6 +31,7 @@ import { getCurrentPrNumber } from "../github/client.mts";
 import { rest, graphql } from "../github/http.mts";
 import { MARK_PR_READY_MUTATION } from "../github/queries.mts";
 import { readFixAttempts, writeFixAttempts } from "../cache/fix-attempts.mts";
+import { readStallState, writeStallState } from "../cache/iterate-stall.mts";
 import { toAgentThread, toAgentComment, toAgentChecks } from "../reporters/agent.mts";
 import { parseSuggestion, isCommittableSuggestion } from "../suggestions/parse.mts";
 import type {
@@ -59,6 +60,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   const config = loadConfig();
   const cooldownSeconds = opts.cooldownSeconds ?? config.iterate.cooldownSeconds;
   const readyDelaySeconds = opts.readyDelaySeconds ?? config.watch.readyDelayMinutes * 60;
+  const stallTimeoutSeconds = opts.stallTimeoutSeconds ?? config.iterate.stallTimeoutMinutes * 60;
 
   // Resolve prNumber early so the cooldown result carries a valid PR number.
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
@@ -145,6 +147,10 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     baseBranch: report.baseBranch,
   };
 
+  // Fetch HEAD SHA once — used by both fix-attempts tracking and stall-detection fingerprint.
+  const headSha = await getCurrentHeadSha();
+  const stallKey = { owner: repoOwner, repo: repoName, pr: prNumber };
+
   // Step 3 cont.: cancel if ready-delay elapsed.
   if (readyState.shouldCancel) {
     return {
@@ -184,7 +190,6 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
 
   if (hasActionableWork) {
     // Load fix-attempt counts, resetting if HEAD SHA changed (new commit pushed).
-    const headSha = await getCurrentHeadSha();
     const attemptsKey = { owner: repoOwner, repo: repoName, pr: prNumber };
     const stored = await readFixAttempts(attemptsKey);
     const attempts =
@@ -274,27 +279,36 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       reviewSummaryIds.length === 0;
 
     if (canShortcut) {
-      return {
-        ...base,
-        baseBranch: baseLookup.branch,
-        action: "fix_code",
-        fix: {
-          mode: "commit-suggestions",
-          threads,
-          commitSuggestionsCommand: {
-            argv: [
-              "npx",
-              "pr-shepherd",
-              "commit-suggestions",
-              String(prNumber),
-              "--thread-ids",
-              threads.map((t) => t.id).join(","),
-            ],
+      return applyStallGuard(
+        stallKey,
+        stallTimeoutSeconds,
+        headSha,
+        base,
+        prNumber,
+        {
+          ...base,
+          baseBranch: baseLookup.branch,
+          action: "fix_code" as const,
+          fix: {
+            mode: "commit-suggestions" as const,
+            threads,
+            commitSuggestionsCommand: {
+              argv: [
+                "npx",
+                "pr-shepherd",
+                "commit-suggestions",
+                String(prNumber),
+                "--thread-ids",
+                threads.map((t) => t.id).join(","),
+              ],
+            },
+            instructions: buildCommitSuggestionsInstructions(),
           },
-          instructions: buildCommitSuggestionsInstructions(),
-        },
-        cancelled,
-      };
+          cancelled,
+        } as IterateResult,
+        report,
+        reviewSummaryIds,
+      );
     }
 
     // Review summary IDs ride in the minimize bucket — they have no code-fix counterpart.
@@ -345,24 +359,33 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       prNumber,
     );
 
-    return {
-      ...base,
-      baseBranch: baseLookup.branch,
-      action: "fix_code",
-      fix: {
-        mode: "rebase-and-push",
-        threads,
-        actionableComments,
-        noiseCommentIds,
-        reviewSummaryIds,
-        surfacedSummaries,
-        checks,
-        changesRequestedReviews,
-        resolveCommand,
-        instructions,
-      },
-      cancelled,
-    };
+    return applyStallGuard(
+      stallKey,
+      stallTimeoutSeconds,
+      headSha,
+      base,
+      prNumber,
+      {
+        ...base,
+        baseBranch: baseLookup.branch,
+        action: "fix_code" as const,
+        fix: {
+          mode: "rebase-and-push" as const,
+          threads,
+          actionableComments,
+          noiseCommentIds,
+          reviewSummaryIds,
+          surfacedSummaries,
+          checks,
+          changesRequestedReviews,
+          resolveCommand,
+          instructions,
+        },
+        cancelled,
+      } as IterateResult,
+      report,
+      reviewSummaryIds,
+    );
   }
 
   // Step 5: Transient failures (timeout / infrastructure) — no actionable work, no conflicts.
@@ -395,12 +418,21 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       ({ runId, checkNames, failureKind }) =>
         `${runId} (${checkNames.join(", ")} — ${failureKind})`,
     );
-    return {
-      ...base,
-      action: "rerun_ci",
-      reran,
-      log: `RERAN ${reran.length} CI run${reran.length === 1 ? "" : "s"}: ${runSummaries.join(", ")}`,
-    };
+    return applyStallGuard(
+      stallKey,
+      stallTimeoutSeconds,
+      headSha,
+      base,
+      prNumber,
+      {
+        ...base,
+        action: "rerun_ci" as const,
+        reran,
+        log: `RERAN ${reran.length} CI run${reran.length === 1 ? "" : "s"}: ${runSummaries.join(", ")}`,
+      } as IterateResult,
+      report,
+      reviewSummaryIds,
+    );
   }
 
   // Step 6: Flaky + behind — rebase needed.
@@ -424,15 +456,24 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
         },
       };
     }
-    return {
-      ...base,
-      baseBranch: baseLookup.branch,
-      action: "rebase",
-      rebase: {
-        reason: `Branch is behind ${baseLookup.branch} — rebasing to pick up latest changes and clear flaky failures`,
-        shellScript: buildRebaseShellScript(baseLookup.branch),
-      },
-    };
+    return applyStallGuard(
+      stallKey,
+      stallTimeoutSeconds,
+      headSha,
+      base,
+      prNumber,
+      {
+        ...base,
+        baseBranch: baseLookup.branch,
+        action: "rebase" as const,
+        rebase: {
+          reason: `Branch is behind ${baseLookup.branch} — rebasing to pick up latest changes and clear flaky failures`,
+          shellScript: buildRebaseShellScript(baseLookup.branch),
+        },
+      } as IterateResult,
+      report,
+      reviewSummaryIds,
+    );
   }
 
   // Step 7: Mark ready for review.
@@ -459,11 +500,16 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   }
 
   // Step 8: Nothing to do.
-  return {
-    ...base,
-    action: "wait",
-    log: buildWaitLog(base),
-  };
+  return applyStallGuard(
+    stallKey,
+    stallTimeoutSeconds,
+    headSha,
+    base,
+    prNumber,
+    { ...base, action: "wait" as const, log: buildWaitLog(base) } as IterateResult,
+    report,
+    reviewSummaryIds,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -858,6 +904,87 @@ function buildWaitLog(base: IterateResultBase): string {
   return parts.join(" — ");
 }
 
+function computeStallFingerprint(
+  action: string,
+  headSha: string,
+  base: IterateResultBase,
+  report: Awaited<ReturnType<typeof runCheck>>,
+  reviewSummaryIds: string[],
+): string {
+  const checks = report.checks.failing
+    .map((f) => `${f.name}:${f.failureKind ?? ""}`)
+    .sort();
+  const threads = report.threads.actionable.map((t) => t.id).sort();
+  const comments = report.comments.actionable.map((c) => c.id).sort();
+  const reviews = report.changesRequestedReviews.map((r) => r.id).sort();
+  const summaries = [...reviewSummaryIds].sort();
+  return JSON.stringify({
+    action,
+    headSha,
+    status: base.status,
+    mergeStateStatus: base.mergeStateStatus,
+    state: base.state,
+    checks,
+    threads,
+    comments,
+    reviews,
+    summaries,
+  });
+}
+
+async function applyStallGuard(
+  stallKey: { owner: string; repo: string; pr: number },
+  stallTimeoutSeconds: number,
+  headSha: string,
+  base: IterateResultBase,
+  prNumber: number,
+  prospectiveResult: IterateResult,
+  report: Awaited<ReturnType<typeof runCheck>>,
+  reviewSummaryIds: string[],
+): Promise<IterateResult> {
+  const fingerprint = computeStallFingerprint(
+    prospectiveResult.action,
+    headSha,
+    base,
+    report,
+    reviewSummaryIds,
+  );
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const stored = await readStallState(stallKey);
+
+  if (stored && stored.fingerprint === fingerprint) {
+    const ageSeconds = nowSeconds - stored.firstSeenAt;
+    if (ageSeconds < 0) {
+      // Clock skew: stored timestamp is in the future — reset.
+      await writeStallState(stallKey, { fingerprint, firstSeenAt: nowSeconds });
+    } else if (stallTimeoutSeconds > 0 && ageSeconds >= stallTimeoutSeconds) {
+      const stalledMinutes = Math.floor(ageSeconds / 60);
+      const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
+        triggers: ["stall-timeout"],
+        unresolvedThreads: report.threads.actionable.map(toAgentThread),
+        ambiguousComments: report.comments.actionable.map(toAgentComment),
+        changesRequestedReviews: report.changesRequestedReviews,
+        suggestion: buildEscalateSuggestion(["stall-timeout"], String(stalledMinutes)),
+      };
+      return {
+        ...base,
+        action: "escalate",
+        escalate: {
+          ...escalateBase,
+          humanMessage: buildEscalateHumanMessage(escalateBase, prNumber),
+        },
+      };
+    }
+    // Within threshold: preserve firstSeenAt, emit the original result.
+    return prospectiveResult;
+  }
+
+  // Fingerprint changed or no prior state — reset the stall timer.
+  await writeStallState(stallKey, { fingerprint, firstSeenAt: nowSeconds });
+  return prospectiveResult;
+}
+
 function buildEscalateHumanMessage(
   escalate: Omit<EscalateDetails, "humanMessage">,
   pr: number,
@@ -907,9 +1034,13 @@ function buildEscalateHumanMessage(
   return lines.join("\n");
 }
 
-function buildEscalateSuggestion(triggers: string[], failureReason?: string): string {
+function buildEscalateSuggestion(triggers: string[], detail?: string): string {
+  if (triggers.includes("stall-timeout")) {
+    const mins = detail ?? "30";
+    return `No progress detected for ${mins} minute${parseInt(mins) === 1 ? "" : "s"} — state has not changed. Inspect the PR and resume manually once the blocking issue is resolved.`;
+  }
   if (triggers.includes("base-branch-unknown")) {
-    const reason = failureReason ? ` (${failureReason})` : "";
+    const reason = detail ? ` (${detail})` : "";
     return `Could not determine the PR's base branch${reason} — refusing to emit a rebase that could force-push onto the wrong base. Run the rebase manually against the PR's real target branch.`;
   }
   if (triggers.includes("fix-thrash")) {

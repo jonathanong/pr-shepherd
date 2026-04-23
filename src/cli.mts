@@ -9,8 +9,8 @@
  *                            [--last-push-time N]
  *   pr-shepherd commit-suggestions [PR] --thread-ids A,B [--format text|json]
  *   pr-shepherd iterate [PR] [--format text|json] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
- *                              [--no-auto-rerun] [--no-auto-mark-ready] [--no-auto-cancel-actionable]
- *                              [--no-commit-suggestions]
+ *                              [--stall-timeout Nm] [--no-auto-rerun] [--no-auto-mark-ready]
+ *                              [--no-auto-cancel-actionable] [--no-commit-suggestions]
  *   pr-shepherd status PR1 [PR2 …]
  */
 
@@ -180,6 +180,10 @@ async function handleIterate(args: string[]): Promise<void> {
   const noAutoMarkReady = hasFlag(extra, "--no-auto-mark-ready");
   const noAutoCancelActionable = hasFlag(extra, "--no-auto-cancel-actionable");
   const noCommitSuggestions = hasFlag(extra, "--no-commit-suggestions");
+  const stallTimeoutStr = getFlag(extra, "--stall-timeout");
+  const stallTimeoutSeconds = stallTimeoutStr
+    ? parseDurationToMinutes(stallTimeoutStr, cfg.iterate.stallTimeoutMinutes) * 60
+    : cfg.iterate.stallTimeoutMinutes * 60;
 
   const result = await runIterate({
     ...globalOpts,
@@ -187,6 +191,7 @@ async function handleIterate(args: string[]): Promise<void> {
     lastPushTime,
     readyDelaySeconds,
     cooldownSeconds,
+    stallTimeoutSeconds,
     noAutoRerun,
     noAutoMarkReady,
     noAutoCancelActionable,

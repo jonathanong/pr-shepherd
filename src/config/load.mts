@@ -11,6 +11,7 @@ export interface PrShepherdConfig {
   iterate: {
     cooldownSeconds: number;
     fixAttemptsPerThread: number;
+    stallTimeoutMinutes: number;
     /**
      * Which review summaries the monitor loop should auto-minimize via `resolve --minimize-comment-ids`.
      * Bots default on; humans default on; approvals default off (opt-in). See docs/comments.md.
