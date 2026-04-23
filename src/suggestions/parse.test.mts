@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseSuggestion, applySuggestionToFile } from "./parse.mts";
+import { parseSuggestion, applySuggestionToFile, isCommittableSuggestion } from "./parse.mts";
 
 describe("parseSuggestion", () => {
   it("extracts a single-line suggestion", () => {
@@ -65,10 +65,56 @@ describe("parseSuggestion", () => {
   });
 
   it("tolerates a body without a trailing newline before the closing fence", () => {
-    // GitHub renders suggestions when the closing fence is inline — the regex
-    // accepts this and the body is taken verbatim (no trailing \n to strip).
+    // Inline close: the parser's fallback path for bodies like "```suggestion\nfoo```".
     const body = "```suggestion\nfoo```";
     expect(parseSuggestion(body)).toEqual({ lines: ["foo"] });
+  });
+
+  it("preserves a nested ```suggestion substring in the body content (issue #68)", () => {
+    // The old regex stopped at the inner ``` and silently truncated the body.
+    // The new line-based parser treats mid-line ``` as content, not a closer.
+    const body = ["```suggestion", "text with ```suggestion inside", "```"].join("\n");
+    expect(parseSuggestion(body)).toEqual({ lines: ["text with ```suggestion inside"] });
+  });
+
+  it("preserves a stray ``` run mid-line in the body content (issue #68)", () => {
+    const body = ["```suggestion", "here is a fence: ```", "and more text", "```"].join("\n");
+    expect(parseSuggestion(body)).toEqual({
+      lines: ["here is a fence: ```", "and more text"],
+    });
+  });
+
+  it("supports a 4-backtick outer fence to wrap content containing ```", () => {
+    const body = ["````suggestion", "body with ``` in it", "````"].join("\n");
+    expect(parseSuggestion(body)).toEqual({ lines: ["body with ``` in it"] });
+  });
+
+  it("returns null for a quoted suggestion block with no closing fence", () => {
+    // prefix is non-empty but closeIdx is never found → else { return null }
+    const body = ["> ```suggestion", "> const x = 1;"].join("\n");
+    expect(parseSuggestion(body)).toBeNull();
+  });
+});
+
+describe("isCommittableSuggestion", () => {
+  it("returns true for a clean suggestion", () => {
+    expect(isCommittableSuggestion({ lines: ["const x = 1;"] })).toBe(true);
+  });
+
+  it("returns true for an empty suggestion (deletion)", () => {
+    expect(isCommittableSuggestion({ lines: [] })).toBe(true);
+  });
+
+  it("returns false when replacement contains a nested ```suggestion marker", () => {
+    expect(isCommittableSuggestion({ lines: ["text with ```suggestion inside"] })).toBe(false);
+  });
+
+  it("returns false when replacement has an odd number of ``` runs (unmatched fence)", () => {
+    expect(isCommittableSuggestion({ lines: ["here is a fence: ```", "no close"] })).toBe(false);
+  });
+
+  it("returns true when replacement contains a balanced pair of ``` runs", () => {
+    expect(isCommittableSuggestion({ lines: ["```js", "code", "```"] })).toBe(true);
   });
 });
 

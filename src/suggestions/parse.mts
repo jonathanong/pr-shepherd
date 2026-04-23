@@ -10,15 +10,6 @@
  * button (this one included) must parse + commit themselves.
  */
 
-// Capture the opening prefix (indent / `>` quote markers) so the same prefix
-// can be required before the closing fence via a backreference. Lazy on the
-// prefix so same-line-indent blocks outside a quote aren't swallowed.
-// Lazy body with no mandatory newline before the closing fence — this lets
-// empty blocks (deletion) match and preserves the body's own trailing \n so
-// the caller can distinguish "delete these lines" from "replace with a blank
-// line" (raw="" vs raw="\n").
-const SUGGESTION_BLOCK = /(^|\n)([ \t>]*?)```suggestion[^\n]*\n([\s\S]*?)\2```/;
-
 export interface ParsedSuggestion {
   /**
    * Replacement lines to splice in. Empty array means "delete these lines".
@@ -35,8 +26,13 @@ export interface ParsedSuggestion {
  * Handles three distinct cases:
  *   - Empty block (` ```suggestion\n``` `) → `lines: []` (deletion).
  *   - Blank-line-only body (` ```suggestion\n\n``` `) → `lines: [""]`.
- *   - Non-empty body → split into lines, dropping the single trailing `\n`
- *     that acts as a line terminator rather than an extra blank line.
+ *   - Non-empty body → split into lines.
+ *
+ * The opening fence may be 3+ backticks; the closing fence must be at least
+ * as many backticks, at the start of a line (after the captured prefix). This
+ * means content lines that contain ` ``` ` in the middle (not at line-start)
+ * are treated as content rather than a closing fence — fixing the silent
+ * truncation in the original regex approach (issue #68).
  *
  * When the block is embedded in a quoted reply (e.g. `> ```suggestion …`),
  * the leading prefix captured from the opening fence is stripped from each
@@ -44,28 +40,70 @@ export interface ParsedSuggestion {
  * characters inside the suggested code survive.
  */
 export function parseSuggestion(body: string): ParsedSuggestion | null {
-  const match = SUGGESTION_BLOCK.exec(body);
-  if (!match) return null;
-  const prefix = match[2] ?? "";
-  const raw = match[3] ?? "";
+  const lines = body.split("\n");
 
-  // Raw truly empty → the block had no body at all, which GitHub treats as
-  // "delete the commented lines".
-  if (raw === "") return { lines: [] };
+  // Find the opening fence: optional prefix + N backticks (N≥3) + "suggestion" + anything.
+  let openIdx = -1;
+  let prefix = "";
+  let fenceLen = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^([ \t>]*?)(`{3,})suggestion[^\n]*$/.exec(lines[i]!);
+    if (m) {
+      openIdx = i;
+      prefix = m[1]!;
+      fenceLen = m[2]!.length;
+      break;
+    }
+  }
+  if (openIdx === -1) return null;
 
-  const unindented =
+  // Find the closing fence: same prefix + N+ backticks at the start of a line.
+  const escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const closeRegex = new RegExp(`^${escapedPrefix}\`{${fenceLen},}[ \\t]*$`);
+  let closeIdx = -1;
+  for (let i = openIdx + 1; i < lines.length; i++) {
+    if (closeRegex.test(lines[i]!)) {
+      closeIdx = i;
+      break;
+    }
+  }
+
+  let bodyLines: string[];
+  if (closeIdx !== -1) {
+    bodyLines = lines.slice(openIdx + 1, closeIdx);
+  } else if (prefix === "" && lines.length > openIdx + 1) {
+    // Inline-close fallback: last line ends with N+ backticks (no trailing newline).
+    // Preserves the historical behaviour for bodies like "```suggestion\nfoo```".
+    // Only supported for non-quoted (prefix="") blocks.
+    const last = lines[lines.length - 1]!;
+    const m = new RegExp(`^(.*?)\`{${fenceLen},}$`).exec(last);
+    if (!m) return null;
+    bodyLines = [...lines.slice(openIdx + 1, lines.length - 1), m[1]!];
+  } else {
+    return null;
+  }
+
+  if (bodyLines.length === 0) return { lines: [] };
+
+  const cleaned =
     prefix === ""
-      ? raw
-      : raw
-          .split("\n")
-          .map((line) => (line.startsWith(prefix) ? line.slice(prefix.length) : line))
-          .join("\n");
+      ? bodyLines
+      : bodyLines.map((l) => (l.startsWith(prefix) ? l.slice(prefix.length) : l));
+  return { lines: cleaned };
+}
 
-  // Strip exactly one trailing \n — it's the line terminator of the last body
-  // line, not an extra blank line. An explicit trailing blank is represented
-  // by two trailing \ns, which leave one behind after this strip.
-  const stripped = unindented.endsWith("\n") ? unindented.slice(0, -1) : unindented;
-  return { lines: stripped.split("\n") };
+/**
+ * True when a parsed suggestion's replacement is safe to commit: the joined
+ * replacement contains no nested ` ```suggestion ` marker and no unmatched
+ * ` ``` ` run (odd count). Both shapes previously masked silent truncation
+ * (issue #68). Conservative by design: reviewers whose suggestion content
+ * legitimately includes these markers must apply the change manually.
+ */
+export function isCommittableSuggestion(parsed: ParsedSuggestion): boolean {
+  const replacement = parsed.lines.join("\n");
+  if (replacement.includes("```suggestion")) return false;
+  const fenceRuns = (replacement.match(/`{3,}/g) ?? []).length;
+  return fenceRuns % 2 === 0;
 }
 
 /**

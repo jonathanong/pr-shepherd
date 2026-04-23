@@ -288,7 +288,7 @@ Agent-side equivalent of GitHub's "Commit suggestion" and "Add suggestion to bat
 pr-shepherd commit-suggestions 42 --thread-ids PRRT_abc,PRRT_def --format=json
 ```
 
-Requires a clean working tree (errors out if `git status --porcelain` is non-empty). After a successful run, **your local checkout is one commit behind remote** — the output's `postActionInstruction` tells the agent to `git pull --ff-only` before editing anything else. Threads whose body lacks a parseable suggestion, that are already resolved or outdated, or whose line range overlaps another applied suggestion on the same file are reported as `skipped` so callers can fall back to a manual fix.
+Requires a clean working tree (errors out if `git status --porcelain` is non-empty). After a successful run, **your local checkout is one commit behind remote** — the output's `postActionInstruction` tells the agent to `git pull --ff-only` before editing anything else. Threads whose body lacks a parseable suggestion, that are already resolved or outdated, whose body contains a nested ` ```suggestion ` fence (would silently truncate — see issue #68), whose replacement text contains an odd number of 3+-backtick runs, or whose line range overlaps another applied suggestion on the same file are reported as `skipped` so callers can fall back to a manual fix.
 
 Gated by `actions.commitSuggestions` (default `true`) — `/pr-shepherd:resolve` invokes this automatically for threads that `resolve --fetch` annotates with a `suggestion` field.
 

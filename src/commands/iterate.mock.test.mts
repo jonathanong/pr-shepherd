@@ -2467,6 +2467,28 @@ describe("runIterate — fix_code commit-suggestions shortcut", () => {
     expect(result.fix.mode).toBe("rebase-and-push");
   });
 
+  it("falls back to mode: rebase-and-push when a thread has a non-committable suggestion (nested fence, issue #68)", async () => {
+    const nestedFenceBody = ["```suggestion", "text with ```suggestion inside", "```"].join("\n");
+    const t1 = makeSuggestionThread("PRRT_x", nestedFenceBody);
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [t1], autoResolved: [], autoResolveErrors: [] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.mode).toBe("rebase-and-push");
+  });
+
   it("falls back to mode: rebase-and-push when an actionable comment is also present", async () => {
     const t1 = makeSuggestionThread("PRRT_x");
     const comment = {
