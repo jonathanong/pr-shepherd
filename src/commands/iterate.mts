@@ -147,10 +147,6 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     baseBranch: report.baseBranch,
   };
 
-  // Fetch HEAD SHA once — used by both fix-attempts tracking and stall-detection fingerprint.
-  const headSha = await getCurrentHeadSha();
-  const stallKey = { owner: repoOwner, repo: repoName, pr: prNumber };
-
   // Step 3 cont.: cancel if ready-delay elapsed.
   if (readyState.shouldCancel) {
     return {
@@ -159,6 +155,11 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       log: `CANCEL: PR #${base.pr} has been ready for review — ready-delay elapsed, stopping monitor`,
     };
   }
+
+  // Fetch HEAD SHA once — used by both fix-attempts tracking and stall-detection fingerprint.
+  // Done after the shouldCancel early-return to avoid a subprocess call on cancel paths.
+  const headSha = await getCurrentHeadSha();
+  const stallKey = { owner: repoOwner, repo: repoName, pr: prNumber };
 
   // Triage failing checks now that we know we need failureKind for steps 4–6.
   if (report.checks.failing.length > 0) {
@@ -957,10 +958,10 @@ async function applyStallGuard(
 
   if (stored && stored.fingerprint === fingerprint) {
     const ageSeconds = nowSeconds - stored.firstSeenAt;
-    if (ageSeconds < 0) {
-      // Clock skew: stored timestamp is in the future — reset.
+    if (ageSeconds < 0 || stallTimeoutSeconds <= 0) {
+      // Clock skew or stall detection disabled — refresh firstSeenAt so re-enabling starts fresh.
       await writeStallState(stallKey, { fingerprint, firstSeenAt: nowSeconds });
-    } else if (stallTimeoutSeconds > 0 && ageSeconds >= stallTimeoutSeconds) {
+    } else if (ageSeconds >= stallTimeoutSeconds) {
       const stalledMinutes = Math.floor(ageSeconds / 60);
       const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
         triggers: ["stall-timeout"],

@@ -3013,13 +3013,8 @@ describe("runIterate — stall-timeout guard", () => {
     expect(written.fingerprint).not.toBe(fp1);
   });
 
-  it("respects stallTimeoutSeconds: 0 as never-stall", async () => {
+  it("respects stallTimeoutSeconds: 0 as never-stall and refreshes firstSeenAt", async () => {
     mockRunCheck.mockResolvedValue(makeReport());
-    // Simulate stored state that has been there forever (large age).
-    mockReadStallState.mockResolvedValue({
-      fingerprint: "will-be-overridden",
-      firstSeenAt: 0,
-    });
     // First call to capture real fingerprint.
     mockReadStallState.mockResolvedValue(null);
     await runIterate(makeOpts30mStall({ stallTimeoutSeconds: 0 }));
@@ -3030,7 +3025,12 @@ describe("runIterate — stall-timeout guard", () => {
 
     const result = await runIterate(makeOpts({ stallTimeoutSeconds: 0, noAutoMarkReady: true }));
 
-    // stallTimeoutSeconds: 0 means "never escalate for stall".
+    // stallTimeoutSeconds: 0 means "never escalate for stall", but still refreshes firstSeenAt
+    // so that re-enabling stall detection starts a fresh timer.
     expect(result.action).toBe("wait");
+    expect(mockWriteStallState).toHaveBeenCalledOnce();
+    const written = mockWriteStallState.mock.calls[0]![1] as StallState;
+    expect(written.firstSeenAt).toBe(NOW);
+    expect(written.fingerprint).toBe(realFp);
   });
 });
