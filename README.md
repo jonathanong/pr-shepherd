@@ -292,7 +292,7 @@ pr-shepherd commit-suggestion 42 \
   --format=json
 ```
 
-Requires a clean working tree and that the current branch matches the PR head ref. Every validation failure (wrong branch, thread not found, already resolved, outdated, no suggestion block, nested fencing, patch rejected) is a hard error with a specific reason string — unlike the bulk command there is no `skipped` state; the caller must handle or retry.
+Requires a clean working tree and that the current branch matches the PR head ref. Precondition/lookup failures such as wrong branch, thread not found, already resolved, outdated, no suggestion block, or nested fencing are hard errors with specific reason strings. Patch rejection is reported as a normal result with `applied: false` plus a specific `reason` (and the generated `patch`), and the CLI exits `1`. Unlike the bulk command there is no `skipped` state; the caller must handle or retry either hard errors or `applied: false` results.
 
 Gated by `actions.commitSuggestions` (default `true`) — `/pr-shepherd:resolve` calls this automatically for threads that `resolve --fetch` annotates with a `suggestion` field.
 

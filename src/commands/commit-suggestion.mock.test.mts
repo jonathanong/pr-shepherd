@@ -56,7 +56,7 @@ import { runCommitSuggestion } from "./commit-suggestion.mts";
 import { getPrHead, getCurrentBranch, getCurrentPrNumber } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { applyResolveOptions } from "../comments/resolve.mts";
-import { readFile } from "node:fs/promises";
+import { readFile, unlink } from "node:fs/promises";
 import type { ReviewThread, BatchPrData } from "../types.mts";
 
 const mockGetPrHead = vi.mocked(getPrHead);
@@ -65,6 +65,7 @@ const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockFetchBatch = vi.mocked(fetchPrBatch);
 const mockApplyResolveOptions = vi.mocked(applyResolveOptions);
 const mockReadFile = vi.mocked(readFile);
+const mockUnlink = vi.mocked(unlink);
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -415,6 +416,16 @@ describe("runCommitSuggestion — successful apply", () => {
       message: "fix",
     });
     expect(result.postActionInstruction).toContain("git push");
+  });
+
+  it("succeeds even when temp patch file unlink fails", async () => {
+    mockUnlink.mockRejectedValueOnce(new Error("ENOENT: unlink failed"));
+    const result = await runCommitSuggestion({
+      ...GLOBAL_OPTS,
+      threadId: "PRRT_x",
+      message: "fix",
+    });
+    expect(result.applied).toBe(true);
   });
 });
 

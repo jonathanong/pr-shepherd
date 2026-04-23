@@ -52,7 +52,7 @@ pr-shepherd commit-suggestion 42 \
   --format=json
 ```
 
-Requires a clean working tree and that the current branch matches the PR head ref. Every validation failure is a hard error. The resolve skill calls this automatically for threads that carry a `suggestion` block when `actions.commitSuggestions` is `true` (the default — see [configuration.md](configuration.md)).
+Requires a clean working tree and that the current branch matches the PR head ref. Preflight and thread-classification validation failures are hard errors. If `git apply --check` rejects the generated patch, the command exits non-zero but reports a structured `applied: false` result with `reason` and `patch` for inspection instead of throwing. The resolve skill calls this automatically for threads that carry a `suggestion` block when `actions.commitSuggestions` is `true` (the default — see [configuration.md](configuration.md)).
 
 ### `pr-shepherd iterate [PR]`
 
