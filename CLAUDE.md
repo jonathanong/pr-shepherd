@@ -41,4 +41,4 @@ Per-action dispatch logic — which command to extract, which tool to call, what
 
 Rule of thumb: if a skill or loop prompt contains a dispatch table keyed on CLI output shape, that table should live in the CLI's output instead.
 
-Skills must not link to `docs/**` or `README.md`. Those files are not included in the published plugin and will be dead links for consumers. All information a skill consumer needs must come from the CLI output itself or be written inline in the skill.
+Skills must not link to files outside the `plugin/` directory (such as `docs/**` or `README.md`). Those files are not included in the published plugin and will be dead links for consumers. All information a skill consumer needs must come from the CLI output itself or be written inline in the skill.
