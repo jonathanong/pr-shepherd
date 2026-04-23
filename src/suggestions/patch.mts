@@ -36,8 +36,7 @@ export function buildUnifiedDiff({
   const hunkNewCount = beforeLines.length + replacementLines.length + afterLines.length;
 
   const noNewline = "\\ No newline at end of file\n";
-  const isLastOrigLine = (lineIdx: number) =>
-    !endsWithNewline && lineIdx === fileLines.length - 1;
+  const isLastOrigLine = (lineIdx: number) => !endsWithNewline && lineIdx === fileLines.length - 1;
 
   const out: string[] = [
     `--- a/${path}\n`,
@@ -58,8 +57,10 @@ export function buildUnifiedDiff({
   // Replacement ends the file only when the removed range reaches the very last line —
   // not just because context is 0 (there may still be unshown lines beyond the hunk).
   const addedEndsFile = !endsWithNewline && endLine >= fileLines.length;
+  const hasCr = originalContent.includes("\r\n");
   for (let i = 0; i < replacementLines.length; i++) {
-    out.push(`+${replacementLines[i]}\n`);
+    const line = hasCr ? replacementLines[i] + "\r" : replacementLines[i];
+    out.push(`+${line}\n`);
     if (addedEndsFile && i === replacementLines.length - 1) out.push(noNewline);
   }
 

@@ -806,7 +806,6 @@ function buildFixInstructions(
   return instructions;
 }
 
-
 function buildWaitLog(base: IterateResultBase): string {
   const { summary, mergeStateStatus, remainingSeconds } = base;
   const parts: string[] = [`WAIT: ${summary.passing} passing, ${summary.inProgress} in-progress`];

@@ -313,29 +313,13 @@ describe("main — commit-suggestion", () => {
       commitSha: undefined,
       postActionInstruction: "",
     });
-    await main([
-      "node",
-      "shepherd",
-      "commit-suggestion",
-      "--thread-id",
-      "t1",
-      "--message",
-      "fix",
-    ]);
+    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "fix"]);
     expect(process.exitCode).toBe(1);
   });
 
   it("text output shows applied result with commit sha and post-action", async () => {
     mockRunCommitSuggestion.mockResolvedValue(APPLIED_RESULT);
-    await main([
-      "node",
-      "shepherd",
-      "commit-suggestion",
-      "--thread-id",
-      "t1",
-      "--message",
-      "fix",
-    ]);
+    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "fix"]);
     const out = getStdout();
     expect(out).toContain("Applied suggestion from @alice:");
     expect(out).toContain("a.ts (line 5)");
@@ -352,15 +336,7 @@ describe("main — commit-suggestion", () => {
       commitSha: undefined,
       postActionInstruction: "",
     });
-    await main([
-      "node",
-      "shepherd",
-      "commit-suggestion",
-      "--thread-id",
-      "t1",
-      "--message",
-      "fix",
-    ]);
+    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "fix"]);
     const out = getStdout();
     expect(out).toContain("Failed to apply suggestion t1:");
     expect(out).toContain("git apply rejected");

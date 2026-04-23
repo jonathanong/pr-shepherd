@@ -19,18 +19,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
-import {
-  getRepoInfo,
-  getCurrentPrNumber,
-  getPrHead,
-  getCurrentBranch,
-} from "../github/client.mts";
+import { getRepoInfo, getCurrentPrNumber, getPrHead, getCurrentBranch } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { applyResolveOptions } from "../comments/resolve.mts";
-import {
-  parseSuggestion,
-  isCommittableSuggestion,
-} from "../suggestions/parse.mts";
+import { parseSuggestion, isCommittableSuggestion } from "../suggestions/parse.mts";
 import { buildUnifiedDiff } from "../suggestions/patch.mts";
 import type { CommitSuggestionResult, GlobalOptions } from "../types.mts";
 
@@ -136,7 +128,7 @@ export async function runCommitSuggestion(
 
   let patchError: string | null = null;
   try {
-    await writeFile(patchFile, patch);
+    await writeFile(patchFile, patch, { mode: 0o600 });
 
     try {
       await execFile("git", ["apply", "--check", patchFile]);
