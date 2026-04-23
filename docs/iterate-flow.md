@@ -71,7 +71,7 @@ The fingerprint and a `firstSeenAt` timestamp are persisted to `$TMPDIR/pr-sheph
 - **Fingerprint matches but within threshold** → preserve `firstSeenAt`, return the original action.
 - **Fingerprint differs or no stored state** → write new state with `firstSeenAt = now`, return the original action.
 
-Timing-only fields (`remainingSeconds`, `inProgress` count) are deliberately excluded so normal CI progress does not prevent the timer from expiring when substantive state is unchanged.
+In-progress check **names** are included so that a long-running CI pipeline where jobs complete one by one (moving from in-progress to passing) resets the timer as progress happens. Timing-only fields (`remainingSeconds`, `inProgress` count by itself) are excluded — only the set of check names changes the fingerprint, not how many are still running.
 
 **Applies to:** `wait`, `fix_code`, `rerun_ci`, `rebase`. Not applied to `cooldown`, `cancel`, `mark_ready`, or `escalate` — these are either pre-sweep, already terminal, or one-shot.
 

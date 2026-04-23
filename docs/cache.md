@@ -44,7 +44,7 @@ For `batch-read.json`, the `owner`, `repo`, and `shape` segments are each valida
 
 **Written:** On every stall-guarded iterate return (`wait`, `fix_code`, `rerun_ci`, `rebase`) when the fingerprint changes. When the fingerprint matches but the stall threshold has not been exceeded, the file is **not** overwritten (preserving `firstSeenAt`).
 
-**Reset:** When any of the following changes: HEAD SHA, action, failing-check names/kinds, actionable thread IDs, comment IDs, review IDs, or review-summary IDs. Changes that do not touch these fields (e.g. `remainingSeconds` decrement, `inProgress` count) do **not** reset the timer.
+**Reset:** When any of the following changes: HEAD SHA, action, failing-check names/kinds, in-progress check names, actionable thread IDs, comment IDs, review IDs, or review-summary IDs. Changes that do not touch these fields (e.g. `remainingSeconds` decrement, `inProgress` count by itself) do **not** reset the timer.
 
 **Purpose:** Guards against infinite loops where the PR is stuck in the same state — for example, a failing test that the agent cannot fix, or a CI run that keeps timing out. After `iterate.stallTimeoutMinutes` (default 30) without material progress, the iterate command escalates with trigger `stall-timeout`.
 

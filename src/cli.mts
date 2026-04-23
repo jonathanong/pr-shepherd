@@ -9,7 +9,7 @@
  *                            [--last-push-time N]
  *   pr-shepherd commit-suggestions [PR] --thread-ids A,B [--format text|json]
  *   pr-shepherd iterate [PR] [--format text|json] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
- *                              [--stall-timeout Nm] [--no-auto-rerun] [--no-auto-mark-ready]
+ *                              [--stall-timeout <duration>] [--no-auto-rerun] [--no-auto-mark-ready]
  *                              [--no-auto-cancel-actionable] [--no-commit-suggestions]
  *   pr-shepherd status PR1 [PR2 …]
  */
