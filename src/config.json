@@ -42,7 +42,8 @@
       "the hosted runner lost connection"
     ],
     "logMaxLines": 50,
-    "logMaxChars": 3000
+    "logMaxChars": 3000,
+    "errorLines": 1
   },
   "mergeStatus": {
     "blockingReviewerLogins": ["copilot"]

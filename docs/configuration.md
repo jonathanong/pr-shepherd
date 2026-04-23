@@ -35,6 +35,7 @@ checks:
     - ECONNRESET
   logMaxLines: 50
   logMaxChars: 3000
+  errorLines: 1
 
 mergeStatus:
   blockingReviewerLogins:
@@ -210,6 +211,14 @@ The last N lines of each failing check's log are kept for triage. Larger values 
 ### `checks.logMaxChars` — default `3000`
 
 Character cap applied after the line limit. The excerpt is trimmed to the last N characters. Combined with `logMaxLines`, this bounds the payload size.
+
+### `checks.errorLines` — default `1`
+
+Number of trailing `##[error]`-marked lines to surface per failing check as `errorExcerpt`. These are the red "Error:" lines GitHub Actions renders in its log viewer. The excerpt is shown under each failing check in the `## Checks` section of every iterate action.
+
+- Falls back to the last N raw log lines when no `##[error]` markers are found (e.g. external status checks that don't use workflow commands).
+- Set higher (e.g. `3`) for checks that emit multi-line error summaries across several `##[error]` lines.
+- The window is taken from within the `logMaxLines`/`logMaxChars` slice, so raising `errorLines` beyond that window has no effect.
 
 ---
 

@@ -92,6 +92,7 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
     remainingSeconds: 60,
     summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 1 },
     baseBranch: "main",
+    checks: [] as import("./types.mts").RelevantCheck[],
   };
   if (action === "cooldown") return { ...base, action: "cooldown", log: "SKIP: CI still starting" };
   if (action === "wait") return { ...base, action: "wait", log: "WAIT: 0 passing, 1 in-progress" };
@@ -438,14 +439,18 @@ describe("main — iterate text format", () => {
     expect(out).toContain("1. End this iteration");
   });
 
-  it("rerun_ci: heading includes [RERUN_CI] tag, log, and ## Instructions with re-run note", async () => {
-    mockRunIterate.mockResolvedValue(makeIterateResult("rerun_ci"));
+  it("rerun_ci: heading includes [RERUN_CI] tag, log, and ## Instructions with gh run rerun", async () => {
+    mockRunIterate.mockResolvedValue({
+      ...makeIterateResult("rerun_ci"),
+      log: "RERUN NEEDED — 1 CI run: run-99 (typecheck — timeout)",
+      reran: [{ runId: "run-99", checkNames: ["typecheck"], failureKind: "timeout" }],
+    } as IterateResult);
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain("# PR #42 [RERUN_CI]");
-    expect(out).toContain("RERAN: run-99 (typecheck — transient)");
+    expect(out).toContain("RERUN NEEDED");
     expect(out).toContain("## Instructions");
-    expect(out).toContain("1. The CLI already triggered the re-run above");
+    expect(out).toContain("gh run rerun run-99 --failed");
   });
 
   it("mark_ready: heading includes [MARK_READY] tag and ## Instructions with end-iteration step", async () => {

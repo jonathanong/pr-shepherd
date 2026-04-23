@@ -18,6 +18,10 @@ const config = loadConfig();
 const TIMEOUT_PATTERNS = config.checks.timeoutPatterns.map((p) => new RegExp(p, "i"));
 const INFRA_PATTERNS = config.checks.infraPatterns.map((p) => new RegExp(p, "i"));
 
+// Matches GitHub Actions workflow-command error markers: `##[error]...`
+// May be preceded by a timestamp: `2026-04-23T09:53:06.123Z ##[error]Error: foo`
+const ERROR_MARKER_RE = /##\[error\]/;
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -45,11 +49,13 @@ async function triageCheck(check: ClassifiedCheck, repo: RepoInfo): Promise<Tria
 
   const logExcerpt = await fetchFailedLogs(check.runId, repo);
   const failureKind = classifyLogs(check, logExcerpt);
+  const errorExcerpt = extractErrorLines(logExcerpt, config.checks.errorLines) || undefined;
 
   return {
     ...check,
     failureKind,
     logExcerpt: logExcerpt.slice(-config.checks.logMaxChars) || undefined,
+    errorExcerpt,
   };
 }
 
@@ -105,6 +111,28 @@ async function fetchFailedLogs(runId: string, repo: RepoInfo): Promise<string> {
   } catch {
     return "";
   }
+}
+
+/**
+ * Extract the last `maxLines` `##[error]`-marked lines from GitHub Actions logs,
+ * stripping the workflow-command prefix and any leading timestamp.
+ *
+ * Falls back to the last `maxLines` raw lines when no `##[error]` markers are found
+ * (some checks don't emit workflow commands — e.g. external status checks).
+ */
+export function extractErrorLines(logs: string, maxLines: number): string {
+  const lines = logs.split("\n");
+  const errorLines = lines.filter((l) => ERROR_MARKER_RE.test(l));
+  const source = errorLines.length > 0 ? errorLines : lines;
+  const tail = source.slice(-maxLines);
+  return tail
+    .map((l) => {
+      // Strip optional timestamp + `##[error]` prefix:
+      // "2026-04-23T09:53:06.123Z ##[error]Error: foo" → "Error: foo"
+      return l.replace(/^[^\s]*\s*##\[error\]/, "").trim();
+    })
+    .filter(Boolean)
+    .join("\n");
 }
 
 function classifyLogs(check: ClassifiedCheck, logs: string): FailureKind {

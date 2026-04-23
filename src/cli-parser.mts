@@ -10,7 +10,7 @@
  *   pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [--description DESC]
  *                                      [--format text|json]
  *   pr-shepherd iterate [PR] [--format text|json] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
- *                              [--stall-timeout <duration>] [--no-auto-rerun] [--no-auto-mark-ready]
+ *                              [--stall-timeout <duration>] [--no-auto-mark-ready]
  *                              [--no-auto-cancel-actionable]
  *   pr-shepherd status PR1 [PR2 …]
  */
@@ -193,7 +193,6 @@ async function handleIterate(args: string[]): Promise<void> {
   const cooldownSeconds = cooldownSecondsStr
     ? parseIntStrict(cooldownSecondsStr, "--cooldown-seconds")
     : cfg.iterate.cooldownSeconds;
-  const noAutoRerun = hasFlag(extra, "--no-auto-rerun");
   const noAutoMarkReady = hasFlag(extra, "--no-auto-mark-ready");
   const noAutoCancelActionable = hasFlag(extra, "--no-auto-cancel-actionable");
   const stallTimeoutStr = getFlag(extra, "--stall-timeout");
@@ -208,7 +207,6 @@ async function handleIterate(args: string[]): Promise<void> {
     readyDelaySeconds,
     cooldownSeconds,
     stallTimeoutSeconds,
-    noAutoRerun,
     noAutoMarkReady,
     noAutoCancelActionable,
   });
@@ -380,6 +378,7 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
   const baseLine = `**status** \`${result.status}\` · **merge** \`${result.mergeStateStatus}\` · **state** \`${result.state}\` · **repo** \`${result.repo}\``;
   const summaryLine = `**summary** ${result.summary.passing} passing, ${result.summary.skipped} skipped, ${result.summary.filtered} filtered, ${result.summary.inProgress} inProgress · **remainingSeconds** ${result.remainingSeconds} · **copilotReviewInProgress** ${result.copilotReviewInProgress} · **isDraft** ${result.isDraft} · **shouldCancel** ${result.shouldCancel}`;
   const header = [heading, "", baseLine, summaryLine].join("\n");
+  const checksSection = formatChecksSection(result.checks);
 
   switch (result.action) {
     case "cooldown":
@@ -393,27 +392,21 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
         "1. End this iteration — the next cron fire will recheck once CI starts reporting.",
       ].join("\n");
 
-    case "wait":
-      return [
-        header,
-        "",
-        result.log,
-        "",
-        "## Instructions",
-        "",
-        "1. End this iteration — the next cron fire will recheck.",
-      ].join("\n");
+    case "wait": {
+      const parts = [header];
+      if (checksSection) parts.push(checksSection);
+      parts.push(result.log, "", "## Instructions", "", "1. End this iteration — the next cron fire will recheck.");
+      return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
+    }
 
-    case "rerun_ci":
-      return [
-        header,
-        "",
-        result.log,
-        "",
-        "## Instructions",
-        "",
-        "1. The CLI already triggered the re-run above — end this iteration and wait for CI to report results.",
-      ].join("\n");
+    case "rerun_ci": {
+      const rerunInstructions = result.reran.map((r, i) => `${i + 1}. Run: \`gh run rerun ${r.runId} --failed\``);
+      rerunInstructions.push(`${rerunInstructions.length + 1}. End this iteration — wait for CI to report results after the re-run.`);
+      const parts = [header];
+      if (checksSection) parts.push(checksSection);
+      parts.push(result.log, "", "## Instructions", "", rerunInstructions.join("\n"));
+      return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
+    }
 
     case "mark_ready":
       return [
@@ -426,33 +419,24 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
         "1. The CLI already marked the PR ready for review — end this iteration.",
       ].join("\n");
 
-    case "cancel":
-      return [
-        header,
-        "",
-        result.log,
-        "",
-        "## Instructions",
-        "",
-        "1. Invoke `/loop cancel` via the Skill tool.",
-        "2. Stop.",
-      ].join("\n");
+    case "cancel": {
+      const parts = [header];
+      if (checksSection) parts.push(checksSection);
+      parts.push(result.log, "", "## Instructions", "", "1. Invoke `/loop cancel` via the Skill tool.\n2. Stop.");
+      return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
+    }
 
-    case "rebase":
-      return [
-        header,
-        "",
+    case "rebase": {
+      const parts = [header];
+      if (checksSection) parts.push(checksSection);
+      parts.push(
         result.rebase.reason,
-        "",
-        "```bash",
-        result.rebase.shellScript,
-        "```",
-        "",
+        "```bash\n" + result.rebase.shellScript + "\n```",
         "## Instructions",
-        "",
-        "1. Copy the shell script from the ` ```bash ` block above and run it in Bash.",
-        "2. End this iteration — the next cron fire will check CI after the rebase.",
-      ].join("\n");
+        "1. Copy the shell script from the ` ```bash ` block above and run it in Bash.\n2. End this iteration — the next cron fire will check CI after the rebase.",
+      );
+      return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
+    }
 
     case "escalate":
       return [
@@ -467,15 +451,41 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
       ].join("\n");
 
     case "fix_code":
-      return formatFixCodeResult(header, result);
+      return formatFixCodeResult(header, checksSection, result);
   }
+}
+
+function formatChecksSection(checks: import("./types.mts").RelevantCheck[]): string | null {
+  if (checks.length === 0) return null;
+  const lines: string[] = ["## Checks", ""];
+  for (const c of checks) {
+    if (c.conclusion === "SUCCESS") {
+      lines.push(`- ✓ \`${c.name}\` — SUCCESS`);
+    } else {
+      const kind = c.failureKind ? ` (${c.failureKind})` : "";
+      const locator = c.runId
+        ? `\`${c.runId}\``
+        : c.detailsUrl
+          ? `\`${c.detailsUrl}\``
+          : "(no ID)";
+      lines.push(`- ✗ \`${c.name}\`${kind} — ${c.conclusion} · ${locator}`);
+      if (c.errorExcerpt) {
+        for (const eLine of c.errorExcerpt.split("\n")) {
+          lines.push(`  > ${eLine}`);
+        }
+      }
+    }
+  }
+  return lines.join("\n");
 }
 
 function formatFixCodeResult(
   header: string,
+  checksSection: string | null,
   result: import("./types.mts").IterateResultFixCode,
 ): string {
   const sections: string[] = [header];
+  if (checksSection) sections.push(checksSection);
 
   if (result.fix.threads.length > 0) {
     sections.push("## Review threads");

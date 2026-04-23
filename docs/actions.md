@@ -14,6 +14,12 @@ The default output format is Markdown — what you see when running `npx pr-shep
 **status** `<…>` · **merge** `<…>` · **state** `<…>` · **repo** `<…>`
 **summary** <N> passing, <N> skipped, <N> filtered, <N> inProgress · **remainingSeconds** <N> · **copilotReviewInProgress** <bool> · **isDraft** <bool> · **shouldCancel** <bool>
 
+## Checks
+
+- ✓ `<name>` — SUCCESS
+- ✗ `<name>` (<failureKind>) — <conclusion> · `<runId>`
+  > <errorExcerpt line>
+
 <action-specific body>
 
 ## Instructions
@@ -28,6 +34,7 @@ Load-bearing conventions (the monitor SKILL depends on these):
 3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … — that tells the monitor exactly what to do. The monitor follows those steps; it does not need its own dispatch table.
 4. Under `[REBASE]`, the shell script is inside a ```bash fenced block — instruction 1 tells the monitor to extract and run it.
 5. Under `[FIX_CODE]`, the `## Post-fix push` section has a `` resolve: `<command>` `` bullet — the instructions reference this bullet so the monitor strips backticks and runs the command.
+6. `## Checks` appears immediately after the base fields in every action where checks were fetched (all actions except `cooldown`). It lists every completed, non-skipped PR CI check — passing entries with ✓, failing entries with ✗ plus `failureKind` and a short `errorExcerpt`. The section is omitted when there are no checks (e.g. during `cooldown` or when the PR has no CI configured). JSON surfaces the same data as `checks: RelevantCheck[]` on the base object.
 
 ---
 
@@ -95,11 +102,11 @@ The body line (`WAIT: …`) varies with the merge state — `branch is behind ba
 
 ## `rerun_ci`
 
-Re-triggers CI runs that failed due to transient infrastructure or timeout issues.
+Surfaces CI runs that failed due to transient infrastructure or timeout issues, and instructs the agent to re-trigger them.
 
 **Trigger:** One or more failing checks have `failureKind === "timeout"` or `"infrastructure"`, and no actionable work was found (evaluated after step 4).
 
-**CLI side-effects:** Calls `gh run rerun <runId> --failed` for each unique run ID. Deduplicates — multiple failed steps sharing a run ID produce one rerun call.
+**CLI side-effects:** None. The CLI emits the list of run IDs that need a rerun; the agent runs `gh run rerun <runId> --failed` for each one. Deduplicates — multiple failed steps sharing a run ID produce one rerun entry.
 
 **Exit code:** 0
 
@@ -111,16 +118,23 @@ Re-triggers CI runs that failed due to transient infrastructure or timeout issue
 **status** `FAILING` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 0 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 600 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
 
-RERAN 2 CI runs: 24697658766 (lint / typecheck / test (22.x) — timeout), 24697658767 (build — infrastructure)
+## Checks
+
+- ✗ `lint / typecheck / test (22.x)` (timeout) — TIMED_OUT · `24697658766`
+- ✗ `build` (infrastructure) — CANCELLED · `24697658767`
+
+RERUN NEEDED — 2 CI runs: 24697658766 (lint / typecheck / test (22.x) — timeout), 24697658767 (build — infrastructure)
 
 ## Instructions
 
-1. The CLI already triggered the re-run above — end this iteration and wait for CI to report results.
+1. Run: `gh run rerun 24697658766 --failed`
+2. Run: `gh run rerun 24697658767 --failed`
+3. End this iteration — wait for CI to report results after the re-run.
 ```
 
 Each comma-separated entry on the body line has shape `<runId> (<check names joined by ", "> — <failureKind>)`. JSON surfaces the same information as `reran: ReranRun[]`.
 
-**What the monitor does:** Follow `## Instructions` — end the iteration and wait for CI to re-queue.
+**What the monitor does:** Follow `## Instructions` — run `gh run rerun <runId> --failed` for each listed run ID, then end the iteration and wait for CI to re-queue.
 
 ---
 
