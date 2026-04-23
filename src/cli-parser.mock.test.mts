@@ -344,6 +344,14 @@ describe("main — iterate", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     expect(process.exitCode).toBe(0);
   });
+
+  it("passes stallTimeoutSeconds derived from --stall-timeout to runIterate", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
+    await main(["node", "shepherd", "iterate", "42", "--stall-timeout", "15m"]);
+    expect(mockRunIterate).toHaveBeenCalledWith(
+      expect.objectContaining({ stallTimeoutSeconds: 15 * 60 }),
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
