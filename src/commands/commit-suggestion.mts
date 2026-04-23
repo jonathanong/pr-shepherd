@@ -67,6 +67,14 @@ export async function runCommitSuggestion(
     );
   }
 
+  const { stdout: localHeadOut } = await execFile("git", ["rev-parse", "HEAD"]);
+  const localHeadSha = localHeadOut.trim();
+  if (localHeadSha !== head.sha) {
+    throw new Error(
+      `Local HEAD ${localHeadSha} does not match PR head ${head.sha}. ` +
+        `Pull/rebase "${head.ref}" to the latest PR head and try again.`,
+    );
+  }
   // Fetch PR data and locate the thread
   const { data } = await fetchPrBatch(prNumber, repo);
   const thread = data.reviewThreads.find((t) => t.id === opts.threadId);
