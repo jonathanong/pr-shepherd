@@ -7,7 +7,14 @@ import type {
   Review,
   ReviewThread,
 } from "../types.mts";
-import type { RawPr, RawThread, RawComment, RawReview, RawReviewSummary, RawContextNode } from "./batch-raw-types.mts";
+import type {
+  RawPr,
+  RawThread,
+  RawComment,
+  RawReview,
+  RawReviewSummary,
+  RawContextNode,
+} from "./batch-raw-types.mts";
 
 export function parseRawPr(
   raw: RawPr,

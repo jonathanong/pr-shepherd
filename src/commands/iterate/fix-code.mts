@@ -76,7 +76,10 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     return {
       ...base,
       action: "escalate",
-      escalate: { ...escalateBase, humanMessage: buildEscalateHumanMessage(escalateBase, prNumber) },
+      escalate: {
+        ...escalateBase,
+        humanMessage: buildEscalateHumanMessage(escalateBase, prNumber),
+      },
     };
   }
 

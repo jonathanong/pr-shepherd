@@ -23,12 +23,7 @@ import { autoResolveOutdated } from "../comments/resolve.mts";
 import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
 import { computeStatus } from "./check-status.mts";
-import type {
-  GlobalOptions,
-  ShepherdReport,
-  ClassifiedCheck,
-  BatchPrData,
-} from "../types.mts";
+import type { GlobalOptions, ShepherdReport, ClassifiedCheck, BatchPrData } from "../types.mts";
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -168,4 +163,3 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
     lastPushTime: opts.lastPushTime,
   };
 }
-

@@ -1,4 +1,11 @@
-import type { AgentThread, AgentComment, AgentCheck, Review, ResolveCommand, IterateResultBase } from "../../types.mts";
+import type {
+  AgentThread,
+  AgentComment,
+  AgentCheck,
+  Review,
+  ResolveCommand,
+  IterateResultBase,
+} from "../../types.mts";
 
 /**
  * Render a ResolveCommand as a single-line command string for the monitor loop

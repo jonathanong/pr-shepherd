@@ -3,7 +3,14 @@ export { formatFixCodeResult, blockquote } from "./fix-formatter.mts";
 
 export function formatFetchResult(result: {
   prNumber: number;
-  actionableThreads: Array<{ id: string; path: string | null; line: number | null; author: string; body: string; suggestion?: unknown }>;
+  actionableThreads: Array<{
+    id: string;
+    path: string | null;
+    line: number | null;
+    author: string;
+    body: string;
+    suggestion?: unknown;
+  }>;
   actionableComments: Array<{ id: string; author: string; body: string }>;
   changesRequestedReviews: Array<{ id: string; author: string }>;
   reviewSummaries: Array<{ id: string; author: string; body: string }>;
@@ -148,4 +155,3 @@ export function formatMutateResult(result: {
   if (result.errors.length) lines.push(`Errors:\n  ${result.errors.join("\n  ")}`);
   return `${lines.join("\n")}\n`;
 }
-

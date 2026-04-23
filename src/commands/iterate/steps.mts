@@ -1,5 +1,10 @@
 import { applyStallGuard } from "./stall.mts";
-import { validateBaseBranch, buildRebaseShellScript, buildEscalateSuggestion, buildEscalateHumanMessage } from "./escalate.mts";
+import {
+  validateBaseBranch,
+  buildRebaseShellScript,
+  buildEscalateSuggestion,
+  buildEscalateHumanMessage,
+} from "./escalate.mts";
 import type {
   EscalateDetails,
   IterateResult,
@@ -34,8 +39,7 @@ export async function buildRerunCiResult(
   }
   const reran = [...runMap.values()];
   const runSummaries = reran.map(
-    ({ runId, checkNames, failureKind }) =>
-      `${runId} (${checkNames.join(", ")} — ${failureKind})`,
+    ({ runId, checkNames, failureKind }) => `${runId} (${checkNames.join(", ")} — ${failureKind})`,
   );
   return applyStallGuard(
     stallKey,

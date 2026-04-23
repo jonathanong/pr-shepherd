@@ -163,7 +163,15 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
 
   const hasFlaky = report.checks.failing.some((f) => f.failureKind === "flaky");
   if (hasFlaky && report.mergeStatus.status === "BEHIND" && config.actions.autoRebase) {
-    return handleRebase(base, report, stallKey, stallTimeoutSeconds, headSha, prNumber, reviewSummaryIds);
+    return handleRebase(
+      base,
+      report,
+      stallKey,
+      stallTimeoutSeconds,
+      headSha,
+      prNumber,
+      reviewSummaryIds,
+    );
   }
 
   const mergeStateAllowsMarkReady =

@@ -1,6 +1,13 @@
 // Iterate command types.
 
-import type { AgentThread, AgentComment, AgentCheck, GlobalOptions, RelevantCheck, ShepherdStatus } from "./report.mts";
+import type {
+  AgentThread,
+  AgentComment,
+  AgentCheck,
+  GlobalOptions,
+  RelevantCheck,
+  ShepherdStatus,
+} from "./report.mts";
 import type { MergeStateStatus, Review } from "./github.mts";
 
 export type ShepherdAction =

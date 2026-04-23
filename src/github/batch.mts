@@ -11,7 +11,14 @@ import { graphql, graphqlWithRateLimit, type RateLimitInfo, type RepoInfo } from
 import { paginateForward, paginateBackward } from "./pagination.mts";
 import { BATCH_PR_QUERY } from "./queries.mts";
 import { parseRawPr } from "./batch-parsers.mts";
-import type { RawBatchResponse, RawThread, RawComment, RawReview, RawReviewSummary, RawContextNode } from "./batch-raw-types.mts";
+import type {
+  RawBatchResponse,
+  RawThread,
+  RawComment,
+  RawReview,
+  RawReviewSummary,
+  RawContextNode,
+} from "./batch-raw-types.mts";
 import type { BatchPrData } from "../types.mts";
 
 // ---------------------------------------------------------------------------
@@ -182,4 +189,3 @@ export async function fetchPrBatch(
   );
   return { data, rateLimit: result.rateLimit };
 }
-
