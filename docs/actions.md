@@ -27,9 +27,7 @@ Load-bearing conventions (the monitor SKILL depends on these):
 2. Lines 3–4 carry the full base fields (status, merge, state, repo, summary, remainingSeconds, etc.), so Markdown output is never a lossy view of JSON.
 3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … — that tells the monitor exactly what to do. The monitor follows those steps; it does not need its own dispatch table.
 4. Under `[REBASE]`, the shell script is inside a ```bash fenced block — instruction 1 tells the monitor to extract and run it.
-5. Under `[FIX_CODE]`, two variants are discriminated by `fix.mode`:
-   - `rebase-and-push` (default): the `## Post-fix push` section has a `` resolve: `<command>` `` bullet — the instructions reference this bullet so the monitor strips backticks and runs the command.
-   - `commit-suggestions` (shortcut): the `## Commit suggestions` section has `` commit-suggestions: `<command>` `` and `` after: `git pull --ff-only` `` bullets — the instructions tell the monitor to run the first, then the second. No rebase, no force-push, no resolve ceremony.
+5. Under `[FIX_CODE]`, the `## Post-fix push` section has a `` resolve: `<command>` `` bullet — the instructions reference this bullet so the monitor strips backticks and runs the command.
 
 ---
 
@@ -298,41 +296,7 @@ Actionable work needs a code fix, commit, and push.
 9. Stop this iteration — CI needs time to run on the new push before the next tick.
 ```
 
-### Commit-suggestions shortcut
-
-When **every** actionable thread carries a parseable ` ```suggestion ` block and there are no actionable comments, noise comments, failing checks, changes-requested reviews, or merge conflicts (and `actions.commitSuggestions` is true and `--no-commit-suggestions` was not passed), `fix_code` short-circuits the rebase ceremony. The CLI hands the agent a pre-built `commit-suggestions` invocation that creates one server-side commit (co-crediting each reviewer) and then resolves the affected threads.
-
-````markdown
-# PR #42 [FIX_CODE]
-
-**status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 3 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 600 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
-
-## Review threads
-
-### `PRRT_x` — `src/foo.ts:10` (@reviewer)
-
-> Use a const here.
->
-> ```suggestion
-> const remainingSeconds = …;
-> ```
-
-## Commit suggestions
-
-- commit-suggestions: `npx pr-shepherd commit-suggestions 42 --thread-ids PRRT_x`
-- after: `git pull --ff-only`
-
-## Instructions
-
-1. Run the `commit-suggestions:` command above — it applies all reviewer suggestion blocks server-side as a single commit and resolves the threads.
-2. Run `git pull --ff-only` to sync your local checkout with the new commit before any further edits.
-3. Stop this iteration — CI needs time to run on the new commit before the next tick.
-````
-
-The JSON payload for this variant carries `fix.mode === "commit-suggestions"` plus `fix.threads`, `fix.commitSuggestionsCommand.argv`, and `fix.instructions`. The rebase-and-push fields (`actionableComments`, `noiseCommentIds`, `checks`, `changesRequestedReviews`, `resolveCommand`) are absent — the discriminator on `mode` tells consumers which shape to expect.
-
-**Section order (rebase-and-push variant):**
+**Section order:**
 
 1. Heading + base fields (always present).
 2. `## Review threads` — each thread under `### <id> — <loc> (@author)` with the full body as a `>` blockquote. Multi-paragraph bodies preserve empty lines as `>` lines, so code blocks and ` ```suggestion ` blocks survive intact.
@@ -360,7 +324,6 @@ The JSON payload for this variant carries `fix.mode === "commit-suggestions"` pl
 - `Keep the PR title and description current:` is emitted immediately after the commit step and uses the same gate (`hasCodeChanges`). A `CONFLICTS`-only dispatch (no code to commit) omits it.
 - The rebase step switches wording based on `mergeStatus.status`. When conflicts are present it emits "Rebase with conflict resolution" and walks through `git rebase --continue` loops; otherwise it emits the clean one-liner `git fetch origin && git rebase origin/<base> && git push --force-with-lease`.
 - The `resolve:` instruction is only emitted when the resolve command actually mutates GitHub state (at least one of threads/comments/reviews is non-empty). A `CONFLICTS`-only dispatch omits it.
-- The commit-suggestions variant always emits exactly three instructions: run the `commit-suggestions:` command, then `git pull --ff-only`, then stop the iteration.
 - A "Do not re-run `gh run cancel`" instruction is appended for rebase-and-push when `cancelled` is non-empty and a push is required — it reminds the monitor that those IDs were cancelled pre-push and new runs have since been triggered.
 - A "Stop this iteration" instruction is always appended for rebase-and-push when a push or GitHub mutation is required, so CI has time to start before the next tick.
 

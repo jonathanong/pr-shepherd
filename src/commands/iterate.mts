@@ -824,21 +824,6 @@ function buildFixInstructions(
   return instructions;
 }
 
-/**
- * Three-step instruction list emitted with the `## Commit suggestions` shortcut.
- * The CLI's `commit-suggestions` subcommand creates one server-side commit and
- * resolves the threads it landed, so the agent only needs to invoke it,
- * sync the local checkout, then stop the iteration so CI can run.
- */
-function buildCommitSuggestionsInstructions(): string[] {
-  return [
-    "Run the `commit-suggestions:` command above — it applies all reviewer suggestion blocks server-side as a single commit and resolves the threads.",
-    "Run `git pull --ff-only` to sync your local checkout with the new commit before any further edits.",
-    "Stop this iteration — CI needs time to run on the new commit before the next tick.",
-  ];
-}
-
-
 function buildWaitLog(base: IterateResultBase): string {
   const { summary, mergeStateStatus, remainingSeconds } = base;
   const parts: string[] = [`WAIT: ${summary.passing} passing, ${summary.inProgress} in-progress`];

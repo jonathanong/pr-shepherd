@@ -29,8 +29,8 @@ When making changes, review [`docs/`](docs/) and [`README.md`](README.md) for im
 CLI output that targets a human or an AI agent must be easy to read and act on:
 
 - Every heading (`##`, `###`) is followed by a blank line before its body.
-- Each item that the reader may need to act on independently goes on its own line — use a bullet list or a numbered list. Do not chain multiple actionable items together on one line with `·`, `,`, or `;`. (The base/summary status lines in `formatIterateResult` are a dashboard meant to be scanned at a glance, not acted on individually — those are exempt.)
-- Long output is acceptable. Clarity over brevity for anything the reader must act on.
+- Each independently actionable item goes on its own line — use a bullet list or a numbered list. Do not chain multiple action items together on one line with `·`, `,`, or `;`. Informational summaries, status rollups, and ID lists that are meant to be scanned rather than acted on item-by-item may stay inline if they remain easy to read. (The base/summary status lines in `formatIterateResult` are a dashboard meant to be scanned at a glance, not acted on individually — those are exempt.)
+- Long output is acceptable. Prefer clarity over brevity for instructions and other content the reader is expected to act on.
 - When the output tells the reader to do something, phrase it as explicit, numbered steps.
 
 ## Keep skills and loop prompts minimal

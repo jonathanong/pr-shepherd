@@ -366,13 +366,9 @@ function formatMutateResult(result: Awaited<ReturnType<typeof runResolveMutate>>
  *   1. The H1 heading on line 1 contains `[<ACTION>]` — the action tag identifies
  *      the output for logging and validation. Behavior is driven by `## Instructions`,
  *      not by dispatching on the tag.
- *   2. `[FIX_CODE]` has two variants discriminated by `fix.mode`:
- *        2a. `rebase-and-push`: the `resolve` bullet under `## Post-fix push`
- *            wraps the resolve command in backticks — the SKILL extracts the
- *            backticked content for execution.
- *        2b. `commit-suggestions`: the `commit-suggestions` bullet under
- *            `## Commit suggestions` wraps the CLI invocation in backticks,
- *            and the `after` bullet wraps `git pull --ff-only` in backticks.
+ *   2. `[FIX_CODE]` uses the `rebase-and-push` variant: the `resolve` bullet under
+ *      `## Post-fix push` wraps the resolve command in backticks — the SKILL
+ *      extracts the backticked content for execution.
  *   3. The shell script under `[REBASE]` is inside a ```bash fenced block.
  *   4. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … —
  *      that tells the monitor exactly what to do with this output. The section is
@@ -481,8 +477,6 @@ function formatFixCodeResult(
 ): string {
   const sections: string[] = [header];
 
-  // Threads section is shared between both fix modes — render it first so the
-  // human/agent sees what is about to be applied.
   if (result.fix.threads.length > 0) {
     sections.push("## Review threads");
     for (const t of result.fix.threads) {
@@ -491,20 +485,6 @@ function formatFixCodeResult(
       sections.push(blockquote(t.body));
     }
   }
-
-  if (result.fix.mode === "commit-suggestions") {
-    sections.push("## Commit suggestions");
-    sections.push(
-      [
-        `- commit-suggestions: \`${result.fix.commitSuggestionsCommand.argv.map((a) => (/\s/.test(a) ? `"${a}"` : a)).join(" ")}\``,
-        `- after: \`git pull --ff-only\``,
-      ].join("\n"),
-    );
-    sections.push("## Instructions");
-    sections.push(result.fix.instructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n"));
-    return sections.join("\n\n");
-  }
-
 
   if (result.fix.actionableComments.length > 0) {
     sections.push("## Actionable comments");
