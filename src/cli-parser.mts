@@ -397,9 +397,7 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
       if (checksSection) parts.push(checksSection);
       parts.push(
         result.log,
-        "",
         "## Instructions",
-        "",
         "1. End this iteration — the next cron fire will recheck.",
       );
       return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
@@ -414,7 +412,7 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
       );
       const parts = [header];
       if (checksSection) parts.push(checksSection);
-      parts.push(result.log, "", "## Instructions", "", rerunInstructions.join("\n"));
+      parts.push(result.log, "## Instructions", rerunInstructions.join("\n"));
       return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
     }
 
@@ -423,9 +421,7 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
       if (checksSection) parts.push(checksSection);
       parts.push(
         result.log,
-        "",
         "## Instructions",
-        "",
         "1. The CLI already marked the PR ready for review — end this iteration.",
       );
       return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
@@ -436,9 +432,7 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
       if (checksSection) parts.push(checksSection);
       parts.push(
         result.log,
-        "",
         "## Instructions",
-        "",
         "1. Invoke `/loop cancel` via the Skill tool.\n2. Stop.",
       );
       return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
@@ -461,9 +455,7 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
       if (checksSection) parts.push(checksSection);
       parts.push(
         result.escalate.humanMessage,
-        "",
         "## Instructions",
-        "",
         "1. Invoke `/loop cancel` via the Skill tool.\n2. Stop — the PR needs human direction before monitoring can resume.",
       );
       return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
@@ -482,7 +474,11 @@ function formatChecksSection(checks: import("./types.mts").RelevantCheck[]): str
       lines.push(`- ✓ \`${c.name}\` — SUCCESS`);
     } else {
       const kind = c.failureKind ? ` (${c.failureKind})` : "";
-      const locator = c.runId ? `\`${c.runId}\`` : c.detailsUrl ? `\`${c.detailsUrl}\`` : "(no ID)";
+      const locator = c.runId
+        ? `\`${c.runId}\``
+        : c.detailsUrl
+          ? `external \`${c.detailsUrl}\``
+          : "(no runId)";
       lines.push(`- ✗ \`${c.name}\`${kind} — ${c.conclusion} · ${locator}`);
       if (c.errorExcerpt) {
         for (const eLine of c.errorExcerpt.split("\n")) {

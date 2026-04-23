@@ -129,7 +129,7 @@ export function extractErrorLines(logs: string, maxLines: number): string {
     .map((l) => {
       // Strip optional timestamp + `##[error]` prefix:
       // "2026-04-23T09:53:06.123Z ##[error]Error: foo" → "Error: foo"
-      return l.replace(/^[^\s]*\s*##\[error\]/, "").trim();
+      return l.replace(/^.*##\[error\]/, "").trim();
     })
     .filter(Boolean)
     .join("\n");
