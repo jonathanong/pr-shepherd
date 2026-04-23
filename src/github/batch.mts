@@ -29,10 +29,26 @@ export interface BatchResult {
   rateLimit?: RateLimitInfo;
 }
 
+export interface FetchPrBatchOptions {
+  /**
+   * When false (default), the first-page approvedReviews are returned but
+   * backward pagination is skipped. Iterate's approvals-minimize flow sets this
+   * to true only when the user opts in, so long-lived PRs with > 50 approvals
+   * don't pay extra GraphQL round-trips per monitor tick for data no consumer
+   * currently uses. The first page is free — already inside the one batch
+   * request — so there's no need to conditionally omit the field itself.
+   */
+  paginateApprovedReviews?: boolean;
+}
+
 /**
  * Fetch all PR data needed for a `shepherd check` in one (or a few, if paginating) GraphQL requests.
  */
-export async function fetchPrBatch(pr: number, repo: RepoInfo): Promise<BatchResult> {
+export async function fetchPrBatch(
+  pr: number,
+  repo: RepoInfo,
+  opts: FetchPrBatchOptions = {},
+): Promise<BatchResult> {
   // First page: no cursor variables.
   const result = await graphqlWithRateLimit<RawBatchResponse>(BATCH_PR_QUERY, {
     owner: repo.owner,
@@ -119,9 +135,14 @@ export async function fetchPrBatch(pr: number, repo: RepoInfo): Promise<BatchRes
     rawReviewSummaryNodes = [...extra, ...rawReviewSummaryNodes];
   }
 
-  // Paginate APPROVED reviews backward if the first page is incomplete.
+  // Paginate APPROVED reviews backward if the first page is incomplete — gated behind
+  // `paginateApprovedReviews` because approvals minimization is opt-in. See FetchPrBatchOptions.
   let rawApprovedReviewNodes = raw.approvedReviews.nodes;
-  if (raw.approvedReviews.pageInfo.hasPreviousPage && raw.approvedReviews.pageInfo.startCursor) {
+  if (
+    opts.paginateApprovedReviews &&
+    raw.approvedReviews.pageInfo.hasPreviousPage &&
+    raw.approvedReviews.pageInfo.startCursor
+  ) {
     const extra = await paginateBackward<RawReviewSummary>(async (cursor) => {
       const res = await graphql<RawBatchResponse>(BATCH_PR_QUERY, {
         owner: repo.owner,

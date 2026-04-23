@@ -119,7 +119,7 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
         actionableComments: [],
         noiseCommentIds: [],
         reviewSummaryIds: [],
-        surfacedHumanSummaries: [],
+        surfacedSummaries: [],
         checks: [],
         changesRequestedReviews: [],
         resolveCommand: {
@@ -461,7 +461,7 @@ describe("main — iterate text format", () => {
       actionableComments: [{ id: "PRRC_1", author: "bot", body: "please address" }],
       noiseCommentIds: ["c-noise-1", "c-noise-2"],
       reviewSummaryIds: [],
-      surfacedHumanSummaries: [],
+      surfacedSummaries: [],
       checks: [
         { name: "lint", runId: "run-42", detailsUrl: "https://x", failureKind: "actionable" },
         {
@@ -567,7 +567,7 @@ describe("main — iterate text format", () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
     if (result.fix.mode !== "rebase-and-push") throw new Error("unreachable");
-    result.fix.surfacedHumanSummaries = [
+    result.fix.surfacedSummaries = [
       { id: "PRR_HUMAN", author: "alice", body: "Looks reasonable but please double-check X." },
     ];
     mockRunIterate.mockResolvedValue(result);

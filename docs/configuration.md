@@ -93,15 +93,17 @@ Controls which review IDs the monitor / `iterate` loop includes in `--minimize-c
 
 #### `iterate.minimizeReviewSummaries.bots` — default `true`
 
-Auto-minimize `COMMENTED` review summaries whose author is a known bot (`copilot-pull-request-reviewer`, `gemini-code-assist`, `coderabbitai`, or any `*[bot]` login). Set `false` to leave bot summaries visible.
+Auto-minimize `COMMENTED` review summaries whose author is a known bot (`copilot-pull-request-reviewer`, `gemini-code-assist`, `coderabbitai`, or any `*[bot]` login). When `false`, bot summaries render under `## Review summaries (surfaced — not minimized)` in the iterate output instead (same treatment as the `humans` toggle) — not dropped.
 
 #### `iterate.minimizeReviewSummaries.humans` — default `true`
 
-Auto-minimize `COMMENTED` review summaries from non-bot authors. When `false`, human summaries are rendered under `## Review summaries (surfaced — not minimized)` in the iterate output so you see them, but they are not passed to `--minimize-comment-ids`.
+Auto-minimize `COMMENTED` review summaries from non-bot authors. When `false`, human summaries render under `## Review summaries (surfaced — not minimized)` in the iterate output so you see them, but they are not passed to `--minimize-comment-ids`.
 
 #### `iterate.minimizeReviewSummaries.approvals` — default `false`
 
 Opt in to minimize `APPROVED`-state reviews (`pr approve` clicks with or without a body). Off by default because approvals are usually an affirmative signal you want to keep visible. Flip to `true` for long-running PRs where stale approvals pile up.
+
+> Perf note: when this is `false` (default), `fetchPrBatch` does not paginate beyond the first 50 approved reviews. Turn it on to fetch all approvals.
 
 ---
 

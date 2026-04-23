@@ -411,9 +411,9 @@ All supported keys:
 | `cache.ttlSeconds`                          | `300`                                     | File-cache TTL for read operations                                                                   |
 | `iterate.cooldownSeconds`                   | `30`                                      | Wait after a push before reading CI                                                                  |
 | `iterate.fixAttemptsPerThread`              | `3`                                       | Max fix attempts per unresolved thread before `escalate`                                             |
-| `iterate.minimizeReviewSummaries.bots`      | `true`                                    | Auto-minimize COMMENTED review summaries from bot authors (Copilot, Gemini, `*[bot]`)                |
-| `iterate.minimizeReviewSummaries.humans`    | `true`                                    | Auto-minimize COMMENTED review summaries from human authors (surfaced instead when `false`)          |
-| `iterate.minimizeReviewSummaries.approvals` | `false`                                   | Auto-minimize APPROVED-state reviews (off by default — approvals usually stay visible)               |
+| `iterate.minimizeReviewSummaries.bots`      | `true`                                    | Auto-minimize COMMENTED review summaries from bot authors; surfaced (not dropped) when `false`       |
+| `iterate.minimizeReviewSummaries.humans`    | `true`                                    | Auto-minimize COMMENTED review summaries from human authors; surfaced when `false`                   |
+| `iterate.minimizeReviewSummaries.approvals` | `false`                                   | Opt in to minimize APPROVED-state reviews (also enables >50-approval pagination)                     |
 | `watch.interval`                            | `"4m"`                                    | Monitor tick interval (tuned to Claude's 5-min prompt-cache TTL)                                     |
 | `watch.readyDelayMinutes`                   | `10`                                      | Settle window after READY before the monitor loop cancels                                            |
 | `watch.expiresHours`                        | `8`                                       | Max lifetime of a monitor cron job                                                                   |

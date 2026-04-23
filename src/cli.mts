@@ -446,9 +446,9 @@ function formatFixCodeResult(
     sections.push(result.fix.reviewSummaryIds.map((id) => `\`${id}\``).join(", "));
   }
 
-  if (result.fix.surfacedHumanSummaries.length > 0) {
+  if (result.fix.surfacedSummaries.length > 0) {
     sections.push("## Review summaries (surfaced — not minimized)");
-    for (const r of result.fix.surfacedHumanSummaries) {
+    for (const r of result.fix.surfacedSummaries) {
       sections.push(`### \`${r.id}\` (@${r.author})`);
       sections.push(blockquote(r.body));
     }

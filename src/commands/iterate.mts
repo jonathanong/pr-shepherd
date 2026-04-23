@@ -168,7 +168,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   // already runs fetch+rebase+push, so conflicts are resolved as part of that flow.
   const actionableChecks = report.checks.failing.filter((f) => f.failureKind === "actionable");
   // Classify review summaries upfront so summary-only PRs still trigger fix_code and get minimized.
-  const { minimizeIds: reviewSummaryIds, surfacedHumanSummaries } = classifyReviewSummaries(
+  const { minimizeIds: reviewSummaryIds, surfacedSummaries } = classifyReviewSummaries(
     report.reviewSummaries,
     report.approvedReviews,
     config.iterate.minimizeReviewSummaries,
@@ -179,7 +179,8 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     report.changesRequestedReviews.length > 0 ||
     actionableChecks.length > 0 ||
     report.mergeStatus.status === "CONFLICTS" ||
-    reviewSummaryIds.length > 0;
+    reviewSummaryIds.length > 0 ||
+    surfacedSummaries.length > 0;
 
   if (hasActionableWork) {
     // Load fix-attempt counts, resetting if HEAD SHA changed (new commit pushed).
@@ -351,7 +352,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
         actionableComments,
         noiseCommentIds,
         reviewSummaryIds,
-        surfacedHumanSummaries,
+        surfacedSummaries,
         checks,
         changesRequestedReviews,
         resolveCommand,
@@ -622,22 +623,18 @@ export function classifyReviewSummaries(
   summaries: Review[],
   approvals: Review[],
   cfg: { bots: boolean; humans: boolean; approvals: boolean },
-): { minimizeIds: string[]; surfacedHumanSummaries: Review[] } {
+): { minimizeIds: string[]; surfacedSummaries: Review[] } {
   const minimizeIds: string[] = [];
-  const surfacedHumanSummaries: Review[] = [];
+  const surfacedSummaries: Review[] = [];
   for (const r of summaries) {
-    if (isBotAuthor(r.author)) {
-      if (cfg.bots) minimizeIds.push(r.id);
-    } else if (cfg.humans) {
-      minimizeIds.push(r.id);
-    } else {
-      surfacedHumanSummaries.push(r);
-    }
+    const enabled = isBotAuthor(r.author) ? cfg.bots : cfg.humans;
+    if (enabled) minimizeIds.push(r.id);
+    else surfacedSummaries.push(r);
   }
   if (cfg.approvals) {
     for (const r of approvals) minimizeIds.push(r.id);
   }
-  return { minimizeIds, surfacedHumanSummaries };
+  return { minimizeIds, surfacedSummaries };
 }
 
 // Patterns that indicate a comment is bot-generated noise rather than actionable feedback.

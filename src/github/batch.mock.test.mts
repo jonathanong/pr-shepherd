@@ -650,7 +650,7 @@ describe("fetchPrBatch — approvedReviews", () => {
     expect(data.approvedReviews[0]!.author).toBe("unknown");
   });
 
-  it("paginates backward when hasPreviousPage is true", async () => {
+  it("paginates backward only when paginateApprovedReviews is set", async () => {
     const firstPage = makeRawPr({
       approvedReviews: {
         pageInfo: { hasPreviousPage: true, startCursor: "cursor-ap" },
@@ -666,8 +666,23 @@ describe("fetchPrBatch — approvedReviews", () => {
     mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
     mockGraphql.mockResolvedValue(makeResponse(prevPage));
 
-    const { data } = await fetchPrBatch(42, REPO);
+    const { data } = await fetchPrBatch(42, REPO, { paginateApprovedReviews: true });
     expect(data.approvedReviews.map((r) => r.id)).toEqual(["PRR_1", "PRR_2"]);
+  });
+
+  it("skips approved-review backward pagination by default (opt-in via paginateApprovedReviews)", async () => {
+    const firstPage = makeRawPr({
+      approvedReviews: {
+        pageInfo: { hasPreviousPage: true, startCursor: "cursor-ap" },
+        nodes: [{ id: "PRR_2", isMinimized: false, author: { login: "bob" }, body: "" }],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
+    mockGraphql.mockClear();
+
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.approvedReviews.map((r) => r.id)).toEqual(["PRR_2"]);
+    expect(mockGraphql).not.toHaveBeenCalled();
   });
 });
 

@@ -21,6 +21,7 @@ import { triageFailingChecks } from "../checks/triage.mts";
 import { getOutdatedThreads } from "../comments/outdated.mts";
 import { autoResolveOutdated } from "../comments/resolve.mts";
 import { deriveMergeStatus } from "../merge-status/derive.mts";
+import { loadConfig } from "../config/load.mts";
 import type {
   GlobalOptions,
   MergeStatusResult,
@@ -62,7 +63,10 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
   let batchData = await cacheGet<BatchPrData>(cacheKey, cacheOpts);
 
   if (batchData === null) {
-    const result = await fetchPrBatch(prNumber, repo);
+    // Only paginate APPROVED reviews when the caller will actually minimize them.
+    // Otherwise the first-page cap of 50 (already in the batch) is plenty — no extra round-trip.
+    const paginateApprovedReviews = loadConfig().iterate.minimizeReviewSummaries.approvals;
+    const result = await fetchPrBatch(prNumber, repo, { paginateApprovedReviews });
     batchData = result.data;
     // Don't cache UNKNOWN merge state — it's transient and would poison the
     // cache for the full TTL window, causing stale UNKNOWN on the next sweep.

@@ -353,8 +353,8 @@ export interface FixRebaseAndPush {
   noiseCommentIds: string[];
   /** Review IDs (COMMENTED summaries and, if opted in, APPROVED reviews) to minimize — no code change needed. */
   reviewSummaryIds: string[];
-  /** Human-authored COMMENTED review summaries surfaced for visibility when the humans toggle is off. Not minimized. */
-  surfacedHumanSummaries: Review[];
+  /** COMMENTED review summaries surfaced for visibility (author type's toggle is off). Not minimized. */
+  surfacedSummaries: Review[];
   checks: AgentCheck[];
   changesRequestedReviews: Review[];
   /** Pre-built resolve command. Run after committing and pushing. */
