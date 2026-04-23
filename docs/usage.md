@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-```sh
+```
 pr-shepherd -v|--version                              # print installed version
 pr-shepherd check [PR]                                # read-only PR status snapshot
 pr-shepherd resolve [PR] [--fetch | --resolve-thread-ids …]
@@ -96,7 +96,7 @@ Dismissed reviews (1): PRR_kwDO123
 
 ### pr-shepherd commit-suggestion [PR] --thread-id A --message "…"
 
-Applies a single reviewer ` ```suggestion ` block as a local git commit. Builds a unified diff from the suggestion, validates it against the working tree with `git apply --check`, writes the file, and commits with the caller-supplied message plus a `Co-authored-by: <reviewer>` trailer. The thread is resolved on GitHub after the commit lands. The CLI never pushes — `postActionInstruction` tells the caller to `git push` when ready.
+Applies a single reviewer ``suggestion`` fenced block as a local git commit. Builds a unified diff from the suggestion, validates it against the working tree with `git apply --check`, writes the file, and commits with the caller-supplied message plus a `Co-authored-by: <reviewer>` trailer. The thread is resolved on GitHub after the commit lands. The CLI never pushes — `postActionInstruction` tells the caller to `git push` when ready.
 
 ```sh
 pr-shepherd commit-suggestion 42 \
