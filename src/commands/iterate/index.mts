@@ -9,6 +9,7 @@ import {
   getCurrentHeadSha,
   buildSummary,
   buildRelevantChecks,
+  buildCooldownResult,
 } from "./helpers.mts";
 import { classifyReviewSummaries } from "./classify.mts";
 import { applyStallGuard } from "./stall.mts";
@@ -32,25 +33,10 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   const lastCommitTime = await getLastCommitTime();
   const nowSeconds = Math.floor(Date.now() / 1000);
   if (nowSeconds - lastCommitTime < cooldownSeconds) {
-    return {
-      action: "cooldown",
-      pr: prNumber,
-      repo: "",
-      status: "UNKNOWN",
-      state: "UNKNOWN" as const,
-      mergeStateStatus: "UNKNOWN",
-      copilotReviewInProgress: false,
-      isDraft: false,
-      shouldCancel: false,
-      remainingSeconds: readyDelaySeconds,
-      summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 0 },
-      baseBranch: "",
-      checks: [],
-      log: "SKIP: CI still starting — waiting for first check to appear",
-    };
+    return buildCooldownResult(prNumber, readyDelaySeconds);
   }
 
-  let report = await runCheck({
+  const report = await runCheck({
     ...optsWithPr,
     autoResolve: config.actions.autoResolveOutdated,
   });

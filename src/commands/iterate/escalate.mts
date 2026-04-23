@@ -6,7 +6,6 @@ import type {
   TriagedCheck,
 } from "../../types.mts";
 import { loadConfig } from "../../config/load.mts";
-import { toAgentThread, toAgentComment } from "../../reporters/agent.mts";
 
 export interface EscalateCheck {
   triggers: string[];
@@ -170,6 +169,3 @@ export function buildEscalateSuggestion(triggers: string[], detail?: string): st
   }
   return "Ambiguous state — inspect the PR and act manually";
 }
-
-// Re-export for use in stall.mts without circular dependency through the barrel.
-export { toAgentThread, toAgentComment };

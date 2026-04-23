@@ -1,22 +1,11 @@
 export { formatIterateResult, formatChecksSection } from "./iterate-formatter.mts";
 export { formatFixCodeResult, blockquote } from "./fix-formatter.mts";
 
-export function formatFetchResult(result: {
-  prNumber: number;
-  actionableThreads: Array<{
-    id: string;
-    path: string | null;
-    line: number | null;
-    author: string;
-    body: string;
-    suggestion?: unknown;
-  }>;
-  actionableComments: Array<{ id: string; author: string; body: string }>;
-  changesRequestedReviews: Array<{ id: string; author: string }>;
-  reviewSummaries: Array<{ id: string; author: string; body: string }>;
-  commitSuggestionsEnabled: boolean;
-  instructions: string[];
-}): string {
+import type { FetchResult } from "../commands/resolve.mts";
+import type { CommitSuggestionResult } from "../types.mts";
+import type { ResolveResult } from "../comments/resolve.mts";
+
+export function formatFetchResult(result: FetchResult): string {
   const total =
     result.actionableThreads.length +
     result.actionableComments.length +
@@ -87,18 +76,7 @@ export function formatFetchResult(result: {
   return `${sections.join("\n\n")}\n`;
 }
 
-export function formatCommitSuggestionResult(result: {
-  applied: boolean;
-  author: string;
-  startLine: number;
-  endLine: number;
-  path: string;
-  commitSha?: string;
-  patch?: string;
-  threadId: string;
-  reason?: string;
-  postActionInstruction?: string;
-}): string {
+export function formatCommitSuggestionResult(result: CommitSuggestionResult): string {
   const lines: string[] = [];
   if (result.applied) {
     lines.push(`Applied suggestion from @${result.author}:`);
@@ -133,12 +111,7 @@ export function formatCommitSuggestionResult(result: {
   return `${lines.join("\n")}\n`;
 }
 
-export function formatMutateResult(result: {
-  resolvedThreads: string[];
-  minimizedComments: string[];
-  dismissedReviews: string[];
-  errors: string[];
-}): string {
+export function formatMutateResult(result: ResolveResult): string {
   const lines: string[] = [];
   if (result.resolvedThreads.length)
     lines.push(

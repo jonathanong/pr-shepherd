@@ -2,7 +2,7 @@ import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 import { rest } from "../../github/http.mts";
 import type { ShepherdReport } from "../../types.mts";
-import type { IterateResultSummary, RelevantCheck } from "../../types.mts";
+import type { IterateResultSummary, RelevantCheck, IterateResult } from "../../types.mts";
 
 const execFile = promisify(execFileCb);
 
@@ -79,4 +79,23 @@ export async function getCurrentHeadSha(): Promise<string> {
   } catch {
     return "unknown";
   }
+}
+
+export function buildCooldownResult(prNumber: number, readyDelaySeconds: number): IterateResult {
+  return {
+    action: "cooldown",
+    pr: prNumber,
+    repo: "",
+    status: "UNKNOWN",
+    state: "UNKNOWN" as const,
+    mergeStateStatus: "UNKNOWN",
+    copilotReviewInProgress: false,
+    isDraft: false,
+    shouldCancel: false,
+    remainingSeconds: readyDelaySeconds,
+    summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 0 },
+    baseBranch: "",
+    checks: [],
+    log: "SKIP: CI still starting — waiting for first check to appear",
+  };
 }

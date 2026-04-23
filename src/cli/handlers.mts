@@ -7,7 +7,6 @@ import {
   parseCommonArgs,
   getFlag,
   hasFlag,
-  parseList,
   parseStatusPrNumbers,
   parseDurationToMinutes,
   parseIntStrict,
@@ -119,5 +118,3 @@ export async function handleStatus(args: string[]): Promise<void> {
   const allReady = summaries.every((s) => deriveSimpleReady(s));
   process.exitCode = allReady ? 0 : 1;
 }
-
-export { parseList };

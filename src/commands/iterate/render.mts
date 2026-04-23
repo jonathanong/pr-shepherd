@@ -48,7 +48,7 @@ export function buildFixInstructions(
       `Apply code fixes: read and edit each file referenced under \`## Review threads\` and \`## Actionable comments\` above.`,
     );
   }
-  // Mirror the truthiness checks in `formatIterateResult` (cli-parser.mts) so each
+  // Mirror the truthiness checks in `formatIterateResult` (cli/iterate-formatter.mts) so each
   // AgentCheck maps to the same bullet shape here as there: runId → runId
   // bullet, else detailsUrl → external bullet, else `(no runId)` bullet.
   const checksWithRunId = checks.filter((c) => c.runId);

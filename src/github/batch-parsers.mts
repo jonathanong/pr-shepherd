@@ -136,19 +136,18 @@ export function parseRawPr(
   };
 }
 
-export function parseCreatedAt(iso: string): number {
+function parseCreatedAt(iso: string): number {
   const ms = new Date(iso).getTime();
   return Number.isFinite(ms) ? Math.floor(ms / 1000) : 0;
 }
 
-export function extractRunId(url: string | undefined | null): string | null {
+function extractRunId(url: string | undefined | null): string | null {
   if (!url) return null;
   const m = /\/runs\/(\d+)/.exec(url);
   return m ? (m[1] ?? null) : null;
 }
 
-/** Maps a GitHub commit status `state` to CheckRun-compatible status + conclusion. */
-export function mapStatusContextState(state: string): {
+function mapStatusContextState(state: string): {
   status: CheckStatus;
   conclusion: CheckConclusion;
 } {
