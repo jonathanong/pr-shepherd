@@ -13,13 +13,7 @@ import { main } from "./cli-parser.mts";
 
 main(process.argv).catch((err) => {
   const msg = err instanceof Error ? err.message : String(err);
-  const cause = err instanceof Error && err.cause != null ? err.cause : null;
-  const causeStr =
-    cause instanceof Error
-      ? `${cause.name}: ${cause.message}`
-      : cause !== null
-        ? String(cause)
-        : null;
+  const causeStr = err instanceof Error && err.cause != null ? String(err.cause) : null;
   process.stderr.write(
     `pr-shepherd error: ${msg}${causeStr !== null ? ` (cause: ${causeStr})` : ""}\n`,
   );
