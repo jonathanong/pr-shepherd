@@ -9,8 +9,6 @@ allowed-tools:
 
 # pr-shepherd monitor — Continuous PR Monitor
 
-> Action reference (all 8 actions, JSON fields, examples): [docs/actions.md](../../../docs/actions.md)
-
 ## Arguments: $ARGUMENTS
 
 ## Resolve PR number
@@ -46,7 +44,7 @@ Run in a single Bash call:
 
 Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with `# PR #<N> [`), log the first line of stderr and continue — do not cancel the loop. The next cron fire will retry.
 
-The output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Every output ends with a `## Instructions` section — follow those numbered steps exactly. See [docs/actions.md](../../../docs/actions.md) for the full output shape of each action.
+The output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Every output ends with a `## Instructions` section — follow those numbered steps exactly.
 
 ```
 

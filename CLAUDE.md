@@ -40,3 +40,5 @@ Skills (`plugin/skills/*/SKILL.md`) and `/loop` prompts should be thin dispatche
 Per-action dispatch logic — which command to extract, which tool to call, what variant to run, substitution rules — belongs in the CLI's Markdown output as a `## Instructions` section, not in the skill or the loop prompt.
 
 Rule of thumb: if a skill or loop prompt contains a dispatch table keyed on CLI output shape, that table should live in the CLI's output instead.
+
+Skills must not link to `docs/**` or `README.md`. Those files are not included in the published plugin and will be dead links for consumers. All information a skill consumer needs must come from the CLI output itself or be written inline in the skill.
