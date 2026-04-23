@@ -389,6 +389,9 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     expect(joined).toContain("PRR_…");
     // summaries-only: no full --dismiss-review-ids guidance block
     expect(joined).not.toContain("For `--dismiss-review-ids`");
+    // summaries have no file paths — fix/commit/push steps must not appear
+    expect(joined).not.toContain("git add");
+    expect(joined).not.toContain("git push");
   });
 });
 

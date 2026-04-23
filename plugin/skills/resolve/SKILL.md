@@ -20,12 +20,7 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
    - If not found, infer: `gh pr list --head "$(git rev-parse --abbrev-ref HEAD)" --json number --jq '.[0].number'`
    - If no PR found, report an error and stop.
 
-2. **Capture context and short-circuit if merged:**
-
-   ```bash
-   BRANCH=$(git rev-parse --abbrev-ref HEAD)
-   BASE_BRANCH=$(gh pr view <N> --json baseRefName --jq '.baseRefName')
-   ```
+2. **Short-circuit if merged:**
 
    ```bash
    gh pr view <N> --json state --jq '.state'
