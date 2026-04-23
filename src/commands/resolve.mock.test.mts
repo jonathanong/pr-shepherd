@@ -288,6 +288,26 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     const result = await runResolveFetch(BASE_OPTS);
     expect(result.reviewSummaries).toEqual([]);
   });
+
+  it("includes prNumber in FetchResult", async () => {
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({}) });
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.prNumber).toBe(42);
+  });
+
+  it("populates instructions as a non-empty string array", async () => {
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({}) });
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(Array.isArray(result.instructions)).toBe(true);
+    expect(result.instructions.length).toBeGreaterThan(0);
+    expect(typeof result.instructions[0]).toBe("string");
+  });
+
+  it("instructions single step when no actionable items", async () => {
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({}) });
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.instructions).toEqual(["No actionable items — end this invocation."]);
+  });
 });
 
 // ---------------------------------------------------------------------------
