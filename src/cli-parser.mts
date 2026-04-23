@@ -418,16 +418,18 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
       return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
     }
 
-    case "mark_ready":
-      return [
-        header,
-        "",
+    case "mark_ready": {
+      const parts = [header];
+      if (checksSection) parts.push(checksSection);
+      parts.push(
         result.log,
         "",
         "## Instructions",
         "",
         "1. The CLI already marked the PR ready for review — end this iteration.",
-      ].join("\n");
+      );
+      return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
+    }
 
     case "cancel": {
       const parts = [header];
@@ -454,17 +456,18 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
       return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
     }
 
-    case "escalate":
-      return [
-        header,
-        "",
+    case "escalate": {
+      const parts = [header];
+      if (checksSection) parts.push(checksSection);
+      parts.push(
         result.escalate.humanMessage,
         "",
         "## Instructions",
         "",
-        "1. Invoke `/loop cancel` via the Skill tool.",
-        "2. Stop — the PR needs human direction before monitoring can resume.",
-      ].join("\n");
+        "1. Invoke `/loop cancel` via the Skill tool.\n2. Stop — the PR needs human direction before monitoring can resume.",
+      );
+      return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
+    }
 
     case "fix_code":
       return formatFixCodeResult(header, checksSection, result);

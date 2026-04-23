@@ -63,7 +63,7 @@ export type FailureKind = "timeout" | "infrastructure" | "actionable" | "flaky";
 
 export interface TriagedCheck extends ClassifiedCheck {
   failureKind?: FailureKind;
-  /** Full log excerpt used for failure classification. */
+  /** Truncated tail of the log excerpt retained for classification/debugging, bounded by configured line/char limits. */
   logExcerpt?: string;
   /** Last N `##[error]`-marked lines (or last N raw lines as fallback). Compact error summary. */
   errorExcerpt?: string;
