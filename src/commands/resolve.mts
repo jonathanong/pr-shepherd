@@ -155,7 +155,8 @@ function buildFetchInstructions(
   const hasCodeItems =
     actionableThreads.length > 0 ||
     actionableComments.length > 0 ||
-    changesRequestedReviews.length > 0;
+    changesRequestedReviews.length > 0 ||
+    reviewSummaries.length > 0;
   const hasSuggestions =
     commitSuggestionsEnabled && actionableThreads.some((t) => t.suggestion != null);
 
@@ -173,10 +174,10 @@ function buildFetchInstructions(
 
   if (hasCodeItems) {
     instructions.push(
-      `Read and edit each file referenced under \`## Actionable Review Threads\`, \`## Actionable PR Comments\`, and \`## Pending CHANGES_REQUESTED reviews\` above. Reclassify each fixed item as Fixed. If an item is too complex to address, leave it as Actionable for the final report.`,
+      `Read and edit each file referenced under \`## Actionable Review Threads\`, \`## Actionable PR Comments\`, \`## Pending CHANGES_REQUESTED reviews\`, and \`## Review summaries\` above. Reclassify each fixed item as Fixed. If an item is too complex to address, leave it as Actionable for the final report.`,
     );
     instructions.push(
-      `Commit changed files: \`git add <files>\` (not \`git add -A\`) \`&& git commit -m "<descriptive message>"\`. If the fixes alter the PR's scope or intent, run \`gh pr edit ${prNumber} --title "<new title>" --body "<new body>"\` to reflect them. Then rebase and push: \`git fetch origin && git rebase origin/<BASE_BRANCH> && git push --force-with-lease\`. Cancel stale in-progress runs: \`gh run list --branch <BRANCH> --status in_progress --json databaseId --jq '.[].databaseId' | xargs -I{} gh run cancel {}\`.`,
+      `Commit changed files: \`git add <files>\` (not \`git add -A\`) \`&& git commit -m "<descriptive message>"\`. If the fixes alter the PR's scope or intent, run \`gh pr edit ${prNumber} --title "<new title>" --body "<new body>"\` to reflect them. Then rebase and push: \`git fetch origin && git rebase origin/$BASE_BRANCH && git push --force-with-lease\`. Cancel stale in-progress runs: \`gh run list --branch $BRANCH --status in_progress --json databaseId --jq '.[].databaseId' | xargs -I{} gh run cancel {}\`.`,
     );
   }
 

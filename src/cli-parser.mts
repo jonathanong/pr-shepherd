@@ -295,9 +295,7 @@ function formatFetchResult(result: Awaited<ReturnType<typeof runResolveFetch>>):
       `## Pending CHANGES_REQUESTED reviews (${result.changesRequestedReviews.length})`,
     );
     sections.push(
-      result.changesRequestedReviews
-        .map((r) => `- \`reviewId=${r.id}\` (@${r.author})`)
-        .join("\n"),
+      result.changesRequestedReviews.map((r) => `- \`reviewId=${r.id}\` (@${r.author})`).join("\n"),
     );
   }
 
@@ -306,8 +304,7 @@ function formatFetchResult(result: Awaited<ReturnType<typeof runResolveFetch>>):
     sections.push(
       result.reviewSummaries
         .map(
-          (r) =>
-            `- \`reviewId=${r.id}\` (@${r.author}): ${r.body.split("\n")[0]!.slice(0, 100)}`,
+          (r) => `- \`reviewId=${r.id}\` (@${r.author}): ${r.body.split("\n")[0]!.slice(0, 100)}`,
         )
         .join("\n"),
     );
