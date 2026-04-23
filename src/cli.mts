@@ -441,6 +441,19 @@ function formatFixCodeResult(
     sections.push(result.fix.noiseCommentIds.map((id) => `\`${id}\``).join(", "));
   }
 
+  if (result.fix.reviewSummaryIds.length > 0) {
+    sections.push("## Review summaries (minimize only)");
+    sections.push(result.fix.reviewSummaryIds.map((id) => `\`${id}\``).join(", "));
+  }
+
+  if (result.fix.surfacedSummaries.length > 0) {
+    sections.push("## Review summaries (surfaced — not minimized)");
+    for (const r of result.fix.surfacedSummaries) {
+      sections.push(`### \`${r.id}\` (@${r.author})`);
+      sections.push(blockquote(r.body));
+    }
+  }
+
   if (result.cancelled.length > 0) {
     sections.push("## Cancelled runs");
     sections.push(result.cancelled.map((id) => `\`${id}\``).join(", "));

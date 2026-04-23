@@ -4,7 +4,12 @@
   },
   "iterate": {
     "cooldownSeconds": 30,
-    "fixAttemptsPerThread": 3
+    "fixAttemptsPerThread": 3,
+    "minimizeReviewSummaries": {
+      "bots": true,
+      "humans": true,
+      "approvals": false
+    }
   },
   "watch": {
     "interval": "4m",

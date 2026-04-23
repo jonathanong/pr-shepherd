@@ -73,6 +73,8 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
     threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
     comments: { actionable: [] },
     changesRequestedReviews: [],
+    reviewSummaries: [],
+    approvedReviews: [],
     ...overrides,
   };
 }
@@ -116,6 +118,8 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
         threads: [],
         actionableComments: [],
         noiseCommentIds: [],
+        reviewSummaryIds: [],
+        surfacedSummaries: [],
         checks: [],
         changesRequestedReviews: [],
         resolveCommand: {
@@ -456,6 +460,8 @@ describe("main — iterate text format", () => {
       ],
       actionableComments: [{ id: "PRRC_1", author: "bot", body: "please address" }],
       noiseCommentIds: ["c-noise-1", "c-noise-2"],
+      reviewSummaryIds: [],
+      surfacedSummaries: [],
       checks: [
         { name: "lint", runId: "run-42", detailsUrl: "https://x", failureKind: "actionable" },
         {
@@ -531,6 +537,47 @@ describe("main — iterate text format", () => {
     // Instructions are numbered.
     expect(out).toContain("1. step one");
     expect(out).toContain("2. step two");
+  });
+
+  it("fix_code: renders '## Review summaries (minimize only)' section when reviewSummaryIds is non-empty", async () => {
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    if (result.fix.mode !== "rebase-and-push") throw new Error("unreachable");
+    result.fix.reviewSummaryIds = ["PRR_BOT", "PRR_AP"];
+    result.fix.resolveCommand = {
+      argv: ["npx", "pr-shepherd", "resolve", "42", "--minimize-comment-ids", "PRR_BOT,PRR_AP"],
+      requiresHeadSha: false,
+      requiresDismissMessage: false,
+      hasMutations: true,
+    };
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+
+    expect(out).toContain("## Review summaries (minimize only)");
+    expect(out).toContain("`PRR_BOT`, `PRR_AP`");
+    expect(out).toContain(
+      "- resolve: `npx pr-shepherd resolve 42 --minimize-comment-ids PRR_BOT,PRR_AP`",
+    );
+    expect(out).not.toContain("## Review summaries (surfaced");
+  });
+
+  it("fix_code: renders '## Review summaries (surfaced — not minimized)' with H3 + blockquote", async () => {
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    if (result.fix.mode !== "rebase-and-push") throw new Error("unreachable");
+    result.fix.surfacedSummaries = [
+      { id: "PRR_HUMAN", author: "alice", body: "Looks reasonable but please double-check X." },
+    ];
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+
+    expect(out).toContain("## Review summaries (surfaced — not minimized)");
+    expect(out).toContain("### `PRR_HUMAN` (@alice)");
+    expect(out).toContain("> Looks reasonable but please double-check X.");
   });
 
   it("fix_code: multi-paragraph thread body is preserved verbatim in the blockquote", async () => {

@@ -167,12 +167,20 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   // conflicts all in one push. CONFLICTS is included here because the fix_code handler
   // already runs fetch+rebase+push, so conflicts are resolved as part of that flow.
   const actionableChecks = report.checks.failing.filter((f) => f.failureKind === "actionable");
+  // Classify review summaries upfront so summary-only PRs still trigger fix_code and get minimized.
+  const { minimizeIds: reviewSummaryIds, surfacedSummaries } = classifyReviewSummaries(
+    report.reviewSummaries,
+    report.approvedReviews,
+    config.iterate.minimizeReviewSummaries,
+  );
   const hasActionableWork =
     report.threads.actionable.length > 0 ||
     report.comments.actionable.length > 0 ||
     report.changesRequestedReviews.length > 0 ||
     actionableChecks.length > 0 ||
-    report.mergeStatus.status === "CONFLICTS";
+    report.mergeStatus.status === "CONFLICTS" ||
+    reviewSummaryIds.length > 0 ||
+    surfacedSummaries.length > 0;
 
   if (hasActionableWork) {
     // Load fix-attempt counts, resetting if HEAD SHA changed (new commit pushed).
@@ -256,7 +264,11 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       noiseCommentIds.length === 0 &&
       changesRequestedReviews.length === 0 &&
       checks.length === 0 &&
-      !hasConflicts;
+      !hasConflicts &&
+      // Block the shortcut when any review summary still needs minimizing — the
+      // commit-suggestions path emits no resolve command, so summary IDs would
+      // be orphaned. Falling through to rebase-and-push keeps them included.
+      reviewSummaryIds.length === 0;
 
     if (canShortcut) {
       return {
@@ -282,7 +294,12 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       };
     }
 
-    const allCommentIds = [...actionableComments.map((c) => c.id), ...noiseCommentIds];
+    // Review summary IDs ride in the minimize bucket — they have no code-fix counterpart.
+    const allCommentIds = [
+      ...actionableComments.map((c) => c.id),
+      ...noiseCommentIds,
+      ...reviewSummaryIds,
+    ];
     const resolveCommand = buildResolveCommand(
       threads,
       actionableComments,
@@ -334,6 +351,8 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
         threads,
         actionableComments,
         noiseCommentIds,
+        reviewSummaryIds,
+        surfacedSummaries,
         checks,
         changesRequestedReviews,
         resolveCommand,
@@ -584,6 +603,38 @@ function buildRebaseShellScript(baseBranch: string): string {
     `fi`,
     `git fetch origin && git rebase origin/${baseBranch} && git push --force-with-lease`,
   ].join("\n");
+}
+
+// Logins treated as bot authors regardless of the GitHub Bot/User user type.
+// Mirrors plugin/skills/resolve/SKILL.md §3 — kept in sync with the resolve triage guidance.
+const KNOWN_BOT_LOGINS = new Set([
+  "copilot-pull-request-reviewer",
+  "gemini-code-assist",
+  "coderabbitai",
+]);
+
+function isBotAuthor(login: string): boolean {
+  const bare = login.replace(/\[bot\]$/, "");
+  if (bare !== login) return true;
+  return KNOWN_BOT_LOGINS.has(bare);
+}
+
+export function classifyReviewSummaries(
+  summaries: Review[],
+  approvals: Review[],
+  cfg: { bots: boolean; humans: boolean; approvals: boolean },
+): { minimizeIds: string[]; surfacedSummaries: Review[] } {
+  const minimizeIds: string[] = [];
+  const surfacedSummaries: Review[] = [];
+  for (const r of summaries) {
+    const enabled = isBotAuthor(r.author) ? cfg.bots : cfg.humans;
+    if (enabled) minimizeIds.push(r.id);
+    else surfacedSummaries.push(r);
+  }
+  if (cfg.approvals) {
+    for (const r of approvals) minimizeIds.push(r.id);
+  }
+  return { minimizeIds, surfacedSummaries };
 }
 
 // Patterns that indicate a comment is bot-generated noise rather than actionable feedback.
