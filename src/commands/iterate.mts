@@ -925,6 +925,7 @@ function computeStallFingerprint(
     status: base.status,
     mergeStateStatus: base.mergeStateStatus,
     state: base.state,
+    isDraft: base.isDraft,
     checks,
     threads,
     comments,

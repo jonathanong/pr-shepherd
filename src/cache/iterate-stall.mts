@@ -19,7 +19,7 @@ import { SAFE_SEGMENT } from "../util/path-segment.mts";
 // ---------------------------------------------------------------------------
 
 export interface StallState {
-  /** Deterministic hash of the material iterate inputs. */
+  /** Canonicalized JSON fingerprint of the material iterate inputs. */
   fingerprint: string;
   /** Unix timestamp (seconds) when this fingerprint was first seen. */
   firstSeenAt: number;

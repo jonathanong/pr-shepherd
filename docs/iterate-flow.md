@@ -60,7 +60,7 @@ See [ready-delay.md](ready-delay.md) for full lifecycle.
 
 - HEAD SHA (from `git rev-parse HEAD`)
 - Action about to be emitted
-- `status`, `mergeStateStatus`, `state`
+- `status`, `mergeStateStatus`, `state`, `isDraft`
 - Sorted failing-check names + failureKinds
 - Sorted actionable thread/comment/review IDs
 - Sorted review-summary minimize IDs
