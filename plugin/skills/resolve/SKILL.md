@@ -59,22 +59,23 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
 
 3a. **Prefer commit-suggestion when available.**
 
-> Note: `pr-shepherd iterate` already emits a pre-built `commit-suggestions` invocation under its own `## Commit suggestions` heading when **every** actionable thread carries a suggestion (and nothing else needs fixing). The monitor skill handles that shortcut directly. The logic below applies to the manual `/pr-shepherd:resolve` flow, which fetches via `resolve --fetch` and decides per-thread.
+For each **Actionable** thread where the fetch payload returned a `suggestion` field **and** the top-level `commitSuggestionsEnabled` is `true`, apply it via the singular command — one thread at a time. Write a concise one-sentence commit message describing the fix; the CLI appends `Co-authored-by: <reviewer>` automatically.
 
-For each **Actionable** thread where the fetch payload returned a `suggestion` field **and** the top-level `commitSuggestionsEnabled` is `true`, let the CLI apply the reviewer's change verbatim instead of re-typing it by hand. This preserves the reviewer's exact text and co-credits them in the commit.
-
-Collect the thread IDs of all such threads, then run:
+For each such thread, run:
 
 ```bash
-npx pr-shepherd commit-suggestions <N> --thread-ids <comma-separated-IDs> --format=json
+npx pr-shepherd commit-suggestion <N> \
+  --thread-id <id> \
+  --message "<one-sentence headline>" \
+  --format=json
 ```
 
-The CLI creates one remote commit with all suggestions applied and resolves the threads it landed. Parse the JSON output:
+Parse each response:
 
-- `threads[].status == "applied"` — mark these as **Fixed**; do **not** pass their IDs to `--resolve-thread-ids` in step 6 (already resolved).
-- `threads[].status == "skipped"` — fall through to manual fixing in step 4. The `reason` tells you why (no parseable suggestion, file changed, overlapping range, etc.).
+- `applied: true` — mark **Fixed**; do **not** pass the ID to `--resolve-thread-ids` in step 6 (the CLI already resolved it).
+- `applied: false` — read `reason` and the `patch` block, then fall through to step 4 to fix manually. Do not retry the same command.
 
-After a successful run, **your working copy is one commit behind remote**. You MUST run `git pull --ff-only` before making any further local edits in this session — otherwise subsequent commits will either fail to push or clobber the applied suggestion.
+After all per-thread calls succeed, you have N local commits. Continue to step 5; the rebase-and-push handles the push — no `git pull --ff-only` needed.
 
 If `commitSuggestionsEnabled` is `false`, skip this step and go straight to manual fixing in step 4.
 
@@ -120,5 +121,5 @@ If `commitSuggestionsEnabled` is `false`, skip this step and go straight to manu
 - NEVER blindly resolve items — always read and verify first.
 - NEVER silently skip a fetched item. Every item must be resolved, acknowledged with a reason, or escalated.
 - Resolve from ALL authors — bots, AI reviewers, and humans alike.
-- Prefer `commit-suggestions` over manual edits when a thread carries a `suggestion` block and `commitSuggestionsEnabled` is true — applies the reviewer's change verbatim and co-credits them. After it runs, `git pull --ff-only` **before** any other local edit.
+- Prefer `commit-suggestion` (singular) over manual edits when a thread carries a `suggestion` block and `commitSuggestionsEnabled` is true — applies the reviewer's change verbatim, creates a local commit, and co-credits the reviewer. Run one command per thread; the CLI handles resolution. Then continue to step 5 for the normal rebase-and-push.
 - `--message` is required when using `--dismiss-review-ids`, and must NOT be passed otherwise. The CLI throws if it is missing during dismissal. The message must describe the specific change that addressed the review or the concrete reason for not acting (e.g. `"Added null check in handler.ts:42"`, or `"Acknowledged as won't-fix — reviewer noted not worth refactoring"`); generic boilerplate like `"address review comments"` or `"Addressed in <SHA>"` is reviewer-hostile and forbidden.

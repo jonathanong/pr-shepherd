@@ -35,5 +35,3 @@ export const PR_NUMBER_BY_BRANCH_QUERY = gql("pr-number-by-branch.gql");
 /** Convert a draft PR to ready for review. */
 export const MARK_PR_READY_MUTATION = gql("mark-pr-ready.gql");
 
-/** Create a commit on a branch with `FileChanges.additions` (used to apply suggestion blocks). */
-export const CREATE_COMMIT_ON_BRANCH_MUTATION = gql("create-commit.gql");

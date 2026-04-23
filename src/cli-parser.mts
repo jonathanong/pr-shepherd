@@ -7,10 +7,11 @@
  *   pr-shepherd resolve [PR] [--fetch] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]
  *                            [--dismiss-review-ids Q] [--message MSG] [--require-sha SHA]
  *                            [--last-push-time N]
- *   pr-shepherd commit-suggestions [PR] --thread-ids A,B [--format text|json]
+ *   pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [--description DESC]
+ *                                      [--format text|json]
  *   pr-shepherd iterate [PR] [--format text|json] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
  *                              [--stall-timeout <duration>] [--no-auto-rerun] [--no-auto-mark-ready]
- *                              [--no-auto-cancel-actionable] [--no-commit-suggestions]
+ *                              [--no-auto-cancel-actionable]
  *   pr-shepherd status PR1 [PR2 …]
  */
 
@@ -18,7 +19,7 @@ import { readFileSync } from "node:fs";
 
 import { runCheck } from "./commands/check.mts";
 import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
-import { runCommitSuggestions } from "./commands/commit-suggestions.mts";
+import { runCommitSuggestion } from "./commands/commit-suggestion.mts";
 import { runIterate, renderResolveCommand } from "./commands/iterate.mts";
 import { runStatus, formatStatusTable } from "./commands/status.mts";
 import { getRepoInfo } from "./github/client.mts";
@@ -59,8 +60,8 @@ export async function main(argv: string[]): Promise<void> {
     case "resolve":
       await handleResolve(args.slice(1));
       break;
-    case "commit-suggestions":
-      await handleCommitSuggestions(args.slice(1));
+    case "commit-suggestion":
+      await handleCommitSuggestion(args.slice(1));
       break;
     case "iterate":
       await handleIterate(args.slice(1));
@@ -71,7 +72,7 @@ export async function main(argv: string[]): Promise<void> {
     default:
       process.stderr.write(`Unknown subcommand: ${subcommand ?? "(none)"}\n`);
       process.stderr.write(
-        "Usage: pr-shepherd <check|resolve|commit-suggestions|iterate|status> [options]\n" +
+        "Usage: pr-shepherd <check|resolve|commit-suggestion|iterate|status> [options]\n" +
           "       pr-shepherd --version | -v\n",
       );
       process.exitCode = 1;
@@ -139,25 +140,41 @@ async function handleResolve(args: string[]): Promise<void> {
   }
 }
 
-async function handleCommitSuggestions(args: string[]): Promise<void> {
+async function handleCommitSuggestion(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
 
-  const threadIds = parseList(getFlag(extra, "--thread-ids"));
-  if (threadIds.length === 0) {
-    process.stderr.write("Usage: pr-shepherd commit-suggestions [PR] --thread-ids ID1,ID2,...\n");
+  const threadId = getFlag(extra, "--thread-id");
+  if (!threadId) {
+    process.stderr.write(
+      "Usage: pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [--description DESC]\n",
+    );
     process.exitCode = 1;
     return;
   }
 
-  const result = await runCommitSuggestions({ ...globalOpts, prNumber, threadIds });
+  const message = getFlag(extra, "--message");
+  if (!message || message.trim() === "") {
+    process.stderr.write("--message is required and must be non-empty\n");
+    process.exitCode = 1;
+    return;
+  }
+
+  const description = getFlag(extra, "--description") ?? undefined;
+
+  const result = await runCommitSuggestion({
+    ...globalOpts,
+    prNumber,
+    threadId,
+    message,
+    description,
+  });
 
   process.stdout.write(
     globalOpts.format === "json"
       ? `${JSON.stringify(result, null, 2)}\n`
-      : formatCommitSuggestionsResult(result),
+      : formatCommitSuggestionResult(result),
   );
 
-  // Exit 0 on any applied commit; 1 when every requested thread was skipped.
   process.exitCode = result.applied ? 0 : 1;
 }
 
@@ -179,7 +196,6 @@ async function handleIterate(args: string[]): Promise<void> {
   const noAutoRerun = hasFlag(extra, "--no-auto-rerun");
   const noAutoMarkReady = hasFlag(extra, "--no-auto-mark-ready");
   const noAutoCancelActionable = hasFlag(extra, "--no-auto-cancel-actionable");
-  const noCommitSuggestions = hasFlag(extra, "--no-commit-suggestions");
   const stallTimeoutStr = getFlag(extra, "--stall-timeout");
   const stallTimeoutSeconds = stallTimeoutStr
     ? parseDurationToMinutes(stallTimeoutStr, cfg.iterate.stallTimeoutMinutes) * 60
@@ -195,7 +211,6 @@ async function handleIterate(args: string[]): Promise<void> {
     noAutoRerun,
     noAutoMarkReady,
     noAutoCancelActionable,
-    noCommitSuggestions,
   });
 
   if (globalOpts.format === "json") {
@@ -289,31 +304,32 @@ function formatFetchResult(result: Awaited<ReturnType<typeof runResolveFetch>>):
   return `${lines.join("\n")}\n`;
 }
 
-function formatCommitSuggestionsResult(
-  result: Awaited<ReturnType<typeof runCommitSuggestions>>,
+function formatCommitSuggestionResult(
+  result: Awaited<ReturnType<typeof runCommitSuggestion>>,
 ): string {
   const lines: string[] = [];
-  const applied = result.threads.filter((t) => t.status === "applied");
-  const skipped = result.threads.filter((t) => t.status === "skipped");
-
-  if (applied.length > 0) {
-    lines.push(`Applied ${applied.length} suggestion(s):`);
-    for (const t of applied) {
-      lines.push(`  - ${t.id} ${t.path ? `→ ${t.path}` : ""}`);
+  if (result.applied) {
+    lines.push(`Applied suggestion from @${result.author}:`);
+    const range =
+      result.startLine === result.endLine
+        ? `line ${result.startLine}`
+        : `lines ${result.startLine}-${result.endLine}`;
+    lines.push(`  ${result.path} (${range})`);
+    if (result.commitSha) lines.push(`Commit: ${result.commitSha}`);
+  } else {
+    lines.push(`Failed to apply suggestion ${result.threadId}:`);
+    lines.push(`  path: ${result.path} (lines ${result.startLine}-${result.endLine})`);
+    lines.push(`  author: @${result.author}`);
+    lines.push(`  reason: ${result.reason ?? "unknown"}`);
+    if (result.patch) {
+      lines.push("");
+      lines.push(result.patch);
     }
   }
-  if (skipped.length > 0) {
-    lines.push(`Skipped ${skipped.length} thread(s):`);
-    for (const t of skipped) {
-      lines.push(`  - ${t.id}: ${t.reason ?? "unknown reason"}`);
-    }
+  if (result.postActionInstruction) {
+    lines.push("");
+    lines.push(result.postActionInstruction);
   }
-  if (result.commitUrl) {
-    lines.push(`Commit: ${result.commitUrl}`);
-    lines.push(`New HEAD: ${result.newHeadSha}`);
-  }
-  lines.push("");
-  lines.push(result.postActionInstruction);
   return `${lines.join("\n")}\n`;
 }
 
@@ -340,13 +356,9 @@ function formatMutateResult(result: Awaited<ReturnType<typeof runResolveMutate>>
  *
  * Load-bearing conventions the monitor SKILL relies on:
  *   1. The H1 heading on line 1 contains `[<ACTION>]` — the SKILL greps this tag.
- *   2. `[FIX_CODE]` has two variants discriminated by `fix.mode`:
- *        2a. `rebase-and-push`: the `resolve` bullet under `## Post-fix push`
- *            wraps the resolve command in backticks — the SKILL extracts the
- *            backticked content for execution.
- *        2b. `commit-suggestions`: the `commit-suggestions` bullet under
- *            `## Commit suggestions` wraps the CLI invocation in backticks,
- *            and the `after` bullet wraps `git pull --ff-only` in backticks.
+ *   2. `[FIX_CODE]` always uses the `rebase-and-push` variant: the `resolve`
+ *      bullet under `## Post-fix push` wraps the resolve command in backticks —
+ *      the SKILL extracts the backticked content for execution.
  *   3. The shell script under `[REBASE]` is inside a ```bash fenced block.
  *   4. `## Instructions` items are numbered `1.`, `2.`, … and executed in order.
  */
@@ -398,21 +410,6 @@ function formatFixCodeResult(
       sections.push(`### \`${t.id}\` — ${loc} (@${t.author})`);
       sections.push(blockquote(t.body));
     }
-  }
-
-  if (result.fix.mode === "commit-suggestions") {
-    sections.push("## Commit suggestions");
-    sections.push(
-      [
-        `- commit-suggestions: \`${result.fix.commitSuggestionsCommand.argv.map((a) => (/\s/.test(a) ? `"${a}"` : a)).join(" ")}\``,
-        `- after: \`git pull --ff-only\``,
-      ].join("\n"),
-    );
-    if (result.fix.instructions.length > 0) {
-      sections.push("## Instructions");
-      sections.push(result.fix.instructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n"));
-    }
-    return sections.join("\n\n");
   }
 
   if (result.fix.actionableComments.length > 0) {
