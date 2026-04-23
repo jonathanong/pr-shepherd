@@ -3003,4 +3003,43 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
     expect(result.action).toBe("wait");
     expect(result.checks).toEqual([]);
   });
+
+  it("passing check with null detailsUrl maps to detailsUrl: null in base.checks", async () => {
+    // Exercises the `c.detailsUrl || null` false branch in buildRelevantChecks when
+    // detailsUrl is null (StatusContext checks have no detailsUrl).
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        checks: {
+          passing: [
+            {
+              name: "status-check",
+              status: "COMPLETED" as const,
+              conclusion: "SUCCESS" as const,
+              detailsUrl: null as unknown as string,
+              event: null,
+              runId: null,
+              category: "passed" as const,
+            },
+          ],
+          failing: [],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: false,
+      remainingSeconds: 300,
+    });
+
+    const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
+
+    expect(result.action).toBe("wait");
+    expect(result.checks).toHaveLength(1);
+    expect(result.checks[0]!.detailsUrl).toBeNull();
+  });
 });

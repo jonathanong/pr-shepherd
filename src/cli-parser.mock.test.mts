@@ -836,6 +836,57 @@ describe("main — iterate text format", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     expect(getStdout()).not.toContain("## Checks");
   });
+
+  it("## Checks section renders in rerun_ci, mark_ready, cancel, rebase, escalate, fix_code when checks is non-empty", async () => {
+    const passingCheck: import("./types.mts").RelevantCheck = {
+      name: "lint",
+      conclusion: "SUCCESS",
+      runId: "run-1",
+      detailsUrl: null,
+    };
+    // Test each action that had an uncovered checksSection TRUE branch.
+    for (const action of [
+      "rerun_ci",
+      "mark_ready",
+      "cancel",
+      "rebase",
+      "escalate",
+      "fix_code",
+    ] as const) {
+      const result = makeIterateResult(action);
+      result.checks = [passingCheck];
+      mockRunIterate.mockResolvedValue(result as IterateResult);
+      await main(["node", "shepherd", "iterate", "42"]);
+      const out = getStdout();
+      expect(out).toContain("## Checks");
+      expect(out).toContain("- ✓ `lint` — SUCCESS");
+    }
+  });
+
+  it("## Checks — failing check with no failureKind omits kind suffix", async () => {
+    const result = makeIterateResult("wait");
+    result.checks = [
+      {
+        name: "external-check",
+        conclusion: "FAILURE",
+        runId: null,
+        detailsUrl: "https://example.com",
+        // no failureKind — exercises the `c.failureKind ? ...` false branch
+      } as import("./types.mts").RelevantCheck,
+    ];
+    mockRunIterate.mockResolvedValue(result);
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    // No kind suffix in parens when failureKind is absent
+    expect(out).toContain("- ✗ `external-check` — FAILURE · external `https://example.com`");
+    expect(out).not.toContain("(undefined)");
+  });
+
+  it("iterate --cooldown-seconds passes parsed value to runIterate", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
+    await main(["node", "shepherd", "iterate", "42", "--cooldown-seconds", "120"]);
+    expect(mockRunIterate).toHaveBeenCalledWith(expect.objectContaining({ cooldownSeconds: 120 }));
+  });
 });
 
 // ---------------------------------------------------------------------------
