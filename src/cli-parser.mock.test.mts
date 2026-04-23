@@ -26,7 +26,7 @@ vi.mock("./github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
 }));
 
-import { main } from "./cli.mts";
+import { main } from "./cli-parser.mts";
 import { runCheck } from "./commands/check.mts";
 import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
 import { runCommitSuggestions } from "./commands/commit-suggestions.mts";

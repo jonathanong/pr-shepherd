@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const { mockMain } = vi.hoisted(() => ({ mockMain: vi.fn() }));
 
-vi.mock("./cli.mts", () => ({ main: mockMain }));
+vi.mock("./cli-parser.mts", () => ({ main: mockMain }));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let exitSpy: any;
