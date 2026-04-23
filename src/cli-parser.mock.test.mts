@@ -327,6 +327,25 @@ describe("main — commit-suggestion", () => {
     expect(out).toContain("git push");
   });
 
+  it("text output shows patch diff block when patch is present in success result", async () => {
+    mockRunCommitSuggestion.mockResolvedValue({
+      ...APPLIED_RESULT,
+      patch: "--- a/a.ts\n+++ b/a.ts\n@@ -5,1 +5,1 @@\n-old\n+new\n",
+    });
+    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "fix"]);
+    const out = getStdout();
+    expect(out).toContain("```diff");
+    expect(out).toContain("--- a/a.ts");
+  });
+
+  it("errors when --message is whitespace only", async () => {
+    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "   "]);
+    expect(process.exitCode).toBe(1);
+    expect(mockRunCommitSuggestion).not.toHaveBeenCalled();
+    const err = stderrSpy.mock.calls.map((c: string[]) => c[0]).join("");
+    expect(err).toContain("--message");
+  });
+
   it("text output shows failure with reason and patch", async () => {
     mockRunCommitSuggestion.mockResolvedValue({
       ...APPLIED_RESULT,

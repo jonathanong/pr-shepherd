@@ -455,6 +455,24 @@ describe("runCommitSuggestion — file read failure", () => {
       runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("Could not read src/foo.ts");
   });
+
+  it("uses String(err) when readFile throws a non-Error value", async () => {
+    vi.clearAllMocks();
+    mockGetPrHead.mockResolvedValue({
+      sha: "headsha",
+      ref: "feature/foo",
+      repoWithOwner: "owner/repo",
+    });
+    mockGetCurrentBranch.mockResolvedValue("feature/foo");
+    mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
+    mockExecFile.mockImplementation(() => makeGitSuccess(""));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (mockReadFile as any).mockRejectedValue("plain string error");
+
+    await expect(
+      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+    ).rejects.toThrow("Could not read src/foo.ts: plain string error");
+  });
 });
 
 describe("runCommitSuggestion — patch failure", () => {
@@ -494,6 +512,27 @@ describe("runCommitSuggestion — patch failure", () => {
     expect(result.reason).toContain("git apply rejected");
     expect(result.reason).toContain("patch does not apply");
     expect(result.patch).toContain("--- a/src/foo.ts");
+  });
+
+  it("uses String(err) as reason when apply error has no stderr", async () => {
+    const applyError = new Error("apply: context did not match");
+
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
+      if (cmd === "git" && args[0] === "apply" && args.includes("--check")) {
+        return Promise.reject(applyError);
+      }
+      return makeGitSuccess("");
+    });
+
+    const result = await runCommitSuggestion({
+      ...GLOBAL_OPTS,
+      threadId: "PRRT_x",
+      message: "fix",
+    });
+
+    expect(result.applied).toBe(false);
+    expect(result.reason).toContain("apply: context did not match");
   });
 
   it("does not call git commit when patch fails", async () => {
