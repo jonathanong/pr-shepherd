@@ -441,7 +441,7 @@ export interface CommitSuggestionResult {
   commitSha?: string;
   /** Why the patch was rejected. Set when applied=false. */
   reason?: string;
-  /** The unified diff that was rejected. Set when applied=false. */
+  /** The unified diff for the suggestion. May be set whether applied is true or false. */
   patch?: string;
   postActionInstruction: string;
 }
