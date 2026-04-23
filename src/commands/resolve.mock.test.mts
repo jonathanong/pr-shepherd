@@ -308,6 +308,88 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     const result = await runResolveFetch(BASE_OPTS);
     expect(result.instructions).toEqual(["No actionable items — end this invocation."]);
   });
+
+  it("instructions include commit-suggestion step when enabled and suggestion present", async () => {
+    const thread = makeThread({
+      body: "```suggestion\nconst x = 1;\n```",
+      path: "src/foo.ts",
+      line: 5,
+    });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
+
+    const result = await runResolveFetch(BASE_OPTS);
+    const joined = result.instructions.join("\n");
+    expect(joined).toContain("commit-suggestion");
+    expect(joined).toContain("applied: true");
+    expect(joined).toContain("applied: false");
+  });
+
+  it("instructions omit commit-suggestion step when commitSuggestionsEnabled is false", async () => {
+    mockLoadConfig.mockReturnValueOnce({
+      resolve: {
+        concurrency: 4,
+        shaPoll: { intervalMs: 2000, maxAttempts: 10 },
+        fetchReviewSummaries: true,
+      },
+      actions: {
+        autoResolveOutdated: true,
+        autoRebase: true,
+        autoMarkReady: true,
+        commitSuggestions: false,
+      },
+    } as ReturnType<typeof loadConfig>);
+    const thread = makeThread({
+      body: "```suggestion\nconst x = 1;\n```",
+      path: "src/foo.ts",
+      line: 5,
+    });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
+
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.instructions.join("\n")).not.toContain("commit-suggestion");
+  });
+
+  it("instructions include fix and commit/push steps when code items present (no suggestions)", async () => {
+    const thread = makeThread({ body: "rename this" });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
+
+    const result = await runResolveFetch(BASE_OPTS);
+    const joined = result.instructions.join("\n");
+    expect(joined).not.toContain("commit-suggestion");
+    expect(joined).toContain("git add");
+    expect(joined).toContain("rebase");
+    expect(joined).toContain("git push");
+  });
+
+  it("instructions dismissNote includes CHANGES_REQUESTED guidance when reviews present", async () => {
+    const review = { id: "PRR_review1", author: "alice", body: "needs changes" };
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ changesRequestedReviews: [review] }),
+    });
+
+    const result = await runResolveFetch(BASE_OPTS);
+    const joined = result.instructions.join("\n");
+    // changesRequested note describes --dismiss-review-ids usage and --message requirement
+    expect(joined).toContain("For `--dismiss-review-ids`");
+    expect(joined).toContain("--message` is required");
+    // also explains PRR_ routing (review-summary IDs go to --minimize-comment-ids, not dismiss)
+    expect(joined).toContain("PRR_…");
+  });
+
+  it("instructions dismissNote mentions review-summary minimize guidance when reviewSummaries present but no changes-requested", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        reviewSummaries: [{ id: "PRR_s1", author: "copilot", body: "summary" }],
+      }),
+    });
+
+    const result = await runResolveFetch(BASE_OPTS);
+    const joined = result.instructions.join("\n");
+    expect(joined).toContain("--minimize-comment-ids");
+    expect(joined).toContain("PRR_…");
+    // summaries-only: no full --dismiss-review-ids guidance block
+    expect(joined).not.toContain("For `--dismiss-review-ids`");
+  });
 });
 
 // ---------------------------------------------------------------------------
