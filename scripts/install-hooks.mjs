@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs'
 if (process.env.CI) process.exit(0)
 if (!existsSync('.git')) process.exit(0)
 
-const currentHooksPathRes = spawnSync('git', ['config', '--get', 'core.hooksPath'], { encoding: 'utf8' })
+const currentHooksPathRes = spawnSync('git', ['config', '--local', '--get', 'core.hooksPath'], { encoding: 'utf8' })
 const currentHooksPath = currentHooksPathRes.status === 0 ? currentHooksPathRes.stdout.trim() : ''
 
 if (currentHooksPath && currentHooksPath !== '.githooks') {

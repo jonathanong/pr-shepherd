@@ -10,7 +10,7 @@ npm install && npm run build
 
 The `bin/` directory is gitignored and must be built before `npx pr-shepherd` works.
 
-`npm install` also registers `.githooks/pre-push` (lint + typecheck) via `git config core.hooksPath .githooks`. Bypass with `git push --no-verify`.
+If no `core.hooksPath` is already configured in the local repo config, `npm install` registers `.githooks/pre-push` (lint + typecheck) via `git config core.hooksPath .githooks`. If `core.hooksPath` is already set locally, the install step is skipped and your existing hooks path takes precedence. Bypass with `git push --no-verify`.
 
 ## Output format invariant
 
