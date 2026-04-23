@@ -1,0 +1,157 @@
+import type { AgentThread, AgentComment, AgentCheck, Review, ResolveCommand, IterateResultBase } from "../../types.mts";
+
+/**
+ * Render a ResolveCommand as a single-line command string for the monitor loop
+ * to print or execute. This is NOT a general-purpose POSIX escaper — it wraps
+ * the two known placeholders ($DISMISS_MESSAGE, $HEAD_SHA) and any whitespace-
+ * bearing arg in double quotes so multi-word values don't split across flags.
+ *
+ * Contract for callers substituting placeholders: replace the entire quoted
+ * token (including the surrounding `"`) with a properly shell-quoted literal.
+ * Do not splice raw text inside the existing quotes — the output would then
+ * re-expand `$…` / `$(…)` / embedded `"` and break.
+ */
+export function renderResolveCommand(rc: ResolveCommand): string {
+  // `$HEAD_SHA` is never in `rc.argv` — it is appended pre-quoted below when
+  // `requiresHeadSha`. Only `$DISMISS_MESSAGE` (or whitespace-bearing values)
+  // need quoting here.
+  const needsQuoting = (arg: string) => arg === "$DISMISS_MESSAGE" || /\s/.test(arg);
+  const parts = rc.argv.map((a) => (needsQuoting(a) ? `"${a}"` : a));
+  if (rc.requiresHeadSha) {
+    parts.push("--require-sha", '"$HEAD_SHA"');
+  }
+  return parts.join(" ");
+}
+
+export function buildFixInstructions(
+  threads: AgentThread[],
+  actionableComments: AgentComment[],
+  checks: AgentCheck[],
+  reviews: Review[],
+  baseBranch: string,
+  resolveCommand: ResolveCommand,
+  hasConflicts: boolean,
+  prNumber: number,
+  cancelledCount: number,
+): string[] {
+  const instructions: string[] = [];
+
+  if (threads.length > 0 || actionableComments.length > 0) {
+    instructions.push(
+      `Apply code fixes: read and edit each file referenced under \`## Review threads\` and \`## Actionable comments\` above.`,
+    );
+  }
+  // Mirror the truthiness checks in `formatIterateResult` (cli-parser.mts) so each
+  // AgentCheck maps to the same bullet shape here as there: runId → runId
+  // bullet, else detailsUrl → external bullet, else `(no runId)` bullet.
+  const checksWithRunId = checks.filter((c) => c.runId);
+  const externalChecks = checks.filter((c) => !c.runId && c.detailsUrl);
+  const bareChecks = checks.filter((c) => !c.runId && !c.detailsUrl);
+  if (checksWithRunId.length > 0) {
+    instructions.push(
+      `For each bullet in \`## Failing checks\` whose backticked locator is a numeric runId (GitHub Actions): run \`gh run view <runId> --log-failed\`, identify the failure, and apply the fix.`,
+    );
+  }
+  if (externalChecks.length > 0) {
+    instructions.push(
+      `For each bullet in \`## Failing checks\` starting with \`external\` (external status check): open the linked URL in a browser to inspect the failure — \`gh run view\` cannot fetch logs for external checks.`,
+    );
+  }
+  if (bareChecks.length > 0) {
+    instructions.push(
+      `For each bullet in \`## Failing checks\` starting with \`(no runId)\`: there is no run or details URL to inspect. Escalate these to a human — they require manual investigation outside the pr-shepherd flow.`,
+    );
+  }
+  if (reviews.length > 0) {
+    instructions.push(
+      `For each bullet under \`## Changes-requested reviews\` above: read the review body and apply the requested changes.`,
+    );
+  }
+
+  const hasCodeChanges =
+    threads.length > 0 || actionableComments.length > 0 || checks.length > 0 || reviews.length > 0;
+  const needsPush = hasCodeChanges || hasConflicts;
+
+  if (hasCodeChanges) {
+    instructions.push(
+      `Commit changed files: \`git add <files> && git commit -m "<descriptive message>"\``,
+    );
+    instructions.push(
+      `Keep the PR title and description current: if the changes alter the PR's scope or intent, run \`gh pr edit ${prNumber} --title "<new title>" --body "<new body>"\` to reflect them. Skip if the existing title/body still accurately describe the PR.`,
+    );
+  }
+
+  if (needsPush) {
+    const captureHint = resolveCommand.requiresHeadSha
+      ? ` — capture \`HEAD_SHA=$(git rev-parse HEAD)\``
+      : "";
+    if (hasConflicts) {
+      instructions.push(
+        `Rebase with conflict resolution: run \`git fetch origin && git rebase origin/${baseBranch}\`. If the rebase halts with conflicts, edit the conflicted files to resolve them, \`git add <files>\`, then \`git rebase --continue\`. Repeat until the rebase completes, then \`git push --force-with-lease\`${captureHint}.`,
+      );
+    } else {
+      instructions.push(
+        `Rebase and push: \`git fetch origin && git rebase origin/${baseBranch} && git push --force-with-lease\`${captureHint}`,
+      );
+    }
+  }
+
+  // Only tell the agent to run `resolve:` if the command actually mutates
+  // GitHub state. A CONFLICTS-only flow has nothing to mutate on GitHub.
+  if (resolveCommand.hasMutations) {
+    const substituteParts: string[] = [];
+    if (resolveCommand.requiresHeadSha) {
+      substituteParts.push(`"$HEAD_SHA" with the pushed commit SHA`);
+    }
+    if (resolveCommand.requiresDismissMessage) {
+      substituteParts.push(`$DISMISS_MESSAGE with a one-sentence description of what you changed`);
+    }
+    const substituteHint =
+      substituteParts.length > 0 ? `, substituting ${substituteParts.join(" and ")}` : "";
+    instructions.push(`Run the \`resolve:\` command shown above${substituteHint}.`);
+  }
+
+  if (needsPush && cancelledCount > 0) {
+    instructions.push(
+      `Do not re-run \`gh run cancel\` on the IDs listed under \`## Cancelled runs\` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.`,
+    );
+  }
+
+  if (needsPush) {
+    instructions.push(
+      `Stop this iteration — CI needs time to run on the new push before the next tick.`,
+    );
+  } else if (resolveCommand.hasMutations) {
+    instructions.push(`Stop this iteration before the next tick.`);
+  } else {
+    instructions.push(`End this iteration.`);
+  }
+
+  return instructions;
+}
+
+export function buildWaitLog(base: IterateResultBase): string {
+  const { summary, mergeStateStatus, remainingSeconds } = base;
+  const parts: string[] = [`WAIT: ${summary.passing} passing, ${summary.inProgress} in-progress`];
+
+  switch (mergeStateStatus) {
+    case "BEHIND":
+      parts.push("branch is behind base");
+      break;
+    case "BLOCKED":
+      parts.push("blocked by pending reviews or required status checks");
+      break;
+    case "DRAFT":
+      parts.push("PR is a draft");
+      break;
+    case "UNSTABLE":
+      parts.push("some checks are unstable");
+      break;
+  }
+
+  if (remainingSeconds > 0) {
+    parts.push(`${remainingSeconds}s until auto-cancel`);
+  }
+
+  return parts.join(" — ");
+}

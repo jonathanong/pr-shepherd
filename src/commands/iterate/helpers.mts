@@ -1,0 +1,82 @@
+import { execFile as execFileCb } from "node:child_process";
+import { promisify } from "node:util";
+import { rest } from "../../github/http.mts";
+import type { ShepherdReport } from "../../types.mts";
+import type { IterateResultSummary, RelevantCheck } from "../../types.mts";
+
+const execFile = promisify(execFileCb);
+
+export function buildSummary(report: ShepherdReport): IterateResultSummary {
+  return {
+    passing: report.checks.passing.length,
+    skipped: report.checks.skipped.length,
+    filtered: report.checks.filtered.length,
+    inProgress: report.checks.inProgress.length,
+  };
+}
+
+/**
+ * Build the full list of CI checks relevant to PR readiness: triggered by a PR
+ * event (or StatusContext with null event), completed, and not skipped/neutral.
+ * Includes both passing and failing. Failing entries carry failureKind + errorExcerpt.
+ */
+export function buildRelevantChecks(report: ShepherdReport): RelevantCheck[] {
+  const excluded = new Set([null, "SKIPPED", "NEUTRAL"]);
+  const passing: RelevantCheck[] = report.checks.passing.flatMap((c) => {
+    if (excluded.has(c.conclusion)) return [];
+    const conclusion = c.conclusion as RelevantCheck["conclusion"];
+    return [{ name: c.name, conclusion, runId: c.runId, detailsUrl: c.detailsUrl || null }];
+  });
+  const failing: RelevantCheck[] = report.checks.failing.flatMap((c) => {
+    if (excluded.has(c.conclusion)) return [];
+    const conclusion = c.conclusion as RelevantCheck["conclusion"];
+    return [
+      {
+        name: c.name,
+        conclusion,
+        runId: c.runId,
+        detailsUrl: c.detailsUrl || null,
+        failureKind: c.failureKind,
+        errorExcerpt: c.errorExcerpt,
+      },
+    ];
+  });
+  return [...passing, ...failing];
+}
+
+export async function getLastCommitTime(): Promise<number> {
+  try {
+    const { stdout } = await execFile("git", ["log", "-1", "--format=%ct", "HEAD"]);
+    return parseInt(stdout.trim(), 10);
+  } catch {
+    return 0;
+  }
+}
+
+// Best-effort: cancelling a completed run is a no-op, not an error.
+export async function tryCancelRun(
+  runId: string,
+  owner: string,
+  repo: string,
+): Promise<string | null> {
+  try {
+    await rest("POST", `/repos/${owner}/${repo}/actions/runs/${runId}/cancel`);
+    return runId;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    // GitHub returns 409 when the run reached a terminal state — expected, not worth logging.
+    if (/409|already completed|cannot cancel a workflow run that is completed/i.test(msg))
+      return null;
+    process.stderr.write(`pr-shepherd: cancel run ${runId} failed (ignored): ${msg}\n`);
+    return null;
+  }
+}
+
+export async function getCurrentHeadSha(): Promise<string> {
+  try {
+    const { stdout } = await execFile("git", ["rev-parse", "HEAD"]);
+    return stdout.trim();
+  } catch {
+    return "unknown";
+  }
+}
