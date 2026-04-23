@@ -381,62 +381,84 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
   switch (result.action) {
     case "cooldown":
       return [
-        header, "",
-        result.log, "",
-        "## Instructions", "",
+        header,
+        "",
+        result.log,
+        "",
+        "## Instructions",
+        "",
         "1. End this iteration — the next cron fire will recheck once CI starts reporting.",
       ].join("\n");
 
     case "wait":
       return [
-        header, "",
-        result.log, "",
-        "## Instructions", "",
+        header,
+        "",
+        result.log,
+        "",
+        "## Instructions",
+        "",
         "1. End this iteration — the next cron fire will recheck.",
       ].join("\n");
 
     case "rerun_ci":
       return [
-        header, "",
-        result.log, "",
-        "## Instructions", "",
+        header,
+        "",
+        result.log,
+        "",
+        "## Instructions",
+        "",
         "1. The CLI already triggered the re-run above — end this iteration and wait for CI to report results.",
       ].join("\n");
 
     case "mark_ready":
       return [
-        header, "",
-        result.log, "",
-        "## Instructions", "",
+        header,
+        "",
+        result.log,
+        "",
+        "## Instructions",
+        "",
         "1. The CLI already marked the PR ready for review — end this iteration.",
       ].join("\n");
 
     case "cancel":
       return [
-        header, "",
-        result.log, "",
-        "## Instructions", "",
+        header,
+        "",
+        result.log,
+        "",
+        "## Instructions",
+        "",
         "1. Invoke `/loop cancel` via the Skill tool.",
         "2. Stop.",
       ].join("\n");
 
     case "rebase":
       return [
-        header, "",
-        result.rebase.reason, "",
+        header,
+        "",
+        result.rebase.reason,
+        "",
         "```bash",
         result.rebase.shellScript,
-        "```", "",
-        "## Instructions", "",
+        "```",
+        "",
+        "## Instructions",
+        "",
         "1. Copy the shell script from the ` ```bash ` block above and run it in Bash.",
         "2. End this iteration — the next cron fire will check CI after the rebase.",
       ].join("\n");
 
     case "escalate":
       return [
-        header, "",
-        result.escalate.humanMessage, "",
-        "## Instructions", "",
+        header,
+        "",
+        result.escalate.humanMessage,
+        "",
+        "## Instructions",
+        "",
         "1. Invoke `/loop cancel` via the Skill tool.",
         "2. Stop — the PR needs human direction before monitoring can resume.",
       ].join("\n");

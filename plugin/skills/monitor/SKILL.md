@@ -31,7 +31,7 @@ allowed-tools:
 
 Invoke `/loop <INTERVAL> --max-turns 50 --expires 8h` via the Skill tool. Use the interval from the argument if provided (e.g. `every 30 minutes` → `30m`), otherwise use `4m`. The loop prompt should be:
 
-````
+```
 # pr-shepherd-loop:pr=<PR_NUMBER>
 
 **IMPORTANT — recurrence rules:**
@@ -48,7 +48,7 @@ Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdo
 
 The output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Every output ends with a `## Instructions` section — follow those numbered steps exactly. See [docs/actions.md](../../../docs/actions.md) for the full output shape of each action.
 
-````
+```
 
 **Do NOT call ScheduleWakeup** — the cron job handles its own recurrence. Calling ScheduleWakeup with a `/loop` prompt would create a duplicate cron job on the next fire.
 
