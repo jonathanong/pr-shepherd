@@ -41,4 +41,15 @@ describe("index — error exit", () => {
     expect(stderrSpy).toHaveBeenCalledWith("pr-shepherd error: not an error object\n");
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
+
+  it("appends cause when err.cause is set", async () => {
+    const err = new Error("fetch failed");
+    err.cause = new Error("getaddrinfo ENOTFOUND api.github.com");
+    mockMain.mockRejectedValueOnce(err);
+    await loadIndex();
+    expect(stderrSpy).toHaveBeenCalledWith(
+      "pr-shepherd error: fetch failed (cause: Error: getaddrinfo ENOTFOUND api.github.com)\n",
+    );
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
 });
