@@ -298,6 +298,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       resolveCommand,
       hasConflicts,
       prNumber,
+      cancelled.length,
     );
 
     return applyStallGuard(
@@ -725,6 +726,7 @@ function buildFixInstructions(
   resolveCommand: ResolveCommand,
   hasConflicts: boolean,
   prNumber: number,
+  cancelledCount: number,
 ): string[] {
   const instructions: string[] = [];
 
@@ -803,8 +805,35 @@ function buildFixInstructions(
     instructions.push(`Run the \`resolve:\` command shown above${substituteHint}.`);
   }
 
+  if (needsPush && cancelledCount > 0) {
+    instructions.push(
+      `Do not re-run \`gh run cancel\` on the IDs listed under \`## Cancelled runs\` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.`,
+    );
+  }
+
+  if (needsPush || resolveCommand.hasMutations) {
+    instructions.push(
+      `Stop this iteration — CI needs time to run on the new push before the next tick.`,
+    );
+  }
+
   return instructions;
 }
+
+/**
+ * Three-step instruction list emitted with the `## Commit suggestions` shortcut.
+ * The CLI's `commit-suggestions` subcommand creates one server-side commit and
+ * resolves the threads it landed, so the agent only needs to invoke it,
+ * sync the local checkout, then stop the iteration so CI can run.
+ */
+function buildCommitSuggestionsInstructions(): string[] {
+  return [
+    "Run the `commit-suggestions:` command above — it applies all reviewer suggestion blocks server-side as a single commit and resolves the threads.",
+    "Run `git pull --ff-only` to sync your local checkout with the new commit before any further edits.",
+    "Stop this iteration — CI needs time to run on the new commit before the next tick.",
+  ];
+}
+
 
 function buildWaitLog(base: IterateResultBase): string {
   const { summary, mergeStateStatus, remainingSeconds } = base;
