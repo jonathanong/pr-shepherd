@@ -2462,11 +2462,7 @@ describe("runIterate — fix_code commit-suggestions shortcut", () => {
   });
 
   it("falls back to mode: rebase-and-push when a thread has a non-committable suggestion (nested fence, issue #68)", async () => {
-    const nestedFenceBody = [
-      "```suggestion",
-      "text with ```suggestion inside",
-      "```",
-    ].join("\n");
+    const nestedFenceBody = ["```suggestion", "text with ```suggestion inside", "```"].join("\n");
     const t1 = makeSuggestionThread("PRRT_x", nestedFenceBody);
     mockRunCheck.mockResolvedValue(
       makeReport({
