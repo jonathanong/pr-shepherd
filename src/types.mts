@@ -363,28 +363,9 @@ export interface FixRebaseAndPush {
   instructions: string[];
 }
 
-/**
- * Shortcut variant: every actionable thread carries a parseable
- * `` ```suggestion `` block and there is nothing else to fix. The CLI hands
- * the agent a pre-built `commit-suggestions` invocation that creates one
- * server-side commit, then resolves the affected threads via subsequent
- * mutations. Emitted under `## Commit suggestions`. No rebase, no force-push,
- * and no separate manual resolve step.
- */
-export interface FixCommitSuggestions {
-  mode: "commit-suggestions";
-  /** Threads that all carry parseable suggestion blocks (gate invariant). */
-  threads: AgentThread[];
-  /** Pre-built `npx pr-shepherd commit-suggestions <PR> --thread-ids …` argv. */
-  commitSuggestionsCommand: { argv: string[] };
-  /** Two-step instruction list (run command, then `git pull --ff-only`). */
-  instructions: string[];
-}
-
 export interface IterateResultFixCode extends IterateResultBase {
   action: "fix_code";
-  fix: FixRebaseAndPush | FixCommitSuggestions;
-  /** CLI-cancelled run IDs. Always empty in commit-suggestions mode (no checks by gate). */
+  fix: FixRebaseAndPush;
   cancelled: string[];
 }
 
@@ -439,43 +420,36 @@ export interface IterateCommandOptions extends GlobalOptions {
   noAutoRerun?: boolean;
   noAutoMarkReady?: boolean;
   noAutoCancelActionable?: boolean;
-  /** When true, suppress the all-suggestions shortcut and always emit the rebase-and-push variant. Mirrors `actions.commitSuggestions: false` for one-off invocations. */
-  noCommitSuggestions?: boolean;
   /** Override the stall-timeout threshold (seconds). Defaults to config.iterate.stallTimeoutMinutes * 60. */
   stallTimeoutSeconds?: number;
 }
 
 // ---------------------------------------------------------------------------
-// Commit-suggestions command
+// commit-suggestion command (singular — one suggestion, one local commit)
 // ---------------------------------------------------------------------------
 
-export type CommitSuggestionStatus = "applied" | "skipped";
-
-export interface CommitSuggestionThreadResult {
-  id: string;
-  status: CommitSuggestionStatus;
-  /** Populated for skipped threads. Not set when applied successfully. */
-  reason?: string;
-  /** File path the suggestion targeted. */
-  path?: string;
-  /** The reviewer who authored the suggestion. */
-  author?: string;
-}
-
-export interface CommitSuggestionsResult {
+interface CommitSuggestionResultBase {
   pr: number;
   repo: string;
-  /** New HEAD SHA after the commit lands. Null when no threads applied. */
-  newHeadSha: string | null;
-  /** URL of the resulting commit on GitHub. Null when no threads applied. */
-  commitUrl: string | null;
-  /** One entry per thread requested, preserving input order. */
-  threads: CommitSuggestionThreadResult[];
-  /** Whether at least one suggestion was applied (commit exists on remote). */
-  applied: boolean;
-  /** Instruction the agent MUST follow after applied=true to sync local. */
+  threadId: string;
+  path: string;
+  startLine: number;
+  endLine: number;
+  author: string;
+  /** The unified diff that was generated for this suggestion. */
+  patch: string;
   postActionInstruction: string;
 }
+
+export type CommitSuggestionResult =
+  | (CommitSuggestionResultBase & {
+      applied: true;
+      commitSha: string;
+    })
+  | (CommitSuggestionResultBase & {
+      applied: false;
+      reason: string;
+    });
 
 // ---------------------------------------------------------------------------
 // CLI options

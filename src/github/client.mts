@@ -143,7 +143,7 @@ export async function getMergeableState(
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-async function getCurrentBranch(): Promise<string> {
+export async function getCurrentBranch(): Promise<string> {
   const { stdout } = await execFile("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
   return stdout.trim();
 }

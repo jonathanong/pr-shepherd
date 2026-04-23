@@ -41,17 +41,18 @@ pr-shepherd resolve 42 \
 
 `--require-sha` polls GitHub until the PR head matches the SHA before mutating — prevents resolving before reviewers see the fix. `--message` is required only when `--dismiss-review-ids` is set, and should describe the specific fix — it is shown to the reviewer on GitHub.
 
-### `pr-shepherd commit-suggestions [PR] --thread-ids A,B,...`
+### `pr-shepherd commit-suggestion [PR] --thread-id A --message "…"`
 
-Agent-side equivalent of GitHub's "Commit suggestion" and "Add suggestion to batch" buttons. Parses reviewer-authored ` ```suggestion ` blocks from the given threads, applies them to their target files, and creates a single remote commit via the `createCommitOnBranch` GraphQL mutation — co-crediting each distinct reviewer. The threads it applies are resolved in the same run.
+Applies a single reviewer ` ```suggestion ` block as a local git commit. Builds a unified diff from the suggestion, validates it against the working tree with `git apply --check`, writes the file, and commits with the caller-supplied message plus a `Co-authored-by: <reviewer>` trailer. The thread is resolved on GitHub after the commit lands. One command = one thread = one local commit. The CLI never pushes.
 
 ```sh
-pr-shepherd commit-suggestions 42 --thread-ids PRRT_abc,PRRT_def --format=json
+pr-shepherd commit-suggestion 42 \
+  --thread-id PRRT_abc \
+  --message "trim trailing whitespace per reviewer" \
+  --format=json
 ```
 
-Requires a clean working tree (the command errors out early if `git status --porcelain` is non-empty). After a successful run **the local checkout is one commit behind remote** — run `git pull --ff-only` before any further local edits. Threads without a parseable suggestion, threads already resolved, suggestions whose body contains a nested ` ```suggestion ` fence, suggestions whose replacement contains an unmatched fenced code block (an odd number of 3+ backtick runs), or suggestions whose range overlaps another on the same file are reported as `skipped` so the caller can fall back to a manual fix.
-
-The resolve skill surfaces this command automatically for threads that carry a `suggestion` block when `actions.commitSuggestions` is `true` (the default — see [configuration.md](configuration.md)).
+Requires a clean working tree and that the current branch matches the PR head ref. Preflight and thread-classification validation failures are hard errors. If `git apply --check` rejects the generated patch, the command exits non-zero but reports a structured `applied: false` result with `reason` and `patch` for inspection instead of throwing. The resolve skill calls this automatically for threads that carry a `suggestion` block when `actions.commitSuggestions` is `true` (the default — see [configuration.md](configuration.md)).
 
 ### `pr-shepherd iterate [PR]`
 

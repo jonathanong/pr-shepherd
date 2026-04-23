@@ -7,8 +7,8 @@ vi.mock("./commands/resolve.mts", () => ({
   runResolveFetch: vi.fn(),
   runResolveMutate: vi.fn(),
 }));
-vi.mock("./commands/commit-suggestions.mts", () => ({
-  runCommitSuggestions: vi.fn(),
+vi.mock("./commands/commit-suggestion.mts", () => ({
+  runCommitSuggestion: vi.fn(),
 }));
 vi.mock("./commands/iterate.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./commands/iterate.mts")>();
@@ -29,7 +29,7 @@ vi.mock("./github/client.mts", () => ({
 import { main } from "./cli-parser.mts";
 import { runCheck } from "./commands/check.mts";
 import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
-import { runCommitSuggestions } from "./commands/commit-suggestions.mts";
+import { runCommitSuggestion } from "./commands/commit-suggestion.mts";
 import { runIterate } from "./commands/iterate.mts";
 import { runStatus } from "./commands/status.mts";
 import type { ShepherdReport, IterateResult } from "./types.mts";
@@ -37,7 +37,7 @@ import type { ShepherdReport, IterateResult } from "./types.mts";
 const mockRunCheck = vi.mocked(runCheck);
 const mockRunResolveFetch = vi.mocked(runResolveFetch);
 const mockRunResolveMutate = vi.mocked(runResolveMutate);
-const mockRunCommitSuggestions = vi.mocked(runCommitSuggestions);
+const mockRunCommitSuggestion = vi.mocked(runCommitSuggestion);
 const mockRunIterate = vi.mocked(runIterate);
 const mockRunStatus = vi.mocked(runStatus);
 
@@ -235,96 +235,147 @@ describe("main — resolve", () => {
 });
 
 // ---------------------------------------------------------------------------
-// commit-suggestions dispatch
+// commit-suggestion dispatch
 // ---------------------------------------------------------------------------
 
-describe("main — commit-suggestions", () => {
-  it("errors when --thread-ids is omitted", async () => {
-    await main(["node", "shepherd", "commit-suggestions", "42"]);
+const APPLIED_RESULT = {
+  pr: 42,
+  repo: "owner/repo",
+  threadId: "t1",
+  path: "a.ts",
+  startLine: 5,
+  endLine: 5,
+  author: "alice",
+  applied: true as const,
+  commitSha: "abc123",
+  patch: "--- a/a.ts\n+++ b/a.ts\n@@ -5,1 +5,1 @@\n-old\n+new\n",
+  postActionInstruction: "Run `git push` to publish the commit.",
+};
+
+const FAILED_RESULT = {
+  pr: 42,
+  repo: "owner/repo",
+  threadId: "t1",
+  path: "a.ts",
+  startLine: 5,
+  endLine: 5,
+  author: "alice",
+  applied: false as const,
+  reason: "git apply rejected the patch: context mismatch",
+  patch: "--- a/a.ts\n+++ b/a.ts\n@@ -5,1 +5,1 @@\n-old\n+new\n",
+  postActionInstruction: "",
+};
+
+describe("main — commit-suggestion", () => {
+  it("errors when --thread-id is omitted", async () => {
+    await main(["node", "shepherd", "commit-suggestion", "42", "--message", "fix"]);
     expect(process.exitCode).toBe(1);
-    expect(mockRunCommitSuggestions).not.toHaveBeenCalled();
+    expect(mockRunCommitSuggestion).not.toHaveBeenCalled();
     const err = stderrSpy.mock.calls.map((c: string[]) => c[0]).join("");
-    expect(err).toContain("--thread-ids");
+    expect(err).toContain("--thread-id");
   });
 
-  it("calls runCommitSuggestions with parsed thread IDs and exits 0 on applied", async () => {
-    mockRunCommitSuggestions.mockResolvedValue({
-      pr: 42,
-      repo: "owner/repo",
-      newHeadSha: "newsha",
-      commitUrl: "https://commit/url",
-      threads: [{ id: "t1", status: "applied", path: "a.ts", author: "alice" }],
-      applied: true,
-      postActionInstruction: "Run `git pull --ff-only` before editing.",
-    });
-    await main(["node", "shepherd", "commit-suggestions", "42", "--thread-ids", "t1,t2"]);
-    expect(mockRunCommitSuggestions).toHaveBeenCalledWith(
-      expect.objectContaining({ prNumber: 42, threadIds: ["t1", "t2"] }),
+  it("errors when --message is omitted", async () => {
+    await main(["node", "shepherd", "commit-suggestion", "42", "--thread-id", "t1"]);
+    expect(process.exitCode).toBe(1);
+    expect(mockRunCommitSuggestion).not.toHaveBeenCalled();
+    const err = stderrSpy.mock.calls.map((c: string[]) => c[0]).join("");
+    expect(err).toContain("--message");
+  });
+
+  it("calls runCommitSuggestion with correct args and exits 0 on applied", async () => {
+    mockRunCommitSuggestion.mockResolvedValue(APPLIED_RESULT);
+    await main([
+      "node",
+      "shepherd",
+      "commit-suggestion",
+      "42",
+      "--thread-id",
+      "t1",
+      "--message",
+      "apply fix",
+    ]);
+    expect(mockRunCommitSuggestion).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: 42, threadId: "t1", message: "apply fix" }),
     );
     expect(process.exitCode).toBe(0);
   });
 
-  it("exits 1 when nothing applied", async () => {
-    mockRunCommitSuggestions.mockResolvedValue({
-      pr: 42,
-      repo: "owner/repo",
-      newHeadSha: null,
-      commitUrl: null,
-      threads: [{ id: "t1", status: "skipped", reason: "no suggestion block" }],
-      applied: false,
-      postActionInstruction: "No commit was created. Nothing to pull.",
-    });
-    await main(["node", "shepherd", "commit-suggestions", "42", "--thread-ids", "t1"]);
-    expect(process.exitCode).toBe(1);
-  });
-
-  it("text output lists applied and skipped threads plus the post-action instruction", async () => {
-    mockRunCommitSuggestions.mockResolvedValue({
-      pr: 42,
-      repo: "owner/repo",
-      newHeadSha: "newsha",
-      commitUrl: "https://commit/url",
-      threads: [
-        { id: "t1", status: "applied", path: "a.ts", author: "alice" },
-        { id: "t2", status: "skipped", reason: "no suggestion block" },
-      ],
-      applied: true,
-      postActionInstruction: "Run `git pull --ff-only` before editing.",
-    });
-    await main(["node", "shepherd", "commit-suggestions", "42", "--thread-ids", "t1,t2"]);
-    const out = getStdout();
-    expect(out).toContain("Applied 1 suggestion(s):");
-    expect(out).toContain("- t1 → a.ts");
-    expect(out).toContain("Skipped 1 thread(s):");
-    expect(out).toContain("- t2: no suggestion block");
-    expect(out).toContain("Commit: https://commit/url");
-    expect(out).toContain("New HEAD: newsha");
-    expect(out).toContain("Run `git pull --ff-only`");
-  });
-
-  it("json output serialises the full result", async () => {
-    const result = {
-      pr: 42,
-      repo: "owner/repo",
-      newHeadSha: "newsha",
-      commitUrl: "https://commit/url",
-      threads: [{ id: "t1", status: "applied" as const, path: "a.ts", author: "alice" }],
-      applied: true,
-      postActionInstruction: "Run `git pull --ff-only` before editing.",
-    };
-    mockRunCommitSuggestions.mockResolvedValue(result);
+  it("passes --description when supplied", async () => {
+    mockRunCommitSuggestion.mockResolvedValue(APPLIED_RESULT);
     await main([
       "node",
       "shepherd",
-      "commit-suggestions",
-      "42",
-      "--thread-ids",
+      "commit-suggestion",
+      "--thread-id",
       "t1",
+      "--message",
+      "fix",
+      "--description",
+      "more detail",
+    ]);
+    expect(mockRunCommitSuggestion).toHaveBeenCalledWith(
+      expect.objectContaining({ description: "more detail" }),
+    );
+  });
+
+  it("exits 1 when applied=false", async () => {
+    mockRunCommitSuggestion.mockResolvedValue(FAILED_RESULT);
+    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "fix"]);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("text output shows applied result with commit sha and post-action", async () => {
+    mockRunCommitSuggestion.mockResolvedValue(APPLIED_RESULT);
+    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "fix"]);
+    const out = getStdout();
+    expect(out).toContain("Applied suggestion from @alice:");
+    expect(out).toContain("a.ts (line 5)");
+    expect(out).toContain("Commit: abc123");
+    expect(out).toContain("git push");
+  });
+
+  it("text output shows patch diff block in success result", async () => {
+    mockRunCommitSuggestion.mockResolvedValue(APPLIED_RESULT);
+    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "fix"]);
+    const out = getStdout();
+    expect(out).toContain("```diff");
+    expect(out).toContain("--- a/a.ts");
+  });
+
+  it("errors when --message is whitespace only", async () => {
+    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "   "]);
+    expect(process.exitCode).toBe(1);
+    expect(mockRunCommitSuggestion).not.toHaveBeenCalled();
+    const err = stderrSpy.mock.calls.map((c: string[]) => c[0]).join("");
+    expect(err).toContain("--message");
+  });
+
+  it("text output shows failure with reason and patch", async () => {
+    mockRunCommitSuggestion.mockResolvedValue(FAILED_RESULT);
+    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "fix"]);
+    const out = getStdout();
+    expect(out).toContain("Failed to apply suggestion t1:");
+    expect(out).toContain("git apply rejected");
+    expect(out).toContain("--- a/a.ts");
+  });
+
+  it("json output serialises the full result", async () => {
+    mockRunCommitSuggestion.mockResolvedValue(APPLIED_RESULT);
+    await main([
+      "node",
+      "shepherd",
+      "commit-suggestion",
+      "--thread-id",
+      "t1",
+      "--message",
+      "fix",
       "--format",
       "json",
     ]);
     const out = getStdout();
-    expect(JSON.parse(out.trim())).toEqual(result);
+    const parsed = JSON.parse(out.trim());
+    expect(parsed).toMatchObject({ applied: true, commitSha: "abc123", threadId: "t1" });
   });
 });
 
@@ -651,133 +702,6 @@ describe("main — iterate text format", () => {
     const out = getStdout();
     expect(out).toContain("- external `https://app.codecov.io/a/b` — `codecov/patch` (actionable)");
     expect(out).toContain("- (no runId) — `mystery-check` (actionable)");
-  });
-
-  it("fix_code (commit-suggestions mode): emits ## Commit suggestions and two-step instructions", async () => {
-    const result: IterateResult = {
-      ...makeIterateResult("fix_code"),
-    };
-    if (result.action !== "fix_code") throw new Error("unreachable");
-    result.fix = {
-      mode: "commit-suggestions",
-      threads: [
-        {
-          id: "PRRT_x",
-          path: "src/foo.ts",
-          line: 10,
-          author: "reviewer",
-          body: "use a const\n\n```suggestion\nconst x = 1;\n```",
-        },
-        {
-          id: "PRRT_y",
-          path: "src/bar.ts",
-          line: 20,
-          author: "reviewer2",
-          body: "rename it\n\n```suggestion\nconst better = 2;\n```",
-        },
-      ],
-      commitSuggestionsCommand: {
-        argv: ["npx", "pr-shepherd", "commit-suggestions", "42", "--thread-ids", "PRRT_x,PRRT_y"],
-      },
-      instructions: [
-        "Run the `commit-suggestions:` command above — it applies all reviewer suggestion blocks server-side as a single commit and resolves the threads.",
-        "Run `git pull --ff-only` to sync your local checkout with the new commit before any further edits.",
-      ],
-    };
-    mockRunIterate.mockResolvedValue(result);
-
-    await main(["node", "shepherd", "iterate", "42"]);
-    const out = getStdout();
-
-    // Heading is the new shortcut variant — never the rebase-and-push variant.
-    expect(out).toContain("# PR #42 [FIX_CODE]");
-    expect(out).toContain("## Review threads");
-    expect(out).toContain("## Commit suggestions");
-    expect(out).not.toContain("## Post-fix push");
-    expect(out).not.toContain("## Rebase");
-    // No ceremony sections from the rebase-and-push path.
-    expect(out).not.toContain("## Actionable comments");
-    expect(out).not.toContain("## Failing checks");
-    expect(out).not.toContain("## Changes-requested reviews");
-    expect(out).not.toContain("## Cancelled runs");
-    // Bundle bullets — both wrapped in backticks for the monitor SKILL to extract.
-    expect(out).toContain(
-      "- commit-suggestions: `npx pr-shepherd commit-suggestions 42 --thread-ids PRRT_x,PRRT_y`",
-    );
-    expect(out).toContain("- after: `git pull --ff-only`");
-    // Two-step numbered instructions.
-    expect(out).toContain("1. Run the `commit-suggestions:` command above");
-    expect(out).toContain("2. Run `git pull --ff-only`");
-  });
-
-  it("fix_code (commit-suggestions mode): defensively quotes whitespace-bearing argv entries", async () => {
-    // The argv shape produced by `runIterate` never contains whitespace
-    // (PR number, thread IDs are alphanumeric/comma-separated), but the
-    // formatter's quoting branch is defense-in-depth — exercise it directly
-    // to keep the coverage signal on this safety check.
-    const result: IterateResult = { ...makeIterateResult("fix_code") };
-    if (result.action !== "fix_code") throw new Error("unreachable");
-    result.fix = {
-      mode: "commit-suggestions",
-      threads: [
-        {
-          id: "PRRT_x",
-          path: "src/foo.ts",
-          line: 10,
-          author: "reviewer",
-          body: "use a const\n\n```suggestion\nconst x = 1;\n```",
-        },
-      ],
-      commitSuggestionsCommand: {
-        argv: ["npx", "pr-shepherd", "commit-suggestions", "42", "--thread-ids", "PRRT a b"],
-      },
-      instructions: ["one"],
-    };
-    mockRunIterate.mockResolvedValue(result);
-
-    await main(["node", "shepherd", "iterate", "42"]);
-    const out = getStdout();
-    expect(out).toContain(
-      `- commit-suggestions: \`npx pr-shepherd commit-suggestions 42 --thread-ids "PRRT a b"\``,
-    );
-  });
-
-  it("fix_code (commit-suggestions mode): JSON parity — fix.mode and argv round-trip", async () => {
-    const result: IterateResult = {
-      ...makeIterateResult("fix_code"),
-    };
-    if (result.action !== "fix_code") throw new Error("unreachable");
-    result.fix = {
-      mode: "commit-suggestions",
-      threads: [
-        {
-          id: "PRRT_x",
-          path: "src/foo.ts",
-          line: 10,
-          author: "reviewer",
-          body: "use a const\n\n```suggestion\nconst x = 1;\n```",
-        },
-      ],
-      commitSuggestionsCommand: {
-        argv: ["npx", "pr-shepherd", "commit-suggestions", "42", "--thread-ids", "PRRT_x"],
-      },
-      instructions: ["one", "two"],
-    };
-    mockRunIterate.mockResolvedValue(result);
-
-    await main(["node", "shepherd", "iterate", "42", "--format", "json"]);
-    const parsed = JSON.parse(getStdout().trimEnd());
-    expect(parsed.action).toBe("fix_code");
-    expect(parsed.fix.mode).toBe("commit-suggestions");
-    expect(parsed.fix.commitSuggestionsCommand.argv).toEqual([
-      "npx",
-      "pr-shepherd",
-      "commit-suggestions",
-      "42",
-      "--thread-ids",
-      "PRRT_x",
-    ]);
-    expect(parsed.fix.instructions).toEqual(["one", "two"]);
   });
 
   it("json format: emits a single JSON.stringify(result)+newline, no formatter output", async () => {

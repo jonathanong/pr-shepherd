@@ -2391,219 +2391,6 @@ describe("runIterate — escalate (thread-missing-location)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Commit-suggestions shortcut (issue #66)
-//
-// Gate: every actionable thread carries a parseable ```suggestion block, no
-// other actionable items (comments, noise, checks, reviews, conflicts), and
-// both `actions.commitSuggestions` and (not) `--no-commit-suggestions` allow
-// the shortcut. When the gate passes, fix.mode === "commit-suggestions" and
-// the agent gets a pre-built `commit-suggestions` invocation instead of the
-// rebase + push + resolve ceremony.
-// ---------------------------------------------------------------------------
-
-const SUGGESTION_BODY = "Use a const here.\n\n```suggestion\nconst foo = 1;\n```";
-const NON_SUGGESTION_BODY = "Just rename it — no code attached.";
-
-function makeSuggestionThread(id: string, body = SUGGESTION_BODY) {
-  return {
-    id,
-    isResolved: false,
-    isOutdated: false,
-    isMinimized: false,
-    path: "src/foo.mts",
-    line: 10,
-    startLine: null,
-    author: "reviewer",
-    body,
-    createdAtUnix: NOW - 3600,
-  };
-}
-
-describe("runIterate — fix_code commit-suggestions shortcut", () => {
-  it("emits mode: commit-suggestions when every thread has a parseable suggestion and nothing else is actionable", async () => {
-    const t1 = makeSuggestionThread("PRRT_x");
-    const t2 = makeSuggestionThread("PRRT_y");
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [t1, t2], autoResolved: [], autoResolveErrors: [] },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
-
-    const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.mode).toBe("commit-suggestions");
-    if (result.fix.mode !== "commit-suggestions") return;
-    expect(result.fix.threads.map((t) => t.id)).toEqual(["PRRT_x", "PRRT_y"]);
-    expect(result.fix.commitSuggestionsCommand.argv).toEqual([
-      "npx",
-      "pr-shepherd",
-      "commit-suggestions",
-      "42",
-      "--thread-ids",
-      "PRRT_x,PRRT_y",
-    ]);
-    expect(result.fix.instructions).toHaveLength(2);
-    expect(result.fix.instructions[0]).toContain("commit-suggestions");
-    expect(result.fix.instructions[1]).toContain("git pull --ff-only");
-    expect(result.cancelled).toEqual([]);
-  });
-
-  it("falls back to mode: rebase-and-push when one thread has a suggestion and another does not", async () => {
-    const t1 = makeSuggestionThread("PRRT_x");
-    const t2 = makeSuggestionThread("PRRT_y", NON_SUGGESTION_BODY);
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [t1, t2], autoResolved: [], autoResolveErrors: [] },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
-
-    const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.mode).toBe("rebase-and-push");
-  });
-
-  it("falls back to mode: rebase-and-push when a thread has a non-committable suggestion (nested fence, issue #68)", async () => {
-    const nestedFenceBody = ["```suggestion", "text with ```suggestion inside", "```"].join("\n");
-    const t1 = makeSuggestionThread("PRRT_x", nestedFenceBody);
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [t1], autoResolved: [], autoResolveErrors: [] },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
-
-    const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.mode).toBe("rebase-and-push");
-  });
-
-  it("falls back to mode: rebase-and-push when an actionable comment is also present", async () => {
-    const t1 = makeSuggestionThread("PRRT_x");
-    const comment = {
-      id: "PRRC_1",
-      author: "bot",
-      body: "please address",
-      isMinimized: false,
-      createdAtUnix: NOW - 3600,
-    };
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [t1], autoResolved: [], autoResolveErrors: [] },
-        comments: { actionable: [comment] },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
-
-    const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.mode).toBe("rebase-and-push");
-  });
-
-  it("falls back to mode: rebase-and-push when --no-commit-suggestions is set", async () => {
-    const t1 = makeSuggestionThread("PRRT_x");
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [t1], autoResolved: [], autoResolveErrors: [] },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
-
-    const result = await runIterate(makeOpts({ noCommitSuggestions: true }));
-
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.mode).toBe("rebase-and-push");
-  });
-
-  it("falls back to mode: rebase-and-push when actions.commitSuggestions is false in config", async () => {
-    const cfg = defaultConfig();
-    cfg.actions.commitSuggestions = false;
-    mockLoadConfig.mockReturnValue(cfg);
-    const t1 = makeSuggestionThread("PRRT_x");
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [t1], autoResolved: [], autoResolveErrors: [] },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
-
-    const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.mode).toBe("rebase-and-push");
-  });
-
-  it("does not trigger the shortcut for a CONFLICTS-only state with zero threads", async () => {
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "UNRESOLVED_COMMENTS",
-        mergeStatus: {
-          status: "CONFLICTS",
-          state: "OPEN",
-          isDraft: false,
-          mergeable: "CONFLICTING",
-          reviewDecision: "APPROVED",
-          copilotReviewInProgress: false,
-          mergeStateStatus: "DIRTY",
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
-
-    const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.mode).toBe("rebase-and-push");
-  });
-});
-
-// ---------------------------------------------------------------------------
 // Review summary minimize — issue #70
 // ---------------------------------------------------------------------------
 
@@ -2775,8 +2562,19 @@ describe("runIterate — review summary auto-minimize", () => {
     expect(result.action).toBe("fix_code");
   });
 
-  it("blocks the commit-suggestions shortcut when a bot summary is pending", async () => {
-    const t1 = makeSuggestionThread("PRRT_x");
+  it("includes reviewSummaryIds in fix_code result when both a thread and a bot summary are present", async () => {
+    const t1 = {
+      id: "PRRT_x",
+      isResolved: false,
+      isOutdated: false,
+      isMinimized: false,
+      path: "src/foo.mts",
+      line: 10,
+      startLine: null,
+      author: "reviewer",
+      body: "Use a const here.\n\n```suggestion\nconst foo = 1;\n```",
+      createdAtUnix: NOW - 3600,
+    };
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
