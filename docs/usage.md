@@ -217,7 +217,7 @@ pr-shepherd status 100 --format=json
 
 PR #41    Add new feature for user authentication           READY        SUCCESS
 PR #42    Refactor internal module                          IN PROGRESS  PENDING
-PR #43    Fix edge case in parser                           BLOCKED      SUCCESS (threads truncated — run shepherd check for full count)
+PR #43    Fix edge case in parser                           BLOCKED      SUCCESS (threads truncated — run pr-shepherd check for full count)
 ```
 
 Exit code: `0` if every PR is READY, `1` otherwise.
