@@ -35,11 +35,20 @@ interface CacheKey {
 // Public API
 // ---------------------------------------------------------------------------
 
-/** Read the current stall state. Returns null on miss or corrupt data. */
+/** Read the current stall state. Returns null on miss, corrupt data, or invalid shape. */
 export async function readStallState(key: CacheKey): Promise<StallState | null> {
   try {
     const raw = await readFile(resolvePath(key), "utf8");
-    return JSON.parse(raw) as StallState;
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      parsed === null ||
+      typeof parsed !== "object" ||
+      typeof (parsed as Record<string, unknown>)["fingerprint"] !== "string" ||
+      !Number.isFinite((parsed as Record<string, unknown>)["firstSeenAt"])
+    ) {
+      return null;
+    }
+    return parsed as StallState;
   } catch {
     return null;
   }

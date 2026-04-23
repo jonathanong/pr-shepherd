@@ -35,6 +35,40 @@ describe("readStallState — invalid JSON", () => {
   });
 });
 
+describe("readStallState — invalid shape (valid JSON but wrong types)", () => {
+  it("returns null when fingerprint is missing", async () => {
+    const dir = join(testCacheDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr));
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, "iterate-stall.json"), JSON.stringify({ firstSeenAt: 1000 }), "utf8");
+    const result = await readStallState(testKey);
+    expect(result).toBeNull();
+  });
+
+  it("returns null when firstSeenAt is not a finite number", async () => {
+    const dir = join(testCacheDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr));
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      join(dir, "iterate-stall.json"),
+      JSON.stringify({ fingerprint: "abc", firstSeenAt: "not-a-number" }),
+      "utf8",
+    );
+    const result = await readStallState(testKey);
+    expect(result).toBeNull();
+  });
+
+  it("returns null when firstSeenAt is NaN", async () => {
+    const dir = join(testCacheDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr));
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      join(dir, "iterate-stall.json"),
+      JSON.stringify({ fingerprint: "abc", firstSeenAt: null }),
+      "utf8",
+    );
+    const result = await readStallState(testKey);
+    expect(result).toBeNull();
+  });
+});
+
 describe("writeStallState / readStallState — round-trip", () => {
   it("returns the written state", async () => {
     const state: StallState = {

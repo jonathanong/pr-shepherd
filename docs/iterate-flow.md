@@ -135,15 +135,15 @@ CONFLICTS is included here because the `fix_code` handler already runs `git fetc
 
 ## Decision table
 
-| Step    | Condition                                              | Action       | Exit code |
-| ------- | ------------------------------------------------------ | ------------ | --------- |
-| 1       | Last commit < cooldownSeconds old                      | `cooldown`   | 0         |
-| 2.5     | `state !== 'OPEN'`                                     | `cancel`     | 2         |
-| 3 cont. | `shouldCancel`                                         | `cancel`     | 2         |
-| 3.5     | Same fingerprint for ≥ `stallTimeoutMinutes` (any step)| `escalate`   | 3         |
-| 4       | Actionable threads/comments/CI or CONFLICTS            | `fix_code`   | 1         |
-| 4 esc.  | Same thread hit `fixAttemptsPerThread` times           | `escalate`   | 3         |
-| 5       | Transient CI failures                                  | `rerun_ci`   | 0         |
-| 6       | Flaky + BEHIND                                         | `rebase`     | 1         |
-| 7       | READY + CLEAN + isDraft                                | `mark_ready` | 0         |
-| 8       | Fallthrough                                            | `wait`       | 0         |
+| Step    | Condition                                               | Action       | Exit code |
+| ------- | ------------------------------------------------------- | ------------ | --------- |
+| 1       | Last commit < cooldownSeconds old                       | `cooldown`   | 0         |
+| 2.5     | `state !== 'OPEN'`                                      | `cancel`     | 2         |
+| 3 cont. | `shouldCancel`                                          | `cancel`     | 2         |
+| 3.5     | Same fingerprint for ≥ `stallTimeoutMinutes` (any step) | `escalate`   | 3         |
+| 4       | Actionable threads/comments/CI or CONFLICTS             | `fix_code`   | 1         |
+| 4 esc.  | Same thread hit `fixAttemptsPerThread` times            | `escalate`   | 3         |
+| 5       | Transient CI failures                                   | `rerun_ci`   | 0         |
+| 6       | Flaky + BEHIND                                          | `rebase`     | 1         |
+| 7       | READY + CLEAN + isDraft                                 | `mark_ready` | 0         |
+| 8       | Fallthrough                                             | `wait`       | 0         |
