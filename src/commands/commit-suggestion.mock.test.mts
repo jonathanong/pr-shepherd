@@ -319,7 +319,7 @@ describe("runCommitSuggestion — successful apply", () => {
     setupHappyPath();
   });
 
-  it("returns applied=true with commitSha on success", async () => {
+  it("returns applied=true with commitSha and patch on success", async () => {
     const result = await runCommitSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
@@ -330,6 +330,8 @@ describe("runCommitSuggestion — successful apply", () => {
     expect(result.threadId).toBe("PRRT_x");
     expect(result.author).toBe("alice");
     expect(result.path).toBe("src/foo.ts");
+    expect(result.patch).toContain("--- a/src/foo.ts");
+    expect(result.patch).toContain("+const x = 10;");
   });
 
   it("runs git apply --check then git apply", async () => {

@@ -316,6 +316,12 @@ function formatCommitSuggestionResult(
         : `lines ${result.startLine}-${result.endLine}`;
     lines.push(`  ${result.path} (${range})`);
     if (result.commitSha) lines.push(`Commit: ${result.commitSha}`);
+    if (result.patch) {
+      lines.push("");
+      lines.push("```diff");
+      lines.push(result.patch.trimEnd());
+      lines.push("```");
+    }
   } else {
     lines.push(`Failed to apply suggestion ${result.threadId}:`);
     lines.push(`  path: ${result.path} (lines ${result.startLine}-${result.endLine})`);
@@ -323,7 +329,9 @@ function formatCommitSuggestionResult(
     lines.push(`  reason: ${result.reason ?? "unknown"}`);
     if (result.patch) {
       lines.push("");
-      lines.push(result.patch);
+      lines.push("```diff");
+      lines.push(result.patch.trimEnd());
+      lines.push("```");
     }
   }
   if (result.postActionInstruction) {

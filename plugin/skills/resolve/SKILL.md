@@ -72,8 +72,8 @@ npx pr-shepherd commit-suggestion <N> \
 
 Parse each response:
 
-- `applied: true` — mark **Fixed**; do **not** pass the ID to `--resolve-thread-ids` in step 6 (the CLI already resolved it).
-- `applied: false` — read `reason` and the `patch` block, then fall through to step 4 to fix manually. Do not retry the same command.
+- `applied: true` — the result always includes a `patch` field (the full unified diff). **Read it** to confirm the change is correct before continuing. Mark **Fixed**; do **not** pass the ID to `--resolve-thread-ids` in step 6 (the CLI already resolved it).
+- `applied: false` — read `reason` (the exact `git apply` stderr) and `patch` (the diff that was rejected) together to understand why the context didn't match. Fall through to step 4 to fix manually. Do not retry the same command.
 
 After all per-thread calls succeed, you have N local commits. Continue to step 5; the rebase-and-push handles the push — no `git pull --ff-only` needed.
 

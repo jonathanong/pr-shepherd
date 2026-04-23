@@ -188,6 +188,7 @@ export async function runCommitSuggestion(
     author: thread.author,
     applied: true,
     commitSha,
+    patch,
     postActionInstruction:
       "Run `git push` (or `git push --force-with-lease` after rebasing) to publish the commit.",
   };

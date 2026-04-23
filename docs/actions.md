@@ -351,3 +351,85 @@ After fixing manually, rerun `/pr-shepherd:monitor 42` to resume.
 The block after the base-fields line (separated by a blank line) is `escalate.humanMessage` in JSON — ready to print verbatim.
 
 **What the monitor does:** Print the full output, then invoke `/loop cancel` via Skill tool to stop the cron job.
+
+---
+
+## `commit-suggestion` (apply a reviewer suggestion)
+
+Not an `iterate` action — a separate subcommand called by the resolve skill during `[FIX_CODE]` handling when a review thread carries a ` ```suggestion ` block. One invocation = one thread = one local commit.
+
+```bash
+npx pr-shepherd commit-suggestion <PR> \
+  --thread-id <PRRT_…> \
+  --message "<one-sentence headline>" \
+  [--description "<optional body>"] \
+  --format=json
+```
+
+### How the git-apply workflow works
+
+The command runs these phases in order:
+
+1. **Parse the suggestion.** Extracts the replacement lines from the ` ```suggestion ` fenced block in the review comment body. Rejects nested fences or blocks with odd backtick runs (these would silently truncate — see issue #68).
+
+2. **Build a unified diff.** Generates a `git apply`-compatible patch from the current file content on disk using the thread's `startLine`/`endLine` anchor and the parsed replacement lines. The diff includes 3 lines of context on each side. The full patch is always returned in the result (both success and failure) so the agent can inspect what will be or was applied.
+
+3. **Dry-run validate.** Runs `git apply --check <patchfile>` against the actual working tree. If context lines don't match (the file changed since the comment was posted, or line numbers drifted after a prior suggestion commit), `git apply --check` surfaces a specific line-level mismatch error. The command returns `applied: false` with `reason` (the stderr from `git apply`) and `patch` (the full diff) — no commit is made. The caller should inspect the diff and reason, then fall through to a manual fix.
+
+4. **Apply + commit.** On `--check` success, runs `git apply <patchfile>` to write the file, stages it with `git add -- <path>`, and commits with `git commit -m "<message>" -m "<description>\n\nCo-authored-by: <login> <login@users.noreply.github.com>"`. The commit message headline comes from `--message`; the CLI appends the reviewer's `Co-authored-by` attribution automatically.
+
+5. **Resolve thread.** Calls `applyResolveOptions` to resolve the GitHub review thread immediately after the local commit. If resolution fails (network error, already resolved), the error is surfaced but the local commit stands; the caller must handle the orphaned thread.
+
+6. **Return result.** Always includes `patch` (the full unified diff), `path`, `startLine`, `endLine`, `author`, `applied`, and `postActionInstruction` telling the caller to push.
+
+### Output shapes
+
+**Success (`applied: true`):**
+
+```json
+{
+  "pr": 42,
+  "repo": "owner/repo",
+  "threadId": "PRRT_xxx",
+  "path": "src/foo.ts",
+  "startLine": 10,
+  "endLine": 12,
+  "author": "alice",
+  "commitSha": "abc1234",
+  "applied": true,
+  "patch": "--- a/src/foo.ts\n+++ b/src/foo.ts\n@@ -8,7 +8,7 @@\n ...",
+  "postActionInstruction": "Run `git push` (or `git push --force-with-lease` after rebasing) to publish the commit."
+}
+```
+
+Text output shows the applied range, the commit SHA, and the full diff fenced in ` ```diff `.
+
+**Failure (`applied: false`) — patch rejected by `git apply --check`:**
+
+```json
+{
+  "pr": 42,
+  "repo": "owner/repo",
+  "threadId": "PRRT_xxx",
+  "path": "src/foo.ts",
+  "startLine": 10,
+  "endLine": 12,
+  "author": "alice",
+  "applied": false,
+  "reason": "git apply rejected the patch: error: patch failed: src/foo.ts:10",
+  "patch": "--- a/src/foo.ts\n+++ b/src/foo.ts\n@@ -8,7 +8,7 @@\n ..."
+}
+```
+
+The `patch` lets the agent see exactly what diff was rejected and why the context didn't match, so it can fall through to a manual edit with full information.
+
+### Exit codes
+
+- `0` — suggestion applied, committed, thread resolved.
+- `1` — any error: bad input, dirty worktree, wrong branch, thread invalid (`applied: false`), resolve failed.
+
+### What the agent should do
+
+- Read `applied` to branch on success vs failure.
+- On success: inspect `patch` to verify the applied change is correct. Then run `git push` (or rebase-and-push if multiple suggestions were applied).
+- On failure: read `reason` and `patch` together — the diff shows what was attempted, `reason` shows the exact `git apply` error. Fix the file manually, then re-run the normal `resolve` flow.
