@@ -26,7 +26,7 @@ vi.mock("./github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
 }));
 
-import { main } from "./cli.mts";
+import { main } from "./cli-parser.mts";
 import { runCheck } from "./commands/check.mts";
 import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
 import { runCommitSuggestions } from "./commands/commit-suggestions.mts";
@@ -343,6 +343,14 @@ describe("main — iterate", () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
     await main(["node", "shepherd", "iterate", "42"]);
     expect(process.exitCode).toBe(0);
+  });
+
+  it("passes stallTimeoutSeconds derived from --stall-timeout to runIterate", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
+    await main(["node", "shepherd", "iterate", "42", "--stall-timeout", "15m"]);
+    expect(mockRunIterate).toHaveBeenCalledWith(
+      expect.objectContaining({ stallTimeoutSeconds: 15 * 60 }),
+    );
   });
 });
 

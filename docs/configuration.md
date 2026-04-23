@@ -10,6 +10,7 @@ pr-shepherd looks for a `.pr-shepherdrc.yml` file starting from the current work
 iterate:
   cooldownSeconds: 60 # wait 60s after a push before reading CI
   fixAttemptsPerThread: 5 # raise before escalating to manual review
+  stallTimeoutMinutes: 30 # escalate if state unchanged for this many minutes
 
 watch:
   interval: 4m # /loop cadence
@@ -86,6 +87,18 @@ The counter resets automatically when a new commit is pushed (HEAD SHA change).
 
 - **Raise** for complex threads that may require multiple fix-push-review cycles.
 - **Lower** if you want to escalate to human review sooner.
+
+### `iterate.stallTimeoutMinutes` — default `30`
+
+Maximum number of minutes the monitor loop will repeat the same action without material progress before escalating with the `stall-timeout` trigger. "Material progress" means any change to: HEAD SHA, the set of failing check names, actionable thread/comment/review IDs, or the review-summary minimize bucket.
+
+The stall timer resets automatically whenever the fingerprint changes (new commit, resolved thread, different CI failure, etc.).
+
+Override per-invocation with `--stall-timeout <duration>` (e.g. `--stall-timeout 1h`, `--stall-timeout 0` to disable).
+
+- **Raise** for workflows where CI can legitimately take longer than 30 minutes without any state change.
+- **Lower** if you want faster escalation when a PR gets stuck.
+- **Set to `0`** to disable stall detection entirely.
 
 ### `iterate.minimizeReviewSummaries`
 

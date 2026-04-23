@@ -54,6 +54,29 @@ See [ready-delay.md](ready-delay.md) for full lifecycle.
 
 ---
 
+### 3.5. Stall guard
+
+**What:** After building `base` from the sweep results, `applyStallGuard` is called for every non-terminal action (`wait`, `fix_code`, `rerun_ci`, `rebase`). It computes a fingerprint of the material iterate inputs:
+
+- HEAD SHA (from `git rev-parse HEAD`)
+- Action about to be emitted
+- `status`, `mergeStateStatus`, `state`, `isDraft`
+- Sorted failing-check names + failureKinds
+- Sorted actionable thread/comment/review IDs
+- Sorted review-summary minimize IDs
+
+The fingerprint and a `firstSeenAt` timestamp are persisted to `$TMPDIR/pr-shepherd-cache/<owner>-<repo>/<pr>/iterate-stall.json`.
+
+- **Fingerprint matches and `now − firstSeenAt ≥ stallTimeoutSeconds`** → return `action: 'escalate'` with trigger `stall-timeout`.
+- **Fingerprint matches but within threshold** → preserve `firstSeenAt`, return the original action.
+- **Fingerprint differs or no stored state** → write new state with `firstSeenAt = now`, return the original action.
+
+In-progress check **names** are included so that a long-running CI pipeline where jobs complete one by one (moving from in-progress to passing) resets the timer as progress happens. Timing-only fields (`remainingSeconds`, `inProgress` count by itself) are excluded — only the set of check names changes the fingerprint, not how many are still running.
+
+**Applies to:** `wait`, `fix_code`, `rerun_ci`, `rebase`. Not applied to `cooldown`, `cancel`, `mark_ready`, or `escalate` — these are either pre-sweep, already terminal, or one-shot.
+
+---
+
 ### 4. Actionable work
 
 **Check:** any of:
@@ -112,14 +135,15 @@ CONFLICTS is included here because the `fix_code` handler already runs `git fetc
 
 ## Decision table
 
-| Step    | Condition                                    | Action       | Exit code |
-| ------- | -------------------------------------------- | ------------ | --------- |
-| 1       | Last commit < cooldownSeconds old            | `cooldown`   | 0         |
-| 2.5     | `state !== 'OPEN'`                           | `cancel`     | 2         |
-| 3 cont. | `shouldCancel`                               | `cancel`     | 2         |
-| 4       | Actionable threads/comments/CI or CONFLICTS  | `fix_code`   | 1         |
-| 4 esc.  | Same thread hit `fixAttemptsPerThread` times | `escalate`   | 3         |
-| 5       | Transient CI failures                        | `rerun_ci`   | 0         |
-| 6       | Flaky + BEHIND                               | `rebase`     | 1         |
-| 7       | READY + CLEAN + isDraft                      | `mark_ready` | 0         |
-| 8       | Fallthrough                                  | `wait`       | 0         |
+| Step    | Condition                                               | Action       | Exit code |
+| ------- | ------------------------------------------------------- | ------------ | --------- |
+| 1       | Last commit < cooldownSeconds old                       | `cooldown`   | 0         |
+| 2.5     | `state !== 'OPEN'`                                      | `cancel`     | 2         |
+| 3 cont. | `shouldCancel`                                          | `cancel`     | 2         |
+| 3.5     | Same fingerprint for ≥ `stallTimeoutMinutes` (any step) | `escalate`   | 3         |
+| 4       | Actionable threads/comments/CI or CONFLICTS             | `fix_code`   | 1         |
+| 4 esc.  | Same thread hit `fixAttemptsPerThread` times            | `escalate`   | 3         |
+| 5       | Transient CI failures                                   | `rerun_ci`   | 0         |
+| 6       | Flaky + BEHIND                                          | `rebase`     | 1         |
+| 7       | READY + CLEAN + isDraft                                 | `mark_ready` | 0         |
+| 8       | Fallthrough                                             | `wait`       | 0         |

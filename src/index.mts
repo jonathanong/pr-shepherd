@@ -9,7 +9,7 @@
  *   pr-shepherd status PR1 [PR2 …]
  */
 
-import { main } from "./cli.mts";
+import { main } from "./cli-parser.mts";
 
 main(process.argv).catch((err) => {
   process.stderr.write(`pr-shepherd error: ${err instanceof Error ? err.message : String(err)}\n`);

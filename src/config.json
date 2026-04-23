@@ -5,6 +5,7 @@
   "iterate": {
     "cooldownSeconds": 30,
     "fixAttemptsPerThread": 3,
+    "stallTimeoutMinutes": 30,
     "minimizeReviewSummaries": {
       "bots": true,
       "humans": true,

@@ -441,6 +441,8 @@ export interface IterateCommandOptions extends GlobalOptions {
   noAutoCancelActionable?: boolean;
   /** When true, suppress the all-suggestions shortcut and always emit the rebase-and-push variant. Mirrors `actions.commitSuggestions: false` for one-off invocations. */
   noCommitSuggestions?: boolean;
+  /** Override the stall-timeout threshold (seconds). Defaults to config.iterate.stallTimeoutMinutes * 60. */
+  stallTimeoutSeconds?: number;
 }
 
 // ---------------------------------------------------------------------------
