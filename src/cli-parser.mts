@@ -395,13 +395,23 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
     case "wait": {
       const parts = [header];
       if (checksSection) parts.push(checksSection);
-      parts.push(result.log, "", "## Instructions", "", "1. End this iteration — the next cron fire will recheck.");
+      parts.push(
+        result.log,
+        "",
+        "## Instructions",
+        "",
+        "1. End this iteration — the next cron fire will recheck.",
+      );
       return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
     }
 
     case "rerun_ci": {
-      const rerunInstructions = result.reran.map((r, i) => `${i + 1}. Run: \`gh run rerun ${r.runId} --failed\``);
-      rerunInstructions.push(`${rerunInstructions.length + 1}. End this iteration — wait for CI to report results after the re-run.`);
+      const rerunInstructions = result.reran.map(
+        (r, i) => `${i + 1}. Run: \`gh run rerun ${r.runId} --failed\``,
+      );
+      rerunInstructions.push(
+        `${rerunInstructions.length + 1}. End this iteration — wait for CI to report results after the re-run.`,
+      );
       const parts = [header];
       if (checksSection) parts.push(checksSection);
       parts.push(result.log, "", "## Instructions", "", rerunInstructions.join("\n"));
@@ -422,7 +432,13 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
     case "cancel": {
       const parts = [header];
       if (checksSection) parts.push(checksSection);
-      parts.push(result.log, "", "## Instructions", "", "1. Invoke `/loop cancel` via the Skill tool.\n2. Stop.");
+      parts.push(
+        result.log,
+        "",
+        "## Instructions",
+        "",
+        "1. Invoke `/loop cancel` via the Skill tool.\n2. Stop.",
+      );
       return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
     }
 
@@ -463,11 +479,7 @@ function formatChecksSection(checks: import("./types.mts").RelevantCheck[]): str
       lines.push(`- ✓ \`${c.name}\` — SUCCESS`);
     } else {
       const kind = c.failureKind ? ` (${c.failureKind})` : "";
-      const locator = c.runId
-        ? `\`${c.runId}\``
-        : c.detailsUrl
-          ? `\`${c.detailsUrl}\``
-          : "(no ID)";
+      const locator = c.runId ? `\`${c.runId}\`` : c.detailsUrl ? `\`${c.detailsUrl}\`` : "(no ID)";
       lines.push(`- ✗ \`${c.name}\`${kind} — ${c.conclusion} · ${locator}`);
       if (c.errorExcerpt) {
         for (const eLine of c.errorExcerpt.split("\n")) {

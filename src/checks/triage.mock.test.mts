@@ -270,11 +270,9 @@ describe("extractErrorLines", () => {
   });
 
   it("returns up to maxLines ##[error] lines when multiple exist", () => {
-    const logs = [
-      "##[error]Error: first",
-      "##[error]Error: second",
-      "##[error]Error: third",
-    ].join("\n");
+    const logs = ["##[error]Error: first", "##[error]Error: second", "##[error]Error: third"].join(
+      "\n",
+    );
     expect(extractErrorLines(logs, 2)).toBe("Error: second\nError: third");
     expect(extractErrorLines(logs, 3)).toBe("Error: first\nError: second\nError: third");
   });
