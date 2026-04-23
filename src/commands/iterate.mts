@@ -815,6 +815,8 @@ function buildFixInstructions(
     instructions.push(
       `Stop this iteration — CI needs time to run on the new push before the next tick.`,
     );
+  } else {
+    instructions.push(`End this iteration.`);
   }
 
   return instructions;

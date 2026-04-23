@@ -128,7 +128,7 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
           requiresDismissMessage: false,
           hasMutations: false,
         },
-        instructions: [],
+        instructions: ["End this iteration."],
       },
       cancelled: [],
     };
@@ -505,7 +505,7 @@ describe("main — iterate text format", () => {
     expect(out).toContain("2. Stop — the PR needs human direction");
   });
 
-  it("fix_code (empty payload): heading + base/summary + Post-fix push section only (no items, no Instructions)", async () => {
+  it("fix_code (empty payload): heading + base/summary + Post-fix push + fallback Instructions", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("fix_code"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
@@ -514,14 +514,17 @@ describe("main — iterate text format", () => {
     expect(out).not.toContain("## Rebase");
     expect(out).toContain("- base: `main`");
     expect(out).toContain('- resolve: `npx pr-shepherd resolve 42 --require-sha "$HEAD_SHA"`');
-    // No item sections, no instructions (empty fix + no instructions in fixture).
+    // No item sections.
     expect(out).not.toContain("## Review threads");
     expect(out).not.toContain("## Actionable comments");
     expect(out).not.toContain("## Failing checks");
     expect(out).not.toContain("## Changes-requested reviews");
     expect(out).not.toContain("## Noise");
     expect(out).not.toContain("## Cancelled runs");
-    expect(out).not.toContain("## Instructions");
+    // Fallback instruction always present for consistency with the invariant that
+    // every iterate output ends with ## Instructions.
+    expect(out).toContain("## Instructions");
+    expect(out).toContain("1. End this iteration.");
   });
 
   it("fix_code (rich payload): sections appear in fixed order with backtick-quoted codes", async () => {
