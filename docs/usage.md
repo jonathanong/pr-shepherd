@@ -68,11 +68,24 @@ pr-shepherd resolve 42 --fetch --format=json
 ```
 
 ```
-Actionable Review Threads (2):
-  - threadId=RT_kwDOabc src/api.ts:47 (@reviewer): Please add error handling here
-  - threadId=RT_kwDOdef src/utils.ts:12 (@bot): Consider using a const here
+# PR #42 — Resolve fetch (2 actionable)
 
-Summary: 2 actionable item(s)
+## Actionable Review Threads (2)
+
+- `threadId=RT_kwDOabc` `src/api.ts:47` (@reviewer): Please add error handling here
+- `threadId=RT_kwDOdef` `src/utils.ts:12` (@bot): Consider using a const here
+
+## Summary
+
+2 actionable item(s)
+
+## Instructions
+
+1. Classify every item listed above into exactly one of: Fixed / Actionable / Not relevant / Outdated / Acknowledge. …
+2. Read and edit each file referenced under `## Actionable Review Threads` above. …
+3. Commit changed files and push: `git add <files> && git commit -m "<message>"`, then rebase and push. …
+4. Run `npx pr-shepherd resolve 42 [--resolve-thread-ids <ids>] …` with only the non-empty flag subsets. …
+5. Report: echo the CLI's mutation output, then one line per Acknowledged item. …
 ```
 
 **Mutate mode** (after pushing fixes):

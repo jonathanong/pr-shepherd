@@ -251,55 +251,74 @@ async function handleStatus(args: string[]): Promise<void> {
 // ---------------------------------------------------------------------------
 
 function formatFetchResult(result: Awaited<ReturnType<typeof runResolveFetch>>): string {
-  const lines: string[] = [];
-
-  if (result.actionableThreads.length > 0) {
-    lines.push(
-      `\nActionable Review Threads (${result.actionableThreads.length})` +
-        (result.commitSuggestionsEnabled ? " [commit-suggestions: enabled]" : "") +
-        ":",
-    );
-    for (const t of result.actionableThreads) {
-      const suggestionMarker = t.suggestion ? " [suggestion]" : "";
-      lines.push(
-        `  - threadId=${t.id} ${t.path ?? ""}:${t.line ?? "?"} (@${t.author})${suggestionMarker}: ${t.body.split("\n")[0]?.slice(0, 100) ?? ""}`,
-      );
-    }
-  }
-
-  if (result.actionableComments.length > 0) {
-    lines.push(`\nActionable PR Comments (${result.actionableComments.length}):`);
-    for (const c of result.actionableComments) {
-      lines.push(
-        `  - commentId=${c.id} (@${c.author}): ${c.body.split("\n")[0]?.slice(0, 100) ?? ""}`,
-      );
-    }
-  }
-
-  if (result.changesRequestedReviews.length > 0) {
-    lines.push(`\nPending CHANGES_REQUESTED reviews (${result.changesRequestedReviews.length}):`);
-    for (const r of result.changesRequestedReviews) {
-      lines.push(`  - reviewId=${r.id} (@${r.author})`);
-    }
-  }
-
-  if (result.reviewSummaries.length > 0) {
-    lines.push(`\nReview summaries (${result.reviewSummaries.length}):`);
-    for (const r of result.reviewSummaries) {
-      lines.push(`  - reviewId=${r.id} (@${r.author}): ${r.body.split("\n")[0]!.slice(0, 100)}`);
-    }
-  }
-
   const total =
     result.actionableThreads.length +
     result.actionableComments.length +
     result.changesRequestedReviews.length +
     result.reviewSummaries.length;
-  lines.push(
-    `\nSummary: ${total === 0 ? "0 actionable — all threads resolved/minimized" : `${total} actionable item(s)`}`,
+
+  const sections: string[] = [];
+
+  sections.push(
+    `# PR #${result.prNumber} — Resolve fetch (${total === 0 ? "0 actionable" : `${total} actionable`})`,
   );
 
-  return `${lines.join("\n")}\n`;
+  if (result.actionableThreads.length > 0) {
+    sections.push(
+      `## Actionable Review Threads (${result.actionableThreads.length})` +
+        (result.commitSuggestionsEnabled ? " [commit-suggestions: enabled]" : ""),
+    );
+    sections.push(
+      result.actionableThreads
+        .map((t) => {
+          const suggestionMarker = t.suggestion ? " [suggestion]" : "";
+          return `- \`threadId=${t.id}\` \`${t.path ?? ""}:${t.line ?? "?"}\` (@${t.author})${suggestionMarker}: ${t.body.split("\n")[0]?.slice(0, 100) ?? ""}`;
+        })
+        .join("\n"),
+    );
+  }
+
+  if (result.actionableComments.length > 0) {
+    sections.push(`## Actionable PR Comments (${result.actionableComments.length})`);
+    sections.push(
+      result.actionableComments
+        .map(
+          (c) =>
+            `- \`commentId=${c.id}\` (@${c.author}): ${c.body.split("\n")[0]?.slice(0, 100) ?? ""}`,
+        )
+        .join("\n"),
+    );
+  }
+
+  if (result.changesRequestedReviews.length > 0) {
+    sections.push(
+      `## Pending CHANGES_REQUESTED reviews (${result.changesRequestedReviews.length})`,
+    );
+    sections.push(
+      result.changesRequestedReviews.map((r) => `- \`reviewId=${r.id}\` (@${r.author})`).join("\n"),
+    );
+  }
+
+  if (result.reviewSummaries.length > 0) {
+    sections.push(`## Review summaries (${result.reviewSummaries.length})`);
+    sections.push(
+      result.reviewSummaries
+        .map(
+          (r) => `- \`reviewId=${r.id}\` (@${r.author}): ${r.body.split("\n")[0]!.slice(0, 100)}`,
+        )
+        .join("\n"),
+    );
+  }
+
+  sections.push("## Summary");
+  sections.push(
+    total === 0 ? "0 actionable — all threads resolved/minimized" : `${total} actionable item(s)`,
+  );
+
+  sections.push("## Instructions");
+  sections.push(result.instructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n"));
+
+  return `${sections.join("\n\n")}\n`;
 }
 
 function formatCommitSuggestionResult(

@@ -197,11 +197,13 @@ describe("main — check", () => {
 describe("main — resolve", () => {
   it("calls runResolveFetch when no mutation flags are given (fetch mode)", async () => {
     mockRunResolveFetch.mockResolvedValue({
+      prNumber: 42,
       actionableThreads: [],
       actionableComments: [],
       changesRequestedReviews: [],
       reviewSummaries: [],
       commitSuggestionsEnabled: true,
+      instructions: ["No actionable items — end this invocation."],
     });
     await main(["node", "shepherd", "resolve", "42"]);
     expect(mockRunResolveFetch).toHaveBeenCalledTimes(1);
@@ -210,16 +212,18 @@ describe("main — resolve", () => {
 
   it("formatFetchResult renders reviewSummaries section and includes them in total", async () => {
     mockRunResolveFetch.mockResolvedValue({
+      prNumber: 42,
       actionableThreads: [],
       actionableComments: [],
       changesRequestedReviews: [],
       reviewSummaries: [{ id: "PRR_1", author: "copilot", body: "## PR overview\nsome detail" }],
       commitSuggestionsEnabled: true,
+      instructions: ["Classify every item."],
     });
     await main(["node", "shepherd", "resolve", "42"]);
     const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
-    expect(out).toContain("Review summaries (1):");
-    expect(out).toContain("reviewId=PRR_1 (@copilot): ## PR overview");
+    expect(out).toContain("## Review summaries (1)");
+    expect(out).toContain("`reviewId=PRR_1` (@copilot): ## PR overview");
     expect(out).toContain("1 actionable item(s)");
   });
 
@@ -232,6 +236,145 @@ describe("main — resolve", () => {
     });
     await main(["node", "shepherd", "resolve", "42", "--resolve-thread-ids", "t-1"]);
     expect(mockRunResolveMutate).toHaveBeenCalledTimes(1);
+  });
+
+  it("formatFetchResult emits H1 heading, Markdown sections, and ## Instructions", async () => {
+    mockRunResolveFetch.mockResolvedValue({
+      prNumber: 42,
+      actionableThreads: [
+        {
+          id: "PRT_1",
+          path: "src/foo.ts",
+          line: 10,
+          startLine: null,
+          isMinimized: false,
+          author: "alice",
+          body: "Consider renaming this",
+          createdAtUnix: 0,
+        },
+      ],
+      actionableComments: [
+        { id: "IC_1", author: "bob", body: "Typo here", isMinimized: false, createdAtUnix: 0 },
+      ],
+      changesRequestedReviews: [],
+      reviewSummaries: [],
+      commitSuggestionsEnabled: false,
+      instructions: ["Classify every item.", "Fix items.", "Resolve verified items.", "Report."],
+    });
+    await main(["node", "shepherd", "resolve", "42"]);
+    const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
+
+    expect(out).toContain("# PR #42 — Resolve fetch");
+    expect(out).toContain("## Actionable Review Threads");
+    expect(out).toContain("## Actionable PR Comments");
+    expect(out).toContain("## Instructions");
+
+    // Instructions must be last H2
+    const instrIdx = out.indexOf("## Instructions");
+    expect(instrIdx).toBeGreaterThan(out.indexOf("## Actionable PR Comments"));
+
+    // Numbered steps rendered
+    expect(out).toContain("1. Classify every item.");
+    expect(out).toContain("2. Fix items.");
+  });
+
+  it("formatFetchResult includes commit-suggestion step when enabled and suggestion present", async () => {
+    mockRunResolveFetch.mockResolvedValue({
+      prNumber: 42,
+      actionableThreads: [
+        {
+          id: "PRT_1",
+          path: "src/foo.ts",
+          line: 5,
+          startLine: null,
+          isMinimized: false,
+          author: "alice",
+          body: "Use const",
+          createdAtUnix: 0,
+          suggestion: { startLine: 5, endLine: 5, lines: ["const x = 1;"], author: "alice" },
+        },
+      ],
+      actionableComments: [],
+      changesRequestedReviews: [],
+      reviewSummaries: [],
+      commitSuggestionsEnabled: true,
+      instructions: [
+        "Classify every item.",
+        "For each Actionable thread marked `[suggestion]`: run `npx pr-shepherd commit-suggestion 42 ...`",
+        "Fix items.",
+        "Commit and push.",
+        "Resolve.",
+        "Report.",
+      ],
+    });
+    await main(["node", "shepherd", "resolve", "42"]);
+    const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
+    expect(out).toContain("commit-suggestion");
+  });
+
+  it("formatFetchResult -- zero items emits single-step instructions", async () => {
+    mockRunResolveFetch.mockResolvedValue({
+      prNumber: 42,
+      actionableThreads: [],
+      actionableComments: [],
+      changesRequestedReviews: [],
+      reviewSummaries: [],
+      commitSuggestionsEnabled: false,
+      instructions: ["No actionable items — end this invocation."],
+    });
+    await main(["node", "shepherd", "resolve", "42"]);
+    const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
+    expect(out).toContain("## Instructions");
+    expect(out).toContain("1. No actionable items — end this invocation.");
+  });
+
+  it("formatFetchResult renders changesRequestedReviews section and null path/line fallbacks", async () => {
+    mockRunResolveFetch.mockResolvedValue({
+      prNumber: 42,
+      actionableThreads: [
+        {
+          id: "PRT_null",
+          path: null,
+          line: null,
+          startLine: null,
+          isMinimized: false,
+          author: "alice",
+          body: "no location",
+          createdAtUnix: 0,
+        },
+      ],
+      actionableComments: [
+        { id: "IC_2", author: "bob", body: "comment", isMinimized: false, createdAtUnix: 0 },
+      ],
+      changesRequestedReviews: [{ id: "PRR_r1", author: "carol", body: "needs work" }],
+      reviewSummaries: [],
+      commitSuggestionsEnabled: false,
+      instructions: ["Classify every item.", "Fix items.", "Resolve.", "Report."],
+    });
+    await main(["node", "shepherd", "resolve", "42"]);
+    const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
+    expect(out).toContain("## Pending CHANGES_REQUESTED reviews (1)");
+    expect(out).toContain("`reviewId=PRR_r1` (@carol)");
+    // null path/line fallbacks rendered
+    expect(out).toContain("`:?`");
+  });
+
+  it("formatFetchResult --format=json includes instructions array", async () => {
+    const instructions = ["Classify every item.", "Resolve.", "Report."];
+    mockRunResolveFetch.mockResolvedValue({
+      prNumber: 42,
+      actionableThreads: [],
+      actionableComments: [],
+      changesRequestedReviews: [],
+      reviewSummaries: [],
+      commitSuggestionsEnabled: false,
+      instructions,
+    });
+    await main(["node", "shepherd", "resolve", "42", "--format=json"]);
+    const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
+    const parsed = JSON.parse(out) as { instructions: string[] };
+    expect(Array.isArray(parsed.instructions)).toBe(true);
+    expect(parsed.instructions).toEqual(instructions);
   });
 });
 

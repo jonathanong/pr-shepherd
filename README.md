@@ -47,7 +47,7 @@ Claude Code skills that wrap the CLI with model-driven triage, code edits, and f
 
 - **`/pr-shepherd:check`** — calls `check --format=json` and prints a human summary; never declares "ready to merge" unless every gate passes (merge status CLEAN, status READY, Copilot review not in progress)
 - **`/pr-shepherd:monitor`** — creates a `/loop` cron job (4-minute default, 8-hour expiry, 50-turn cap), deduplicates via a `# pr-shepherd-loop:pr=<N>` tag in `CronList`, dispatches on the `[ACTION]` H1 tag each tick, runs rebase scripts and fix instructions in the main conversation
-- **`/pr-shepherd:resolve`** — runs `resolve --fetch`, triages every returned item into Fixed / Actionable / Not-relevant / Outdated / Acknowledge (no silent drops — this is a project invariant), prefers `commit-suggestion` (singular) for threads carrying a ` ```suggestion ` block so the reviewer's change is applied verbatim and co-credited (one commit per suggestion), applies any remaining edits by hand, cancels stale CI runs, pushes, then calls `resolve` in mutate mode with `--require-sha`
+- **`/pr-shepherd:resolve`** — runs `resolve --fetch` and follows the `## Instructions` section embedded in the Markdown output; the CLI output describes the full triage/fix/push/resolve/report flow, including commit-suggestion preference and per-bucket dispatch rules
 
 See [docs/skills.md](docs/skills.md) for full skill reference.
 
