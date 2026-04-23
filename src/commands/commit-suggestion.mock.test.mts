@@ -32,7 +32,7 @@ vi.mock("node:fs/promises", () => ({
 
 vi.mock("../github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
-  getCurrentPrNumber: vi.fn().mockResolvedValue(42),
+  getCurrentPrNumber: vi.fn().mockResolvedValue(42 as number | null),
   getPrHead: vi
     .fn()
     .mockResolvedValue({ sha: "headsha", ref: "feature/foo", repoWithOwner: "owner/repo" }),
@@ -53,7 +53,7 @@ vi.mock("../comments/resolve.mts", () => ({
 }));
 
 import { runCommitSuggestion } from "./commit-suggestion.mts";
-import { getPrHead, getCurrentBranch } from "../github/client.mts";
+import { getPrHead, getCurrentBranch, getCurrentPrNumber } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { applyResolveOptions } from "../comments/resolve.mts";
 import { readFile } from "node:fs/promises";
@@ -61,6 +61,7 @@ import type { ReviewThread, BatchPrData } from "../types.mts";
 
 const mockGetPrHead = vi.mocked(getPrHead);
 const mockGetCurrentBranch = vi.mocked(getCurrentBranch);
+const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockFetchBatch = vi.mocked(fetchPrBatch);
 const mockApplyResolveOptions = vi.mocked(applyResolveOptions);
 const mockReadFile = vi.mocked(readFile);
@@ -187,6 +188,14 @@ describe("runCommitSuggestion — preflight", () => {
     });
     mockGetCurrentBranch.mockResolvedValue("feature/foo");
     mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
+  });
+
+  it("throws when no open PR is found for current branch", async () => {
+    mockGetCurrentPrNumber.mockResolvedValueOnce(null);
+    mockExecFile.mockImplementation(() => makeGitSuccess(""));
+    await expect(
+      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+    ).rejects.toThrow("No open PR found");
   });
 
   it("throws when worktree is dirty", async () => {
@@ -412,6 +421,28 @@ describe("runCommitSuggestion — successful apply", () => {
 // ---------------------------------------------------------------------------
 // Patch application failure
 // ---------------------------------------------------------------------------
+
+describe("runCommitSuggestion — file read failure", () => {
+  it("throws with descriptive message when file cannot be read", async () => {
+    vi.clearAllMocks();
+    mockGetPrHead.mockResolvedValue({
+      sha: "headsha",
+      ref: "feature/foo",
+      repoWithOwner: "owner/repo",
+    });
+    mockGetCurrentBranch.mockResolvedValue("feature/foo");
+    mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
+    mockExecFile.mockImplementation(() => makeGitSuccess(""));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (mockReadFile as any).mockRejectedValue(
+      Object.assign(new Error("ENOENT: no such file or directory"), { code: "ENOENT" }),
+    );
+
+    await expect(
+      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+    ).rejects.toThrow("Could not read src/foo.ts");
+  });
+});
 
 describe("runCommitSuggestion — patch failure", () => {
   beforeEach(() => {

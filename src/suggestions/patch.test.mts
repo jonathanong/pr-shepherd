@@ -112,6 +112,67 @@ describe("buildUnifiedDiff", () => {
     expect(patch).not.toContain("No newline");
   });
 
+  it("appends \\r to replacement lines when original uses CRLF", () => {
+    const content = "a\r\nb\r\nc\r\n";
+    const patch = buildUnifiedDiff({
+      path: "f.ts",
+      originalContent: content,
+      startLine: 2,
+      endLine: 2,
+      replacementLines: ["B"],
+    });
+    // replacement line should have \r before \n to match CRLF style
+    expect(patch).toContain("+B\r\n");
+    // context lines already carry \r from split("\n")
+    expect(patch).toContain(" a\r\n");
+  });
+
+  it("handles empty file (zero-line body)", () => {
+    const content = "";
+    const patch = buildUnifiedDiff({
+      path: "f.ts",
+      originalContent: content,
+      startLine: 1,
+      endLine: 1,
+      replacementLines: ["inserted"],
+    });
+    expect(patch).toContain("+inserted\n");
+    expect(patch).toContain("@@ -1,0 +1,1 @@\n");
+  });
+
+  it("emits no-newline marker for context lines before the hunk when last line is in before-context", () => {
+    // File has no trailing newline; the last line appears in the before-context window
+    const content = "a\nb"; // 2 lines, no trailing newline — line 2 = last
+    const patch = buildUnifiedDiff({
+      path: "f.ts",
+      originalContent: content,
+      startLine: 2,
+      endLine: 2,
+      replacementLines: ["B"],
+      context: 0,
+    });
+    // With context=0, before-context is empty — no no-newline in before section.
+    // The removed line IS the last line so it gets the marker.
+    expect(patch).toContain("-b\n");
+    expect(patch).toContain("\\ No newline at end of file\n");
+  });
+
+  it("emits no-newline marker for after-context lines when last line is in after-context", () => {
+    // File has no trailing newline; last line falls in the after-context of the hunk
+    const content = "a\nb\nc"; // 3 lines, no trailing newline
+    const patch = buildUnifiedDiff({
+      path: "f.ts",
+      originalContent: content,
+      startLine: 1,
+      endLine: 1,
+      replacementLines: ["A"],
+      context: 3,
+    });
+    // after-context includes line 2 (b) and line 3 (c = last, no newline)
+    expect(patch).toContain(" c\n");
+    expect(patch).toContain("\\ No newline at end of file\n");
+  });
+
   it("honours custom context size", () => {
     const content = "1\n2\n3\n4\n5\n6\n7\n8\n9\n";
     const patch = buildUnifiedDiff({
