@@ -1037,7 +1037,7 @@ function buildEscalateHumanMessage(
 function buildEscalateSuggestion(triggers: string[], detail?: string): string {
   if (triggers.includes("stall-timeout")) {
     const mins = detail ?? "30";
-    return `No progress detected for ${mins} minute${parseInt(mins) === 1 ? "" : "s"} — state has not changed. Inspect the PR and resume manually once the blocking issue is resolved.`;
+    return `No progress detected for ${mins} minute${parseInt(mins, 10) === 1 ? "" : "s"} — state has not changed. Inspect the PR and resume manually once the blocking issue is resolved.`;
   }
   if (triggers.includes("base-branch-unknown")) {
     const reason = detail ? ` (${detail})` : "";
