@@ -88,6 +88,12 @@ describe("parseSuggestion", () => {
     const body = ["````suggestion", "body with ``` in it", "````"].join("\n");
     expect(parseSuggestion(body)).toEqual({ lines: ["body with ``` in it"] });
   });
+
+  it("returns null for a quoted suggestion block with no closing fence", () => {
+    // prefix is non-empty but closeIdx is never found → else { return null }
+    const body = ["> ```suggestion", "> const x = 1;"].join("\n");
+    expect(parseSuggestion(body)).toBeNull();
+  });
 });
 
 describe("isCommittableSuggestion", () => {
