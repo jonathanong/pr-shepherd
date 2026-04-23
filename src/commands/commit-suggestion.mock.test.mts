@@ -129,12 +129,17 @@ function setupHappyPath(): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (mockReadFile as any).mockResolvedValue(FILE_CONTENT);
 
+  // Two rev-parse HEAD calls: preflight (must match head.sha="headsha") then post-commit.
+  let revParseCount = 0;
   mockExecFile.mockImplementation((cmd: string, args: string[]) => {
     if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
+    if (cmd === "git" && args[0] === "rev-parse") {
+      revParseCount++;
+      return revParseCount === 1 ? makeGitSuccess("headsha\n") : makeGitSuccess("newsha\n");
+    }
     if (cmd === "git" && args[0] === "apply") return makeGitSuccess();
     if (cmd === "git" && args[0] === "add") return makeGitSuccess();
     if (cmd === "git" && args[0] === "commit") return makeGitSuccess();
-    if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("newsha\n");
     throw new Error(`Unexpected execFile call: ${cmd} ${args.join(" ")}`);
   });
 }
@@ -216,6 +221,17 @@ describe("runCommitSuggestion — preflight", () => {
       runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow('does not match PR head branch "feature/foo"');
   });
+
+  it("throws when local HEAD SHA does not match PR head SHA", async () => {
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
+      if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("divergedsha\n");
+      return makeGitSuccess("");
+    });
+    await expect(
+      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+    ).rejects.toThrow("does not match PR head headsha");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -231,7 +247,10 @@ describe("runCommitSuggestion — thread classification", () => {
       repoWithOwner: "owner/repo",
     });
     mockGetCurrentBranch.mockResolvedValue("feature/foo");
-    mockExecFile.mockImplementation(() => makeGitSuccess(""));
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
+      return makeGitSuccess("");
+    });
   });
 
   it("throws when thread not found on PR", async () => {
@@ -445,7 +464,10 @@ describe("runCommitSuggestion — file read failure", () => {
     });
     mockGetCurrentBranch.mockResolvedValue("feature/foo");
     mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
-    mockExecFile.mockImplementation(() => makeGitSuccess(""));
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
+      return makeGitSuccess("");
+    });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (mockReadFile as any).mockRejectedValue(
       Object.assign(new Error("ENOENT: no such file or directory"), { code: "ENOENT" }),
@@ -465,7 +487,10 @@ describe("runCommitSuggestion — file read failure", () => {
     });
     mockGetCurrentBranch.mockResolvedValue("feature/foo");
     mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
-    mockExecFile.mockImplementation(() => makeGitSuccess(""));
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
+      return makeGitSuccess("");
+    });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (mockReadFile as any).mockRejectedValue("plain string error");
 
@@ -496,6 +521,7 @@ describe("runCommitSuggestion — patch failure", () => {
 
     mockExecFile.mockImplementation((cmd: string, args: string[]) => {
       if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
+      if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
       if (cmd === "git" && args[0] === "apply" && args.includes("--check")) {
         return Promise.reject(applyError);
       }
@@ -519,6 +545,7 @@ describe("runCommitSuggestion — patch failure", () => {
 
     mockExecFile.mockImplementation((cmd: string, args: string[]) => {
       if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
+      if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
       if (cmd === "git" && args[0] === "apply" && args.includes("--check")) {
         return Promise.reject(applyError);
       }
@@ -539,6 +566,7 @@ describe("runCommitSuggestion — patch failure", () => {
     const applyError = Object.assign(new Error("apply failed"), { stderr: "context mismatch" });
     mockExecFile.mockImplementation((cmd: string, args: string[]) => {
       if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
+      if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
       if (cmd === "git" && args[0] === "apply" && args.includes("--check")) {
         return Promise.reject(applyError);
       }
@@ -557,6 +585,7 @@ describe("runCommitSuggestion — patch failure", () => {
     const applyError = Object.assign(new Error("apply failed"), { stderr: "context mismatch" });
     mockExecFile.mockImplementation((cmd: string, args: string[]) => {
       if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
+      if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
       if (cmd === "git" && args[0] === "apply" && args.includes("--check")) {
         return Promise.reject(applyError);
       }
