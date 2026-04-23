@@ -23,7 +23,7 @@ The default output format is Markdown — what you see when running `npx pr-shep
 
 Load-bearing conventions (the monitor SKILL depends on these):
 
-1. Line 1 is always an H1 heading of the form `# PR #<N> [<ACTION>]`. The monitor greps the `[ACTION]` tag.
+1. Line 1 is always an H1 heading of the form `# PR #<N> [<ACTION>]`. The action tag identifies the output for logging and validation — behavior is driven by the `## Instructions` section, not by dispatching on the tag.
 2. Lines 3–4 carry the full base fields (status, merge, state, repo, summary, remainingSeconds, etc.), so Markdown output is never a lossy view of JSON.
 3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … — that tells the monitor exactly what to do. The monitor follows those steps; it does not need its own dispatch table.
 4. Under `[REBASE]`, the shell script is inside a ```bash fenced block — instruction 1 tells the monitor to extract and run it.

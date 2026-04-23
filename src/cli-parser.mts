@@ -363,10 +363,16 @@ function formatMutateResult(result: Awaited<ReturnType<typeof runResolveMutate>>
  * Format an IterateResult as human-readable Markdown.
  *
  * Load-bearing conventions the monitor SKILL relies on:
- *   1. The H1 heading on line 1 contains `[<ACTION>]` — the SKILL greps this tag.
- *   2. `[FIX_CODE]` always uses the `rebase-and-push` variant: the `resolve`
- *      bullet under `## Post-fix push` wraps the resolve command in backticks —
- *      the SKILL extracts the backticked content for execution.
+ *   1. The H1 heading on line 1 contains `[<ACTION>]` — the action tag identifies
+ *      the output for logging and validation. Behavior is driven by `## Instructions`,
+ *      not by dispatching on the tag.
+ *   2. `[FIX_CODE]` has two variants discriminated by `fix.mode`:
+ *        2a. `rebase-and-push`: the `resolve` bullet under `## Post-fix push`
+ *            wraps the resolve command in backticks — the SKILL extracts the
+ *            backticked content for execution.
+ *        2b. `commit-suggestions`: the `commit-suggestions` bullet under
+ *            `## Commit suggestions` wraps the CLI invocation in backticks,
+ *            and the `after` bullet wraps `git pull --ff-only` in backticks.
  *   3. The shell script under `[REBASE]` is inside a ```bash fenced block.
  *   4. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … —
  *      that tells the monitor exactly what to do with this output. The section is
