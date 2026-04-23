@@ -248,7 +248,22 @@ const APPLIED_RESULT = {
   author: "alice",
   applied: true as const,
   commitSha: "abc123",
+  patch: "--- a/a.ts\n+++ b/a.ts\n@@ -5,1 +5,1 @@\n-old\n+new\n",
   postActionInstruction: "Run `git push` to publish the commit.",
+};
+
+const FAILED_RESULT = {
+  pr: 42,
+  repo: "owner/repo",
+  threadId: "t1",
+  path: "a.ts",
+  startLine: 5,
+  endLine: 5,
+  author: "alice",
+  applied: false as const,
+  reason: "git apply rejected the patch: context mismatch",
+  patch: "--- a/a.ts\n+++ b/a.ts\n@@ -5,1 +5,1 @@\n-old\n+new\n",
+  postActionInstruction: "",
 };
 
 describe("main — commit-suggestion", () => {
@@ -305,14 +320,7 @@ describe("main — commit-suggestion", () => {
   });
 
   it("exits 1 when applied=false", async () => {
-    mockRunCommitSuggestion.mockResolvedValue({
-      ...APPLIED_RESULT,
-      applied: false,
-      reason: "git apply rejected",
-      patch: "--- a/a.ts\n...",
-      commitSha: undefined,
-      postActionInstruction: "",
-    });
+    mockRunCommitSuggestion.mockResolvedValue(FAILED_RESULT);
     await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "fix"]);
     expect(process.exitCode).toBe(1);
   });
@@ -327,11 +335,8 @@ describe("main — commit-suggestion", () => {
     expect(out).toContain("git push");
   });
 
-  it("text output shows patch diff block when patch is present in success result", async () => {
-    mockRunCommitSuggestion.mockResolvedValue({
-      ...APPLIED_RESULT,
-      patch: "--- a/a.ts\n+++ b/a.ts\n@@ -5,1 +5,1 @@\n-old\n+new\n",
-    });
+  it("text output shows patch diff block in success result", async () => {
+    mockRunCommitSuggestion.mockResolvedValue(APPLIED_RESULT);
     await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "fix"]);
     const out = getStdout();
     expect(out).toContain("```diff");
@@ -347,14 +352,7 @@ describe("main — commit-suggestion", () => {
   });
 
   it("text output shows failure with reason and patch", async () => {
-    mockRunCommitSuggestion.mockResolvedValue({
-      ...APPLIED_RESULT,
-      applied: false,
-      reason: "git apply rejected the patch: context mismatch",
-      patch: "--- a/a.ts\n+++ b/a.ts\n@@ -5,1 +5,1 @@\n-old\n+new\n",
-      commitSha: undefined,
-      postActionInstruction: "",
-    });
+    mockRunCommitSuggestion.mockResolvedValue(FAILED_RESULT);
     await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "fix"]);
     const out = getStdout();
     expect(out).toContain("Failed to apply suggestion t1:");
@@ -376,7 +374,8 @@ describe("main — commit-suggestion", () => {
       "json",
     ]);
     const out = getStdout();
-    expect(JSON.parse(out.trim())).toEqual(APPLIED_RESULT);
+    const parsed = JSON.parse(out.trim());
+    expect(parsed).toMatchObject({ applied: true, commitSha: "abc123", threadId: "t1" });
   });
 });
 

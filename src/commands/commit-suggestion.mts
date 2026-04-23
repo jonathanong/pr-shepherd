@@ -153,7 +153,7 @@ export async function runCommitSuggestion(
         startLine,
         endLine,
         author: thread.author,
-        applied: false,
+        applied: false as const,
         reason: `git apply rejected the patch: ${patchError}`,
         patch,
         postActionInstruction: "",
@@ -194,7 +194,7 @@ export async function runCommitSuggestion(
     startLine,
     endLine,
     author: thread.author,
-    applied: true,
+    applied: true as const,
     commitSha,
     patch,
     postActionInstruction:

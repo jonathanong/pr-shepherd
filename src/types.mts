@@ -428,7 +428,7 @@ export interface IterateCommandOptions extends GlobalOptions {
 // commit-suggestion command (singular — one suggestion, one local commit)
 // ---------------------------------------------------------------------------
 
-export interface CommitSuggestionResult {
+interface CommitSuggestionResultBase {
   pr: number;
   repo: string;
   threadId: string;
@@ -436,15 +436,20 @@ export interface CommitSuggestionResult {
   startLine: number;
   endLine: number;
   author: string;
-  applied: boolean;
-  /** Local commit SHA. Set when applied=true. */
-  commitSha?: string;
-  /** Why the patch was rejected. Set when applied=false. */
-  reason?: string;
-  /** The unified diff for the suggestion. May be set whether applied is true or false. */
-  patch?: string;
+  /** The unified diff that was generated for this suggestion. */
+  patch: string;
   postActionInstruction: string;
 }
+
+export type CommitSuggestionResult =
+  | (CommitSuggestionResultBase & {
+      applied: true;
+      commitSha: string;
+    })
+  | (CommitSuggestionResultBase & {
+      applied: false;
+      reason: string;
+    });
 
 // ---------------------------------------------------------------------------
 // CLI options

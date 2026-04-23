@@ -345,6 +345,7 @@ describe("runCommitSuggestion — successful apply", () => {
       message: "apply suggestion",
     });
     expect(result.applied).toBe(true);
+    if (!result.applied) throw new Error("expected applied=true");
     expect(result.commitSha).toBe("newsha");
     expect(result.threadId).toBe("PRRT_x");
     expect(result.author).toBe("alice");
@@ -535,6 +536,7 @@ describe("runCommitSuggestion — patch failure", () => {
     });
 
     expect(result.applied).toBe(false);
+    if (result.applied) throw new Error("expected applied=false");
     expect(result.reason).toContain("git apply rejected");
     expect(result.reason).toContain("patch does not apply");
     expect(result.patch).toContain("--- a/src/foo.ts");
@@ -559,6 +561,7 @@ describe("runCommitSuggestion — patch failure", () => {
     });
 
     expect(result.applied).toBe(false);
+    if (result.applied) throw new Error("expected applied=false");
     expect(result.reason).toContain("apply: context did not match");
   });
 
