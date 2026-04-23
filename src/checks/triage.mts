@@ -49,12 +49,14 @@ async function triageCheck(check: ClassifiedCheck, repo: RepoInfo): Promise<Tria
 
   const logExcerpt = await fetchFailedLogs(check.runId, repo);
   const failureKind = classifyLogs(check, logExcerpt);
-  const errorExcerpt = extractErrorLines(logExcerpt, config.checks.errorLines) || undefined;
+  const boundedLogExcerpt = logExcerpt.slice(-config.checks.logMaxChars);
+  const errorExcerpt =
+    extractErrorLines(boundedLogExcerpt, config.checks.errorLines) || undefined;
 
   return {
     ...check,
     failureKind,
-    logExcerpt: logExcerpt.slice(-config.checks.logMaxChars) || undefined,
+    logExcerpt: boundedLogExcerpt || undefined,
     errorExcerpt,
   };
 }
