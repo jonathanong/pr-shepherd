@@ -118,12 +118,14 @@ async function fetchFailedLogs(runId: string, repo: RepoInfo): Promise<string> {
  * stripping the workflow-command prefix and any leading timestamp.
  *
  * Falls back to the last `maxLines` raw lines when no `##[error]` markers are found
- * (some checks don't emit workflow commands — e.g. external status checks).
+ * (for example, jobs that do not emit workflow commands). Checks without a `runId`
+ * do not have fetched logs, so they will not have an `errorExcerpt`.
  */
 export function extractErrorLines(logs: string, maxLines: number): string {
+  if (maxLines <= 0) return "";
   const lines = logs.split("\n");
   const errorLines = lines.filter((l) => ERROR_MARKER_RE.test(l));
-  const source = errorLines.length > 0 ? errorLines : lines;
+  const source = errorLines.length > 0 ? errorLines : lines.filter(Boolean);
   const tail = source.slice(-maxLines);
   return tail
     .map((l) => {

@@ -294,4 +294,13 @@ describe("extractErrorLines", () => {
   it("returns empty string when logs are all whitespace", () => {
     expect(extractErrorLines("   \n  \n  ", 1)).toBe("");
   });
+
+  it("falls back to last real line when logs end with a trailing newline", () => {
+    // split("\n") on "last line\n" yields ["last line", ""] — filter(Boolean) removes the empty tail
+    expect(extractErrorLines("first line\nlast line\n", 1)).toBe("last line");
+  });
+
+  it("returns empty string when maxLines is 0", () => {
+    expect(extractErrorLines("some output\n##[error]Error: boom", 0)).toBe("");
+  });
 });
