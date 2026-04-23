@@ -25,7 +25,6 @@
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 import { runCheck } from "./check.mts";
-import { triageFailingChecks } from "../checks/triage.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { getCurrentPrNumber } from "../github/client.mts";
 import { rest, graphql } from "../github/http.mts";
@@ -42,6 +41,7 @@ import type {
   IterateResultBase,
   IterateResultSummary,
   PrComment,
+  RelevantCheck,
   ResolveCommand,
   Review,
   ReviewThread,
@@ -86,16 +86,17 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       remainingSeconds: readyDelaySeconds,
       summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 0 },
       baseBranch: "",
+      checks: [],
       log: "SKIP: CI still starting — waiting for first check to appear",
     };
   }
 
   // Step 2: Sweep — fetch CI + comments + merge status, auto-resolve outdated.
-  // skipTriage defers log fetching until we know we'll need failureKind (steps 4–6).
+  // Always triage failing checks (fetch logs) so failureKind and errorExcerpt are
+  // available on every subsequent step regardless of which action fires.
   let report = await runCheck({
     ...optsWithPr,
     autoResolve: config.actions.autoResolveOutdated,
-    skipTriage: true,
   });
 
   // Step 2.5: Cancel if PR is merged or closed — no longer actionable.
@@ -113,6 +114,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       state: report.mergeStatus.state,
       summary: buildSummary(report),
       baseBranch: report.baseBranch,
+      checks: buildRelevantChecks(report),
       action: "cancel",
       log: `CANCEL: PR #${report.pr} is ${state} — stopping monitor`,
     };
@@ -144,6 +146,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     remainingSeconds: readyState.remainingSeconds,
     summary: buildSummary(report),
     baseBranch: report.baseBranch,
+    checks: buildRelevantChecks(report),
   };
 
   // Step 3 cont.: cancel if ready-delay elapsed.
@@ -152,22 +155,13 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       ...base,
       action: "cancel",
       log: `CANCEL: PR #${base.pr} has been ready for review — ready-delay elapsed, stopping monitor`,
-    };
+    }; // base.checks already set
   }
 
   // Fetch HEAD SHA once — used by both fix-attempts tracking and stall-detection fingerprint.
   // Done after the shouldCancel early-return to avoid a subprocess call on cancel paths.
   const headSha = await getCurrentHeadSha();
   const stallKey = { owner: repoOwner, repo: repoName, pr: prNumber };
-
-  // Triage failing checks now that we know we need failureKind for steps 4–6.
-  if (report.checks.failing.length > 0) {
-    const triaged = await triageFailingChecks(report.checks.failing, {
-      owner: repoOwner,
-      name: repoName,
-    });
-    report = { ...report, checks: { ...report.checks, failing: triaged } };
-  }
 
   // Step 4: Actionable work — fix comments, review requests, CI failures, and merge
   // conflicts all in one push. CONFLICTS is included here because the fix_code handler
@@ -331,10 +325,12 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   }
 
   // Step 5: Transient failures (timeout / infrastructure) — no actionable work, no conflicts.
+  // The CLI identifies which runs need a rerun and emits them; the agent runs
+  // `gh run rerun <runId> --failed` for each entry.
   const transientChecks = report.checks.failing.filter(
     (f) => f.failureKind === "timeout" || f.failureKind === "infrastructure",
   );
-  if (transientChecks.length > 0 && !opts.noAutoRerun) {
+  if (transientChecks.length > 0) {
     // Group checks by runId — multiple failed steps can share one run.
     const runMap = new Map<string, import("../types.mts").ReranRun>();
     for (const c of transientChecks) {
@@ -351,11 +347,6 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       }
     }
     const reran = [...runMap.values()];
-    await Promise.all(
-      reran.map(({ runId }) =>
-        rest("POST", `/repos/${repoOwner}/${repoName}/actions/runs/${runId}/rerun-failed-jobs`),
-      ),
-    );
     const runSummaries = reran.map(
       ({ runId, checkNames, failureKind }) =>
         `${runId} (${checkNames.join(", ")} — ${failureKind})`,
@@ -370,7 +361,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
         ...base,
         action: "rerun_ci" as const,
         reran,
-        log: `RERAN ${reran.length} CI run${reran.length === 1 ? "" : "s"}: ${runSummaries.join(", ")}`,
+        log: `RERUN NEEDED — ${reran.length} CI run${reran.length === 1 ? "" : "s"}: ${runSummaries.join(", ")}`,
       } as IterateResult,
       report,
       reviewSummaryIds,
@@ -465,6 +456,35 @@ function buildSummary(report: Awaited<ReturnType<typeof runCheck>>): IterateResu
     filtered: report.checks.filtered.length,
     inProgress: report.checks.inProgress.length,
   };
+}
+
+/**
+ * Build the full list of CI checks relevant to PR readiness: triggered by a PR
+ * event (or StatusContext with null event), completed, and not skipped/neutral.
+ * Includes both passing and failing. Failing entries carry failureKind + errorExcerpt.
+ */
+function buildRelevantChecks(report: Awaited<ReturnType<typeof runCheck>>): RelevantCheck[] {
+  const excluded = new Set([null, "SKIPPED", "NEUTRAL"]);
+  const passing: RelevantCheck[] = report.checks.passing.flatMap((c) => {
+    if (excluded.has(c.conclusion)) return [];
+    const conclusion = c.conclusion as RelevantCheck["conclusion"];
+    return [{ name: c.name, conclusion, runId: c.runId, detailsUrl: c.detailsUrl || null }];
+  });
+  const failing: RelevantCheck[] = report.checks.failing.flatMap((c) => {
+    if (excluded.has(c.conclusion)) return [];
+    const conclusion = c.conclusion as RelevantCheck["conclusion"];
+    return [
+      {
+        name: c.name,
+        conclusion,
+        runId: c.runId,
+        detailsUrl: c.detailsUrl || null,
+        failureKind: c.failureKind,
+        errorExcerpt: c.errorExcerpt,
+      },
+    ];
+  });
+  return [...passing, ...failing];
 }
 
 async function getLastCommitTime(): Promise<number> {

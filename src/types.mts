@@ -63,8 +63,10 @@ export type FailureKind = "timeout" | "infrastructure" | "actionable" | "flaky";
 
 export interface TriagedCheck extends ClassifiedCheck {
   failureKind?: FailureKind;
-  /** Log excerpt for actionable failures. */
+  /** Truncated tail of the log excerpt retained for classification/debugging, bounded by configured line/char limits. */
   logExcerpt?: string;
+  /** Last N `##[error]`-marked lines (or last N raw lines as fallback). Compact error summary. */
+  errorExcerpt?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -265,6 +267,31 @@ export interface AgentCheck {
 }
 
 // ---------------------------------------------------------------------------
+// Relevant check (iterate output — completed, non-skipped, PR-triggered)
+// ---------------------------------------------------------------------------
+
+/**
+ * A single CI check that is relevant to PR readiness — triggered by a PR event
+ * (or by a StatusContext with null event), completed, and not skipped/neutral.
+ *
+ * Included in every iterate result so the agent always sees the full CI picture
+ * regardless of which action fired.
+ */
+export interface RelevantCheck {
+  name: string;
+  conclusion: Exclude<CheckConclusion, "SKIPPED" | "NEUTRAL" | null>;
+  runId: string | null;
+  detailsUrl: string | null;
+  /** Present for non-SUCCESS conclusions. */
+  failureKind?: FailureKind;
+  /**
+   * Last `checks.errorLines` `##[error]`-marked log lines (fallback: last N raw lines).
+   * Present for non-SUCCESS conclusions when logs were fetched.
+   */
+  errorExcerpt?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Iterate command types
 // ---------------------------------------------------------------------------
 
@@ -312,6 +339,15 @@ export interface IterateResultBase {
   summary: IterateResultSummary;
   /** Validated base branch (e.g. "main") for this PR. Echoed from `ShepherdReport.baseBranch` after `validateBaseBranch` whenever a sweep/report has run; `""` only for early-return cases where no sweep has run yet (for example, cooldown). */
   baseBranch: string;
+  /**
+   * All CI checks that are relevant to PR readiness: triggered by a PR event
+   * (pull_request / pull_request_target, or StatusContext with null event),
+   * completed (status === COMPLETED), and not skipped/neutral.
+   *
+   * Includes both passing and failing checks. Failing entries carry `failureKind`
+   * and `errorExcerpt`. Empty (`[]`) during the `cooldown` early-return (no sweep ran).
+   */
+  checks: RelevantCheck[];
 }
 
 export interface IterateResultCooldown extends IterateResultBase {
@@ -417,7 +453,6 @@ export interface IterateCommandOptions extends GlobalOptions {
   cooldownSeconds?: number;
   readyDelaySeconds?: number;
   lastPushTime?: number;
-  noAutoRerun?: boolean;
   noAutoMarkReady?: boolean;
   noAutoCancelActionable?: boolean;
   /** Override the stall-timeout threshold (seconds). Defaults to config.iterate.stallTimeoutMinutes * 60. */

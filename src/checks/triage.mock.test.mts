@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
-import { triageFailingChecks } from "./triage.mts";
+import { triageFailingChecks, extractErrorLines } from "./triage.mts";
 import type { ClassifiedCheck } from "../types.mts";
 
 const REPO = { owner: "owner", name: "repo" };
@@ -221,5 +221,86 @@ describe("triageFailingChecks — batch", () => {
     expect(results).toHaveLength(2);
     expect(results[0]!.failureKind).toBe("actionable");
     expect(results[1]!.failureKind).toBe("infrastructure");
+  });
+});
+
+describe("triageFailingChecks — errorExcerpt", () => {
+  it("extracts ##[error]-marked line and strips prefix", async () => {
+    setupFetch("some output\n##[error]Error: test failed\n");
+    const [result] = await triageFailingChecks([makeCheck({ conclusion: "FAILURE" })], REPO);
+    expect(result!.errorExcerpt).toBe("Error: test failed");
+  });
+
+  it("strips timestamp + ##[error] prefix from error lines", async () => {
+    setupFetch("2026-04-23T09:53:06.123Z ##[error]AssertionError: expected 42 to equal 43\n");
+    const [result] = await triageFailingChecks([makeCheck({ conclusion: "FAILURE" })], REPO);
+    expect(result!.errorExcerpt).toBe("AssertionError: expected 42 to equal 43");
+  });
+
+  it("falls back to last raw log line when no ##[error] markers exist", async () => {
+    setupFetch("first line\nsecond line\nlast line"); // no trailing newline so "last line" is last element
+    const [result] = await triageFailingChecks([makeCheck({ conclusion: "FAILURE" })], REPO);
+    // default errorLines=1 → last non-empty line
+    expect(result!.errorExcerpt).toBe("last line");
+  });
+
+  it("returns undefined errorExcerpt when runId is null (no logs fetched)", async () => {
+    const check = makeCheck({ runId: null });
+    const [result] = await triageFailingChecks([check], REPO);
+    expect(result!.errorExcerpt).toBeUndefined();
+  });
+
+  it("returns undefined errorExcerpt when log fetch returns empty string", async () => {
+    mockFetch.mockResolvedValueOnce(makeErrorResponse(500));
+    const [result] = await triageFailingChecks([makeCheck({ conclusion: "FAILURE" })], REPO);
+    expect(result!.errorExcerpt).toBeUndefined();
+  });
+});
+
+describe("extractErrorLines", () => {
+  it("returns last ##[error]-marked line with prefix stripped (maxLines=1)", () => {
+    const logs = [
+      "build output line",
+      "##[error]Error: first error",
+      "more output",
+      "##[error]Error: second error",
+      "##[error]Error: third error",
+    ].join("\n");
+    expect(extractErrorLines(logs, 1)).toBe("Error: third error");
+  });
+
+  it("returns up to maxLines ##[error] lines when multiple exist", () => {
+    const logs = ["##[error]Error: first", "##[error]Error: second", "##[error]Error: third"].join(
+      "\n",
+    );
+    expect(extractErrorLines(logs, 2)).toBe("Error: second\nError: third");
+    expect(extractErrorLines(logs, 3)).toBe("Error: first\nError: second\nError: third");
+  });
+
+  it("strips ISO timestamp prefix before ##[error]", () => {
+    const logs = "2026-04-23T09:53:06.123Z ##[error]Error: timed out waiting";
+    expect(extractErrorLines(logs, 1)).toBe("Error: timed out waiting");
+  });
+
+  it("falls back to last N raw lines when no ##[error] markers exist", () => {
+    const logs = "line one\nline two\nline three\nline four";
+    expect(extractErrorLines(logs, 2)).toBe("line three\nline four");
+  });
+
+  it("returns empty string for empty input", () => {
+    expect(extractErrorLines("", 1)).toBe("");
+  });
+
+  it("returns empty string when logs are all whitespace", () => {
+    expect(extractErrorLines("   \n  \n  ", 1)).toBe("");
+  });
+
+  it("falls back to last real line when logs end with a trailing newline", () => {
+    // split("\n") on "last line\n" yields ["last line", ""] — filter(Boolean) removes the empty tail
+    expect(extractErrorLines("first line\nlast line\n", 1)).toBe("last line");
+  });
+
+  it("returns empty string when maxLines is 0", () => {
+    expect(extractErrorLines("some output\n##[error]Error: boom", 0)).toBe("");
   });
 });

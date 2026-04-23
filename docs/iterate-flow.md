@@ -99,7 +99,7 @@ CONFLICTS is included here because the `fix_code` handler already runs `git fetc
 
 **Check:** any failing check has `failureKind === 'timeout'` or `failureKind === 'infrastructure'`, and no actionable work, no conflicts.
 
-**Side-effects:** `gh run rerun <runId> --failed` for each unique run ID.
+**Side-effects:** None — the CLI reports the run IDs that need a rerun; the agent executes `gh run rerun <runId> --failed` for each unique run ID as instructed by `## Instructions`.
 
 **Emits:** `action: 'rerun_ci'`
 
