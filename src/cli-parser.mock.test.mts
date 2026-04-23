@@ -764,6 +764,78 @@ describe("main — iterate text format", () => {
     expect(text).toContain(`${result.summary.inProgress} inProgress`);
     expect(text).toContain(`**remainingSeconds** ${result.remainingSeconds}`);
   });
+
+  it("## Checks section renders in wait/cancel/rerun_ci actions when checks is non-empty", async () => {
+    const result = makeIterateResult("wait");
+    result.checks = [
+      {
+        name: "lint",
+        conclusion: "SUCCESS",
+        runId: "run-1",
+        detailsUrl: "https://github.com/owner/repo/actions/runs/1",
+      },
+      {
+        name: "test",
+        conclusion: "FAILURE",
+        runId: "run-2",
+        detailsUrl: "https://github.com/owner/repo/actions/runs/2",
+        failureKind: "actionable",
+        errorExcerpt: "AssertionError: expected 1 to equal 2",
+      },
+    ] as import("./types.mts").RelevantCheck[];
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+
+    // ## Checks section present before ## Instructions
+    const checksIdx = out.indexOf("## Checks");
+    const instrIdx = out.indexOf("## Instructions");
+    expect(checksIdx).toBeGreaterThan(-1);
+    expect(instrIdx).toBeGreaterThan(checksIdx);
+
+    // Passing check: ✓ bullet
+    expect(out).toContain("- ✓ `lint` — SUCCESS");
+    // Failing check: ✗ bullet with failureKind, conclusion, runId
+    expect(out).toContain("- ✗ `test` (actionable) — FAILURE · `run-2`");
+    // errorExcerpt rendered as blockquote
+    expect(out).toContain("  > AssertionError: expected 1 to equal 2");
+  });
+
+  it("## Checks — external detailsUrl renders `external` prefix; no-ID renders `(no runId)`", async () => {
+    const result = makeIterateResult("wait");
+    result.checks = [
+      {
+        name: "codecov/patch",
+        conclusion: "FAILURE",
+        runId: null,
+        detailsUrl: "https://app.codecov.io/gh/owner/repo/pull/42",
+        failureKind: "actionable",
+      },
+      {
+        name: "mystery",
+        conclusion: "FAILURE",
+        runId: null,
+        detailsUrl: null,
+        failureKind: "infrastructure",
+      },
+    ] as import("./types.mts").RelevantCheck[];
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+
+    expect(out).toContain(
+      "- ✗ `codecov/patch` (actionable) — FAILURE · external `https://app.codecov.io/gh/owner/repo/pull/42`",
+    );
+    expect(out).toContain("- ✗ `mystery` (infrastructure) — FAILURE · (no runId)");
+  });
+
+  it("## Checks section is absent when checks is empty (cooldown keeps no-checks invariant)", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("cooldown")); // checks: []
+    await main(["node", "shepherd", "iterate", "42"]);
+    expect(getStdout()).not.toContain("## Checks");
+  });
 });
 
 // ---------------------------------------------------------------------------
