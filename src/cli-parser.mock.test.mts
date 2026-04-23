@@ -328,6 +328,37 @@ describe("main — resolve", () => {
     expect(out).toContain("1. No actionable items — end this invocation.");
   });
 
+  it("formatFetchResult renders changesRequestedReviews section and null path/line fallbacks", async () => {
+    mockRunResolveFetch.mockResolvedValue({
+      prNumber: 42,
+      actionableThreads: [
+        {
+          id: "PRT_null",
+          path: null,
+          line: null,
+          startLine: null,
+          isMinimized: false,
+          author: "alice",
+          body: "no location",
+          createdAtUnix: 0,
+        },
+      ],
+      actionableComments: [
+        { id: "IC_2", author: "bob", body: "comment", isMinimized: false, createdAtUnix: 0 },
+      ],
+      changesRequestedReviews: [{ id: "PRR_r1", author: "carol", body: "needs work" }],
+      reviewSummaries: [],
+      commitSuggestionsEnabled: false,
+      instructions: ["Classify every item.", "Fix items.", "Resolve.", "Report."],
+    });
+    await main(["node", "shepherd", "resolve", "42"]);
+    const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
+    expect(out).toContain("## Pending CHANGES_REQUESTED reviews (1)");
+    expect(out).toContain("`reviewId=PRR_r1` (@carol)");
+    // null path/line fallbacks rendered
+    expect(out).toContain("`:?`");
+  });
+
   it("formatFetchResult --format=json includes instructions array", async () => {
     const instructions = ["Classify every item.", "Resolve.", "Report."];
     mockRunResolveFetch.mockResolvedValue({
