@@ -312,6 +312,10 @@ describe("runIterate — fix_code (actionable threads)", () => {
       expect(result.fix.noiseCommentIds).toHaveLength(0);
       expect(result.fix.checks).toHaveLength(0);
       expect(result.cancelled).toHaveLength(0);
+      const joined = result.fix.instructions.join("\n");
+      // push with no cancelled → stop-iteration but no no-recancel warning
+      expect(joined).toContain("Stop this iteration");
+      expect(joined).not.toContain("Do not re-run");
     }
   });
 });
@@ -359,6 +363,11 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
     if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       expect(result.fix.checks).toHaveLength(1);
       expect(result.cancelled).toEqual(["run-99"]);
+      const joined = result.fix.instructions.join("\n");
+      // cancelled > 0 + push → no-recancel warning present
+      expect(joined).toContain("Do not re-run `gh run cancel`");
+      // any push → stop-iteration instruction present
+      expect(joined).toContain("Stop this iteration");
     }
     const cancelCall = (mockFetch.mock.calls as Array<[string, RequestInit]>).find(([url]) =>
       url.includes("run-99/cancel"),

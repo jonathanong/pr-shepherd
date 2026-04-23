@@ -31,7 +31,7 @@ allowed-tools:
 
 Invoke `/loop <INTERVAL> --max-turns 50 --expires 8h` via the Skill tool. Use the interval from the argument if provided (e.g. `every 30 minutes` → `30m`), otherwise use `4m`. The loop prompt should be:
 
-````
+```
 # pr-shepherd-loop:pr=<PR_NUMBER>
 
 **IMPORTANT — recurrence rules:**
@@ -46,15 +46,9 @@ Run in a single Bash call:
 
 Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with `# PR #<N> [`), log the first line of stderr and continue — do not cancel the loop. The next cron fire will retry.
 
-The output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Read the `[<ACTION>]` tag to decide what to do (see [docs/actions.md](../../../docs/actions.md) for full output shapes):
+The output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Every output ends with a `## Instructions` section — follow those numbered steps exactly. See [docs/actions.md](../../../docs/actions.md) for the full output shape of each action.
 
-- `[COOLDOWN]` | `[WAIT]` | `[RERUN_CI]` | `[MARK_READY]` → print the output, continue.
-- `[CANCEL]`   → print the output, then invoke `/loop cancel` via Skill tool and stop.
-- `[REBASE]`   → print the output, then extract the shell script from the ` ```bash ` fenced block and run it in Bash.
-- `[ESCALATE]` → print the output, then invoke `/loop cancel` via Skill tool and stop.
-- `[FIX_CODE]` → follow the numbered items under `## Instructions` in order. The output contains `## Post-fix push`. Only run a `resolve` command if those instructions explicitly include a "Run the `resolve:` command…" step, or if the provided resolve command includes mutation flags. In that case, the `resolve` bullet under `## Post-fix push` holds the final resolve command inside backticks — strip the backticks and run it, substituting `"$HEAD_SHA"` with the pushed SHA and `$DISMISS_MESSAGE` with a one-sentence description of the actual fix (never generic text like "address review comments"). **Never manually run `gh run cancel` after your push** — stale runs listed under `## Cancelled runs` were already cancelled by the CLI (using the pre-push run IDs, as required by the "cancel CI runs before fixing and pushing" rule); running it again post-push would hit the NEW runs your push just triggered. If you run the resolve command, stop this iteration afterward — CI needs time before the next tick.
-
-````
+```
 
 **Do NOT call ScheduleWakeup** — the cron job handles its own recurrence. Calling ScheduleWakeup with a `/loop` prompt would create a duplicate cron job on the next fire.
 

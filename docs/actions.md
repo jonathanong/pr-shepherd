@@ -15,15 +15,19 @@ The default output format is Markdown — what you see when running `npx pr-shep
 **summary** <N> passing, <N> skipped, <N> filtered, <N> inProgress · **remainingSeconds** <N> · **copilotReviewInProgress** <bool> · **isDraft** <bool> · **shouldCancel** <bool>
 
 <action-specific body>
+
+## Instructions
+
+1. <numbered steps telling the monitor exactly what to do>
 ```
 
 Load-bearing conventions (the monitor SKILL depends on these):
 
-1. Line 1 is always an H1 heading of the form `# PR #<N> [<ACTION>]`. The monitor greps the `[ACTION]` tag.
+1. Line 1 is always an H1 heading of the form `# PR #<N> [<ACTION>]`. The action tag identifies the output for logging and validation — behavior is driven by the `## Instructions` section, not by dispatching on the tag.
 2. Lines 3–4 carry the full base fields (status, merge, state, repo, summary, remainingSeconds, etc.), so Markdown output is never a lossy view of JSON.
-3. Under `[REBASE]`, the shell script is inside a ```bash fenced block — the monitor extracts it for execution.
-4. Under `[FIX_CODE]`, the `## Post-fix push` section has a `` resolve: `<command>` `` bullet — the monitor strips backticks and runs the command.
-5. Under `[FIX_CODE]`, `## Instructions` items are numbered `1.`, `2.`, … and executed in order.
+3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … — that tells the monitor exactly what to do. The monitor follows those steps; it does not need its own dispatch table.
+4. Under `[REBASE]`, the shell script is inside a ```bash fenced block — instruction 1 tells the monitor to extract and run it.
+5. Under `[FIX_CODE]`, the `## Post-fix push` section has a `` resolve: `<command>` `` bullet — the instructions reference this bullet so the monitor strips backticks and runs the command.
 
 ---
 
@@ -46,11 +50,15 @@ Skips all work because the last commit is too fresh for CI checks to have starte
 **summary** 0 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 600 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
 
 SKIP: CI still starting — waiting for first check to appear
+
+## Instructions
+
+1. End this iteration — the next cron fire will recheck once CI starts reporting.
 ```
 
 `status`, `merge`, `state` are `UNKNOWN` and `repo` is empty because the early return happens before any GitHub sweep.
 
-**What the monitor does:** Print the output and wait for the next cron fire.
+**What the monitor does:** Follow `## Instructions` — end the iteration and wait for the next cron fire.
 
 ---
 
@@ -73,11 +81,15 @@ Nothing actionable to do; all CI is passing or in-progress.
 **summary** 3 passing, 0 skipped, 0 filtered, 2 inProgress · **remainingSeconds** 120 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
 
 WAIT: 3 passing, 2 in-progress — 120s until auto-cancel
+
+## Instructions
+
+1. End this iteration — the next cron fire will recheck.
 ```
 
 The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, `blocked by pending reviews or required status checks`, `PR is a draft`, or `some checks are unstable`.
 
-**What the monitor does:** Print the output and wait for the next cron fire.
+**What the monitor does:** Follow `## Instructions` — end the iteration and wait for the next cron fire.
 
 ---
 
@@ -100,11 +112,15 @@ Re-triggers CI runs that failed due to transient infrastructure or timeout issue
 **summary** 0 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 600 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
 
 RERAN 2 CI runs: 24697658766 (lint / typecheck / test (22.x) — timeout), 24697658767 (build — infrastructure)
+
+## Instructions
+
+1. The CLI already triggered the re-run above — end this iteration and wait for CI to report results.
 ```
 
 Each comma-separated entry on the body line has shape `<runId> (<check names joined by ", "> — <failureKind>)`. JSON surfaces the same information as `reran: ReranRun[]`.
 
-**What the monitor does:** Print the output and wait for CI to re-queue.
+**What the monitor does:** Follow `## Instructions` — end the iteration and wait for CI to re-queue.
 
 ---
 
@@ -127,9 +143,13 @@ Converts a draft PR to ready for review.
 **summary** 5 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 600 · **copilotReviewInProgress** false · **isDraft** true · **shouldCancel** false
 
 MARKED READY: PR #42 converted from draft to ready for review
+
+## Instructions
+
+1. The CLI already marked the PR ready for review — end this iteration.
 ```
 
-**What the monitor does:** Print the output and continue monitoring.
+**What the monitor does:** Follow `## Instructions` — end the iteration and continue monitoring on the next cron fire.
 
 ---
 
@@ -152,11 +172,16 @@ Stops the monitor loop — no further iterations needed.
 **summary** 5 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 0 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** true
 
 CANCEL: PR #42 is merged — stopping monitor
+
+## Instructions
+
+1. Invoke `/loop cancel` via the Skill tool.
+2. Stop.
 ```
 
 Other body-line variants: `CANCEL: PR #42 is closed — stopping monitor`, `CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping monitor`.
 
-**What the monitor does:** Print the output, then invoke `/loop cancel` via Skill tool to stop the cron job.
+**What the monitor does:** Follow `## Instructions` — invoke `/loop cancel` via Skill tool to stop the cron job.
 
 ---
 
@@ -189,13 +214,18 @@ if ! git diff --quiet || ! git diff --cached --quiet; then
 fi
 git fetch origin && git rebase origin/main && git push --force-with-lease
 ```
+
+## Instructions
+
+1. Copy the shell script from the ` ```bash ` block above and run it in Bash.
+2. End this iteration — the next cron fire will check CI after the rebase.
 ````
 
 The dirty-worktree guard exits 1 on skip, so the monitor SKILL sees a non-zero exit rather than silently counting the iteration as successful.
 
 **Base branch determination:** The CLI runs `gh pr view <PR> --json baseRefName` to find the rebase target. If that command fails (network error, auth issue) or returns a branch name containing characters outside `[A-Za-z0-9._/-]`, the CLI emits `[ESCALATE]` with trigger `base-branch-unknown` instead of a rebase — force-pushing onto the wrong base would be catastrophic for a PR that actually targets e.g. `release/2026.04`.
 
-**What the monitor does:** Print the heading + base fields + reason, then extract the shell script from the ```bash fenced block and run it in Bash.
+**What the monitor does:** Follow `## Instructions` — extract the shell script from the ` ```bash ` block and run it in Bash, then end the iteration.
 
 ---
 
@@ -262,6 +292,8 @@ Actionable work needs a code fix, commit, and push.
 5. Keep the PR title and description current: if the changes alter the PR's scope or intent, run `gh pr edit 42 --title "<new title>" --body "<new body>"` to reflect them. Skip if the existing title/body still accurately describe the PR.
 6. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
 7. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
+8. Do not re-run `gh run cancel` on the IDs listed under `## Cancelled runs` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.
+9. Stop this iteration — CI needs time to run on the new push before the next tick.
 ```
 
 **Section order:**
@@ -292,6 +324,8 @@ Actionable work needs a code fix, commit, and push.
 - `Keep the PR title and description current:` is emitted immediately after the commit step and uses the same gate (`hasCodeChanges`). A `CONFLICTS`-only dispatch (no code to commit) omits it.
 - The rebase step switches wording based on `mergeStatus.status`. When conflicts are present it emits "Rebase with conflict resolution" and walks through `git rebase --continue` loops; otherwise it emits the clean one-liner `git fetch origin && git rebase origin/<base> && git push --force-with-lease`.
 - The `resolve:` instruction is only emitted when the resolve command actually mutates GitHub state (at least one of threads/comments/reviews is non-empty). A `CONFLICTS`-only dispatch omits it.
+- A "Do not re-run `gh run cancel`" instruction is appended for rebase-and-push when `cancelled` is non-empty and a push is required — it reminds the monitor that those IDs were cancelled pre-push and new runs have since been triggered.
+- A "Stop this iteration" instruction is always appended for rebase-and-push when a push or GitHub mutation is required, so CI has time to start before the next tick.
 
 The JSON payload exposes the same data under `fix.{threads, actionableComments, noiseCommentIds, reviewSummaryIds, surfacedSummaries, checks, changesRequestedReviews, baseBranch, resolveCommand, instructions}` plus top-level `cancelled`. `reviewSummaryIds` are merged into `--minimize-comment-ids` inside `resolveCommand.argv`; `surfacedSummaries` are informational only.
 
@@ -300,7 +334,7 @@ The JSON payload exposes the same data under `fix.{threads, actionableComments, 
 - `--require-sha "$HEAD_SHA"` is appended only when a push occurred. Noise-only minimizations omit it.
 - `$DISMISS_MESSAGE` must be one specific sentence describing what changed — never generic text like "address review comments".
 
-**What the monitor does:** Follow the numbered instructions under `## Instructions` in order. Run the backticked `resolve:` command as the final step, then stop this iteration to let CI run. Never re-run `gh run cancel` on the `## Cancelled runs` IDs after your push.
+**What the monitor does:** Follow `## Instructions` in order. The instructions are self-contained and action-specific — no dispatch table needed in the monitor. See `## Instructions` in the output for the exact steps.
 
 ---
 
@@ -346,90 +380,13 @@ Same thread(s) attempted multiple times without resolution — fix manually then
 
 Run `/pr-shepherd:check 42` to see current state.
 After fixing manually, rerun `/pr-shepherd:monitor 42` to resume.
+
+## Instructions
+
+1. Invoke `/loop cancel` via the Skill tool.
+2. Stop — the PR needs human direction before monitoring can resume.
 ```
 
 The block after the base-fields line (separated by a blank line) is `escalate.humanMessage` in JSON — ready to print verbatim.
 
-**What the monitor does:** Print the full output, then invoke `/loop cancel` via Skill tool to stop the cron job.
-
----
-
-## `commit-suggestion` (apply a reviewer suggestion)
-
-Not an `iterate` action — a separate subcommand called by the resolve skill during `[FIX_CODE]` handling when a review thread carries a ` ```suggestion ` block. One invocation = one thread = one local commit.
-
-```bash
-npx pr-shepherd commit-suggestion <PR> \
-  --thread-id <PRRT_…> \
-  --message "<one-sentence headline>" \
-  [--description "<optional body>"] \
-  --format=json
-```
-
-### How the git-apply workflow works
-
-The command runs these phases in order:
-
-1. **Parse the suggestion.** Extracts the replacement lines from the ` ```suggestion ` fenced block in the review comment body. Rejects nested fences or blocks with odd backtick runs (these would silently truncate — see issue #68).
-
-2. **Build a unified diff.** Generates a `git apply`-compatible patch from the current file content on disk using the thread's `startLine`/`endLine` anchor and the parsed replacement lines. The diff includes 3 lines of context on each side. The full patch is always returned in the result (both success and failure) so the agent can inspect what will be or was applied.
-
-3. **Dry-run validate.** Runs `git apply --check <patchfile>` against the actual working tree. If context lines don't match (the file changed since the comment was posted, or line numbers drifted after a prior suggestion commit), `git apply --check` surfaces a specific line-level mismatch error. The command returns `applied: false` with `reason` (the stderr from `git apply`) and `patch` (the full diff) — no commit is made. The caller should inspect the diff and reason, then fall through to a manual fix.
-
-4. **Apply + commit.** On `--check` success, runs `git apply <patchfile>` to write the file, stages it with `git add -- <path>`, and commits with `git commit -m "<message>" -m "<description>\n\nCo-authored-by: <login> <login@users.noreply.github.com>"`. The commit message headline comes from `--message`; the CLI appends the reviewer's `Co-authored-by` attribution automatically.
-
-5. **Resolve thread.** Calls `applyResolveOptions` to resolve the GitHub review thread immediately after the local commit. If resolution fails (network error, already resolved), the error is surfaced but the local commit stands; the caller must handle the orphaned thread.
-
-6. **Return result.** Always includes `patch` (the full unified diff), `path`, `startLine`, `endLine`, `author`, `applied`, and `postActionInstruction` telling the caller to push.
-
-### Output shapes
-
-**Success (`applied: true`):**
-
-```json
-{
-  "pr": 42,
-  "repo": "owner/repo",
-  "threadId": "PRRT_xxx",
-  "path": "src/foo.ts",
-  "startLine": 10,
-  "endLine": 12,
-  "author": "alice",
-  "commitSha": "abc1234",
-  "applied": true,
-  "patch": "--- a/src/foo.ts\n+++ b/src/foo.ts\n@@ -8,7 +8,7 @@\n ...",
-  "postActionInstruction": "Run `git push` (or `git push --force-with-lease` after rebasing) to publish the commit."
-}
-```
-
-Text output shows the applied range, the commit SHA, and the full diff fenced in ` ```diff `.
-
-**Failure (`applied: false`) — patch rejected by `git apply --check`:**
-
-```json
-{
-  "pr": 42,
-  "repo": "owner/repo",
-  "threadId": "PRRT_xxx",
-  "path": "src/foo.ts",
-  "startLine": 10,
-  "endLine": 12,
-  "author": "alice",
-  "applied": false,
-  "reason": "git apply rejected the patch: error: patch failed: src/foo.ts:10",
-  "patch": "--- a/src/foo.ts\n+++ b/src/foo.ts\n@@ -8,7 +8,7 @@\n ..."
-}
-```
-
-The `patch` lets the agent see exactly what diff was rejected and why the context didn't match, so it can fall through to a manual edit with full information.
-
-### Exit codes
-
-- `0` — suggestion applied, committed, thread resolved.
-- `1` — any error: bad input, dirty worktree, wrong branch, thread invalid (`applied: false`), resolve failed.
-
-### What the agent should do
-
-- Read `applied` to branch on success vs failure.
-- On success: inspect `patch` to verify the applied change is correct. Then run `git push` (or rebase-and-push if multiple suggestions were applied).
-- On failure: read `reason` and `patch` together — the diff shows what was attempted, `reason` shows the exact `git apply` error. Fix the file manually, then re-run the normal `resolve` flow.
+**What the monitor does:** Follow `## Instructions` — invoke `/loop cancel` via Skill tool to stop the cron job.

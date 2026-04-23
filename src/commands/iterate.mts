@@ -298,6 +298,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       resolveCommand,
       hasConflicts,
       prNumber,
+      cancelled.length,
     );
 
     return applyStallGuard(
@@ -725,6 +726,7 @@ function buildFixInstructions(
   resolveCommand: ResolveCommand,
   hasConflicts: boolean,
   prNumber: number,
+  cancelledCount: number,
 ): string[] {
   const instructions: string[] = [];
 
@@ -801,6 +803,22 @@ function buildFixInstructions(
     const substituteHint =
       substituteParts.length > 0 ? `, substituting ${substituteParts.join(" and ")}` : "";
     instructions.push(`Run the \`resolve:\` command shown above${substituteHint}.`);
+  }
+
+  if (needsPush && cancelledCount > 0) {
+    instructions.push(
+      `Do not re-run \`gh run cancel\` on the IDs listed under \`## Cancelled runs\` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.`,
+    );
+  }
+
+  if (needsPush) {
+    instructions.push(
+      `Stop this iteration — CI needs time to run on the new push before the next tick.`,
+    );
+  } else if (resolveCommand.hasMutations) {
+    instructions.push(`Stop this iteration before the next tick.`);
+  } else {
+    instructions.push(`End this iteration.`);
   }
 
   return instructions;

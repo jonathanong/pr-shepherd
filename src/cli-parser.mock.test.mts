@@ -128,7 +128,7 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
           requiresDismissMessage: false,
           hasMutations: false,
         },
-        instructions: [],
+        instructions: ["End this iteration."],
       },
       cancelled: [],
     };
@@ -410,7 +410,7 @@ describe("main — iterate", () => {
 // ---------------------------------------------------------------------------
 
 describe("main — iterate text format", () => {
-  it("cooldown: line 1 is base+log, line 2 is info", async () => {
+  it("cooldown: heading, base/summary, log, then ## Instructions with end-iteration step", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cooldown"));
     await main(["node", "shepherd", "iterate", "42"]);
     const lines = getStdout().trimEnd().split("\n");
@@ -422,38 +422,53 @@ describe("main — iterate text format", () => {
     expect(lines[3]).toMatch(/^\*\*summary\*\* 0 passing, 0 skipped, 0 filtered, 1 inProgress /);
     expect(lines[4]).toBe("");
     expect(lines[5]).toBe("SKIP: CI still starting");
-    expect(lines).toHaveLength(6);
+    expect(lines[6]).toBe("");
+    expect(lines[7]).toBe("## Instructions");
+    expect(lines[8]).toBe("");
+    expect(lines[9]).toMatch(/End this iteration/);
   });
 
-  it("wait: heading includes [WAIT] tag and log body follows header", async () => {
+  it("wait: heading includes [WAIT] tag, log body follows header, ## Instructions present", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toMatch(/^# PR #42 \[WAIT\]\n/);
     expect(out).toContain("WAIT: 0 passing, 1 in-progress");
+    expect(out).toContain("## Instructions");
+    expect(out).toContain("1. End this iteration");
   });
 
-  it("rerun_ci: heading includes [RERUN_CI] tag and log", async () => {
+  it("rerun_ci: heading includes [RERUN_CI] tag, log, and ## Instructions with re-run note", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("rerun_ci"));
     await main(["node", "shepherd", "iterate", "42"]);
-    expect(getStdout()).toContain("# PR #42 [RERUN_CI]");
-    expect(getStdout()).toContain("RERAN: run-99 (typecheck — transient)");
+    const out = getStdout();
+    expect(out).toContain("# PR #42 [RERUN_CI]");
+    expect(out).toContain("RERAN: run-99 (typecheck — transient)");
+    expect(out).toContain("## Instructions");
+    expect(out).toContain("1. The CLI already triggered the re-run above");
   });
 
-  it("mark_ready: heading includes [MARK_READY] tag", async () => {
+  it("mark_ready: heading includes [MARK_READY] tag and ## Instructions with end-iteration step", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("mark_ready"));
     await main(["node", "shepherd", "iterate", "42"]);
-    expect(getStdout()).toContain("# PR #42 [MARK_READY]");
-    expect(getStdout()).toContain("MARKED READY: PR 42");
+    const out = getStdout();
+    expect(out).toContain("# PR #42 [MARK_READY]");
+    expect(out).toContain("MARKED READY: PR 42");
+    expect(out).toContain("## Instructions");
+    expect(out).toContain("1. The CLI already marked the PR ready for review");
   });
 
-  it("cancel: heading includes [CANCEL] tag", async () => {
+  it("cancel: heading includes [CANCEL] tag and ## Instructions with loop-cancel steps", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
     await main(["node", "shepherd", "iterate", "42"]);
-    expect(getStdout()).toContain("# PR #42 [CANCEL]");
+    const out = getStdout();
+    expect(out).toContain("# PR #42 [CANCEL]");
+    expect(out).toContain("## Instructions");
+    expect(out).toContain("1. Invoke `/loop cancel` via the Skill tool.");
+    expect(out).toContain("2. Stop.");
   });
 
-  it("rebase: heading, base/summary lines, reason, then fenced shell script", async () => {
+  it("rebase: heading, base/summary lines, reason, fenced shell script, then ## Instructions", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("rebase"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
@@ -471,18 +486,26 @@ describe("main — iterate text format", () => {
     expect(script).toContain(
       "git fetch origin && git rebase origin/main && git push --force-with-lease",
     );
+    // ## Instructions appears after the fenced block.
+    const instrIdx = lines.indexOf("## Instructions");
+    expect(instrIdx).toBeGreaterThan(fenceEnd);
+    expect(out).toContain("1. Copy the shell script from the");
+    expect(out).toContain("2. End this iteration");
   });
 
-  it("escalate: heading, base/summary, then humanMessage", async () => {
+  it("escalate: heading, base/summary, humanMessage, then ## Instructions with loop-cancel steps", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("escalate"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toMatch(/^# PR #42 \[ESCALATE\]\n/);
     expect(out).toContain("**status** `IN_PROGRESS`");
     expect(out).toContain("⚠️  /pr-shepherd:monitor paused — needs human direction");
+    expect(out).toContain("## Instructions");
+    expect(out).toContain("1. Invoke `/loop cancel` via the Skill tool.");
+    expect(out).toContain("2. Stop — the PR needs human direction");
   });
 
-  it("fix_code (empty payload): heading + base/summary + Post-fix push section only (no items, no Instructions)", async () => {
+  it("fix_code (empty payload): heading + base/summary + Post-fix push + fallback Instructions", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("fix_code"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
@@ -491,14 +514,17 @@ describe("main — iterate text format", () => {
     expect(out).not.toContain("## Rebase");
     expect(out).toContain("- base: `main`");
     expect(out).toContain('- resolve: `npx pr-shepherd resolve 42 --require-sha "$HEAD_SHA"`');
-    // No item sections, no instructions (empty fix + no instructions in fixture).
+    // No item sections.
     expect(out).not.toContain("## Review threads");
     expect(out).not.toContain("## Actionable comments");
     expect(out).not.toContain("## Failing checks");
     expect(out).not.toContain("## Changes-requested reviews");
     expect(out).not.toContain("## Noise");
     expect(out).not.toContain("## Cancelled runs");
-    expect(out).not.toContain("## Instructions");
+    // Fallback instruction always present for consistency with the invariant that
+    // every iterate output ends with ## Instructions.
+    expect(out).toContain("## Instructions");
+    expect(out).toContain("1. End this iteration.");
   });
 
   it("fix_code (rich payload): sections appear in fixed order with backtick-quoted codes", async () => {

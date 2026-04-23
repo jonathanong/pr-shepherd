@@ -363,12 +363,17 @@ function formatMutateResult(result: Awaited<ReturnType<typeof runResolveMutate>>
  * Format an IterateResult as human-readable Markdown.
  *
  * Load-bearing conventions the monitor SKILL relies on:
- *   1. The H1 heading on line 1 contains `[<ACTION>]` — the SKILL greps this tag.
- *   2. `[FIX_CODE]` always uses the `rebase-and-push` variant: the `resolve`
- *      bullet under `## Post-fix push` wraps the resolve command in backticks —
- *      the SKILL extracts the backticked content for execution.
+ *   1. The H1 heading on line 1 contains `[<ACTION>]` — the action tag identifies
+ *      the output for logging and validation. Behavior is driven by `## Instructions`,
+ *      not by dispatching on the tag.
+ *   2. `[FIX_CODE]` uses the `rebase-and-push` variant: the `resolve` bullet under
+ *      `## Post-fix push` wraps the resolve command in backticks — the SKILL
+ *      extracts the backticked content for execution.
  *   3. The shell script under `[REBASE]` is inside a ```bash fenced block.
- *   4. `## Instructions` items are numbered `1.`, `2.`, … and executed in order.
+ *   4. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … —
+ *      that tells the monitor exactly what to do with this output. The section is
+ *      unconditional: every action, every variant, always emits at least one step.
+ *      The SKILL simply follows those steps; it does not need its own dispatch table.
  */
 function formatIterateResult(result: import("./types.mts").IterateResult): string {
   const heading = `# PR #${result.pr} [${result.action.toUpperCase()}]`;
@@ -378,11 +383,60 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
 
   switch (result.action) {
     case "cooldown":
+      return [
+        header,
+        "",
+        result.log,
+        "",
+        "## Instructions",
+        "",
+        "1. End this iteration — the next cron fire will recheck once CI starts reporting.",
+      ].join("\n");
+
     case "wait":
-    case "cancel":
+      return [
+        header,
+        "",
+        result.log,
+        "",
+        "## Instructions",
+        "",
+        "1. End this iteration — the next cron fire will recheck.",
+      ].join("\n");
+
     case "rerun_ci":
+      return [
+        header,
+        "",
+        result.log,
+        "",
+        "## Instructions",
+        "",
+        "1. The CLI already triggered the re-run above — end this iteration and wait for CI to report results.",
+      ].join("\n");
+
     case "mark_ready":
-      return [header, "", result.log].join("\n");
+      return [
+        header,
+        "",
+        result.log,
+        "",
+        "## Instructions",
+        "",
+        "1. The CLI already marked the PR ready for review — end this iteration.",
+      ].join("\n");
+
+    case "cancel":
+      return [
+        header,
+        "",
+        result.log,
+        "",
+        "## Instructions",
+        "",
+        "1. Invoke `/loop cancel` via the Skill tool.",
+        "2. Stop.",
+      ].join("\n");
 
     case "rebase":
       return [
@@ -393,10 +447,24 @@ function formatIterateResult(result: import("./types.mts").IterateResult): strin
         "```bash",
         result.rebase.shellScript,
         "```",
+        "",
+        "## Instructions",
+        "",
+        "1. Copy the shell script from the ` ```bash ` block above and run it in Bash.",
+        "2. End this iteration — the next cron fire will check CI after the rebase.",
       ].join("\n");
 
     case "escalate":
-      return [header, "", result.escalate.humanMessage].join("\n");
+      return [
+        header,
+        "",
+        result.escalate.humanMessage,
+        "",
+        "## Instructions",
+        "",
+        "1. Invoke `/loop cancel` via the Skill tool.",
+        "2. Stop — the PR needs human direction before monitoring can resume.",
+      ].join("\n");
 
     case "fix_code":
       return formatFixCodeResult(header, result);
@@ -409,8 +477,6 @@ function formatFixCodeResult(
 ): string {
   const sections: string[] = [header];
 
-  // Threads section is shared between both fix modes — render it first so the
-  // human/agent sees what is about to be applied.
   if (result.fix.threads.length > 0) {
     sections.push("## Review threads");
     for (const t of result.fix.threads) {
@@ -477,10 +543,8 @@ function formatFixCodeResult(
     ].join("\n"),
   );
 
-  if (result.fix.instructions.length > 0) {
-    sections.push("## Instructions");
-    sections.push(result.fix.instructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n"));
-  }
+  sections.push("## Instructions");
+  sections.push(result.fix.instructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n"));
 
   return sections.join("\n\n");
 }
