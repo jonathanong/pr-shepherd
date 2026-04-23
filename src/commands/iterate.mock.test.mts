@@ -2960,7 +2960,11 @@ describe("runIterate — stall-timeout guard", () => {
 
   it("does not touch stall state on cancel (ready-delay elapsed)", async () => {
     mockRunCheck.mockResolvedValue(makeReport());
-    mockUpdateReadyDelay.mockResolvedValue({ isReady: true, shouldCancel: true, remainingSeconds: 0 });
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
 
     const result = await runIterate(makeOpts30mStall({ stallTimeoutSeconds: STALL_TIMEOUT_S }));
 
