@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseSuggestion, applySuggestionToFile } from "./parse.mts";
+import { parseSuggestion, applySuggestionToFile, isCommittableSuggestion } from "./parse.mts";
 
 describe("parseSuggestion", () => {
   it("extracts a single-line suggestion", () => {
@@ -87,6 +87,28 @@ describe("parseSuggestion", () => {
   it("supports a 4-backtick outer fence to wrap content containing ```", () => {
     const body = ["````suggestion", "body with ``` in it", "````"].join("\n");
     expect(parseSuggestion(body)).toEqual({ lines: ["body with ``` in it"] });
+  });
+});
+
+describe("isCommittableSuggestion", () => {
+  it("returns true for a clean suggestion", () => {
+    expect(isCommittableSuggestion({ lines: ["const x = 1;"] })).toBe(true);
+  });
+
+  it("returns true for an empty suggestion (deletion)", () => {
+    expect(isCommittableSuggestion({ lines: [] })).toBe(true);
+  });
+
+  it("returns false when replacement contains a nested ```suggestion marker", () => {
+    expect(isCommittableSuggestion({ lines: ["text with ```suggestion inside"] })).toBe(false);
+  });
+
+  it("returns false when replacement has an odd number of ``` runs (unmatched fence)", () => {
+    expect(isCommittableSuggestion({ lines: ["here is a fence: ```", "no close"] })).toBe(false);
+  });
+
+  it("returns true when replacement contains a balanced pair of ``` runs", () => {
+    expect(isCommittableSuggestion({ lines: ["```js", "code", "```"] })).toBe(true);
   });
 });
 
