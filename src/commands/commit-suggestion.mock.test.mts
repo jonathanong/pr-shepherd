@@ -322,7 +322,7 @@ describe("runCommitSuggestion — thread classification", () => {
 });
 
 describe("runCommitSuggestion — file read failure", () => {
-  it("throws with descriptive message when file cannot be read", async () => {
+  it("propagates the underlying readFile error when file cannot be read", async () => {
     vi.clearAllMocks();
     mockGetPrHead.mockResolvedValue({
       sha: "headsha",
