@@ -9,7 +9,7 @@
     {
       "files": ["*.test.mts", "*.mock.test.mts"],
       "rules": {
-        "max-lines": "off"
+        "max-lines": ["error", 500]
       }
     }
   ]

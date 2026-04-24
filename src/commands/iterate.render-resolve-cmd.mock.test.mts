@@ -23,7 +23,9 @@ vi.mock("node:child_process", () => ({
     const cb = typeof optsOrCb === "function" ? optsOrCb : maybeCb!;
     mockExecFile(cmd, args)
       .then((result: { stdout: string; stderr: string }) => cb(null, result))
-      .catch((err: Error) => cb(err, { stdout: "", stderr: "" }));
+      .catch((err: Error & { stderr?: string }) =>
+        cb(err, { stdout: "", stderr: err.stderr ?? "" }),
+      );
   },
 }));
 
@@ -52,7 +54,7 @@ vi.mock("../cache/iterate-stall.mts", () => ({
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
-import { runIterate } from "./iterate.mts";
+import { runIterate, renderResolveCommand } from "./iterate.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { readFixAttempts, writeFixAttempts } from "../cache/fix-attempts.mts";
@@ -206,117 +208,187 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("runIterate — cooldown", () => {
-  it("returns action: cooldown when last commit is 5s ago", async () => {
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "log") {
-        return Promise.resolve({ stdout: String(NOW - 5), stderr: "" });
-      }
-      return Promise.resolve({ stdout: "", stderr: "" });
+describe("renderResolveCommand", () => {
+  it("quotes $DISMISS_MESSAGE so a substituted sentence stays one argument", () => {
+    const joined = renderResolveCommand({
+      argv: [
+        "npx",
+        "pr-shepherd",
+        "resolve",
+        "42",
+        "--dismiss-review-ids",
+        "r-1",
+        "--message",
+        "$DISMISS_MESSAGE",
+      ],
+      requiresHeadSha: false,
+      requiresDismissMessage: true,
+      hasMutations: true,
     });
+    expect(joined).toBe(
+      'npx pr-shepherd resolve 42 --dismiss-review-ids r-1 --message "$DISMISS_MESSAGE"',
+    );
+  });
 
-    const result = await runIterate(makeOpts({ cooldownSeconds: 30 }));
+  it('appends --require-sha "$HEAD_SHA" when requiresHeadSha is true', () => {
+    const joined = renderResolveCommand({
+      argv: ["npx", "pr-shepherd", "resolve", "42", "--resolve-thread-ids", "t-1"],
+      requiresHeadSha: true,
+      requiresDismissMessage: false,
+      hasMutations: true,
+    });
+    expect(joined).toBe(
+      'npx pr-shepherd resolve 42 --resolve-thread-ids t-1 --require-sha "$HEAD_SHA"',
+    );
+  });
 
-    expect(result.action).toBe("cooldown");
-    expect(mockRunCheck).not.toHaveBeenCalled();
+  it("omits --require-sha when requiresHeadSha is false (noise-only path)", () => {
+    const joined = renderResolveCommand({
+      argv: ["npx", "pr-shepherd", "resolve", "42", "--minimize-comment-ids", "c-noise"],
+      requiresHeadSha: false,
+      requiresDismissMessage: false,
+      hasMutations: true,
+    });
+    expect(joined).toBe("npx pr-shepherd resolve 42 --minimize-comment-ids c-noise");
+  });
+
+  it("quotes whitespace-bearing args defensively", () => {
+    const joined = renderResolveCommand({
+      argv: ["npx", "pr-shepherd", "resolve", "42", "--message", "hello world"],
+      requiresHeadSha: false,
+      requiresDismissMessage: false,
+      hasMutations: false,
+    });
+    expect(joined).toBe('npx pr-shepherd resolve 42 --message "hello world"');
+  });
+
+  it("leaves thread-IDs, flag names, and plain alphanumeric args unquoted", () => {
+    const joined = renderResolveCommand({
+      argv: [
+        "npx",
+        "pr-shepherd",
+        "resolve",
+        "42",
+        "--resolve-thread-ids",
+        "PRRT_kwDOSGizTs58XpO6,PRRT_kwDOSGizTs58XpPD",
+        "--minimize-comment-ids",
+        "c-1,c-2",
+      ],
+      requiresHeadSha: false,
+      requiresDismissMessage: false,
+      hasMutations: true,
+    });
+    expect(joined).not.toMatch(/"/);
+    expect(joined).toBe(
+      "npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XpO6,PRRT_kwDOSGizTs58XpPD --minimize-comment-ids c-1,c-2",
+    );
+  });
+
+  it('emits placeholders as exactly `"$PLACEHOLDER"` so callers replace the whole token', () => {
+    const joined = renderResolveCommand({
+      argv: [
+        "npx",
+        "pr-shepherd",
+        "resolve",
+        "42",
+        "--dismiss-review-ids",
+        "r-1",
+        "--message",
+        "$DISMISS_MESSAGE",
+      ],
+      requiresHeadSha: true,
+      requiresDismissMessage: true,
+      hasMutations: true,
+    });
+    // Both placeholders appear with their quotes attached as a single token —
+    // this is the contract consumers rely on when doing literal-text substitution.
+    expect(joined).toContain('"$DISMISS_MESSAGE"');
+    expect(joined).toContain('"$HEAD_SHA"');
+    expect(joined.endsWith('--require-sha "$HEAD_SHA"')).toBe(true);
+  });
+
+  it("never emits an unquoted $HEAD_SHA (regardless of requiresHeadSha)", () => {
+    const withSha = renderResolveCommand({
+      argv: ["npx", "pr-shepherd", "resolve", "42"],
+      requiresHeadSha: true,
+      requiresDismissMessage: false,
+      hasMutations: false,
+    });
+    const withoutSha = renderResolveCommand({
+      argv: ["npx", "pr-shepherd", "resolve", "42"],
+      requiresHeadSha: false,
+      requiresDismissMessage: false,
+      hasMutations: false,
+    });
+    // Whenever $HEAD_SHA appears it is always quoted.
+    expect(withSha).not.toMatch(/(?<!")\$HEAD_SHA(?!")/);
+    expect(withoutSha).not.toContain("$HEAD_SHA");
+  });
+
+  it("never emits a backtick (would break the Markdown `resolve:` fence)", () => {
+    // Rendered output is embedded inside a backtick-delimited inline span in
+    // the Markdown emitter (cli.mts). An unescaped backtick here would close
+    // the fence early and corrupt the rest of the line for downstream parsers.
+    const rendered = renderResolveCommand({
+      argv: [
+        "npx",
+        "pr-shepherd",
+        "resolve",
+        "42",
+        "--resolve-thread-ids",
+        "PRRT_kwDOSGizTs58XpO6",
+        "--minimize-comment-ids",
+        "c-1,c-2",
+        "--dismiss-review-ids",
+        "REV_1",
+        "--message",
+        "$DISMISS_MESSAGE",
+      ],
+      requiresHeadSha: true,
+      requiresDismissMessage: true,
+      hasMutations: true,
+    });
+    expect(rendered).not.toContain("`");
   });
 });
 
-describe("runIterate — wait", () => {
-  it("returns action: wait when all CI is passing and no threads", async () => {
-    mockRunCheck.mockResolvedValue(makeReport());
+describe("buildResolveCommand (via runIterate) — argv shape invariants", () => {
+  it("never puts $HEAD_SHA or --require-sha into argv (they're appended by renderResolveCommand)", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: {
+          actionable: [
+            {
+              id: "t-1",
+              isResolved: false,
+              isOutdated: false,
+              isMinimized: false,
+              path: "src/foo.mts",
+              line: 10,
+              startLine: null,
+              author: "reviewer",
+              body: "fix me",
+              createdAtUnix: NOW - 3600,
+            },
+          ],
+          autoResolved: [],
+          autoResolveErrors: [],
+        },
+      }),
+    );
     mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
+      isReady: false,
       shouldCancel: false,
-      remainingSeconds: 300,
-    });
-
-    const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
-
-    expect(result.action).toBe("wait");
-    expect(result.pr).toBe(42);
-    expect(result.status).toBe("READY");
-    expect(result.summary.passing).toBe(1);
-  });
-});
-
-describe("runIterate — cancel", () => {
-  it("returns action: cancel when shouldCancel is true", async () => {
-    mockRunCheck.mockResolvedValue(makeReport());
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
-      shouldCancel: true,
-      remainingSeconds: 0,
+      remainingSeconds: 600,
     });
 
     const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("cancel");
-    expect(result.shouldCancel).toBe(true);
-    expect(result.remainingSeconds).toBe(0);
-  });
-});
-
-describe("runIterate — cancel on merged/closed PR", () => {
-  it("returns action: cancel and does not call updateReadyDelay when PR is MERGED", async () => {
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        mergeStatus: {
-          status: "UNKNOWN",
-          state: "MERGED",
-          isDraft: false,
-          mergeable: "UNKNOWN",
-          reviewDecision: null,
-          copilotReviewInProgress: false,
-          mergeStateStatus: "UNKNOWN",
-        },
-      }),
-    );
-
-    const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("cancel");
-    expect(result.state).toBe("MERGED");
-    expect(mockUpdateReadyDelay).not.toHaveBeenCalled();
-  });
-
-  it("returns action: cancel when PR is CLOSED", async () => {
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        mergeStatus: {
-          status: "UNKNOWN",
-          state: "CLOSED",
-          isDraft: false,
-          mergeable: "UNKNOWN",
-          reviewDecision: null,
-          copilotReviewInProgress: false,
-          mergeStateStatus: "UNKNOWN",
-        },
-      }),
-    );
-
-    const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("cancel");
-    expect(result.state).toBe("CLOSED");
-    expect(mockUpdateReadyDelay).not.toHaveBeenCalled();
-  });
-});
-
-describe("runIterate — malformed repo format", () => {
-  it("throws when report.repo has no slash (e.g. 'badformat')", async () => {
-    mockRunCheck.mockResolvedValue(makeReport({ repo: "badformat" }));
-
-    await expect(runIterate(makeOpts())).rejects.toThrow(
-      'Unexpected repo format: "badformat" (expected "owner/name")',
-    );
-  });
-
-  it("throws when report.repo has a leading slash (e.g. '/noowner')", async () => {
-    mockRunCheck.mockResolvedValue(makeReport({ repo: "/noowner" }));
-
-    await expect(runIterate(makeOpts())).rejects.toThrow(
-      'Unexpected repo format: "/noowner" (expected "owner/name")',
-    );
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+      expect(result.fix.resolveCommand.argv).not.toContain("$HEAD_SHA");
+      expect(result.fix.resolveCommand.argv).not.toContain("--require-sha");
+      expect(result.fix.resolveCommand.requiresHeadSha).toBe(true);
+    }
   });
 });

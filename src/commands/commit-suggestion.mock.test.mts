@@ -56,7 +56,7 @@ import { runCommitSuggestion } from "./commit-suggestion.mts";
 import { getPrHead, getCurrentBranch, getCurrentPrNumber } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { applyResolveOptions } from "../comments/resolve.mts";
-import { readFile, unlink } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import type { ReviewThread, BatchPrData } from "../types.mts";
 
 const mockGetPrHead = vi.mocked(getPrHead);
@@ -65,7 +65,6 @@ const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockFetchBatch = vi.mocked(fetchPrBatch);
 const mockApplyResolveOptions = vi.mocked(applyResolveOptions);
 const mockReadFile = vi.mocked(readFile);
-const mockUnlink = vi.mocked(unlink);
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -319,135 +318,6 @@ describe("runCommitSuggestion — thread classification", () => {
     await expect(
       runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("nested suggestion fencing");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Successful apply
-// ---------------------------------------------------------------------------
-
-describe("runCommitSuggestion — successful apply", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetPrHead.mockResolvedValue({
-      sha: "headsha",
-      ref: "feature/foo",
-      repoWithOwner: "owner/repo",
-    });
-    mockGetCurrentBranch.mockResolvedValue("feature/foo");
-    setupHappyPath();
-  });
-
-  it("returns applied=true with commitSha and patch on success", async () => {
-    const result = await runCommitSuggestion({
-      ...GLOBAL_OPTS,
-      threadId: "PRRT_x",
-      message: "apply suggestion",
-    });
-    expect(result.applied).toBe(true);
-    if (!result.applied) throw new Error("expected applied=true");
-    expect(result.commitSha).toBe("newsha");
-    expect(result.threadId).toBe("PRRT_x");
-    expect(result.author).toBe("alice");
-    expect(result.path).toBe("src/foo.ts");
-    expect(result.patch).toContain("--- a/src/foo.ts");
-    expect(result.patch).toContain("+const x = 10;");
-  });
-
-  it("runs git apply --check then git apply", async () => {
-    await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" });
-
-    const applyCalls = mockExecFile.mock.calls.filter(
-      (call) => call[0] === "git" && (call[1] as string[])[0] === "apply",
-    );
-    expect(applyCalls).toHaveLength(2);
-    expect(applyCalls[0]![1]).toContain("--check");
-    expect(applyCalls[1]![1]).not.toContain("--check");
-  });
-
-  it("commits with Co-authored-by trailer in body when --description omitted", async () => {
-    await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "apply suggestion" });
-
-    const commitCall = mockExecFile.mock.calls.find(
-      (call) => call[0] === "git" && (call[1] as string[])[0] === "commit",
-    );
-    expect(commitCall).toBeDefined();
-    const argv = commitCall![1] as string[];
-    // -m <headline> -m <body>
-    const headlineIdx = argv.indexOf("-m");
-    const bodyIdx = argv.indexOf("-m", headlineIdx + 2);
-    expect(argv[headlineIdx + 1]).toBe("apply suggestion");
-    expect(argv[bodyIdx + 1]).toContain("Co-authored-by: alice <alice@users.noreply.github.com>");
-  });
-
-  it("prepends --description to commit body before Co-authored-by", async () => {
-    await runCommitSuggestion({
-      ...GLOBAL_OPTS,
-      threadId: "PRRT_x",
-      message: "apply suggestion",
-      description: "Reviewer asked to use const.",
-    });
-
-    const commitCall = mockExecFile.mock.calls.find(
-      (call) => call[0] === "git" && (call[1] as string[])[0] === "commit",
-    );
-    const argv = commitCall![1] as string[];
-    const headlineIdx = argv.indexOf("-m");
-    const bodyIdx = argv.indexOf("-m", headlineIdx + 2);
-    const body = argv[bodyIdx + 1]!;
-    expect(body).toContain("Reviewer asked to use const.");
-    expect(body).toContain("Co-authored-by: alice");
-    // Description comes before Co-authored-by
-    expect(body.indexOf("Reviewer")).toBeLessThan(body.indexOf("Co-authored-by"));
-  });
-
-  it("resolves the thread on GitHub after committing", async () => {
-    await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" });
-
-    expect(mockApplyResolveOptions).toHaveBeenCalledWith(
-      42,
-      { owner: "owner", name: "repo" },
-      { resolveThreadIds: ["PRRT_x"] },
-    );
-  });
-
-  it("multi-line range: uses startLine from thread", async () => {
-    mockFetchBatch.mockResolvedValue({
-      data: makeBatch([
-        makeThread({
-          line: 6,
-          startLine: 4,
-          body: "```suggestion\nreplacement1\nreplacement2\nreplacement3\n```",
-        }),
-      ]),
-    });
-
-    const result = await runCommitSuggestion({
-      ...GLOBAL_OPTS,
-      threadId: "PRRT_x",
-      message: "fix",
-    });
-    expect(result.startLine).toBe(4);
-    expect(result.endLine).toBe(6);
-  });
-
-  it("postActionInstruction mentions git push", async () => {
-    const result = await runCommitSuggestion({
-      ...GLOBAL_OPTS,
-      threadId: "PRRT_x",
-      message: "fix",
-    });
-    expect(result.postActionInstruction).toContain("git push");
-  });
-
-  it("succeeds even when temp patch file unlink fails", async () => {
-    mockUnlink.mockRejectedValueOnce(new Error("ENOENT: unlink failed"));
-    const result = await runCommitSuggestion({
-      ...GLOBAL_OPTS,
-      threadId: "PRRT_x",
-      message: "fix",
-    });
-    expect(result.applied).toBe(true);
   });
 });
 

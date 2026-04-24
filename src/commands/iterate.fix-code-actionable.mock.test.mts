@@ -23,7 +23,9 @@ vi.mock("node:child_process", () => ({
     const cb = typeof optsOrCb === "function" ? optsOrCb : maybeCb!;
     mockExecFile(cmd, args)
       .then((result: { stdout: string; stderr: string }) => cb(null, result))
-      .catch((err: Error) => cb(err, { stdout: "", stderr: "" }));
+      .catch((err: Error & { stderr?: string }) =>
+        cb(err, { stdout: "", stderr: err.stderr ?? "" }),
+      );
   },
 }));
 
@@ -206,117 +208,57 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("runIterate — cooldown", () => {
-  it("returns action: cooldown when last commit is 5s ago", async () => {
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "log") {
-        return Promise.resolve({ stdout: String(NOW - 5), stderr: "" });
-      }
-      return Promise.resolve({ stdout: "", stderr: "" });
-    });
-
-    const result = await runIterate(makeOpts({ cooldownSeconds: 30 }));
-
-    expect(result.action).toBe("cooldown");
-    expect(mockRunCheck).not.toHaveBeenCalled();
-  });
-});
-
-describe("runIterate — wait", () => {
-  it("returns action: wait when all CI is passing and no threads", async () => {
-    mockRunCheck.mockResolvedValue(makeReport());
+describe("runIterate — fix_code (actionable threads)", () => {
+  it("returns action: fix_code with 2 actionable threads and 0 CI failures", async () => {
+    const thread1 = {
+      id: "thread-1",
+      isResolved: false,
+      isOutdated: false,
+      isMinimized: false,
+      path: "src/foo.mts",
+      line: 10,
+      startLine: null,
+      author: "reviewer",
+      body: "Fix this bug",
+      createdAtUnix: NOW - 3600,
+    };
+    const thread2 = {
+      id: "thread-2",
+      isResolved: false,
+      isOutdated: false,
+      isMinimized: false,
+      path: "src/bar.mts",
+      line: 20,
+      startLine: null,
+      author: "reviewer",
+      body: "Fix this too",
+      createdAtUnix: NOW - 3600,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [thread1, thread2], autoResolved: [], autoResolveErrors: [] },
+      }),
+    );
     mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
+      isReady: false,
       shouldCancel: false,
-      remainingSeconds: 300,
-    });
-
-    const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
-
-    expect(result.action).toBe("wait");
-    expect(result.pr).toBe(42);
-    expect(result.status).toBe("READY");
-    expect(result.summary.passing).toBe(1);
-  });
-});
-
-describe("runIterate — cancel", () => {
-  it("returns action: cancel when shouldCancel is true", async () => {
-    mockRunCheck.mockResolvedValue(makeReport());
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
-      shouldCancel: true,
-      remainingSeconds: 0,
+      remainingSeconds: 600,
     });
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("cancel");
-    expect(result.shouldCancel).toBe(true);
-    expect(result.remainingSeconds).toBe(0);
-  });
-});
-
-describe("runIterate — cancel on merged/closed PR", () => {
-  it("returns action: cancel and does not call updateReadyDelay when PR is MERGED", async () => {
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        mergeStatus: {
-          status: "UNKNOWN",
-          state: "MERGED",
-          isDraft: false,
-          mergeable: "UNKNOWN",
-          reviewDecision: null,
-          copilotReviewInProgress: false,
-          mergeStateStatus: "UNKNOWN",
-        },
-      }),
-    );
-
-    const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("cancel");
-    expect(result.state).toBe("MERGED");
-    expect(mockUpdateReadyDelay).not.toHaveBeenCalled();
-  });
-
-  it("returns action: cancel when PR is CLOSED", async () => {
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        mergeStatus: {
-          status: "UNKNOWN",
-          state: "CLOSED",
-          isDraft: false,
-          mergeable: "UNKNOWN",
-          reviewDecision: null,
-          copilotReviewInProgress: false,
-          mergeStateStatus: "UNKNOWN",
-        },
-      }),
-    );
-
-    const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("cancel");
-    expect(result.state).toBe("CLOSED");
-    expect(mockUpdateReadyDelay).not.toHaveBeenCalled();
-  });
-});
-
-describe("runIterate — malformed repo format", () => {
-  it("throws when report.repo has no slash (e.g. 'badformat')", async () => {
-    mockRunCheck.mockResolvedValue(makeReport({ repo: "badformat" }));
-
-    await expect(runIterate(makeOpts())).rejects.toThrow(
-      'Unexpected repo format: "badformat" (expected "owner/name")',
-    );
-  });
-
-  it("throws when report.repo has a leading slash (e.g. '/noowner')", async () => {
-    mockRunCheck.mockResolvedValue(makeReport({ repo: "/noowner" }));
-
-    await expect(runIterate(makeOpts())).rejects.toThrow(
-      'Unexpected repo format: "/noowner" (expected "owner/name")',
-    );
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+      expect(result.fix.threads).toHaveLength(2);
+      expect(result.fix.actionableComments).toHaveLength(0);
+      expect(result.fix.noiseCommentIds).toHaveLength(0);
+      expect(result.fix.checks).toHaveLength(0);
+      expect(result.cancelled).toHaveLength(0);
+      const joined = result.fix.instructions.join("\n");
+      // push with no cancelled → stop-iteration but no no-recancel warning
+      expect(joined).toContain("Stop this iteration");
+      expect(joined).not.toContain("Do not re-run");
+    }
   });
 });

@@ -23,7 +23,9 @@ vi.mock("node:child_process", () => ({
     const cb = typeof optsOrCb === "function" ? optsOrCb : maybeCb!;
     mockExecFile(cmd, args)
       .then((result: { stdout: string; stderr: string }) => cb(null, result))
-      .catch((err: Error) => cb(err, { stdout: "", stderr: "" }));
+      .catch((err: Error & { stderr?: string }) =>
+        cb(err, { stdout: "", stderr: err.stderr ?? "" }),
+      );
   },
 }));
 
@@ -206,117 +208,183 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("runIterate — cooldown", () => {
-  it("returns action: cooldown when last commit is 5s ago", async () => {
+// THREAD fixture used by escalate humanMessage tests.
+const THREAD = {
+  id: "thread-1",
+  isResolved: false,
+  isOutdated: false,
+  isMinimized: false,
+  path: "src/foo.mts",
+  line: 10,
+  startLine: null,
+  author: "reviewer",
+  body: "Fix this",
+  createdAtUnix: NOW - 3600,
+};
+
+describe("runIterate — prescriptive fields: escalate humanMessage", () => {
+  it("escalate.humanMessage contains triggers, suggestion, and thread details", async () => {
+    mockReadFixAttempts.mockResolvedValue({ headSha: "abc123", threadAttempts: { "thread-1": 3 } });
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
     mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "log") {
-        return Promise.resolve({ stdout: String(NOW - 5), stderr: "" });
-      }
+      if (cmd === "git" && args[0] === "log")
+        return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
+      if (cmd === "git" && args[0] === "rev-parse")
+        return Promise.resolve({ stdout: "abc123\n", stderr: "" });
       return Promise.resolve({ stdout: "", stderr: "" });
     });
 
-    const result = await runIterate(makeOpts({ cooldownSeconds: 30 }));
-
-    expect(result.action).toBe("cooldown");
-    expect(mockRunCheck).not.toHaveBeenCalled();
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      const { humanMessage } = result.escalate;
+      expect(humanMessage).toMatch(/paused/i);
+      expect(humanMessage).toMatch(/fix-thrash/);
+      expect(humanMessage).toMatch(/thread-1/);
+      expect(humanMessage).toMatch(/src\/foo\.mts/);
+      expect(humanMessage).toMatch(/pr-shepherd:check 42/);
+      expect(humanMessage).toMatch(/pr-shepherd:monitor 42` to resume/);
+    }
   });
-});
 
-describe("runIterate — wait", () => {
-  it("returns action: wait when all CI is passing and no threads", async () => {
-    mockRunCheck.mockResolvedValue(makeReport());
+  it("escalates with base-branch-unknown when fix_code needs a push but baseBranch is empty", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        baseBranch: "",
+        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
+      }),
+    );
     mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
+      isReady: false,
       shouldCancel: false,
-      remainingSeconds: 300,
+      remainingSeconds: 600,
     });
 
-    const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
-
-    expect(result.action).toBe("wait");
-    expect(result.pr).toBe(42);
-    expect(result.status).toBe("READY");
-    expect(result.summary.passing).toBe(1);
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toContain("base-branch-unknown");
+      expect(result.escalate.suggestion).toMatch(/empty base branch name/);
+      expect(result.escalate.humanMessage).toMatch(/base-branch-unknown/);
+    }
   });
-});
 
-describe("runIterate — cancel", () => {
-  it("returns action: cancel when shouldCancel is true", async () => {
-    mockRunCheck.mockResolvedValue(makeReport());
+  it("escalates with base-branch-unknown when rebase would run but baseBranch is empty", async () => {
+    const flakyCheck = {
+      name: "flaky",
+      status: "COMPLETED" as const,
+      conclusion: "FAILURE" as const,
+      detailsUrl: "https://github.com/owner/repo/actions/runs/30",
+      event: "pull_request",
+      runId: "run-30",
+      category: "failing" as const,
+      failureKind: "flaky" as const,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        baseBranch: "",
+        mergeStatus: {
+          status: "BEHIND",
+          state: "OPEN",
+          isDraft: false,
+          mergeable: "MERGEABLE",
+          reviewDecision: null,
+          copilotReviewInProgress: false,
+          mergeStateStatus: "BEHIND",
+        },
+        checks: {
+          passing: [],
+          failing: [flakyCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
     mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
-      shouldCancel: true,
-      remainingSeconds: 0,
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
     });
 
     const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("cancel");
-    expect(result.shouldCancel).toBe(true);
-    expect(result.remainingSeconds).toBe(0);
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toEqual(["base-branch-unknown"]);
+    }
   });
-});
 
-describe("runIterate — cancel on merged/closed PR", () => {
-  it("returns action: cancel and does not call updateReadyDelay when PR is MERGED", async () => {
+  it("escalates with base-branch-unknown on CONFLICTS-only when baseBranch is empty (no resolve IDs, but rebase still needed)", async () => {
+    // Guards the `|| hasConflicts` branch of the fix_code base-branch-unknown
+    // gate. Without it, a CONFLICTS-only PR with no threads/comments/checks/
+    // reviews would silently rebase onto `main` when the base branch was
+    // invalid, because resolveCommand.requiresHeadSha is false (nothing to
+    // resolve).
     mockRunCheck.mockResolvedValue(
       makeReport({
+        status: "FAILING",
+        baseBranch: "",
         mergeStatus: {
-          status: "UNKNOWN",
-          state: "MERGED",
+          status: "CONFLICTS",
+          state: "OPEN" as const,
           isDraft: false,
-          mergeable: "UNKNOWN",
+          mergeable: "CONFLICTING",
           reviewDecision: null,
           copilotReviewInProgress: false,
-          mergeStateStatus: "UNKNOWN",
+          mergeStateStatus: "DIRTY",
         },
       }),
     );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
 
     const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("cancel");
-    expect(result.state).toBe("MERGED");
-    expect(mockUpdateReadyDelay).not.toHaveBeenCalled();
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toEqual(["base-branch-unknown"]);
+      expect(result.escalate.suggestion).toMatch(/empty base branch name/);
+    }
   });
 
-  it("returns action: cancel when PR is CLOSED", async () => {
+  it("escalates with base-branch-unknown when baseBranch contains unsafe characters", async () => {
+    // Prevents shell interpolation via validateBaseBranch — a ref like
+    // `main;rm -rf /` must not flow into buildRebaseShellScript.
     mockRunCheck.mockResolvedValue(
       makeReport({
-        mergeStatus: {
-          status: "UNKNOWN",
-          state: "CLOSED",
-          isDraft: false,
-          mergeable: "UNKNOWN",
-          reviewDecision: null,
-          copilotReviewInProgress: false,
-          mergeStateStatus: "UNKNOWN",
-        },
+        status: "UNRESOLVED_COMMENTS",
+        baseBranch: "main; rm -rf /",
+        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
       }),
     );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
 
     const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("cancel");
-    expect(result.state).toBe("CLOSED");
-    expect(mockUpdateReadyDelay).not.toHaveBeenCalled();
-  });
-});
-
-describe("runIterate — malformed repo format", () => {
-  it("throws when report.repo has no slash (e.g. 'badformat')", async () => {
-    mockRunCheck.mockResolvedValue(makeReport({ repo: "badformat" }));
-
-    await expect(runIterate(makeOpts())).rejects.toThrow(
-      'Unexpected repo format: "badformat" (expected "owner/name")',
-    );
-  });
-
-  it("throws when report.repo has a leading slash (e.g. '/noowner')", async () => {
-    mockRunCheck.mockResolvedValue(makeReport({ repo: "/noowner" }));
-
-    await expect(runIterate(makeOpts())).rejects.toThrow(
-      'Unexpected repo format: "/noowner" (expected "owner/name")',
-    );
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toContain("base-branch-unknown");
+      expect(result.escalate.suggestion).toMatch(/unsafe characters/);
+      expect(result.escalate.suggestion).toContain("main; rm -rf /");
+    }
   });
 });
