@@ -112,7 +112,9 @@ async function fetchJobsUncached(
   try {
     for (let page = 1; ; page++) {
       if (++pagesFetched > MAX_JOB_PAGES) {
-        process.stderr.write(`pr-shepherd: job pagination cap (${MAX_JOB_PAGES * 100} jobs) reached for run ${runId} — triage may be incomplete\n`);
+        process.stderr.write(
+          `pr-shepherd: job pagination cap (${MAX_JOB_PAGES * 100} jobs) reached for run ${runId} — triage may be incomplete\n`,
+        );
         break;
       }
       const data = await rest<JobsResponse>(
@@ -137,9 +139,8 @@ function pickJobInfo(
   // Fall back to prefix matching for matrix jobs whose workflow-API name includes
   // a suffix like "(ubuntu)" while checkName is just the base name.
   const exactMatches = jobs.filter((j) => j.name === checkName);
-  const matchedJobs = exactMatches.length > 0
-    ? exactMatches
-    : jobs.filter((j) => j.name.startsWith(checkName));
+  const matchedJobs =
+    exactMatches.length > 0 ? exactMatches : jobs.filter((j) => j.name.startsWith(checkName));
   const job = matchedJobs.find((j) => j.conclusion === "failure") ?? matchedJobs[0];
   if (!job) return undefined;
   const failedStep =
