@@ -156,7 +156,8 @@ function defaultConfig() {
       fetchReviewSummaries: true,
     },
     checks: {
-      ciTriggerEvents: ["pull_request", "pull_request_target"],    },
+      ciTriggerEvents: ["pull_request", "pull_request_target"],
+    },
     mergeStatus: { blockingReviewerLogins: ["copilot"] },
     actions: {
       autoResolveOutdated: true,
@@ -343,6 +344,5 @@ describe("runIterate — prescriptive fields: log strings", () => {
     }
   });
 });
-
 
 // renderResolveCommand and buildResolveCommand tests moved to iterate.render-resolve-cmd.mock.test.mts

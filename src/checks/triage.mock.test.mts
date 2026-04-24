@@ -29,7 +29,12 @@ function makeCheck(overrides: Partial<ClassifiedCheck> = {}): ClassifiedCheck {
   };
 }
 
-type JobStub = { id: number; name: string; conclusion: string; steps?: Array<{ name: string; number: number; conclusion: string | null }> };
+type JobStub = {
+  id: number;
+  name: string;
+  conclusion: string;
+  steps?: Array<{ name: string; number: number; conclusion: string | null }>;
+};
 
 function makeJobsResponse(jobs: JobStub[]): Response {
   return {
@@ -84,7 +89,10 @@ describe("triageFailingChecks — cancelled", () => {
   });
 
   it("returns cancelled for STARTUP_FAILURE conclusion; skips fetch", async () => {
-    const [result] = await triageFailingChecks([makeCheck({ conclusion: "STARTUP_FAILURE" })], REPO);
+    const [result] = await triageFailingChecks(
+      [makeCheck({ conclusion: "STARTUP_FAILURE" })],
+      REPO,
+    );
     expect(result!.failureKind).toBe("cancelled");
     expect(mockFetch).not.toHaveBeenCalled();
   });
@@ -104,16 +112,18 @@ describe("triageFailingChecks — cancelled", () => {
 describe("triageFailingChecks — actionable: failedStep", () => {
   it("returns actionable and extracts failedStep from matching job", async () => {
     mockFetch.mockResolvedValueOnce(
-      makeJobsResponse([{
-        id: 42,
-        name: "tests",
-        conclusion: "failure",
-        steps: [
-          { name: "Set up job", number: 1, conclusion: "success" },
-          { name: "Run tests", number: 2, conclusion: "failure" },
-          { name: "Post", number: 3, conclusion: null },
-        ],
-      }]),
+      makeJobsResponse([
+        {
+          id: 42,
+          name: "tests",
+          conclusion: "failure",
+          steps: [
+            { name: "Set up job", number: 1, conclusion: "success" },
+            { name: "Run tests", number: 2, conclusion: "failure" },
+            { name: "Post", number: 3, conclusion: null },
+          ],
+        },
+      ]),
     );
     const [result] = await triageFailingChecks([makeCheck()], REPO);
     expect(result!.failureKind).toBe("actionable");
@@ -131,12 +141,14 @@ describe("triageFailingChecks — actionable: failedStep", () => {
 
   it("returns actionable with failedStep=undefined when no job matches check name", async () => {
     mockFetch.mockResolvedValueOnce(
-      makeJobsResponse([{
-        id: 42,
-        name: "some-other-job",
-        conclusion: "failure",
-        steps: [{ name: "Run tests", number: 1, conclusion: "failure" }],
-      }]),
+      makeJobsResponse([
+        {
+          id: 42,
+          name: "some-other-job",
+          conclusion: "failure",
+          steps: [{ name: "Run tests", number: 1, conclusion: "failure" }],
+        },
+      ]),
     );
     const [result] = await triageFailingChecks([makeCheck({ name: "tests" })], REPO);
     expect(result!.failureKind).toBe("actionable");
@@ -183,12 +195,14 @@ describe("triageFailingChecks — batch", () => {
   it("triages multiple checks in parallel", async () => {
     mockFetch
       .mockResolvedValueOnce(
-        makeJobsResponse([{
-          id: 1,
-          name: "tests",
-          conclusion: "failure",
-          steps: [{ name: "Run tests", number: 1, conclusion: "failure" }],
-        }]),
+        makeJobsResponse([
+          {
+            id: 1,
+            name: "tests",
+            conclusion: "failure",
+            steps: [{ name: "Run tests", number: 1, conclusion: "failure" }],
+          },
+        ]),
       )
       .mockResolvedValueOnce(
         makeJobsResponse([{ id: 2, name: "build", conclusion: "cancelled", steps: [] }]),

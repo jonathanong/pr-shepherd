@@ -166,4 +166,3 @@ export function formatText(report: ShepherdReport): string {
 function firstLine(text: string): string {
   return (text.split("\n")[0] ?? "").trim().slice(0, 120);
 }
-

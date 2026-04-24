@@ -41,11 +41,11 @@ Returns:
 
 Failing checks are further classified by `FailureKind`:
 
-| `FailureKind` | Condition                                                          |
-| ------------- | ------------------------------------------------------------------ |
-| `timeout`     | `conclusion === 'TIMED_OUT'`                                       |
+| `FailureKind` | Condition                                                         |
+| ------------- | ----------------------------------------------------------------- |
+| `timeout`     | `conclusion === 'TIMED_OUT'`                                      |
 | `cancelled`   | `conclusion === 'CANCELLED'`, `'STARTUP_FAILURE'`, or `'STALE'`   |
-| `actionable`  | Everything else — code failures, type errors, lint, test failures  |
+| `actionable`  | Everything else — code failures, type errors, lint, test failures |
 
 For `actionable` checks, triage calls the GitHub Actions jobs API (the same `jobs?filter=latest` endpoint) to find the name of the first failed step (e.g. `"Run tests"`, `"Set up job"`). This `failedStep` is returned as part of the check and is visible in both JSON and text output. No log fetching is done for `timeout` or `cancelled` checks.
 

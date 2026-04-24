@@ -156,7 +156,8 @@ function defaultConfig() {
       fetchReviewSummaries: true,
     },
     checks: {
-      ciTriggerEvents: ["pull_request", "pull_request_target"],    },
+      ciTriggerEvents: ["pull_request", "pull_request_target"],
+    },
     mergeStatus: { blockingReviewerLogins: ["copilot"] },
     actions: {
       autoResolveOutdated: true,

@@ -156,7 +156,8 @@ function defaultConfig() {
       fetchReviewSummaries: true,
     },
     checks: {
-      ciTriggerEvents: ["pull_request", "pull_request_target"],    },
+      ciTriggerEvents: ["pull_request", "pull_request_target"],
+    },
     mergeStatus: { blockingReviewerLogins: ["copilot"] },
     actions: {
       autoResolveOutdated: true,
@@ -273,7 +274,6 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
       expect(result.escalate.humanMessage).toMatch(/base-branch-unknown/);
     }
   });
-
 
   it("escalates with base-branch-unknown on CONFLICTS-only when baseBranch is empty (no resolve IDs, but rebase still needed)", async () => {
     // Guards the `|| hasConflicts` branch of the fix_code base-branch-unknown
