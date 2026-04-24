@@ -34,13 +34,13 @@ npx pr-shepherd check <N> --format=json
 
 Parse the JSON output and report all three:
 
-- **Merge status** (`report.mergeStatus.status`): CLEAN | BEHIND | CONFLICTS | BLOCKED | UNSTABLE | DRAFT | UNKNOWN — never omit; include `copilotReviewInProgress` when true
-- **CI check results** (`report.checks`): passing count, failing names + kinds, in-progress names
-- **Unresolved review comments** (`report.threads.actionable` + `report.comments.actionable`): count + details with file paths and line numbers
+- **Merge status** (`mergeStatus.status`): CLEAN | BEHIND | CONFLICTS | BLOCKED | UNSTABLE | DRAFT | UNKNOWN — never omit; include `copilotReviewInProgress` when true
+- **CI check results** (`checks.passing`, `checks.failing`, `checks.inProgress`): passing count, failing names + kinds, in-progress names
+- **Unresolved review comments** (`threads.actionable` + `comments.actionable`): count + details with file paths and line numbers
 
 ## Rebase policy
 
-The CLI already determines whether a rebase is warranted. Read `report.mergeStatus.status` directly:
+The CLI already determines whether a rebase is warranted. Read `mergeStatus.status` directly:
 
 - `CONFLICTS` — a rebase is required to resolve the merge conflict before the PR can land.
 - `BEHIND` — a rebase may be appropriate; a `flaky` failure while `BEHIND` is the canonical rebase signal. If all checks pass but the PR is `BEHIND`, a rebase is optional.
@@ -50,7 +50,7 @@ Do not re-derive these conditions from raw branch state. For automated monitorin
 
 ## CI budget policy
 
-Each entry in `report.checks` carries a `failureKind` field. Read it directly rather than re-classifying failures:
+Each entry in `checks.failing` carries a `failureKind` field. Read it directly rather than re-classifying failures:
 
 - `actionable` — the failure is code-level and needs a fix.
 - `infrastructure` — transient infra problem; re-run with `gh run rerun <runId> --failed`.
@@ -61,8 +61,8 @@ Each entry in `report.checks` carries a `failureKind` field. Read it directly ra
 
 Unless ALL of:
 
-1. `report.mergeStatus.mergeStateStatus == 'CLEAN'`
-2. `report.status == 'READY'`
-3. `report.mergeStatus.copilotReviewInProgress == false`
+1. `mergeStatus.mergeStateStatus == 'CLEAN'`
+2. `status == 'READY'`
+3. `mergeStatus.copilotReviewInProgress == false`
 
 This is a one-shot check. For continuous monitoring, use `/pr-shepherd:monitor`.

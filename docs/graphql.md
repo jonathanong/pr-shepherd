@@ -1,6 +1,6 @@
 # shepherd GraphQL
 
-[← README.md](README.md)
+[← README](../README.md)
 
 ## The batch query
 

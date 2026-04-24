@@ -1,6 +1,6 @@
 # shepherd — architecture
 
-[← README.md](README.md)
+[← README](../README.md)
 
 ## Module tree
 

@@ -1,6 +1,6 @@
 # shepherd iterate — step-by-step flow
 
-[← README.md](README.md) | [actions.md](actions.md)
+[← README](../README.md) | [actions.md](actions.md)
 
 `commands/iterate.mts` is the heart of the watch loop. Each cron tick calls it once and interprets the JSON result.
 
