@@ -28,7 +28,7 @@ Read-only PR status snapshot. Fetches CI results, merge state, and review commen
 ```sh
 pr-shepherd check           # infer PR from current branch
 pr-shepherd check 42
-pr-shepherd check 42 --format=json
+pr-shepherd check 42
 pr-shepherd check 42 --no-cache
 ```
 
@@ -64,7 +64,7 @@ Two modes: **fetch** (default) auto-resolves outdated threads and returns action
 
 ```sh
 pr-shepherd resolve           # fetch + auto-resolve outdated threads
-pr-shepherd resolve 42 --fetch --format=json
+pr-shepherd resolve 42 --fetch
 ```
 
 ```
@@ -164,7 +164,7 @@ Exit codes: `0` suggestion applied and committed · `1` any error.
 One monitor tick: classifies current PR state and emits a single action. Used by the cron loop; the monitor skill calls this every 4 minutes and acts on the result. See [iterate-flow.md](iterate-flow.md) for the full decision tree.
 
 ```sh
-pr-shepherd iterate 42 --no-cache --format=json \
+pr-shepherd iterate 42 --no-cache \
   --ready-delay 10m \
   --last-push-time "$(git log -1 --format=%ct HEAD)"
 ```
@@ -220,7 +220,7 @@ Multi-PR summary table. One lightweight GraphQL query per PR, run in parallel.
 
 ```sh
 pr-shepherd status 41 42 43
-pr-shepherd status 100 --format=json
+pr-shepherd status 100
 ```
 
 ```
