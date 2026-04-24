@@ -5,9 +5,13 @@
  *   - cancelled: conclusion is CANCELLED, STARTUP_FAILURE, or STALE.
  *   - actionable: everything else (FAILURE, ACTION_REQUIRED, …).
  *
- * For actionable checks, the name of the first failed step in the matched job
- * is fetched from the GitHub Actions jobs API and returned as `failedStep`.
- * No log fetching is done for timeout/cancelled checks.
+ * Exception: checks with runId === null are always classified as "actionable"
+ * regardless of conclusion, so they surface in fix_code where the monitor
+ * escalates to the user (no run to rerun/inspect).
+ *
+ * For all checks with a non-null runId, the jobs API is called to fetch the
+ * workflow name. For actionable checks, the first failed step name is also
+ * returned as `failedStep`. No log fetching is done.
  */
 
 import { rest } from "../github/http.mts";

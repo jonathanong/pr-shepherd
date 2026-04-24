@@ -93,7 +93,7 @@ export interface AgentComment {
 
 /**
  * Check shape emitted to the monitor agent.
- * The agent fetches full logs on demand via `gh run view <runId> --log-failed`
+ * The agent fetches failed job logs on demand via `gh run view <runId> --log-failed`
  * when `runId` is available, and falls back to `detailsUrl` otherwise.
  */
 export interface AgentCheck {

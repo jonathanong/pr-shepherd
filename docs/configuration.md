@@ -233,9 +233,7 @@ When `true`, shepherd automatically resolves threads that GitHub has marked `isO
 
 ### `actions.autoRebase` — default `true`
 
-When `true`, shepherd returns `action: rebase` when the branch must be rebased during `fix_code`. The `/pr-shepherd:monitor` skill then runs `git fetch && git rebase && git push --force-with-lease`.
-
-Disable for repos that enforce merge commits or use a merge queue where rebasing is handled automatically.
+This flag is currently unused. Shepherd no longer returns `action: rebase` from `iterate`; branch update and conflict handling are performed inside the `fix_code` instructions instead of via a separate rebase action. It is retained only for backward-compatible configuration parsing and may be removed in a future cleanup. Do not rely on changing this flag to affect runtime behavior.
 
 ### `actions.autoMarkReady` — default `true`
 

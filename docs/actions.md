@@ -201,45 +201,11 @@ Other body-line variants: `CANCEL: PR #42 is closed — stopping monitor`, `CANC
 
 ## `rebase`
 
-Rebases the branch on top of its base to clear merge conflicts.
+> **This action is no longer emitted by `iterate`.** Branch rebasing is now handled inside the `fix_code` instructions (see below). The `rebase` action type and its `## Instructions` format are preserved here for reference, but the CLI will not produce `[REBASE]` output in current releases.
 
-**Trigger:** `fix_code` path when `mergeStatus.status === "CONFLICTS"` and the base branch is resolvable. Also emitted explicitly by the `fix_code` handler for CONFLICTS-only PRs (no threads/comments/reviews) to avoid a separate tick.
+Rebases the branch on top of its base to bring it up to date with the target branch.
 
-> Note: merge conflicts (`CONFLICTS`) route to `fix_code`, not `rebase` — conflicts need manual resolution during the rebase. The `fix_code` runbook always emits a rebase step when the PR is in `CONFLICTS`, even without any threads/comments/checks/reviews; the wording switches from the clean `rebase && push` one-liner to an explicit "Rebase with conflict resolution" step that handles `git rebase --continue` loops before pushing.
-
-**CLI side-effects:** None. The CLI uses the base branch already returned in the GraphQL batch (`baseRefName` → `ShepherdReport.baseBranch`), validates it locally, and pre-builds the shell script.
-
-**Exit code:** 1
-
-**Markdown output:**
-
-````markdown
-# PR #42 [REBASE]
-
-**status** `FAILING` · **merge** `BEHIND` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 2 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 600 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
-
-Branch is behind main — rebasing to pick up latest changes
-
-```bash
-if ! git diff --quiet || ! git diff --cached --quiet; then
-  echo "SKIP rebase: dirty worktree (uncommitted changes present)"
-  exit 1
-fi
-git fetch origin && git rebase origin/main && git push --force-with-lease
-```
-
-## Instructions
-
-1. Copy the shell script from the ` ```bash ` block above and run it in Bash.
-2. End this iteration — the next cron fire will check CI after the rebase.
-````
-
-The dirty-worktree guard exits 1 on skip, so the monitor SKILL sees a non-zero exit rather than silently counting the iteration as successful.
-
-**Base branch determination:** The base branch comes from the GraphQL batch (`ShepherdReport.baseBranch`) — no extra network call is needed. `validateBaseBranch` emits `[ESCALATE]` with trigger `base-branch-unknown` if the value is empty or contains characters outside `[A-Za-z0-9._/-]` — force-pushing onto the wrong base would be catastrophic for a PR that actually targets e.g. `release/2026.04`.
-
-**What the monitor does:** Follow `## Instructions` — extract the shell script from the ` ```bash ` block and run it in Bash, then end the iteration.
+**Trigger:** Previously emitted when a branch was `BEHIND` its base and no other actionable items were pending. Removed in favour of embedding the rebase step inside `fix_code` when conflicts are present.
 
 ---
 
