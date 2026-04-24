@@ -3,7 +3,6 @@ import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { parse } from "yaml";
 import builtins from "../config.json" with { type: "json" };
-import { applyCompat } from "./compat.mts";
 
 export interface PrShepherdConfig {
   cache: {
@@ -49,7 +48,6 @@ export interface PrShepherdConfig {
   };
   actions: {
     autoResolveOutdated: boolean;
-    autoRebase: boolean;
     autoMarkReady: boolean;
     /** When true, the resolve skill prefers applying reviewer suggestion blocks as a commit over manual edits. */
     commitSuggestions: boolean;
@@ -114,10 +112,9 @@ export function loadConfig(): PrShepherdConfig {
   try {
     const raw = readFileSync(rcPath, "utf8");
     const parsed = (parse(raw) ?? {}) as Record<string, unknown>;
-    const compat = applyCompat(parsed);
     cached = deepMerge(
       defaults as unknown as Record<string, unknown>,
-      compat,
+      parsed,
     ) as unknown as PrShepherdConfig;
     return cached;
   } catch (err) {

@@ -56,7 +56,7 @@ See [ready-delay.md](ready-delay.md) for full lifecycle.
 
 ### 3.5. Stall guard
 
-**What:** After building `base` from the sweep results, `applyStallGuard` is called for every non-terminal action (`wait`, `fix_code`, `rerun_ci`, `rebase`). It computes a fingerprint of the material iterate inputs:
+**What:** After building `base` from the sweep results, `applyStallGuard` is called for every non-terminal action (`wait`, `fix_code`, `rerun_ci`). It computes a fingerprint of the material iterate inputs:
 
 - HEAD SHA (from `git rev-parse HEAD`)
 - Action about to be emitted

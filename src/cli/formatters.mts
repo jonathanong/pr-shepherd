@@ -1,5 +1,4 @@
-export { formatIterateResult, formatChecksSection } from "./iterate-formatter.mts";
-export { formatFixCodeResult, blockquote } from "./fix-formatter.mts";
+export { formatIterateResult } from "./iterate-formatter.mts";
 
 import type { FetchResult } from "../commands/resolve.mts";
 import type { CommitSuggestionResult } from "../types.mts";

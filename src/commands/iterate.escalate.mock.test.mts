@@ -160,7 +160,6 @@ function defaultConfig() {
     mergeStatus: { blockingReviewerLogins: ["copilot"] },
     actions: {
       autoResolveOutdated: true,
-      autoRebase: true,
       autoMarkReady: true,
       commitSuggestions: true,
     },
@@ -220,7 +219,7 @@ const THREAD = {
 };
 
 describe("runIterate — escalate (fix-thrash)", () => {
-  it("escalates when a thread has been attempted >= maxFixAttempts times", async () => {
+  it("escalates when a thread has been attempted >= fixAttemptsPerThread times", async () => {
     mockReadFixAttempts.mockResolvedValue({ headSha: "abc123", threadAttempts: { "thread-1": 3 } });
     mockRunCheck.mockResolvedValue(
       makeReport({

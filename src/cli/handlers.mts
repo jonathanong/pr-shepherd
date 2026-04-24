@@ -9,11 +9,9 @@ import {
   getFlag,
   hasFlag,
   parseStatusPrNumbers,
-  parseDurationToMinutes,
   parseIntStrict,
-  iterateActionToExitCode,
-  deriveSimpleReady,
 } from "./args.mts";
+import { parseDurationToMinutes, iterateActionToExitCode, deriveSimpleReady } from "./exit-codes.mts";
 import { formatCommitSuggestionResult, formatIterateResult } from "./formatters.mts";
 
 export async function handleCommitSuggestion(args: string[]): Promise<void> {

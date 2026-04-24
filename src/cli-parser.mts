@@ -22,7 +22,8 @@ import { runCheck } from "./commands/check.mts";
 import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
 import { formatJson } from "./reporters/json.mts";
 import { formatText } from "./reporters/text.mts";
-import { parseCommonArgs, getFlag, hasFlag, parseList, statusToExitCode } from "./cli/args.mts";
+import { parseCommonArgs, getFlag, hasFlag, parseList } from "./cli/args.mts";
+import { statusToExitCode } from "./cli/exit-codes.mts";
 import { formatFetchResult, formatMutateResult } from "./cli/formatters.mts";
 import {
   handleCommitSuggestion,

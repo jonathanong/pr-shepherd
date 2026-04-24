@@ -28,7 +28,6 @@ export function statusToExitCode(status: string): number {
 export function iterateActionToExitCode(action: ShepherdAction): number {
   switch (action) {
     case "fix_code":
-    case "rebase":
       return 1;
     case "cancel":
       return 2;

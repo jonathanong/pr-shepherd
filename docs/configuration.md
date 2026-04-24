@@ -35,7 +35,6 @@ mergeStatus:
 
 actions:
   autoResolveOutdated: true
-  autoRebase: true
   autoMarkReady: true
   commitSuggestions: true
 
@@ -70,7 +69,6 @@ iterate:
 | `checks.ciTriggerEvents`                    | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos)                                  |
 | `mergeStatus.blockingReviewerLogins`        | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                            |
 | `actions.autoResolveOutdated`               | `true`                                    | Auto-resolve threads that point to code no longer in the PR diff                                                  |
-| `actions.autoRebase`                        | `true`                                    | Emit `rebase` when the branch must be rebased during `fix_code`                                                   |
 | `actions.autoMarkReady`                     | `true`                                    | Emit `mark_ready` when a draft PR's CI goes clean                                                                 |
 | `actions.commitSuggestions`                 | `true`                                    | Route `/pr-shepherd:resolve` through `commit-suggestion` (singular) for threads with a ` ```suggestion ` block    |
 
@@ -233,10 +231,6 @@ These flags control whether shepherd automatically performs each class of mutati
 
 When `true`, shepherd automatically resolves threads that GitHub has marked `isOutdated` at the start of each tick. Disable if your team uses outdated threads as a deliberate signal (e.g. "fix this when you rebase").
 
-### `actions.autoRebase` — default `true`
-
-This flag is currently unused. Shepherd no longer returns `action: rebase` from `iterate`; branch update and conflict handling are performed inside the `fix_code` instructions instead of via a separate rebase action. It is retained only for backward-compatible configuration parsing and may be removed in a future cleanup. Do not rely on changing this flag to affect runtime behavior.
-
 ### `actions.autoMarkReady` — default `true`
 
 When `true`, shepherd converts a draft PR to ready-for-review once all checks pass and the ready-delay has elapsed.
@@ -259,23 +253,3 @@ Disable if you want the agent to read and re-implement every suggestion (e.g. be
 | `PR_SHEPHERD_CACHE_TTL_SECONDS` | Override `cache.ttlSeconds`. Precedence: `--cache-ttl` > this env var > RC/config value.                         |
 | `GH_TOKEN` / `GITHUB_TOKEN`     | GitHub auth token. Resolution order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` fallback (requires `gh` CLI). |
 
-## Deprecated keys
-
-The following keys from earlier versions are still accepted but emit a deprecation warning to stderr. They will be removed in a future release.
-
-| Old key                          | New key                                                   |
-| -------------------------------- | --------------------------------------------------------- |
-| `iterate.maxFixAttempts`         | `iterate.fixAttemptsPerThread`                            |
-| `watch.intervalDefault`          | `watch.interval`                                          |
-| `watch.readyDelayMinutesDefault` | `watch.readyDelayMinutes`                                 |
-| `watch.expiresHoursDefault`      | `watch.expiresHours`                                      |
-| `resolve.shaPollIntervalMs`      | `resolve.shaPoll.intervalMs`                              |
-| `resolve.shaPollMaxAttempts`     | `resolve.shaPoll.maxAttempts`                             |
-| `checks.relevantEvents`          | `checks.ciTriggerEvents`                                  |
-| `checks.logLinesKept`            | _(removed)_                                               |
-| `checks.logExcerptMaxChars`      | _(removed)_                                               |
-| `baseBranch`                     | _(removed — auto-detected from PR)_                       |
-| `minimizeBots`                   | _(removed)_                                               |
-| `cancelCiOnFailure`              | _(removed)_                                               |
-| `execution.maxBufferMb`          | _(removed — no subprocess buffer caps with native fetch)_ |
-| `execution.triageLogBufferMb`    | _(removed — no subprocess buffer caps with native fetch)_ |

@@ -57,16 +57,6 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
     return { ...base, action: "rerun_ci", log: "RERAN: run-99 (typecheck — transient)", reran: [] };
   if (action === "mark_ready")
     return { ...base, action: "mark_ready", markedReady: true, log: "MARKED READY: PR 42" };
-  if (action === "rebase")
-    return {
-      ...base,
-      action: "rebase",
-      rebase: {
-        reason: "BEHIND + flaky CI — rebasing onto origin/main",
-        shellScript:
-          'if ! git diff --quiet || ! git diff --cached --quiet; then\n  echo "SKIP rebase: dirty worktree"\n  exit 1\nfi\ngit fetch origin && git rebase origin/main && git push --force-with-lease',
-      },
-    };
   if (action === "fix_code") {
     return {
       ...base,
@@ -436,7 +426,6 @@ describe("main — iterate text format (fix_code and checks)", () => {
       "rerun_ci",
       "mark_ready",
       "cancel",
-      "rebase",
       "escalate",
       "fix_code",
     ] as const) {
