@@ -23,7 +23,9 @@ vi.mock("node:child_process", () => ({
     const cb = typeof optsOrCb === "function" ? optsOrCb : maybeCb!;
     mockExecFile(cmd, args)
       .then((result: { stdout: string; stderr: string }) => cb(null, result))
-      .catch((err: Error) => cb(err, { stdout: "", stderr: "" }));
+      .catch((err: Error & { stderr?: string }) =>
+        cb(err, { stdout: "", stderr: err.stderr ?? "" }),
+      );
   },
 }));
 
