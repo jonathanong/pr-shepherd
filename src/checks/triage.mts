@@ -12,6 +12,12 @@
  * For all checks with a non-null runId, the jobs API is called once per runId
  * (results are cached across checks that share a run) to fetch workflow name
  * and, for actionable checks, the first failed step name. No log fetching is done.
+ *
+ * Note on infrastructure-killed FAILURE runs: GitHub reports these as
+ * conclusion === "FAILURE", so they classify as "actionable". The jobs API
+ * surfaces their failedStep (e.g. "Set up job") which gives the agent a
+ * GitHub-native signal to distinguish runner setup deaths from real test
+ * failures — without any log-pattern analysis at the CLI level.
  */
 
 import { rest } from "../github/http.mts";

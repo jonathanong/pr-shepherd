@@ -2,8 +2,9 @@
  * Projections for the agent-facing iterate output.
  *
  * These strip fields that are always-false by the time items reach iterate
- * (isResolved, isOutdated, isMinimized, createdAtUnix) and metadata that the
- * monitor prompt never reads (detailsUrl, event, status, conclusion, category).
+ * (isResolved, isOutdated, isMinimized, createdAtUnix) and check metadata the
+ * monitor prompt never reads (event, status, conclusion, category).
+ * detailsUrl is preserved in AgentCheck as a fallback for external status checks.
  * The original domain types are preserved for check command output.
  */
 
