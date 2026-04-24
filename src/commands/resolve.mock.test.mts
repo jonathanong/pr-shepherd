@@ -42,7 +42,7 @@ const mockAutoResolveOutdated = vi.mocked(autoResolveOutdated);
 const mockApplyResolveOptions = vi.mocked(applyResolveOptions);
 const mockLoadConfig = vi.mocked(loadConfig);
 
-const BASE_OPTS = { format: "text" as const, noCache: false, cacheTtlSeconds: 300 };
+const BASE_OPTS = { format: "text" as const, format: "text" as const };
 
 function makeBatchData(overrides: Partial<BatchPrData> = {}): BatchPrData {
   return {

@@ -1,17 +1,14 @@
 /**
  * CLI argument-parsing helpers extracted from cli.mts for testability.
- * Note: parseCommonArgs calls loadConfig() for cache TTL defaults.
  */
 
 import { parseArgs } from "node:util";
-import { loadConfig } from "../config/load.mts";
 import type { GlobalOptions } from "../types.mts";
 
 // Flags that consume the next argument as their value (used for PR-number
 // detection only — prevents a flag's value from being mistaken for a PR number).
 const FLAGS_WITH_VALUES = new Set([
   "--format",
-  "--cache-ttl",
   "--ready-delay",
   "--cooldown-seconds",
   "--stall-timeout",
@@ -29,7 +26,6 @@ const FLAGS_WITH_VALUES = new Set([
 // for PR-number detection — so removed flags don't silently cause their
 // numeric value to be misidentified as the PR number.
 const BOOLEAN_FLAGS = new Set([
-  "--no-cache",
   "--fetch",
   "--no-auto-mark-ready",
   "--no-auto-cancel-actionable",
@@ -58,8 +54,6 @@ export interface ParsedArgs {
 }
 
 export function parseCommonArgs(args: string[]): ParsedArgs {
-  const config = loadConfig();
-
   const { values, tokens } = parseArgs({
     args,
     strict: false,
@@ -67,17 +61,10 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
     tokens: true,
     options: {
       format: { type: "string" },
-      "cache-ttl": { type: "string" },
-      "no-cache": { type: "boolean" },
     },
   });
 
   const format = (values.format ?? "text") as string as "text" | "json";
-  const noCache = (values["no-cache"] ?? false) as boolean;
-  const cacheTtlStr = values["cache-ttl"] as string | undefined;
-  const cacheTtlSeconds = cacheTtlStr
-    ? parseIntStrict(cacheTtlStr, "--cache-ttl")
-    : config.cache.ttlSeconds;
 
   // Build the set of arg indices consumed by global flags so we can strip
   // them from `extra`.  Subcommand-specific flags are left untouched.
@@ -85,7 +72,7 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
   for (const tok of tokens ?? []) {
     if (
       tok.kind === "option" &&
-      (tok.name === "format" || tok.name === "cache-ttl" || tok.name === "no-cache")
+      tok.name === "format"
     ) {
       consumedIndices.add(tok.index);
       // When the value is a separate arg (--flag value, not --flag=value),
@@ -136,7 +123,7 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
 
   return {
     prNumber,
-    global: { format, noCache, cacheTtlSeconds },
+    global: { format },
     extra,
   };
 }

@@ -117,7 +117,7 @@ const FILE_CONTENT =
   "line6\n" +
   "line7\n";
 
-const GLOBAL_OPTS = { format: "text" as const, noCache: false, cacheTtlSeconds: 300 };
+const GLOBAL_OPTS = { format: "text" as const, format: "text" as const };
 
 function makeGitSuccess(stdout = ""): Promise<{ stdout: string; stderr: string }> {
   return Promise.resolve({ stdout, stderr: "" });

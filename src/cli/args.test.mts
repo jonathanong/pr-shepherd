@@ -30,20 +30,20 @@ describe("parseIntStrict", () => {
   });
 
   it("throws for a float string like '10.5'", () => {
-    expect(() => parseIntStrict("10.5", "--cache-ttl")).toThrow(
-      'Invalid value for --cache-ttl: "10.5" is not an integer',
+    expect(() => parseIntStrict("10.5", "--cooldown-seconds")).toThrow(
+      'Invalid value for --cooldown-seconds: "10.5" is not an integer',
     );
   });
 
   it("throws for a partial integer like '10abc'", () => {
-    expect(() => parseIntStrict("10abc", "--cache-ttl")).toThrow(
-      'Invalid value for --cache-ttl: "10abc" is not an integer',
+    expect(() => parseIntStrict("10abc", "--cooldown-seconds")).toThrow(
+      'Invalid value for --cooldown-seconds: "10abc" is not an integer',
     );
   });
 
   it("throws for a non-numeric string", () => {
-    expect(() => parseIntStrict("abc", "--cache-ttl")).toThrow(
-      'Invalid value for --cache-ttl: "abc" is not an integer',
+    expect(() => parseIntStrict("abc", "--cooldown-seconds")).toThrow(
+      'Invalid value for --cooldown-seconds: "abc" is not an integer',
     );
   });
 });
@@ -62,7 +62,7 @@ describe("getFlag", () => {
   });
 
   it("returns null when flag is absent", () => {
-    expect(getFlag(["--no-cache"], "--format")).toBeNull();
+    expect(getFlag(["--dry-run"], "--format")).toBeNull();
   });
 
   it("returns null when flag is last arg with no value", () => {
@@ -76,11 +76,11 @@ describe("getFlag", () => {
 
 describe("hasFlag", () => {
   it("returns true when flag is present", () => {
-    expect(hasFlag(["--no-cache", "42"], "--no-cache")).toBe(true);
+    expect(hasFlag(["--dry-run", "42"], "--dry-run")).toBe(true);
   });
 
   it("returns false when flag is absent", () => {
-    expect(hasFlag(["--format", "json"], "--no-cache")).toBe(false);
+    expect(hasFlag(["--format", "json"], "--dry-run")).toBe(false);
   });
 });
 
@@ -120,7 +120,7 @@ describe("parseStatusPrNumbers", () => {
   });
 
   it("skips boolean flags", () => {
-    expect(parseStatusPrNumbers(["--no-cache", "42"])).toEqual([42]);
+    expect(parseStatusPrNumbers(["--dry-run", "42"])).toEqual([42]);
   });
 
   it("returns empty for no PR numbers", () => {
@@ -136,11 +136,6 @@ describe("parseCommonArgs — PR number detection", () => {
   it("extracts PR number from positional arg", () => {
     const { prNumber } = parseCommonArgs(["42"]);
     expect(prNumber).toBe(42);
-  });
-
-  it("does NOT treat --cache-ttl value as PR number", () => {
-    const { prNumber } = parseCommonArgs(["--cache-ttl", "30"]);
-    expect(prNumber).toBeUndefined();
   });
 
   it("does NOT treat unknown flag values as PR numbers", () => {
@@ -163,11 +158,6 @@ describe("parseCommonArgs — PR number detection", () => {
     expect(g.format).toBe("text");
   });
 
-  it("sets noCache=true when --no-cache is present", () => {
-    const { global: g } = parseCommonArgs(["--no-cache"]);
-    expect(g.noCache).toBe(true);
-  });
-
   it("keeps subcommand-specific flags in extra", () => {
     const { extra } = parseCommonArgs(["--format", "json", "--cooldown-seconds", "60"]);
     expect(extra).toContain("--cooldown-seconds");
@@ -175,10 +165,10 @@ describe("parseCommonArgs — PR number detection", () => {
   });
 
   it("strips global flags from extra", () => {
-    const { extra } = parseCommonArgs(["--format", "json", "--no-cache"]);
+    const { extra } = parseCommonArgs(["--format", "json", "--cooldown-seconds", "60"]);
     expect(extra).not.toContain("--format");
     expect(extra).not.toContain("json");
-    expect(extra).not.toContain("--no-cache");
+    expect(extra).toContain("--cooldown-seconds");
   });
 
   it("strips inline --format=json form from extra", () => {

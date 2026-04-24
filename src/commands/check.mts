@@ -15,7 +15,6 @@
 
 import { fetchPrBatch } from "../github/batch.mts";
 import { getRepoInfo, getCurrentPrNumber, getMergeableState } from "../github/client.mts";
-import { cacheGet, cacheSet } from "../cache/file-cache.mts";
 import { classifyChecks, getCiVerdict } from "../checks/classify.mts";
 import { triageFailingChecks } from "../checks/triage.mts";
 import { getOutdatedThreads } from "../comments/outdated.mts";
@@ -23,7 +22,7 @@ import { autoResolveOutdated } from "../comments/resolve.mts";
 import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
 import { computeStatus } from "./check-status.mts";
-import type { GlobalOptions, ShepherdReport, ClassifiedCheck, BatchPrData } from "../types.mts";
+import type { GlobalOptions, ShepherdReport, ClassifiedCheck } from "../types.mts";
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -44,29 +43,11 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
     throw new Error("No open PR found for current branch. Pass a PR number explicitly.");
   }
 
-  const cacheKey = { owner: repo.owner, repo: repo.name, pr: prNumber, shape: "check" };
-  // When autoResolve is enabled the command will mutate (resolve threads, minimize
-  // comments) — always bypass cache so we act on fresh data, not a stale snapshot.
-  const cacheOpts = {
-    disabled: opts.noCache || opts.autoResolve,
-    ttlSeconds: opts.cacheTtlSeconds,
-  };
-
-  // Try cache first.
-  let batchData = await cacheGet<BatchPrData>(cacheKey, cacheOpts);
-
-  if (batchData === null) {
-    // Only paginate APPROVED reviews when the caller will actually minimize them.
-    // Otherwise the first-page cap of 50 (already in the batch) is plenty — no extra round-trip.
-    const paginateApprovedReviews = loadConfig().iterate.minimizeReviewSummaries.approvals;
-    const result = await fetchPrBatch(prNumber, repo, { paginateApprovedReviews });
-    batchData = result.data;
-    // Don't cache UNKNOWN merge state — it's transient and would poison the
-    // cache for the full TTL window, causing stale UNKNOWN on the next sweep.
-    if (batchData.mergeable !== "UNKNOWN" && batchData.mergeStateStatus !== "UNKNOWN") {
-      await cacheSet(cacheKey, batchData, cacheOpts);
-    }
-  }
+  // Only paginate APPROVED reviews when the caller will actually minimize them.
+  // Otherwise the first-page cap of 50 (already in the batch) is plenty — no extra round-trip.
+  const paginateApprovedReviews = loadConfig().iterate.minimizeReviewSummaries.approvals;
+  const result = await fetchPrBatch(prNumber, repo, { paginateApprovedReviews });
+  let batchData = result.data;
 
   // GraphQL sometimes returns UNKNOWN for mergeable/mergeStateStatus while the
   // REST API already has the correct value. Fall back to REST in that case.

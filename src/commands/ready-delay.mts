@@ -95,7 +95,7 @@ function readySincePath(pr: number, owner: string, repo: string): string {
       throw new Error(`Invalid path segment "${field}": ${value}`);
     }
   }
-  const base = process.env["PR_SHEPHERD_CACHE_DIR"] ?? join(tmpdir(), "pr-shepherd-cache");
+  const base = process.env["PR_SHEPHERD_STATE_DIR"] ?? join(tmpdir(), "pr-shepherd-state");
   return join(base, `${owner}-${repo}`, String(pr), "ready-since.txt");
 }
 

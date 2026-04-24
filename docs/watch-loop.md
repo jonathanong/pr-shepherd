@@ -19,7 +19,7 @@ The `/pr-shepherd:monitor <PR>` slash command starts a cron loop that polls PR s
 3. **Each tick runs `shepherd iterate`**
    - The cron prompt runs (single Bash invocation):
      ```bash
-     pr-shepherd iterate <PR> --no-cache
+     pr-shepherd iterate <PR>
      ```
    - Exit codes 0, 1, 2, and 3 are all valid (not errors).
 

@@ -44,12 +44,12 @@ The monitor skill tags each cron job with `# pr-shepherd-loop:pr=<N>` so `CronLi
 
 By default only `pull_request` and `pull_request_target` events count toward CI readiness. Change `checks.ciTriggerEvents` in `src/config.json` or `.pr-shepherdrc.yml` if your workflow uses different events.
 
-## 4. Rename env vars and cache directories
+## 4. Rename env vars and state directories
 
 If you need multiple versions of shepherd running simultaneously, change:
 
-- `PR_SHEPHERD_CACHE_DIR` env var in `src/cache/file-cache.mts` and `src/commands/ready-delay.mts`
-- The `pr-shepherd-cache` base directory name in the same files
+- `PR_SHEPHERD_STATE_DIR` env var in `src/state/fix-attempts.mts`, `src/state/iterate-stall.mts`, and `src/commands/ready-delay.mts`
+- The `pr-shepherd-state` base directory name in the same files
 
 ## 5. Extend the action dispatch
 

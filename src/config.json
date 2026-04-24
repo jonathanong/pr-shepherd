@@ -1,7 +1,4 @@
 {
-  "cache": {
-    "ttlSeconds": 300
-  },
   "iterate": {
     "cooldownSeconds": 30,
     "fixAttemptsPerThread": 3,

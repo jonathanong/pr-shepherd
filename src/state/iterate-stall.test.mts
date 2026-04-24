@@ -4,18 +4,18 @@ import { rm, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { readStallState, writeStallState, type StallState } from "./iterate-stall.mts";
 
-let testCacheDir: string;
+let testStateDir: string;
 
 const testKey = { owner: "test-owner", repo: "test-repo", pr: 123 };
 
 beforeEach(() => {
-  testCacheDir = `${process.env["TMPDIR"] ?? "/tmp"}/shepherd-stall-test-${randomBytes(4).toString("hex")}`;
-  process.env["PR_SHEPHERD_CACHE_DIR"] = testCacheDir;
+  testStateDir = `${process.env["TMPDIR"] ?? "/tmp"}/shepherd-stall-test-${randomBytes(4).toString("hex")}`;
+  process.env["PR_SHEPHERD_STATE_DIR"] = testStateDir;
 });
 
 afterEach(async () => {
-  delete process.env["PR_SHEPHERD_CACHE_DIR"];
-  await rm(testCacheDir, { recursive: true, force: true });
+  delete process.env["PR_SHEPHERD_STATE_DIR"];
+  await rm(testStateDir, { recursive: true, force: true });
 });
 
 describe("readStallState — miss", () => {
@@ -27,7 +27,7 @@ describe("readStallState — miss", () => {
 
 describe("readStallState — invalid JSON", () => {
   it("returns null instead of throwing", async () => {
-    const dir = join(testCacheDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr));
+    const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr));
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, "iterate-stall.json"), "not json", "utf8");
     const result = await readStallState(testKey);
@@ -37,7 +37,7 @@ describe("readStallState — invalid JSON", () => {
 
 describe("readStallState — invalid shape (valid JSON but wrong types)", () => {
   it("returns null when fingerprint is missing", async () => {
-    const dir = join(testCacheDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr));
+    const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr));
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, "iterate-stall.json"), JSON.stringify({ firstSeenAt: 1000 }), "utf8");
     const result = await readStallState(testKey);
@@ -45,7 +45,7 @@ describe("readStallState — invalid shape (valid JSON but wrong types)", () => 
   });
 
   it("returns null when firstSeenAt is not a finite number", async () => {
-    const dir = join(testCacheDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr));
+    const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr));
     await mkdir(dir, { recursive: true });
     await writeFile(
       join(dir, "iterate-stall.json"),
@@ -57,7 +57,7 @@ describe("readStallState — invalid shape (valid JSON but wrong types)", () => 
   });
 
   it("returns null when firstSeenAt is NaN", async () => {
-    const dir = join(testCacheDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr));
+    const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr));
     await mkdir(dir, { recursive: true });
     await writeFile(
       join(dir, "iterate-stall.json"),
@@ -94,11 +94,11 @@ describe("readStallState — unsafe key segments", () => {
 });
 
 describe("writeStallState — fire and forget", () => {
-  it("does not throw when the cache dir is not writable", async () => {
-    const collision = join(testCacheDir, "collision");
-    await mkdir(testCacheDir, { recursive: true });
+  it("does not throw when the state dir is not writable", async () => {
+    const collision = join(testStateDir, "collision");
+    await mkdir(testStateDir, { recursive: true });
     await writeFile(collision, "blocker", "utf8");
-    process.env["PR_SHEPHERD_CACHE_DIR"] = collision;
+    process.env["PR_SHEPHERD_STATE_DIR"] = collision;
     await expect(
       writeStallState({ owner: "a", repo: "b", pr: 1 }, { fingerprint: "x", firstSeenAt: 1 }),
     ).resolves.toBeUndefined();

@@ -65,7 +65,7 @@ See [ready-delay.md](ready-delay.md) for full lifecycle.
 - Sorted actionable thread/comment/review IDs
 - Sorted review-summary minimize IDs
 
-The fingerprint and a `firstSeenAt` timestamp are persisted to `$TMPDIR/pr-shepherd-cache/<owner>-<repo>/<pr>/iterate-stall.json`.
+The fingerprint and a `firstSeenAt` timestamp are persisted to `$TMPDIR/pr-shepherd-state/<owner>-<repo>/<pr>/iterate-stall.json`.
 
 - **Fingerprint matches and `now − firstSeenAt ≥ stallTimeoutSeconds`** → return `action: 'escalate'` with trigger `stall-timeout`.
 - **Fingerprint matches but within threshold** → preserve `firstSeenAt`, return the original action.

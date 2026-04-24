@@ -49,8 +49,4 @@ The generic paginator is in `github/pagination.mts`. It accepts a `direction` pa
 
 `graphqlWithRateLimit` (in `github/client.mts`) parses the `x-ratelimit-remaining` header from GitHub's response and returns it in `BatchResult.rateLimit`. The value is available for callers to inspect; shepherd does not log warnings at any threshold by default.
 
-The 5-minute cache means a typical idle watch loop costs **zero API calls** per tick when nothing has changed.
-
-## `$PR_SHEPHERD_CACHE_TTL_SECONDS`
-
-Controls the batch-read cache TTL. When unset, defaults to 300 seconds (5 minutes). Can also be set per-invocation with `--cache-ttl <N>`. See [cache.md](cache.md).
+Each iterate tick fetches fresh data from the GitHub GraphQL API — there is no local cache. Rate limit consumption is one batched request per tick.

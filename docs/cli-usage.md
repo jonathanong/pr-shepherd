@@ -16,11 +16,9 @@ pr-shepherd status PR1 [PR2 …]
 
 All subcommands accept:
 
-| Flag                  | Default | Description                                                                         |
-| --------------------- | ------- | ----------------------------------------------------------------------------------- |
-| `--format text\|json` | `text`  | Output format                                                                       |
-| `--no-cache`          | false   | Bypass the 5-minute file cache                                                      |
-| `--cache-ttl N`       | `300`   | Cache TTL in seconds; takes precedence over `PR_SHEPHERD_CACHE_TTL_SECONDS` env var |
+| Flag                  | Default | Description    |
+| --------------------- | ------- | -------------- |
+| `--format text\|json` | `text`  | Output format  |
 
 ### pr-shepherd check [PR]
 
@@ -29,7 +27,6 @@ Read-only PR status snapshot. Fetches CI results, merge state, and review commen
 ```sh
 pr-shepherd check           # infer PR from current branch
 pr-shepherd check 42
-pr-shepherd check 42 --no-cache
 ```
 
 Exit codes: `0` READY · `2` IN_PROGRESS · `3` UNRESOLVED_COMMENTS · `1` all other statuses
@@ -226,8 +223,8 @@ If `commit-suggestion` exits `1`, apply the fix manually as a regular code edit.
 One monitor tick: classifies current PR state and emits a single action. Used by the cron loop — the monitor skill calls this on each tick and follows the `## Instructions` section verbatim. See [iterate-flow.md](iterate-flow.md) for the decision tree and [actions.md](actions.md) for every action's full output shape.
 
 ```sh
-pr-shepherd iterate 42 --no-cache
-pr-shepherd iterate 42 --no-cache --ready-delay 15m  # override ready-delay for this run
+pr-shepherd iterate 42
+pr-shepherd iterate 42 --ready-delay 15m  # override ready-delay for this run
 ```
 
 **Flags:**

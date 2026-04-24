@@ -14,8 +14,7 @@ Quick entry point. For a command overview see [`../README.md`](../README.md).
 | [iterate-flow.md](iterate-flow.md)       | Full 8-step dispatch walkthrough inside `iterate`                 |
 | [actions.md](actions.md)                 | Every action: trigger, side-effects, prescriptive output fields   |
 | [watch-loop.md](watch-loop.md)           | How the monitor skill + `/loop` + `iterate` interact              |
-| [ready-delay.md](ready-delay.md)         | The `ready-since.txt` state machine                               |
-| [cache.md](cache.md)                     | File layout, atomic writes, TTL, bypass paths                     |
+| [ready-delay.md](ready-delay.md)         | Loop-state files: ready-since, fix-attempts, iterate-stall        |
 | [graphql.md](graphql.md)                 | Batch query, pagination strategy, REST fallbacks                  |
 | [checks.md](checks.md)                   | Classify → triage → `failureKind`, event filtering                |
 | [comments.md](comments.md)               | Threads vs comments, outdated detection, push-before-resolve      |

@@ -74,20 +74,6 @@ iterate:
 
 ---
 
-## `cache`
-
-### `cache.ttlSeconds` — default `300`
-
-How long (in seconds) the batch GraphQL response is cached on disk. A cache hit means a cron tick costs zero API calls.
-
-- **Raise** if you're running many parallel shepherd instances and want to reduce API usage.
-- **Lower** (or set to `0`) if you need fresh data on every tick — useful when debugging.
-- **Override per invocation**: `--no-cache` flag or `--cache-ttl N`.
-
-> Interaction: setting `ttlSeconds` shorter than `iterate.cooldownSeconds` means cache is always cold during the cooldown window — no harm, just wasted reads.
-
----
-
 ## `iterate`
 
 ### `iterate.cooldownSeconds` — default `30`
@@ -247,8 +233,7 @@ Disable if you want the agent to read and re-implement every suggestion (e.g. be
 
 ## Environment variables
 
-| Variable                        | Effect                                                                                                           |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `PR_SHEPHERD_CACHE_DIR`         | Override the cache base directory (default `$TMPDIR/pr-shepherd-cache`)                                          |
-| `PR_SHEPHERD_CACHE_TTL_SECONDS` | Override `cache.ttlSeconds`. Precedence: `--cache-ttl` > this env var > RC/config value.                         |
-| `GH_TOKEN` / `GITHUB_TOKEN`     | GitHub auth token. Resolution order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` fallback (requires `gh` CLI). |
+| Variable                    | Effect                                                                                                           |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `PR_SHEPHERD_STATE_DIR`     | Override the loop-state base directory (default `$TMPDIR/pr-shepherd-state`)                                     |
+| `GH_TOKEN` / `GITHUB_TOKEN` | GitHub auth token. Resolution order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` fallback (requires `gh` CLI). |

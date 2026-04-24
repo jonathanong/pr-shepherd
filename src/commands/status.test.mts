@@ -149,7 +149,7 @@ describe("runStatus — PR not found", () => {
   it("throws when pullRequest is null", async () => {
     mockGraphql.mockResolvedValue({ data: { repository: { pullRequest: null } } });
     await expect(
-      runStatus({ prNumbers: [99], format: "text", noCache: false, cacheTtlSeconds: 300 }),
+      runStatus({ prNumbers: [99], format: "text" }),
     ).rejects.toThrow("PR #99 not found");
   });
 });
@@ -181,8 +181,8 @@ describe("runStatus — pagination", () => {
     const [summary] = await runStatus({
       prNumbers: [42],
       format: "text",
-      noCache: false,
-      cacheTtlSeconds: 300,
+      
+      
     });
     expect(summary!.unresolvedThreads).toBe(2);
     expect(mockGraphql).toHaveBeenCalledTimes(2);
@@ -203,8 +203,8 @@ describe("runStatus — pagination", () => {
     const [summary] = await runStatus({
       prNumbers: [42],
       format: "text",
-      noCache: false,
-      cacheTtlSeconds: 300,
+      
+      
     });
     expect(summary!.threadsTruncated).toBe(true);
   });

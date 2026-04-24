@@ -1,4 +1,4 @@
-import { readFixAttempts, writeFixAttempts } from "../../cache/fix-attempts.mts";
+import { readFixAttempts, writeFixAttempts } from "../../state/fix-attempts.mts";
 import { toAgentThread, toAgentComment, toAgentChecks } from "../../reporters/agent.mts";
 import {
   checkEscalateTriggers,

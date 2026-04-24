@@ -88,7 +88,7 @@ function buildLoopPrompt(prNumber: number, loopTag: string): string {
     `**Self-dedup:** Run \`CronList\`. If more than one job contains \`${loopTag}\`, keep the lowest job ID and \`CronDelete\` the rest (ignore errors — a concurrent runner may have already deleted them).`,
     "",
     "Run in a single Bash call:",
-    `  npx pr-shepherd iterate ${prNumber} --no-cache`,
+    `  npx pr-shepherd iterate ${prNumber}`,
     "",
     "Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with `# PR #" +
       prNumber +

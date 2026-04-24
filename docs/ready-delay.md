@@ -19,7 +19,7 @@ updateReadyDelay(pr, isReady, readyDelaySeconds, owner, repo)
 
 ## Marker file
 
-**Path:** `$TMPDIR/pr-shepherd-cache/<owner>-<repo>/<pr>/ready-since.txt`
+**Path:** `$TMPDIR/pr-shepherd-state/<owner>-<repo>/<pr>/ready-since.txt`
 
 **Format:** Unix timestamp in seconds (plain integer string).
 
@@ -44,4 +44,4 @@ If the timestamp in `ready-since.txt` is in the future (e.g., due to a system cl
 | Parameter            | Default                     | How to change                         |
 | -------------------- | --------------------------- | ------------------------------------- |
 | `readyDelaySeconds`  | 600 (10 minutes)            | `--ready-delay 10m` flag on `iterate` |
-| Base cache directory | `$TMPDIR/pr-shepherd-cache` | `PR_SHEPHERD_CACHE_DIR` env var       |
+| Base state directory | `$TMPDIR/pr-shepherd-state` | `PR_SHEPHERD_STATE_DIR` env var       |
