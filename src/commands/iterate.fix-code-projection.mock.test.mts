@@ -295,7 +295,7 @@ describe("runIterate — fix_code agent projection", () => {
     }
   });
 
-  it("emits AgentCheck shape — no logExcerpt/detailsUrl/conclusion on fix.checks", async () => {
+  it("emits AgentCheck shape — no logExcerpt/conclusion/category on fix.checks", async () => {
     const check = makeActionableCheck("run-55");
     mockRunCheck.mockResolvedValue(
       makeReport({
