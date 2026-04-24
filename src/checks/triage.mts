@@ -34,7 +34,7 @@ export function triageFailingChecks(
 // ---------------------------------------------------------------------------
 
 async function triageCheck(check: ClassifiedCheck, repo: RepoInfo): Promise<TriagedCheck> {
-  const failureKind = classifyConclusion(check.conclusion);
+  const failureKind = check.runId === null ? "actionable" : classifyConclusion(check.conclusion);
   if (failureKind !== "actionable" || check.runId === null) {
     return { ...check, failureKind };
   }

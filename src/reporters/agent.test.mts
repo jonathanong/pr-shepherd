@@ -33,7 +33,6 @@ function makeCheck(runId: string | null, name = "typecheck"): TriagedCheck {
     runId,
     category: "failing",
     failureKind: "actionable",
-    logExcerpt: "error TS2345",
   };
 }
 
@@ -63,7 +62,7 @@ describe("toAgentComment", () => {
 });
 
 describe("toAgentCheck", () => {
-  it("keeps name/runId/detailsUrl/failureKind and drops logExcerpt/conclusion/category", () => {
+  it("keeps name/runId/detailsUrl/failureKind and drops conclusion/category; omits failedStep when absent", () => {
     const result = toAgentCheck(makeCheck("run-1"));
     expect(result).toEqual({
       name: "typecheck",

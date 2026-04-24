@@ -132,7 +132,8 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   }
 
   const transientChecks = report.checks.failing.filter(
-    (f) => f.failureKind === "timeout" || f.failureKind === "cancelled",
+    (f) =>
+      (f.failureKind === "timeout" || f.failureKind === "cancelled") && f.runId !== null,
   );
   if (transientChecks.length > 0) {
     return buildRerunCiResult(

@@ -3,8 +3,8 @@
  *
  * These strip fields that are always-false by the time items reach iterate
  * (isResolved, isOutdated, isMinimized, createdAtUnix) and metadata that the
- * monitor prompt never reads (detailsUrl, event, status, conclusion, category,
- * logExcerpt). The original domain types are preserved for check command output.
+ * monitor prompt never reads (detailsUrl, event, status, conclusion, category).
+ * The original domain types are preserved for check command output.
  */
 
 import type {
@@ -30,7 +30,7 @@ export function toAgentCheck(c: TriagedCheck): AgentCheck {
     runId: c.runId,
     detailsUrl: c.detailsUrl,
     failureKind: c.failureKind,
-    failedStep: c.failedStep,
+    ...(c.failedStep !== undefined && { failedStep: c.failedStep }),
   };
 }
 

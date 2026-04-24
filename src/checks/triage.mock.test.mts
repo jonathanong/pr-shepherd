@@ -71,6 +71,13 @@ describe("triageFailingChecks — no runId", () => {
     expect(result!.failureKind).toBe("actionable");
     expect(mockFetch).not.toHaveBeenCalled();
   });
+
+  it("returns actionable (not timeout) for TIMED_OUT when runId is null — no run to rerun", async () => {
+    const check = makeCheck({ runId: null, conclusion: "TIMED_OUT" });
+    const [result] = await triageFailingChecks([check], REPO);
+    expect(result!.failureKind).toBe("actionable");
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
 });
 
 describe("triageFailingChecks — TIMED_OUT", () => {
