@@ -98,24 +98,19 @@ export function formatIterateResult(result: IterateResult): string {
 }
 
 export function formatChecksSection(checks: RelevantCheck[]): string | null {
-  if (checks.length === 0) return null;
+  const failing = checks.filter((c) => c.conclusion !== "SUCCESS");
+  if (failing.length === 0) return null;
   const lines: string[] = ["## Checks", ""];
-  for (const c of checks) {
-    if (c.conclusion === "SUCCESS") {
-      lines.push(`- ✓ \`${c.name}\` — SUCCESS`);
-    } else {
-      const kind = c.failureKind ? ` (${c.failureKind})` : "";
-      const locator = c.runId
-        ? `\`${c.runId}\``
-        : c.detailsUrl
-          ? `external \`${c.detailsUrl}\``
-          : "(no runId)";
-      const prefix = c.workflowName ? `${c.workflowName} › ` : "";
-      lines.push(`- ✗ \`${prefix}${c.name}\`${kind} — ${c.conclusion} · ${locator}`);
-      if (c.failedStep) {
-        lines.push(`  > ${c.failedStep}`);
-      }
-    }
+  for (const c of failing) {
+    const locator = c.runId
+      ? `\`${c.runId}\``
+      : c.detailsUrl
+        ? `external \`${c.detailsUrl}\``
+        : "(no runId)";
+    const prefix = c.workflowName ? `${c.workflowName} › ` : "";
+    lines.push(`- ✗ \`${prefix}${c.name}\` — ${c.conclusion} · ${locator}`);
+    if (c.failedStep) lines.push(`  > ${c.failedStep}`);
+    if (c.summary) lines.push(`  > ${c.summary}`);
   }
   return lines.join("\n");
 }

@@ -29,12 +29,18 @@ export function formatFixCodeResult(
   if (result.fix.checks.length > 0) {
     sections.push("## Failing checks");
     const bullets = result.fix.checks.map((ch) => {
-      const kind = ch.failureKind ?? "actionable";
-      if (ch.runId) return `- \`${ch.runId}\` — \`${ch.name}\` (${kind})`;
-      if (ch.detailsUrl) return `- external \`${ch.detailsUrl}\` — \`${ch.name}\` (${kind})`;
-      return `- (no runId) — \`${ch.name}\` (${kind})`;
+      const prefix = ch.workflowName ? `${ch.workflowName} › ` : "";
+      const locator = ch.runId
+        ? `\`${ch.runId}\``
+        : ch.detailsUrl
+          ? `external \`${ch.detailsUrl}\``
+          : "(no runId)";
+      const lines = [`- ${locator} — \`${prefix}${ch.name}\``];
+      if (ch.failedStep) lines.push(`  > ${ch.failedStep}`);
+      if (ch.summary) lines.push(`  > ${ch.summary}`);
+      return lines.join("\n");
     });
-    sections.push(bullets.join("\n"));
+    sections.push(bullets.join("\n\n"));
   }
 
   if (result.fix.changesRequestedReviews.length > 0) {

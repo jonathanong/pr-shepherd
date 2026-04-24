@@ -39,6 +39,7 @@ export function buildRelevantChecks(report: ShepherdReport): RelevantCheck[] {
         failureKind: c.failureKind,
         workflowName: c.workflowName,
         failedStep: c.failedStep,
+        summary: c.summary,
       },
     ];
   });

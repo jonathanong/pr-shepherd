@@ -35,11 +35,13 @@ export function formatText(report: ShepherdReport): string {
     parts.push("");
     for (const c of failing) {
       const triaged = c as TriagedCheck;
-      const kind = triaged.failureKind ? ` [${triaged.failureKind}]` : "";
       const prefix = triaged.workflowName ? `${triaged.workflowName} › ` : "";
-      parts.push(`- ${prefix}${c.name}${kind}: ${c.conclusion ?? c.status}`);
+      parts.push(`- ${prefix}${c.name}: ${c.conclusion ?? c.status}`);
       if (triaged.failedStep) {
         parts.push(`    failed step: ${triaged.failedStep}`);
+      }
+      if (triaged.summary) {
+        parts.push(`    summary: ${triaged.summary}`);
       }
     }
     parts.push("");

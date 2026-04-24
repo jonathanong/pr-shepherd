@@ -223,9 +223,9 @@ describe("main — iterate text format (fix_code and checks)", () => {
     // Comment section
     expect(out).toContain("### `PRRC_1` (@bot)");
     expect(out).toContain("> please address");
-    // Failing checks — GitHub Actions and external.
-    expect(out).toContain("- `run-42` — `lint` (actionable)");
-    expect(out).toContain("- external `https://app.codecov.io` — `codecov/patch` (actionable)");
+    // Failing checks — GitHub Actions and external (no failureKind label).
+    expect(out).toContain("- `run-42` — `lint`");
+    expect(out).toContain("- external `https://app.codecov.io` — `codecov/patch`");
     // Reviews
     expect(out).toContain("- `REV_1` (@reviewer)");
     // Noise — backticked IDs, comma-separated.
@@ -344,8 +344,8 @@ describe("main — iterate text format (fix_code and checks)", () => {
 
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
-    expect(out).toContain("- external `https://app.codecov.io/a/b` — `codecov/patch` (actionable)");
-    expect(out).toContain("- (no runId) — `mystery-check` (actionable)");
+    expect(out).toContain("- external `https://app.codecov.io/a/b` — `codecov/patch`");
+    expect(out).toContain("- (no runId) — `mystery-check`");
   });
 
   it("## Checks section renders in wait/cancel/rerun_ci actions when checks is non-empty", async () => {
@@ -377,10 +377,10 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(checksIdx).toBeGreaterThan(-1);
     expect(instrIdx).toBeGreaterThan(checksIdx);
 
-    // Passing check: ✓ bullet
-    expect(out).toContain("- ✓ `lint` — SUCCESS");
-    // Failing check: ✗ bullet with failureKind, conclusion, runId
-    expect(out).toContain("- ✗ `test` (actionable) — FAILURE · `run-2`");
+    // Passing checks are not listed — only the count in the summary header matters.
+    expect(out).not.toContain("- ✓ `lint`");
+    // Failing check: ✗ bullet with conclusion and runId (no failureKind label).
+    expect(out).toContain("- ✗ `test` — FAILURE · `run-2`");
     // failedStep rendered as blockquote
     expect(out).toContain("  > Run tests");
   });
@@ -409,27 +409,28 @@ describe("main — iterate text format (fix_code and checks)", () => {
     const out = getStdout();
 
     expect(out).toContain(
-      "- ✗ `codecov/patch` (actionable) — FAILURE · external `https://app.codecov.io/gh/owner/repo/pull/42`",
+      "- ✗ `codecov/patch` — FAILURE · external `https://app.codecov.io/gh/owner/repo/pull/42`",
     );
-    expect(out).toContain("- ✗ `mystery` (cancelled) — FAILURE · (no runId)");
+    expect(out).toContain("- ✗ `mystery` — FAILURE · (no runId)");
   });
 
-  it("## Checks section renders in rerun_ci, mark_ready, cancel, rebase, escalate, fix_code when checks is non-empty", async () => {
-    const passingCheck: import("./types.mts").RelevantCheck = {
+  it("## Checks section renders in rerun_ci, mark_ready, cancel, rebase, escalate, fix_code when checks has failing entries", async () => {
+    const failingCheck: import("./types.mts").RelevantCheck = {
       name: "lint",
-      conclusion: "SUCCESS",
+      conclusion: "FAILURE",
       runId: "run-1",
       detailsUrl: null,
+      failureKind: "actionable",
     };
     // Test each action that had an uncovered checksSection TRUE branch.
     for (const action of ["rerun_ci", "mark_ready", "cancel", "escalate", "fix_code"] as const) {
       const result = makeIterateResult(action);
-      result.checks = [passingCheck];
+      result.checks = [failingCheck];
       mockRunIterate.mockResolvedValue(result as IterateResult);
       await main(["node", "shepherd", "iterate", "42"]);
       const out = getStdout();
       expect(out).toContain("## Checks");
-      expect(out).toContain("- ✓ `lint` — SUCCESS");
+      expect(out).toContain("- ✗ `lint` — FAILURE · `run-1`");
     }
   });
 

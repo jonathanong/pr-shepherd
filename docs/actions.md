@@ -16,9 +16,9 @@ The default output format is Markdown — what you see when running `npx pr-shep
 
 ## Checks
 
-- ✓ `<name>` — SUCCESS
-- ✗ `<name>` (<failureKind>) — <conclusion> · `<runId>`
+- ✗ `<workflowName> › <name>` — <conclusion> · `<runId>`
   > <failedStep>
+  > <summary>
 
 <action-specific body>
 
@@ -34,7 +34,7 @@ Load-bearing conventions (the monitor SKILL depends on these):
 3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … — that tells the monitor exactly what to do. The monitor follows those steps; it does not need its own dispatch table.
 4. Under `[REBASE]`, the shell script is inside a ```bash fenced block — instruction 1 tells the monitor to extract and run it.
 5. Under `[FIX_CODE]`, the `## Post-fix push` section has a `` resolve: `<command>` `` bullet — the instructions reference this bullet so the monitor strips backticks and runs the command.
-6. `## Checks` appears immediately after the base fields in every action where checks were fetched (all actions except `cooldown`). It lists every completed, non-skipped PR CI check — passing entries with ✓, failing entries with ✗ plus `failureKind` and the failed step name (`failedStep`) when available. The section is omitted when there are no checks (e.g. during `cooldown` or when the PR has no CI configured). JSON surfaces the same data as `checks: RelevantCheck[]` on the base object.
+6. `## Checks` appears immediately after the base fields in every action where checks were fetched (all actions except `cooldown`). It lists only **failing** completed, non-skipped PR CI checks — ✗ bullets with conclusion, locator, failed step, and one-line summary when available. Passing checks are omitted; their count is in the `**summary**` line. The section is omitted when there are no failing checks (or during `cooldown` / when the PR has no CI configured). JSON surfaces the same data as `checks: RelevantCheck[]` on the base object.
 
 ---
 
@@ -234,7 +234,8 @@ Actionable work needs a code fix, commit, and push.
 
 ## Failing checks
 
-- `24697658766` — `lint / typecheck / test (22.x)` (actionable)
+- `24697658766` — `CI › lint / typecheck / test (22.x)`
+  > Run tests
 
 ## Changes-requested reviews
 
@@ -272,11 +273,13 @@ Actionable work needs a code fix, commit, and push.
 2. `## Review threads` — each thread under `### <id> — <loc> (@author)` with the full body as a `>` blockquote. Multi-paragraph bodies preserve empty lines as `>` lines, so code blocks and ` ```suggestion ` blocks survive intact.
 3. `## Actionable comments` — same shape as threads minus the `<loc>`.
 4. `## Failing checks` — one bullet per actionable failing check. Shape varies by locator:
-   - ``- `<runId>` — `<name>` (<failureKind|actionable>)`` for GitHub Actions checks.
-   - ``- external `<detailsUrl>` — `<name>` (<failureKind|actionable>)`` for external status checks (codecov, vercel, etc.) with null `runId` but a URL.
-   - ``- (no runId) — `<name>` (<failureKind|actionable>)`` when both are null.
+   - ``- `<runId>` — `<workflowName> › <name>` `` for GitHub Actions checks (`workflowName ›` prefix omitted when unavailable).
+   - ``- external `<detailsUrl>` — `<name>` `` for external status checks (codecov, vercel, etc.) with null `runId` but a URL.
+   - ``- (no runId) — `<name>` `` when both are null.
 
-   The numbered instructions split accordingly: `gh run view <runId> --log-failed` for GitHub Actions, open `detailsUrl` manually for external checks.
+   Each bullet may be followed by one or two `> ` blockquote lines: `failedStep` (GitHub Actions only — the first step that failed), then `summary` (one-line status text from the GitHub UI — e.g. "67.68% of diff hit (target 85.00%)"). Both lines are omitted when not available.
+
+   The numbered instructions split accordingly: `gh run view <runId> --log-failed` for GitHub Actions, open `detailsUrl` manually for external checks (the `summary` blockquote often states the reason so a browser visit may not be needed).
 
 5. `## Changes-requested reviews` — one bullet per `CHANGES_REQUESTED` review: ``- `<reviewId>` (@<author>)``.
 6. `## Noise (minimize only)` — backticked IDs of bot-noise comments (quota warnings, rate-limit acks). Minimize on GitHub but do not act on them.
@@ -293,7 +296,7 @@ Actionable work needs a code fix, commit, and push.
 - `Commit changed files:` is only emitted when there are actual code changes to commit (threads/comments/checks/reviews present). A `CONFLICTS`-only state skips this step.
 - `Keep the PR title and description current:` is emitted immediately after the commit step and uses the same gate (`hasCodeChanges`). A `CONFLICTS`-only dispatch (no code to commit) omits it.
 - The rebase step switches wording based on `mergeStatus.status`. When conflicts are present it emits "Rebase with conflict resolution" and walks through `git rebase --continue` loops; otherwise it emits the clean one-liner `git fetch origin && git rebase origin/<base> && git push --force-with-lease`.
-- `## Failing checks` generates one instruction step per locator type present. When a check has a numeric `runId`, the step says to run `gh run view <runId> --log-failed`. When a check has only a `detailsUrl` (external status check — no `runId`), the step says to open the URL in a browser. When both are absent, the step says to escalate to a human — there is nothing to inspect automatically.
+- `## Failing checks` generates one instruction step per locator type present. When a check has a numeric `runId`, the step says to run `gh run view <runId> --log-failed`. When a check has only a `detailsUrl` (external status check — no `runId`), the step says to open the URL in a browser (the `> summary` blockquote often states the reason inline, so check it first). When both are absent, the step says to escalate to a human — there is nothing to inspect automatically.
 - The `resolve:` instruction is emitted when `resolveCommand.hasMutations` is true — i.e. when at least one of `threads`, `actionableComments`, `noiseCommentIds`, or `reviewSummaryIds` is non-empty. Noise-only and summary-only dispatches also emit the instruction. A `CONFLICTS`-only dispatch (none of those non-empty) omits it.
 - A `Do not re-run \`gh run cancel\``instruction is appended when`cancelled` is non-empty and a push is required — it reminds the monitor that those IDs were cancelled pre-push and new runs have since been triggered.
 - The final "iteration" step has three variants: `Stop this iteration — CI needs time to run on the new push before the next tick.` when a push occurred; `Stop this iteration before the next tick.` when only GitHub mutations were made (no push); `End this iteration.` when no push or mutations occurred.

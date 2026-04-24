@@ -146,6 +146,8 @@ query BatchPr(
                     status
                     conclusion
                     detailsUrl
+                    title
+                    summary
                     checkSuite {
                       workflowRun {
                         event
@@ -156,6 +158,7 @@ query BatchPr(
                     context
                     state
                     targetUrl
+                    description
                   }
                 }
               }
