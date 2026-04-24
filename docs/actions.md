@@ -16,9 +16,9 @@ The default output format is Markdown — what you see when running `npx pr-shep
 
 ## Checks
 
-- ✗ `<workflowName> › <name>` — <conclusion> · `<runId>`
-  > <failedStep>
-  > <summary>
+- ✗ `[<workflowName> › ]<name>` — <conclusion> · `<runId>` | external `<detailsUrl>` | (no runId)
+  > <failedStep>  (when available)
+  > <summary>    (when available)
 
 <action-specific body>
 

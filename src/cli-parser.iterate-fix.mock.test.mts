@@ -434,6 +434,66 @@ describe("main — iterate text format (fix_code and checks)", () => {
     }
   });
 
+  it("## Checks — summary blockquote rendered when present, omitted when absent", async () => {
+    const result = makeIterateResult("wait");
+    result.checks = [
+      {
+        name: "codecov/patch",
+        conclusion: "FAILURE",
+        runId: null,
+        detailsUrl: "https://app.codecov.io",
+        summary: "67.68% of diff hit (target 85.00%)",
+      },
+      {
+        name: "lint",
+        conclusion: "FAILURE",
+        runId: "run-2",
+        detailsUrl: null,
+        // no summary — blockquote line should be absent
+      },
+    ] as import("./types.mts").RelevantCheck[];
+    mockRunIterate.mockResolvedValue(result);
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    // summary rendered as blockquote
+    expect(out).toContain("  > 67.68% of diff hit (target 85.00%)");
+    // check without summary has no trailing blockquote
+    expect(out).toContain("- ✗ `lint` — FAILURE · `run-2`");
+    // multiple failing checks separated by blank line
+    expect(out).toMatch(/codecov\/patch[\s\S]+\n\n- ✗/);
+  });
+
+  it("## Failing checks — summary blockquote rendered when present, omitted when absent", async () => {
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code" || result.fix.mode !== "rebase-and-push") {
+      throw new Error("unreachable");
+    }
+    result.fix.checks = [
+      {
+        name: "codecov/patch",
+        runId: null,
+        detailsUrl: "https://app.codecov.io/a/b",
+        failureKind: "actionable",
+        summary: "67.68% of diff hit (target 85.00%)",
+      },
+      {
+        name: "lint",
+        runId: "run-42",
+        detailsUrl: null,
+        failureKind: "actionable",
+        // no summary
+      },
+    ];
+    mockRunIterate.mockResolvedValue(result);
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    // summary rendered as blockquote
+    expect(out).toContain("  > 67.68% of diff hit (target 85.00%)");
+    // check without summary has no trailing blockquote line for it
+    expect(out).toContain("- `run-42` — `lint`");
+    expect(out).not.toMatch(/`lint`\s*\n\s*>/);
+  });
+
   it("## Checks — failing check with no failureKind omits kind suffix", async () => {
     const result = makeIterateResult("wait");
     result.checks = [

@@ -159,7 +159,7 @@ function extractCheckRunSummary(
   if (t) return t;
   const firstLine = summary
     ?.split("\n")
-    .find((l) => l.trim() !== "")
+    ?.find((l) => l.trim() !== "")
     ?.trim();
   return firstLine || undefined;
 }

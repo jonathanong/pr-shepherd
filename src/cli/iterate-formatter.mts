@@ -100,17 +100,17 @@ export function formatIterateResult(result: IterateResult): string {
 export function formatChecksSection(checks: RelevantCheck[]): string | null {
   const failing = checks.filter((c) => c.conclusion !== "SUCCESS");
   if (failing.length === 0) return null;
-  const lines: string[] = ["## Checks", ""];
-  for (const c of failing) {
+  const bullets = failing.map((c) => {
     const locator = c.runId
       ? `\`${c.runId}\``
       : c.detailsUrl
         ? `external \`${c.detailsUrl}\``
         : "(no runId)";
     const prefix = c.workflowName ? `${c.workflowName} › ` : "";
-    lines.push(`- ✗ \`${prefix}${c.name}\` — ${c.conclusion} · ${locator}`);
-    if (c.failedStep) lines.push(`  > ${c.failedStep}`);
-    if (c.summary) lines.push(`  > ${c.summary}`);
-  }
-  return lines.join("\n");
+    const entry = [`- ✗ \`${prefix}${c.name}\` — ${c.conclusion} · ${locator}`];
+    if (c.failedStep) entry.push(`  > ${c.failedStep}`);
+    if (c.summary) entry.push(`  > ${c.summary}`);
+    return entry.join("\n");
+  });
+  return ["## Checks", "", bullets.join("\n\n")].join("\n");
 }
