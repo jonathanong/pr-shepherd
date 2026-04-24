@@ -9,16 +9,16 @@ const REPO = "test-repo";
 const PR = 42;
 const DELAY = 600; // 10 minutes
 
-let cacheDir: string;
+let stateDir: string;
 
 beforeEach(async () => {
-  cacheDir = await mkdtemp(join(tmpdir(), "shepherd-watch-test-"));
-  process.env["PR_SHEPHERD_CACHE_DIR"] = cacheDir;
+  stateDir = await mkdtemp(join(tmpdir(), "shepherd-watch-test-"));
+  process.env["PR_SHEPHERD_STATE_DIR"] = stateDir;
 });
 
 afterEach(async () => {
-  delete process.env["PR_SHEPHERD_CACHE_DIR"];
-  await rm(cacheDir, { recursive: true, force: true });
+  delete process.env["PR_SHEPHERD_STATE_DIR"];
+  await rm(stateDir, { recursive: true, force: true });
 });
 
 describe("updateReadyDelay", () => {
@@ -40,9 +40,9 @@ describe("updateReadyDelay", () => {
   it("fires shouldCancel when delay has elapsed", async () => {
     // Write a marker from the past (delay + 5 seconds ago)
     const past = Math.floor(Date.now() / 1000) - DELAY - 5;
-    const markerPath = join(cacheDir, `${OWNER}-${REPO}`, String(PR), "ready-since.txt");
+    const markerPath = join(stateDir, `${OWNER}-${REPO}`, String(PR), "ready-since.txt");
     const { mkdir, writeFile } = await import("node:fs/promises");
-    await mkdir(join(cacheDir, `${OWNER}-${REPO}`, String(PR)), { recursive: true });
+    await mkdir(join(stateDir, `${OWNER}-${REPO}`, String(PR)), { recursive: true });
     await writeFile(markerPath, String(past), "utf8");
 
     const state = await updateReadyDelay(PR, true, DELAY, OWNER, REPO);
@@ -54,9 +54,9 @@ describe("updateReadyDelay", () => {
   it("keeps the marker file after shouldCancel fires so subsequent calls also return shouldCancel:true", async () => {
     // Write a past marker
     const past = Math.floor(Date.now() / 1000) - DELAY - 5;
-    const markerPath = join(cacheDir, `${OWNER}-${REPO}`, String(PR), "ready-since.txt");
+    const markerPath = join(stateDir, `${OWNER}-${REPO}`, String(PR), "ready-since.txt");
     const { mkdir, writeFile } = await import("node:fs/promises");
-    await mkdir(join(cacheDir, `${OWNER}-${REPO}`, String(PR)), { recursive: true });
+    await mkdir(join(stateDir, `${OWNER}-${REPO}`, String(PR)), { recursive: true });
     await writeFile(markerPath, String(past), "utf8");
 
     // First call fires shouldCancel
@@ -75,9 +75,9 @@ describe("updateReadyDelay", () => {
   it("resets the countdown when ready-since.txt contains a future timestamp (clock skew)", async () => {
     // Write a marker far in the future (simulating clock skew or manual corruption).
     const future = Math.floor(Date.now() / 1000) + 9999;
-    const markerPath = join(cacheDir, `${OWNER}-${REPO}`, String(PR), "ready-since.txt");
+    const markerPath = join(stateDir, `${OWNER}-${REPO}`, String(PR), "ready-since.txt");
     const { mkdir, writeFile } = await import("node:fs/promises");
-    await mkdir(join(cacheDir, `${OWNER}-${REPO}`, String(PR)), { recursive: true });
+    await mkdir(join(stateDir, `${OWNER}-${REPO}`, String(PR)), { recursive: true });
     await writeFile(markerPath, String(future), "utf8");
 
     const state = await updateReadyDelay(PR, true, DELAY, OWNER, REPO);
@@ -90,9 +90,9 @@ describe("updateReadyDelay", () => {
 
   it("resets the timer when PR drops out of READY state after shouldCancel", async () => {
     const past = Math.floor(Date.now() / 1000) - DELAY - 5;
-    const markerPath = join(cacheDir, `${OWNER}-${REPO}`, String(PR), "ready-since.txt");
+    const markerPath = join(stateDir, `${OWNER}-${REPO}`, String(PR), "ready-since.txt");
     const { mkdir, writeFile, access } = await import("node:fs/promises");
-    await mkdir(join(cacheDir, `${OWNER}-${REPO}`, String(PR)), { recursive: true });
+    await mkdir(join(stateDir, `${OWNER}-${REPO}`, String(PR)), { recursive: true });
     await writeFile(markerPath, String(past), "utf8");
 
     // shouldCancel fires

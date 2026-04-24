@@ -5,9 +5,6 @@ import { parse } from "yaml";
 import builtins from "../config.json" with { type: "json" };
 
 export interface PrShepherdConfig {
-  cache: {
-    ttlSeconds: number;
-  };
   iterate: {
     cooldownSeconds: number;
     fixAttemptsPerThread: number;

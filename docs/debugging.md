@@ -15,7 +15,7 @@
 **Fix:** Verify the fix is deployed. Check the iterate output:
 
 ```bash
-pr-shepherd iterate <PR> --no-cache --format=json
+pr-shepherd iterate <PR> --format=json
 ```
 
 Should return `{"action":"cancel","state":"MERGED",...}`.
@@ -28,16 +28,13 @@ If it still returns `wait`, check that `report.mergeStatus.state` is being set c
 
 **Symptom:** The loop keeps emitting `action: wait` with `status: UNKNOWN`.
 
-**Cause:** Stale cache. The `batch-read.json` file has a stale UNKNOWN value locked in.
+**Cause:** GitHub is still computing the merge state.
 
-**Fix:** Clear the cache and rerun:
+**Fix:** Wait a minute and retry:
 
 ```bash
-rm -rf $TMPDIR/pr-shepherd-cache
-pr-shepherd iterate <PR> --no-cache --format=json
+pr-shepherd iterate <PR> --format=json
 ```
-
-If UNKNOWN persists without cache, GitHub may still be computing the merge state. Wait a minute and retry.
 
 ---
 
@@ -50,13 +47,13 @@ If UNKNOWN persists without cache, GitHub may still be computing the merge state
 **Fix:** Delete the ready-since file:
 
 ```bash
-rm $TMPDIR/pr-shepherd-cache/<owner>-<repo>/<pr>/ready-since.txt
+rm $TMPDIR/pr-shepherd-state/<owner>-<repo>/<pr>/ready-since.txt
 ```
 
 Replace `<owner>-<repo>` and `<pr>` with actual values. Example:
 
 ```bash
-rm $TMPDIR/pr-shepherd-cache/acme-myrepo/42/ready-since.txt
+rm $TMPDIR/pr-shepherd-state/acme-myrepo/42/ready-since.txt
 ```
 
 ---
@@ -69,9 +66,8 @@ rm $TMPDIR/pr-shepherd-cache/acme-myrepo/42/ready-since.txt
 
 **Fix options:**
 
-1. Increase the cache TTL: `--cache-ttl 600` (10 minutes)
-2. Increase the cron interval: `--interval 8m`
-3. Check `x-ratelimit-remaining` in the reporter JSON output to monitor consumption
+1. Increase the cron interval: `--interval 8m`
+2. Check `x-ratelimit-remaining` in the reporter JSON output to monitor consumption
 
 ---
 
@@ -96,13 +92,11 @@ If `state` is `OPEN` and both `mergeable` and `mergeStateStatus` are `UNKNOWN` a
 To replay a single iteration with full output:
 
 ```bash
-pr-shepherd iterate <PR> --no-cache --format=json
+pr-shepherd iterate <PR> --format=json
 ```
 
 For human-readable output:
 
 ```bash
-pr-shepherd check <PR> --no-cache
+pr-shepherd check <PR>
 ```
-
-To bypass cache and see the raw GraphQL batch response, add `--no-cache` to any command.

@@ -4,18 +4,18 @@ import { rm, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { readFixAttempts, writeFixAttempts, type FixAttemptsState } from "./fix-attempts.mts";
 
-let testCacheDir: string;
+let testStateDir: string;
 
 const testKey = { owner: "test-owner", repo: "test-repo", pr: 123 };
 
 beforeEach(() => {
-  testCacheDir = `${process.env["TMPDIR"] ?? "/tmp"}/shepherd-fix-test-${randomBytes(4).toString("hex")}`;
-  process.env["PR_SHEPHERD_CACHE_DIR"] = testCacheDir;
+  testStateDir = `${process.env["TMPDIR"] ?? "/tmp"}/shepherd-fix-test-${randomBytes(4).toString("hex")}`;
+  process.env["PR_SHEPHERD_STATE_DIR"] = testStateDir;
 });
 
 afterEach(async () => {
-  delete process.env["PR_SHEPHERD_CACHE_DIR"];
-  await rm(testCacheDir, { recursive: true, force: true });
+  delete process.env["PR_SHEPHERD_STATE_DIR"];
+  await rm(testStateDir, { recursive: true, force: true });
 });
 
 describe("readFixAttempts — miss", () => {
@@ -27,7 +27,7 @@ describe("readFixAttempts — miss", () => {
 
 describe("readFixAttempts — invalid JSON", () => {
   it("returns null instead of throwing", async () => {
-    const dir = join(testCacheDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr));
+    const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr));
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, "fix-attempts.json"), "not json", "utf8");
     const result = await readFixAttempts(testKey);
@@ -47,6 +47,14 @@ describe("writeFixAttempts / readFixAttempts — round-trip", () => {
   });
 });
 
+describe("readFixAttempts — default state dir", () => {
+  it("returns null (no file) when PR_SHEPHERD_STATE_DIR is unset", async () => {
+    delete process.env["PR_SHEPHERD_STATE_DIR"];
+    const result = await readFixAttempts(testKey);
+    expect(result).toBeNull();
+  });
+});
+
 describe("readFixAttempts — unsafe key segments", () => {
   it("returns null (does not throw) when owner contains a slash", async () => {
     // resolvePath throws, but readFixAttempts wraps in try-catch → null
@@ -61,12 +69,12 @@ describe("readFixAttempts — unsafe key segments", () => {
 });
 
 describe("writeFixAttempts — fire and forget", () => {
-  it("does not throw when the cache dir is not writable", async () => {
+  it("does not throw when the state dir is not writable", async () => {
     // Point to an impossible path (file exists where dir would be).
-    const collision = join(testCacheDir, "collision");
-    await mkdir(testCacheDir, { recursive: true });
+    const collision = join(testStateDir, "collision");
+    await mkdir(testStateDir, { recursive: true });
     await writeFile(collision, "blocker", "utf8");
-    process.env["PR_SHEPHERD_CACHE_DIR"] = collision;
+    process.env["PR_SHEPHERD_STATE_DIR"] = collision;
     await expect(
       writeFixAttempts({ owner: "a", repo: "b", pr: 1 }, { headSha: "sha", threadAttempts: {} }),
     ).resolves.toBeUndefined();

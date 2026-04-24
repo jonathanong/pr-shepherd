@@ -1,4 +1,4 @@
-import { readStallState, writeStallState } from "../../cache/iterate-stall.mts";
+import { readStallState, writeStallState } from "../../state/iterate-stall.mts";
 import { toAgentThread, toAgentComment } from "../../reporters/agent.mts";
 import { buildEscalateSuggestion, buildEscalateHumanMessage } from "./escalate.mts";
 import type {

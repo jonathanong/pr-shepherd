@@ -41,12 +41,12 @@ vi.mock("../github/client.mts", () => ({
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
 }));
 
-vi.mock("../cache/fix-attempts.mts", () => ({
+vi.mock("../state/fix-attempts.mts", () => ({
   readFixAttempts: vi.fn().mockResolvedValue(null),
   writeFixAttempts: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../cache/iterate-stall.mts", () => ({
+vi.mock("../state/iterate-stall.mts", () => ({
   readStallState: vi.fn().mockResolvedValue(null),
   writeStallState: vi.fn().mockResolvedValue(undefined),
 }));
@@ -57,8 +57,8 @@ vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 import { runIterate } from "./iterate.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
-import { readFixAttempts, writeFixAttempts } from "../cache/fix-attempts.mts";
-import { readStallState, writeStallState } from "../cache/iterate-stall.mts";
+import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
+import { readStallState, writeStallState } from "../state/iterate-stall.mts";
 import type { ShepherdReport, IterateCommandOptions } from "../types.mts";
 
 // ---------------------------------------------------------------------------
@@ -120,8 +120,6 @@ function makeOpts(overrides: Partial<IterateCommandOptions> = {}): IterateComman
   return {
     prNumber: 42,
     format: "json",
-    noCache: true,
-    cacheTtlSeconds: 300,
     cooldownSeconds: 30,
     readyDelaySeconds: 600,
     ...overrides,
@@ -141,7 +139,6 @@ const READY_STATE_DEFAULT = {
 
 function defaultConfig() {
   return {
-    cache: { ttlSeconds: 300 },
     iterate: {
       cooldownSeconds: 30,
       fixAttemptsPerThread: 3,

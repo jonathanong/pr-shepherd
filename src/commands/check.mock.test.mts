@@ -6,7 +6,6 @@ vi.mock("../github/client.mts", () => ({
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
   getMergeableState: vi.fn(),
 }));
-vi.mock("../cache/file-cache.mts", () => ({ cacheGet: vi.fn(), cacheSet: vi.fn() }));
 vi.mock("../checks/triage.mts", () => ({
   triageFailingChecks: vi.fn((checks: unknown[]) => Promise.resolve(checks)),
 }));
@@ -17,18 +16,15 @@ vi.mock("../comments/resolve.mts", () => ({
 import { runCheck } from "./check.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { getCurrentPrNumber, getMergeableState } from "../github/client.mts";
-import { cacheGet, cacheSet } from "../cache/file-cache.mts";
 import { triageFailingChecks } from "../checks/triage.mts";
 import type { BatchPrData, ClassifiedCheck } from "../types.mts";
 
 const mockFetchPrBatch = vi.mocked(fetchPrBatch);
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockGetMergeableState = vi.mocked(getMergeableState);
-const mockCacheGet = vi.mocked(cacheGet);
-const mockCacheSet = vi.mocked(cacheSet);
 const mockTriageFailingChecks = vi.mocked(triageFailingChecks);
 
-const BASE_OPTS = { format: "text" as const, noCache: false, cacheTtlSeconds: 300 };
+const BASE_OPTS = { format: "text" as const };
 
 function makeCheck(overrides: Partial<ClassifiedCheck> = {}): ClassifiedCheck {
   return {
@@ -68,8 +64,6 @@ function makeBatchData(overrides: Partial<BatchPrData> = {}): BatchPrData {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockCacheGet.mockResolvedValue(null);
-  mockCacheSet.mockResolvedValue(undefined);
   mockFetchPrBatch.mockResolvedValue({ data: makeBatchData() });
   mockGetMergeableState.mockResolvedValue({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" });
 });
@@ -82,32 +76,6 @@ describe("runCheck — no PR", () => {
   it("throws when no PR number is found", async () => {
     mockGetCurrentPrNumber.mockResolvedValueOnce(null);
     await expect(runCheck(BASE_OPTS)).rejects.toThrow("No open PR found");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Caching
-// ---------------------------------------------------------------------------
-
-describe("runCheck — caching", () => {
-  it("uses cached data and skips fetchPrBatch on cache hit", async () => {
-    mockCacheGet.mockResolvedValue(makeBatchData());
-    await runCheck(BASE_OPTS);
-    expect(mockFetchPrBatch).not.toHaveBeenCalled();
-  });
-
-  it("calls fetchPrBatch and caches result on miss", async () => {
-    await runCheck(BASE_OPTS);
-    expect(mockFetchPrBatch).toHaveBeenCalledTimes(1);
-    expect(mockCacheSet).toHaveBeenCalledTimes(1);
-  });
-
-  it("bypasses cache when autoResolve=true (cacheGet called with disabled=true)", async () => {
-    await runCheck({ ...BASE_OPTS, autoResolve: true });
-    expect(mockCacheGet).toHaveBeenCalledWith(
-      expect.any(Object),
-      expect.objectContaining({ disabled: true }),
-    );
   });
 });
 
@@ -130,14 +98,6 @@ describe("runCheck — UNKNOWN merge state", () => {
     });
     await runCheck(BASE_OPTS);
     expect(mockGetMergeableState).not.toHaveBeenCalled();
-  });
-
-  it("does NOT cache UNKNOWN merge result", async () => {
-    mockFetchPrBatch.mockResolvedValue({
-      data: makeBatchData({ mergeStateStatus: "UNKNOWN" }),
-    });
-    await runCheck(BASE_OPTS);
-    expect(mockCacheSet).not.toHaveBeenCalled();
   });
 });
 

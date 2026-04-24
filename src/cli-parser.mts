@@ -3,7 +3,7 @@
  *
  * Usage:
  *   pr-shepherd --version
- *   pr-shepherd check [PR] [--format text|json] [--no-cache] [--cache-ttl N]
+ *   pr-shepherd check [PR] [--format text|json]
  *   pr-shepherd resolve [PR] [--fetch] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]
  *                            [--dismiss-review-ids Q] [--message MSG] [--require-sha SHA]
  *   pr-shepherd commit-suggestion [PR] --thread-id ID [--message MSG] [--description DESC]

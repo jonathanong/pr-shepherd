@@ -51,7 +51,6 @@ iterate:
 
 | Key                                         | Default                                   | Purpose                                                                                                           |
 | ------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `cache.ttlSeconds`                          | `300`                                     | File-cache TTL for read operations                                                                                |
 | `iterate.cooldownSeconds`                   | `30`                                      | Wait after a push before reading CI                                                                               |
 | `iterate.fixAttemptsPerThread`              | `3`                                       | Max fix attempts per unresolved thread before `escalate`                                                          |
 | `iterate.stallTimeoutMinutes`               | `30`                                      | Minutes the loop may repeat the same action without progress before `escalate` with `stall-timeout`; `0` disables |
@@ -71,20 +70,6 @@ iterate:
 | `actions.autoResolveOutdated`               | `true`                                    | Auto-resolve threads that point to code no longer in the PR diff                                                  |
 | `actions.autoMarkReady`                     | `true`                                    | Emit `mark_ready` when a draft PR's CI goes clean                                                                 |
 | `actions.commitSuggestions`                 | `true`                                    | Route `/pr-shepherd:resolve` through `commit-suggestion` (singular) for threads with a ` ```suggestion ` block    |
-
----
-
-## `cache`
-
-### `cache.ttlSeconds` — default `300`
-
-How long (in seconds) the batch GraphQL response is cached on disk. A cache hit means a cron tick costs zero API calls.
-
-- **Raise** if you're running many parallel shepherd instances and want to reduce API usage.
-- **Lower** (or set to `0`) if you need fresh data on every tick — useful when debugging.
-- **Override per invocation**: `--no-cache` flag or `--cache-ttl N`.
-
-> Interaction: setting `ttlSeconds` shorter than `iterate.cooldownSeconds` means cache is always cold during the cooldown window — no harm, just wasted reads.
 
 ---
 
@@ -247,8 +232,7 @@ Disable if you want the agent to read and re-implement every suggestion (e.g. be
 
 ## Environment variables
 
-| Variable                        | Effect                                                                                                           |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `PR_SHEPHERD_CACHE_DIR`         | Override the cache base directory (default `$TMPDIR/pr-shepherd-cache`)                                          |
-| `PR_SHEPHERD_CACHE_TTL_SECONDS` | Override `cache.ttlSeconds`. Precedence: `--cache-ttl` > this env var > RC/config value.                         |
-| `GH_TOKEN` / `GITHUB_TOKEN`     | GitHub auth token. Resolution order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` fallback (requires `gh` CLI). |
+| Variable                    | Effect                                                                                                           |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `PR_SHEPHERD_STATE_DIR`     | Override the loop-state base directory (default `$TMPDIR/pr-shepherd-state`)                                     |
+| `GH_TOKEN` / `GITHUB_TOKEN` | GitHub auth token. Resolution order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` fallback (requires `gh` CLI). |

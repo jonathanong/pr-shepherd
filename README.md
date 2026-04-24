@@ -20,7 +20,7 @@ Concrete improvements to an agentic PR-review workflow:
 - **Faster monitor loops** — one batched GraphQL query per tick (see [docs/graphql.md](docs/graphql.md)) instead of N REST round-trips
 - **Lower context usage per iteration** — classification lives in the CLI; the agent receives one decision per tick and never sees raw GraphQL payloads or resolved threads
 - **Prompt-cache friendly** — the 4-minute default tick is tuned to Claude's 5-minute prompt-cache TTL (tunable via `watch.interval`)
-- **Reduced GitHub rate-limit exposure** — read results share a 5-minute file cache with atomic writes (see [docs/cache.md](docs/cache.md))
+- **Reduced GitHub rate-limit exposure** — one batched GraphQL read per tick; loop-state files (fix-attempts, stall detection, ready-delay timer) are kept in `$TMPDIR/pr-shepherd-state/`
 - **No MCP surface** — skills call the CLI via `npx`; no long-lived MCP server, no extra auth boundary, smaller reasoning surface
 - **Skills over subagents** — skill prompts inject into the main conversation rather than spawning a subagent that reloads CLAUDE.md every turn
 - **Safe to interrupt** — all state lives in the PR on GitHub; the cron loop self-terminates when the PR is merged, closed, or settles after ready-delay
@@ -129,7 +129,7 @@ actions:
   autoRebase: false # disable for repos that enforce merge commits
 ```
 
-Environment variables: `GH_TOKEN` / `GITHUB_TOKEN` (auth; falls back to `gh auth token`), `PR_SHEPHERD_CACHE_DIR` (override cache base dir), `PR_SHEPHERD_CACHE_TTL_SECONDS` (override cache TTL; `--cache-ttl` takes precedence over this env var, which in turn takes precedence over the RC/config value).
+Environment variables: `GH_TOKEN` / `GITHUB_TOKEN` (auth; falls back to `gh auth token`), `PR_SHEPHERD_STATE_DIR` (override loop-state base dir).
 
 See [docs/configuration.md](docs/configuration.md) for full semantics and deprecated-key migration.
 

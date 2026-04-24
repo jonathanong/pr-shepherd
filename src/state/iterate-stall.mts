@@ -5,7 +5,7 @@
  * was first seen. If the fingerprint does not change for stallTimeoutSeconds
  * the iterate command escalates instead of repeating the same action.
  *
- * State lives in `$TMPDIR/pr-shepherd-cache/<owner>-<repo>/<pr>/iterate-stall.json`.
+ * State lives in `$TMPDIR/pr-shepherd-state/<owner>-<repo>/<pr>/iterate-stall.json`.
  */
 
 import { readFile, writeFile, rename, unlink, mkdir } from "node:fs/promises";
@@ -25,7 +25,7 @@ export interface StallState {
   firstSeenAt: number;
 }
 
-interface CacheKey {
+interface StateKey {
   owner: string;
   repo: string;
   pr: number;
@@ -36,7 +36,7 @@ interface CacheKey {
 // ---------------------------------------------------------------------------
 
 /** Read the current stall state. Returns null on miss, corrupt data, or invalid shape. */
-export async function readStallState(key: CacheKey): Promise<StallState | null> {
+export async function readStallState(key: StateKey): Promise<StallState | null> {
   try {
     const raw = await readFile(resolvePath(key), "utf8");
     const parsed = JSON.parse(raw) as unknown;
@@ -55,7 +55,7 @@ export async function readStallState(key: CacheKey): Promise<StallState | null> 
 }
 
 /** Write stall state (fire-and-forget — never throws). */
-export async function writeStallState(key: CacheKey, state: StallState): Promise<void> {
+export async function writeStallState(key: StateKey, state: StallState): Promise<void> {
   let tmp: string | undefined;
   try {
     const path = resolvePath(key);
@@ -81,15 +81,15 @@ export async function writeStallState(key: CacheKey, state: StallState): Promise
 // Helpers
 // ---------------------------------------------------------------------------
 
-function resolvePath(key: CacheKey): string {
+function resolvePath(key: StateKey): string {
   for (const [field, value] of [
     ["owner", key.owner],
     ["repo", key.repo],
   ] as const) {
     if (!SAFE_SEGMENT.test(value)) {
-      throw new Error(`Invalid cache key segment "${field}": ${value}`);
+      throw new Error(`Invalid state key segment "${field}": ${value}`);
     }
   }
-  const base = process.env["PR_SHEPHERD_CACHE_DIR"] ?? join(tmpdir(), "pr-shepherd-cache");
+  const base = process.env["PR_SHEPHERD_STATE_DIR"] ?? join(tmpdir(), "pr-shepherd-state");
   return join(base, `${key.owner}-${key.repo}`, String(key.pr), "iterate-stall.json");
 }

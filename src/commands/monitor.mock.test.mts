@@ -22,22 +22,17 @@ describe("runMonitor", () => {
   });
 
   it("returns prNumber, loopTag, loopInvocation, loopPrompt for explicit PR", async () => {
-    const result = await runMonitor({
-      format: "text",
-      noCache: false,
-      cacheTtlSeconds: 300,
-      prNumber: 99,
-    });
+    const result = await runMonitor({ format: "text", prNumber: 99 });
     expect(result.prNumber).toBe(99);
     expect(result.loopTag).toBe("# pr-shepherd-loop:pr=99");
     expect(result.loopInvocation).toContain("4m --max-turns 50 --expires 8h");
     expect(result.loopInvocation).toContain("# pr-shepherd-loop:pr=99");
-    expect(result.loopInvocation).toContain("npx pr-shepherd iterate 99 --no-cache");
+    expect(result.loopInvocation).toContain("npx pr-shepherd iterate 99");
     expect(result.loopPrompt).toContain("pr-shepherd-loop:pr=99");
   });
 
   it("infers PR number from branch when none provided", async () => {
-    const result = await runMonitor({ format: "text", noCache: false, cacheTtlSeconds: 300 });
+    const result = await runMonitor({ format: "text" });
     expect(result.prNumber).toBe(42);
   });
 
@@ -45,39 +40,34 @@ describe("runMonitor", () => {
     vi.mocked(loadConfig).mockReturnValue({
       watch: { interval: "every 4 minutes", maxTurns: 50, expiresHours: 8, readyDelayMinutes: 10 },
     } as unknown as PrShepherdConfig);
-    await expect(
-      runMonitor({ format: "text", noCache: false, cacheTtlSeconds: 300, prNumber: 42 }),
-    ).rejects.toThrow("watch.interval must be a duration string");
+    await expect(runMonitor({ format: "text", prNumber: 42 })).rejects.toThrow(
+      "watch.interval must be a duration string",
+    );
   });
 
   it("throws a clear error when expiresHours is not a positive integer", async () => {
     vi.mocked(loadConfig).mockReturnValue({
       watch: { interval: "4m", maxTurns: 50, expiresHours: "8h", readyDelayMinutes: 10 },
     } as unknown as PrShepherdConfig);
-    await expect(
-      runMonitor({ format: "text", noCache: false, cacheTtlSeconds: 300, prNumber: 42 }),
-    ).rejects.toThrow("watch.expiresHours must be a positive integer");
+    await expect(runMonitor({ format: "text", prNumber: 42 })).rejects.toThrow(
+      "watch.expiresHours must be a positive integer",
+    );
   });
 
   it("throws a clear error when maxTurns is not a positive integer", async () => {
     vi.mocked(loadConfig).mockReturnValue({
       watch: { interval: "4m", maxTurns: 0, expiresHours: 8, readyDelayMinutes: 10 },
     } as unknown as PrShepherdConfig);
-    await expect(
-      runMonitor({ format: "text", noCache: false, cacheTtlSeconds: 300, prNumber: 42 }),
-    ).rejects.toThrow("watch.maxTurns must be a positive integer");
+    await expect(runMonitor({ format: "text", prNumber: 42 })).rejects.toThrow(
+      "watch.maxTurns must be a positive integer",
+    );
   });
 
   it("respects config overrides for interval/maxTurns/expiresHours", async () => {
     vi.mocked(loadConfig).mockReturnValue({
       watch: { interval: "8m", maxTurns: 30, expiresHours: 4, readyDelayMinutes: 10 },
     } as unknown as PrShepherdConfig);
-    const result = await runMonitor({
-      format: "text",
-      noCache: false,
-      cacheTtlSeconds: 300,
-      prNumber: 42,
-    });
+    const result = await runMonitor({ format: "text", prNumber: 42 });
     expect(result.loopInvocation).toMatch(/^8m --max-turns 30 --expires 4h/);
   });
 });
