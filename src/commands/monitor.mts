@@ -2,9 +2,7 @@ import { getCurrentPrNumber } from "../github/client.mts";
 import { loadConfig } from "../config/load.mts";
 import type { GlobalOptions } from "../types.mts";
 
-export interface MonitorCommandOptions extends GlobalOptions {
-  prNumber?: number;
-}
+export interface MonitorCommandOptions extends GlobalOptions {}
 
 export interface MonitorResult {
   prNumber: number;
@@ -23,10 +21,19 @@ export async function runMonitor(opts: MonitorCommandOptions): Promise<MonitorRe
   }
 
   const { interval, maxTurns, expiresHours } = config.watch;
+  if (!Number.isFinite(expiresHours) || expiresHours <= 0 || !Number.isInteger(expiresHours)) {
+    throw new Error(
+      `Invalid config: watch.expiresHours must be a positive integer, got ${JSON.stringify(expiresHours)}`,
+    );
+  }
+  if (!Number.isFinite(maxTurns) || maxTurns <= 0 || !Number.isInteger(maxTurns)) {
+    throw new Error(
+      `Invalid config: watch.maxTurns must be a positive integer, got ${JSON.stringify(maxTurns)}`,
+    );
+  }
   const loopTag = `# pr-shepherd-loop:pr=${prNumber}`;
   const loopPrompt = buildLoopPrompt(prNumber, loopTag);
-  const expiresNum = parseInt(String(expiresHours), 10);
-  const loopArgs = `${interval} --max-turns ${maxTurns} --expires ${expiresNum}h`;
+  const loopArgs = `${interval} --max-turns ${maxTurns} --expires ${expiresHours}h`;
   const loopInvocation = `${loopArgs}\n\n${loopPrompt}`;
 
   return { prNumber, loopTag, loopInvocation, loopPrompt };

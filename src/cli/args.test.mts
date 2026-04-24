@@ -141,6 +141,11 @@ describe("parseCommonArgs — PR number detection", () => {
     expect(prNumber).toBeUndefined();
   });
 
+  it("does NOT treat unknown flag values as PR numbers", () => {
+    const { prNumber } = parseCommonArgs(["--last-push-time", "100", "42"]);
+    expect(prNumber).toBe(42);
+  });
+
   it("supports --format=json inline form", () => {
     const { global: g } = parseCommonArgs(["--format=json", "42"]);
     expect(g.format).toBe("json");

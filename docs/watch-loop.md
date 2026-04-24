@@ -4,7 +4,7 @@
 
 ## Overview
 
-The `/pr-shepherd:monitor <PR>` slash command starts a cron loop that polls PR status every 4 minutes. This document explains how all the pieces fit together.
+The `/pr-shepherd:monitor <PR>` slash command starts a cron loop that polls PR status at the configured interval (default `4m`, set via `watch.interval`). This document explains how all the pieces fit together.
 
 ## Lifecycle
 
@@ -40,9 +40,9 @@ User                    Main Agent              shepherd iterate
  |                          |                        |
  |-- /pr-shepherd:monitor <PR> ------> |                        |
  |                          |-- CronCreate           |
- |                          |   every 4m             |
+ |                          |   every <interval>     |
  |                          |                        |
- |                  [cron tick every 4m]             |
+ |            [cron tick every <interval>]           |
  |                          |-- iterate <PR> ------> |
  |                          |                        |-- GraphQL fetch
  |                          |                        |-- classify
