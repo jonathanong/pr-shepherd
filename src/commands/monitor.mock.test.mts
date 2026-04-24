@@ -41,6 +41,15 @@ describe("runMonitor", () => {
     expect(result.prNumber).toBe(42);
   });
 
+  it("throws a clear error when interval is not a valid duration string", async () => {
+    vi.mocked(loadConfig).mockReturnValue({
+      watch: { interval: "every 4 minutes", maxTurns: 50, expiresHours: 8, readyDelayMinutes: 10 },
+    } as unknown as PrShepherdConfig);
+    await expect(
+      runMonitor({ format: "text", noCache: false, cacheTtlSeconds: 300, prNumber: 42 }),
+    ).rejects.toThrow("watch.interval must be a duration string");
+  });
+
   it("throws a clear error when expiresHours is not a positive integer", async () => {
     vi.mocked(loadConfig).mockReturnValue({
       watch: { interval: "4m", maxTurns: 50, expiresHours: "8h", readyDelayMinutes: 10 },

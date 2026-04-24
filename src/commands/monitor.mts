@@ -21,6 +21,11 @@ export async function runMonitor(opts: MonitorCommandOptions): Promise<MonitorRe
   }
 
   const { interval, maxTurns, expiresHours } = config.watch;
+  if (typeof interval !== "string" || !/^\d+[smhd]$/.test(interval)) {
+    throw new Error(
+      `Invalid config: watch.interval must be a duration string like "4m" or "1h", got ${JSON.stringify(interval)}`,
+    );
+  }
   if (!Number.isFinite(expiresHours) || expiresHours <= 0 || !Number.isInteger(expiresHours)) {
     throw new Error(
       `Invalid config: watch.expiresHours must be a positive integer, got ${JSON.stringify(expiresHours)}`,
