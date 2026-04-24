@@ -1,14 +1,24 @@
 # pr-shepherd
 
 Autonomous PR CI monitor and review-comment resolver for Claude Code.
+The goal is to have an agent take a plan to a human reviewable PR autonomously.
+
+Example Workflow:
+
+1. `/model opusplan`
+2. Create a plan
+3. Accept the Plan
+4. Switch to Auto Mode
+5. Prompt: `make a PR, then run /pr-shepherd:monitor`
+6. ...
+7. Human reviews PR with passing CI, no open threads, and all comments minimized
 
 ## Why pr-shepherd
 
 Concrete improvements to an agentic PR-review workflow:
 
 - **Faster monitor loops** — one batched GraphQL query per tick (see [docs/graphql.md](docs/graphql.md)) instead of N REST round-trips
-- **Lower context usage per iteration** — classification lives in TypeScript; the agent receives one decision per tick and never sees raw GraphQL payloads or resolved threads
-- **Deterministic output** — `--format=json` and `--format=text` surface equivalent information, so both scripts and agents see the same state
+- **Lower context usage per iteration** — classification lives in the CLI; the agent receives one decision per tick and never sees raw GraphQL payloads or resolved threads
 - **Prompt-cache friendly** — the 4-minute default tick is tuned to Claude's 5-minute prompt-cache TTL (tunable via `watch.interval`)
 - **Reduced GitHub rate-limit exposure** — read results share a 5-minute file cache with atomic writes (see [docs/cache.md](docs/cache.md))
 - **No MCP surface** — skills call the CLI via `npx`; no long-lived MCP server, no extra auth boundary, smaller reasoning surface
@@ -20,8 +30,6 @@ Concrete improvements to an agentic PR-review workflow:
 - **Reduced agent context** — logic lives in the CLI, not the prompt
 - **Reduced GitHub rate-limit exhaustion** — primary PR state is fetched via a batched GraphQL query
 - **Fewer tool calls** — comment resolutions are batched; resolved threads never reach the agent
-- **No MCP** — smaller reasoning surface, much faster than the GitHub MCP
-- **No vendor lock-in** — runs against `gh` + `git`; no hosted service required
 - **Skills over subagents** — subagents reload all CLAUDE.md context on every turn; skills inject into the main conversation instead, keeping cost low
 - **JSON/text parity** — `--format=json` and `--format=text` carry equivalent information; every field in one has a representation in the other
 
