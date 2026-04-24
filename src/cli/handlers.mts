@@ -21,7 +21,8 @@ export async function handleCommitSuggestion(args: string[]): Promise<void> {
   const threadId = getFlag(extra, "--thread-id");
   if (!threadId) {
     process.stderr.write(
-      "Usage: pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [--description DESC] [--dry-run]\n",
+      "Usage: pr-shepherd commit-suggestion [PR] --thread-id ID [--message MSG] [--description DESC] [--dry-run]\n" +
+        "       (--message is required unless --dry-run is set)\n",
     );
     process.exitCode = 1;
     return;

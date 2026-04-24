@@ -130,7 +130,7 @@ pr-shepherd commit-suggestion 42 \
   --description "Optional longer body text."
 ```
 
-Pass `--dry-run` to preview the unified diff without writing, staging, committing, or resolving the thread. `--message` is optional in dry-run mode. Exit code: `0` when the patch would apply cleanly, `1` on drift.
+Pass `--dry-run` to preview the unified diff without modifying the working tree, staging, committing, or resolving the thread. (A temporary patch file is still written to the OS temp dir for `git apply --check`, but no working-tree files are changed.) `--message` is optional in dry-run mode. Exit code: `0` when the patch would apply cleanly, `1` on drift.
 
 ```sh
 pr-shepherd commit-suggestion 42 --thread-id PRRT_abc --dry-run

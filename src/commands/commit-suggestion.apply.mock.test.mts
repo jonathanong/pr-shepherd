@@ -319,15 +319,16 @@ describe("runCommitSuggestion — dry-run", () => {
     expect(result.patch).toContain("+const x = 10;");
   });
 
-  it("does not call git apply, git add, git commit, or applyResolveOptions", async () => {
+  it("calls git apply --check but not bare git apply, git add, git commit, or applyResolveOptions", async () => {
     setupDryRunHappyPath();
     await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", dryRun: true });
 
     const applyCalls = mockExecFile.mock.calls.filter(
       (call) => call[0] === "git" && (call[1] as string[])[0] === "apply",
     );
-    // Only --check, never bare apply
-    expect(applyCalls.every((c) => (c[1] as string[]).includes("--check"))).toBe(true);
+    // Exactly one --check call; no bare apply
+    expect(applyCalls).toHaveLength(1);
+    expect((applyCalls[0]![1] as string[]).includes("--check")).toBe(true);
 
     const addCalls = mockExecFile.mock.calls.filter(
       (call) => call[0] === "git" && (call[1] as string[])[0] === "add",
