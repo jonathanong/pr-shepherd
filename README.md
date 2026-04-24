@@ -119,7 +119,7 @@ to be installed in the repository first (`npm install pr-shepherd`), so that
    Parse the JSON and report:
 
    - **Merge status** (`mergeStatus.status`): CLEAN | BEHIND | CONFLICTS | BLOCKED | UNSTABLE | DRAFT | UNKNOWN
-   - **CI check results** (`checks`): passing count, failing names, in-progress names
+   - **CI check results** (`checks.passing`, `checks.failing`, `checks.inProgress`): passing count, failing names, in-progress names
    - **Unresolved review comments** (`threads.actionable` + `comments.actionable`): count + details
    ````
 
