@@ -36,7 +36,7 @@ export type MergeStateStatus =
   | "UNKNOWN"
   | "UNSTABLE";
 
-export type ReviewDecision = "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
+type ReviewDecision = "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
 
 // ---------------------------------------------------------------------------
 // Check runs
@@ -53,7 +53,7 @@ export interface CheckRun {
   runId: string | null;
 }
 
-export type CheckCategory = "passed" | "failing" | "in_progress" | "skipped" | "filtered";
+type CheckCategory = "passed" | "failing" | "in_progress" | "skipped" | "filtered";
 
 export interface ClassifiedCheck extends CheckRun {
   category: CheckCategory;
@@ -128,7 +128,7 @@ export interface Review {
 // Merge status
 // ---------------------------------------------------------------------------
 
-export type ShepherdMergeStatus =
+type ShepherdMergeStatus =
   | "CLEAN"
   | "BEHIND"
   | "CONFLICTS"

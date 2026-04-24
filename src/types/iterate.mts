@@ -15,7 +15,6 @@ export type ShepherdAction =
   | "wait"
   | "fix_code"
   | "rerun_ci"
-  | "rebase"
   | "mark_ready"
   | "cancel"
   | "escalate";
@@ -65,17 +64,17 @@ export interface IterateResultBase {
   checks: RelevantCheck[];
 }
 
-export interface IterateResultCooldown extends IterateResultBase {
+interface IterateResultCooldown extends IterateResultBase {
   action: "cooldown";
   log: string;
 }
 
-export interface IterateResultWait extends IterateResultBase {
+interface IterateResultWait extends IterateResultBase {
   action: "wait";
   log: string;
 }
 
-export interface IterateResultCancel extends IterateResultBase {
+interface IterateResultCancel extends IterateResultBase {
   action: "cancel";
   log: string;
 }
@@ -95,7 +94,7 @@ export interface ResolveCommand {
  * Default fix_code variant: agent applies edits locally, commits, pushes,
  * then runs the pre-built resolve command. Emitted under `## Post-fix push`.
  */
-export interface FixRebaseAndPush {
+interface FixRebaseAndPush {
   mode: "rebase-and-push";
   threads: AgentThread[];
   /** Comments classified as actionable — require code changes. */
@@ -129,29 +128,19 @@ export interface ReranRun {
   workflowName?: string;
 }
 
-export interface IterateResultRerunCi extends IterateResultBase {
+interface IterateResultRerunCi extends IterateResultBase {
   action: "rerun_ci";
   reran: ReranRun[];
   log: string;
 }
 
-export interface IterateResultRebase extends IterateResultBase {
-  action: "rebase";
-  rebase: {
-    /** Human-readable explanation of why a rebase is needed. */
-    reason: string;
-    /** Complete shell script to run (includes dirty-worktree guard). */
-    shellScript: string;
-  };
-}
-
-export interface IterateResultMarkReady extends IterateResultBase {
+interface IterateResultMarkReady extends IterateResultBase {
   action: "mark_ready";
   markedReady: boolean;
   log: string;
 }
 
-export interface IterateResultEscalate extends IterateResultBase {
+interface IterateResultEscalate extends IterateResultBase {
   action: "escalate";
   escalate: EscalateDetails;
 }
@@ -162,7 +151,6 @@ export type IterateResult =
   | IterateResultCancel
   | IterateResultFixCode
   | IterateResultRerunCi
-  | IterateResultRebase
   | IterateResultMarkReady
   | IterateResultEscalate;
 

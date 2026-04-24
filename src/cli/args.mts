@@ -177,11 +177,3 @@ export function parseStatusPrNumbers(args: string[]): number[] {
   }
   return prNumbers;
 }
-
-// Re-export exit-code helpers so existing importers of args.mts keep working.
-export {
-  parseDurationToMinutes,
-  statusToExitCode,
-  iterateActionToExitCode,
-  deriveSimpleReady,
-} from "./exit-codes.mts";

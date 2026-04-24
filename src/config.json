@@ -34,7 +34,6 @@
   },
   "actions": {
     "autoResolveOutdated": true,
-    "autoRebase": true,
     "autoMarkReady": true,
     "commitSuggestions": true
   }

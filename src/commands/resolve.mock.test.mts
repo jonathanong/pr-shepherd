@@ -23,7 +23,6 @@ vi.mock("../config/load.mts", () => ({
     },
     actions: {
       autoResolveOutdated: true,
-      autoRebase: true,
       autoMarkReady: true,
       commitSuggestions: true,
     },
@@ -274,7 +273,6 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
       },
       actions: {
         autoResolveOutdated: true,
-        autoRebase: true,
         autoMarkReady: true,
         commitSuggestions: true,
       },
@@ -334,7 +332,6 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
       },
       actions: {
         autoResolveOutdated: true,
-        autoRebase: true,
         autoMarkReady: true,
         commitSuggestions: false,
       },

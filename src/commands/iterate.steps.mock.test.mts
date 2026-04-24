@@ -160,7 +160,6 @@ function defaultConfig() {
     mergeStatus: { blockingReviewerLogins: ["copilot"] },
     actions: {
       autoResolveOutdated: true,
-      autoRebase: true,
       autoMarkReady: true,
       commitSuggestions: true,
     },

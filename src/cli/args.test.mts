@@ -5,12 +5,14 @@ import {
   parseList,
   parseStatusPrNumbers,
   parseCommonArgs,
-  parseDurationToMinutes,
   parseIntStrict,
+} from "./args.mts";
+import {
+  parseDurationToMinutes,
   statusToExitCode,
   iterateActionToExitCode,
   deriveSimpleReady,
-} from "./args.mts";
+} from "./exit-codes.mts";
 import type { PrSummary } from "../commands/status.mts";
 import type { ShepherdAction } from "../types.mts";
 
@@ -248,7 +250,6 @@ describe("statusToExitCode", () => {
 describe("iterateActionToExitCode", () => {
   it.each<[ShepherdAction, number]>([
     ["fix_code", 1],
-    ["rebase", 1],
     ["cancel", 2],
     ["escalate", 3],
     ["cooldown", 0],

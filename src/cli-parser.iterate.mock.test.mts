@@ -57,16 +57,6 @@ function makeIterateResult(action: IterateResult["action"] = "wait"): IterateRes
     return { ...base, action: "rerun_ci", log: "RERAN: run-99 (typecheck — transient)", reran: [] };
   if (action === "mark_ready")
     return { ...base, action: "mark_ready", markedReady: true, log: "MARKED READY: PR 42" };
-  if (action === "rebase")
-    return {
-      ...base,
-      action: "rebase",
-      rebase: {
-        reason: "BEHIND + flaky CI — rebasing onto origin/main",
-        shellScript:
-          'if ! git diff --quiet || ! git diff --cached --quiet; then\n  echo "SKIP rebase: dirty worktree"\n  exit 1\nfi\ngit fetch origin && git rebase origin/main && git push --force-with-lease',
-      },
-    };
   if (action === "fix_code") {
     return {
       ...base,
@@ -225,31 +215,6 @@ describe("main — iterate text format", () => {
     expect(out).toContain("## Instructions");
     expect(out).toContain("1. Invoke `/loop cancel` via the Skill tool.");
     expect(out).toContain("2. Stop.");
-  });
-
-  it("rebase: heading, base/summary lines, reason, fenced shell script, then ## Instructions", async () => {
-    mockRunIterate.mockResolvedValue(makeIterateResult("rebase"));
-    await main(["node", "shepherd", "iterate", "42"]);
-    const out = getStdout();
-    const lines = out.trimEnd().split("\n");
-    expect(lines[0]).toBe("# PR #42 [REBASE]");
-    expect(lines[2]).toMatch(/^\*\*status\*\* `IN_PROGRESS` /);
-    expect(out).toContain("BEHIND + flaky CI — rebasing onto origin/main");
-    // Shell script is inside a ```bash fenced block.
-    const fenceStart = lines.findIndex((l) => l === "```bash");
-    const fenceEnd = lines.indexOf("```", fenceStart + 1);
-    expect(fenceStart).toBeGreaterThan(-1);
-    expect(fenceEnd).toBeGreaterThan(fenceStart);
-    const script = lines.slice(fenceStart + 1, fenceEnd).join("\n");
-    expect(script).toContain("if ! git diff --quiet");
-    expect(script).toContain(
-      "git fetch origin && git rebase origin/main && git push --force-with-lease",
-    );
-    // ## Instructions appears after the fenced block.
-    const instrIdx = lines.indexOf("## Instructions");
-    expect(instrIdx).toBeGreaterThan(fenceEnd);
-    expect(out).toContain("1. Copy the shell script from the");
-    expect(out).toContain("2. End this iteration");
   });
 
   it("escalate: heading, base/summary, humanMessage, then ## Instructions with loop-cancel steps", async () => {

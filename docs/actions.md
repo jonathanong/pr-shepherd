@@ -199,21 +199,11 @@ Other body-line variants: `CANCEL: PR #42 is closed — stopping monitor`, `CANC
 
 ---
 
-## `rebase`
-
-> **This action is no longer emitted by `iterate`.** Branch rebasing is now handled inside the `fix_code` instructions (see below). The `rebase` action type and its `## Instructions` format are preserved here for reference, but the CLI will not produce `[REBASE]` output in current releases.
-
-Rebases the branch on top of its base to bring it up to date with the target branch.
-
-**Trigger:** Previously emitted when a branch was `BEHIND` its base and no other actionable items were pending. Removed in favour of embedding the rebase step inside `fix_code` when conflicts are present.
-
----
-
 ## `fix_code`
 
 Actionable work needs a code fix, commit, and push.
 
-**Trigger:** Any of: unresolved inline review threads, actionable PR-level comments, `CHANGES_REQUESTED` reviews, actionable CI failures (`failureKind === "actionable"`), merge conflicts (`mergeStatus.status === "CONFLICTS"`), pending review summary IDs to minimize, or review summaries to surface. Evaluated at step 4, before rerun/rebase.
+**Trigger:** Any of: unresolved inline review threads, actionable PR-level comments, `CHANGES_REQUESTED` reviews, actionable CI failures (`failureKind === "actionable"`), merge conflicts (`mergeStatus.status === "CONFLICTS"`), pending review summary IDs to minimize, or review summaries to surface. Evaluated at step 4, before `rerun_ci`.
 
 **CLI side-effects:** Issues a `POST /repos/{owner}/{repo}/actions/runs/{runId}/cancel` REST call for each unique run ID of actionable CI failures (best-effort; already-completed runs return 409 and are silently ignored). **Important:** this cancellation runs on the pre-push run IDs recorded in the sweep — do not re-cancel these IDs after you push, because the push replaces them with fresh runs whose IDs differ.
 

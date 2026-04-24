@@ -11,8 +11,7 @@ import { formatFixCodeResult } from "./fix-formatter.mts";
  *   2. `[FIX_CODE]` uses the `rebase-and-push` variant: the `resolve` bullet under
  *      `## Post-fix push` wraps the resolve command in backticks — the SKILL
  *      extracts the backticked content for execution.
- *   3. The shell script under `[REBASE]` is inside a ```bash fenced block.
- *   4. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … —
+ *   3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … —
  *      that tells the monitor exactly what to do with this output. The section is
  *      unconditional: every action, every variant, always emits at least one step.
  *      The SKILL simply follows those steps; it does not need its own dispatch table.
@@ -78,18 +77,6 @@ export function formatIterateResult(result: IterateResult): string {
         result.log,
         "## Instructions",
         "1. Invoke `/loop cancel` via the Skill tool.\n2. Stop.",
-      );
-      return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
-    }
-
-    case "rebase": {
-      const parts = [header];
-      if (checksSection) parts.push(checksSection);
-      parts.push(
-        result.rebase.reason,
-        "```bash\n" + result.rebase.shellScript + "\n```",
-        "## Instructions",
-        "1. Copy the shell script from the ` ```bash ` block above and run it in Bash.\n2. End this iteration — the next cron fire will check CI after the rebase.",
       );
       return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
     }
