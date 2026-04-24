@@ -39,7 +39,7 @@ export function formatText(report: ShepherdReport): string {
       const prefix = triaged.workflowName ? `${triaged.workflowName} › ` : "";
       parts.push(`- ${prefix}${c.name}${kind}: ${c.conclusion ?? c.status}`);
       if (triaged.failedStep) {
-        parts.push(`  failed step: ${triaged.failedStep}`);
+        parts.push(`    failed step: ${triaged.failedStep}`);
       }
     }
     parts.push("");
