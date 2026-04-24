@@ -123,14 +123,14 @@ Dismissed reviews (1): PRR_kwDO123
 
 **Flags:**
 
-| Flag                     | Description                                                                  |
-| ------------------------ | ---------------------------------------------------------------------------- |
-| `--fetch`                | Fetch mode (default when no mutation flags are given)                        |
-| `--resolve-thread-ids`   | Comma-separated thread IDs to mark resolved                                  |
-| `--minimize-comment-ids` | Comma-separated comment or review-summary IDs to minimize                    |
-| `--dismiss-review-ids`   | Comma-separated `CHANGES_REQUESTED` review IDs to dismiss                    |
-| `--message`              | Dismiss message (required when `--dismiss-review-ids` is set)                |
-| `--require-sha`          | Poll GitHub until the PR head matches this SHA before mutating               |
+| Flag                     | Description                                                    |
+| ------------------------ | -------------------------------------------------------------- |
+| `--fetch`                | Fetch mode (default when no mutation flags are given)          |
+| `--resolve-thread-ids`   | Comma-separated thread IDs to mark resolved                    |
+| `--minimize-comment-ids` | Comma-separated comment or review-summary IDs to minimize      |
+| `--dismiss-review-ids`   | Comma-separated `CHANGES_REQUESTED` review IDs to dismiss      |
+| `--message`              | Dismiss message (required when `--dismiss-review-ids` is set)  |
+| `--require-sha`          | Poll GitHub until the PR head matches this SHA before mutating |
 
 `--require-sha` polls `GET /repos/{owner}/{repo}/pulls/{pr}` for `headRefOid` until it matches, then issues the mutations — ensures reviewers see the fix before threads are closed. Exit code: always `0`. `--message` must describe the specific fix; it is shown to the reviewer on GitHub.
 
@@ -232,13 +232,13 @@ pr-shepherd iterate 42 --no-cache --ready-delay 15m  # override ready-delay for 
 
 **Flags:**
 
-| Flag                          | Default                            | Description                                                     |
-| ----------------------------- | ---------------------------------- | --------------------------------------------------------------- |
-| `--ready-delay Nm`            | `watch.readyDelayMinutes` in config | Settle window before the loop cancels after READY               |
-| `--cooldown-seconds N`        | `iterate.cooldownSeconds` in config | Wait after a push before reading CI                             |
+| Flag                          | Default                                 | Description                                                     |
+| ----------------------------- | --------------------------------------- | --------------------------------------------------------------- |
+| `--ready-delay Nm`            | `watch.readyDelayMinutes` in config     | Settle window before the loop cancels after READY               |
+| `--cooldown-seconds N`        | `iterate.cooldownSeconds` in config     | Wait after a push before reading CI                             |
 | `--stall-timeout <duration>`  | `iterate.stallTimeoutMinutes` in config | Override the stall-detection window (e.g. `--stall-timeout 1h`) |
-| `--no-auto-mark-ready`        | false                              | Skip converting draft → ready-for-review                        |
-| `--no-auto-cancel-actionable` | false   | Skip cancelling actionable failing runs                         |
+| `--no-auto-mark-ready`        | false                                   | Skip converting draft → ready-for-review                        |
+| `--no-auto-cancel-actionable` | false                                   | Skip cancelling actionable failing runs                         |
 
 **Default (Markdown) output.** Every action emits an H1 heading, a bolded base-fields line, a bolded summary line, then an action-specific body. Example for `[WAIT]`:
 
@@ -314,7 +314,7 @@ npx pr-shepherd monitor 42
 
 **Example output:**
 
-```markdown
+````markdown
 # PR #42 [MONITOR]
 
 Loop tag: `# pr-shepherd-loop:pr=42`
@@ -328,18 +328,19 @@ Loop tag: `# pr-shepherd-loop:pr=42`
 
 ## Loop invocation
 
-\`\`\`loop
+```loop
 4m --max-turns 50 --expires 8h
 
 # pr-shepherd-loop:pr=42
+
 ...
-\`\`\`
+```
 
 ## Instructions
 
 1. Run `CronList`. If any job's prompt contains `# pr-shepherd-loop:pr=42`, run the loop prompt in `## Loop prompt` once inline then stop — do not create a duplicate loop.
-2. Otherwise, invoke the `/loop` skill via the Skill tool, passing the entire contents of the \`\`\`loop\`\`\` block above as the `args` parameter.
-```
+2. Otherwise, invoke the `/loop` skill via the Skill tool, passing the entire contents of the `loop` block above as the `args` parameter.
+````
 
 All loop parameters (`interval`, `maxTurns`, `expiresHours`) come from `.pr-shepherdrc.yml` or the built-in defaults (`watch.*` config keys). Use `--format=json` to inspect the raw values programmatically.
 

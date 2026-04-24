@@ -24,7 +24,12 @@ import { formatJson } from "./reporters/json.mts";
 import { formatText } from "./reporters/text.mts";
 import { parseCommonArgs, getFlag, hasFlag, parseList, statusToExitCode } from "./cli/args.mts";
 import { formatFetchResult, formatMutateResult } from "./cli/formatters.mts";
-import { handleCommitSuggestion, handleIterate, handleMonitor, handleStatus } from "./cli/handlers.mts";
+import {
+  handleCommitSuggestion,
+  handleIterate,
+  handleMonitor,
+  handleStatus,
+} from "./cli/handlers.mts";
 
 // ---------------------------------------------------------------------------
 // Entry

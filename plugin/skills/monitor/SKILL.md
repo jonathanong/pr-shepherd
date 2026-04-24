@@ -21,7 +21,7 @@ allowed-tools:
 2. **Run the bootstrap command and follow its instructions:**
 
    ```bash
-   npx pr-shepherd monitor <N>
+   npx pr-shepherd monitor <PR_NUMBER>
    ```
 
    Print the full output. Follow the `## Instructions` section exactly.

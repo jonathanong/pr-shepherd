@@ -22,7 +22,12 @@ describe("runMonitor", () => {
   });
 
   it("returns prNumber, loopTag, loopInvocation, loopPrompt for explicit PR", async () => {
-    const result = await runMonitor({ format: "text", noCache: false, cacheTtlSeconds: 300, prNumber: 99 });
+    const result = await runMonitor({
+      format: "text",
+      noCache: false,
+      cacheTtlSeconds: 300,
+      prNumber: 99,
+    });
     expect(result.prNumber).toBe(99);
     expect(result.loopTag).toBe("# pr-shepherd-loop:pr=99");
     expect(result.loopInvocation).toContain("4m --max-turns 50 --expires 8h");
@@ -40,7 +45,12 @@ describe("runMonitor", () => {
     vi.mocked(loadConfig).mockReturnValue({
       watch: { interval: "8m", maxTurns: 30, expiresHours: 4, readyDelayMinutes: 10 },
     } as unknown as PrShepherdConfig);
-    const result = await runMonitor({ format: "text", noCache: false, cacheTtlSeconds: 300, prNumber: 42 });
+    const result = await runMonitor({
+      format: "text",
+      noCache: false,
+      cacheTtlSeconds: 300,
+      prNumber: 42,
+    });
     expect(result.loopInvocation).toMatch(/^8m --max-turns 30 --expires 4h/);
   });
 });

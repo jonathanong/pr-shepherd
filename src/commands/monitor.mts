@@ -25,7 +25,8 @@ export async function runMonitor(opts: MonitorCommandOptions): Promise<MonitorRe
   const { interval, maxTurns, expiresHours } = config.watch;
   const loopTag = `# pr-shepherd-loop:pr=${prNumber}`;
   const loopPrompt = buildLoopPrompt(prNumber, loopTag);
-  const loopArgs = `${interval} --max-turns ${maxTurns} --expires ${expiresHours}h`;
+  const expiresNum = parseInt(String(expiresHours), 10);
+  const loopArgs = `${interval} --max-turns ${maxTurns} --expires ${expiresNum}h`;
   const loopInvocation = `${loopArgs}\n\n${loopPrompt}`;
 
   return { prNumber, loopTag, loopInvocation, loopPrompt };

@@ -10,7 +10,7 @@ The `/pr-shepherd:monitor <PR>` slash command starts a cron loop that polls PR s
 
 1. **User runs `/pr-shepherd:monitor <PR>`**
    - The skill runs `npx pr-shepherd monitor <PR>`, which reads `watch.*` config and emits a bootstrap Markdown block.
-   - The skill follows `## Instructions` in that output: checks for an existing loop (dedup), then invokes the `/loop` skill with the pre-built args+prompt from the ```` ```loop ```` block.
+   - The skill follows `## Instructions` in that output: checks for an existing loop (dedup), then invokes the `/loop` skill with the pre-built args+prompt from the ` ```loop ` block.
 
 2. **`/loop` schedules cron ticks**
    - `/loop` schedules a tick at the interval from config (default `4m`, configurable via `watch.interval`).

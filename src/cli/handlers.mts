@@ -100,9 +100,22 @@ export async function handleIterate(args: string[]): Promise<void> {
 }
 
 export async function handleMonitor(args: string[]): Promise<void> {
-  const { prNumber, global: globalOpts } = parseCommonArgs(args);
+  const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
 
-  const result = await runMonitor({ ...globalOpts, prNumber });
+  if (extra.length > 0) {
+    process.stderr.write(`Unknown arguments: ${extra.join(" ")}\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  let result;
+  try {
+    result = await runMonitor({ ...globalOpts, prNumber });
+  } catch (err) {
+    process.stderr.write(`${err instanceof Error ? err.message : String(err)}\n`);
+    process.exitCode = 1;
+    return;
+  }
 
   process.stdout.write(
     globalOpts.format === "json"
