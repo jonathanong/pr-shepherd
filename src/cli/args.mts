@@ -70,10 +70,7 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
   // them from `extra`.  Subcommand-specific flags are left untouched.
   const consumedIndices = new Set<number>();
   for (const tok of tokens ?? []) {
-    if (
-      tok.kind === "option" &&
-      tok.name === "format"
-    ) {
+    if (tok.kind === "option" && tok.name === "format") {
       consumedIndices.add(tok.index);
       // When the value is a separate arg (--flag value, not --flag=value),
       // inlineValue is false and the value occupies tok.index + 1.

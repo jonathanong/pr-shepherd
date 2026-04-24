@@ -16,9 +16,9 @@ pr-shepherd status PR1 [PR2 …]
 
 All subcommands accept:
 
-| Flag                  | Default | Description    |
-| --------------------- | ------- | -------------- |
-| `--format text\|json` | `text`  | Output format  |
+| Flag                  | Default | Description   |
+| --------------------- | ------- | ------------- |
+| `--format text\|json` | `text`  | Output format |
 
 ### pr-shepherd check [PR]
 

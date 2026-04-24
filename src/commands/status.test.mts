@@ -148,9 +148,9 @@ describe("formatStatusTable — formatting", () => {
 describe("runStatus — PR not found", () => {
   it("throws when pullRequest is null", async () => {
     mockGraphql.mockResolvedValue({ data: { repository: { pullRequest: null } } });
-    await expect(
-      runStatus({ prNumbers: [99], format: "text" }),
-    ).rejects.toThrow("PR #99 not found");
+    await expect(runStatus({ prNumbers: [99], format: "text" })).rejects.toThrow(
+      "PR #99 not found",
+    );
   });
 });
 

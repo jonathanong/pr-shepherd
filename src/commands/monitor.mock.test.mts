@@ -40,27 +40,27 @@ describe("runMonitor", () => {
     vi.mocked(loadConfig).mockReturnValue({
       watch: { interval: "every 4 minutes", maxTurns: 50, expiresHours: 8, readyDelayMinutes: 10 },
     } as unknown as PrShepherdConfig);
-    await expect(
-      runMonitor({ format: "text", prNumber: 42 }),
-    ).rejects.toThrow("watch.interval must be a duration string");
+    await expect(runMonitor({ format: "text", prNumber: 42 })).rejects.toThrow(
+      "watch.interval must be a duration string",
+    );
   });
 
   it("throws a clear error when expiresHours is not a positive integer", async () => {
     vi.mocked(loadConfig).mockReturnValue({
       watch: { interval: "4m", maxTurns: 50, expiresHours: "8h", readyDelayMinutes: 10 },
     } as unknown as PrShepherdConfig);
-    await expect(
-      runMonitor({ format: "text", prNumber: 42 }),
-    ).rejects.toThrow("watch.expiresHours must be a positive integer");
+    await expect(runMonitor({ format: "text", prNumber: 42 })).rejects.toThrow(
+      "watch.expiresHours must be a positive integer",
+    );
   });
 
   it("throws a clear error when maxTurns is not a positive integer", async () => {
     vi.mocked(loadConfig).mockReturnValue({
       watch: { interval: "4m", maxTurns: 0, expiresHours: 8, readyDelayMinutes: 10 },
     } as unknown as PrShepherdConfig);
-    await expect(
-      runMonitor({ format: "text", prNumber: 42 }),
-    ).rejects.toThrow("watch.maxTurns must be a positive integer");
+    await expect(runMonitor({ format: "text", prNumber: 42 })).rejects.toThrow(
+      "watch.maxTurns must be a positive integer",
+    );
   });
 
   it("respects config overrides for interval/maxTurns/expiresHours", async () => {

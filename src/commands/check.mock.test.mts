@@ -99,7 +99,6 @@ describe("runCheck — UNKNOWN merge state", () => {
     await runCheck(BASE_OPTS);
     expect(mockGetMergeableState).not.toHaveBeenCalled();
   });
-
 });
 
 // ---------------------------------------------------------------------------
