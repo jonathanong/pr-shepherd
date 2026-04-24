@@ -1,127 +1,161 @@
-/**
- * Human-readable text reporter for shepherd check output.
- */
-
 import type { ShepherdReport, TriagedCheck } from "../types.mts";
+import { buildCheckInstructions } from "./check-instructions.mts";
 
 export function formatText(report: ShepherdReport): string {
-  const lines: string[] = [];
+  const parts: string[] = [];
 
-  // Header
-  lines.push(`\nPR #${report.pr} — ${report.repo}`);
-  lines.push(`Status: ${report.status}`);
-  lines.push("");
+  // Header — scan-friendly status lines for quick at-a-glance review
+  parts.push(`\nPR #${report.pr} — ${report.repo}`);
+  parts.push(`Status: ${report.status}`);
+  parts.push("");
 
   // Merge status
   const ms = report.mergeStatus;
-  lines.push(`Merge Status: ${ms.status}`);
-  lines.push(`  mergeStateStatus:       ${ms.mergeStateStatus}`);
-  lines.push(`  mergeable:              ${ms.mergeable}`);
-  lines.push(`  reviewDecision:         ${ms.reviewDecision ?? "(none)"}`);
-  lines.push(`  isDraft:                ${ms.isDraft}`);
-  lines.push(`  copilotReviewInProgress:${ms.copilotReviewInProgress}`);
-  lines.push("");
+  parts.push("## Merge Status");
+  parts.push("");
+  parts.push(`${ms.status}`);
+  parts.push(`  mergeStateStatus:        ${ms.mergeStateStatus}`);
+  parts.push(`  mergeable:               ${ms.mergeable}`);
+  parts.push(`  reviewDecision:          ${ms.reviewDecision ?? "(none)"}`);
+  parts.push(`  isDraft:                 ${ms.isDraft}`);
+  parts.push(`  copilotReviewInProgress: ${ms.copilotReviewInProgress}`);
+  parts.push("");
 
   // CI checks
   const { passing, failing, inProgress, skipped } = report.checks;
   const total = passing.length + failing.length + inProgress.length + skipped.length;
-  lines.push(`CI Checks: ${passing.length}/${total} passed`);
+
+  parts.push("## CI Checks");
+  parts.push("");
+  parts.push(`${passing.length}/${total} passed`);
+  parts.push("");
 
   if (failing.length > 0) {
-    lines.push(`\nFailed Checks (${failing.length}):`);
+    parts.push(`### Failed (${failing.length})`);
+    parts.push("");
     for (const c of failing) {
       const triaged = c as TriagedCheck;
       const kind = triaged.failureKind ? ` [${triaged.failureKind}]` : "";
-      lines.push(`  - ${c.name}${kind}: ${c.conclusion ?? c.status}`);
+      parts.push(`- ${c.name}${kind}: ${c.conclusion ?? c.status}`);
       if (triaged.logExcerpt) {
-        lines.push(indent(triaged.logExcerpt.split("\n").slice(-10).join("\n"), "    "));
+        parts.push(indent(triaged.logExcerpt.split("\n").slice(-10).join("\n"), "    "));
       }
     }
+    parts.push("");
   }
 
   if (inProgress.length > 0) {
-    lines.push(`\nIn Progress (${inProgress.length}):`);
+    parts.push(`### In Progress (${inProgress.length})`);
+    parts.push("");
     for (const c of inProgress) {
-      lines.push(`  - ${c.name}: ${c.status}`);
+      parts.push(`- ${c.name}: ${c.status}`);
     }
+    parts.push("");
   }
 
   if (skipped.length > 0) {
-    lines.push(`\nSkipped (${skipped.length}): ${skipped.map((c) => c.name).join(", ")}`);
+    parts.push(`### Skipped (${skipped.length}): ${skipped.map((c) => c.name).join(", ")}`);
+    parts.push("");
   }
 
   if (report.checks.filtered.length > 0) {
-    lines.push(
-      `\nFiltered (non-PR-trigger) (${report.checks.filtered.length}): ${report.checks.filtered.map((c) => c.name).join(", ")}`,
+    parts.push(
+      `### Filtered non-PR-trigger (${report.checks.filtered.length}): ${report.checks.filtered.map((c) => c.name).join(", ")}`,
     );
+    parts.push("");
     if (report.checks.blockedByFilteredCheck) {
-      lines.push(
+      parts.push(
         "  Note: PR is BLOCKED and all filtered checks are non-PR-trigger — one of these filtered checks may be a required status check blocking merge.",
       );
     } else if (report.mergeStatus.status === "BLOCKED") {
-      lines.push(
+      parts.push(
         "  Note: one or more of these filtered checks may be a required status check blocking merge.",
       );
     }
+    parts.push("");
   }
-
-  lines.push("");
 
   // Review threads
   const { actionable: actionableThreads, autoResolved, autoResolveErrors } = report.threads;
-  if (autoResolved.length > 0) {
-    lines.push(`Auto-resolved outdated threads (${autoResolved.length}):`);
-    for (const t of autoResolved) {
-      lines.push(`  - threadId=${t.id} ${t.path ?? ""}:${t.line ?? "?"} (@${t.author})`);
-    }
-    lines.push("");
-  }
+  const hasThreadSection =
+    autoResolved.length > 0 || autoResolveErrors.length > 0 || actionableThreads.length > 0;
 
-  if (autoResolveErrors.length > 0) {
-    lines.push(`Auto-resolve errors (${autoResolveErrors.length}):`);
-    for (const e of autoResolveErrors) {
-      lines.push(`  - ${e}`);
-    }
-    lines.push("");
-  }
+  if (hasThreadSection) {
+    parts.push("## Review Threads");
+    parts.push("");
 
-  if (actionableThreads.length > 0) {
-    lines.push(`Actionable Review Threads (${actionableThreads.length}):`);
-    for (const t of actionableThreads) {
-      const label = t.path ? `${t.path}:${t.line ?? "?"}` : "(general)";
-      lines.push(`  - threadId=${t.id} ${label} (@${t.author})`);
-      lines.push(`    ${firstLine(t.body)}`);
+    if (autoResolved.length > 0) {
+      parts.push(`Auto-resolved outdated (${autoResolved.length}):`);
+      for (const t of autoResolved) {
+        parts.push(`- threadId=${t.id} ${t.path ?? ""}:${t.line ?? "?"} (@${t.author})`);
+      }
+      parts.push("");
     }
-    lines.push("");
+
+    if (autoResolveErrors.length > 0) {
+      parts.push(`Auto-resolve errors (${autoResolveErrors.length}):`);
+      for (const e of autoResolveErrors) {
+        parts.push(`- ${e}`);
+      }
+      parts.push("");
+    }
+
+    if (actionableThreads.length > 0) {
+      parts.push(`### Actionable (${actionableThreads.length})`);
+      parts.push("");
+      for (const t of actionableThreads) {
+        const label = t.path ? `${t.path}:${t.line ?? "?"}` : "(general)";
+        parts.push(`- threadId=${t.id} ${label} (@${t.author})`);
+        parts.push(`  ${firstLine(t.body)}`);
+      }
+      parts.push("");
+    }
   }
 
   // PR comments
   const { actionable: actionableComments } = report.comments;
   if (actionableComments.length > 0) {
-    lines.push(`Actionable PR Comments (${actionableComments.length}):`);
+    parts.push("## PR Comments");
+    parts.push("");
+    parts.push(`### Actionable (${actionableComments.length})`);
+    parts.push("");
     for (const c of actionableComments) {
-      lines.push(`  - commentId=${c.id} (@${c.author}): ${firstLine(c.body)}`);
+      parts.push(`- commentId=${c.id} (@${c.author}): ${firstLine(c.body)}`);
     }
-    lines.push("");
+    parts.push("");
   }
 
   // CHANGES_REQUESTED reviews
   if (report.changesRequestedReviews.length > 0) {
-    lines.push(`Pending CHANGES_REQUESTED reviews (${report.changesRequestedReviews.length}):`);
+    parts.push("## CHANGES_REQUESTED Reviews");
+    parts.push("");
     for (const r of report.changesRequestedReviews) {
-      lines.push(`  - reviewId=${r.id} (@${r.author}): ${firstLine(r.body)}`);
+      parts.push(`- reviewId=${r.id} (@${r.author}): ${firstLine(r.body)}`);
     }
-    lines.push("");
+    parts.push("");
   }
 
   // Summary
   const totalActionable =
     actionableThreads.length + actionableComments.length + report.changesRequestedReviews.length;
-  lines.push(
-    `Summary: ${totalActionable === 0 ? "0 actionable — all threads resolved/minimized" : `${totalActionable} actionable item(s) remaining`}`,
+  parts.push("## Summary");
+  parts.push("");
+  parts.push(
+    totalActionable === 0
+      ? "0 actionable — all threads resolved/minimized"
+      : `${totalActionable} actionable item(s) remaining`,
   );
+  parts.push("");
 
-  return lines.join("\n");
+  // Instructions
+  parts.push("## Instructions");
+  parts.push("");
+  const instructions = buildCheckInstructions(report);
+  instructions.forEach((step, i) => {
+    parts.push(`${i + 1}. ${step}`);
+  });
+
+  return parts.join("\n");
 }
 
 // ---------------------------------------------------------------------------

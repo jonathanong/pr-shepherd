@@ -10,59 +10,26 @@ allowed-tools: ["Bash"]
 
 ## Arguments: $ARGUMENTS
 
-## Resolve PR number(s)
+## Steps
 
-1. If `$ARGUMENTS` contains PR numbers or GitHub PR URLs, extract the number(s).
-2. Otherwise, infer: `gh pr list --head "$(git rev-parse --abbrev-ref HEAD)" --json number --jq '.[0].number'`
-3. If no PR found, report an error and stop.
+1. **Parse `$ARGUMENTS`:** extract PR numbers or GitHub PR URLs. If none, infer:
+   `gh pr list --head "$(git rev-parse --abbrev-ref HEAD)" --json number --jq '.[0].number'`
+   If no PR found, report an error and stop.
 
-For each resolved PR number, check if it is already merged:
+2. **Short-circuit if merged:**
 
-```bash
-gh pr view <N> --json state --jq '.state'
-```
+   ```bash
+   gh pr view <N> --json state --jq '.state'
+   ```
 
-If `MERGED`, output: `PR #N is already merged. Nothing to check.` and skip.
+   If `MERGED`, output: `PR #N is already merged. Nothing to check.` and skip.
 
-## Run the check
+3. **Run the check and follow instructions:**
 
-```bash
-npx pr-shepherd check <N> --format=json
-```
+   ```bash
+   npx pr-shepherd check <N>
+   ```
 
-## Reporting
+   Print the full output. Follow the `## Instructions` section exactly.
 
-Parse the JSON output and report all three:
-
-- **Merge status** (`mergeStatus.status`): CLEAN | BEHIND | CONFLICTS | BLOCKED | UNSTABLE | DRAFT | UNKNOWN — never omit; include `copilotReviewInProgress` when true
-- **CI check results** (`checks.passing`, `checks.failing`, `checks.inProgress`): passing count, failing names + kinds, in-progress names
-- **Unresolved review comments** (`threads.actionable` + `comments.actionable`): count + details with file paths and line numbers
-
-## Rebase policy
-
-The CLI already determines whether a rebase is warranted. Read `mergeStatus.status` directly:
-
-- `CONFLICTS` — a rebase is required to resolve the merge conflict before the PR can land.
-- `BEHIND` — a rebase may be appropriate; a `flaky` failure while `BEHIND` is the canonical rebase signal. If all checks pass but the PR is `BEHIND`, a rebase is optional.
-- Any other status — no rebase needed.
-
-Do not re-derive these conditions from raw branch state. For automated monitoring that acts on these signals, use `/pr-shepherd:monitor` — it handles rebase decisions end-to-end.
-
-## CI budget policy
-
-Each entry in `checks.failing` carries a `failureKind` field. Read it directly rather than re-classifying failures:
-
-- `actionable` — the failure is code-level and needs a fix.
-- `infrastructure` — transient infra problem; re-run with `gh run rerun <runId> --failed`.
-- `timeout` — job exceeded the time limit; re-run with `gh run rerun <runId> --failed`.
-- `flaky` — known-flaky test; do NOT cancel. Rebase first if `mergeStatus.status` is `BEHIND`.
-
-## Never declare ready to merge
-
-Unless ALL of:
-
-1. `mergeStatus.mergeStateStatus == 'CLEAN'`
-2. `status == 'READY'`
-3. `mergeStatus.copilotReviewInProgress == false`
-
-This is a one-shot check. For continuous monitoring, use `/pr-shepherd:monitor`.
+4. For multiple PRs, repeat steps 2–3 for each.

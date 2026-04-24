@@ -21,7 +21,7 @@ The 4-minute default is intentional — it keeps Claude's prompt cache warm (5-m
 
 ## `/pr-shepherd:check`
 
-One-shot PR status snapshot. Reports merge status, CI results, and unresolved comments.
+One-shot PR status snapshot. Reports merge status, CI results, and unresolved comments. The skill is a thin dispatcher: it runs `pr-shepherd check <N>`, prints the Markdown output, then follows the `## Instructions` section embedded in that output. All rebase policy, CI budget rules, and ready-to-merge gating are described in the CLI output itself — not in the skill.
 
 ```
 /pr-shepherd:check        # infer from branch

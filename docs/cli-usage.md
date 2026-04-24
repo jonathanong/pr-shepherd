@@ -39,20 +39,35 @@ Exit codes: `0` READY · `2` IN_PROGRESS · `3` UNRESOLVED_COMMENTS · `1` all o
 PR #42 — owner/repo
 Status: UNRESOLVED_COMMENTS
 
-Merge Status: CLEAN
-  mergeStateStatus:       CLEAN
-  mergeable:              MERGEABLE
-  reviewDecision:         APPROVED
-  isDraft:                false
-  copilotReviewInProgress:false
+## Merge Status
 
-CI Checks: 3/3 passed
+CLEAN
+  mergeStateStatus:        CLEAN
+  mergeable:               MERGEABLE
+  reviewDecision:          APPROVED
+  isDraft:                 false
+  copilotReviewInProgress: false
 
-Actionable Review Threads (1):
-  - threadId=RT_kwDOBxyz123 src/api.ts:47 (@reviewer)
-    Please add error handling here
+## CI Checks
 
-Summary: 1 actionable item(s) remaining
+3/3 passed
+
+## Review Threads
+
+### Actionable (1)
+
+- threadId=RT_kwDOBxyz123 src/api.ts:47 (@reviewer)
+  Please add error handling here
+
+## Summary
+
+1 actionable item(s) remaining
+
+## Instructions
+
+1. Report: merge status is CLEAN, CI 3/3 passed, 1 actionable review item(s).
+2. Do not declare this PR ready to merge: status is UNRESOLVED_COMMENTS (not READY).
+3. This is a one-shot check. For continuous monitoring that acts on these signals automatically, use `/pr-shepherd:monitor`.
 ```
 
 ### pr-shepherd resolve [PR]

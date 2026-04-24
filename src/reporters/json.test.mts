@@ -37,10 +37,20 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
 }
 
 describe("formatJson", () => {
-  it("produces valid JSON that round-trips to the original report", () => {
+  it("produces valid JSON containing all report fields", () => {
     const report = makeReport();
     const output = formatJson(report);
-    expect(JSON.parse(output)).toEqual(report);
+    const parsed = JSON.parse(output) as Record<string, unknown>;
+    // instructions is added by the formatter; strip it before comparing
+    const { instructions: _instructions, ...rest } = parsed;
+    expect(rest).toEqual(report);
+  });
+
+  it("includes non-empty instructions array", () => {
+    const output = formatJson(makeReport());
+    const parsed = JSON.parse(output) as { instructions: unknown };
+    expect(Array.isArray(parsed.instructions)).toBe(true);
+    expect((parsed.instructions as string[]).length).toBeGreaterThan(0);
   });
 
   it("indents with 2 spaces", () => {
@@ -55,5 +65,11 @@ describe("formatJson", () => {
     const parsed = JSON.parse(formatJson(report)) as ShepherdReport;
     expect(parsed.pr).toBe(99);
     expect(parsed.status).toBe("FAILING");
+  });
+
+  it("instructions include monitoring pointer", () => {
+    const output = formatJson(makeReport());
+    const parsed = JSON.parse(output) as { instructions: string[] };
+    expect(parsed.instructions.some((s) => s.includes("/pr-shepherd:monitor"))).toBe(true);
   });
 });

@@ -84,16 +84,17 @@ describe("formatText — header", () => {
     expect(out).toContain("Status: FAILING");
   });
 
-  it("includes merge status fields", () => {
+  it("includes merge status heading and fields", () => {
     const out = formatText(makeReport());
-    expect(out).toContain("Merge Status: CLEAN");
+    expect(out).toContain("## Merge Status");
+    expect(out).toContain("CLEAN");
     expect(out).toContain("mergeStateStatus:");
     expect(out).toContain("mergeable:");
   });
 });
 
 describe("formatText — CI check counts", () => {
-  it("shows passed count out of total", () => {
+  it("shows passed count out of total under ## CI Checks", () => {
     const report = makeReport({
       checks: {
         passing: [makeCheck(), makeCheck()],
@@ -106,6 +107,7 @@ describe("formatText — CI check counts", () => {
       },
     });
     const out = formatText(report);
+    expect(out).toContain("## CI Checks");
     expect(out).toContain("2/3 passed");
   });
 });
@@ -175,7 +177,7 @@ describe("formatText — in-progress section", () => {
       },
     });
     const out = formatText(report);
-    expect(out).toContain("In Progress (1):");
+    expect(out).toContain("### In Progress (1)");
   });
 
   it("omits in-progress section when empty", () => {
@@ -196,7 +198,7 @@ describe("formatText — skipped section", () => {
       },
     });
     const out = formatText(report);
-    expect(out).toContain("Skipped (2): deploy, e2e");
+    expect(out).toContain("### Skipped (2): deploy, e2e");
   });
 });
 
@@ -232,7 +234,7 @@ describe("formatText — filtered checks notes", () => {
 });
 
 describe("formatText — threads and comments", () => {
-  it("shows auto-resolved threads", () => {
+  it("shows auto-resolved threads under ## Review Threads", () => {
     const report = makeReport({
       threads: {
         actionable: [],
@@ -241,7 +243,8 @@ describe("formatText — threads and comments", () => {
       },
     });
     const out = formatText(report);
-    expect(out).toContain("Auto-resolved outdated threads (1):");
+    expect(out).toContain("## Review Threads");
+    expect(out).toContain("Auto-resolved outdated (1):");
     expect(out).toContain("threadId=t-1");
   });
 
@@ -297,7 +300,7 @@ describe("formatText — threads and comments", () => {
     expect(out).not.toContain("should not appear");
   });
 
-  it("shows actionable PR comments", () => {
+  it("shows actionable PR comments under ## PR Comments", () => {
     const comment: PrComment = {
       id: "c-1",
       isMinimized: false,
@@ -309,16 +312,16 @@ describe("formatText — threads and comments", () => {
       comments: { actionable: [comment] },
     });
     const out = formatText(report);
-    expect(out).toContain("Actionable PR Comments (1):");
+    expect(out).toContain("## PR Comments");
     expect(out).toContain("commentId=c-1");
     expect(out).toContain("@carol");
   });
 
-  it("shows CHANGES_REQUESTED reviews", () => {
+  it("shows CHANGES_REQUESTED reviews under ## CHANGES_REQUESTED Reviews", () => {
     const review: Review = { id: "r-1", author: "dave", body: "please fix the types" };
     const report = makeReport({ changesRequestedReviews: [review] });
     const out = formatText(report);
-    expect(out).toContain("Pending CHANGES_REQUESTED reviews (1):");
+    expect(out).toContain("## CHANGES_REQUESTED Reviews");
     expect(out).toContain("reviewId=r-1");
   });
 });
@@ -339,5 +342,69 @@ describe("formatText — summary line", () => {
     });
     const out = formatText(report);
     expect(out).toContain("2 actionable item(s) remaining");
+  });
+});
+
+describe("formatText — ## Instructions section", () => {
+  it("includes ## Instructions heading", () => {
+    const out = formatText(makeReport());
+    expect(out).toContain("## Instructions");
+  });
+
+  it("has numbered steps", () => {
+    const out = formatText(makeReport());
+    expect(out).toMatch(/1\. /);
+    expect(out).toMatch(/2\. /);
+  });
+
+  it("includes ready-to-merge declaration when READY+CLEAN", () => {
+    const out = formatText(makeReport());
+    expect(out).toContain("ready to merge");
+  });
+
+  it("includes do-not-merge instruction when not READY", () => {
+    const out = formatText(makeReport({ status: "FAILING" }));
+    expect(out).toContain("Do not declare");
+  });
+
+  it("includes rebase instruction for CONFLICTS", () => {
+    const report = makeReport({
+      mergeStatus: {
+        ...makeReport().mergeStatus,
+        status: "CONFLICTS",
+        mergeStateStatus: "DIRTY",
+      },
+    });
+    const out = formatText(report);
+    expect(out).toContain("Rebase required");
+  });
+
+  it("includes fix-code instruction for actionable failures", () => {
+    const failing: TriagedCheck = {
+      ...makeCheck({ name: "lint", category: "failing", conclusion: "FAILURE" }),
+      failureKind: "actionable",
+    };
+    const report = makeReport({
+      checks: { ...makeReport().checks, failing: [failing] },
+    });
+    const out = formatText(report);
+    expect(out).toContain("Fix code failure");
+  });
+
+  it("includes rerun instruction for timeout failures with runId", () => {
+    const failing: TriagedCheck = {
+      ...makeCheck({ name: "build", category: "failing", conclusion: "TIMED_OUT", runId: "12345" }),
+      failureKind: "timeout",
+    };
+    const report = makeReport({
+      checks: { ...makeReport().checks, failing: [failing] },
+    });
+    const out = formatText(report);
+    expect(out).toContain("gh run rerun 12345 --failed");
+  });
+
+  it("mentions /pr-shepherd:monitor for continuous monitoring", () => {
+    const out = formatText(makeReport());
+    expect(out).toContain("/pr-shepherd:monitor");
   });
 });
