@@ -119,7 +119,7 @@ Dismissed reviews (1): PRR_kwDO123
 
 `--require-sha` polls `GET /repos/{owner}/{repo}/pulls/{pr}` for `headRefOid` until it matches, then issues the mutations — ensures reviewers see the fix before threads are closed. Exit code: always `0`. `--message` must describe the specific fix; it is shown to the reviewer on GitHub.
 
-### pr-shepherd commit-suggestion [PR] --thread-id <id> --message "…"
+### pr-shepherd commit-suggestion [PR] --thread-id <id> [--message "…"] [--dry-run]
 
 Applies a single reviewer ` ```suggestion ` fenced block as a local git commit. Builds a unified diff from the suggestion, validates it with `git apply --check`, writes the file, and commits with the caller-supplied message plus a `Co-authored-by: <reviewer>` trailer. Resolves the thread on GitHub after the commit lands. Never pushes — the output tells the caller to `git push` when ready.
 
