@@ -7,3 +7,6 @@ npm run --silent lint
 
 echo "pre-push: npm run typecheck"
 npm run --silent typecheck
+
+echo "pre-push: npm run format:check"
+npm run --silent format:check
