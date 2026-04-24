@@ -1,7 +1,7 @@
 # pr-shepherd
 
 Autonomous PR CI monitor and review-comment resolver for Claude Code.
-The goal is to have an agent take a plan to a human reviewable PR autonomously.
+The goal is to have an agent take a plan to a human-reviewable PR autonomously.
 
 Example Workflow:
 
