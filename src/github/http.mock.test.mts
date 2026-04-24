@@ -140,7 +140,11 @@ describe("graphql — error handling", () => {
       ok: true,
       status: 200,
       headers: new Headers({ "content-type": "application/json" }),
-      json: () => Promise.resolve({ data: { node: { id: "PR_1" } }, errors: [{ message: "partial failure" }] }),
+      json: () =>
+        Promise.resolve({
+          data: { node: { id: "PR_1" } },
+          errors: [{ message: "partial failure" }],
+        }),
     });
     const result = await graphql("{ q }");
     expect(result.data).toEqual({ node: { id: "PR_1" } });

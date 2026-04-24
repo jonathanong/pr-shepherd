@@ -416,6 +416,6 @@ describe("runCommitSuggestion — git apply rollback", () => {
       (call) => call[0] === "git" && (call[1] as string[])[0] === "checkout",
     );
     expect(checkoutCall).toBeDefined();
-    expect((checkoutCall![1] as string[])).toContain("src/foo.ts");
+    expect(checkoutCall![1] as string[]).toContain("src/foo.ts");
   });
 });

@@ -138,7 +138,9 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
 
     const result = await runResolveFetch(BASE_OPTS);
 
-    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("auto-resolve outdated threads failed"));
+    expect(stderrSpy).toHaveBeenCalledWith(
+      expect.stringContaining("auto-resolve outdated threads failed"),
+    );
     expect(result).toBeDefined();
     stderrSpy.mockRestore();
   });
