@@ -157,7 +157,10 @@ function extractCheckRunSummary(
 ): string | undefined {
   const t = title?.trim();
   if (t) return t;
-  const firstLine = summary?.split("\n").find((l) => l.trim() !== "")?.trim();
+  const firstLine = summary
+    ?.split("\n")
+    .find((l) => l.trim() !== "")
+    ?.trim();
   return firstLine || undefined;
 }
 
