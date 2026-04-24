@@ -237,15 +237,7 @@ describe("main — commit-suggestion", () => {
 describe("main — commit-suggestion --dry-run", () => {
   it("passes dryRun=true to runCommitSuggestion and does not require --message", async () => {
     mockRunCommitSuggestion.mockResolvedValue(DRY_RUN_VALID_RESULT);
-    await main([
-      "node",
-      "shepherd",
-      "commit-suggestion",
-      "42",
-      "--thread-id",
-      "t1",
-      "--dry-run",
-    ]);
+    await main(["node", "shepherd", "commit-suggestion", "42", "--thread-id", "t1", "--dry-run"]);
     expect(mockRunCommitSuggestion).toHaveBeenCalledWith(
       expect.objectContaining({ prNumber: 42, threadId: "t1", dryRun: true }),
     );
