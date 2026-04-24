@@ -83,7 +83,24 @@ describe("runMonitor", () => {
     expect(result.loopPrompt).toContain("--ready-delay 15m");
   });
 
-  it("throws for an invalid readyDelaySuffix", async () => {
+  it("accepts hours suffix for readyDelaySuffix", async () => {
+    const result = await runMonitor({ format: "text", prNumber: 42, readyDelaySuffix: "2h" });
+    expect(result.loopPrompt).toContain("--ready-delay 2h");
+  });
+
+  it("throws for an invalid readyDelaySuffix (seconds not accepted)", async () => {
+    await expect(
+      runMonitor({ format: "text", prNumber: 42, readyDelaySuffix: "30s" }),
+    ).rejects.toThrow(/Invalid --ready-delay/);
+  });
+
+  it("throws for an invalid readyDelaySuffix (days not accepted)", async () => {
+    await expect(
+      runMonitor({ format: "text", prNumber: 42, readyDelaySuffix: "1d" }),
+    ).rejects.toThrow(/Invalid --ready-delay/);
+  });
+
+  it("throws for a plain-text invalid readyDelaySuffix", async () => {
     await expect(
       runMonitor({ format: "text", prNumber: 42, readyDelaySuffix: "invalid" }),
     ).rejects.toThrow(/Invalid --ready-delay/);

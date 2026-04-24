@@ -76,9 +76,9 @@ export function formatMonitorResult(result: MonitorResult): string {
 function validateReadyDelaySuffix(readyDelaySuffix?: string): string | undefined {
   if (readyDelaySuffix === undefined) return undefined;
   const trimmed = readyDelaySuffix.trim();
-  if (!/^\d+(?:ms|s|m|h|d|w)$/i.test(trimmed)) {
+  if (!/^\d+(?:m|min|minutes?|h|hours?)$/.test(trimmed)) {
     throw new Error(
-      `Invalid --ready-delay: ${readyDelaySuffix}. Expected a duration like 30s, 5m, 2h, or 1d.`,
+      `Invalid --ready-delay: ${readyDelaySuffix}. Expected a duration like 5m, 2h, 10m, or 1h.`,
     );
   }
   return trimmed;

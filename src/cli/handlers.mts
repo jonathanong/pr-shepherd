@@ -105,7 +105,10 @@ export async function handleMonitor(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
 
   const readyDelayStr = getFlag(extra, "--ready-delay");
-  if (hasFlag(extra, "--ready-delay") && readyDelayStr === null) {
+  if (
+    hasFlag(extra, "--ready-delay") &&
+    (readyDelayStr === null || readyDelayStr.startsWith("--"))
+  ) {
     process.stderr.write(
       "pr-shepherd monitor: --ready-delay requires a value (e.g. --ready-delay 15m)\n",
     );

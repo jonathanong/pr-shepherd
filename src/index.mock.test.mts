@@ -54,4 +54,28 @@ describe("index — error exit", () => {
     expect(written).toMatch(/\)\n$/);
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
+
+  it("does not recurse infinitely for circular cause chains", async () => {
+    const err = new Error("outer");
+    err.cause = err;
+    mockMain.mockRejectedValueOnce(err);
+    await loadIndex();
+    const written = stderrSpy.mock.calls[0][0] as string;
+    expect(written).toContain("[circular or deep cause chain]");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it("truncates deeply nested cause chains at max depth", async () => {
+    let cause: Error = new Error("deepest");
+    for (let i = 0; i < 7; i++) {
+      const next = new Error(`level ${i}`);
+      next.cause = cause;
+      cause = next;
+    }
+    mockMain.mockRejectedValueOnce(cause);
+    await loadIndex();
+    const written = stderrSpy.mock.calls[0][0] as string;
+    expect(written).toContain("[circular or deep cause chain]");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
 });

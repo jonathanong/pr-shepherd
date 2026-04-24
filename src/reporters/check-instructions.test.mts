@@ -200,8 +200,26 @@ describe("buildCheckInstructions — monitoring pointer", () => {
     expect(steps[steps.length - 1]).toContain("/pr-shepherd:monitor");
   });
 
-  it("omits the /pr-shepherd:monitor pointer for READY PRs", () => {
+  it("omits the /pr-shepherd:monitor pointer when truly ready to merge (CLEAN + READY + no copilot)", () => {
     const steps = buildCheckInstructions(makeReport({ status: "READY" }));
     expect(steps.every((s) => !s.includes("/pr-shepherd:monitor"))).toBe(true);
+  });
+
+  it("includes the /pr-shepherd:monitor pointer when status=READY but mergeStateStatus is not CLEAN (e.g. draft)", () => {
+    const report = makeReport({
+      status: "READY",
+      mergeStatus: { ...makeReport().mergeStatus, mergeStateStatus: "DRAFT", isDraft: true },
+    });
+    const steps = buildCheckInstructions(report);
+    expect(steps.some((s) => s.includes("/pr-shepherd:monitor"))).toBe(true);
+  });
+
+  it("includes the /pr-shepherd:monitor pointer when status=READY but copilot review in progress", () => {
+    const report = makeReport({
+      status: "READY",
+      mergeStatus: { ...makeReport().mergeStatus, copilotReviewInProgress: true },
+    });
+    const steps = buildCheckInstructions(report);
+    expect(steps.some((s) => s.includes("/pr-shepherd:monitor"))).toBe(true);
   });
 });
