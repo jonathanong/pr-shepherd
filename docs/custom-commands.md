@@ -4,8 +4,9 @@
 
 If you don't want the full plugin, create a project-local (or user-scope)
 slash command that wraps the CLI directly. This still requires `pr-shepherd`
-to be installed in the repository first (`npm install pr-shepherd`), so that
-`npx pr-shepherd ...` runs without prompting to install the package.
+to be installed in the repository first (preferably as a dev dependency:
+`npm install --save-dev pr-shepherd`), so that `npx pr-shepherd ...` runs
+without prompting to install the package.
 
 1. **Create the command file:**
    - Project-scope: `.claude/commands/pr-check.md`

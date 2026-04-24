@@ -28,7 +28,6 @@ Read-only PR status snapshot. Fetches CI results, merge state, and review commen
 ```sh
 pr-shepherd check           # infer PR from current branch
 pr-shepherd check 42
-pr-shepherd check 42
 pr-shepherd check 42 --no-cache
 ```
 
