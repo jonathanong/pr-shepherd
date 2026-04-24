@@ -21,14 +21,16 @@ export async function handleCommitSuggestion(args: string[]): Promise<void> {
   const threadId = getFlag(extra, "--thread-id");
   if (!threadId) {
     process.stderr.write(
-      "Usage: pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [--description DESC]\n",
+      "Usage: pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [--description DESC] [--dry-run]\n",
     );
     process.exitCode = 1;
     return;
   }
 
-  const message = getFlag(extra, "--message");
-  if (!message || message.trim() === "") {
+  const dryRun = hasFlag(extra, "--dry-run");
+  const message = getFlag(extra, "--message") ?? undefined;
+
+  if (!dryRun && (!message || message.trim() === "")) {
     process.stderr.write("--message is required and must be non-empty\n");
     process.exitCode = 1;
     return;
@@ -42,6 +44,7 @@ export async function handleCommitSuggestion(args: string[]): Promise<void> {
     threadId,
     message,
     description,
+    dryRun,
   });
 
   process.stdout.write(
@@ -50,7 +53,11 @@ export async function handleCommitSuggestion(args: string[]): Promise<void> {
       : formatCommitSuggestionResult(result),
   );
 
-  process.exitCode = result.applied ? 0 : 1;
+  if (result.dryRun) {
+    process.exitCode = result.valid ? 0 : 1;
+  } else {
+    process.exitCode = result.applied ? 0 : 1;
+  }
 }
 
 export async function handleIterate(args: string[]): Promise<void> {

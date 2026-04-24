@@ -130,6 +130,12 @@ pr-shepherd commit-suggestion 42 \
   --description "Optional longer body text."
 ```
 
+Pass `--dry-run` to preview the unified diff without writing, staging, committing, or resolving the thread. `--message` is optional in dry-run mode. Exit code: `0` when the patch would apply cleanly, `1` on drift.
+
+```sh
+pr-shepherd commit-suggestion 42 --thread-id PRRT_abc --dry-run
+```
+
 Requires a clean working tree and that the current branch matches the PR head ref. Precondition or lookup failures (wrong branch, thread not found, already resolved, outdated, no suggestion block, nested fencing) are hard errors with specific reason strings. Patch rejection is a normal result with `applied: false` plus a `reason` — the CLI exits `1`. There is no `skipped` state; the caller must handle or retry hard errors or `applied: false` results.
 
 Gated by `actions.commitSuggestions` (default `true`) — `/pr-shepherd:resolve` calls this automatically for threads that `resolve --fetch` annotates with `[suggestion]`.
@@ -152,6 +158,23 @@ Commit: abc1234
 Run `git push` (or `git push --force-with-lease` after rebasing) to publish the commit.
 ````
 
+**Example output (--dry-run, patch valid):**
+
+````
+Dry-run: would apply suggestion from @alice:
+  src/foo.ts (line 42)
+
+```diff
+--- a/src/foo.ts
++++ b/src/foo.ts
+@@ -42 +42 @@
+-const x = computeRemaining();
++const remainingSeconds = computeRemaining();
+```
+
+Re-run without --dry-run to apply and commit.
+````
+
 **Example output (failure — patch rejected):**
 
 ````
@@ -171,7 +194,7 @@ Failed to apply suggestion PRRT_abc:
 ```
 ````
 
-Exit codes: `0` suggestion applied and committed · `1` any error.
+Exit codes: `0` suggestion applied and committed, or dry-run patch is clean · `1` any error or dry-run drift.
 
 **Applying multiple suggestions.** Invoke once per thread — the command handles one suggestion at a time. For a PR with multiple suggestion threads, run in sequence then push all the resulting commits together:
 

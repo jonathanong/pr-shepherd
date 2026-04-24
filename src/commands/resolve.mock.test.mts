@@ -322,6 +322,7 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     expect(joined).toContain("commit-suggestion");
     expect(joined).toContain("applied: true");
     expect(joined).toContain("applied: false");
+    expect(joined).toContain("--dry-run");
   });
 
   it("instructions omit commit-suggestion step when commitSuggestionsEnabled is false", async () => {
