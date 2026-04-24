@@ -142,9 +142,9 @@ Each comma-separated entry on the body line has shape `<runId> (<check names joi
 
 Converts a draft PR to ready for review.
 
-**Trigger:** All of: `status === "READY"`, `mergeStateStatus === "CLEAN"` (or `"DRAFT"` when `isDraft`), Copilot review not in progress, `isDraft === true`, ready-delay not elapsed (`readyState.shouldCancel === false`). Once the delay elapses, the action flips to `cancel`.
+**Trigger:** All of: `status === "READY"`, `mergeStateStatus === "CLEAN"` (or `"DRAFT"` when `isDraft`), Copilot review not in progress, `isDraft === true`, `config.actions.autoMarkReady` is enabled (disable with `--no-auto-mark-ready`), and ready-delay not elapsed (`readyState.shouldCancel === false`). Once the delay elapses, the action flips to `cancel`.
 
-**CLI side-effects:** Calls `gh pr ready <PR>` before returning.
+**CLI side-effects:** Calls the `markPullRequestReadyForReview` GraphQL mutation before returning.
 
 **Exit code:** 0
 
@@ -207,7 +207,7 @@ Rebases the branch on top of its base to clear flaky failures caused by being be
 
 > Note: merge conflicts (`CONFLICTS`) route to `fix_code`, not `rebase` — conflicts need manual resolution during the rebase. The `fix_code` runbook always emits a rebase step when the PR is in `CONFLICTS`, even without any threads/comments/checks/reviews; the wording switches from the clean `rebase && push` one-liner to an explicit "Rebase with conflict resolution" step that handles `git rebase --continue` loops before pushing.
 
-**CLI side-effects:** None. The CLI uses the base branch already returned in the GraphQL batch (`baseRefName` → `ShepherdReport.baseBranch`), validates it locally, and pre-builds the shell script. If the base branch is unknown (`base-branch-unknown`), it does not do an extra `gh pr view` fetch.
+**CLI side-effects:** None. The CLI uses the base branch already returned in the GraphQL batch (`baseRefName` → `ShepherdReport.baseBranch`), validates it locally, and pre-builds the shell script.
 
 **Exit code:** 1
 
@@ -218,6 +218,11 @@ Rebases the branch on top of its base to clear flaky failures caused by being be
 
 **status** `FAILING` · **merge** `BEHIND` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 2 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 600 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
+
+## Checks
+
+- ✓ `build` — SUCCESS
+- ✗ `lint / typecheck / test (22.x)` (flaky) — TIMED_OUT · `24697658766`
 
 Branch is behind main — rebasing to pick up latest changes and clear flaky failures
 
@@ -237,7 +242,7 @@ git fetch origin && git rebase origin/main && git push --force-with-lease
 
 The dirty-worktree guard exits 1 on skip, so the monitor SKILL sees a non-zero exit rather than silently counting the iteration as successful.
 
-**Base branch determination:** The CLI runs `gh pr view <PR> --json baseRefName` to find the rebase target. If that command fails (network error, auth issue) or returns a branch name containing characters outside `[A-Za-z0-9._/-]`, the CLI emits `[ESCALATE]` with trigger `base-branch-unknown` instead of a rebase — force-pushing onto the wrong base would be catastrophic for a PR that actually targets e.g. `release/2026.04`.
+**Base branch determination:** The base branch comes from the GraphQL batch (`ShepherdReport.baseBranch`) — no extra network call is needed. `validateBaseBranch` emits `[ESCALATE]` with trigger `base-branch-unknown` if the value is empty or contains characters outside `[A-Za-z0-9._/-]` — force-pushing onto the wrong base would be catastrophic for a PR that actually targets e.g. `release/2026.04`.
 
 **What the monitor does:** Follow `## Instructions` — extract the shell script from the ` ```bash ` block and run it in Bash, then end the iteration.
 
@@ -247,9 +252,9 @@ The dirty-worktree guard exits 1 on skip, so the monitor SKILL sees a non-zero e
 
 Actionable work needs a code fix, commit, and push.
 
-**Trigger:** Any of: unresolved inline review threads, actionable PR-level comments, `CHANGES_REQUESTED` reviews, actionable CI failures (`failureKind === "actionable"`), or merge conflicts (`mergeStatus.status === "CONFLICTS"`). Evaluated at step 4, before rerun/rebase.
+**Trigger:** Any of: unresolved inline review threads, actionable PR-level comments, `CHANGES_REQUESTED` reviews, actionable CI failures (`failureKind === "actionable"`), merge conflicts (`mergeStatus.status === "CONFLICTS"`), pending review summary IDs to minimize, or review summaries to surface. Evaluated at step 4, before rerun/rebase.
 
-**CLI side-effects:** Calls `gh run cancel <runId>` for each unique run ID of actionable CI failures (best-effort; already-completed runs are silently ignored). **Important:** this cancellation runs on the pre-push run IDs recorded in the sweep — do not re-run `gh run cancel` on these IDs after you push, because the push replaces them with fresh runs whose IDs differ.
+**CLI side-effects:** Issues a `POST /repos/{owner}/{repo}/actions/runs/{runId}/cancel` REST call for each unique run ID of actionable CI failures (best-effort; already-completed runs return 409 and are silently ignored). **Important:** this cancellation runs on the pre-push run IDs recorded in the sweep — do not re-cancel these IDs after you push, because the push replaces them with fresh runs whose IDs differ.
 
 **Exit code:** 1
 
@@ -326,7 +331,7 @@ Actionable work needs a code fix, commit, and push.
 6. `## Noise (minimize only)` — backticked IDs of bot-noise comments (quota warnings, rate-limit acks). Minimize on GitHub but do not act on them.
 7. `## Review summaries (minimize only)` — backticked review IDs (`PRR_…`) of `COMMENTED` review summaries (and, if `iterate.minimizeReviewSummaries.approvals` is `true`, `APPROVED` reviews) that will be minimized by the resolve command. Gated by `iterate.minimizeReviewSummaries.{bots, humans, approvals}`. Not emitted if the list is empty.
 8. `## Review summaries (surfaced — not minimized)` — emitted when a summary falls through to the "surface" bucket (the author's toggle — `bots` or `humans` — is `false`). Same H3-plus-blockquote shape as `## Review threads`; surfaced for visibility, but NOT included in `--minimize-comment-ids`.
-9. `## Cancelled runs` — backticked IDs, emitted only when CLI-side `gh run cancel` succeeded for at least one run.
+9. `## Cancelled runs` — backticked IDs, emitted only when at least one pre-push REST cancellation succeeded.
 10. `## Post-fix push`:
     - ``- base: `<branch>` `` — rebase target for the push step.
     - ``- resolve: `<argv>` `` — fully-quoted resolve command. `$DISMISS_MESSAGE` and `$HEAD_SHA` are always quoted so substituting a multi-word sentence keeps it as one argument. `--require-sha "$HEAD_SHA"` is appended only when a push is expected (threads/actionableComments/checks/reviews present); noise/summary-only dispatches omit it.
@@ -337,16 +342,77 @@ Actionable work needs a code fix, commit, and push.
 - `Commit changed files:` is only emitted when there are actual code changes to commit (threads/comments/checks/reviews present). A `CONFLICTS`-only state skips this step.
 - `Keep the PR title and description current:` is emitted immediately after the commit step and uses the same gate (`hasCodeChanges`). A `CONFLICTS`-only dispatch (no code to commit) omits it.
 - The rebase step switches wording based on `mergeStatus.status`. When conflicts are present it emits "Rebase with conflict resolution" and walks through `git rebase --continue` loops; otherwise it emits the clean one-liner `git fetch origin && git rebase origin/<base> && git push --force-with-lease`.
-- The `resolve:` instruction is only emitted when the resolve command actually mutates GitHub state (at least one of threads/comments/reviews is non-empty). A `CONFLICTS`-only dispatch omits it.
-- A "Do not re-run `gh run cancel`" instruction is appended for rebase-and-push when `cancelled` is non-empty and a push is required — it reminds the monitor that those IDs were cancelled pre-push and new runs have since been triggered.
-- A "Stop this iteration" instruction is always appended for rebase-and-push when a push or GitHub mutation is required, so CI has time to start before the next tick.
+- `## Failing checks` generates one instruction step per locator type present. When a check has a numeric `runId`, the step says to run `gh run view <runId> --log-failed`. When a check has only a `detailsUrl` (external status check — no `runId`), the step says to open the URL in a browser. When both are absent, the step says to escalate to a human — there is nothing to inspect automatically.
+- The `resolve:` instruction is emitted when `resolveCommand.hasMutations` is true — i.e. when at least one of `threads`, `actionableComments`, `noiseCommentIds`, or `reviewSummaryIds` is non-empty. Noise-only and summary-only dispatches also emit the instruction. A `CONFLICTS`-only dispatch (none of those non-empty) omits it.
+- A `Do not re-run \`gh run cancel\``instruction is appended when`cancelled` is non-empty and a push is required — it reminds the monitor that those IDs were cancelled pre-push and new runs have since been triggered.
+- The final "iteration" step has three variants: `Stop this iteration — CI needs time to run on the new push before the next tick.` when a push occurred; `Stop this iteration before the next tick.` when only GitHub mutations were made (no push); `End this iteration.` when no push or mutations occurred.
 
-The JSON payload exposes the same data under `fix.{threads, actionableComments, noiseCommentIds, reviewSummaryIds, surfacedSummaries, checks, changesRequestedReviews, baseBranch, resolveCommand, instructions}` plus top-level `cancelled`. `reviewSummaryIds` are merged into `--minimize-comment-ids` inside `resolveCommand.argv`; `surfacedSummaries` are informational only.
+The JSON payload exposes the same data under `fix.{threads, actionableComments, noiseCommentIds, reviewSummaryIds, surfacedSummaries, checks, changesRequestedReviews, resolveCommand, instructions, mode}` — where `fix.mode === "rebase-and-push"` is the type discriminator — plus top-level `baseBranch` (on `IterateResultBase`, not under `fix`) and `cancelled`. `reviewSummaryIds` are merged into `--minimize-comment-ids` inside `resolveCommand.argv`; `surfacedSummaries` are informational only.
 
 **Resolve command rules (same in Markdown and JSON):**
 
 - `--require-sha "$HEAD_SHA"` is appended only when a push occurred. Noise-only minimizations omit it.
 - `$DISMISS_MESSAGE` must be one specific sentence describing what changed — never generic text like "address review comments".
+
+### Applying ` ```suggestion ` blocks
+
+GitHub reviewers can leave ` ```suggestion ` fenced blocks in review thread bodies. In `iterate`'s `fix_code` output these ride verbatim inside the blockquoted thread body — there is no separate structured field. The numbered `## Instructions` say "read and edit each file," which applies equally to suggestion blocks.
+
+**Single-line suggestion.** Thread locators in `[FIX_CODE]` use the end line only (e.g. `src/foo.ts:42`). When the body contains a suggestion block, replace exactly that line with the suggestion's content:
+
+````markdown
+### `PRRT_kwDOSGizTs58XB1L` — `src/foo.ts:42` (@alice)
+
+> Rename `x` to `remainingSeconds` so readers don't have to trace back to the declaration.
+>
+> ```suggestion
+> const remainingSeconds = computeRemaining();
+> ```
+````
+
+Steps: open `src/foo.ts`, replace line 42 with `const remainingSeconds = computeRemaining();`, then proceed to the commit step in `## Instructions`.
+
+**Multi-line suggestion.** When the thread spans a range the locator shows only the end line (e.g. `src/foo.ts:42`), but the suggestion body replaces all lines from `startLine` to `line` inclusive. An empty suggestion body deletes those lines; a body of one blank line replaces the range with a single blank line.
+
+````markdown
+### `PRRT_kwDOSGizTs58XB2M` — `src/foo.ts:42` (@alice)
+
+> Collapse these three assignments into one.
+>
+> ```suggestion
+> const result = computeAll();
+> ```
+````
+
+If the reviewer's thread was originally anchored to lines 40–42, you replace lines 40–42 with the single suggestion line. When the range isn't obvious from context, read the surrounding file to find which lines the comment is attached to.
+
+**Multiple suggestions (two or more threads).** Apply each suggestion to its target file. The edits are independent — apply them in any order that avoids line-number drift (apply suggestions on later lines first when both touch the same file). Then make a single `git add && git commit` covering all the changed files before the rebase/push step in `## Instructions`. Both thread IDs go into the `resolve:` command's `--resolve-thread-ids` argument as a comma-separated list.
+
+Example with two threads:
+
+````markdown
+## Review threads
+
+### `PRRT_kwDOSGizTs58XB1L` — `src/foo.ts:42` (@alice)
+
+> ```suggestion
+> const remainingSeconds = computeRemaining();
+> ```
+
+### `PRRT_kwDOSGizTs58XC2M` — `src/bar.ts:17` (@alice)
+
+> ```suggestion
+> return value ?? defaultValue;
+> ```
+````
+
+Apply both edits, then commit and push together. The `resolve:` command at the bottom of `## Post-fix push` already includes both IDs:
+
+```
+- resolve: `npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L,PRRT_kwDOSGizTs58XC2M --require-sha "$HEAD_SHA" --message "$DISMISS_MESSAGE"`
+```
+
+**Alternative: structured path via `commit-suggestion`.** Instead of editing files manually, you can shell out to `npx pr-shepherd commit-suggestion <PR> --thread-id <id> --message "…"`. This builds a unified diff from the suggestion block, validates it with `git apply --check`, writes the file, commits with a `Co-authored-by: <reviewer>` trailer, and resolves the thread on GitHub — all in one command. The command handles one thread at a time; invoke it in sequence for multi-suggestion PRs, then push all the resulting commits together. See the `commit-suggestion` section in the [CLI reference](cli-usage.md#pr-shepherd-commit-suggestion-pr---thread-id-id---message) for flags and output format.
 
 **What the monitor does:** Follow `## Instructions` in order. The instructions are self-contained and action-specific — no dispatch table needed in the monitor. See `## Instructions` in the output for the exact steps.
 
