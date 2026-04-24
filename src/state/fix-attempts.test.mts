@@ -47,6 +47,14 @@ describe("writeFixAttempts / readFixAttempts — round-trip", () => {
   });
 });
 
+describe("readFixAttempts — default state dir", () => {
+  it("returns null (no file) when PR_SHEPHERD_STATE_DIR is unset", async () => {
+    delete process.env["PR_SHEPHERD_STATE_DIR"];
+    const result = await readFixAttempts(testKey);
+    expect(result).toBeNull();
+  });
+});
+
 describe("readFixAttempts — unsafe key segments", () => {
   it("returns null (does not throw) when owner contains a slash", async () => {
     // resolvePath throws, but readFixAttempts wraps in try-catch → null

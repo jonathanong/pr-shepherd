@@ -81,6 +81,14 @@ describe("writeStallState / readStallState — round-trip", () => {
   });
 });
 
+describe("readStallState — default state dir", () => {
+  it("returns null (no file) when PR_SHEPHERD_STATE_DIR is unset", async () => {
+    delete process.env["PR_SHEPHERD_STATE_DIR"];
+    const result = await readStallState(testKey);
+    expect(result).toBeNull();
+  });
+});
+
 describe("readStallState — unsafe key segments", () => {
   it("returns null (does not throw) when owner contains a slash", async () => {
     const result = await readStallState({ owner: "a/b", repo: "repo", pr: 1 });

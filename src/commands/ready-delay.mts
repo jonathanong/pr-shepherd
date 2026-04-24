@@ -2,7 +2,7 @@
  * Ready-delay state machine for the shepherd iterate loop.
  *
  * When all READY conditions hold, shepherd writes a `ready-since.txt` marker
- * to the cache dir. The loop continues until the PR has been READY for
+ * to the state dir. The loop continues until the PR has been READY for
  * `readyDelaySeconds` consecutively. Any not-READY result resets the timer.
  */
 
