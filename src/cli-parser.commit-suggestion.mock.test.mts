@@ -85,6 +85,38 @@ const FAILED_RESULT = {
   postActionInstruction: "",
 };
 
+const DRY_RUN_VALID_RESULT = {
+  pr: 42,
+  repo: "owner/repo",
+  threadId: "t1",
+  path: "a.ts",
+  startLine: 5,
+  endLine: 5,
+  author: "alice",
+  applied: false as const,
+  dryRun: true as const,
+  valid: true,
+  reason: null,
+  patch: "--- a/a.ts\n+++ b/a.ts\n@@ -5,1 +5,1 @@\n-old\n+new\n",
+  postActionInstruction: "Re-run without --dry-run to apply and commit.",
+};
+
+const DRY_RUN_INVALID_RESULT = {
+  pr: 42,
+  repo: "owner/repo",
+  threadId: "t1",
+  path: "a.ts",
+  startLine: 5,
+  endLine: 5,
+  author: "alice",
+  applied: false as const,
+  dryRun: true as const,
+  valid: false,
+  reason: "git apply rejected the patch: context mismatch",
+  patch: "--- a/a.ts\n+++ b/a.ts\n@@ -5,1 +5,1 @@\n-old\n+new\n",
+  postActionInstruction: "",
+};
+
 describe("main — commit-suggestion", () => {
   it("errors when --thread-id is omitted", async () => {
     await main(["node", "shepherd", "commit-suggestion", "42", "--message", "fix"]);
@@ -195,5 +227,78 @@ describe("main — commit-suggestion", () => {
     const out = getStdout();
     const parsed = JSON.parse(out.trim());
     expect(parsed).toMatchObject({ applied: true, commitSha: "abc123", threadId: "t1" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// commit-suggestion --dry-run dispatch
+// ---------------------------------------------------------------------------
+
+describe("main — commit-suggestion --dry-run", () => {
+  it("passes dryRun=true to runCommitSuggestion and does not require --message", async () => {
+    mockRunCommitSuggestion.mockResolvedValue(DRY_RUN_VALID_RESULT);
+    await main(["node", "shepherd", "commit-suggestion", "42", "--thread-id", "t1", "--dry-run"]);
+    expect(mockRunCommitSuggestion).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: 42, threadId: "t1", dryRun: true }),
+    );
+    expect(process.exitCode).toBe(0);
+  });
+
+  it("exits 1 when dry-run valid=false", async () => {
+    mockRunCommitSuggestion.mockResolvedValue(DRY_RUN_INVALID_RESULT);
+    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--dry-run"]);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("text output shows dry-run valid header and diff", async () => {
+    mockRunCommitSuggestion.mockResolvedValue(DRY_RUN_VALID_RESULT);
+    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--dry-run"]);
+    const out = getStdout();
+    expect(out).toContain("Dry-run: would apply suggestion from @alice:");
+    expect(out).toContain("a.ts (line 5)");
+    expect(out).toContain("```diff");
+    expect(out).toContain("Re-run without --dry-run");
+  });
+
+  it("text output shows dry-run invalid header and reason", async () => {
+    mockRunCommitSuggestion.mockResolvedValue(DRY_RUN_INVALID_RESULT);
+    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--dry-run"]);
+    const out = getStdout();
+    expect(out).toContain("Dry-run: suggestion cannot apply cleanly:");
+    expect(out).toContain("context mismatch");
+    expect(out).toContain("```diff");
+  });
+
+  it("errors when --thread-id is omitted even with --dry-run", async () => {
+    await main(["node", "shepherd", "commit-suggestion", "--dry-run"]);
+    expect(process.exitCode).toBe(1);
+    expect(mockRunCommitSuggestion).not.toHaveBeenCalled();
+    const err = stderrSpy.mock.calls.map((c: string[]) => c[0]).join("");
+    expect(err).toContain("--thread-id");
+  });
+
+  it("errors when --message is omitted and --dry-run is NOT set", async () => {
+    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1"]);
+    expect(process.exitCode).toBe(1);
+    expect(mockRunCommitSuggestion).not.toHaveBeenCalled();
+    const err = stderrSpy.mock.calls.map((c: string[]) => c[0]).join("");
+    expect(err).toContain("--message");
+  });
+
+  it("json output for dry-run valid includes dryRun and valid fields", async () => {
+    mockRunCommitSuggestion.mockResolvedValue(DRY_RUN_VALID_RESULT);
+    await main([
+      "node",
+      "shepherd",
+      "commit-suggestion",
+      "--thread-id",
+      "t1",
+      "--dry-run",
+      "--format",
+      "json",
+    ]);
+    const out = getStdout();
+    const parsed = JSON.parse(out.trim());
+    expect(parsed).toMatchObject({ applied: false, dryRun: true, valid: true, reason: null });
   });
 });

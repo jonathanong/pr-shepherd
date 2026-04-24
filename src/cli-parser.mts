@@ -7,8 +7,9 @@
  *   pr-shepherd resolve [PR] [--fetch] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]
  *                            [--dismiss-review-ids Q] [--message MSG] [--require-sha SHA]
  *                            [--last-push-time N]
- *   pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [--description DESC]
- *                                      [--format text|json]
+ *   pr-shepherd commit-suggestion [PR] --thread-id ID [--message MSG] [--description DESC]
+ *                                      [--dry-run] [--format text|json]
+ *   (--message is required unless --dry-run is set)
  *   pr-shepherd iterate [PR] [--format text|json] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
  *                              [--stall-timeout <duration>] [--no-auto-mark-ready]
  *                              [--no-auto-cancel-actionable]

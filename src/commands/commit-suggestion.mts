@@ -15,8 +15,9 @@ const execFile = promisify(execFileCb);
 
 export interface CommitSuggestionOptions extends GlobalOptions {
   threadId: string;
-  message: string;
+  message?: string;
   description?: string;
+  dryRun?: boolean;
 }
 
 export async function runCommitSuggestion(
@@ -25,11 +26,10 @@ export async function runCommitSuggestion(
   if (!opts.threadId) {
     throw new Error("--thread-id is required");
   }
-  if (!opts.message || opts.message.trim() === "") {
+  if (!opts.dryRun && (!opts.message || opts.message.trim() === "")) {
     throw new Error("--message is required and must be non-empty");
   }
 
-  // Worktree must be clean — we're writing to the working tree
   const { stdout: statusOut } = await execFile("git", ["status", "--porcelain"]);
   if (statusOut.trim() !== "") {
     throw new Error(
@@ -60,10 +60,8 @@ export async function runCommitSuggestion(
         `Pull/rebase "${head.ref}" to the latest PR head and try again.`,
     );
   }
-  // Fetch PR data and locate the thread
   const { data } = await fetchPrBatch(prNumber, repo);
   const thread = data.reviewThreads.find((t) => t.id === opts.threadId);
-
   if (!thread) {
     throw new Error(`Thread ${opts.threadId} not found on PR #${prNumber}.`);
   }
@@ -95,8 +93,6 @@ export async function runCommitSuggestion(
   const endLine = thread.line;
   const filePath = thread.path;
 
-  // Read the file from the working tree (not from GitHub) — the local checkout
-  // is the authoritative source; mismatches are caught by git apply's context check.
   let originalContent: string;
   try {
     originalContent = await readFile(filePath, "utf8");
@@ -113,7 +109,6 @@ export async function runCommitSuggestion(
     replacementLines: parsed.lines,
   });
 
-  // Write patch to a temp file and apply via git
   const patchFile = join(
     tmpdir(),
     `pr-shepherd-${Date.now()}-${Math.random().toString(36).slice(2)}.patch`,
@@ -127,6 +122,25 @@ export async function runCommitSuggestion(
       await execFile("git", ["apply", "--check", patchFile]);
     } catch (err) {
       patchError = ((err as { stderr?: string }).stderr?.trim() || String(err)).trim();
+    }
+
+    if (opts.dryRun) {
+      return {
+        pr: prNumber,
+        repo: `${repo.owner}/${repo.name}`,
+        threadId: opts.threadId,
+        path: filePath,
+        startLine,
+        endLine,
+        author: thread.author,
+        applied: false as const,
+        dryRun: true as const,
+        valid: patchError === null,
+        reason: patchError !== null ? `git apply rejected the patch: ${patchError}` : null,
+        patch,
+        postActionInstruction:
+          patchError === null ? "Re-run without --dry-run to apply and commit." : "",
+      };
     }
 
     if (patchError !== null) {
@@ -150,17 +164,15 @@ export async function runCommitSuggestion(
     await unlink(patchFile).catch(() => undefined);
   }
 
-  // Stage and commit
   await execFile("git", ["add", "--", filePath]);
 
   const coAuthor = `Co-authored-by: ${thread.author} <${thread.author}@users.noreply.github.com>`;
   const commitBody = opts.description ? `${opts.description}\n\n${coAuthor}` : coAuthor;
-  await execFile("git", ["commit", "-m", opts.message, "-m", commitBody]);
+  await execFile("git", ["commit", "-m", opts.message!, "-m", commitBody]);
 
   const { stdout: shaOut } = await execFile("git", ["rev-parse", "HEAD"]);
   const commitSha = shaOut.trim();
 
-  // Resolve the thread on GitHub now that the fix is committed
   const resolveResult = await applyResolveOptions(prNumber, repo, {
     resolveThreadIds: [opts.threadId],
   });

@@ -149,11 +149,21 @@ interface CommitSuggestionResultBase {
 export type CommitSuggestionResult =
   | (CommitSuggestionResultBase & {
       applied: true;
+      dryRun?: false;
       commitSha: string;
     })
   | (CommitSuggestionResultBase & {
       applied: false;
+      dryRun?: false;
       reason: string;
+    })
+  | (CommitSuggestionResultBase & {
+      applied: false;
+      dryRun: true;
+      /** Whether `git apply --check` succeeded. */
+      valid: boolean;
+      /** Rejection message from `git apply --check`, or null when valid. */
+      reason: string | null;
     });
 
 // ---------------------------------------------------------------------------

@@ -271,3 +271,110 @@ describe("runCommitSuggestion — successful apply", () => {
     expect(result.applied).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Dry-run
+// ---------------------------------------------------------------------------
+
+describe("runCommitSuggestion — dry-run", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetPrHead.mockResolvedValue({
+      sha: "headsha",
+      ref: "feature/foo",
+      repoWithOwner: "owner/repo",
+    });
+    mockGetCurrentBranch.mockResolvedValue("feature/foo");
+    mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (mockReadFile as any).mockResolvedValue(FILE_CONTENT);
+  });
+
+  function setupDryRunHappyPath(): void {
+    let revParseCount = 0;
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
+      if (cmd === "git" && args[0] === "rev-parse") {
+        revParseCount++;
+        return revParseCount === 1 ? makeGitSuccess("headsha\n") : makeGitSuccess("newsha\n");
+      }
+      // Only --check is expected; bare apply must not be called.
+      if (cmd === "git" && args[0] === "apply" && args.includes("--check")) return makeGitSuccess();
+      throw new Error(`Unexpected execFile call: ${cmd} ${args.join(" ")}`);
+    });
+  }
+
+  it("returns dryRun=true, valid=true, reason=null when patch applies cleanly", async () => {
+    setupDryRunHappyPath();
+    const result = await runCommitSuggestion({
+      ...GLOBAL_OPTS,
+      threadId: "PRRT_x",
+      dryRun: true,
+    });
+
+    expect(result.applied).toBe(false);
+    if (!("dryRun" in result) || !result.dryRun) throw new Error("expected dryRun=true");
+    expect(result.valid).toBe(true);
+    expect(result.reason).toBeNull();
+    expect(result.patch).toContain("+const x = 10;");
+  });
+
+  it("calls git apply --check but not bare git apply, git add, git commit, or applyResolveOptions", async () => {
+    setupDryRunHappyPath();
+    await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", dryRun: true });
+
+    const applyCalls = mockExecFile.mock.calls.filter(
+      (call) => call[0] === "git" && (call[1] as string[])[0] === "apply",
+    );
+    // Exactly one --check call; no bare apply
+    expect(applyCalls).toHaveLength(1);
+    expect((applyCalls[0]![1] as string[]).includes("--check")).toBe(true);
+
+    const addCalls = mockExecFile.mock.calls.filter(
+      (call) => call[0] === "git" && (call[1] as string[])[0] === "add",
+    );
+    expect(addCalls).toHaveLength(0);
+
+    const commitCalls = mockExecFile.mock.calls.filter(
+      (call) => call[0] === "git" && (call[1] as string[])[0] === "commit",
+    );
+    expect(commitCalls).toHaveLength(0);
+
+    expect(mockApplyResolveOptions).not.toHaveBeenCalled();
+  });
+
+  it("postActionInstruction mentions re-run when valid", async () => {
+    setupDryRunHappyPath();
+    const result = await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", dryRun: true });
+    expect(result.postActionInstruction).toContain("--dry-run");
+  });
+
+  it("returns valid=false with reason when git apply --check fails", async () => {
+    let revParseCount = 0;
+    const checkErr = Object.assign(new Error("patch failed"), { stderr: "context mismatch" });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
+      if (cmd === "git" && args[0] === "rev-parse") {
+        revParseCount++;
+        return revParseCount === 1 ? makeGitSuccess("headsha\n") : makeGitSuccess("newsha\n");
+      }
+      if (cmd === "git" && args[0] === "apply" && args.includes("--check"))
+        return Promise.reject(checkErr);
+      throw new Error(`Unexpected execFile call: ${cmd} ${args.join(" ")}`);
+    });
+
+    const result = await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", dryRun: true });
+    if (!("dryRun" in result) || !result.dryRun) throw new Error("expected dryRun=true");
+    expect(result.valid).toBe(false);
+    expect(result.reason).toContain("context mismatch");
+    expect(mockApplyResolveOptions).not.toHaveBeenCalled();
+  });
+
+  it("works without --message being set", async () => {
+    setupDryRunHappyPath();
+    // Should not throw even though message is undefined
+    await expect(
+      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", dryRun: true }),
+    ).resolves.toBeDefined();
+  });
+});

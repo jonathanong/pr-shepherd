@@ -119,7 +119,7 @@ Dismissed reviews (1): PRR_kwDO123
 
 `--require-sha` polls `GET /repos/{owner}/{repo}/pulls/{pr}` for `headRefOid` until it matches, then issues the mutations — ensures reviewers see the fix before threads are closed. Exit code: always `0`. `--message` must describe the specific fix; it is shown to the reviewer on GitHub.
 
-### pr-shepherd commit-suggestion [PR] --thread-id <id> --message "…"
+### pr-shepherd commit-suggestion [PR] --thread-id <id> [--message "…"] [--dry-run]
 
 Applies a single reviewer ` ```suggestion ` fenced block as a local git commit. Builds a unified diff from the suggestion, validates it with `git apply --check`, writes the file, and commits with the caller-supplied message plus a `Co-authored-by: <reviewer>` trailer. Resolves the thread on GitHub after the commit lands. Never pushes — the output tells the caller to `git push` when ready.
 
@@ -128,6 +128,12 @@ pr-shepherd commit-suggestion 42 \
   --thread-id PRRT_abc \
   --message "trim trailing whitespace per reviewer" \
   --description "Optional longer body text."
+```
+
+Pass `--dry-run` to preview the unified diff without modifying the working tree, staging, committing, or resolving the thread. (A temporary patch file is still written to the OS temp dir for `git apply --check`, but no working-tree files are changed.) `--message` is optional in dry-run mode. Exit code: `0` when the patch would apply cleanly, `1` on drift.
+
+```sh
+pr-shepherd commit-suggestion 42 --thread-id PRRT_abc --dry-run
 ```
 
 Requires a clean working tree and that the current branch matches the PR head ref. Precondition or lookup failures (wrong branch, thread not found, already resolved, outdated, no suggestion block, nested fencing) are hard errors with specific reason strings. Patch rejection is a normal result with `applied: false` plus a `reason` — the CLI exits `1`. There is no `skipped` state; the caller must handle or retry hard errors or `applied: false` results.
@@ -152,6 +158,23 @@ Commit: abc1234
 Run `git push` (or `git push --force-with-lease` after rebasing) to publish the commit.
 ````
 
+**Example output (--dry-run, patch valid):**
+
+````
+Dry-run: would apply suggestion from @alice:
+  src/foo.ts (line 42)
+
+```diff
+--- a/src/foo.ts
++++ b/src/foo.ts
+@@ -42 +42 @@
+-const x = computeRemaining();
++const remainingSeconds = computeRemaining();
+```
+
+Re-run without --dry-run to apply and commit.
+````
+
 **Example output (failure — patch rejected):**
 
 ````
@@ -171,7 +194,7 @@ Failed to apply suggestion PRRT_abc:
 ```
 ````
 
-Exit codes: `0` suggestion applied and committed · `1` any error.
+Exit codes: `0` suggestion applied and committed, or dry-run patch is clean · `1` any error or dry-run drift.
 
 **Applying multiple suggestions.** Invoke once per thread — the command handles one suggestion at a time. For a PR with multiple suggestion threads, run in sequence then push all the resulting commits together:
 

@@ -78,7 +78,28 @@ export function formatFetchResult(result: FetchResult): string {
 
 export function formatCommitSuggestionResult(result: CommitSuggestionResult): string {
   const lines: string[] = [];
-  if (result.applied) {
+
+  if (result.dryRun) {
+    const range =
+      result.startLine === result.endLine
+        ? `line ${result.startLine}`
+        : `lines ${result.startLine}-${result.endLine}`;
+    if (result.valid) {
+      lines.push(`Dry-run: would apply suggestion from @${result.author}:`);
+      lines.push(`  ${result.path} (${range})`);
+    } else {
+      lines.push(`Dry-run: suggestion cannot apply cleanly:`);
+      lines.push(`  path: ${result.path} (${range})`);
+      lines.push(`  author: @${result.author}`);
+      lines.push(`  reason: ${result.reason ?? "unknown"}`);
+    }
+    if (result.patch) {
+      lines.push("");
+      lines.push("```diff");
+      lines.push(result.patch.trimEnd());
+      lines.push("```");
+    }
+  } else if (result.applied) {
     lines.push(`Applied suggestion from @${result.author}:`);
     const range =
       result.startLine === result.endLine
@@ -104,6 +125,7 @@ export function formatCommitSuggestionResult(result: CommitSuggestionResult): st
       lines.push("```");
     }
   }
+
   if (result.postActionInstruction) {
     lines.push("");
     lines.push(result.postActionInstruction);
