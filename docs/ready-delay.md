@@ -1,6 +1,6 @@
 # shepherd ready-delay
 
-[← README.md](README.md)
+[← README](../README.md)
 
 ## What it does
 

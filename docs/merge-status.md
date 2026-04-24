@@ -1,10 +1,10 @@
 # shepherd merge-status derivation
 
-[← README.md](README.md)
+[← README](../README.md)
 
 ## `deriveMergeStatus` — first-match-wins table
 
-Located in `shepherd/merge-status/derive.mts`. Given a `BatchPrData`, returns a `MergeStatusResult`.
+Located in `src/merge-status/derive.mts`. Given a `BatchPrData`, returns a `MergeStatusResult`.
 
 | Priority | Condition                                         | Status         | Notes                                                                      |
 | -------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------- |

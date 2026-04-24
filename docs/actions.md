@@ -1,6 +1,6 @@
 # shepherd actions
 
-[← README.md](README.md)
+[← README](../README.md)
 
 Each iteration of `shepherd iterate` returns exactly one action. See [docs/iterate-flow.md](iterate-flow.md) for the decision order.
 

@@ -1,6 +1,6 @@
 # shepherd cache
 
-[← README.md](README.md) | [ready-delay.md](ready-delay.md)
+[← README](../README.md) | [ready-delay.md](ready-delay.md)
 
 ## File layout
 

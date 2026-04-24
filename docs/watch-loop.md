@@ -1,6 +1,6 @@
 # shepherd watch loop
 
-[← README.md](README.md) | [actions.md](actions.md) | [iterate-flow.md](iterate-flow.md)
+[← README](../README.md) | [actions.md](actions.md) | [iterate-flow.md](iterate-flow.md)
 
 ## Overview
 

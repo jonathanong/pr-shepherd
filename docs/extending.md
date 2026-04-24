@@ -1,6 +1,6 @@
 # shepherd — extending
 
-[← README.md](README.md) | [architecture.md](architecture.md)
+[← README](../README.md) | [architecture.md](architecture.md)
 
 Four recipes for common extension patterns.
 

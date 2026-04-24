@@ -46,7 +46,7 @@ Cross-cutting machinery: file cache with atomic writes ([docs/cache.md](docs/cac
 Claude Code skills that wrap the CLI with model-driven triage, code edits, and flow control:
 
 - **`/pr-shepherd:check`** — calls `check --format=json` and prints a human summary; never declares "ready to merge" unless every gate passes (merge status CLEAN, status READY, Copilot review not in progress)
-- **`/pr-shepherd:monitor`** — creates a `/loop` cron job (4-minute default, 8-hour expiry, 50-turn cap), deduplicates via a `# pr-shepherd-loop:pr=<N>` tag in `CronList`, dispatches on the `[ACTION]` H1 tag each tick, runs rebase scripts and fix instructions in the main conversation
+- **`/pr-shepherd:monitor`** — creates a `/loop` cron job (4-minute default, 8-hour expiry, 50-turn cap), deduplicates via a `# pr-shepherd-loop:pr=<N>` tag in `CronList`, follows the `## Instructions` section emitted by `iterate` each tick (the `[ACTION]` H1 tag identifies the action for logging), runs rebase scripts and fix instructions in the main conversation
 - **`/pr-shepherd:resolve`** — runs `resolve --fetch` and follows the `## Instructions` section embedded in the Markdown output; the CLI output describes the full triage/fix/push/resolve/report flow, including commit-suggestion preference and per-bucket dispatch rules
 
 See [docs/skills.md](docs/skills.md) for full skill reference.
@@ -118,9 +118,9 @@ to be installed in the repository first (`npm install pr-shepherd`), so that
 
    Parse the JSON and report:
 
-   - **Merge status** (`report.mergeStatus.status`): CLEAN | BEHIND | CONFLICTS | BLOCKED | UNSTABLE | DRAFT | UNKNOWN
-   - **CI check results** (`report.checks`): passing count, failing names, in-progress names
-   - **Unresolved review comments** (`report.threads.actionable` + `report.comments.actionable`): count + details
+   - **Merge status** (`mergeStatus.status`): CLEAN | BEHIND | CONFLICTS | BLOCKED | UNSTABLE | DRAFT | UNKNOWN
+   - **CI check results** (`checks`): passing count, failing names, in-progress names
+   - **Unresolved review comments** (`threads.actionable` + `comments.actionable`): count + details
    ````
 
 3. **Use it in Claude Code:**
@@ -186,7 +186,7 @@ See [docs/skills.md](docs/skills.md) for full argument reference.
 
 ## Workflow
 
-On each tick (4-minute default, tunable via `watch.interval`): fetch PR state in one GraphQL batch → classify CI, comments, and merge status → take one action (fix code, rebase, rerun CI, mark ready, or wait). See [docs/flow.md](docs/flow.md) for the full decision tree.
+On each tick (4-minute default, tunable via `watch.interval`): fetch PR state in one GraphQL batch → classify CI, comments, and merge status → take one action (fix code, rebase, rerun CI, mark ready, or wait). See [docs/iterate-flow.md](docs/iterate-flow.md) for the decision table and [docs/flow.md](docs/flow.md) for the end-to-end flow diagram.
 
 ## CLI
 
@@ -215,6 +215,7 @@ All supported keys:
 | `cache.ttlSeconds`                          | `300`                                     | File-cache TTL for read operations                                                                             |
 | `iterate.cooldownSeconds`                   | `30`                                      | Wait after a push before reading CI                                                                            |
 | `iterate.fixAttemptsPerThread`              | `3`                                       | Max fix attempts per unresolved thread before `escalate`                                                       |
+| `iterate.stallTimeoutMinutes`               | `30`                                      | Minutes the loop may repeat the same action without progress before `escalate` with `stall-timeout`; `0` disables |
 | `iterate.minimizeReviewSummaries.bots`      | `true`                                    | Auto-minimize COMMENTED review summaries from bot authors; surfaced (not dropped) when `false`                 |
 | `iterate.minimizeReviewSummaries.humans`    | `true`                                    | Auto-minimize COMMENTED review summaries from human authors; surfaced when `false`                             |
 | `iterate.minimizeReviewSummaries.approvals` | `false`                                   | Opt in to minimize APPROVED-state reviews (also enables >50-approval pagination)                               |
@@ -231,7 +232,8 @@ All supported keys:
 | `checks.infraPatterns`                      | see [`src/config.json`](src/config.json)  | Log patterns that classify a failure as `infrastructure`                                                       |
 | `checks.logMaxLines`                        | `50`                                      | Max log lines kept per failing check                                                                           |
 | `checks.logMaxChars`                        | `3000`                                    | Max log characters kept per failing check                                                                      |
-| `mergeStatus.blockingReviewerLogins`        | `["copilot"]`                             | Reviewer logins whose pending review blocks `mark_ready`                                                       |
+| `checks.errorLines`                         | `1`                                       | Trailing `##[error]`-marked log lines surfaced as `errorExcerpt` per failing check                             |
+| `mergeStatus.blockingReviewerLogins`        | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                         |
 | `actions.autoResolveOutdated`               | `true`                                    | Auto-resolve threads that point to code no longer in the PR diff                                               |
 | `actions.autoRebase`                        | `true`                                    | Emit `rebase` for flaky failures when the branch is behind base                                                |
 | `actions.autoMarkReady`                     | `true`                                    | Emit `mark_ready` when a draft PR's CI goes clean                                                              |

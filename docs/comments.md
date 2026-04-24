@@ -1,6 +1,6 @@
 # shepherd comments and threads
 
-[← README.md](README.md)
+[← README](../README.md)
 
 ## Review threads vs PR comments
 

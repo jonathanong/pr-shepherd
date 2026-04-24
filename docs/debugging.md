@@ -1,6 +1,6 @@
 # shepherd — debugging
 
-[← README.md](README.md)
+[← README](../README.md)
 
 ## Common failure modes
 

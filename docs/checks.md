@@ -1,6 +1,6 @@
 # shepherd CI checks
 
-[← README.md](README.md)
+[← README](../README.md)
 
 ## Classification pipeline
 
