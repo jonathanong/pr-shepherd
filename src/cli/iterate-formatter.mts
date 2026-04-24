@@ -35,7 +35,12 @@ export function formatIterateResult(result: IterateResult): string {
       ].join("\n");
 
     case "wait": {
-      const parts = [header, result.log, "## Instructions", "1. End this iteration — the next cron fire will recheck."];
+      const parts = [
+        header,
+        result.log,
+        "## Instructions",
+        "1. End this iteration — the next cron fire will recheck.",
+      ];
       return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
     }
 
