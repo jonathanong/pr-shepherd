@@ -7,8 +7,8 @@
  * Interpretation order for `status` — first match wins:
  *   1. mergeable == CONFLICTING       → CONFLICTS (hard conflict even for drafts)
  *   2. copilotReviewInProgress        → BLOCKED
- *   3. isDraft                        → DRAFT (takes precedence over DIRTY/BEHIND/BLOCKED)
- *   4. mergeStateStatus DIRTY         → CONFLICTS (GitHub merge conflicts)
+ *   3. mergeStateStatus DIRTY         → CONFLICTS (GitHub merge conflicts, even for drafts)
+ *   4. isDraft                        → DRAFT
  *   5. mergeStateStatus BEHIND        → BEHIND
  *   6. mergeStateStatus BLOCKED / HAS_HOOKS → BLOCKED
  *   7. mergeStateStatus UNSTABLE      → UNSTABLE
@@ -28,11 +28,11 @@ export function deriveMergeStatus(pr: BatchPrData): MergeStatusResult {
     status = "CONFLICTS";
   } else if (copilotReviewInProgress) {
     status = "BLOCKED";
+  } else if (pr.mergeStateStatus === "DIRTY") {
+    // DIRTY means GitHub detected merge conflicts — surface as CONFLICTS even for drafts.
+    status = "CONFLICTS";
   } else if (pr.isDraft || pr.mergeStateStatus === "DRAFT") {
     status = "DRAFT";
-  } else if (pr.mergeStateStatus === "DIRTY") {
-    // DIRTY means GitHub detected merge conflicts in the branch.
-    status = "CONFLICTS";
   } else if (pr.mergeStateStatus === "BEHIND") {
     status = "BEHIND";
   } else if (pr.mergeStateStatus === "BLOCKED" || pr.mergeStateStatus === "HAS_HOOKS") {

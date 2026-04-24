@@ -73,9 +73,21 @@ export function formatMonitorResult(result: MonitorResult): string {
 // Internal
 // ---------------------------------------------------------------------------
 
+function validateReadyDelaySuffix(readyDelaySuffix?: string): string | undefined {
+  if (readyDelaySuffix === undefined) return undefined;
+  const trimmed = readyDelaySuffix.trim();
+  if (!/^\d+(?:ms|s|m|h|d|w)$/i.test(trimmed)) {
+    throw new Error(
+      `Invalid --ready-delay: ${readyDelaySuffix}. Expected a duration like 30s, 5m, 2h, or 1d.`,
+    );
+  }
+  return trimmed;
+}
+
 function buildLoopPrompt(prNumber: number, loopTag: string, readyDelaySuffix?: string): string {
-  const iterateCmd = readyDelaySuffix
-    ? `npx pr-shepherd iterate ${prNumber} --no-cache --ready-delay ${readyDelaySuffix}`
+  const validatedDelay = validateReadyDelaySuffix(readyDelaySuffix);
+  const iterateCmd = validatedDelay
+    ? `npx pr-shepherd iterate ${prNumber} --no-cache --ready-delay ${validatedDelay}`
     : `npx pr-shepherd iterate ${prNumber} --no-cache`;
   return [
     loopTag,

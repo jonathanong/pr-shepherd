@@ -77,6 +77,17 @@ describe("runMonitor", () => {
     const result = await runMonitor({ format: "text", prNumber: 42 });
     expect(result.loopArgs).toMatch(/^8m --max-turns 30 --expires 4h/);
   });
+
+  it("includes --ready-delay in loop prompt when readyDelaySuffix is valid", async () => {
+    const result = await runMonitor({ format: "text", prNumber: 42, readyDelaySuffix: "15m" });
+    expect(result.loopPrompt).toContain("--ready-delay 15m");
+  });
+
+  it("throws for an invalid readyDelaySuffix", async () => {
+    await expect(
+      runMonitor({ format: "text", prNumber: 42, readyDelaySuffix: "invalid" }),
+    ).rejects.toThrow(/Invalid --ready-delay/);
+  });
 });
 
 describe("formatMonitorResult", () => {
