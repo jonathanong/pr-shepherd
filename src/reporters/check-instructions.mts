@@ -48,8 +48,11 @@ export function buildCheckInstructions(report: ShepherdReport): string[] {
   // 3. CI budget policy — one instruction per failing check
   for (const c of checks.failing) {
     if (c.failureKind === "actionable") {
+      const diagnosisSource = c.logExcerpt
+        ? "investigate the log excerpt in the output above"
+        : `open the check details (${c.detailsUrl}) to diagnose the failure`;
       instructions.push(
-        `Fix code failure: \`${c.name}\` (actionable) — investigate the log excerpt in the output above and apply a fix.`,
+        `Fix code failure: \`${c.name}\` (actionable) — ${diagnosisSource} and apply a fix.`,
       );
     } else if (c.failureKind === "infrastructure" || c.failureKind === "timeout") {
       const rerunCmd = c.runId

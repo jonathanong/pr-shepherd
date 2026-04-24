@@ -4,7 +4,7 @@ import { buildCheckInstructions } from "./check-instructions.mts";
 export function formatText(report: ShepherdReport): string {
   const parts: string[] = [];
 
-  // Header — status dashboard, scanned at a glance (exempt from heading rule per CLAUDE.md)
+  // Header — scan-friendly status lines for quick at-a-glance review
   parts.push(`\nPR #${report.pr} — ${report.repo}`);
   parts.push(`Status: ${report.status}`);
   parts.push("");
@@ -62,6 +62,7 @@ export function formatText(report: ShepherdReport): string {
     parts.push(
       `### Filtered non-PR-trigger (${report.checks.filtered.length}): ${report.checks.filtered.map((c) => c.name).join(", ")}`,
     );
+    parts.push("");
     if (report.checks.blockedByFilteredCheck) {
       parts.push(
         "  Note: PR is BLOCKED and all filtered checks are non-PR-trigger — one of these filtered checks may be a required status check blocking merge.",
