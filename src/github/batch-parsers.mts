@@ -88,6 +88,7 @@ export function parseRawPr(
     if (node.__typename === "CheckRun") {
       const event = node.checkSuite?.workflowRun?.event ?? null;
       const runId = extractRunId(node.detailsUrl);
+      const summary = extractCheckRunSummary(node.title, node.summary);
       return [
         {
           name: node.name,
@@ -96,11 +97,13 @@ export function parseRawPr(
           detailsUrl: node.detailsUrl ?? "",
           event,
           runId,
+          ...(summary !== undefined && { summary }),
         },
       ];
     }
     if (node.__typename === "StatusContext") {
       const { status, conclusion } = mapStatusContextState(node.state);
+      const summary = node.description?.trim() || undefined;
       return [
         {
           name: node.context,
@@ -109,6 +112,7 @@ export function parseRawPr(
           detailsUrl: node.targetUrl ?? "",
           event: null,
           runId: null,
+          ...(summary !== undefined && { summary }),
         },
       ];
     }
@@ -145,6 +149,19 @@ function extractRunId(url: string | undefined | null): string | null {
   if (!url) return null;
   const m = /\/runs\/(\d+)/.exec(url);
   return m ? (m[1] ?? null) : null;
+}
+
+function extractCheckRunSummary(
+  title: string | null | undefined,
+  summary: string | null | undefined,
+): string | undefined {
+  const t = title?.trim();
+  if (t) return t;
+  const firstLine = summary
+    ?.split("\n")
+    ?.find((l) => l.trim() !== "")
+    ?.trim();
+  return firstLine || undefined;
 }
 
 function mapStatusContextState(state: string): {

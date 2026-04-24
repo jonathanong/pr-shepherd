@@ -25,7 +25,15 @@ export function buildRelevantChecks(report: ShepherdReport): RelevantCheck[] {
   const passing: RelevantCheck[] = report.checks.passing.flatMap((c) => {
     if (excluded.has(c.conclusion)) return [];
     const conclusion = c.conclusion as RelevantCheck["conclusion"];
-    return [{ name: c.name, conclusion, runId: c.runId, detailsUrl: c.detailsUrl || null }];
+    return [
+      {
+        name: c.name,
+        conclusion,
+        runId: c.runId,
+        detailsUrl: c.detailsUrl || null,
+        summary: c.summary,
+      },
+    ];
   });
   const failing: RelevantCheck[] = report.checks.failing.flatMap((c) => {
     if (excluded.has(c.conclusion)) return [];
@@ -39,6 +47,7 @@ export function buildRelevantChecks(report: ShepherdReport): RelevantCheck[] {
         failureKind: c.failureKind,
         workflowName: c.workflowName,
         failedStep: c.failedStep,
+        summary: c.summary,
       },
     ];
   });

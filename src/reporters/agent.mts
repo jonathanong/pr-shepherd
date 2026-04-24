@@ -33,6 +33,7 @@ export function toAgentCheck(c: TriagedCheck): AgentCheck {
     failureKind: c.failureKind,
     ...(c.workflowName !== undefined && { workflowName: c.workflowName }),
     ...(c.failedStep !== undefined && { failedStep: c.failedStep }),
+    ...(c.summary !== undefined && { summary: c.summary }),
   };
 }
 

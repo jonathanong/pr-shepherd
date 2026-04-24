@@ -80,6 +80,24 @@ describe("toAgentCheck", () => {
     expect(result.runId).toBeNull();
     expect(result.detailsUrl).toBe("https://github.com/owner/repo/actions/runs/null");
   });
+
+  it("includes workflowName, failedStep, and summary when present; omits when absent", () => {
+    const check: TriagedCheck = {
+      ...makeCheck("run-1"),
+      workflowName: "CI",
+      failedStep: "Run tests",
+      summary: "2 tests failed",
+    };
+    const result = toAgentCheck(check);
+    expect(result.workflowName).toBe("CI");
+    expect(result.failedStep).toBe("Run tests");
+    expect(result.summary).toBe("2 tests failed");
+
+    const bare = toAgentCheck(makeCheck("run-2"));
+    expect(bare).not.toHaveProperty("workflowName");
+    expect(bare).not.toHaveProperty("failedStep");
+    expect(bare).not.toHaveProperty("summary");
+  });
 });
 
 describe("toAgentChecks", () => {

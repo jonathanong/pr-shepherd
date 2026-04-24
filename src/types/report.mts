@@ -105,6 +105,8 @@ export interface AgentCheck {
   workflowName?: string;
   /** For `actionable` failures: name of the first failed step (e.g. `"Run tests"`, `"Set up job"`). */
   failedStep?: string;
+  /** One-line status text shown in the GitHub UI (e.g. "67.68% of diff hit (target 85.00%)"). */
+  summary?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -129,6 +131,8 @@ export interface RelevantCheck {
   workflowName?: string;
   /** For `actionable` failures: name of the first failed step in the matched job. */
   failedStep?: string;
+  /** One-line status text shown in the GitHub UI (e.g. "67.68% of diff hit (target 85.00%)"). */
+  summary?: string;
 }
 
 // ---------------------------------------------------------------------------

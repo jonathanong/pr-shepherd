@@ -51,6 +51,8 @@ export interface CheckRun {
   event: string | null;
   /** GitHub Actions run ID extracted from detailsUrl. */
   runId: string | null;
+  /** One-line status text shown in the GitHub UI (CheckRun.title or first line of summary; StatusContext.description). */
+  summary?: string;
 }
 
 type CheckCategory = "passed" | "failing" | "in_progress" | "skipped" | "filtered";

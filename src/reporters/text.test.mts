@@ -161,6 +161,24 @@ describe("formatText — failed checks", () => {
     const out = formatText(report);
     expect(out).not.toContain("failed step:");
   });
+
+  it("renders summary when present; omits when absent", () => {
+    const withSummary: TriagedCheck = {
+      ...makeCheck({ category: "failing", conclusion: "FAILURE" }),
+      failureKind: "actionable",
+      summary: "67.68% of diff hit (target 85.00%)",
+    };
+    const without: TriagedCheck = {
+      ...makeCheck({ name: "lint", category: "failing", conclusion: "FAILURE" }),
+      failureKind: "actionable",
+    };
+    const report = makeReport({
+      checks: { ...makeReport().checks, failing: [withSummary, without] },
+    });
+    const out = formatText(report);
+    expect(out).toContain("    summary: 67.68% of diff hit (target 85.00%)");
+    expect(out).not.toContain("summary: undefined");
+  });
 });
 
 describe("formatText — in-progress section", () => {

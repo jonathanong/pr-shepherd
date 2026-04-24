@@ -107,6 +107,8 @@ export type RawContextNode =
       status: string;
       conclusion: string | null;
       detailsUrl: string | null;
+      title: string | null;
+      summary: string | null;
       checkSuite: { workflowRun: { event: string } | null } | null;
     }
   | {
@@ -114,4 +116,5 @@ export type RawContextNode =
       context: string;
       state: string;
       targetUrl: string | null;
+      description: string | null;
     };
