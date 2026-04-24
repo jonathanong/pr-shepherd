@@ -46,7 +46,7 @@ function getStdout(): string {
 const MONITOR_RESULT = {
   prNumber: 42,
   loopTag: "# pr-shepherd-loop:pr=42",
-  loopInvocation: "4m --max-turns 50 --expires 8h\n\n# pr-shepherd-loop:pr=42\nBODY",
+  loopArgs: "4m --max-turns 50 --expires 8h",
   loopPrompt: "# pr-shepherd-loop:pr=42\nBODY",
 };
 
@@ -80,6 +80,7 @@ describe("main — monitor", () => {
     const parsed = JSON.parse(out.trim()) as typeof MONITOR_RESULT;
     expect(parsed.prNumber).toBe(42);
     expect(parsed.loopTag).toBe("# pr-shepherd-loop:pr=42");
+    expect(parsed.loopArgs).toBe("4m --max-turns 50 --expires 8h");
   });
 
   it("exits 1 and writes to stderr when unknown args are passed", async () => {

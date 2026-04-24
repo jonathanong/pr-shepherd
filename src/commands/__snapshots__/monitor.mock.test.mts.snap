@@ -1,0 +1,30 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`formatMonitorResult > matches snapshot 1`] = `
+"# PR #42 [MONITOR]
+
+Loop tag: \`# pr-shepherd-loop:pr=42\`
+Loop args: \`4m --max-turns 50 --expires 8h\`
+
+## Loop prompt
+
+# pr-shepherd-loop:pr=42
+
+**IMPORTANT — recurrence rules:**
+- **Do NOT call \`ScheduleWakeup\` or \`/loop\`.** This session is fired by a recurring cron job. Either call creates a duplicate runner, causing concurrent git operations and \`.git/index.lock\` collisions.
+- End the turn cleanly after completing the actions below. The cron job handles the next fire.
+
+**Self-dedup:** Run \`CronList\`. If more than one job contains \`# pr-shepherd-loop:pr=42\`, keep the lowest job ID and \`CronDelete\` the rest (ignore errors — a concurrent runner may have already deleted them).
+
+Run in a single Bash call:
+  npx pr-shepherd iterate 42
+
+Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with \`# PR #42 [\`), log the first line of stderr and continue — do not cancel the loop. The next cron fire will retry.
+
+The output is Markdown. The first line is an H1 heading of the form \`# PR #<N> [<ACTION>]\`. Every output ends with a \`## Instructions\` section — follow those numbered steps exactly.
+
+## Instructions
+
+1. Run \`CronList\`. If any job's prompt contains \`# pr-shepherd-loop:pr=42\`, run the \`## Loop prompt\` body once inline (as if it were a cron tick) then stop — do not create a duplicate loop.
+2. Otherwise, invoke the \`/loop\` skill via the Skill tool. Build the \`args\` parameter as: only the value inside the backticks on the \`Loop args\` line above (the interval/flags string — not the \`Loop args:\` label), then a blank line, then the full \`## Loop prompt\` body."
+`;

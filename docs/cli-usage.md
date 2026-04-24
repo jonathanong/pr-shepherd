@@ -302,7 +302,7 @@ Exit codes: `0` wait/cooldown/rerun_ci/mark_ready · `1` fix_code/rebase · `2` 
 
 ### pr-shepherd monitor [PR]
 
-Bootstrap command for `/pr-shepherd:monitor`. Reads `watch.{interval, maxTurns, expiresHours}` from config and emits a `## Loop invocation` block containing the exact `/loop` args string (interval, flags, and full prompt body). The monitor skill invokes this command and passes the block contents to `/loop` via the Skill tool.
+Bootstrap command for `/pr-shepherd:monitor`. Reads `watch.{interval, maxTurns, expiresHours}` from config and emits the loop prompt body (for inline single-iteration use) and a short `Loop args` line (interval + flags). The monitor skill invokes this command and follows its `## Instructions` to either run one iteration inline (if a loop already exists) or start a new `/loop`.
 
 ```sh
 npx pr-shepherd monitor        # infer PR from current branch
@@ -311,10 +311,11 @@ npx pr-shepherd monitor 42
 
 **Example output:**
 
-````markdown
+```markdown
 # PR #42 [MONITOR]
 
 Loop tag: `# pr-shepherd-loop:pr=42`
+Loop args: `4m --max-turns 50 --expires 8h`
 
 ## Loop prompt
 
@@ -323,21 +324,11 @@ Loop tag: `# pr-shepherd-loop:pr=42`
 **IMPORTANT — recurrence rules:**
 ...
 
-## Loop invocation
-
-```loop
-4m --max-turns 50 --expires 8h
-
-# pr-shepherd-loop:pr=42
-
-...
-```
-
 ## Instructions
 
-1. Run `CronList`. If any job's prompt contains `# pr-shepherd-loop:pr=42`, run the loop prompt in `## Loop prompt` once inline then stop — do not create a duplicate loop.
-2. Otherwise, invoke the `/loop` skill via the Skill tool, passing the entire contents of the `loop` block above as the `args` parameter.
-````
+1. Run `CronList`. If any job's prompt contains `# pr-shepherd-loop:pr=42`, run the `## Loop prompt` body once inline (as if it were a cron tick) then stop — do not create a duplicate loop.
+2. Otherwise, invoke the `/loop` skill via the Skill tool. Build the `args` parameter as: only the value inside the backticks on the `Loop args` line above (the interval/flags string — not the `Loop args:` label), then a blank line, then the full `## Loop prompt` body.
+```
 
 All loop parameters (`interval`, `maxTurns`, `expiresHours`) come from `.pr-shepherdrc.yml` or the built-in defaults (`watch.*` config keys). Use `--format=json` to inspect the raw values programmatically.
 

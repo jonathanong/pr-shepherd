@@ -7,9 +7,9 @@ export interface MonitorCommandOptions extends GlobalOptions {}
 export interface MonitorResult {
   prNumber: number;
   loopTag: string;
-  /** The full args string to pass to /loop via Skill: "<interval> --max-turns N --expires Nh\n\n<prompt>" */
-  loopInvocation: string;
-  /** The bare loop prompt body (for inline single-iteration use). */
+  /** The interval/flags line: "<interval> --max-turns N --expires Nh" */
+  loopArgs: string;
+  /** The loop prompt body. To build /loop args: `${loopArgs}\n\n${loopPrompt}` */
   loopPrompt: string;
 }
 
@@ -39,9 +39,8 @@ export async function runMonitor(opts: MonitorCommandOptions): Promise<MonitorRe
   const loopTag = `# pr-shepherd-loop:pr=${prNumber}`;
   const loopPrompt = buildLoopPrompt(prNumber, loopTag);
   const loopArgs = `${interval} --max-turns ${maxTurns} --expires ${expiresHours}h`;
-  const loopInvocation = `${loopArgs}\n\n${loopPrompt}`;
 
-  return { prNumber, loopTag, loopInvocation, loopPrompt };
+  return { prNumber, loopTag, loopArgs, loopPrompt };
 }
 
 // ---------------------------------------------------------------------------
@@ -49,27 +48,22 @@ export async function runMonitor(opts: MonitorCommandOptions): Promise<MonitorRe
 // ---------------------------------------------------------------------------
 
 export function formatMonitorResult(result: MonitorResult): string {
-  const { prNumber, loopTag, loopInvocation, loopPrompt } = result;
+  const { prNumber, loopTag, loopArgs, loopPrompt } = result;
 
   return [
     `# PR #${prNumber} [MONITOR]`,
     "",
     `Loop tag: \`${loopTag}\``,
+    `Loop args: \`${loopArgs}\``,
     "",
     "## Loop prompt",
     "",
     loopPrompt,
     "",
-    "## Loop invocation",
-    "",
-    "```loop",
-    loopInvocation,
-    "```",
-    "",
     "## Instructions",
     "",
-    `1. Run \`CronList\`. If any job's prompt contains \`${loopTag}\`, run the loop prompt in \`## Loop prompt\` once inline (as if it were a cron tick) then stop — do not create a duplicate loop.`,
-    `2. Otherwise, invoke the \`/loop\` skill via the Skill tool, passing the entire contents of the \`\`\`loop\`\`\` block above as the \`args\` parameter (include the interval/flags line and the blank line and the full prompt body).`,
+    `1. Run \`CronList\`. If any job's prompt contains \`${loopTag}\`, run the \`## Loop prompt\` body once inline (as if it were a cron tick) then stop — do not create a duplicate loop.`,
+    `2. Otherwise, invoke the \`/loop\` skill via the Skill tool. Build the \`args\` parameter as: only the value inside the backticks on the \`Loop args\` line above (the interval/flags string — not the \`Loop args:\` label), then a blank line, then the full \`## Loop prompt\` body.`,
   ].join("\n");
 }
 
