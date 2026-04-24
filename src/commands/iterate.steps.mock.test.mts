@@ -206,117 +206,161 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("runIterate — cooldown", () => {
-  it("returns action: cooldown when last commit is 5s ago", async () => {
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "log") {
-        return Promise.resolve({ stdout: String(NOW - 5), stderr: "" });
-      }
-      return Promise.resolve({ stdout: "", stderr: "" });
-    });
-
-    const result = await runIterate(makeOpts({ cooldownSeconds: 30 }));
-
-    expect(result.action).toBe("cooldown");
-    expect(mockRunCheck).not.toHaveBeenCalled();
-  });
-});
-
-describe("runIterate — wait", () => {
-  it("returns action: wait when all CI is passing and no threads", async () => {
-    mockRunCheck.mockResolvedValue(makeReport());
+describe("runIterate — rerun_ci", () => {
+  it("calls gh run rerun for 2 timeout failures and returns action: rerun_ci", async () => {
+    const timeoutCheck1 = {
+      name: "test-1",
+      status: "COMPLETED" as const,
+      conclusion: "TIMED_OUT" as const,
+      detailsUrl: "https://github.com/owner/repo/actions/runs/10",
+      event: "pull_request",
+      runId: "run-10",
+      category: "failing" as const,
+      failureKind: "timeout" as const,
+    };
+    const timeoutCheck2 = {
+      name: "test-2",
+      status: "COMPLETED" as const,
+      conclusion: "TIMED_OUT" as const,
+      detailsUrl: "https://github.com/owner/repo/actions/runs/11",
+      event: "pull_request",
+      runId: "run-11",
+      category: "failing" as const,
+      failureKind: "timeout" as const,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        checks: {
+          passing: [],
+          failing: [timeoutCheck1, timeoutCheck2],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
     mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
+      isReady: false,
       shouldCancel: false,
-      remainingSeconds: 300,
+      remainingSeconds: 600,
     });
 
-    const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
+    const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("wait");
-    expect(result.pr).toBe(42);
-    expect(result.status).toBe("READY");
-    expect(result.summary.passing).toBe(1);
+    expect(result.action).toBe("rerun_ci");
+    if (result.action === "rerun_ci") {
+      expect(result.reran.map((r) => r.runId)).toContain("run-10");
+      expect(result.reran.map((r) => r.runId)).toContain("run-11");
+      expect(result.reran.find((r) => r.runId === "run-10")?.checkNames).toEqual(["test-1"]);
+      expect(result.reran.find((r) => r.runId === "run-11")?.checkNames).toEqual(["test-2"]);
+      expect(result.reran.find((r) => r.runId === "run-10")?.failureKind).toBe("timeout");
+    }
+
+    // CLI no longer calls rerun-failed-jobs — the agent does it via `gh run rerun`.
+    const fetchUrls = (mockFetch.mock.calls as Array<[string, RequestInit]>).map(([url]) => url);
+    expect(fetchUrls.some((u) => u.includes("rerun-failed-jobs"))).toBe(false);
   });
-});
 
-describe("runIterate — cancel", () => {
-  it("returns action: cancel when shouldCancel is true", async () => {
-    mockRunCheck.mockResolvedValue(makeReport());
+  it("deduplicates runIds when multiple failing steps share the same run", async () => {
+    const check1 = {
+      name: "test-step-1",
+      status: "COMPLETED" as const,
+      conclusion: "FAILURE" as const,
+      detailsUrl: "https://github.com/owner/repo/actions/runs/20",
+      event: "pull_request",
+      runId: "run-20",
+      category: "failing" as const,
+      failureKind: "infrastructure" as const,
+    };
+    const check2 = {
+      name: "test-step-2",
+      status: "COMPLETED" as const,
+      conclusion: "FAILURE" as const,
+      detailsUrl: "https://github.com/owner/repo/actions/runs/20",
+      event: "pull_request",
+      runId: "run-20", // same runId
+      category: "failing" as const,
+      failureKind: "infrastructure" as const,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        checks: {
+          passing: [],
+          failing: [check1, check2],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
     mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
-      shouldCancel: true,
-      remainingSeconds: 0,
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
     });
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("cancel");
-    expect(result.shouldCancel).toBe(true);
-    expect(result.remainingSeconds).toBe(0);
+    expect(result.action).toBe("rerun_ci");
+    if (result.action === "rerun_ci") {
+      expect(result.reran).toHaveLength(1);
+      expect(result.reran[0].runId).toBe("run-20");
+      expect(result.reran[0].checkNames).toEqual(["test-step-1", "test-step-2"]);
+      expect(result.reran[0].failureKind).toBe("infrastructure");
+    }
   });
 });
 
-describe("runIterate — cancel on merged/closed PR", () => {
-  it("returns action: cancel and does not call updateReadyDelay when PR is MERGED", async () => {
+describe("runIterate — rebase", () => {
+  it("returns action: rebase when flaky failure + BEHIND", async () => {
+    const flakyCheck = {
+      name: "flaky-test",
+      status: "COMPLETED" as const,
+      conclusion: "FAILURE" as const,
+      detailsUrl: "https://github.com/owner/repo/actions/runs/30",
+      event: "pull_request",
+      runId: "run-30",
+      category: "failing" as const,
+      failureKind: "flaky" as const,
+    };
     mockRunCheck.mockResolvedValue(
       makeReport({
+        status: "FAILING",
         mergeStatus: {
-          status: "UNKNOWN",
-          state: "MERGED",
+          status: "BEHIND",
+          state: "OPEN" as const,
           isDraft: false,
-          mergeable: "UNKNOWN",
+          mergeable: "MERGEABLE",
           reviewDecision: null,
           copilotReviewInProgress: false,
-          mergeStateStatus: "UNKNOWN",
+          mergeStateStatus: "BEHIND",
+        },
+        checks: {
+          passing: [],
+          failing: [flakyCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
         },
       }),
     );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("cancel");
-    expect(result.state).toBe("MERGED");
-    expect(mockUpdateReadyDelay).not.toHaveBeenCalled();
-  });
-
-  it("returns action: cancel when PR is CLOSED", async () => {
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        mergeStatus: {
-          status: "UNKNOWN",
-          state: "CLOSED",
-          isDraft: false,
-          mergeable: "UNKNOWN",
-          reviewDecision: null,
-          copilotReviewInProgress: false,
-          mergeStateStatus: "UNKNOWN",
-        },
-      }),
-    );
-
-    const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("cancel");
-    expect(result.state).toBe("CLOSED");
-    expect(mockUpdateReadyDelay).not.toHaveBeenCalled();
-  });
-});
-
-describe("runIterate — malformed repo format", () => {
-  it("throws when report.repo has no slash (e.g. 'badformat')", async () => {
-    mockRunCheck.mockResolvedValue(makeReport({ repo: "badformat" }));
-
-    await expect(runIterate(makeOpts())).rejects.toThrow(
-      'Unexpected repo format: "badformat" (expected "owner/name")',
-    );
-  });
-
-  it("throws when report.repo has a leading slash (e.g. '/noowner')", async () => {
-    mockRunCheck.mockResolvedValue(makeReport({ repo: "/noowner" }));
-
-    await expect(runIterate(makeOpts())).rejects.toThrow(
-      'Unexpected repo format: "/noowner" (expected "owner/name")',
-    );
+    expect(result.action).toBe("rebase");
+    expect(result.mergeStateStatus).toBe("BEHIND");
   });
 });

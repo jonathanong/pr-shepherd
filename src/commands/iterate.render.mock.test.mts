@@ -206,24 +206,23 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("runIterate — cooldown", () => {
-  it("returns action: cooldown when last commit is 5s ago", async () => {
+describe("runIterate — prescriptive fields: log strings", () => {
+  it("cooldown.log mentions CI starting", async () => {
     mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "log") {
+      if (cmd === "git" && args[0] === "log")
         return Promise.resolve({ stdout: String(NOW - 5), stderr: "" });
-      }
       return Promise.resolve({ stdout: "", stderr: "" });
     });
 
     const result = await runIterate(makeOpts({ cooldownSeconds: 30 }));
-
     expect(result.action).toBe("cooldown");
-    expect(mockRunCheck).not.toHaveBeenCalled();
+    if (result.action === "cooldown") {
+      expect(result.log).toMatch(/SKIP/);
+      expect(result.log).toMatch(/CI/i);
+    }
   });
-});
 
-describe("runIterate — wait", () => {
-  it("returns action: wait when all CI is passing and no threads", async () => {
+  it("wait.log includes passing count and merge state", async () => {
     mockRunCheck.mockResolvedValue(makeReport());
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: true,
@@ -232,16 +231,38 @@ describe("runIterate — wait", () => {
     });
 
     const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
-
     expect(result.action).toBe("wait");
-    expect(result.pr).toBe(42);
-    expect(result.status).toBe("READY");
-    expect(result.summary.passing).toBe(1);
+    if (result.action === "wait") {
+      expect(result.log).toMatch(/WAIT/);
+      expect(result.log).toMatch(/passing/);
+      expect(result.log).toMatch(/300s/);
+    }
   });
-});
 
-describe("runIterate — cancel", () => {
-  it("returns action: cancel when shouldCancel is true", async () => {
+  it("cancel.log mentions PR state when PR is merged", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        mergeStatus: {
+          status: "CLEAN",
+          state: "MERGED",
+          isDraft: false,
+          mergeable: "MERGEABLE",
+          reviewDecision: "APPROVED",
+          copilotReviewInProgress: false,
+          mergeStateStatus: "CLEAN",
+        },
+      }),
+    );
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("cancel");
+    if (result.action === "cancel") {
+      expect(result.log).toMatch(/CANCEL/);
+      expect(result.log).toMatch(/merged/i);
+    }
+  });
+
+  it("cancel.log mentions ready-delay when shouldCancel from ready-delay", async () => {
     mockRunCheck.mockResolvedValue(makeReport());
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: true,
@@ -250,73 +271,143 @@ describe("runIterate — cancel", () => {
     });
 
     const result = await runIterate(makeOpts());
-
     expect(result.action).toBe("cancel");
-    expect(result.shouldCancel).toBe(true);
-    expect(result.remainingSeconds).toBe(0);
+    if (result.action === "cancel") {
+      expect(result.log).toMatch(/CANCEL/);
+      expect(result.log).toMatch(/ready/i);
+    }
   });
-});
 
-describe("runIterate — cancel on merged/closed PR", () => {
-  it("returns action: cancel and does not call updateReadyDelay when PR is MERGED", async () => {
+  it("rerun_ci.log includes count and run IDs", async () => {
+    const timeoutCheck = {
+      name: "test",
+      status: "COMPLETED" as const,
+      conclusion: "TIMED_OUT" as const,
+      detailsUrl: "https://github.com/owner/repo/actions/runs/99",
+      event: "pull_request",
+      runId: "run-99",
+      category: "failing" as const,
+      failureKind: "timeout" as const,
+    };
     mockRunCheck.mockResolvedValue(
       makeReport({
-        mergeStatus: {
-          status: "UNKNOWN",
-          state: "MERGED",
-          isDraft: false,
-          mergeable: "UNKNOWN",
-          reviewDecision: null,
-          copilotReviewInProgress: false,
-          mergeStateStatus: "UNKNOWN",
+        status: "FAILING",
+        checks: {
+          passing: [],
+          failing: [timeoutCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
         },
       }),
     );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
 
     const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("cancel");
-    expect(result.state).toBe("MERGED");
-    expect(mockUpdateReadyDelay).not.toHaveBeenCalled();
+    expect(result.action).toBe("rerun_ci");
+    if (result.action === "rerun_ci") {
+      expect(result.log).toMatch(/RERUN NEEDED/);
+      expect(result.log).toMatch(/run-99/);
+      expect(result.log).toMatch(/test/);
+      expect(result.log).toMatch(/timeout/);
+    }
   });
 
-  it("returns action: cancel when PR is CLOSED", async () => {
+  it("mark_ready.log mentions PR number", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         mergeStatus: {
-          status: "UNKNOWN",
-          state: "CLOSED",
-          isDraft: false,
-          mergeable: "UNKNOWN",
-          reviewDecision: null,
+          status: "CLEAN",
+          state: "OPEN",
+          isDraft: true,
+          mergeable: "MERGEABLE",
+          reviewDecision: "APPROVED",
           copilotReviewInProgress: false,
-          mergeStateStatus: "UNKNOWN",
+          mergeStateStatus: "DRAFT",
         },
       }),
     );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
 
     const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("cancel");
-    expect(result.state).toBe("CLOSED");
-    expect(mockUpdateReadyDelay).not.toHaveBeenCalled();
+    expect(result.action).toBe("mark_ready");
+    if (result.action === "mark_ready") {
+      expect(result.log).toMatch(/MARKED READY/);
+      expect(result.log).toMatch(/42/);
+    }
   });
 });
 
-describe("runIterate — malformed repo format", () => {
-  it("throws when report.repo has no slash (e.g. 'badformat')", async () => {
-    mockRunCheck.mockResolvedValue(makeReport({ repo: "badformat" }));
-
-    await expect(runIterate(makeOpts())).rejects.toThrow(
-      'Unexpected repo format: "badformat" (expected "owner/name")',
+describe("runIterate — prescriptive fields: rebase", () => {
+  it("rebase result includes baseBranch, reason, and shellScript with dirty-worktree guard", async () => {
+    const flakyCheck = {
+      name: "flaky",
+      status: "COMPLETED" as const,
+      conclusion: "FAILURE" as const,
+      detailsUrl: "https://github.com/owner/repo/actions/runs/30",
+      event: "pull_request",
+      runId: "run-30",
+      category: "failing" as const,
+      failureKind: "flaky" as const,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        mergeStatus: {
+          status: "BEHIND",
+          state: "OPEN",
+          isDraft: false,
+          mergeable: "MERGEABLE",
+          reviewDecision: null,
+          copilotReviewInProgress: false,
+          mergeStateStatus: "BEHIND",
+        },
+        checks: {
+          passing: [],
+          failing: [flakyCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
     );
-  });
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "log")
+        return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
+      if (cmd === "git" && args[0] === "rev-parse")
+        return Promise.resolve({ stdout: "abc123\n", stderr: "" });
+      if (cmd === "gh" && args[1] === "view")
+        return Promise.resolve({ stdout: "main\n", stderr: "" });
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
 
-  it("throws when report.repo has a leading slash (e.g. '/noowner')", async () => {
-    mockRunCheck.mockResolvedValue(makeReport({ repo: "/noowner" }));
-
-    await expect(runIterate(makeOpts())).rejects.toThrow(
-      'Unexpected repo format: "/noowner" (expected "owner/name")',
-    );
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("rebase");
+    if (result.action === "rebase") {
+      expect(result.baseBranch).toBe("main");
+      expect(result.rebase.reason).toMatch(/behind main/i);
+      expect(result.rebase.shellScript).toMatch(/git diff --quiet/);
+      expect(result.rebase.shellScript).toMatch(/git rebase origin\/main/);
+      expect(result.rebase.shellScript).toMatch(/--force-with-lease/);
+    }
   });
 });
+
+// renderResolveCommand and buildResolveCommand tests moved to iterate.render-resolve-cmd.mock.test.mts

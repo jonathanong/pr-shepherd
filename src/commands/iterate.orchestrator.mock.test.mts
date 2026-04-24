@@ -206,59 +206,75 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("runIterate — cooldown", () => {
-  it("returns action: cooldown when last commit is 5s ago", async () => {
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "log") {
-        return Promise.resolve({ stdout: String(NOW - 5), stderr: "" });
-      }
-      return Promise.resolve({ stdout: "", stderr: "" });
-    });
-
-    const result = await runIterate(makeOpts({ cooldownSeconds: 30 }));
-
-    expect(result.action).toBe("cooldown");
-    expect(mockRunCheck).not.toHaveBeenCalled();
-  });
-});
-
-describe("runIterate — wait", () => {
-  it("returns action: wait when all CI is passing and no threads", async () => {
-    mockRunCheck.mockResolvedValue(makeReport());
+describe("runIterate — mark_ready", () => {
+  it("calls gh pr ready and returns action: mark_ready for READY + CLEAN + isDraft", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        mergeStatus: {
+          status: "CLEAN",
+          state: "OPEN" as const,
+          isDraft: true,
+          mergeable: "MERGEABLE",
+          reviewDecision: "APPROVED",
+          copilotReviewInProgress: false,
+          mergeStateStatus: "CLEAN",
+        },
+      }),
+    );
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: true,
       shouldCancel: false,
       remainingSeconds: 300,
     });
 
-    const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
+    const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("wait");
-    expect(result.pr).toBe(42);
-    expect(result.status).toBe("READY");
-    expect(result.summary.passing).toBe(1);
+    expect(result.action).toBe("mark_ready");
+    if (result.action === "mark_ready") {
+      expect(result.markedReady).toBe(true);
+    }
+
+    // markPullRequestReadyForReview is a GraphQL mutation — verify a /graphql fetch was made
+    const graphqlCalls = (mockFetch.mock.calls as Array<[string, RequestInit]>).filter(([url]) =>
+      url.endsWith("/graphql"),
+    );
+    expect(graphqlCalls).toHaveLength(1);
   });
-});
 
-describe("runIterate — cancel", () => {
-  it("returns action: cancel when shouldCancel is true", async () => {
-    mockRunCheck.mockResolvedValue(makeReport());
+  it("does NOT mark ready when copilotReviewInProgress", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        mergeStatus: {
+          status: "CLEAN",
+          state: "OPEN" as const,
+          isDraft: true,
+          mergeable: "MERGEABLE",
+          reviewDecision: "APPROVED",
+          copilotReviewInProgress: true,
+          mergeStateStatus: "CLEAN",
+        },
+      }),
+    );
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: true,
-      shouldCancel: true,
-      remainingSeconds: 0,
+      shouldCancel: false,
+      remainingSeconds: 300,
     });
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("cancel");
-    expect(result.shouldCancel).toBe(true);
-    expect(result.remainingSeconds).toBe(0);
+    expect(result.action).toBe("wait");
+    const graphqlCalls = (mockFetch.mock.calls as Array<[string, RequestInit]>).filter(([url]) =>
+      url.endsWith("/graphql"),
+    );
+    expect(graphqlCalls).toHaveLength(0);
   });
 });
 
-describe("runIterate — cancel on merged/closed PR", () => {
-  it("returns action: cancel and does not call updateReadyDelay when PR is MERGED", async () => {
+describe("runIterate — triage via runCheck", () => {
+  it("returns action: cancel when PR is MERGED even with failing checks", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         mergeStatus: {
@@ -270,27 +286,25 @@ describe("runIterate — cancel on merged/closed PR", () => {
           copilotReviewInProgress: false,
           mergeStateStatus: "UNKNOWN",
         },
-      }),
-    );
-
-    const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("cancel");
-    expect(result.state).toBe("MERGED");
-    expect(mockUpdateReadyDelay).not.toHaveBeenCalled();
-  });
-
-  it("returns action: cancel when PR is CLOSED", async () => {
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        mergeStatus: {
-          status: "UNKNOWN",
-          state: "CLOSED",
-          isDraft: false,
-          mergeable: "UNKNOWN",
-          reviewDecision: null,
-          copilotReviewInProgress: false,
-          mergeStateStatus: "UNKNOWN",
+        checks: {
+          passing: [],
+          failing: [
+            {
+              name: "ci",
+              status: "COMPLETED",
+              conclusion: "FAILURE",
+              detailsUrl: "https://github.com/owner/repo/actions/runs/1",
+              event: "pull_request",
+              runId: "run-1",
+              category: "failing",
+              failureKind: "actionable",
+            },
+          ],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
         },
       }),
     );
@@ -298,25 +312,94 @@ describe("runIterate — cancel on merged/closed PR", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("cancel");
-    expect(result.state).toBe("CLOSED");
-    expect(mockUpdateReadyDelay).not.toHaveBeenCalled();
+  });
+
+  it("returns fix_code for CONFLICTS even with a failing check (CONFLICTS is always actionable)", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        mergeStatus: {
+          status: "CONFLICTS",
+          state: "OPEN",
+          isDraft: false,
+          mergeable: "CONFLICTING",
+          reviewDecision: null,
+          copilotReviewInProgress: false,
+          mergeStateStatus: "DIRTY",
+        },
+        checks: {
+          passing: [],
+          failing: [
+            {
+              name: "ci",
+              status: "COMPLETED",
+              conclusion: "FAILURE",
+              detailsUrl: "https://github.com/owner/repo/actions/runs/2",
+              event: "pull_request",
+              runId: "run-2",
+              category: "failing",
+              failureKind: "actionable",
+            },
+          ],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+  });
+
+  it("surfaces actionable failureKind in fix payload when check has failureKind set", async () => {
+    const failingCheck = {
+      name: "typecheck",
+      status: "COMPLETED" as const,
+      conclusion: "FAILURE" as const,
+      detailsUrl: "https://github.com/owner/repo/actions/runs/3",
+      event: "pull_request",
+      runId: "run-3",
+      category: "failing" as const,
+      failureKind: "actionable" as const,
+      logExcerpt: "error TS2345: type mismatch",
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        checks: {
+          passing: [],
+          failing: [failingCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+      expect(result.fix.checks).toHaveLength(1);
+      expect(result.fix.checks[0]?.failureKind).toBe("actionable");
+    }
   });
 });
 
-describe("runIterate — malformed repo format", () => {
-  it("throws when report.repo has no slash (e.g. 'badformat')", async () => {
-    mockRunCheck.mockResolvedValue(makeReport({ repo: "badformat" }));
-
-    await expect(runIterate(makeOpts())).rejects.toThrow(
-      'Unexpected repo format: "badformat" (expected "owner/name")',
-    );
-  });
-
-  it("throws when report.repo has a leading slash (e.g. '/noowner')", async () => {
-    mockRunCheck.mockResolvedValue(makeReport({ repo: "/noowner" }));
-
-    await expect(runIterate(makeOpts())).rejects.toThrow(
-      'Unexpected repo format: "/noowner" (expected "owner/name")',
-    );
-  });
-});
+// base.checks tests moved to iterate.base-checks.mock.test.mts
