@@ -1,12 +1,3 @@
-/**
- * Executes the primary batch GraphQL query and parses the raw GitHub response
- * into shepherd's typed `BatchPrData` shape.
- *
- * The batch query fetches CI checks + review threads + PR comments + merge
- * status in a single network round-trip, drastically reducing API call counts
- * compared to the previous per-agent approach.
- */
-
 import { graphql, graphqlWithRateLimit, type RateLimitInfo, type RepoInfo } from "./client.mts";
 import { paginateForward, paginateBackward } from "./pagination.mts";
 import { BATCH_PR_QUERY } from "./queries.mts";
@@ -161,9 +152,11 @@ export async function fetchPrBatch(
   // Paginate check contexts forward if the first page is incomplete.
   let rawCheckNodes = raw.commits.nodes[0]?.commit.statusCheckRollup?.contexts.nodes ?? [];
   const checksPageInfo = raw.commits.nodes[0]?.commit.statusCheckRollup?.contexts.pageInfo;
+  const firstOid = raw.commits.nodes[0]?.commit.oid;
   if (checksPageInfo?.hasNextPage && checksPageInfo.endCursor) {
     // Pass endCursor so paginateForward fetches pages *after* the already-
     // fetched first page instead of re-fetching it from the start.
+    let pageCount = 0;
     const extra = await paginateForward<RawContextNode>(async (cursor) => {
       const res = await graphql<RawBatchResponse>(BATCH_PR_QUERY, {
         owner: repo.owner,
@@ -172,7 +165,19 @@ export async function fetchPrBatch(
         ...(cursor ? { checksCursor: cursor } : {}),
       });
       const pr2 = res.data.repository.pullRequest;
-      const ctxs = pr2?.commits.nodes[0]?.commit.statusCheckRollup?.contexts;
+      if (!pr2?.commits.nodes[0]?.commit.statusCheckRollup) {
+        throw new Error(
+          `Check-context pagination interrupted: statusCheckRollup disappeared on page ${pageCount + 1} (possible force-push race). Retry after the push stabilizes.`
+        );
+      }
+      const currentOid = pr2.commits.nodes[0]?.commit.oid;
+      if (firstOid !== undefined && currentOid !== undefined && currentOid !== firstOid) {
+        throw new Error(
+          `Check-context pagination interrupted: head commit changed from ${firstOid} to ${currentOid} between pages (force-push race). Retry.`
+        );
+      }
+      pageCount++;
+      const ctxs = pr2.commits.nodes[0]?.commit.statusCheckRollup?.contexts;
       return ctxs ?? { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [] };
     }, checksPageInfo.endCursor);
     rawCheckNodes = [...rawCheckNodes, ...extra];

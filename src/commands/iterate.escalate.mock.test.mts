@@ -260,11 +260,11 @@ describe("runIterate — escalate (fix-thrash)", () => {
     expect(result.action).toBe("fix_code");
   });
 
-  it("resets attempt counts when HEAD SHA changes and does NOT escalate", async () => {
-    // Stored state has SHA 'old-sha' with 5 attempts — should be discarded.
+  it("accumulates attempt counts when HEAD SHA changes and does NOT immediately escalate", async () => {
+    // Stored state has SHA 'old-sha' with 1 attempt — new SHA triggers increment to 2, still below threshold.
     mockReadFixAttempts.mockResolvedValue({
       headSha: "old-sha",
-      threadAttempts: { "thread-1": 5 },
+      threadAttempts: { "thread-1": 1 },
     });
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -280,12 +280,13 @@ describe("runIterate — escalate (fix-thrash)", () => {
 
     const result = await runIterate(makeOpts());
 
-    // Old SHA 'old-sha' ≠ current 'abc123' → counts reset → no escalation.
+    // Old SHA 'old-sha' ≠ current 'abc123' → counts increment (1→2) → below threshold → no escalation.
     expect(result.action).toBe("fix_code");
   });
 
   it("increments attempt count and calls writeFixAttempts on fix_code dispatch", async () => {
-    mockReadFixAttempts.mockResolvedValue({ headSha: "abc123", threadAttempts: { "thread-1": 1 } });
+    // Use a different stored SHA so isNewSha=true and the increment fires.
+    mockReadFixAttempts.mockResolvedValue({ headSha: "old-sha", threadAttempts: { "thread-1": 1 } });
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",

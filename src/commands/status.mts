@@ -65,8 +65,15 @@ async function fetchSummary(pr: number, owner: string, repo: string): Promise<Pr
   // If the response was truncated, fetch additional pages to get the full count.
   if (p.reviewThreads.totalCount > p.reviewThreads.nodes.length) {
     // Fetch additional pages backward until we have all threads.
+    const MAX_THREAD_PAGES = 10;
+    let pagesFetched = 0;
+    const totalCount = p.reviewThreads.totalCount;
     let cursor: string | null = p.reviewThreads.pageInfo?.startCursor ?? null;
     while (cursor !== null) {
+      if (++pagesFetched > MAX_THREAD_PAGES) {
+        process.stderr.write(`pr-shepherd: thread pagination cap reached for PR #${pr}: fetched ${allNodes.length} of ${totalCount} threads\n`);
+        break;
+      }
       // eslint-disable-next-line no-await-in-loop
       const extra = await graphql<RawStatusResponse>(MULTI_PR_STATUS_QUERY_WITH_CURSOR, {
         owner,

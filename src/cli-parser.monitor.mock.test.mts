@@ -83,12 +83,19 @@ describe("main — monitor", () => {
     expect(parsed.loopArgs).toBe("4m --max-turns 50 --expires 8h");
   });
 
-  it("exits 1 and writes to stderr when unknown args are passed", async () => {
+  it("accepts --ready-delay and forwards it to runMonitor", async () => {
     await main(["node", "shepherd", "monitor", "42", "--ready-delay", "10m"]);
-    expect(process.exitCode).toBe(1);
+    expect(mockRunMonitor).toHaveBeenCalledWith(
+      expect.objectContaining({ readyDelaySuffix: "10m" }),
+    );
+    expect(process.exitCode).not.toBe(1);
+  });
+
+  it("warns on truly unknown flags but still calls runMonitor", async () => {
+    await main(["node", "shepherd", "monitor", "42", "--unknown-xyz"]);
     const err = stderrSpy.mock.calls.map((c: string[]) => c[0]).join("");
-    expect(err).toContain("Unknown arguments");
-    expect(mockRunMonitor).not.toHaveBeenCalled();
+    expect(err).toContain("ignoring unknown flags");
+    expect(mockRunMonitor).toHaveBeenCalled();
   });
 
   it("exits 1 and writes to stderr when runMonitor throws", async () => {

@@ -11,9 +11,18 @@
 
 import { main } from "./cli-parser.mts";
 
+function formatCause(cause: unknown): string {
+  if (cause instanceof Error) {
+    const stack = cause.stack ?? `${cause.message}`;
+    const nested = cause.cause != null ? `\n  caused by: ${formatCause(cause.cause)}` : "";
+    return `${stack}${nested}`;
+  }
+  return String(cause);
+}
+
 main(process.argv).catch((err) => {
   const msg = err instanceof Error ? err.message : String(err);
-  const causeStr = err instanceof Error && err.cause != null ? String(err.cause) : null;
+  const causeStr = err instanceof Error && err.cause != null ? formatCause(err.cause) : null;
   process.stderr.write(
     `pr-shepherd error: ${msg}${causeStr !== null ? ` (cause: ${causeStr})` : ""}\n`,
   );

@@ -7,6 +7,7 @@ export function formatText(report: ShepherdReport): string {
   // Header — scan-friendly status lines for quick at-a-glance review
   parts.push(`\nPR #${report.pr} — ${report.repo}`);
   parts.push(`Status: ${report.status}`);
+  parts.push(`Base: ${report.baseBranch}`);
   parts.push("");
 
   // Merge status
@@ -133,6 +134,26 @@ export function formatText(report: ShepherdReport): string {
     parts.push("## CHANGES_REQUESTED Reviews");
     parts.push("");
     for (const r of report.changesRequestedReviews) {
+      parts.push(`- reviewId=${r.id} (@${r.author}): ${firstLine(r.body)}`);
+    }
+    parts.push("");
+  }
+
+  // Review summaries
+  if (report.reviewSummaries.length > 0) {
+    parts.push("## Review Summaries");
+    parts.push("");
+    for (const r of report.reviewSummaries) {
+      parts.push(`- reviewId=${r.id} (@${r.author}): ${firstLine(r.body)}`);
+    }
+    parts.push("");
+  }
+
+  // Approved reviews
+  if (report.approvedReviews.length > 0) {
+    parts.push("## Approved Reviews");
+    parts.push("");
+    for (const r of report.approvedReviews) {
       parts.push(`- reviewId=${r.id} (@${r.author}): ${firstLine(r.body)}`);
     }
     parts.push("");

@@ -51,17 +51,25 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const actionableChecks = report.checks.failing.filter((f) => f.failureKind === "actionable");
 
   const stored = await readFixAttempts({ owner: repoOwner, repo: repoName, pr: prNumber });
-  const attempts =
-    stored?.headSha === headSha
-      ? stored
-      : { headSha, threadAttempts: {} as Record<string, number> };
+
+  const isNewSha = stored?.headSha !== headSha;
+  // Accumulate across shas — only increment when a push is detected (sha changed)
+  const currentAttempts: Record<string, number> = stored
+    ? { ...stored.threadAttempts }
+    : {};
+
+  if (isNewSha) {
+    for (const t of report.threads.actionable) {
+      currentAttempts[t.id] = (currentAttempts[t.id] ?? 0) + 1;
+    }
+  }
 
   const escalateTriggers = checkEscalateTriggers(
     report.threads.actionable,
     report.comments.actionable,
     report.changesRequestedReviews,
     actionableChecks,
-    attempts.threadAttempts,
+    currentAttempts,
     report.mergeStatus.status === "CONFLICTS",
   );
   if (escalateTriggers.triggers.length > 0) {
@@ -83,13 +91,10 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     };
   }
 
-  const newThreadAttempts = { ...attempts.threadAttempts };
-  for (const t of report.threads.actionable) {
-    newThreadAttempts[t.id] = (newThreadAttempts[t.id] ?? 0) + 1;
-  }
+  // Save updated state (only incremented on sha change)
   await writeFixAttempts(
     { owner: repoOwner, repo: repoName, pr: prNumber },
-    { headSha, threadAttempts: newThreadAttempts },
+    { headSha, threadAttempts: currentAttempts },
   );
 
   let cancelled: string[] = [];

@@ -195,8 +195,13 @@ describe("buildCheckInstructions — ready-to-merge gate", () => {
 });
 
 describe("buildCheckInstructions — monitoring pointer", () => {
-  it("always includes a /pr-shepherd:monitor pointer", () => {
-    const steps = buildCheckInstructions(makeReport());
+  it("includes a /pr-shepherd:monitor pointer for non-READY PRs", () => {
+    const steps = buildCheckInstructions(makeReport({ status: "FAILING" }));
     expect(steps[steps.length - 1]).toContain("/pr-shepherd:monitor");
+  });
+
+  it("omits the /pr-shepherd:monitor pointer for READY PRs", () => {
+    const steps = buildCheckInstructions(makeReport({ status: "READY" }));
+    expect(steps.every((s) => !s.includes("/pr-shepherd:monitor"))).toBe(true);
   });
 });

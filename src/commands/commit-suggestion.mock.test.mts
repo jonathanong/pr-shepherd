@@ -346,10 +346,10 @@ describe("runCommitSuggestion — file read failure", () => {
 
     await expect(
       runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
-    ).rejects.toThrow("Could not read src/foo.ts");
+    ).rejects.toThrow("ENOENT");
   });
 
-  it("uses String(err) when readFile throws a non-Error value", async () => {
+  it("propagates a non-Error rejection from readFile", async () => {
     vi.clearAllMocks();
     mockGetPrHead.mockResolvedValue({
       sha: "headsha",
@@ -367,7 +367,7 @@ describe("runCommitSuggestion — file read failure", () => {
 
     await expect(
       runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
-    ).rejects.toThrow("Could not read src/foo.ts: plain string error");
+    ).rejects.toThrow("plain string error");
   });
 });
 
@@ -470,12 +470,8 @@ describe("runCommitSuggestion — patch failure", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Resolve failure after commit
-// ---------------------------------------------------------------------------
-
 describe("runCommitSuggestion — resolve failure", () => {
-  it("throws (with commit SHA in message) when resolve fails after commit lands", async () => {
+  it("returns applied:true with error in postActionInstruction when resolve fails after commit", async () => {
     vi.clearAllMocks();
     mockGetPrHead.mockResolvedValue({
       sha: "headsha",
@@ -491,8 +487,12 @@ describe("runCommitSuggestion — resolve failure", () => {
       errors: ["could not resolve PRRT_x"],
     });
 
-    await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
-    ).rejects.toThrow(/Commit created \(newsha\).*could not resolve/);
+    const result = await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" });
+    expect(result.applied).toBe(true);
+    if (result.applied) {
+      expect(result.commitSha).toBe("newsha");
+      expect(result.postActionInstruction).toMatch(/Commit created \(newsha\)/);
+      expect(result.postActionInstruction).toMatch(/could not resolve/);
+    }
   });
 });

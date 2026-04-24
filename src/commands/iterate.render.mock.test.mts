@@ -182,7 +182,7 @@ beforeEach(() => {
     ok: true,
     status: 204,
     headers: new Headers(),
-    json: () => Promise.resolve({}),
+    json: () => Promise.resolve({ data: {} }),
     text: () => Promise.resolve(""),
   });
   vi.useFakeTimers();

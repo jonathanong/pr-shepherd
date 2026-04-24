@@ -418,8 +418,8 @@ describe("formatText — ## Instructions section", () => {
     expect(out).toContain("gh run rerun 12345 --failed");
   });
 
-  it("mentions /pr-shepherd:monitor for continuous monitoring", () => {
-    const out = formatText(makeReport());
+  it("mentions /pr-shepherd:monitor for non-READY PRs", () => {
+    const out = formatText(makeReport({ status: "FAILING" }));
     expect(out).toContain("/pr-shepherd:monitor");
   });
 });

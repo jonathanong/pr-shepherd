@@ -418,3 +418,13 @@ After fixing manually, rerun `/pr-shepherd:monitor 42` to resume.
 The block after the base-fields line (separated by a blank line) is `escalate.humanMessage` in JSON — ready to print verbatim.
 
 **What the monitor does:** Follow `## Instructions` — invoke `/loop cancel` via Skill tool to stop the cron job.
+
+---
+
+## Archived / no longer emitted
+
+### `rebase`
+
+> **This action is no longer emitted by `iterate`.** Branch rebasing is now handled inside the `fix_code` instructions (see `## Post-fix push` and the rebase step in `## Instructions`). The `rebase` action type and its formatter case are preserved in the codebase for reference, but the CLI will not produce `[REBASE]` output in current releases.
+
+**Trigger:** Previously emitted when a branch was `BEHIND` its base and no other actionable items were pending. Removed in favour of embedding the rebase step inside `fix_code` when conflicts are present.

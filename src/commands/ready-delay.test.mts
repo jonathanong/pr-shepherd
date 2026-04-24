@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { join } from "node:path";
-import { mkdtemp, rm, readFile } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { updateReadyDelay } from "./ready-delay.mts";
 
@@ -51,25 +51,25 @@ describe("updateReadyDelay", () => {
     expect(state.remainingSeconds).toBe(0);
   });
 
-  it("keeps the marker file after shouldCancel fires so subsequent calls also return shouldCancel:true", async () => {
-    // Write a past marker
+  it("deletes the marker file after shouldCancel fires and resets the timer on the next call", async () => {
+    // Write a past marker so the timer has already expired
     const past = Math.floor(Date.now() / 1000) - DELAY - 5;
     const markerPath = join(stateDir, `${OWNER}-${REPO}`, String(PR), "ready-since.txt");
-    const { mkdir, writeFile } = await import("node:fs/promises");
+    const { mkdir, writeFile, access } = await import("node:fs/promises");
     await mkdir(join(stateDir, `${OWNER}-${REPO}`, String(PR)), { recursive: true });
     await writeFile(markerPath, String(past), "utf8");
 
-    // First call fires shouldCancel
+    // First call fires shouldCancel and must delete the marker
     const first = await updateReadyDelay(PR, true, DELAY, OWNER, REPO);
     expect(first.shouldCancel).toBe(true);
 
-    // Marker file must still exist
-    const contents = await readFile(markerPath, "utf8");
-    expect(contents).toBe(String(past));
+    // Marker file must be gone
+    await expect(access(markerPath)).rejects.toThrow();
 
-    // Second call (simulating next cron tick) also returns shouldCancel:true
+    // Second call starts a fresh timer — shouldCancel must be false
     const second = await updateReadyDelay(PR, true, DELAY, OWNER, REPO);
-    expect(second.shouldCancel).toBe(true);
+    expect(second.shouldCancel).toBe(false);
+    expect(second.remainingSeconds).toBeGreaterThan(0);
   });
 
   it("resets the countdown when ready-since.txt contains a future timestamp (clock skew)", async () => {

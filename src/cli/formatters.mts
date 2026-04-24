@@ -88,9 +88,9 @@ export function formatCommitSuggestionResult(result: CommitSuggestionResult): st
       lines.push(`  ${result.path} (${range})`);
     } else {
       lines.push(`Dry-run: suggestion cannot apply cleanly:`);
-      lines.push(`  path: ${result.path} (${range})`);
-      lines.push(`  author: @${result.author}`);
-      lines.push(`  reason: ${result.reason ?? "unknown"}`);
+      lines.push(`- path: ${result.path} (${range})`);
+      lines.push(`- author: @${result.author}`);
+      lines.push(`- reason: ${result.reason ?? "unknown"}`);
     }
     if (result.patch) {
       lines.push("");
@@ -114,9 +114,9 @@ export function formatCommitSuggestionResult(result: CommitSuggestionResult): st
     }
   } else {
     lines.push(`Failed to apply suggestion ${result.threadId}:`);
-    lines.push(`  path: ${result.path} (lines ${result.startLine}-${result.endLine})`);
-    lines.push(`  author: @${result.author}`);
-    lines.push(`  reason: ${result.reason ?? "unknown"}`);
+    lines.push(`- path: ${result.path} (lines ${result.startLine}–${result.endLine})`);
+    lines.push(`- author: @${result.author}`);
+    lines.push(`- reason: ${result.reason ?? "unknown"}`);
     if (result.patch) {
       lines.push("");
       lines.push("```diff");

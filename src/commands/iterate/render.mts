@@ -22,7 +22,16 @@ export function renderResolveCommand(rc: ResolveCommand): string {
   // `$HEAD_SHA` is never in `rc.argv` — it is appended pre-quoted below when
   // `requiresHeadSha`. Only `$DISMISS_MESSAGE` (or whitespace-bearing values)
   // need quoting here.
-  const needsQuoting = (arg: string) => arg === "$DISMISS_MESSAGE" || /\s/.test(arg);
+  const needsQuoting = (arg: string) => {
+    if (arg === "$DISMISS_MESSAGE") return true;
+    // Assert no characters that would break the naive escaper are present in arg
+    if (/["$`\\]/.test(arg)) {
+      throw new Error(
+        `Unexpected character in argv arg that needsQuoting can't handle: ${JSON.stringify(arg)}`,
+      );
+    }
+    return /\s/.test(arg);
+  };
   const parts = rc.argv.map((a) => (needsQuoting(a) ? `"${a}"` : a));
   if (rc.requiresHeadSha) {
     parts.push("--require-sha", '"$HEAD_SHA"');

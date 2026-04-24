@@ -28,6 +28,7 @@ import { main } from "./cli-parser.mts";
 import { runIterate } from "./commands/iterate.mts";
 import { runStatus } from "./commands/status.mts";
 import type { IterateResult } from "./types.mts";
+import { makeIterateResult } from "./cli-parser.iterate-fixtures.mts";
 
 const mockRunIterate = vi.mocked(runIterate);
 const mockRunStatus = vi.mocked(runStatus);
@@ -35,70 +36,6 @@ const mockRunStatus = vi.mocked(runStatus);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let stdoutSpy: any;
 let stderrSpy: any;
-
-function makeIterateResult(action: IterateResult["action"] = "wait"): IterateResult {
-  const base = {
-    pr: 42,
-    repo: "owner/repo",
-    status: "IN_PROGRESS" as const,
-    state: "OPEN" as const,
-    mergeStateStatus: "BLOCKED" as const,
-    copilotReviewInProgress: false,
-    isDraft: false,
-    shouldCancel: false,
-    remainingSeconds: 60,
-    summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 1 },
-    baseBranch: "main",
-    checks: [] as import("./types.mts").RelevantCheck[],
-  };
-  if (action === "cooldown") return { ...base, action: "cooldown", log: "SKIP: CI still starting" };
-  if (action === "wait") return { ...base, action: "wait", log: "WAIT: 0 passing, 1 in-progress" };
-  if (action === "rerun_ci")
-    return { ...base, action: "rerun_ci", log: "RERAN: run-99 (typecheck — transient)", reran: [] };
-  if (action === "mark_ready")
-    return { ...base, action: "mark_ready", markedReady: true, log: "MARKED READY: PR 42" };
-  if (action === "fix_code") {
-    return {
-      ...base,
-      action: "fix_code",
-      fix: {
-        mode: "rebase-and-push",
-        threads: [],
-        actionableComments: [],
-        noiseCommentIds: [],
-        reviewSummaryIds: [],
-        surfacedSummaries: [],
-        checks: [],
-        changesRequestedReviews: [],
-        resolveCommand: {
-          argv: ["npx", "pr-shepherd", "resolve", "42"],
-          requiresHeadSha: true,
-          requiresDismissMessage: false,
-          hasMutations: false,
-        },
-        instructions: ["End this iteration."],
-      },
-      cancelled: [],
-    };
-  }
-  if (action === "cancel")
-    return { ...base, action: "cancel", log: "CANCEL: PR #42 — stopping monitor" };
-  if (action === "escalate") {
-    return {
-      ...base,
-      action: "escalate",
-      escalate: {
-        triggers: [],
-        unresolvedThreads: [],
-        ambiguousComments: [],
-        changesRequestedReviews: [],
-        suggestion: "check manually",
-        humanMessage: "⚠️  /pr-shepherd:monitor paused — needs human direction",
-      },
-    };
-  }
-  return { ...base, action: "wait", log: "WAIT: 0 passing, 1 in-progress" };
-}
 
 function getStdout(): string {
   return stdoutSpy.mock.calls.map((c: unknown[]) => c[0]).join("");
@@ -131,7 +68,8 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain("## Post-fix push");
     expect(out).not.toContain("## Rebase");
     expect(out).toContain("- base: `main`");
-    expect(out).toContain('- resolve: `npx pr-shepherd resolve 42 --require-sha "$HEAD_SHA"`');
+    // hasMutations: false in the fixture → resolve line is omitted (no-op commit).
+    expect(out).not.toContain("- resolve:");
     // No item sections.
     expect(out).not.toContain("## Review threads");
     expect(out).not.toContain("## Actionable comments");

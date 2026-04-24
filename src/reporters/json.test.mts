@@ -67,8 +67,8 @@ describe("formatJson", () => {
     expect(parsed.status).toBe("FAILING");
   });
 
-  it("instructions include monitoring pointer", () => {
-    const output = formatJson(makeReport());
+  it("instructions include monitoring pointer for non-READY PRs", () => {
+    const output = formatJson(makeReport({ status: "FAILING" }));
     const parsed = JSON.parse(output) as { instructions: string[] };
     expect(parsed.instructions.some((s) => s.includes("/pr-shepherd:monitor"))).toBe(true);
   });
