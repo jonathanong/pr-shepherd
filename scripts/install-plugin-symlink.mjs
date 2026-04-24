@@ -2,6 +2,7 @@ import { existsSync, symlinkSync, unlinkSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 if (process.env.CI) process.exit(0)
+if (process.platform === 'win32') process.exit(0) // symlinks require admin on Windows; shims not generated
 
 const skillsTarget = resolve('plugin/skills')
 const symlinkPath =
