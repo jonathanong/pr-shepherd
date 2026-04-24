@@ -378,3 +378,44 @@ describe("runCommitSuggestion — dry-run", () => {
     ).resolves.toBeDefined();
   });
 });
+
+describe("runCommitSuggestion — git apply rollback", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetPrHead.mockResolvedValue({
+      sha: "headsha",
+      ref: "feature/foo",
+      repoWithOwner: "owner/repo",
+    });
+    mockGetCurrentBranch.mockResolvedValue("feature/foo");
+    mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (mockReadFile as any).mockResolvedValue(FILE_CONTENT);
+  });
+
+  it("calls git checkout -- on the file and rethrows when real git apply fails", async () => {
+    const applyError = Object.assign(new Error("apply failed mid-way"), { stderr: "patch failed" });
+    let revParseCount = 0;
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
+      if (cmd === "git" && args[0] === "rev-parse") {
+        revParseCount++;
+        return revParseCount === 1 ? makeGitSuccess("headsha\n") : makeGitSuccess("newsha\n");
+      }
+      if (cmd === "git" && args[0] === "apply" && args.includes("--check")) return makeGitSuccess();
+      if (cmd === "git" && args[0] === "apply") return Promise.reject(applyError);
+      if (cmd === "git" && args[0] === "checkout") return makeGitSuccess();
+      return makeGitSuccess("");
+    });
+
+    await expect(
+      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+    ).rejects.toThrow("apply failed mid-way");
+
+    const checkoutCall = mockExecFile.mock.calls.find(
+      (call) => call[0] === "git" && (call[1] as string[])[0] === "checkout",
+    );
+    expect(checkoutCall).toBeDefined();
+    expect((checkoutCall![1] as string[])).toContain("src/foo.ts");
+  });
+});

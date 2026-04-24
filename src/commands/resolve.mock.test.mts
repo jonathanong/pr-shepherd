@@ -130,6 +130,19 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     expect(mockAutoResolveOutdated).toHaveBeenCalledWith(["outdated-1"]);
   });
 
+  it("logs to stderr and continues when autoResolveOutdated returns errors", async () => {
+    const outdated = makeThread({ id: "outdated-1", isOutdated: true, isResolved: false });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [outdated] }) });
+    mockAutoResolveOutdated.mockResolvedValue({ resolved: [], errors: ["rate limit hit"] });
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
+    const result = await runResolveFetch(BASE_OPTS);
+
+    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("auto-resolve outdated threads failed"));
+    expect(result).toBeDefined();
+    stderrSpy.mockRestore();
+  });
+
   it("activeThreads excludes outdated threads", async () => {
     const outdated = makeThread({ id: "t-outdated", isOutdated: true });
     const active = makeThread({ id: "t-active", isOutdated: false });
