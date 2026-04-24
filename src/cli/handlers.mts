@@ -104,15 +104,47 @@ export async function handleIterate(args: string[]): Promise<void> {
 export async function handleMonitor(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
 
-  if (extra.length > 0) {
-    process.stderr.write(`Unknown arguments: ${extra.join(" ")}\n`);
+  const readyDelayStr = getFlag(extra, "--ready-delay");
+  if (
+    hasFlag(extra, "--ready-delay") &&
+    (readyDelayStr === null || readyDelayStr.startsWith("--"))
+  ) {
+    process.stderr.write(
+      "pr-shepherd monitor: --ready-delay requires a value (e.g. --ready-delay 15m)\n",
+    );
     process.exitCode = 1;
     return;
+  }
+  const remaining: string[] = [];
+  for (let i = 0; i < extra.length; i++) {
+    const a = extra[i]!;
+    if (a === "--ready-delay") {
+      i++;
+      continue;
+    }
+    if (a.startsWith("--ready-delay=")) continue;
+    remaining.push(a);
+  }
+  const unknownFlags = remaining.filter((a) => a.startsWith("--"));
+  if (unknownFlags.length > 0) {
+    process.stderr.write(
+      `pr-shepherd monitor: ignoring unknown flags: ${unknownFlags.join(" ")}\n`,
+    );
+  }
+  const unknownPositionals = remaining.filter((a) => !a.startsWith("--"));
+  if (unknownPositionals.length > 0) {
+    process.stderr.write(
+      `pr-shepherd monitor: unexpected positional arguments ignored: ${unknownPositionals.join(" ")}\n`,
+    );
   }
 
   let result;
   try {
-    result = await runMonitor({ ...globalOpts, prNumber });
+    result = await runMonitor({
+      ...globalOpts,
+      prNumber,
+      readyDelaySuffix: readyDelayStr ?? undefined,
+    });
   } catch (err) {
     process.stderr.write(`${err instanceof Error ? err.message : String(err)}\n`);
     process.exitCode = 1;

@@ -74,7 +74,7 @@ export async function applyResolveOptions(
   );
   await runBatched(
     opts.dismissReviewIds ?? [],
-    (id) => dismissReview(id, opts.dismissMessage!),
+    (id) => dismissReview(id, opts.dismissMessage ?? ""),
     result.dismissedReviews,
     result.errors,
   );

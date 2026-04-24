@@ -95,30 +95,38 @@ function deepMerge(
 
 const defaults: PrShepherdConfig = builtins;
 
-let cached: PrShepherdConfig | null = null;
+const configCache = new Map<string, PrShepherdConfig>();
 
 export function loadConfig(): PrShepherdConfig {
-  if (cached) return cached;
+  const cwd = process.cwd();
+  if (configCache.has(cwd)) return configCache.get(cwd)!;
 
-  const rcPath = findRcFile(process.cwd());
+  const rcPath = findRcFile(cwd);
   if (!rcPath) {
-    cached = defaults;
-    return cached;
+    configCache.set(cwd, defaults);
+    return defaults;
   }
 
   try {
     const raw = readFileSync(rcPath, "utf8");
     const parsed = (parse(raw) ?? {}) as Record<string, unknown>;
-    cached = deepMerge(
+    const config = deepMerge(
       defaults as unknown as Record<string, unknown>,
       parsed,
     ) as unknown as PrShepherdConfig;
-    return cached;
+    configCache.set(cwd, config);
+    return config;
   } catch (err) {
     process.stderr.write(
       `pr-shepherd: failed to parse ${rcPath}: ${err instanceof Error ? err.message : String(err)}\n`,
     );
-    cached = { ...defaults };
-    return cached;
+    const fallback = { ...defaults };
+    configCache.set(cwd, fallback);
+    return fallback;
   }
+}
+
+/** Reset the config cache — for use in tests that change directories. */
+export function _resetConfigCache(): void {
+  configCache.clear();
 }

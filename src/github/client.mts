@@ -149,19 +149,26 @@ export async function getCurrentBranch(): Promise<string> {
 }
 
 function parseRemoteUrl(url: string): RepoInfo {
-  // Strip trailing .git and trailing slash
-  const stripped = url.replace(/\.git$/, "").replace(/\/$/, "");
+  const trimmed = url.trim();
 
-  // ssh: git@host:owner/repo
-  const sshMatch = /^git@[^:]+:([^/]+)\/(.+)$/.exec(stripped);
+  // ssh: git@host:owner/repo[.git]
+  const sshMatch = /^git@[^:]+:([^/]+)\/([^/]+?)(?:\.git)?$/.exec(trimmed);
   if (sshMatch) {
     return { owner: sshMatch[1]!, name: sshMatch[2]! };
   }
 
-  // https or ssh://: https://host/owner/repo  or  ssh://git@host/owner/repo
-  const httpsMatch = /^(?:https?|ssh):\/\/[^/]+\/([^/]+)\/(.+)$/.exec(stripped);
-  if (httpsMatch) {
-    return { owner: httpsMatch[1]!, name: httpsMatch[2]! };
+  // https or ssh://: parse via URL and require exactly /<owner>/<repo>[.git]
+  if (/^(?:https?|ssh):\/\//.test(trimmed)) {
+    try {
+      const parsed = new URL(trimmed);
+      const pathname = parsed.pathname.replace(/\.git\/?$/, "").replace(/\/$/, "");
+      const parts = pathname.split("/").filter(Boolean);
+      if (parts.length === 2) {
+        return { owner: parts[0]!, name: parts[1]! };
+      }
+    } catch {
+      // fall through to error
+    }
   }
 
   throw new Error(`Cannot parse GitHub remote URL: ${url}`);

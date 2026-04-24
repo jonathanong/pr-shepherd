@@ -24,7 +24,7 @@ afterEach(() => {
 async function loadIndex() {
   await import("./index.mts");
   // Flush the microtask queue so the .catch() handler runs
-  await new Promise<void>((r) => setTimeout(r, 0));
+  await Promise.resolve();
 }
 
 describe("index — error exit", () => {
@@ -47,9 +47,35 @@ describe("index — error exit", () => {
     err.cause = new Error("getaddrinfo ENOTFOUND api.github.com");
     mockMain.mockRejectedValueOnce(err);
     await loadIndex();
-    expect(stderrSpy).toHaveBeenCalledWith(
-      "pr-shepherd error: fetch failed (cause: Error: getaddrinfo ENOTFOUND api.github.com)\n",
+    const written = stderrSpy.mock.calls[0][0] as string;
+    expect(written).toMatch(
+      /^pr-shepherd error: fetch failed \(cause: Error: getaddrinfo ENOTFOUND api\.github\.com/,
     );
+    expect(written).toMatch(/\)\n$/);
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it("does not recurse infinitely for circular cause chains", async () => {
+    const err = new Error("outer");
+    err.cause = err;
+    mockMain.mockRejectedValueOnce(err);
+    await loadIndex();
+    const written = stderrSpy.mock.calls[0][0] as string;
+    expect(written).toContain("[circular or deep cause chain]");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it("truncates deeply nested cause chains at max depth", async () => {
+    let cause: Error = new Error("deepest");
+    for (let i = 0; i < 7; i++) {
+      const next = new Error(`level ${i}`);
+      next.cause = cause;
+      cause = next;
+    }
+    mockMain.mockRejectedValueOnce(cause);
+    await loadIndex();
+    const written = stderrSpy.mock.calls[0][0] as string;
+    expect(written).toContain("[circular or deep cause chain]");
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 });

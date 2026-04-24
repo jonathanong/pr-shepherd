@@ -57,7 +57,11 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
     (batchData.mergeable === "UNKNOWN" || batchData.mergeStateStatus === "UNKNOWN")
   ) {
     const restState = await getMergeableState(prNumber, repo.owner, repo.name);
-    batchData = { ...batchData, ...restState };
+    batchData = {
+      ...batchData,
+      mergeable: restState.mergeable ?? batchData.mergeable,
+      mergeStateStatus: restState.mergeStateStatus ?? batchData.mergeStateStatus,
+    };
   }
 
   // Classify checks.

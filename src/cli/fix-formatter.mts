@@ -69,12 +69,11 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
   }
 
   sections.push("## Post-fix push");
-  sections.push(
-    [
-      `- base: \`${result.baseBranch}\``,
-      `- resolve: \`${renderResolveCommand(result.fix.resolveCommand)}\``,
-    ].join("\n"),
-  );
+  const postFixLines = [`- base: \`${result.baseBranch}\``];
+  if (result.fix.resolveCommand.hasMutations) {
+    postFixLines.push(`- resolve: \`${renderResolveCommand(result.fix.resolveCommand)}\``);
+  }
+  sections.push(postFixLines.join("\n"));
 
   sections.push("## Instructions");
   sections.push(result.fix.instructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n"));
@@ -84,6 +83,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
 
 export function blockquote(body: string): string {
   return body
+    .replace(/\r\n/g, "\n")
     .split("\n")
     .map((line) => (line === "" ? ">" : `> ${line}`))
     .join("\n");

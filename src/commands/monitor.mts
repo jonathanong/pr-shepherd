@@ -2,7 +2,9 @@ import { getCurrentPrNumber } from "../github/client.mts";
 import { loadConfig } from "../config/load.mts";
 import type { GlobalOptions } from "../types.mts";
 
-export interface MonitorCommandOptions extends GlobalOptions {}
+export interface MonitorCommandOptions extends GlobalOptions {
+  readyDelaySuffix?: string;
+}
 
 export interface MonitorResult {
   prNumber: number;
@@ -37,7 +39,7 @@ export async function runMonitor(opts: MonitorCommandOptions): Promise<MonitorRe
     );
   }
   const loopTag = `# pr-shepherd-loop:pr=${prNumber}`;
-  const loopPrompt = buildLoopPrompt(prNumber, loopTag);
+  const loopPrompt = buildLoopPrompt(prNumber, loopTag, opts.readyDelaySuffix);
   const loopArgs = `${interval} --max-turns ${maxTurns} --expires ${expiresHours}h`;
 
   return { prNumber, loopTag, loopArgs, loopPrompt };
@@ -71,7 +73,22 @@ export function formatMonitorResult(result: MonitorResult): string {
 // Internal
 // ---------------------------------------------------------------------------
 
-function buildLoopPrompt(prNumber: number, loopTag: string): string {
+function validateReadyDelaySuffix(readyDelaySuffix?: string): string | undefined {
+  if (readyDelaySuffix === undefined) return undefined;
+  const trimmed = readyDelaySuffix.trim();
+  if (!/^\d+(?:m|min|minutes?|h|hours?)$/.test(trimmed)) {
+    throw new Error(
+      `Invalid --ready-delay: ${readyDelaySuffix}. Expected a duration like 5m, 2h, 10m, or 1h.`,
+    );
+  }
+  return trimmed;
+}
+
+function buildLoopPrompt(prNumber: number, loopTag: string, readyDelaySuffix?: string): string {
+  const validatedDelay = validateReadyDelaySuffix(readyDelaySuffix);
+  const iterateCmd = validatedDelay
+    ? `npx pr-shepherd iterate ${prNumber} --no-cache --ready-delay ${validatedDelay}`
+    : `npx pr-shepherd iterate ${prNumber} --no-cache`;
   return [
     loopTag,
     "",
@@ -82,11 +99,9 @@ function buildLoopPrompt(prNumber: number, loopTag: string): string {
     `**Self-dedup:** Run \`CronList\`. If more than one job contains \`${loopTag}\`, keep the lowest job ID and \`CronDelete\` the rest (ignore errors — a concurrent runner may have already deleted them).`,
     "",
     "Run in a single Bash call:",
-    `  npx pr-shepherd iterate ${prNumber}`,
+    `  ${iterateCmd}`,
     "",
-    "Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with `# PR #" +
-      prNumber +
-      " [`), log the first line of stderr and continue — do not cancel the loop. The next cron fire will retry.",
+    `Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with \`# PR #${prNumber} [\`), log the first line of stderr and continue — do not cancel the loop. The next cron fire will retry.`,
     "",
     "The output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Every output ends with a `## Instructions` section — follow those numbered steps exactly.",
   ].join("\n");

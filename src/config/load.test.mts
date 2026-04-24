@@ -139,4 +139,17 @@ describe("loadConfig — caching", () => {
     const second = loadConfig();
     expect(second).toBe(first);
   });
+
+  it("_resetConfigCache allows fresh load after cache is cleared", async () => {
+    writeFileSync(join(tmpDir, RC), "resolve:\n  concurrency: 7\n");
+    const mod = await import("./load.mts");
+    const first = mod.loadConfig();
+    expect(first.resolve.concurrency).toBe(7);
+
+    // Update the file then reset the cache so the next call re-reads disk
+    writeFileSync(join(tmpDir, RC), "resolve:\n  concurrency: 11\n");
+    mod._resetConfigCache();
+    const second = mod.loadConfig();
+    expect(second.resolve.concurrency).toBe(11);
+  });
 });

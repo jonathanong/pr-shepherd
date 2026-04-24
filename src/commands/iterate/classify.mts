@@ -38,7 +38,7 @@ export function classifyReviewSummaries(
 const NOISE_PATTERNS = [
   /you have reached your daily quota/i,
   /please wait up to \d+ hours?/i,
-  /rate[\s\-]?limit(?:ed)?\s*[—\-:]\s*try again/i,
+  /rate[\s-]?limit(?:ed)?\s*[-—:]\s*try again/i,
   /resuming (monitoring|watch|checking)/i,
   /restarting (monitoring|watch)/i,
 ];

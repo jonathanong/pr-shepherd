@@ -251,4 +251,38 @@ describe("runIterate — fix_code (actionable threads)", () => {
       expect(joined).not.toContain("Do not re-run");
     }
   });
+
+  it("does not increment fix-attempt counter when headSha is unchanged (no push detected)", async () => {
+    const thread = {
+      id: "thread-1",
+      isResolved: false,
+      isOutdated: false,
+      isMinimized: false,
+      path: "src/foo.mts",
+      line: 10,
+      startLine: null,
+      author: "reviewer",
+      body: "Fix this bug",
+      createdAtUnix: NOW - 3600,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    // Stored state has the same sha as the current HEAD → no push detected
+    mockReadFixAttempts.mockResolvedValue({ headSha: "abc123", threadAttempts: { "thread-1": 2 } });
+
+    await runIterate(makeOpts());
+
+    const written = mockWriteFixAttempts.mock.calls[0]?.[1];
+    // Counter must NOT increment because sha is unchanged
+    expect(written?.threadAttempts?.["thread-1"]).toBe(2);
+  });
 });

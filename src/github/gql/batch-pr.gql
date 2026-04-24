@@ -133,6 +133,7 @@ query BatchPr(
       commits(last: 1) {
         nodes {
           commit {
+            oid
             statusCheckRollup {
               contexts(first: 100, after: $checksCursor) {
                 pageInfo {

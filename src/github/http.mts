@@ -1,13 +1,3 @@
-/**
- * Thin native-fetch HTTP client for the GitHub API.
- * Replaces the previous `gh` CLI shell-out on every code path.
- *
- * Token resolution order:
- *   1. GH_TOKEN env
- *   2. GITHUB_TOKEN env
- *   3. `gh auth token` (fallback for users who have run `gh auth login`)
- */
-
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -39,12 +29,9 @@ export function _resetTokenCache(): void {
 async function resolveToken(): Promise<string> {
   if (_token) return _token;
 
-  if (process.env["GH_TOKEN"]) {
-    _token = process.env["GH_TOKEN"];
-    return _token;
-  }
-  if (process.env["GITHUB_TOKEN"]) {
-    _token = process.env["GITHUB_TOKEN"];
+  const envToken = process.env["GH_TOKEN"] ?? process.env["GITHUB_TOKEN"];
+  if (envToken) {
+    _token = envToken;
     return _token;
   }
 
@@ -72,6 +59,22 @@ async function makeHeaders(): Promise<Record<string, string>> {
   };
 }
 
+function sanitizeBody(body: string): string {
+  return body.replace(/Bearer\s+\S+/gi, "[REDACTED]").slice(0, 200);
+}
+
+async function requestWithTokenRetry(fn: () => Promise<Response>): Promise<Response> {
+  const res = await fn();
+  if (res.status === 401 && _token !== undefined) {
+    try {
+      await res.arrayBuffer();
+    } catch {}
+    _token = undefined;
+    return fn();
+  }
+  return res;
+}
+
 // ---------------------------------------------------------------------------
 // GraphQL
 // ---------------------------------------------------------------------------
@@ -80,24 +83,30 @@ async function graphqlInner<T>(
   query: string,
   vars: Record<string, unknown>,
 ): Promise<{ data: T; rateLimit: RateLimitInfo | null }> {
-  const res = await fetch(`${BASE_URL}/graphql`, {
-    method: "POST",
-    headers: await makeHeaders(),
-    body: JSON.stringify({ query, variables: vars }),
-  });
+  const res = await requestWithTokenRetry(async () =>
+    fetch(`${BASE_URL}/graphql`, {
+      method: "POST",
+      headers: await makeHeaders(),
+      body: JSON.stringify({ query, variables: vars }),
+    }),
+  );
 
   const rateLimit = parseRateLimit(res.headers);
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`GitHub GraphQL request failed: ${res.status} ${body.slice(0, 300)}`);
+    throw new Error(`GitHub GraphQL request failed: ${res.status} ${sanitizeBody(body)}`);
   }
 
-  const parsed = (await res.json()) as { data: T; errors?: Array<{ message: string }> };
+  const parsed = (await res.json()) as { data: T | null; errors?: Array<{ message: string }> };
 
+  if (parsed.data == null) {
+    const messages = (parsed.errors ?? []).map((e: { message: string }) => e.message).join("; ");
+    throw new Error(`GitHub GraphQL error (no data): ${messages}`);
+  }
   if (parsed.errors?.length) {
-    const messages = parsed.errors.map((e) => e.message).join("; ");
-    throw new Error(`GitHub GraphQL error: ${messages}`);
+    const messages = parsed.errors.map((e: { message: string }) => e.message).join("; ");
+    process.stderr.write(`pr-shepherd: GraphQL non-fatal errors: ${messages}\n`);
   }
 
   return { data: parsed.data, rateLimit };
@@ -124,15 +133,17 @@ export async function graphqlWithRateLimit<T = unknown>(
 // ---------------------------------------------------------------------------
 
 export async function rest<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers: await makeHeaders(),
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  const res = await requestWithTokenRetry(async () =>
+    fetch(`${BASE_URL}${path}`, {
+      method,
+      headers: await makeHeaders(),
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    }),
+  );
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`GitHub REST ${method} ${path} failed: ${res.status} ${text.slice(0, 300)}`);
+    throw new Error(`GitHub REST ${method} ${path} failed: ${res.status} ${sanitizeBody(text)}`);
   }
 
   const ct = res.headers.get("content-type") ?? "";
@@ -142,17 +153,14 @@ export async function rest<T = unknown>(method: string, path: string, body?: unk
   return undefined as T;
 }
 
-/**
- * GET request that returns plain text.
- * Handles the 302 redirect pattern used by the GitHub Actions job-logs endpoint —
- * the redirect target (a signed storage URL) is fetched without auth headers.
- */
 export async function restText(path: string): Promise<string> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: "GET",
-    headers: await makeHeaders(),
-    redirect: "manual",
-  });
+  const res = await requestWithTokenRetry(async () =>
+    fetch(`${BASE_URL}${path}`, {
+      method: "GET",
+      headers: await makeHeaders(),
+      redirect: "manual",
+    }),
+  );
 
   if (res.status === 301 || res.status === 302 || res.status === 307 || res.status === 308) {
     const location = res.headers.get("location");
@@ -167,7 +175,7 @@ export async function restText(path: string): Promise<string> {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`GitHub REST GET ${path} failed: ${res.status} ${text.slice(0, 300)}`);
+    throw new Error(`GitHub REST GET ${path} failed: ${res.status} ${sanitizeBody(text)}`);
   }
 
   return res.text();

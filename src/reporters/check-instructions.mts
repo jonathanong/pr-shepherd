@@ -73,10 +73,12 @@ export function buildCheckInstructions(report: ShepherdReport): string[] {
     instructions.push(`Do not declare this PR ready to merge: ${blockers.join("; ")}.`);
   }
 
-  // 5. Continuous monitoring pointer
-  instructions.push(
-    "This is a one-shot check. For continuous monitoring that acts on these signals automatically, use `/pr-shepherd:monitor`.",
-  );
+  // 5. Continuous monitoring pointer (suppressed only when truly ready to merge)
+  if (!isReady) {
+    instructions.push(
+      "This is a one-shot check. For continuous monitoring that acts on these signals automatically, use `/pr-shepherd:monitor`.",
+    );
+  }
 
   return instructions;
 }

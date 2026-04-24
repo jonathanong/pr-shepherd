@@ -50,6 +50,7 @@ export interface RawPr {
   commits: {
     nodes: Array<{
       commit: {
+        oid: string;
         statusCheckRollup: {
           contexts: {
             pageInfo: { hasNextPage: boolean; endCursor: string | null };

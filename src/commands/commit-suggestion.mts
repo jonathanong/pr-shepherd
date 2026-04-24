@@ -93,13 +93,7 @@ export async function runCommitSuggestion(
   const endLine = thread.line;
   const filePath = thread.path;
 
-  let originalContent: string;
-  try {
-    originalContent = await readFile(filePath, "utf8");
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`Could not read ${filePath}: ${msg}`);
-  }
+  const originalContent = await readFile(filePath, "utf8");
 
   const patch = buildUnifiedDiff({
     path: filePath,
@@ -159,7 +153,16 @@ export async function runCommitSuggestion(
       };
     }
 
-    await execFile("git", ["apply", patchFile]);
+    try {
+      await execFile("git", ["apply", patchFile]);
+    } catch (applyErr) {
+      try {
+        await execFile("git", ["checkout", "--", filePath]);
+      } catch {
+        // best-effort rollback
+      }
+      throw applyErr;
+    }
   } finally {
     await unlink(patchFile).catch(() => undefined);
   }
@@ -176,12 +179,7 @@ export async function runCommitSuggestion(
   const resolveResult = await applyResolveOptions(prNumber, repo, {
     resolveThreadIds: [opts.threadId],
   });
-  if (resolveResult.errors.length > 0) {
-    throw new Error(
-      `Commit created (${commitSha}), but failed to resolve thread ${opts.threadId}: ` +
-        resolveResult.errors.join("; "),
-    );
-  }
+  const resolveErrors = resolveResult.errors;
 
   return {
     pr: prNumber,
@@ -195,6 +193,8 @@ export async function runCommitSuggestion(
     commitSha,
     patch,
     postActionInstruction:
-      "Run `git push` (or `git push --force-with-lease` after rebasing) to publish the commit.",
+      resolveErrors.length > 0
+        ? `Commit created (${commitSha}), but failed to resolve thread ${opts.threadId}: ${resolveErrors.join("; ")}. Run \`git push\` then resolve manually.`
+        : "Run `git push` (or `git push --force-with-lease` after rebasing) to publish the commit.",
   };
 }

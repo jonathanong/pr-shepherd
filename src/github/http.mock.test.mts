@@ -132,6 +132,51 @@ describe("graphql — error handling", () => {
     });
     await expect(graphql("{ q }")).rejects.toThrow(/bad field/);
   });
+
+  it("succeeds and logs to stderr when data is present but errors[] is non-empty", async () => {
+    process.env["GH_TOKEN"] = "tok";
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: () =>
+        Promise.resolve({
+          data: { node: { id: "PR_1" } },
+          errors: [{ message: "partial failure" }],
+        }),
+    });
+    const result = await graphql("{ q }");
+    expect(result.data).toEqual({ node: { id: "PR_1" } });
+    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("non-fatal errors"));
+    stderrSpy.mockRestore();
+  });
+
+  it("redacts bearer tokens from error response bodies", async () => {
+    process.env["GH_TOKEN"] = "tok";
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      headers: new Headers(),
+      text: () => Promise.resolve("Authorization: Bearer supersecret-token-123 caused error"),
+    });
+    await expect(graphql("{ q }")).rejects.toThrow("[REDACTED]");
+  });
+
+  it("retries graphql on 401 and succeeds after token refresh", async () => {
+    process.env["GH_TOKEN"] = "stale-tok";
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        headers: new Headers(),
+        text: () => Promise.resolve("Unauthorized"),
+      })
+      .mockResolvedValueOnce(gqlOk({ id: "refreshed" }));
+    const result = await graphql("{ q }");
+    expect(result.data).toEqual({ id: "refreshed" });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -202,6 +247,20 @@ describe("rest", () => {
     await expect(rest("POST", "/repos/o/r/actions/runs/1/cancel")).rejects.toThrow(
       /GitHub REST POST \/repos\/o\/r\/actions\/runs\/1\/cancel failed: 409/,
     );
+  });
+
+  it("retries rest on 401 and succeeds after token refresh", async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        headers: new Headers(),
+        text: () => Promise.resolve("Unauthorized"),
+      })
+      .mockResolvedValueOnce(jsonOk({ merged: true }));
+    const result = await rest<{ merged: boolean }>("PUT", "/repos/o/r/pulls/1/merge");
+    expect(result).toEqual({ merged: true });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });
 

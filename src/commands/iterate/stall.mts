@@ -61,8 +61,11 @@ export async function applyStallGuard(
 
   if (stored && stored.fingerprint === fingerprint) {
     const ageSeconds = nowSeconds - stored.firstSeenAt;
-    if (ageSeconds < 0 || stallTimeoutSeconds <= 0) {
-      // Clock skew or stall detection disabled — refresh firstSeenAt so re-enabling starts fresh.
+    if (ageSeconds < 0) {
+      // Clock skew: stored timestamp is in the future. Reset to avoid perpetually negative age.
+      await writeStallState(stallKey, { fingerprint, firstSeenAt: nowSeconds });
+    } else if (stallTimeoutSeconds <= 0) {
+      // Stall detection disabled: refresh so re-enabling starts a fresh timer.
       await writeStallState(stallKey, { fingerprint, firstSeenAt: nowSeconds });
     } else if (ageSeconds >= stallTimeoutSeconds) {
       const stalledMinutes = Math.floor(ageSeconds / 60);

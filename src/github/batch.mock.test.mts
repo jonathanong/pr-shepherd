@@ -436,8 +436,7 @@ describe("fetchPrBatch — checks pagination", () => {
     mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
     mockGraphql.mockResolvedValue(makeResponse(nullRollupPage));
 
-    const { data } = await fetchPrBatch(42, REPO);
-    expect(data.checks.map((c) => c.name)).toEqual(["check-1"]);
+    await expect(fetchPrBatch(42, REPO)).rejects.toThrow("Check-context pagination interrupted");
   });
 });
 

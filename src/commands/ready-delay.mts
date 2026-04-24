@@ -74,8 +74,7 @@ export async function updateReadyDelay(
   const remaining = readyDelaySeconds - elapsed;
 
   if (remaining <= 0) {
-    // Leave the marker in place so future sweeps also return shouldCancel:true
-    // until the PR drops out of READY state (which resets via safeUnlink above).
+    await safeUnlink(markerPath);
     return { isReady: true, shouldCancel: true, remainingSeconds: 0 };
   }
 

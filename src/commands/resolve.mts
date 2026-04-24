@@ -77,7 +77,9 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   if (outdated.length > 0) {
     const { errors } = await autoResolveOutdated(outdated.map((t) => t.id));
     if (errors.length > 0) {
-      throw new Error(`Failed to auto-resolve outdated threads: ${errors.join(", ")}`);
+      process.stderr.write(
+        `pr-shepherd: auto-resolve outdated threads failed (continuing): ${errors.join(", ")}\n`,
+      );
     }
   }
 

@@ -12,8 +12,6 @@
 import type { CheckRun, ClassifiedCheck } from "../types.mts";
 import { loadConfig } from "../config/load.mts";
 
-const RELEVANT_EVENTS = new Set(loadConfig().checks.ciTriggerEvents);
-
 /**
  * Classify a list of raw check runs into shepherd categories.
  *
@@ -21,12 +19,14 @@ const RELEVANT_EVENTS = new Set(loadConfig().checks.ciTriggerEvents);
  * @returns Classified checks. "filtered" items were excluded from the tally.
  */
 export function classifyChecks(checks: CheckRun[]): ClassifiedCheck[] {
-  return checks.map((c) => classify(c));
+  const relevantEvents = new Set(loadConfig().checks.ciTriggerEvents);
+  return checks.map((c) => classify(c, relevantEvents));
 }
 
-function classify(check: CheckRun): ClassifiedCheck {
+function classify(check: CheckRun, relevantEvents: Set<string>): ClassifiedCheck {
   // Filter: runs from non-PR events don't count toward PR readiness.
-  if (check.event !== null && !RELEVANT_EVENTS.has(check.event)) {
+  // event === null means a commit StatusContext — these are always relevant regardless of ciTriggerEvents.
+  if (check.event !== null && !relevantEvents.has(check.event)) {
     return { ...check, category: "filtered" };
   }
 

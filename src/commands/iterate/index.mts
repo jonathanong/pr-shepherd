@@ -32,7 +32,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
 
   const lastCommitTime = await getLastCommitTime();
   const nowSeconds = Math.floor(Date.now() / 1000);
-  if (nowSeconds - lastCommitTime < cooldownSeconds) {
+  if (lastCommitTime !== null && nowSeconds - lastCommitTime < cooldownSeconds) {
     return buildCooldownResult(prNumber, readyDelaySeconds);
   }
 
@@ -97,7 +97,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     };
   }
 
-  const headSha = await getCurrentHeadSha();
+  const headSha = (await getCurrentHeadSha()) ?? "unknown";
   const stallKey = { owner: repoOwner, repo: repoName, pr: prNumber };
 
   const { minimizeIds: reviewSummaryIds, surfacedSummaries } = classifyReviewSummaries(
@@ -147,15 +147,11 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     );
   }
 
-  const mergeStateAllowsMarkReady =
-    report.mergeStatus.mergeStateStatus === "CLEAN" ||
-    (report.mergeStatus.mergeStateStatus === "DRAFT" && report.mergeStatus.isDraft);
   const canMarkReady =
     report.status === "READY" &&
-    mergeStateAllowsMarkReady &&
+    report.mergeStatus.isDraft &&
     !report.mergeStatus.copilotReviewInProgress &&
-    !readyState.shouldCancel &&
-    report.mergeStatus.isDraft;
+    !readyState.shouldCancel;
 
   if (canMarkReady && !opts.noAutoMarkReady && config.actions.autoMarkReady) {
     await graphql(MARK_PR_READY_MUTATION, { pullRequestId: report.nodeId });

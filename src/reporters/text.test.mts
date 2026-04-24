@@ -418,8 +418,47 @@ describe("formatText — ## Instructions section", () => {
     expect(out).toContain("gh run rerun 12345 --failed");
   });
 
-  it("mentions /pr-shepherd:monitor for continuous monitoring", () => {
-    const out = formatText(makeReport());
+  it("mentions /pr-shepherd:monitor for non-READY PRs", () => {
+    const out = formatText(makeReport({ status: "FAILING" }));
     expect(out).toContain("/pr-shepherd:monitor");
+  });
+});
+
+describe("formatText — baseBranch, reviewSummaries, approvedReviews", () => {
+  it("includes Base: field with baseBranch", () => {
+    const out = formatText(makeReport({ baseBranch: "main" }));
+    expect(out).toContain("Base: main");
+  });
+
+  it("includes ## Review Summaries section when non-empty", () => {
+    const report = makeReport({
+      reviewSummaries: [
+        { id: "PRR_1", author: "copilot", body: "Looks good overall.\nSome details." },
+      ],
+    });
+    const out = formatText(report);
+    expect(out).toContain("## Review Summaries");
+    expect(out).toContain("reviewId=PRR_1 (@copilot)");
+    expect(out).toContain("Looks good overall.");
+  });
+
+  it("omits ## Review Summaries section when empty", () => {
+    const out = formatText(makeReport({ reviewSummaries: [] }));
+    expect(out).not.toContain("## Review Summaries");
+  });
+
+  it("includes ## Approved Reviews section when non-empty", () => {
+    const report = makeReport({
+      approvedReviews: [{ id: "PRR_2", author: "alice", body: "LGTM!" }],
+    });
+    const out = formatText(report);
+    expect(out).toContain("## Approved Reviews");
+    expect(out).toContain("reviewId=PRR_2 (@alice)");
+    expect(out).toContain("LGTM!");
+  });
+
+  it("omits ## Approved Reviews section when empty", () => {
+    const out = formatText(makeReport({ approvedReviews: [] }));
+    expect(out).not.toContain("## Approved Reviews");
   });
 });

@@ -54,12 +54,12 @@ export function buildRelevantChecks(report: ShepherdReport): RelevantCheck[] {
   return [...passing, ...failing];
 }
 
-export async function getLastCommitTime(): Promise<number> {
+export async function getLastCommitTime(): Promise<number | null> {
   try {
     const { stdout } = await execFile("git", ["log", "-1", "--format=%ct", "HEAD"]);
     return parseInt(stdout.trim(), 10);
   } catch {
-    return 0;
+    return null;
   }
 }
 
@@ -82,12 +82,12 @@ export async function tryCancelRun(
   }
 }
 
-export async function getCurrentHeadSha(): Promise<string> {
+export async function getCurrentHeadSha(): Promise<string | null> {
   try {
     const { stdout } = await execFile("git", ["rev-parse", "HEAD"]);
     return stdout.trim();
   } catch {
-    return "unknown";
+    return null;
   }
 }
 

@@ -5,13 +5,13 @@
  * for non-OPEN (merged/closed) PRs — this function does not branch on it.
  *
  * Interpretation order for `status` — first match wins:
- *   1. mergeable == CONFLICTING       → CONFLICTS
- *   2. mergeStateStatus DIRTY         → CONFLICTS (GitHub merge conflicts)
- *   3. copilotReviewInProgress        → BLOCKED
- *   4. mergeStateStatus BEHIND        → BEHIND
- *   5. mergeStateStatus BLOCKED / HAS_HOOKS → BLOCKED
- *   6. mergeStateStatus UNSTABLE      → UNSTABLE
- *   7. isDraft                        → DRAFT
+ *   1. mergeable == CONFLICTING       → CONFLICTS (hard conflict even for drafts)
+ *   2. copilotReviewInProgress        → BLOCKED
+ *   3. mergeStateStatus DIRTY         → CONFLICTS (GitHub merge conflicts, even for drafts)
+ *   4. isDraft                        → DRAFT
+ *   5. mergeStateStatus BEHIND        → BEHIND
+ *   6. mergeStateStatus BLOCKED / HAS_HOOKS → BLOCKED
+ *   7. mergeStateStatus UNSTABLE      → UNSTABLE
  *   8. mergeStateStatus UNKNOWN       → UNKNOWN
  *   9. mergeStateStatus CLEAN         → CLEAN
  */
@@ -29,16 +29,16 @@ export function deriveMergeStatus(pr: BatchPrData): MergeStatusResult {
   } else if (copilotReviewInProgress) {
     status = "BLOCKED";
   } else if (pr.mergeStateStatus === "DIRTY") {
-    // DIRTY means GitHub detected merge conflicts in the branch.
+    // DIRTY means GitHub detected merge conflicts — surface as CONFLICTS even for drafts.
     status = "CONFLICTS";
+  } else if (pr.isDraft || pr.mergeStateStatus === "DRAFT") {
+    status = "DRAFT";
   } else if (pr.mergeStateStatus === "BEHIND") {
     status = "BEHIND";
   } else if (pr.mergeStateStatus === "BLOCKED" || pr.mergeStateStatus === "HAS_HOOKS") {
     status = "BLOCKED";
   } else if (pr.mergeStateStatus === "UNSTABLE") {
     status = "UNSTABLE";
-  } else if (pr.isDraft || pr.mergeStateStatus === "DRAFT") {
-    status = "DRAFT";
   } else if (pr.mergeStateStatus === "UNKNOWN") {
     status = "UNKNOWN";
   } else {
