@@ -12,7 +12,6 @@ import type { GlobalOptions } from "../types.mts";
 const FLAGS_WITH_VALUES = new Set([
   "--format",
   "--cache-ttl",
-  "--last-push-time",
   "--ready-delay",
   "--cooldown-seconds",
   "--stall-timeout",
@@ -23,6 +22,18 @@ const FLAGS_WITH_VALUES = new Set([
   "--resolve-thread-ids",
   "--minimize-comment-ids",
   "--dismiss-review-ids",
+]);
+
+// Boolean flags that do NOT consume the next argument. Any --flag not in this
+// set and not in FLAGS_WITH_VALUES is treated conservatively as value-taking
+// for PR-number detection — so removed flags don't silently cause their
+// numeric value to be misidentified as the PR number.
+const BOOLEAN_FLAGS = new Set([
+  "--no-cache",
+  "--fetch",
+  "--no-auto-mark-ready",
+  "--no-auto-cancel-actionable",
+  "--dry-run",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -86,7 +97,9 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
   }
 
   // Find the first positional arg that looks like a PR number, skipping values
-  // that belong to flags in FLAGS_WITH_VALUES (subcommand flags included).
+  // that belong to value-taking flags. Any --flag not in BOOLEAN_FLAGS is
+  // treated conservatively as value-taking so that removed flags don't cause
+  // their numeric value to be misidentified as the PR number.
   const skipForPrDetect = new Set<number>();
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i]!;
@@ -94,6 +107,13 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
       skipForPrDetect.add(i);
       if (i + 1 < args.length) skipForPrDetect.add(i + 1);
       i += 1;
+    } else if (arg.startsWith("--") && !arg.includes("=") && !BOOLEAN_FLAGS.has(arg)) {
+      // Unknown non-boolean flag: conservatively skip the next non-flag arg.
+      skipForPrDetect.add(i);
+      if (i + 1 < args.length && !args[i + 1]!.startsWith("--")) {
+        skipForPrDetect.add(i + 1);
+        i += 1;
+      }
     } else {
       const eqIdx = arg.indexOf("=");
       if (eqIdx > 0 && FLAGS_WITH_VALUES.has(arg.slice(0, eqIdx))) {

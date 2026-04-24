@@ -5,9 +5,10 @@
 ```
 pr-shepherd -v|--version
 pr-shepherd check [PR]
-pr-shepherd resolve [PR] [--fetch | --resolve-thread-ids … | --minimize-comment-ids … | --dismiss-review-ids … | --message "…" | --require-sha <sha> | --last-push-time <ts>]
+pr-shepherd resolve [PR] [--fetch | --resolve-thread-ids … | --minimize-comment-ids … | --dismiss-review-ids … | --message "…" | --require-sha <sha>]
 pr-shepherd commit-suggestion [PR] --thread-id <id> --message "…"
-pr-shepherd iterate [PR] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]
+pr-shepherd iterate [PR] [--cooldown-seconds N] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]
+pr-shepherd monitor [PR]
 pr-shepherd status PR1 [PR2 …]
 ```
 
@@ -122,15 +123,14 @@ Dismissed reviews (1): PRR_kwDO123
 
 **Flags:**
 
-| Flag                     | Description                                                                  |
-| ------------------------ | ---------------------------------------------------------------------------- |
-| `--fetch`                | Fetch mode (default when no mutation flags are given)                        |
-| `--resolve-thread-ids`   | Comma-separated thread IDs to mark resolved                                  |
-| `--minimize-comment-ids` | Comma-separated comment or review-summary IDs to minimize                    |
-| `--dismiss-review-ids`   | Comma-separated `CHANGES_REQUESTED` review IDs to dismiss                    |
-| `--message`              | Dismiss message (required when `--dismiss-review-ids` is set)                |
-| `--require-sha`          | Poll GitHub until the PR head matches this SHA before mutating               |
-| `--last-push-time`       | Unix timestamp of the most recent push (used internally by the monitor loop) |
+| Flag                     | Description                                                    |
+| ------------------------ | -------------------------------------------------------------- |
+| `--fetch`                | Fetch mode (default when no mutation flags are given)          |
+| `--resolve-thread-ids`   | Comma-separated thread IDs to mark resolved                    |
+| `--minimize-comment-ids` | Comma-separated comment or review-summary IDs to minimize      |
+| `--dismiss-review-ids`   | Comma-separated `CHANGES_REQUESTED` review IDs to dismiss      |
+| `--message`              | Dismiss message (required when `--dismiss-review-ids` is set)  |
+| `--require-sha`          | Poll GitHub until the PR head matches this SHA before mutating |
 
 `--require-sha` polls `GET /repos/{owner}/{repo}/pulls/{pr}` for `headRefOid` until it matches, then issues the mutations — ensures reviewers see the fix before threads are closed. Exit code: always `0`. `--message` must describe the specific fix; it is shown to the reviewer on GitHub.
 
@@ -226,21 +226,19 @@ If `commit-suggestion` exits `1`, apply the fix manually as a regular code edit.
 One monitor tick: classifies current PR state and emits a single action. Used by the cron loop — the monitor skill calls this on each tick and follows the `## Instructions` section verbatim. See [iterate-flow.md](iterate-flow.md) for the decision tree and [actions.md](actions.md) for every action's full output shape.
 
 ```sh
-pr-shepherd iterate 42 --no-cache \
-  --ready-delay 10m \
-  --last-push-time "$(git log -1 --format=%ct HEAD)"
+pr-shepherd iterate 42 --no-cache
+pr-shepherd iterate 42 --no-cache --ready-delay 15m  # override ready-delay for this run
 ```
 
 **Flags:**
 
-| Flag                          | Default | Description                                                     |
-| ----------------------------- | ------- | --------------------------------------------------------------- |
-| `--ready-delay Nm`            | `10m`   | Settle window before the loop cancels after READY               |
-| `--cooldown-seconds N`        | `30`    | Wait after a push before reading CI                             |
-| `--last-push-time N`          | —       | Unix timestamp hint embedded in the result                      |
-| `--stall-timeout <duration>`  | `30m`   | Override the stall-detection window (e.g. `--stall-timeout 1h`) |
-| `--no-auto-mark-ready`        | false   | Skip converting draft → ready-for-review                        |
-| `--no-auto-cancel-actionable` | false   | Skip cancelling actionable failing runs                         |
+| Flag                          | Default                                 | Description                                                     |
+| ----------------------------- | --------------------------------------- | --------------------------------------------------------------- |
+| `--ready-delay Nm`            | `watch.readyDelayMinutes` in config     | Settle window before the loop cancels after READY               |
+| `--cooldown-seconds N`        | `iterate.cooldownSeconds` in config     | Wait after a push before reading CI                             |
+| `--stall-timeout <duration>`  | `iterate.stallTimeoutMinutes` in config | Override the stall-detection window (e.g. `--stall-timeout 1h`) |
+| `--no-auto-mark-ready`        | false                                   | Skip converting draft → ready-for-review                        |
+| `--no-auto-cancel-actionable` | false                                   | Skip cancelling actionable failing runs                         |
 
 **Default (Markdown) output.** Every action emits an H1 heading, a bolded base-fields line, a bolded summary line, then an action-specific body. Example for `[WAIT]`:
 
@@ -304,6 +302,49 @@ See [actions.md](actions.md) for all eight actions and their complete output sha
 Both `--format=text` (default Markdown) and `--format=json` carry equivalent information — every field exposed in JSON has a corresponding Markdown representation, and vice versa.
 
 Exit codes: `0` wait/cooldown/rerun_ci/mark_ready · `1` fix_code/rebase · `2` cancel · `3` escalate
+
+### pr-shepherd monitor [PR]
+
+Bootstrap command for `/pr-shepherd:monitor`. Reads `watch.{interval, maxTurns, expiresHours}` from config and emits a `## Loop invocation` block containing the exact `/loop` args string (interval, flags, and full prompt body). The monitor skill invokes this command and passes the block contents to `/loop` via the Skill tool.
+
+```sh
+npx pr-shepherd monitor        # infer PR from current branch
+npx pr-shepherd monitor 42
+```
+
+**Example output:**
+
+````markdown
+# PR #42 [MONITOR]
+
+Loop tag: `# pr-shepherd-loop:pr=42`
+
+## Loop prompt
+
+# pr-shepherd-loop:pr=42
+
+**IMPORTANT — recurrence rules:**
+...
+
+## Loop invocation
+
+```loop
+4m --max-turns 50 --expires 8h
+
+# pr-shepherd-loop:pr=42
+
+...
+```
+
+## Instructions
+
+1. Run `CronList`. If any job's prompt contains `# pr-shepherd-loop:pr=42`, run the loop prompt in `## Loop prompt` once inline then stop — do not create a duplicate loop.
+2. Otherwise, invoke the `/loop` skill via the Skill tool, passing the entire contents of the `loop` block above as the `args` parameter.
+````
+
+All loop parameters (`interval`, `maxTurns`, `expiresHours`) come from `.pr-shepherdrc.yml` or the built-in defaults (`watch.*` config keys). Use `--format=json` to inspect the raw values programmatically.
+
+Exit code: `0`
 
 ### pr-shepherd status PR1 [PR2 …]
 

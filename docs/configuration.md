@@ -153,6 +153,8 @@ The default of 4 minutes is chosen to keep Claude's prompt cache warm — the ca
 - **Raise** if you want a lighter polling footprint.
 - **Lower** if you want faster detection of CI state changes (costs more API budget).
 
+> These `watch.*` keys are the only way to tune the loop interval and ready-delay. The `/pr-shepherd:monitor` skill reads them from config via `npx pr-shepherd monitor` — there are no per-invocation flags.
+
 ### `watch.readyDelayMinutes` — default `10`
 
 After the PR first reaches READY status (all checks green, no open threads), shepherd continues to loop for this many minutes before cancelling the loop. This settle window gives reviewers time to request changes or for a Copilot review to finish.

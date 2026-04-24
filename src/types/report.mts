@@ -55,7 +55,6 @@ export interface ShepherdReport {
   reviewSummaries: Review[];
   /** APPROVED reviews not yet minimized — opt-in minimize target. */
   approvedReviews: Review[];
-  lastPushTime?: number;
 }
 
 // ---------------------------------------------------------------------------

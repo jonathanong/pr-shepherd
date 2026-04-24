@@ -1,7 +1,7 @@
 ---
 name: resolve
 description: "Resolve all inline review comments on the current PR"
-argument-hint: "[PR number or URL] [--thread-id ID | --comment-id ID] [--require-sha SHA]"
+argument-hint: "[PR number or URL]"
 user-invocable: true
 allowed-tools: ["Bash", "Read", "Grep", "Edit", "Write", "Glob", "Skill"]
 ---
@@ -14,10 +14,9 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
 
 ## Steps
 
-1. **Parse `$ARGUMENTS`:**
-   - Extract and remove any `--thread-id ID`, `--comment-id ID`, or `--require-sha SHA` flags.
-   - Look for a PR number or GitHub PR URL in the remaining text.
-   - If not found, infer: `gh pr list --head "$(git rev-parse --abbrev-ref HEAD)" --json number --jq '.[0].number'`
+1. **Resolve PR number:**
+   - If `$ARGUMENTS` contains a PR number or GitHub PR URL, extract the number.
+   - Otherwise, infer: `gh pr list --head "$(git rev-parse --abbrev-ref HEAD)" --json number --jq '.[0].number'`
    - If no PR found, report an error and stop.
 
 2. **Short-circuit if merged:**

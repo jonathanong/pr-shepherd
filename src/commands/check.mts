@@ -32,7 +32,6 @@ import type { GlobalOptions, ShepherdReport, ClassifiedCheck, BatchPrData } from
 export interface CheckCommandOptions extends GlobalOptions {
   /** When true, auto-resolve outdated threads. */
   autoResolve?: boolean;
-  lastPushTime?: number;
   /** When true, skip fetching logs for failing checks (no failureKind set). */
   skipTriage?: boolean;
 }
@@ -160,6 +159,5 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
     changesRequestedReviews: batchData.changesRequestedReviews,
     reviewSummaries: batchData.reviewSummaries,
     approvedReviews: batchData.approvedReviews,
-    lastPushTime: opts.lastPushTime,
   };
 }
