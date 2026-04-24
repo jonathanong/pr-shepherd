@@ -5,7 +5,8 @@ import { spawnSync } from 'node:child_process'
 rmSync('bin', { recursive: true, force: true })
 
 // 2. tsc -p tsconfig.build.json
-const tsc = spawnSync('npx', ['tsc', '-p', 'tsconfig.build.json'], { stdio: 'inherit' })
+const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx'
+const tsc = spawnSync(npxCmd, ['tsc', '-p', 'tsconfig.build.json'], { stdio: 'inherit' })
 if (tsc.status !== 0) process.exit(tsc.status ?? 1)
 
 // 3. Copy src/config.json -> bin/config.json

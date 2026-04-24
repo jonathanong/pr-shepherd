@@ -69,6 +69,7 @@ function sanitizeBody(body: string): string {
 async function requestWithTokenRetry(fn: () => Promise<Response>): Promise<Response> {
   const res = await fn();
   if (res.status === 401 && _token !== undefined) {
+    try { await res.arrayBuffer(); } catch { /* best-effort drain */ }
     _token = undefined;
     return fn();
   }

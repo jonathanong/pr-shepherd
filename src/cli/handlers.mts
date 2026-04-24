@@ -105,6 +105,13 @@ export async function handleMonitor(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
 
   const readyDelayStr = getFlag(extra, "--ready-delay");
+  if (hasFlag(extra, "--ready-delay") && readyDelayStr === null) {
+    process.stderr.write(
+      "pr-shepherd monitor: --ready-delay requires a value (e.g. --ready-delay 15m)\n",
+    );
+    process.exitCode = 1;
+    return;
+  }
   const remaining: string[] = [];
   for (let i = 0; i < extra.length; i++) {
     const a = extra[i]!;
@@ -119,6 +126,12 @@ export async function handleMonitor(args: string[]): Promise<void> {
   if (unknownFlags.length > 0) {
     process.stderr.write(
       `pr-shepherd monitor: ignoring unknown flags: ${unknownFlags.join(" ")}\n`,
+    );
+  }
+  const unknownPositionals = remaining.filter((a) => !a.startsWith("--"));
+  if (unknownPositionals.length > 0) {
+    process.stderr.write(
+      `pr-shepherd monitor: unexpected positional arguments ignored: ${unknownPositionals.join(" ")}\n`,
     );
   }
 
