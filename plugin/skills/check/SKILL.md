@@ -35,7 +35,7 @@ npx pr-shepherd check <N> --format=json
 Parse the JSON output and report all three:
 
 - **Merge status** (`mergeStatus.status`): CLEAN | BEHIND | CONFLICTS | BLOCKED | UNSTABLE | DRAFT | UNKNOWN — never omit; include `copilotReviewInProgress` when true
-- **CI check results** (`checks`): passing count, failing names + kinds, in-progress names
+- **CI check results** (`checks.passing`, `checks.failing`, `checks.inProgress`): passing count, failing names + kinds, in-progress names
 - **Unresolved review comments** (`threads.actionable` + `comments.actionable`): count + details with file paths and line numbers
 
 ## Rebase policy
@@ -50,7 +50,7 @@ Do not re-derive these conditions from raw branch state. For automated monitorin
 
 ## CI budget policy
 
-Each entry in `checks` carries a `failureKind` field. Read it directly rather than re-classifying failures:
+Each entry in `checks.failing` carries a `failureKind` field. Read it directly rather than re-classifying failures:
 
 - `actionable` — the failure is code-level and needs a fix.
 - `infrastructure` — transient infra problem; re-run with `gh run rerun <runId> --failed`.
