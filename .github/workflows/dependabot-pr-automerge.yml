@@ -53,7 +53,9 @@ jobs:
               });
 
               for (const review of sortedReviews) {
-                latestStateByUser.set(review.user.login, review.state);
+                if (review.user) {
+                  latestStateByUser.set(review.user.login, review.state);
+                }
               }
 
               return [...latestStateByUser.values()].includes('APPROVED');
@@ -102,14 +104,18 @@ jobs:
             }
 
             core.info('Enabling auto-merge');
-            await github.graphql(`
-              mutation($pullRequestId: ID!) {
-                enablePullRequestAutoMerge(input: {
-                  pullRequestId: $pullRequestId,
-                  mergeMethod: SQUASH
-                }) {
-                  pullRequest { autoMergeRequest { enabledAt } }
+            try {
+              await github.graphql(`
+                mutation($pullRequestId: ID!) {
+                  enablePullRequestAutoMerge(input: {
+                    pullRequestId: $pullRequestId,
+                    mergeMethod: SQUASH
+                  }) {
+                    pullRequest { autoMergeRequest { enabledAt } }
+                  }
                 }
-              }
-            `, { pullRequestId: freshPr.node_id });
-            core.info('Done: auto-merge enabled');
+              `, { pullRequestId: freshPr.node_id });
+              core.info('Done: auto-merge enabled');
+            } catch (err) {
+              core.warning(`Could not enable auto-merge: ${err.message}. Ensure branch protection with required status checks is configured on the base branch.`);
+            }
