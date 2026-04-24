@@ -1,5 +1,6 @@
 import { runCommitSuggestion } from "../commands/commit-suggestion.mts";
 import { runIterate } from "../commands/iterate.mts";
+import { runMonitor, formatMonitorResult } from "../commands/monitor.mts";
 import { runStatus, formatStatusTable } from "../commands/status.mts";
 import { getRepoInfo } from "../github/client.mts";
 import { loadConfig } from "../config/load.mts";
@@ -64,10 +65,6 @@ export async function handleCommitSuggestion(args: string[]): Promise<void> {
 export async function handleIterate(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
 
-  const lastPushTimeStr = getFlag(extra, "--last-push-time");
-  const lastPushTime = lastPushTimeStr
-    ? parseIntStrict(lastPushTimeStr, "--last-push-time")
-    : undefined;
   const readyDelayStr = getFlag(extra, "--ready-delay");
   const cfg = loadConfig();
   const readyDelaySeconds =
@@ -86,7 +83,6 @@ export async function handleIterate(args: string[]): Promise<void> {
   const result = await runIterate({
     ...globalOpts,
     prNumber,
-    lastPushTime,
     readyDelaySeconds,
     cooldownSeconds,
     stallTimeoutSeconds,
@@ -101,6 +97,18 @@ export async function handleIterate(args: string[]): Promise<void> {
   }
 
   process.exitCode = iterateActionToExitCode(result.action);
+}
+
+export async function handleMonitor(args: string[]): Promise<void> {
+  const { prNumber, global: globalOpts } = parseCommonArgs(args);
+
+  const result = await runMonitor({ ...globalOpts, prNumber });
+
+  process.stdout.write(
+    globalOpts.format === "json"
+      ? `${JSON.stringify(result, null, 2)}\n`
+      : `${formatMonitorResult(result)}\n`,
+  );
 }
 
 export async function handleStatus(args: string[]): Promise<void> {

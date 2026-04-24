@@ -110,7 +110,6 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
     changesRequestedReviews: [],
     reviewSummaries: [],
     approvedReviews: [],
-    lastPushTime: undefined,
     ...overrides,
   };
 }

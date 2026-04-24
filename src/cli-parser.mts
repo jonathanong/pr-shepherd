@@ -6,13 +6,13 @@
  *   pr-shepherd check [PR] [--format text|json] [--no-cache] [--cache-ttl N]
  *   pr-shepherd resolve [PR] [--fetch] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]
  *                            [--dismiss-review-ids Q] [--message MSG] [--require-sha SHA]
- *                            [--last-push-time N]
  *   pr-shepherd commit-suggestion [PR] --thread-id ID [--message MSG] [--description DESC]
  *                                      [--dry-run] [--format text|json]
  *   (--message is required unless --dry-run is set)
- *   pr-shepherd iterate [PR] [--format text|json] [--cooldown-seconds N] [--ready-delay Nm] [--last-push-time N]
+ *   pr-shepherd iterate [PR] [--format text|json] [--cooldown-seconds N] [--ready-delay Nm]
  *                              [--stall-timeout <duration>] [--no-auto-mark-ready]
  *                              [--no-auto-cancel-actionable]
+ *   pr-shepherd monitor [PR] [--format text|json]
  *   pr-shepherd status PR1 [PR2 …]
  */
 
@@ -24,7 +24,7 @@ import { formatJson } from "./reporters/json.mts";
 import { formatText } from "./reporters/text.mts";
 import { parseCommonArgs, getFlag, hasFlag, parseList, statusToExitCode } from "./cli/args.mts";
 import { formatFetchResult, formatMutateResult } from "./cli/formatters.mts";
-import { handleCommitSuggestion, handleIterate, handleStatus } from "./cli/handlers.mts";
+import { handleCommitSuggestion, handleIterate, handleMonitor, handleStatus } from "./cli/handlers.mts";
 
 // ---------------------------------------------------------------------------
 // Entry
@@ -53,13 +53,16 @@ export async function main(argv: string[]): Promise<void> {
     case "iterate":
       await handleIterate(args.slice(1));
       break;
+    case "monitor":
+      await handleMonitor(args.slice(1));
+      break;
     case "status":
       await handleStatus(args.slice(1));
       break;
     default:
       process.stderr.write(`Unknown subcommand: ${subcommand ?? "(none)"}\n`);
       process.stderr.write(
-        "Usage: pr-shepherd <check|resolve|commit-suggestion|iterate|status> [options]\n" +
+        "Usage: pr-shepherd <check|resolve|commit-suggestion|iterate|monitor|status> [options]\n" +
           "       pr-shepherd --version | -v\n",
       );
       process.exitCode = 1;

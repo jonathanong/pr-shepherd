@@ -169,7 +169,6 @@ export type IterateResult =
 export interface IterateCommandOptions extends GlobalOptions {
   cooldownSeconds?: number;
   readyDelaySeconds?: number;
-  lastPushTime?: number;
   noAutoMarkReady?: boolean;
   noAutoCancelActionable?: boolean;
   /** Override the stall-timeout threshold (seconds). Defaults to config.iterate.stallTimeoutMinutes * 60. */
