@@ -63,7 +63,7 @@ export type FailureKind = "timeout" | "cancelled" | "actionable";
 
 export interface TriagedCheck extends ClassifiedCheck {
   failureKind?: FailureKind;
-  /** Workflow display name (e.g. `"CI"`). Available for all checks with a runId. */
+  /** Workflow display name (e.g. `"CI"`). Populated when available from the jobs API; may be `undefined` on fetch failure or when no matching job is found. */
   workflowName?: string;
   /** For `actionable` failures: name of the first failed step in the matched job (e.g. `"Run tests"`). */
   failedStep?: string;

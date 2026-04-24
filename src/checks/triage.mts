@@ -9,9 +9,9 @@
  * regardless of conclusion, so they surface in fix_code where the monitor
  * escalates to the user (no run to rerun/inspect).
  *
- * For all checks with a non-null runId, the jobs API is called to fetch the
- * workflow name. For actionable checks, the first failed step name is also
- * returned as `failedStep`. No log fetching is done.
+ * For all checks with a non-null runId, the jobs API is called once per runId
+ * (results are cached across checks that share a run) to fetch workflow name
+ * and, for actionable checks, the first failed step name. No log fetching is done.
  */
 
 import { rest } from "../github/http.mts";
@@ -23,26 +23,36 @@ import type { RepoInfo } from "../github/client.mts";
 // ---------------------------------------------------------------------------
 
 /**
- * Triage each failing check: classify by GitHub conclusion and, for actionable
- * failures, fetch the name of the first failed step from the jobs API.
+ * Triage each failing check: classify by GitHub conclusion and call the jobs
+ * API for each check with a non-null runId to fetch workflow name and (for
+ * actionable failures) the name of the first failed step.
+ *
+ * Jobs responses are cached by runId so checks that share a run (e.g. matrix
+ * builds or multiple required steps in one workflow) make only one API call.
  */
 export function triageFailingChecks(
   failingChecks: ClassifiedCheck[],
   repo: RepoInfo,
 ): Promise<TriagedCheck[]> {
-  return Promise.all(failingChecks.map((c) => triageCheck(c, repo)));
+  const jobsCache = new Map<string, Promise<JobsResponse["jobs"] | undefined>>();
+  return Promise.all(failingChecks.map((c) => triageCheck(c, repo, jobsCache)));
 }
 
 // ---------------------------------------------------------------------------
 // Internal
 // ---------------------------------------------------------------------------
 
-async function triageCheck(check: ClassifiedCheck, repo: RepoInfo): Promise<TriagedCheck> {
+async function triageCheck(
+  check: ClassifiedCheck,
+  repo: RepoInfo,
+  jobsCache: Map<string, Promise<JobsResponse["jobs"] | undefined>>,
+): Promise<TriagedCheck> {
   const failureKind = check.runId === null ? "actionable" : classifyConclusion(check.conclusion);
   if (check.runId === null) {
     return { ...check, failureKind };
   }
-  const jobInfo = await fetchJobInfo(check.runId, check.name, repo);
+  const jobs = await fetchJobs(check.runId, repo, jobsCache);
+  const jobInfo = jobs ? pickJobInfo(jobs, check.name, failureKind) : undefined;
   return {
     ...check,
     failureKind,
@@ -72,11 +82,22 @@ interface JobInfo {
   failedStep?: string;
 }
 
-async function fetchJobInfo(
+function fetchJobs(
   runId: string,
-  checkName: string,
   repo: RepoInfo,
-): Promise<JobInfo | undefined> {
+  cache: Map<string, Promise<JobsResponse["jobs"] | undefined>>,
+): Promise<JobsResponse["jobs"] | undefined> {
+  const cached = cache.get(runId);
+  if (cached) return cached;
+  const promise = fetchJobsUncached(runId, repo);
+  cache.set(runId, promise);
+  return promise;
+}
+
+async function fetchJobsUncached(
+  runId: string,
+  repo: RepoInfo,
+): Promise<JobsResponse["jobs"] | undefined> {
   const { owner, name } = repo;
   const perPage = 100;
   const allJobs: JobsResponse["jobs"] = [];
@@ -92,12 +113,21 @@ async function fetchJobInfo(
   } catch {
     return undefined;
   }
+  return allJobs;
+}
+
+function pickJobInfo(
+  jobs: JobsResponse["jobs"],
+  checkName: string,
+  failureKind: FailureKind,
+): JobInfo | undefined {
   // Match by name. For matrix jobs sharing a check name, prefer a failing one.
-  const matches = allJobs.filter((j) => j.name === checkName);
+  const matches = jobs.filter((j) => j.name === checkName);
   const job = matches.find((j) => j.conclusion === "failure") ?? matches[0];
-  const failedStep = job?.steps?.find((s) => s.conclusion === "failure");
-  return {
-    workflowName: job?.workflow_name,
-    failedStep: failedStep?.name,
-  };
+  if (!job) return undefined;
+  const failedStep =
+    failureKind === "actionable"
+      ? job.steps?.find((s) => s.conclusion === "failure")?.name
+      : undefined;
+  return { workflowName: job.workflow_name, failedStep };
 }

@@ -253,4 +253,38 @@ describe("triageFailingChecks — batch", () => {
     expect(results[1]!.failureKind).toBe("cancelled");
     expect(results[1]!.failedStep).toBeUndefined();
   });
+
+  it("fetches jobs once per runId when multiple checks share the same run", async () => {
+    mockFetch.mockResolvedValueOnce(
+      makeJobsResponse([
+        {
+          id: 1,
+          name: "tests",
+          workflow_name: "CI",
+          conclusion: "failure",
+          steps: [{ name: "Run tests", number: 1, conclusion: "failure" }],
+        },
+        {
+          id: 2,
+          name: "lint",
+          workflow_name: "CI",
+          conclusion: "failure",
+          steps: [{ name: "Run lint", number: 1, conclusion: "failure" }],
+        },
+      ]),
+    );
+
+    const checks: ClassifiedCheck[] = [
+      makeCheck({ name: "tests", runId: "run-1", conclusion: "FAILURE" }),
+      makeCheck({ name: "lint", runId: "run-1", conclusion: "FAILURE" }),
+    ];
+    const results = await triageFailingChecks(checks, REPO);
+    expect(results).toHaveLength(2);
+    expect(results[0]!.failedStep).toBe("Run tests");
+    expect(results[0]!.workflowName).toBe("CI");
+    expect(results[1]!.failedStep).toBe("Run lint");
+    expect(results[1]!.workflowName).toBe("CI");
+    // Only one fetch call despite two checks sharing the same runId
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
 });
