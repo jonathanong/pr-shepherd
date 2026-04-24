@@ -1,8 +1,8 @@
 import type { MergeStatusResult, ShepherdStatus } from "../types.mts";
-import type { getCiVerdict } from "../checks/classify.mts";
+import type { CiVerdict } from "../checks/classify.mts";
 
 export function computeStatus(
-  verdict: ReturnType<typeof getCiVerdict>,
+  verdict: CiVerdict,
   unresolvedThreads: number,
   unresolvedComments: number,
   mergeStatus: MergeStatusResult,
