@@ -1,18 +1,3 @@
-/**
- * `shepherd commit-suggestion <PR> --thread-id ID --message "..." [--description "..."]`
- *
- * Applies a single reviewer ```suggestion block as one local git commit, then
- * resolves the thread on GitHub. The agent writes the commit message; the CLI
- * appends the reviewer's `Co-authored-by` trailer automatically.
- *
- * Why local-apply vs server-side:
- *   - `git apply` validates context lines, so a mismatched file (e.g. the
- *     branch has advanced past the comment's anchor) produces a precise diff
- *     and error rather than a silent misapplication.
- *   - One suggestion → one commit → clean attribution and revertability.
- *   - The agent controls the commit headline and description.
- */
-
 import { execFile as execFileCb } from "node:child_process";
 import { readFile, writeFile, unlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
