@@ -39,10 +39,22 @@ CLI output that targets a human or an AI agent must be easy to read and act on:
 
 ## Keep skills and loop prompts minimal
 
-Skills (`plugin/skills/*/SKILL.md`) and `/loop` prompts should be thin dispatchers: parse inputs, invoke the CLI, print the output, then follow the output's own `## Instructions` section.
+Skills (`plugin/skills/*/SKILL.md`) and `/loop` prompts should be thin dispatchers with this shape:
 
-Per-action dispatch logic — which command to extract, which tool to call, what variant to run, substitution rules — belongs in the CLI's Markdown output as a `## Instructions` section, not in the skill or the loop prompt.
+1. Parse arguments.
+2. Short-circuit trivial cases (e.g. merged PR).
+3. Invoke the CLI.
+4. Print the full output.
+5. Follow the output's own `## Instructions` section exactly.
 
-Rule of thumb: if a skill or loop prompt contains a dispatch table keyed on CLI output shape, that table should live in the CLI's output instead.
+The canonical example is `plugin/skills/resolve/SKILL.md` — 37 lines, pure dispatcher, no policy.
+
+Everything else belongs in the CLI's Markdown `## Instructions` output, not in the skill:
+
+- Per-action dispatch (which command to extract, which tool to call, what variant to run).
+- **Interpretation and policy tables keyed on CLI output shape** — enum meanings (e.g. what `CONFLICTS` means for rebase), CI budget rules (`failureKind` handling, rerun commands), ready-to-merge predicates, field-by-field reporting templates.
+- Any instruction the reader is expected to act on.
+
+Rule of thumb: if a skill contains a table, policy, or interpretation block whose inputs come from CLI output fields, that content belongs in the CLI's `## Instructions` section instead.
 
 Skills must not link to files outside the `plugin/` directory (such as `docs/**` or `README.md`). Those files are not included in the published plugin and will be dead links for consumers. All information a skill consumer needs must come from the CLI output itself or be written inline in the skill.
