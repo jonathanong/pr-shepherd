@@ -494,4 +494,3 @@ describe("fetchPrBatch — PR not found in pagination callbacks", () => {
     await expect(fetchPrBatch(42, REPO)).rejects.toThrow("PR #42 not found");
   });
 });
-
