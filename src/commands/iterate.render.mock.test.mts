@@ -157,11 +157,6 @@ function defaultConfig() {
     },
     checks: {
       ciTriggerEvents: ["pull_request", "pull_request_target"],
-      timeoutPatterns: [],
-      infraPatterns: [],
-      logMaxLines: 50,
-      logMaxChars: 3000,
-      errorLines: 1,
     },
     mergeStatus: { blockingReviewerLogins: ["copilot"] },
     actions: {
@@ -346,68 +341,6 @@ describe("runIterate — prescriptive fields: log strings", () => {
     if (result.action === "mark_ready") {
       expect(result.log).toMatch(/MARKED READY/);
       expect(result.log).toMatch(/42/);
-    }
-  });
-});
-
-describe("runIterate — prescriptive fields: rebase", () => {
-  it("rebase result includes baseBranch, reason, and shellScript with dirty-worktree guard", async () => {
-    const flakyCheck = {
-      name: "flaky",
-      status: "COMPLETED" as const,
-      conclusion: "FAILURE" as const,
-      detailsUrl: "https://github.com/owner/repo/actions/runs/30",
-      event: "pull_request",
-      runId: "run-30",
-      category: "failing" as const,
-      failureKind: "flaky" as const,
-    };
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "FAILING",
-        mergeStatus: {
-          status: "BEHIND",
-          state: "OPEN",
-          isDraft: false,
-          mergeable: "MERGEABLE",
-          reviewDecision: null,
-          copilotReviewInProgress: false,
-          mergeStateStatus: "BEHIND",
-        },
-        checks: {
-          passing: [],
-          failing: [flakyCheck],
-          inProgress: [],
-          skipped: [],
-          filtered: [],
-          filteredNames: [],
-          blockedByFilteredCheck: false,
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "log")
-        return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
-      if (cmd === "git" && args[0] === "rev-parse")
-        return Promise.resolve({ stdout: "abc123\n", stderr: "" });
-      if (cmd === "gh" && args[1] === "view")
-        return Promise.resolve({ stdout: "main\n", stderr: "" });
-      return Promise.resolve({ stdout: "", stderr: "" });
-    });
-
-    const result = await runIterate(makeOpts());
-    expect(result.action).toBe("rebase");
-    if (result.action === "rebase") {
-      expect(result.baseBranch).toBe("main");
-      expect(result.rebase.reason).toMatch(/behind main/i);
-      expect(result.rebase.shellScript).toMatch(/git diff --quiet/);
-      expect(result.rebase.shellScript).toMatch(/git rebase origin\/main/);
-      expect(result.rebase.shellScript).toMatch(/--force-with-lease/);
     }
   });
 });

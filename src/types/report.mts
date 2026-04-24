@@ -92,8 +92,8 @@ export interface AgentComment {
 }
 
 /**
- * Check shape emitted to the monitor agent — no log excerpt.
- * The agent fetches logs on demand via `gh run view <runId> --log-failed`
+ * Check shape emitted to the monitor agent.
+ * The agent fetches failed job logs on demand via `gh run view <runId> --log-failed`
  * when `runId` is available, and falls back to `detailsUrl` otherwise.
  */
 export interface AgentCheck {
@@ -102,6 +102,10 @@ export interface AgentCheck {
   /** Fallback for checks where runId is null (e.g. external status checks). */
   detailsUrl: string | null;
   failureKind?: FailureKind;
+  /** Workflow display name (e.g. `"CI"`). Populated on a best-effort basis when available from the jobs API. */
+  workflowName?: string;
+  /** For `actionable` failures: name of the first failed step (e.g. `"Run tests"`, `"Set up job"`). */
+  failedStep?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -122,11 +126,10 @@ export interface RelevantCheck {
   detailsUrl: string | null;
   /** Present for non-SUCCESS conclusions. */
   failureKind?: FailureKind;
-  /**
-   * Last `checks.errorLines` `##[error]`-marked log lines (fallback: last N raw lines).
-   * Present for non-SUCCESS conclusions when logs were fetched.
-   */
-  errorExcerpt?: string;
+  /** Workflow display name (e.g. `"CI"`). Available for all checks with a runId. */
+  workflowName?: string;
+  /** For `actionable` failures: name of the first failed step in the matched job. */
+  failedStep?: string;
 }
 
 // ---------------------------------------------------------------------------

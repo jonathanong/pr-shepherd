@@ -97,17 +97,17 @@ describe("buildCheckInstructions — rebase policy", () => {
     expect(steps.some((s) => s.includes("Rebase required"))).toBe(true);
   });
 
-  it("emits rebase-recommended for BEHIND + flaky failure", () => {
+  it("emits rebase-optional for BEHIND + actionable failure", () => {
     const failing: TriagedCheck = {
       ...makeCheck({ name: "tests", category: "failing", conclusion: "FAILURE" }),
-      failureKind: "flaky",
+      failureKind: "actionable",
     };
     const report = makeReport({
       mergeStatus: { ...makeReport().mergeStatus, status: "BEHIND" },
       checks: { ...makeReport().checks, failing: [failing] },
     });
     const steps = buildCheckInstructions(report);
-    expect(steps.some((s) => s.includes("Rebase recommended"))).toBe(true);
+    expect(steps.some((s) => s.includes("A rebase is optional"))).toBe(true);
   });
 
   it("emits rebase-optional for BEHIND + no flaky failures", () => {
@@ -135,10 +135,10 @@ describe("buildCheckInstructions — CI budget policy", () => {
     expect(steps.some((s) => s.includes("Fix code failure") && s.includes("lint"))).toBe(true);
   });
 
-  it("emits rerun with runId for infrastructure failure", () => {
+  it("emits rerun with runId for cancelled failure", () => {
     const failing: TriagedCheck = {
       ...makeCheck({ name: "build", category: "failing", conclusion: "CANCELLED", runId: "99999" }),
-      failureKind: "infrastructure",
+      failureKind: "cancelled",
     };
     const report = makeReport({ checks: { ...makeReport().checks, failing: [failing] } });
     const steps = buildCheckInstructions(report);
@@ -153,30 +153,6 @@ describe("buildCheckInstructions — CI budget policy", () => {
     const report = makeReport({ checks: { ...makeReport().checks, failing: [failing] } });
     const steps = buildCheckInstructions(report);
     expect(steps.some((s) => s.includes("gh run rerun <runId> --failed"))).toBe(true);
-  });
-
-  it("emits do-not-cancel for flaky failure", () => {
-    const failing: TriagedCheck = {
-      ...makeCheck({ name: "e2e", category: "failing", conclusion: "FAILURE" }),
-      failureKind: "flaky",
-    };
-    const report = makeReport({ checks: { ...makeReport().checks, failing: [failing] } });
-    const steps = buildCheckInstructions(report);
-    expect(steps.some((s) => s.includes("Do not cancel") && s.includes("e2e"))).toBe(true);
-  });
-
-  it("appends rebase-first note to flaky step when BEHIND", () => {
-    const failing: TriagedCheck = {
-      ...makeCheck({ name: "e2e", category: "failing", conclusion: "FAILURE" }),
-      failureKind: "flaky",
-    };
-    const report = makeReport({
-      mergeStatus: { ...makeReport().mergeStatus, status: "BEHIND" },
-      checks: { ...makeReport().checks, failing: [failing] },
-    });
-    const steps = buildCheckInstructions(report);
-    const flakStep = steps.find((s) => s.includes("Do not cancel") && s.includes("e2e"));
-    expect(flakStep).toContain("Rebase first");
   });
 
   it("emits no CI budget steps when no failing checks", () => {

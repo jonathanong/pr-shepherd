@@ -60,7 +60,7 @@ export interface IterateResultBase {
    * completed (status === COMPLETED), and not skipped/neutral.
    *
    * Includes both passing and failing checks. Failing entries carry `failureKind`
-   * and `errorExcerpt`. Empty (`[]`) during the `cooldown` early-return (no sweep ran).
+   * and `failedStep`. Empty (`[]`) during the `cooldown` early-return (no sweep ran).
    */
   checks: RelevantCheck[];
 }
@@ -124,7 +124,9 @@ export interface ReranRun {
   runId: string;
   /** Check names within this run that triggered the rerun (multiple steps can share a run). */
   checkNames: string[];
-  failureKind: "timeout" | "infrastructure";
+  failureKind: "timeout" | "cancelled";
+  /** Workflow display name (e.g. `"CI"`). */
+  workflowName?: string;
 }
 
 export interface IterateResultRerunCi extends IterateResultBase {

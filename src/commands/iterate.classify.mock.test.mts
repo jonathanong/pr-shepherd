@@ -157,11 +157,6 @@ function defaultConfig() {
     },
     checks: {
       ciTriggerEvents: ["pull_request", "pull_request_target"],
-      timeoutPatterns: [],
-      infraPatterns: [],
-      logMaxLines: 50,
-      logMaxChars: 3000,
-      errorLines: 1,
     },
     mergeStatus: { blockingReviewerLogins: ["copilot"] },
     actions: {

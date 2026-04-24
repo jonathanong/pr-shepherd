@@ -157,11 +157,6 @@ function defaultConfig() {
     },
     checks: {
       ciTriggerEvents: ["pull_request", "pull_request_target"],
-      timeoutPatterns: [],
-      infraPatterns: [],
-      logMaxLines: 50,
-      logMaxChars: 3000,
-      errorLines: 1,
     },
     mergeStatus: { blockingReviewerLogins: ["copilot"] },
     actions: {
@@ -277,54 +272,6 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
       expect(result.escalate.triggers).toContain("base-branch-unknown");
       expect(result.escalate.suggestion).toMatch(/empty base branch name/);
       expect(result.escalate.humanMessage).toMatch(/base-branch-unknown/);
-    }
-  });
-
-  it("escalates with base-branch-unknown when rebase would run but baseBranch is empty", async () => {
-    const flakyCheck = {
-      name: "flaky",
-      status: "COMPLETED" as const,
-      conclusion: "FAILURE" as const,
-      detailsUrl: "https://github.com/owner/repo/actions/runs/30",
-      event: "pull_request",
-      runId: "run-30",
-      category: "failing" as const,
-      failureKind: "flaky" as const,
-    };
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "FAILING",
-        baseBranch: "",
-        mergeStatus: {
-          status: "BEHIND",
-          state: "OPEN",
-          isDraft: false,
-          mergeable: "MERGEABLE",
-          reviewDecision: null,
-          copilotReviewInProgress: false,
-          mergeStateStatus: "BEHIND",
-        },
-        checks: {
-          passing: [],
-          failing: [flakyCheck],
-          inProgress: [],
-          skipped: [],
-          filtered: [],
-          filteredNames: [],
-          blockedByFilteredCheck: false,
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
-
-    const result = await runIterate(makeOpts());
-    expect(result.action).toBe("escalate");
-    if (result.action === "escalate") {
-      expect(result.escalate.triggers).toEqual(["base-branch-unknown"]);
     }
   });
 

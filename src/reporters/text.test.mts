@@ -137,32 +137,29 @@ describe("formatText — failed checks", () => {
     expect(out).not.toContain("[");
   });
 
-  it("indents logExcerpt with 4 spaces", () => {
+  it("renders failedStep when present", () => {
     const failing: TriagedCheck = {
       ...makeCheck({ category: "failing", conclusion: "FAILURE" }),
       failureKind: "actionable",
-      logExcerpt: "error: something went wrong",
+      failedStep: "Run tests",
     };
     const report = makeReport({
       checks: { ...makeReport().checks, failing: [failing] },
     });
     const out = formatText(report);
-    expect(out).toContain("    error: something went wrong");
+    expect(out).toContain("    failed step: Run tests");
   });
 
-  it("takes only the last 10 lines of logExcerpt", () => {
-    const allLines = Array.from({ length: 15 }, (_, i) => `line ${i + 1}`);
+  it("omits failed step line when failedStep is absent", () => {
     const failing: TriagedCheck = {
       ...makeCheck({ category: "failing", conclusion: "FAILURE" }),
       failureKind: "actionable",
-      logExcerpt: allLines.join("\n"),
     };
     const report = makeReport({
       checks: { ...makeReport().checks, failing: [failing] },
     });
     const out = formatText(report);
-    expect(out).toContain("line 15");
-    expect(out).not.toContain("line 5"); // first 5 lines should be excluded
+    expect(out).not.toContain("failed step:");
   });
 });
 

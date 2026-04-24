@@ -15,7 +15,7 @@ import { classifyReviewSummaries } from "./classify.mts";
 import { applyStallGuard } from "./stall.mts";
 import { buildWaitLog } from "./render.mts";
 import { handleFixCode } from "./fix-code.mts";
-import { buildRerunCiResult, handleRebase } from "./steps.mts";
+import { buildRerunCiResult } from "./steps.mts";
 import type { IterateCommandOptions, IterateResult, IterateResultBase } from "../../types.mts";
 
 export async function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
@@ -132,7 +132,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   }
 
   const transientChecks = report.checks.failing.filter(
-    (f) => f.failureKind === "timeout" || f.failureKind === "infrastructure",
+    (f) => (f.failureKind === "timeout" || f.failureKind === "cancelled") && f.runId !== null,
   );
   if (transientChecks.length > 0) {
     return buildRerunCiResult(
@@ -143,19 +143,6 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       stallTimeoutSeconds,
       headSha,
       report,
-      reviewSummaryIds,
-    );
-  }
-
-  const hasFlaky = report.checks.failing.some((f) => f.failureKind === "flaky");
-  if (hasFlaky && report.mergeStatus.status === "BEHIND" && config.actions.autoRebase) {
-    return handleRebase(
-      base,
-      report,
-      stallKey,
-      stallTimeoutSeconds,
-      headSha,
-      prNumber,
       reviewSummaryIds,
     );
   }

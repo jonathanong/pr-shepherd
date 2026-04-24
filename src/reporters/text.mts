@@ -36,9 +36,10 @@ export function formatText(report: ShepherdReport): string {
     for (const c of failing) {
       const triaged = c as TriagedCheck;
       const kind = triaged.failureKind ? ` [${triaged.failureKind}]` : "";
-      parts.push(`- ${c.name}${kind}: ${c.conclusion ?? c.status}`);
-      if (triaged.logExcerpt) {
-        parts.push(indent(triaged.logExcerpt.split("\n").slice(-10).join("\n"), "    "));
+      const prefix = triaged.workflowName ? `${triaged.workflowName} › ` : "";
+      parts.push(`- ${prefix}${c.name}${kind}: ${c.conclusion ?? c.status}`);
+      if (triaged.failedStep) {
+        parts.push(`    failed step: ${triaged.failedStep}`);
       }
     }
     parts.push("");
@@ -164,11 +165,4 @@ export function formatText(report: ShepherdReport): string {
 
 function firstLine(text: string): string {
   return (text.split("\n")[0] ?? "").trim().slice(0, 120);
-}
-
-function indent(text: string, prefix: string): string {
-  return text
-    .split("\n")
-    .map((l) => prefix + l)
-    .join("\n");
 }

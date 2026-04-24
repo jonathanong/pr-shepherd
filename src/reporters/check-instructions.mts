@@ -27,45 +27,33 @@ export function buildCheckInstructions(report: ShepherdReport): string[] {
   );
 
   // 2. Rebase policy (only emit when relevant)
-  const anyFlaky = checks.failing.some((c) => c.failureKind === "flaky");
   if (mergeStatus.status === "CONFLICTS") {
     instructions.push(
       "Rebase required: the branch has merge conflicts that must be resolved before this PR can land.",
     );
-  } else if (mergeStatus.status === "BEHIND" && anyFlaky) {
-    instructions.push(
-      "Rebase recommended: the PR is behind the base branch and has a flaky failure — this is the canonical rebase signal. Run `git fetch origin && git rebase origin/<baseBranch>` then `git push --force-with-lease`.".replace(
-        "<baseBranch>",
-        report.baseBranch,
-      ),
-    );
   } else if (mergeStatus.status === "BEHIND") {
     instructions.push(
-      "The PR is behind the base branch. A rebase is optional if all CI checks pass; rebase if a flaky failure appears after rechecking.",
+      "The PR is behind the base branch. A rebase is optional if all CI checks pass.",
     );
   }
 
   // 3. CI budget policy — one instruction per failing check
   for (const c of checks.failing) {
     if (c.failureKind === "actionable") {
-      const diagnosisSource = c.logExcerpt
-        ? "investigate the log excerpt in the output above"
-        : `open the check details (${c.detailsUrl}) to diagnose the failure`;
+      const diagnosisHint = c.failedStep
+        ? `the failure was in step \`${c.failedStep}\` — fetch the run log with \`gh run view ${c.runId ?? "<runId>"} --log-failed\` to diagnose`
+        : c.runId
+          ? `fetch the run log with \`gh run view ${c.runId} --log-failed\` to diagnose the failure`
+          : `open the check details (${c.detailsUrl}) to diagnose the failure`;
       instructions.push(
-        `Fix code failure: \`${c.name}\` (actionable) — ${diagnosisSource} and apply a fix.`,
+        `Fix code failure: \`${c.name}\` (actionable) — ${diagnosisHint} and apply a fix.`,
       );
-    } else if (c.failureKind === "infrastructure" || c.failureKind === "timeout") {
+    } else if (c.failureKind === "cancelled" || c.failureKind === "timeout") {
       const rerunCmd = c.runId
         ? `gh run rerun ${c.runId} --failed`
         : `gh run rerun <runId> --failed`;
       instructions.push(
         `Re-run transient failure: \`${c.name}\` [${c.failureKind}] — run \`${rerunCmd}\`.`,
-      );
-    } else if (c.failureKind === "flaky") {
-      const rebasing =
-        mergeStatus.status === "BEHIND" ? " Rebase first — see rebase instruction above." : "";
-      instructions.push(
-        `Do not cancel flaky failure: \`${c.name}\` [flaky]. Do NOT cancel the run.${rebasing}`,
       );
     }
   }

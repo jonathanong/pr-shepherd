@@ -18,7 +18,7 @@ The default output format is Markdown — what you see when running `npx pr-shep
 
 - ✓ `<name>` — SUCCESS
 - ✗ `<name>` (<failureKind>) — <conclusion> · `<runId>`
-  > <errorExcerpt line>
+  > <failedStep>
 
 <action-specific body>
 
@@ -34,7 +34,7 @@ Load-bearing conventions (the monitor SKILL depends on these):
 3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … — that tells the monitor exactly what to do. The monitor follows those steps; it does not need its own dispatch table.
 4. Under `[REBASE]`, the shell script is inside a ```bash fenced block — instruction 1 tells the monitor to extract and run it.
 5. Under `[FIX_CODE]`, the `## Post-fix push` section has a `` resolve: `<command>` `` bullet — the instructions reference this bullet so the monitor strips backticks and runs the command.
-6. `## Checks` appears immediately after the base fields in every action where checks were fetched (all actions except `cooldown`). It lists every completed, non-skipped PR CI check — passing entries with ✓, failing entries with ✗ plus `failureKind` and a short `errorExcerpt`. The section is omitted when there are no checks (e.g. during `cooldown` or when the PR has no CI configured). JSON surfaces the same data as `checks: RelevantCheck[]` on the base object.
+6. `## Checks` appears immediately after the base fields in every action where checks were fetched (all actions except `cooldown`). It lists every completed, non-skipped PR CI check — passing entries with ✓, failing entries with ✗ plus `failureKind` and the failed step name (`failedStep`) when available. The section is omitted when there are no checks (e.g. during `cooldown` or when the PR has no CI configured). JSON surfaces the same data as `checks: RelevantCheck[]` on the base object.
 
 ---
 
@@ -102,9 +102,9 @@ The body line (`WAIT: …`) varies with the merge state — `branch is behind ba
 
 ## `rerun_ci`
 
-Surfaces CI runs that failed due to transient infrastructure or timeout issues, and instructs the agent to re-trigger them.
+Surfaces CI runs that failed due to transient timeout or external cancellation, and instructs the agent to re-trigger them.
 
-**Trigger:** One or more failing checks have `failureKind === "timeout"` or `"infrastructure"`, and no actionable work was found (evaluated after step 4).
+**Trigger:** One or more failing checks have `failureKind === "timeout"` or `"cancelled"`, and no actionable work was found (evaluated after step 4).
 
 **CLI side-effects:** None. The CLI emits the list of run IDs that need a rerun; the agent runs `gh run rerun <runId> --failed` for each one. Deduplicates — multiple failed steps sharing a run ID produce one rerun entry.
 
@@ -121,9 +121,9 @@ Surfaces CI runs that failed due to transient infrastructure or timeout issues, 
 ## Checks
 
 - ✗ `lint / typecheck / test (22.x)` (timeout) — TIMED_OUT · `24697658766`
-- ✗ `build` (infrastructure) — CANCELLED · `24697658767`
+- ✗ `build` (cancelled) — CANCELLED · `24697658767`
 
-RERUN NEEDED — 2 CI runs: 24697658766 (lint / typecheck / test (22.x) — timeout), 24697658767 (build — infrastructure)
+RERUN NEEDED — 2 CI runs: 24697658766 (lint / typecheck / test (22.x) — timeout), 24697658767 (build — cancelled)
 
 ## Instructions
 
@@ -201,50 +201,11 @@ Other body-line variants: `CANCEL: PR #42 is closed — stopping monitor`, `CANC
 
 ## `rebase`
 
-Rebases the branch on top of its base to clear flaky failures caused by being behind.
+> **This action is no longer emitted by `iterate`.** Branch rebasing is now handled inside the `fix_code` instructions (see below). The `rebase` action type and its `## Instructions` format are preserved here for reference, but the CLI will not produce `[REBASE]` output in current releases.
 
-**Trigger:** A failing check has `failureKind === "flaky"` AND `mergeStatus.status === "BEHIND"` AND `config.actions.autoRebase` is enabled.
+Rebases the branch on top of its base to bring it up to date with the target branch.
 
-> Note: merge conflicts (`CONFLICTS`) route to `fix_code`, not `rebase` — conflicts need manual resolution during the rebase. The `fix_code` runbook always emits a rebase step when the PR is in `CONFLICTS`, even without any threads/comments/checks/reviews; the wording switches from the clean `rebase && push` one-liner to an explicit "Rebase with conflict resolution" step that handles `git rebase --continue` loops before pushing.
-
-**CLI side-effects:** None. The CLI uses the base branch already returned in the GraphQL batch (`baseRefName` → `ShepherdReport.baseBranch`), validates it locally, and pre-builds the shell script.
-
-**Exit code:** 1
-
-**Markdown output:**
-
-````markdown
-# PR #42 [REBASE]
-
-**status** `FAILING` · **merge** `BEHIND` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 2 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 600 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
-
-## Checks
-
-- ✓ `build` — SUCCESS
-- ✗ `lint / typecheck / test (22.x)` (flaky) — TIMED_OUT · `24697658766`
-
-Branch is behind main — rebasing to pick up latest changes and clear flaky failures
-
-```bash
-if ! git diff --quiet || ! git diff --cached --quiet; then
-  echo "SKIP rebase: dirty worktree (uncommitted changes present)"
-  exit 1
-fi
-git fetch origin && git rebase origin/main && git push --force-with-lease
-```
-
-## Instructions
-
-1. Copy the shell script from the ` ```bash ` block above and run it in Bash.
-2. End this iteration — the next cron fire will check CI after the rebase.
-````
-
-The dirty-worktree guard exits 1 on skip, so the monitor SKILL sees a non-zero exit rather than silently counting the iteration as successful.
-
-**Base branch determination:** The base branch comes from the GraphQL batch (`ShepherdReport.baseBranch`) — no extra network call is needed. `validateBaseBranch` emits `[ESCALATE]` with trigger `base-branch-unknown` if the value is empty or contains characters outside `[A-Za-z0-9._/-]` — force-pushing onto the wrong base would be catastrophic for a PR that actually targets e.g. `release/2026.04`.
-
-**What the monitor does:** Follow `## Instructions` — extract the shell script from the ` ```bash ` block and run it in Bash, then end the iteration.
+**Trigger:** Previously emitted when a branch was `BEHIND` its base and no other actionable items were pending. Removed in favour of embedding the rebase step inside `fix_code` when conflicts are present.
 
 ---
 

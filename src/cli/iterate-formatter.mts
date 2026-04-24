@@ -123,11 +123,10 @@ export function formatChecksSection(checks: RelevantCheck[]): string | null {
         : c.detailsUrl
           ? `external \`${c.detailsUrl}\``
           : "(no runId)";
-      lines.push(`- ✗ \`${c.name}\`${kind} — ${c.conclusion} · ${locator}`);
-      if (c.errorExcerpt) {
-        for (const eLine of c.errorExcerpt.split("\n")) {
-          lines.push(`  > ${eLine}`);
-        }
+      const prefix = c.workflowName ? `${c.workflowName} › ` : "";
+      lines.push(`- ✗ \`${prefix}${c.name}\`${kind} — ${c.conclusion} · ${locator}`);
+      if (c.failedStep) {
+        lines.push(`  > ${c.failedStep}`);
       }
     }
   }

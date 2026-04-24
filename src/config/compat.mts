@@ -98,7 +98,7 @@ export function applyCompat(raw: Record<string, unknown>): Record<string, unknow
     out["resolve"] = resolveOut;
   }
 
-  // Renamed checks keys
+  // Renamed/removed checks keys
   const checks = out["checks"] as Record<string, unknown> | undefined;
   if (checks) {
     const checksOut = { ...checks };
@@ -109,19 +109,21 @@ export function applyCompat(raw: Record<string, unknown>): Record<string, unknow
       checksOut["ciTriggerEvents"] = checksOut["ciTriggerEvents"] ?? checks["relevantEvents"];
       delete checksOut["relevantEvents"];
     }
-    if ("logLinesKept" in checks) {
-      process.stderr.write(
-        `pr-shepherd: config key "checks.logLinesKept" renamed to "checks.logMaxLines".\n`,
-      );
-      checksOut["logMaxLines"] = checksOut["logMaxLines"] ?? checks["logLinesKept"];
-      delete checksOut["logLinesKept"];
-    }
-    if ("logExcerptMaxChars" in checks) {
-      process.stderr.write(
-        `pr-shepherd: config key "checks.logExcerptMaxChars" renamed to "checks.logMaxChars".\n`,
-      );
-      checksOut["logMaxChars"] = checksOut["logMaxChars"] ?? checks["logExcerptMaxChars"];
-      delete checksOut["logExcerptMaxChars"];
+    for (const gone of [
+      "timeoutPatterns",
+      "infraPatterns",
+      "logMaxLines",
+      "logMaxChars",
+      "errorLines",
+      "logLinesKept",
+      "logExcerptMaxChars",
+    ]) {
+      if (gone in checks) {
+        process.stderr.write(
+          `pr-shepherd: config key "checks.${gone}" has been removed and has no effect.\n`,
+        );
+        delete checksOut[gone];
+      }
     }
     out["checks"] = checksOut;
   }

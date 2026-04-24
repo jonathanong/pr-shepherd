@@ -41,14 +41,13 @@ Returns:
 
 Failing checks are further classified by `FailureKind`:
 
-| `FailureKind`    | Condition                                                                                         |
-| ---------------- | ------------------------------------------------------------------------------------------------- |
-| `timeout`        | `conclusion === 'TIMED_OUT'`                                                                      |
-| `infrastructure` | `conclusion === 'CANCELLED'` AND log excerpt matches infra patterns (runner not found, OOM, etc.) |
-| `flaky`          | Log excerpt matches known-flaky patterns (test retry noise, network blips)                        |
-| `actionable`     | Everything else — code failures, type errors, lint, test logic errors                             |
+| `FailureKind` | Condition                                                         |
+| ------------- | ----------------------------------------------------------------- |
+| `timeout`     | `conclusion === 'TIMED_OUT'`                                      |
+| `cancelled`   | `conclusion === 'CANCELLED'`, `'STARTUP_FAILURE'`, or `'STALE'`   |
+| `actionable`  | Everything else — code failures, type errors, lint, test failures |
 
-Triage fetches the first N lines of the failure log for each failing check. The log excerpt is stored in `check.logExcerpt` and surfaced in the `fix_code` payload so the main agent can read it without making additional API calls.
+For `actionable` checks, triage calls the GitHub Actions jobs API (the same `jobs?filter=latest` endpoint) to find the name of the first failed step (e.g. `"Run tests"`, `"Set up job"`). This `failedStep` is returned as part of the check and is visible in both JSON and text output. No log fetching is done for `timeout` or `cancelled` checks.
 
 ## Report output
 
@@ -57,7 +56,7 @@ Triage fetches the first N lines of the failure log for each failing check. The 
 | Field                    | Content                                                      |
 | ------------------------ | ------------------------------------------------------------ |
 | `passing`                | Classified checks with `category === 'passed'`               |
-| `failing`                | Triaged failing checks (with `failureKind` and `logExcerpt`) |
+| `failing`                | Triaged failing checks (with `failureKind` and `failedStep`) |
 | `inProgress`             | Checks with `category === 'in_progress'`                     |
 | `skipped`                | Checks with `category === 'skipped'`                         |
 | `filtered`               | Checks excluded by event filter                              |

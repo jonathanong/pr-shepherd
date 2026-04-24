@@ -84,7 +84,6 @@ All tunable constants live in `src/config.json`. Edit there — do not hardcode 
   "cache": { "ttlSeconds": 300 },
   "iterate": { "cooldownSeconds": 30, "fixAttemptsPerThread": 3 },
   "watch": { "interval": "4m", "readyDelayMinutes": 10 },
-  "checks": { "logMaxLines": 50, "logMaxChars": 3000 },
   "resolve": { "shaPoll": { "maxAttempts": 10, "intervalMs": 2000 } }
 }
 ```

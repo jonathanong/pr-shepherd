@@ -2,9 +2,10 @@
  * Projections for the agent-facing iterate output.
  *
  * These strip fields that are always-false by the time items reach iterate
- * (isResolved, isOutdated, isMinimized, createdAtUnix) and metadata that the
- * monitor prompt never reads (detailsUrl, event, status, conclusion, category,
- * logExcerpt). The original domain types are preserved for check command output.
+ * (isResolved, isOutdated, isMinimized, createdAtUnix) and check metadata the
+ * monitor prompt never reads (event, status, conclusion, category).
+ * detailsUrl is preserved in AgentCheck as a fallback for external status checks.
+ * The original domain types are preserved for check command output.
  */
 
 import type {
@@ -25,7 +26,14 @@ export function toAgentComment(c: PrComment): AgentComment {
 }
 
 export function toAgentCheck(c: TriagedCheck): AgentCheck {
-  return { name: c.name, runId: c.runId, detailsUrl: c.detailsUrl, failureKind: c.failureKind };
+  return {
+    name: c.name,
+    runId: c.runId,
+    detailsUrl: c.detailsUrl,
+    failureKind: c.failureKind,
+    ...(c.workflowName !== undefined && { workflowName: c.workflowName }),
+    ...(c.failedStep !== undefined && { failedStep: c.failedStep }),
+  };
 }
 
 /**

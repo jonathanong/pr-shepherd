@@ -59,14 +59,14 @@ export interface ClassifiedCheck extends CheckRun {
   category: CheckCategory;
 }
 
-export type FailureKind = "timeout" | "infrastructure" | "actionable" | "flaky";
+export type FailureKind = "timeout" | "cancelled" | "actionable";
 
 export interface TriagedCheck extends ClassifiedCheck {
   failureKind?: FailureKind;
-  /** Truncated tail of the log excerpt retained for classification/debugging, bounded by configured line/char limits. */
-  logExcerpt?: string;
-  /** Last N `##[error]`-marked lines (or last N raw lines as fallback). Compact error summary. */
-  errorExcerpt?: string;
+  /** Workflow display name (e.g. `"CI"`). Populated when available from the jobs API; may be `undefined` on fetch failure or when no matching job is found. */
+  workflowName?: string;
+  /** For `actionable` failures: name of the first failed step in the matched job (e.g. `"Run tests"`). */
+  failedStep?: string;
 }
 
 // ---------------------------------------------------------------------------

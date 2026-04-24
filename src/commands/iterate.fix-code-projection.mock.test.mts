@@ -157,11 +157,6 @@ function defaultConfig() {
     },
     checks: {
       ciTriggerEvents: ["pull_request", "pull_request_target"],
-      timeoutPatterns: [],
-      infraPatterns: [],
-      logMaxLines: 50,
-      logMaxChars: 3000,
-      errorLines: 1,
     },
     mergeStatus: { blockingReviewerLogins: ["copilot"] },
     actions: {
@@ -218,7 +213,6 @@ function makeActionableCheck(runId: string, name = "typecheck") {
     runId,
     category: "failing" as const,
     failureKind: "actionable" as const,
-    logExcerpt: "error TS2345: type mismatch",
   };
 }
 
@@ -328,7 +322,6 @@ describe("runIterate — fix_code agent projection", () => {
       expect(c.runId).toBe("run-55");
       expect(c.detailsUrl).toBeDefined();
       expect(c.failureKind).toBe("actionable");
-      expect(c).not.toHaveProperty("logExcerpt");
       expect(c).not.toHaveProperty("conclusion");
       expect(c).not.toHaveProperty("category");
     }
