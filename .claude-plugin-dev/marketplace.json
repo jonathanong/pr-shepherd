@@ -10,7 +10,7 @@
     {
       "name": "pr-shepherd",
       "description": "Autonomous PR CI monitor and review-comment resolver",
-      "source": "./plugin",
+      "source": "./plugins/pr-shepherd",
       "category": "productivity"
     }
   ]
