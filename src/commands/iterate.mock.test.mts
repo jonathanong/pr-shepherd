@@ -215,6 +215,26 @@ describe("runIterate — cooldown", () => {
     expect(result.action).toBe("cooldown");
     expect(mockRunCheck).not.toHaveBeenCalled();
   });
+
+  it("skips cooldown and proceeds when git log fails (null lastCommitTime)", async () => {
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "log") return Promise.reject(new Error("not a git repo"));
+      if (cmd === "git" && args[0] === "rev-parse")
+        return Promise.resolve({ stdout: "abc\n", stderr: "" });
+      return Promise.resolve({ stdout: "", stderr: "" });
+    });
+    mockRunCheck.mockResolvedValue(makeReport());
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: false,
+      remainingSeconds: 300,
+    });
+
+    const result = await runIterate(makeOpts({ cooldownSeconds: 30, noAutoMarkReady: true }));
+
+    expect(result.action).not.toBe("cooldown");
+    expect(mockRunCheck).toHaveBeenCalled();
+  });
 });
 
 describe("runIterate — wait", () => {

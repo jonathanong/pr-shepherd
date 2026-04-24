@@ -209,6 +209,27 @@ describe("triageFailingChecks — actionable: failedStep", () => {
     expect(result!.failedStep).toBe("Run tests");
   });
 
+  it("falls back to prefix match for matrix jobs when no exact name match", async () => {
+    mockFetch.mockResolvedValueOnce(
+      makeJobsResponse([
+        {
+          id: 1,
+          name: "build (ubuntu)",
+          conclusion: "failure",
+          steps: [{ name: "Compile", number: 1, conclusion: "failure" }],
+        },
+        {
+          id: 2,
+          name: "build (windows)",
+          conclusion: "success",
+          steps: [{ name: "Compile", number: 1, conclusion: "success" }],
+        },
+      ]),
+    );
+    const [result] = await triageFailingChecks([makeCheck({ name: "build" })], REPO);
+    expect(result!.failedStep).toBe("Compile");
+  });
+
   it("returns actionable with failedStep=undefined when jobs fetch throws", async () => {
     mockFetch.mockResolvedValueOnce(makeErrorResponse(500));
     const [result] = await triageFailingChecks([makeCheck({ conclusion: "FAILURE" })], REPO);
