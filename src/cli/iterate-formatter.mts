@@ -124,10 +124,8 @@ export function formatChecksSection(checks: RelevantCheck[]): string | null {
           ? `external \`${c.detailsUrl}\``
           : "(no runId)";
       lines.push(`- ✗ \`${c.name}\`${kind} — ${c.conclusion} · ${locator}`);
-      if (c.errorExcerpt) {
-        for (const eLine of c.errorExcerpt.split("\n")) {
-          lines.push(`  > ${eLine}`);
-        }
+      if (c.failedStep) {
+        lines.push(`  > ${c.failedStep}`);
       }
     }
   }

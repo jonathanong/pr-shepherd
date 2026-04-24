@@ -38,7 +38,7 @@ describe("loadConfig — no rc file", () => {
     const result = loadConfig();
     expect(result.resolve.concurrency).toBe(4);
     expect(result.iterate.fixAttemptsPerThread).toBe(3);
-    expect(result.checks.logMaxLines).toBe(50);
+    expect(result.checks.ciTriggerEvents).toEqual(["pull_request", "pull_request_target"]);
   });
 
   it("defaults iterate.minimizeReviewSummaries to {bots:true, humans:true, approvals:false}", async () => {
@@ -86,10 +86,10 @@ describe("loadConfig — deep merge", () => {
   });
 
   it("replaces arrays outright rather than concatenating", async () => {
-    writeFileSync(join(tmpDir, RC), "checks:\n  timeoutPatterns:\n    - only-this\n");
+    writeFileSync(join(tmpDir, RC), "checks:\n  ciTriggerEvents:\n    - push\n");
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
-    expect(result.checks.timeoutPatterns).toEqual(["only-this"]);
+    expect(result.checks.ciTriggerEvents).toEqual(["push"]);
   });
 });
 
@@ -216,25 +216,23 @@ describe("loadConfig — checks renames", () => {
     );
   });
 
-  it("maps logLinesKept → logMaxLines and warns", async () => {
+  it("warns and strips logLinesKept (removed)", async () => {
     writeFileSync(join(tmpDir, RC), "checks:\n  logLinesKept: 100\n");
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     const loadConfig = await freshLoadConfig();
-    const result = loadConfig();
-    expect(result.checks.logMaxLines).toBe(100);
+    loadConfig();
     expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain(
-      '"checks.logLinesKept" renamed',
+      '"checks.logLinesKept" has been removed',
     );
   });
 
-  it("maps logExcerptMaxChars → logMaxChars and warns", async () => {
+  it("warns and strips logExcerptMaxChars (removed)", async () => {
     writeFileSync(join(tmpDir, RC), "checks:\n  logExcerptMaxChars: 9999\n");
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     const loadConfig = await freshLoadConfig();
-    const result = loadConfig();
-    expect(result.checks.logMaxChars).toBe(9999);
+    loadConfig();
     expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain(
-      '"checks.logExcerptMaxChars" renamed',
+      '"checks.logExcerptMaxChars" has been removed',
     );
   });
 });

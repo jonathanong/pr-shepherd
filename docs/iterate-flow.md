@@ -73,7 +73,7 @@ The fingerprint and a `firstSeenAt` timestamp are persisted to `$TMPDIR/pr-sheph
 
 In-progress check **names** are included so that a long-running CI pipeline where jobs complete one by one (moving from in-progress to passing) resets the timer as progress happens. Timing-only fields (`remainingSeconds`, `inProgress` count by itself) are excluded — only the set of check names changes the fingerprint, not how many are still running.
 
-**Applies to:** `wait`, `fix_code`, `rerun_ci`, `rebase`. Not applied to `cooldown`, `cancel`, `mark_ready`, or `escalate` — these are either pre-sweep, already terminal, or one-shot.
+**Applies to:** `wait`, `fix_code`, `rerun_ci`. Not applied to `cooldown`, `cancel`, `mark_ready`, or `escalate` — these are either pre-sweep, already terminal, or one-shot.
 
 ---
 
@@ -97,7 +97,7 @@ CONFLICTS is included here because the `fix_code` handler already runs `git fetc
 
 ### 5. Transient failures
 
-**Check:** any failing check has `failureKind === 'timeout'` or `failureKind === 'infrastructure'`, and no actionable work, no conflicts.
+**Check:** any failing check has `failureKind === 'timeout'` or `failureKind === 'cancelled'`, and no actionable work, no conflicts.
 
 **Side-effects:** None — the CLI reports the run IDs that need a rerun; the agent executes `gh run rerun <runId> --failed` for each unique run ID as instructed by `## Instructions`.
 
@@ -105,17 +105,7 @@ CONFLICTS is included here because the `fix_code` handler already runs `git fetc
 
 ---
 
-### 6. Flaky + behind
-
-**Check:** any failing check has `failureKind === 'flaky'` AND `report.mergeStatus.status === 'BEHIND'`.
-
-**Why:** A flaky test is more likely to pass after a rebase onto main.
-
-**Emits:** `action: 'rebase'`
-
----
-
-### 7. Mark ready
+### 6. Mark ready
 
 **Check:** `report.status === 'READY'` AND `mergeStateStatus` is `CLEAN` (or `DRAFT` when `isDraft`) AND `!copilotReviewInProgress` AND `isDraft` AND `!shouldCancel`.
 
@@ -125,7 +115,7 @@ CONFLICTS is included here because the `fix_code` handler already runs `git fetc
 
 ---
 
-### 8. Wait
+### 7. Wait
 
 **Fallthrough:** nothing actionable, no terminal state, no ready-delay elapsed.
 
@@ -143,7 +133,6 @@ CONFLICTS is included here because the `fix_code` handler already runs `git fetc
 | 3.5     | Same fingerprint for ≥ `stallTimeoutMinutes` (any step) | `escalate`   | 3         |
 | 4       | Actionable threads/comments/CI or CONFLICTS             | `fix_code`   | 1         |
 | 4 esc.  | Same thread hit `fixAttemptsPerThread` times            | `escalate`   | 3         |
-| 5       | Transient CI failures                                   | `rerun_ci`   | 0         |
-| 6       | Flaky + BEHIND                                          | `rebase`     | 1         |
-| 7       | READY + CLEAN + isDraft                                 | `mark_ready` | 0         |
-| 8       | Fallthrough                                             | `wait`       | 0         |
+| 5       | Transient CI failures (timeout or cancelled)            | `rerun_ci`   | 0         |
+| 6       | READY + CLEAN + isDraft                                 | `mark_ready` | 0         |
+| 7       | Fallthrough                                             | `wait`       | 0         |

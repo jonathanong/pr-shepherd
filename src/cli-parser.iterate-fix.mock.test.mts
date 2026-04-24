@@ -373,7 +373,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
         runId: "run-2",
         detailsUrl: "https://github.com/owner/repo/actions/runs/2",
         failureKind: "actionable",
-        errorExcerpt: "AssertionError: expected 1 to equal 2",
+        failedStep: "Run tests",
       },
     ] as import("./types.mts").RelevantCheck[];
     mockRunIterate.mockResolvedValue(result);
@@ -391,8 +391,8 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain("- ✓ `lint` — SUCCESS");
     // Failing check: ✗ bullet with failureKind, conclusion, runId
     expect(out).toContain("- ✗ `test` (actionable) — FAILURE · `run-2`");
-    // errorExcerpt rendered as blockquote
-    expect(out).toContain("  > AssertionError: expected 1 to equal 2");
+    // failedStep rendered as blockquote
+    expect(out).toContain("  > Run tests");
   });
 
   it("## Checks — external detailsUrl renders `external` prefix; no-ID renders `(no runId)`", async () => {
@@ -410,7 +410,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
         conclusion: "FAILURE",
         runId: null,
         detailsUrl: null,
-        failureKind: "infrastructure",
+        failureKind: "cancelled",
       },
     ] as import("./types.mts").RelevantCheck[];
     mockRunIterate.mockResolvedValue(result);
@@ -421,7 +421,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain(
       "- ✗ `codecov/patch` (actionable) — FAILURE · external `https://app.codecov.io/gh/owner/repo/pull/42`",
     );
-    expect(out).toContain("- ✗ `mystery` (infrastructure) — FAILURE · (no runId)");
+    expect(out).toContain("- ✗ `mystery` (cancelled) — FAILURE · (no runId)");
   });
 
   it("## Checks section renders in rerun_ci, mark_ready, cancel, rebase, escalate, fix_code when checks is non-empty", async () => {

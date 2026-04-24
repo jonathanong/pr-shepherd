@@ -156,13 +156,7 @@ function defaultConfig() {
       fetchReviewSummaries: true,
     },
     checks: {
-      ciTriggerEvents: ["pull_request", "pull_request_target"],
-      timeoutPatterns: [],
-      infraPatterns: [],
-      logMaxLines: 50,
-      logMaxChars: 3000,
-      errorLines: 1,
-    },
+      ciTriggerEvents: ["pull_request", "pull_request_target"],    },
     mergeStatus: { blockingReviewerLogins: ["copilot"] },
     actions: {
       autoResolveOutdated: true,
@@ -280,53 +274,6 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
     }
   });
 
-  it("escalates with base-branch-unknown when rebase would run but baseBranch is empty", async () => {
-    const flakyCheck = {
-      name: "flaky",
-      status: "COMPLETED" as const,
-      conclusion: "FAILURE" as const,
-      detailsUrl: "https://github.com/owner/repo/actions/runs/30",
-      event: "pull_request",
-      runId: "run-30",
-      category: "failing" as const,
-      failureKind: "flaky" as const,
-    };
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "FAILING",
-        baseBranch: "",
-        mergeStatus: {
-          status: "BEHIND",
-          state: "OPEN",
-          isDraft: false,
-          mergeable: "MERGEABLE",
-          reviewDecision: null,
-          copilotReviewInProgress: false,
-          mergeStateStatus: "BEHIND",
-        },
-        checks: {
-          passing: [],
-          failing: [flakyCheck],
-          inProgress: [],
-          skipped: [],
-          filtered: [],
-          filteredNames: [],
-          blockedByFilteredCheck: false,
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
-
-    const result = await runIterate(makeOpts());
-    expect(result.action).toBe("escalate");
-    if (result.action === "escalate") {
-      expect(result.escalate.triggers).toEqual(["base-branch-unknown"]);
-    }
-  });
 
   it("escalates with base-branch-unknown on CONFLICTS-only when baseBranch is empty (no resolve IDs, but rebase still needed)", async () => {
     // Guards the `|| hasConflicts` branch of the fix_code base-branch-unknown

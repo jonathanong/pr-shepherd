@@ -43,12 +43,6 @@ export interface PrShepherdConfig {
   };
   checks: {
     ciTriggerEvents: string[];
-    timeoutPatterns: string[];
-    infraPatterns: string[];
-    logMaxLines: number;
-    logMaxChars: number;
-    /** Number of trailing `##[error]`-marked lines to surface per failing check. Default 1. */
-    errorLines: number;
   };
   mergeStatus: {
     blockingReviewerLogins: string[];

@@ -156,13 +156,7 @@ function defaultConfig() {
       fetchReviewSummaries: true,
     },
     checks: {
-      ciTriggerEvents: ["pull_request", "pull_request_target"],
-      timeoutPatterns: [],
-      infraPatterns: [],
-      logMaxLines: 50,
-      logMaxChars: 3000,
-      errorLines: 1,
-    },
+      ciTriggerEvents: ["pull_request", "pull_request_target"],    },
     mergeStatus: { blockingReviewerLogins: ["copilot"] },
     actions: {
       autoResolveOutdated: true,

@@ -156,13 +156,7 @@ function defaultConfig() {
       fetchReviewSummaries: true,
     },
     checks: {
-      ciTriggerEvents: ["pull_request", "pull_request_target"],
-      timeoutPatterns: [],
-      infraPatterns: [],
-      logMaxLines: 50,
-      logMaxChars: 3000,
-      errorLines: 1,
-    },
+      ciTriggerEvents: ["pull_request", "pull_request_target"],    },
     mergeStatus: { blockingReviewerLogins: ["copilot"] },
     actions: {
       autoResolveOutdated: true,
@@ -218,7 +212,6 @@ function makeActionableCheck(runId: string, name = "typecheck") {
     runId,
     category: "failing" as const,
     failureKind: "actionable" as const,
-    logExcerpt: "error TS2345: type mismatch",
   };
 }
 

@@ -33,7 +33,7 @@ export async function buildRerunCiResult(
       runMap.set(c.runId, {
         runId: c.runId,
         checkNames: [c.name],
-        failureKind: c.failureKind as "timeout" | "infrastructure",
+        failureKind: c.failureKind as "timeout" | "cancelled",
       });
     }
   }

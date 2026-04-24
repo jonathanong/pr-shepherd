@@ -156,13 +156,7 @@ function defaultConfig() {
       fetchReviewSummaries: true,
     },
     checks: {
-      ciTriggerEvents: ["pull_request", "pull_request_target"],
-      timeoutPatterns: [],
-      infraPatterns: [],
-      logMaxLines: 50,
-      logMaxChars: 3000,
-      errorLines: 1,
-    },
+      ciTriggerEvents: ["pull_request", "pull_request_target"],    },
     mergeStatus: { blockingReviewerLogins: ["copilot"] },
     actions: {
       autoResolveOutdated: true,
@@ -275,7 +269,7 @@ describe("runIterate — rerun_ci", () => {
       event: "pull_request",
       runId: "run-20",
       category: "failing" as const,
-      failureKind: "infrastructure" as const,
+      failureKind: "cancelled" as const,
     };
     const check2 = {
       name: "test-step-2",
@@ -285,7 +279,7 @@ describe("runIterate — rerun_ci", () => {
       event: "pull_request",
       runId: "run-20", // same runId
       category: "failing" as const,
-      failureKind: "infrastructure" as const,
+      failureKind: "cancelled" as const,
     };
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -314,22 +308,22 @@ describe("runIterate — rerun_ci", () => {
       expect(result.reran).toHaveLength(1);
       expect(result.reran[0].runId).toBe("run-20");
       expect(result.reran[0].checkNames).toEqual(["test-step-1", "test-step-2"]);
-      expect(result.reran[0].failureKind).toBe("infrastructure");
+      expect(result.reran[0].failureKind).toBe("cancelled");
     }
   });
 });
 
-describe("runIterate — rebase", () => {
-  it("returns action: rebase when flaky failure + BEHIND", async () => {
-    const flakyCheck = {
-      name: "flaky-test",
+describe("runIterate — cancelled + BEHIND", () => {
+  it("returns rerun_ci (not rebase) for cancelled failure when branch is BEHIND", async () => {
+    const cancelledCheck = {
+      name: "ci",
       status: "COMPLETED" as const,
-      conclusion: "FAILURE" as const,
+      conclusion: "CANCELLED" as const,
       detailsUrl: "https://github.com/owner/repo/actions/runs/30",
       event: "pull_request",
       runId: "run-30",
       category: "failing" as const,
-      failureKind: "flaky" as const,
+      failureKind: "cancelled" as const,
     };
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -345,7 +339,7 @@ describe("runIterate — rebase", () => {
         },
         checks: {
           passing: [],
-          failing: [flakyCheck],
+          failing: [cancelledCheck],
           inProgress: [],
           skipped: [],
           filtered: [],
@@ -362,7 +356,7 @@ describe("runIterate — rebase", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("rebase");
+    expect(result.action).toBe("rerun_ci");
     expect(result.mergeStateStatus).toBe("BEHIND");
   });
 });

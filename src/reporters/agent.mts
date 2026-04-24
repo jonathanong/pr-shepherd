@@ -25,7 +25,7 @@ export function toAgentComment(c: PrComment): AgentComment {
 }
 
 export function toAgentCheck(c: TriagedCheck): AgentCheck {
-  return { name: c.name, runId: c.runId, detailsUrl: c.detailsUrl, failureKind: c.failureKind };
+  return { name: c.name, runId: c.runId, detailsUrl: c.detailsUrl, failureKind: c.failureKind, failedStep: c.failedStep };
 }
 
 /**

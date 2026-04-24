@@ -33,7 +33,7 @@ shepherd/
 │
 ├── checks/
 │   ├── classify.mts       # event filter + CI verdict (CheckCategory, CiVerdict)
-│   └── triage.mts         # failure kind (timeout / infrastructure / flaky / actionable)
+│   └── triage.mts         # failure kind (timeout / cancelled / actionable) + failed step name
 │
 ├── comments/
 │   ├── outdated.mts       # outdated-thread detection (isOutdated flag)

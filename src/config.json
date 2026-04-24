@@ -27,23 +27,7 @@
     "fetchReviewSummaries": true
   },
   "checks": {
-    "ciTriggerEvents": ["pull_request", "pull_request_target"],
-    "timeoutPatterns": [
-      "cancel timeout",
-      "exceeded the maximum execution time",
-      "job was cancelled"
-    ],
-    "infraPatterns": [
-      "runner error",
-      "service unavailable",
-      "ETIMEOUT",
-      "ECONNRESET",
-      "lost communication with the server",
-      "the hosted runner lost connection"
-    ],
-    "logMaxLines": 50,
-    "logMaxChars": 3000,
-    "errorLines": 1
+    "ciTriggerEvents": ["pull_request", "pull_request_target"]
   },
   "mergeStatus": {
     "blockingReviewerLogins": ["copilot"]

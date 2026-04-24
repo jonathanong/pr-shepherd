@@ -27,15 +27,6 @@ checks:
   ciTriggerEvents:
     - pull_request
     - pull_request_target
-  timeoutPatterns:
-    - cancel timeout
-    - exceeded the maximum execution time
-  infraPatterns:
-    - runner error
-    - ECONNRESET
-  logMaxLines: 50
-  logMaxChars: 3000
-  errorLines: 1
 
 mergeStatus:
   blockingReviewerLogins:
@@ -77,14 +68,9 @@ iterate:
 | `resolve.shaPoll.maxAttempts`               | `10`                                        | Max `--require-sha` polls before giving up                                                                        |
 | `resolve.fetchReviewSummaries`              | `true`                                      | Surface `COMMENTED` review summaries in `resolve --fetch` output                                                  |
 | `checks.ciTriggerEvents`                    | `["pull_request", "pull_request_target"]`   | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos)                                  |
-| `checks.timeoutPatterns`                    | see [`src/config.json`](../src/config.json) | Log patterns that classify a failure as `timeout`                                                                 |
-| `checks.infraPatterns`                      | see [`src/config.json`](../src/config.json) | Log patterns that classify a failure as `infrastructure`                                                          |
-| `checks.logMaxLines`                        | `50`                                        | Max log lines kept per failing check                                                                              |
-| `checks.logMaxChars`                        | `3000`                                      | Max log characters kept per failing check                                                                         |
-| `checks.errorLines`                         | `1`                                         | Trailing `##[error]`-marked log lines surfaced as `errorExcerpt` per failing check                                |
 | `mergeStatus.blockingReviewerLogins`        | `["copilot"]`                               | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                            |
 | `actions.autoResolveOutdated`               | `true`                                      | Auto-resolve threads that point to code no longer in the PR diff                                                  |
-| `actions.autoRebase`                        | `true`                                      | Emit `rebase` for flaky failures when the branch is behind base                                                   |
+| `actions.autoRebase`                        | `true`                                      | Emit `rebase` when the branch must be rebased during `fix_code`                                                   |
 | `actions.autoMarkReady`                     | `true`                                      | Emit `mark_ready` when a draft PR's CI goes clean                                                                 |
 | `actions.commitSuggestions`                 | `true`                                      | Route `/pr-shepherd:resolve` through `commit-suggestion` (singular) for threads with a ` ```suggestion ` block    |
 
@@ -225,34 +211,6 @@ Common additions:
 - `merge_group` — for repos using GitHub's merge queue.
 - Remove `pull_request_target` for repos that don't use it (reduces noise).
 
-### `checks.timeoutPatterns` — default: see [`src/config.json`](../src/config.json)
-
-Case-insensitive strings matched against the trimmed failure log. If any pattern matches, the check is classified as `timeout` and shepherd retries the run (`rerun_ci` action) rather than treating it as an actionable failure.
-
-Example: adding `"operation timed out"` classifies any run whose log contains that phrase as a transient timeout.
-
-### `checks.infraPatterns` — default: see [`src/config.json`](../src/config.json)
-
-Same matching logic as `timeoutPatterns`, but classifies the check as `infrastructure` (e.g. a runner crashed). These are also retried via `rerun_ci`.
-
-> `timeoutPatterns` are checked first; `infraPatterns` only apply if the timeout test did not match.
-
-### `checks.logMaxLines` — default `50`
-
-The last N lines of each failing check's log are kept for triage. Larger values give better context but increase memory usage and the size of the `fix_code` payload.
-
-### `checks.logMaxChars` — default `3000`
-
-Character cap applied after the line limit. The excerpt is trimmed to the last N characters. Combined with `logMaxLines`, this bounds the payload size.
-
-### `checks.errorLines` — default `1`
-
-Number of trailing `##[error]`-marked lines to surface per failing check as `errorExcerpt`. These are the red "Error:" lines GitHub Actions renders in its log viewer. The excerpt is shown under each failing check in the `## Checks` section of every iterate action.
-
-- Falls back to the last N raw log lines for fetched GitHub Actions logs when no `##[error]` markers are found (for example, jobs that do not emit workflow commands). Checks without a `runId` do not have fetched logs, so they will not have an `errorExcerpt`.
-- Set higher (e.g. `3`) for checks that emit multi-line error summaries across several `##[error]` lines.
-- The window is taken from within the `logMaxLines`/`logMaxChars` slice, so raising `errorLines` beyond that window has no effect.
-
 ---
 
 ## `mergeStatus`
@@ -275,7 +233,7 @@ When `true`, shepherd automatically resolves threads that GitHub has marked `isO
 
 ### `actions.autoRebase` — default `true`
 
-When `true`, shepherd returns `action: rebase` when it detects a flaky failure and the branch is `BEHIND` the base. The `/pr-shepherd:monitor` skill then runs `git fetch && git rebase && git push --force-with-lease`.
+When `true`, shepherd returns `action: rebase` when the branch must be rebased during `fix_code`. The `/pr-shepherd:monitor` skill then runs `git fetch && git rebase && git push --force-with-lease`.
 
 Disable for repos that enforce merge commits or use a merge queue where rebasing is handled automatically.
 
@@ -314,8 +272,8 @@ The following keys from earlier versions are still accepted but emit a deprecati
 | `resolve.shaPollIntervalMs`      | `resolve.shaPoll.intervalMs`                              |
 | `resolve.shaPollMaxAttempts`     | `resolve.shaPoll.maxAttempts`                             |
 | `checks.relevantEvents`          | `checks.ciTriggerEvents`                                  |
-| `checks.logLinesKept`            | `checks.logMaxLines`                                      |
-| `checks.logExcerptMaxChars`      | `checks.logMaxChars`                                      |
+| `checks.logLinesKept`            | _(removed)_                                               |
+| `checks.logExcerptMaxChars`      | _(removed)_                                               |
 | `baseBranch`                     | _(removed — auto-detected from PR)_                       |
 | `minimizeBots`                   | _(removed)_                                               |
 | `cancelCiOnFailure`              | _(removed)_                                               |

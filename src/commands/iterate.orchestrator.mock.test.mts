@@ -156,13 +156,7 @@ function defaultConfig() {
       fetchReviewSummaries: true,
     },
     checks: {
-      ciTriggerEvents: ["pull_request", "pull_request_target"],
-      timeoutPatterns: [],
-      infraPatterns: [],
-      logMaxLines: 50,
-      logMaxChars: 3000,
-      errorLines: 1,
-    },
+      ciTriggerEvents: ["pull_request", "pull_request_target"],    },
     mergeStatus: { blockingReviewerLogins: ["copilot"] },
     actions: {
       autoResolveOutdated: true,
@@ -372,7 +366,6 @@ describe("runIterate — triage via runCheck", () => {
       runId: "run-3",
       category: "failing" as const,
       failureKind: "actionable" as const,
-      logExcerpt: "error TS2345: type mismatch",
     };
     mockRunCheck.mockResolvedValue(
       makeReport({

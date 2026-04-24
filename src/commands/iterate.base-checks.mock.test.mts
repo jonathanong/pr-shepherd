@@ -156,13 +156,7 @@ function defaultConfig() {
       fetchReviewSummaries: true,
     },
     checks: {
-      ciTriggerEvents: ["pull_request", "pull_request_target"],
-      timeoutPatterns: [],
-      infraPatterns: [],
-      logMaxLines: 50,
-      logMaxChars: 3000,
-      errorLines: 1,
-    },
+      ciTriggerEvents: ["pull_request", "pull_request_target"],    },
     mergeStatus: { blockingReviewerLogins: ["copilot"] },
     actions: {
       autoResolveOutdated: true,
@@ -222,8 +216,8 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
       event: "pull_request",
       runId: "run-50",
       category: "failing" as const,
-      failureKind: "infrastructure" as const,
-      errorExcerpt: "Runner error: the runner crashed",
+      failureKind: "cancelled" as const,
+      failedStep: undefined,
     };
     const passingChecks = ["lint", "typecheck", "test", "e2e", "security"].map((name) => ({
       name,
@@ -261,8 +255,7 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
     expect(result.checks).toHaveLength(6);
     const failing = result.checks.find((c) => c.name === "build");
     expect(failing).toBeDefined();
-    expect(failing!.failureKind).toBe("infrastructure");
-    expect(failing!.errorExcerpt).toBe("Runner error: the runner crashed");
+    expect(failing!.failureKind).toBe("cancelled");
     const passNames = result.checks
       .filter((c) => c.conclusion === "SUCCESS")
       .map((c) => c.name)
@@ -270,17 +263,16 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
     expect(passNames).toEqual(["e2e", "lint", "security", "test", "typecheck"]);
   });
 
-  it("flaky+BEHIND → rebase action with failing check still in base.checks", async () => {
-    const flakyCheck = {
-      name: "flaky-test",
+  it("cancelled+BEHIND → rerun_ci action with failing check still in base.checks", async () => {
+    const cancelledCheck = {
+      name: "ci",
       status: "COMPLETED" as const,
-      conclusion: "FAILURE" as const,
+      conclusion: "CANCELLED" as const,
       detailsUrl: "https://github.com/owner/repo/actions/runs/60",
       event: "pull_request",
       runId: "run-60",
       category: "failing" as const,
-      failureKind: "flaky" as const,
-      errorExcerpt: "Test is flaky: failed 1/3 runs",
+      failureKind: "cancelled" as const,
     };
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -296,7 +288,7 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
         },
         checks: {
           passing: [],
-          failing: [flakyCheck],
+          failing: [cancelledCheck],
           inProgress: [],
           skipped: [],
           filtered: [],
@@ -313,11 +305,10 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("rebase");
+    expect(result.action).toBe("rerun_ci");
     expect(result.checks).toHaveLength(1);
-    expect(result.checks[0]!.name).toBe("flaky-test");
-    expect(result.checks[0]!.failureKind).toBe("flaky");
-    expect(result.checks[0]!.errorExcerpt).toBe("Test is flaky: failed 1/3 runs");
+    expect(result.checks[0]!.name).toBe("ci");
+    expect(result.checks[0]!.failureKind).toBe("cancelled");
   });
 
   it("cooldown path returns checks: []", async () => {

@@ -25,26 +25,21 @@ flowchart TD
   S4 -->|no| S5{5. transient<br/>timeout/infra?}
   S5 -->|yes| S5X[gh run rerun runId --failed]
   S5X --> A_RR([action: rerun_ci])
-  S5 -->|no| S6{6. flaky + BEHIND?}
-  S6 -->|yes| A_REB([action: rebase])
-  S6 -->|no| S7{7. READY + CLEAN<br/>+ isDraft<br/>+ !copilot?}
-  S7 -->|yes| S7X[gh pr ready PR]
-  S7X --> A_MR([action: mark_ready])
-  S7 -->|no| A_W([action: wait])
+  S5 -->|no| S6{6. READY + CLEAN<br/>+ isDraft<br/>+ !copilot?}
+  S6 -->|yes| S6X[gh pr ready PR]
+  S6X --> A_MR([action: mark_ready])
+  S6 -->|no| A_W([action: wait])
 
   A_COOL --> DEC{Cron prompt<br/>acts on action}
   A_CAN --> DEC
-  A_REB --> DEC
   A_FIX --> DEC
   A_RR --> DEC
   A_MR --> DEC
   A_W --> DEC
 
   DEC -->|cancel| STOP["/loop cancel"]
-  DEC -->|rebase| REB[git fetch && rebase &&<br/>push --force-with-lease]
   DEC -->|fix_code| FIX[Edit files →<br/>git add + commit →<br/>fetch + rebase + push →<br/>pr-shepherd resolve --require-sha HEAD]
   FIX --> NEXT[Wait for next tick]
-  REB --> NEXT
   DEC -->|other| NEXT
   NEXT --> CRON
 ```
