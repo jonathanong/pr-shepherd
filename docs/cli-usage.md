@@ -327,7 +327,7 @@ Loop args: `4m --max-turns 50 --expires 8h`
 ## Instructions
 
 1. Run `CronList`. If any job's prompt contains `# pr-shepherd-loop:pr=42`, run the `## Loop prompt` body once inline (as if it were a cron tick) then stop — do not create a duplicate loop.
-2. Otherwise, invoke the `/loop` skill via the Skill tool. Build the `args` parameter as: the `Loop args` line above, a blank line, then the full `## Loop prompt` body.
+2. Otherwise, invoke the `/loop` skill via the Skill tool. Build the `args` parameter as: only the value inside the backticks on the `Loop args` line above (the interval/flags string — not the `Loop args:` label), then a blank line, then the full `## Loop prompt` body.
 ```
 
 All loop parameters (`interval`, `maxTurns`, `expiresHours`) come from `.pr-shepherdrc.yml` or the built-in defaults (`watch.*` config keys). Use `--format=json` to inspect the raw values programmatically.
