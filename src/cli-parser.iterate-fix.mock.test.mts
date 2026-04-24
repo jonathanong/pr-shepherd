@@ -259,6 +259,26 @@ describe("main — iterate text format (fix_code and checks)", () => {
     );
   });
 
+  it("fix_code: CRLF line endings in thread body are normalized in blockquote", async () => {
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    result.fix.threads = [
+      {
+        id: "t-crlf",
+        path: "src/x.ts",
+        line: 1,
+        author: "reviewer",
+        body: "First line.\r\nSecond line.",
+      },
+    ];
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    expect(out).toContain("> First line.\n> Second line.");
+    expect(out).not.toContain("\r");
+  });
+
   it("fix_code: check with runId=null + detailsUrl renders 'external `<url>`', without detailsUrl falls back to '(no runId)'", async () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code" || result.fix.mode !== "rebase-and-push") {

@@ -98,6 +98,21 @@ describe("main — monitor", () => {
     expect(mockRunMonitor).toHaveBeenCalled();
   });
 
+  it("exits 1 with error when --ready-delay is followed by another flag (value treated as missing)", async () => {
+    await main(["node", "shepherd", "monitor", "42", "--ready-delay", "--format=json"]);
+    expect(process.exitCode).toBe(1);
+    const err = stderrSpy.mock.calls.map((c: string[]) => c[0]).join("");
+    expect(err).toContain("--ready-delay requires a value");
+    expect(mockRunMonitor).not.toHaveBeenCalled();
+  });
+
+  it("warns on unexpected positional arguments but still calls runMonitor", async () => {
+    await main(["node", "shepherd", "monitor", "42", "extra-positional"]);
+    const err = stderrSpy.mock.calls.map((c: string[]) => c[0]).join("");
+    expect(err).toContain("unexpected positional arguments");
+    expect(mockRunMonitor).toHaveBeenCalled();
+  });
+
   it("exits 1 and writes to stderr when runMonitor throws", async () => {
     mockRunMonitor.mockRejectedValue(new Error("No open PR found for current branch."));
     await main(["node", "shepherd", "monitor"]);
