@@ -1,4 +1,4 @@
-import { cpSync, chmodSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, chmodSync, mkdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 
 // 1. rm -rf bin
@@ -21,3 +21,8 @@ writeFileSync('bin/pr-shepherd', '#!/usr/bin/env node\nimport("./index.mjs")\n')
 
 // 6. Set executable bit
 chmodSync('bin/pr-shepherd', 0o755)
+
+// 7. Self-link into node_modules/.bin so `npx pr-shepherd` resolves to this build
+try { unlinkSync('node_modules/.bin/pr-shepherd') } catch {}
+mkdirSync('node_modules/.bin', { recursive: true })
+symlinkSync('../../bin/pr-shepherd', 'node_modules/.bin/pr-shepherd')
