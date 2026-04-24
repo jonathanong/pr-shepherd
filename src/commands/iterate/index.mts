@@ -57,6 +57,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       baseBranch: report.baseBranch,
       checks: buildRelevantChecks(report),
       action: "cancel",
+      reason: report.mergeStatus.state === "MERGED" ? "merged" : "closed",
       log: `CANCEL: PR #${report.pr} is ${state} — stopping monitor`,
     };
   }
@@ -93,6 +94,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     return {
       ...base,
       action: "cancel",
+      reason: "ready-delay-elapsed",
       log: `CANCEL: PR #${base.pr} has been ready for review — ready-delay elapsed, stopping monitor`,
     };
   }

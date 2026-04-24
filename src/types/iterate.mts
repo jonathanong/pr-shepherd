@@ -74,8 +74,11 @@ interface IterateResultWait extends IterateResultBase {
   log: string;
 }
 
+export type CancelReason = "merged" | "closed" | "ready-delay-elapsed";
+
 interface IterateResultCancel extends IterateResultBase {
   action: "cancel";
+  reason: CancelReason;
   log: string;
 }
 

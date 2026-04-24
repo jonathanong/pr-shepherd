@@ -231,7 +231,7 @@ describe("runIterate — prescriptive fields: log strings", () => {
     }
   });
 
-  it("cancel.log mentions PR state when PR is merged", async () => {
+  it("cancel.log mentions PR state and reason=merged when PR is merged", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         mergeStatus: {
@@ -249,12 +249,37 @@ describe("runIterate — prescriptive fields: log strings", () => {
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("cancel");
     if (result.action === "cancel") {
+      expect(result.reason).toBe("merged");
       expect(result.log).toMatch(/CANCEL/);
       expect(result.log).toMatch(/merged/i);
     }
   });
 
-  it("cancel.log mentions ready-delay when shouldCancel from ready-delay", async () => {
+  it("cancel.reason=closed and log mentions closed when PR is closed", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        mergeStatus: {
+          status: "UNKNOWN",
+          state: "CLOSED",
+          isDraft: false,
+          mergeable: "UNKNOWN",
+          reviewDecision: null,
+          copilotReviewInProgress: false,
+          mergeStateStatus: "UNKNOWN",
+        },
+      }),
+    );
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("cancel");
+    if (result.action === "cancel") {
+      expect(result.reason).toBe("closed");
+      expect(result.log).toMatch(/CANCEL/);
+      expect(result.log).toMatch(/closed/i);
+    }
+  });
+
+  it("cancel.log mentions ready-delay and reason=ready-delay-elapsed when shouldCancel from ready-delay", async () => {
     mockRunCheck.mockResolvedValue(makeReport());
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: true,
@@ -265,6 +290,7 @@ describe("runIterate — prescriptive fields: log strings", () => {
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("cancel");
     if (result.action === "cancel") {
+      expect(result.reason).toBe("ready-delay-elapsed");
       expect(result.log).toMatch(/CANCEL/);
       expect(result.log).toMatch(/ready/i);
     }
