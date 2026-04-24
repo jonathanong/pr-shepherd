@@ -181,7 +181,11 @@ describe("buildCheckInstructions — CI budget policy", () => {
 
   it("emits no CI budget steps when no failing checks", () => {
     const steps = buildCheckInstructions(makeReport());
-    expect(steps.some((s) => s.includes("Fix code") || s.includes("Re-run") || s.includes("Do not cancel"))).toBe(false);
+    expect(
+      steps.some(
+        (s) => s.includes("Fix code") || s.includes("Re-run") || s.includes("Do not cancel"),
+      ),
+    ).toBe(false);
   });
 });
 

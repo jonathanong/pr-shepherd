@@ -34,8 +34,10 @@ export function buildCheckInstructions(report: ShepherdReport): string[] {
     );
   } else if (mergeStatus.status === "BEHIND" && anyFlaky) {
     instructions.push(
-      "Rebase recommended: the PR is behind the base branch and has a flaky failure — this is the canonical rebase signal. Run `git fetch origin && git rebase origin/<baseBranch>` then `git push --force-with-lease`."
-        .replace("<baseBranch>", report.baseBranch),
+      "Rebase recommended: the PR is behind the base branch and has a flaky failure — this is the canonical rebase signal. Run `git fetch origin && git rebase origin/<baseBranch>` then `git push --force-with-lease`.".replace(
+        "<baseBranch>",
+        report.baseBranch,
+      ),
     );
   } else if (mergeStatus.status === "BEHIND") {
     instructions.push(
@@ -57,7 +59,8 @@ export function buildCheckInstructions(report: ShepherdReport): string[] {
         `Re-run transient failure: \`${c.name}\` [${c.failureKind}] — run \`${rerunCmd}\`.`,
       );
     } else if (c.failureKind === "flaky") {
-      const rebasing = mergeStatus.status === "BEHIND" ? " Rebase first — see rebase instruction above." : "";
+      const rebasing =
+        mergeStatus.status === "BEHIND" ? " Rebase first — see rebase instruction above." : "";
       instructions.push(
         `Do not cancel flaky failure: \`${c.name}\` [flaky]. Do NOT cancel the run.${rebasing}`,
       );
