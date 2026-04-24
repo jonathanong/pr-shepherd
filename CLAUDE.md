@@ -2,15 +2,17 @@
 
 ## Setup
 
-After cloning or creating a new worktree, run:
+**Before any `npx pr-shepherd` or `/pr-shepherd:*` invocation in this worktree**, verify `bin/` and `node_modules/` exist. If either is missing, run:
 
 ```bash
 npm install && npm run build
 ```
 
-The `bin/` directory is gitignored and must be built before `npx pr-shepherd` works.
+The `bin/` directory is gitignored and must be built before `npx pr-shepherd` works. Do not skip this step — without it, `npx pr-shepherd` falls through to any globally installed binary, which may lack recent subcommands.
 
 If no `core.hooksPath` is already configured in the local repo config, `npm install` registers `.githooks/pre-push` (lint + typecheck) via `git config core.hooksPath .githooks`. If `core.hooksPath` is already set locally, the install step is skipped and your existing hooks path takes precedence. Bypass with `git push --no-verify`.
+
+Each worktree's `.claude/settings.json` registers a per-worktree `pr-shepherd-dev` marketplace that sources the plugin from that worktree's own `plugin/` directory. No manual symlink management. Opening Claude Code in a fresh worktree auto-enables `pr-shepherd@pr-shepherd-dev` from its own files; after reloading plugins you may need to `/plugin install pr-shepherd@pr-shepherd-dev` once.
 
 ## Output format invariant
 
