@@ -86,7 +86,7 @@ pr-shepherd resolve 42 --fetch
 4. Run `npx pr-shepherd resolve 42 [--resolve-thread-ids <ids>] …` with the appropriate flags.
 ```
 
-The `[suggestion]` marker appears on threads whose body contains a `` ```suggestion `` fenced block and `actions.commitSuggestions` is enabled. See the [`commit-suggestion` section](#pr-shepherd-commit-suggestion-pr---thread-id-id---message) below for how to apply them.
+The `[suggestion]` marker appears on threads whose body contains a ` ```suggestion ` fenced block and `actions.commitSuggestions` is enabled. See the [`commit-suggestion` section](#pr-shepherd-commit-suggestion-pr---thread-id-id---message) below for how to apply them.
 
 **Mutate mode** (after pushing fixes):
 
@@ -107,21 +107,21 @@ Dismissed reviews (1): PRR_kwDO123
 
 **Flags:**
 
-| Flag                     | Description                                                                   |
-| ------------------------ | ----------------------------------------------------------------------------- |
-| `--fetch`                | Fetch mode (default when no mutation flags are given)                         |
-| `--resolve-thread-ids`   | Comma-separated thread IDs to mark resolved                                   |
-| `--minimize-comment-ids` | Comma-separated comment or review-summary IDs to minimize                     |
-| `--dismiss-review-ids`   | Comma-separated `CHANGES_REQUESTED` review IDs to dismiss                     |
-| `--message`              | Dismiss message (required when `--dismiss-review-ids` is set)                 |
-| `--require-sha`          | Poll GitHub until the PR head matches this SHA before mutating                |
-| `--last-push-time`       | Unix timestamp of the most recent push (used internally by the monitor loop)  |
+| Flag                     | Description                                                                  |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| `--fetch`                | Fetch mode (default when no mutation flags are given)                        |
+| `--resolve-thread-ids`   | Comma-separated thread IDs to mark resolved                                  |
+| `--minimize-comment-ids` | Comma-separated comment or review-summary IDs to minimize                    |
+| `--dismiss-review-ids`   | Comma-separated `CHANGES_REQUESTED` review IDs to dismiss                    |
+| `--message`              | Dismiss message (required when `--dismiss-review-ids` is set)                |
+| `--require-sha`          | Poll GitHub until the PR head matches this SHA before mutating               |
+| `--last-push-time`       | Unix timestamp of the most recent push (used internally by the monitor loop) |
 
 `--require-sha` polls `GET /repos/{owner}/{repo}/pulls/{pr}` for `headRefOid` until it matches, then issues the mutations — ensures reviewers see the fix before threads are closed. Exit code: always `0`. `--message` must describe the specific fix; it is shown to the reviewer on GitHub.
 
 ### pr-shepherd commit-suggestion [PR] --thread-id <id> --message "…"
 
-Applies a single reviewer `` ```suggestion `` fenced block as a local git commit. Builds a unified diff from the suggestion, validates it with `git apply --check`, writes the file, and commits with the caller-supplied message plus a `Co-authored-by: <reviewer>` trailer. Resolves the thread on GitHub after the commit lands. Never pushes — the output tells the caller to `git push` when ready.
+Applies a single reviewer ` ```suggestion ` fenced block as a local git commit. Builds a unified diff from the suggestion, validates it with `git apply --check`, writes the file, and commits with the caller-supplied message plus a `Co-authored-by: <reviewer>` trailer. Resolves the thread on GitHub after the commit lands. Never pushes — the output tells the caller to `git push` when ready.
 
 ```sh
 pr-shepherd commit-suggestion 42 \
@@ -195,14 +195,14 @@ pr-shepherd iterate 42 --no-cache \
 
 **Flags:**
 
-| Flag                          | Default | Description                                                               |
-| ----------------------------- | ------- | ------------------------------------------------------------------------- |
-| `--ready-delay Nm`            | `10m`   | Settle window before the loop cancels after READY                         |
-| `--cooldown-seconds N`        | `30`    | Wait after a push before reading CI                                       |
-| `--last-push-time N`          | —       | Unix timestamp hint embedded in the result                                |
-| `--stall-timeout <duration>`  | `30m`   | Override the stall-detection window (e.g. `--stall-timeout 1h`)           |
-| `--no-auto-mark-ready`        | false   | Skip converting draft → ready-for-review                                  |
-| `--no-auto-cancel-actionable` | false   | Skip cancelling actionable failing runs                                   |
+| Flag                          | Default | Description                                                     |
+| ----------------------------- | ------- | --------------------------------------------------------------- |
+| `--ready-delay Nm`            | `10m`   | Settle window before the loop cancels after READY               |
+| `--cooldown-seconds N`        | `30`    | Wait after a push before reading CI                             |
+| `--last-push-time N`          | —       | Unix timestamp hint embedded in the result                      |
+| `--stall-timeout <duration>`  | `30m`   | Override the stall-detection window (e.g. `--stall-timeout 1h`) |
+| `--no-auto-mark-ready`        | false   | Skip converting draft → ready-for-review                        |
+| `--no-auto-cancel-actionable` | false   | Skip cancelling actionable failing runs                         |
 
 **Default (Markdown) output.** Every action emits an H1 heading, a bolded base-fields line, a bolded summary line, then an action-specific body. Example for `[WAIT]`:
 

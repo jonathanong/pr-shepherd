@@ -344,7 +344,7 @@ Actionable work needs a code fix, commit, and push.
 - The rebase step switches wording based on `mergeStatus.status`. When conflicts are present it emits "Rebase with conflict resolution" and walks through `git rebase --continue` loops; otherwise it emits the clean one-liner `git fetch origin && git rebase origin/<base> && git push --force-with-lease`.
 - `## Failing checks` generates one instruction step per locator type present. When a check has a numeric `runId`, the step says to run `gh run view <runId> --log-failed`. When a check has only a `detailsUrl` (external status check — no `runId`), the step says to open the URL in a browser. When both are absent, the step says to escalate to a human — there is nothing to inspect automatically.
 - The `resolve:` instruction is emitted when `resolveCommand.hasMutations` is true — i.e. when at least one of `threads`, `actionableComments`, `noiseCommentIds`, or `reviewSummaryIds` is non-empty. Noise-only and summary-only dispatches also emit the instruction. A `CONFLICTS`-only dispatch (none of those non-empty) omits it.
-- A `Do not re-run \`gh run cancel\`` instruction is appended when `cancelled` is non-empty and a push is required — it reminds the monitor that those IDs were cancelled pre-push and new runs have since been triggered.
+- A `Do not re-run \`gh run cancel\``instruction is appended when`cancelled` is non-empty and a push is required — it reminds the monitor that those IDs were cancelled pre-push and new runs have since been triggered.
 - The final "iteration" step has three variants: `Stop this iteration — CI needs time to run on the new push before the next tick.` when a push occurred; `Stop this iteration before the next tick.` when only GitHub mutations were made (no push); `End this iteration.` when no push or mutations occurred.
 
 The JSON payload exposes the same data under `fix.{threads, actionableComments, noiseCommentIds, reviewSummaryIds, surfacedSummaries, checks, changesRequestedReviews, resolveCommand, instructions, mode}` — where `fix.mode === "rebase-and-push"` is the type discriminator — plus top-level `baseBranch` (on `IterateResultBase`, not under `fix`) and `cancelled`. `reviewSummaryIds` are merged into `--minimize-comment-ids` inside `resolveCommand.argv`; `surfacedSummaries` are informational only.
@@ -354,13 +354,13 @@ The JSON payload exposes the same data under `fix.{threads, actionableComments, 
 - `--require-sha "$HEAD_SHA"` is appended only when a push occurred. Noise-only minimizations omit it.
 - `$DISMISS_MESSAGE` must be one specific sentence describing what changed — never generic text like "address review comments".
 
-### Applying `` ```suggestion `` blocks
+### Applying ` ```suggestion ` blocks
 
-GitHub reviewers can leave `` ```suggestion `` fenced blocks in review thread bodies. In `iterate`'s `fix_code` output these ride verbatim inside the blockquoted thread body — there is no separate structured field. The numbered `## Instructions` say "read and edit each file," which applies equally to suggestion blocks.
+GitHub reviewers can leave ` ```suggestion ` fenced blocks in review thread bodies. In `iterate`'s `fix_code` output these ride verbatim inside the blockquoted thread body — there is no separate structured field. The numbered `## Instructions` say "read and edit each file," which applies equally to suggestion blocks.
 
 **Single-line suggestion.** Thread locators in `[FIX_CODE]` use the end line only (e.g. `src/foo.ts:42`). When the body contains a suggestion block, replace exactly that line with the suggestion's content:
 
-```markdown
+````markdown
 ### `PRRT_kwDOSGizTs58XB1L` — `src/foo.ts:42` (@alice)
 
 > Rename `x` to `remainingSeconds` so readers don't have to trace back to the declaration.
@@ -368,13 +368,13 @@ GitHub reviewers can leave `` ```suggestion `` fenced blocks in review thread bo
 > ```suggestion
 > const remainingSeconds = computeRemaining();
 > ```
-```
+````
 
 Steps: open `src/foo.ts`, replace line 42 with `const remainingSeconds = computeRemaining();`, then proceed to the commit step in `## Instructions`.
 
 **Multi-line suggestion.** When the thread spans a range the locator shows only the end line (e.g. `src/foo.ts:42`), but the suggestion body replaces all lines from `startLine` to `line` inclusive. An empty suggestion body deletes those lines; a body of one blank line replaces the range with a single blank line.
 
-```markdown
+````markdown
 ### `PRRT_kwDOSGizTs58XB2M` — `src/foo.ts:42` (@alice)
 
 > Collapse these three assignments into one.
@@ -382,7 +382,7 @@ Steps: open `src/foo.ts`, replace line 42 with `const remainingSeconds = compute
 > ```suggestion
 > const result = computeAll();
 > ```
-```
+````
 
 If the reviewer's thread was originally anchored to lines 40–42, you replace lines 40–42 with the single suggestion line. When the range isn't obvious from context, read the surrounding file to find which lines the comment is attached to.
 
@@ -390,7 +390,7 @@ If the reviewer's thread was originally anchored to lines 40–42, you replace l
 
 Example with two threads:
 
-```markdown
+````markdown
 ## Review threads
 
 ### `PRRT_kwDOSGizTs58XB1L` — `src/foo.ts:42` (@alice)
@@ -404,7 +404,7 @@ Example with two threads:
 > ```suggestion
 > return value ?? defaultValue;
 > ```
-```
+````
 
 Apply both edits, then commit and push together. The `resolve:` command at the bottom of `## Post-fix push` already includes both IDs:
 
@@ -442,7 +442,7 @@ Ambiguous state that requires human judgement — the monitor stops and surfaces
 **status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 0 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 600 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
 
-⚠️  /pr-shepherd:monitor paused — needs human direction
+⚠️ /pr-shepherd:monitor paused — needs human direction
 
 **Triggers:** `fix-thrash`
 
