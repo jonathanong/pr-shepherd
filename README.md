@@ -7,7 +7,7 @@ Example Workflow:
 
 1. `/model opusplan`
 2. Create a plan
-3. Accept the Plan
+3. Accept the plan
 4. Switch to Auto Mode
 5. Prompt: `make a PR, then run /pr-shepherd:monitor`
 6. ...
