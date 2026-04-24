@@ -51,7 +51,6 @@ iterate:
 
 | Key                                         | Default                                   | Purpose                                                                                                           |
 | ------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `cache.ttlSeconds`                          | `300`                                     | File-cache TTL for read operations                                                                                |
 | `iterate.cooldownSeconds`                   | `30`                                      | Wait after a push before reading CI                                                                               |
 | `iterate.fixAttemptsPerThread`              | `3`                                       | Max fix attempts per unresolved thread before `escalate`                                                          |
 | `iterate.stallTimeoutMinutes`               | `30`                                      | Minutes the loop may repeat the same action without progress before `escalate` with `stall-timeout`; `0` disables |

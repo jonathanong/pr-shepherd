@@ -181,8 +181,6 @@ describe("runStatus — pagination", () => {
     const [summary] = await runStatus({
       prNumbers: [42],
       format: "text",
-      
-      
     });
     expect(summary!.unresolvedThreads).toBe(2);
     expect(mockGraphql).toHaveBeenCalledTimes(2);
@@ -203,8 +201,6 @@ describe("runStatus — pagination", () => {
     const [summary] = await runStatus({
       prNumbers: [42],
       format: "text",
-      
-      
     });
     expect(summary!.threadsTruncated).toBe(true);
   });
