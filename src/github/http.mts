@@ -63,7 +63,7 @@ async function makeHeaders(): Promise<Record<string, string>> {
 }
 
 function sanitizeBody(body: string): string {
-  return body.slice(0, 200).replace(/Bearer\s+\S+/gi, "[REDACTED]");
+  return body.replace(/Bearer\s+\S+/gi, "[REDACTED]").slice(0, 200);
 }
 
 async function requestWithTokenRetry(fn: () => Promise<Response>): Promise<Response> {

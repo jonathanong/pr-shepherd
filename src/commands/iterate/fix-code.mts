@@ -54,9 +54,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
 
   const isNewSha = stored?.headSha !== headSha;
   // Accumulate across shas — only increment when a push is detected (sha changed)
-  const currentAttempts: Record<string, number> = stored
-    ? { ...stored.threadAttempts }
-    : {};
+  const currentAttempts: Record<string, number> = stored ? { ...stored.threadAttempts } : {};
 
   if (isNewSha) {
     for (const t of report.threads.actionable) {

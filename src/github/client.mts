@@ -149,14 +149,16 @@ export async function getCurrentBranch(): Promise<string> {
 }
 
 function parseRemoteUrl(url: string): RepoInfo {
-  // ssh: git@host:owner/repo[.git]
-  const sshMatch = /^git@[^:]+:([^/]+)\/([^/]+?)(?:\.git)?$/.exec(url.trim());
+  // ssh: git@host:owner/repo[.git][/]
+  const sshMatch = /^git@[^:]+:([^/]+)\/([^/]+?)(?:\.git)?\/?$/.exec(url.trim());
   if (sshMatch) {
     return { owner: sshMatch[1]!, name: sshMatch[2]! };
   }
 
-  // https or ssh://: https://host/owner/repo[.git]  or  ssh://git@host/owner/repo[.git]
-  const httpsMatch = /^(?:https?|ssh):\/\/[^/]+\/([^/]+)\/([^/]+?)(?:\.git)?$/.exec(url.trim());
+  // https or ssh://: https://host[/prefix]/owner/repo[.git][/]  or  ssh://git@host/owner/repo[.git][/]
+  const httpsMatch = /^(?:https?|ssh):\/\/[^/]+\/(?:.*\/)?([^/]+)\/([^/]+?)(?:\.git)?\/?$/.exec(
+    url.trim(),
+  );
   if (httpsMatch) {
     return { owner: httpsMatch[1]!, name: httpsMatch[2]! };
   }

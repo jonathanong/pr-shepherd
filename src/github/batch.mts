@@ -167,13 +167,13 @@ export async function fetchPrBatch(
       const pr2 = res.data.repository.pullRequest;
       if (!pr2?.commits.nodes[0]?.commit.statusCheckRollup) {
         throw new Error(
-          `Check-context pagination interrupted: statusCheckRollup disappeared on page ${pageCount + 1} (possible force-push race). Retry after the push stabilizes.`
+          `Check-context pagination interrupted: statusCheckRollup disappeared on page ${pageCount + 1} (possible force-push race). Retry after the push stabilizes.`,
         );
       }
       const currentOid = pr2.commits.nodes[0]?.commit.oid;
       if (firstOid !== undefined && currentOid !== undefined && currentOid !== firstOid) {
         throw new Error(
-          `Check-context pagination interrupted: head commit changed from ${firstOid} to ${currentOid} between pages (force-push race). Retry.`
+          `Check-context pagination interrupted: head commit changed from ${firstOid} to ${currentOid} between pages (force-push race). Retry.`,
         );
       }
       pageCount++;

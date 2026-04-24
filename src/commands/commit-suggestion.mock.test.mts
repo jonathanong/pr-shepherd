@@ -321,10 +321,6 @@ describe("runCommitSuggestion — thread classification", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Patch application failure
-// ---------------------------------------------------------------------------
-
 describe("runCommitSuggestion — file read failure", () => {
   it("throws with descriptive message when file cannot be read", async () => {
     vi.clearAllMocks();
@@ -487,7 +483,11 @@ describe("runCommitSuggestion — resolve failure", () => {
       errors: ["could not resolve PRRT_x"],
     });
 
-    const result = await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" });
+    const result = await runCommitSuggestion({
+      ...GLOBAL_OPTS,
+      threadId: "PRRT_x",
+      message: "fix",
+    });
     expect(result.applied).toBe(true);
     if (result.applied) {
       expect(result.commitSha).toBe("newsha");

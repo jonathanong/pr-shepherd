@@ -105,8 +105,16 @@ export async function handleMonitor(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
 
   const readyDelayStr = getFlag(extra, "--ready-delay");
-  const consumed = readyDelayStr !== null ? ["--ready-delay", readyDelayStr] : [];
-  const remaining = extra.filter((a) => !consumed.includes(a));
+  const remaining: string[] = [];
+  for (let i = 0; i < extra.length; i++) {
+    const a = extra[i]!;
+    if (a === "--ready-delay") {
+      i++;
+      continue;
+    }
+    if (a.startsWith("--ready-delay=")) continue;
+    remaining.push(a);
+  }
   const unknownFlags = remaining.filter((a) => a.startsWith("--"));
   if (unknownFlags.length > 0) {
     process.stderr.write(
@@ -116,7 +124,11 @@ export async function handleMonitor(args: string[]): Promise<void> {
 
   let result;
   try {
-    result = await runMonitor({ ...globalOpts, prNumber, readyDelaySuffix: readyDelayStr ?? undefined });
+    result = await runMonitor({
+      ...globalOpts,
+      prNumber,
+      readyDelaySuffix: readyDelayStr ?? undefined,
+    });
   } catch (err) {
     process.stderr.write(`${err instanceof Error ? err.message : String(err)}\n`);
     process.exitCode = 1;

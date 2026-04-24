@@ -71,7 +71,9 @@ async function fetchSummary(pr: number, owner: string, repo: string): Promise<Pr
     let cursor: string | null = p.reviewThreads.pageInfo?.startCursor ?? null;
     while (cursor !== null) {
       if (++pagesFetched > MAX_THREAD_PAGES) {
-        process.stderr.write(`pr-shepherd: thread pagination cap reached for PR #${pr}: fetched ${allNodes.length} of ${totalCount} threads\n`);
+        process.stderr.write(
+          `pr-shepherd: thread pagination cap reached for PR #${pr}: fetched ${allNodes.length} of ${totalCount} threads\n`,
+        );
         break;
       }
       // eslint-disable-next-line no-await-in-loop

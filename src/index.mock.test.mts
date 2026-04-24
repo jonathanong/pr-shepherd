@@ -48,7 +48,9 @@ describe("index — error exit", () => {
     mockMain.mockRejectedValueOnce(err);
     await loadIndex();
     const written = stderrSpy.mock.calls[0][0] as string;
-    expect(written).toMatch(/^pr-shepherd error: fetch failed \(cause: Error: getaddrinfo ENOTFOUND api\.github\.com/);
+    expect(written).toMatch(
+      /^pr-shepherd error: fetch failed \(cause: Error: getaddrinfo ENOTFOUND api\.github\.com/,
+    );
     expect(written).toMatch(/\)\n$/);
     expect(exitSpy).toHaveBeenCalledWith(1);
   });

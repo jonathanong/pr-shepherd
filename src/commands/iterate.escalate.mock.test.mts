@@ -286,7 +286,10 @@ describe("runIterate — escalate (fix-thrash)", () => {
 
   it("increments attempt count and calls writeFixAttempts on fix_code dispatch", async () => {
     // Use a different stored SHA so isNewSha=true and the increment fires.
-    mockReadFixAttempts.mockResolvedValue({ headSha: "old-sha", threadAttempts: { "thread-1": 1 } });
+    mockReadFixAttempts.mockResolvedValue({
+      headSha: "old-sha",
+      threadAttempts: { "thread-1": 1 },
+    });
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
