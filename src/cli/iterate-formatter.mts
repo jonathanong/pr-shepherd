@@ -66,9 +66,8 @@ export function formatIterateResult(result: IterateResult): string {
     }
 
     case "cancel": {
-      const cancelHeading = `# PR #${result.pr} [CANCEL] — ${result.reason}`;
       const parts = [
-        [cancelHeading, "", baseLine, summaryLine].join("\n"),
+        [`${heading} — ${result.reason}`, "", baseLine, summaryLine].join("\n"),
         result.log,
         "## Instructions",
         "1. Invoke `/loop cancel` via the Skill tool.\n2. Stop.",
