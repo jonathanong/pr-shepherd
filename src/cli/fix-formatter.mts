@@ -1,13 +1,8 @@
 import { renderResolveCommand } from "../commands/iterate.mts";
 import type { IterateResultFixCode } from "../types.mts";
 
-export function formatFixCodeResult(
-  header: string,
-  checksSection: string | null,
-  result: IterateResultFixCode,
-): string {
+export function formatFixCodeResult(header: string, result: IterateResultFixCode): string {
   const sections: string[] = [header];
-  if (checksSection) sections.push(checksSection);
 
   if (result.fix.threads.length > 0) {
     sections.push("## Review threads");

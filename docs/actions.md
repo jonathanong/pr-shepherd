@@ -14,12 +14,6 @@ The default output format is Markdown — what you see when running `npx pr-shep
 **status** `<…>` · **merge** `<…>` · **state** `<…>` · **repo** `<…>`
 **summary** <N> passing, <N> skipped, <N> filtered, <N> inProgress · **remainingSeconds** <N> · **copilotReviewInProgress** <bool> · **isDraft** <bool> · **shouldCancel** <bool>
 
-## Checks
-
-- ✗ `[<workflowName> › ]<name>` — <conclusion> · `<runId>` | external `<detailsUrl>` | (no runId)
-  > <failedStep>  (when available)
-  > <summary>    (when available)
-
 <action-specific body>
 
 ## Instructions
@@ -34,7 +28,7 @@ Load-bearing conventions (the monitor SKILL depends on these):
 3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … — that tells the monitor exactly what to do. The monitor follows those steps; it does not need its own dispatch table.
 4. Under `[REBASE]`, the shell script is inside a ```bash fenced block — instruction 1 tells the monitor to extract and run it.
 5. Under `[FIX_CODE]`, the `## Post-fix push` section has a `` resolve: `<command>` `` bullet — the instructions reference this bullet so the monitor strips backticks and runs the command.
-6. `## Checks` appears immediately after the base fields in every action where checks were fetched (all actions except `cooldown`). It lists only **failing** completed, non-skipped PR CI checks — ✗ bullets with conclusion, locator, failed step, and one-line summary when available. Passing checks are omitted; their count is in the `**summary**` line. The section is omitted when there are no failing checks (or during `cooldown` / when the PR has no CI configured). JSON surfaces the same data as `checks: RelevantCheck[]` on the base object.
+6. Passing check counts are surfaced only via the `**summary**` line — no per-check detail is emitted for passing checks. Failing check detail appears in `## Failing checks` (within `[FIX_CODE]` output). JSON surfaces all check data as `checks: RelevantCheck[]` on the base object.
 
 ---
 

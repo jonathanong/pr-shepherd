@@ -1,4 +1,4 @@
-import type { IterateResult, RelevantCheck } from "../types.mts";
+import type { IterateResult } from "../types.mts";
 import { formatFixCodeResult } from "./fix-formatter.mts";
 
 /**
@@ -21,7 +21,6 @@ export function formatIterateResult(result: IterateResult): string {
   const baseLine = `**status** \`${result.status}\` · **merge** \`${result.mergeStateStatus}\` · **state** \`${result.state}\` · **repo** \`${result.repo}\``;
   const summaryLine = `**summary** ${result.summary.passing} passing, ${result.summary.skipped} skipped, ${result.summary.filtered} filtered, ${result.summary.inProgress} inProgress · **remainingSeconds** ${result.remainingSeconds} · **copilotReviewInProgress** ${result.copilotReviewInProgress} · **isDraft** ${result.isDraft} · **shouldCancel** ${result.shouldCancel}`;
   const header = [heading, "", baseLine, summaryLine].join("\n");
-  const checksSection = formatChecksSection(result.checks);
 
   switch (result.action) {
     case "cooldown":
@@ -36,13 +35,7 @@ export function formatIterateResult(result: IterateResult): string {
       ].join("\n");
 
     case "wait": {
-      const parts = [header];
-      if (checksSection) parts.push(checksSection);
-      parts.push(
-        result.log,
-        "## Instructions",
-        "1. End this iteration — the next cron fire will recheck.",
-      );
+      const parts = [header, result.log, "## Instructions", "1. End this iteration — the next cron fire will recheck."];
       return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
     }
 
@@ -53,64 +46,41 @@ export function formatIterateResult(result: IterateResult): string {
       rerunInstructions.push(
         `${rerunInstructions.length + 1}. End this iteration — wait for CI to report results after the re-run.`,
       );
-      const parts = [header];
-      if (checksSection) parts.push(checksSection);
-      parts.push(result.log, "## Instructions", rerunInstructions.join("\n"));
+      const parts = [header, result.log, "## Instructions", rerunInstructions.join("\n")];
       return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
     }
 
     case "mark_ready": {
-      const parts = [header];
-      if (checksSection) parts.push(checksSection);
-      parts.push(
+      const parts = [
+        header,
         result.log,
         "## Instructions",
         "1. The CLI already marked the PR ready for review — end this iteration.",
-      );
+      ];
       return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
     }
 
     case "cancel": {
-      const parts = [header];
-      if (checksSection) parts.push(checksSection);
-      parts.push(
+      const parts = [
+        header,
         result.log,
         "## Instructions",
         "1. Invoke `/loop cancel` via the Skill tool.\n2. Stop.",
-      );
+      ];
       return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
     }
 
     case "escalate": {
-      const parts = [header];
-      if (checksSection) parts.push(checksSection);
-      parts.push(
+      const parts = [
+        header,
         result.escalate.humanMessage,
         "## Instructions",
         "1. Invoke `/loop cancel` via the Skill tool.\n2. Stop — the PR needs human direction before monitoring can resume.",
-      );
+      ];
       return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
     }
 
     case "fix_code":
-      return formatFixCodeResult(header, checksSection, result);
+      return formatFixCodeResult(header, result);
   }
-}
-
-export function formatChecksSection(checks: RelevantCheck[]): string | null {
-  const failing = checks.filter((c) => c.conclusion !== "SUCCESS");
-  if (failing.length === 0) return null;
-  const bullets = failing.map((c) => {
-    const locator = c.runId
-      ? `\`${c.runId}\``
-      : c.detailsUrl
-        ? `external \`${c.detailsUrl}\``
-        : "(no runId)";
-    const prefix = c.workflowName ? `${c.workflowName} › ` : "";
-    const entry = [`- ✗ \`${prefix}${c.name}\` — ${c.conclusion} · ${locator}`];
-    if (c.failedStep) entry.push(`  > ${c.failedStep}`);
-    if (c.summary) entry.push(`  > ${c.summary}`);
-    return entry.join("\n");
-  });
-  return ["## Checks", "", bullets.join("\n\n")].join("\n");
 }

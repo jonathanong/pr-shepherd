@@ -348,168 +348,20 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain("- (no runId) — `mystery-check`");
   });
 
-  it("## Checks section renders in wait/cancel/rerun_ci actions when checks is non-empty", async () => {
+  it("non-fix_code actions do not emit ## Checks — check count is in summary header only", async () => {
     const result = makeIterateResult("wait");
     result.checks = [
       {
         name: "lint",
-        conclusion: "SUCCESS",
+        conclusion: "FAILURE",
         runId: "run-1",
-        detailsUrl: "https://github.com/owner/repo/actions/runs/1",
-      },
-      {
-        name: "test",
-        conclusion: "FAILURE",
-        runId: "run-2",
-        detailsUrl: "https://github.com/owner/repo/actions/runs/2",
-        failureKind: "actionable",
-        failedStep: "Run tests",
-      },
-    ] as import("./types.mts").RelevantCheck[];
-    mockRunIterate.mockResolvedValue(result);
-
-    await main(["node", "shepherd", "iterate", "42"]);
-    const out = getStdout();
-
-    // ## Checks section present before ## Instructions
-    const checksIdx = out.indexOf("## Checks");
-    const instrIdx = out.indexOf("## Instructions");
-    expect(checksIdx).toBeGreaterThan(-1);
-    expect(instrIdx).toBeGreaterThan(checksIdx);
-
-    // Passing checks are not listed — only the count in the summary header matters.
-    expect(out).not.toContain("- ✓ `lint`");
-    // Failing check: ✗ bullet with conclusion and runId (no failureKind label).
-    expect(out).toContain("- ✗ `test` — FAILURE · `run-2`");
-    // failedStep rendered as blockquote
-    expect(out).toContain("  > Run tests");
-  });
-
-  it("## Checks — external detailsUrl renders `external` prefix; no-ID renders `(no runId)`", async () => {
-    const result = makeIterateResult("wait");
-    result.checks = [
-      {
-        name: "codecov/patch",
-        conclusion: "FAILURE",
-        runId: null,
-        detailsUrl: "https://app.codecov.io/gh/owner/repo/pull/42",
-        failureKind: "actionable",
-      },
-      {
-        name: "mystery",
-        conclusion: "FAILURE",
-        runId: null,
         detailsUrl: null,
-        failureKind: "cancelled",
-      },
-    ] as import("./types.mts").RelevantCheck[];
-    mockRunIterate.mockResolvedValue(result);
-
-    await main(["node", "shepherd", "iterate", "42"]);
-    const out = getStdout();
-
-    expect(out).toContain(
-      "- ✗ `codecov/patch` — FAILURE · external `https://app.codecov.io/gh/owner/repo/pull/42`",
-    );
-    expect(out).toContain("- ✗ `mystery` — FAILURE · (no runId)");
-  });
-
-  it("## Checks section renders in rerun_ci, mark_ready, cancel, rebase, escalate, fix_code when checks has failing entries", async () => {
-    const failingCheck: import("./types.mts").RelevantCheck = {
-      name: "lint",
-      conclusion: "FAILURE",
-      runId: "run-1",
-      detailsUrl: null,
-      failureKind: "actionable",
-    };
-    // Test each action that had an uncovered checksSection TRUE branch.
-    for (const action of ["rerun_ci", "mark_ready", "cancel", "escalate", "fix_code"] as const) {
-      const result = makeIterateResult(action);
-      result.checks = [failingCheck];
-      mockRunIterate.mockResolvedValue(result as IterateResult);
-      await main(["node", "shepherd", "iterate", "42"]);
-      const out = getStdout();
-      expect(out).toContain("## Checks");
-      expect(out).toContain("- ✗ `lint` — FAILURE · `run-1`");
-    }
-  });
-
-  it("## Checks — summary blockquote rendered when present, omitted when absent", async () => {
-    const result = makeIterateResult("wait");
-    result.checks = [
-      {
-        name: "codecov/patch",
-        conclusion: "FAILURE",
-        runId: null,
-        detailsUrl: "https://app.codecov.io",
-        summary: "67.68% of diff hit (target 85.00%)",
-      },
-      {
-        name: "lint",
-        conclusion: "FAILURE",
-        runId: "run-2",
-        detailsUrl: null,
-        // no summary — blockquote line should be absent
+        failureKind: "actionable",
       },
     ] as import("./types.mts").RelevantCheck[];
     mockRunIterate.mockResolvedValue(result);
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
-    // summary rendered as blockquote
-    expect(out).toContain("  > 67.68% of diff hit (target 85.00%)");
-    // check without summary has no trailing blockquote
-    expect(out).toContain("- ✗ `lint` — FAILURE · `run-2`");
-    // multiple failing checks separated by blank line
-    expect(out).toMatch(/codecov\/patch[\s\S]+\n\n- ✗/);
-  });
-
-  it("## Failing checks — summary blockquote rendered when present, omitted when absent", async () => {
-    const result = makeIterateResult("fix_code");
-    if (result.action !== "fix_code" || result.fix.mode !== "rebase-and-push") {
-      throw new Error("unreachable");
-    }
-    result.fix.checks = [
-      {
-        name: "codecov/patch",
-        runId: null,
-        detailsUrl: "https://app.codecov.io/a/b",
-        failureKind: "actionable",
-        summary: "67.68% of diff hit (target 85.00%)",
-      },
-      {
-        name: "lint",
-        runId: "run-42",
-        detailsUrl: null,
-        failureKind: "actionable",
-        // no summary
-      },
-    ];
-    mockRunIterate.mockResolvedValue(result);
-    await main(["node", "shepherd", "iterate", "42"]);
-    const out = getStdout();
-    // summary rendered as blockquote
-    expect(out).toContain("  > 67.68% of diff hit (target 85.00%)");
-    // check without summary has no trailing blockquote line for it
-    expect(out).toContain("- `run-42` — `lint`");
-    expect(out).not.toMatch(/`lint`\s*\n\s*>/);
-  });
-
-  it("## Checks — failing check with no failureKind omits kind suffix", async () => {
-    const result = makeIterateResult("wait");
-    result.checks = [
-      {
-        name: "external-check",
-        conclusion: "FAILURE",
-        runId: null,
-        detailsUrl: "https://example.com",
-        // no failureKind — exercises the `c.failureKind ? ...` false branch
-      } as import("./types.mts").RelevantCheck,
-    ];
-    mockRunIterate.mockResolvedValue(result);
-    await main(["node", "shepherd", "iterate", "42"]);
-    const out = getStdout();
-    // No kind suffix in parens when failureKind is absent
-    expect(out).toContain("- ✗ `external-check` — FAILURE · external `https://example.com`");
-    expect(out).not.toContain("(undefined)");
+    expect(out).not.toContain("## Checks");
   });
 });
