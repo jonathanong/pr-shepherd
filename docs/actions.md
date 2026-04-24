@@ -425,6 +425,6 @@ The block after the base-fields line (separated by a blank line) is `escalate.hu
 
 ### `rebase`
 
-> **This action is no longer emitted by `iterate`.** Branch rebasing is now handled inside the `fix_code` instructions (see `## Post-fix push` and the rebase step in `## Instructions`). The `rebase` action type and its formatter case are preserved in the codebase for reference, but the CLI will not produce `[REBASE]` output in current releases.
+> **This action is no longer emitted by `iterate`.** Branch rebasing is now handled inside the `fix_code` instructions (see `## Post-fix push` and the rebase step in `## Instructions`). Current releases no longer include a dedicated `rebase` action or `[REBASE]` formatter output.
 
 **Trigger:** Previously emitted when a branch was `BEHIND` its base and no other actionable items were pending. Removed in favour of embedding the rebase step inside `fix_code` when conflicts are present.
