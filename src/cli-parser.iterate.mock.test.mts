@@ -27,7 +27,7 @@ vi.mock("./github/client.mts", () => ({
 import { main } from "./cli-parser.mts";
 import { runIterate } from "./commands/iterate.mts";
 import { runStatus } from "./commands/status.mts";
-import type { IterateResult } from "./types.mts";
+import type { CancelReason, IterateResult } from "./types.mts";
 import { makeIterateResult } from "./cli-parser.iterate-fixtures.mts";
 
 const mockRunIterate = vi.mocked(runIterate);
@@ -144,11 +144,12 @@ describe("main — iterate text format", () => {
     expect(out).toContain("1. The CLI already marked the PR ready for review");
   });
 
-  it("cancel: heading includes [CANCEL] tag and ## Instructions with loop-cancel steps", async () => {
+  it("cancel: heading includes [CANCEL] tag with reason and ## Instructions with loop-cancel steps", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain("# PR #42 [CANCEL]");
+    expect(out).toContain("— ready-delay-elapsed");
     expect(out).toContain("## Instructions");
     expect(out).toContain("1. Invoke `/loop cancel` via the Skill tool.");
     expect(out).toContain("2. Stop.");
@@ -180,6 +181,25 @@ describe("main — iterate text format", () => {
     const parsed = JSON.parse(out);
     expect(parsed.action).toBe("wait");
     expect(parsed.pr).toBe(42);
+  });
+
+  it("cancel json: emits reason field so consumers can branch without parsing log", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
+    await main(["node", "shepherd", "iterate", "42", "--format", "json"]);
+    const parsed = JSON.parse(getStdout().trimEnd());
+    expect(parsed.action).toBe("cancel");
+    expect(parsed.reason).toBe("ready-delay-elapsed");
+  });
+
+  it("cancel text: each CancelReason value appears in the heading", async () => {
+    const reasons: CancelReason[] = ["merged", "closed", "ready-delay-elapsed"];
+    for (const reason of reasons) {
+      const base = makeIterateResult("cancel") as Extract<IterateResult, { action: "cancel" }>;
+      mockRunIterate.mockResolvedValue({ ...base, reason });
+      await main(["node", "shepherd", "iterate", "42"]);
+      const out = getStdout();
+      expect(out).toContain(`# PR #42 [CANCEL] — ${reason}`);
+    }
   });
 
   // Per CLAUDE.md output-format invariant: text and JSON must surface equivalent

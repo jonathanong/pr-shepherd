@@ -171,10 +171,12 @@ Stops the monitor loop — no further iterations needed.
 
 **Exit code:** 2
 
+**`reason` field:** The result carries a structured `reason` discriminator — `"merged"`, `"closed"`, or `"ready-delay-elapsed"` — as a first-class field in both JSON and Markdown output. JSON consumers should branch on `reason` rather than parsing `log`.
+
 **Markdown output:**
 
 ```markdown
-# PR #42 [CANCEL]
+# PR #42 [CANCEL] — merged
 
 **status** `READY` · **merge** `CLEAN` · **state** `MERGED` · **repo** `owner/repo`
 **summary** 5 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 0 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** true
@@ -186,6 +188,8 @@ CANCEL: PR #42 is merged — stopping monitor
 1. Invoke `/loop cancel` via the Skill tool.
 2. Stop.
 ```
+
+Other heading variants: `# PR #42 [CANCEL] — closed`, `# PR #42 [CANCEL] — ready-delay-elapsed`.
 
 Other body-line variants: `CANCEL: PR #42 is closed — stopping monitor`, `CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping monitor`.
 

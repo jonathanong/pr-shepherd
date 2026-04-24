@@ -46,7 +46,12 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
     };
   }
   if (action === "cancel")
-    return { ...base, action: "cancel", log: "CANCEL: PR #42 — stopping monitor" };
+    return {
+      ...base,
+      action: "cancel",
+      reason: "ready-delay-elapsed" as const,
+      log: "CANCEL: PR #42 — stopping monitor",
+    };
   if (action === "escalate") {
     return {
       ...base,
