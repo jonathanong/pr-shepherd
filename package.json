@@ -6,7 +6,7 @@
   "author": "Jonathan Ong",
   "type": "module",
   "bin": {
-    "pr-shepherd": "bin/index.mjs"
+    "pr-shepherd": "bin/pr-shepherd"
   },
   "files": [
     "bin/**",
