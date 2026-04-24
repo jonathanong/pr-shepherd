@@ -35,11 +35,16 @@ export function triageFailingChecks(
 
 async function triageCheck(check: ClassifiedCheck, repo: RepoInfo): Promise<TriagedCheck> {
   const failureKind = check.runId === null ? "actionable" : classifyConclusion(check.conclusion);
-  if (failureKind !== "actionable" || check.runId === null) {
+  if (check.runId === null) {
     return { ...check, failureKind };
   }
-  const failedStep = await fetchFailedStep(check.runId, check.name, repo);
-  return { ...check, failureKind, failedStep };
+  const jobInfo = await fetchJobInfo(check.runId, check.name, repo);
+  return {
+    ...check,
+    failureKind,
+    workflowName: jobInfo?.workflowName,
+    ...(failureKind === "actionable" && { failedStep: jobInfo?.failedStep }),
+  };
 }
 
 function classifyConclusion(c: CheckConclusion): FailureKind {
@@ -52,16 +57,22 @@ interface JobsResponse {
   jobs: Array<{
     id: number;
     name: string;
+    workflow_name?: string;
     conclusion: string | null;
     steps?: Array<{ name: string; number: number; conclusion: string | null }>;
   }>;
 }
 
-async function fetchFailedStep(
+interface JobInfo {
+  workflowName?: string;
+  failedStep?: string;
+}
+
+async function fetchJobInfo(
   runId: string,
   checkName: string,
   repo: RepoInfo,
-): Promise<string | undefined> {
+): Promise<JobInfo | undefined> {
   const { owner, name } = repo;
   const perPage = 100;
   const allJobs: JobsResponse["jobs"] = [];
@@ -81,5 +92,8 @@ async function fetchFailedStep(
   const matches = allJobs.filter((j) => j.name === checkName);
   const job = matches.find((j) => j.conclusion === "failure") ?? matches[0];
   const failedStep = job?.steps?.find((s) => s.conclusion === "failure");
-  return failedStep?.name;
+  return {
+    workflowName: job?.workflow_name,
+    failedStep: failedStep?.name,
+  };
 }

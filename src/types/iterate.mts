@@ -125,6 +125,8 @@ export interface ReranRun {
   /** Check names within this run that triggered the rerun (multiple steps can share a run). */
   checkNames: string[];
   failureKind: "timeout" | "cancelled";
+  /** Workflow display name (e.g. `"CI"`). */
+  workflowName?: string;
 }
 
 export interface IterateResultRerunCi extends IterateResultBase {

@@ -27,13 +27,15 @@ export async function buildRerunCiResult(
         runId: c.runId,
         checkNames: [c.name],
         failureKind: c.failureKind as "timeout" | "cancelled",
+        workflowName: c.workflowName,
       });
     }
   }
   const reran = [...runMap.values()];
-  const runSummaries = reran.map(
-    ({ runId, checkNames, failureKind }) => `${runId} (${checkNames.join(", ")} — ${failureKind})`,
-  );
+  const runSummaries = reran.map(({ runId, checkNames, failureKind, workflowName }) => {
+    const prefix = workflowName ? `${workflowName} › ` : "";
+    return `${runId} (${prefix}${checkNames.join(", ")} — ${failureKind})`;
+  });
   return applyStallGuard(
     stallKey,
     stallTimeoutSeconds,

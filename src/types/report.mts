@@ -102,6 +102,8 @@ export interface AgentCheck {
   /** Fallback for checks where runId is null (e.g. external status checks). */
   detailsUrl: string | null;
   failureKind?: FailureKind;
+  /** Workflow display name (e.g. `"CI"`). Available for all checks with a runId. */
+  workflowName?: string;
   /** For `actionable` failures: name of the first failed step (e.g. `"Run tests"`, `"Set up job"`). */
   failedStep?: string;
 }
@@ -124,6 +126,8 @@ export interface RelevantCheck {
   detailsUrl: string | null;
   /** Present for non-SUCCESS conclusions. */
   failureKind?: FailureKind;
+  /** Workflow display name (e.g. `"CI"`). Available for all checks with a runId. */
+  workflowName?: string;
   /** For `actionable` failures: name of the first failed step in the matched job. */
   failedStep?: string;
 }

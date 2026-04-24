@@ -123,7 +123,8 @@ export function formatChecksSection(checks: RelevantCheck[]): string | null {
         : c.detailsUrl
           ? `external \`${c.detailsUrl}\``
           : "(no runId)";
-      lines.push(`- ✗ \`${c.name}\`${kind} — ${c.conclusion} · ${locator}`);
+      const prefix = c.workflowName ? `${c.workflowName} › ` : "";
+      lines.push(`- ✗ \`${prefix}${c.name}\`${kind} — ${c.conclusion} · ${locator}`);
       if (c.failedStep) {
         lines.push(`  > ${c.failedStep}`);
       }

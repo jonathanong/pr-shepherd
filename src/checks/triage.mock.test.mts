@@ -32,6 +32,7 @@ function makeCheck(overrides: Partial<ClassifiedCheck> = {}): ClassifiedCheck {
 type JobStub = {
   id: number;
   name: string;
+  workflow_name?: string;
   conclusion: string;
   steps?: Array<{ name: string; number: number; conclusion: string | null }>;
 };
@@ -81,48 +82,72 @@ describe("triageFailingChecks — no runId", () => {
 });
 
 describe("triageFailingChecks — TIMED_OUT", () => {
-  it("returns timeout for TIMED_OUT conclusion; skips fetch", async () => {
+  it("returns timeout with workflowName; fetches job info", async () => {
+    mockFetch.mockResolvedValueOnce(
+      makeJobsResponse([{ id: 1, name: "tests", workflow_name: "CI", conclusion: "timed_out" }]),
+    );
     const [result] = await triageFailingChecks([makeCheck({ conclusion: "TIMED_OUT" })], REPO);
     expect(result!.failureKind).toBe("timeout");
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(result!.workflowName).toBe("CI");
+    expect(result!.failedStep).toBeUndefined();
+    expect(mockFetch).toHaveBeenCalled();
   });
 });
 
 describe("triageFailingChecks — cancelled", () => {
-  it("returns cancelled for CANCELLED conclusion; skips fetch", async () => {
+  it("returns cancelled with workflowName for CANCELLED; fetches job info", async () => {
+    mockFetch.mockResolvedValueOnce(
+      makeJobsResponse([{ id: 1, name: "tests", workflow_name: "CI", conclusion: "cancelled" }]),
+    );
     const [result] = await triageFailingChecks([makeCheck({ conclusion: "CANCELLED" })], REPO);
     expect(result!.failureKind).toBe("cancelled");
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(result!.workflowName).toBe("CI");
+    expect(result!.failedStep).toBeUndefined();
   });
 
-  it("returns cancelled for STARTUP_FAILURE conclusion; skips fetch", async () => {
+  it("returns cancelled for STARTUP_FAILURE conclusion", async () => {
+    mockFetch.mockResolvedValueOnce(
+      makeJobsResponse([{ id: 1, name: "tests", conclusion: "cancelled" }]),
+    );
     const [result] = await triageFailingChecks(
       [makeCheck({ conclusion: "STARTUP_FAILURE" })],
       REPO,
     );
     expect(result!.failureKind).toBe("cancelled");
-    expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it("returns cancelled for STALE conclusion; skips fetch", async () => {
+  it("returns cancelled for STALE conclusion", async () => {
+    mockFetch.mockResolvedValueOnce(
+      makeJobsResponse([{ id: 1, name: "tests", conclusion: "cancelled" }]),
+    );
     const [result] = await triageFailingChecks([makeCheck({ conclusion: "STALE" })], REPO);
     expect(result!.failureKind).toBe("cancelled");
-    expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it("does not set failedStep for cancelled checks", async () => {
+  it("does not set failedStep for cancelled checks even when fetch succeeds", async () => {
+    mockFetch.mockResolvedValueOnce(
+      makeJobsResponse([
+        {
+          id: 1,
+          name: "tests",
+          conclusion: "cancelled",
+          steps: [{ name: "Run tests", number: 1, conclusion: "cancelled" }],
+        },
+      ]),
+    );
     const [result] = await triageFailingChecks([makeCheck({ conclusion: "CANCELLED" })], REPO);
     expect(result!.failedStep).toBeUndefined();
   });
 });
 
 describe("triageFailingChecks — actionable: failedStep", () => {
-  it("returns actionable and extracts failedStep from matching job", async () => {
+  it("returns actionable and extracts failedStep + workflowName from matching job", async () => {
     mockFetch.mockResolvedValueOnce(
       makeJobsResponse([
         {
           id: 42,
           name: "tests",
+          workflow_name: "CI",
           conclusion: "failure",
           steps: [
             { name: "Set up job", number: 1, conclusion: "success" },
@@ -134,6 +159,7 @@ describe("triageFailingChecks — actionable: failedStep", () => {
     );
     const [result] = await triageFailingChecks([makeCheck()], REPO);
     expect(result!.failureKind).toBe("actionable");
+    expect(result!.workflowName).toBe("CI");
     expect(result!.failedStep).toBe("Run tests");
   });
 
@@ -223,7 +249,7 @@ describe("triageFailingChecks — batch", () => {
     expect(results).toHaveLength(2);
     expect(results[0]!.failureKind).toBe("actionable");
     expect(results[0]!.failedStep).toBe("Run tests");
-    // CANCELLED → no fetch; mock for run-2 won't be called
+    // CANCELLED → fetch is called for workflowName; mock for run-2 is consumed
     expect(results[1]!.failureKind).toBe("cancelled");
     expect(results[1]!.failedStep).toBeUndefined();
   });
