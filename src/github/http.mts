@@ -29,12 +29,9 @@ export function _resetTokenCache(): void {
 async function resolveToken(): Promise<string> {
   if (_token) return _token;
 
-  if (process.env["GH_TOKEN"]) {
-    _token = process.env["GH_TOKEN"];
-    return _token;
-  }
-  if (process.env["GITHUB_TOKEN"]) {
-    _token = process.env["GITHUB_TOKEN"];
+  const envToken = process.env["GH_TOKEN"] ?? process.env["GITHUB_TOKEN"];
+  if (envToken) {
+    _token = envToken;
     return _token;
   }
 
@@ -69,8 +66,11 @@ function sanitizeBody(body: string): string {
 async function requestWithTokenRetry(fn: () => Promise<Response>): Promise<Response> {
   const res = await fn();
   if (res.status === 401 && _token !== undefined) {
-    try { await res.arrayBuffer(); } catch {}
-    _token = undefined; return fn();
+    try {
+      await res.arrayBuffer();
+    } catch {}
+    _token = undefined;
+    return fn();
   }
   return res;
 }
