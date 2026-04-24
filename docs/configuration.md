@@ -252,4 +252,3 @@ Disable if you want the agent to read and re-implement every suggestion (e.g. be
 | `PR_SHEPHERD_CACHE_DIR`         | Override the cache base directory (default `$TMPDIR/pr-shepherd-cache`)                                          |
 | `PR_SHEPHERD_CACHE_TTL_SECONDS` | Override `cache.ttlSeconds`. Precedence: `--cache-ttl` > this env var > RC/config value.                         |
 | `GH_TOKEN` / `GITHUB_TOKEN`     | GitHub auth token. Resolution order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` fallback (requires `gh` CLI). |
-

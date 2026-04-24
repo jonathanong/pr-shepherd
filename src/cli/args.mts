@@ -177,5 +177,3 @@ export function parseStatusPrNumbers(args: string[]): number[] {
   }
   return prNumbers;
 }
-
-

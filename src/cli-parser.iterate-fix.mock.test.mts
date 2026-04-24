@@ -422,13 +422,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
       detailsUrl: null,
     };
     // Test each action that had an uncovered checksSection TRUE branch.
-    for (const action of [
-      "rerun_ci",
-      "mark_ready",
-      "cancel",
-      "escalate",
-      "fix_code",
-    ] as const) {
+    for (const action of ["rerun_ci", "mark_ready", "cancel", "escalate", "fix_code"] as const) {
       const result = makeIterateResult(action);
       result.checks = [passingCheck];
       mockRunIterate.mockResolvedValue(result as IterateResult);

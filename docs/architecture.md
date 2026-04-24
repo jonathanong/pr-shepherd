@@ -4,7 +4,7 @@
 
 ## Module tree
 
-```
+````
 shepherd/
 ├── index.mts              # bin entrypoint — thin shim that imports cli-parser
 ├── cli-parser.mts         # argv dispatch; subcommand routing
@@ -89,7 +89,7 @@ shepherd/
 │
 └── util/
     └── path-segment.mts   # path-segment parsing utility
-```
+````
 
 ## Dependency direction rule
 
@@ -112,15 +112,15 @@ Never import upward (e.g., `github` importing from `commands`) — that creates 
 
 ## Where to put new code
 
-| What you're adding               | Where it goes                                                      |
-| -------------------------------- | ------------------------------------------------------------------ |
-| New subcommand                   | `commands/<name>.mts`                                              |
-| New GraphQL query or mutation    | `github/gql/<name>.gql` + loader in `queries.mts`                  |
-| New CI check classifier category | `checks/classify.mts` + type in `types/github.mts`                 |
-| New failure kind                 | `checks/triage.mts` + type in `types/github.mts`                   |
-| New thread/comment mutation      | `comments/resolve.mts` + `ResolveOptions` in `types/report.mts`    |
-| New merge state derivation rule  | `merge-status/derive.mts`                                          |
-| New tunable constant             | `config.json` + `PrShepherdConfig` in `config/load.mts`            |
-| New shared type                  | `types/github.mts`, `types/iterate.mts`, or `types/report.mts`     |
+| What you're adding               | Where it goes                                                   |
+| -------------------------------- | --------------------------------------------------------------- |
+| New subcommand                   | `commands/<name>.mts`                                           |
+| New GraphQL query or mutation    | `github/gql/<name>.gql` + loader in `queries.mts`               |
+| New CI check classifier category | `checks/classify.mts` + type in `types/github.mts`              |
+| New failure kind                 | `checks/triage.mts` + type in `types/github.mts`                |
+| New thread/comment mutation      | `comments/resolve.mts` + `ResolveOptions` in `types/report.mts` |
+| New merge state derivation rule  | `merge-status/derive.mts`                                       |
+| New tunable constant             | `config.json` + `PrShepherdConfig` in `config/load.mts`         |
+| New shared type                  | `types/github.mts`, `types/iterate.mts`, or `types/report.mts`  |
 
 See [extending.md](extending.md) for step-by-step recipes.
