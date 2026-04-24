@@ -58,4 +58,4 @@ frontmatter that is not valid for `.claude/commands/` files. Instead, create
 using the same command-file structure as the `pr-check` example above, with
 the CLI invocation changed to `npx pr-shepherd iterate ...` or
 `npx pr-shepherd resolve ...`. To drive the CLI without Claude at all, see
-[usage.md](usage.md).
+[cli-usage.md](cli-usage.md).

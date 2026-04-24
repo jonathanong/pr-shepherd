@@ -26,6 +26,8 @@ Use it from the same worktree/repository so it picks up the skills and configura
 
 When making changes, review [`docs/`](docs/) and [`README.md`](README.md) for impact. Update them when the change affects user-facing behavior, commands, configuration, or workflows so the documentation stays in sync as part of the same change, not as a follow-up. If no documentation updates are needed, it is OK to leave them unchanged (optionally noting `docs: n/a`).
 
+`docs/actions.md` is the canonical spec for `shepherd iterate` output — the monitor SKILL and agent consumers read the `## Instructions` sections and section structure directly. Any change to iterate action output (new triggers, new sections, new instruction variants, JSON field moves) must land together with the matching `docs/actions.md` edit in the same PR. If you change the CLI's output shape without updating the doc, the skill silently drifts.
+
 ## Markdown output readability
 
 CLI output that targets a human or an AI agent must be easy to read and act on:
