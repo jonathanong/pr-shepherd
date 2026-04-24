@@ -1,13 +1,5 @@
 {
-  "extraKnownMarketplaces": {
-    "pr-shepherd-dev": {
-      "source": {
-        "source": "directory",
-        "path": "./.claude-plugin-dev"
-      }
-    }
-  },
   "enabledPlugins": {
-    "pr-shepherd@pr-shepherd-dev": true
+    "pr-shepherd@local": true
   }
 }

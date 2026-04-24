@@ -12,7 +12,7 @@ The `bin/` directory is gitignored and must be built before `npx pr-shepherd` wo
 
 If no `core.hooksPath` is already configured in the local repo config, `npm install` registers `.githooks/pre-push` (lint + typecheck) via `git config core.hooksPath .githooks`. If `core.hooksPath` is already set locally, the install step is skipped and your existing hooks path takes precedence. Bypass with `git push --no-verify`.
 
-Each worktree's `.claude/settings.json` registers a per-worktree `pr-shepherd-dev` marketplace that sources the plugin from that worktree's own `plugin/` directory. No manual symlink management. Opening Claude Code in a fresh worktree auto-enables `pr-shepherd@pr-shepherd-dev` from its own files; after reloading plugins you may need to `/plugin install pr-shepherd@pr-shepherd-dev` once.
+Running `npm install` also updates the `~/.claude/plugins/marketplaces/local/plugins/pr-shepherd/skills` symlink to point at this worktree's `plugin/skills/`. After installing in a new worktree, run `/reload-plugins` (or restart Claude Code) so the plugin picks up the updated path.
 
 ## Output format invariant
 
