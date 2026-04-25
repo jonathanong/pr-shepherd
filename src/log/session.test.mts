@@ -19,13 +19,6 @@ describe("buildSessionHeader", () => {
     const { markdown } = buildSessionHeader(["node", "bin/index.mjs"]);
     expect(markdown).toContain("(no args)");
   });
-
-  it("returns a context whose nextEntry() increments", () => {
-    const { ctx } = buildSessionHeader(["node", "bin/index.mjs", "check"]);
-    expect(ctx.nextEntry()).toBe(1);
-    expect(ctx.nextEntry()).toBe(2);
-    expect(ctx.nextEntry()).toBe(3);
-  });
 });
 
 describe("formatRequestEntry", () => {

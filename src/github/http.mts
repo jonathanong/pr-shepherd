@@ -69,16 +69,24 @@ function redactToken(body: string): string {
   return body.replace(/Bearer\s+\S+/gi, "[REDACTED]");
 }
 
-async function requestWithTokenRetry(fn: () => Promise<Response>): Promise<Response> {
+type RetryLogFn = (status: number, durationMs: number) => void;
+
+async function requestWithTokenRetry(
+  fn: () => Promise<Response>,
+  t0: number,
+  onIntermediate?: RetryLogFn,
+): Promise<{ res: Response; attempt: number; retryT0: number }> {
   const res = await fn();
   if (res.status === 401 && _token !== undefined) {
+    onIntermediate?.(401, Math.round(performance.now() - t0));
     try {
       await res.arrayBuffer();
     } catch {}
     _token = undefined;
-    return fn();
+    const retryT0 = performance.now();
+    return { res: await fn(), attempt: 2, retryT0 };
   }
-  return res;
+  return { res, attempt: 1, retryT0: t0 };
 }
 
 // ---------------------------------------------------------------------------
@@ -102,15 +110,29 @@ async function graphqlInner<T>(
   );
   const t0 = performance.now();
 
-  const res = await requestWithTokenRetry(async () =>
-    fetch(url, {
-      method: "POST",
-      headers: await makeHeaders(),
-      body: JSON.stringify({ query, variables: vars }),
-    }),
+  const { res, attempt, retryT0 } = await requestWithTokenRetry(
+    async () =>
+      fetch(url, {
+        method: "POST",
+        headers: await makeHeaders(),
+        body: JSON.stringify({ query, variables: vars }),
+      }),
+    t0,
+    (status, firstDurationMs) => {
+      appendEntry(
+        formatResponseEntry({
+          n,
+          kind: "GraphQL",
+          method: "POST",
+          url,
+          status,
+          durationMs: firstDurationMs,
+        }),
+      );
+    },
   );
 
-  const durationMs = Math.round(performance.now() - t0);
+  const durationMs = Math.round(performance.now() - retryT0);
   const rateLimit = parseRateLimit(res.headers);
 
   if (!res.ok) {
@@ -124,6 +146,7 @@ async function graphqlInner<T>(
         status: res.status,
         durationMs,
         textBody: redactToken(body),
+        attempt: attempt > 1 ? attempt : undefined,
       }),
     );
     throw new Error(`GitHub GraphQL request failed: ${res.status} ${sanitizeBody(body)}`);
@@ -139,6 +162,7 @@ async function graphqlInner<T>(
       status: res.status,
       durationMs,
       body: parsed,
+      attempt: attempt > 1 ? attempt : undefined,
     }),
   );
 
@@ -180,15 +204,22 @@ export async function rest<T = unknown>(method: string, path: string, body?: unk
   appendEntry(formatRequestEntry({ n, kind: "REST", method, url, body }));
   const t0 = performance.now();
 
-  const res = await requestWithTokenRetry(async () =>
-    fetch(url, {
-      method,
-      headers: await makeHeaders(),
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    }),
+  const { res, attempt, retryT0 } = await requestWithTokenRetry(
+    async () =>
+      fetch(url, {
+        method,
+        headers: await makeHeaders(),
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      }),
+    t0,
+    (status, firstDurationMs) => {
+      appendEntry(
+        formatResponseEntry({ n, kind: "REST", method, url, status, durationMs: firstDurationMs }),
+      );
+    },
   );
 
-  const durationMs = Math.round(performance.now() - t0);
+  const durationMs = Math.round(performance.now() - retryT0);
   const ct = res.headers.get("content-type") ?? "";
 
   if (!res.ok) {
@@ -202,6 +233,7 @@ export async function rest<T = unknown>(method: string, path: string, body?: unk
         status: res.status,
         durationMs,
         textBody: redactToken(text),
+        attempt: attempt > 1 ? attempt : undefined,
       }),
     );
     throw new Error(`GitHub REST ${method} ${path} failed: ${res.status} ${sanitizeBody(text)}`);
@@ -219,6 +251,7 @@ export async function rest<T = unknown>(method: string, path: string, body?: unk
         durationMs,
         contentType: ct,
         body: json,
+        attempt: attempt > 1 ? attempt : undefined,
       }),
     );
     return json;
@@ -232,6 +265,7 @@ export async function rest<T = unknown>(method: string, path: string, body?: unk
       status: res.status,
       durationMs,
       contentType: ct || undefined,
+      attempt: attempt > 1 ? attempt : undefined,
     }),
   );
   return undefined as T;
@@ -243,15 +277,29 @@ export async function restText(path: string): Promise<string> {
   appendEntry(formatRequestEntry({ n, kind: "restText", method: "GET", url }));
   const t0 = performance.now();
 
-  const res = await requestWithTokenRetry(async () =>
-    fetch(url, {
-      method: "GET",
-      headers: await makeHeaders(),
-      redirect: "manual",
-    }),
+  const { res, attempt, retryT0 } = await requestWithTokenRetry(
+    async () =>
+      fetch(url, {
+        method: "GET",
+        headers: await makeHeaders(),
+        redirect: "manual",
+      }),
+    t0,
+    (status, firstDurationMs) => {
+      appendEntry(
+        formatResponseEntry({
+          n,
+          kind: "restText",
+          method: "GET",
+          url,
+          status,
+          durationMs: firstDurationMs,
+        }),
+      );
+    },
   );
 
-  const durationMs = Math.round(performance.now() - t0);
+  const durationMs = Math.round(performance.now() - retryT0);
 
   if (res.status === 301 || res.status === 302 || res.status === 307 || res.status === 308) {
     appendEntry(
@@ -262,6 +310,7 @@ export async function restText(path: string): Promise<string> {
         url,
         status: res.status,
         durationMs,
+        attempt: attempt > 1 ? attempt : undefined,
       }),
     );
     const location = res.headers.get("location");
@@ -302,6 +351,7 @@ export async function restText(path: string): Promise<string> {
         url,
         status: res.status,
         durationMs,
+        attempt: attempt > 1 ? attempt : undefined,
       }),
     );
     throw new Error(`GitHub REST GET ${path} failed: ${res.status} ${sanitizeBody(text)}`);
@@ -319,6 +369,7 @@ export async function restText(path: string): Promise<string> {
       status: res.status,
       durationMs,
       contentLength,
+      attempt: attempt > 1 ? attempt : undefined,
     }),
   );
   return res.text();

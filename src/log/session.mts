@@ -7,19 +7,13 @@ function readVersion(): string {
   return pkg.version;
 }
 
-export interface SessionContext {
-  /** Monotonically-incrementing counter for entries within this session. */
-  nextEntry: () => number;
-}
-
-/** Builds the session header markdown block and returns a counter for entry numbering. */
-export function buildSessionHeader(argv: string[]): { markdown: string; ctx: SessionContext } {
+/** Builds the session header markdown block. */
+export function buildSessionHeader(argv: string[]): { markdown: string } {
   const ts = new Date().toISOString();
   const cmd = argv.slice(2).join(" ") || "(no args)";
-  let n = 0;
   const markdown =
     `## ${ts} — pr-shepherd ${cmd}\n` + `pid: ${process.pid} · version: ${readVersion()}\n\n`;
-  return { markdown, ctx: { nextEntry: () => ++n } };
+  return { markdown };
 }
 
 export interface HttpRequestEntry {
@@ -98,8 +92,8 @@ export function formatResponseEntry(entry: HttpResponseEntry): string {
     entry.kind === "GraphQL"
       ? `GraphQL response — ${entry.status}${attempt} · ${entry.durationMs}ms`
       : entry.kind === "restText"
-        ? `restText response — ${entry.status} · ${entry.durationMs}ms`
-        : `REST response — ${entry.status} · ${entry.durationMs}ms`;
+        ? `restText response — ${entry.status}${attempt} · ${entry.durationMs}ms`
+        : `REST response — ${entry.status}${attempt} · ${entry.durationMs}ms`;
 
   let out = `### #${entry.n} ${label}\n${ts}\n`;
 

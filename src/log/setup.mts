@@ -4,6 +4,14 @@ import { getRepoInfo } from "../github/client.mts";
 
 let _done = false;
 
+function detectFormat(argv: string[]): "text" | "json" {
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === "--format=json") return "json";
+    if (argv[i] === "--format" && argv[i + 1] === "json") return "json";
+  }
+  return "text";
+}
+
 /**
  * Initialize the per-worktree log, write the session header, and install a
  * stdout tee that routes all CLI output to the log. No-op after the first call.
@@ -23,20 +31,17 @@ export async function setupLog(argv: string[]): Promise<void> {
   const { markdown: header } = buildSessionHeader(argv);
   appendEntry(header);
 
-  let outputBuffer = "";
+  const format = detectFormat(argv);
   const origWrite = process.stdout.write.bind(process.stdout);
   process.stdout.write = (
     chunk: string | Uint8Array,
     encodingOrCb?: BufferEncoding | ((err?: Error | null) => void),
     cb?: (err?: Error | null) => void,
   ): boolean => {
-    outputBuffer += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
+    const text = typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
+    if (text.length > 0) appendEntry(formatOutputEntry(text, format));
     return typeof encodingOrCb === "function"
       ? origWrite(chunk, encodingOrCb)
       : origWrite(chunk, encodingOrCb as BufferEncoding, cb);
   };
-
-  process.once("exit", () => {
-    if (outputBuffer.length > 0) appendEntry(formatOutputEntry(outputBuffer, "text"));
-  });
 }
