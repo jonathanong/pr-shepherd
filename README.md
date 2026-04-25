@@ -14,7 +14,7 @@ Example Workflow:
 7. PR has passing CI -> draft is marked Ready for Review
 8. Review bots begin providing reviews
 9. Agent automatically classifies and fixes review comments based on the Plan
-10. Human reviews PR with passing CI, no open threads, and all comments minimized
+10. Human reviews PR with a well-documented PR title and description, passing CI, and no open threads/comments/reviews
 
 ## How it works
 
@@ -71,7 +71,7 @@ Each iteration calls `npx pr-shepherd iterate <PR>`, which provides actionable f
 1. Fix the code
 2. [Shown only if the branch is out of date] Rebase <DEFAULT BRANCH> if out of date
 3. [If rebased] git push --force-with-lease [If not rebased] git push
-4. Resolve/minimize comments
+4. Call the `resolve` step above
 5. Stop
 ```
 
@@ -80,6 +80,22 @@ On every iteration, a command is returned to instruct the agent exactly what to 
 ```bash
 `npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
 ```
+
+## Workflow
+
+This system makes opinionated decisions, which may or may not work for your team's workflow.
+
+- The following PR branch protection rules are expected:
+  - There exists status checks that are `required`
+  - All inline comments are resolved
+- **ALL** comments/threads/reviews will be hidden by default except for PR approvals. The only option here is to hide PR approvals as well.
+  - The primary reason is to optimize tokens by avoiding re-fetching comments and re-adding them to the agent's context.
+  - This also ties hand-in-hand with requiring all inline comments to be resolved.
+  - We also want to avoid storing state as comments can be un-resolved/-minimized/-hidden.
+- `pr-shepherd` keeps the PR title and description up to date, including a journal of decisions with links to comments/threads/reviews (that would be hidden at this point).
+  - This may break your workflow if your PR titles and descriptions are restricted to a specific format.
+- Branches are currently kept up-to-date with `git push --force-with-lease`.
+- To optimize AI code reviewer tokens, create your pull requests initially as drafts and instruct your AI code reviewers to only code review PRs that are ready for review. `pr-shepherd` will automatically mark PRs as ready for review when all CI passes (can be disabled). If you have no intention of marking your PR as ready for review, then don't run `pr-shepherd`.
 
 ## Why pr-shepherd
 
