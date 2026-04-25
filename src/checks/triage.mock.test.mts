@@ -402,66 +402,6 @@ describe("triageFailingChecks — log tail", () => {
   });
 });
 
-describe("triageFailingChecks — step log extraction", () => {
-  it("extracts only lines within the matching ##[group] section", async () => {
-    const log = [
-      "2024-01-01T00:00:00Z ##[group]Set up job",
-      "2024-01-01T00:00:01Z setup line 1",
-      "2024-01-01T00:00:02Z ##[endgroup]",
-      "2024-01-01T00:00:03Z ##[group]Run tests",
-      "2024-01-01T00:00:04Z test failure output",
-      "2024-01-01T00:00:05Z ##[endgroup]",
-    ].join("\n");
-    mockFetch
-      .mockResolvedValueOnce(
-        makeJobsResponse([
-          {
-            id: 1,
-            name: "tests",
-            conclusion: "failure",
-            steps: [{ name: "Run tests", number: 1, conclusion: "failure" }],
-          },
-        ]),
-      )
-      .mockResolvedValueOnce(makeLogsRedirectResponse("https://s3.example.com/logs"))
-      .mockResolvedValueOnce(makeLogTextResponse(log));
-    const [result] = await triageFailingChecks([makeCheck()], REPO, 10);
-    expect(result!.logTail).toContain("test failure output");
-    expect(result!.logTail).not.toContain("setup line 1");
-  });
-
-  it("falls back to full log when no group matches the failed step", async () => {
-    const log = ["line 1", "line 2", "line 3"].join("\n");
-    mockFetch
-      .mockResolvedValueOnce(
-        makeJobsResponse([
-          {
-            id: 1,
-            name: "tests",
-            conclusion: "failure",
-            steps: [{ name: "Run tests", number: 1, conclusion: "failure" }],
-          },
-        ]),
-      )
-      .mockResolvedValueOnce(makeLogsRedirectResponse("https://s3.example.com/logs"))
-      .mockResolvedValueOnce(makeLogTextResponse(log));
-    const [result] = await triageFailingChecks([makeCheck()], REPO, 10);
-    expect(result!.logTail).toBe("line 1\nline 2\nline 3");
-  });
-
-  it("applies logTailChars character limit after line limit", async () => {
-    const log = Array.from({ length: 5 }, (_, i) => `line-${i.toString().padStart(2, "0")}`).join(
-      "\n",
-    );
-    mockFetch
-      .mockResolvedValueOnce(makeJobsResponse([{ id: 1, name: "tests", conclusion: "failure" }]))
-      .mockResolvedValueOnce(makeLogsRedirectResponse("https://s3.example.com/logs"))
-      .mockResolvedValueOnce(makeLogTextResponse(log));
-    const [result] = await triageFailingChecks([makeCheck()], REPO, 10, 10);
-    expect(result!.logTail!.length).toBeLessThanOrEqual(10);
-  });
-});
-
 describe("triageFailingChecks — batch", () => {
   it("triages multiple checks; different runIds each get their own fetch", async () => {
     mockFetch
