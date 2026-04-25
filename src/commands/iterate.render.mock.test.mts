@@ -367,3 +367,45 @@ describe("runIterate — prescriptive fields: log strings", () => {
 });
 
 // renderResolveCommand and buildResolveCommand tests moved to iterate.render-resolve-cmd.mock.test.mts
+
+// ---------------------------------------------------------------------------
+// HAS_HOOKS — derived BLOCKED, raw HAS_HOOKS
+// ---------------------------------------------------------------------------
+
+describe("runIterate — HAS_HOOKS (derived BLOCKED)", () => {
+  function makeHasHooksReport(reviewDecision: "REVIEW_REQUIRED" | null) {
+    return makeReport({
+      status: "READY",
+      mergeStatus: {
+        status: "BLOCKED",
+        state: "OPEN" as const,
+        isDraft: false,
+        mergeable: "MERGEABLE",
+        reviewDecision,
+        copilotReviewInProgress: false,
+        mergeStateStatus: "HAS_HOOKS",
+      },
+    });
+  }
+
+  it("cancel-note uses branch-protection wording when raw is HAS_HOOKS", async () => {
+    mockRunCheck.mockResolvedValue(makeHasHooksReport(null));
+    mockUpdateReadyDelay.mockResolvedValue({ isReady: true, shouldCancel: true, remainingSeconds: 0 });
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("cancel");
+    if (result.action === "cancel") {
+      expect(result.log).toContain("branch protection");
+      expect(result.log).not.toContain("ready for review");
+    }
+  });
+
+  it("wait log uses branch-protection wording when raw is HAS_HOOKS", async () => {
+    mockRunCheck.mockResolvedValue(makeHasHooksReport(null));
+    mockUpdateReadyDelay.mockResolvedValue({ isReady: true, shouldCancel: false, remainingSeconds: 300 });
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("wait");
+    if (result.action === "wait") {
+      expect(result.log).toContain("branch protection");
+    }
+  });
+});

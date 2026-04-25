@@ -404,10 +404,7 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
 
 // Human approval pending — cancel after ready-delay elapses
 
-function makeBlockedReadyReport(
-  reviewDecision: "REVIEW_REQUIRED" | "APPROVED" | null,
-  mergeStateStatus: "BLOCKED" | "HAS_HOOKS" = "BLOCKED",
-) {
+function makeBlockedReadyReport(reviewDecision: "REVIEW_REQUIRED" | "APPROVED" | null) {
   return makeReport({
     status: "READY",
     mergeStatus: {
@@ -417,7 +414,7 @@ function makeBlockedReadyReport(
       mergeable: "MERGEABLE",
       reviewDecision,
       copilotReviewInProgress: false,
-      mergeStateStatus,
+      mergeStateStatus: "BLOCKED",
     },
   });
 }
@@ -449,35 +446,6 @@ describe("runIterate — BLOCKED + clean (hand off to humans via ready-delay)", 
       expect(result.shouldCancel).toBe(true);
     },
   );
-
-  it("HAS_HOOKS raw (derived BLOCKED): cancel-note uses branch-protection wording", async () => {
-    mockRunCheck.mockResolvedValue(makeBlockedReadyReport(null, "HAS_HOOKS"));
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
-      shouldCancel: true,
-      remainingSeconds: 0,
-    });
-    const result = await runIterate(makeOpts());
-    expect(result.action).toBe("cancel");
-    if (result.action === "cancel") {
-      expect(result.log).toContain("branch protection");
-      expect(result.log).not.toContain("ready for review");
-    }
-  });
-
-  it("HAS_HOOKS raw (derived BLOCKED): wait log uses branch-protection wording", async () => {
-    mockRunCheck.mockResolvedValue(makeBlockedReadyReport(null, "HAS_HOOKS"));
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
-      shouldCancel: false,
-      remainingSeconds: 300,
-    });
-    const result = await runIterate(makeOpts());
-    expect(result.action).toBe("wait");
-    if (result.action === "wait") {
-      expect(result.log).toContain("branch protection");
-    }
-  });
 });
 
 describe("runIterate — escalate (thread-missing-location)", () => {
