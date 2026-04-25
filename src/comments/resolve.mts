@@ -137,17 +137,20 @@ async function bulkApply(
   }
 
   for (let i = 0; i < resolveIds.length; i++) {
-    if (data[`r${i}`]) result.resolvedThreads.push(resolveIds[i]!);
-    else result.errors.push(`${resolveIds[i]}: resolve returned null`);
+    const r = data[`r${i}`] as { thread?: { isResolved?: boolean } } | null | undefined;
+    if (r?.thread?.isResolved === true) result.resolvedThreads.push(resolveIds[i]!);
+    else result.errors.push(`${resolveIds[i]}: resolve returned null or thread not resolved`);
   }
 
   for (let i = 0; i < minimizeIds.length; i++) {
-    if (data[`m${i}`]) result.minimizedComments.push(minimizeIds[i]!);
-    else result.errors.push(`${minimizeIds[i]}: minimize returned null`);
+    const m = data[`m${i}`] as { minimizedComment?: { isMinimized?: boolean } } | null | undefined;
+    if (m?.minimizedComment?.isMinimized === true) result.minimizedComments.push(minimizeIds[i]!);
+    else result.errors.push(`${minimizeIds[i]}: minimize returned null or comment not minimized`);
   }
 
   for (let i = 0; i < dismissIds.length; i++) {
-    if (data[`d${i}`]) result.dismissedReviews.push(dismissIds[i]!);
+    const d = data[`d${i}`] as { pullRequestReview?: { state?: string } } | null | undefined;
+    if (d?.pullRequestReview != null) result.dismissedReviews.push(dismissIds[i]!);
     else result.errors.push(`${dismissIds[i]}: dismiss returned null`);
   }
 }

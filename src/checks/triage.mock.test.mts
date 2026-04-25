@@ -472,4 +472,3 @@ describe("triageFailingChecks — batch", () => {
     expect(jobsFetchCalls).toHaveLength(1);
   });
 });
-

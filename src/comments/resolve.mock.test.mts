@@ -17,12 +17,15 @@ const mockGetPrHeadSha = vi.mocked(getPrHeadSha);
 
 const REPO = { owner: "owner", name: "repo" };
 
-/** Build a mock response that marks every alias in the document as truthy. */
+/** Build a mock response with the correct nested shape for each alias type (r/m/d). */
 function makeBulkResponse(doc: unknown): { data: Record<string, unknown> } {
   const str = typeof doc === "string" ? doc : "";
   const data: Record<string, unknown> = {};
   for (const [, alias] of str.matchAll(/^\s+([a-z]\d+):/gm)) {
-    data[alias] = { ok: true };
+    if (alias!.startsWith("r")) data[alias!] = { thread: { isResolved: true } };
+    else if (alias!.startsWith("m")) data[alias!] = { minimizedComment: { isMinimized: true } };
+    else if (alias!.startsWith("d")) data[alias!] = { pullRequestReview: { state: "DISMISSED" } };
+    else data[alias!] = {};
   }
   return { data };
 }
