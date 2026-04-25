@@ -17,18 +17,21 @@ Example Workflow:
 
 `pr-shepherd` optimizes token management, rate limits, and agentic orchestration by moving **ALL** deterministic logic and prompts to code via a CLI tool, enshrining what would be a large skill or command prompt (of which the agent would inevitably make mistakes) into the code and returning a clear, actionable prompt.
 
-At a high-level, to start the monitor, the skill/command invokes a CLI that invokes a prompt:
+At a high-level, to start the monitor, the skill/command invokes a CLI that returns a prompt to be ingested by the agent:
 
 ```bash
+/pr-shepherd:monitor
+
 > npx pr-shepherd monitor 123
 
 Run /loop "npx pr-shepherd iterate 123" every 4 minutes
 ```
 
-Each iteration calls `npx pr-shepherd iterate`, which provides actionable feedback directly to the agent:
+Each iteration calls `npx pr-shepherd iterate <PR>`, which provides actionable feedback directly to the agent:
 
 ```bash
 > npx pr-shepherd iterate 123
+
 # PR #123 [FIX_CODE]
 
 **status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
@@ -68,10 +71,11 @@ Each iteration calls `npx pr-shepherd iterate`, which provides actionable feedba
 1. Fix the code
 2. [Shown only if the branch is out of date] Rebase <DEFAULT BRANCH> if out of date
 3. [If rebased] git push --force-with-lease [If not rebased] git push
-4. Stop
+4. Resolve/minimize comments
+5. Stop
 ```
 
-On every iteration, a command is returned to instruct the agent exactly what to do. No guessing, no thinking:
+On every iteration, a command is returned to instruct the agent exactly what to do. No guessing, no thinking, as few agentic turns as possible:
 
 ```bash
 `npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
