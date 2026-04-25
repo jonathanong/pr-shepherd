@@ -93,15 +93,16 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   };
 
   if (readyState.shouldCancel) {
-    const cancelNote =
-      base.mergeStateStatus === "BLOCKED"
-        ? "is awaiting human review — ready-delay elapsed"
-        : "has been ready for review — ready-delay elapsed";
+    let cancelNote: string;
+    if (base.mergeStateStatus !== "BLOCKED") cancelNote = "has been ready for review";
+    else if (base.reviewDecision === "REVIEW_REQUIRED") cancelNote = "is awaiting human review";
+    else if (base.reviewDecision === "APPROVED") cancelNote = "is awaiting additional approvals";
+    else cancelNote = "is awaiting human review or branch protection resolution";
     return {
       ...base,
       action: "cancel",
       reason: "ready-delay-elapsed",
-      log: `CANCEL: PR #${base.pr} ${cancelNote}, stopping monitor`,
+      log: `CANCEL: PR #${base.pr} ${cancelNote} — ready-delay elapsed, stopping monitor`,
     };
   }
 
