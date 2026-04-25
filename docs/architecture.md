@@ -23,6 +23,7 @@ shepherd/
 │   ├── handlers.mts       # async handlers wired from cli-parser (iterate, monitor, status, commit-suggestion)
 │   ├── formatters.mts     # barrel for per-output formatters
 │   ├── iterate-formatter.mts  # Markdown formatter for IterateResult
+│   ├── iterate-lean.mts   # lean JSON projection for default --format=json output
 │   └── fix-formatter.mts  # Markdown formatter for fix_code variant
 │
 ├── commands/              # one file (or dir) per subcommand
@@ -61,10 +62,10 @@ shepherd/
 │       ├── minimize-comment.gql
 │       └── dismiss-review.gql
 │
-├── cache/
-│   ├── file-cache.mts     # TTL-aware file cache with atomic writes (tmp + rename)
-│   ├── fix-attempts.mts   # per-thread fix-attempt counter (JSON file in cache dir)
-│   └── iterate-stall.mts  # stall-state persistence
+├── state/
+│   ├── fix-attempts.mts   # per-thread fix-attempt counter (JSON file in state dir)
+│   ├── iterate-stall.mts  # stall-state persistence
+│   └── seen-comments.mts  # seen-marker gate for first-look threads/comments
 │
 ├── checks/
 │   ├── classify.mts       # event filter + CI verdict

@@ -66,7 +66,7 @@ rm $TMPDIR/pr-shepherd-state/acme-myrepo/42/ready-since.txt
 
 **Fix options:**
 
-1. Increase the cron interval: `--interval 8m`
+1. Increase `watch.interval` in `.pr-shepherdrc.yml` (e.g. `8m`). The next monitor run will pick it up.
 2. Check `x-ratelimit-remaining` in the reporter JSON output to monitor consumption
 
 ---

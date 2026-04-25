@@ -7,7 +7,7 @@ pr-shepherd -v|--version
 pr-shepherd check [PR]
 pr-shepherd resolve [PR] [--fetch | --resolve-thread-ids … | --minimize-comment-ids … | --dismiss-review-ids … | --message "…" | --require-sha <sha>]
 pr-shepherd commit-suggestion [PR] --thread-id <id> --message "…"
-pr-shepherd iterate [PR] [--cooldown-seconds N] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]
+pr-shepherd iterate [PR] [--verbose] [--cooldown-seconds N] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]
 pr-shepherd monitor [PR]
 pr-shepherd status PR1 [PR2 …]
 ```
@@ -16,9 +16,10 @@ pr-shepherd status PR1 [PR2 …]
 
 All subcommands accept:
 
-| Flag                  | Default | Description   |
-| --------------------- | ------- | ------------- |
-| `--format text\|json` | `text`  | Output format |
+| Flag                  | Default | Description                                                                                       |
+| --------------------- | ------- | ------------------------------------------------------------------------------------------------- |
+| `--format text\|json` | `text`  | Output format                                                                                     |
+| `--verbose`           | false   | (`iterate` only) emit full `IterateResult` JSON / show all base/summary fields in Markdown output |
 
 ### pr-shepherd check [PR]
 
@@ -237,21 +238,22 @@ pr-shepherd iterate 42 --ready-delay 15m  # override ready-delay for this run
 
 **Flags:**
 
-| Flag                          | Default                                 | Description                                                     |
-| ----------------------------- | --------------------------------------- | --------------------------------------------------------------- |
-| `--ready-delay Nm`            | `watch.readyDelayMinutes` in config     | Settle window before the loop cancels after READY               |
-| `--cooldown-seconds N`        | `iterate.cooldownSeconds` in config     | Wait after a push before reading CI                             |
-| `--stall-timeout <duration>`  | `iterate.stallTimeoutMinutes` in config | Override the stall-detection window (e.g. `--stall-timeout 1h`) |
-| `--no-auto-mark-ready`        | false                                   | Skip converting draft → ready-for-review                        |
-| `--no-auto-cancel-actionable` | false                                   | Skip cancelling actionable failing runs                         |
+| Flag                          | Default                                 | Description                                                                                          |
+| ----------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `--verbose`                   | false                                   | Full JSON output (all fields); restores full summary line in Markdown. See [actions.md](actions.md). |
+| `--ready-delay Nm`            | `watch.readyDelayMinutes` in config     | Settle window before the loop cancels after READY                                                    |
+| `--cooldown-seconds N`        | `iterate.cooldownSeconds` in config     | Wait after a push before reading CI                                                                  |
+| `--stall-timeout <duration>`  | `iterate.stallTimeoutMinutes` in config | Override the stall-detection window (e.g. `--stall-timeout 1h`)                                     |
+| `--no-auto-mark-ready`        | false                                   | Skip converting draft → ready-for-review                                                             |
+| `--no-auto-cancel-actionable` | false                                   | Skip cancelling actionable failing runs                                                              |
 
-**Default (Markdown) output.** Every action emits an H1 heading, a bolded base-fields line, a bolded summary line, then an action-specific body. Example for `[WAIT]`:
+**Default (Markdown) output.** Every action emits an H1 heading, a bolded base-fields line, a bolded summary line, then an action-specific body. Zero counts (`skipped`, `filtered`, `inProgress`) are omitted in lean mode; `copilotReviewInProgress` and `isDraft` are only shown when `true`; `shouldCancel` is never shown. Example for `[WAIT]`:
 
 ```markdown
 # PR #42 [WAIT]
 
 **status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 3 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 540 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
+**summary** 3 passing · **remainingSeconds** 540
 
 WAIT: 3 passing, 0 in-progress — 540s until auto-cancel
 
@@ -266,13 +268,7 @@ Example for `[FIX_CODE]` (richest action):
 # PR #42 [FIX_CODE]
 
 **status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 3 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 600 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
-
-## Checks
-
-- ✓ `build` — SUCCESS
-- ✗ `lint / typecheck / test (22.x)` (actionable) — FAILURE · `24697658766`
-  > Error: expected 'foo' to equal 'bar'
+**summary** 3 passing
 
 ## Review threads
 
@@ -284,7 +280,12 @@ Example for `[FIX_CODE]` (richest action):
 
 ## Failing checks
 
-- `24697658766` — `lint / typecheck / test (22.x)` (actionable)
+- `24697658766` — `CI / lint / typecheck / test (22.x)`
+  > Run tests
+  ```
+  Error: expected 'foo' to equal 'bar'
+    at Object.<anonymous> (src/commands/iterate.test.mts:58:22)
+  ```
 
 ## Post-fix push
 
@@ -294,19 +295,20 @@ Example for `[FIX_CODE]` (richest action):
 ## Instructions
 
 1. Apply code fixes: read and edit each file referenced under `## Review threads` and `## Actionable comments` above.
-2. For each bullet in `## Failing checks` whose backticked locator is a numeric runId (GitHub Actions): run `gh run view <runId> --log-failed`, identify the failure, and apply the fix.
+2. For each bullet in `## Failing checks`: examine the log tail shown — if the failure looks transient (network error, flaky test), run `gh run rerun <runId> --failed`; otherwise apply a code fix.
 3. Commit changed files: `git add <files> && git commit -m "<descriptive message>"`
 4. Keep the PR title and description current: if the changes alter the PR's scope or intent, run `gh pr edit 42 --title "<new title>" --body "<new body>"` to reflect them. Skip if the existing title/body still accurately describe the PR.
 5. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
 6. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
-7. Stop this iteration — CI needs time to run on the new push before the next tick.
+7. Add a `## Shepherd Journal` entry to the PR description for any large decisions made: `gh pr edit 42 --body "$(gh pr view 42 --json body -q .body)\n\n## Shepherd Journal\n- <decision>"`
+8. Stop this iteration — CI needs time to run on the new push before the next tick.
 ```
 
-See [actions.md](actions.md) for all eight actions and their complete output shapes.
+See [actions.md](actions.md) for all six actions and their complete output shapes.
 
 Both `--format=text` (default Markdown) and `--format=json` carry equivalent information — every field exposed in JSON has a corresponding Markdown representation, and vice versa.
 
-Exit codes: `0` wait/cooldown/mark_ready · `1` fix_code/rebase · `2` cancel · `3` escalate
+Exit codes: `0` wait/cooldown/mark_ready · `1` fix_code · `2` cancel · `3` escalate
 
 ### pr-shepherd monitor [PR]
 
