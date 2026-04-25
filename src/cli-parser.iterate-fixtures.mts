@@ -41,6 +41,8 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
           hasMutations: false,
         },
         instructions: ["End this iteration."],
+        firstLookThreads: [],
+        firstLookComments: [],
       },
       cancelled: [],
     };

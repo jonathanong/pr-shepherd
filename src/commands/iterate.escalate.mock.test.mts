@@ -107,8 +107,8 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       filteredNames: [],
       blockedByFilteredCheck: false,
     },
-    threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
-    comments: { actionable: [] },
+    threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+    comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
     approvedReviews: [],
@@ -318,8 +318,8 @@ describe("runIterate — escalate (pr-level-changes-requested)", () => {
       makeReport({
         status: "UNRESOLVED_COMMENTS",
         changesRequestedReviews: [{ id: "review-1", author: "boss", body: "Needs rework" }],
-        threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
-        comments: { actionable: [] },
+        threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+        comments: { actionable: [], firstLook: [] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -353,8 +353,8 @@ describe("runIterate — escalate (pr-level-changes-requested suppressed during 
           mergeStateStatus: "DIRTY",
         },
         changesRequestedReviews: [{ id: "review-1", author: "boss", body: "Needs rework" }],
-        threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
-        comments: { actionable: [] },
+        threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+        comments: { actionable: [], firstLook: [] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -375,7 +375,7 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
       makeReport({
         status: "UNRESOLVED_COMMENTS",
         changesRequestedReviews: [{ id: "review-1", author: "boss", body: "Needs rework" }],
-        threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
+        threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
         comments: {
           actionable: [
             {

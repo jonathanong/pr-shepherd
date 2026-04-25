@@ -66,8 +66,8 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       filteredNames: [],
       blockedByFilteredCheck: false,
     },
-    threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
-    comments: { actionable: [] },
+    threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+    comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
     approvedReviews: [],
@@ -122,6 +122,8 @@ describe("main — resolve", () => {
       prNumber: 42,
       actionableThreads: [],
       actionableComments: [],
+      firstLookThreads: [],
+      firstLookComments: [],
       changesRequestedReviews: [],
       reviewSummaries: [],
       commitSuggestionsEnabled: true,
@@ -137,6 +139,8 @@ describe("main — resolve", () => {
       prNumber: 42,
       actionableThreads: [],
       actionableComments: [],
+      firstLookThreads: [],
+      firstLookComments: [],
       changesRequestedReviews: [],
       reviewSummaries: [{ id: "PRR_1", author: "copilot", body: "## PR overview\nsome detail" }],
       commitSuggestionsEnabled: true,
@@ -146,7 +150,7 @@ describe("main — resolve", () => {
     const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
     expect(out).toContain("## Review summaries (1)");
     expect(out).toContain("`reviewId=PRR_1` (@copilot): ## PR overview");
-    expect(out).toContain("1 actionable item(s)");
+    expect(out).toContain("1 actionable");
   });
 
   it("calls runResolveMutate when --resolve-thread-ids is given", async () => {
@@ -186,6 +190,8 @@ describe("main — resolve", () => {
           createdAtUnix: 0,
         },
       ],
+      firstLookThreads: [],
+      firstLookComments: [],
       changesRequestedReviews: [],
       reviewSummaries: [],
       commitSuggestionsEnabled: false,
@@ -226,6 +232,8 @@ describe("main — resolve", () => {
         },
       ],
       actionableComments: [],
+      firstLookThreads: [],
+      firstLookComments: [],
       changesRequestedReviews: [],
       reviewSummaries: [],
       commitSuggestionsEnabled: true,
@@ -248,6 +256,8 @@ describe("main — resolve", () => {
       prNumber: 42,
       actionableThreads: [],
       actionableComments: [],
+      firstLookThreads: [],
+      firstLookComments: [],
       changesRequestedReviews: [],
       reviewSummaries: [],
       commitSuggestionsEnabled: false,
@@ -285,6 +295,8 @@ describe("main — resolve", () => {
           createdAtUnix: 0,
         },
       ],
+      firstLookThreads: [],
+      firstLookComments: [],
       changesRequestedReviews: [{ id: "PRR_r1", author: "carol", body: "needs work" }],
       reviewSummaries: [],
       commitSuggestionsEnabled: false,
@@ -345,6 +357,8 @@ describe("main — resolve", () => {
       prNumber: 42,
       actionableThreads: [],
       actionableComments: [],
+      firstLookThreads: [],
+      firstLookComments: [],
       changesRequestedReviews: [],
       reviewSummaries: [],
       commitSuggestionsEnabled: false,

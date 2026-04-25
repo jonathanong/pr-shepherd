@@ -7,6 +7,8 @@ import type {
   GlobalOptions,
   RelevantCheck,
   ShepherdStatus,
+  FirstLookThread,
+  FirstLookComment,
 } from "./report.mts";
 import type { MergeStateStatus, Review, ReviewDecision, ShepherdMergeStatus } from "./github.mts";
 
@@ -122,6 +124,10 @@ interface FixRebaseAndPush {
   resolveCommand: ResolveCommand;
   /** Ordered steps for the model to follow. */
   instructions: string[];
+  /** First-look threads — previously hidden, surfaced for acknowledgment only. */
+  firstLookThreads: FirstLookThread[];
+  /** First-look comments — previously hidden, surfaced for acknowledgment only. */
+  firstLookComments: FirstLookComment[];
 }
 
 export interface IterateResultFixCode extends IterateResultBase {

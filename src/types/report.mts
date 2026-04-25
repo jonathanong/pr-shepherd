@@ -11,6 +11,30 @@ import type {
 } from "./github.mts";
 
 // ---------------------------------------------------------------------------
+// First-look items (previously hidden — surfaced to agent on first encounter)
+// ---------------------------------------------------------------------------
+
+/**
+ * A review thread that was outdated, resolved, or minimized — normally hidden
+ * from the agent. Surfaced on first encounter so the agent can acknowledge it.
+ * After first-look, a seen-marker is written and the item is suppressed on
+ * subsequent fetches.
+ */
+export interface FirstLookThread extends ReviewThread {
+  firstLookStatus: "outdated" | "resolved" | "minimized";
+  /** True when Shepherd auto-resolved this thread during the current run (outdated only). */
+  autoResolved?: boolean;
+}
+
+/**
+ * A PR comment that was minimized — normally hidden from the agent. Surfaced
+ * on first encounter for acknowledgment. Same seen-marker suppression applies.
+ */
+export interface FirstLookComment extends PrComment {
+  firstLookStatus: "minimized";
+}
+
+// ---------------------------------------------------------------------------
 // Shepherd check report (output of the check command)
 // ---------------------------------------------------------------------------
 
@@ -45,9 +69,13 @@ export interface ShepherdReport {
     actionable: ReviewThread[];
     autoResolved: ReviewThread[];
     autoResolveErrors: string[];
+    /** First-look items — outdated/resolved/minimized threads not yet seen by the agent. */
+    firstLook: FirstLookThread[];
   };
   comments: {
     actionable: PrComment[];
+    /** First-look items — minimized comments not yet seen by the agent. */
+    firstLook: FirstLookComment[];
   };
   changesRequestedReviews: Review[];
   /** COMMENTED reviews with a non-empty, non-minimized body — surfaced for agent-driven minimize. */

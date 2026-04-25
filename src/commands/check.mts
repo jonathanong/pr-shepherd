@@ -22,7 +22,14 @@ import { autoResolveOutdated } from "../comments/resolve.mts";
 import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
 import { computeStatus } from "./check-status.mts";
-import type { GlobalOptions, ShepherdReport, ClassifiedCheck } from "../types.mts";
+import { hasSeen, markSeen } from "../state/seen-comments.mts";
+import type {
+  GlobalOptions,
+  ShepherdReport,
+  ClassifiedCheck,
+  FirstLookThread,
+  FirstLookComment,
+} from "../types.mts";
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -81,6 +88,8 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
       ? await triageFailingChecks(failing, repo, config.checks.logTailLines)
       : failing;
 
+  const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
+
   // Resolve threads and comments.
   const unresolvedThreads = batchData.reviewThreads.filter((t) => !t.isResolved && !t.isMinimized);
   const visibleComments = batchData.comments.filter((c) => !c.isMinimized);
@@ -96,6 +105,49 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
   }
 
   const activeThreads = unresolvedThreads.filter((t) => !t.isOutdated);
+
+  // First-look: collect previously-hidden items not yet seen by the agent.
+  const outdatedCandidates = batchData.reviewThreads.filter((t) => t.isOutdated && !t.isResolved);
+  const resolvedCandidates = batchData.reviewThreads.filter((t) => t.isResolved && !t.isOutdated);
+  const minimizedThreadCandidates = batchData.reviewThreads.filter(
+    (t) => t.isMinimized && !t.isResolved && !t.isOutdated,
+  );
+  const minimizedCommentCandidates = batchData.comments.filter((c) => c.isMinimized);
+
+  const [outdatedSeen, resolvedSeen, minimizedThreadSeen, minimizedCommentSeen] = await Promise.all([
+    Promise.all(outdatedCandidates.map((t) => hasSeen(stateKey, t.id))),
+    Promise.all(resolvedCandidates.map((t) => hasSeen(stateKey, t.id))),
+    Promise.all(minimizedThreadCandidates.map((t) => hasSeen(stateKey, t.id))),
+    Promise.all(minimizedCommentCandidates.map((c) => hasSeen(stateKey, c.id))),
+  ]);
+
+  const autoResolvedIds = new Set(autoResolved.map((t) => t.id));
+
+  const firstLookThreads: FirstLookThread[] = [
+    ...outdatedCandidates
+      .filter((_, i) => !outdatedSeen[i])
+      .map((t) => ({
+        ...t,
+        firstLookStatus: "outdated" as const,
+        autoResolved: autoResolvedIds.has(t.id),
+      })),
+    ...resolvedCandidates
+      .filter((_, i) => !resolvedSeen[i])
+      .map((t) => ({ ...t, firstLookStatus: "resolved" as const })),
+    ...minimizedThreadCandidates
+      .filter((_, i) => !minimizedThreadSeen[i])
+      .map((t) => ({ ...t, firstLookStatus: "minimized" as const })),
+  ];
+
+  const firstLookComments: FirstLookComment[] = minimizedCommentCandidates
+    .filter((_, i) => !minimizedCommentSeen[i])
+    .map((c) => ({ ...c, firstLookStatus: "minimized" as const }));
+
+  // Mark first-look items as seen (best-effort, fire-and-forget).
+  void Promise.allSettled([
+    ...firstLookThreads.map((t) => markSeen(stateKey, t.id)),
+    ...firstLookComments.map((c) => markSeen(stateKey, c.id)),
+  ]);
 
   // Actionable: all active threads and all visible comments (no classification — LLM handles triage).
   const actionableThreads = activeThreads;
@@ -140,9 +192,11 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
       actionable: actionableThreads,
       autoResolved,
       autoResolveErrors,
+      firstLook: firstLookThreads,
     },
     comments: {
       actionable: actionableComments,
+      firstLook: firstLookComments,
     },
     changesRequestedReviews: batchData.changesRequestedReviews,
     reviewSummaries: batchData.reviewSummaries,

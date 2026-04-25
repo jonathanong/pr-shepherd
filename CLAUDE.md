@@ -60,6 +60,42 @@ CLI output that targets a human or an AI agent must be easy to read and act on:
 - Long output is acceptable. Prefer clarity over brevity for instructions and other content the reader is expected to act on.
 - When the output tells the reader to do something, phrase it as explicit, numbered steps.
 
+## Comment visibility invariant
+
+Every review thread, PR comment, and review summary must be surfaced to the
+agent **at least once**, even if it is outdated, resolved, or minimized.
+Filtering those out before the agent sees them silently discards reviewer
+intent.
+
+Each first-look item must carry its current status — `outdated`, `resolved`,
+`auto-resolved` (closed by Shepherd this run), or `minimized` — so the agent
+can classify it (Acknowledge / Note / etc.) rather than attempt to fix code
+that no longer exists.
+
+To avoid re-surfacing items on every fetch, a per-item "seen" marker is
+written after first display. Markers live at:
+
+```
+$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/seen/<id>.json
+```
+
+One file per id — file existence is the marker. Concurrent writers are
+race-free because writes are idempotent (same content on double-write) and
+reads are monotonic (once seen, stays seen). The JSON payload is
+`{ "seenAt": <unix> }` today; the schema is intentionally open so future
+fields (classification, agent-reply, etc.) can be added without breaking
+readers. Do not adopt formats that lock the schema (empty touch files, a
+single shared list).
+
+Any new code path that filters threads, comments, or reviews by `isResolved`,
+`isOutdated`, or `isMinimized` must route them through the seen-marker gate
+before suppression — never drop them outright.
+
+Implementation lives in `src/state/seen-comments.mts`. The two call sites
+are `src/commands/resolve.mts` (surfaced in `resolve --fetch` output under
+`## First-look items`) and `src/commands/check.mts` (surfaced in iterate's
+`fix_code` output under `## First-look items`).
+
 ## Keep skills and loop prompts minimal
 
 Skills (`plugin/skills/*/SKILL.md`) and `/loop` prompts should be thin dispatchers with this shape:

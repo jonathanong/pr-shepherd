@@ -30,10 +30,25 @@ Auto-resolve happens in `check.mts` when `opts.autoResolve === true` (set by `it
 
 Shepherd does **not** classify threads as "actionable" vs "informational" — that's the LLM's job. Shepherd surfaces:
 
-- All active (non-outdated, unresolved) threads in `report.threads.actionable`
+- All active (non-outdated, unresolved, non-minimized) threads in `report.threads.actionable`
 - All visible (non-minimized) PR comments in `report.comments.actionable`
 
 The cron prompt reads these and decides what to fix.
+
+## First-look items (comment visibility invariant)
+
+Every review item must be surfaced to the agent **at least once**, even if it is outdated, resolved, or minimized. Items that would otherwise be silently dropped are presented on first encounter with a status tag (`outdated`, `resolved`, `minimized`, or `outdated, auto-resolved`) so the agent can acknowledge them.
+
+After first display, a per-item seen-marker file is written under `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/seen/<id>.json`. Subsequent fetches check the marker and suppress items already seen.
+
+First-look items appear in:
+
+- `resolve --fetch` output: `## First-look items` section in text; `firstLookThreads` / `firstLookComments` arrays in JSON.
+- `iterate fix_code` output: same `## First-look items` section when `fix_code` fires for other reasons.
+
+First-look items must **not** be passed to `--resolve-thread-ids`, `--minimize-comment-ids`, or `--dismiss-review-ids` — they are already closed on GitHub. The agent's only responsibility is to acknowledge each with a one-line classification.
+
+State module: `src/state/seen-comments.mts`.
 
 ## `--require-sha` polling
 

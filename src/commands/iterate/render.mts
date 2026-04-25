@@ -5,6 +5,8 @@ import type {
   Review,
   ResolveCommand,
   IterateResultBase,
+  FirstLookThread,
+  FirstLookComment,
 } from "../../types.mts";
 
 /**
@@ -49,6 +51,8 @@ export function buildFixInstructions(
   hasConflicts: boolean,
   prNumber: number,
   cancelledCount: number,
+  firstLookThreads: FirstLookThread[] = [],
+  firstLookComments: FirstLookComment[] = [],
 ): string[] {
   const instructions: string[] = [];
 
@@ -127,6 +131,13 @@ export function buildFixInstructions(
   if (needsPush && cancelledCount > 0) {
     instructions.push(
       `Do not re-run \`gh run cancel\` on the IDs listed under \`## Cancelled runs\` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.`,
+    );
+  }
+
+  const firstLookTotal = firstLookThreads.length + firstLookComments.length;
+  if (firstLookTotal > 0) {
+    instructions.push(
+      `Items in \`## First-look items\` are already closed on GitHub — do not pass their IDs to \`--resolve-thread-ids\`, \`--minimize-comment-ids\`, or \`--dismiss-review-ids\`. Acknowledge each one with a one-line classification (e.g. "outdated — addressed by commit abc1234", "resolved — already fixed", "minimized — noise").`,
     );
   }
 

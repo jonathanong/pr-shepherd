@@ -11,20 +11,25 @@ export function buildFetchInstructions(
 ): string[] {
   const {
     actionableThreads,
+    firstLookThreads,
     actionableComments,
+    firstLookComments,
     changesRequestedReviews,
     reviewSummaries,
     commitSuggestionsEnabled,
   } = result;
 
+  const firstLookTotal = firstLookThreads.length + firstLookComments.length;
+
   const total =
     actionableThreads.length +
     actionableComments.length +
     changesRequestedReviews.length +
-    reviewSummaries.length;
+    reviewSummaries.length +
+    firstLookTotal;
 
   if (total === 0) {
-    return ["No actionable items — end this invocation."];
+    return ["No actionable items and no first-look items — end this invocation."];
   }
 
   const hasCodeItems =
@@ -39,6 +44,12 @@ export function buildFetchInstructions(
   instructions.push(
     `Classify every item listed above into exactly one of: Fixed / Actionable / Not relevant / Outdated / Acknowledge. Do not silently skip any item. Bot-authored review summaries (authors whose name contains \`[bot]\` or matches \`copilot-pull-request-reviewer\`, \`gemini-code-assist\`) default to Acknowledge with reason "bot summary — no actionable content" unless the body calls out an unaddressed issue.`,
   );
+
+  if (firstLookTotal > 0) {
+    instructions.push(
+      `Items in \`## First-look items\` are already closed on GitHub — do not pass their IDs to \`--resolve-thread-ids\`, \`--minimize-comment-ids\`, or \`--dismiss-review-ids\`. Acknowledge each one with a one-line classification (e.g. "outdated — addressed by commit abc1234", "resolved — already fixed", "minimized — noise").`,
+    );
+  }
 
   if (hasSuggestions) {
     instructions.push(
