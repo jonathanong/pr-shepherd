@@ -18,8 +18,7 @@ export function buildSessionHeader(argv: string[]): { markdown: string; ctx: Ses
   const cmd = argv.slice(2).join(" ") || "(no args)";
   let n = 0;
   const markdown =
-    `## ${ts} — pr-shepherd ${cmd}\n` +
-    `pid: ${process.pid} · version: ${readVersion()}\n\n`;
+    `## ${ts} — pr-shepherd ${cmd}\n` + `pid: ${process.pid} · version: ${readVersion()}\n\n`;
   return { markdown, ctx: { nextEntry: () => ++n } };
 }
 
@@ -48,11 +47,12 @@ export interface HttpResponseEntry {
   attempt?: number;
 }
 
-const MAX_BODY = Number(process.env["PR_SHEPHERD_LOG_MAX_BODY"] ?? 256 * 1024);
+const _maxBodyRaw = Number(process.env["PR_SHEPHERD_LOG_MAX_BODY"]);
+const MAX_BODY = Number.isFinite(_maxBodyRaw) && _maxBodyRaw > 0 ? _maxBodyRaw : 256 * 1024;
 
 function truncate(s: string): string {
   if (s.length <= MAX_BODY) return s;
-  return `${s.slice(0, MAX_BODY)}\n...[truncated ${s.length - MAX_BODY} bytes]`;
+  return `${s.slice(0, MAX_BODY)}\n...[truncated ${s.length - MAX_BODY} characters]`;
 }
 
 function fenceBody(body: unknown, lang: string): string {

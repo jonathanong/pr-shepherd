@@ -65,6 +65,10 @@ function sanitizeBody(body: string): string {
   return body.replace(/Bearer\s+\S+/gi, "[REDACTED]").slice(0, 200);
 }
 
+function redactToken(body: string): string {
+  return body.replace(/Bearer\s+\S+/gi, "[REDACTED]");
+}
+
 async function requestWithTokenRetry(fn: () => Promise<Response>): Promise<Response> {
   const res = await fn();
   if (res.status === 401 && _token !== undefined) {
@@ -87,7 +91,15 @@ async function graphqlInner<T>(
 ): Promise<{ data: T; rateLimit: RateLimitInfo | null }> {
   const url = `${BASE_URL}/graphql`;
   const n = nextEntry();
-  appendEntry(formatRequestEntry({ n, kind: "GraphQL", method: "POST", url, body: { query, variables: vars } }));
+  appendEntry(
+    formatRequestEntry({
+      n,
+      kind: "GraphQL",
+      method: "POST",
+      url,
+      body: { query, variables: vars },
+    }),
+  );
   const t0 = performance.now();
 
   const res = await requestWithTokenRetry(async () =>
@@ -103,12 +115,32 @@ async function graphqlInner<T>(
 
   if (!res.ok) {
     const body = await res.text();
-    appendEntry(formatResponseEntry({ n, kind: "GraphQL", method: "POST", url, status: res.status, durationMs, textBody: sanitizeBody(body) }));
+    appendEntry(
+      formatResponseEntry({
+        n,
+        kind: "GraphQL",
+        method: "POST",
+        url,
+        status: res.status,
+        durationMs,
+        textBody: redactToken(body),
+      }),
+    );
     throw new Error(`GitHub GraphQL request failed: ${res.status} ${sanitizeBody(body)}`);
   }
 
   const parsed = (await res.json()) as { data: T | null; errors?: Array<{ message: string }> };
-  appendEntry(formatResponseEntry({ n, kind: "GraphQL", method: "POST", url, status: res.status, durationMs, body: parsed }));
+  appendEntry(
+    formatResponseEntry({
+      n,
+      kind: "GraphQL",
+      method: "POST",
+      url,
+      status: res.status,
+      durationMs,
+      body: parsed,
+    }),
+  );
 
   if (parsed.data == null) {
     const messages = (parsed.errors ?? []).map((e: { message: string }) => e.message).join("; ");
@@ -161,16 +193,47 @@ export async function rest<T = unknown>(method: string, path: string, body?: unk
 
   if (!res.ok) {
     const text = await res.text();
-    appendEntry(formatResponseEntry({ n, kind: "REST", method, url, status: res.status, durationMs, textBody: sanitizeBody(text) }));
+    appendEntry(
+      formatResponseEntry({
+        n,
+        kind: "REST",
+        method,
+        url,
+        status: res.status,
+        durationMs,
+        textBody: redactToken(text),
+      }),
+    );
     throw new Error(`GitHub REST ${method} ${path} failed: ${res.status} ${sanitizeBody(text)}`);
   }
 
   if (ct.includes("application/json")) {
     const json = (await res.json()) as T;
-    appendEntry(formatResponseEntry({ n, kind: "REST", method, url, status: res.status, durationMs, contentType: ct }));
+    appendEntry(
+      formatResponseEntry({
+        n,
+        kind: "REST",
+        method,
+        url,
+        status: res.status,
+        durationMs,
+        contentType: ct,
+        body: json,
+      }),
+    );
     return json;
   }
-  appendEntry(formatResponseEntry({ n, kind: "REST", method, url, status: res.status, durationMs, contentType: ct || undefined }));
+  appendEntry(
+    formatResponseEntry({
+      n,
+      kind: "REST",
+      method,
+      url,
+      status: res.status,
+      durationMs,
+      contentType: ct || undefined,
+    }),
+  );
   return undefined as T;
 }
 
@@ -191,7 +254,16 @@ export async function restText(path: string): Promise<string> {
   const durationMs = Math.round(performance.now() - t0);
 
   if (res.status === 301 || res.status === 302 || res.status === 307 || res.status === 308) {
-    appendEntry(formatResponseEntry({ n, kind: "restText", method: "GET", url, status: res.status, durationMs }));
+    appendEntry(
+      formatResponseEntry({
+        n,
+        kind: "restText",
+        method: "GET",
+        url,
+        status: res.status,
+        durationMs,
+      }),
+    );
     const location = res.headers.get("location");
     if (location) {
       const n2 = nextEntry();
@@ -200,8 +272,19 @@ export async function restText(path: string): Promise<string> {
       const redirectRes = await fetch(location);
       const duration2 = Math.round(performance.now() - t1);
       const clRaw = redirectRes.headers.get("content-length");
-      const contentLength = clRaw !== null && Number.isFinite(Number(clRaw)) ? Number(clRaw) : undefined;
-      appendEntry(formatResponseEntry({ n: n2, kind: "restText", method: "GET", url: location, status: redirectRes.status, durationMs: duration2, contentLength }));
+      const contentLength =
+        clRaw !== null && Number.isFinite(Number(clRaw)) ? Number(clRaw) : undefined;
+      appendEntry(
+        formatResponseEntry({
+          n: n2,
+          kind: "restText",
+          method: "GET",
+          url: location,
+          status: redirectRes.status,
+          durationMs: duration2,
+          contentLength,
+        }),
+      );
       if (!redirectRes.ok) {
         throw new Error(`redirect target ${location} failed: ${redirectRes.status}`);
       }
@@ -211,13 +294,33 @@ export async function restText(path: string): Promise<string> {
 
   if (!res.ok) {
     const text = await res.text();
-    appendEntry(formatResponseEntry({ n, kind: "restText", method: "GET", url, status: res.status, durationMs }));
+    appendEntry(
+      formatResponseEntry({
+        n,
+        kind: "restText",
+        method: "GET",
+        url,
+        status: res.status,
+        durationMs,
+      }),
+    );
     throw new Error(`GitHub REST GET ${path} failed: ${res.status} ${sanitizeBody(text)}`);
   }
 
   const clRaw = res.headers.get("content-length");
-  const contentLength = clRaw !== null && Number.isFinite(Number(clRaw)) ? Number(clRaw) : undefined;
-  appendEntry(formatResponseEntry({ n, kind: "restText", method: "GET", url, status: res.status, durationMs, contentLength }));
+  const contentLength =
+    clRaw !== null && Number.isFinite(Number(clRaw)) ? Number(clRaw) : undefined;
+  appendEntry(
+    formatResponseEntry({
+      n,
+      kind: "restText",
+      method: "GET",
+      url,
+      status: res.status,
+      durationMs,
+      contentLength,
+    }),
+  );
   return res.text();
 }
 

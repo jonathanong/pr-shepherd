@@ -56,7 +56,10 @@ describe("initLog + appendEntry", () => {
     appendEntry("should not be written");
     // File should not exist
     try {
-      await readFile(join(testStateDir, "acme-widgets", "worktrees", "test-worktree-abc12345.md"), "utf8");
+      await readFile(
+        join(testStateDir, "acme-widgets", "worktrees", "test-worktree-abc12345.md"),
+        "utf8",
+      );
       expect.fail("file should not exist");
     } catch (e: unknown) {
       expect((e as NodeJS.ErrnoException).code).toBe("ENOENT");

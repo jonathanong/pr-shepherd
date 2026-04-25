@@ -14,8 +14,7 @@ import { resolveStateBase } from "../state/base.mts";
 import { SAFE_SEGMENT } from "../util/path-segment.mts";
 import { getWorktreeKey } from "../util/worktree.mts";
 
-let _disabled =
-  process.env["PR_SHEPHERD_LOG_DISABLED"] === "1" || process.env["CI"] === "true";
+let _disabled = process.env["PR_SHEPHERD_LOG_DISABLED"] === "1" || process.env["CI"] === "true";
 
 let _logPath: string | null = null;
 let _entryCounter = 0;
@@ -86,8 +85,7 @@ export async function resolveLogPath(repoKey: RepoKey): Promise<string> {
 
 /** Exposed for tests to reset module state. */
 export function _resetLogState(): void {
-  _disabled =
-    process.env["PR_SHEPHERD_LOG_DISABLED"] === "1" || process.env["CI"] === "true";
+  _disabled = process.env["PR_SHEPHERD_LOG_DISABLED"] === "1" || process.env["CI"] === "true";
   _logPath = null;
   _worktreeKey = null;
   _entryCounter = 0;

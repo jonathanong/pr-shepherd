@@ -15,7 +15,7 @@
     {
       "files": ["src/github/http.mts"],
       "rules": {
-        "max-lines": ["error", 250]
+        "max-lines": ["error", 400]
       }
     }
   ]
