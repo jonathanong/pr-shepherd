@@ -22,17 +22,18 @@ describe("buildSessionHeader", () => {
 });
 
 describe("formatRequestEntry", () => {
-  it("formats a GraphQL request with query and variables", () => {
+  it("formats a GraphQL request with operation name and variables", () => {
     const out = formatRequestEntry({
       n: 1,
       kind: "GraphQL",
       method: "POST",
       url: "https://api.github.com/graphql",
-      body: { query: "query { viewer { login } }", variables: { owner: "acme" } },
+      body: { query: "query GetViewer { viewer { login } }", variables: { owner: "acme" } },
     });
     expect(out).toContain("### #1 GraphQL request");
-    expect(out).toContain("query { viewer { login } }");
-    expect(out).toContain('"owner": "acme"');
+    expect(out).toContain("operation: `GetViewer`");
+    expect(out).not.toContain("viewer { login }");
+    expect(out).toContain('"owner":"acme"');
   });
 
   it("omits empty variables block for GraphQL", () => {
@@ -55,7 +56,7 @@ describe("formatRequestEntry", () => {
       body: { title: "Bug" },
     });
     expect(out).toContain("### #3 REST request — POST");
-    expect(out).toContain('"title": "Bug"');
+    expect(out).toContain('"title":"Bug"');
   });
 
   it("formats a REST request without body as (no body)", () => {
@@ -92,7 +93,7 @@ describe("formatResponseEntry", () => {
       body: { data: { viewer: { login: "alice" } } },
     });
     expect(out).toContain("### #1 GraphQL response — 200 · 312ms");
-    expect(out).toContain('"login": "alice"');
+    expect(out).toContain('"login":"alice"');
   });
 
   it("formats a failed GraphQL response with textBody", () => {
@@ -135,7 +136,7 @@ describe("formatResponseEntry", () => {
       body: { id: 1 },
     });
     expect(out).toContain("content-type: application/json");
-    expect(out).toContain('"id": 1');
+    expect(out).toContain('"id":1');
   });
 
   it("includes content-length in header when both contentType and contentLength are set", () => {

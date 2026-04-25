@@ -9,7 +9,7 @@
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 import { graphql as httpGraphql, rest, type RateLimitInfo, type GraphQlResult } from "./http.mts";
-import { PR_NUMBER_BY_BRANCH_QUERY } from "./queries.mts";
+import { PR_NUMBER_BY_BRANCH_QUERY, GET_PR_HEAD_SHA_QUERY } from "./queries.mts";
 import type { MergeableState, MergeStateStatus } from "../types.mts";
 
 export type { RateLimitInfo, GraphQlResult };
@@ -61,8 +61,12 @@ export async function getCurrentPrNumber(): Promise<number | null> {
 
 /** Returns the `headRefOid` (commit SHA) of the given PR as reported by GitHub. */
 export async function getPrHeadSha(pr: number, owner: string, name: string): Promise<string> {
-  const data = await rest<{ head: { sha: string } }>("GET", `/repos/${owner}/${name}/pulls/${pr}`);
-  return data.head.sha;
+  const result = await httpGraphql<{
+    repository: { pullRequest: { headRefOid: string } | null } | null;
+  }>(GET_PR_HEAD_SHA_QUERY, { owner, repo: name, pr });
+  const sha = result.data.repository?.pullRequest?.headRefOid;
+  if (!sha) throw new Error(`Could not resolve head SHA for PR #${pr}`);
+  return sha;
 }
 
 export interface PrHeadInfo {

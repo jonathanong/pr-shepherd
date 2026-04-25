@@ -12,7 +12,6 @@
     "maxTurns": 50
   },
   "resolve": {
-    "concurrency": 4,
     "shaPoll": {
       "intervalMs": 2000,
       "maxAttempts": 10
@@ -21,7 +20,7 @@
   },
   "checks": {
     "ciTriggerEvents": ["pull_request", "pull_request_target"],
-    "logTailLines": 200
+    "logTailLines": 80
   },
   "mergeStatus": {
     "blockingReviewerLogins": ["copilot"]

@@ -1,9 +1,9 @@
 /**
  * Batched mutations for resolving threads, minimizing comments, and dismissing reviews.
  *
- * The three mutation types (resolve / minimize / dismiss) are run sequentially so total
- * in-flight mutations never exceed CONCURRENCY at once, keeping us well within GitHub's
- * secondary rate-limit window.
+ * All operations are sent in a single aliased mutation document (`BulkApply`), eliminating
+ * one round-trip per id. Partial failures (one alias returns null) are tracked per-id
+ * without aborting the rest.
  *
  * Push-before-resolve safety:
  *   When `requireSha` is set, shepherd verifies that GitHub has received that
@@ -13,11 +13,6 @@
  */
 
 import { graphql, getPrHeadSha, type RepoInfo } from "../github/client.mts";
-import {
-  RESOLVE_THREAD_MUTATION,
-  MINIMIZE_COMMENT_MUTATION,
-  DISMISS_REVIEW_MUTATION,
-} from "../github/queries.mts";
 import type { ResolveOptions } from "../types.mts";
 import { loadConfig } from "../config/load.mts";
 
@@ -33,7 +28,7 @@ export interface ResolveResult {
 }
 
 /**
- * Execute all requested resolve/minimize/dismiss mutations.
+ * Execute all requested resolve/minimize/dismiss mutations in a single GraphQL call.
  *
  * @throws Error if `requireSha` is set and GitHub hasn't received that commit
  *              within the polling window.
@@ -43,12 +38,10 @@ export async function applyResolveOptions(
   repo: RepoInfo,
   opts: ResolveOptions,
 ): Promise<ResolveResult> {
-  // Require --message when dismissing reviews.
   if ((opts.dismissReviewIds?.length ?? 0) > 0 && !opts.dismissMessage) {
     throw new Error("--message is required when dismissing reviews");
   }
 
-  // Safety check: verify the push landed before resolving.
   if (opts.requireSha) {
     await waitForSha(pr, repo, opts.requireSha);
   }
@@ -60,84 +53,102 @@ export async function applyResolveOptions(
     errors: [],
   };
 
-  await runBatched(
+  await bulkApply(
     opts.resolveThreadIds ?? [],
-    (id) => resolveThread(id),
-    result.resolvedThreads,
-    result.errors,
-  );
-  await runBatched(
     opts.minimizeCommentIds ?? [],
-    (id) => minimizeComment(id, "RESOLVED"),
-    result.minimizedComments,
-    result.errors,
-  );
-  await runBatched(
     opts.dismissReviewIds ?? [],
-    (id) => dismissReview(id, opts.dismissMessage ?? ""),
-    result.dismissedReviews,
-    result.errors,
+    opts.dismissMessage ?? "",
+    result,
   );
 
   return result;
 }
 
 /**
- * Auto-resolve a batch of outdated threads via the resolveReviewThread mutation.
+ * Auto-resolve a batch of outdated threads via a single aliased mutation.
  */
 export async function autoResolveOutdated(
   threadIds: string[],
 ): Promise<{ resolved: string[]; errors: string[] }> {
-  const resolved: string[] = [];
-  const errors: string[] = [];
-  await runBatched(threadIds, (id) => resolveThread(id), resolved, errors);
-  return { resolved, errors };
+  const result: ResolveResult = {
+    resolvedThreads: [],
+    minimizedComments: [],
+    dismissedReviews: [],
+    errors: [],
+  };
+  await bulkApply(threadIds, [], [], "", result);
+  return { resolved: result.resolvedThreads, errors: result.errors };
 }
 
 // ---------------------------------------------------------------------------
-// Mutation helpers
+// Bulk mutation
 // ---------------------------------------------------------------------------
 
-async function resolveThread(threadId: string): Promise<void> {
-  await graphql(RESOLVE_THREAD_MUTATION, { threadId });
-}
+function buildBulkMutation(
+  resolveIds: string[],
+  minimizeIds: string[],
+  dismissIds: string[],
+  dismissMessage: string,
+): string {
+  const ops: string[] = [];
 
-async function minimizeComment(
-  commentId: string,
-  classifier: "RESOLVED" | "OFF_TOPIC",
-): Promise<void> {
-  await graphql(MINIMIZE_COMMENT_MUTATION, { commentId, classifier });
-}
-
-async function dismissReview(reviewId: string, message: string): Promise<void> {
-  await graphql(DISMISS_REVIEW_MUTATION, { reviewId, message });
-}
-
-// ---------------------------------------------------------------------------
-// Concurrency helper
-// ---------------------------------------------------------------------------
-
-async function runBatched(
-  ids: string[],
-  fn: (id: string) => Promise<void>,
-  successList: string[],
-  errorList: string[],
-): Promise<void> {
-  const CONCURRENCY = loadConfig().resolve.concurrency;
-  // Process in chunks of CONCURRENCY.
-  for (let i = 0; i < ids.length; i += CONCURRENCY) {
-    const chunk = ids.slice(i, i + CONCURRENCY);
-    // eslint-disable-next-line no-await-in-loop
-    await Promise.all(
-      chunk.map(async (id) => {
-        try {
-          await fn(id);
-          successList.push(id);
-        } catch (err) {
-          errorList.push(`${id}: ${err instanceof Error ? err.message : String(err)}`);
-        }
-      }),
+  for (let i = 0; i < resolveIds.length; i++) {
+    ops.push(
+      `  r${i}: resolveReviewThread(input: { threadId: ${JSON.stringify(resolveIds[i])} }) { thread { isResolved } }`,
     );
+  }
+
+  for (let i = 0; i < minimizeIds.length; i++) {
+    ops.push(
+      `  m${i}: minimizeComment(input: { subjectId: ${JSON.stringify(minimizeIds[i])}, classifier: RESOLVED }) { minimizedComment { isMinimized } }`,
+    );
+  }
+
+  for (let i = 0; i < dismissIds.length; i++) {
+    ops.push(
+      `  d${i}: dismissPullRequestReview(input: { pullRequestReviewId: ${JSON.stringify(dismissIds[i])}, message: ${JSON.stringify(dismissMessage)} }) { pullRequestReview { state } }`,
+    );
+  }
+
+  return `mutation BulkApply {\n${ops.join("\n")}\n}`;
+}
+
+async function bulkApply(
+  resolveIds: string[],
+  minimizeIds: string[],
+  dismissIds: string[],
+  dismissMessage: string,
+  result: ResolveResult,
+): Promise<void> {
+  if (resolveIds.length === 0 && minimizeIds.length === 0 && dismissIds.length === 0) return;
+
+  const doc = buildBulkMutation(resolveIds, minimizeIds, dismissIds, dismissMessage);
+
+  let data: Record<string, unknown>;
+  try {
+    const resp = await graphql<Record<string, unknown>>(doc, {});
+    data = resp.data;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    for (const id of resolveIds) result.errors.push(`${id}: ${msg}`);
+    for (const id of minimizeIds) result.errors.push(`${id}: ${msg}`);
+    for (const id of dismissIds) result.errors.push(`${id}: ${msg}`);
+    return;
+  }
+
+  for (let i = 0; i < resolveIds.length; i++) {
+    if (data[`r${i}`]) result.resolvedThreads.push(resolveIds[i]!);
+    else result.errors.push(`${resolveIds[i]}: resolve returned null`);
+  }
+
+  for (let i = 0; i < minimizeIds.length; i++) {
+    if (data[`m${i}`]) result.minimizedComments.push(minimizeIds[i]!);
+    else result.errors.push(`${minimizeIds[i]}: minimize returned null`);
+  }
+
+  for (let i = 0; i < dismissIds.length; i++) {
+    if (data[`d${i}`]) result.dismissedReviews.push(dismissIds[i]!);
+    else result.errors.push(`${dismissIds[i]}: dismiss returned null`);
   }
 }
 
@@ -154,7 +165,6 @@ async function waitForSha(pr: number, repo: RepoInfo, expectedSha: string): Prom
       const currentSha = await getPrHeadSha(pr, repo.owner, repo.name);
       if (currentSha === expectedSha) return;
     } catch (err) {
-      // Transient network / 5xx error — keep polling unless this is the last attempt.
       if (attempt === SHA_POLL_MAX_ATTEMPTS - 1) throw err;
     }
 
@@ -164,7 +174,6 @@ async function waitForSha(pr: number, repo: RepoInfo, expectedSha: string): Prom
     }
   }
 
-  // Total actual wait = (SHA_POLL_MAX_ATTEMPTS - 1) * SHA_POLL_INTERVAL_MS (no sleep after last poll).
   throw new Error(
     `Timeout: GitHub PR #${pr} head SHA has not updated to ${expectedSha} after ${
       ((SHA_POLL_MAX_ATTEMPTS - 1) * SHA_POLL_INTERVAL_MS) / 1000

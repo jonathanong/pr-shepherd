@@ -23,7 +23,6 @@ export interface PrShepherdConfig {
     maxTurns: number;
   };
   resolve: {
-    concurrency: number;
     shaPoll: {
       intervalMs: number;
       maxAttempts: number;

@@ -36,7 +36,7 @@ describe("loadConfig — no rc file", () => {
   it("returns built-in defaults when no rc file exists in the tree", async () => {
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
-    expect(result.resolve.concurrency).toBe(4);
+    expect(result.resolve.shaPoll.maxAttempts).toBe(10);
     expect(result.iterate.fixAttemptsPerThread).toBe(3);
     expect(result.checks.ciTriggerEvents).toEqual(["pull_request", "pull_request_target"]);
   });
@@ -58,7 +58,7 @@ describe("loadConfig — no rc file", () => {
     writeFileSync(join(tmpDir, RC), "");
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
-    expect(result.resolve.concurrency).toBe(4);
+    expect(result.resolve.shaPoll.maxAttempts).toBe(10);
   });
 });
 
@@ -68,13 +68,12 @@ describe("loadConfig — no rc file", () => {
 
 describe("loadConfig — deep merge", () => {
   it("overrides a single leaf while keeping sibling defaults", async () => {
-    writeFileSync(join(tmpDir, RC), "resolve:\n  concurrency: 8\n");
+    writeFileSync(join(tmpDir, RC), "resolve:\n  shaPoll:\n    maxAttempts: 20\n");
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
-    expect(result.resolve.concurrency).toBe(8);
-    // shaPoll nested object must survive the merge
+    expect(result.resolve.shaPoll.maxAttempts).toBe(20);
+    // sibling leaf must survive the merge
     expect(result.resolve.shaPoll.intervalMs).toBe(2000);
-    expect(result.resolve.shaPoll.maxAttempts).toBe(10);
   });
 
   it("replaces arrays outright rather than concatenating", async () => {
@@ -95,7 +94,7 @@ describe("loadConfig — malformed YAML", () => {
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
-    expect(result.resolve.concurrency).toBe(4);
+    expect(result.resolve.shaPoll.maxAttempts).toBe(10);
     const output = stderrSpy.mock.calls.map((c) => c[0]).join("");
     expect(output).toContain("failed to parse");
   });
@@ -107,13 +106,13 @@ describe("loadConfig — malformed YAML", () => {
 
 describe("loadConfig — findRcFile", () => {
   it("finds rc file in a parent directory when cwd is a nested subdir", async () => {
-    writeFileSync(join(tmpDir, RC), "resolve:\n  concurrency: 12\n");
+    writeFileSync(join(tmpDir, RC), "checks:\n  logTailLines: 50\n");
     const sub = join(tmpDir, "nested", "deep");
     mkdirSync(sub, { recursive: true });
     process.chdir(sub);
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
-    expect(result.resolve.concurrency).toBe(12);
+    expect(result.checks.logTailLines).toBe(50);
   });
 });
 
@@ -133,15 +132,15 @@ describe("loadConfig — caching", () => {
   });
 
   it("_resetConfigCache allows fresh load after cache is cleared", async () => {
-    writeFileSync(join(tmpDir, RC), "resolve:\n  concurrency: 7\n");
+    writeFileSync(join(tmpDir, RC), "checks:\n  logTailLines: 7\n");
     const mod = await import("./load.mts");
     const first = mod.loadConfig();
-    expect(first.resolve.concurrency).toBe(7);
+    expect(first.checks.logTailLines).toBe(7);
 
     // Update the file then reset the cache so the next call re-reads disk
-    writeFileSync(join(tmpDir, RC), "resolve:\n  concurrency: 11\n");
+    writeFileSync(join(tmpDir, RC), "checks:\n  logTailLines: 11\n");
     mod._resetConfigCache();
     const second = mod.loadConfig();
-    expect(second.resolve.concurrency).toBe(11);
+    expect(second.checks.logTailLines).toBe(11);
   });
 });

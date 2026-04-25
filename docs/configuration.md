@@ -19,7 +19,6 @@ watch:
   expiresHours: 8 # max loop lifetime
 
 resolve:
-  concurrency: 4
   shaPoll:
     intervalMs: 2000
     maxAttempts: 10
@@ -54,12 +53,11 @@ actions:
 | `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                                                              |
 | `watch.expiresHours`                 | `8`                                       | Max lifetime of a monitor cron job                                                                                                     |
 | `watch.maxTurns`                     | `50`                                      | Max monitor ticks per session                                                                                                          |
-| `resolve.concurrency`                | `4`                                       | Parallel fanout for per-thread GraphQL fetches                                                                                         |
 | `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                                       |
 | `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                                                             |
 | `resolve.fetchReviewSummaries`       | `true`                                    | Surface `COMMENTED` review summaries in `resolve --fetch` output                                                                       |
 | `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos)                                                       |
-| `checks.logTailLines`                | `200`                                     | Lines of job log to include in `logTail` for each failing check (set 0 to disable log fetching)                                        |
+| `checks.logTailLines`                | `80`                                      | Lines of job log to include in `logTail` for each failing check (set 0 to disable log fetching)                                        |
 | `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                                                 |
 | `actions.autoResolveOutdated`        | `true`                                    | Auto-resolve threads that point to code no longer in the PR diff                                                                       |
 | `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR's CI goes clean                                                                                      |
@@ -144,13 +142,6 @@ Maximum number of iterations before the `/loop` skill stops. This is the `--max-
 
 ## `resolve`
 
-### `resolve.concurrency` — default `4`
-
-Maximum number of parallel GraphQL mutations when resolving threads, minimizing comments, or dismissing reviews. GitHub's secondary rate limits start biting around 10 simultaneous mutations.
-
-- **Lower** if you see `HTTP 403: secondary rate limit` errors.
-- **Raise** cautiously for PRs with many threads.
-
 ### `resolve.fetchReviewSummaries` — default `true`
 
 When `true`, `pr-shepherd resolve --fetch` includes COMMENTED review summaries (PR-level overview bodies, like those produced by `copilot-pull-request-reviewer` and `gemini-code-assist`) in the `reviewSummaries` array returned to the agent. The agent classifies each one through the normal triage flow and minimizes it via `--minimize-comment-ids` as appropriate.
@@ -184,9 +175,9 @@ Common additions:
 - `merge_group` — for repos using GitHub's merge queue.
 - Remove `pull_request_target` for repos that don't use it (reduces noise).
 
-### `checks.logTailLines` — default `200`
+### `checks.logTailLines` — default `80`
 
-Number of lines from the end of the failing job's log to include in the `logTail` field of each triaged check. The log is fetched via `GET /repos/{owner}/{repo}/actions/jobs/{jobId}/logs` (which redirects to the raw log text) and the last N lines are extracted. Set to `0` to disable log fetching entirely.
+Number of lines from the end of the failing job's log to include in the `logTail` field of each triaged check. The log is fetched via `GET /repos/{owner}/{repo}/actions/jobs/{jobId}/logs` (which redirects to the raw log text), runner setup boilerplate is stripped, and the last N lines are extracted. Set to `0` to disable log fetching entirely.
 
 **Security/privacy note:** Log lines are embedded into agent-visible output. CI logs may contain sensitive data such as stack traces, internal paths, service endpoints, or accidentally logged secrets. For repositories where CI logs should not be surfaced to the agent, set this to `0`.
 

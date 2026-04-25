@@ -17,9 +17,19 @@ const mockGetPrHeadSha = vi.mocked(getPrHeadSha);
 
 const REPO = { owner: "owner", name: "repo" };
 
+/** Build a mock response that marks every alias in the document as truthy. */
+function makeBulkResponse(doc: unknown): { data: Record<string, unknown> } {
+  const str = typeof doc === "string" ? doc : "";
+  const data: Record<string, unknown> = {};
+  for (const [, alias] of str.matchAll(/^\s+([a-z]\d+):/gm)) {
+    data[alias] = { ok: true };
+  }
+  return { data };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
-  mockGraphql.mockResolvedValue({ data: {} });
+  mockGraphql.mockImplementation(async (doc) => makeBulkResponse(doc));
 });
 
 // ---------------------------------------------------------------------------
@@ -44,12 +54,10 @@ describe("applyResolveOptions — mutations", () => {
   it("minimizes comments with classifier RESOLVED", async () => {
     const result = await applyResolveOptions(1, REPO, { minimizeCommentIds: ["c-1"] });
     expect(result.minimizedComments).toEqual(["c-1"]);
-    // Verify the mutation var shape
-    const callArgs = mockGraphql.mock.calls.find(
-      (c) => (c[1] as Record<string, unknown>)?.["commentId"] === "c-1",
-    );
-    expect(callArgs).toBeDefined();
-    expect((callArgs![1] as Record<string, unknown>)["classifier"]).toBe("RESOLVED");
+    // Verify classifier and ID are inlined in the mutation document.
+    const doc = mockGraphql.mock.calls[0]?.[0] as string;
+    expect(doc).toContain("c-1");
+    expect(doc).toContain("classifier: RESOLVED");
   });
 
   it("dismisses reviews with provided message", async () => {
@@ -58,10 +66,10 @@ describe("applyResolveOptions — mutations", () => {
       dismissMessage: "addressed in follow-up",
     });
     expect(result.dismissedReviews).toEqual(["r-1"]);
-    const callArgs = mockGraphql.mock.calls.find(
-      (c) => (c[1] as Record<string, unknown>)?.["reviewId"] === "r-1",
-    );
-    expect((callArgs![1] as Record<string, unknown>)["message"]).toBe("addressed in follow-up");
+    // Verify the review ID and message are inlined in the mutation document.
+    const doc = mockGraphql.mock.calls[0]?.[0] as string;
+    expect(doc).toContain("r-1");
+    expect(doc).toContain("addressed in follow-up");
   });
 
   it("collects errors as 'id: message' without throwing", async () => {
@@ -85,11 +93,16 @@ describe("autoResolveOutdated", () => {
     expect(errors).toHaveLength(0);
   });
 
-  it("batches by CONCURRENCY (default 4) — correct graphql call count for 20 ids", async () => {
+  it("issues a single bulk graphql call for any number of ids", async () => {
     const ids = Array.from({ length: 20 }, (_, i) => `t-${i}`);
     await autoResolveOutdated(ids);
-    // One graphql call per id.
-    expect(mockGraphql).toHaveBeenCalledTimes(20);
+    expect(mockGraphql).toHaveBeenCalledTimes(1);
+    const doc = mockGraphql.mock.calls[0]?.[0] as string;
+    expect(doc).toContain("mutation BulkApply");
+    // All 20 IDs should appear inline.
+    for (const id of ids) {
+      expect(doc).toContain(id);
+    }
   });
 });
 

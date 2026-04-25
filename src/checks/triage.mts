@@ -152,6 +152,34 @@ function pickJobInfo(jobs: JobsResponse["jobs"], checkName: string): JobInfo | u
   };
 }
 
+// Patterns matching GitHub Actions runner setup boilerplate that adds noise
+// without diagnostic value. Lines matching any of these are stripped before
+// taking the tail so that error output stays close to the end of the window.
+const BOILERPLATE_PATTERNS = [
+  /^##\[(?:group|endgroup|debug)\]/,
+  /^\[command\]/,
+  /^Removing /,
+  /^Cache (hit|restored|saved|Size|not found)/i,
+  /^Download action repository /,
+  /^Found in cache @ /,
+  /^Received \d+ of \d+/,
+  /^Cleaning up orphan processes/,
+  /^Initialized empty Git repository/,
+  /^\s*(?:hint|note|advice):/i,
+  /^Run actions\//,
+  /^with:/,
+  /^env:/,
+  /^\s+\S+=.+/,  // indented key=value lines from 'with:' blocks
+];
+
+function filterBoilerplate(lines: string[]): string[] {
+  // Strip timestamp prefix (format: "2024-01-01T00:00:00.0000000Z ") before matching.
+  return lines.filter((line) => {
+    const content = line.replace(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z\s+/, "");
+    return !BOILERPLATE_PATTERNS.some((re) => re.test(content));
+  });
+}
+
 async function fetchLogTail(
   jobId: number,
   repo: RepoInfo,
@@ -160,8 +188,10 @@ async function fetchLogTail(
   const { owner, name } = repo;
   try {
     const text = await restText(`/repos/${owner}/${name}/actions/jobs/${jobId}/logs`);
-    const lines = text.split("\n");
-    if (lines.length <= logTailLines) return text;
+    const allLines = text.split("\n");
+    const filtered = filterBoilerplate(allLines);
+    const lines = filtered.length > 0 ? filtered : allLines;
+    if (lines.length <= logTailLines) return lines.join("\n");
     return lines.slice(-logTailLines).join("\n");
   } catch {
     return undefined;

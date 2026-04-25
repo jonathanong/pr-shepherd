@@ -265,8 +265,10 @@ describe("getMergeableState", () => {
 // ---------------------------------------------------------------------------
 
 describe("getPrHeadSha", () => {
-  it("returns head.sha from REST response", async () => {
-    mockFetch.mockResolvedValue(restOk({ head: { sha: "abc123def456" } }));
+  it("returns headRefOid from GraphQL response", async () => {
+    mockFetch.mockResolvedValue(
+      gqlOk({ repository: { pullRequest: { headRefOid: "abc123def456" } } }),
+    );
     const sha = await getPrHeadSha(42, "owner", "repo");
     expect(sha).toBe("abc123def456");
   });

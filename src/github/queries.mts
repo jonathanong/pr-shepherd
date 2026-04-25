@@ -14,14 +14,8 @@ const gql = (name: string): string =>
 /** The primary batch query that fetches CI + comments + merge status in one round-trip. */
 export const BATCH_PR_QUERY = gql("batch-pr.gql");
 
-/** Resolve a single review thread. */
-export const RESOLVE_THREAD_MUTATION = gql("resolve-thread.gql");
-
-/** Minimize a PR comment (IssueComment). */
-export const MINIMIZE_COMMENT_MUTATION = gql("minimize-comment.gql");
-
-/** Dismiss a pull request review. */
-export const DISMISS_REVIEW_MUTATION = gql("dismiss-review.gql");
+/** Returns the current head commit SHA for a PR. Used by waitForSha polling. */
+export const GET_PR_HEAD_SHA_QUERY = gql("get-pr-head-sha.gql");
 
 /** Multi-PR status query for `shepherd status PR1 PR2 …`. */
 export const MULTI_PR_STATUS_QUERY = gql("multi-pr-status.gql");
