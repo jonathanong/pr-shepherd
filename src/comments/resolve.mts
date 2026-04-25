@@ -84,6 +84,10 @@ export async function autoResolveOutdated(
 // Bulk mutation
 // ---------------------------------------------------------------------------
 
+// GitHub GraphQL complexity limits cap realistic batches well below this, but
+// chunk anyway so a single oversized list never fails the entire call.
+const BULK_CHUNK_SIZE = 50;
+
 function buildBulkMutation(
   resolveIds: string[],
   minimizeIds: string[],
@@ -114,6 +118,33 @@ function buildBulkMutation(
 }
 
 async function bulkApply(
+  resolveIds: string[],
+  minimizeIds: string[],
+  dismissIds: string[],
+  dismissMessage: string,
+  result: ResolveResult,
+): Promise<void> {
+  type Op = { kind: "r"; id: string } | { kind: "m"; id: string } | { kind: "d"; id: string };
+  const allOps: Op[] = [
+    ...resolveIds.map((id) => ({ kind: "r" as const, id })),
+    ...minimizeIds.map((id) => ({ kind: "m" as const, id })),
+    ...dismissIds.map((id) => ({ kind: "d" as const, id })),
+  ];
+
+  for (let i = 0; i < allOps.length; i += BULK_CHUNK_SIZE) {
+    const chunk = allOps.slice(i, i + BULK_CHUNK_SIZE);
+    // eslint-disable-next-line no-await-in-loop
+    await bulkApplyChunk(
+      chunk.filter((o) => o.kind === "r").map((o) => o.id),
+      chunk.filter((o) => o.kind === "m").map((o) => o.id),
+      chunk.filter((o) => o.kind === "d").map((o) => o.id),
+      dismissMessage,
+      result,
+    );
+  }
+}
+
+async function bulkApplyChunk(
   resolveIds: string[],
   minimizeIds: string[],
   dismissIds: string[],

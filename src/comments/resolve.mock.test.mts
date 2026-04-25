@@ -122,7 +122,7 @@ describe("autoResolveOutdated", () => {
     expect(errors).toHaveLength(0);
   });
 
-  it("issues a single bulk graphql call for any number of ids", async () => {
+  it("issues a single bulk graphql call when ids fit in one chunk", async () => {
     const ids = Array.from({ length: 20 }, (_, i) => `t-${i}`);
     await autoResolveOutdated(ids);
     expect(mockGraphql).toHaveBeenCalledTimes(1);
@@ -132,6 +132,20 @@ describe("autoResolveOutdated", () => {
     for (const id of ids) {
       expect(doc).toContain(id);
     }
+  });
+
+  it("splits into multiple graphql calls when ids exceed BULK_CHUNK_SIZE (50)", async () => {
+    const ids = Array.from({ length: 55 }, (_, i) => `t-${i}`);
+    await autoResolveOutdated(ids);
+    // 55 ids → chunk 1: t-0..t-49 (50 ops), chunk 2: t-50..t-54 (5 ops)
+    expect(mockGraphql).toHaveBeenCalledTimes(2);
+    const doc1 = mockGraphql.mock.calls[0]?.[0] as string;
+    const doc2 = mockGraphql.mock.calls[1]?.[0] as string;
+    expect(doc1).toContain("t-0");
+    expect(doc1).toContain("t-49");
+    expect(doc1).not.toContain("t-50");
+    expect(doc2).toContain("t-50");
+    expect(doc2).toContain("t-54");
   });
 });
 
