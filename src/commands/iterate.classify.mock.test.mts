@@ -346,7 +346,7 @@ describe("runIterate — review summary auto-minimize", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [t1], autoResolved: [], autoResolveErrors: [] },
+        threads: { actionable: [t1], autoResolved: [], autoResolveErrors: [], firstLook: [] },
         reviewSummaries: [botSummary],
       }),
     );

@@ -219,7 +219,7 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
+        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [], firstLook: [] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -253,7 +253,7 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
       makeReport({
         status: "UNRESOLVED_COMMENTS",
         baseBranch: "",
-        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
+        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [], firstLook: [] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -313,7 +313,7 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
       makeReport({
         status: "UNRESOLVED_COMMENTS",
         baseBranch: "main; rm -rf /",
-        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
+        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [], firstLook: [] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({

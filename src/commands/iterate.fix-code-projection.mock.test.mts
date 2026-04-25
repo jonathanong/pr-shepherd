@@ -228,7 +228,7 @@ describe("runIterate — fix_code agent projection", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [] },
+        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [], firstLook: [] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -265,7 +265,7 @@ describe("runIterate — fix_code agent projection", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        comments: { actionable: [comment] },
+        comments: { actionable: [comment], firstLook: [] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
