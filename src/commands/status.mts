@@ -145,7 +145,7 @@ export function deriveVerdict(s: PrSummary): string {
   ) {
     return "READY";
   }
-  if (s.mergeStateStatus === "BLOCKED") return "BLOCKED";
+  if (s.mergeStateStatus === "BLOCKED" || s.mergeStateStatus === "HAS_HOOKS") return "BLOCKED";
   if (s.mergeStateStatus === "DIRTY") return "CONFLICTS";
   if (s.ciState === "PENDING" || s.ciState === "EXPECTED") return "IN PROGRESS";
   if (s.ciState === "FAILURE" || s.ciState === "ERROR") return "FAILING";

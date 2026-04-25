@@ -21,7 +21,7 @@ export function formatIterateResult(result: IterateResult, opts?: { verbose?: bo
 
   const heading = `# PR #${result.pr} [${result.action.toUpperCase()}]`;
   const reviewDecisionSeg =
-    result.mergeStateStatus === "BLOCKED" && result.reviewDecision
+    result.mergeStatus === "BLOCKED" && result.reviewDecision
       ? ` · **reviewDecision** \`${result.reviewDecision}\``
       : "";
   const baseLine = `**status** \`${result.status}\` · **merge** \`${result.mergeStateStatus}\`${reviewDecisionSeg} · **state** \`${result.state}\` · **repo** \`${result.repo}\``;

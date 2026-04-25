@@ -153,17 +153,17 @@ export function buildFixInstructions(
 }
 
 export function buildWaitLog(base: IterateResultBase): string {
-  const { summary, mergeStateStatus, remainingSeconds } = base;
+  const { summary, remainingSeconds } = base;
   const parts: string[] = [`WAIT: ${summary.passing} passing, ${summary.inProgress} in-progress`];
 
-  switch (mergeStateStatus) {
-    case "BEHIND":
-      parts.push("branch is behind base");
-      break;
+  switch (base.mergeStatus) {
     case "BLOCKED":
       if (base.reviewDecision === "REVIEW_REQUIRED") parts.push("awaiting human review");
       else if (base.reviewDecision === "APPROVED") parts.push("awaiting additional approvals");
       else parts.push("awaiting human review or branch protection");
+      break;
+    case "BEHIND":
+      parts.push("branch is behind base");
       break;
     case "DRAFT":
       parts.push("PR is a draft");

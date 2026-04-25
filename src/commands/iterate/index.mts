@@ -48,6 +48,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       repo: report.repo,
       status: report.status,
       mergeStateStatus: report.mergeStatus.mergeStateStatus,
+      mergeStatus: report.mergeStatus.status,
       reviewDecision: report.mergeStatus.reviewDecision,
       copilotReviewInProgress: report.mergeStatus.copilotReviewInProgress,
       isDraft: report.mergeStatus.isDraft,
@@ -82,6 +83,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     status: report.status,
     state: report.mergeStatus.state,
     mergeStateStatus: report.mergeStatus.mergeStateStatus,
+    mergeStatus: report.mergeStatus.status,
     reviewDecision: report.mergeStatus.reviewDecision,
     copilotReviewInProgress: report.mergeStatus.copilotReviewInProgress,
     isDraft: report.mergeStatus.isDraft,
@@ -94,7 +96,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
 
   if (readyState.shouldCancel) {
     let cancelNote: string;
-    if (base.mergeStateStatus !== "BLOCKED") cancelNote = "has been ready for review";
+    if (base.mergeStatus !== "BLOCKED") cancelNote = "has been ready for review";
     else if (base.reviewDecision === "REVIEW_REQUIRED") cancelNote = "is awaiting human review";
     else if (base.reviewDecision === "APPROVED") cancelNote = "is awaiting additional approvals";
     else cancelNote = "is awaiting human review or branch protection resolution";

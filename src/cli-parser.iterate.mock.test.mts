@@ -323,4 +323,46 @@ describe("main — iterate text format", () => {
     expect(parsed.summary.skipped).toBe(0);
     expect(parsed.summary.filtered).toBe(0);
   });
+
+  // ---------------------------------------------------------------------------
+  // HAS_HOOKS — derived BLOCKED, raw HAS_HOOKS
+  // ---------------------------------------------------------------------------
+
+  it("text: reviewDecision shown in heading when mergeStatus=BLOCKED from HAS_HOOKS raw", async () => {
+    const result = {
+      ...makeIterateResult("wait"),
+      mergeStateStatus: "HAS_HOOKS" as const,
+      mergeStatus: "BLOCKED" as const,
+      reviewDecision: "REVIEW_REQUIRED" as const,
+    };
+    mockRunIterate.mockResolvedValue(result);
+    await main(["node", "shepherd", "iterate", "42", "--verbose"]);
+    const text = getStdout();
+    expect(text).toContain("**reviewDecision** `REVIEW_REQUIRED`");
+  });
+
+  it("text: reviewDecision omitted from heading when mergeStatus=BLOCKED+HAS_HOOKS but null", async () => {
+    const result = {
+      ...makeIterateResult("wait"),
+      mergeStateStatus: "HAS_HOOKS" as const,
+      mergeStatus: "BLOCKED" as const,
+      reviewDecision: null,
+    };
+    mockRunIterate.mockResolvedValue(result);
+    await main(["node", "shepherd", "iterate", "42", "--verbose"]);
+    expect(getStdout()).not.toContain("reviewDecision");
+  });
+
+  it("json lean: reviewDecision included when mergeStatus=BLOCKED from HAS_HOOKS raw", async () => {
+    const result = {
+      ...makeIterateResult("wait"),
+      mergeStateStatus: "HAS_HOOKS" as const,
+      mergeStatus: "BLOCKED" as const,
+      reviewDecision: "REVIEW_REQUIRED" as const,
+    };
+    mockRunIterate.mockResolvedValue(result);
+    await main(["node", "shepherd", "iterate", "42", "--format", "json"]);
+    const parsed = JSON.parse(getStdout().trimEnd());
+    expect(parsed.reviewDecision).toBe("REVIEW_REQUIRED");
+  });
 });

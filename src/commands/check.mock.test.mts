@@ -273,6 +273,16 @@ describe("runCheck — BLOCKED + clean (hand off to humans)", () => {
     const report = await runCheck(BASE_OPTS);
     expect(report.status).toBe("PENDING");
   });
+
+  it("returns READY when HAS_HOOKS (derived BLOCKED) and CI passed", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ mergeStateStatus: "HAS_HOOKS", reviewDecision: "REVIEW_REQUIRED" }),
+    });
+    const report = await runCheck(BASE_OPTS);
+    expect(report.status).toBe("READY");
+    expect(report.mergeStatus.status).toBe("BLOCKED");
+    expect(report.mergeStatus.mergeStateStatus).toBe("HAS_HOOKS");
+  });
 });
 
 // ---------------------------------------------------------------------------
