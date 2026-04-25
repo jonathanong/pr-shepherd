@@ -65,7 +65,14 @@ export async function getPrHeadSha(pr: number, owner: string, name: string): Pro
     repository: { pullRequest: { headRefOid: string } | null } | null;
   }>(GET_PR_HEAD_SHA_QUERY, { owner, repo: name, pr });
   const sha = result.data.repository?.pullRequest?.headRefOid;
-  if (!sha) throw new Error(`Could not resolve head SHA for PR #${pr}`);
+  if (!sha) {
+    const detail = !result.data.repository
+      ? "repository not found"
+      : !result.data.repository.pullRequest
+        ? "PR not found"
+        : "headRefOid missing";
+    throw new Error(`Could not resolve head SHA for ${owner}/${name} PR #${pr}: ${detail}`);
+  }
   return sha;
 }
 

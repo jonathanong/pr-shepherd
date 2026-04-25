@@ -1,8 +1,10 @@
 /**
  * GraphQL query strings used by pr-shepherd.
  *
- * Query strings live in src/github/gql/*.gql.
- * Never inline raw GraphQL strings in .ts source files.
+ * Static query strings live in src/github/gql/*.gql and are loaded here.
+ * Dynamic documents whose content varies per call (e.g. BulkApply in
+ * src/comments/resolve.mts) are built at runtime and are exempt — they
+ * cannot be expressed as static files.
  */
 
 import { readFileSync } from "node:fs";

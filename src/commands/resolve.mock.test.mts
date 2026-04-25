@@ -22,7 +22,6 @@ vi.mock("../comments/resolve.mts", () => ({
 vi.mock("../config/load.mts", () => ({
   loadConfig: vi.fn().mockReturnValue({
     resolve: {
-
       shaPoll: { intervalMs: 2000, maxAttempts: 10 },
       fetchReviewSummaries: true,
     },
@@ -288,7 +287,6 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
   it("returns empty reviewSummaries when fetchReviewSummaries is false", async () => {
     mockLoadConfig.mockReturnValueOnce({
       resolve: {
-  
         shaPoll: { intervalMs: 2000, maxAttempts: 10 },
         fetchReviewSummaries: false,
       },
@@ -349,7 +347,6 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
   it("instructions omit commit-suggestion step when commitSuggestionsEnabled is false", async () => {
     mockLoadConfig.mockReturnValueOnce({
       resolve: {
-  
         shaPoll: { intervalMs: 2000, maxAttempts: 10 },
         fetchReviewSummaries: true,
       },
