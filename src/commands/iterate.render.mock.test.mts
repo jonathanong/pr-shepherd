@@ -390,7 +390,11 @@ describe("runIterate — HAS_HOOKS (derived BLOCKED)", () => {
 
   it("cancel-note uses branch-protection wording when raw is HAS_HOOKS", async () => {
     mockRunCheck.mockResolvedValue(makeHasHooksReport(null));
-    mockUpdateReadyDelay.mockResolvedValue({ isReady: true, shouldCancel: true, remainingSeconds: 0 });
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("cancel");
     if (result.action === "cancel") {
@@ -401,7 +405,11 @@ describe("runIterate — HAS_HOOKS (derived BLOCKED)", () => {
 
   it("wait log uses branch-protection wording when raw is HAS_HOOKS", async () => {
     mockRunCheck.mockResolvedValue(makeHasHooksReport(null));
-    mockUpdateReadyDelay.mockResolvedValue({ isReady: true, shouldCancel: false, remainingSeconds: 300 });
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: false,
+      remainingSeconds: 300,
+    });
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("wait");
     if (result.action === "wait") {
