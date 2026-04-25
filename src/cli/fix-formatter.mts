@@ -1,6 +1,11 @@
 import { renderResolveCommand } from "../commands/iterate.mts";
 import type { IterateResultFixCode } from "../types.mts";
 
+function safeFence(content: string): string {
+  const maxRun = Math.max(0, ...Array.from(content.matchAll(/`+/g), (m) => m[0].length));
+  return "`".repeat(Math.max(3, maxRun + 1));
+}
+
 export function formatFixCodeResult(header: string, result: IterateResultFixCode): string {
   const sections: string[] = [header];
 
@@ -37,9 +42,10 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
       if (ch.failedStep) lines.push(`  > ${ch.failedStep}`);
       if (ch.summary) lines.push(`  > ${ch.summary}`);
       if (ch.logTail) {
-        lines.push("  ```");
+        const fence = safeFence(ch.logTail);
+        lines.push(`  ${fence}`);
         lines.push(ch.logTail.replace(/^/gm, "  ").trimEnd());
-        lines.push("  ```");
+        lines.push(`  ${fence}`);
       }
       return lines.join("\n");
     });
