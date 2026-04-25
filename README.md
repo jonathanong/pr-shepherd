@@ -17,6 +17,66 @@ Example Workflow:
 
 `pr-shepherd` optimizes performance, rate limits, and orchestration by moving **ALL** logic and prompts to code via a CLI tool, enshrining what would be a large skill or command prompt (which the agent would inevitably make mistakes on) into the code and returning a clear, actionable prompt.
 
+At a high-level, to start the monitor, the skill/command invokes a CLI that invokes a prompt:
+
+```bash
+> npx pr-shepherd monitor 123
+
+Run /loop "npx pr-shepherd iterate 123" every 4 minutes
+```
+
+Each iteration calls `npx pr-shepherd iterate`, which provides actionable feedback directly to the agent:
+
+```bash
+> npx pr-shepherd iterate 123
+# PR #123 [FIX_CODE]
+
+**status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
+**summary** 3 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 600 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
+
+## Review threads
+
+### `PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate.mts:42` (@alice)
+
+> The variable name is misleading.
+>
+> Consider renaming `x` to `remainingSeconds` so readers don't have to
+> trace back to the declaration to understand its meaning.
+
+## Actionable comments
+
+### `IC_kwDOSGizTs7_ajT8` (@bob)
+
+> Consider using a more descriptive name here.
+
+## Failing checks
+
+- `24697658766` — `CI › lint / typecheck / test (22.x)`
+  > Run tests
+
+## Changes-requested reviews
+
+- `PRR_kwDOSGizTs58XB1R` (@alice)
+
+## Post-fix push
+
+- base: `main`
+- resolve: `npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
+
+## Instructions
+
+1. Fix the code
+2. [Shown only if the branch is out of date] Rebase <DEFAULT BRANCH> if out of date
+3. [If rebased] git push --force-with-lease [If not rebased] git push
+4. Stop
+```
+
+On every iteration, a command is returned to instruct the agent exactly what to do. No guessing, no thinking:
+
+```bash
+`npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
+```
+
 ## Why pr-shepherd
 
 Concrete improvements to an agentic PR-review workflow:
