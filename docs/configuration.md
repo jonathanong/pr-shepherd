@@ -190,6 +190,8 @@ Common additions:
 
 Number of lines from the end of the failing job's log to include in the `logTail` field of each triaged check. The log is fetched via `GET /repos/{owner}/{repo}/actions/jobs/{jobId}/logs` (which redirects to the raw log text) and the last N lines are extracted. Set to `0` to disable log fetching entirely.
 
+**Security/privacy note:** Log lines are embedded into agent-visible output. CI logs may contain sensitive data such as stack traces, internal paths, service endpoints, or accidentally logged secrets. For repositories where CI logs should not be surfaced to the agent, set this to `0`.
+
 ---
 
 ## `mergeStatus`

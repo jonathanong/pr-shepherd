@@ -126,4 +126,4 @@ CONFLICTS is included here because the `fix_code` handler already runs `git fetc
 | 4       | Actionable threads/comments/any failing CI or CONFLICTS | `fix_code`   | 1         |
 | 4 esc.  | Same thread hit `fixAttemptsPerThread` times            | `escalate`   | 3         |
 | 5       | READY + CLEAN + isDraft                                 | `mark_ready` | 0         |
-| 7       | Fallthrough                                             | `wait`       | 0         |
+| 6       | Fallthrough                                             | `wait`       | 0         |

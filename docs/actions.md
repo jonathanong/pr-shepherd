@@ -180,7 +180,7 @@ Actionable work needs a code fix, commit, and push.
 
 **Markdown output:**
 
-```markdown
+````markdown
 # PR #42 [FIX_CODE]
 
 **status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
@@ -205,6 +205,7 @@ Actionable work needs a code fix, commit, and push.
 
 - `24697658766` — `CI › lint / typecheck / test (22.x)`
   > Run tests
+
 ```
 
 Error: 2 tests failed
@@ -241,7 +242,7 @@ AssertionError: expected true to be false
 8. Do not re-run `gh run cancel` on the IDs listed under `## Cancelled runs` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.
 9. For any large decisions or rejections you made this iteration, add or update a `## Shepherd Journal` section in the PR description (`gh pr edit 42 --body …`) summarizing each decision and linking back to the originating comment, thread, or review.
 10. Stop this iteration — CI needs time to run on the new push before the next tick.
-```
+````
 
 **Section order:**
 

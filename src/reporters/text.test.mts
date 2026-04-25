@@ -125,7 +125,7 @@ describe("formatText — failed checks", () => {
     expect(out).toContain("TIMED_OUT");
   });
 
-  it("omits bracket when failureKind is absent", () => {
+  it("omits bracket when check has no additional metadata", () => {
     const failing: TriagedCheck = {
       ...makeCheck({ name: "lint", category: "failing", conclusion: "FAILURE" }),
     };
