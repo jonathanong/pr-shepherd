@@ -67,9 +67,9 @@ export async function getPrHeadSha(pr: number, owner: string, name: string): Pro
   const sha = result.data.repository?.pullRequest?.headRefOid;
   if (!sha) {
     const detail = !result.data.repository
-      ? "repository not found"
+      ? "repository not found or access denied"
       : !result.data.repository.pullRequest
-        ? "PR not found"
+        ? "PR not found or access denied"
         : "headRefOid missing";
     throw new Error(`Could not resolve head SHA for ${owner}/${name} PR #${pr}: ${detail}`);
   }

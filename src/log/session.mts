@@ -83,7 +83,7 @@ export function formatRequestEntry(entry: HttpRequestEntry): string {
     } else {
       // For dynamic documents (e.g. BulkApply) the IDs are inlined as aliases.
       // Count the aliases so the log shows how many operations were batched.
-      const aliasCount = (query.match(/^\s+[a-z]\d+:/gm) ?? []).length;
+      const aliasCount = (query.match(/^\s+[_A-Za-z]\w*:/gm) ?? []).length;
       if (aliasCount > 0) out += `aliases: ${aliasCount}\n`;
     }
   } else if (entry.body !== undefined) {

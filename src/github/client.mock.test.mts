@@ -273,14 +273,18 @@ describe("getPrHeadSha", () => {
     expect(sha).toBe("abc123def456");
   });
 
-  it("throws 'repository not found' when repository is null", async () => {
+  it("throws 'repository not found or access denied' when repository is null", async () => {
     mockFetch.mockResolvedValue(gqlOk({ repository: null }));
-    await expect(getPrHeadSha(42, "owner", "repo")).rejects.toThrow("repository not found");
+    await expect(getPrHeadSha(42, "owner", "repo")).rejects.toThrow(
+      "repository not found or access denied",
+    );
   });
 
-  it("throws 'PR not found' when pullRequest is null", async () => {
+  it("throws 'PR not found or access denied' when pullRequest is null", async () => {
     mockFetch.mockResolvedValue(gqlOk({ repository: { pullRequest: null } }));
-    await expect(getPrHeadSha(42, "owner", "repo")).rejects.toThrow("PR not found");
+    await expect(getPrHeadSha(42, "owner", "repo")).rejects.toThrow(
+      "PR not found or access denied",
+    );
   });
 
   it("throws 'headRefOid missing' when headRefOid is absent", async () => {
