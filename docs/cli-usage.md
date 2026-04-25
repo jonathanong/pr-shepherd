@@ -243,7 +243,7 @@ pr-shepherd iterate 42 --ready-delay 15m  # override ready-delay for this run
 | `--verbose`                   | false                                   | Full JSON output (all fields); restores full summary line in Markdown. See [actions.md](actions.md). |
 | `--ready-delay Nm`            | `watch.readyDelayMinutes` in config     | Settle window before the loop cancels after READY                                                    |
 | `--cooldown-seconds N`        | `iterate.cooldownSeconds` in config     | Wait after a push before reading CI                                                                  |
-| `--stall-timeout <duration>`  | `iterate.stallTimeoutMinutes` in config | Override the stall-detection window (e.g. `--stall-timeout 1h`)                                     |
+| `--stall-timeout <duration>`  | `iterate.stallTimeoutMinutes` in config | Override the stall-detection window (e.g. `--stall-timeout 1h`)                                      |
 | `--no-auto-mark-ready`        | false                                   | Skip converting draft → ready-for-review                                                             |
 | `--no-auto-cancel-actionable` | false                                   | Skip cancelling actionable failing runs                                                              |
 
@@ -282,10 +282,12 @@ Example for `[FIX_CODE]` (richest action):
 
 - `24697658766` — `CI / lint / typecheck / test (22.x)`
   > Run tests
-  ```
-  Error: expected 'foo' to equal 'bar'
-    at Object.<anonymous> (src/commands/iterate.test.mts:58:22)
-  ```
+```
+
+Error: expected 'foo' to equal 'bar'
+at Object.<anonymous> (src/commands/iterate.test.mts:58:22)
+
+```
 
 ## Post-fix push
 
