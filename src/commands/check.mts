@@ -105,7 +105,6 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
   }
 
   const activeThreads = unresolvedThreads.filter((t) => !t.isOutdated);
-
   // First-look: collect previously-hidden items not yet seen by the agent.
   const outdatedCandidates = batchData.reviewThreads.filter((t) => t.isOutdated && !t.isResolved);
   const resolvedCandidates = batchData.reviewThreads.filter((t) => t.isResolved && !t.isOutdated);
@@ -122,7 +121,6 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
   ]);
 
   const autoResolvedIds = new Set(autoResolved.map((t) => t.id));
-
   const firstLookThreads: FirstLookThread[] = [
     ...outdatedCandidates
       .filter((_, i) => !outdatedSeen[i])

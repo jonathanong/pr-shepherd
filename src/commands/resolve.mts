@@ -1,19 +1,3 @@
-/**
- * `shepherd resolve [PR] [flags]`
- *
- * Two modes:
- *
- *   Fetch mode (--fetch or no mutation flags):
- *     Auto-resolves outdated threads and returns all active threads,
- *     visible comments, and CHANGES_REQUESTED reviews for LLM triage.
- *     Sonnet reads this output, applies code fixes, pushes, then calls
- *     resolve in mutation mode to resolve/minimize/dismiss by ID.
- *
- *   Mutation mode (--resolve-thread-ids, --minimize-comment-ids, --dismiss-review-ids):
- *     Resolves/minimizes/dismisses by ID. Optionally verifies the push
- *     has landed on GitHub before mutating (--require-sha).
- */
-
 import { getRepoInfo, getCurrentPrNumber } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { getOutdatedThreads } from "../comments/outdated.mts";
