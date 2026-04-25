@@ -20,7 +20,8 @@
   },
   "checks": {
     "ciTriggerEvents": ["pull_request", "pull_request_target"],
-    "logTailLines": 80
+    "logTailLines": 5,
+    "logTailChars": 200
   },
   "mergeStatus": {
     "blockingReviewerLogins": ["copilot"]

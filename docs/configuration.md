@@ -57,7 +57,8 @@ actions:
 | `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                                                             |
 | `resolve.fetchReviewSummaries`       | `true`                                    | Surface `COMMENTED` review summaries in `resolve --fetch` output                                                                       |
 | `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos)                                                       |
-| `checks.logTailLines`                | `80`                                      | Lines of job log to include in `logTail` for each failing check (set 0 to disable log fetching)                                        |
+| `checks.logTailLines`                | `5`                                       | Lines to tail from the failing step's log section (set 0 to disable log fetching)                                                      |
+| `checks.logTailChars`                | `200`                                     | Character limit on the log tail after the line limit is applied                                                                        |
 | `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                                                 |
 | `actions.autoResolveOutdated`        | `true`                                    | Auto-resolve threads that point to code no longer in the PR diff                                                                       |
 | `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR's CI goes clean                                                                                      |
@@ -175,9 +176,13 @@ Common additions:
 - `merge_group` — for repos using GitHub's merge queue.
 - Remove `pull_request_target` for repos that don't use it (reduces noise).
 
-### `checks.logTailLines` — default `80`
+### `checks.logTailLines` — default `5`
 
-Number of lines from the end of the failing job's log to include in the `logTail` field of each triaged check. The log is fetched via `GET /repos/{owner}/{repo}/actions/jobs/{jobId}/logs` (which redirects to the raw log text), runner setup boilerplate is stripped, and the last N lines are extracted. Set to `0` to disable log fetching entirely.
+Number of lines to tail from the failing step's log section. If the failing step has a `##[group]`/`##[endgroup]` section in the log, only lines within that section are considered; otherwise the full log is used. Set to `0` to disable log fetching entirely.
+
+### `checks.logTailChars` — default `200`
+
+Character limit applied after the line limit. The last `logTailChars` characters of the tail are kept. This bounds the agent context consumed by log output.
 
 **Security/privacy note:** Log lines are embedded into agent-visible output. CI logs may contain sensitive data such as stack traces, internal paths, service endpoints, or accidentally logged secrets. For repositories where CI logs should not be surfaced to the agent, set this to `0`.
 

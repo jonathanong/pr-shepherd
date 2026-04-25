@@ -1,52 +1,25 @@
-/**
- * Triage failing check runs: call the jobs API once per runId to fetch
- * workflow name, job name, and the first failed step name. Then fetch the
- * last N lines of the failing job's log so the agent can diagnose failures
- * without a separate tool call.
- *
- * No heuristic classification is applied — the raw GitHub `conclusion` field
- * is preserved as-is. The agent decides whether a failure is transient or
- * real based on the log tail and other context.
- *
- * For checks with runId === null (external StatusContexts) no API calls are
- * made; workflowName, jobName, failedStep, and logTail are all absent.
- *
- * Jobs responses are cached by runId so checks that share a run (e.g. matrix
- * builds or multiple required steps in one workflow) make only one API call.
- * Log tails are fetched per job ID, not per runId.
- */
-
 import { rest, restText } from "../github/http.mts";
 import type { ClassifiedCheck, TriagedCheck } from "../types.mts";
 import type { RepoInfo } from "../github/client.mts";
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
-/**
- * Triage each failing check: call the jobs API for each check with a non-null
- * runId to fetch workflow name, job name, and the first failed step name, then
- * fetch the last `logTailLines` lines of the failing job's log.
- */
 export function triageFailingChecks(
   failingChecks: ClassifiedCheck[],
   repo: RepoInfo,
   logTailLines: number,
+  logTailChars = 200,
 ): Promise<TriagedCheck[]> {
   const jobsCache = new Map<string, Promise<JobsResponse["jobs"] | undefined>>();
-  return Promise.all(failingChecks.map((c) => triageCheck(c, repo, jobsCache, logTailLines)));
+  return Promise.all(
+    failingChecks.map((c) => triageCheck(c, repo, jobsCache, logTailLines, logTailChars)),
+  );
 }
-
-// ---------------------------------------------------------------------------
-// Internal
-// ---------------------------------------------------------------------------
 
 async function triageCheck(
   check: ClassifiedCheck,
   repo: RepoInfo,
   jobsCache: Map<string, Promise<JobsResponse["jobs"] | undefined>>,
   logTailLines: number,
+  logTailChars: number,
 ): Promise<TriagedCheck> {
   if (check.runId === null) {
     return { ...check };
@@ -55,7 +28,7 @@ async function triageCheck(
   const jobInfo = jobs ? pickJobInfo(jobs, check.name) : undefined;
   const logTail =
     jobInfo?.jobId !== undefined && logTailLines > 0
-      ? await fetchLogTail(jobInfo.jobId, repo, logTailLines)
+      ? await fetchLogTail(jobInfo.jobId, repo, logTailLines, logTailChars, jobInfo.failedStep)
       : undefined;
   return {
     ...check,
@@ -126,9 +99,6 @@ async function fetchJobsUncached(
 }
 
 function pickJobInfo(jobs: JobsResponse["jobs"], checkName: string): JobInfo | undefined {
-  // Match by name. For matrix jobs sharing a check name, prefer a failing one.
-  // Fall back to prefix matching for matrix jobs whose workflow-API name includes
-  // a suffix like "(ubuntu)" while checkName is just the base name.
   const exactMatches = jobs.filter((j) => j.name === checkName);
   const matchedJobs =
     exactMatches.length > 0 ? exactMatches : jobs.filter((j) => j.name.startsWith(checkName));
@@ -152,46 +122,44 @@ function pickJobInfo(jobs: JobsResponse["jobs"], checkName: string): JobInfo | u
   };
 }
 
-// Patterns matching GitHub Actions runner setup boilerplate that adds noise
-// without diagnostic value. Lines matching any of these are stripped before
-// taking the tail so that error output stays close to the end of the window.
-const BOILERPLATE_PATTERNS = [
-  /^##\[(?:group|endgroup|debug)\]/,
-  /^\[command\]/,
-  /^Removing /,
-  /^Cache (hit|restored|saved|Size|not found)/i,
-  /^Download action repository /,
-  /^Found in cache @ /,
-  /^Received \d+ of \d+/,
-  /^Cleaning up orphan processes/,
-  /^Initialized empty Git repository/,
-  /^Run actions\//,
-  /^with:/,
-  /^env:/,
-];
-
-function filterBoilerplate(lines: string[]): string[] {
-  // Strip timestamp prefix (format: "2024-01-01T00:00:00.0000000Z ") before matching.
-  return lines.filter((line) => {
-    const content = line.replace(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z\s+/, "");
-    return !BOILERPLATE_PATTERNS.some((re) => re.test(content));
-  });
-}
-
 async function fetchLogTail(
   jobId: number,
   repo: RepoInfo,
   logTailLines: number,
+  logTailChars: number,
+  failedStepName?: string,
 ): Promise<string | undefined> {
   const { owner, name } = repo;
   try {
     const text = await restText(`/repos/${owner}/${name}/actions/jobs/${jobId}/logs`);
     const allLines = text.split("\n");
-    const filtered = filterBoilerplate(allLines);
-    const lines = filtered.length > 0 ? filtered : allLines;
-    if (lines.length <= logTailLines) return lines.join("\n");
-    return lines.slice(-logTailLines).join("\n");
+    const stepLines = failedStepName ? extractStepLines(allLines, failedStepName) : null;
+    const lines = stepLines ?? allLines;
+    const tail =
+      lines.length <= logTailLines ? lines.join("\n") : lines.slice(-logTailLines).join("\n");
+    return tail.length <= logTailChars ? tail : tail.slice(-logTailChars);
   } catch {
     return undefined;
   }
+}
+
+// Extract the lines inside the ##[group]..##[endgroup] section for the named step.
+// Returns null when no matching group is found so the caller falls back to the full log.
+function extractStepLines(lines: string[], stepName: string): string[] | null {
+  const lowerStep = stepName.toLowerCase();
+  let inStep = false;
+  const result: string[] = [];
+  for (const line of lines) {
+    const content = line.replace(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z\s+/, "");
+    if (!inStep) {
+      if (content.startsWith("##[group]") && content.slice(9).toLowerCase().includes(lowerStep)) {
+        inStep = true;
+      }
+    } else if (content.startsWith("##[endgroup]")) {
+      inStep = false;
+    } else {
+      result.push(line);
+    }
+  }
+  return result.length > 0 ? result : null;
 }
