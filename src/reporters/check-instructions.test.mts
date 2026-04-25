@@ -132,13 +132,50 @@ describe("buildCheckInstructions — CI budget policy", () => {
     expect(steps.some((s) => s.includes("Failing check:") && s.includes("lint"))).toBe(true);
   });
 
-  it("emits rerun hint with runId for check that has a runId", () => {
+  it("emits rerun hint with runId for check that has a runId but no logTail", () => {
     const failing: TriagedCheck = {
       ...makeCheck({ name: "build", category: "failing", conclusion: "CANCELLED", runId: "99999" }),
     };
     const report = makeReport({ checks: { ...makeReport().checks, failing: [failing] } });
     const steps = buildCheckInstructions(report);
+    expect(steps.some((s) => s.includes("gh run view 99999 --log-failed"))).toBe(true);
     expect(steps.some((s) => s.includes("gh run rerun 99999 --failed"))).toBe(true);
+  });
+
+  it("emits 'examine the log tail' when logTail is present with runId", () => {
+    const failing: TriagedCheck = {
+      ...makeCheck({ name: "build", category: "failing", conclusion: "FAILURE", runId: "99999" }),
+      logTail: "some failure output",
+    };
+    const report = makeReport({ checks: { ...makeReport().checks, failing: [failing] } });
+    const steps = buildCheckInstructions(report);
+    expect(steps.some((s) => s.includes("examine the log tail"))).toBe(true);
+    expect(steps.some((s) => s.includes("gh run rerun 99999 --failed"))).toBe(true);
+  });
+
+  it("includes failedStep hint in instruction when failedStep is set (logTail absent)", () => {
+    const failing: TriagedCheck = {
+      ...makeCheck({ name: "ci", category: "failing", conclusion: "FAILURE", runId: "12345" }),
+      failedStep: "Run tests",
+    };
+    const report = makeReport({ checks: { ...makeReport().checks, failing: [failing] } });
+    const steps = buildCheckInstructions(report);
+    expect(steps.some((s) => s.includes("Run tests") && s.includes("gh run view 12345"))).toBe(
+      true,
+    );
+  });
+
+  it("includes failedStep hint in instruction when failedStep is set (logTail present)", () => {
+    const failing: TriagedCheck = {
+      ...makeCheck({ name: "ci", category: "failing", conclusion: "FAILURE", runId: "12345" }),
+      failedStep: "Run tests",
+      logTail: "error output here",
+    };
+    const report = makeReport({ checks: { ...makeReport().checks, failing: [failing] } });
+    const steps = buildCheckInstructions(report);
+    expect(steps.some((s) => s.includes("Run tests") && s.includes("examine the log tail"))).toBe(
+      true,
+    );
   });
 
   it("emits escalate-to-human hint when runId and detailsUrl are both absent", () => {
