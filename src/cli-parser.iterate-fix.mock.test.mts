@@ -309,6 +309,41 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain("- (no runId) — `mystery-check`");
   });
 
+  it("fix_code: thread with url renders markdown link heading; comment with url renders markdown link heading", async () => {
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    result.fix.threads = [
+      {
+        id: "PRRT_linked",
+        path: "src/x.ts",
+        line: 5,
+        author: "reviewer",
+        body: "nit",
+        url: "https://github.com/owner/repo/pull/1#discussion_r1",
+      },
+    ];
+    result.fix.actionableComments = [
+      {
+        id: "PRRC_linked",
+        author: "bob",
+        body: "please fix",
+        url: "https://github.com/owner/repo/pull/1#issuecomment-1",
+      },
+    ];
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    expect(out).toContain(
+      "### [PRRT_linked](https://github.com/owner/repo/pull/1#discussion_r1) — `src/x.ts:5` (@reviewer)",
+    );
+    expect(out).toContain(
+      "### [PRRC_linked](https://github.com/owner/repo/pull/1#issuecomment-1) (@bob)",
+    );
+    expect(out).not.toContain("### `PRRT_linked`");
+    expect(out).not.toContain("### `PRRC_linked`");
+  });
+
   it("non-fix_code actions do not emit ## Checks — check count is in summary header only", async () => {
     const result = makeIterateResult("wait");
     result.checks = [
