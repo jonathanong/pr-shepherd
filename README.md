@@ -105,25 +105,12 @@ Some other workflow improvements:
 - `pr-shepherd` is instructed to cancel failed CI runs or re-run flaky CI runs. The primary reason is to minimize CI costs.
 - `pr-shepherd` supports "commit suggestions" by converting into a diff, applying them, and then committing them with attribution. This avoids a file read & write. One commit is always made per suggestion to avoid any merge conflicts - in these cases, the agent will resolve the comment manually.
 
-## Why pr-shepherd
+## Design Principles
 
-Concrete improvements to an agentic PR-review workflow:
-
-- **Faster monitor loops** — one batched GraphQL query per tick (see [docs/graphql.md](docs/graphql.md)) instead of N REST round-trips
-- **Lower context usage per iteration** — classification lives in the CLI; the agent receives one decision per tick and never sees raw GraphQL payloads or resolved threads
-- **Prompt-cache friendly** — the 4-minute default tick is tuned to Claude's 5-minute prompt-cache TTL (tunable via `watch.interval`)
-- **Reduced GitHub rate-limit exposure** — one batched GraphQL read per tick; loop-state files (fix-attempts, stall detection, ready-delay timer) are kept in `$TMPDIR/pr-shepherd-state/`
-- **No MCP surface** — skills call the CLI via `npx`; no long-lived MCP server, no extra auth boundary, smaller reasoning surface
-- **Skills over subagents** — skill prompts inject into the main conversation rather than spawning a subagent that reloads CLAUDE.md every turn
-- **Safe to interrupt** — all state lives in the PR on GitHub; the cron loop self-terminates when the PR is merged, closed, or settles after ready-delay
-
-## Design principles
-
-- **Reduced agent context** — logic lives in the CLI, not the prompt
-- **Reduced GitHub rate-limit exhaustion** — primary PR state is fetched via a batched GraphQL query
-- **Fewer tool calls** — comment resolutions are batched; resolved threads never reach the agent
-- **Skills over subagents** — subagents reload all CLAUDE.md context on every turn; skills inject into the main conversation instead, keeping cost low
-- **JSON/text parity** — `--format=json` and `--format=text` carry equivalent information; every field in one has a representation in the other
+- **Reduced agent context and turns** — logic lives in the CLI, not the prompt. The relevant context is provided automatically to the agent, reducing tool calls.
+- **Reduced GitHub rate-limit exposure** - GraphQL requests are batched when possible
+- **Minimal state** - `pr-shepherd` stores minimal state in the local worktree
+- **Classifications and decisions still happen at the agent level** - `pr-shepherd` goal is to provide sufficient context to make informed decisions and provide clear actionable steps without writing unreliable code-level heuristics
 
 ## Usage
 
