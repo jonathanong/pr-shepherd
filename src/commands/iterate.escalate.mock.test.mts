@@ -400,9 +400,7 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
   });
 });
 
-// ---------------------------------------------------------------------------
 // Human approval pending — cancel after ready-delay elapses
-// ---------------------------------------------------------------------------
 
 function makeBlockedReadyReport(reviewDecision: "REVIEW_REQUIRED" | "APPROVED" | null) {
   return makeReport({
