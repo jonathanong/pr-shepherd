@@ -54,7 +54,7 @@ async function triageCheck(
   const jobs = await fetchJobs(check.runId, repo, jobsCache);
   const jobInfo = jobs ? pickJobInfo(jobs, check.name) : undefined;
   const logTail =
-    jobInfo?.jobId !== undefined
+    jobInfo?.jobId !== undefined && logTailLines > 0
       ? await fetchLogTail(jobInfo.jobId, repo, logTailLines)
       : undefined;
   return {
@@ -132,7 +132,10 @@ function pickJobInfo(jobs: JobsResponse["jobs"], checkName: string): JobInfo | u
   const exactMatches = jobs.filter((j) => j.name === checkName);
   const matchedJobs =
     exactMatches.length > 0 ? exactMatches : jobs.filter((j) => j.name.startsWith(checkName));
-  const job = matchedJobs.find((j) => j.conclusion === "failure") ?? matchedJobs[0];
+  const job =
+    matchedJobs.find((j) => j.conclusion === "failure") ??
+    matchedJobs.find((j) => j.conclusion !== null && j.conclusion !== "success") ??
+    matchedJobs[0];
   if (!job) return undefined;
   const failedStep = job.steps?.find((s) => s.conclusion === "failure")?.name;
   return {
@@ -148,6 +151,7 @@ async function fetchLogTail(
   repo: RepoInfo,
   logTailLines: number,
 ): Promise<string | undefined> {
+  if (logTailLines <= 0) return undefined;
   const { owner, name } = repo;
   try {
     const text = await restText(`/repos/${owner}/${name}/actions/jobs/${jobId}/logs`);

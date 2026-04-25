@@ -52,12 +52,12 @@ All fields are populated unconditionally when available; none are gated on the t
 
 `report.checks` has these fields:
 
-| Field                    | Content                                                                           |
-| ------------------------ | --------------------------------------------------------------------------------- |
-| `passing`                | Classified checks with `category === 'passed'`                                    |
-| `failing`                | Triaged failing checks — with `workflowName`, `jobName`, `failedStep`, `logTail`  |
-| `inProgress`             | Checks with `category === 'in_progress'`                                          |
-| `skipped`                | Checks with `category === 'skipped'`                                              |
-| `filtered`               | Checks excluded by event filter                                                   |
-| `filteredNames`          | Names of filtered checks (for reporter display)                                   |
-| `blockedByFilteredCheck` | True when BLOCKED state is caused by a filtered check                             |
+| Field                    | Content                                                                          |
+| ------------------------ | -------------------------------------------------------------------------------- |
+| `passing`                | Classified checks with `category === 'passed'`                                   |
+| `failing`                | Triaged failing checks — with `workflowName`, `jobName`, `failedStep`, `logTail` |
+| `inProgress`             | Checks with `category === 'in_progress'`                                         |
+| `skipped`                | Checks with `category === 'skipped'`                                             |
+| `filtered`               | Checks excluded by event filter                                                  |
+| `filteredNames`          | Names of filtered checks (for reporter display)                                  |
+| `blockedByFilteredCheck` | True when BLOCKED state is caused by a filtered check                            |
