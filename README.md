@@ -13,6 +13,10 @@ Example Workflow:
 6. ...
 7. Human reviews PR with passing CI, no open threads, and all comments minimized
 
+## How it works
+
+`pr-shepherd` optimizes performance, rate limits, and orchestration by moving **ALL** logic and prompts to code via a CLI tool, enshrining what would be a large skill or command prompt (which the agent would inevitably make mistakes on) into the code and returning a clear, actionable prompt.
+
 ## Why pr-shepherd
 
 Concrete improvements to an agentic PR-review workflow:
