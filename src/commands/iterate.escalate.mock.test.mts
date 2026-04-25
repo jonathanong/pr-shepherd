@@ -422,34 +422,40 @@ describe("runIterate — BLOCKED + clean (hand off to humans via ready-delay)", 
     ["REVIEW_REQUIRED", "REVIEW_REQUIRED" as const],
     ["APPROVED (insufficient approvals)", "APPROVED" as const],
     ["null (other branch protection)", null],
-  ])("reviewDecision=%s: returns wait during ready-delay window", async (_label, reviewDecision) => {
-    mockRunCheck.mockResolvedValue(makeBlockedReadyReport(reviewDecision));
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
-      shouldCancel: false,
-      remainingSeconds: 300,
-    });
+  ])(
+    "reviewDecision=%s: returns wait during ready-delay window",
+    async (_label, reviewDecision) => {
+      mockRunCheck.mockResolvedValue(makeBlockedReadyReport(reviewDecision));
+      mockUpdateReadyDelay.mockResolvedValue({
+        isReady: true,
+        shouldCancel: false,
+        remainingSeconds: 300,
+      });
 
-    const result = await runIterate(makeOpts());
-    expect(result.action).toBe("wait");
-  });
+      const result = await runIterate(makeOpts());
+      expect(result.action).toBe("wait");
+    },
+  );
 
   it.each([
     ["REVIEW_REQUIRED", "REVIEW_REQUIRED" as const],
     ["APPROVED (insufficient approvals)", "APPROVED" as const],
     ["null (other branch protection)", null],
-  ])("reviewDecision=%s: returns cancel when ready-delay has elapsed", async (_label, reviewDecision) => {
-    mockRunCheck.mockResolvedValue(makeBlockedReadyReport(reviewDecision));
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
-      shouldCancel: true,
-      remainingSeconds: 0,
-    });
+  ])(
+    "reviewDecision=%s: returns cancel when ready-delay has elapsed",
+    async (_label, reviewDecision) => {
+      mockRunCheck.mockResolvedValue(makeBlockedReadyReport(reviewDecision));
+      mockUpdateReadyDelay.mockResolvedValue({
+        isReady: true,
+        shouldCancel: true,
+        remainingSeconds: 0,
+      });
 
-    const result = await runIterate(makeOpts());
-    expect(result.action).toBe("cancel");
-    expect(result.shouldCancel).toBe(true);
-  });
+      const result = await runIterate(makeOpts());
+      expect(result.action).toBe("cancel");
+      expect(result.shouldCancel).toBe(true);
+    },
+  );
 });
 
 describe("runIterate — escalate (thread-missing-location)", () => {

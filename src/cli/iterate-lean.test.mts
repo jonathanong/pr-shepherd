@@ -98,7 +98,11 @@ describe("projectIterateLean", () => {
   // ---------------------------------------------------------------------------
 
   it("omits reviewDecision when mergeStateStatus is not BLOCKED", () => {
-    const result = { ...makeIterateResult("wait"), mergeStateStatus: "CLEAN" as const, reviewDecision: "APPROVED" as const };
+    const result = {
+      ...makeIterateResult("wait"),
+      mergeStateStatus: "CLEAN" as const,
+      reviewDecision: "APPROVED" as const,
+    };
     const lean = projectIterateLean(result) as Record<string, unknown>;
     expect(lean.reviewDecision).toBeUndefined();
   });
