@@ -92,9 +92,25 @@ describe("main — iterate", () => {
 // ---------------------------------------------------------------------------
 
 describe("main — iterate text format", () => {
-  it("cooldown: heading, base/summary, log, then ## Instructions with end-iteration step", async () => {
+  it("cooldown (default): only heading, log, and ## Instructions — no base/summary lines", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cooldown"));
     await main(["node", "shepherd", "iterate", "42"]);
+    const lines = getStdout().trimEnd().split("\n");
+    expect(lines[0]).toBe("# PR #42 [COOLDOWN]");
+    expect(lines[1]).toBe("");
+    expect(lines[2]).toBe("SKIP: CI still starting");
+    expect(lines[3]).toBe("");
+    expect(lines[4]).toBe("## Instructions");
+    expect(lines[5]).toBe("");
+    expect(lines[6]).toMatch(/End this iteration/);
+    // No base/summary lines in default mode
+    expect(getStdout()).not.toContain("**status**");
+    expect(getStdout()).not.toContain("**summary**");
+  });
+
+  it("cooldown (verbose): heading, full base/summary, log, then ## Instructions", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("cooldown"));
+    await main(["node", "shepherd", "iterate", "42", "--verbose"]);
     const lines = getStdout().trimEnd().split("\n");
     expect(lines[0]).toBe("# PR #42 [COOLDOWN]");
     expect(lines[1]).toBe("");
@@ -173,7 +189,7 @@ describe("main — iterate text format", () => {
     expect(getStdout()).not.toContain("## Checks");
   });
 
-  it("json format: emits a single JSON.stringify(result)+newline, no formatter output", async () => {
+  it("json format: emits a single JSON object+newline, no formatter output", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
     await main(["node", "shepherd", "iterate", "42", "--format", "json"]);
     const out = getStdout().trimEnd();
@@ -202,17 +218,69 @@ describe("main — iterate text format", () => {
     }
   });
 
-  // Per CLAUDE.md output-format invariant: text and JSON must surface equivalent
-  // information. This is a smoke test for the scalar base fields — adding a new
-  // field to IterateResultBase without a text representation should fail here.
-  it("format parity: text output surfaces every scalar base field that JSON carries", async () => {
-    const result = makeIterateResult("wait");
+  // ---------------------------------------------------------------------------
+  // lean vs verbose output
+  // ---------------------------------------------------------------------------
+
+  it("lean mode (default): summary line omits zero counts, false booleans, and non-READY remainingSeconds", async () => {
+    // fixture: status=IN_PROGRESS, remainingSeconds=60, copilotReviewInProgress=false, isDraft=false
+    mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
+    await main(["node", "shepherd", "iterate", "42"]);
+    const text = getStdout();
+    // Zero counts omitted
+    expect(text).not.toContain("skipped");
+    expect(text).not.toContain("filtered");
+    // False booleans omitted
+    expect(text).not.toContain("shouldCancel");
+    expect(text).not.toContain("copilotReviewInProgress");
+    expect(text).not.toContain("isDraft");
+    // remainingSeconds omitted when status != READY
+    expect(text).not.toContain("remainingSeconds");
+  });
+
+  it("lean mode: remainingSeconds shown when status=READY and timer is positive", async () => {
+    const result = {
+      ...makeIterateResult("wait"),
+      status: "READY" as const,
+      remainingSeconds: 300,
+    };
+    mockRunIterate.mockResolvedValue(result);
+    await main(["node", "shepherd", "iterate", "42"]);
+    expect(getStdout()).toContain("**remainingSeconds** 300");
+  });
+
+  it("lean mode: copilotReviewInProgress and isDraft shown only when true", async () => {
+    const result = {
+      ...makeIterateResult("wait"),
+      copilotReviewInProgress: true,
+      isDraft: true,
+    };
     mockRunIterate.mockResolvedValue(result);
     await main(["node", "shepherd", "iterate", "42"]);
     const text = getStdout();
-    // pr, status, mergeStateStatus, state, summary counts, remainingSeconds
-    // are the scalars the cron runner + docs rely on. If any of these are
-    // silently dropped from the text path a downstream parser breaks.
+    expect(text).toContain("**copilotReviewInProgress**");
+    expect(text).toContain("**isDraft**");
+  });
+
+  it("verbose mode: summary line includes all fields including shouldCancel and false booleans", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
+    await main(["node", "shepherd", "iterate", "42", "--verbose"]);
+    const text = getStdout();
+    expect(text).toContain("shouldCancel");
+    expect(text).toContain(`**remainingSeconds** 60`);
+    expect(text).toContain("copilotReviewInProgress");
+    expect(text).toContain("isDraft");
+    expect(text).toContain("0 skipped");
+    expect(text).toContain("0 filtered");
+  });
+
+  // Per CLAUDE.md output-format invariant: text and JSON must surface equivalent
+  // information. In verbose mode every scalar base field is present in both formats.
+  it("format parity (verbose): text output surfaces every scalar base field that JSON carries", async () => {
+    const result = makeIterateResult("wait");
+    mockRunIterate.mockResolvedValue(result);
+    await main(["node", "shepherd", "iterate", "42", "--verbose"]);
+    const text = getStdout();
     expect(text).toContain(`# PR #${result.pr}`);
     expect(text).toContain(`\`${result.status}\``);
     expect(text).toContain(`\`${result.mergeStateStatus}\``);
@@ -220,5 +288,39 @@ describe("main — iterate text format", () => {
     expect(text).toContain(`${result.summary.passing} passing`);
     expect(text).toContain(`${result.summary.inProgress} inProgress`);
     expect(text).toContain(`**remainingSeconds** ${result.remainingSeconds}`);
+  });
+
+  it("json lean: omits shouldCancel, false booleans, and remainingSeconds when status != READY", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
+    await main(["node", "shepherd", "iterate", "42", "--format", "json"]);
+    const parsed = JSON.parse(getStdout().trimEnd());
+    expect(parsed.shouldCancel).toBeUndefined();
+    expect(parsed.copilotReviewInProgress).toBeUndefined();
+    expect(parsed.isDraft).toBeUndefined();
+    expect(parsed.remainingSeconds).toBeUndefined();
+    // checks omitted for wait action
+    expect(parsed.checks).toBeUndefined();
+  });
+
+  it("json lean: summary omits zero counts", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("wait")); // skipped/filtered = 0
+    await main(["node", "shepherd", "iterate", "42", "--format", "json"]);
+    const parsed = JSON.parse(getStdout().trimEnd());
+    expect(parsed.summary.skipped).toBeUndefined();
+    expect(parsed.summary.filtered).toBeUndefined();
+    expect(parsed.summary.inProgress).toBe(1); // non-zero, must be present
+  });
+
+  it("json verbose: emits full result with all fields including shouldCancel and false booleans", async () => {
+    const result = makeIterateResult("wait");
+    mockRunIterate.mockResolvedValue(result);
+    await main(["node", "shepherd", "iterate", "42", "--format", "json", "--verbose"]);
+    const parsed = JSON.parse(getStdout().trimEnd());
+    expect(parsed.shouldCancel).toBe(false);
+    expect(parsed.copilotReviewInProgress).toBe(false);
+    expect(parsed.isDraft).toBe(false);
+    expect(parsed.remainingSeconds).toBe(60);
+    expect(parsed.summary.skipped).toBe(0);
+    expect(parsed.summary.filtered).toBe(0);
   });
 });

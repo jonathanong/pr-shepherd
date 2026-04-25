@@ -179,4 +179,5 @@ export type CommitSuggestionResult =
 export interface GlobalOptions {
   prNumber?: number;
   format: "text" | "json";
+  verbose?: boolean;
 }

@@ -30,6 +30,7 @@ const BOOLEAN_FLAGS = new Set([
   "--no-auto-mark-ready",
   "--no-auto-cancel-actionable",
   "--dry-run",
+  "--verbose",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -61,20 +62,27 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
     tokens: true,
     options: {
       format: { type: "string" },
+      verbose: { type: "boolean" },
     },
   });
 
   const format = (values.format ?? "text") as string as "text" | "json";
+  const verbose = values.verbose === true;
 
   // Build the set of arg indices consumed by global flags so we can strip
   // them from `extra`.  Subcommand-specific flags are left untouched.
   const consumedIndices = new Set<number>();
   for (const tok of tokens ?? []) {
-    if (tok.kind === "option" && tok.name === "format") {
+    if (tok.kind === "option" && (tok.name === "format" || tok.name === "verbose")) {
       consumedIndices.add(tok.index);
       // When the value is a separate arg (--flag value, not --flag=value),
       // inlineValue is false and the value occupies tok.index + 1.
-      if ("inlineValue" in tok && tok.inlineValue === false && tok.value != null) {
+      if (
+        tok.name === "format" &&
+        "inlineValue" in tok &&
+        tok.inlineValue === false &&
+        tok.value != null
+      ) {
         consumedIndices.add(tok.index + 1);
       }
     }
@@ -120,7 +128,7 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
 
   return {
     prNumber,
-    global: { format },
+    global: { format, verbose },
     extra,
   };
 }

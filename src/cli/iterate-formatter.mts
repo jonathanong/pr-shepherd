@@ -16,16 +16,37 @@ import { formatFixCodeResult } from "./fix-formatter.mts";
  *      unconditional: every action, every variant, always emits at least one step.
  *      The SKILL simply follows those steps; it does not need its own dispatch table.
  */
-export function formatIterateResult(result: IterateResult): string {
+export function formatIterateResult(result: IterateResult, opts?: { verbose?: boolean }): string {
+  const verbose = opts?.verbose ?? false;
+
   const heading = `# PR #${result.pr} [${result.action.toUpperCase()}]`;
   const baseLine = `**status** \`${result.status}\` · **merge** \`${result.mergeStateStatus}\` · **state** \`${result.state}\` · **repo** \`${result.repo}\``;
-  const summaryLine = `**summary** ${result.summary.passing} passing, ${result.summary.skipped} skipped, ${result.summary.filtered} filtered, ${result.summary.inProgress} inProgress · **remainingSeconds** ${result.remainingSeconds} · **copilotReviewInProgress** ${result.copilotReviewInProgress} · **isDraft** ${result.isDraft} · **shouldCancel** ${result.shouldCancel}`;
+
+  let summaryLine: string;
+  if (verbose) {
+    summaryLine = `**summary** ${result.summary.passing} passing, ${result.summary.skipped} skipped, ${result.summary.filtered} filtered, ${result.summary.inProgress} inProgress · **remainingSeconds** ${result.remainingSeconds} · **copilotReviewInProgress** ${result.copilotReviewInProgress} · **isDraft** ${result.isDraft} · **shouldCancel** ${result.shouldCancel}`;
+  } else {
+    const counts = [`${result.summary.passing} passing`];
+    if (result.summary.skipped > 0) counts.push(`${result.summary.skipped} skipped`);
+    if (result.summary.filtered > 0) counts.push(`${result.summary.filtered} filtered`);
+    if (result.summary.inProgress > 0) counts.push(`${result.summary.inProgress} inProgress`);
+    const segs = [`**summary** ${counts.join(", ")}`];
+    if (result.status === "READY" && result.remainingSeconds > 0) {
+      segs.push(`**remainingSeconds** ${result.remainingSeconds}`);
+    }
+    if (result.copilotReviewInProgress) segs.push(`**copilotReviewInProgress**`);
+    if (result.isDraft) segs.push(`**isDraft**`);
+    summaryLine = segs.join(" · ");
+  }
+
   const header = [heading, "", baseLine, summaryLine].join("\n");
 
   switch (result.action) {
     case "cooldown":
+      // In default mode: suppress base/summary lines — cooldown carries UNKNOWN/empty
+      // placeholders that add no value. Emit only heading + log + Instructions.
       return [
-        header,
+        verbose ? header : heading,
         "",
         result.log,
         "",
