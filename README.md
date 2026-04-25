@@ -10,8 +10,11 @@ Example Workflow:
 3. Accept the plan
 4. Switch to Auto Mode
 5. Prompt: `make a PR, then run /pr-shepherd:monitor`
-6. ...
-7. Human reviews PR with passing CI, no open threads, and all comments minimized
+6. Agent makes a draft PR
+7. PR has passing CI -> draft is marked Ready for Review
+8. Review bots begin providing reviews
+9. Agent automatically classifies and fixes review comments based on the Plan
+10. Human reviews PR with passing CI, no open threads, and all comments minimized
 
 ## How it works
 
