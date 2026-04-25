@@ -47,6 +47,7 @@ GitHub sometimes updates `mergeStateStatus` to `'DRAFT'` before the `isDraft` bo
 `deriveMergeStatus` sets `status: "BLOCKED"` whenever `mergeStateStatus` is `BLOCKED`. However, `computeStatus` in `check.mts` overrides this to `ShepherdStatus: "READY"` when all of the following are true:
 
 - `verdict.allPassed` — no failing or in-progress CI checks.
+- `verdict.hasChecks` — at least one relevant (non-filtered, non-skipped) check has completed. Prevents a PR with zero relevant checks (CI never started, or all checks filtered/skipped) from prematurely triggering READY before any check has reported.
 - No unresolved threads, comments, or changes-requested reviews.
 - `mergeStatus.status === "BLOCKED"` (from `deriveMergeStatus`).
 - `mergeStatus.copilotReviewInProgress === false` — a bot review still pending is shepherd's problem, not a hand-off case.

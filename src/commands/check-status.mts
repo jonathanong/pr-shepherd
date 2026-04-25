@@ -17,9 +17,12 @@ export function computeStatus(
   if (verdict.anyInProgress) return "IN_PROGRESS";
   // BLOCKED with no remaining shepherd work — hand off via ready-delay regardless of why GitHub
   // is BLOCKED (review pending, insufficient approvals, branch-protection rule, etc.).
+  // Requires hasChecks so that a PR with zero relevant checks (CI never started, or all
+  // filtered/skipped) doesn't prematurely trigger READY before any check has reported.
   // copilotReviewInProgress is still excluded — a bot review is shepherd's problem, not a hand-off.
   if (
     verdict.allPassed &&
+    verdict.hasChecks &&
     unresolvedThreads === 0 &&
     unresolvedComments === 0 &&
     changesRequestedReviews === 0 &&
