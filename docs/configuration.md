@@ -104,7 +104,7 @@ All `COMMENTED` review summaries (bot and human alike) are always minimized by t
 
 Opt in to also minimize `APPROVED`-state reviews (`pr approve` clicks with or without a body). Off by default because approvals are an affirmative signal you usually want to keep visible. Flip to `true` for long-running PRs where stale approvals pile up.
 
-When `false` (default), any approval reviews render under `## Approvals (surfaced — not minimized)` in the iterate output — visible but not passed to `--minimize-comment-ids`.
+When `false` (default), approval reviews are surfaced under `## Approvals (surfaced — not minimized)` only in iterate output that is already being emitted for other actionable work (for example, alongside a `fix_code` payload). They remain visible and are not passed to `--minimize-comment-ids`, but approvals by themselves do not cause iterate to emit that section instead of returning `wait`.
 
 > Perf note: when this is `false` (default), `fetchPrBatch` does not paginate beyond the first 50 approved reviews. Turn it on to fetch all approvals.
 
