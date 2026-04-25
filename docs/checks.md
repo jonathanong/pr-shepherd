@@ -39,26 +39,25 @@ Returns:
 
 ## Stage 2: Triage (`checks/triage.mts`)
 
-Failing checks are further classified by `FailureKind`:
+For each failing check, triage fetches additional context from the GitHub Actions API:
 
-| `FailureKind` | Condition                                                         |
-| ------------- | ----------------------------------------------------------------- |
-| `timeout`     | `conclusion === 'TIMED_OUT'`                                      |
-| `cancelled`   | `conclusion === 'CANCELLED'`, `'STARTUP_FAILURE'`, or `'STALE'`   |
-| `actionable`  | Everything else — code failures, type errors, lint, test failures |
+- **`workflowName`** — the workflow that owns the failing job (from `jobs?filter=latest`).
+- **`jobName`** — the name of the matched job (falls back to the check name when not available).
+- **`failedStep`** — the first step that returned a non-success conclusion (e.g. `"Run tests"`, `"Set up job"`).
+- **`logTail`** — the last `checks.logTailLines` (default 200) lines of the failing job's log, fetched via `GET /repos/{owner}/{repo}/actions/jobs/{jobId}/logs`.
 
-For `actionable` checks, triage calls the GitHub Actions jobs API (the same `jobs?filter=latest` endpoint) to find the name of the first failed step (e.g. `"Run tests"`, `"Set up job"`). This `failedStep` is returned as part of the check and is visible in both JSON and text output. No log fetching is done for `timeout` or `cancelled` checks.
+All fields are populated unconditionally when available; none are gated on the type of failure. The agent reads `logTail` to decide whether to rerun (transient failure) or fix (real failure). `logTail` is omitted when the log fetch fails or when the check has no run ID.
 
 ## Report output
 
 `report.checks` has these fields:
 
-| Field                    | Content                                                      |
-| ------------------------ | ------------------------------------------------------------ |
-| `passing`                | Classified checks with `category === 'passed'`               |
-| `failing`                | Triaged failing checks (with `failureKind` and `failedStep`) |
-| `inProgress`             | Checks with `category === 'in_progress'`                     |
-| `skipped`                | Checks with `category === 'skipped'`                         |
-| `filtered`               | Checks excluded by event filter                              |
-| `filteredNames`          | Names of filtered checks (for reporter display)              |
-| `blockedByFilteredCheck` | True when BLOCKED state is caused by a filtered check        |
+| Field                    | Content                                                                           |
+| ------------------------ | --------------------------------------------------------------------------------- |
+| `passing`                | Classified checks with `category === 'passed'`                                    |
+| `failing`                | Triaged failing checks — with `workflowName`, `jobName`, `failedStep`, `logTail`  |
+| `inProgress`             | Checks with `category === 'in_progress'`                                          |
+| `skipped`                | Checks with `category === 'skipped'`                                              |
+| `filtered`               | Checks excluded by event filter                                                   |
+| `filteredNames`          | Names of filtered checks (for reporter display)                                   |
+| `blockedByFilteredCheck` | True when BLOCKED state is caused by a filtered check                             |

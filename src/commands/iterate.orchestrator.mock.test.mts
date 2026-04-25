@@ -289,7 +289,7 @@ describe("runIterate — triage via runCheck", () => {
               event: "pull_request",
               runId: "run-1",
               category: "failing",
-              failureKind: "actionable",
+
             },
           ],
           inProgress: [],
@@ -330,7 +330,7 @@ describe("runIterate — triage via runCheck", () => {
               event: "pull_request",
               runId: "run-2",
               category: "failing",
-              failureKind: "actionable",
+
             },
           ],
           inProgress: [],
@@ -352,7 +352,7 @@ describe("runIterate — triage via runCheck", () => {
     expect(result.action).toBe("fix_code");
   });
 
-  it("surfaces actionable failureKind in fix payload when check has failureKind set", async () => {
+  it("surfaces failing check in fix payload with name and runId", async () => {
     const failingCheck = {
       name: "typecheck",
       status: "COMPLETED" as const,
@@ -361,7 +361,6 @@ describe("runIterate — triage via runCheck", () => {
       event: "pull_request",
       runId: "run-3",
       category: "failing" as const,
-      failureKind: "actionable" as const,
     };
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -388,7 +387,8 @@ describe("runIterate — triage via runCheck", () => {
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       expect(result.fix.checks).toHaveLength(1);
-      expect(result.fix.checks[0]?.failureKind).toBe("actionable");
+      expect(result.fix.checks[0]?.name).toBe("typecheck");
+      expect(result.fix.checks[0]?.runId).toBe("run-3");
     }
   });
 });

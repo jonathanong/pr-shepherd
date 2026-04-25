@@ -63,7 +63,6 @@ describe("buildCheckInstructions — summary", () => {
   it("includes failing count in summary when non-zero", () => {
     const failing: TriagedCheck = {
       ...makeCheck({ category: "failing", conclusion: "FAILURE" }),
-      failureKind: "actionable",
     };
     const report = makeReport({ checks: { ...makeReport().checks, failing: [failing] } });
     const steps = buildCheckInstructions(report);
@@ -100,7 +99,6 @@ describe("buildCheckInstructions — rebase policy", () => {
   it("emits rebase-optional for BEHIND + actionable failure", () => {
     const failing: TriagedCheck = {
       ...makeCheck({ name: "tests", category: "failing", conclusion: "FAILURE" }),
-      failureKind: "actionable",
     };
     const report = makeReport({
       mergeStatus: { ...makeReport().mergeStatus, status: "BEHIND" },
@@ -125,34 +123,31 @@ describe("buildCheckInstructions — rebase policy", () => {
 });
 
 describe("buildCheckInstructions — CI budget policy", () => {
-  it("emits fix-code for actionable failure", () => {
+  it("emits failing-check instruction for any failure (not gated on failureKind)", () => {
     const failing: TriagedCheck = {
       ...makeCheck({ name: "lint", category: "failing", conclusion: "FAILURE" }),
-      failureKind: "actionable",
     };
     const report = makeReport({ checks: { ...makeReport().checks, failing: [failing] } });
     const steps = buildCheckInstructions(report);
-    expect(steps.some((s) => s.includes("Fix code failure") && s.includes("lint"))).toBe(true);
+    expect(steps.some((s) => s.includes("Failing check:") && s.includes("lint"))).toBe(true);
   });
 
-  it("emits rerun with runId for cancelled failure", () => {
+  it("emits rerun hint with runId for check that has a runId", () => {
     const failing: TriagedCheck = {
       ...makeCheck({ name: "build", category: "failing", conclusion: "CANCELLED", runId: "99999" }),
-      failureKind: "cancelled",
     };
     const report = makeReport({ checks: { ...makeReport().checks, failing: [failing] } });
     const steps = buildCheckInstructions(report);
     expect(steps.some((s) => s.includes("gh run rerun 99999 --failed"))).toBe(true);
   });
 
-  it("emits rerun with placeholder when runId is null", () => {
+  it("emits escalate-to-human hint when runId and detailsUrl are both absent", () => {
     const failing: TriagedCheck = {
       ...makeCheck({ name: "build", category: "failing", conclusion: "TIMED_OUT", runId: null }),
-      failureKind: "timeout",
     };
     const report = makeReport({ checks: { ...makeReport().checks, failing: [failing] } });
     const steps = buildCheckInstructions(report);
-    expect(steps.some((s) => s.includes("gh run rerun <runId> --failed"))).toBe(true);
+    expect(steps.some((s) => s.includes("escalate to a human"))).toBe(true);
   });
 
   it("emits no CI budget steps when no failing checks", () => {

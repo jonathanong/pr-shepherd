@@ -16,7 +16,7 @@ export function checkEscalateTriggers(
   actionableThreads: ReviewThread[],
   actionableComments: PrComment[],
   changesRequestedReviews: Review[],
-  actionableChecks: TriagedCheck[],
+  failingChecks: TriagedCheck[],
   threadAttempts: Record<string, number>,
   hasConflicts: boolean,
 ): EscalateCheck {
@@ -35,7 +35,7 @@ export function checkEscalateTriggers(
     changesRequestedReviews.length > 0 &&
     actionableThreads.length === 0 &&
     actionableComments.length === 0 &&
-    actionableChecks.length === 0 &&
+    failingChecks.length === 0 &&
     !hasConflicts
   ) {
     triggers.push("pr-level-changes-requested");

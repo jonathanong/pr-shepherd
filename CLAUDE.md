@@ -1,5 +1,15 @@
 # Development
 
+## Principles
+
+### Surface data, don't classify it
+
+The CLI's job is to fetch and present raw-enough data; the agent's job is to interpret it. Whenever the CLI is tempted to derive a categorical enum from raw GitHub fields (e.g. "this CI failure is transient", "this comment is noise", "this review is a nit"), prefer instead to ship the raw fields and any context the agent would otherwise have to fetch separately — log tails, step names, summaries, author logins.
+
+**Rule of thumb**: if removing a classification would force the agent to make another tool call to recover the same information, surface that information in the CLI output instead. If the agent already has the data and the classification is just a one-liner over it, delete the classification.
+
+State-machine actions (`fix_code`, `cancel`, `mark_ready`, `wait`, `escalate`) and convenience rollups required by skill instructions (`ShepherdStatus`, `ShepherdMergeStatus`) are not classifications — they're either state transitions or summaries of raw state and stay in the CLI.
+
 ## Setup
 
 **Before any `npx pr-shepherd` or `/pr-shepherd:*` invocation in this worktree**, verify `bin/` and `node_modules/` exist. If either is missing, run:

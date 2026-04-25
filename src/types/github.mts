@@ -61,14 +61,15 @@ export interface ClassifiedCheck extends CheckRun {
   category: CheckCategory;
 }
 
-export type FailureKind = "timeout" | "cancelled" | "actionable";
-
 export interface TriagedCheck extends ClassifiedCheck {
-  failureKind?: FailureKind;
   /** Workflow display name (e.g. `"CI"`). Populated when available from the jobs API; may be `undefined` on fetch failure or when no matching job is found. */
   workflowName?: string;
-  /** For `actionable` failures: name of the first failed step in the matched job (e.g. `"Run tests"`). */
+  /** Name of the matched job (e.g. `"tests (ubuntu)"`). Distinct from the check name for matrix builds. */
+  jobName?: string;
+  /** Name of the first failed step in the matched job (e.g. `"Run tests"`). */
   failedStep?: string;
+  /** Last N lines of the failing job's log. `undefined` when no matching job is found or log fetch fails. */
+  logTail?: string;
 }
 
 // ---------------------------------------------------------------------------

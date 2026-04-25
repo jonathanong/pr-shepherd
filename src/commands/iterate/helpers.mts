@@ -18,7 +18,8 @@ export function buildSummary(report: ShepherdReport): IterateResultSummary {
 /**
  * Build the full list of CI checks relevant to PR readiness: triggered by a PR
  * event (or StatusContext with null event), completed, and not skipped/neutral.
- * Includes both passing and failing. Failing entries carry failureKind + errorExcerpt.
+ * Includes both passing and failing. Failing entries carry workflowName, jobName,
+ * failedStep, and summary.
  */
 export function buildRelevantChecks(report: ShepherdReport): RelevantCheck[] {
   const excluded = new Set([null, "SKIPPED", "NEUTRAL"]);
@@ -44,10 +45,10 @@ export function buildRelevantChecks(report: ShepherdReport): RelevantCheck[] {
         conclusion,
         runId: c.runId,
         detailsUrl: c.detailsUrl || null,
-        failureKind: c.failureKind,
-        workflowName: c.workflowName,
-        failedStep: c.failedStep,
-        summary: c.summary,
+        ...(c.workflowName !== undefined && { workflowName: c.workflowName }),
+        ...(c.jobName !== undefined && { jobName: c.jobName }),
+        ...(c.failedStep !== undefined && { failedStep: c.failedStep }),
+        ...(c.summary !== undefined && { summary: c.summary }),
       },
     ];
   });

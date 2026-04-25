@@ -33,6 +33,8 @@ export interface PrShepherdConfig {
   };
   checks: {
     ciTriggerEvents: string[];
+    /** Number of log lines to tail from the failing job step. Default 200. */
+    logTailLines: number;
   };
   mergeStatus: {
     blockingReviewerLogins: string[];

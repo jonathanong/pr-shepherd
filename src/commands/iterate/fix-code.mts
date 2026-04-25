@@ -48,7 +48,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     surfacedApprovals,
   } = ctx;
 
-  const actionableChecks = report.checks.failing.filter((f) => f.failureKind === "actionable");
+  const failingChecks = report.checks.failing;
 
   const stored = await readFixAttempts({ owner: repoOwner, repo: repoName, pr: prNumber });
 
@@ -66,7 +66,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     report.threads.actionable,
     report.comments.actionable,
     report.changesRequestedReviews,
-    actionableChecks,
+    failingChecks,
     currentAttempts,
     report.mergeStatus.status === "CONFLICTS",
   );
@@ -98,7 +98,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   let cancelled: string[] = [];
   if (!opts.noAutoCancelActionable) {
     const uniqueRunIds = [
-      ...new Set(actionableChecks.map((c) => c.runId).filter((id): id is string => id !== null)),
+      ...new Set(failingChecks.map((c) => c.runId).filter((id): id is string => id !== null)),
     ];
     const results = await Promise.all(
       uniqueRunIds.map((id) => tryCancelRun(id, repoOwner, repoName)),
@@ -111,7 +111,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const { actionable: actionableComments, noiseIds: noiseCommentIds } = classifyComments(
     report.comments.actionable.map(toAgentComment),
   );
-  const checks = toAgentChecks(actionableChecks);
+  const checks = toAgentChecks(failingChecks);
   const { changesRequestedReviews } = report;
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
 

@@ -57,20 +57,17 @@ export function buildFixInstructions(
       `Apply code fixes: read and edit each file referenced under \`## Review threads\` and \`## Actionable comments\` above.`,
     );
   }
-  // Mirror the truthiness checks in `formatIterateResult` (cli/iterate-formatter.mts) so each
-  // AgentCheck maps to the same bullet shape here as there: runId → runId
-  // bullet, else detailsUrl → external bullet, else `(no runId)` bullet.
   const checksWithRunId = checks.filter((c) => c.runId);
   const externalChecks = checks.filter((c) => !c.runId && c.detailsUrl);
   const bareChecks = checks.filter((c) => !c.runId && !c.detailsUrl);
   if (checksWithRunId.length > 0) {
     instructions.push(
-      `For each bullet in \`## Failing checks\` whose backticked locator is a numeric runId (GitHub Actions): run \`gh run view <runId> --log-failed\`, identify the failure, and apply the fix.`,
+      `For each failing check under \`## Failing checks\` with a run ID: examine the log tail shown in the fenced block. If the log shows a transient runner or infrastructure failure (e.g. network timeout, runner setup crash, OOM kill), run \`gh run rerun <runId> --failed\` and stop this iteration — CI will re-run automatically. If the log shows a real test or build failure, apply a code fix.`,
     );
   }
   if (externalChecks.length > 0) {
     instructions.push(
-      `For each bullet in \`## Failing checks\` starting with \`external\` (external status check): open the linked URL in a browser to inspect the failure — \`gh run view\` cannot fetch logs for external checks.`,
+      `For each bullet in \`## Failing checks\` starting with \`external\` (external status check): open the linked URL in a browser to inspect the failure — log tails are not available for external checks.`,
     );
   }
   if (bareChecks.length > 0) {

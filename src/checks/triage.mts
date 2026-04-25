@@ -1,27 +1,23 @@
 /**
- * Triage failing check runs into three categories based solely on GitHub's
- * own conclusion field — no log-content classification:
- *   - timeout: conclusion is TIMED_OUT.
- *   - cancelled: conclusion is CANCELLED, STARTUP_FAILURE, or STALE.
- *   - actionable: everything else (FAILURE, ACTION_REQUIRED, …).
+ * Triage failing check runs: call the jobs API once per runId to fetch
+ * workflow name, job name, and the first failed step name. Then fetch the
+ * last N lines of the failing job's log so the agent can diagnose failures
+ * without a separate tool call.
  *
- * Exception: checks with runId === null are always classified as "actionable"
- * regardless of conclusion, so they surface in fix_code where the monitor
- * escalates to the user (no run to rerun/inspect).
+ * No heuristic classification is applied — the raw GitHub `conclusion` field
+ * is preserved as-is. The agent decides whether a failure is transient or
+ * real based on the log tail and other context.
  *
- * For all checks with a non-null runId, the jobs API is called once per runId
- * (results are cached across checks that share a run) to fetch workflow name
- * and, for actionable checks, the first failed step name. No log fetching is done.
+ * For checks with runId === null (external StatusContexts) no API calls are
+ * made; workflowName, jobName, failedStep, and logTail are all absent.
  *
- * Note on infrastructure-killed FAILURE runs: GitHub reports these as
- * conclusion === "FAILURE", so they classify as "actionable". The jobs API
- * surfaces their failedStep (e.g. "Set up job") which gives the agent a
- * GitHub-native signal to distinguish runner setup deaths from real test
- * failures — without any log-pattern analysis at the CLI level.
+ * Jobs responses are cached by runId so checks that share a run (e.g. matrix
+ * builds or multiple required steps in one workflow) make only one API call.
+ * Log tails are fetched per job ID, not per runId.
  */
 
-import { rest } from "../github/http.mts";
-import type { ClassifiedCheck, TriagedCheck, FailureKind, CheckConclusion } from "../types.mts";
+import { rest, restText } from "../github/http.mts";
+import type { ClassifiedCheck, TriagedCheck } from "../types.mts";
 import type { RepoInfo } from "../github/client.mts";
 
 // ---------------------------------------------------------------------------
@@ -29,19 +25,17 @@ import type { RepoInfo } from "../github/client.mts";
 // ---------------------------------------------------------------------------
 
 /**
- * Triage each failing check: classify by GitHub conclusion and call the jobs
- * API for each check with a non-null runId to fetch workflow name and (for
- * actionable failures) the name of the first failed step.
- *
- * Jobs responses are cached by runId so checks that share a run (e.g. matrix
- * builds or multiple required steps in one workflow) make only one API call.
+ * Triage each failing check: call the jobs API for each check with a non-null
+ * runId to fetch workflow name, job name, and the first failed step name, then
+ * fetch the last `logTailLines` lines of the failing job's log.
  */
 export function triageFailingChecks(
   failingChecks: ClassifiedCheck[],
   repo: RepoInfo,
+  logTailLines: number,
 ): Promise<TriagedCheck[]> {
   const jobsCache = new Map<string, Promise<JobsResponse["jobs"] | undefined>>();
-  return Promise.all(failingChecks.map((c) => triageCheck(c, repo, jobsCache)));
+  return Promise.all(failingChecks.map((c) => triageCheck(c, repo, jobsCache, logTailLines)));
 }
 
 // ---------------------------------------------------------------------------
@@ -52,25 +46,24 @@ async function triageCheck(
   check: ClassifiedCheck,
   repo: RepoInfo,
   jobsCache: Map<string, Promise<JobsResponse["jobs"] | undefined>>,
+  logTailLines: number,
 ): Promise<TriagedCheck> {
-  const failureKind = check.runId === null ? "actionable" : classifyConclusion(check.conclusion);
   if (check.runId === null) {
-    return { ...check, failureKind };
+    return { ...check };
   }
   const jobs = await fetchJobs(check.runId, repo, jobsCache);
-  const jobInfo = jobs ? pickJobInfo(jobs, check.name, failureKind) : undefined;
+  const jobInfo = jobs ? pickJobInfo(jobs, check.name) : undefined;
+  const logTail =
+    jobInfo?.jobId !== undefined
+      ? await fetchLogTail(jobInfo.jobId, repo, logTailLines)
+      : undefined;
   return {
     ...check,
-    failureKind,
-    workflowName: jobInfo?.workflowName,
-    ...(failureKind === "actionable" && { failedStep: jobInfo?.failedStep }),
+    ...(jobInfo?.workflowName !== undefined && { workflowName: jobInfo.workflowName }),
+    ...(jobInfo?.jobName !== undefined && { jobName: jobInfo.jobName }),
+    ...(jobInfo?.failedStep !== undefined && { failedStep: jobInfo.failedStep }),
+    ...(logTail !== undefined && { logTail }),
   };
-}
-
-function classifyConclusion(c: CheckConclusion): FailureKind {
-  if (c === "TIMED_OUT") return "timeout";
-  if (c === "CANCELLED" || c === "STARTUP_FAILURE" || c === "STALE") return "cancelled";
-  return "actionable";
 }
 
 interface JobsResponse {
@@ -85,7 +78,9 @@ interface JobsResponse {
 
 interface JobInfo {
   workflowName?: string;
+  jobName?: string;
   failedStep?: string;
+  jobId?: number;
 }
 
 function fetchJobs(
@@ -130,11 +125,7 @@ async function fetchJobsUncached(
   return allJobs;
 }
 
-function pickJobInfo(
-  jobs: JobsResponse["jobs"],
-  checkName: string,
-  failureKind: FailureKind,
-): JobInfo | undefined {
+function pickJobInfo(jobs: JobsResponse["jobs"], checkName: string): JobInfo | undefined {
   // Match by name. For matrix jobs sharing a check name, prefer a failing one.
   // Fall back to prefix matching for matrix jobs whose workflow-API name includes
   // a suffix like "(ubuntu)" while checkName is just the base name.
@@ -143,9 +134,27 @@ function pickJobInfo(
     exactMatches.length > 0 ? exactMatches : jobs.filter((j) => j.name.startsWith(checkName));
   const job = matchedJobs.find((j) => j.conclusion === "failure") ?? matchedJobs[0];
   if (!job) return undefined;
-  const failedStep =
-    failureKind === "actionable"
-      ? job.steps?.find((s) => s.conclusion === "failure")?.name
-      : undefined;
-  return { workflowName: job.workflow_name, failedStep };
+  const failedStep = job.steps?.find((s) => s.conclusion === "failure")?.name;
+  return {
+    workflowName: job.workflow_name,
+    jobName: job.name,
+    failedStep,
+    jobId: job.id,
+  };
+}
+
+async function fetchLogTail(
+  jobId: number,
+  repo: RepoInfo,
+  logTailLines: number,
+): Promise<string | undefined> {
+  const { owner, name } = repo;
+  try {
+    const text = await restText(`/repos/${owner}/${name}/actions/jobs/${jobId}/logs`);
+    const lines = text.split("\n");
+    if (lines.length <= logTailLines) return text;
+    return lines.slice(-logTailLines).join("\n");
+  } catch {
+    return undefined;
+  }
 }

@@ -15,7 +15,6 @@ import { classifyReviewSummaries } from "./classify.mts";
 import { applyStallGuard } from "./stall.mts";
 import { buildWaitLog } from "./render.mts";
 import { handleFixCode } from "./fix-code.mts";
-import { buildRerunCiResult } from "./steps.mts";
 import type { IterateCommandOptions, IterateResult, IterateResultBase } from "../../types.mts";
 
 export async function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
@@ -114,12 +113,11 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     report.approvedReviews,
     config.iterate.minimizeApprovals,
   );
-  const actionableChecks = report.checks.failing.filter((f) => f.failureKind === "actionable");
   const hasActionableWork =
     report.threads.actionable.length > 0 ||
     report.comments.actionable.length > 0 ||
     report.changesRequestedReviews.length > 0 ||
-    actionableChecks.length > 0 ||
+    report.checks.failing.length > 0 ||
     report.mergeStatus.status === "CONFLICTS" ||
     reviewSummaryIds.length > 0;
 
@@ -137,22 +135,6 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       reviewSummaryIds,
       surfacedApprovals,
     });
-  }
-
-  const transientChecks = report.checks.failing.filter(
-    (f) => (f.failureKind === "timeout" || f.failureKind === "cancelled") && f.runId !== null,
-  );
-  if (transientChecks.length > 0) {
-    return buildRerunCiResult(
-      transientChecks,
-      base,
-      prNumber,
-      stallKey,
-      stallTimeoutSeconds,
-      headSha,
-      report,
-      reviewSummaryIds,
-    );
   }
 
   const canMarkReady =

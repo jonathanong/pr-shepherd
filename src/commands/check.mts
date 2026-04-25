@@ -31,7 +31,7 @@ import type { GlobalOptions, ShepherdReport, ClassifiedCheck } from "../types.mt
 export interface CheckCommandOptions extends GlobalOptions {
   /** When true, auto-resolve outdated threads. */
   autoResolve?: boolean;
-  /** When true, skip fetching logs for failing checks (no failureKind set). */
+  /** When true, skip fetching job info and log tails for failing checks. */
   skipTriage?: boolean;
 }
 
@@ -43,9 +43,10 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
     throw new Error("No open PR found for current branch. Pass a PR number explicitly.");
   }
 
+  const config = loadConfig();
   // Only paginate APPROVED reviews when the caller will actually minimize them.
   // Otherwise the first-page cap of 50 (already in the batch) is plenty — no extra round-trip.
-  const paginateApprovedReviews = loadConfig().iterate.minimizeApprovals;
+  const paginateApprovedReviews = config.iterate.minimizeReviewSummaries.approvals;
   const result = await fetchPrBatch(prNumber, repo, { paginateApprovedReviews });
   let batchData = result.data;
 
@@ -74,9 +75,11 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
   const skipped = classifiedChecks.filter((c) => c.category === "skipped");
   const filtered = classifiedChecks.filter((c) => c.category === "filtered");
 
-  // Triage failures (fetch logs) — skipped when caller will short-circuit before needing failureKind.
+  // Triage failures (fetch job info + log tails) — skipped when caller short-circuits early.
   const triaged =
-    failing.length > 0 && !opts.skipTriage ? await triageFailingChecks(failing, repo) : failing;
+    failing.length > 0 && !opts.skipTriage
+      ? await triageFailingChecks(failing, repo, config.checks.logTailLines)
+      : failing;
 
   // Resolve threads and comments.
   const unresolvedThreads = batchData.reviewThreads.filter((t) => !t.isResolved && !t.isMinimized);

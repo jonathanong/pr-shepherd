@@ -56,12 +56,12 @@ See [ready-delay.md](ready-delay.md) for full lifecycle.
 
 ### 3.5. Stall guard
 
-**What:** After building `base` from the sweep results, `applyStallGuard` is called for every non-terminal action (`wait`, `fix_code`, `rerun_ci`). It computes a fingerprint of the material iterate inputs:
+**What:** After building `base` from the sweep results, `applyStallGuard` is called for every non-terminal action (`wait`, `fix_code`). It computes a fingerprint of the material iterate inputs:
 
 - HEAD SHA (from `git rev-parse HEAD`)
 - Action about to be emitted
 - `status`, `mergeStateStatus`, `state`, `isDraft`
-- Sorted failing-check names + failureKinds
+- Sorted failing-check names + conclusions
 - Sorted actionable thread/comment/review IDs
 - Sorted review-summary minimize IDs
 
@@ -73,7 +73,7 @@ The fingerprint and a `firstSeenAt` timestamp are persisted to `$TMPDIR/pr-sheph
 
 In-progress check **names** are included so that a long-running CI pipeline where jobs complete one by one (moving from in-progress to passing) resets the timer as progress happens. Timing-only fields (`remainingSeconds`, `inProgress` count by itself) are excluded — only the set of check names changes the fingerprint, not how many are still running.
 
-**Applies to:** `wait`, `fix_code`, `rerun_ci`. Not applied to `cooldown`, `cancel`, `mark_ready`, or `escalate` — these are either pre-sweep, already terminal, or one-shot.
+**Applies to:** `wait`, `fix_code`. Not applied to `cooldown`, `cancel`, `mark_ready`, or `escalate` — these are either pre-sweep, already terminal, or one-shot.
 
 ---
 
@@ -84,28 +84,20 @@ In-progress check **names** are included so that a long-running CI pipeline wher
 - `report.threads.actionable.length > 0`
 - `report.comments.actionable.length > 0`
 - `report.changesRequestedReviews.length > 0`
-- `report.checks.failing` has any entry with `failureKind === 'actionable'`
+- `report.checks.failing.length > 0` (any failing check, regardless of conclusion)
 - `report.mergeStatus.status === 'CONFLICTS'`
+
+All failing checks — including timeout, cancelled, and flaky failures — route here. The `fix` payload carries `jobName` and `logTail` for each failing check so the agent can decide whether to run `gh run rerun <runId> --failed` (transient failure) or apply a code fix (real failure).
 
 CONFLICTS is included here because the `fix_code` handler already runs `git fetch origin && git rebase origin/<BASE_BRANCH> && git push --force-with-lease`, so merge conflicts and review comments are resolved together in a single push rather than across two separate ticks.
 
-**Side-effects:** cancels stale CI runs (`gh run cancel <runId>`) for actionable check failures.
+**Side-effects:** cancels stale CI runs (`gh run cancel <runId>`) for all failing checks.
 
 **Emits:** `action: 'fix_code'` with the full `fix` payload (may have empty threads/checks when CONFLICTS-only).
 
 ---
 
-### 5. Transient failures
-
-**Check:** any failing check has `failureKind === 'timeout'` or `failureKind === 'cancelled'`, and no actionable work, no conflicts.
-
-**Side-effects:** None — the CLI reports the run IDs that need a rerun; the agent executes `gh run rerun <runId> --failed` for each unique run ID as instructed by `## Instructions`.
-
-**Emits:** `action: 'rerun_ci'`
-
----
-
-### 6. Mark ready
+### 5. Mark ready
 
 **Check:** `report.status === 'READY'` AND `mergeStateStatus` is `CLEAN` (or `DRAFT` when `isDraft`) AND `!copilotReviewInProgress` AND `isDraft` AND `!shouldCancel`.
 
@@ -115,7 +107,7 @@ CONFLICTS is included here because the `fix_code` handler already runs `git fetc
 
 ---
 
-### 7. Wait
+### 6. Wait
 
 **Fallthrough:** nothing actionable, no terminal state, no ready-delay elapsed.
 
@@ -131,8 +123,7 @@ CONFLICTS is included here because the `fix_code` handler already runs `git fetc
 | 2.5     | `state !== 'OPEN'`                                      | `cancel`     | 2         |
 | 3 cont. | `shouldCancel`                                          | `cancel`     | 2         |
 | 3.5     | Same fingerprint for ≥ `stallTimeoutMinutes` (any step) | `escalate`   | 3         |
-| 4       | Actionable threads/comments/CI or CONFLICTS             | `fix_code`   | 1         |
+| 4       | Actionable threads/comments/any failing CI or CONFLICTS | `fix_code`   | 1         |
 | 4 esc.  | Same thread hit `fixAttemptsPerThread` times            | `escalate`   | 3         |
-| 5       | Transient CI failures (timeout or cancelled)            | `rerun_ci`   | 0         |
-| 6       | READY + CLEAN + isDraft                                 | `mark_ready` | 0         |
+| 5       | READY + CLEAN + isDraft                                 | `mark_ready` | 0         |
 | 7       | Fallthrough                                             | `wait`       | 0         |

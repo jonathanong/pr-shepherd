@@ -7,7 +7,6 @@ import type {
   PrComment,
   Review,
   MergeStatusResult,
-  FailureKind,
   CheckConclusion,
 } from "./github.mts";
 
@@ -93,22 +92,24 @@ export interface AgentComment {
 }
 
 /**
- * Check shape emitted to the monitor agent.
- * The agent fetches failed job logs on demand via `gh run view <runId> --log-failed`
- * when `runId` is available, and falls back to `detailsUrl` otherwise.
+ * Check shape emitted to the monitor agent under `fix_code`.
+ * Includes log tail so the agent can diagnose failures without a separate tool call.
  */
 export interface AgentCheck {
   name: string;
   runId: string | null;
   /** Fallback for checks where runId is null (e.g. external status checks). */
   detailsUrl: string | null;
-  failureKind?: FailureKind;
   /** Workflow display name (e.g. `"CI"`). Populated on a best-effort basis when available from the jobs API. */
   workflowName?: string;
-  /** For `actionable` failures: name of the first failed step (e.g. `"Run tests"`, `"Set up job"`). */
+  /** Name of the matched job (e.g. `"tests (ubuntu)"`). Distinct from check name for matrix builds. */
+  jobName?: string;
+  /** Name of the first failed step (e.g. `"Run tests"`, `"Set up job"`). */
   failedStep?: string;
   /** One-line status text shown in the GitHub UI (e.g. "67.68% of diff hit (target 85.00%)"). */
   summary?: string;
+  /** Last N lines of the failing job's log. `undefined` for external checks or when log fetch fails. */
+  logTail?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -127,11 +128,11 @@ export interface RelevantCheck {
   conclusion: Exclude<CheckConclusion, "SKIPPED" | "NEUTRAL" | null>;
   runId: string | null;
   detailsUrl: string | null;
-  /** Present for non-SUCCESS conclusions. */
-  failureKind?: FailureKind;
   /** Workflow display name (e.g. `"CI"`). Available for all checks with a runId. */
   workflowName?: string;
-  /** For `actionable` failures: name of the first failed step in the matched job. */
+  /** Name of the matched job (e.g. `"tests (ubuntu)"`). Distinct from check name for matrix builds. */
+  jobName?: string;
+  /** Name of the first failed step in the matched job. */
   failedStep?: string;
   /** One-line status text shown in the GitHub UI (e.g. "67.68% of diff hit (target 85.00%)"). */
   summary?: string;

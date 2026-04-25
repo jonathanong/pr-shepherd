@@ -105,12 +105,11 @@ describe("main — iterate text format (fix_code and checks)", () => {
       reviewSummaryIds: [],
       surfacedApprovals: [],
       checks: [
-        { name: "lint", runId: "run-42", detailsUrl: "https://x", failureKind: "actionable" },
+        { name: "lint", runId: "run-42", detailsUrl: "https://x" },
         {
           name: "codecov/patch",
           runId: null,
           detailsUrl: "https://app.codecov.io",
-          failureKind: "actionable",
         },
       ],
       changesRequestedReviews: [{ id: "REV_1", author: "reviewer", body: "please rework this" }],
@@ -307,13 +306,11 @@ describe("main — iterate text format (fix_code and checks)", () => {
         name: "codecov/patch",
         runId: null,
         detailsUrl: "https://app.codecov.io/a/b",
-        failureKind: "actionable",
       },
       {
         name: "mystery-check",
         runId: null,
         detailsUrl: null,
-        failureKind: "actionable",
       },
     ];
     mockRunIterate.mockResolvedValue(result);
@@ -367,7 +364,6 @@ describe("main — iterate text format (fix_code and checks)", () => {
         conclusion: "FAILURE",
         runId: "run-1",
         detailsUrl: null,
-        failureKind: "actionable",
       },
     ] as import("./types.mts").RelevantCheck[];
     mockRunIterate.mockResolvedValue(result);

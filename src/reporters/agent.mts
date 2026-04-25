@@ -30,27 +30,24 @@ export function toAgentCheck(c: TriagedCheck): AgentCheck {
     name: c.name,
     runId: c.runId,
     detailsUrl: c.detailsUrl,
-    failureKind: c.failureKind,
     ...(c.workflowName !== undefined && { workflowName: c.workflowName }),
+    ...(c.jobName !== undefined && { jobName: c.jobName }),
     ...(c.failedStep !== undefined && { failedStep: c.failedStep }),
     ...(c.summary !== undefined && { summary: c.summary }),
+    ...(c.logTail !== undefined && { logTail: c.logTail }),
   };
 }
 
 /**
- * Project and deduplicate checks so the agent makes one `gh run view` call
- * per run (dedup by runId) and skips duplicate external status checks (dedup
- * by name when runId is null).
+ * Project failing checks for the agent. Deduplicates only null-runId external
+ * checks by name — when runId is present each check may have a distinct job and
+ * log tail, so they are all kept.
  */
 export function toAgentChecks(checks: TriagedCheck[]): AgentCheck[] {
-  const seenRunIds = new Set<string>();
   const seenNames = new Set<string>();
   const result: AgentCheck[] = [];
   for (const c of checks) {
-    if (c.runId !== null) {
-      if (seenRunIds.has(c.runId)) continue;
-      seenRunIds.add(c.runId);
-    } else {
+    if (c.runId === null) {
       if (seenNames.has(c.name)) continue;
       seenNames.add(c.name);
     }

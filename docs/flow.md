@@ -19,26 +19,22 @@ flowchart TD
   S25 -->|no| S3[3. updateReadyDelay<br/>ready-since.txt]
   S3 --> S3C{shouldCancel?}
   S3C -->|yes| A_CAN
-  S3C -->|no| S4{4. CONFLICTS or actionable<br/>threads/comments/CI/reviews?<br/>fix_code handler rebases too}
-  S4 -->|yes| S4X[gh run cancel actionable runIds]
-  S4X --> A_FIX([action: fix_code<br/>+ fix payload])
-  S4 -->|no| S5{5. transient<br/>timeout/infra?}
-  S5 -->|yes| S5X[gh run rerun runId --failed]
-  S5X --> A_RR([action: rerun_ci])
-  S5 -->|no| S6{6. READY + CLEAN<br/>+ isDraft<br/>+ !copilot?}
-  S6 -->|yes| S6X[gh pr ready PR]
-  S6X --> A_MR([action: mark_ready])
-  S6 -->|no| A_W([action: wait])
+  S3C -->|no| S4{4. CONFLICTS or any<br/>failing CI / threads /<br/>comments / reviews?}
+  S4 -->|yes| S4X[gh run cancel failing runIds]
+  S4X --> A_FIX([action: fix_code<br/>+ fix payload with logTail])
+  S4 -->|no| S5{5. READY + CLEAN<br/>+ isDraft<br/>+ !copilot?}
+  S5 -->|yes| S5X[gh pr ready PR]
+  S5X --> A_MR([action: mark_ready])
+  S5 -->|no| A_W([action: wait])
 
   A_COOL --> DEC{Cron prompt<br/>acts on action}
   A_CAN --> DEC
   A_FIX --> DEC
-  A_RR --> DEC
   A_MR --> DEC
   A_W --> DEC
 
   DEC -->|cancel| STOP["/loop cancel"]
-  DEC -->|fix_code| FIX[Edit files →<br/>git add + commit →<br/>fetch + rebase + push →<br/>pr-shepherd resolve --require-sha HEAD]
+  DEC -->|fix_code| FIX[Examine logTail →<br/>rerun or edit+commit →<br/>fetch + rebase + push →<br/>pr-shepherd resolve --require-sha HEAD]
   FIX --> NEXT[Wait for next tick]
   DEC -->|other| NEXT
   NEXT --> CRON

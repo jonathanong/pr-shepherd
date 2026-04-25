@@ -14,7 +14,6 @@ export type ShepherdAction =
   | "cooldown"
   | "wait"
   | "fix_code"
-  | "rerun_ci"
   | "mark_ready"
   | "cancel"
   | "escalate";
@@ -59,8 +58,9 @@ export interface IterateResultBase {
    * (pull_request / pull_request_target, or StatusContext with null event),
    * completed (status === COMPLETED), and not skipped/neutral.
    *
-   * Includes both passing and failing checks. Failing entries carry `failureKind`
-   * and `failedStep`. Empty (`[]`) during the `cooldown` early-return (no sweep ran).
+   * Includes both passing and failing checks. Failing entries carry
+   * `workflowName`, `jobName`, `failedStep`, and `summary`. Empty (`[]`)
+   * during the `cooldown` early-return (no sweep ran).
    */
   checks: RelevantCheck[];
 }
@@ -123,21 +123,6 @@ export interface IterateResultFixCode extends IterateResultBase {
   cancelled: string[];
 }
 
-export interface ReranRun {
-  runId: string;
-  /** Check names within this run that triggered the rerun (multiple steps can share a run). */
-  checkNames: string[];
-  failureKind: "timeout" | "cancelled";
-  /** Workflow display name (e.g. `"CI"`). */
-  workflowName?: string;
-}
-
-interface IterateResultRerunCi extends IterateResultBase {
-  action: "rerun_ci";
-  reran: ReranRun[];
-  log: string;
-}
-
 interface IterateResultMarkReady extends IterateResultBase {
   action: "mark_ready";
   markedReady: boolean;
@@ -154,7 +139,6 @@ export type IterateResult =
   | IterateResultWait
   | IterateResultCancel
   | IterateResultFixCode
-  | IterateResultRerunCi
   | IterateResultMarkReady
   | IterateResultEscalate;
 

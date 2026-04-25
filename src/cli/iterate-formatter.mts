@@ -69,17 +69,6 @@ export function formatIterateResult(result: IterateResult, opts?: { verbose?: bo
       return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
     }
 
-    case "rerun_ci": {
-      const rerunInstructions = result.reran.map(
-        (r, i) => `${i + 1}. Run: \`gh run rerun ${r.runId} --failed\``,
-      );
-      rerunInstructions.push(
-        `${rerunInstructions.length + 1}. End this iteration — wait for CI to report results after the re-run.`,
-      );
-      const parts = [header, result.log, "## Instructions", rerunInstructions.join("\n")];
-      return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
-    }
-
     case "mark_ready": {
       const parts = [
         header,
