@@ -20,7 +20,7 @@ Example Workflow:
 
 `pr-shepherd` optimizes token management, rate limits, and agentic orchestration by moving **ALL** deterministic logic and prompts to code via a CLI tool, enshrining what would be a large skill or command prompt (of which the agent would inevitably make mistakes) into the code and returning a clear, actionable prompt.
 
-At a high-level, to start the monitor, the skill/command invokes a CLI that returns a prompt to be ingested by the agent:
+At a high level, to start the monitor, the skill/command invokes a CLI that returns a prompt to be ingested by the agent:
 
 ```bash
 /pr-shepherd:monitor
