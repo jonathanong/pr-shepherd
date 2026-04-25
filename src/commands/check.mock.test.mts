@@ -372,6 +372,7 @@ function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
     startLine: null,
     author: "alice",
     body: "fix this",
+    url: "",
     createdAtUnix: 1_700_000_000,
     ...overrides,
   };
@@ -383,6 +384,7 @@ function makeComment(overrides: Partial<PrComment> = {}): PrComment {
     isMinimized: false,
     author: "bob",
     body: "nit",
+    url: "",
     createdAtUnix: 1_700_000_000,
     ...overrides,
   };

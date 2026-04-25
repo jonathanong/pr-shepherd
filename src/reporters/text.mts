@@ -181,8 +181,7 @@ export function formatText(report: ShepherdReport): string {
   const counts: string[] = [];
   if (totalActionable > 0) counts.push(`${totalActionable} actionable`);
   if (firstLookTotal > 0) counts.push(`${firstLookTotal} first-look`);
-  const summaryLine =
-    counts.join(", ") || "0 actionable — all threads resolved/minimized";
+  const summaryLine = counts.join(", ") || "0 actionable — all threads resolved/minimized";
   parts.push(summaryLine);
   parts.push("");
   parts.push("## Instructions");

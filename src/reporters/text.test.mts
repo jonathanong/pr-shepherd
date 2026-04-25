@@ -470,13 +470,13 @@ describe("formatText — first-look items", () => {
     const thread = {
       ...makeThread({ id: "PRRT_abc", isOutdated: true }),
       firstLookStatus: "outdated" as const,
-      autoResolved: false,
     };
     const comment = {
       id: "PRRC_xyz",
       isMinimized: true,
       author: "bob",
       body: "nit",
+      url: "",
       createdAtUnix: 0,
       firstLookStatus: "minimized" as const,
     };

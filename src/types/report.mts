@@ -191,10 +191,7 @@ export type CommitSuggestionResult =
       reason: string | null;
     });
 
-// ---------------------------------------------------------------------------
 // CLI options
-// ---------------------------------------------------------------------------
-
 export interface GlobalOptions {
   prNumber?: number;
   format: "text" | "json";

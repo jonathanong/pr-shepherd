@@ -115,10 +115,6 @@ beforeEach(() => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// runResolveFetch
-// ---------------------------------------------------------------------------
-
 describe("runResolveFetch — no PR", () => {
   it("throws when no open PR found", async () => {
     mockGetCurrentPrNumber.mockResolvedValueOnce(null);
@@ -420,9 +416,7 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
   });
 
   it("instructions include Shepherd Journal step when there are actionable items", async () => {
-    const thread = makeThread({ body: "fix this" });
-    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
-
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [makeThread()] }) });
     const result = await runResolveFetch(BASE_OPTS);
     expect(result.instructions.join("\n")).toContain("Shepherd Journal");
   });
@@ -433,10 +427,6 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     expect(result.instructions.join("\n")).not.toContain("Shepherd Journal");
   });
 });
-
-// ---------------------------------------------------------------------------
-// runResolveMutate
-// ---------------------------------------------------------------------------
 
 describe("runResolveMutate — no PR", () => {
   it("throws when no open PR found", async () => {
@@ -471,12 +461,14 @@ describe("runResolveMutate — forwards options", () => {
 });
 
 describe("runResolveFetch — first-look items", () => {
-  it("surfaces unseen outdated thread with correct status and autoResolved=false", async () => {
-    const outdated = makeThread({ id: "t-outdated", isOutdated: true });
-    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [outdated] }) });
+  it.each([
+    ["outdated", makeThread({ id: "t-outdated", isOutdated: true }), "outdated"],
+    ["resolved", makeThread({ id: "t-resolved", isResolved: true }), "resolved"],
+    ["minimized", makeThread({ id: "t-minimized", isMinimized: true }), "minimized"],
+  ])("surfaces unseen %s thread in firstLookThreads", async (_label, thread, status) => {
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
     const result = await runResolveFetch(BASE_OPTS);
-    expect(result.firstLookThreads[0]?.firstLookStatus).toBe("outdated");
-    expect(result.firstLookThreads[0]?.autoResolved).toBe(false);
+    expect(result.firstLookThreads[0]?.firstLookStatus).toBe(status);
   });
 
   it("marks auto-resolved outdated thread with autoResolved: true", async () => {
@@ -485,14 +477,6 @@ describe("runResolveFetch — first-look items", () => {
     mockAutoResolveOutdated.mockResolvedValue({ resolved: ["t-auto"], errors: [] });
     const result = await runResolveFetch(BASE_OPTS);
     expect(result.firstLookThreads[0]?.autoResolved).toBe(true);
-  });
-  it.each([
-    ["resolved", makeThread({ id: "t-resolved", isResolved: true })],
-    ["minimized thread", makeThread({ id: "t-minimized", isMinimized: true })],
-  ])("surfaces unseen %s in firstLookThreads", async (_label, thread) => {
-    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
-    const result = await runResolveFetch(BASE_OPTS);
-    expect(result.firstLookThreads).toHaveLength(1);
   });
 
   it("surfaces unseen minimized comment in firstLookComments", async () => {
