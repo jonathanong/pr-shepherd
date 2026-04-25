@@ -111,6 +111,7 @@ Some other workflow improvements:
 - **Reduced GitHub rate-limit exposure** - GraphQL requests are batched when possible
 - **Minimal state** - `pr-shepherd` stores minimal state in the local worktree
 - **Classifications and decisions still happen at the agent level** - `pr-shepherd` goal is to provide sufficient context to make informed decisions and provide clear actionable steps without writing unreliable code-level heuristics
+- **Configurable** - `pr-shepherd` is configurable via `pr-shepherdrc.yml`, which is only possible with a light prompt that simply invokes the CLI which returns the prompt. 
 
 ## Usage
 
