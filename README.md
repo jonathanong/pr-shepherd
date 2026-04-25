@@ -231,7 +231,7 @@ actions:
   autoMarkReady: false # disable to stay draft until you manually promote
 ```
 
-Environment variables: `GH_TOKEN` / `GITHUB_TOKEN` (auth; falls back to `gh auth token`), `PR_SHEPHERD_STATE_DIR` (override loop-state base dir).
+Environment variables: `GH_TOKEN` / `GITHUB_TOKEN` (auth; falls back to `gh auth token`), `PR_SHEPHERD_STATE_DIR` (override loop-state and log base dir), `PR_SHEPHERD_LOG_DISABLED=1` (disable the per-worktree debug log).
 
 See [docs/configuration.md](docs/configuration.md) for full semantics and deprecated-key migration.
 

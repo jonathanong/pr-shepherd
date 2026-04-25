@@ -20,6 +20,7 @@ import { readFileSync } from "node:fs";
 
 import { runCheck } from "./commands/check.mts";
 import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
+import { runLogFile } from "./commands/log-file.mts";
 import { formatJson } from "./reporters/json.mts";
 import { formatText } from "./reporters/text.mts";
 import { parseCommonArgs, getFlag, hasFlag, parseList } from "./cli/args.mts";
@@ -31,6 +32,7 @@ import {
   handleMonitor,
   handleStatus,
 } from "./cli/handlers.mts";
+import { setupLog } from "./log/setup.mts";
 
 // ---------------------------------------------------------------------------
 // Entry
@@ -45,6 +47,15 @@ export async function main(argv: string[]): Promise<void> {
     process.stdout.write(`${readVersion()}\n`);
     return;
   }
+
+  // log-file must run before the stdout tee and log init to avoid recursion.
+  if (subcommand === "log-file") {
+    await handleLogFile(args.slice(1));
+    return;
+  }
+
+  // Initialize the per-worktree log and install a stdout tee.
+  await setupLog(argv);
 
   switch (subcommand) {
     case "check":
@@ -68,7 +79,7 @@ export async function main(argv: string[]): Promise<void> {
     default:
       process.stderr.write(`Unknown subcommand: ${subcommand ?? "(none)"}\n`);
       process.stderr.write(
-        "Usage: pr-shepherd <check|resolve|commit-suggestion|iterate|monitor|status> [options]\n" +
+        "Usage: pr-shepherd <check|resolve|commit-suggestion|iterate|monitor|status|log-file> [options]\n" +
           "       pr-shepherd --version | -v\n",
       );
       process.exitCode = 1;
@@ -94,6 +105,23 @@ async function handleCheck(args: string[]): Promise<void> {
   process.stdout.write(`${output}\n`);
 
   process.exitCode = statusToExitCode(report.status);
+}
+
+async function handleLogFile(args: string[]): Promise<void> {
+  const jsonOut =
+    args.some((a) => a === "--format=json") ||
+    (() => {
+      const idx = args.indexOf("--format");
+      return idx !== -1 && args[idx + 1] === "json";
+    })();
+
+  try {
+    const result = await runLogFile();
+    process.stdout.write(jsonOut ? `${JSON.stringify(result, null, 2)}\n` : `${result.path}\n`);
+  } catch (e) {
+    process.stderr.write(`pr-shepherd: log-file: ${String(e)}\n`);
+    process.exitCode = 1;
+  }
 }
 
 async function handleResolve(args: string[]): Promise<void> {

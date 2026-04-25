@@ -10,6 +10,7 @@ pr-shepherd commit-suggestion [PR] --thread-id <id> --message "…"
 pr-shepherd iterate [PR] [--verbose] [--cooldown-seconds N] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]
 pr-shepherd monitor [PR]
 pr-shepherd status PR1 [PR2 …]
+pr-shepherd log-file
 ```
 
 ## Common flags
@@ -364,3 +365,32 @@ PR #43    Fix edge case in parser                           BLOCKED      SUCCESS
 ```
 
 Exit code: `0` if every PR is READY, `1` otherwise.
+
+### pr-shepherd log-file
+
+Prints the path of the per-worktree append-only debug log for the current repository. The file is created on the first invocation of any other subcommand.
+
+```sh
+pr-shepherd log-file             # prints path
+pr-shepherd log-file --format=json  # {"path":"…"}
+```
+
+```
+/var/folders/…/pr-shepherd-state/owner-repo/worktrees/my-branch-3f4a9b21.md
+```
+
+The log captures, for each CLI invocation:
+
+- A session header (ISO-8601 timestamp · pid · version · full argv)
+- Every GraphQL request and response (query, variables, response body)
+- Every REST JSON request and response (method, path, body, status)
+- Every `restText` request/response — metadata only (status · content-length), body never logged
+- Full stdout output (text or JSON) emitted by the subcommand
+
+All entries carry an ISO-8601 millisecond timestamp. HTTP response entries also show elapsed milliseconds. Auth headers are never written to the log.
+
+**Disable logging:** set `PR_SHEPHERD_LOG_DISABLED=1`. Logging is also automatically disabled when `CI=true` or when the first write fails.
+
+**Override base directory:** set `PR_SHEPHERD_STATE_DIR` (same env var as the loop-state directory). The log lives at `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/worktrees/<basename>-<sha8>.md`.
+
+Exit code: `0` on success · `1` if not in a git repo or repo identity cannot be resolved.
