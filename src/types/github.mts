@@ -132,7 +132,7 @@ export interface Review {
 // Merge status
 // ---------------------------------------------------------------------------
 
-type ShepherdMergeStatus =
+export type ShepherdMergeStatus =
   | "CLEAN"
   | "BEHIND"
   | "CONFLICTS"

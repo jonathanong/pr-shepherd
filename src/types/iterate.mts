@@ -8,7 +8,7 @@ import type {
   RelevantCheck,
   ShepherdStatus,
 } from "./report.mts";
-import type { MergeStateStatus, Review, ReviewDecision } from "./github.mts";
+import type { MergeStateStatus, Review, ReviewDecision, ShepherdMergeStatus } from "./github.mts";
 
 export type ShepherdAction =
   | "cooldown"
@@ -46,6 +46,13 @@ export interface IterateResultBase {
   /** `'UNKNOWN'` during the cooldown early-return (no sweep has been run yet). */
   state: "OPEN" | "CLOSED" | "MERGED" | "UNKNOWN";
   mergeStateStatus: MergeStateStatus;
+  /**
+   * Shepherd-derived merge classification (from deriveMergeStatus). Use this
+   * (not raw mergeStateStatus) when gating on "is this PR merge-blocked?":
+   * it collapses BLOCKED+HAS_HOOKS into "BLOCKED" and accounts for
+   * copilotReviewInProgress and isDraft overrides.
+   */
+  mergeStatus: ShepherdMergeStatus;
   reviewDecision: ReviewDecision;
   copilotReviewInProgress: boolean;
   isDraft: boolean;

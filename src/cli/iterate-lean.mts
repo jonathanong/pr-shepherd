@@ -13,7 +13,7 @@ export function projectIterateLean(result: IterateResult): unknown {
     status: result.status,
     state: result.state,
     mergeStateStatus: result.mergeStateStatus,
-    ...(result.mergeStateStatus === "BLOCKED" &&
+    ...(result.mergeStatus === "BLOCKED" &&
       result.reviewDecision !== null && { reviewDecision: result.reviewDecision }),
     ...(result.copilotReviewInProgress && { copilotReviewInProgress: true }),
     ...(result.isDraft && { isDraft: true }),

@@ -97,10 +97,11 @@ describe("projectIterateLean", () => {
   // reviewDecision
   // ---------------------------------------------------------------------------
 
-  it("omits reviewDecision when mergeStateStatus is not BLOCKED", () => {
+  it("omits reviewDecision when mergeStatus is not BLOCKED", () => {
     const result = {
       ...makeIterateResult("wait"),
       mergeStateStatus: "CLEAN" as const,
+      mergeStatus: "CLEAN" as const,
       reviewDecision: "APPROVED" as const,
     };
     const lean = projectIterateLean(result) as Record<string, unknown>;
@@ -108,12 +109,12 @@ describe("projectIterateLean", () => {
   });
 
   it("omits reviewDecision when BLOCKED but null", () => {
-    // fixture already has mergeStateStatus=BLOCKED, reviewDecision=null
+    // fixture already has mergeStatus=BLOCKED, reviewDecision=null
     const lean = projectIterateLean(makeIterateResult("wait")) as Record<string, unknown>;
     expect(lean.reviewDecision).toBeUndefined();
   });
 
-  it("includes reviewDecision when BLOCKED and non-null", () => {
+  it("includes reviewDecision when BLOCKED (BLOCKED raw) and non-null", () => {
     const result = { ...makeIterateResult("wait"), reviewDecision: "REVIEW_REQUIRED" as const };
     const lean = projectIterateLean(result) as Record<string, unknown>;
     expect(lean.reviewDecision).toBe("REVIEW_REQUIRED");
@@ -123,6 +124,28 @@ describe("projectIterateLean", () => {
     const result = { ...makeIterateResult("wait"), reviewDecision: "APPROVED" as const };
     const lean = projectIterateLean(result) as Record<string, unknown>;
     expect(lean.reviewDecision).toBe("APPROVED");
+  });
+
+  it("includes reviewDecision when mergeStatus=BLOCKED from HAS_HOOKS raw", () => {
+    const result = {
+      ...makeIterateResult("wait"),
+      mergeStateStatus: "HAS_HOOKS" as const,
+      mergeStatus: "BLOCKED" as const,
+      reviewDecision: "REVIEW_REQUIRED" as const,
+    };
+    const lean = projectIterateLean(result) as Record<string, unknown>;
+    expect(lean.reviewDecision).toBe("REVIEW_REQUIRED");
+  });
+
+  it("omits reviewDecision when HAS_HOOKS raw but mergeStatus=BLOCKED and null reviewDecision", () => {
+    const result = {
+      ...makeIterateResult("wait"),
+      mergeStateStatus: "HAS_HOOKS" as const,
+      mergeStatus: "BLOCKED" as const,
+      reviewDecision: null,
+    };
+    const lean = projectIterateLean(result) as Record<string, unknown>;
+    expect(lean.reviewDecision).toBeUndefined();
   });
 
   // ---------------------------------------------------------------------------

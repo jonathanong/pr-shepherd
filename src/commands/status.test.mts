@@ -92,6 +92,7 @@ describe("formatStatusTable — deriveVerdict precedence", () => {
       "READY",
     ],
     ["BLOCKED merge state", { mergeStateStatus: "BLOCKED", ciState: null }, "BLOCKED"],
+    ["HAS_HOOKS (branch protection — same verdict as BLOCKED)", { mergeStateStatus: "HAS_HOOKS", ciState: null }, "BLOCKED"],
     ["DIRTY (CONFLICTS)", { mergeStateStatus: "DIRTY", ciState: null }, "CONFLICTS"],
     ["PENDING ciState", { mergeStateStatus: "UNKNOWN", ciState: "PENDING" }, "IN PROGRESS"],
     ["EXPECTED ciState", { mergeStateStatus: "UNKNOWN", ciState: "EXPECTED" }, "IN PROGRESS"],

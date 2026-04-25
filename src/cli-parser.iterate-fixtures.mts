@@ -7,6 +7,7 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
     status: "IN_PROGRESS" as const,
     state: "OPEN" as const,
     mergeStateStatus: "BLOCKED" as const,
+    mergeStatus: "BLOCKED" as const,
     reviewDecision: null as null,
     copilotReviewInProgress: false,
     isDraft: false,
