@@ -188,7 +188,7 @@ Common additions:
 
 ### `checks.logTailLines` — default `200`
 
-Number of lines from the end of the failing job's log to include in the `logTail` field of each triaged check. The log is fetched via `GET /repos/{owner}/{repo}/actions/jobs/{jobId}/logs` and sliced. Set to `0` to disable log fetching entirely.
+Number of lines from the end of the failing job's log to include in the `logTail` field of each triaged check. The log is fetched via `GET /repos/{owner}/{repo}/actions/jobs/{jobId}/logs` (which redirects to the raw log text) and the last N lines are extracted. Set to `0` to disable log fetching entirely.
 
 ---
 

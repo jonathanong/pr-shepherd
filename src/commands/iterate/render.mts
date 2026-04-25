@@ -62,7 +62,7 @@ export function buildFixInstructions(
   const bareChecks = checks.filter((c) => !c.runId && !c.detailsUrl);
   if (checksWithRunId.length > 0) {
     instructions.push(
-      `For each failing check under \`## Failing checks\` with a run ID: examine the log tail shown in the fenced block. If the log shows a transient runner or infrastructure failure (e.g. network timeout, runner setup crash, OOM kill), run \`gh run rerun <runId> --failed\` and stop this iteration — CI will re-run automatically. If the log shows a real test or build failure, apply a code fix.`,
+      `For each failing check under \`## Failing checks\` with a run ID: examine the log tail shown in the fenced block when available (or run \`gh run view <runId> --log-failed\` if the block is absent) to decide what to do. If the logs show a transient runner or infrastructure failure (e.g. network timeout, runner setup crash, OOM kill), run \`gh run rerun <runId> --failed\` and stop this iteration — CI will re-run automatically. If the logs show a real test or build failure, apply a code fix.`,
     );
   }
   if (externalChecks.length > 0) {

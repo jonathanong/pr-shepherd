@@ -137,7 +137,13 @@ function pickJobInfo(jobs: JobsResponse["jobs"], checkName: string): JobInfo | u
     matchedJobs.find((j) => j.conclusion !== null && j.conclusion !== "success") ??
     matchedJobs[0];
   if (!job) return undefined;
-  const failedStep = job.steps?.find((s) => s.conclusion === "failure")?.name;
+  const failedStep = job.steps?.find(
+    (s) =>
+      s.conclusion !== null &&
+      s.conclusion !== "success" &&
+      s.conclusion !== "skipped" &&
+      s.conclusion !== "neutral",
+  )?.name;
   return {
     workflowName: job.workflow_name,
     jobName: job.name,

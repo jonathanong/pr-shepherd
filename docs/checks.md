@@ -43,8 +43,8 @@ For each failing check, triage fetches additional context from the GitHub Action
 
 - **`workflowName`** — the workflow that owns the failing job (from `jobs?filter=latest`).
 - **`jobName`** — the name of the matched job (falls back to the check name when not available).
-- **`failedStep`** — the first step that returned a non-success conclusion (e.g. `"Run tests"`, `"Set up job"`).
-- **`logTail`** — the last `checks.logTailLines` (default 200) lines of the failing job's log, fetched via `GET /repos/{owner}/{repo}/actions/jobs/{jobId}/logs`.
+- **`failedStep`** — the first step whose conclusion is not `success`, `skipped`, or `neutral` (e.g. a step with `failure`, `timed_out`, or `cancelled` conclusion).
+- **`logTail`** — the last `checks.logTailLines` (default 200) lines of the failing job's log, fetched via `GET /repos/{owner}/{repo}/actions/jobs/{jobId}/logs` (follows a redirect to the raw log text).
 
 All fields are populated unconditionally when available; none are gated on the type of failure. The agent reads `logTail` to decide whether to rerun (transient failure) or fix (real failure). `logTail` is omitted when the log fetch fails or when the check has no run ID.
 
