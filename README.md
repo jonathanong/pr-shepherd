@@ -20,7 +20,7 @@ Example Workflow:
 
 `pr-shepherd` optimizes token management, rate limits, and agentic orchestration by moving **ALL** deterministic logic and prompts to code via a CLI tool, enshrining what would be a large skill or command prompt (of which the agent would inevitably make mistakes) into the code and returning a clear, actionable prompt.
 
-At a high level, to start the monitor, the skill/command invokes a CLI that returns a prompt to be ingested by the agent:
+At a high level, to start the monitor, the skill/command invokes a CLI that returns a prompt to be ingested by the agent _(schematic — paraphrased for brevity; actual output is more detailed)_:
 
 ```
 /pr-shepherd:monitor
@@ -36,16 +36,17 @@ Loop args: `4m --max-turns 50 --expires 8h`
 
 # pr-shepherd-loop:pr=123
 
-IMPORTANT — recurrence rules: do not call ScheduleWakeup or /loop (duplicate runner).
+**IMPORTANT — recurrence rules:** Do not call ScheduleWakeup or /loop. End the turn
+after completing the actions below. The cron job handles the next fire.
 
 Run in a single Bash call:
   npx pr-shepherd iterate 123 --no-cache
 
-…
+…(self-dedup guidance, error-handling instructions)…
 
 ## Instructions
 
-1. Run CronList. If any job's prompt contains the loop tag, run the ## Loop prompt inline then stop.
+1. Run `CronList`. If any job's prompt contains the loop tag, run the ## Loop prompt inline then stop.
 2. Otherwise, invoke the /loop skill with Loop args and the full ## Loop prompt body.
 ```
 
@@ -57,7 +58,7 @@ Each iteration calls `npx pr-shepherd iterate <PR>`, which provides actionable f
 # PR #123 [FIX_CODE]
 
 **status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 3 passing, 0 skipped, 0 filtered, 0 inProgress
+**summary** 3 passing
 
 ## Review threads
 
