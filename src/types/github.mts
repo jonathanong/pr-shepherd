@@ -86,6 +86,7 @@ export interface ReviewThread {
   startLine: number | null;
   author: string;
   body: string;
+  url: string;
   createdAtUnix: number;
 }
 
@@ -117,6 +118,7 @@ export interface PrComment {
   isMinimized: boolean;
   author: string;
   body: string;
+  url: string;
   createdAtUnix: number;
 }
 

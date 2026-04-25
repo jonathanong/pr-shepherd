@@ -1,36 +1,17 @@
 import type { AgentThread, AgentComment, Review, ResolveCommand } from "../../types.mts";
 import type { AgentCheck } from "../../types.mts";
 
-// Logins treated as bot authors regardless of the GitHub Bot/User user type.
-// Mirrors plugin/skills/resolve/SKILL.md §3 — kept in sync with the resolve triage guidance.
-const KNOWN_BOT_LOGINS = new Set([
-  "copilot-pull-request-reviewer",
-  "gemini-code-assist",
-  "coderabbitai",
-]);
-
-function isBotAuthor(login: string): boolean {
-  const bare = login.replace(/\[bot\]$/, "");
-  if (bare !== login) return true;
-  return KNOWN_BOT_LOGINS.has(bare);
-}
-
 export function classifyReviewSummaries(
   summaries: Review[],
   approvals: Review[],
-  cfg: { bots: boolean; humans: boolean; approvals: boolean },
-): { minimizeIds: string[]; surfacedSummaries: Review[] } {
-  const minimizeIds: string[] = [];
-  const surfacedSummaries: Review[] = [];
-  for (const r of summaries) {
-    const enabled = isBotAuthor(r.author) ? cfg.bots : cfg.humans;
-    if (enabled) minimizeIds.push(r.id);
-    else surfacedSummaries.push(r);
-  }
-  if (cfg.approvals) {
+  minimizeApprovals: boolean,
+): { minimizeIds: string[]; surfacedApprovals: Review[] } {
+  const minimizeIds = summaries.map((r) => r.id);
+  if (minimizeApprovals) {
     for (const r of approvals) minimizeIds.push(r.id);
+    return { minimizeIds, surfacedApprovals: [] };
   }
-  return { minimizeIds, surfacedSummaries };
+  return { minimizeIds, surfacedApprovals: approvals };
 }
 
 // Patterns that indicate a comment is bot-generated noise rather than actionable feedback.

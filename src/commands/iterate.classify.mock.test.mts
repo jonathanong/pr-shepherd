@@ -143,7 +143,7 @@ function defaultConfig() {
       cooldownSeconds: 30,
       fixAttemptsPerThread: 3,
       stallTimeoutMinutes: 30,
-      minimizeReviewSummaries: { bots: true, humans: true, approvals: false },
+      minimizeApprovals: false,
     },
     watch: { interval: "4m", readyDelayMinutes: 10, expiresHours: 8, maxTurns: 50 },
     resolve: {
@@ -223,7 +223,7 @@ describe("runIterate — review summary auto-minimize", () => {
     expect(result.fix.mode).toBe("rebase-and-push");
     if (result.fix.mode !== "rebase-and-push") return;
     expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
-    expect(result.fix.surfacedSummaries).toEqual([]);
+    expect(result.fix.surfacedApprovals).toEqual([]);
     expect(result.fix.resolveCommand.argv).toContain("--minimize-comment-ids");
     expect(result.fix.resolveCommand.argv).toContain("PRR_BOT");
     expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
@@ -255,7 +255,7 @@ describe("runIterate — review summary auto-minimize", () => {
     expect(result.fix.reviewSummaryIds).toEqual(["PRR_GEM"]);
   });
 
-  it("auto-minimizes human summaries when cfg.humans is true (default)", async () => {
+  it("always minimizes human summaries regardless of author type", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [humanSummary] }));
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: false,
@@ -266,13 +266,10 @@ describe("runIterate — review summary auto-minimize", () => {
     if (result.action !== "fix_code") return;
     if (result.fix.mode !== "rebase-and-push") return;
     expect(result.fix.reviewSummaryIds).toEqual(["PRR_HUMAN"]);
-    expect(result.fix.surfacedSummaries).toEqual([]);
+    expect(result.fix.surfacedApprovals).toEqual([]);
   });
 
-  it("surfaces (without minimizing) human summaries when cfg.humans is false", async () => {
-    const cfg = defaultConfig();
-    cfg.iterate.minimizeReviewSummaries.humans = false;
-    mockLoadConfig.mockReturnValue(cfg);
+  it("minimizes both bot and human summaries unconditionally", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary, humanSummary] }));
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: false,
@@ -282,46 +279,8 @@ describe("runIterate — review summary auto-minimize", () => {
     const result = await runIterate(makeOpts());
     if (result.action !== "fix_code") return;
     if (result.fix.mode !== "rebase-and-push") return;
-    expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
-    expect(result.fix.surfacedSummaries).toEqual([humanSummary]);
-  });
-
-  it("surfaces (without minimizing) bot summaries when cfg.bots is false", async () => {
-    const cfg = defaultConfig();
-    cfg.iterate.minimizeReviewSummaries.bots = false;
-    mockLoadConfig.mockReturnValue(cfg);
-    mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary] }));
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
-    const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    if (result.fix.mode !== "rebase-and-push") return;
-    expect(result.fix.reviewSummaryIds).toEqual([]);
-    expect(result.fix.surfacedSummaries).toEqual([botSummary]);
-  });
-
-  it("emits fix_code with only surfaced summaries (no minimize, no push) when both toggles are off", async () => {
-    const cfg = defaultConfig();
-    cfg.iterate.minimizeReviewSummaries.bots = false;
-    cfg.iterate.minimizeReviewSummaries.humans = false;
-    mockLoadConfig.mockReturnValue(cfg);
-    mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary, humanSummary] }));
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
-    const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    if (result.fix.mode !== "rebase-and-push") return;
-    expect(result.fix.reviewSummaryIds).toEqual([]);
-    expect(result.fix.surfacedSummaries).toEqual([botSummary, humanSummary]);
-    expect(result.fix.resolveCommand.hasMutations).toBe(false);
+    expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT", "PRR_HUMAN"]);
+    expect(result.fix.surfacedApprovals).toEqual([]);
   });
 
   it("omits APPROVED reviews from minimize list by default (approvals: false)", async () => {
@@ -339,9 +298,9 @@ describe("runIterate — review summary auto-minimize", () => {
     expect(result.action).toBe("wait");
   });
 
-  it("includes APPROVED reviews in minimize list when cfg.approvals is true", async () => {
+  it("includes APPROVED reviews in minimize list when cfg.minimizeApprovals is true", async () => {
     const cfg = defaultConfig();
-    cfg.iterate.minimizeReviewSummaries.approvals = true;
+    cfg.iterate.minimizeApprovals = true;
     mockLoadConfig.mockReturnValue(cfg);
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -381,6 +340,7 @@ describe("runIterate — review summary auto-minimize", () => {
       startLine: null,
       author: "reviewer",
       body: "Use a const here.\n\n```suggestion\nconst foo = 1;\n```",
+      url: "",
       createdAtUnix: NOW - 3600,
     };
     mockRunCheck.mockResolvedValue(

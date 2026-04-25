@@ -107,8 +107,8 @@ interface FixRebaseAndPush {
   noiseCommentIds: string[];
   /** Review IDs (COMMENTED summaries and, if opted in, APPROVED reviews) to minimize — no code change needed. */
   reviewSummaryIds: string[];
-  /** COMMENTED review summaries surfaced for visibility (author type's toggle is off). Not minimized. */
-  surfacedSummaries: Review[];
+  /** APPROVED-state reviews surfaced for visibility (when `iterate.minimizeApprovals` is false). */
+  surfacedApprovals: Review[];
   checks: AgentCheck[];
   changesRequestedReviews: Review[];
   /** Pre-built resolve command. Run after committing and pushing. */

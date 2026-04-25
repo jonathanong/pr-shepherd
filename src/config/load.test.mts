@@ -41,25 +41,17 @@ describe("loadConfig — no rc file", () => {
     expect(result.checks.ciTriggerEvents).toEqual(["pull_request", "pull_request_target"]);
   });
 
-  it("defaults iterate.minimizeReviewSummaries to {bots:true, humans:true, approvals:false}", async () => {
+  it("defaults iterate.minimizeApprovals to false", async () => {
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
-    expect(result.iterate.minimizeReviewSummaries).toEqual({
-      bots: true,
-      humans: true,
-      approvals: false,
-    });
+    expect(result.iterate.minimizeApprovals).toBe(false);
   });
 
-  it("preserves other iterate.minimizeReviewSummaries defaults when only one key is overridden", async () => {
-    writeFileSync(join(tmpDir, RC), "iterate:\n  minimizeReviewSummaries:\n    approvals: true\n");
+  it("overrides iterate.minimizeApprovals when set in rc file", async () => {
+    writeFileSync(join(tmpDir, RC), "iterate:\n  minimizeApprovals: true\n");
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
-    expect(result.iterate.minimizeReviewSummaries).toEqual({
-      bots: true,
-      humans: true,
-      approvals: true,
-    });
+    expect(result.iterate.minimizeApprovals).toBe(true);
   });
 
   it("returns defaults for empty YAML (yaml.parse returns null)", async () => {

@@ -70,6 +70,7 @@ export interface RawThread {
     nodes: Array<{
       id: string;
       isMinimized: boolean;
+      url: string;
       author: { login: string } | null;
       body: string;
       path: string | null;
@@ -83,6 +84,7 @@ export interface RawThread {
 export interface RawComment {
   id: string;
   isMinimized: boolean;
+  url: string;
   author: { login: string } | null;
   body: string;
   createdAt: string;

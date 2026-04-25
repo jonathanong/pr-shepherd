@@ -32,7 +32,7 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
         actionableComments: [],
         noiseCommentIds: [],
         reviewSummaryIds: [],
-        surfacedSummaries: [],
+        surfacedApprovals: [],
         checks: [],
         changesRequestedReviews: [],
         resolveCommand: {

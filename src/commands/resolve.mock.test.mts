@@ -78,6 +78,7 @@ function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
     startLine: null,
     author: "alice",
     body: "fix this",
+    url: "",
     createdAtUnix: 1_700_000_000,
     ...overrides,
   };
@@ -89,6 +90,7 @@ function makeComment(overrides: Partial<PrComment> = {}): PrComment {
     isMinimized: false,
     author: "bob",
     body: "nit",
+    url: "",
     createdAtUnix: 1_700_000_000,
     ...overrides,
   };
@@ -405,6 +407,20 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     // summaries have no file paths — fix/commit/push steps must not appear
     expect(joined).not.toContain("git add");
     expect(joined).not.toContain("git push");
+  });
+
+  it("instructions include Shepherd Journal step when there are actionable items", async () => {
+    const thread = makeThread({ body: "fix this" });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
+
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.instructions.join("\n")).toContain("Shepherd Journal");
+  });
+
+  it("instructions omit Shepherd Journal step when there are no actionable items", async () => {
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({}) });
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.instructions.join("\n")).not.toContain("Shepherd Journal");
   });
 });
 

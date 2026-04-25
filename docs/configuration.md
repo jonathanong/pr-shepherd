@@ -11,6 +11,7 @@ iterate:
   cooldownSeconds: 60 # wait 60s after a push before reading CI
   fixAttemptsPerThread: 5 # raise before escalating to manual review
   stallTimeoutMinutes: 30 # escalate if state unchanged for this many minutes
+  minimizeApprovals: false # set true to also minimize APPROVED-state reviews
 
 watch:
   interval: 4m # /loop cadence
@@ -37,39 +38,31 @@ actions:
   autoResolveOutdated: true
   autoMarkReady: true
   commitSuggestions: true
-
-iterate:
-  minimizeReviewSummaries:
-    bots: true
-    humans: true
-    approvals: false
 ```
 
 ---
 
 ## All supported keys
 
-| Key                                         | Default                                   | Purpose                                                                                                           |
-| ------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `iterate.cooldownSeconds`                   | `30`                                      | Wait after a push before reading CI                                                                               |
-| `iterate.fixAttemptsPerThread`              | `3`                                       | Max fix attempts per unresolved thread before `escalate`                                                          |
-| `iterate.stallTimeoutMinutes`               | `30`                                      | Minutes the loop may repeat the same action without progress before `escalate` with `stall-timeout`; `0` disables |
-| `iterate.minimizeReviewSummaries.bots`      | `true`                                    | Auto-minimize COMMENTED review summaries from bot authors; surfaced (not dropped) when `false`                    |
-| `iterate.minimizeReviewSummaries.humans`    | `true`                                    | Auto-minimize COMMENTED review summaries from human authors; surfaced when `false`                                |
-| `iterate.minimizeReviewSummaries.approvals` | `false`                                   | Opt in to minimize APPROVED-state reviews (also enables >50-approval pagination)                                  |
-| `watch.interval`                            | `"4m"`                                    | Monitor tick interval (tuned to Claude's 5-min prompt-cache TTL)                                                  |
-| `watch.readyDelayMinutes`                   | `10`                                      | Settle window after READY before the monitor loop cancels                                                         |
-| `watch.expiresHours`                        | `8`                                       | Max lifetime of a monitor cron job                                                                                |
-| `watch.maxTurns`                            | `50`                                      | Max monitor ticks per session                                                                                     |
-| `resolve.concurrency`                       | `4`                                       | Parallel fanout for per-thread GraphQL fetches                                                                    |
-| `resolve.shaPoll.intervalMs`                | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                  |
-| `resolve.shaPoll.maxAttempts`               | `10`                                      | Max `--require-sha` polls before giving up                                                                        |
-| `resolve.fetchReviewSummaries`              | `true`                                    | Surface `COMMENTED` review summaries in `resolve --fetch` output                                                  |
-| `checks.ciTriggerEvents`                    | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos)                                  |
-| `mergeStatus.blockingReviewerLogins`        | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                            |
-| `actions.autoResolveOutdated`               | `true`                                    | Auto-resolve threads that point to code no longer in the PR diff                                                  |
-| `actions.autoMarkReady`                     | `true`                                    | Emit `mark_ready` when a draft PR's CI goes clean                                                                 |
-| `actions.commitSuggestions`                 | `true`                                    | Route `/pr-shepherd:resolve` through `commit-suggestion` (singular) for threads with a ` ```suggestion ` block    |
+| Key                                  | Default                                   | Purpose                                                                                                                                |
+| ------------------------------------ | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `iterate.cooldownSeconds`            | `30`                                      | Wait after a push before reading CI                                                                                                    |
+| `iterate.fixAttemptsPerThread`       | `3`                                       | Max fix attempts per unresolved thread before `escalate`                                                                               |
+| `iterate.stallTimeoutMinutes`        | `30`                                      | Minutes the loop may repeat the same action without progress before `escalate` with `stall-timeout`; `0` disables                      |
+| `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination). All `COMMENTED` summaries are always minimized. |
+| `watch.interval`                     | `"4m"`                                    | Monitor tick interval (tuned to Claude's 5-min prompt-cache TTL)                                                                       |
+| `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                                                              |
+| `watch.expiresHours`                 | `8`                                       | Max lifetime of a monitor cron job                                                                                                     |
+| `watch.maxTurns`                     | `50`                                      | Max monitor ticks per session                                                                                                          |
+| `resolve.concurrency`                | `4`                                       | Parallel fanout for per-thread GraphQL fetches                                                                                         |
+| `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                                       |
+| `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                                                             |
+| `resolve.fetchReviewSummaries`       | `true`                                    | Surface `COMMENTED` review summaries in `resolve --fetch` output                                                                       |
+| `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos)                                                       |
+| `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                                                 |
+| `actions.autoResolveOutdated`        | `true`                                    | Auto-resolve threads that point to code no longer in the PR diff                                                                       |
+| `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR's CI goes clean                                                                                      |
+| `actions.commitSuggestions`          | `true`                                    | Route `/pr-shepherd:resolve` through `commit-suggestion` (singular) for threads with a ` ```suggestion ` block                         |
 
 ---
 
@@ -103,21 +96,15 @@ Override per-invocation with `--stall-timeout <duration>` (e.g. `--stall-timeout
 - **Lower** if you want faster escalation when a PR gets stuck.
 - **Set to `0`** to disable stall detection entirely.
 
-### `iterate.minimizeReviewSummaries`
+### `iterate.minimizeApprovals` — default `false`
 
-Controls which review IDs the monitor / `iterate` loop includes in `--minimize-comment-ids` when it emits `fix_code`. Review summary IDs ride along inside the existing resolve command — no code change needed to minimize them. Rendered under `## Review summaries (minimize only)` in the iterate markdown output.
+**Breaking change from `iterate.minimizeReviewSummaries.{bots, humans, approvals}`** — the old nested keys are no longer recognized.
 
-#### `iterate.minimizeReviewSummaries.bots` — default `true`
+All `COMMENTED` review summaries (bot and human alike) are always minimized by the monitor / `iterate` loop. Review summary IDs ride along inside the existing resolve command — no code change needed to minimize them. Rendered under `## Review summaries (minimize only)` in the iterate markdown output.
 
-Auto-minimize `COMMENTED` review summaries whose author is a known bot (`copilot-pull-request-reviewer`, `gemini-code-assist`, `coderabbitai`, or any `*[bot]` login). When `false`, bot summaries render under `## Review summaries (surfaced — not minimized)` in the iterate output instead (same treatment as the `humans` toggle) — not dropped.
+Opt in to also minimize `APPROVED`-state reviews (`pr approve` clicks with or without a body). Off by default because approvals are an affirmative signal you usually want to keep visible. Flip to `true` for long-running PRs where stale approvals pile up.
 
-#### `iterate.minimizeReviewSummaries.humans` — default `true`
-
-Auto-minimize `COMMENTED` review summaries from non-bot authors. When `false`, human summaries render under `## Review summaries (surfaced — not minimized)` in the iterate output so you see them, but they are not passed to `--minimize-comment-ids`.
-
-#### `iterate.minimizeReviewSummaries.approvals` — default `false`
-
-Opt in to minimize `APPROVED`-state reviews (`pr approve` clicks with or without a body). Off by default because approvals are usually an affirmative signal you want to keep visible. Flip to `true` for long-running PRs where stale approvals pile up.
+When `false` (default), approval reviews are surfaced under `## Approvals (surfaced — not minimized)` only in iterate output that is already being emitted for other actionable work (for example, alongside a `fix_code` payload). They remain visible and are not passed to `--minimize-comment-ids`, but approvals by themselves do not cause iterate to emit that section instead of returning `wait`.
 
 > Perf note: when this is `false` (default), `fetchPrBatch` does not paginate beyond the first 50 approved reviews. Turn it on to fetch all approvals.
 

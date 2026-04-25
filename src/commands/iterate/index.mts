@@ -109,10 +109,10 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   const headSha = (await getCurrentHeadSha()) ?? "unknown";
   const stallKey = { owner: repoOwner, repo: repoName, pr: prNumber };
 
-  const { minimizeIds: reviewSummaryIds, surfacedSummaries } = classifyReviewSummaries(
+  const { minimizeIds: reviewSummaryIds, surfacedApprovals } = classifyReviewSummaries(
     report.reviewSummaries,
     report.approvedReviews,
-    config.iterate.minimizeReviewSummaries,
+    config.iterate.minimizeApprovals,
   );
   const actionableChecks = report.checks.failing.filter((f) => f.failureKind === "actionable");
   const hasActionableWork =
@@ -121,8 +121,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     report.changesRequestedReviews.length > 0 ||
     actionableChecks.length > 0 ||
     report.mergeStatus.status === "CONFLICTS" ||
-    reviewSummaryIds.length > 0 ||
-    surfacedSummaries.length > 0;
+    reviewSummaryIds.length > 0;
 
   if (hasActionableWork) {
     return handleFixCode({
@@ -136,7 +135,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       repoOwner,
       repoName,
       reviewSummaryIds,
-      surfacedSummaries,
+      surfacedApprovals,
     });
   }
 

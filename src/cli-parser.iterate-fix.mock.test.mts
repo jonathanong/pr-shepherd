@@ -97,12 +97,13 @@ describe("main — iterate text format (fix_code and checks)", () => {
           line: 10,
           author: "reviewer",
           body: "fix\nsecond line is now preserved",
+          url: "",
         },
       ],
-      actionableComments: [{ id: "PRRC_1", author: "bot", body: "please address" }],
+      actionableComments: [{ id: "PRRC_1", author: "bot", body: "please address", url: "" }],
       noiseCommentIds: ["c-noise-1", "c-noise-2"],
       reviewSummaryIds: [],
-      surfacedSummaries: [],
+      surfacedApprovals: [],
       checks: [
         { name: "lint", runId: "run-42", detailsUrl: "https://x", failureKind: "actionable" },
         {
@@ -201,14 +202,14 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain(
       "- resolve: `npx pr-shepherd resolve 42 --minimize-comment-ids PRR_BOT,PRR_AP`",
     );
-    expect(out).not.toContain("## Review summaries (surfaced");
+    expect(out).not.toContain("## Approvals (surfaced");
   });
 
-  it("fix_code: renders '## Review summaries (surfaced — not minimized)' with H3 + blockquote", async () => {
+  it("fix_code: renders '## Approvals (surfaced — not minimized)' with H3 + blockquote", async () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
     if (result.fix.mode !== "rebase-and-push") throw new Error("unreachable");
-    result.fix.surfacedSummaries = [
+    result.fix.surfacedApprovals = [
       { id: "PRR_HUMAN", author: "alice", body: "Looks reasonable but please double-check X." },
     ];
     mockRunIterate.mockResolvedValue(result);
@@ -216,9 +217,24 @@ describe("main — iterate text format (fix_code and checks)", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
 
-    expect(out).toContain("## Review summaries (surfaced — not minimized)");
+    expect(out).toContain("## Approvals (surfaced — not minimized)");
     expect(out).toContain("### `PRR_HUMAN` (@alice)");
     expect(out).toContain("> Looks reasonable but please double-check X.");
+  });
+
+  it("fix_code: approval with empty body renders '(no review body)' instead of bare blockquote", async () => {
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    if (result.fix.mode !== "rebase-and-push") throw new Error("unreachable");
+    result.fix.surfacedApprovals = [{ id: "PRR_EMPTY", author: "alice", body: "" }];
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+
+    expect(out).toContain("### `PRR_EMPTY` (@alice)");
+    expect(out).toContain("(no review body)");
+    expect(out).not.toContain("\n>\n");
   });
 
   it("fix_code: multi-paragraph thread body is preserved verbatim in the blockquote", async () => {
@@ -238,6 +254,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
         line: 1,
         author: "reviewer",
         body: multiParagraphBody,
+        url: "",
       },
     ];
     mockRunIterate.mockResolvedValue(result);
@@ -269,6 +286,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
         line: 1,
         author: "reviewer",
         body: "First line.\r\nSecond line.",
+        url: "",
       },
     ];
     mockRunIterate.mockResolvedValue(result);
@@ -304,6 +322,41 @@ describe("main — iterate text format (fix_code and checks)", () => {
     const out = getStdout();
     expect(out).toContain("- external `https://app.codecov.io/a/b` — `codecov/patch`");
     expect(out).toContain("- (no runId) — `mystery-check`");
+  });
+
+  it("fix_code: thread with url renders markdown link heading; comment with url renders markdown link heading", async () => {
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    result.fix.threads = [
+      {
+        id: "PRRT_linked",
+        path: "src/x.ts",
+        line: 5,
+        author: "reviewer",
+        body: "nit",
+        url: "https://github.com/owner/repo/pull/1#discussion_r1",
+      },
+    ];
+    result.fix.actionableComments = [
+      {
+        id: "PRRC_linked",
+        author: "bob",
+        body: "please fix",
+        url: "https://github.com/owner/repo/pull/1#issuecomment-1",
+      },
+    ];
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    expect(out).toContain(
+      "### [PRRT_linked](https://github.com/owner/repo/pull/1#discussion_r1) — `src/x.ts:5` (@reviewer)",
+    );
+    expect(out).toContain(
+      "### [PRRC_linked](https://github.com/owner/repo/pull/1#issuecomment-1) (@bob)",
+    );
+    expect(out).not.toContain("### `PRRT_linked`");
+    expect(out).not.toContain("### `PRRC_linked`");
   });
 
   it("non-fix_code actions do not emit ## Checks — check count is in summary header only", async () => {

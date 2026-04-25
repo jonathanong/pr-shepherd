@@ -143,7 +143,7 @@ function defaultConfig() {
       cooldownSeconds: 30,
       fixAttemptsPerThread: 3,
       stallTimeoutMinutes: 30,
-      minimizeReviewSummaries: { bots: true, humans: true, approvals: false },
+      minimizeApprovals: false,
     },
     watch: { interval: "4m", readyDelayMinutes: 10, expiresHours: 8, maxTurns: 50 },
     resolve: {
@@ -212,6 +212,7 @@ const THREAD = {
   startLine: null,
   author: "reviewer",
   body: "Fix this",
+  url: "",
   createdAtUnix: NOW - 3600,
 };
 
@@ -382,6 +383,7 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
               isMinimized: false,
               author: "boss",
               body: "See review",
+              url: "",
               createdAtUnix: NOW - 100,
             },
           ],

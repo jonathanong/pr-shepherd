@@ -33,6 +33,7 @@ function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
     startLine: null,
     author: "alice",
     body: "please fix this",
+    url: "",
     createdAtUnix: 1_700_000_000,
     ...overrides,
   };
@@ -321,6 +322,7 @@ describe("formatText — threads and comments", () => {
       isMinimized: false,
       author: "carol",
       body: "nit: rename this",
+      url: "",
       createdAtUnix: 1_700_000_000,
     };
     const report = makeReport({

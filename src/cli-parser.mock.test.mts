@@ -172,11 +172,19 @@ describe("main — resolve", () => {
           isMinimized: false,
           author: "alice",
           body: "Consider renaming this",
+          url: "",
           createdAtUnix: 0,
         },
       ],
       actionableComments: [
-        { id: "IC_1", author: "bob", body: "Typo here", isMinimized: false, createdAtUnix: 0 },
+        {
+          id: "IC_1",
+          author: "bob",
+          body: "Typo here",
+          isMinimized: false,
+          url: "",
+          createdAtUnix: 0,
+        },
       ],
       changesRequestedReviews: [],
       reviewSummaries: [],
@@ -212,6 +220,7 @@ describe("main — resolve", () => {
           isMinimized: false,
           author: "alice",
           body: "Use const",
+          url: "",
           createdAtUnix: 0,
           suggestion: { startLine: 5, endLine: 5, lines: ["const x = 1;"], author: "alice" },
         },
@@ -262,11 +271,19 @@ describe("main — resolve", () => {
           isMinimized: false,
           author: "alice",
           body: "no location",
+          url: "",
           createdAtUnix: 0,
         },
       ],
       actionableComments: [
-        { id: "IC_2", author: "bob", body: "comment", isMinimized: false, createdAtUnix: 0 },
+        {
+          id: "IC_2",
+          author: "bob",
+          body: "comment",
+          isMinimized: false,
+          url: "",
+          createdAtUnix: 0,
+        },
       ],
       changesRequestedReviews: [{ id: "PRR_r1", author: "carol", body: "needs work" }],
       reviewSummaries: [],
@@ -279,6 +296,47 @@ describe("main — resolve", () => {
     expect(out).toContain("`reviewId=PRR_r1` (@carol)");
     // null path/line fallbacks rendered
     expect(out).toContain("`:?`");
+  });
+
+  it("formatFetchResult: thread and comment with url render ↗ link after id", async () => {
+    mockRunResolveFetch.mockResolvedValue({
+      prNumber: 42,
+      actionableThreads: [
+        {
+          id: "PRT_linked",
+          path: "src/x.ts",
+          line: 1,
+          startLine: null,
+          isMinimized: false,
+          author: "alice",
+          body: "nit",
+          url: "https://github.com/owner/repo/pull/1#discussion_r1",
+          createdAtUnix: 0,
+        },
+      ],
+      actionableComments: [
+        {
+          id: "IC_linked",
+          author: "bob",
+          body: "fix me",
+          isMinimized: false,
+          url: "https://github.com/owner/repo/pull/1#issuecomment-1",
+          createdAtUnix: 0,
+        },
+      ],
+      changesRequestedReviews: [],
+      reviewSummaries: [],
+      commitSuggestionsEnabled: false,
+      instructions: ["Classify.", "Report."],
+    });
+    await main(["node", "shepherd", "resolve", "42"]);
+    const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
+    expect(out).toContain(
+      "`threadId=PRT_linked` [↗](https://github.com/owner/repo/pull/1#discussion_r1)",
+    );
+    expect(out).toContain(
+      "`commentId=IC_linked` [↗](https://github.com/owner/repo/pull/1#issuecomment-1)",
+    );
   });
 
   it("formatFetchResult --format=json includes instructions array", async () => {

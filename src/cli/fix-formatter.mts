@@ -8,7 +8,8 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     sections.push("## Review threads");
     for (const t of result.fix.threads) {
       const loc = t.path ? `\`${t.path}:${t.line ?? "?"}\`` : "(no location)";
-      sections.push(`### \`${t.id}\` — ${loc} (@${t.author})`);
+      const heading = t.url ? `[${t.id}](${t.url})` : `\`${t.id}\``;
+      sections.push(`### ${heading} — ${loc} (@${t.author})`);
       sections.push(blockquote(t.body));
     }
   }
@@ -16,7 +17,8 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
   if (result.fix.actionableComments.length > 0) {
     sections.push("## Actionable comments");
     for (const c of result.fix.actionableComments) {
-      sections.push(`### \`${c.id}\` (@${c.author})`);
+      const heading = c.url ? `[${c.id}](${c.url})` : `\`${c.id}\``;
+      sections.push(`### ${heading} (@${c.author})`);
       sections.push(blockquote(c.body));
     }
   }
@@ -55,11 +57,11 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     sections.push(result.fix.reviewSummaryIds.map((id) => `\`${id}\``).join(", "));
   }
 
-  if (result.fix.surfacedSummaries.length > 0) {
-    sections.push("## Review summaries (surfaced — not minimized)");
-    for (const r of result.fix.surfacedSummaries) {
+  if (result.fix.surfacedApprovals.length > 0) {
+    sections.push("## Approvals (surfaced — not minimized)");
+    for (const r of result.fix.surfacedApprovals) {
       sections.push(`### \`${r.id}\` (@${r.author})`);
-      sections.push(blockquote(r.body));
+      sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body));
     }
   }
 

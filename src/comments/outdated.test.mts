@@ -13,6 +13,7 @@ function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
     startLine: null,
     author: "alice",
     body: "please fix",
+    url: "",
     createdAtUnix: 1_700_000_000,
     ...overrides,
   };

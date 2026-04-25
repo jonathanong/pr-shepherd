@@ -143,7 +143,7 @@ function defaultConfig() {
       cooldownSeconds: 30,
       fixAttemptsPerThread: 3,
       stallTimeoutMinutes: 30,
-      minimizeReviewSummaries: { bots: true, humans: true, approvals: false },
+      minimizeApprovals: false,
     },
     watch: { interval: "4m", readyDelayMinutes: 10, expiresHours: 8, maxTurns: 50 },
     resolve: {
@@ -223,6 +223,7 @@ describe("runIterate — fix_code agent projection", () => {
       startLine: null,
       author: "alice",
       body: "Please fix this",
+      url: "",
       createdAtUnix: 1700000000,
     };
     mockRunCheck.mockResolvedValue(
@@ -259,6 +260,7 @@ describe("runIterate — fix_code agent projection", () => {
       isMinimized: false,
       author: "bob",
       body: "Consider renaming this",
+      url: "",
       createdAtUnix: 1700000000,
     };
     mockRunCheck.mockResolvedValue(
