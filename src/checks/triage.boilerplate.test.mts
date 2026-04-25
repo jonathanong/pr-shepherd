@@ -143,4 +143,30 @@ describe("triageFailingChecks — log boilerplate filter", () => {
     expect(logTail).toContain("note: candidate found by name lookup");
     expect(logTail).toContain("Received: 'foo'");
   });
+
+  it("falls back to original lines when every line is boilerplate", async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        makeJobsResponse([
+          {
+            id: 1,
+            name: "tests",
+            workflow_name: "CI",
+            conclusion: "failure",
+            steps: [{ name: "Run tests", number: 1, conclusion: "failure" }],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(makeLogsRedirectResponse("https://s3.example.com/logs"))
+      .mockResolvedValueOnce(
+        makeLogTextResponse(
+          ["##[group]Set up job", "##[endgroup]", "[command]/usr/bin/git init"].join("\n"),
+        ),
+      );
+
+    const results = await triageFailingChecks([makeCheck()], REPO, 10);
+    expect(results).toHaveLength(1);
+    // When all lines are boilerplate the original unfiltered lines are used.
+    expect(results[0]!.logTail).toContain("##[group]Set up job");
+  });
 });

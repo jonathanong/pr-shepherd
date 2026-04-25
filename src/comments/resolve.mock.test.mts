@@ -82,6 +82,32 @@ describe("applyResolveOptions — mutations", () => {
     expect(result.errors[0]).toContain("t-bad:");
     expect(result.errors[0]).toContain("rate limited");
   });
+
+  it("records error when resolve alias returns non-resolved thread", async () => {
+    mockGraphql.mockResolvedValueOnce({ data: { r0: { thread: { isResolved: false } } } });
+    const result = await applyResolveOptions(1, REPO, { resolveThreadIds: ["t-1"] });
+    expect(result.resolvedThreads).toHaveLength(0);
+    expect(result.errors[0]).toContain("t-1");
+    expect(result.errors[0]).toContain("not resolved");
+  });
+
+  it("records error when minimize alias returns null minimizedComment", async () => {
+    mockGraphql.mockResolvedValueOnce({ data: { m0: { minimizedComment: null } } });
+    const result = await applyResolveOptions(1, REPO, { minimizeCommentIds: ["c-1"] });
+    expect(result.minimizedComments).toHaveLength(0);
+    expect(result.errors[0]).toContain("c-1");
+    expect(result.errors[0]).toContain("not minimized");
+  });
+
+  it("records error when dismiss alias returns null pullRequestReview", async () => {
+    mockGraphql.mockResolvedValueOnce({ data: { d0: null } });
+    const result = await applyResolveOptions(1, REPO, {
+      dismissReviewIds: ["r-1"],
+      dismissMessage: "addressed",
+    });
+    expect(result.dismissedReviews).toHaveLength(0);
+    expect(result.errors[0]).toContain("r-1");
+  });
 });
 
 // ---------------------------------------------------------------------------

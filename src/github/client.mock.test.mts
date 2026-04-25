@@ -272,6 +272,21 @@ describe("getPrHeadSha", () => {
     const sha = await getPrHeadSha(42, "owner", "repo");
     expect(sha).toBe("abc123def456");
   });
+
+  it("throws 'repository not found' when repository is null", async () => {
+    mockFetch.mockResolvedValue(gqlOk({ repository: null }));
+    await expect(getPrHeadSha(42, "owner", "repo")).rejects.toThrow("repository not found");
+  });
+
+  it("throws 'PR not found' when pullRequest is null", async () => {
+    mockFetch.mockResolvedValue(gqlOk({ repository: { pullRequest: null } }));
+    await expect(getPrHeadSha(42, "owner", "repo")).rejects.toThrow("PR not found");
+  });
+
+  it("throws 'headRefOid missing' when headRefOid is absent", async () => {
+    mockFetch.mockResolvedValue(gqlOk({ repository: { pullRequest: {} } }));
+    await expect(getPrHeadSha(42, "owner", "repo")).rejects.toThrow("headRefOid missing");
+  });
 });
 
 // ---------------------------------------------------------------------------
