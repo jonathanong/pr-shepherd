@@ -263,7 +263,11 @@ describe("runCheck — BLOCKED + clean (hand off to humans)", () => {
 
   it("returns PENDING when BLOCKED with zero relevant checks (CI never started)", async () => {
     mockFetchPrBatch.mockResolvedValue({
-      data: makeBatchData({ mergeStateStatus: "BLOCKED", reviewDecision: "REVIEW_REQUIRED", checks: [] }),
+      data: makeBatchData({
+        mergeStateStatus: "BLOCKED",
+        reviewDecision: "REVIEW_REQUIRED",
+        checks: [],
+      }),
     });
     const report = await runCheck(BASE_OPTS);
     expect(report.status).toBe("PENDING");
