@@ -451,12 +451,7 @@ describe("runIterate — escalate (thread-missing-location)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: {
-          actionable: [threadNoPath],
-          autoResolved: [],
-          autoResolveErrors: [],
-          firstLook: [],
-        },
+        threads: { ...makeReport().threads, actionable: [threadNoPath] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -479,12 +474,7 @@ describe("runIterate — escalate (thread-missing-location)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: {
-          actionable: [threadNoLine],
-          autoResolved: [],
-          autoResolveErrors: [],
-          firstLook: [],
-        },
+        threads: { ...makeReport().threads, actionable: [threadNoLine] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
