@@ -58,6 +58,8 @@ function classify(check: CheckRun, relevantEvents: Set<string>): ClassifiedCheck
 export interface CiVerdict {
   /** True when all relevant (non-filtered, non-skipped) checks passed. */
   allPassed: boolean;
+  /** True when at least one relevant (non-filtered, non-skipped) check exists. */
+  hasChecks: boolean;
   /** True when at least one check is still running/queued. */
   anyInProgress: boolean;
   /** True when at least one check failed. */
@@ -74,7 +76,8 @@ export function getCiVerdict(classified: ClassifiedCheck[]): CiVerdict {
   // When there are no relevant checks (e.g. docs-only PR where all checks are filtered/skipped),
   // treat as allPassed rather than blocking — there's nothing to fail.
   const allPassed = !anyInProgress && !anyFailing;
+  const hasChecks = relevant.length > 0;
   const filteredNames = classified.filter((c) => c.category === "filtered").map((c) => c.name);
 
-  return { allPassed, anyInProgress, anyFailing, filteredNames };
+  return { allPassed, hasChecks, anyInProgress, anyFailing, filteredNames };
 }

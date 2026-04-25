@@ -400,48 +400,50 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
   });
 });
 
-// ---------------------------------------------------------------------------
 // Human approval pending — cancel after ready-delay elapses
-// ---------------------------------------------------------------------------
 
-describe("runIterate — human approval pending (BLOCKED + REVIEW_REQUIRED)", () => {
-  const blockedApprovalReport = makeReport({
+function makeBlockedReadyReport(reviewDecision: "REVIEW_REQUIRED" | "APPROVED" | null) {
+  return makeReport({
     status: "READY",
     mergeStatus: {
       status: "BLOCKED",
       state: "OPEN" as const,
       isDraft: false,
       mergeable: "MERGEABLE",
-      reviewDecision: "REVIEW_REQUIRED",
+      reviewDecision,
       copilotReviewInProgress: false,
       mergeStateStatus: "BLOCKED",
     },
   });
+}
 
-  it("returns action: wait during the ready-delay window", async () => {
-    mockRunCheck.mockResolvedValue(blockedApprovalReport);
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
-      shouldCancel: false,
-      remainingSeconds: 300,
-    });
+describe("runIterate — BLOCKED + clean (hand off to humans via ready-delay)", () => {
+  it.each([
+    ["REVIEW_REQUIRED", "REVIEW_REQUIRED" as const],
+    ["APPROVED (insufficient approvals)", "APPROVED" as const],
+    ["null (other branch protection)", null],
+  ])(
+    "reviewDecision=%s: wait during window then cancel after elapsed",
+    async (_label, reviewDecision) => {
+      mockRunCheck.mockResolvedValue(makeBlockedReadyReport(reviewDecision));
 
-    const result = await runIterate(makeOpts());
-    expect(result.action).toBe("wait");
-  });
+      mockUpdateReadyDelay.mockResolvedValue({
+        isReady: true,
+        shouldCancel: false,
+        remainingSeconds: 300,
+      });
+      expect((await runIterate(makeOpts())).action).toBe("wait");
 
-  it("returns action: cancel when ready-delay has elapsed", async () => {
-    mockRunCheck.mockResolvedValue(blockedApprovalReport);
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
-      shouldCancel: true,
-      remainingSeconds: 0,
-    });
-
-    const result = await runIterate(makeOpts());
-    expect(result.action).toBe("cancel");
-    expect(result.shouldCancel).toBe(true);
-  });
+      mockUpdateReadyDelay.mockResolvedValue({
+        isReady: true,
+        shouldCancel: true,
+        remainingSeconds: 0,
+      });
+      const result = await runIterate(makeOpts());
+      expect(result.action).toBe("cancel");
+      expect(result.shouldCancel).toBe(true);
+    },
+  );
 });
 
 describe("runIterate — escalate (thread-missing-location)", () => {

@@ -36,7 +36,7 @@ export type MergeStateStatus =
   | "UNKNOWN"
   | "UNSTABLE";
 
-type ReviewDecision = "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
+export type ReviewDecision = "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
 
 // ---------------------------------------------------------------------------
 // Check runs

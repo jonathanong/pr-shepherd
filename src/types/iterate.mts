@@ -8,7 +8,7 @@ import type {
   RelevantCheck,
   ShepherdStatus,
 } from "./report.mts";
-import type { MergeStateStatus, Review } from "./github.mts";
+import type { MergeStateStatus, Review, ReviewDecision } from "./github.mts";
 
 export type ShepherdAction =
   | "cooldown"
@@ -46,6 +46,7 @@ export interface IterateResultBase {
   /** `'UNKNOWN'` during the cooldown early-return (no sweep has been run yet). */
   state: "OPEN" | "CLOSED" | "MERGED" | "UNKNOWN";
   mergeStateStatus: MergeStateStatus;
+  reviewDecision: ReviewDecision;
   copilotReviewInProgress: boolean;
   isDraft: boolean;
   shouldCancel: boolean;

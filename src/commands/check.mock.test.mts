@@ -182,10 +182,10 @@ describe("runCheck — computeStatus precedence", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Human approval pending — BLOCKED + REVIEW_REQUIRED
+// BLOCKED + clean — hand off to humans via ready-delay
 // ---------------------------------------------------------------------------
 
-describe("runCheck — BLOCKED + REVIEW_REQUIRED (human approval pending)", () => {
+describe("runCheck — BLOCKED + clean (hand off to humans)", () => {
   it("returns READY when CI passed and only human approval is missing", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({ mergeStateStatus: "BLOCKED", reviewDecision: "REVIEW_REQUIRED" }),
@@ -245,9 +245,29 @@ describe("runCheck — BLOCKED + REVIEW_REQUIRED (human approval pending)", () =
     expect(report.status).toBe("PENDING");
   });
 
-  it("returns PENDING when BLOCKED but reviewDecision is null (other branch protection)", async () => {
+  it("returns READY when BLOCKED with reviewDecision null (other branch protection — still hand off)", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({ mergeStateStatus: "BLOCKED", reviewDecision: null }),
+    });
+    const report = await runCheck(BASE_OPTS);
+    expect(report.status).toBe("READY");
+  });
+
+  it("returns READY when BLOCKED with reviewDecision APPROVED (insufficient approvals)", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ mergeStateStatus: "BLOCKED", reviewDecision: "APPROVED" }),
+    });
+    const report = await runCheck(BASE_OPTS);
+    expect(report.status).toBe("READY");
+  });
+
+  it("returns PENDING when BLOCKED with zero relevant checks (CI never started)", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        mergeStateStatus: "BLOCKED",
+        reviewDecision: "REVIEW_REQUIRED",
+        checks: [],
+      }),
     });
     const report = await runCheck(BASE_OPTS);
     expect(report.status).toBe("PENDING");

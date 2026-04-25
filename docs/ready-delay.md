@@ -6,7 +6,7 @@
 
 The ready-delay prevents shepherd from cancelling the loop the instant CI goes green. It waits for a configurable window of consecutive READY status before emitting `action: cancel`. This gives reviewers time to post comments before the loop exits.
 
-The timer also starts when the PR is READY solely because a human reviewer hasn't approved yet (`reviewDecision === REVIEW_REQUIRED` with all CI green and no unresolved work). From shepherd's perspective the PR is ready for human review — it has nothing more to do — so the same ready-delay countdown applies and the loop cancels once it elapses.
+The timer also starts when the PR is BLOCKED but shepherd has nothing left to do — all CI is green, no unresolved threads or comments, no Copilot review pending. This covers any branch-protection reason: awaiting a first human review (`REVIEW_REQUIRED`), awaiting additional approvals (`APPROVED` but not enough), required signed commits, or other policy. From shepherd's perspective these are all hand-off states — it cannot resolve them — so the ready-delay countdown applies and the loop cancels once it elapses.
 
 ## The `updateReadyDelay` function
 

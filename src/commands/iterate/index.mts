@@ -48,6 +48,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       repo: report.repo,
       status: report.status,
       mergeStateStatus: report.mergeStatus.mergeStateStatus,
+      reviewDecision: report.mergeStatus.reviewDecision,
       copilotReviewInProgress: report.mergeStatus.copilotReviewInProgress,
       isDraft: report.mergeStatus.isDraft,
       shouldCancel: true,
@@ -81,6 +82,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     status: report.status,
     state: report.mergeStatus.state,
     mergeStateStatus: report.mergeStatus.mergeStateStatus,
+    reviewDecision: report.mergeStatus.reviewDecision,
     copilotReviewInProgress: report.mergeStatus.copilotReviewInProgress,
     isDraft: report.mergeStatus.isDraft,
     shouldCancel: readyState.shouldCancel,
@@ -91,11 +93,16 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   };
 
   if (readyState.shouldCancel) {
+    let cancelNote: string;
+    if (base.mergeStateStatus !== "BLOCKED") cancelNote = "has been ready for review";
+    else if (base.reviewDecision === "REVIEW_REQUIRED") cancelNote = "is awaiting human review";
+    else if (base.reviewDecision === "APPROVED") cancelNote = "is awaiting additional approvals";
+    else cancelNote = "is awaiting human review or branch protection resolution";
     return {
       ...base,
       action: "cancel",
       reason: "ready-delay-elapsed",
-      log: `CANCEL: PR #${base.pr} has been ready for review — ready-delay elapsed, stopping monitor`,
+      log: `CANCEL: PR #${base.pr} ${cancelNote} — ready-delay elapsed, stopping monitor`,
     };
   }
 

@@ -20,7 +20,11 @@ export function formatIterateResult(result: IterateResult, opts?: { verbose?: bo
   const verbose = opts?.verbose ?? false;
 
   const heading = `# PR #${result.pr} [${result.action.toUpperCase()}]`;
-  const baseLine = `**status** \`${result.status}\` · **merge** \`${result.mergeStateStatus}\` · **state** \`${result.state}\` · **repo** \`${result.repo}\``;
+  const reviewDecisionSeg =
+    result.mergeStateStatus === "BLOCKED" && result.reviewDecision
+      ? ` · **reviewDecision** \`${result.reviewDecision}\``
+      : "";
+  const baseLine = `**status** \`${result.status}\` · **merge** \`${result.mergeStateStatus}\`${reviewDecisionSeg} · **state** \`${result.state}\` · **repo** \`${result.repo}\``;
 
   let summaryLine: string;
   if (verbose) {
