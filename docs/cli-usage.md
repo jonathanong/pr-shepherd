@@ -280,7 +280,7 @@ Example for `[FIX_CODE]` (richest action):
 
 ## Failing checks
 
-- `24697658766` — `CI / lint / typecheck / test (22.x)`
+- `24697658766` — `CI › lint / typecheck / test (22.x)`
   > Run tests
 ```
 
@@ -297,12 +297,12 @@ at Object.<anonymous> (src/commands/iterate.test.mts:58:22)
 ## Instructions
 
 1. Apply code fixes: read and edit each file referenced under `## Review threads` and `## Actionable comments` above.
-2. For each bullet in `## Failing checks`: examine the log tail shown — if the failure looks transient (network error, flaky test), run `gh run rerun <runId> --failed`; otherwise apply a code fix.
+2. For each bullet in `## Failing checks`: the backticked locator at the start of each line is the runId. If a log tail is shown, examine it — if the failure looks transient (network error, flaky test), run `gh run rerun <runId> --failed`; otherwise apply a code fix. If no log tail appears, run `gh run view <runId> --log-failed` to diagnose first.
 3. Commit changed files: `git add <files> && git commit -m "<descriptive message>"`
 4. Keep the PR title and description current: if the changes alter the PR's scope or intent, run `gh pr edit 42 --title "<new title>" --body "<new body>"` to reflect them. Skip if the existing title/body still accurately describe the PR.
 5. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
 6. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
-7. Add a `## Shepherd Journal` entry to the PR description for any large decisions made: `gh pr edit 42 --body "$(gh pr view 42 --json body -q .body)\n\n## Shepherd Journal\n- <decision>"`
+7. For any large decisions made, add or update a `## Shepherd Journal` section in the PR description: `gh pr edit 42 --body …`
 8. Stop this iteration — CI needs time to run on the new push before the next tick.
 ```
 
