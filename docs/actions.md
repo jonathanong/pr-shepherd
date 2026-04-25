@@ -6,7 +6,7 @@ Each iteration of `shepherd iterate` returns exactly one action. See [docs/itera
 
 The default output format is Markdown — what you see when running `npx pr-shepherd iterate <PR>`, and what the monitor SKILL reads each cron tick. `--format=json` emits the same information as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
 
-Pass `--verbose` to get the full debug state: all base fields present in both Markdown and JSON regardless of their value. Lean mode is the default because most fields are `false`/`0`/`[]` on a typical healthy tick and add context noise without value.
+Pass `--verbose` to get more debug state. In JSON mode, the full `IterateResult` is returned (all fields, including `baseBranch`, `checks`, `shouldCancel`). In Markdown mode, `--verbose` restores the full header summary line (all four counts, `remainingSeconds`, `copilotReviewInProgress`, `isDraft`, `shouldCancel` always shown, and `[COOLDOWN]` no longer suppresses the base/summary block) — but Markdown is structurally different from JSON and does not guarantee field-for-field parity (array fields like `baseBranch` or `checks` are not added to Markdown for actions that do not normally render them). Lean mode is the default because most fields are `false`/`0`/`[]` on a typical healthy tick and add context noise without value.
 
 **Output shape (every action, default lean format):**
 
@@ -36,11 +36,11 @@ Lean-mode rules for the summary line:
 Load-bearing conventions (the monitor SKILL depends on these):
 
 1. Line 1 is always an H1 heading of the form `# PR #<N> [<ACTION>]`. The action tag identifies the output for logging and validation — behavior is driven by the `## Instructions` section, not by dispatching on the tag.
-2. Lines 3–4 carry the base fields (status, merge, state, repo, summary). In lean mode, fields at their trivial default are omitted; `--verbose` surfaces every field so Markdown output is never a lossy view of JSON.
+2. Lines 3–4 carry the base fields (status, merge, state, repo, summary). In lean mode, fields at their trivial default are omitted; `--verbose` restores the full scalar header/summary line in Markdown. JSON verbose mode returns the complete `IterateResult` including fields not present in Markdown (e.g. `baseBranch`, `checks` on all actions); Markdown is structurally lossy relative to JSON and `--verbose` does not close that gap.
 3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … — that tells the monitor exactly what to do. The monitor follows those steps; it does not need its own dispatch table.
 4. Under `[REBASE]`, the shell script is inside a ```bash fenced block — instruction 1 tells the monitor to extract and run it.
 5. Under `[FIX_CODE]`, the `## Post-fix push` section has a `` resolve: `<command>` `` bullet — the instructions reference this bullet so the monitor strips backticks and runs the command.
-6. Passing check counts are surfaced only via the `**summary**` line — no per-check detail is emitted for passing checks. Failing check detail appears in `## Failing checks` (within `[FIX_CODE]` output). JSON surfaces check data as `checks: RelevantCheck[]` only on `fix_code` and `rerun_ci` actions in lean mode; `--verbose` includes `checks` on all actions.
+6. Passing check counts are surfaced only via the `**summary**` line — no per-check detail is emitted for passing checks. Failing check detail appears in `## Failing checks` (within `[FIX_CODE]` output). JSON surfaces check data as `checks: RelevantCheck[]` only on `fix_code` and `rerun_ci` actions in lean mode; `--format=json --verbose` includes `checks` on all actions (full IterateResult).
 
 ---
 
