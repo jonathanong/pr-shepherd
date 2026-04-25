@@ -107,8 +107,8 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       filteredNames: [],
       blockedByFilteredCheck: false,
     },
-    threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
-    comments: { actionable: [] },
+    threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+    comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
     approvedReviews: [],
@@ -229,7 +229,12 @@ describe("runIterate — fix_code (actionable threads)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [thread1, thread2], autoResolved: [], autoResolveErrors: [] },
+        threads: {
+          actionable: [thread1, thread2],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -271,7 +276,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [] },
+        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [], firstLook: [] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -306,7 +311,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [] },
+        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [], firstLook: [] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({

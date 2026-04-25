@@ -208,7 +208,7 @@ These flags control whether shepherd automatically performs each class of mutati
 
 ### `actions.autoResolveOutdated` — default `true`
 
-When `true`, shepherd automatically resolves threads that GitHub has marked `isOutdated` at the start of each tick. Disable if your team uses outdated threads as a deliberate signal (e.g. "fix this when you rebase").
+When `true`, shepherd automatically resolves threads that GitHub has marked `isOutdated` at the start of each tick. The agent still sees them on first encounter (tagged `[status: outdated, auto-resolved]` in the `## First-look items` section) so reviewer intent is acknowledged before the thread disappears. Disable if your team uses outdated threads as a deliberate signal (e.g. "fix this when you rebase") — with this flag off, outdated threads still surface as `[status: outdated]` first-look items but are not auto-resolved.
 
 ### `actions.autoMarkReady` — default `true`
 

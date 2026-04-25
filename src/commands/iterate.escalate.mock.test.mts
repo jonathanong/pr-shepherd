@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// ---------------------------------------------------------------------------
-// Hoist mocks BEFORE any imports so modules capture the mocked versions.
-// child_process is still used by iterate.mts for `git` calls only.
-// GitHub API mutations now go through fetch (http.mts).
-// ---------------------------------------------------------------------------
+// Hoist mocks before imports so modules capture the mocked versions.
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
@@ -107,8 +103,8 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       filteredNames: [],
       blockedByFilteredCheck: false,
     },
-    threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
-    comments: { actionable: [] },
+    threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+    comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
     approvedReviews: [],
@@ -222,7 +218,7 @@ describe("runIterate — escalate (fix-thrash)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
+        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [], firstLook: [] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -247,7 +243,7 @@ describe("runIterate — escalate (fix-thrash)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
+        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [], firstLook: [] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -270,7 +266,7 @@ describe("runIterate — escalate (fix-thrash)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
+        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [], firstLook: [] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -294,7 +290,7 @@ describe("runIterate — escalate (fix-thrash)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [] },
+        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [], firstLook: [] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -318,8 +314,8 @@ describe("runIterate — escalate (pr-level-changes-requested)", () => {
       makeReport({
         status: "UNRESOLVED_COMMENTS",
         changesRequestedReviews: [{ id: "review-1", author: "boss", body: "Needs rework" }],
-        threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
-        comments: { actionable: [] },
+        threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+        comments: { actionable: [], firstLook: [] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -353,8 +349,8 @@ describe("runIterate — escalate (pr-level-changes-requested suppressed during 
           mergeStateStatus: "DIRTY",
         },
         changesRequestedReviews: [{ id: "review-1", author: "boss", body: "Needs rework" }],
-        threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
-        comments: { actionable: [] },
+        threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+        comments: { actionable: [], firstLook: [] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -375,7 +371,7 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
       makeReport({
         status: "UNRESOLVED_COMMENTS",
         changesRequestedReviews: [{ id: "review-1", author: "boss", body: "Needs rework" }],
-        threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
+        threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
         comments: {
           actionable: [
             {
@@ -387,6 +383,7 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
               createdAtUnix: NOW - 100,
             },
           ],
+          firstLook: [],
         },
       }),
     );
@@ -454,7 +451,7 @@ describe("runIterate — escalate (thread-missing-location)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [threadNoPath], autoResolved: [], autoResolveErrors: [] },
+        threads: { ...makeReport().threads, actionable: [threadNoPath] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -477,7 +474,7 @@ describe("runIterate — escalate (thread-missing-location)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [threadNoLine], autoResolved: [], autoResolveErrors: [] },
+        threads: { ...makeReport().threads, actionable: [threadNoLine] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({

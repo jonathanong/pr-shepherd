@@ -147,6 +147,9 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     };
   }
 
+  const firstLookThreads = report.threads.firstLook;
+  const firstLookComments = report.comments.firstLook;
+
   const instructions = buildFixInstructions(
     threads,
     actionableComments,
@@ -157,6 +160,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     hasConflicts,
     prNumber,
     cancelled.length,
+    firstLookThreads,
+    firstLookComments,
   );
 
   return applyStallGuard(
@@ -180,6 +185,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
         changesRequestedReviews,
         resolveCommand,
         instructions,
+        firstLookThreads,
+        firstLookComments,
       },
       cancelled,
     } as IterateResult,

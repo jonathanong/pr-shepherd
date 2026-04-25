@@ -1,19 +1,3 @@
-/**
- * `shepherd resolve [PR] [flags]`
- *
- * Two modes:
- *
- *   Fetch mode (--fetch or no mutation flags):
- *     Auto-resolves outdated threads and returns all active threads,
- *     visible comments, and CHANGES_REQUESTED reviews for LLM triage.
- *     Sonnet reads this output, applies code fixes, pushes, then calls
- *     resolve in mutation mode to resolve/minimize/dismiss by ID.
- *
- *   Mutation mode (--resolve-thread-ids, --minimize-comment-ids, --dismiss-review-ids):
- *     Resolves/minimizes/dismisses by ID. Optionally verifies the push
- *     has landed on GitHub before mutating (--require-sha).
- */
-
 import { getRepoInfo, getCurrentPrNumber } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { getOutdatedThreads } from "../comments/outdated.mts";
@@ -21,6 +5,7 @@ import { autoResolveOutdated, applyResolveOptions } from "../comments/resolve.mt
 import { loadConfig } from "../config/load.mts";
 import { parseSuggestion } from "../suggestions/parse.mts";
 import { buildFetchInstructions } from "./resolve-instructions.mts";
+import { loadSeenSet, markSeen } from "../state/seen-comments.mts";
 import type {
   GlobalOptions,
   ResolveOptions,
@@ -28,6 +13,8 @@ import type {
   PrComment,
   Review,
   SuggestionBlock,
+  FirstLookThread,
+  FirstLookComment,
 } from "../types.mts";
 
 // ---------------------------------------------------------------------------
@@ -42,7 +29,11 @@ export type FetchThread = Omit<ReviewThread, "isResolved" | "isOutdated"> & {
 export interface FetchResult {
   prNumber: number;
   actionableThreads: FetchThread[];
+  /** First-look threads — outdated/resolved/minimized, surfaced for agent acknowledgment on first encounter only. */
+  firstLookThreads: FirstLookThread[];
   actionableComments: PrComment[];
+  /** First-look comments — minimized, surfaced for agent acknowledgment on first encounter only. */
+  firstLookComments: FirstLookComment[];
   changesRequestedReviews: Review[];
   reviewSummaries: Review[];
   /** Mirrors `actions.commitSuggestions` config. When true, the resolve skill prefers the commit-suggestions path for threads with a suggestion block. */
@@ -69,13 +60,32 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   // Always bypass cache for resolve — we need fresh data before mutating.
   const { data } = await fetchPrBatch(prNumber, repo);
 
+  const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
+
   const unresolvedThreads = data.reviewThreads.filter((t) => !t.isResolved && !t.isMinimized);
   const visibleComments = data.comments.filter((c) => !c.isMinimized);
 
-  // Auto-resolve outdated.
+  // First-look: collect items that would normally be hidden and check seen markers.
+  const outdatedCandidates = data.reviewThreads.filter((t) => t.isOutdated);
+  const resolvedCandidates = data.reviewThreads.filter((t) => t.isResolved && !t.isOutdated);
+  const minimizedThreadCandidates = data.reviewThreads.filter(
+    (t) => t.isMinimized && !t.isResolved && !t.isOutdated,
+  );
+  const minimizedCommentCandidates = data.comments.filter((c) => c.isMinimized);
+
+  const seenSet = await loadSeenSet(stateKey);
+
+  const unseenOutdated = outdatedCandidates.filter((t) => !seenSet.has(t.id));
+  const unseenResolved = resolvedCandidates.filter((t) => !seenSet.has(t.id));
+  const unseenMinimizedThreads = minimizedThreadCandidates.filter((t) => !seenSet.has(t.id));
+  const unseenMinimizedComments = minimizedCommentCandidates.filter((c) => !seenSet.has(c.id));
+
+  // Auto-resolve outdated (same as before — fires regardless of first-look status).
   const outdated = getOutdatedThreads(unresolvedThreads);
+  const autoResolvedIds = new Set<string>();
   if (outdated.length > 0) {
-    const { errors } = await autoResolveOutdated(outdated.map((t) => t.id));
+    const { resolved: resolvedIds, errors } = await autoResolveOutdated(outdated.map((t) => t.id));
+    for (const id of resolvedIds) autoResolvedIds.add(id);
     if (errors.length > 0) {
       process.stderr.write(
         `pr-shepherd: auto-resolve outdated threads failed (continuing): ${errors.join(", ")}\n`,
@@ -96,10 +106,33 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
     },
   );
 
+  const firstLookThreads: FirstLookThread[] = [
+    ...unseenOutdated.map((t) => ({
+      ...t,
+      firstLookStatus: "outdated" as const,
+      autoResolved: autoResolvedIds.has(t.id),
+    })),
+    ...unseenResolved.map((t) => ({ ...t, firstLookStatus: "resolved" as const })),
+    ...unseenMinimizedThreads.map((t) => ({ ...t, firstLookStatus: "minimized" as const })),
+  ];
+
+  const firstLookComments: FirstLookComment[] = unseenMinimizedComments.map((c) => ({
+    ...c,
+    firstLookStatus: "minimized" as const,
+  }));
+
+  // Mark first-look items as seen (best-effort — markSeen never throws).
+  await Promise.allSettled([
+    ...firstLookThreads.map((t) => markSeen(stateKey, t.id)),
+    ...firstLookComments.map((c) => markSeen(stateKey, c.id)),
+  ]);
+
   const result: Omit<FetchResult, "instructions"> = {
     prNumber,
     actionableThreads,
+    firstLookThreads,
     actionableComments: visibleComments,
+    firstLookComments,
     changesRequestedReviews: data.changesRequestedReviews,
     reviewSummaries: cfg.resolve.fetchReviewSummaries ? data.reviewSummaries : [],
     commitSuggestionsEnabled: cfg.actions.commitSuggestions,

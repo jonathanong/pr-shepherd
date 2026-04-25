@@ -129,6 +129,8 @@ describe("main — iterate text format (fix_code and checks)", () => {
         hasMutations: true,
       },
       instructions: ["step one", "step two"],
+      firstLookThreads: [],
+      firstLookComments: [],
     };
     result.cancelled = ["run-99"];
     mockRunIterate.mockResolvedValue(result);

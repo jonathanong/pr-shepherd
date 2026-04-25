@@ -5,6 +5,11 @@ vi.mock("../github/client.mts", () => ({
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
 }));
 
+vi.mock("../state/seen-comments.mts", () => ({
+  loadSeenSet: vi.fn().mockResolvedValue(new Set()),
+  markSeen: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("../github/batch.mts", () => ({
   fetchPrBatch: vi.fn(),
 }));
@@ -34,6 +39,7 @@ import { getCurrentPrNumber } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { autoResolveOutdated, applyResolveOptions } from "../comments/resolve.mts";
 import { loadConfig } from "../config/load.mts";
+import { loadSeenSet, markSeen } from "../state/seen-comments.mts";
 import type { BatchPrData, ReviewThread, PrComment } from "../types.mts";
 
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
@@ -41,6 +47,8 @@ const mockFetchPrBatch = vi.mocked(fetchPrBatch);
 const mockAutoResolveOutdated = vi.mocked(autoResolveOutdated);
 const mockApplyResolveOptions = vi.mocked(applyResolveOptions);
 const mockLoadConfig = vi.mocked(loadConfig);
+const mockLoadSeenSet = vi.mocked(loadSeenSet);
+const mockMarkSeen = vi.mocked(markSeen);
 
 const BASE_OPTS = { format: "text" as const };
 
@@ -106,10 +114,6 @@ beforeEach(() => {
     errors: [],
   });
 });
-
-// ---------------------------------------------------------------------------
-// runResolveFetch
-// ---------------------------------------------------------------------------
 
 describe("runResolveFetch — no PR", () => {
   it("throws when no open PR found", async () => {
@@ -321,7 +325,9 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
   it("instructions single step when no actionable items", async () => {
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({}) });
     const result = await runResolveFetch(BASE_OPTS);
-    expect(result.instructions).toEqual(["No actionable items — end this invocation."]);
+    expect(result.instructions).toEqual([
+      "No actionable items and no first-look items — end this invocation.",
+    ]);
   });
 
   it("instructions include commit-suggestion step when enabled and suggestion present", async () => {
@@ -410,9 +416,7 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
   });
 
   it("instructions include Shepherd Journal step when there are actionable items", async () => {
-    const thread = makeThread({ body: "fix this" });
-    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
-
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [makeThread()] }) });
     const result = await runResolveFetch(BASE_OPTS);
     expect(result.instructions.join("\n")).toContain("Shepherd Journal");
   });
@@ -423,10 +427,6 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     expect(result.instructions.join("\n")).not.toContain("Shepherd Journal");
   });
 });
-
-// ---------------------------------------------------------------------------
-// runResolveMutate
-// ---------------------------------------------------------------------------
 
 describe("runResolveMutate — no PR", () => {
   it("throws when no open PR found", async () => {
@@ -457,5 +457,44 @@ describe("runResolveMutate — forwards options", () => {
         requireSha: "sha-abc",
       }),
     );
+  });
+});
+
+describe("runResolveFetch — first-look items", () => {
+  it.each([
+    ["outdated", makeThread({ id: "t-outdated", isOutdated: true }), "outdated"],
+    ["resolved", makeThread({ id: "t-resolved", isResolved: true }), "resolved"],
+    ["minimized", makeThread({ id: "t-minimized", isMinimized: true }), "minimized"],
+  ])("surfaces unseen %s thread in firstLookThreads", async (_label, thread, status) => {
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.firstLookThreads[0]?.firstLookStatus).toBe(status);
+  });
+
+  it("marks auto-resolved outdated thread with autoResolved: true", async () => {
+    const outdated = makeThread({ id: "t-auto", isOutdated: true });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [outdated] }) });
+    mockAutoResolveOutdated.mockResolvedValue({ resolved: ["t-auto"], errors: [] });
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.firstLookThreads[0]?.autoResolved).toBe(true);
+  });
+
+  it("surfaces unseen minimized comment in firstLookComments", async () => {
+    const minimized = makeComment({ id: "c-min", isMinimized: true });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ comments: [minimized] }) });
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.firstLookComments[0]?.firstLookStatus).toBe("minimized");
+  });
+
+  it("suppresses already-seen items and calls markSeen for new ones", async () => {
+    const outdated = makeThread({ id: "t-outdated", isOutdated: true });
+    const minimized = makeComment({ id: "c-min", isMinimized: true });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ reviewThreads: [outdated], comments: [minimized] }),
+    });
+    mockLoadSeenSet.mockResolvedValue(new Set(["t-outdated"]));
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.firstLookThreads).toHaveLength(0);
+    expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "c-min");
   });
 });

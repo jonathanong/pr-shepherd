@@ -1,5 +1,3 @@
-// Shepherd-specific report types, agent projections, and CLI options.
-
 import type {
   ClassifiedCheck,
   TriagedCheck,
@@ -9,6 +7,20 @@ import type {
   MergeStatusResult,
   CheckConclusion,
 } from "./github.mts";
+
+// ---------------------------------------------------------------------------
+// First-look items (previously hidden — surfaced to agent on first encounter)
+// ---------------------------------------------------------------------------
+
+export interface FirstLookThread extends ReviewThread {
+  firstLookStatus: "outdated" | "resolved" | "minimized";
+  /** True when Shepherd auto-resolved this thread during the current run (outdated only). */
+  autoResolved?: boolean;
+}
+
+export interface FirstLookComment extends PrComment {
+  firstLookStatus: "minimized";
+}
 
 // ---------------------------------------------------------------------------
 // Shepherd check report (output of the check command)
@@ -45,9 +57,13 @@ export interface ShepherdReport {
     actionable: ReviewThread[];
     autoResolved: ReviewThread[];
     autoResolveErrors: string[];
+    /** First-look items — outdated/resolved/minimized threads not yet seen by the agent. */
+    firstLook: FirstLookThread[];
   };
   comments: {
     actionable: PrComment[];
+    /** First-look items — minimized comments not yet seen by the agent. */
+    firstLook: FirstLookComment[];
   };
   changesRequestedReviews: Review[];
   /** COMMENTED reviews with a non-empty, non-minimized body — surfaced for agent-driven minimize. */
@@ -175,10 +191,7 @@ export type CommitSuggestionResult =
       reason: string | null;
     });
 
-// ---------------------------------------------------------------------------
 // CLI options
-// ---------------------------------------------------------------------------
-
 export interface GlobalOptions {
   prNumber?: number;
   format: "text" | "json";

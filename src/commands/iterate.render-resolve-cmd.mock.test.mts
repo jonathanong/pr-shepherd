@@ -107,8 +107,8 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       filteredNames: [],
       blockedByFilteredCheck: false,
     },
-    threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
-    comments: { actionable: [] },
+    threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+    comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
     approvedReviews: [],
@@ -365,6 +365,7 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
           ],
           autoResolved: [],
           autoResolveErrors: [],
+          firstLook: [],
         },
       }),
     );

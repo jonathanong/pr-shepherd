@@ -107,8 +107,8 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       filteredNames: [],
       blockedByFilteredCheck: false,
     },
-    threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
-    comments: { actionable: [] },
+    threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+    comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
     approvedReviews: [],
@@ -234,7 +234,7 @@ describe("runIterate — prescriptive fields: fix_code noise/actionable split", 
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        comments: { actionable: [noiseComment, realComment] },
+        comments: { actionable: [noiseComment, realComment], firstLook: [] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -289,7 +289,7 @@ describe("runIterate — prescriptive fields: fix_code noise/actionable split", 
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        comments: { actionable: [emDash, asciiHyphen, colon] },
+        comments: { actionable: [emDash, asciiHyphen, colon], firstLook: [] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -324,8 +324,8 @@ describe("runIterate — prescriptive fields: fix_code noise/actionable split", 
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [] },
-        comments: { actionable: [comment] },
+        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+        comments: { actionable: [comment], firstLook: [] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -362,7 +362,7 @@ describe("runIterate — prescriptive fields: fix_code noise/actionable split", 
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [] },
+        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [], firstLook: [] },
         changesRequestedReviews: [review],
       }),
     );

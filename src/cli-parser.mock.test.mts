@@ -66,8 +66,8 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       filteredNames: [],
       blockedByFilteredCheck: false,
     },
-    threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
-    comments: { actionable: [] },
+    threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+    comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
     approvedReviews: [],
@@ -122,6 +122,8 @@ describe("main — resolve", () => {
       prNumber: 42,
       actionableThreads: [],
       actionableComments: [],
+      firstLookThreads: [],
+      firstLookComments: [],
       changesRequestedReviews: [],
       reviewSummaries: [],
       commitSuggestionsEnabled: true,
@@ -137,6 +139,8 @@ describe("main — resolve", () => {
       prNumber: 42,
       actionableThreads: [],
       actionableComments: [],
+      firstLookThreads: [],
+      firstLookComments: [],
       changesRequestedReviews: [],
       reviewSummaries: [{ id: "PRR_1", author: "copilot", body: "## PR overview\nsome detail" }],
       commitSuggestionsEnabled: true,
@@ -146,7 +150,7 @@ describe("main — resolve", () => {
     const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
     expect(out).toContain("## Review summaries (1)");
     expect(out).toContain("`reviewId=PRR_1` (@copilot): ## PR overview");
-    expect(out).toContain("1 actionable item(s)");
+    expect(out).toContain("1 actionable");
   });
 
   it("calls runResolveMutate when --resolve-thread-ids is given", async () => {
@@ -186,6 +190,8 @@ describe("main — resolve", () => {
           createdAtUnix: 0,
         },
       ],
+      firstLookThreads: [],
+      firstLookComments: [],
       changesRequestedReviews: [],
       reviewSummaries: [],
       commitSuggestionsEnabled: false,
@@ -226,6 +232,8 @@ describe("main — resolve", () => {
         },
       ],
       actionableComments: [],
+      firstLookThreads: [],
+      firstLookComments: [],
       changesRequestedReviews: [],
       reviewSummaries: [],
       commitSuggestionsEnabled: true,
@@ -248,6 +256,8 @@ describe("main — resolve", () => {
       prNumber: 42,
       actionableThreads: [],
       actionableComments: [],
+      firstLookThreads: [],
+      firstLookComments: [],
       changesRequestedReviews: [],
       reviewSummaries: [],
       commitSuggestionsEnabled: false,
@@ -285,6 +295,8 @@ describe("main — resolve", () => {
           createdAtUnix: 0,
         },
       ],
+      firstLookThreads: [],
+      firstLookComments: [],
       changesRequestedReviews: [{ id: "PRR_r1", author: "carol", body: "needs work" }],
       reviewSummaries: [],
       commitSuggestionsEnabled: false,
@@ -324,6 +336,8 @@ describe("main — resolve", () => {
           createdAtUnix: 0,
         },
       ],
+      firstLookThreads: [],
+      firstLookComments: [],
       changesRequestedReviews: [],
       reviewSummaries: [],
       commitSuggestionsEnabled: false,
@@ -345,6 +359,8 @@ describe("main — resolve", () => {
       prNumber: 42,
       actionableThreads: [],
       actionableComments: [],
+      firstLookThreads: [],
+      firstLookComments: [],
       changesRequestedReviews: [],
       reviewSummaries: [],
       commitSuggestionsEnabled: false,
@@ -424,5 +440,53 @@ describe("main — --version", () => {
     await main(["node", "shepherd", "-v"]);
     expect(getStdout()).toBe(`${pkgVersion}\n`);
     expect(process.exitCode).toBeUndefined();
+  });
+});
+
+describe("main — resolve first-look rendering", () => {
+  it("formatFetchResult renders ## First-look items section", async () => {
+    mockRunResolveFetch.mockResolvedValue({
+      prNumber: 42,
+      actionableThreads: [],
+      actionableComments: [],
+      firstLookThreads: [
+        {
+          id: "PRRT_fl1",
+          isResolved: true,
+          isOutdated: false,
+          isMinimized: false,
+          path: "src/foo.ts",
+          line: 5,
+          startLine: null,
+          author: "alice",
+          body: "already fixed",
+          url: "",
+          createdAtUnix: 0,
+          firstLookStatus: "resolved" as const,
+        },
+      ],
+      firstLookComments: [
+        {
+          id: "PRRC_fl2",
+          isMinimized: true,
+          author: "bot",
+          body: "quota warning",
+          url: "",
+          createdAtUnix: 0,
+          firstLookStatus: "minimized" as const,
+        },
+      ],
+      changesRequestedReviews: [],
+      reviewSummaries: [],
+      commitSuggestionsEnabled: false,
+      instructions: ["Acknowledge first-look items."],
+    });
+    await main(["node", "shepherd", "resolve", "42"]);
+    const out = getStdout();
+    expect(out).toContain("## First-look items (2)");
+    expect(out).toContain("threadId=PRRT_fl1");
+    expect(out).toContain("[status: resolved]");
+    expect(out).toContain("commentId=PRRC_fl2");
+    expect(out).toContain("[status: minimized]");
   });
 });

@@ -6,17 +6,22 @@ import type { CommitSuggestionResult } from "../types.mts";
 import type { ResolveResult } from "../comments/resolve.mts";
 
 export function formatFetchResult(result: FetchResult): string {
-  const total =
+  const activeTotal =
     result.actionableThreads.length +
     result.actionableComments.length +
     result.changesRequestedReviews.length +
     result.reviewSummaries.length;
+  const firstLookTotal = result.firstLookThreads.length + result.firstLookComments.length;
+  const total = activeTotal + firstLookTotal;
+
+  const headingParts: string[] = [];
+  if (activeTotal > 0) headingParts.push(`${activeTotal} actionable`);
+  if (firstLookTotal > 0) headingParts.push(`${firstLookTotal} first-look`);
+  const headingSuffix = headingParts.length > 0 ? headingParts.join(", ") : "0 actionable";
 
   const sections: string[] = [];
 
-  sections.push(
-    `# PR #${result.prNumber} — Resolve fetch (${total === 0 ? "0 actionable" : `${total} actionable`})`,
-  );
+  sections.push(`# PR #${result.prNumber} — Resolve fetch (${headingSuffix})`);
 
   if (result.actionableThreads.length > 0) {
     sections.push(
@@ -66,9 +71,38 @@ export function formatFetchResult(result: FetchResult): string {
     );
   }
 
+  if (firstLookTotal > 0) {
+    sections.push(
+      `## First-look items (${firstLookTotal}) — already closed on GitHub; acknowledge only`,
+    );
+    const bullets: string[] = [];
+    for (const t of result.firstLookThreads) {
+      const statusTag = t.autoResolved
+        ? `[status: outdated, auto-resolved]`
+        : `[status: ${t.firstLookStatus}]`;
+      const loc = t.path ? `\`${t.path}:${t.line ?? "?"}\`` : "(no location)";
+      bullets.push(
+        `- \`threadId=${t.id}\` ${loc} (@${t.author}) ${statusTag}: ${t.body.split("\n")[0]?.slice(0, 100) ?? ""}`,
+      );
+    }
+    for (const c of result.firstLookComments) {
+      bullets.push(
+        `- \`commentId=${c.id}\` (@${c.author}) [status: minimized]: ${c.body.split("\n")[0]?.slice(0, 100) ?? ""}`,
+      );
+    }
+    sections.push(bullets.join("\n"));
+  }
+
   sections.push("## Summary");
   sections.push(
-    total === 0 ? "0 actionable — all threads resolved/minimized" : `${total} actionable item(s)`,
+    total === 0
+      ? "0 actionable, 0 first-look — all items seen"
+      : [
+          activeTotal > 0 ? `${activeTotal} actionable` : null,
+          firstLookTotal > 0 ? `${firstLookTotal} first-look` : null,
+        ]
+          .filter(Boolean)
+          .join(", "),
   );
 
   sections.push("## Instructions");

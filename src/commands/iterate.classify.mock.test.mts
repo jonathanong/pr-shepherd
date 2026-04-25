@@ -107,8 +107,8 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       filteredNames: [],
       blockedByFilteredCheck: false,
     },
-    threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
-    comments: { actionable: [] },
+    threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+    comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
     approvedReviews: [],
@@ -346,7 +346,7 @@ describe("runIterate — review summary auto-minimize", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [t1], autoResolved: [], autoResolveErrors: [] },
+        threads: { actionable: [t1], autoResolved: [], autoResolveErrors: [], firstLook: [] },
         reviewSummaries: [botSummary],
       }),
     );

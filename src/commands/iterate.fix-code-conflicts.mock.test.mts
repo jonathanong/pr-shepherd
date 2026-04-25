@@ -107,8 +107,8 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       filteredNames: [],
       blockedByFilteredCheck: false,
     },
-    threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
-    comments: { actionable: [] },
+    threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+    comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
     approvedReviews: [],
@@ -264,7 +264,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
           copilotReviewInProgress: false,
           mergeStateStatus: "DIRTY",
         },
-        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [] },
+        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [], firstLook: [] },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({

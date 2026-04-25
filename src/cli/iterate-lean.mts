@@ -61,6 +61,12 @@ export function projectIterateLean(result: IterateResult): unknown {
           ...(result.fix.surfacedApprovals.length > 0 && {
             surfacedApprovals: result.fix.surfacedApprovals,
           }),
+          ...(result.fix.firstLookThreads.length > 0 && {
+            firstLookThreads: result.fix.firstLookThreads,
+          }),
+          ...(result.fix.firstLookComments.length > 0 && {
+            firstLookComments: result.fix.firstLookComments,
+          }),
           ...(result.fix.checks.length > 0 && { checks: result.fix.checks }),
           ...(result.fix.changesRequestedReviews.length > 0 && {
             changesRequestedReviews: result.fix.changesRequestedReviews,

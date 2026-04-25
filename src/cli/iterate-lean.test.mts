@@ -209,6 +209,8 @@ describe("projectIterateLean", () => {
     expect(fix.noiseCommentIds).toBeUndefined();
     expect(fix.reviewSummaryIds).toBeUndefined();
     expect(fix.surfacedApprovals).toBeUndefined();
+    expect(fix.firstLookThreads).toBeUndefined();
+    expect(fix.firstLookComments).toBeUndefined();
     expect(fix.checks).toBeUndefined();
     expect(fix.changesRequestedReviews).toBeUndefined();
     // fixture has one default instruction ("End this iteration."), so it is present
@@ -229,6 +231,33 @@ describe("projectIterateLean", () => {
     result.fix.noiseCommentIds = ["c2"];
     result.fix.reviewSummaryIds = ["r1"];
     result.fix.surfacedApprovals = [{ id: "s1", author: "a", body: "summary" }];
+    result.fix.firstLookThreads = [
+      {
+        id: "t2",
+        path: "src/y.ts",
+        line: 5,
+        author: "b",
+        body: "note",
+        url: "",
+        isResolved: false,
+        isOutdated: true,
+        isMinimized: false,
+        startLine: null,
+        createdAtUnix: 0,
+        firstLookStatus: "outdated",
+      },
+    ];
+    result.fix.firstLookComments = [
+      {
+        id: "c3",
+        author: "b",
+        body: "old",
+        url: "",
+        isMinimized: true,
+        createdAtUnix: 0,
+        firstLookStatus: "minimized",
+      },
+    ];
     result.fix.changesRequestedReviews = [{ id: "rv1", author: "a", body: "" }];
     result.checks = [
       { name: "lint", conclusion: "FAILURE" as const, runId: "r2", detailsUrl: null },
@@ -245,6 +274,8 @@ describe("projectIterateLean", () => {
     expect((fix.noiseCommentIds as unknown[]).length).toBe(1);
     expect((fix.reviewSummaryIds as unknown[]).length).toBe(1);
     expect((fix.surfacedApprovals as unknown[]).length).toBe(1);
+    expect((fix.firstLookThreads as unknown[]).length).toBe(1);
+    expect((fix.firstLookComments as unknown[]).length).toBe(1);
     expect((fix.changesRequestedReviews as unknown[]).length).toBe(1);
     expect((lean.cancelled as unknown[]).length).toBe(1);
   });

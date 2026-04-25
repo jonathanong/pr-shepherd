@@ -64,8 +64,8 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       filteredNames: [],
       blockedByFilteredCheck: false,
     },
-    threads: { actionable: [], autoResolved: [], autoResolveErrors: [] },
-    comments: { actionable: [] },
+    threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+    comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
     approvedReviews: [],
@@ -251,6 +251,7 @@ describe("formatText — threads and comments", () => {
         actionable: [],
         autoResolved: [makeThread({ id: "t-1", path: "src/bar.ts", line: 5, author: "bob" })],
         autoResolveErrors: [],
+        firstLook: [],
       },
     });
     const out = formatText(report);
@@ -265,6 +266,7 @@ describe("formatText — threads and comments", () => {
         actionable: [],
         autoResolved: [],
         autoResolveErrors: ["thread-x: GraphQL error"],
+        firstLook: [],
       },
     });
     const out = formatText(report);
@@ -278,6 +280,7 @@ describe("formatText — threads and comments", () => {
         actionable: [makeThread({ id: "t-1", path: null, line: null, author: "alice" })],
         autoResolved: [],
         autoResolveErrors: [],
+        firstLook: [],
       },
     });
     const out = formatText(report);
@@ -290,6 +293,7 @@ describe("formatText — threads and comments", () => {
         actionable: [makeThread({ id: "t-2", path: "src/index.ts", line: 42, author: "alice" })],
         autoResolved: [],
         autoResolveErrors: [],
+        firstLook: [],
       },
     });
     const out = formatText(report);
@@ -303,6 +307,7 @@ describe("formatText — threads and comments", () => {
         actionable: [makeThread({ body: longBody })],
         autoResolved: [],
         autoResolveErrors: [],
+        firstLook: [],
       },
     });
     const out = formatText(report);
@@ -321,7 +326,7 @@ describe("formatText — threads and comments", () => {
       createdAtUnix: 1_700_000_000,
     };
     const report = makeReport({
-      comments: { actionable: [comment] },
+      comments: { actionable: [comment], firstLook: [] },
     });
     const out = formatText(report);
     expect(out).toContain("## PR Comments");
@@ -350,10 +355,11 @@ describe("formatText — summary line", () => {
         actionable: [makeThread(), makeThread({ id: "t-2" })],
         autoResolved: [],
         autoResolveErrors: [],
+        firstLook: [],
       },
     });
     const out = formatText(report);
-    expect(out).toContain("2 actionable item(s) remaining");
+    expect(out).toContain("2 actionable");
   });
 });
 
@@ -456,5 +462,33 @@ describe("formatText — baseBranch, reviewSummaries, approvedReviews", () => {
   it("omits ## Approved Reviews section when empty", () => {
     const out = formatText(makeReport({ approvedReviews: [] }));
     expect(out).not.toContain("## Approved Reviews");
+  });
+});
+
+describe("formatText — first-look items", () => {
+  it("renders ## First-look items section", () => {
+    const thread = {
+      ...makeThread({ id: "PRRT_abc", isOutdated: true }),
+      firstLookStatus: "outdated" as const,
+    };
+    const comment = {
+      id: "PRRC_xyz",
+      isMinimized: true,
+      author: "bob",
+      body: "nit",
+      url: "",
+      createdAtUnix: 0,
+      firstLookStatus: "minimized" as const,
+    };
+    const report = makeReport({
+      threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [thread] },
+      comments: { actionable: [], firstLook: [comment] },
+    });
+    const out = formatText(report);
+    expect(out).toContain("## First-look items");
+    expect(out).toContain("threadId=PRRT_abc");
+    expect(out).toContain("[status: outdated]");
+    expect(out).toContain("commentId=PRRC_xyz");
+    expect(out).toContain("[status: minimized]");
   });
 });

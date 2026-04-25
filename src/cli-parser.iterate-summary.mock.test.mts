@@ -69,6 +69,8 @@ function makeFixCodeResult(): IterateResult & { action: "fix_code" } {
         hasMutations: false,
       },
       instructions: ["End this iteration."],
+      firstLookThreads: [],
+      firstLookComments: [],
     },
     cancelled: [],
   };

@@ -80,24 +80,32 @@ pr-shepherd resolve 42 --fetch
 ```
 
 ```markdown
-# PR #42 — Resolve fetch (2 actionable)
+# PR #42 — Resolve fetch (2 actionable, 1 first-look)
 
 ## Actionable Review Threads (2) [commit-suggestions: enabled]
 
 - `threadId=RT_kwDOabc` `src/api.ts:47` (@reviewer): Please add error handling here
 - `threadId=RT_kwDOdef` `src/utils.ts:12` (@alice) [suggestion]: Replace manual loop with Array.from
 
+## First-look items (1) — already closed on GitHub; acknowledge only
+
+- `threadId=RT_kwDOghi` `src/old.ts:9` (@bob) [status: outdated, auto-resolved]: This variable name is confusing
+
 ## Summary
 
-2 actionable item(s)
+2 actionable, 1 first-look
 
 ## Instructions
 
-1. For each thread marked `[suggestion]`: run `npx pr-shepherd commit-suggestion 42 --thread-id <id> --message "<message>" --format=json` (one thread at a time). On `applied: false`, fall through to step 2 for that thread.
-2. For remaining threads (no suggestion, or commit-suggestion failed): read and edit the referenced files.
-3. Commit changed files and push: `git add <files> && git commit -m "<message>"`, then rebase and push.
-4. Run `npx pr-shepherd resolve 42 [--resolve-thread-ids <ids>] …` with the appropriate flags.
+1. Classify every item listed above …
+2. Items in `## First-look items` are already closed on GitHub — do not pass their IDs to `--resolve-thread-ids`, `--minimize-comment-ids`, or `--dismiss-review-ids`. Acknowledge each one with a one-line classification.
+3. For each thread marked `[suggestion]`: run `npx pr-shepherd commit-suggestion 42 --thread-id <id> --message "<message>" --format=json` (one thread at a time). On `applied: false`, fall through to step 4 for that thread.
+4. For remaining threads (no suggestion, or commit-suggestion failed): read and edit the referenced files.
+5. Commit changed files and push: `git add <files> && git commit -m "<message>"`, then rebase and push.
+6. Run `npx pr-shepherd resolve 42 [--resolve-thread-ids <ids>] …` with the appropriate flags.
 ```
+
+First-look items (threads / comments that are outdated, resolved, or minimized on GitHub) are surfaced on first fetch only; a per-item seen-marker file suppresses them on subsequent fetches. They carry a `[status: …]` tag: `outdated`, `outdated, auto-resolved`, `resolved`, or `minimized`. Do not include first-look IDs in resolve mutations — they are already closed.
 
 The `[suggestion]` marker appears on threads whose body contains a ` ```suggestion ` fenced block and `actions.commitSuggestions` is enabled. See the [`commit-suggestion` section](#pr-shepherd-commit-suggestion-pr---thread-id-id---message) below for how to apply them.
 

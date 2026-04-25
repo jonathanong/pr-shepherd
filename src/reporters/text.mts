@@ -4,13 +4,11 @@ import { buildCheckInstructions } from "./check-instructions.mts";
 export function formatText(report: ShepherdReport): string {
   const parts: string[] = [];
 
-  // Header — scan-friendly status lines for quick at-a-glance review
   parts.push(`\nPR #${report.pr} — ${report.repo}`);
   parts.push(`Status: ${report.status}`);
   parts.push(`Base: ${report.baseBranch}`);
   parts.push("");
 
-  // Merge status
   const ms = report.mergeStatus;
   parts.push("## Merge Status");
   parts.push("");
@@ -22,7 +20,6 @@ export function formatText(report: ShepherdReport): string {
   parts.push(`  copilotReviewInProgress: ${ms.copilotReviewInProgress}`);
   parts.push("");
 
-  // CI checks
   const { passing, failing, inProgress, skipped } = report.checks;
   const total = passing.length + failing.length + inProgress.length + skipped.length;
 
@@ -79,8 +76,12 @@ export function formatText(report: ShepherdReport): string {
     parts.push("");
   }
 
-  // Review threads
-  const { actionable: actionableThreads, autoResolved, autoResolveErrors } = report.threads;
+  const {
+    actionable: actionableThreads,
+    autoResolved,
+    autoResolveErrors,
+    firstLook: firstLookThreads,
+  } = report.threads;
   const hasThreadSection =
     autoResolved.length > 0 || autoResolveErrors.length > 0 || actionableThreads.length > 0;
 
@@ -116,8 +117,7 @@ export function formatText(report: ShepherdReport): string {
     }
   }
 
-  // PR comments
-  const { actionable: actionableComments } = report.comments;
+  const { actionable: actionableComments, firstLook: firstLookComments } = report.comments;
   if (actionableComments.length > 0) {
     parts.push("## PR Comments");
     parts.push("");
@@ -129,7 +129,6 @@ export function formatText(report: ShepherdReport): string {
     parts.push("");
   }
 
-  // CHANGES_REQUESTED reviews
   if (report.changesRequestedReviews.length > 0) {
     parts.push("## CHANGES_REQUESTED Reviews");
     parts.push("");
@@ -139,7 +138,6 @@ export function formatText(report: ShepherdReport): string {
     parts.push("");
   }
 
-  // Review summaries
   if (report.reviewSummaries.length > 0) {
     parts.push("## Review Summaries");
     parts.push("");
@@ -149,7 +147,6 @@ export function formatText(report: ShepherdReport): string {
     parts.push("");
   }
 
-  // Approved reviews
   if (report.approvedReviews.length > 0) {
     parts.push("## Approved Reviews");
     parts.push("");
@@ -158,20 +155,35 @@ export function formatText(report: ShepherdReport): string {
     }
     parts.push("");
   }
+  const firstLookTotal = firstLookThreads.length + firstLookComments.length;
+  if (firstLookTotal > 0) {
+    parts.push("## First-look items");
+    parts.push("");
+    for (const t of firstLookThreads) {
+      const statusTag = t.autoResolved
+        ? `[status: outdated, auto-resolved]`
+        : `[status: ${t.firstLookStatus}]`;
+      const loc = t.path ? `${t.path}:${t.line ?? "?"}` : "(no location)";
+      parts.push(`- threadId=${t.id} ${loc} (@${t.author}) ${statusTag}`);
+      parts.push(`  ${firstLine(t.body)}`);
+    }
+    for (const c of firstLookComments) {
+      parts.push(`- commentId=${c.id} (@${c.author}) [status: minimized]`);
+      parts.push(`  ${firstLine(c.body)}`);
+    }
+    parts.push("");
+  }
 
-  // Summary
   const totalActionable =
     actionableThreads.length + actionableComments.length + report.changesRequestedReviews.length;
   parts.push("## Summary");
   parts.push("");
-  parts.push(
-    totalActionable === 0
-      ? "0 actionable — all threads resolved/minimized"
-      : `${totalActionable} actionable item(s) remaining`,
-  );
+  const counts: string[] = [];
+  if (totalActionable > 0) counts.push(`${totalActionable} actionable`);
+  if (firstLookTotal > 0) counts.push(`${firstLookTotal} first-look`);
+  const summaryLine = counts.join(", ") || "0 actionable — all threads resolved/minimized";
+  parts.push(summaryLine);
   parts.push("");
-
-  // Instructions
   parts.push("## Instructions");
   parts.push("");
   const instructions = buildCheckInstructions(report);
@@ -181,10 +193,6 @@ export function formatText(report: ShepherdReport): string {
 
   return parts.join("\n");
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function firstLine(text: string): string {
   return (text.split("\n")[0] ?? "").trim().slice(0, 120);
