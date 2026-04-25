@@ -1,24 +1,6 @@
-/**
- * Batched mutations for resolving threads, minimizing comments, and dismissing reviews.
- *
- * All operations are sent in a single aliased mutation document (`BulkApply`), eliminating
- * one round-trip per id. Partial failures (one alias returns null) are tracked per-id
- * without aborting the rest.
- *
- * Push-before-resolve safety:
- *   When `requireSha` is set, shepherd verifies that GitHub has received that
- *   commit before issuing any resolve/dismiss mutations. It polls up to 20 seconds.
- *   If the push hasn't landed, shepherd throws rather than resolving prematurely
- *   (which could allow auto-merge before reviewers see the fix).
- */
-
 import { graphql, getPrHeadSha, type RepoInfo } from "../github/client.mts";
 import type { ResolveOptions } from "../types.mts";
 import { loadConfig } from "../config/load.mts";
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
 
 export interface ResolveResult {
   resolvedThreads: string[];
@@ -27,12 +9,6 @@ export interface ResolveResult {
   errors: string[];
 }
 
-/**
- * Execute all requested resolve/minimize/dismiss mutations in a single GraphQL call.
- *
- * @throws Error if `requireSha` is set and GitHub hasn't received that commit
- *              within the polling window.
- */
 export async function applyResolveOptions(
   pr: number,
   repo: RepoInfo,
@@ -43,6 +19,8 @@ export async function applyResolveOptions(
   }
 
   if (opts.requireSha) {
+    // Verify GitHub received the commit before resolving — prevents auto-merge
+    // before reviewers see the fix.
     await waitForSha(pr, repo, opts.requireSha);
   }
 
@@ -64,9 +42,6 @@ export async function applyResolveOptions(
   return result;
 }
 
-/**
- * Auto-resolve a batch of outdated threads via a single aliased mutation.
- */
 export async function autoResolveOutdated(
   threadIds: string[],
 ): Promise<{ resolved: string[]; errors: string[] }> {
@@ -80,12 +55,7 @@ export async function autoResolveOutdated(
   return { resolved: result.resolvedThreads, errors: result.errors };
 }
 
-// ---------------------------------------------------------------------------
-// Bulk mutation
-// ---------------------------------------------------------------------------
-
-// GitHub GraphQL complexity limits cap realistic batches well below this, but
-// chunk anyway so a single oversized list never fails the entire call.
+// Chunk at 50 so a single oversized list never fails the entire call.
 const BULK_CHUNK_SIZE = 50;
 
 function buildBulkMutation(
@@ -185,10 +155,6 @@ async function bulkApplyChunk(
     else result.errors.push(`${dismissIds[i]}: dismiss returned null`);
   }
 }
-
-// ---------------------------------------------------------------------------
-// SHA polling
-// ---------------------------------------------------------------------------
 
 async function waitForSha(pr: number, repo: RepoInfo, expectedSha: string): Promise<void> {
   const { intervalMs: SHA_POLL_INTERVAL_MS, maxAttempts: SHA_POLL_MAX_ATTEMPTS } =
