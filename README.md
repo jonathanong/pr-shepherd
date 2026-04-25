@@ -38,31 +38,28 @@ Each iteration calls `npx pr-shepherd iterate <PR>`, which provides actionable f
 # PR #123 [FIX_CODE]
 
 **status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 3 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 600 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
+**summary** 3 passing, 0 skipped, 0 filtered, 0 inProgress · **copilotReviewInProgress** false · **isDraft** false
 
 ## Review threads
 
 ### `PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate.mts:42` (@alice)
+
+<!--
+  Return all review threads with IDs for minimization
+  Code suggestions are converted into diffs and can be applied without reading & writing the file
+-->
 
 > The variable name is misleading.
 >
 > Consider renaming `x` to `remainingSeconds` so readers don't have to
 > trace back to the declaration to understand its meaning.
 
-## Actionable comments
-
-### `IC_kwDOSGizTs7_ajT8` (@bob)
-
-> Consider using a more descriptive name here.
-
 ## Failing checks
 
+<!-- Only failing checks are returned -->
+
 - `24697658766` — `CI › lint / typecheck / test (22.x)`
-  > Run tests
-
-## Changes-requested reviews
-
-- `PRR_kwDOSGizTs58XB1R` (@alice)
+  > npx oxfmt <!-- return the exact step it failed, which avoids loading `gh view run <id>` into context for many scenarios -->
 
 ## Post-fix push
 
