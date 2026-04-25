@@ -1,5 +1,7 @@
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
+import { appendEntry, nextEntry } from "../log/log-file.mts";
+import { formatRequestEntry, formatResponseEntry } from "../log/session.mts";
 
 const execFile = promisify(execFileCb);
 
@@ -83,22 +85,30 @@ async function graphqlInner<T>(
   query: string,
   vars: Record<string, unknown>,
 ): Promise<{ data: T; rateLimit: RateLimitInfo | null }> {
+  const url = `${BASE_URL}/graphql`;
+  const n = nextEntry();
+  appendEntry(formatRequestEntry({ n, kind: "GraphQL", method: "POST", url, body: { query, variables: vars } }));
+  const t0 = performance.now();
+
   const res = await requestWithTokenRetry(async () =>
-    fetch(`${BASE_URL}/graphql`, {
+    fetch(url, {
       method: "POST",
       headers: await makeHeaders(),
       body: JSON.stringify({ query, variables: vars }),
     }),
   );
 
+  const durationMs = Math.round(performance.now() - t0);
   const rateLimit = parseRateLimit(res.headers);
 
   if (!res.ok) {
     const body = await res.text();
+    appendEntry(formatResponseEntry({ n, kind: "GraphQL", method: "POST", url, status: res.status, durationMs, textBody: sanitizeBody(body) }));
     throw new Error(`GitHub GraphQL request failed: ${res.status} ${sanitizeBody(body)}`);
   }
 
   const parsed = (await res.json()) as { data: T | null; errors?: Array<{ message: string }> };
+  appendEntry(formatResponseEntry({ n, kind: "GraphQL", method: "POST", url, status: res.status, durationMs, body: parsed }));
 
   if (parsed.data == null) {
     const messages = (parsed.errors ?? []).map((e: { message: string }) => e.message).join("; ");
@@ -133,39 +143,65 @@ export async function graphqlWithRateLimit<T = unknown>(
 // ---------------------------------------------------------------------------
 
 export async function rest<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
+  const url = `${BASE_URL}${path}`;
+  const n = nextEntry();
+  appendEntry(formatRequestEntry({ n, kind: "REST", method, url, body }));
+  const t0 = performance.now();
+
   const res = await requestWithTokenRetry(async () =>
-    fetch(`${BASE_URL}${path}`, {
+    fetch(url, {
       method,
       headers: await makeHeaders(),
       body: body !== undefined ? JSON.stringify(body) : undefined,
     }),
   );
 
+  const durationMs = Math.round(performance.now() - t0);
+  const ct = res.headers.get("content-type") ?? "";
+
   if (!res.ok) {
     const text = await res.text();
+    appendEntry(formatResponseEntry({ n, kind: "REST", method, url, status: res.status, durationMs, textBody: sanitizeBody(text) }));
     throw new Error(`GitHub REST ${method} ${path} failed: ${res.status} ${sanitizeBody(text)}`);
   }
 
-  const ct = res.headers.get("content-type") ?? "";
   if (ct.includes("application/json")) {
-    return res.json() as Promise<T>;
+    const json = (await res.json()) as T;
+    appendEntry(formatResponseEntry({ n, kind: "REST", method, url, status: res.status, durationMs, contentType: ct }));
+    return json;
   }
+  appendEntry(formatResponseEntry({ n, kind: "REST", method, url, status: res.status, durationMs, contentType: ct || undefined }));
   return undefined as T;
 }
 
 export async function restText(path: string): Promise<string> {
+  const url = `${BASE_URL}${path}`;
+  const n = nextEntry();
+  appendEntry(formatRequestEntry({ n, kind: "restText", method: "GET", url }));
+  const t0 = performance.now();
+
   const res = await requestWithTokenRetry(async () =>
-    fetch(`${BASE_URL}${path}`, {
+    fetch(url, {
       method: "GET",
       headers: await makeHeaders(),
       redirect: "manual",
     }),
   );
 
+  const durationMs = Math.round(performance.now() - t0);
+
   if (res.status === 301 || res.status === 302 || res.status === 307 || res.status === 308) {
+    appendEntry(formatResponseEntry({ n, kind: "restText", method: "GET", url, status: res.status, durationMs }));
     const location = res.headers.get("location");
     if (location) {
+      const n2 = nextEntry();
+      appendEntry(formatRequestEntry({ n: n2, kind: "restText", method: "GET", url: location }));
+      const t1 = performance.now();
       const redirectRes = await fetch(location);
+      const duration2 = Math.round(performance.now() - t1);
+      const clRaw = redirectRes.headers.get("content-length");
+      const contentLength = clRaw !== null && Number.isFinite(Number(clRaw)) ? Number(clRaw) : undefined;
+      appendEntry(formatResponseEntry({ n: n2, kind: "restText", method: "GET", url: location, status: redirectRes.status, durationMs: duration2, contentLength }));
       if (!redirectRes.ok) {
         throw new Error(`redirect target ${location} failed: ${redirectRes.status}`);
       }
@@ -175,9 +211,13 @@ export async function restText(path: string): Promise<string> {
 
   if (!res.ok) {
     const text = await res.text();
+    appendEntry(formatResponseEntry({ n, kind: "restText", method: "GET", url, status: res.status, durationMs }));
     throw new Error(`GitHub REST GET ${path} failed: ${res.status} ${sanitizeBody(text)}`);
   }
 
+  const clRaw = res.headers.get("content-length");
+  const contentLength = clRaw !== null && Number.isFinite(Number(clRaw)) ? Number(clRaw) : undefined;
+  appendEntry(formatResponseEntry({ n, kind: "restText", method: "GET", url, status: res.status, durationMs, contentLength }));
   return res.text();
 }
 

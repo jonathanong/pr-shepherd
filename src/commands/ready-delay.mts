@@ -8,8 +8,8 @@
 
 import { readFile, writeFile, mkdir, unlink } from "node:fs/promises";
 import { join, dirname } from "node:path";
-import { tmpdir } from "node:os";
 import { SAFE_SEGMENT } from "../util/path-segment.mts";
+import { resolveStateBase } from "../state/base.mts";
 
 // ---------------------------------------------------------------------------
 // Ready-delay state machine
@@ -94,7 +94,7 @@ function readySincePath(pr: number, owner: string, repo: string): string {
       throw new Error(`Invalid path segment "${field}": ${value}`);
     }
   }
-  const base = process.env["PR_SHEPHERD_STATE_DIR"] ?? join(tmpdir(), "pr-shepherd-state");
+  const base = resolveStateBase();
   return join(base, `${owner}-${repo}`, String(pr), "ready-since.txt");
 }
 

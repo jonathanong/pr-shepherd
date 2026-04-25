@@ -11,8 +11,8 @@
 import { readFile, writeFile, rename, unlink, mkdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { join, dirname } from "node:path";
-import { tmpdir } from "node:os";
 import { SAFE_SEGMENT } from "../util/path-segment.mts";
+import { resolveStateBase } from "./base.mts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -81,6 +81,6 @@ function resolvePath(key: StateKey): string {
       throw new Error(`Invalid state key segment "${field}": ${value}`);
     }
   }
-  const base = process.env["PR_SHEPHERD_STATE_DIR"] ?? join(tmpdir(), "pr-shepherd-state");
+  const base = resolveStateBase();
   return join(base, `${key.owner}-${key.repo}`, String(key.pr), "fix-attempts.json");
 }

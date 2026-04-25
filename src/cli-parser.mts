@@ -20,6 +20,7 @@ import { readFileSync } from "node:fs";
 
 import { runCheck } from "./commands/check.mts";
 import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
+import { runLogFile } from "./commands/log-file.mts";
 import { formatJson } from "./reporters/json.mts";
 import { formatText } from "./reporters/text.mts";
 import { parseCommonArgs, getFlag, hasFlag, parseList } from "./cli/args.mts";
@@ -31,6 +32,9 @@ import {
   handleMonitor,
   handleStatus,
 } from "./cli/handlers.mts";
+import { initLog, appendEntry } from "./log/log-file.mts";
+import { buildSessionHeader, formatOutputEntry } from "./log/session.mts";
+import { getRepoInfo } from "./github/client.mts";
 
 // ---------------------------------------------------------------------------
 // Entry
@@ -45,6 +49,15 @@ export async function main(argv: string[]): Promise<void> {
     process.stdout.write(`${readVersion()}\n`);
     return;
   }
+
+  // log-file must run before the stdout tee and log init to avoid recursion.
+  if (subcommand === "log-file") {
+    await handleLogFile(args.slice(1));
+    return;
+  }
+
+  // Initialize the per-worktree log and install a stdout tee.
+  await setupLog(argv);
 
   switch (subcommand) {
     case "check":
@@ -68,12 +81,54 @@ export async function main(argv: string[]): Promise<void> {
     default:
       process.stderr.write(`Unknown subcommand: ${subcommand ?? "(none)"}\n`);
       process.stderr.write(
-        "Usage: pr-shepherd <check|resolve|commit-suggestion|iterate|monitor|status> [options]\n" +
+        "Usage: pr-shepherd <check|resolve|commit-suggestion|iterate|monitor|status|log-file> [options]\n" +
           "       pr-shepherd --version | -v\n",
       );
       process.exitCode = 1;
       return;
   }
+}
+
+let _logSetupDone = false;
+
+async function setupLog(argv: string[]): Promise<void> {
+  if (_logSetupDone) return;
+  _logSetupDone = true;
+
+  try {
+    const { owner, name } = await getRepoInfo();
+    await initLog({ owner, repo: name });
+  } catch {
+    // Not in a git repo or repo info unavailable — log is silently disabled.
+    return;
+  }
+
+  const { markdown: header } = buildSessionHeader(argv);
+  appendEntry(header);
+
+  // Tee stdout to the log. Captures JSON and markdown output from all subcommands.
+  let outputBuffer = "";
+  const origWrite = process.stdout.write.bind(process.stdout);
+  process.stdout.write = (
+    chunk: string | Uint8Array,
+    encodingOrCb?: BufferEncoding | ((err?: Error | null) => void),
+    cb?: (err?: Error | null) => void,
+  ): boolean => {
+    const text = typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
+    outputBuffer += text;
+    const result =
+      typeof encodingOrCb === "function"
+        ? origWrite(chunk, encodingOrCb)
+        : origWrite(chunk, encodingOrCb as BufferEncoding, cb);
+    return result;
+  };
+
+  // Flush buffered output to the log on process exit.
+  process.once("exit", () => {
+    if (outputBuffer.length > 0) {
+      appendEntry(formatOutputEntry(outputBuffer, "text"));
+    }
+  });
 }
 
 function readVersion(): string {
@@ -94,6 +149,23 @@ async function handleCheck(args: string[]): Promise<void> {
   process.stdout.write(`${output}\n`);
 
   process.exitCode = statusToExitCode(report.status);
+}
+
+async function handleLogFile(args: string[]): Promise<void> {
+  const jsonOut =
+    args.some((a) => a === "--format=json") ||
+    (() => {
+      const idx = args.indexOf("--format");
+      return idx !== -1 && args[idx + 1] === "json";
+    })();
+
+  try {
+    const result = await runLogFile();
+    process.stdout.write(jsonOut ? `${JSON.stringify(result, null, 2)}\n` : `${result.path}\n`);
+  } catch (e) {
+    process.stderr.write(`pr-shepherd: log-file: ${String(e)}\n`);
+    process.exitCode = 1;
+  }
 }
 
 async function handleResolve(args: string[]): Promise<void> {
