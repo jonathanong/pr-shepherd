@@ -32,9 +32,7 @@ import {
   handleMonitor,
   handleStatus,
 } from "./cli/handlers.mts";
-import { initLog, appendEntry } from "./log/log-file.mts";
-import { buildSessionHeader, formatOutputEntry } from "./log/session.mts";
-import { getRepoInfo } from "./github/client.mts";
+import { setupLog } from "./log/setup.mts";
 
 // ---------------------------------------------------------------------------
 // Entry
@@ -87,48 +85,6 @@ export async function main(argv: string[]): Promise<void> {
       process.exitCode = 1;
       return;
   }
-}
-
-let _logSetupDone = false;
-
-async function setupLog(argv: string[]): Promise<void> {
-  if (_logSetupDone) return;
-  _logSetupDone = true;
-
-  try {
-    const { owner, name } = await getRepoInfo();
-    await initLog({ owner, repo: name });
-  } catch {
-    // Not in a git repo or repo info unavailable — log is silently disabled.
-    return;
-  }
-
-  const { markdown: header } = buildSessionHeader(argv);
-  appendEntry(header);
-
-  // Tee stdout to the log. Captures JSON and markdown output from all subcommands.
-  let outputBuffer = "";
-  const origWrite = process.stdout.write.bind(process.stdout);
-  process.stdout.write = (
-    chunk: string | Uint8Array,
-    encodingOrCb?: BufferEncoding | ((err?: Error | null) => void),
-    cb?: (err?: Error | null) => void,
-  ): boolean => {
-    const text = typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
-    outputBuffer += text;
-    const result =
-      typeof encodingOrCb === "function"
-        ? origWrite(chunk, encodingOrCb)
-        : origWrite(chunk, encodingOrCb as BufferEncoding, cb);
-    return result;
-  };
-
-  // Flush buffered output to the log on process exit.
-  process.once("exit", () => {
-    if (outputBuffer.length > 0) {
-      appendEntry(formatOutputEntry(outputBuffer, "text"));
-    }
-  });
 }
 
 function readVersion(): string {
