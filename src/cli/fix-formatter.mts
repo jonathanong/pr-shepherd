@@ -61,7 +61,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     sections.push("## Approvals (surfaced — not minimized)");
     for (const r of result.fix.surfacedApprovals) {
       sections.push(`### \`${r.id}\` (@${r.author})`);
-      sections.push(blockquote(r.body));
+      sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body));
     }
   }
 

@@ -222,6 +222,21 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain("> Looks reasonable but please double-check X.");
   });
 
+  it("fix_code: approval with empty body renders '(no review body)' instead of bare blockquote", async () => {
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    if (result.fix.mode !== "rebase-and-push") throw new Error("unreachable");
+    result.fix.surfacedApprovals = [{ id: "PRR_EMPTY", author: "alice", body: "" }];
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+
+    expect(out).toContain("### `PRR_EMPTY` (@alice)");
+    expect(out).toContain("(no review body)");
+    expect(out).not.toContain("\n>\n");
+  });
+
   it("fix_code: multi-paragraph thread body is preserved verbatim in the blockquote", async () => {
     const multiParagraphBody = [
       "First paragraph giving context.",
