@@ -298,7 +298,7 @@ See [actions.md](actions.md) for all eight actions and their complete output sha
 
 Both `--format=text` (default Markdown) and `--format=json` carry equivalent information — every field exposed in JSON has a corresponding Markdown representation, and vice versa.
 
-Exit codes: `0` wait/cooldown/rerun_ci/mark_ready · `1` fix_code/rebase · `2` cancel · `3` escalate
+Exit codes: `0` wait/cooldown/mark_ready · `1` fix_code/rebase · `2` cancel · `3` escalate
 
 ### pr-shepherd monitor [PR]
 

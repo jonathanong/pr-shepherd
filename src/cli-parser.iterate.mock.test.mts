@@ -136,20 +136,6 @@ describe("main — iterate text format", () => {
     expect(out).toContain("1. End this iteration");
   });
 
-  it("rerun_ci: heading includes [RERUN_CI] tag, log, and ## Instructions with gh run rerun", async () => {
-    mockRunIterate.mockResolvedValue({
-      ...makeIterateResult("rerun_ci"),
-      log: "RERUN NEEDED — 1 CI run: run-99 (typecheck — timeout)",
-      reran: [{ runId: "run-99", checkNames: ["typecheck"], failureKind: "timeout" }],
-    } as IterateResult);
-    await main(["node", "shepherd", "iterate", "42"]);
-    const out = getStdout();
-    expect(out).toContain("# PR #42 [RERUN_CI]");
-    expect(out).toContain("RERUN NEEDED");
-    expect(out).toContain("## Instructions");
-    expect(out).toContain("gh run rerun run-99 --failed");
-  });
-
   it("mark_ready: heading includes [MARK_READY] tag and ## Instructions with end-iteration step", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("mark_ready"));
     await main(["node", "shepherd", "iterate", "42"]);

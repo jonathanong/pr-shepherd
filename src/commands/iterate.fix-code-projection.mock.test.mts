@@ -207,7 +207,6 @@ function makeActionableCheck(runId: string, name = "typecheck") {
     event: "pull_request",
     runId,
     category: "failing" as const,
-    failureKind: "actionable" as const,
   };
 }
 
@@ -288,7 +287,7 @@ describe("runIterate — fix_code agent projection", () => {
     }
   });
 
-  it("emits AgentCheck shape — no logExcerpt/conclusion/category on fix.checks", async () => {
+  it("emits AgentCheck shape — no failureKind/conclusion/category on fix.checks", async () => {
     const check = makeActionableCheck("run-55");
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -318,7 +317,7 @@ describe("runIterate — fix_code agent projection", () => {
       expect(c.name).toBe("typecheck");
       expect(c.runId).toBe("run-55");
       expect(c.detailsUrl).toBeDefined();
-      expect(c.failureKind).toBe("actionable");
+      expect(c).not.toHaveProperty("failureKind");
       expect(c).not.toHaveProperty("conclusion");
       expect(c).not.toHaveProperty("category");
     }
@@ -333,7 +332,6 @@ describe("runIterate — fix_code agent projection", () => {
       event: "pull_request",
       runId: null,
       category: "failing" as const,
-      failureKind: "actionable" as const,
     };
     const ghActionsCheck = makeActionableCheck("run-77", "lint");
     mockRunCheck.mockResolvedValue(
@@ -361,8 +359,10 @@ describe("runIterate — fix_code agent projection", () => {
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       const instructionsJoined = result.fix.instructions.join("\n");
-      expect(instructionsJoined).toContain("GitHub Actions");
-      expect(instructionsJoined).toContain("gh run view <runId> --log-failed");
+      // GitHub Actions check with runId — agent examines log tail and decides rerun vs fix
+      expect(instructionsJoined).toContain("examine the log tail");
+      expect(instructionsJoined).toContain("gh run rerun");
+      // External check with detailsUrl but no runId — open details URL
       expect(instructionsJoined).toContain("external status check");
       expect(instructionsJoined).toContain("open the linked URL");
       // No bare-check bullets in this test, so the `(no runId)` instruction is omitted.
@@ -379,7 +379,6 @@ describe("runIterate — fix_code agent projection", () => {
       event: "pull_request",
       runId: null,
       category: "failing" as const,
-      failureKind: "actionable" as const,
     };
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -427,7 +426,6 @@ describe("runIterate — fix_code agent projection", () => {
       event: "pull_request",
       runId: null,
       category: "failing" as const,
-      failureKind: "actionable" as const,
     };
     const bareCheck = {
       name: "mystery",
@@ -437,7 +435,6 @@ describe("runIterate — fix_code agent projection", () => {
       event: "pull_request",
       runId: null,
       category: "failing" as const,
-      failureKind: "actionable" as const,
     };
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -466,11 +463,11 @@ describe("runIterate — fix_code agent projection", () => {
       expect(result.fix.checks).toHaveLength(3);
       const joined = result.fix.instructions.join("\n");
       // All three instruction variants present:
-      expect(joined).toContain("numeric runId (GitHub Actions)");
+      expect(joined).toContain("with a run ID");
       expect(joined).toContain("external status check");
       expect(joined).toContain("(no runId)");
       // And each appears exactly once:
-      expect(joined.match(/GitHub Actions/g)).toHaveLength(1);
+      expect(joined.match(/with a run ID/g)).toHaveLength(1);
       expect(joined.match(/external status check/g)).toHaveLength(1);
       expect(joined.match(/\(no runId\)/g)).toHaveLength(1);
     }

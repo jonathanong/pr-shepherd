@@ -203,7 +203,7 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("runIterate — base.checks carries passing + failing (regression: missing CI bug)", () => {
-  it("regression: 5 passing + 1 infra failure → rerun_ci with failing check in base.checks", async () => {
+  it("regression: 5 passing + 1 infra failure → fix_code with failing check in base.checks", async () => {
     const infraCheck = {
       name: "build",
       status: "COMPLETED" as const,
@@ -212,7 +212,6 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
       event: "pull_request",
       runId: "run-50",
       category: "failing" as const,
-      failureKind: "cancelled" as const,
       failedStep: undefined,
     };
     const passingChecks = ["lint", "typecheck", "test", "e2e", "security"].map((name) => ({
@@ -246,12 +245,11 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("rerun_ci");
+    expect(result.action).toBe("fix_code");
     // All 6 checks visible — the bug was that the failing infra check disappeared from output.
     expect(result.checks).toHaveLength(6);
     const failing = result.checks.find((c) => c.name === "build");
     expect(failing).toBeDefined();
-    expect(failing!.failureKind).toBe("cancelled");
     const passNames = result.checks
       .filter((c) => c.conclusion === "SUCCESS")
       .map((c) => c.name)
@@ -259,7 +257,7 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
     expect(passNames).toEqual(["e2e", "lint", "security", "test", "typecheck"]);
   });
 
-  it("cancelled+BEHIND → rerun_ci action with failing check still in base.checks", async () => {
+  it("cancelled+BEHIND → fix_code action with failing check still in base.checks", async () => {
     const cancelledCheck = {
       name: "ci",
       status: "COMPLETED" as const,
@@ -268,7 +266,6 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
       event: "pull_request",
       runId: "run-60",
       category: "failing" as const,
-      failureKind: "cancelled" as const,
     };
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -301,10 +298,9 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("rerun_ci");
+    expect(result.action).toBe("fix_code");
     expect(result.checks).toHaveLength(1);
     expect(result.checks[0]!.name).toBe("ci");
-    expect(result.checks[0]!.failureKind).toBe("cancelled");
   });
 
   it("cooldown path returns checks: []", async () => {
@@ -335,7 +331,6 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
     expect(result.checks).toHaveLength(1);
     expect(result.checks[0]!.name).toBe("ci");
     expect(result.checks[0]!.conclusion).toBe("SUCCESS");
-    expect(result.checks[0]!.failureKind).toBeUndefined();
   });
 
   it("skipped and filtered checks are excluded from base.checks", async () => {

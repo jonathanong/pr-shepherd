@@ -105,12 +105,11 @@ describe("main — iterate text format (fix_code and checks)", () => {
       reviewSummaryIds: [],
       surfacedApprovals: [],
       checks: [
-        { name: "lint", runId: "run-42", detailsUrl: "https://x", failureKind: "actionable" },
+        { name: "lint", runId: "run-42", detailsUrl: "https://x" },
         {
           name: "codecov/patch",
           runId: null,
           detailsUrl: "https://app.codecov.io",
-          failureKind: "actionable",
         },
       ],
       changesRequestedReviews: [{ id: "REV_1", author: "reviewer", body: "please rework this" }],
@@ -307,13 +306,11 @@ describe("main — iterate text format (fix_code and checks)", () => {
         name: "codecov/patch",
         runId: null,
         detailsUrl: "https://app.codecov.io/a/b",
-        failureKind: "actionable",
       },
       {
         name: "mystery-check",
         runId: null,
         detailsUrl: null,
-        failureKind: "actionable",
       },
     ];
     mockRunIterate.mockResolvedValue(result);
@@ -359,6 +356,30 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).not.toContain("### `PRRC_linked`");
   });
 
+  it("fix_code: logTail with embedded backticks uses a fence longer than the longest run", async () => {
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code" || result.fix.mode !== "rebase-and-push") {
+      throw new Error("unreachable");
+    }
+    result.fix.checks = [
+      {
+        name: "build",
+        runId: "42",
+        detailsUrl: null,
+        logTail: "error: expected ``` here\nbut got `foo` instead",
+      },
+    ];
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    // logTail contains ``` (3 backticks), so fence must be at least 4 backticks.
+    expect(out).toContain("  ````");
+    expect(out).not.toMatch(/^  ```\n/m);
+    // Content should be indented inside the fence.
+    expect(out).toContain("  error: expected ``` here");
+  });
+
   it("non-fix_code actions do not emit ## Checks — check count is in summary header only", async () => {
     const result = makeIterateResult("wait");
     result.checks = [
@@ -367,7 +388,6 @@ describe("main — iterate text format (fix_code and checks)", () => {
         conclusion: "FAILURE",
         runId: "run-1",
         detailsUrl: null,
-        failureKind: "actionable",
       },
     ] as import("./types.mts").RelevantCheck[];
     mockRunIterate.mockResolvedValue(result);

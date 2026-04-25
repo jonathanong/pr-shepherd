@@ -39,23 +39,15 @@ export function buildCheckInstructions(report: ShepherdReport): string[] {
 
   // 3. CI budget policy — one instruction per failing check
   for (const c of checks.failing) {
-    if (c.failureKind === "actionable") {
-      const diagnosisHint = c.failedStep
-        ? `the failure was in step \`${c.failedStep}\` — fetch the run log with \`gh run view ${c.runId ?? "<runId>"} --log-failed\` to diagnose`
-        : c.runId
-          ? `fetch the run log with \`gh run view ${c.runId} --log-failed\` to diagnose the failure`
-          : `open the check details (${c.detailsUrl}) to diagnose the failure`;
-      instructions.push(
-        `Fix code failure: \`${c.name}\` (actionable) — ${diagnosisHint} and apply a fix.`,
-      );
-    } else if (c.failureKind === "cancelled" || c.failureKind === "timeout") {
-      const rerunCmd = c.runId
-        ? `gh run rerun ${c.runId} --failed`
-        : `gh run rerun <runId> --failed`;
-      instructions.push(
-        `Re-run transient failure: \`${c.name}\` [${c.failureKind}] — run \`${rerunCmd}\`.`,
-      );
-    }
+    const stepHint = c.failedStep ? ` (failed step: \`${c.failedStep}\`)` : "";
+    const diagnosisHint = c.runId
+      ? c.logTail !== undefined
+        ? `examine the log tail${stepHint} — if transient, run \`gh run rerun ${c.runId} --failed\`; otherwise apply a fix`
+        : `run \`gh run view ${c.runId} --log-failed\`${stepHint} to diagnose — if transient, rerun with \`gh run rerun ${c.runId} --failed\`; otherwise apply a fix`
+      : c.detailsUrl
+        ? `open the check details (${c.detailsUrl}) to diagnose the failure`
+        : `no run or details URL available — escalate to a human`;
+    instructions.push(`Failing check: \`${c.name}\` — ${diagnosisHint}.`);
   }
 
   // 4. Ready-to-merge gate

@@ -59,6 +59,7 @@ actions:
 | `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                                                             |
 | `resolve.fetchReviewSummaries`       | `true`                                    | Surface `COMMENTED` review summaries in `resolve --fetch` output                                                                       |
 | `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos)                                                       |
+| `checks.logTailLines`                | `200`                                     | Lines of job log to include in `logTail` for each failing check (set 0 to disable log fetching)                                        |
 | `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                                                 |
 | `actions.autoResolveOutdated`        | `true`                                    | Auto-resolve threads that point to code no longer in the PR diff                                                                       |
 | `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR's CI goes clean                                                                                      |
@@ -182,6 +183,12 @@ Common additions:
 
 - `merge_group` — for repos using GitHub's merge queue.
 - Remove `pull_request_target` for repos that don't use it (reduces noise).
+
+### `checks.logTailLines` — default `200`
+
+Number of lines from the end of the failing job's log to include in the `logTail` field of each triaged check. The log is fetched via `GET /repos/{owner}/{repo}/actions/jobs/{jobId}/logs` (which redirects to the raw log text) and the last N lines are extracted. Set to `0` to disable log fetching entirely.
+
+**Security/privacy note:** Log lines are embedded into agent-visible output. CI logs may contain sensitive data such as stack traces, internal paths, service endpoints, or accidentally logged secrets. For repositories where CI logs should not be surfaced to the agent, set this to `0`.
 
 ---
 

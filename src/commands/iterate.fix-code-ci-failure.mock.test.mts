@@ -207,7 +207,6 @@ function makeActionableCheck(runId: string, name = "typecheck") {
     event: "pull_request",
     runId,
     category: "failing" as const,
-    failureKind: "actionable" as const,
   };
 }
 
@@ -420,7 +419,7 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
     }
   });
 
-  it("deduplicates runIds — two checks sharing a runId emit one AgentCheck and call gh run cancel once", async () => {
+  it("two checks sharing a runId emit two AgentChecks but only call gh run cancel once", async () => {
     const check1 = makeActionableCheck("run-300", "typecheck");
     const check2 = makeActionableCheck("run-300", "lint");
     mockRunCheck.mockResolvedValue(
@@ -447,9 +446,9 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
 
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
-      // Deduped by runId — only one AgentCheck emitted.
-      expect(result.fix.checks).toHaveLength(1);
-      expect(result.fix.checks[0]?.runId).toBe("run-300");
+      // Both AgentChecks are present — each may carry distinct job+logTail.
+      expect(result.fix.checks).toHaveLength(2);
+      expect(result.fix.checks.map((c) => c.runId)).toEqual(["run-300", "run-300"]);
       expect(result.cancelled).toEqual(["run-300"]);
     }
     const cancelCalls = (mockFetch.mock.calls as Array<[string, RequestInit]>).filter(([url]) =>

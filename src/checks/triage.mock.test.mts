@@ -11,6 +11,7 @@ import { triageFailingChecks } from "./triage.mts";
 import type { ClassifiedCheck } from "../types.mts";
 
 const REPO = { owner: "owner", name: "repo" };
+const LOG_TAIL_LINES = 10;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -47,6 +48,23 @@ function makeJobsResponse(jobs: JobStub[]): Response {
   } as unknown as Response;
 }
 
+function makeLogsRedirectResponse(logUrl: string): Response {
+  return {
+    ok: false,
+    status: 302,
+    headers: new Headers({ location: logUrl }),
+  } as unknown as Response;
+}
+
+function makeLogTextResponse(text: string): Response {
+  return {
+    ok: true,
+    status: 200,
+    headers: new Headers(),
+    text: () => Promise.resolve(text),
+  } as unknown as Response;
+}
+
 function makeErrorResponse(status: number): Response {
   return {
     ok: false,
@@ -66,113 +84,130 @@ beforeEach(() => {
 });
 
 describe("triageFailingChecks — no runId", () => {
-  it("skips fetch and returns actionable when runId is null", async () => {
+  it("skips fetch and returns no job info when runId is null", async () => {
     const check = makeCheck({ runId: null });
-    const [result] = await triageFailingChecks([check], REPO);
-    expect(result!.failureKind).toBe("actionable");
+    const [result] = await triageFailingChecks([check], REPO, LOG_TAIL_LINES);
+    expect(result!.workflowName).toBeUndefined();
+    expect(result!.jobName).toBeUndefined();
+    expect(result!.failedStep).toBeUndefined();
+    expect(result!.logTail).toBeUndefined();
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it("returns actionable (not timeout) for TIMED_OUT when runId is null — no run to rerun", async () => {
+  it("TIMED_OUT with runId=null — no fetch, no job info", async () => {
     const check = makeCheck({ runId: null, conclusion: "TIMED_OUT" });
-    const [result] = await triageFailingChecks([check], REPO);
-    expect(result!.failureKind).toBe("actionable");
+    const [result] = await triageFailingChecks([check], REPO, LOG_TAIL_LINES);
+    expect(result!.workflowName).toBeUndefined();
+    expect(result!.logTail).toBeUndefined();
     expect(mockFetch).not.toHaveBeenCalled();
   });
 });
 
-describe("triageFailingChecks — TIMED_OUT", () => {
-  it("returns timeout with workflowName; fetches job info", async () => {
-    mockFetch.mockResolvedValueOnce(
-      makeJobsResponse([{ id: 1, name: "tests", workflow_name: "CI", conclusion: "timed_out" }]),
+describe("triageFailingChecks — job info", () => {
+  it("TIMED_OUT: fetches jobs, returns workflowName + jobName; fetches logs", async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        makeJobsResponse([{ id: 1, name: "tests", workflow_name: "CI", conclusion: "timed_out" }]),
+      )
+      .mockResolvedValueOnce(makeLogsRedirectResponse("https://s3.example.com/logs"))
+      .mockResolvedValueOnce(makeLogTextResponse("line1\nline2\nline3"));
+    const [result] = await triageFailingChecks(
+      [makeCheck({ conclusion: "TIMED_OUT" })],
+      REPO,
+      LOG_TAIL_LINES,
     );
-    const [result] = await triageFailingChecks([makeCheck({ conclusion: "TIMED_OUT" })], REPO);
-    expect(result!.failureKind).toBe("timeout");
     expect(result!.workflowName).toBe("CI");
-    expect(result!.failedStep).toBeUndefined();
+    expect(result!.jobName).toBe("tests");
+    expect(result!.logTail).toBe("line1\nline2\nline3");
     expect(mockFetch).toHaveBeenCalled();
   });
-});
 
-describe("triageFailingChecks — cancelled", () => {
-  it("returns cancelled with workflowName for CANCELLED; fetches job info", async () => {
-    mockFetch.mockResolvedValueOnce(
-      makeJobsResponse([{ id: 1, name: "tests", workflow_name: "CI", conclusion: "cancelled" }]),
-    );
-    const [result] = await triageFailingChecks([makeCheck({ conclusion: "CANCELLED" })], REPO);
-    expect(result!.failureKind).toBe("cancelled");
-    expect(result!.workflowName).toBe("CI");
-    expect(result!.failedStep).toBeUndefined();
-  });
-
-  it("returns cancelled for STARTUP_FAILURE conclusion", async () => {
-    mockFetch.mockResolvedValueOnce(
-      makeJobsResponse([{ id: 1, name: "tests", conclusion: "cancelled" }]),
-    );
+  it("CANCELLED: fetches jobs, returns workflowName + failedStep for the cancelled step", async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        makeJobsResponse([
+          {
+            id: 1,
+            name: "tests",
+            workflow_name: "CI",
+            conclusion: "cancelled",
+            steps: [{ name: "Run tests", number: 1, conclusion: "cancelled" }],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(makeErrorResponse(404));
     const [result] = await triageFailingChecks(
-      [makeCheck({ conclusion: "STARTUP_FAILURE" })],
+      [makeCheck({ conclusion: "CANCELLED" })],
       REPO,
+      LOG_TAIL_LINES,
     );
-    expect(result!.failureKind).toBe("cancelled");
-  });
-
-  it("returns cancelled for STALE conclusion", async () => {
-    mockFetch.mockResolvedValueOnce(
-      makeJobsResponse([{ id: 1, name: "tests", conclusion: "cancelled" }]),
-    );
-    const [result] = await triageFailingChecks([makeCheck({ conclusion: "STALE" })], REPO);
-    expect(result!.failureKind).toBe("cancelled");
-  });
-
-  it("does not set failedStep for cancelled checks even when fetch succeeds", async () => {
-    mockFetch.mockResolvedValueOnce(
-      makeJobsResponse([
-        {
-          id: 1,
-          name: "tests",
-          conclusion: "cancelled",
-          steps: [{ name: "Run tests", number: 1, conclusion: "cancelled" }],
-        },
-      ]),
-    );
-    const [result] = await triageFailingChecks([makeCheck({ conclusion: "CANCELLED" })], REPO);
-    expect(result!.failedStep).toBeUndefined();
-  });
-});
-
-describe("triageFailingChecks — actionable: failedStep", () => {
-  it("returns actionable and extracts failedStep + workflowName from matching job", async () => {
-    mockFetch.mockResolvedValueOnce(
-      makeJobsResponse([
-        {
-          id: 42,
-          name: "tests",
-          workflow_name: "CI",
-          conclusion: "failure",
-          steps: [
-            { name: "Set up job", number: 1, conclusion: "success" },
-            { name: "Run tests", number: 2, conclusion: "failure" },
-            { name: "Post", number: 3, conclusion: null },
-          ],
-        },
-      ]),
-    );
-    const [result] = await triageFailingChecks([makeCheck()], REPO);
-    expect(result!.failureKind).toBe("actionable");
     expect(result!.workflowName).toBe("CI");
     expect(result!.failedStep).toBe("Run tests");
   });
 
-  it("returns actionable with failedStep=undefined when job has no failed steps", async () => {
-    mockFetch.mockResolvedValueOnce(
-      makeJobsResponse([{ id: 42, name: "tests", conclusion: "failure", steps: [] }]),
+  it("STARTUP_FAILURE: treated the same as any other conclusion", async () => {
+    mockFetch
+      .mockResolvedValueOnce(makeJobsResponse([{ id: 1, name: "tests", conclusion: "cancelled" }]))
+      .mockResolvedValueOnce(makeErrorResponse(404));
+    const [result] = await triageFailingChecks(
+      [makeCheck({ conclusion: "STARTUP_FAILURE" })],
+      REPO,
+      LOG_TAIL_LINES,
     );
-    const [result] = await triageFailingChecks([makeCheck()], REPO);
-    expect(result!.failureKind).toBe("actionable");
+    expect(result!.workflowName).toBeUndefined();
+  });
+
+  it("STALE: treated the same as any other conclusion", async () => {
+    mockFetch
+      .mockResolvedValueOnce(makeJobsResponse([{ id: 1, name: "tests", conclusion: "cancelled" }]))
+      .mockResolvedValueOnce(makeErrorResponse(404));
+    const [result] = await triageFailingChecks(
+      [makeCheck({ conclusion: "STALE" })],
+      REPO,
+      LOG_TAIL_LINES,
+    );
+    expect(result).toBeDefined();
+  });
+});
+
+describe("triageFailingChecks — failedStep", () => {
+  it("extracts failedStep + workflowName + jobName from matching job", async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        makeJobsResponse([
+          {
+            id: 42,
+            name: "tests",
+            workflow_name: "CI",
+            conclusion: "failure",
+            steps: [
+              { name: "Set up job", number: 1, conclusion: "success" },
+              { name: "Run tests", number: 2, conclusion: "failure" },
+              { name: "Post", number: 3, conclusion: null },
+            ],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(makeLogsRedirectResponse("https://s3.example.com/logs"))
+      .mockResolvedValueOnce(makeLogTextResponse("test failure output"));
+    const [result] = await triageFailingChecks([makeCheck()], REPO, LOG_TAIL_LINES);
+    expect(result!.workflowName).toBe("CI");
+    expect(result!.jobName).toBe("tests");
+    expect(result!.failedStep).toBe("Run tests");
+    expect(result!.logTail).toBe("test failure output");
+  });
+
+  it("failedStep=undefined when job has no failed steps", async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        makeJobsResponse([{ id: 42, name: "tests", conclusion: "failure", steps: [] }]),
+      )
+      .mockResolvedValueOnce(makeErrorResponse(404));
+    const [result] = await triageFailingChecks([makeCheck()], REPO, LOG_TAIL_LINES);
     expect(result!.failedStep).toBeUndefined();
   });
 
-  it("returns actionable with failedStep=undefined when no job matches check name", async () => {
+  it("failedStep=undefined when no job matches check name", async () => {
     mockFetch.mockResolvedValueOnce(
       makeJobsResponse([
         {
@@ -183,70 +218,192 @@ describe("triageFailingChecks — actionable: failedStep", () => {
         },
       ]),
     );
-    const [result] = await triageFailingChecks([makeCheck({ name: "tests" })], REPO);
-    expect(result!.failureKind).toBe("actionable");
+    const [result] = await triageFailingChecks(
+      [makeCheck({ name: "tests" })],
+      REPO,
+      LOG_TAIL_LINES,
+    );
     expect(result!.failedStep).toBeUndefined();
+    expect(result!.logTail).toBeUndefined();
   });
 
   it("prefers failing job when multiple jobs share the same check name (matrix)", async () => {
-    mockFetch.mockResolvedValueOnce(
-      makeJobsResponse([
-        {
-          id: 1,
-          name: "tests",
-          conclusion: "success",
-          steps: [{ name: "Run tests", number: 1, conclusion: "success" }],
-        },
-        {
-          id: 2,
-          name: "tests",
-          conclusion: "failure",
-          steps: [{ name: "Run tests", number: 1, conclusion: "failure" }],
-        },
-      ]),
+    mockFetch
+      .mockResolvedValueOnce(
+        makeJobsResponse([
+          {
+            id: 1,
+            name: "tests",
+            conclusion: "success",
+            steps: [{ name: "Run tests", number: 1, conclusion: "success" }],
+          },
+          {
+            id: 2,
+            name: "tests",
+            conclusion: "failure",
+            steps: [{ name: "Run tests", number: 1, conclusion: "failure" }],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(makeLogsRedirectResponse("https://s3.example.com/logs"))
+      .mockResolvedValueOnce(makeLogTextResponse("test output"));
+    const [result] = await triageFailingChecks(
+      [makeCheck({ name: "tests" })],
+      REPO,
+      LOG_TAIL_LINES,
     );
-    const [result] = await triageFailingChecks([makeCheck({ name: "tests" })], REPO);
     expect(result!.failedStep).toBe("Run tests");
   });
 
+  it("falls back to matchedJobs[0] when no job has a non-success conclusion", async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        makeJobsResponse([
+          {
+            id: 7,
+            name: "tests",
+            conclusion: null as unknown as string,
+            steps: [],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(makeErrorResponse(404));
+    const [result] = await triageFailingChecks([makeCheck()], REPO, LOG_TAIL_LINES);
+    expect(result!.jobName).toBe("tests");
+    expect(result!.failedStep).toBeUndefined();
+  });
+
   it("falls back to prefix match for matrix jobs when no exact name match", async () => {
-    mockFetch.mockResolvedValueOnce(
-      makeJobsResponse([
-        {
-          id: 1,
-          name: "build (ubuntu)",
-          conclusion: "failure",
-          steps: [{ name: "Compile", number: 1, conclusion: "failure" }],
-        },
-        {
-          id: 2,
-          name: "build (windows)",
-          conclusion: "success",
-          steps: [{ name: "Compile", number: 1, conclusion: "success" }],
-        },
-      ]),
+    mockFetch
+      .mockResolvedValueOnce(
+        makeJobsResponse([
+          {
+            id: 1,
+            name: "build (ubuntu)",
+            conclusion: "failure",
+            steps: [{ name: "Compile", number: 1, conclusion: "failure" }],
+          },
+          {
+            id: 2,
+            name: "build (windows)",
+            conclusion: "success",
+            steps: [{ name: "Compile", number: 1, conclusion: "success" }],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(makeLogsRedirectResponse("https://s3.example.com/logs"))
+      .mockResolvedValueOnce(makeLogTextResponse("compile output"));
+    const [result] = await triageFailingChecks(
+      [makeCheck({ name: "build" })],
+      REPO,
+      LOG_TAIL_LINES,
     );
-    const [result] = await triageFailingChecks([makeCheck({ name: "build" })], REPO);
     expect(result!.failedStep).toBe("Compile");
   });
 
-  it("returns actionable with failedStep=undefined when jobs fetch throws", async () => {
+  it("no job info when jobs fetch throws", async () => {
     mockFetch.mockResolvedValueOnce(makeErrorResponse(500));
-    const [result] = await triageFailingChecks([makeCheck({ conclusion: "FAILURE" })], REPO);
-    expect(result!.failureKind).toBe("actionable");
+    const [result] = await triageFailingChecks(
+      [makeCheck({ conclusion: "FAILURE" })],
+      REPO,
+      LOG_TAIL_LINES,
+    );
     expect(result!.failedStep).toBeUndefined();
+    expect(result!.logTail).toBeUndefined();
+  });
+});
+
+describe("triageFailingChecks — failedStep non-success conclusions", () => {
+  it("captures timed_out step as failedStep", async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        makeJobsResponse([
+          {
+            id: 1,
+            name: "tests",
+            conclusion: "timed_out",
+            steps: [
+              { name: "Set up job", number: 1, conclusion: "success" },
+              { name: "Run tests", number: 2, conclusion: "timed_out" },
+            ],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(makeErrorResponse(404));
+    const [result] = await triageFailingChecks(
+      [makeCheck({ conclusion: "TIMED_OUT" })],
+      REPO,
+      LOG_TAIL_LINES,
+    );
+    expect(result!.failedStep).toBe("Run tests");
   });
 
-  it("returns actionable with failedStep=undefined when runId is null", async () => {
-    const check = makeCheck({ runId: null });
-    const [result] = await triageFailingChecks([check], REPO);
-    expect(result!.failureKind).toBe("actionable");
-    expect(result!.failedStep).toBeUndefined();
+  it("skips skipped/neutral steps, captures the first genuinely failed step", async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        makeJobsResponse([
+          {
+            id: 1,
+            name: "tests",
+            conclusion: "failure",
+            steps: [
+              { name: "Check cache", number: 1, conclusion: "skipped" },
+              { name: "Run lint", number: 2, conclusion: "neutral" },
+              { name: "Run tests", number: 3, conclusion: "failure" },
+            ],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(makeErrorResponse(404));
+    const [result] = await triageFailingChecks([makeCheck()], REPO, LOG_TAIL_LINES);
+    expect(result!.failedStep).toBe("Run tests");
+  });
+});
+
+describe("triageFailingChecks — log tail", () => {
+  it("tails to logTailLines when log has more lines", async () => {
+    const logLines = Array.from({ length: 20 }, (_, i) => `line ${i}`).join("\n");
+    mockFetch
+      .mockResolvedValueOnce(makeJobsResponse([{ id: 1, name: "tests", conclusion: "failure" }]))
+      .mockResolvedValueOnce(makeLogsRedirectResponse("https://s3.example.com/logs"))
+      .mockResolvedValueOnce(makeLogTextResponse(logLines));
+    const [result] = await triageFailingChecks([makeCheck()], REPO, 5);
+    expect(result!.logTail).toBe("line 15\nline 16\nline 17\nline 18\nline 19");
+  });
+
+  it("returns full log when log has fewer lines than logTailLines", async () => {
+    mockFetch
+      .mockResolvedValueOnce(makeJobsResponse([{ id: 1, name: "tests", conclusion: "failure" }]))
+      .mockResolvedValueOnce(makeLogsRedirectResponse("https://s3.example.com/logs"))
+      .mockResolvedValueOnce(makeLogTextResponse("only\nthree\nlines"));
+    const [result] = await triageFailingChecks([makeCheck()], REPO, 100);
+    expect(result!.logTail).toBe("only\nthree\nlines");
+  });
+
+  it("logTail=undefined and no log fetch when logTailLines=0", async () => {
+    mockFetch.mockResolvedValueOnce(
+      makeJobsResponse([{ id: 1, name: "tests", conclusion: "failure" }]),
+    );
+    const [result] = await triageFailingChecks([makeCheck()], REPO, 0);
+    expect(result!.logTail).toBeUndefined();
+    // Only the jobs fetch — no log fetch
+    const logFetchCalls = (mockFetch.mock.calls as Array<[string]>).filter(
+      ([url]) => !url.includes("/jobs"),
+    );
+    expect(logFetchCalls).toHaveLength(0);
+  });
+
+  it("logTail=undefined when log fetch fails", async () => {
+    mockFetch
+      .mockResolvedValueOnce(makeJobsResponse([{ id: 1, name: "tests", conclusion: "failure" }]))
+      .mockResolvedValueOnce(makeErrorResponse(403));
+    const [result] = await triageFailingChecks([makeCheck()], REPO, LOG_TAIL_LINES);
+    expect(result!.logTail).toBeUndefined();
   });
 });
 
 describe("triageFailingChecks — batch", () => {
-  it("triages multiple checks in parallel", async () => {
+  it("triages multiple checks; different runIds each get their own fetch", async () => {
     mockFetch
       .mockResolvedValueOnce(
         makeJobsResponse([
@@ -258,54 +415,60 @@ describe("triageFailingChecks — batch", () => {
           },
         ]),
       )
+      .mockResolvedValueOnce(makeErrorResponse(404)) // log for job 1 fails
       .mockResolvedValueOnce(
         makeJobsResponse([{ id: 2, name: "build", conclusion: "cancelled", steps: [] }]),
-      );
+      )
+      .mockResolvedValueOnce(makeErrorResponse(404)); // log for job 2 fails
 
     const checks: ClassifiedCheck[] = [
       makeCheck({ name: "tests", runId: "run-1", conclusion: "FAILURE" }),
       makeCheck({ name: "build", runId: "run-2", conclusion: "CANCELLED" }),
     ];
-    const results = await triageFailingChecks(checks, REPO);
+    const results = await triageFailingChecks(checks, REPO, LOG_TAIL_LINES);
     expect(results).toHaveLength(2);
-    expect(results[0]!.failureKind).toBe("actionable");
     expect(results[0]!.failedStep).toBe("Run tests");
-    // CANCELLED → fetch is called for workflowName; mock for run-2 is consumed
-    expect(results[1]!.failureKind).toBe("cancelled");
     expect(results[1]!.failedStep).toBeUndefined();
   });
 
   it("fetches jobs once per runId when multiple checks share the same run", async () => {
-    mockFetch.mockResolvedValueOnce(
-      makeJobsResponse([
-        {
-          id: 1,
-          name: "tests",
-          workflow_name: "CI",
-          conclusion: "failure",
-          steps: [{ name: "Run tests", number: 1, conclusion: "failure" }],
-        },
-        {
-          id: 2,
-          name: "lint",
-          workflow_name: "CI",
-          conclusion: "failure",
-          steps: [{ name: "Run lint", number: 1, conclusion: "failure" }],
-        },
-      ]),
-    );
+    // Jobs fetched once (cached), but logs fetched per job (different job IDs).
+    mockFetch
+      .mockResolvedValueOnce(
+        makeJobsResponse([
+          {
+            id: 1,
+            name: "tests",
+            workflow_name: "CI",
+            conclusion: "failure",
+            steps: [{ name: "Run tests", number: 1, conclusion: "failure" }],
+          },
+          {
+            id: 2,
+            name: "lint",
+            workflow_name: "CI",
+            conclusion: "failure",
+            steps: [{ name: "Run lint", number: 1, conclusion: "failure" }],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(makeErrorResponse(404)) // log for job 1
+      .mockResolvedValueOnce(makeErrorResponse(404)); // log for job 2
 
     const checks: ClassifiedCheck[] = [
       makeCheck({ name: "tests", runId: "run-1", conclusion: "FAILURE" }),
       makeCheck({ name: "lint", runId: "run-1", conclusion: "FAILURE" }),
     ];
-    const results = await triageFailingChecks(checks, REPO);
+    const results = await triageFailingChecks(checks, REPO, LOG_TAIL_LINES);
     expect(results).toHaveLength(2);
     expect(results[0]!.failedStep).toBe("Run tests");
     expect(results[0]!.workflowName).toBe("CI");
     expect(results[1]!.failedStep).toBe("Run lint");
     expect(results[1]!.workflowName).toBe("CI");
-    // Only one fetch call despite two checks sharing the same runId
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    // Jobs API called once (runId cached), log API called twice (job IDs differ)
+    const jobsFetchCalls = (mockFetch.mock.calls as Array<[string]>).filter(([url]) =>
+      url.includes("/jobs?filter=latest"),
+    );
+    expect(jobsFetchCalls).toHaveLength(1);
   });
 });

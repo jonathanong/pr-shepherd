@@ -19,8 +19,6 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
   };
   if (action === "cooldown") return { ...base, action: "cooldown", log: "SKIP: CI still starting" };
   if (action === "wait") return { ...base, action: "wait", log: "WAIT: 0 passing, 1 in-progress" };
-  if (action === "rerun_ci")
-    return { ...base, action: "rerun_ci", log: "RERAN: run-99 (typecheck — transient)", reran: [] };
   if (action === "mark_ready")
     return { ...base, action: "mark_ready", markedReady: true, log: "MARKED READY: PR 42" };
   if (action === "fix_code") {

@@ -114,19 +114,18 @@ describe("formatText — CI check counts", () => {
 });
 
 describe("formatText — failed checks", () => {
-  it("shows failureKind bracket when present", () => {
+  it("renders the conclusion in the failing check line", () => {
     const failing: TriagedCheck = {
-      ...makeCheck({ category: "failing", conclusion: "FAILURE" }),
-      failureKind: "timeout",
+      ...makeCheck({ category: "failing", conclusion: "TIMED_OUT" }),
     };
     const report = makeReport({
       checks: { ...makeReport().checks, failing: [failing] },
     });
     const out = formatText(report);
-    expect(out).toContain("[timeout]");
+    expect(out).toContain("TIMED_OUT");
   });
 
-  it("omits bracket when failureKind is absent", () => {
+  it("omits bracket when check has no additional metadata", () => {
     const failing: TriagedCheck = {
       ...makeCheck({ name: "lint", category: "failing", conclusion: "FAILURE" }),
     };
@@ -141,7 +140,6 @@ describe("formatText — failed checks", () => {
   it("renders failedStep when present", () => {
     const failing: TriagedCheck = {
       ...makeCheck({ category: "failing", conclusion: "FAILURE" }),
-      failureKind: "actionable",
       failedStep: "Run tests",
     };
     const report = makeReport({
@@ -154,7 +152,6 @@ describe("formatText — failed checks", () => {
   it("omits failed step line when failedStep is absent", () => {
     const failing: TriagedCheck = {
       ...makeCheck({ category: "failing", conclusion: "FAILURE" }),
-      failureKind: "actionable",
     };
     const report = makeReport({
       checks: { ...makeReport().checks, failing: [failing] },
@@ -166,12 +163,10 @@ describe("formatText — failed checks", () => {
   it("renders summary when present; omits when absent", () => {
     const withSummary: TriagedCheck = {
       ...makeCheck({ category: "failing", conclusion: "FAILURE" }),
-      failureKind: "actionable",
       summary: "67.68% of diff hit (target 85.00%)",
     };
     const without: TriagedCheck = {
       ...makeCheck({ name: "lint", category: "failing", conclusion: "FAILURE" }),
-      failureKind: "actionable",
     };
     const report = makeReport({
       checks: { ...makeReport().checks, failing: [withSummary, without] },
@@ -399,19 +394,18 @@ describe("formatText — ## Instructions section", () => {
   it("includes fix-code instruction for actionable failures", () => {
     const failing: TriagedCheck = {
       ...makeCheck({ name: "lint", category: "failing", conclusion: "FAILURE" }),
-      failureKind: "actionable",
     };
     const report = makeReport({
       checks: { ...makeReport().checks, failing: [failing] },
     });
     const out = formatText(report);
-    expect(out).toContain("Fix code failure");
+    expect(out).toContain("Failing check:");
+    expect(out).toContain("lint");
   });
 
-  it("includes rerun instruction for timeout failures with runId", () => {
+  it("includes rerun hint for failures with runId", () => {
     const failing: TriagedCheck = {
       ...makeCheck({ name: "build", category: "failing", conclusion: "TIMED_OUT", runId: "12345" }),
-      failureKind: "timeout",
     };
     const report = makeReport({
       checks: { ...makeReport().checks, failing: [failing] },

@@ -289,7 +289,6 @@ describe("runIterate — stall-timeout guard", () => {
               event: "pull_request",
               runId: "run-99",
               category: "failing",
-              failureKind: "actionable",
             },
           ],
           inProgress: [],

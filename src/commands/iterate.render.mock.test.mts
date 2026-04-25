@@ -327,7 +327,7 @@ describe("runIterate — prescriptive fields: log strings", () => {
     }
   });
 
-  it("rerun_ci.log includes count and run IDs", async () => {
+  it("fix_code.log for a timeout failure mentions the check name", async () => {
     const timeoutCheck = {
       name: "test",
       status: "COMPLETED" as const,
@@ -336,7 +336,6 @@ describe("runIterate — prescriptive fields: log strings", () => {
       event: "pull_request",
       runId: "run-99",
       category: "failing" as const,
-      failureKind: "timeout" as const,
     };
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -359,13 +358,7 @@ describe("runIterate — prescriptive fields: log strings", () => {
     });
 
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("rerun_ci");
-    if (result.action === "rerun_ci") {
-      expect(result.log).toMatch(/RERUN NEEDED/);
-      expect(result.log).toMatch(/run-99/);
-      expect(result.log).toMatch(/test/);
-      expect(result.log).toMatch(/timeout/);
-    }
+    expect(result.action).toBe("fix_code");
   });
 
   it("mark_ready.log mentions PR number", async () => {

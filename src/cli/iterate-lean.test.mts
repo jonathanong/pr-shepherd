@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { projectIterateLean } from "./iterate-lean.mts";
 import { makeIterateResult } from "../cli-parser.iterate-fixtures.mts";
-import type { IterateResult } from "../types.mts";
 
 describe("projectIterateLean", () => {
   // ---------------------------------------------------------------------------
@@ -184,34 +183,6 @@ describe("projectIterateLean", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // rerun_ci
-  // ---------------------------------------------------------------------------
-
-  it("rerun_ci: includes reran, omits checks when empty", () => {
-    const lean = projectIterateLean(makeIterateResult("rerun_ci")) as Record<string, unknown>;
-    expect(lean.action).toBe("rerun_ci");
-    expect(lean.reran).toBeDefined();
-    expect(lean.checks).toBeUndefined();
-  });
-
-  it("rerun_ci: includes checks when non-empty", () => {
-    const result = {
-      ...makeIterateResult("rerun_ci"),
-      checks: [
-        {
-          name: "lint",
-          conclusion: "FAILURE" as const,
-          runId: "r1",
-          detailsUrl: null,
-          failureKind: "timeout" as const,
-        },
-      ],
-    } as IterateResult;
-    const lean = projectIterateLean(result) as Record<string, unknown>;
-    expect((lean.checks as unknown[]).length).toBe(1);
-  });
-
-  // ---------------------------------------------------------------------------
   // mark_ready
   // ---------------------------------------------------------------------------
 
@@ -252,7 +223,7 @@ describe("projectIterateLean", () => {
     result.fix.threads = [
       { id: "t1", path: "src/x.ts", line: 1, author: "a", body: "fix", url: "" },
     ];
-    result.fix.checks = [{ name: "ci", runId: "r1", detailsUrl: null, failureKind: "actionable" }];
+    result.fix.checks = [{ name: "ci", runId: "r1", detailsUrl: null }];
     result.fix.instructions = ["step 1"];
     result.fix.actionableComments = [{ id: "c1", author: "a", body: "nit", url: "" }];
     result.fix.noiseCommentIds = ["c2"];
@@ -260,13 +231,7 @@ describe("projectIterateLean", () => {
     result.fix.surfacedApprovals = [{ id: "s1", author: "a", body: "summary" }];
     result.fix.changesRequestedReviews = [{ id: "rv1", author: "a", body: "" }];
     result.checks = [
-      {
-        name: "lint",
-        conclusion: "FAILURE" as const,
-        runId: "r2",
-        detailsUrl: null,
-        failureKind: "timeout" as const,
-      },
+      { name: "lint", conclusion: "FAILURE" as const, runId: "r2", detailsUrl: null },
     ];
     result.cancelled = ["run-1"];
 

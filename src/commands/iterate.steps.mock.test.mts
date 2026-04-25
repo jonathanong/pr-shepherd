@@ -198,8 +198,8 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("runIterate — rerun_ci", () => {
-  it("calls gh run rerun for 2 timeout failures and returns action: rerun_ci", async () => {
+describe("runIterate — timeout/cancelled failures route to fix_code", () => {
+  it("TIMED_OUT failures produce fix_code (not a separate rerun action)", async () => {
     const timeoutCheck1 = {
       name: "test-1",
       status: "COMPLETED" as const,
@@ -208,7 +208,6 @@ describe("runIterate — rerun_ci", () => {
       event: "pull_request",
       runId: "run-10",
       category: "failing" as const,
-      failureKind: "timeout" as const,
     };
     const timeoutCheck2 = {
       name: "test-2",
@@ -218,7 +217,6 @@ describe("runIterate — rerun_ci", () => {
       event: "pull_request",
       runId: "run-11",
       category: "failing" as const,
-      failureKind: "timeout" as const,
     };
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -242,40 +240,35 @@ describe("runIterate — rerun_ci", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("rerun_ci");
-    if (result.action === "rerun_ci") {
-      expect(result.reran.map((r) => r.runId)).toContain("run-10");
-      expect(result.reran.map((r) => r.runId)).toContain("run-11");
-      expect(result.reran.find((r) => r.runId === "run-10")?.checkNames).toEqual(["test-1"]);
-      expect(result.reran.find((r) => r.runId === "run-11")?.checkNames).toEqual(["test-2"]);
-      expect(result.reran.find((r) => r.runId === "run-10")?.failureKind).toBe("timeout");
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      // Both failing checks are in the fix payload so the agent can decide.
+      expect(result.fix.checks.map((c) => c.runId)).toContain("run-10");
+      expect(result.fix.checks.map((c) => c.runId)).toContain("run-11");
+      // Instructions tell the agent to examine log tails.
+      const joined = result.fix.instructions.join("\n");
+      expect(joined).toContain("examine the log tail");
     }
-
-    // CLI no longer calls rerun-failed-jobs — the agent does it via `gh run rerun`.
-    const fetchUrls = (mockFetch.mock.calls as Array<[string, RequestInit]>).map(([url]) => url);
-    expect(fetchUrls.some((u) => u.includes("rerun-failed-jobs"))).toBe(false);
   });
 
-  it("deduplicates runIds when multiple failing steps share the same run", async () => {
+  it("CANCELLED failures produce fix_code so the agent can decide rerun vs fix", async () => {
     const check1 = {
       name: "test-step-1",
       status: "COMPLETED" as const,
-      conclusion: "FAILURE" as const,
+      conclusion: "CANCELLED" as const,
       detailsUrl: "https://github.com/owner/repo/actions/runs/20",
       event: "pull_request",
       runId: "run-20",
       category: "failing" as const,
-      failureKind: "cancelled" as const,
     };
     const check2 = {
       name: "test-step-2",
       status: "COMPLETED" as const,
-      conclusion: "FAILURE" as const,
+      conclusion: "CANCELLED" as const,
       detailsUrl: "https://github.com/owner/repo/actions/runs/20",
       event: "pull_request",
-      runId: "run-20", // same runId
+      runId: "run-20",
       category: "failing" as const,
-      failureKind: "cancelled" as const,
     };
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -299,18 +292,15 @@ describe("runIterate — rerun_ci", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("rerun_ci");
-    if (result.action === "rerun_ci") {
-      expect(result.reran).toHaveLength(1);
-      expect(result.reran[0].runId).toBe("run-20");
-      expect(result.reran[0].checkNames).toEqual(["test-step-1", "test-step-2"]);
-      expect(result.reran[0].failureKind).toBe("cancelled");
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.checks.length).toBeGreaterThanOrEqual(1);
     }
   });
 });
 
 describe("runIterate — cancelled + BEHIND", () => {
-  it("returns rerun_ci (not rebase) for cancelled failure when branch is BEHIND", async () => {
+  it("routes cancelled failure to fix_code (not rebase) when branch is BEHIND", async () => {
     const cancelledCheck = {
       name: "ci",
       status: "COMPLETED" as const,
@@ -319,7 +309,6 @@ describe("runIterate — cancelled + BEHIND", () => {
       event: "pull_request",
       runId: "run-30",
       category: "failing" as const,
-      failureKind: "cancelled" as const,
     };
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -352,7 +341,7 @@ describe("runIterate — cancelled + BEHIND", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("rerun_ci");
+    expect(result.action).toBe("fix_code");
     expect(result.mergeStateStatus).toBe("BEHIND");
   });
 });

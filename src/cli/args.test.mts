@@ -244,7 +244,6 @@ describe("iterateActionToExitCode", () => {
     ["escalate", 3],
     ["cooldown", 0],
     ["wait", 0],
-    ["rerun_ci", 0],
     ["mark_ready", 0],
   ])("%s → %d", (action, code) => {
     expect(iterateActionToExitCode(action)).toBe(code);

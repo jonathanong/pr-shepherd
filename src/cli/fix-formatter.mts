@@ -1,6 +1,11 @@
 import { renderResolveCommand } from "../commands/iterate.mts";
 import type { IterateResultFixCode } from "../types.mts";
 
+function safeFence(content: string): string {
+  const maxRun = Math.max(0, ...Array.from(content.matchAll(/`+/g), (m) => m[0].length));
+  return "`".repeat(Math.max(3, maxRun + 1));
+}
+
 export function formatFixCodeResult(header: string, result: IterateResultFixCode): string {
   const sections: string[] = [header];
 
@@ -26,15 +31,22 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
   if (result.fix.checks.length > 0) {
     sections.push("## Failing checks");
     const bullets = result.fix.checks.map((ch) => {
-      const prefix = ch.workflowName ? `${ch.workflowName} › ` : "";
+      const workflowPrefix = ch.workflowName ? `${ch.workflowName} › ` : "";
+      const jobLabel = ch.jobName ? ch.jobName : ch.name;
       const locator = ch.runId
         ? `\`${ch.runId}\``
         : ch.detailsUrl
           ? `external \`${ch.detailsUrl}\``
           : "(no runId)";
-      const lines = [`- ${locator} — \`${prefix}${ch.name}\``];
+      const lines = [`- ${locator} — \`${workflowPrefix}${jobLabel}\``];
       if (ch.failedStep) lines.push(`  > ${ch.failedStep}`);
       if (ch.summary) lines.push(`  > ${ch.summary}`);
+      if (ch.logTail) {
+        const fence = safeFence(ch.logTail);
+        lines.push(`  ${fence}`);
+        lines.push(ch.logTail.replace(/^/gm, "  ").trimEnd());
+        lines.push(`  ${fence}`);
+      }
       return lines.join("\n");
     });
     sections.push(bullets.join("\n\n"));
