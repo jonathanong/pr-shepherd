@@ -39,6 +39,7 @@ export async function markSeen(key: StateKey, id: string): Promise<void> {
     const path = resolvePath(key, id);
     await mkdir(dirname(path), { recursive: true });
     // O_EXCL: create-only — EEXIST means already marked, which is the idempotent success case.
+    // seenAt is unix milliseconds (Date.now()), matching JS convention for this module.
     await writeFile(path, JSON.stringify({ seenAt: Date.now() }), { flag: "wx", encoding: "utf8" });
   } catch {
     // EEXIST = already seen. All other errors are best-effort.

@@ -359,7 +359,7 @@ describe("formatText — summary line", () => {
       },
     });
     const out = formatText(report);
-    expect(out).toContain("2 actionable item(s) remaining");
+    expect(out).toContain("2 actionable");
   });
 });
 

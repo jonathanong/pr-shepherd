@@ -178,13 +178,13 @@ export function formatText(report: ShepherdReport): string {
     actionableThreads.length + actionableComments.length + report.changesRequestedReviews.length;
   parts.push("## Summary");
   parts.push("");
-  parts.push(
-    totalActionable === 0
-      ? "0 actionable — all threads resolved/minimized"
-      : `${totalActionable} actionable item(s) remaining`,
-  );
+  const counts: string[] = [];
+  if (totalActionable > 0) counts.push(`${totalActionable} actionable`);
+  if (firstLookTotal > 0) counts.push(`${firstLookTotal} first-look`);
+  const summaryLine =
+    counts.join(", ") || "0 actionable — all threads resolved/minimized";
+  parts.push(summaryLine);
   parts.push("");
-
   parts.push("## Instructions");
   parts.push("");
   const instructions = buildCheckInstructions(report);
