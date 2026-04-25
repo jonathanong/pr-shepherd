@@ -22,12 +22,31 @@ Example Workflow:
 
 At a high level, to start the monitor, the skill/command invokes a CLI that returns a prompt to be ingested by the agent:
 
-```bash
+```
 /pr-shepherd:monitor
 
 > npx pr-shepherd monitor 123
 
-Run /loop "npx pr-shepherd iterate 123" every 4 minutes
+# PR #123 [MONITOR]
+
+Loop tag: `# pr-shepherd-loop:pr=123`
+Loop args: `4m --max-turns 50 --expires 8h`
+
+## Loop prompt
+
+# pr-shepherd-loop:pr=123
+
+IMPORTANT — recurrence rules: do not call ScheduleWakeup or /loop (duplicate runner).
+
+Run in a single Bash call:
+  npx pr-shepherd iterate 123 --no-cache
+
+…
+
+## Instructions
+
+1. Run CronList. If any job's prompt contains the loop tag, run the ## Loop prompt inline then stop.
+2. Otherwise, invoke the /loop skill with Loop args and the full ## Loop prompt body.
 ```
 
 Each iteration calls `npx pr-shepherd iterate <PR>`, which provides actionable feedback directly to the agent:
@@ -38,7 +57,7 @@ Each iteration calls `npx pr-shepherd iterate <PR>`, which provides actionable f
 # PR #123 [FIX_CODE]
 
 **status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 3 passing, 0 skipped, 0 filtered, 0 inProgress · **copilotReviewInProgress** false · **isDraft** false
+**summary** 3 passing, 0 skipped, 0 filtered, 0 inProgress
 
 ## Review threads
 
@@ -68,11 +87,15 @@ Each iteration calls `npx pr-shepherd iterate <PR>`, which provides actionable f
 
 ## Instructions
 
-1. Fix the code
-2. [Shown only if the branch is out of date] Rebase <DEFAULT BRANCH> if out of date
-3. [If rebased] git push --force-with-lease [If not rebased] git push
-4. Call the `resolve` step above
-5. Stop
+_(schematic — actual steps depend on PR state)_
+
+1. Apply code fixes for each file referenced under `## Review threads`.
+2. For each failing check: examine the log tail to decide — rerun if transient, fix code if real.
+3. Commit changed files.
+4. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`.
+5. Run the `resolve:` command above, substituting `"$HEAD_SHA"`.
+6. Add a `## Shepherd Journal` entry to the PR description for any large decisions made.
+7. Stop this iteration.
 ```
 
 On every iteration, a command is returned to instruct the agent exactly what to do. No guessing, no thinking, as few agentic turns as possible:
@@ -96,14 +119,14 @@ This system makes opinionated decisions, which may or may not work for your team
   - This may break your workflow if your PR titles and descriptions are restricted to a specific format.
 - `pr-shepherd` does **NOT** reply to inline comments when resolving them. Doing so would require agentic loops and more tokens. Instead, it updates the PR title & description once per loop with only the relevant information.
 - Branches are currently kept up-to-date with `git push --force-with-lease`. Please make a PR for making `merge <default branch>` an option.
-- Branches are currently only rebased when 1) pushing a commit on a branch that is out of date or 2) there are merge conflicts. It does not continuously rebase the branch (use a merge queue for that). 
+- Branches are currently only rebased when 1) pushing a commit on a branch that is out of date or 2) there are merge conflicts. It does not continuously rebase the branch (use a merge queue for that).
 - To optimize AI code reviewer tokens, create your pull requests initially as drafts and instruct your AI code reviewers to only code review PRs that are ready for review. `pr-shepherd` will automatically mark PRs as ready for review when all CI passes (can be disabled). If you have no intention of marking your PR as ready for review, then don't run `pr-shepherd`.
 
 Some other workflow improvements:
 
 - `pr-shepherd` knows whether a GitHub Copilot code review is in progress
 - `pr-shepherd` waits 10 minutes (configurable) until after all comments are hidden and CI passes before exiting. The primary reason is to wait for any lingering automated code reviews that do not provide status updates via the GitHub GraphQL API.
-- `pr-shepherd` is instructed to cancel failed CI runs or re-run flaky CI runs. The primary reason is to minimize CI costs.
+- The agent is instructed to cancel failed CI runs and, when a failure looks transient (e.g. network timeout, runner setup crash), re-run them via `gh run rerun <id> --failed`. The primary reason is to minimize CI costs.
 - `pr-shepherd` supports "commit suggestions" by converting into a diff, applying them, and then committing them with attribution. This avoids a file read & write. One commit is always made per suggestion to avoid any merge conflicts - in these cases, the agent will resolve the comment manually.
 
 Recommendations:
@@ -114,9 +137,9 @@ Recommendations:
 
 - **Reduced agent context and turns** — logic lives in the CLI, not the prompt. The relevant context is provided automatically to the agent, reducing tool calls.
 - **Reduced GitHub rate-limit exposure** - GraphQL requests are batched when possible
-- **Minimal state** - `pr-shepherd` stores minimal state in the local worktree
+- **Minimal state** - `pr-shepherd` stores minimal state in `$PR_SHEPHERD_STATE_DIR` (default `$TMPDIR/pr-shepherd-state/`), not in the repository
 - **Classifications and decisions still happen at the agent level** - `pr-shepherd` goal is to provide sufficient context to make informed decisions and provide clear actionable steps without writing unreliable code-level heuristics
-- **Configurable** - `pr-shepherd` is configurable via `pr-shepherdrc.yml`, which is only possible with a light prompt that simply invokes the CLI which returns the prompt. 
+- **Configurable** - `pr-shepherd` is configurable via `.pr-shepherdrc.yml`, which is only possible with a light prompt that simply invokes the CLI which returns the prompt.
 
 ## Usage
 
@@ -157,9 +180,9 @@ GitHub has seen the push before resolving).
 
 See [docs/skills.md](docs/skills.md) for full argument reference.
 
-## Workflow
+## Iterate decision loop
 
-On each tick (4-minute default, tunable via `watch.interval`): fetch PR state in one GraphQL batch → classify CI, comments, and merge status → take one action (fix code, rebase, rerun CI, mark ready, or wait). See [docs/iterate-flow.md](docs/iterate-flow.md) for the decision table and [docs/flow.md](docs/flow.md) for the end-to-end flow diagram.
+On each tick (4-minute default, tunable via `watch.interval`): fetch PR state in one GraphQL batch → classify CI, comments, and merge status → take one action (`fix_code`, `mark_ready`, `cancel`, `escalate`, `wait`, or `cooldown`). See [docs/iterate-flow.md](docs/iterate-flow.md) for the decision table and [docs/flow.md](docs/flow.md) for the end-to-end flow diagram.
 
 ## Install
 
@@ -211,7 +234,7 @@ checks:
     - pull_request_target
     - merge_group # add for merge-queue repos
 actions:
-  autoRebase: false # disable for repos that enforce merge commits
+  autoMarkReady: false # disable to stay draft until you manually promote
 ```
 
 Environment variables: `GH_TOKEN` / `GITHUB_TOKEN` (auth; falls back to `gh auth token`), `PR_SHEPHERD_STATE_DIR` (override loop-state base dir).
