@@ -80,6 +80,11 @@ export function formatRequestEntry(entry: HttpRequestEntry): string {
     out += `operation: \`${extractOperationName(query)}\`\n`;
     if (variables && Object.keys(variables as object).length > 0) {
       out += `variables:\n${fenceBody(variables, "json")}`;
+    } else {
+      // For dynamic documents (e.g. BulkApply) the IDs are inlined as aliases.
+      // Count the aliases so the log shows how many operations were batched.
+      const aliasCount = (query.match(/^\s+[a-z]\d+:/gm) ?? []).length;
+      if (aliasCount > 0) out += `aliases: ${aliasCount}\n`;
     }
   } else if (entry.body !== undefined) {
     out += fenceBody(entry.body, "json");

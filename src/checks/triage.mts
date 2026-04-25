@@ -165,11 +165,9 @@ const BOILERPLATE_PATTERNS = [
   /^Received \d+ of \d+/,
   /^Cleaning up orphan processes/,
   /^Initialized empty Git repository/,
-  /^\s*(?:hint|note|advice):/i,
   /^Run actions\//,
   /^with:/,
   /^env:/,
-  /^\s+\S+=.+/, // indented key=value lines from 'with:' blocks
 ];
 
 function filterBoilerplate(lines: string[]): string[] {

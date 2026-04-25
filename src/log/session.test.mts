@@ -47,6 +47,19 @@ describe("formatRequestEntry", () => {
     expect(out).not.toContain("variables:");
   });
 
+  it("emits alias count for dynamic documents with no variables", () => {
+    const doc = `mutation BulkApply {\n  r0: resolveReviewThread(input: { threadId: "a" }) { thread { isResolved } }\n  r1: resolveReviewThread(input: { threadId: "b" }) { thread { isResolved } }\n}`;
+    const out = formatRequestEntry({
+      n: 3,
+      kind: "GraphQL",
+      method: "POST",
+      url: "https://api.github.com/graphql",
+      body: { query: doc, variables: {} },
+    });
+    expect(out).toContain("aliases: 2");
+    expect(out).not.toContain("variables:");
+  });
+
   it("formats a REST request with body", () => {
     const out = formatRequestEntry({
       n: 3,
