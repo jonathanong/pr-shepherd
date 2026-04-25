@@ -38,13 +38,6 @@ export function projectIterateLean(result: IterateResult): unknown {
       return { ...base, log: result.log };
     case "cancel":
       return { ...base, reason: result.reason, log: result.log };
-    case "rerun_ci":
-      return {
-        ...base,
-        ...(result.checks.length > 0 && { checks: result.checks }),
-        reran: result.reran,
-        log: result.log,
-      };
     case "mark_ready":
       // drop markedReady — always true, redundant with action discriminator
       return { ...base, log: result.log };

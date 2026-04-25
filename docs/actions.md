@@ -103,7 +103,6 @@ The body line (`WAIT: …`) varies with the merge state — `branch is behind ba
 
 ---
 
-
 ## `mark_ready`
 
 Converts a draft PR to ready for review.
