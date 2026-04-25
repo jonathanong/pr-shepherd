@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   buildSessionHeader,
   formatRequestEntry,
@@ -138,6 +138,20 @@ describe("formatResponseEntry", () => {
     expect(out).toContain('"id": 1');
   });
 
+  it("includes content-length in header when both contentType and contentLength are set", () => {
+    const out = formatResponseEntry({
+      n: 4,
+      kind: "REST",
+      method: "GET",
+      url: "https://api.github.com/repos/acme/foo",
+      status: 200,
+      durationMs: 88,
+      contentType: "application/json",
+      contentLength: 512,
+    });
+    expect(out).toContain("application/json · 512 bytes");
+  });
+
   it("formats a restText response with content-length, no body", () => {
     const out = formatResponseEntry({
       n: 5,
@@ -205,6 +219,30 @@ describe("truncation", () => {
     } finally {
       if (env === undefined) delete process.env["PR_SHEPHERD_LOG_MAX_BODY"];
       else process.env["PR_SHEPHERD_LOG_MAX_BODY"] = env;
+    }
+  });
+
+  it("actually truncates when MAX_BODY env is set before module load", async () => {
+    const saved = process.env["PR_SHEPHERD_LOG_MAX_BODY"];
+    try {
+      process.env["PR_SHEPHERD_LOG_MAX_BODY"] = "5";
+      vi.resetModules();
+      const { formatResponseEntry: freshFmt } = await import("./session.mts");
+      const out = freshFmt({
+        n: 1,
+        kind: "GraphQL",
+        method: "POST",
+        url: "https://api.github.com/graphql",
+        status: 200,
+        durationMs: 10,
+        textBody: "a".repeat(20),
+      });
+      expect(out).toContain("truncated");
+      expect(out).toContain("characters");
+    } finally {
+      vi.resetModules();
+      if (saved === undefined) delete process.env["PR_SHEPHERD_LOG_MAX_BODY"];
+      else process.env["PR_SHEPHERD_LOG_MAX_BODY"] = saved;
     }
   });
 });

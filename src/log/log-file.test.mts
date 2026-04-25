@@ -100,3 +100,49 @@ describe("resolveLogPath", () => {
     await expect(resolveLogPath({ owner: "acme/evil", repo: "widgets" })).rejects.toThrow();
   });
 });
+
+describe("getLogFilePath", () => {
+  it("throws for invalid owner segment", async () => {
+    const { getLogFilePath } = await freshModule();
+    expect(() => getLogFilePath({ owner: "bad/owner", repo: "widgets" })).toThrow(
+      /Invalid repo key segments/,
+    );
+  });
+
+  it("uses 'unknown' worktree key before initLog is called", async () => {
+    const { getLogFilePath } = await freshModule();
+    const path = getLogFilePath({ owner: "acme", repo: "widgets" });
+    expect(path).toContain("unknown.md");
+  });
+});
+
+describe("initLog validation", () => {
+  it("returns null for invalid owner segment without throwing", async () => {
+    const { initLog } = await freshModule();
+    const path = await initLog({ owner: "bad/owner", repo: "widgets" });
+    expect(path).toBeNull();
+  });
+});
+
+describe("initLog error handling", () => {
+  it("disables log when getWorktreeKey throws", async () => {
+    vi.resetModules();
+    const { getWorktreeKey } = await import("../util/worktree.mts");
+    vi.mocked(getWorktreeKey).mockRejectedValueOnce(new Error("not a git repo"));
+    const { initLog, appendEntry } = await import("./log-file.mts");
+    const path = await initLog({ owner: "acme", repo: "widgets" });
+    expect(path).toBeNull();
+    expect(() => appendEntry("test")).not.toThrow();
+  });
+});
+
+describe("_resetLogState", () => {
+  it("resets entry counter and clears log path", async () => {
+    const { initLog, nextEntry, _resetLogState } = await freshModule();
+    await initLog({ owner: "acme", repo: "widgets" });
+    nextEntry();
+    nextEntry(); // counter = 2
+    _resetLogState();
+    expect(nextEntry()).toBe(1); // reset to 0, incremented to 1
+  });
+});

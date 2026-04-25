@@ -209,6 +209,22 @@ describe("graphqlWithRateLimit — header parsing", () => {
     const result = await graphqlWithRateLimit("{ q }");
     expect(result.rateLimit).toBeUndefined();
   });
+
+  it("returns rateLimit: undefined when rate-limit headers contain non-numeric values", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({
+        "content-type": "application/json",
+        "x-ratelimit-remaining": "not-a-number",
+        "x-ratelimit-limit": "5000",
+        "x-ratelimit-reset": "1700000000",
+      }),
+      json: () => Promise.resolve({ data: {} }),
+    });
+    const result = await graphqlWithRateLimit("{ q }");
+    expect(result.rateLimit).toBeUndefined();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -331,5 +347,25 @@ describe("restText — redirect handling", () => {
     await expect(restText("/repos/o/r/actions/jobs/1/logs")).rejects.toThrow(
       /GitHub REST GET.*failed: 404/,
     );
+  });
+
+  it("retries on 401 and returns text after token refresh", async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        headers: new Headers(),
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+        text: () => Promise.resolve("Unauthorized"),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        text: () => Promise.resolve("log content"),
+      });
+    const text = await restText("/repos/o/r/actions/jobs/1/logs");
+    expect(text).toBe("log content");
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });
