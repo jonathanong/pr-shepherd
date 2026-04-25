@@ -70,5 +70,5 @@ function resolvePath(key: StateKey, id: string): string {
     }
   }
   const base = process.env["PR_SHEPHERD_STATE_DIR"] ?? join(tmpdir(), "pr-shepherd-state");
-  return join(base, key.owner, key.repo, String(key.pr), "seen", `${id}.json`);
+  return join(base, `${key.owner}-${key.repo}`, String(key.pr), "seen", `${id}.json`);
 }

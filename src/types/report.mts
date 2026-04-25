@@ -1,5 +1,3 @@
-// Shepherd-specific report types, agent projections, and CLI options.
-
 import type {
   ClassifiedCheck,
   TriagedCheck,

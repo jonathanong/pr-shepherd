@@ -53,7 +53,7 @@ describe("readSeenMarker", () => {
   });
 
   it("tolerates unknown keys — open schema", async () => {
-    const dir = join(testStateDir, testKey.owner, testKey.repo, String(testKey.pr), "seen");
+    const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr), "seen");
     await mkdir(dir, { recursive: true });
     await writeFile(
       join(dir, `${testId}.json`),
@@ -66,7 +66,7 @@ describe("readSeenMarker", () => {
   });
 
   it("returns null on invalid JSON", async () => {
-    const dir = join(testStateDir, testKey.owner, testKey.repo, String(testKey.pr), "seen");
+    const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr), "seen");
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, `${testId}.json`), "not json", "utf8");
     expect(await readSeenMarker(testKey, testId)).toBeNull();

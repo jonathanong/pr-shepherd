@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// ---------------------------------------------------------------------------
-// Hoist mocks BEFORE any imports so modules capture the mocked versions.
-// child_process is still used by iterate.mts for `git` calls only.
-// GitHub API mutations now go through fetch (http.mts).
-// ---------------------------------------------------------------------------
+// Hoist mocks before imports so modules capture the mocked versions.
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);

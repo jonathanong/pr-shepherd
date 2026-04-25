@@ -75,7 +75,7 @@ To avoid re-surfacing items on every fetch, a per-item "seen" marker is
 written after first display. Markers live at:
 
 ```
-$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/seen/<id>.json
+$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/seen/<id>.json
 ```
 
 One file per id — file existence is the marker. The marker is written with
