@@ -24,6 +24,7 @@ Pass `--verbose` to get the full debug state: all base fields present in both Ma
 ```
 
 Lean-mode rules for the summary line:
+
 - Zero counts (`skipped`, `filtered`, `inProgress`) are omitted.
 - `remainingSeconds` is shown only when the ready-delay timer is actively counting down (`status === "READY"` and `remainingSeconds > 0`).
 - `copilotReviewInProgress` and `isDraft` are shown only when `true`.

@@ -87,11 +87,8 @@ export function formatIterateResult(result: IterateResult, opts?: { verbose?: bo
     }
 
     case "cancel": {
-      const cancelHeading = verbose
-        ? [`${heading} — ${result.reason}`, "", baseLine, summaryLine].join("\n")
-        : [`${heading} — ${result.reason}`, "", baseLine, summaryLine].join("\n");
       const parts = [
-        cancelHeading,
+        [`${heading} — ${result.reason}`, "", baseLine, summaryLine].join("\n"),
         result.log,
         "## Instructions",
         "1. Invoke `/loop cancel` via the Skill tool.\n2. Stop.",
@@ -136,9 +133,10 @@ export function projectIterateLean(result: IterateResult): unknown {
       ...(result.summary.inProgress > 0 && { inProgress: result.summary.inProgress }),
     },
     // remainingSeconds: only when the ready-delay timer is actively counting down
-    ...(result.status === "READY" && result.remainingSeconds > 0 && {
-      remainingSeconds: result.remainingSeconds,
-    }),
+    ...(result.status === "READY" &&
+      result.remainingSeconds > 0 && {
+        remainingSeconds: result.remainingSeconds,
+      }),
     ...(result.baseBranch && { baseBranch: result.baseBranch }),
   };
 
@@ -167,12 +165,22 @@ export function projectIterateLean(result: IterateResult): unknown {
         fix: {
           mode: result.fix.mode,
           threads: result.fix.threads,
-          ...(result.fix.actionableComments.length > 0 && { actionableComments: result.fix.actionableComments }),
-          ...(result.fix.noiseCommentIds.length > 0 && { noiseCommentIds: result.fix.noiseCommentIds }),
-          ...(result.fix.reviewSummaryIds.length > 0 && { reviewSummaryIds: result.fix.reviewSummaryIds }),
-          ...(result.fix.surfacedSummaries.length > 0 && { surfacedSummaries: result.fix.surfacedSummaries }),
+          ...(result.fix.actionableComments.length > 0 && {
+            actionableComments: result.fix.actionableComments,
+          }),
+          ...(result.fix.noiseCommentIds.length > 0 && {
+            noiseCommentIds: result.fix.noiseCommentIds,
+          }),
+          ...(result.fix.reviewSummaryIds.length > 0 && {
+            reviewSummaryIds: result.fix.reviewSummaryIds,
+          }),
+          ...(result.fix.surfacedSummaries.length > 0 && {
+            surfacedSummaries: result.fix.surfacedSummaries,
+          }),
           checks: result.fix.checks,
-          ...(result.fix.changesRequestedReviews.length > 0 && { changesRequestedReviews: result.fix.changesRequestedReviews }),
+          ...(result.fix.changesRequestedReviews.length > 0 && {
+            changesRequestedReviews: result.fix.changesRequestedReviews,
+          }),
           resolveCommand: result.fix.resolveCommand,
           instructions: result.fix.instructions,
         },
@@ -182,10 +190,19 @@ export function projectIterateLean(result: IterateResult): unknown {
         ...base,
         escalate: {
           triggers: result.escalate.triggers,
-          ...(result.escalate.unresolvedThreads.length > 0 && { unresolvedThreads: result.escalate.unresolvedThreads }),
-          ...(result.escalate.ambiguousComments.length > 0 && { ambiguousComments: result.escalate.ambiguousComments }),
-          ...(result.escalate.changesRequestedReviews.length > 0 && { changesRequestedReviews: result.escalate.changesRequestedReviews }),
-          ...(result.escalate.attemptHistory && result.escalate.attemptHistory.length > 0 && { attemptHistory: result.escalate.attemptHistory }),
+          ...(result.escalate.unresolvedThreads.length > 0 && {
+            unresolvedThreads: result.escalate.unresolvedThreads,
+          }),
+          ...(result.escalate.ambiguousComments.length > 0 && {
+            ambiguousComments: result.escalate.ambiguousComments,
+          }),
+          ...(result.escalate.changesRequestedReviews.length > 0 && {
+            changesRequestedReviews: result.escalate.changesRequestedReviews,
+          }),
+          ...(result.escalate.attemptHistory &&
+            result.escalate.attemptHistory.length > 0 && {
+              attemptHistory: result.escalate.attemptHistory,
+            }),
           suggestion: result.escalate.suggestion,
           humanMessage: result.escalate.humanMessage,
         },

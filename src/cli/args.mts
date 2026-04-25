@@ -77,7 +77,12 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
       consumedIndices.add(tok.index);
       // When the value is a separate arg (--flag value, not --flag=value),
       // inlineValue is false and the value occupies tok.index + 1.
-      if (tok.name === "format" && "inlineValue" in tok && tok.inlineValue === false && tok.value != null) {
+      if (
+        tok.name === "format" &&
+        "inlineValue" in tok &&
+        tok.inlineValue === false &&
+        tok.value != null
+      ) {
         consumedIndices.add(tok.index + 1);
       }
     }

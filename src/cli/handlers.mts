@@ -16,7 +16,11 @@ import {
   iterateActionToExitCode,
   deriveSimpleReady,
 } from "./exit-codes.mts";
-import { formatCommitSuggestionResult, formatIterateResult, projectIterateLean } from "./formatters.mts";
+import {
+  formatCommitSuggestionResult,
+  formatIterateResult,
+  projectIterateLean,
+} from "./formatters.mts";
 
 export async function handleCommitSuggestion(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
