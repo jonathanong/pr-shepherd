@@ -44,11 +44,11 @@ actions:
 
 ## All supported keys
 
-| Key                                         | Default                                   | Purpose                                                                                                           |
-| ------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `iterate.cooldownSeconds`                   | `30`                                      | Wait after a push before reading CI                                                                               |
-| `iterate.fixAttemptsPerThread`              | `3`                                       | Max fix attempts per unresolved thread before `escalate`                                                          |
-| `iterate.stallTimeoutMinutes`               | `30`                                      | Minutes the loop may repeat the same action without progress before `escalate` with `stall-timeout`; `0` disables |
+| Key                                  | Default                                   | Purpose                                                                                                                                |
+| ------------------------------------ | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `iterate.cooldownSeconds`            | `30`                                      | Wait after a push before reading CI                                                                                                    |
+| `iterate.fixAttemptsPerThread`       | `3`                                       | Max fix attempts per unresolved thread before `escalate`                                                                               |
+| `iterate.stallTimeoutMinutes`        | `30`                                      | Minutes the loop may repeat the same action without progress before `escalate` with `stall-timeout`; `0` disables                      |
 | `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination). All `COMMENTED` summaries are always minimized. |
 | `watch.interval`                     | `"4m"`                                    | Monitor tick interval (tuned to Claude's 5-min prompt-cache TTL)                                                                       |
 | `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                                                              |
