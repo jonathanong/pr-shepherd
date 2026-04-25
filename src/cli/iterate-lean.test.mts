@@ -80,6 +80,19 @@ describe("projectIterateLean", () => {
     expect(summary.inProgress).toBe(1);
   });
 
+  it("includes non-zero skipped and filtered counts", () => {
+    const result = {
+      ...makeIterateResult("wait"),
+      summary: { passing: 2, skipped: 1, filtered: 3, inProgress: 0 },
+    };
+    const lean = projectIterateLean(result) as Record<string, unknown>;
+    const summary = lean.summary as Record<string, unknown>;
+    expect(summary.passing).toBe(2);
+    expect(summary.skipped).toBe(1);
+    expect(summary.filtered).toBe(3);
+    expect(summary.inProgress).toBeUndefined();
+  });
+
   // ---------------------------------------------------------------------------
   // cooldown
   // ---------------------------------------------------------------------------
@@ -184,17 +197,34 @@ describe("projectIterateLean", () => {
     result.fix.threads = [{ id: "t1", path: "src/x.ts", line: 1, author: "a", body: "fix" }];
     result.fix.checks = [{ name: "ci", runId: "r1", detailsUrl: null, failureKind: "actionable" }];
     result.fix.instructions = ["step 1"];
+    result.fix.actionableComments = [{ id: "c1", author: "a", body: "nit" }];
+    result.fix.noiseCommentIds = ["c2"];
+    result.fix.reviewSummaryIds = ["r1"];
+    result.fix.surfacedSummaries = [{ id: "s1", author: "a", body: "summary" }];
+    result.fix.changesRequestedReviews = [{ id: "rv1", author: "a", body: "" }];
+    result.checks = [
+      {
+        name: "lint",
+        conclusion: "FAILURE" as const,
+        runId: "r2",
+        detailsUrl: null,
+        failureKind: "timeout" as const,
+      },
+    ];
     result.cancelled = ["run-1"];
 
     const lean = projectIterateLean(result) as Record<string, unknown>;
     const fix = lean.fix as Record<string, unknown>;
     expect((fix.threads as unknown[]).length).toBe(1);
     expect((fix.checks as unknown[]).length).toBe(1);
+    expect((lean.checks as unknown[]).length).toBe(1);
     expect((fix.instructions as unknown[]).length).toBe(1);
+    expect((fix.actionableComments as unknown[]).length).toBe(1);
+    expect((fix.noiseCommentIds as unknown[]).length).toBe(1);
+    expect((fix.reviewSummaryIds as unknown[]).length).toBe(1);
+    expect((fix.surfacedSummaries as unknown[]).length).toBe(1);
+    expect((fix.changesRequestedReviews as unknown[]).length).toBe(1);
     expect((lean.cancelled as unknown[]).length).toBe(1);
-    // still empty ones omitted
-    expect(fix.actionableComments).toBeUndefined();
-    expect(fix.noiseCommentIds).toBeUndefined();
   });
 
   // ---------------------------------------------------------------------------
@@ -221,12 +251,16 @@ describe("projectIterateLean", () => {
     result.escalate.unresolvedThreads = [
       { id: "t1", path: "f.ts", line: 1, author: "a", body: "b" },
     ];
+    result.escalate.ambiguousComments = [{ id: "c1", author: "a", body: "?" }];
+    result.escalate.changesRequestedReviews = [{ id: "rv1", author: "a", body: "" }];
     result.escalate.attemptHistory = [{ threadId: "t1", attempts: 3 }];
 
     const lean = projectIterateLean(result) as Record<string, unknown>;
     const esc = lean.escalate as Record<string, unknown>;
     expect((esc.triggers as unknown[]).length).toBe(1);
     expect((esc.unresolvedThreads as unknown[]).length).toBe(1);
+    expect((esc.ambiguousComments as unknown[]).length).toBe(1);
+    expect((esc.changesRequestedReviews as unknown[]).length).toBe(1);
     expect((esc.attemptHistory as unknown[]).length).toBe(1);
   });
 });
