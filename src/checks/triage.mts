@@ -157,7 +157,6 @@ async function fetchLogTail(
   repo: RepoInfo,
   logTailLines: number,
 ): Promise<string | undefined> {
-  if (logTailLines <= 0) return undefined;
   const { owner, name } = repo;
   try {
     const text = await restText(`/repos/${owner}/${name}/actions/jobs/${jobId}/logs`);

@@ -178,6 +178,27 @@ describe("buildCheckInstructions — CI budget policy", () => {
     );
   });
 
+  it("emits open-details-url hint when runId is null but detailsUrl is present", () => {
+    const failing: TriagedCheck = {
+      ...makeCheck({
+        name: "codecov/patch",
+        category: "failing",
+        conclusion: "FAILURE",
+        runId: null,
+        detailsUrl: "https://app.codecov.io/gh/owner/repo/pull/42",
+      }),
+    };
+    const report = makeReport({ checks: { ...makeReport().checks, failing: [failing] } });
+    const steps = buildCheckInstructions(report);
+    expect(
+      steps.some(
+        (s) =>
+          s.includes("open the check details") &&
+          s.includes("https://app.codecov.io/gh/owner/repo/pull/42"),
+      ),
+    ).toBe(true);
+  });
+
   it("emits escalate-to-human hint when runId and detailsUrl are both absent", () => {
     const failing: TriagedCheck = {
       ...makeCheck({ name: "build", category: "failing", conclusion: "TIMED_OUT", runId: null }),

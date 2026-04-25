@@ -255,6 +255,24 @@ describe("triageFailingChecks — failedStep", () => {
     expect(result!.failedStep).toBe("Run tests");
   });
 
+  it("falls back to matchedJobs[0] when no job has a non-success conclusion", async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        makeJobsResponse([
+          {
+            id: 7,
+            name: "tests",
+            conclusion: null as unknown as string,
+            steps: [],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(makeErrorResponse(404));
+    const [result] = await triageFailingChecks([makeCheck()], REPO, LOG_TAIL_LINES);
+    expect(result!.jobName).toBe("tests");
+    expect(result!.failedStep).toBeUndefined();
+  });
+
   it("falls back to prefix match for matrix jobs when no exact name match", async () => {
     mockFetch
       .mockResolvedValueOnce(
