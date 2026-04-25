@@ -99,6 +99,7 @@ export function buildCooldownResult(prNumber: number, readyDelaySeconds: number)
     status: "UNKNOWN",
     state: "UNKNOWN" as const,
     mergeStateStatus: "UNKNOWN",
+    reviewDecision: null,
     copilotReviewInProgress: false,
     isDraft: false,
     shouldCancel: false,

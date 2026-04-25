@@ -404,22 +404,28 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
 // Human approval pending — cancel after ready-delay elapses
 // ---------------------------------------------------------------------------
 
-describe("runIterate — human approval pending (BLOCKED + REVIEW_REQUIRED)", () => {
-  const blockedApprovalReport = makeReport({
+function makeBlockedReadyReport(reviewDecision: "REVIEW_REQUIRED" | "APPROVED" | null) {
+  return makeReport({
     status: "READY",
     mergeStatus: {
       status: "BLOCKED",
       state: "OPEN" as const,
       isDraft: false,
       mergeable: "MERGEABLE",
-      reviewDecision: "REVIEW_REQUIRED",
+      reviewDecision,
       copilotReviewInProgress: false,
       mergeStateStatus: "BLOCKED",
     },
   });
+}
 
-  it("returns action: wait during the ready-delay window", async () => {
-    mockRunCheck.mockResolvedValue(blockedApprovalReport);
+describe("runIterate — BLOCKED + clean (hand off to humans via ready-delay)", () => {
+  it.each([
+    ["REVIEW_REQUIRED", "REVIEW_REQUIRED" as const],
+    ["APPROVED (insufficient approvals)", "APPROVED" as const],
+    ["null (other branch protection)", null],
+  ])("reviewDecision=%s: returns wait during ready-delay window", async (_label, reviewDecision) => {
+    mockRunCheck.mockResolvedValue(makeBlockedReadyReport(reviewDecision));
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: true,
       shouldCancel: false,
@@ -430,8 +436,12 @@ describe("runIterate — human approval pending (BLOCKED + REVIEW_REQUIRED)", ()
     expect(result.action).toBe("wait");
   });
 
-  it("returns action: cancel when ready-delay has elapsed", async () => {
-    mockRunCheck.mockResolvedValue(blockedApprovalReport);
+  it.each([
+    ["REVIEW_REQUIRED", "REVIEW_REQUIRED" as const],
+    ["APPROVED (insufficient approvals)", "APPROVED" as const],
+    ["null (other branch protection)", null],
+  ])("reviewDecision=%s: returns cancel when ready-delay has elapsed", async (_label, reviewDecision) => {
+    mockRunCheck.mockResolvedValue(makeBlockedReadyReport(reviewDecision));
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: true,
       shouldCancel: true,

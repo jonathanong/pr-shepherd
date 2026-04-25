@@ -15,16 +15,16 @@ export function computeStatus(
   // These merge-blocking states become PENDING (not FAILING) once CI is resolved.
   if (verdict.anyFailing) return "FAILING";
   if (verdict.anyInProgress) return "IN_PROGRESS";
-  // BLOCKED solely because a human reviewer hasn't approved yet — shepherd is done, hand off.
-  // copilotReviewInProgress means a bot still owes a review, which is not this case.
+  // BLOCKED with no remaining shepherd work — hand off via ready-delay regardless of why GitHub
+  // is BLOCKED (review pending, insufficient approvals, branch-protection rule, etc.).
+  // copilotReviewInProgress is still excluded — a bot review is shepherd's problem, not a hand-off.
   if (
     verdict.allPassed &&
     unresolvedThreads === 0 &&
     unresolvedComments === 0 &&
     changesRequestedReviews === 0 &&
     mergeStatus.status === "BLOCKED" &&
-    !mergeStatus.copilotReviewInProgress &&
-    mergeStatus.reviewDecision === "REVIEW_REQUIRED"
+    !mergeStatus.copilotReviewInProgress
   ) {
     return "READY";
   }

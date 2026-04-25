@@ -155,7 +155,9 @@ export function buildWaitLog(base: IterateResultBase): string {
       parts.push("branch is behind base");
       break;
     case "BLOCKED":
-      parts.push("blocked by pending reviews or required status checks");
+      if (base.reviewDecision === "REVIEW_REQUIRED") parts.push("awaiting human review");
+      else if (base.reviewDecision === "APPROVED") parts.push("awaiting additional approvals");
+      else parts.push("awaiting human review or branch protection");
       break;
     case "DRAFT":
       parts.push("PR is a draft");

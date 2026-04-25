@@ -94,6 +94,34 @@ describe("projectIterateLean", () => {
   });
 
   // ---------------------------------------------------------------------------
+  // reviewDecision
+  // ---------------------------------------------------------------------------
+
+  it("omits reviewDecision when mergeStateStatus is not BLOCKED", () => {
+    const result = { ...makeIterateResult("wait"), mergeStateStatus: "CLEAN" as const, reviewDecision: "APPROVED" as const };
+    const lean = projectIterateLean(result) as Record<string, unknown>;
+    expect(lean.reviewDecision).toBeUndefined();
+  });
+
+  it("omits reviewDecision when BLOCKED but null", () => {
+    // fixture already has mergeStateStatus=BLOCKED, reviewDecision=null
+    const lean = projectIterateLean(makeIterateResult("wait")) as Record<string, unknown>;
+    expect(lean.reviewDecision).toBeUndefined();
+  });
+
+  it("includes reviewDecision when BLOCKED and non-null", () => {
+    const result = { ...makeIterateResult("wait"), reviewDecision: "REVIEW_REQUIRED" as const };
+    const lean = projectIterateLean(result) as Record<string, unknown>;
+    expect(lean.reviewDecision).toBe("REVIEW_REQUIRED");
+  });
+
+  it("includes reviewDecision=APPROVED when BLOCKED with insufficient approvals", () => {
+    const result = { ...makeIterateResult("wait"), reviewDecision: "APPROVED" as const };
+    const lean = projectIterateLean(result) as Record<string, unknown>;
+    expect(lean.reviewDecision).toBe("APPROVED");
+  });
+
+  // ---------------------------------------------------------------------------
   // cooldown
   // ---------------------------------------------------------------------------
 

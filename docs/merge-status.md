@@ -42,19 +42,20 @@ GitHub sometimes updates `mergeStateStatus` to `'DRAFT'` before the `isDraft` bo
 
 `state` (OPEN/MERGED/CLOSED) is passed through directly from `BatchPrData` without any transformation. It is used by `iterate.mts` at step 2.5 to cancel the loop for terminal PRs. The merge status derivation logic itself does not branch on `state` — it always derives a `status` regardless of PR state.
 
-### BLOCKED + REVIEW_REQUIRED → ShepherdStatus READY
+### BLOCKED + no remaining shepherd work → ShepherdStatus READY
 
 `deriveMergeStatus` sets `status: "BLOCKED"` whenever `mergeStateStatus` is `BLOCKED`. However, `computeStatus` in `check.mts` overrides this to `ShepherdStatus: "READY"` when all of the following are true:
 
 - `verdict.allPassed` — no failing or in-progress CI checks.
 - No unresolved threads, comments, or changes-requested reviews.
 - `mergeStatus.status === "BLOCKED"` (from `deriveMergeStatus`).
-- `mergeStatus.copilotReviewInProgress === false` — bot review pending means the blocking reason is not solely a human.
-- `mergeStatus.reviewDecision === "REVIEW_REQUIRED"` — explicitly awaiting human approval.
+- `mergeStatus.copilotReviewInProgress === false` — a bot review still pending is shepherd's problem, not a hand-off case.
+
+The specific reason GitHub is BLOCKED (`reviewDecision === "REVIEW_REQUIRED"`, `"APPROVED"` with insufficient approvals, signed-commit policy, etc.) is not consulted — it is informational only, surfaced in the iterate output for human/agent readers but not used to gate state. Shepherd cannot resolve any of these on its own.
 
 In this case `mergeStatus.status` in the report is still `BLOCKED` (truthful about the GitHub merge state), but the top-level `ShepherdStatus` is `READY`, signalling that shepherd has nothing more to do. The ready-delay timer starts, and `action: cancel` is emitted after it elapses.
 
-Any `BLOCKED` case that does not satisfy all of the above conditions (e.g. Copilot review in progress, unresolved threads, or `reviewDecision` is null) maps to `ShepherdStatus: "PENDING"` rather than `"FAILING"`. The same applies to `UNSTABLE` (non-required checks are red but merge is not fully blocked) and `BEHIND` (head branch is out of date). `FAILING` is reserved for red CI checks (`verdict.anyFailing`) and merge conflicts (`CONFLICTS`).
+A `BLOCKED` case that does not satisfy the above (e.g. Copilot review in progress, unresolved threads, or failing CI) maps to `ShepherdStatus: "PENDING"`. The same applies to `UNSTABLE` (non-required checks are red but merge is not fully blocked) and `BEHIND` (head branch is out of date). `FAILING` is reserved for red CI checks (`verdict.anyFailing`) and merge conflicts (`CONFLICTS`).
 
 ## Copilot detection
 
