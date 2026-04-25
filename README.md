@@ -15,7 +15,7 @@ Example Workflow:
 
 ## How it works
 
-`pr-shepherd` optimizes performance, rate limits, and orchestration by moving **ALL** logic and prompts to code via a CLI tool, enshrining what would be a large skill or command prompt (which the agent would inevitably make mistakes on) into the code and returning a clear, actionable prompt.
+`pr-shepherd` optimizes token management, rate limits, and agentic orchestration by moving **ALL** deterministic logic and prompts to code via a CLI tool, enshrining what would be a large skill or command prompt (of which the agent would inevitably make mistakes) into the code and returning a clear, actionable prompt.
 
 At a high-level, to start the monitor, the skill/command invokes a CLI that invokes a prompt:
 
