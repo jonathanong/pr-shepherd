@@ -77,8 +77,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     }
   }
 
-  const firstLookTotal =
-    result.fix.firstLookThreads.length + result.fix.firstLookComments.length;
+  const firstLookTotal = result.fix.firstLookThreads.length + result.fix.firstLookComments.length;
   if (firstLookTotal > 0) {
     sections.push(
       `## First-look items (${firstLookTotal}) — already closed on GitHub; acknowledge only`,
@@ -89,10 +88,14 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
         ? `[status: outdated, auto-resolved]`
         : `[status: ${t.firstLookStatus}]`;
       const loc = t.path ? `\`${t.path}:${t.line ?? "?"}\`` : "(no location)";
-      bullets.push(`- \`${t.id}\` ${loc} (@${t.author}) ${statusTag}: ${t.body.split("\n")[0]?.slice(0, 100) ?? ""}`);
+      bullets.push(
+        `- \`${t.id}\` ${loc} (@${t.author}) ${statusTag}: ${t.body.split("\n")[0]?.slice(0, 100) ?? ""}`,
+      );
     }
     for (const c of result.fix.firstLookComments) {
-      bullets.push(`- \`${c.id}\` (@${c.author}) [status: minimized]: ${c.body.split("\n")[0]?.slice(0, 100) ?? ""}`);
+      bullets.push(
+        `- \`${c.id}\` (@${c.author}) [status: minimized]: ${c.body.split("\n")[0]?.slice(0, 100) ?? ""}`,
+      );
     }
     sections.push(bullets.join("\n"));
   }

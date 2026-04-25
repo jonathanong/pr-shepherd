@@ -66,29 +66,30 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   const visibleComments = data.comments.filter((c) => !c.isMinimized);
 
   // First-look: collect items that would normally be hidden and check seen markers.
-  const outdatedCandidates = data.reviewThreads.filter((t) => t.isOutdated && !t.isResolved);
+  const outdatedCandidates = data.reviewThreads.filter((t) => t.isOutdated);
   const resolvedCandidates = data.reviewThreads.filter((t) => t.isResolved && !t.isOutdated);
   const minimizedThreadCandidates = data.reviewThreads.filter(
     (t) => t.isMinimized && !t.isResolved && !t.isOutdated,
   );
   const minimizedCommentCandidates = data.comments.filter((c) => c.isMinimized);
 
-  const [
-    outdatedSeen,
-    resolvedSeen,
-    minimizedThreadSeen,
-    minimizedCommentSeen,
-  ] = await Promise.all([
-    Promise.all(outdatedCandidates.map((t) => hasSeen(stateKey, t.id))),
-    Promise.all(resolvedCandidates.map((t) => hasSeen(stateKey, t.id))),
-    Promise.all(minimizedThreadCandidates.map((t) => hasSeen(stateKey, t.id))),
-    Promise.all(minimizedCommentCandidates.map((c) => hasSeen(stateKey, c.id))),
-  ]);
+  const [outdatedSeen, resolvedSeen, minimizedThreadSeen, minimizedCommentSeen] = await Promise.all(
+    [
+      Promise.all(outdatedCandidates.map((t) => hasSeen(stateKey, t.id))),
+      Promise.all(resolvedCandidates.map((t) => hasSeen(stateKey, t.id))),
+      Promise.all(minimizedThreadCandidates.map((t) => hasSeen(stateKey, t.id))),
+      Promise.all(minimizedCommentCandidates.map((c) => hasSeen(stateKey, c.id))),
+    ],
+  );
 
   const unseenOutdated = outdatedCandidates.filter((_, i) => !outdatedSeen[i]);
   const unseenResolved = resolvedCandidates.filter((_, i) => !resolvedSeen[i]);
-  const unseenMinimizedThreads = minimizedThreadCandidates.filter((_, i) => !minimizedThreadSeen[i]);
-  const unseenMinimizedComments = minimizedCommentCandidates.filter((_, i) => !minimizedCommentSeen[i]);
+  const unseenMinimizedThreads = minimizedThreadCandidates.filter(
+    (_, i) => !minimizedThreadSeen[i],
+  );
+  const unseenMinimizedComments = minimizedCommentCandidates.filter(
+    (_, i) => !minimizedCommentSeen[i],
+  );
 
   // Auto-resolve outdated (same as before — fires regardless of first-look status).
   const outdated = getOutdatedThreads(unresolvedThreads);
@@ -131,8 +132,8 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
     firstLookStatus: "minimized" as const,
   }));
 
-  // Mark first-look items as seen (best-effort, fire-and-forget).
-  void Promise.allSettled([
+  // Mark first-look items as seen (best-effort — markSeen never throws).
+  await Promise.allSettled([
     ...firstLookThreads.map((t) => markSeen(stateKey, t.id)),
     ...firstLookComments.map((c) => markSeen(stateKey, c.id)),
   ]);

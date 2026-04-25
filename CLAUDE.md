@@ -62,39 +62,45 @@ CLI output that targets a human or an AI agent must be easy to read and act on:
 
 ## Comment visibility invariant
 
-Every review thread, PR comment, and review summary must be surfaced to the
-agent **at least once**, even if it is outdated, resolved, or minimized.
-Filtering those out before the agent sees them silently discards reviewer
-intent.
+Every review thread and PR comment must be surfaced to the agent **at least
+once**, even if it is outdated, resolved, or minimized. Filtering those out
+before the agent sees them silently discards reviewer intent.
 
-Each first-look item must carry its current status — `outdated`, `resolved`,
-`auto-resolved` (closed by Shepherd this run), or `minimized` — so the agent
-can classify it (Acknowledge / Note / etc.) rather than attempt to fix code
-that no longer exists.
+Each first-look item carries its current status (`outdated`, `resolved`, or
+`minimized`). Outdated threads also carry an `autoResolved` boolean that is
+`true` when Shepherd closed the thread during this run (rendered as
+`[status: outdated, auto-resolved]` in output).
 
 To avoid re-surfacing items on every fetch, a per-item "seen" marker is
 written after first display. Markers live at:
 
 ```
-$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/seen/<id>.json
+$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/seen/<id>.json
 ```
 
-One file per id — file existence is the marker. Concurrent writers are
-race-free because writes are idempotent (same content on double-write) and
-reads are monotonic (once seen, stays seen). The JSON payload is
+One file per id — file existence is the marker. The marker is written with
+`O_EXCL` (exclusive create), so double-writes preserve the original `seenAt`
+timestamp and are safe under concurrent invocations. The JSON payload is
 `{ "seenAt": <unix> }` today; the schema is intentionally open so future
 fields (classification, agent-reply, etc.) can be added without breaking
 readers. Do not adopt formats that lock the schema (empty touch files, a
 single shared list).
 
-Any new code path that filters threads, comments, or reviews by `isResolved`,
+Any new code path that filters threads or comments by `isResolved`,
 `isOutdated`, or `isMinimized` must route them through the seen-marker gate
 before suppression — never drop them outright.
+
+**Scope note:** Minimized review summaries (`COMMENTED` reviews whose body
+has been minimized) are not yet covered — surfacing them would require
+fetching minimized reviews from the batch query, which is tracked as future
+work. The `reviewSummaries` field on `ShepherdReport` already excludes
+minimized summaries at the batch-parser level.
 
 Implementation lives in `src/state/seen-comments.mts`. The two call sites
 are `src/commands/resolve.mts` (surfaced in `resolve --fetch` output under
 `## First-look items`) and `src/commands/check.mts` (surfaced in iterate's
-`fix_code` output under `## First-look items`).
+`fix_code` output and in `pr-shepherd check` text output under `## First-look
+items`).
 
 ## Keep skills and loop prompts minimal
 

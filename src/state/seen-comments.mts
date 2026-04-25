@@ -1,20 +1,4 @@
-/**
- * Per-item "seen" markers for review threads, PR comments, and reviews.
- *
- * Ensures every review item is surfaced to the agent at least once, even when
- * it is outdated, resolved, or minimized. Each marker is a small JSON file at
- * `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/seen/<id>.json`.
- *
- * Schema: `{ seenAt: number }` — open object so future fields (e.g.
- * `classification`, `agentReply`) can be added without breaking readers.
- *
- * Race safety: writes are idempotent (same content on double-write) and
- * `hasSeen` is monotonic (once true, stays true). Concurrent calls from
- * parallel invocations are safe without locking.
- */
-
-import { readFile, writeFile, rename, unlink, mkdir, access } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
+import { readFile, writeFile, mkdir, access } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { SAFE_SEGMENT } from "../util/path-segment.mts";
@@ -49,27 +33,15 @@ export async function hasSeen(key: StateKey, id: string): Promise<boolean> {
   }
 }
 
-/** Write a "seen" marker for this id (fire-and-forget — never throws). */
+/** Write a "seen" marker for this id. Idempotent — preserves original seenAt on double-write. */
 export async function markSeen(key: StateKey, id: string): Promise<void> {
-  let tmp: string | undefined;
   try {
     const path = resolvePath(key, id);
-    tmp = `${path}.${randomUUID()}.tmp`;
-    const marker: SeenMarker = { seenAt: Date.now() };
     await mkdir(dirname(path), { recursive: true });
-    await writeFile(tmp, JSON.stringify(marker), "utf8");
-    await rename(tmp, path);
-    tmp = undefined;
+    // O_EXCL: create-only — EEXIST means already marked, which is the idempotent success case.
+    await writeFile(path, JSON.stringify({ seenAt: Date.now() }), { flag: "wx", encoding: "utf8" });
   } catch {
-    // Best-effort.
-  } finally {
-    if (tmp !== undefined) {
-      try {
-        await unlink(tmp);
-      } catch {
-        // Best-effort cleanup.
-      }
-    }
+    // EEXIST = already seen. All other errors are best-effort.
   }
 }
 
@@ -98,5 +70,5 @@ function resolvePath(key: StateKey, id: string): string {
     }
   }
   const base = process.env["PR_SHEPHERD_STATE_DIR"] ?? join(tmpdir(), "pr-shepherd-state");
-  return join(base, `${key.owner}-${key.repo}`, String(key.pr), "seen", `${id}.json`);
+  return join(base, key.owner, key.repo, String(key.pr), "seen", `${id}.json`);
 }

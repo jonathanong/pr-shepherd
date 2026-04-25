@@ -251,6 +251,7 @@ describe("formatText — threads and comments", () => {
         actionable: [],
         autoResolved: [makeThread({ id: "t-1", path: "src/bar.ts", line: 5, author: "bob" })],
         autoResolveErrors: [],
+        firstLook: [],
       },
     });
     const out = formatText(report);
@@ -265,6 +266,7 @@ describe("formatText — threads and comments", () => {
         actionable: [],
         autoResolved: [],
         autoResolveErrors: ["thread-x: GraphQL error"],
+        firstLook: [],
       },
     });
     const out = formatText(report);
@@ -278,6 +280,7 @@ describe("formatText — threads and comments", () => {
         actionable: [makeThread({ id: "t-1", path: null, line: null, author: "alice" })],
         autoResolved: [],
         autoResolveErrors: [],
+        firstLook: [],
       },
     });
     const out = formatText(report);
@@ -290,6 +293,7 @@ describe("formatText — threads and comments", () => {
         actionable: [makeThread({ id: "t-2", path: "src/index.ts", line: 42, author: "alice" })],
         autoResolved: [],
         autoResolveErrors: [],
+        firstLook: [],
       },
     });
     const out = formatText(report);
@@ -303,6 +307,7 @@ describe("formatText — threads and comments", () => {
         actionable: [makeThread({ body: longBody })],
         autoResolved: [],
         autoResolveErrors: [],
+        firstLook: [],
       },
     });
     const out = formatText(report);
@@ -321,7 +326,7 @@ describe("formatText — threads and comments", () => {
       createdAtUnix: 1_700_000_000,
     };
     const report = makeReport({
-      comments: { actionable: [comment] },
+      comments: { actionable: [comment], firstLook: [] },
     });
     const out = formatText(report);
     expect(out).toContain("## PR Comments");
@@ -350,6 +355,7 @@ describe("formatText — summary line", () => {
         actionable: [makeThread(), makeThread({ id: "t-2" })],
         autoResolved: [],
         autoResolveErrors: [],
+        firstLook: [],
       },
     });
     const out = formatText(report);

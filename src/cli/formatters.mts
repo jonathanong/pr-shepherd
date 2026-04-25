@@ -80,8 +80,9 @@ export function formatFetchResult(result: FetchResult): string {
       const statusTag = t.autoResolved
         ? `[status: outdated, auto-resolved]`
         : `[status: ${t.firstLookStatus}]`;
+      const loc = t.path ? `\`${t.path}:${t.line ?? "?"}\`` : "(no location)";
       bullets.push(
-        `- \`threadId=${t.id}\` \`${t.path ?? ""}:${t.line ?? "?"}\` (@${t.author}) ${statusTag}: ${t.body.split("\n")[0]?.slice(0, 100) ?? ""}`,
+        `- \`threadId=${t.id}\` ${loc} (@${t.author}) ${statusTag}: ${t.body.split("\n")[0]?.slice(0, 100) ?? ""}`,
       );
     }
     for (const c of result.firstLookComments) {

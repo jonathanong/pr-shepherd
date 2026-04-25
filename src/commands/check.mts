@@ -106,20 +106,21 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
 
   const activeThreads = unresolvedThreads.filter((t) => !t.isOutdated);
   // First-look: collect previously-hidden items not yet seen by the agent.
-  const outdatedCandidates = batchData.reviewThreads.filter((t) => t.isOutdated && !t.isResolved);
+  const outdatedCandidates = batchData.reviewThreads.filter((t) => t.isOutdated);
   const resolvedCandidates = batchData.reviewThreads.filter((t) => t.isResolved && !t.isOutdated);
   const minimizedThreadCandidates = batchData.reviewThreads.filter(
     (t) => t.isMinimized && !t.isResolved && !t.isOutdated,
   );
   const minimizedCommentCandidates = batchData.comments.filter((c) => c.isMinimized);
 
-  const [outdatedSeen, resolvedSeen, minimizedThreadSeen, minimizedCommentSeen] = await Promise.all([
-    Promise.all(outdatedCandidates.map((t) => hasSeen(stateKey, t.id))),
-    Promise.all(resolvedCandidates.map((t) => hasSeen(stateKey, t.id))),
-    Promise.all(minimizedThreadCandidates.map((t) => hasSeen(stateKey, t.id))),
-    Promise.all(minimizedCommentCandidates.map((c) => hasSeen(stateKey, c.id))),
-  ]);
-
+  const [outdatedSeen, resolvedSeen, minimizedThreadSeen, minimizedCommentSeen] = await Promise.all(
+    [
+      Promise.all(outdatedCandidates.map((t) => hasSeen(stateKey, t.id))),
+      Promise.all(resolvedCandidates.map((t) => hasSeen(stateKey, t.id))),
+      Promise.all(minimizedThreadCandidates.map((t) => hasSeen(stateKey, t.id))),
+      Promise.all(minimizedCommentCandidates.map((c) => hasSeen(stateKey, c.id))),
+    ],
+  );
   const autoResolvedIds = new Set(autoResolved.map((t) => t.id));
   const firstLookThreads: FirstLookThread[] = [
     ...outdatedCandidates
@@ -136,13 +137,12 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
       .filter((_, i) => !minimizedThreadSeen[i])
       .map((t) => ({ ...t, firstLookStatus: "minimized" as const })),
   ];
-
   const firstLookComments: FirstLookComment[] = minimizedCommentCandidates
     .filter((_, i) => !minimizedCommentSeen[i])
     .map((c) => ({ ...c, firstLookStatus: "minimized" as const }));
 
-  // Mark first-look items as seen (best-effort, fire-and-forget).
-  void Promise.allSettled([
+  // Mark first-look items as seen (best-effort — markSeen never throws).
+  await Promise.allSettled([
     ...firstLookThreads.map((t) => markSeen(stateKey, t.id)),
     ...firstLookComments.map((c) => markSeen(stateKey, c.id)),
   ]);

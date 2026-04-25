@@ -321,7 +321,9 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
   it("instructions single step when no actionable items", async () => {
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({}) });
     const result = await runResolveFetch(BASE_OPTS);
-    expect(result.instructions).toEqual(["No actionable items and no first-look items — end this invocation."]);
+    expect(result.instructions).toEqual([
+      "No actionable items and no first-look items — end this invocation.",
+    ]);
   });
 
   it("instructions include commit-suggestion step when enabled and suggestion present", async () => {
