@@ -47,6 +47,7 @@ export function parseRawPr(
       startLine: comment?.startLine ?? null,
       author: comment?.author?.login ?? "unknown",
       body: comment?.body ?? "",
+      url: comment?.url ?? "",
       createdAtUnix: comment ? parseCreatedAt(comment.createdAt) : 0,
     };
   });
@@ -56,6 +57,7 @@ export function parseRawPr(
     isMinimized: c.isMinimized,
     author: c.author?.login ?? "unknown",
     body: c.body,
+    url: c.url,
     createdAtUnix: parseCreatedAt(c.createdAt),
   }));
 

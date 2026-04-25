@@ -209,6 +209,7 @@ const THREAD = {
   startLine: null,
   author: "reviewer",
   body: "Fix this",
+  url: "",
   createdAtUnix: NOW - 3600,
 };
 

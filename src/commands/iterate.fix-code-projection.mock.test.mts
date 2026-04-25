@@ -223,6 +223,7 @@ describe("runIterate — fix_code agent projection", () => {
       startLine: null,
       author: "alice",
       body: "Please fix this",
+      url: "",
       createdAtUnix: 1700000000,
     };
     mockRunCheck.mockResolvedValue(
@@ -259,6 +260,7 @@ describe("runIterate — fix_code agent projection", () => {
       isMinimized: false,
       author: "bob",
       body: "Consider renaming this",
+      url: "",
       createdAtUnix: 1700000000,
     };
     mockRunCheck.mockResolvedValue(

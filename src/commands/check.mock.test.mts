@@ -224,6 +224,7 @@ describe("runCheck — BLOCKED + clean (hand off to humans)", () => {
             startLine: null,
             author: "alice",
             body: "fix this",
+            url: "",
             createdAtUnix: 0,
           },
         ],
@@ -316,6 +317,7 @@ describe("runCheck — minimized thread filtering", () => {
             startLine: null,
             author: "alice",
             body: "fix this",
+            url: "",
             createdAtUnix: 0,
           },
           {
@@ -328,6 +330,7 @@ describe("runCheck — minimized thread filtering", () => {
             startLine: null,
             author: "gemini-code-assist",
             body: "You have reached your daily quota limit.",
+            url: "",
             createdAtUnix: 0,
           },
         ],

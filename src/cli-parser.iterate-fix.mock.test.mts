@@ -97,9 +97,10 @@ describe("main — iterate text format (fix_code and checks)", () => {
           line: 10,
           author: "reviewer",
           body: "fix\nsecond line is now preserved",
+          url: "",
         },
       ],
-      actionableComments: [{ id: "PRRC_1", author: "bot", body: "please address" }],
+      actionableComments: [{ id: "PRRC_1", author: "bot", body: "please address", url: "" }],
       noiseCommentIds: ["c-noise-1", "c-noise-2"],
       reviewSummaryIds: [],
       surfacedApprovals: [],
@@ -238,6 +239,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
         line: 1,
         author: "reviewer",
         body: multiParagraphBody,
+        url: "",
       },
     ];
     mockRunIterate.mockResolvedValue(result);
@@ -269,6 +271,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
         line: 1,
         author: "reviewer",
         body: "First line.\r\nSecond line.",
+        url: "",
       },
     ];
     mockRunIterate.mockResolvedValue(result);

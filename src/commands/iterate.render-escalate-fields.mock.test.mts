@@ -209,6 +209,7 @@ const THREAD = {
   startLine: null,
   author: "reviewer",
   body: "Fix this",
+  url: "",
   createdAtUnix: NOW - 3600,
 };
 
@@ -219,6 +220,7 @@ describe("runIterate — prescriptive fields: fix_code noise/actionable split", 
       isMinimized: false,
       author: "bot",
       body: "You have reached your daily quota",
+      url: "",
       createdAtUnix: NOW,
     };
     const realComment = {
@@ -226,6 +228,7 @@ describe("runIterate — prescriptive fields: fix_code noise/actionable split", 
       isMinimized: false,
       author: "reviewer",
       body: "Please add a null check here before calling .value()",
+      url: "",
       createdAtUnix: NOW,
     };
     mockRunCheck.mockResolvedValue(
@@ -264,6 +267,7 @@ describe("runIterate — prescriptive fields: fix_code noise/actionable split", 
       isMinimized: false,
       author: "bot",
       body: "rate-limited — try again later",
+      url: "",
       createdAtUnix: NOW,
     };
     const asciiHyphen = {
@@ -271,6 +275,7 @@ describe("runIterate — prescriptive fields: fix_code noise/actionable split", 
       isMinimized: false,
       author: "bot",
       body: "rate-limited - try again in a few minutes",
+      url: "",
       createdAtUnix: NOW,
     };
     const colon = {
@@ -278,6 +283,7 @@ describe("runIterate — prescriptive fields: fix_code noise/actionable split", 
       isMinimized: false,
       author: "bot",
       body: "rate limited: try again later",
+      url: "",
       createdAtUnix: NOW,
     };
     mockRunCheck.mockResolvedValue(
@@ -312,6 +318,7 @@ describe("runIterate — prescriptive fields: fix_code noise/actionable split", 
       isMinimized: false,
       author: "reviewer",
       body: "Fix the types here",
+      url: "",
       createdAtUnix: NOW,
     };
     mockRunCheck.mockResolvedValue(

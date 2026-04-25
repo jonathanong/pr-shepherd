@@ -212,6 +212,7 @@ const THREAD = {
   startLine: null,
   author: "reviewer",
   body: "Fix this",
+  url: "",
   createdAtUnix: NOW - 3600,
 };
 
@@ -382,6 +383,7 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
               isMinimized: false,
               author: "boss",
               body: "See review",
+              url: "",
               createdAtUnix: NOW - 100,
             },
           ],

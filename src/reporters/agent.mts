@@ -18,11 +18,11 @@ import type {
 } from "../types.mts";
 
 export function toAgentThread(t: ReviewThread): AgentThread {
-  return { id: t.id, path: t.path, line: t.line, author: t.author, body: t.body };
+  return { id: t.id, path: t.path, line: t.line, author: t.author, body: t.body, url: t.url };
 }
 
 export function toAgentComment(c: PrComment): AgentComment {
-  return { id: c.id, author: c.author, body: c.body };
+  return { id: c.id, author: c.author, body: c.body, url: c.url };
 }
 
 export function toAgentCheck(c: TriagedCheck): AgentCheck {

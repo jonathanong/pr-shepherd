@@ -81,6 +81,7 @@ function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
     startLine: null,
     author: "alice",
     body: "Use a const here.\n\n```suggestion\nconst x = 10;\n```",
+    url: "",
     createdAtUnix: 0,
     ...overrides,
   };

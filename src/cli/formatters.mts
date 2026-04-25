@@ -27,7 +27,8 @@ export function formatFetchResult(result: FetchResult): string {
       result.actionableThreads
         .map((t) => {
           const suggestionMarker = t.suggestion ? " [suggestion]" : "";
-          return `- \`threadId=${t.id}\` \`${t.path ?? ""}:${t.line ?? "?"}\` (@${t.author})${suggestionMarker}: ${t.body.split("\n")[0]?.slice(0, 100) ?? ""}`;
+          const link = t.url ? ` [↗](${t.url})` : "";
+          return `- \`threadId=${t.id}\`${link} \`${t.path ?? ""}:${t.line ?? "?"}\` (@${t.author})${suggestionMarker}: ${t.body.split("\n")[0]?.slice(0, 100) ?? ""}`;
         })
         .join("\n"),
     );
@@ -37,10 +38,10 @@ export function formatFetchResult(result: FetchResult): string {
     sections.push(`## Actionable PR Comments (${result.actionableComments.length})`);
     sections.push(
       result.actionableComments
-        .map(
-          (c) =>
-            `- \`commentId=${c.id}\` (@${c.author}): ${c.body.split("\n")[0]?.slice(0, 100) ?? ""}`,
-        )
+        .map((c) => {
+          const link = c.url ? ` [↗](${c.url})` : "";
+          return `- \`commentId=${c.id}\`${link} (@${c.author}): ${c.body.split("\n")[0]?.slice(0, 100) ?? ""}`;
+        })
         .join("\n"),
     );
   }

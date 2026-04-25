@@ -340,6 +340,7 @@ describe("runIterate — review summary auto-minimize", () => {
       startLine: null,
       author: "reviewer",
       body: "Use a const here.\n\n```suggestion\nconst foo = 1;\n```",
+      url: "",
       createdAtUnix: NOW - 3600,
     };
     mockRunCheck.mockResolvedValue(

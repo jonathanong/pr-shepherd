@@ -210,6 +210,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
       startLine: null,
       author: "reviewer",
       body: "Fix this bug",
+      url: "",
       createdAtUnix: NOW - 3600,
     };
     const thread2 = {
@@ -222,6 +223,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
       startLine: null,
       author: "reviewer",
       body: "Fix this too",
+      url: "",
       createdAtUnix: NOW - 3600,
     };
     mockRunCheck.mockResolvedValue(
@@ -263,6 +265,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
       startLine: null,
       author: "reviewer",
       body: "Fix this bug",
+      url: "",
       createdAtUnix: NOW - 3600,
     };
     mockRunCheck.mockResolvedValue(
@@ -297,6 +300,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
       startLine: null,
       author: "reviewer",
       body: "Fix this",
+      url: "",
       createdAtUnix: NOW - 3600,
     };
     mockRunCheck.mockResolvedValue(

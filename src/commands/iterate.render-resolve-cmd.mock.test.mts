@@ -359,6 +359,7 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
               startLine: null,
               author: "reviewer",
               body: "fix me",
+              url: "",
               createdAtUnix: NOW - 3600,
             },
           ],

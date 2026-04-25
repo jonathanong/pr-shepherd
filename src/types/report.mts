@@ -81,6 +81,7 @@ export interface AgentThread {
   line: number | null;
   author: string;
   body: string;
+  url: string;
 }
 
 /** Comment shape emitted to the monitor agent — stripped of always-false flags. */
@@ -88,6 +89,7 @@ export interface AgentComment {
   id: string;
   author: string;
   body: string;
+  url: string;
 }
 
 /**

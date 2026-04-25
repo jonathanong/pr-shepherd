@@ -249,6 +249,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       startLine: null,
       author: "reviewer",
       body: "Fix this",
+      url: "",
       createdAtUnix: 1700000000,
     };
     mockRunCheck.mockResolvedValue(

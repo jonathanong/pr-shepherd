@@ -8,7 +8,8 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     sections.push("## Review threads");
     for (const t of result.fix.threads) {
       const loc = t.path ? `\`${t.path}:${t.line ?? "?"}\`` : "(no location)";
-      sections.push(`### \`${t.id}\` — ${loc} (@${t.author})`);
+      const heading = t.url ? `[${t.id}](${t.url})` : `\`${t.id}\``;
+      sections.push(`### ${heading} — ${loc} (@${t.author})`);
       sections.push(blockquote(t.body));
     }
   }
@@ -16,7 +17,8 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
   if (result.fix.actionableComments.length > 0) {
     sections.push("## Actionable comments");
     for (const c of result.fix.actionableComments) {
-      sections.push(`### \`${c.id}\` (@${c.author})`);
+      const heading = c.url ? `[${c.id}](${c.url})` : `\`${c.id}\``;
+      sections.push(`### ${heading} (@${c.author})`);
       sections.push(blockquote(c.body));
     }
   }

@@ -58,6 +58,7 @@ query BatchPr(
             nodes {
               id
               isMinimized
+              url
               author {
                 login
               }
@@ -78,6 +79,7 @@ query BatchPr(
         nodes {
           id
           isMinimized
+          url
           author {
             login
           }
