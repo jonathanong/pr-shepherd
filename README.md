@@ -10,28 +10,130 @@ Example Workflow:
 3. Accept the plan
 4. Switch to Auto Mode
 5. Prompt: `make a PR, then run /pr-shepherd:monitor`
-6. ...
-7. Human reviews PR with passing CI, no open threads, and all comments minimized
+6. Agent makes a draft PR
+7. PR has passing CI -> draft is marked Ready for Review
+8. Review bots begin providing reviews
+9. Agent automatically classifies and fixes review comments based on the Plan
+10. Human reviews PR with a well-documented PR title and description, passing CI, and no open threads/comments/reviews
 
-## Why pr-shepherd
+## How it works
 
-Concrete improvements to an agentic PR-review workflow:
+`pr-shepherd` optimizes token management, rate limits, and agentic orchestration by moving **ALL** deterministic logic and prompts to code via a CLI tool, enshrining what would be a large skill or command prompt (of which the agent would inevitably make mistakes) into the code and returning a clear, actionable prompt.
 
-- **Faster monitor loops** — one batched GraphQL query per tick (see [docs/graphql.md](docs/graphql.md)) instead of N REST round-trips
-- **Lower context usage per iteration** — classification lives in the CLI; the agent receives one decision per tick and never sees raw GraphQL payloads or resolved threads
-- **Prompt-cache friendly** — the 4-minute default tick is tuned to Claude's 5-minute prompt-cache TTL (tunable via `watch.interval`)
-- **Reduced GitHub rate-limit exposure** — one batched GraphQL read per tick; loop-state files (fix-attempts, stall detection, ready-delay timer) are kept in `$TMPDIR/pr-shepherd-state/`
-- **No MCP surface** — skills call the CLI via `npx`; no long-lived MCP server, no extra auth boundary, smaller reasoning surface
-- **Skills over subagents** — skill prompts inject into the main conversation rather than spawning a subagent that reloads CLAUDE.md every turn
-- **Safe to interrupt** — all state lives in the PR on GitHub; the cron loop self-terminates when the PR is merged, closed, or settles after ready-delay
+At a high level, to start the monitor, the skill/command invokes a CLI that returns a prompt to be ingested by the agent _(schematic — paraphrased for brevity; actual output is more detailed)_:
 
-## Design principles
+```
+/pr-shepherd:monitor
 
-- **Reduced agent context** — logic lives in the CLI, not the prompt
-- **Reduced GitHub rate-limit exhaustion** — primary PR state is fetched via a batched GraphQL query
-- **Fewer tool calls** — comment resolutions are batched; resolved threads never reach the agent
-- **Skills over subagents** — subagents reload all CLAUDE.md context on every turn; skills inject into the main conversation instead, keeping cost low
-- **JSON/text parity** — `--format=json` and `--format=text` carry equivalent information; every field in one has a representation in the other
+> npx pr-shepherd monitor 123
+
+# PR #123 [MONITOR]
+
+Loop tag: `# pr-shepherd-loop:pr=123`
+Loop args: `4m --max-turns 50 --expires 8h`
+
+## Loop prompt
+
+# pr-shepherd-loop:pr=123
+
+**IMPORTANT — recurrence rules:** Do not call ScheduleWakeup or /loop. End the turn
+after completing the actions below. The cron job handles the next fire.
+
+Run in a single Bash call:
+  npx pr-shepherd iterate 123 --no-cache
+
+…(self-dedup guidance, error-handling instructions)…
+
+## Instructions
+
+1. Run `CronList`. If any job's prompt contains the loop tag, run the ## Loop prompt inline then stop.
+2. Otherwise, invoke the /loop skill with Loop args and the full ## Loop prompt body.
+```
+
+Each iteration calls `npx pr-shepherd iterate <PR>`, which provides actionable feedback directly to the agent:
+
+```
+> npx pr-shepherd iterate 123
+
+# PR #123 [FIX_CODE]
+
+**status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
+**summary** 3 passing
+
+## Review threads
+
+### `PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate.mts:42` (@alice)
+
+> The variable name is misleading.
+>
+> Consider renaming `x` to `remainingSeconds` so readers don't have to
+> trace back to the declaration to understand its meaning.
+
+## Failing checks
+
+- `24697658766` — `CI › lint / typecheck / test (22.x)`
+  > npx oxfmt
+
+## Post-fix push
+
+- base: `main`
+- resolve: `npx pr-shepherd resolve 123 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
+
+## Instructions
+
+_(schematic — actual steps depend on PR state)_
+
+1. Apply code fixes for each file referenced under `## Review threads`.
+2. For each failing check: examine the log tail to decide — rerun if transient, fix code if real.
+3. Commit changed files.
+4. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`.
+5. Run the `resolve:` command above, substituting `"$HEAD_SHA"`.
+6. Add a `## Shepherd Journal` entry to the PR description for any large decisions made.
+7. Stop this iteration.
+```
+
+On every iteration, a command is returned to instruct the agent exactly what to do. No guessing, no thinking, as few agentic turns as possible:
+
+```
+npx pr-shepherd resolve 123 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"
+```
+
+## Workflow
+
+This system makes opinionated decisions, which may or may not work for your team's workflow.
+
+- The following PR branch protection rules are expected:
+  - There are required status checks
+  - All inline comments are resolved
+- **ALL** comments/threads/reviews will be hidden by default except for PR approvals. The only option here is to hide PR approvals as well.
+  - The primary reason is to optimize tokens by avoiding re-fetching comments and re-adding them to the agent's context.
+  - This also ties hand-in-hand with requiring all inline comments to be resolved.
+  - We also want to avoid storing state as comments can be unresolved/minimized/hidden.
+- `pr-shepherd` keeps the PR title and description up to date, including a journal of decisions with links to comments/threads/reviews (that would be hidden at this point).
+  - This may break your workflow if your PR titles and descriptions are restricted to a specific format.
+- `pr-shepherd` does **NOT** reply to inline comments when resolving them. Doing so would require agentic loops and more tokens. Instead, it updates the PR title & description once per loop with only the relevant information.
+- Branches are currently kept up-to-date with `git push --force-with-lease`. Please make a PR for making `merge <default branch>` an option.
+- Branches are currently only rebased when 1) pushing a commit on a branch that is out of date or 2) there are merge conflicts. It does not continuously rebase the branch (use a merge queue for that).
+- To optimize AI code reviewer tokens, create your pull requests initially as drafts and instruct your AI code reviewers to only code review PRs that are ready for review. `pr-shepherd` will automatically mark PRs as ready for review when all CI passes (can be disabled). If you have no intention of marking your PR as ready for review, then don't run `pr-shepherd`.
+
+Some other workflow improvements:
+
+- `pr-shepherd` knows whether a GitHub Copilot code review is in progress
+- `pr-shepherd` waits 10 minutes (configurable) until after all comments are hidden and CI passes before exiting. The primary reason is to wait for any lingering automated code reviews that do not provide status updates via the GitHub GraphQL API.
+- The agent is instructed to cancel failed CI runs and, when a failure looks transient (e.g. network timeout, runner setup crash), re-run them via `gh run rerun <id> --failed`. The primary reason is to minimize CI costs.
+- `pr-shepherd` supports "commit suggestions" by converting them into a diff, applying them, and then committing them with attribution. This avoids a file read & write. One commit is always made per suggestion to avoid any merge conflicts — in these cases, the agent will resolve the comment manually.
+
+Recommendations:
+
+- Run `pr-shepherd` on all your PRs before you go to sleep so that you wake up to reviewable PRs. As it uses `/loop`, it will continue working when your rate limit window is reset. There is a default timeout of 8 hours and 50 loops before exiting automatically.
+
+## Design Principles
+
+- **Reduced agent context and turns** — logic lives in the CLI, not the prompt. The relevant context is provided automatically to the agent, reducing tool calls.
+- **Reduced GitHub rate-limit exposure** — GraphQL requests are batched when possible
+- **Minimal state** — `pr-shepherd` stores minimal state in `$PR_SHEPHERD_STATE_DIR` (default `$TMPDIR/pr-shepherd-state/`), not in the repository
+- **Classifications and decisions still happen at the agent level** — `pr-shepherd`'s goal is to provide sufficient context to make informed decisions and provide clear actionable steps without writing unreliable code-level heuristics
+- **Configurable** — `pr-shepherd` is configurable via `.pr-shepherdrc.yml`, which is only possible with a light prompt that simply invokes the CLI which returns the prompt.
 
 ## Usage
 
@@ -72,9 +174,9 @@ GitHub has seen the push before resolving).
 
 See [docs/skills.md](docs/skills.md) for full argument reference.
 
-## Workflow
+## Iterate decision loop
 
-On each tick (4-minute default, tunable via `watch.interval`): fetch PR state in one GraphQL batch → classify CI, comments, and merge status → take one action (fix code, rebase, rerun CI, mark ready, or wait). See [docs/iterate-flow.md](docs/iterate-flow.md) for the decision table and [docs/flow.md](docs/flow.md) for the end-to-end flow diagram.
+On each tick (4-minute default, tunable via `watch.interval`): fetch PR state in one GraphQL batch → classify CI, comments, and merge status → take one action (`fix_code`, `mark_ready`, `cancel`, `escalate`, `wait`, or `cooldown`). See [docs/iterate-flow.md](docs/iterate-flow.md) for the decision table and [docs/flow.md](docs/flow.md) for the end-to-end flow diagram.
 
 ## Install
 
@@ -126,7 +228,7 @@ checks:
     - pull_request_target
     - merge_group # add for merge-queue repos
 actions:
-  autoRebase: false # disable for repos that enforce merge commits
+  autoMarkReady: false # disable to stay draft until you manually promote
 ```
 
 Environment variables: `GH_TOKEN` / `GITHUB_TOKEN` (auth; falls back to `gh auth token`), `PR_SHEPHERD_STATE_DIR` (override loop-state base dir).
