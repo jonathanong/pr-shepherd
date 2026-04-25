@@ -1,4 +1,5 @@
-export { formatIterateResult, projectIterateLean } from "./iterate-formatter.mts";
+export { formatIterateResult } from "./iterate-formatter.mts";
+export { projectIterateLean } from "./iterate-lean.mts";
 
 import type { FetchResult } from "../commands/resolve.mts";
 import type { CommitSuggestionResult } from "../types.mts";
