@@ -195,34 +195,7 @@ describe("formatOutputEntry", () => {
 });
 
 describe("truncation", () => {
-  it("truncates large bodies and reports characters", () => {
-    const env = process.env["PR_SHEPHERD_LOG_MAX_BODY"];
-    try {
-      process.env["PR_SHEPHERD_LOG_MAX_BODY"] = "10";
-      // Re-import after env change would be needed for module-level const,
-      // but we can test via formatRequestEntry with a long body
-      // Instead test through formatResponseEntry with a body string >10 chars
-      const longBody = "a".repeat(20);
-      const out = formatResponseEntry({
-        n: 1,
-        kind: "GraphQL",
-        method: "POST",
-        url: "https://api.github.com/graphql",
-        status: 200,
-        durationMs: 10,
-        textBody: longBody,
-      });
-      // MAX_BODY is module-level const — can't change after import, but we can
-      // verify the truncation message format says "characters"
-      // (the actual truncation only fires if we set it before module load)
-      expect(out).toSatisfy((s: string) => s.includes("characters") || !s.includes("truncated"));
-    } finally {
-      if (env === undefined) delete process.env["PR_SHEPHERD_LOG_MAX_BODY"];
-      else process.env["PR_SHEPHERD_LOG_MAX_BODY"] = env;
-    }
-  });
-
-  it("actually truncates when MAX_BODY env is set before module load", async () => {
+  it("truncates when MAX_BODY env is set before module load", async () => {
     const saved = process.env["PR_SHEPHERD_LOG_MAX_BODY"];
     try {
       process.env["PR_SHEPHERD_LOG_MAX_BODY"] = "5";

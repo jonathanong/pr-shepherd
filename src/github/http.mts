@@ -69,6 +69,15 @@ function redactToken(body: string): string {
   return body.replace(/Bearer\s+\S+/gi, "[REDACTED]");
 }
 
+function redactUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    return `${u.origin}${u.pathname}`;
+  } catch {
+    return url;
+  }
+}
+
 type RetryLogFn = (status: number, durationMs: number) => void;
 
 async function requestWithTokenRetry(
@@ -316,7 +325,8 @@ export async function restText(path: string): Promise<string> {
     const location = res.headers.get("location");
     if (location) {
       const n2 = nextEntry();
-      appendEntry(formatRequestEntry({ n: n2, kind: "restText", method: "GET", url: location }));
+      const logUrl = redactUrl(location);
+      appendEntry(formatRequestEntry({ n: n2, kind: "restText", method: "GET", url: logUrl }));
       const t1 = performance.now();
       const redirectRes = await fetch(location);
       const duration2 = Math.round(performance.now() - t1);
@@ -328,7 +338,7 @@ export async function restText(path: string): Promise<string> {
           n: n2,
           kind: "restText",
           method: "GET",
-          url: location,
+          url: logUrl,
           status: redirectRes.status,
           durationMs: duration2,
           contentLength,

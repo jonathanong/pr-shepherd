@@ -23,25 +23,34 @@ export async function setupLog(argv: string[]): Promise<void> {
 
   try {
     const { owner, name } = await getRepoInfo();
-    await initLog({ owner, repo: name });
+    const log = await initLog({ owner, repo: name });
+    if (!log) return;
   } catch {
     return;
   }
 
-  const { markdown: header } = buildSessionHeader(argv);
-  appendEntry(header);
+  try {
+    const { markdown: header } = buildSessionHeader(argv);
+    appendEntry(header);
 
-  const format = detectFormat(argv);
-  const origWrite = process.stdout.write.bind(process.stdout);
-  process.stdout.write = (
-    chunk: string | Uint8Array,
-    encodingOrCb?: BufferEncoding | ((err?: Error | null) => void),
-    cb?: (err?: Error | null) => void,
-  ): boolean => {
-    const text = typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
-    if (text.length > 0) appendEntry(formatOutputEntry(text, format));
-    return typeof encodingOrCb === "function"
-      ? origWrite(chunk, encodingOrCb)
-      : origWrite(chunk, encodingOrCb as BufferEncoding, cb);
-  };
+    const format = detectFormat(argv);
+    const origWrite = process.stdout.write.bind(process.stdout);
+    process.stdout.write = (
+      chunk: string | Uint8Array,
+      encodingOrCb?: BufferEncoding | ((err?: Error | null) => void),
+      cb?: (err?: Error | null) => void,
+    ): boolean => {
+      try {
+        const text = typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
+        if (text.length > 0) appendEntry(formatOutputEntry(text, format));
+      } catch {
+        // Best-effort: logging must never interfere with CLI output.
+      }
+      return typeof encodingOrCb === "function"
+        ? origWrite(chunk, encodingOrCb)
+        : origWrite(chunk, encodingOrCb as BufferEncoding, cb);
+    };
+  } catch {
+    // Best-effort: logging setup must never prevent the CLI from running.
+  }
 }
