@@ -464,3 +464,31 @@ describe("formatText — baseBranch, reviewSummaries, approvedReviews", () => {
     expect(out).not.toContain("## Approved Reviews");
   });
 });
+
+describe("formatText — first-look items", () => {
+  it("renders ## First-look items section", () => {
+    const thread = {
+      ...makeThread({ id: "PRRT_abc", isOutdated: true }),
+      firstLookStatus: "outdated" as const,
+      autoResolved: false,
+    };
+    const comment = {
+      id: "PRRC_xyz",
+      isMinimized: true,
+      author: "bob",
+      body: "nit",
+      createdAtUnix: 0,
+      firstLookStatus: "minimized" as const,
+    };
+    const report = makeReport({
+      threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [thread] },
+      comments: { actionable: [], firstLook: [comment] },
+    });
+    const out = formatText(report);
+    expect(out).toContain("## First-look items");
+    expect(out).toContain("threadId=PRRT_abc");
+    expect(out).toContain("[status: outdated]");
+    expect(out).toContain("commentId=PRRC_xyz");
+    expect(out).toContain("[status: minimized]");
+  });
+});
