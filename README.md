@@ -51,7 +51,7 @@ Run in a single Bash call:
 
 Each iteration calls `npx pr-shepherd iterate <PR>`, which provides actionable feedback directly to the agent:
 
-```bash
+```
 > npx pr-shepherd iterate 123
 
 # PR #123 [FIX_CODE]
@@ -63,11 +63,6 @@ Each iteration calls `npx pr-shepherd iterate <PR>`, which provides actionable f
 
 ### `PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate.mts:42` (@alice)
 
-<!--
-  Return all review threads with IDs for minimization
-  Code suggestions are converted into diffs and can be applied without reading & writing the file
--->
-
 > The variable name is misleading.
 >
 > Consider renaming `x` to `remainingSeconds` so readers don't have to
@@ -75,15 +70,13 @@ Each iteration calls `npx pr-shepherd iterate <PR>`, which provides actionable f
 
 ## Failing checks
 
-<!-- Only failing checks are returned -->
-
 - `24697658766` — `CI › lint / typecheck / test (22.x)`
-  > npx oxfmt <!-- return the exact step it failed, which avoids loading `gh view run <id>` into context for many scenarios -->
+  > npx oxfmt
 
 ## Post-fix push
 
 - base: `main`
-- resolve: `npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
+- resolve: `npx pr-shepherd resolve 123 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
 
 ## Instructions
 
@@ -100,8 +93,8 @@ _(schematic — actual steps depend on PR state)_
 
 On every iteration, a command is returned to instruct the agent exactly what to do. No guessing, no thinking, as few agentic turns as possible:
 
-```bash
-`npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
+```
+npx pr-shepherd resolve 123 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"
 ```
 
 ## Workflow
@@ -109,12 +102,12 @@ On every iteration, a command is returned to instruct the agent exactly what to 
 This system makes opinionated decisions, which may or may not work for your team's workflow.
 
 - The following PR branch protection rules are expected:
-  - There exists status checks that are `required`
+  - There are required status checks
   - All inline comments are resolved
 - **ALL** comments/threads/reviews will be hidden by default except for PR approvals. The only option here is to hide PR approvals as well.
   - The primary reason is to optimize tokens by avoiding re-fetching comments and re-adding them to the agent's context.
   - This also ties hand-in-hand with requiring all inline comments to be resolved.
-  - We also want to avoid storing state as comments can be un-resolved/-minimized/-hidden.
+  - We also want to avoid storing state as comments can be unresolved/minimized/hidden.
 - `pr-shepherd` keeps the PR title and description up to date, including a journal of decisions with links to comments/threads/reviews (that would be hidden at this point).
   - This may break your workflow if your PR titles and descriptions are restricted to a specific format.
 - `pr-shepherd` does **NOT** reply to inline comments when resolving them. Doing so would require agentic loops and more tokens. Instead, it updates the PR title & description once per loop with only the relevant information.
@@ -127,7 +120,7 @@ Some other workflow improvements:
 - `pr-shepherd` knows whether a GitHub Copilot code review is in progress
 - `pr-shepherd` waits 10 minutes (configurable) until after all comments are hidden and CI passes before exiting. The primary reason is to wait for any lingering automated code reviews that do not provide status updates via the GitHub GraphQL API.
 - The agent is instructed to cancel failed CI runs and, when a failure looks transient (e.g. network timeout, runner setup crash), re-run them via `gh run rerun <id> --failed`. The primary reason is to minimize CI costs.
-- `pr-shepherd` supports "commit suggestions" by converting into a diff, applying them, and then committing them with attribution. This avoids a file read & write. One commit is always made per suggestion to avoid any merge conflicts - in these cases, the agent will resolve the comment manually.
+- `pr-shepherd` supports "commit suggestions" by converting them into a diff, applying them, and then committing them with attribution. This avoids a file read & write. One commit is always made per suggestion to avoid any merge conflicts — in these cases, the agent will resolve the comment manually.
 
 Recommendations:
 
@@ -136,10 +129,10 @@ Recommendations:
 ## Design Principles
 
 - **Reduced agent context and turns** — logic lives in the CLI, not the prompt. The relevant context is provided automatically to the agent, reducing tool calls.
-- **Reduced GitHub rate-limit exposure** - GraphQL requests are batched when possible
-- **Minimal state** - `pr-shepherd` stores minimal state in `$PR_SHEPHERD_STATE_DIR` (default `$TMPDIR/pr-shepherd-state/`), not in the repository
-- **Classifications and decisions still happen at the agent level** - `pr-shepherd` goal is to provide sufficient context to make informed decisions and provide clear actionable steps without writing unreliable code-level heuristics
-- **Configurable** - `pr-shepherd` is configurable via `.pr-shepherdrc.yml`, which is only possible with a light prompt that simply invokes the CLI which returns the prompt.
+- **Reduced GitHub rate-limit exposure** — GraphQL requests are batched when possible
+- **Minimal state** — `pr-shepherd` stores minimal state in `$PR_SHEPHERD_STATE_DIR` (default `$TMPDIR/pr-shepherd-state/`), not in the repository
+- **Classifications and decisions still happen at the agent level** — `pr-shepherd`'s goal is to provide sufficient context to make informed decisions and provide clear actionable steps without writing unreliable code-level heuristics
+- **Configurable** — `pr-shepherd` is configurable via `.pr-shepherdrc.yml`, which is only possible with a light prompt that simply invokes the CLI which returns the prompt.
 
 ## Usage
 
