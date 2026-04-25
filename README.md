@@ -106,6 +106,10 @@ Some other workflow improvements:
 - `pr-shepherd` is instructed to cancel failed CI runs or re-run flaky CI runs. The primary reason is to minimize CI costs.
 - `pr-shepherd` supports "commit suggestions" by converting into a diff, applying them, and then committing them with attribution. This avoids a file read & write. One commit is always made per suggestion to avoid any merge conflicts - in these cases, the agent will resolve the comment manually.
 
+Recommendations:
+
+- Run `pr-shepherd` on all your PRs before you go to sleep so that you wake up to reviewable PRs. As it uses `/loop`, it will continue working when your rate limit window is reset. There is a default timeout of 8 hours and 50 loops before exiting automatically.
+
 ## Design Principles
 
 - **Reduced agent context and turns** — logic lives in the CLI, not the prompt. The relevant context is provided automatically to the agent, reducing tool calls.
