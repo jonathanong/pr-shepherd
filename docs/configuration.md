@@ -49,23 +49,21 @@ actions:
 | `iterate.cooldownSeconds`                   | `30`                                      | Wait after a push before reading CI                                                                               |
 | `iterate.fixAttemptsPerThread`              | `3`                                       | Max fix attempts per unresolved thread before `escalate`                                                          |
 | `iterate.stallTimeoutMinutes`               | `30`                                      | Minutes the loop may repeat the same action without progress before `escalate` with `stall-timeout`; `0` disables |
-| `iterate.minimizeReviewSummaries.bots`      | `true`                                    | Auto-minimize COMMENTED review summaries from bot authors; surfaced (not dropped) when `false`                    |
-| `iterate.minimizeReviewSummaries.humans`    | `true`                                    | Auto-minimize COMMENTED review summaries from human authors; surfaced when `false`                                |
-| `iterate.minimizeReviewSummaries.approvals` | `false`                                   | Opt in to minimize APPROVED-state reviews (also enables >50-approval pagination)                                  |
-| `watch.interval`                            | `"4m"`                                    | Monitor tick interval (tuned to Claude's 5-min prompt-cache TTL)                                                  |
-| `watch.readyDelayMinutes`                   | `10`                                      | Settle window after READY before the monitor loop cancels                                                         |
-| `watch.expiresHours`                        | `8`                                       | Max lifetime of a monitor cron job                                                                                |
-| `watch.maxTurns`                            | `50`                                      | Max monitor ticks per session                                                                                     |
-| `resolve.concurrency`                       | `4`                                       | Parallel fanout for per-thread GraphQL fetches                                                                    |
-| `resolve.shaPoll.intervalMs`                | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                  |
-| `resolve.shaPoll.maxAttempts`               | `10`                                      | Max `--require-sha` polls before giving up                                                                        |
-| `resolve.fetchReviewSummaries`              | `true`                                    | Surface `COMMENTED` review summaries in `resolve --fetch` output                                                  |
-| `checks.ciTriggerEvents`                    | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos)                                  |
-| `checks.logTailLines`                       | `200`                                     | Lines of job log to include in `logTail` for each failing check (set 0 to disable log fetching)                   |
-| `mergeStatus.blockingReviewerLogins`        | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                            |
-| `actions.autoResolveOutdated`               | `true`                                    | Auto-resolve threads that point to code no longer in the PR diff                                                  |
-| `actions.autoMarkReady`                     | `true`                                    | Emit `mark_ready` when a draft PR's CI goes clean                                                                 |
-| `actions.commitSuggestions`                 | `true`                                    | Route `/pr-shepherd:resolve` through `commit-suggestion` (singular) for threads with a ` ```suggestion ` block    |
+| `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination). All `COMMENTED` summaries are always minimized. |
+| `watch.interval`                     | `"4m"`                                    | Monitor tick interval (tuned to Claude's 5-min prompt-cache TTL)                                                                       |
+| `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                                                              |
+| `watch.expiresHours`                 | `8`                                       | Max lifetime of a monitor cron job                                                                                                     |
+| `watch.maxTurns`                     | `50`                                      | Max monitor ticks per session                                                                                                          |
+| `resolve.concurrency`                | `4`                                       | Parallel fanout for per-thread GraphQL fetches                                                                                         |
+| `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                                       |
+| `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                                                             |
+| `resolve.fetchReviewSummaries`       | `true`                                    | Surface `COMMENTED` review summaries in `resolve --fetch` output                                                                       |
+| `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos)                                                       |
+| `checks.logTailLines`                | `200`                                     | Lines of job log to include in `logTail` for each failing check (set 0 to disable log fetching)                                        |
+| `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                                                 |
+| `actions.autoResolveOutdated`        | `true`                                    | Auto-resolve threads that point to code no longer in the PR diff                                                                       |
+| `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR's CI goes clean                                                                                      |
+| `actions.commitSuggestions`          | `true`                                    | Route `/pr-shepherd:resolve` through `commit-suggestion` (singular) for threads with a ` ```suggestion ` block                         |
 
 ---
 

@@ -46,7 +46,7 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
   const config = loadConfig();
   // Only paginate APPROVED reviews when the caller will actually minimize them.
   // Otherwise the first-page cap of 50 (already in the batch) is plenty — no extra round-trip.
-  const paginateApprovedReviews = config.iterate.minimizeReviewSummaries.approvals;
+  const paginateApprovedReviews = config.iterate.minimizeApprovals;
   const result = await fetchPrBatch(prNumber, repo, { paginateApprovedReviews });
   let batchData = result.data;
 
