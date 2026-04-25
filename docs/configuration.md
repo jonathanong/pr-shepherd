@@ -11,6 +11,7 @@ iterate:
   cooldownSeconds: 60 # wait 60s after a push before reading CI
   fixAttemptsPerThread: 5 # raise before escalating to manual review
   stallTimeoutMinutes: 30 # escalate if state unchanged for this many minutes
+  minimizeApprovals: false # set true to also minimize APPROVED-state reviews
 
 watch:
   interval: 4m # /loop cadence
@@ -37,9 +38,6 @@ actions:
   autoResolveOutdated: true
   autoMarkReady: true
   commitSuggestions: true
-
-iterate:
-  minimizeApprovals: false # set true to also minimize APPROVED-state reviews
 ```
 
 ---
@@ -98,13 +96,11 @@ Override per-invocation with `--stall-timeout <duration>` (e.g. `--stall-timeout
 - **Lower** if you want faster escalation when a PR gets stuck.
 - **Set to `0`** to disable stall detection entirely.
 
-### `iterate.minimizeApprovals`
+### `iterate.minimizeApprovals` — default `false`
 
 **Breaking change from `iterate.minimizeReviewSummaries.{bots, humans, approvals}`** — the old nested keys are no longer recognized.
 
 All `COMMENTED` review summaries (bot and human alike) are always minimized by the monitor / `iterate` loop. Review summary IDs ride along inside the existing resolve command — no code change needed to minimize them. Rendered under `## Review summaries (minimize only)` in the iterate markdown output.
-
-#### `iterate.minimizeApprovals` — default `false`
 
 Opt in to also minimize `APPROVED`-state reviews (`pr approve` clicks with or without a body). Off by default because approvals are an affirmative signal you usually want to keep visible. Flip to `true` for long-running PRs where stale approvals pile up.
 
