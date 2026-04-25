@@ -214,7 +214,7 @@ describe("projectIterateLean", () => {
     expect(fix.actionableComments).toBeUndefined();
     expect(fix.noiseCommentIds).toBeUndefined();
     expect(fix.reviewSummaryIds).toBeUndefined();
-    expect(fix.surfacedSummaries).toBeUndefined();
+    expect(fix.surfacedApprovals).toBeUndefined();
     expect(fix.checks).toBeUndefined();
     expect(fix.changesRequestedReviews).toBeUndefined();
     // fixture has one default instruction ("End this iteration."), so it is present
@@ -226,13 +226,13 @@ describe("projectIterateLean", () => {
   it("fix_code (rich payload): includes non-empty arrays, omits empty ones", () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
-    result.fix.threads = [{ id: "t1", path: "src/x.ts", line: 1, author: "a", body: "fix" }];
+    result.fix.threads = [{ id: "t1", path: "src/x.ts", line: 1, author: "a", body: "fix", url: "" }];
     result.fix.checks = [{ name: "ci", runId: "r1", detailsUrl: null, failureKind: "actionable" }];
     result.fix.instructions = ["step 1"];
-    result.fix.actionableComments = [{ id: "c1", author: "a", body: "nit" }];
+    result.fix.actionableComments = [{ id: "c1", author: "a", body: "nit", url: "" }];
     result.fix.noiseCommentIds = ["c2"];
     result.fix.reviewSummaryIds = ["r1"];
-    result.fix.surfacedSummaries = [{ id: "s1", author: "a", body: "summary" }];
+    result.fix.surfacedApprovals = [{ id: "s1", author: "a", body: "summary" }];
     result.fix.changesRequestedReviews = [{ id: "rv1", author: "a", body: "" }];
     result.checks = [
       {
@@ -254,7 +254,7 @@ describe("projectIterateLean", () => {
     expect((fix.actionableComments as unknown[]).length).toBe(1);
     expect((fix.noiseCommentIds as unknown[]).length).toBe(1);
     expect((fix.reviewSummaryIds as unknown[]).length).toBe(1);
-    expect((fix.surfacedSummaries as unknown[]).length).toBe(1);
+    expect((fix.surfacedApprovals as unknown[]).length).toBe(1);
     expect((fix.changesRequestedReviews as unknown[]).length).toBe(1);
     expect((lean.cancelled as unknown[]).length).toBe(1);
   });
@@ -281,9 +281,9 @@ describe("projectIterateLean", () => {
     if (result.action !== "escalate") throw new Error("unreachable");
     result.escalate.triggers = ["fix-thrash"];
     result.escalate.unresolvedThreads = [
-      { id: "t1", path: "f.ts", line: 1, author: "a", body: "b" },
+      { id: "t1", path: "f.ts", line: 1, author: "a", body: "b", url: "" },
     ];
-    result.escalate.ambiguousComments = [{ id: "c1", author: "a", body: "?" }];
+    result.escalate.ambiguousComments = [{ id: "c1", author: "a", body: "?", url: "" }];
     result.escalate.changesRequestedReviews = [{ id: "rv1", author: "a", body: "" }];
     result.escalate.attemptHistory = [{ threadId: "t1", attempts: 3 }];
 
