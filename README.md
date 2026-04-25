@@ -94,8 +94,16 @@ This system makes opinionated decisions, which may or may not work for your team
   - We also want to avoid storing state as comments can be un-resolved/-minimized/-hidden.
 - `pr-shepherd` keeps the PR title and description up to date, including a journal of decisions with links to comments/threads/reviews (that would be hidden at this point).
   - This may break your workflow if your PR titles and descriptions are restricted to a specific format.
+- `pr-shepherd` does **NOT** reply to inline comments when resolving them. Doing so would require agentic loops and more tokens. Instead, it updates the PR title & description once per loop with only the relevant information.
 - Branches are currently kept up-to-date with `git push --force-with-lease`.
 - To optimize AI code reviewer tokens, create your pull requests initially as drafts and instruct your AI code reviewers to only code review PRs that are ready for review. `pr-shepherd` will automatically mark PRs as ready for review when all CI passes (can be disabled). If you have no intention of marking your PR as ready for review, then don't run `pr-shepherd`.
+
+Some other workflow improvements:
+
+- `pr-shepherd` knows whether a GitHub Copilot code review is in progress
+- `pr-shepherd` waits 10 minutes (configurable) until after all comments are hidden and CI passes before exiting. The primary reason is to wait for any lingering automated code reviews that do not provide status updates via the GitHub GraphQL API.
+- `pr-shepherd` is instructed to cancel failed CI runs or re-run flaky CI runs. The primary reason is to minimize CI costs.
+- `pr-shepherd` supports "commit suggestions" by converting into a diff, applying them, and then committing them with attribution. This avoids a file read & write. One commit is always made per suggestion to avoid any merge conflicts - in these cases, the agent will resolve the comment manually.
 
 ## Why pr-shepherd
 
