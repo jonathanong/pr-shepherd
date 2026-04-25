@@ -206,10 +206,12 @@ Actionable work needs a code fix, commit, and push.
 
 - `24697658766` — `CI › lint / typecheck / test (22.x)`
   > Run tests
-  ```
-  Error: 2 tests failed
-  AssertionError: expected true to be false
-  ```
+```
+
+Error: 2 tests failed
+AssertionError: expected true to be false
+
+```
 
 ## Changes-requested reviews
 

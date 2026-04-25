@@ -289,7 +289,6 @@ describe("runIterate — triage via runCheck", () => {
               event: "pull_request",
               runId: "run-1",
               category: "failing",
-
             },
           ],
           inProgress: [],
@@ -330,7 +329,6 @@ describe("runIterate — triage via runCheck", () => {
               event: "pull_request",
               runId: "run-2",
               category: "failing",
-
             },
           ],
           inProgress: [],

@@ -111,7 +111,11 @@ describe("triageFailingChecks — job info", () => {
       )
       .mockResolvedValueOnce(makeLogsRedirectResponse("https://s3.example.com/logs"))
       .mockResolvedValueOnce(makeLogTextResponse("line1\nline2\nline3"));
-    const [result] = await triageFailingChecks([makeCheck({ conclusion: "TIMED_OUT" })], REPO, LOG_TAIL_LINES);
+    const [result] = await triageFailingChecks(
+      [makeCheck({ conclusion: "TIMED_OUT" })],
+      REPO,
+      LOG_TAIL_LINES,
+    );
     expect(result!.workflowName).toBe("CI");
     expect(result!.jobName).toBe("tests");
     expect(result!.logTail).toBe("line1\nline2\nline3");
@@ -132,16 +136,18 @@ describe("triageFailingChecks — job info", () => {
         ]),
       )
       .mockResolvedValueOnce(makeErrorResponse(404));
-    const [result] = await triageFailingChecks([makeCheck({ conclusion: "CANCELLED" })], REPO, LOG_TAIL_LINES);
+    const [result] = await triageFailingChecks(
+      [makeCheck({ conclusion: "CANCELLED" })],
+      REPO,
+      LOG_TAIL_LINES,
+    );
     expect(result!.workflowName).toBe("CI");
     expect(result!.failedStep).toBeUndefined();
   });
 
   it("STARTUP_FAILURE: treated the same as any other conclusion", async () => {
     mockFetch
-      .mockResolvedValueOnce(
-        makeJobsResponse([{ id: 1, name: "tests", conclusion: "cancelled" }]),
-      )
+      .mockResolvedValueOnce(makeJobsResponse([{ id: 1, name: "tests", conclusion: "cancelled" }]))
       .mockResolvedValueOnce(makeErrorResponse(404));
     const [result] = await triageFailingChecks(
       [makeCheck({ conclusion: "STARTUP_FAILURE" })],
@@ -153,11 +159,13 @@ describe("triageFailingChecks — job info", () => {
 
   it("STALE: treated the same as any other conclusion", async () => {
     mockFetch
-      .mockResolvedValueOnce(
-        makeJobsResponse([{ id: 1, name: "tests", conclusion: "cancelled" }]),
-      )
+      .mockResolvedValueOnce(makeJobsResponse([{ id: 1, name: "tests", conclusion: "cancelled" }]))
       .mockResolvedValueOnce(makeErrorResponse(404));
-    const [result] = await triageFailingChecks([makeCheck({ conclusion: "STALE" })], REPO, LOG_TAIL_LINES);
+    const [result] = await triageFailingChecks(
+      [makeCheck({ conclusion: "STALE" })],
+      REPO,
+      LOG_TAIL_LINES,
+    );
     expect(result).toBeDefined();
   });
 });
@@ -200,18 +208,21 @@ describe("triageFailingChecks — failedStep", () => {
   });
 
   it("failedStep=undefined when no job matches check name", async () => {
-    mockFetch
-      .mockResolvedValueOnce(
-        makeJobsResponse([
-          {
-            id: 42,
-            name: "some-other-job",
-            conclusion: "failure",
-            steps: [{ name: "Run tests", number: 1, conclusion: "failure" }],
-          },
-        ]),
-      );
-    const [result] = await triageFailingChecks([makeCheck({ name: "tests" })], REPO, LOG_TAIL_LINES);
+    mockFetch.mockResolvedValueOnce(
+      makeJobsResponse([
+        {
+          id: 42,
+          name: "some-other-job",
+          conclusion: "failure",
+          steps: [{ name: "Run tests", number: 1, conclusion: "failure" }],
+        },
+      ]),
+    );
+    const [result] = await triageFailingChecks(
+      [makeCheck({ name: "tests" })],
+      REPO,
+      LOG_TAIL_LINES,
+    );
     expect(result!.failedStep).toBeUndefined();
     expect(result!.logTail).toBeUndefined();
   });
@@ -236,7 +247,11 @@ describe("triageFailingChecks — failedStep", () => {
       )
       .mockResolvedValueOnce(makeLogsRedirectResponse("https://s3.example.com/logs"))
       .mockResolvedValueOnce(makeLogTextResponse("test output"));
-    const [result] = await triageFailingChecks([makeCheck({ name: "tests" })], REPO, LOG_TAIL_LINES);
+    const [result] = await triageFailingChecks(
+      [makeCheck({ name: "tests" })],
+      REPO,
+      LOG_TAIL_LINES,
+    );
     expect(result!.failedStep).toBe("Run tests");
   });
 
@@ -260,13 +275,21 @@ describe("triageFailingChecks — failedStep", () => {
       )
       .mockResolvedValueOnce(makeLogsRedirectResponse("https://s3.example.com/logs"))
       .mockResolvedValueOnce(makeLogTextResponse("compile output"));
-    const [result] = await triageFailingChecks([makeCheck({ name: "build" })], REPO, LOG_TAIL_LINES);
+    const [result] = await triageFailingChecks(
+      [makeCheck({ name: "build" })],
+      REPO,
+      LOG_TAIL_LINES,
+    );
     expect(result!.failedStep).toBe("Compile");
   });
 
   it("no job info when jobs fetch throws", async () => {
     mockFetch.mockResolvedValueOnce(makeErrorResponse(500));
-    const [result] = await triageFailingChecks([makeCheck({ conclusion: "FAILURE" })], REPO, LOG_TAIL_LINES);
+    const [result] = await triageFailingChecks(
+      [makeCheck({ conclusion: "FAILURE" })],
+      REPO,
+      LOG_TAIL_LINES,
+    );
     expect(result!.failedStep).toBeUndefined();
     expect(result!.logTail).toBeUndefined();
   });
@@ -276,9 +299,7 @@ describe("triageFailingChecks — log tail", () => {
   it("tails to logTailLines when log has more lines", async () => {
     const logLines = Array.from({ length: 20 }, (_, i) => `line ${i}`).join("\n");
     mockFetch
-      .mockResolvedValueOnce(
-        makeJobsResponse([{ id: 1, name: "tests", conclusion: "failure" }]),
-      )
+      .mockResolvedValueOnce(makeJobsResponse([{ id: 1, name: "tests", conclusion: "failure" }]))
       .mockResolvedValueOnce(makeLogsRedirectResponse("https://s3.example.com/logs"))
       .mockResolvedValueOnce(makeLogTextResponse(logLines));
     const [result] = await triageFailingChecks([makeCheck()], REPO, 5);
@@ -287,9 +308,7 @@ describe("triageFailingChecks — log tail", () => {
 
   it("returns full log when log has fewer lines than logTailLines", async () => {
     mockFetch
-      .mockResolvedValueOnce(
-        makeJobsResponse([{ id: 1, name: "tests", conclusion: "failure" }]),
-      )
+      .mockResolvedValueOnce(makeJobsResponse([{ id: 1, name: "tests", conclusion: "failure" }]))
       .mockResolvedValueOnce(makeLogsRedirectResponse("https://s3.example.com/logs"))
       .mockResolvedValueOnce(makeLogTextResponse("only\nthree\nlines"));
     const [result] = await triageFailingChecks([makeCheck()], REPO, 100);
@@ -298,9 +317,7 @@ describe("triageFailingChecks — log tail", () => {
 
   it("logTail=undefined when log fetch fails", async () => {
     mockFetch
-      .mockResolvedValueOnce(
-        makeJobsResponse([{ id: 1, name: "tests", conclusion: "failure" }]),
-      )
+      .mockResolvedValueOnce(makeJobsResponse([{ id: 1, name: "tests", conclusion: "failure" }]))
       .mockResolvedValueOnce(makeErrorResponse(403));
     const [result] = await triageFailingChecks([makeCheck()], REPO, LOG_TAIL_LINES);
     expect(result!.logTail).toBeUndefined();
