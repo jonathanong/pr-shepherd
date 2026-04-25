@@ -8,13 +8,13 @@ Four recipes for common extension patterns.
 
 ## Recipe 1: Add a new action
 
-1. **Add the type** — in `types.mts`, add to the `ShepherdAction` union:
+1. **Add the type** — in `types/iterate.mts`, add to the `ShepherdAction` union:
 
    ```ts
    export type ShepherdAction = 'cooldown' | 'wait' | ... | 'my_action'
    ```
 
-2. **Add the result interface** — in `types.mts`, add:
+2. **Add the result interface** — in `types/iterate.mts`, add:
 
    ```ts
    export interface IterateResultMyAction extends IterateResultBase {
@@ -27,11 +27,7 @@ Four recipes for common extension patterns.
 
 3. **Add the dispatch step** — in `commands/iterate.mts`, insert a new numbered step in the decision chain. Return the new result shape.
 
-4. **Add the cron prompt handler** — in `skills/monitor/SKILL.md`, add a new bullet inside the CronCreate prompt for the new `action` value:
-
-   ```
-   - `my_action` → log: `MY_ACTION: <relevant info>`
-   ```
+4. **Add the formatter** — in `cli/iterate-formatter.mts`, add a `case "my_action":` branch that emits the action-specific body and a numbered `## Instructions` section. The monitor skill follows those steps verbatim — no changes to `skills/monitor/SKILL.md` are required.
 
 5. **Add tests** — in `commands/iterate.mock.test.mts`, add a `describe('runIterate — my_action')` block.
 
@@ -69,7 +65,7 @@ Four recipes for common extension patterns.
 
 3. **Add the function** — in `comments/resolve.mts`, add a new exported function that calls the mutation via `graphqlWithRateLimit`.
 
-4. **Add to `ResolveOptions`** — if the mutation is triggered by `resolve` command options, add the relevant field to `ResolveOptions` in `types.mts`.
+4. **Add to `ResolveOptions`** — if the mutation is triggered by `resolve` command options, add the relevant field to `ResolveOptions` in `types/report.mts`.
 
 5. **Add tests** — in `comments/resolve.mock.test.mts`, add test cases.
 

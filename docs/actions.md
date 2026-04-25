@@ -33,6 +33,8 @@ Lean-mode rules for the summary line:
 
 `--verbose` restores the full summary line: all four counts, `remainingSeconds`, `copilotReviewInProgress`, `isDraft`, and `shouldCancel` always present.
 
+**Note on `mergeStatus` in JSON lean mode.** The lean JSON projection (`--format=json`, default) emits `mergeStateStatus` (the raw GitHub value) but **omits the derived `mergeStatus` discriminator** (`CLEAN | BEHIND | CONFLICTS | BLOCKED | UNSTABLE | DRAFT | UNKNOWN`). Scripts that branch on `mergeStatus` must use `--verbose` to get the full `IterateResult`. `mergeStateStatus` is always present in both modes.
+
 Load-bearing conventions (the monitor SKILL depends on these):
 
 1. Line 1 is always an H1 heading of the form `# PR #<N> [<ACTION>]`. The action tag identifies the output for logging and validation — behavior is driven by the `## Instructions` section, not by dispatching on the tag.
