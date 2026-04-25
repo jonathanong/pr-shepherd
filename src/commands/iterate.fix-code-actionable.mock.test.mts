@@ -229,7 +229,12 @@ describe("runIterate — fix_code (actionable threads)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [thread1, thread2], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+        threads: {
+          actionable: [thread1, thread2],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({

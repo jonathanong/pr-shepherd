@@ -365,7 +365,7 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
           ],
           autoResolved: [],
           autoResolveErrors: [],
-        firstLook: []
+          firstLook: [],
         },
       }),
     );
