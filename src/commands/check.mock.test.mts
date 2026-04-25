@@ -13,7 +13,7 @@ vi.mock("../comments/resolve.mts", () => ({
   autoResolveOutdated: vi.fn().mockResolvedValue({ resolved: [], errors: [] }),
 }));
 vi.mock("../state/seen-comments.mts", () => ({
-  hasSeen: vi.fn().mockResolvedValue(false),
+  loadSeenSet: vi.fn().mockResolvedValue(new Set()),
   markSeen: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -21,7 +21,7 @@ import { runCheck } from "./check.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { getCurrentPrNumber, getMergeableState } from "../github/client.mts";
 import { triageFailingChecks } from "../checks/triage.mts";
-import { hasSeen, markSeen } from "../state/seen-comments.mts";
+import { loadSeenSet, markSeen } from "../state/seen-comments.mts";
 import { autoResolveOutdated } from "../comments/resolve.mts";
 import type { BatchPrData, ClassifiedCheck, ReviewThread, PrComment } from "../types.mts";
 
@@ -29,7 +29,7 @@ const mockFetchPrBatch = vi.mocked(fetchPrBatch);
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockGetMergeableState = vi.mocked(getMergeableState);
 const mockTriageFailingChecks = vi.mocked(triageFailingChecks);
-const mockHasSeen = vi.mocked(hasSeen);
+const mockLoadSeenSet = vi.mocked(loadSeenSet);
 const mockMarkSeen = vi.mocked(markSeen);
 const mockAutoResolveOutdated = vi.mocked(autoResolveOutdated);
 
@@ -394,7 +394,7 @@ describe("runCheck — first-look items", () => {
   it("surfaces unseen outdated thread in threads.firstLook", async () => {
     const outdated = makeThread({ id: "t-outdated", isOutdated: true });
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [outdated] }) });
-    mockHasSeen.mockResolvedValue(false);
+    mockLoadSeenSet.mockResolvedValue(new Set());
 
     const report = await runCheck(BASE_OPTS);
     expect(report.threads.firstLook).toHaveLength(1);
@@ -406,7 +406,7 @@ describe("runCheck — first-look items", () => {
   it("marks auto-resolved outdated thread with autoResolved: true", async () => {
     const outdated = makeThread({ id: "t-auto", isOutdated: true });
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [outdated] }) });
-    mockHasSeen.mockResolvedValue(false);
+    mockLoadSeenSet.mockResolvedValue(new Set());
     mockAutoResolveOutdated.mockResolvedValue({ resolved: ["t-auto"], errors: [] });
 
     const report = await runCheck({ ...BASE_OPTS, autoResolve: true });
@@ -416,7 +416,7 @@ describe("runCheck — first-look items", () => {
   it("surfaces unseen resolved thread in threads.firstLook", async () => {
     const resolved = makeThread({ id: "t-resolved", isResolved: true });
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [resolved] }) });
-    mockHasSeen.mockResolvedValue(false);
+    mockLoadSeenSet.mockResolvedValue(new Set());
 
     const report = await runCheck(BASE_OPTS);
     expect(report.threads.firstLook).toHaveLength(1);
@@ -426,7 +426,7 @@ describe("runCheck — first-look items", () => {
   it("surfaces unseen minimized thread in threads.firstLook", async () => {
     const minimized = makeThread({ id: "t-minimized", isMinimized: true });
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [minimized] }) });
-    mockHasSeen.mockResolvedValue(false);
+    mockLoadSeenSet.mockResolvedValue(new Set());
 
     const report = await runCheck(BASE_OPTS);
     expect(report.threads.firstLook).toHaveLength(1);
@@ -436,7 +436,7 @@ describe("runCheck — first-look items", () => {
   it("surfaces unseen minimized comment in comments.firstLook", async () => {
     const minimized = makeComment({ id: "c-min", isMinimized: true });
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ comments: [minimized] }) });
-    mockHasSeen.mockResolvedValue(false);
+    mockLoadSeenSet.mockResolvedValue(new Set());
 
     const report = await runCheck(BASE_OPTS);
     expect(report.comments.firstLook).toHaveLength(1);
@@ -446,7 +446,7 @@ describe("runCheck — first-look items", () => {
   it("suppresses already-seen items", async () => {
     const outdated = makeThread({ id: "t-outdated", isOutdated: true });
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [outdated] }) });
-    mockHasSeen.mockResolvedValue(true);
+    mockLoadSeenSet.mockResolvedValue(new Set(["t-outdated"]));
 
     const report = await runCheck(BASE_OPTS);
     expect(report.threads.firstLook).toHaveLength(0);
@@ -458,7 +458,7 @@ describe("runCheck — first-look items", () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({ reviewThreads: [outdated], comments: [minimized] }),
     });
-    mockHasSeen.mockResolvedValue(false);
+    mockLoadSeenSet.mockResolvedValue(new Set());
 
     await runCheck(BASE_OPTS);
     expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "t-outdated");

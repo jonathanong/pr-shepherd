@@ -5,7 +5,7 @@ import { autoResolveOutdated, applyResolveOptions } from "../comments/resolve.mt
 import { loadConfig } from "../config/load.mts";
 import { parseSuggestion } from "../suggestions/parse.mts";
 import { buildFetchInstructions } from "./resolve-instructions.mts";
-import { hasSeen, markSeen } from "../state/seen-comments.mts";
+import { loadSeenSet, markSeen } from "../state/seen-comments.mts";
 import type {
   GlobalOptions,
   ResolveOptions,
@@ -73,23 +73,12 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   );
   const minimizedCommentCandidates = data.comments.filter((c) => c.isMinimized);
 
-  const [outdatedSeen, resolvedSeen, minimizedThreadSeen, minimizedCommentSeen] = await Promise.all(
-    [
-      Promise.all(outdatedCandidates.map((t) => hasSeen(stateKey, t.id))),
-      Promise.all(resolvedCandidates.map((t) => hasSeen(stateKey, t.id))),
-      Promise.all(minimizedThreadCandidates.map((t) => hasSeen(stateKey, t.id))),
-      Promise.all(minimizedCommentCandidates.map((c) => hasSeen(stateKey, c.id))),
-    ],
-  );
+  const seenSet = await loadSeenSet(stateKey);
 
-  const unseenOutdated = outdatedCandidates.filter((_, i) => !outdatedSeen[i]);
-  const unseenResolved = resolvedCandidates.filter((_, i) => !resolvedSeen[i]);
-  const unseenMinimizedThreads = minimizedThreadCandidates.filter(
-    (_, i) => !minimizedThreadSeen[i],
-  );
-  const unseenMinimizedComments = minimizedCommentCandidates.filter(
-    (_, i) => !minimizedCommentSeen[i],
-  );
+  const unseenOutdated = outdatedCandidates.filter((t) => !seenSet.has(t.id));
+  const unseenResolved = resolvedCandidates.filter((t) => !seenSet.has(t.id));
+  const unseenMinimizedThreads = minimizedThreadCandidates.filter((t) => !seenSet.has(t.id));
+  const unseenMinimizedComments = minimizedCommentCandidates.filter((c) => !seenSet.has(c.id));
 
   // Auto-resolve outdated (same as before — fires regardless of first-look status).
   const outdated = getOutdatedThreads(unresolvedThreads);

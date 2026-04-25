@@ -6,7 +6,7 @@ vi.mock("../github/client.mts", () => ({
 }));
 
 vi.mock("../state/seen-comments.mts", () => ({
-  hasSeen: vi.fn().mockResolvedValue(false),
+  loadSeenSet: vi.fn().mockResolvedValue(new Set()),
   markSeen: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -39,7 +39,7 @@ import { getCurrentPrNumber } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { autoResolveOutdated, applyResolveOptions } from "../comments/resolve.mts";
 import { loadConfig } from "../config/load.mts";
-import { hasSeen, markSeen } from "../state/seen-comments.mts";
+import { loadSeenSet, markSeen } from "../state/seen-comments.mts";
 import type { BatchPrData, ReviewThread, PrComment } from "../types.mts";
 
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
@@ -47,7 +47,7 @@ const mockFetchPrBatch = vi.mocked(fetchPrBatch);
 const mockAutoResolveOutdated = vi.mocked(autoResolveOutdated);
 const mockApplyResolveOptions = vi.mocked(applyResolveOptions);
 const mockLoadConfig = vi.mocked(loadConfig);
-const mockHasSeen = vi.mocked(hasSeen);
+const mockLoadSeenSet = vi.mocked(loadSeenSet);
 const mockMarkSeen = vi.mocked(markSeen);
 
 const BASE_OPTS = { format: "text" as const };
@@ -492,7 +492,7 @@ describe("runResolveFetch — first-look items", () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({ reviewThreads: [outdated], comments: [minimized] }),
     });
-    mockHasSeen.mockResolvedValueOnce(true).mockResolvedValue(false);
+    mockLoadSeenSet.mockResolvedValue(new Set(["t-outdated"]));
     const result = await runResolveFetch(BASE_OPTS);
     expect(result.firstLookThreads).toHaveLength(0);
     expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "c-min");

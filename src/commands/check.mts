@@ -22,7 +22,7 @@ import { autoResolveOutdated } from "../comments/resolve.mts";
 import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
 import { computeStatus } from "./check-status.mts";
-import { hasSeen, markSeen } from "../state/seen-comments.mts";
+import { loadSeenSet, markSeen } from "../state/seen-comments.mts";
 import type {
   GlobalOptions,
   ShepherdReport,
@@ -113,32 +113,25 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
   );
   const minimizedCommentCandidates = batchData.comments.filter((c) => c.isMinimized);
 
-  const [outdatedSeen, resolvedSeen, minimizedThreadSeen, minimizedCommentSeen] = await Promise.all(
-    [
-      Promise.all(outdatedCandidates.map((t) => hasSeen(stateKey, t.id))),
-      Promise.all(resolvedCandidates.map((t) => hasSeen(stateKey, t.id))),
-      Promise.all(minimizedThreadCandidates.map((t) => hasSeen(stateKey, t.id))),
-      Promise.all(minimizedCommentCandidates.map((c) => hasSeen(stateKey, c.id))),
-    ],
-  );
+  const seenSet = await loadSeenSet(stateKey);
   const autoResolvedIds = new Set(autoResolved.map((t) => t.id));
   const firstLookThreads: FirstLookThread[] = [
     ...outdatedCandidates
-      .filter((_, i) => !outdatedSeen[i])
+      .filter((t) => !seenSet.has(t.id))
       .map((t) => ({
         ...t,
         firstLookStatus: "outdated" as const,
         autoResolved: autoResolvedIds.has(t.id),
       })),
     ...resolvedCandidates
-      .filter((_, i) => !resolvedSeen[i])
+      .filter((t) => !seenSet.has(t.id))
       .map((t) => ({ ...t, firstLookStatus: "resolved" as const })),
     ...minimizedThreadCandidates
-      .filter((_, i) => !minimizedThreadSeen[i])
+      .filter((t) => !seenSet.has(t.id))
       .map((t) => ({ ...t, firstLookStatus: "minimized" as const })),
   ];
   const firstLookComments: FirstLookComment[] = minimizedCommentCandidates
-    .filter((_, i) => !minimizedCommentSeen[i])
+    .filter((c) => !seenSet.has(c.id))
     .map((c) => ({ ...c, firstLookStatus: "minimized" as const }));
 
   // Mark first-look items as seen (best-effort — markSeen never throws).

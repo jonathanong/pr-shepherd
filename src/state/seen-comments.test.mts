@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { randomBytes } from "node:crypto";
 import { rm, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { hasSeen, markSeen, readSeenMarker } from "./seen-comments.mts";
+import { hasSeen, markSeen, readSeenMarker, loadSeenSet } from "./seen-comments.mts";
 
 let testStateDir: string;
 
@@ -91,6 +91,34 @@ describe("hasSeen / markSeen — unsafe key segments", () => {
 
   it("markSeen does not throw when id is unsafe", async () => {
     await expect(markSeen(testKey, "bad id")).resolves.toBeUndefined();
+  });
+});
+
+describe("loadSeenSet", () => {
+  it("returns empty Set when directory does not exist", async () => {
+    const set = await loadSeenSet(testKey);
+    expect(set.size).toBe(0);
+  });
+
+  it("returns Set containing marked IDs", async () => {
+    const id2 = "PRRT_kwDOTest456";
+    await markSeen(testKey, testId);
+    await markSeen(testKey, id2);
+    const set = await loadSeenSet(testKey);
+    expect(set.has(testId)).toBe(true);
+    expect(set.has(id2)).toBe(true);
+    expect(set.size).toBe(2);
+  });
+
+  it("ignores non-.json files in the seen directory", async () => {
+    const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr), "seen");
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, "noise.txt"), "", "utf8");
+    await markSeen(testKey, testId);
+    const set = await loadSeenSet(testKey);
+    expect(set.has(testId)).toBe(true);
+    expect(set.has("noise.txt")).toBe(false);
+    expect(set.size).toBe(1);
   });
 });
 
