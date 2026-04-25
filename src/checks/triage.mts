@@ -169,7 +169,7 @@ const BOILERPLATE_PATTERNS = [
   /^Run actions\//,
   /^with:/,
   /^env:/,
-  /^\s+\S+=.+/,  // indented key=value lines from 'with:' blocks
+  /^\s+\S+=.+/, // indented key=value lines from 'with:' blocks
 ];
 
 function filterBoilerplate(lines: string[]): string[] {
