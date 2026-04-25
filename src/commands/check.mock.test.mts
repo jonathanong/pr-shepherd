@@ -12,17 +12,26 @@ vi.mock("../checks/triage.mts", () => ({
 vi.mock("../comments/resolve.mts", () => ({
   autoResolveOutdated: vi.fn().mockResolvedValue({ resolved: [], errors: [] }),
 }));
+vi.mock("../state/seen-comments.mts", () => ({
+  hasSeen: vi.fn().mockResolvedValue(false),
+  markSeen: vi.fn().mockResolvedValue(undefined),
+}));
 
 import { runCheck } from "./check.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { getCurrentPrNumber, getMergeableState } from "../github/client.mts";
 import { triageFailingChecks } from "../checks/triage.mts";
-import type { BatchPrData, ClassifiedCheck } from "../types.mts";
+import { hasSeen, markSeen } from "../state/seen-comments.mts";
+import { autoResolveOutdated } from "../comments/resolve.mts";
+import type { BatchPrData, ClassifiedCheck, ReviewThread, PrComment } from "../types.mts";
 
 const mockFetchPrBatch = vi.mocked(fetchPrBatch);
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockGetMergeableState = vi.mocked(getMergeableState);
 const mockTriageFailingChecks = vi.mocked(triageFailingChecks);
+const mockHasSeen = vi.mocked(hasSeen);
+const mockMarkSeen = vi.mocked(markSeen);
+const mockAutoResolveOutdated = vi.mocked(autoResolveOutdated);
 
 const BASE_OPTS = { format: "text" as const };
 
@@ -349,5 +358,108 @@ describe("runCheck — minimized thread filtering", () => {
     const report = await runCheck(BASE_OPTS);
     expect(report.threads.actionable).toHaveLength(1);
     expect(report.threads.actionable[0]?.id).toBe("t-visible");
+  });
+});
+
+function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
+  return {
+    id: "t-1",
+    isResolved: false,
+    isOutdated: false,
+    isMinimized: false,
+    path: "src/foo.ts",
+    line: 1,
+    startLine: null,
+    author: "alice",
+    body: "fix this",
+    createdAtUnix: 1_700_000_000,
+    ...overrides,
+  };
+}
+
+function makeComment(overrides: Partial<PrComment> = {}): PrComment {
+  return {
+    id: "c-1",
+    isMinimized: false,
+    author: "bob",
+    body: "nit",
+    createdAtUnix: 1_700_000_000,
+    ...overrides,
+  };
+}
+
+describe("runCheck — first-look items", () => {
+  it("surfaces unseen outdated thread in threads.firstLook", async () => {
+    const outdated = makeThread({ id: "t-outdated", isOutdated: true });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [outdated] }) });
+    mockHasSeen.mockResolvedValue(false);
+
+    const report = await runCheck(BASE_OPTS);
+    expect(report.threads.firstLook).toHaveLength(1);
+    expect(report.threads.firstLook[0]?.id).toBe("t-outdated");
+    expect(report.threads.firstLook[0]?.firstLookStatus).toBe("outdated");
+    expect(report.threads.firstLook[0]?.autoResolved).toBe(false);
+  });
+
+  it("marks auto-resolved outdated thread with autoResolved: true", async () => {
+    const outdated = makeThread({ id: "t-auto", isOutdated: true });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [outdated] }) });
+    mockHasSeen.mockResolvedValue(false);
+    mockAutoResolveOutdated.mockResolvedValue({ resolved: ["t-auto"], errors: [] });
+
+    const report = await runCheck({ ...BASE_OPTS, autoResolve: true });
+    expect(report.threads.firstLook[0]?.autoResolved).toBe(true);
+  });
+
+  it("surfaces unseen resolved thread in threads.firstLook", async () => {
+    const resolved = makeThread({ id: "t-resolved", isResolved: true });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [resolved] }) });
+    mockHasSeen.mockResolvedValue(false);
+
+    const report = await runCheck(BASE_OPTS);
+    expect(report.threads.firstLook).toHaveLength(1);
+    expect(report.threads.firstLook[0]?.firstLookStatus).toBe("resolved");
+  });
+
+  it("surfaces unseen minimized thread in threads.firstLook", async () => {
+    const minimized = makeThread({ id: "t-minimized", isMinimized: true });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [minimized] }) });
+    mockHasSeen.mockResolvedValue(false);
+
+    const report = await runCheck(BASE_OPTS);
+    expect(report.threads.firstLook).toHaveLength(1);
+    expect(report.threads.firstLook[0]?.firstLookStatus).toBe("minimized");
+  });
+
+  it("surfaces unseen minimized comment in comments.firstLook", async () => {
+    const minimized = makeComment({ id: "c-min", isMinimized: true });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ comments: [minimized] }) });
+    mockHasSeen.mockResolvedValue(false);
+
+    const report = await runCheck(BASE_OPTS);
+    expect(report.comments.firstLook).toHaveLength(1);
+    expect(report.comments.firstLook[0]?.firstLookStatus).toBe("minimized");
+  });
+
+  it("suppresses already-seen items", async () => {
+    const outdated = makeThread({ id: "t-outdated", isOutdated: true });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [outdated] }) });
+    mockHasSeen.mockResolvedValue(true);
+
+    const report = await runCheck(BASE_OPTS);
+    expect(report.threads.firstLook).toHaveLength(0);
+  });
+
+  it("calls markSeen for each first-look item", async () => {
+    const outdated = makeThread({ id: "t-outdated", isOutdated: true });
+    const minimized = makeComment({ id: "c-min", isMinimized: true });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ reviewThreads: [outdated], comments: [minimized] }),
+    });
+    mockHasSeen.mockResolvedValue(false);
+
+    await runCheck(BASE_OPTS);
+    expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "t-outdated");
+    expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "c-min");
   });
 });
