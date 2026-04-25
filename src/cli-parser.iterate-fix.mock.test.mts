@@ -102,7 +102,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
       actionableComments: [{ id: "PRRC_1", author: "bot", body: "please address" }],
       noiseCommentIds: ["c-noise-1", "c-noise-2"],
       reviewSummaryIds: [],
-      surfacedSummaries: [],
+      surfacedApprovals: [],
       checks: [
         { name: "lint", runId: "run-42", detailsUrl: "https://x", failureKind: "actionable" },
         {
@@ -201,14 +201,14 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain(
       "- resolve: `npx pr-shepherd resolve 42 --minimize-comment-ids PRR_BOT,PRR_AP`",
     );
-    expect(out).not.toContain("## Review summaries (surfaced");
+    expect(out).not.toContain("## Approvals (surfaced");
   });
 
-  it("fix_code: renders '## Review summaries (surfaced — not minimized)' with H3 + blockquote", async () => {
+  it("fix_code: renders '## Approvals (surfaced — not minimized)' with H3 + blockquote", async () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
     if (result.fix.mode !== "rebase-and-push") throw new Error("unreachable");
-    result.fix.surfacedSummaries = [
+    result.fix.surfacedApprovals = [
       { id: "PRR_HUMAN", author: "alice", body: "Looks reasonable but please double-check X." },
     ];
     mockRunIterate.mockResolvedValue(result);
@@ -216,7 +216,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
 
-    expect(out).toContain("## Review summaries (surfaced — not minimized)");
+    expect(out).toContain("## Approvals (surfaced — not minimized)");
     expect(out).toContain("### `PRR_HUMAN` (@alice)");
     expect(out).toContain("> Looks reasonable but please double-check X.");
   });

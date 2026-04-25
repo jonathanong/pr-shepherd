@@ -143,7 +143,7 @@ function defaultConfig() {
       cooldownSeconds: 30,
       fixAttemptsPerThread: 3,
       stallTimeoutMinutes: 30,
-      minimizeReviewSummaries: { bots: true, humans: true, approvals: false },
+      minimizeApprovals: false,
     },
     watch: { interval: "4m", readyDelayMinutes: 10, expiresHours: 8, maxTurns: 50 },
     resolve: {
@@ -284,5 +284,39 @@ describe("runIterate — fix_code (actionable threads)", () => {
     const written = mockWriteFixAttempts.mock.calls[0]?.[1];
     // Counter must NOT increment because sha is unchanged
     expect(written?.threadAttempts?.["thread-1"]).toBe(2);
+  });
+
+  it("includes Shepherd Journal instruction when there are actionable threads", async () => {
+    const thread = {
+      id: "thread-1",
+      isResolved: false,
+      isOutdated: false,
+      isMinimized: false,
+      path: "src/foo.mts",
+      line: 10,
+      startLine: null,
+      author: "reviewer",
+      body: "Fix this",
+      createdAtUnix: NOW - 3600,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+      const joined = result.fix.instructions.join("\n");
+      expect(joined).toContain("Shepherd Journal");
+    }
   });
 });

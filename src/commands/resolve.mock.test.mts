@@ -406,6 +406,20 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     expect(joined).not.toContain("git add");
     expect(joined).not.toContain("git push");
   });
+
+  it("instructions include Shepherd Journal step when there are actionable items", async () => {
+    const thread = makeThread({ body: "fix this" });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
+
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.instructions.join("\n")).toContain("Shepherd Journal");
+  });
+
+  it("instructions omit Shepherd Journal step when there are no actionable items", async () => {
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({}) });
+    const result = await runResolveFetch(BASE_OPTS);
+    expect(result.instructions.join("\n")).not.toContain("Shepherd Journal");
+  });
 });
 
 // ---------------------------------------------------------------------------

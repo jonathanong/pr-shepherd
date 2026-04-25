@@ -55,9 +55,9 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     sections.push(result.fix.reviewSummaryIds.map((id) => `\`${id}\``).join(", "));
   }
 
-  if (result.fix.surfacedSummaries.length > 0) {
-    sections.push("## Review summaries (surfaced — not minimized)");
-    for (const r of result.fix.surfacedSummaries) {
+  if (result.fix.surfacedApprovals.length > 0) {
+    sections.push("## Approvals (surfaced — not minimized)");
+    for (const r of result.fix.surfacedApprovals) {
       sections.push(`### \`${r.id}\` (@${r.author})`);
       sections.push(blockquote(r.body));
     }

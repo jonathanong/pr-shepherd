@@ -133,6 +133,12 @@ export function buildFixInstructions(
     );
   }
 
+  if (threads.length > 0 || actionableComments.length > 0 || reviews.length > 0) {
+    instructions.push(
+      `For any large decisions or rejections you made this iteration, add or update a \`## Shepherd Journal\` section in the PR description (\`gh pr edit ${prNumber} --body …\`) summarizing each decision and linking back to the originating comment, thread, or review.`,
+    );
+  }
+
   if (needsPush) {
     instructions.push(
       `Stop this iteration — CI needs time to run on the new push before the next tick.`,

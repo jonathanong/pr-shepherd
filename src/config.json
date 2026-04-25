@@ -3,11 +3,7 @@
     "cooldownSeconds": 30,
     "fixAttemptsPerThread": 3,
     "stallTimeoutMinutes": 30,
-    "minimizeReviewSummaries": {
-      "bots": true,
-      "humans": true,
-      "approvals": false
-    }
+    "minimizeApprovals": false
   },
   "watch": {
     "interval": "4m",

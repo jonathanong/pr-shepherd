@@ -10,17 +10,10 @@ export interface PrShepherdConfig {
     fixAttemptsPerThread: number;
     stallTimeoutMinutes: number;
     /**
-     * Which review summaries the monitor loop should auto-minimize via `resolve --minimize-comment-ids`.
-     * Bots default on; humans default on; approvals default off (opt-in). See docs/comments.md.
+     * All review summaries and threads are minimized once acted on. When `true`, APPROVED-state
+     * reviews are also minimized — defaults to `false` so approvals stay visible.
      */
-    minimizeReviewSummaries: {
-      /** Auto-minimize review summaries from known bot authors (copilot-pull-request-reviewer, `*[bot]`, etc.). */
-      bots: boolean;
-      /** Auto-minimize COMMENTED review summaries from non-bot (human) authors. */
-      humans: boolean;
-      /** Auto-minimize APPROVED-state reviews. Off by default — approvals usually stay visible. */
-      approvals: boolean;
-    };
+    minimizeApprovals: boolean;
   };
   watch: {
     interval: string;

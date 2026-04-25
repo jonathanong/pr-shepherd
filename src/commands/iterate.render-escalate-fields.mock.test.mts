@@ -143,7 +143,7 @@ function defaultConfig() {
       cooldownSeconds: 30,
       fixAttemptsPerThread: 3,
       stallTimeoutMinutes: 30,
-      minimizeReviewSummaries: { bots: true, humans: true, approvals: false },
+      minimizeApprovals: false,
     },
     watch: { interval: "4m", readyDelayMinutes: 10, expiresHours: 8, maxTurns: 50 },
     resolve: {

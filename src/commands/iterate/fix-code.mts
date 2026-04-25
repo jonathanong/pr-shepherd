@@ -30,7 +30,7 @@ interface HandleFixCodeContext {
   repoOwner: string;
   repoName: string;
   reviewSummaryIds: string[];
-  surfacedSummaries: Review[];
+  surfacedApprovals: Review[];
 }
 
 export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateResult> {
@@ -45,7 +45,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     repoOwner,
     repoName,
     reviewSummaryIds,
-    surfacedSummaries,
+    surfacedApprovals,
   } = ctx;
 
   const actionableChecks = report.checks.failing.filter((f) => f.failureKind === "actionable");
@@ -175,7 +175,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
         actionableComments,
         noiseCommentIds,
         reviewSummaryIds,
-        surfacedSummaries,
+        surfacedApprovals,
         checks,
         changesRequestedReviews,
         resolveCommand,

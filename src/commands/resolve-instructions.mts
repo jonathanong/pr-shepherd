@@ -70,6 +70,10 @@ export function buildFetchInstructions(
   );
 
   instructions.push(
+    `For any large decisions or rejections you made this iteration, add or update a \`## Shepherd Journal\` section in the PR description (\`gh pr edit ${prNumber} --body …\`) summarizing each decision and linking back to the originating comment, thread, or review.`,
+  );
+
+  instructions.push(
     `Report: echo the CLI's mutation output, then one line per Acknowledged item: \`Acknowledged <id> (@<author>): <reason>\`. If any fetched item was neither resolved nor acknowledged, stop and escalate: "<N> item(s) fetched but not acted on or acknowledged — need human direction before closing".`,
   );
 

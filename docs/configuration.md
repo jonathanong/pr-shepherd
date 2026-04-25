@@ -39,10 +39,7 @@ actions:
   commitSuggestions: true
 
 iterate:
-  minimizeReviewSummaries:
-    bots: true
-    humans: true
-    approvals: false
+  minimizeApprovals: false # set true to also minimize APPROVED-state reviews
 ```
 
 ---
@@ -54,9 +51,7 @@ iterate:
 | `iterate.cooldownSeconds`                   | `30`                                      | Wait after a push before reading CI                                                                               |
 | `iterate.fixAttemptsPerThread`              | `3`                                       | Max fix attempts per unresolved thread before `escalate`                                                          |
 | `iterate.stallTimeoutMinutes`               | `30`                                      | Minutes the loop may repeat the same action without progress before `escalate` with `stall-timeout`; `0` disables |
-| `iterate.minimizeReviewSummaries.bots`      | `true`                                    | Auto-minimize COMMENTED review summaries from bot authors; surfaced (not dropped) when `false`                    |
-| `iterate.minimizeReviewSummaries.humans`    | `true`                                    | Auto-minimize COMMENTED review summaries from human authors; surfaced when `false`                                |
-| `iterate.minimizeReviewSummaries.approvals` | `false`                                   | Opt in to minimize APPROVED-state reviews (also enables >50-approval pagination)                                  |
+| `iterate.minimizeApprovals`                 | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination). All `COMMENTED` summaries are always minimized. |
 | `watch.interval`                            | `"4m"`                                    | Monitor tick interval (tuned to Claude's 5-min prompt-cache TTL)                                                  |
 | `watch.readyDelayMinutes`                   | `10`                                      | Settle window after READY before the monitor loop cancels                                                         |
 | `watch.expiresHours`                        | `8`                                       | Max lifetime of a monitor cron job                                                                                |
@@ -103,21 +98,17 @@ Override per-invocation with `--stall-timeout <duration>` (e.g. `--stall-timeout
 - **Lower** if you want faster escalation when a PR gets stuck.
 - **Set to `0`** to disable stall detection entirely.
 
-### `iterate.minimizeReviewSummaries`
+### `iterate.minimizeApprovals`
 
-Controls which review IDs the monitor / `iterate` loop includes in `--minimize-comment-ids` when it emits `fix_code`. Review summary IDs ride along inside the existing resolve command — no code change needed to minimize them. Rendered under `## Review summaries (minimize only)` in the iterate markdown output.
+**Breaking change from `iterate.minimizeReviewSummaries.{bots, humans, approvals}`** — the old nested keys are no longer recognized.
 
-#### `iterate.minimizeReviewSummaries.bots` — default `true`
+All `COMMENTED` review summaries (bot and human alike) are always minimized by the monitor / `iterate` loop. Review summary IDs ride along inside the existing resolve command — no code change needed to minimize them. Rendered under `## Review summaries (minimize only)` in the iterate markdown output.
 
-Auto-minimize `COMMENTED` review summaries whose author is a known bot (`copilot-pull-request-reviewer`, `gemini-code-assist`, `coderabbitai`, or any `*[bot]` login). When `false`, bot summaries render under `## Review summaries (surfaced — not minimized)` in the iterate output instead (same treatment as the `humans` toggle) — not dropped.
+#### `iterate.minimizeApprovals` — default `false`
 
-#### `iterate.minimizeReviewSummaries.humans` — default `true`
+Opt in to also minimize `APPROVED`-state reviews (`pr approve` clicks with or without a body). Off by default because approvals are an affirmative signal you usually want to keep visible. Flip to `true` for long-running PRs where stale approvals pile up.
 
-Auto-minimize `COMMENTED` review summaries from non-bot authors. When `false`, human summaries render under `## Review summaries (surfaced — not minimized)` in the iterate output so you see them, but they are not passed to `--minimize-comment-ids`.
-
-#### `iterate.minimizeReviewSummaries.approvals` — default `false`
-
-Opt in to minimize `APPROVED`-state reviews (`pr approve` clicks with or without a body). Off by default because approvals are usually an affirmative signal you want to keep visible. Flip to `true` for long-running PRs where stale approvals pile up.
+When `false` (default), any approval reviews render under `## Approvals (surfaced — not minimized)` in the iterate output — visible but not passed to `--minimize-comment-ids`.
 
 > Perf note: when this is `false` (default), `fetchPrBatch` does not paginate beyond the first 50 approved reviews. Turn it on to fetch all approvals.
 

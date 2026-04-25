@@ -58,7 +58,7 @@ function makeFixCodeResult(): IterateResult & { action: "fix_code" } {
       actionableComments: [],
       noiseCommentIds: [],
       reviewSummaryIds: [],
-      surfacedSummaries: [],
+      surfacedApprovals: [],
       checks: [],
       changesRequestedReviews: [],
       resolveCommand: {
