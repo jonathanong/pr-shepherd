@@ -30,6 +30,17 @@ When making changes, review [`docs/`](docs/) and [`README.md`](README.md) for im
 
 `docs/actions.md` is the canonical spec for `shepherd iterate` output — the monitor SKILL and agent consumers read the `## Instructions` sections and section structure directly. Any change to iterate action output (new triggers, new sections, new instruction variants, JSON field moves) must land together with the matching `docs/actions.md` edit in the same PR. If you change the CLI's output shape without updating the doc, the skill silently drifts.
 
+## Lean output
+
+CLI output should only include information that is relevant or actionable in the current state. Omit fields and lines that add noise without value:
+
+- Do not emit a field, flag, or line when its value is the trivial default (false, null, 0, empty). For example: do not emit `copilotReviewInProgress` unless it is `true`.
+- Do not emit time-bounded or state-specific fields outside the state where they are meaningful. For example: do not emit `remainingSeconds` unless the PR is in the final ready-delay countdown.
+- Do not repeat information the reader already has from an earlier line in the same output block.
+- Omit section headers and labels when the section would be empty.
+
+The goal is to keep context usage low for agent consumers and to make human output scannable. When in doubt, ask: "would a reader act on this line right now?" If not, leave it out.
+
 ## Markdown output readability
 
 CLI output that targets a human or an AI agent must be easy to read and act on:

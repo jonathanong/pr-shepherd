@@ -16,7 +16,7 @@ import {
   iterateActionToExitCode,
   deriveSimpleReady,
 } from "./exit-codes.mts";
-import { formatCommitSuggestionResult, formatIterateResult } from "./formatters.mts";
+import { formatCommitSuggestionResult, formatIterateResult, projectIterateLean } from "./formatters.mts";
 
 export async function handleCommitSuggestion(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
@@ -93,9 +93,10 @@ export async function handleIterate(args: string[]): Promise<void> {
   });
 
   if (globalOpts.format === "json") {
-    process.stdout.write(`${JSON.stringify(result)}\n`);
+    const output = globalOpts.verbose ? result : projectIterateLean(result);
+    process.stdout.write(`${JSON.stringify(output)}\n`);
   } else {
-    process.stdout.write(`${formatIterateResult(result)}\n`);
+    process.stdout.write(`${formatIterateResult(result, { verbose: globalOpts.verbose })}\n`);
   }
 
   process.exitCode = iterateActionToExitCode(result.action);

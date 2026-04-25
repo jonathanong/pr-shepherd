@@ -4,15 +4,17 @@
 
 Each iteration of `shepherd iterate` returns exactly one action. See [docs/iterate-flow.md](iterate-flow.md) for the decision order.
 
-The default output format is Markdown — what you see when running `npx pr-shepherd iterate <PR>`, and what the monitor SKILL reads each cron tick. `--format=json` emits the same information as a single JSON object for scripting. Every example below shows what the agent actually sees.
+The default output format is Markdown — what you see when running `npx pr-shepherd iterate <PR>`, and what the monitor SKILL reads each cron tick. `--format=json` emits the same information as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
 
-**Output shape (every action):**
+Pass `--verbose` to get the full debug state: all base fields present in both Markdown and JSON regardless of their value. Lean mode is the default because most fields are `false`/`0`/`[]` on a typical healthy tick and add context noise without value.
+
+**Output shape (every action, default lean format):**
 
 ```
 # PR #<N> [ACTION]
 
 **status** `<…>` · **merge** `<…>` · **state** `<…>` · **repo** `<…>`
-**summary** <N> passing, <N> skipped, <N> filtered, <N> inProgress · **remainingSeconds** <N> · **copilotReviewInProgress** <bool> · **isDraft** <bool> · **shouldCancel** <bool>
+**summary** <N> passing[, <N> skipped][, <N> filtered][, <N> inProgress][· **remainingSeconds** <N>][· **copilotReviewInProgress**][· **isDraft**]
 
 <action-specific body>
 
@@ -21,14 +23,23 @@ The default output format is Markdown — what you see when running `npx pr-shep
 1. <numbered steps telling the monitor exactly what to do>
 ```
 
+Lean-mode rules for the summary line:
+- Zero counts (`skipped`, `filtered`, `inProgress`) are omitted.
+- `remainingSeconds` is shown only when the ready-delay timer is actively counting down (`status === "READY"` and `remainingSeconds > 0`).
+- `copilotReviewInProgress` and `isDraft` are shown only when `true`.
+- `shouldCancel` is never shown (it is fully implied by `action === "cancel"`).
+- `[COOLDOWN]` suppresses the base/summary lines entirely — the action carries only UNKNOWN/empty placeholders.
+
+`--verbose` restores the full summary line: all four counts, `remainingSeconds`, `copilotReviewInProgress`, `isDraft`, and `shouldCancel` always present.
+
 Load-bearing conventions (the monitor SKILL depends on these):
 
 1. Line 1 is always an H1 heading of the form `# PR #<N> [<ACTION>]`. The action tag identifies the output for logging and validation — behavior is driven by the `## Instructions` section, not by dispatching on the tag.
-2. Lines 3–4 carry the full base fields (status, merge, state, repo, summary, remainingSeconds, etc.), so Markdown output is never a lossy view of JSON.
+2. Lines 3–4 carry the base fields (status, merge, state, repo, summary). In lean mode, fields at their trivial default are omitted; `--verbose` surfaces every field so Markdown output is never a lossy view of JSON.
 3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … — that tells the monitor exactly what to do. The monitor follows those steps; it does not need its own dispatch table.
 4. Under `[REBASE]`, the shell script is inside a ```bash fenced block — instruction 1 tells the monitor to extract and run it.
 5. Under `[FIX_CODE]`, the `## Post-fix push` section has a `` resolve: `<command>` `` bullet — the instructions reference this bullet so the monitor strips backticks and runs the command.
-6. Passing check counts are surfaced only via the `**summary**` line — no per-check detail is emitted for passing checks. Failing check detail appears in `## Failing checks` (within `[FIX_CODE]` output). JSON surfaces all check data as `checks: RelevantCheck[]` on the base object.
+6. Passing check counts are surfaced only via the `**summary**` line — no per-check detail is emitted for passing checks. Failing check detail appears in `## Failing checks` (within `[FIX_CODE]` output). JSON surfaces check data as `checks: RelevantCheck[]` only on `fix_code` and `rerun_ci` actions in lean mode; `--verbose` includes `checks` on all actions.
 
 ---
 
@@ -47,9 +58,6 @@ Skips all work because the last commit is too fresh for CI checks to have starte
 ```markdown
 # PR #42 [COOLDOWN]
 
-**status** `UNKNOWN` · **merge** `UNKNOWN` · **state** `UNKNOWN` · **repo** ``
-**summary** 0 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 600 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
-
 SKIP: CI still starting — waiting for first check to appear
 
 ## Instructions
@@ -57,7 +65,7 @@ SKIP: CI still starting — waiting for first check to appear
 1. End this iteration — the next cron fire will recheck once CI starts reporting.
 ```
 
-`status`, `merge`, `state` are `UNKNOWN` and `repo` is empty because the early return happens before any GitHub sweep.
+`status`, `merge`, `state`, and `repo` are not emitted in default mode — they carry UNKNOWN/empty placeholders because the early return happens before any GitHub sweep. Pass `--verbose` to see all fields.
 
 **What the monitor does:** Follow `## Instructions` — end the iteration and wait for the next cron fire.
 
@@ -79,7 +87,7 @@ Nothing actionable to do; all CI is passing or in-progress.
 # PR #42 [WAIT]
 
 **status** `IN_PROGRESS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 3 passing, 0 skipped, 0 filtered, 2 inProgress · **remainingSeconds** 120 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
+**summary** 3 passing, 2 inProgress
 
 WAIT: 3 passing, 2 in-progress — 120s until auto-cancel
 
@@ -110,7 +118,7 @@ Surfaces CI runs that failed due to transient timeout or external cancellation, 
 # PR #42 [RERUN_CI]
 
 **status** `FAILING` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 0 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 600 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
+**summary** 0 passing
 
 ## Checks
 
@@ -148,7 +156,7 @@ Converts a draft PR to ready for review.
 # PR #42 [MARK_READY]
 
 **status** `READY` · **merge** `DRAFT` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 5 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 600 · **copilotReviewInProgress** false · **isDraft** true · **shouldCancel** false
+**summary** 5 passing · **remainingSeconds** 600 · **isDraft**
 
 MARKED READY: PR #42 converted from draft to ready for review
 
@@ -179,7 +187,7 @@ Stops the monitor loop — no further iterations needed.
 # PR #42 [CANCEL] — merged
 
 **status** `READY` · **merge** `CLEAN` · **state** `MERGED` · **repo** `owner/repo`
-**summary** 5 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 0 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** true
+**summary** 5 passing
 
 CANCEL: PR #42 is merged — stopping monitor
 
@@ -213,7 +221,7 @@ Actionable work needs a code fix, commit, and push.
 # PR #42 [FIX_CODE]
 
 **status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 3 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 600 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
+**summary** 3 passing
 
 ## Review threads
 
@@ -299,7 +307,7 @@ Actionable work needs a code fix, commit, and push.
 - A `Do not re-run \`gh run cancel\``instruction is appended when`cancelled` is non-empty and a push is required — it reminds the monitor that those IDs were cancelled pre-push and new runs have since been triggered.
 - The final "iteration" step has three variants: `Stop this iteration — CI needs time to run on the new push before the next tick.` when a push occurred; `Stop this iteration before the next tick.` when only GitHub mutations were made (no push); `End this iteration.` when no push or mutations occurred.
 
-The JSON payload exposes the same data under `fix.{threads, actionableComments, noiseCommentIds, reviewSummaryIds, surfacedSummaries, checks, changesRequestedReviews, resolveCommand, instructions, mode}` — where `fix.mode === "rebase-and-push"` is the type discriminator — plus top-level `baseBranch` (on `IterateResultBase`, not under `fix`) and `cancelled`. `reviewSummaryIds` are merged into `--minimize-comment-ids` inside `resolveCommand.argv`; `surfacedSummaries` are informational only.
+The JSON payload exposes the same data under `fix.{threads, actionableComments, noiseCommentIds, reviewSummaryIds, surfacedSummaries, checks, changesRequestedReviews, resolveCommand, instructions, mode}` — where `fix.mode === "rebase-and-push"` is the type discriminator — plus top-level `baseBranch` (on `IterateResultBase`, not under `fix`) and `cancelled`. `reviewSummaryIds` are merged into `--minimize-comment-ids` inside `resolveCommand.argv`; `surfacedSummaries` are informational only. In lean JSON mode, `fix.*` arrays that are empty are omitted; `cancelled` is omitted when empty. Pass `--verbose` to include all fields.
 
 **Resolve command rules (same in Markdown and JSON):**
 
@@ -392,7 +400,7 @@ Ambiguous state that requires human judgement — the monitor stops and surfaces
 # PR #42 [ESCALATE]
 
 **status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 0 passing, 0 skipped, 0 filtered, 0 inProgress · **remainingSeconds** 600 · **copilotReviewInProgress** false · **isDraft** false · **shouldCancel** false
+**summary** 0 passing
 
 ⚠️ /pr-shepherd:monitor paused — needs human direction
 
