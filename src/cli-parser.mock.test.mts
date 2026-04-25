@@ -177,7 +177,14 @@ describe("main — resolve", () => {
         },
       ],
       actionableComments: [
-        { id: "IC_1", author: "bob", body: "Typo here", isMinimized: false, url: "", createdAtUnix: 0 },
+        {
+          id: "IC_1",
+          author: "bob",
+          body: "Typo here",
+          isMinimized: false,
+          url: "",
+          createdAtUnix: 0,
+        },
       ],
       changesRequestedReviews: [],
       reviewSummaries: [],
@@ -269,7 +276,14 @@ describe("main — resolve", () => {
         },
       ],
       actionableComments: [
-        { id: "IC_2", author: "bob", body: "comment", isMinimized: false, url: "", createdAtUnix: 0 },
+        {
+          id: "IC_2",
+          author: "bob",
+          body: "comment",
+          isMinimized: false,
+          url: "",
+          createdAtUnix: 0,
+        },
       ],
       changesRequestedReviews: [{ id: "PRR_r1", author: "carol", body: "needs work" }],
       reviewSummaries: [],

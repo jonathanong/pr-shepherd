@@ -135,7 +135,7 @@ export function buildFixInstructions(
 
   if (resolveCommand.hasMutations) {
     instructions.push(
-      `For any large decisions or rejections you made this iteration, add or update a \`## Shepherd Journal\` section in the PR description (\`gh pr edit ${prNumber} --body …\`) summarizing each decision and linking back to the originating comment, thread, or review using the markdown link shown in its heading above.`,
+      `For any large decisions or rejections you made this iteration, add or update a \`## Shepherd Journal\` section in the PR description (\`gh pr edit ${prNumber} --body …\`) summarizing each decision. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID.`,
     );
   }
 

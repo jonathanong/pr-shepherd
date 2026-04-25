@@ -226,7 +226,9 @@ describe("projectIterateLean", () => {
   it("fix_code (rich payload): includes non-empty arrays, omits empty ones", () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
-    result.fix.threads = [{ id: "t1", path: "src/x.ts", line: 1, author: "a", body: "fix", url: "" }];
+    result.fix.threads = [
+      { id: "t1", path: "src/x.ts", line: 1, author: "a", body: "fix", url: "" },
+    ];
     result.fix.checks = [{ name: "ci", runId: "r1", detailsUrl: null, failureKind: "actionable" }];
     result.fix.instructions = ["step 1"];
     result.fix.actionableComments = [{ id: "c1", author: "a", body: "nit", url: "" }];

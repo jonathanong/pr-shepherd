@@ -10,8 +10,9 @@ export interface PrShepherdConfig {
     fixAttemptsPerThread: number;
     stallTimeoutMinutes: number;
     /**
-     * All review summaries and threads are minimized once acted on. When `true`, APPROVED-state
-     * reviews are also minimized — defaults to `false` so approvals stay visible.
+     * All COMMENTED review summaries and PR-level comments are minimized once acted on; review
+     * threads are resolved. When `true`, APPROVED-state reviews are also minimized — defaults to
+     * `false` so approvals stay visible.
      */
     minimizeApprovals: boolean;
   };
