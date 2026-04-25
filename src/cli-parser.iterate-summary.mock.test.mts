@@ -43,6 +43,7 @@ function makeFixCodeResult(): IterateResult & { action: "fix_code" } {
     status: "IN_PROGRESS" as const,
     state: "OPEN" as const,
     mergeStateStatus: "BLOCKED" as const,
+    reviewDecision: null,
     copilotReviewInProgress: false,
     isDraft: false,
     shouldCancel: false,
