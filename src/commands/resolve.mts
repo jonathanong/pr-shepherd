@@ -141,7 +141,6 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   return { ...result, instructions: buildFetchInstructions(prNumber, result) };
 }
 
-
 /**
  * Mutation mode: resolve/minimize/dismiss by ID.
  */

@@ -24,7 +24,9 @@ export function toAgentThread(t: ReviewThread): AgentThread {
     id: t.id,
     path: t.path,
     line: t.line,
-    ...(t.line !== null && t.startLine !== null && t.startLine !== t.line && { startLine: t.startLine }),
+    ...(t.line !== null &&
+      t.startLine !== null &&
+      t.startLine !== t.line && { startLine: t.startLine }),
     author: t.author,
     body: t.body,
     url: t.url,

@@ -9,9 +9,7 @@ export function renderLineRange(startLine: number | undefined, endLine: number |
 
 export function renderSuggestionBlock(s: SuggestionBlock, indent = "  "): string {
   const rangeLabel =
-    s.startLine !== s.endLine
-      ? `lines ${s.startLine}–${s.endLine}`
-      : `line ${s.startLine}`;
+    s.startLine !== s.endLine ? `lines ${s.startLine}–${s.endLine}` : `line ${s.startLine}`;
 
   const content = s.lines.join("\n");
   const fence = safeFence(content);

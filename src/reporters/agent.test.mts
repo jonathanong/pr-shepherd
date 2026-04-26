@@ -70,7 +70,13 @@ describe("toAgentThread", () => {
 
   it("attaches parsed suggestion when body contains a ```suggestion fence", () => {
     const body = "```suggestion\nconst x = 1;\n```";
-    const result = toAgentThread({ ...thread, path: "src/foo.mts", line: 10, startLine: null, body });
+    const result = toAgentThread({
+      ...thread,
+      path: "src/foo.mts",
+      line: 10,
+      startLine: null,
+      body,
+    });
     expect(result.suggestion).toEqual({
       startLine: 10,
       endLine: 10,
