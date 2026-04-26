@@ -33,8 +33,9 @@ export function formatFetchResult(result: FetchResult): string {
     const threadBullets = result.actionableThreads.map((t) => {
       const suggestionMarker = t.suggestion ? " [suggestion]" : "";
       const link = t.url ? ` [↗](${t.url})` : "";
-      const lineLabel = renderLineRange(t.startLine ?? undefined, t.line);
-      const loc = `\`${t.path ?? ""}:${lineLabel}\``;
+      const loc = t.path
+        ? `\`${t.path}:${renderLineRange(t.startLine ?? undefined, t.line)}\``
+        : "`(no location)`";
       const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (@${t.author})${suggestionMarker}: ${t.body.split("\n")[0]?.slice(0, 100) ?? ""}`;
       if (!t.suggestion) return bulletLine;
       return `${bulletLine}\n${renderSuggestionBlock(t.suggestion)}`;
