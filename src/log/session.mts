@@ -12,7 +12,7 @@ export function buildSessionHeader(argv: string[]): { markdown: string } {
   const ts = new Date().toISOString();
   const cmd = argv.slice(2).join(" ") || "(no args)";
   const markdown =
-    `## ${ts} — pr-shepherd ${cmd}\n` + `pid: ${process.pid} · version: ${readVersion()}\n\n`;
+    `## ${ts} — pr-shepherd ${cmd}\n\n` + `pid: ${process.pid} · version: ${readVersion()}\n\n`;
   return { markdown };
 }
 
@@ -50,8 +50,13 @@ function truncate(s: string): string {
 }
 
 function fenceBody(body: unknown, lang: string): string {
-  const raw = typeof body === "string" ? body : JSON.stringify(body, null, 2);
+  const raw = typeof body === "string" ? body : JSON.stringify(body);
   return `\`\`\`${lang}\n${truncate(raw)}\n\`\`\`\n`;
+}
+
+function extractOperationName(query: string): string {
+  const match = /^\s*(?:query|mutation|subscription)\s+(\w+)/m.exec(query);
+  return match?.[1] ?? "(anonymous)";
 }
 
 export function formatRequestEntry(entry: HttpRequestEntry): string {
@@ -63,7 +68,7 @@ export function formatRequestEntry(entry: HttpRequestEntry): string {
         ? `restText request — GET ${entry.url}`
         : `REST request — ${entry.method} ${entry.url}`;
 
-  let out = `### #${entry.n} ${label}\n${ts}\n`;
+  let out = `### #${entry.n} ${label} · ${ts}\n\n`;
 
   if (entry.kind === "restText") {
     out += `(body omitted: log artifact)\n\n`;
@@ -72,9 +77,14 @@ export function formatRequestEntry(entry: HttpRequestEntry): string {
 
   if (entry.body !== undefined && entry.kind === "GraphQL") {
     const { query, variables } = entry.body as { query: string; variables?: unknown };
-    out += fenceBody(query, "graphql");
+    out += `operation: \`${extractOperationName(query)}\`\n`;
     if (variables && Object.keys(variables as object).length > 0) {
       out += `variables:\n${fenceBody(variables, "json")}`;
+    } else {
+      // For dynamic documents (e.g. BulkApply) the IDs are inlined as aliases.
+      // Count the aliases so the log shows how many operations were batched.
+      const aliasCount = (query.match(/^\s+[_A-Za-z]\w*:/gm) ?? []).length;
+      if (aliasCount > 0) out += `aliases: ${aliasCount}\n`;
     }
   } else if (entry.body !== undefined) {
     out += fenceBody(entry.body, "json");
@@ -95,7 +105,7 @@ export function formatResponseEntry(entry: HttpResponseEntry): string {
         ? `restText response — ${entry.status}${attempt} · ${entry.durationMs}ms`
         : `REST response — ${entry.status}${attempt} · ${entry.durationMs}ms`;
 
-  let out = `### #${entry.n} ${label}\n${ts}\n`;
+  let out = `### #${entry.n} ${label} · ${ts}\n\n`;
 
   if (entry.kind === "restText") {
     if (entry.contentLength !== undefined) {
@@ -124,5 +134,5 @@ export function formatResponseEntry(entry: HttpResponseEntry): string {
 export function formatOutputEntry(text: string, format: "text" | "json"): string {
   const ts = new Date().toISOString();
   const lang = format === "json" ? "json" : "";
-  return `### Output (${format})\n${ts}\n${fenceBody(text.trimEnd(), lang)}\n`;
+  return `### Output (${format}) · ${ts}\n\n${fenceBody(text.trimEnd(), lang)}\n`;
 }

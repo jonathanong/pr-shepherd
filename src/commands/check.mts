@@ -82,10 +82,14 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
   const skipped = classifiedChecks.filter((c) => c.category === "skipped");
   const filtered = classifiedChecks.filter((c) => c.category === "filtered");
 
-  // Triage failures (fetch job info + log tails) — skipped when caller short-circuits early.
   const triaged =
     failing.length > 0 && !opts.skipTriage
-      ? await triageFailingChecks(failing, repo, config.checks.logTailLines)
+      ? await triageFailingChecks(
+          failing,
+          repo,
+          config.checks.logTailLines,
+          config.checks.logTailChars,
+        )
       : failing;
 
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };

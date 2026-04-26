@@ -292,7 +292,7 @@ The JSON payload exposes the same data under `fix.{threads, actionableComments, 
 
 ### Applying ` ```suggestion ` blocks
 
-GitHub reviewers can leave ` ```suggestion ` fenced blocks in review thread bodies. In `iterate`'s `fix_code` output these ride verbatim inside the blockquoted thread body — there is no separate structured field. The numbered `## Instructions` say "read and edit each file," which applies equally to suggestion blocks.
+GitHub reviewers can leave ` ```suggestion ` fenced blocks in review thread bodies. In `iterate`'s `fix_code` output these ride verbatim inside the blockquoted thread body — there is no separate structured field. The numbered `## Instructions` explicitly say to treat any ` ```suggestion ` block as a literal line replacement at the file and line range shown in the thread heading.
 
 **Single-line suggestion.** Thread locators in `[FIX_CODE]` use the end line only (e.g. `src/foo.ts:42`). When the body contains a suggestion block, replace exactly that line with the suggestion's content:
 

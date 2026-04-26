@@ -58,7 +58,7 @@ export function buildFixInstructions(
 
   if (threads.length > 0 || actionableComments.length > 0) {
     instructions.push(
-      `Apply code fixes: read and edit each file referenced under \`## Review threads\` and \`## Actionable comments\` above.`,
+      `Apply code fixes: read and edit each file referenced under \`## Review threads\` and \`## Actionable comments\` above. If a comment body opens with a triple-backtick suggestion fence, treat its contents as a literal line replacement at the file and line range shown in the thread heading and apply it verbatim unless you have a specific reason to deviate.`,
     );
   }
   const checksWithRunId = checks.filter((c) => c.runId);
