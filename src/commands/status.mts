@@ -64,11 +64,12 @@ export async function runStatus(opts: StatusCommandOptions): Promise<PrSummary[]
 // ---------------------------------------------------------------------------
 
 function buildBatchStatusQuery(prNumbers: number[]): string {
+  const uniquePrs = [...new Set(prNumbers)];
   const f =
     "number title state isDraft mergeStateStatus reviewDecision " +
     "reviewThreads(last:100){totalCount pageInfo{hasPreviousPage startCursor} nodes{isResolved}} " +
     "commits(last:1){nodes{commit{statusCheckRollup{state}}}}";
-  const aliases = prNumbers.map((n) => `pr_${n}:pullRequest(number:${n}){${f}}`).join(" ");
+  const aliases = uniquePrs.map((n) => `pr_${n}:pullRequest(number:${n}){${f}}`).join(" ");
   return `query MultiPrStatusBatch($owner:String!,$repo:String!){repository(owner:$owner,name:$repo){${aliases}}}`;
 }
 
