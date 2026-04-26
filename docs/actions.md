@@ -295,7 +295,7 @@ The JSON payload exposes the same data under `fix.{threads, actionableComments, 
 GitHub reviewers can leave ` ```suggestion ` fenced blocks in review thread bodies. The CLI parses these and surfaces them to the agent in two forms:
 
 - A `[suggestion]` marker on the thread heading.
-- A `Replaces lines …` block immediately after the blockquoted body showing the parsed replacement text.
+- Immediately after the blockquoted body, either a `Replaces line(s) …` block showing the parsed replacement text, or for an empty suggestion (deletion), a `Deletes line(s) …` line with no replacement fenced block.
 
 The numbered `## Instructions` section tells the agent how to apply each `[suggestion]` thread.
 
