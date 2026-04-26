@@ -64,7 +64,7 @@ export async function runStatus(opts: StatusCommandOptions): Promise<PrSummary[]
 // ---------------------------------------------------------------------------
 
 function buildBatchStatusQuery(prNumbers: number[]): string {
-  const uniquePrs = [...new Set(prNumbers)];
+  const uniquePrs = [...new Set(prNumbers.filter((n) => n > 0))];
   const f =
     "number title state isDraft mergeStateStatus reviewDecision " +
     "reviewThreads(last:100){totalCount pageInfo{hasPreviousPage startCursor} nodes{isResolved}} " +
