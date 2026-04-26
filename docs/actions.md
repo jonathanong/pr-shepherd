@@ -295,7 +295,7 @@ The JSON payload exposes the same data under `fix.{threads, actionableComments, 
 GitHub reviewers can leave ` ```suggestion ` fenced blocks in review thread bodies. The CLI parses these and surfaces them to the agent in two forms:
 
 - A `[suggestion]` marker on the thread heading.
-- Immediately after the blockquoted body, either a `Replaces line(s) …` block showing the parsed replacement text, or for an empty suggestion (deletion), a `Deletes line(s) …` line with no replacement fenced block.
+- Immediately after the blockquoted body, a `Replaces line(s) …` block showing the parsed replacement text. For an empty suggestion (deletion), the label is `Replaces line(s) … with nothing:` followed by an empty fenced block.
 
 The numbered `## Instructions` section tells the agent how to apply each `[suggestion]` thread.
 
@@ -310,10 +310,11 @@ The numbered `## Instructions` section tells the agent how to apply each `[sugge
 > const remainingSeconds = computeRemaining();
 > ```
 
-  Replaces line 42:
-  ```
-  const remainingSeconds = computeRemaining();
-  ```
+Replaces line 42:
+
+```
+const remainingSeconds = computeRemaining();
+```
 ````
 
 Steps: open `src/foo.ts`, replace line 42 with `const remainingSeconds = computeRemaining();`, then proceed to the commit step in `## Instructions`.
@@ -329,10 +330,11 @@ Steps: open `src/foo.ts`, replace line 42 with `const remainingSeconds = compute
 > const result = computeAll();
 > ```
 
-  Replaces lines 40–42:
-  ```
-  const result = computeAll();
-  ```
+Replaces lines 40–42:
+
+```
+const result = computeAll();
+```
 ````
 
 Replace lines 40–42 in `src/foo.ts` with the single replacement line shown in the block.
@@ -350,10 +352,11 @@ Example with two threads:
 > const remainingSeconds = computeRemaining();
 > ```
 
-  Replaces line 42:
-  ```
-  const remainingSeconds = computeRemaining();
-  ```
+Replaces line 42:
+
+```
+const remainingSeconds = computeRemaining();
+```
 
 ### `PRRT_kwDOSGizTs58XC2M` — `src/bar.ts:17` (@alice) [suggestion]
 
@@ -361,10 +364,11 @@ Example with two threads:
 > return value ?? defaultValue;
 > ```
 
-  Replaces line 17:
-  ```
-  return value ?? defaultValue;
-  ```
+Replaces line 17:
+
+```
+return value ?? defaultValue;
+```
 ````
 
 Apply both edits, then commit and push together. The `resolve:` command at the bottom of `## Post-fix push` already includes both IDs:
