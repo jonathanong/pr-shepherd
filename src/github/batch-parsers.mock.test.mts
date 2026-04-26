@@ -27,6 +27,8 @@ function makeRawPr(overrides: Record<string, unknown> = {}) {
     mergeStateStatus: "CLEAN",
     reviewDecision: "APPROVED",
     headRefOid: "abc123",
+    headRefName: "feature",
+    headRepository: { nameWithOwner: "owner/repo" },
     baseRefName: "main",
     reviewRequests: { nodes: [] },
     latestReviews: { nodes: [] },

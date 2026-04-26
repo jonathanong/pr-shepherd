@@ -33,9 +33,6 @@ vi.mock("node:fs/promises", () => ({
 vi.mock("../github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
   getCurrentPrNumber: vi.fn().mockResolvedValue(42 as number | null),
-  getPrHead: vi
-    .fn()
-    .mockResolvedValue({ sha: "headsha", ref: "feature/foo", repoWithOwner: "owner/repo" }),
   getCurrentBranch: vi.fn().mockResolvedValue("feature/foo"),
 }));
 
@@ -53,13 +50,12 @@ vi.mock("../comments/resolve.mts", () => ({
 }));
 
 import { runCommitSuggestion } from "./commit-suggestion.mts";
-import { getPrHead, getCurrentBranch } from "../github/client.mts";
+import { getCurrentBranch } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { applyResolveOptions } from "../comments/resolve.mts";
 import { readFile, unlink } from "node:fs/promises";
 import type { ReviewThread, BatchPrData } from "../types.mts";
 
-const mockGetPrHead = vi.mocked(getPrHead);
 const mockGetCurrentBranch = vi.mocked(getCurrentBranch);
 const mockFetchBatch = vi.mocked(fetchPrBatch);
 const mockApplyResolveOptions = vi.mocked(applyResolveOptions);
@@ -97,6 +93,8 @@ function makeBatch(threads: ReviewThread[]): BatchPrData {
     mergeStateStatus: "CLEAN",
     reviewDecision: "APPROVED",
     headRefOid: "headsha",
+    headRefName: "feature/foo",
+    headRepoWithOwner: "owner/repo",
     baseRefName: "main",
     reviewRequests: [],
     latestReviews: [],
@@ -151,12 +149,7 @@ function setupHappyPath(): void {
 describe("runCommitSuggestion — successful apply", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetPrHead.mockResolvedValue({
-      sha: "headsha",
-      ref: "feature/foo",
-      repoWithOwner: "owner/repo",
-    });
-    mockGetCurrentBranch.mockResolvedValue("feature/foo");
+mockGetCurrentBranch.mockResolvedValue("feature/foo");
     setupHappyPath();
   });
 
@@ -280,12 +273,7 @@ describe("runCommitSuggestion — successful apply", () => {
 describe("runCommitSuggestion — dry-run", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetPrHead.mockResolvedValue({
-      sha: "headsha",
-      ref: "feature/foo",
-      repoWithOwner: "owner/repo",
-    });
-    mockGetCurrentBranch.mockResolvedValue("feature/foo");
+mockGetCurrentBranch.mockResolvedValue("feature/foo");
     mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (mockReadFile as any).mockResolvedValue(FILE_CONTENT);
@@ -383,12 +371,7 @@ describe("runCommitSuggestion — dry-run", () => {
 describe("runCommitSuggestion — git apply rollback", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetPrHead.mockResolvedValue({
-      sha: "headsha",
-      ref: "feature/foo",
-      repoWithOwner: "owner/repo",
-    });
-    mockGetCurrentBranch.mockResolvedValue("feature/foo");
+mockGetCurrentBranch.mockResolvedValue("feature/foo");
     mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (mockReadFile as any).mockResolvedValue(FILE_CONTENT);

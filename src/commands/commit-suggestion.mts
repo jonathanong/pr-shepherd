@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
-import { getRepoInfo, getCurrentPrNumber, getPrHead, getCurrentBranch } from "../github/client.mts";
+import { getRepoInfo, getCurrentPrNumber, getCurrentBranch } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { applyResolveOptions } from "../comments/resolve.mts";
 import { parseSuggestion, isCommittableSuggestion } from "../suggestions/parse.mts";
@@ -43,24 +43,26 @@ export async function runCommitSuggestion(
     throw new Error("No open PR found for current branch. Pass a PR number explicitly.");
   }
 
-  const head = await getPrHead(prNumber, repo.owner, repo.name);
   const currentBranch = await getCurrentBranch();
-  if (currentBranch !== head.ref) {
-    throw new Error(
-      `Current branch "${currentBranch}" does not match PR head branch "${head.ref}". ` +
-        `Check out "${head.ref}" before applying suggestions.`,
-    );
-  }
-
   const { stdout: localHeadOut } = await execFile("git", ["rev-parse", "HEAD"]);
   const localHeadSha = localHeadOut.trim();
-  if (localHeadSha !== head.sha) {
+
+  const { data } = await fetchPrBatch(prNumber, repo);
+  if (!data.headRepoWithOwner) {
+    throw new Error(`PR #${prNumber} head repository is unavailable (fork may have been deleted).`);
+  }
+  if (currentBranch !== data.headRefName) {
     throw new Error(
-      `Local HEAD ${localHeadSha} does not match PR head ${head.sha}. ` +
-        `Pull/rebase "${head.ref}" to the latest PR head and try again.`,
+      `Current branch "${currentBranch}" does not match PR head branch "${data.headRefName}". ` +
+        `Check out "${data.headRefName}" before applying suggestions.`,
     );
   }
-  const { data } = await fetchPrBatch(prNumber, repo);
+  if (localHeadSha !== data.headRefOid) {
+    throw new Error(
+      `Local HEAD ${localHeadSha} does not match PR head ${data.headRefOid}. ` +
+        `Pull/rebase "${data.headRefName}" to the latest PR head and try again.`,
+    );
+  }
   const thread = data.reviewThreads.find((t) => t.id === opts.threadId);
   if (!thread) {
     throw new Error(`Thread ${opts.threadId} not found on PR #${prNumber}.`);
@@ -92,9 +94,7 @@ export async function runCommitSuggestion(
   const startLine = thread.startLine ?? thread.line;
   const endLine = thread.line;
   const filePath = thread.path;
-
   const originalContent = await readFile(filePath, "utf8");
-
   const patch = buildUnifiedDiff({
     path: filePath,
     originalContent,

@@ -58,6 +58,8 @@ function makeBatchData(overrides: Partial<BatchPrData> = {}): BatchPrData {
     mergeStateStatus: "CLEAN",
     reviewDecision: "APPROVED",
     headRefOid: "abc123",
+    headRefName: "feature",
+    headRepoWithOwner: "owner/repo",
     baseRefName: "main",
     reviewRequests: [],
     latestReviews: [],
