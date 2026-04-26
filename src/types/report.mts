@@ -95,13 +95,11 @@ export interface AgentThread {
   id: string;
   path: string | null;
   line: number | null;
-  /** Set when the thread anchors a multi-line range (startLine differs from line). Omitted for single-line threads. */
-  startLine?: number;
+  startLine?: number; // multi-line range only; omitted when equal to line
   author: string;
   body: string;
   url: string;
-  /** Parsed suggestion block when the comment body contains a ```suggestion fence. */
-  suggestion?: SuggestionBlock;
+  suggestion?: SuggestionBlock; // present when body contains a ```suggestion fence
 }
 
 /** Comment shape emitted to the monitor agent — stripped of always-false flags. */
@@ -190,10 +188,8 @@ export type CommitSuggestionResult =
   | (CommitSuggestionResultBase & {
       applied: false;
       dryRun: true;
-      /** Whether `git apply --check` succeeded. */
-      valid: boolean;
-      /** Rejection message from `git apply --check`, or null when valid. */
-      reason: string | null;
+      valid: boolean; // whether `git apply --check` succeeded
+      reason: string | null; // rejection message or null when valid
     });
 
 // CLI options

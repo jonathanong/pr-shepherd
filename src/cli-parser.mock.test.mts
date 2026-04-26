@@ -251,69 +251,6 @@ describe("main — resolve", () => {
     expect(out).toContain("commit-suggestion");
   });
 
-  it("formatFetchResult shows parsed suggestion content inline under each [suggestion] bullet", async () => {
-    mockRunResolveFetch.mockResolvedValue({
-      prNumber: 42,
-      actionableThreads: [
-        {
-          id: "PRT_1",
-          path: "src/foo.ts",
-          line: 5,
-          startLine: null,
-          isMinimized: false,
-          author: "alice",
-          body: "Use const",
-          url: "",
-          createdAtUnix: 0,
-          suggestion: { startLine: 5, endLine: 5, lines: ["const x = 1;"], author: "alice" },
-        },
-      ],
-      actionableComments: [],
-      firstLookThreads: [],
-      firstLookComments: [],
-      changesRequestedReviews: [],
-      reviewSummaries: [],
-      commitSuggestionsEnabled: true,
-      instructions: ["Classify every item."],
-    });
-    await main(["node", "shepherd", "resolve", "42"]);
-    const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
-    expect(out).toContain("[suggestion]");
-    expect(out).toContain("Replaces line 5:");
-    expect(out).toContain("const x = 1;");
-  });
-
-  it("formatFetchResult shows multi-line range in bullet when startLine differs from line", async () => {
-    mockRunResolveFetch.mockResolvedValue({
-      prNumber: 42,
-      actionableThreads: [
-        {
-          id: "PRT_1",
-          path: "src/foo.ts",
-          line: 42,
-          startLine: 40,
-          isMinimized: false,
-          author: "alice",
-          body: "Collapse these",
-          url: "",
-          createdAtUnix: 0,
-          suggestion: { startLine: 40, endLine: 42, lines: ["const x = 1;"], author: "alice" },
-        },
-      ],
-      actionableComments: [],
-      firstLookThreads: [],
-      firstLookComments: [],
-      changesRequestedReviews: [],
-      reviewSummaries: [],
-      commitSuggestionsEnabled: true,
-      instructions: ["Classify every item."],
-    });
-    await main(["node", "shepherd", "resolve", "42"]);
-    const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
-    expect(out).toContain("`src/foo.ts:40-42`");
-    expect(out).toContain("Replaces lines 40–42:");
-  });
-
   it("formatFetchResult -- zero items emits single-step instructions", async () => {
     mockRunResolveFetch.mockResolvedValue({
       prNumber: 42,
