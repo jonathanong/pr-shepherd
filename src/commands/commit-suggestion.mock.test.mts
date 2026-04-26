@@ -83,7 +83,10 @@ function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
   };
 }
 
-function makeBatch(threads: ReviewThread[]): BatchPrData {
+function makeBatch(
+  threads: ReviewThread[],
+  headRepoWithOwner: string | null = "owner/repo",
+): BatchPrData {
   return {
     nodeId: "PR_kgDOAAA",
     number: 42,
@@ -94,7 +97,7 @@ function makeBatch(threads: ReviewThread[]): BatchPrData {
     reviewDecision: "APPROVED",
     headRefOid: "headsha",
     headRefName: "feature/foo",
-    headRepoWithOwner: "owner/repo",
+    headRepoWithOwner,
     baseRefName: "main",
     reviewRequests: [],
     latestReviews: [],
@@ -219,6 +222,16 @@ describe("runCommitSuggestion — preflight", () => {
     await expect(
       runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("does not match PR head headsha");
+  });
+
+  it("throws when head repository is unavailable (deleted fork)", async () => {
+    mockFetchBatch.mockResolvedValue({
+      data: makeBatch([makeThread()], null),
+    });
+    mockExecFile.mockImplementation(() => makeGitSuccess(""));
+    await expect(
+      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+    ).rejects.toThrow("head repository is unavailable");
   });
 });
 

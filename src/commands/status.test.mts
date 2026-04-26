@@ -166,6 +166,34 @@ describe("formatStatusTable — formatting", () => {
 // runStatus
 // ---------------------------------------------------------------------------
 
+describe("runStatus — empty input", () => {
+  it("returns empty array when prNumbers is empty", async () => {
+    const result = await runStatus({ prNumbers: [], format: "text" });
+    expect(result).toEqual([]);
+    expect(mockGraphql).not.toHaveBeenCalled();
+  });
+});
+
+describe("runStatus — multi-PR batch", () => {
+  it("fetches multiple PRs in a single request", async () => {
+    mockGraphql.mockResolvedValueOnce({
+      data: {
+        repository: {
+          pr_10: makeRawPr({ number: 10, title: "PR ten", state: "OPEN" }),
+          pr_20: makeRawPr({ number: 20, title: "PR twenty", state: "MERGED" }),
+        },
+      },
+    });
+
+    const summaries = await runStatus({ prNumbers: [10, 20], format: "text" });
+    expect(mockGraphql).toHaveBeenCalledTimes(1);
+    expect(summaries).toHaveLength(2);
+    expect(summaries[0]!.number).toBe(10);
+    expect(summaries[1]!.number).toBe(20);
+    expect(summaries[1]!.state).toBe("MERGED");
+  });
+});
+
 describe("runStatus — PR not found", () => {
   it("throws when PR alias is null", async () => {
     mockGraphql.mockResolvedValue({ data: { repository: { pr_99: null } } });

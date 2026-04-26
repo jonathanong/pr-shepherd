@@ -479,4 +479,18 @@ describe("fetchPrBatch — null author fallbacks", () => {
     const { data } = await fetchPrBatch(42, REPO);
     expect(data.reviewDecision).toBeNull();
   });
+
+  it("maps headRepository: null to headRepoWithOwner: null (deleted fork)", async () => {
+    const pr = makeRawPr({ headRepository: null });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.headRepoWithOwner).toBeNull();
+  });
+
+  it("maps headRepository.nameWithOwner to headRepoWithOwner", async () => {
+    const pr = makeRawPr({ headRepository: { nameWithOwner: "contributor/fork" } });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.headRepoWithOwner).toBe("contributor/fork");
+  });
 });
