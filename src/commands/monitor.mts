@@ -87,8 +87,8 @@ function validateReadyDelaySuffix(readyDelaySuffix?: string): string | undefined
 function buildLoopPrompt(prNumber: number, loopTag: string, readyDelaySuffix?: string): string {
   const validatedDelay = validateReadyDelaySuffix(readyDelaySuffix);
   const iterateCmd = validatedDelay
-    ? `npx pr-shepherd iterate ${prNumber} --no-cache --ready-delay ${validatedDelay}`
-    : `npx pr-shepherd iterate ${prNumber} --no-cache`;
+    ? `npx pr-shepherd iterate ${prNumber} --ready-delay ${validatedDelay}`
+    : `npx pr-shepherd iterate ${prNumber}`;
   return [
     loopTag,
     "",
