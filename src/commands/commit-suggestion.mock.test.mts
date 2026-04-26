@@ -149,7 +149,7 @@ function setupHappyPath(): void {
 describe("runCommitSuggestion — validation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-mockGetCurrentBranch.mockResolvedValue("feature/foo");
+    mockGetCurrentBranch.mockResolvedValue("feature/foo");
     mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
     mockExecFile.mockImplementation(() => makeGitSuccess(""));
   });
@@ -180,7 +180,7 @@ mockGetCurrentBranch.mockResolvedValue("feature/foo");
 describe("runCommitSuggestion — preflight", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-mockGetCurrentBranch.mockResolvedValue("feature/foo");
+    mockGetCurrentBranch.mockResolvedValue("feature/foo");
     mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
   });
 
@@ -229,7 +229,7 @@ mockGetCurrentBranch.mockResolvedValue("feature/foo");
 describe("runCommitSuggestion — thread classification", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-mockGetCurrentBranch.mockResolvedValue("feature/foo");
+    mockGetCurrentBranch.mockResolvedValue("feature/foo");
     mockExecFile.mockImplementation((cmd: string, args: string[]) => {
       if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
       return makeGitSuccess("");
@@ -308,7 +308,7 @@ mockGetCurrentBranch.mockResolvedValue("feature/foo");
 describe("runCommitSuggestion — file read failure", () => {
   it("propagates the underlying readFile error when file cannot be read", async () => {
     vi.clearAllMocks();
-mockGetCurrentBranch.mockResolvedValue("feature/foo");
+    mockGetCurrentBranch.mockResolvedValue("feature/foo");
     mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
     mockExecFile.mockImplementation((cmd: string, args: string[]) => {
       if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
@@ -326,7 +326,7 @@ mockGetCurrentBranch.mockResolvedValue("feature/foo");
 
   it("propagates a non-Error rejection from readFile", async () => {
     vi.clearAllMocks();
-mockGetCurrentBranch.mockResolvedValue("feature/foo");
+    mockGetCurrentBranch.mockResolvedValue("feature/foo");
     mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
     mockExecFile.mockImplementation((cmd: string, args: string[]) => {
       if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
@@ -344,7 +344,7 @@ mockGetCurrentBranch.mockResolvedValue("feature/foo");
 describe("runCommitSuggestion — patch failure", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-mockGetCurrentBranch.mockResolvedValue("feature/foo");
+    mockGetCurrentBranch.mockResolvedValue("feature/foo");
     mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (mockReadFile as any).mockResolvedValue(FILE_CONTENT);
@@ -438,7 +438,7 @@ mockGetCurrentBranch.mockResolvedValue("feature/foo");
 describe("runCommitSuggestion — resolve failure", () => {
   it("returns applied:true with error in postActionInstruction when resolve fails after commit", async () => {
     vi.clearAllMocks();
-mockGetCurrentBranch.mockResolvedValue("feature/foo");
+    mockGetCurrentBranch.mockResolvedValue("feature/foo");
     setupHappyPath();
     mockApplyResolveOptions.mockResolvedValue({
       resolvedThreads: [],

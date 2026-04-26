@@ -149,7 +149,7 @@ function setupHappyPath(): void {
 describe("runCommitSuggestion — successful apply", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-mockGetCurrentBranch.mockResolvedValue("feature/foo");
+    mockGetCurrentBranch.mockResolvedValue("feature/foo");
     setupHappyPath();
   });
 
@@ -273,7 +273,7 @@ mockGetCurrentBranch.mockResolvedValue("feature/foo");
 describe("runCommitSuggestion — dry-run", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-mockGetCurrentBranch.mockResolvedValue("feature/foo");
+    mockGetCurrentBranch.mockResolvedValue("feature/foo");
     mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (mockReadFile as any).mockResolvedValue(FILE_CONTENT);
@@ -371,7 +371,7 @@ mockGetCurrentBranch.mockResolvedValue("feature/foo");
 describe("runCommitSuggestion — git apply rollback", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-mockGetCurrentBranch.mockResolvedValue("feature/foo");
+    mockGetCurrentBranch.mockResolvedValue("feature/foo");
     mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (mockReadFile as any).mockResolvedValue(FILE_CONTENT);

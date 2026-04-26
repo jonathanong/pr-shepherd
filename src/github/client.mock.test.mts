@@ -290,4 +290,3 @@ describe("getPrHeadSha", () => {
     await expect(getPrHeadSha(42, "owner", "repo")).rejects.toThrow("headRefOid missing");
   });
 });
-
