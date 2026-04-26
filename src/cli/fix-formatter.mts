@@ -1,10 +1,7 @@
 import { renderResolveCommand } from "../commands/iterate.mts";
+import { safeFence } from "./fence.mts";
+import { renderSuggestionBlock, renderLineRange } from "./suggestion-renderer.mts";
 import type { IterateResultFixCode } from "../types.mts";
-
-function safeFence(content: string): string {
-  const maxRun = Math.max(0, ...Array.from(content.matchAll(/`+/g), (m) => m[0].length));
-  return "`".repeat(Math.max(3, maxRun + 1));
-}
 
 export function formatFixCodeResult(header: string, result: IterateResultFixCode): string {
   const sections: string[] = [header];
@@ -12,10 +9,15 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
   if (result.fix.threads.length > 0) {
     sections.push("## Review threads");
     for (const t of result.fix.threads) {
-      const loc = t.path ? `\`${t.path}:${t.line ?? "?"}\`` : "(no location)";
+      const lineLabel = renderLineRange(t.startLine, t.line);
+      const loc = t.path ? `\`${t.path}:${lineLabel}\`` : "(no location)";
       const heading = t.url ? `[${t.id}](${t.url})` : `\`${t.id}\``;
-      sections.push(`### ${heading} — ${loc} (@${t.author})`);
+      const suggestionMarker = t.suggestion ? " [suggestion]" : "";
+      sections.push(`### ${heading} — ${loc} (@${t.author})${suggestionMarker}`);
       sections.push(blockquote(t.body));
+      if (t.suggestion) {
+        sections.push(renderSuggestionBlock(t.suggestion));
+      }
     }
   }
 

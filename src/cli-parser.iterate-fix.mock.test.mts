@@ -277,6 +277,52 @@ describe("main — iterate text format (fix_code and checks)", () => {
     );
   });
 
+  it("fix_code: multi-line thread heading shows startLine-endLine range", async () => {
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    result.fix.threads = [
+      {
+        id: "t-range",
+        path: "src/foo.ts",
+        line: 42,
+        startLine: 40,
+        author: "alice",
+        body: "Collapse these.",
+        url: "",
+        suggestion: { startLine: 40, endLine: 42, lines: ["const x = 1;"], author: "alice" },
+      },
+    ];
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    expect(out).toContain("### `t-range` — `src/foo.ts:40-42` (@alice)");
+    expect(out).toContain("[suggestion]");
+    expect(out).toContain("Replaces lines 40–42:");
+    expect(out).toContain("const x = 1;");
+  });
+
+  it("fix_code: single-line thread heading shows only end line (no range)", async () => {
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    result.fix.threads = [
+      {
+        id: "t-single",
+        path: "src/foo.ts",
+        line: 10,
+        author: "alice",
+        body: "Fix this.",
+        url: "",
+      },
+    ];
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    expect(out).toContain("### `t-single` — `src/foo.ts:10` (@alice)");
+    expect(out).not.toContain("10-10");
+  });
+
   it("fix_code: CRLF line endings in thread body are normalized in blockquote", async () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");

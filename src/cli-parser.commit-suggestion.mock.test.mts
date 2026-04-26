@@ -176,14 +176,15 @@ describe("main — commit-suggestion", () => {
     expect(process.exitCode).toBe(1);
   });
 
-  it("text output shows applied result with commit sha and post-action", async () => {
+  it("text output shows applied result with commit sha and post-action in ## Instructions", async () => {
     mockRunCommitSuggestion.mockResolvedValue(APPLIED_RESULT);
     await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "fix"]);
     const out = getStdout();
     expect(out).toContain("Applied suggestion from @alice:");
     expect(out).toContain("a.ts (line 5)");
     expect(out).toContain("Commit: abc123");
-    expect(out).toContain("git push");
+    expect(out).toContain("## Instructions");
+    expect(out).toContain("1. Run `git push`");
   });
 
   it("text output shows patch diff block in success result", async () => {
@@ -250,14 +251,15 @@ describe("main — commit-suggestion --dry-run", () => {
     expect(process.exitCode).toBe(1);
   });
 
-  it("text output shows dry-run valid header and diff", async () => {
+  it("text output shows dry-run valid header, diff, and ## Instructions", async () => {
     mockRunCommitSuggestion.mockResolvedValue(DRY_RUN_VALID_RESULT);
     await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--dry-run"]);
     const out = getStdout();
     expect(out).toContain("Dry-run: would apply suggestion from @alice:");
     expect(out).toContain("a.ts (line 5)");
     expect(out).toContain("```diff");
-    expect(out).toContain("Re-run without --dry-run");
+    expect(out).toContain("## Instructions");
+    expect(out).toContain("1. Re-run without --dry-run");
   });
 
   it("text output shows dry-run invalid header and reason", async () => {

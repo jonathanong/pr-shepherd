@@ -6,6 +6,7 @@ import type {
   Review,
   MergeStatusResult,
   CheckConclusion,
+  SuggestionBlock,
 } from "./github.mts";
 
 // ---------------------------------------------------------------------------
@@ -94,9 +95,13 @@ export interface AgentThread {
   id: string;
   path: string | null;
   line: number | null;
+  /** Set when the thread anchors a multi-line range (startLine differs from line). Omitted for single-line threads. */
+  startLine?: number;
   author: string;
   body: string;
   url: string;
+  /** Parsed suggestion block when the comment body contains a ```suggestion fence. */
+  suggestion?: SuggestionBlock;
 }
 
 /** Comment shape emitted to the monitor agent — stripped of always-false flags. */
