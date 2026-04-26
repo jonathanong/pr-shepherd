@@ -119,7 +119,7 @@ export function formatCommitSuggestionResult(result: CommitSuggestionResult): st
   const range =
     result.startLine === result.endLine
       ? `line ${result.startLine}`
-      : `lines ${result.startLine}-${result.endLine}`;
+      : `lines ${result.startLine}–${result.endLine}`;
 
   function pushPatch(patch: string) {
     const fence = safeFence(patch);
@@ -147,7 +147,7 @@ export function formatCommitSuggestionResult(result: CommitSuggestionResult): st
     if (result.patch) pushPatch(result.patch);
   } else {
     lines.push(`Failed to apply suggestion ${result.threadId}:`);
-    lines.push(`- path: ${result.path} (lines ${result.startLine}–${result.endLine})`);
+    lines.push(`- path: ${result.path} (${range})`);
     lines.push(`- author: @${result.author}`);
     lines.push(`- reason: ${result.reason ?? "unknown"}`);
     if (result.patch) pushPatch(result.patch);
