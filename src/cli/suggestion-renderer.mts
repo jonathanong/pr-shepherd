@@ -13,24 +13,26 @@ export function renderSuggestionBlock(s: SuggestionBlock, indent = "  "): string
       ? `lines ${s.startLine}–${s.endLine}`
       : `line ${s.startLine}`;
 
-  if (s.lines.length === 0) {
-    return `${indent}Deletes ${rangeLabel}`;
-  }
-
   const content = s.lines.join("\n");
   const fence = safeFence(content);
   const label =
-    s.lines.length === 1 && s.lines[0] === ""
-      ? `Replaces ${rangeLabel} with a blank line:`
-      : `Replaces ${rangeLabel}:`;
+    s.lines.length === 0
+      ? `Replaces ${rangeLabel} with nothing:`
+      : s.lines.length === 1 && s.lines[0] === ""
+        ? `Replaces ${rangeLabel} with a blank line:`
+        : `Replaces ${rangeLabel}:`;
 
   return [
     `${indent}${label}`,
     `${indent}${fence}`,
-    content
-      .split("\n")
-      .map((l) => `${indent}${l}`)
-      .join("\n"),
+    ...(content === ""
+      ? []
+      : [
+          content
+            .split("\n")
+            .map((l) => `${indent}${l}`)
+            .join("\n"),
+        ]),
     `${indent}${fence}`,
   ].join("\n");
 }
