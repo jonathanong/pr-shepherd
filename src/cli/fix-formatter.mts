@@ -16,7 +16,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
       sections.push(`### ${heading} — ${loc} (@${t.author})${suggestionMarker}`);
       sections.push(blockquote(t.body));
       if (t.suggestion) {
-        sections.push(renderSuggestionBlock(t.suggestion));
+        sections.push(renderSuggestionBlock(t.suggestion, ""));
       }
     }
   }
