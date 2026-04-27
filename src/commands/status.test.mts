@@ -144,11 +144,11 @@ describe("formatStatusTable — deriveVerdict precedence", () => {
 // ---------------------------------------------------------------------------
 
 describe("formatStatusTable — formatting", () => {
-  it("truncates title to 50 chars", () => {
+  it("truncates title with ellipsis at 50 chars total", () => {
     const longTitle = "A".repeat(60);
     const out = formatStatusTable([makeSummary({ title: longTitle })], "owner/repo");
-    expect(out).toContain("A".repeat(50));
-    expect(out).not.toContain("A".repeat(51));
+    expect(out).toContain("A".repeat(47) + "...");
+    expect(out).not.toContain("A".repeat(48));
   });
 
   it("appends threadsTruncated note when flag is true", () => {
