@@ -178,6 +178,30 @@ See [docs/skills.md](docs/skills.md) for full argument reference.
 
 On each tick (4-minute default, tunable via `watch.interval`): fetch PR state in one GraphQL batch → classify CI, comments, and merge status → take one action (`fix_code`, `mark_ready`, `cancel`, `escalate`, `wait`, or `cooldown`). See [docs/iterate-flow.md](docs/iterate-flow.md) for the decision table and [docs/flow.md](docs/flow.md) for the end-to-end flow diagram.
 
+## MCP Server
+
+`pr-shepherd-mcp` is a long-lived MCP server that exposes all CLI commands as MCP tools and can receive GitHub webhooks to push PR activity notifications directly into the connected Claude Code session.
+
+```json
+{
+  "mcpServers": {
+    "pr-shepherd": {
+      "command": "npx",
+      "args": ["pr-shepherd-mcp"],
+      "env": {
+        "GH_TOKEN": "ghp_...",
+        "SHEPHERD_WEBHOOK_PORT": "3000",
+        "GITHUB_WEBHOOK_SECRET": "your-secret"
+      }
+    }
+  }
+}
+```
+
+Once connected, call `shepherd_subscribe_pr` with a PR number to receive `<github-webhook-activity>` notifications whenever GitHub sends a matching webhook event. All 10 tools (`shepherd_check`, `shepherd_iterate`, `shepherd_resolve_fetch`, `shepherd_resolve_mutate`, `shepherd_commit_suggestion`, `shepherd_monitor`, `shepherd_status`, `shepherd_log_file`, `shepherd_subscribe_pr`, `shepherd_unsubscribe_pr`) are available directly in Claude Code's tool list.
+
+See [docs/mcp-server.md](docs/mcp-server.md) for full setup and tool reference.
+
 ## Install
 
 > **Note:** Skill and plugin install methods add the skill definitions only — they do not install the `pr-shepherd` CLI. The skills invoke `npx pr-shepherd`, so you also need the CLI available. If you're using `pr-shepherd` as development tooling for your repo, install it as a dev dependency so `npx` resolves it without prompting:

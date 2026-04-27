@@ -6,7 +6,8 @@
   "author": "Jonathan Ong",
   "type": "module",
   "bin": {
-    "pr-shepherd": "bin/pr-shepherd"
+    "pr-shepherd": "bin/pr-shepherd",
+    "pr-shepherd-mcp": "bin/pr-shepherd-mcp"
   },
   "files": [
     "bin/**",
@@ -20,6 +21,7 @@
     "node": ">=22.0.0"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "yaml": "^2.7.0"
   },
   "devDependencies": {
