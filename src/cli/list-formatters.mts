@@ -37,11 +37,11 @@ export function renderThreadBullet(
     : "`(no location)`";
   const suggestionMarker = t.suggestion ? " [suggestion]" : "";
   const statusSuffix = opts.statusTag ? ` ${opts.statusTag}` : "";
-  const line = `- \`threadId=${t.id}\`${link} ${loc} (@${t.author})${suggestionMarker}${statusSuffix}: ${renderBodyPreview(t.body)}`;
+  const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (@${t.author})${suggestionMarker}${statusSuffix}: ${renderBodyPreview(t.body)}`;
   if (t.suggestion && opts.renderSuggestion) {
-    return `${line}\n${renderSuggestionBlock(t.suggestion)}`;
+    return `${bulletLine}\n${renderSuggestionBlock(t.suggestion)}`;
   }
-  return line;
+  return bulletLine;
 }
 
 export function renderCommentBullet(
