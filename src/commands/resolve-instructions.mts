@@ -71,7 +71,7 @@ export function buildFetchInstructions(
       `Rebase and push: \`BASE_BRANCH=$(gh pr view ${prNumber} --json baseRefName --jq .baseRefName) && git fetch origin && git rebase "origin/$BASE_BRANCH" && git push --force-with-lease\`.`,
     );
     instructions.push(
-      `Cancel stale in-progress runs: \`BRANCH=$(git rev-parse --abbrev-ref HEAD) && gh run list --branch "$BRANCH" --status in_progress --json databaseId --jq '.[].databaseId' | xargs -I{} gh run cancel {}\`.`,
+      `Cancel stale in-progress runs: \`BRANCH=$(git rev-parse --abbrev-ref HEAD) && CURRENT_SHA=$(git rev-parse HEAD) && gh run list --branch "$BRANCH" --status in_progress --json databaseId,headSha --jq ".[] | select(.headSha != \\"$CURRENT_SHA\\") | .databaseId" | xargs -I{} gh run cancel {}\`.`,
     );
   }
 
