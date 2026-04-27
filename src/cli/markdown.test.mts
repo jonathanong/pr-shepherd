@@ -19,7 +19,7 @@ describe("joinSections", () => {
     expect(joinSections([null, undefined, ""])).toBe("");
   });
 
-  it("returns no trailing newline", () => {
+  it("does not add a trailing newline when joining plain sections", () => {
     const result = joinSections(["a", "b"]);
     expect(result.endsWith("\n")).toBe(false);
   });
