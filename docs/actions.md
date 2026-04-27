@@ -315,13 +315,13 @@ When at least one thread has a `[suggestion]` marker, the agent sees these two i
 
 **Step 1 — structured path (preferred):**
 
-> For each thread marked `` `[suggestion]` `` under `## Review threads`: run `npx pr-shepherd commit-suggestion <PR> --thread-id <id> --message "<one-sentence headline>" --format=json`, one thread at a time. On `applied: true` the CLI already resolved the thread — remove its ID from `--resolve-thread-ids` in the `resolve:` command below. On `applied: false` read `reason` and `patch`, fall through to the manual-edit step, and do not retry the same command. Optionally pass `--dry-run` (omitting `--message`) to preview the patch without mutating the working tree.
+> For each thread marked `` `[suggestion]` `` under `` `## Review threads` ``: run `` `npx pr-shepherd commit-suggestion <PR> --thread-id <id> --message "<one-sentence headline>" --format=json` ``, one thread at a time. On `applied: true` the CLI already resolved the thread — remove its ID from `--resolve-thread-ids` in the `resolve:` command below. On `applied: false` read `reason` and `patch`, fall through to the manual-edit step, and do not retry the same command. Optionally pass `--dry-run` (omitting `--message`) to preview the patch without mutating the working tree.
 
 `commit-suggestion` builds a unified diff from the `Replaces lines …` block, validates it with `git apply --check`, writes the file, commits with a `Co-authored-by: <reviewer>` trailer, and resolves the thread on GitHub — all in one command. It handles one thread at a time; for multi-suggestion PRs invoke it in sequence, then push all commits together. See the [`commit-suggestion` reference](cli-usage.md#pr-shepherd-commit-suggestion-pr---thread-id-id---message) for flags and output format.
 
 **Step 2 — manual fallback (apply code fixes step, with suggestion clause):**
 
-> Apply code fixes: read and edit each file referenced under `## Review threads` and `## Actionable comments` above. When applying a `[suggestion]` thread manually (e.g. after a failed `commit-suggestion` run), replace the exact line range shown in the heading (`path:startLine-endLine`) with the replacement shown in its `Replaces lines …` block verbatim — an empty replacement deletes those lines, a single blank line replaces the range with one blank line.
+> Apply code fixes: read and edit each file referenced under `` `## Review threads` `` and `` `## Actionable comments` `` above. When applying a `` `[suggestion]` `` thread manually (e.g. after a failed `commit-suggestion` run), replace the exact line range shown in the heading (`path:startLine-endLine`) with the replacement shown in its `Replaces lines …` block verbatim — an empty replacement deletes those lines, a single blank line replaces the range with one blank line.
 
 The manual-fallback clause is the action for threads where `commit-suggestion` returned `applied: false`. Do not retry `commit-suggestion` — apply the change directly and continue.
 
