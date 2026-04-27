@@ -38,6 +38,10 @@ export async function runMonitor(opts: MonitorCommandOptions): Promise<MonitorRe
       `Invalid config: watch.maxTurns must be a positive integer, got ${JSON.stringify(maxTurns)}`,
     );
   }
+  // The leading `#` is a tag prefix, not a Markdown heading. It intentionally
+  // survives roundtripping through CronList's prompt grep — both the dedup
+  // check in step 1 of formatMonitorResult's ## Instructions and the in-prompt
+  // Self-dedup block depend on this exact prefix. Don't strip the `#`.
   const loopTag = `# pr-shepherd-loop:pr=${prNumber}`;
   const loopPrompt = buildLoopPrompt(prNumber, loopTag, opts.readyDelaySuffix);
   const loopArgs = `${interval} --max-turns ${maxTurns} --expires ${expiresHours}h`;
