@@ -260,8 +260,8 @@ Step 1 is absent when no thread has a `[suggestion]` marker; step 2 omits the ma
 **Section order:**
 
 1. Heading + base fields (always present).
-2. `## Review threads` — each thread under `### `threadId=<id>` — <loc> (@author) [suggestion]?` (or `### [threadId=<id>](<url>) — <loc> (@author) [suggestion]?` when a URL is available) where `<loc>` is `` `path:line` `` for single-line threads or `` `path:startLine-endLine` `` for multi-line threads. The full body follows as a `>` blockquote. Multi-paragraph bodies preserve empty lines as `>` lines. Threads with a ` ```suggestion ` fence carry a `[suggestion]` tag in the heading and a `Replaces lines …` block after the body showing the parsed replacement.
-3. `## Actionable comments` — same H3-plus-blockquote shape as threads minus the `<loc>`: `` ### `commentId=<id>` `` or `### [commentId=<id>](<url>)` when a URL is available.
+2. `## Review threads` — each thread under ``### `threadId=<id>` — <loc> (@author) [suggestion]?`` (or ``### [threadId=<id>](<url>) — <loc> (@author) [suggestion]?`` when a URL is available) where `<loc>` is `` `path:line` `` for single-line threads or `` `path:startLine-endLine` `` for multi-line threads. The full body follows as a `>` blockquote. Multi-paragraph bodies preserve empty lines as `>` lines. Threads with a ` ```suggestion ` fence carry a `[suggestion]` tag in the heading and a `Replaces lines …` block after the body showing the parsed replacement.
+3. `## Actionable comments` — same H3-plus-blockquote shape as threads minus the `<loc>`: ``### `commentId=<id>` `` or ``### [commentId=<id>](<url>)`` when a URL is available.
 4. `## Failing checks` — one bullet per failing check. Shape varies by locator:
    - ``- `<runId>` — `<workflowName> › <jobName>` `` for GitHub Actions checks (`workflowName ›` prefix omitted when unavailable; `jobName` falls back to the check name when absent).
    - ``- external `<detailsUrl>` — `<name>` `` for external status checks (codecov, vercel, etc.) with null `runId` but a URL.
