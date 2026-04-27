@@ -5,7 +5,7 @@ import { firstLine, renderFirstLookItems } from "../cli/first-look.mts";
 export function formatText(report: ShepherdReport): string {
   const parts: string[] = [];
 
-  parts.push(`\nPR #${report.pr} — ${report.repo}`);
+  parts.push(`# PR #${report.pr} [CHECK] — ${report.repo}`);
   parts.push(`Status: ${report.status}`);
   parts.push(`Base: ${report.baseBranch}`);
   parts.push("");

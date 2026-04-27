@@ -36,8 +36,7 @@ Exit codes: `0` READY · `2` IN_PROGRESS · `3` UNRESOLVED_COMMENTS · `1` all o
 **Example output:**
 
 ```
-
-PR #42 — owner/repo
+# PR #42 [CHECK] — owner/repo
 Status: UNRESOLVED_COMMENTS
 Base: main
 

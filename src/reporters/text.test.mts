@@ -74,6 +74,11 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
 }
 
 describe("formatText — header", () => {
+  it("starts with H1 line — no leading blank line", () => {
+    const out = formatText(makeReport());
+    expect(out.split("\n")[0]).toBe("# PR #42 [CHECK] — owner/repo");
+  });
+
   it("includes PR number and repo", () => {
     const out = formatText(makeReport());
     expect(out).toContain("PR #42");
@@ -134,8 +139,9 @@ describe("formatText — failed checks", () => {
       checks: { ...makeReport().checks, failing: [failing] },
     });
     const out = formatText(report);
-    expect(out).toContain("- lint:");
-    expect(out).not.toContain("[");
+    const lintLine = out.split("\n").find((l) => l.includes("- lint:"));
+    expect(lintLine).toBeDefined();
+    expect(lintLine).not.toContain("[");
   });
 
   it("renders failedStep when present", () => {
