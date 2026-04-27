@@ -246,6 +246,18 @@ AssertionError: expected true to be false
 10. Stop this iteration — CI needs time to run on the new push before the next tick.
 ````
 
+When one or more threads carry a `[suggestion]` marker, the `## Instructions` section opens with two different steps. Step 1 is new; step 2 gains a manual-fallback clause. All other steps renumber and are otherwise unchanged.
+
+```markdown
+## Instructions
+
+1. For each thread marked `[suggestion]` under `## Review threads`: run `npx pr-shepherd commit-suggestion 42 --thread-id <id> --message "<one-sentence headline>" --format=json`, one thread at a time. On `applied: true` the CLI already resolved the thread — remove its ID from `--resolve-thread-ids` in the `resolve:` command below. On `applied: false` read `reason` and `patch`, fall through to the manual-edit step, and do not retry the same command. Optionally pass `--dry-run` (omitting `--message`) to preview the patch without mutating the working tree.
+2. Apply code fixes: read and edit each file referenced under `## Review threads` and `## Actionable comments` above. When applying a `[suggestion]` thread manually (e.g. after a failed `commit-suggestion` run), replace the exact line range shown in the heading (`path:startLine-endLine`) with the replacement shown in its `Replaces lines …` block verbatim — an empty replacement deletes those lines, a single blank line replaces the range with one blank line.
+3. [remaining steps — failing checks, reviews, commit, rebase/push, resolve, cancelled-runs guard, journal, stop — renumber starting here]
+```
+
+Step 1 is absent when no thread has a `[suggestion]` marker; step 2 omits the manual-fallback clause in the same case.
+
 **Section order:**
 
 1. Heading + base fields (always present).
@@ -273,6 +285,8 @@ AssertionError: expected true to be false
 
 **Instruction variants:**
 
+- The `commit-suggestion` step (step 1) is emitted only when at least one `## Review threads` entry carries a `[suggestion]` marker (`threads.some(t => t.suggestion)`). When absent, step numbers start at 1 with `Apply code fixes:`.
+- The `Apply code fixes:` step gains a manual-fallback clause — "When applying a `[suggestion]` thread manually …" — only when the `commit-suggestion` step is also present. When no suggestions are present, the step is the plain one-liner.
 - `Commit changed files:` is only emitted when there are actual code changes to commit (threads/comments/checks/reviews present). A `CONFLICTS`-only state skips this step.
 - `Keep the PR title and description current:` is emitted immediately after the commit step and uses the same gate (`hasCodeChanges`). A `CONFLICTS`-only dispatch (no code to commit) omits it.
 - The rebase step switches wording based on `mergeStatus.status`. When conflicts are present it emits "Rebase with conflict resolution" and walks through `git rebase --continue` loops; otherwise it emits the clean one-liner `git fetch origin && git rebase origin/<base> && git push --force-with-lease`.
@@ -292,14 +306,28 @@ The JSON payload exposes the same data under `fix.{threads, actionableComments, 
 
 ### Applying ` ```suggestion ` blocks
 
-GitHub reviewers can leave ` ```suggestion ` fenced blocks in review thread bodies. The CLI parses these and surfaces them to the agent in two forms:
+GitHub reviewers can leave ` ```suggestion ` fenced blocks in review thread bodies. The CLI parses these and surfaces them in two additions to each thread:
 
-- A `[suggestion]` marker on the thread heading.
-- Immediately after the blockquoted body, a `Replaces line(s) …` block showing the parsed replacement text. For an empty suggestion (deletion), the label is `Replaces line(s) … with nothing:` followed by an empty fenced block.
+- A `[suggestion]` marker on the heading.
+- A `Replaces line(s) …` block immediately after the blockquoted body, showing the parsed replacement. An empty suggestion (deletion) uses the label `Replaces line(s) … with nothing:` followed by an empty fenced block.
 
-The numbered `## Instructions` section tells the agent how to apply each `[suggestion]` thread.
+When at least one thread has a `[suggestion]` marker, the agent sees these two instruction steps. The CLI substitutes the real PR number; `<id>` and `<one-sentence headline>` are left for the agent to fill in.
 
-**Single-line suggestion.** Thread headings include the end line (e.g. `src/foo.ts:42`). The `Replaces line 42:` block shows the replacement verbatim:
+**Step 1 — structured path (preferred):**
+
+> For each thread marked `` `[suggestion]` `` under `` `## Review threads` ``: run `` `npx pr-shepherd commit-suggestion 42 --thread-id <id> --message "<one-sentence headline>" --format=json` ``, one thread at a time. On `applied: true` the CLI already resolved the thread — remove its ID from `--resolve-thread-ids` in the `resolve:` command below. On `applied: false` read `reason` and `patch`, fall through to the manual-edit step, and do not retry the same command. Optionally pass `--dry-run` (omitting `--message`) to preview the patch without mutating the working tree.
+
+`commit-suggestion` builds a unified diff from the `Replaces lines …` block, validates it with `git apply --check`, writes the file, commits with a `Co-authored-by: <reviewer>` trailer, and resolves the thread on GitHub — all in one command. It handles one thread at a time; for multi-suggestion PRs invoke it in sequence, then push all commits together. See the [`commit-suggestion` reference](cli-usage.md#pr-shepherd-commit-suggestion-pr---thread-id-id---message) for flags and output format.
+
+**Step 2 — manual fallback (apply code fixes step, with suggestion clause):**
+
+> Apply code fixes: read and edit each file referenced under `` `## Review threads` `` and `` `## Actionable comments` `` above. When applying a `` `[suggestion]` `` thread manually (e.g. after a failed `commit-suggestion` run), replace the exact line range shown in the heading (`path:startLine-endLine`) with the replacement shown in its `Replaces lines …` block verbatim — an empty replacement deletes those lines, a single blank line replaces the range with one blank line.
+
+The manual-fallback clause is the action for threads where `commit-suggestion` returned `applied: false`. Do not retry `commit-suggestion` — apply the change directly and continue.
+
+---
+
+**Single-line suggestion.** Heading `src/foo.ts:42`:
 
 ````markdown
 ### `PRRT_kwDOSGizTs58XB1L` — `src/foo.ts:42` (@alice) [suggestion]
@@ -317,9 +345,9 @@ const remainingSeconds = computeRemaining();
 ```
 ````
 
-Steps: open `src/foo.ts`, replace line 42 with `const remainingSeconds = computeRemaining();`, then proceed to the commit step in `## Instructions`.
+Structured path: `npx pr-shepherd commit-suggestion 42 --thread-id PRRT_kwDOSGizTs58XB1L --message "rename x to remainingSeconds" --format=json`. Manual fallback: open `src/foo.ts` and replace line 42 with `const remainingSeconds = computeRemaining();`.
 
-**Multi-line suggestion.** When the thread spans a range, the heading shows `path:startLine-endLine` (e.g. `src/foo.ts:40-42`). The `Replaces lines 40–42:` block contains the replacement that is spliced in for that entire range. An empty block means "delete those lines"; a block containing a single blank line means "replace with one blank line".
+**Multi-line suggestion.** When the thread spans a range, the heading shows `path:startLine-endLine` (e.g. `src/foo.ts:40-42`). The `Replaces lines 40–42:` block contains the replacement spliced in for that entire range. An empty block means "delete those lines"; a block containing a single blank line means "replace with one blank line".
 
 ````markdown
 ### `PRRT_kwDOSGizTs58XB2M` — `src/foo.ts:40-42` (@alice) [suggestion]
@@ -337,11 +365,9 @@ const result = computeAll();
 ```
 ````
 
-Replace lines 40–42 in `src/foo.ts` with the single replacement line shown in the block.
+Structured path: `npx pr-shepherd commit-suggestion 42 --thread-id PRRT_kwDOSGizTs58XB2M --message "collapse three assignments" --format=json`. Manual fallback: replace lines 40–42 in `src/foo.ts` with `const result = computeAll();`.
 
-**Multiple suggestions (two or more threads).** Apply each suggestion to its target file. The edits are independent — apply them in any order that avoids line-number drift (apply suggestions on later lines first when both touch the same file). Then make a single `git add && git commit` covering all the changed files before the rebase/push step in `## Instructions`. Both thread IDs go into the `resolve:` command's `--resolve-thread-ids` argument as a comma-separated list.
-
-Example with two threads:
+**Multiple suggestions (two or more threads).** Invoke `commit-suggestion` once per thread in sequence. Threads where it returns `applied: true` are already committed and resolved on GitHub — drop their IDs from `--resolve-thread-ids`. Threads where it returns `applied: false` need manual edits and must stay in `--resolve-thread-ids`. Push all commits together after all threads are handled.
 
 ````markdown
 ## Review threads
@@ -371,13 +397,13 @@ return value ?? defaultValue;
 ```
 ````
 
-Apply both edits, then commit and push together. The `resolve:` command at the bottom of `## Post-fix push` already includes both IDs:
+The `resolve:` command at the bottom of `## Post-fix push` starts with both IDs:
 
 ```
 - resolve: `npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L,PRRT_kwDOSGizTs58XC2M --require-sha "$HEAD_SHA" --message "$DISMISS_MESSAGE"`
 ```
 
-**Preferred: structured path via `commit-suggestion`.** The `## Instructions` section tells the agent to run `npx pr-shepherd commit-suggestion <PR> --thread-id <id> --message "…"` for each `[suggestion]` thread. This builds a unified diff from the suggestion block, validates it with `git apply --check`, writes the file, commits with a `Co-authored-by: <reviewer>` trailer, and resolves the thread on GitHub — all in one command. Pass `--dry-run` (omitting `--message`) to preview the unified diff without mutating the working tree, index, or GitHub state — the CLI exits `0` when the patch would apply cleanly, `1` on drift. The command handles one thread at a time; invoke it in sequence for multi-suggestion PRs, then push all the resulting commits together. On `applied: true` the thread is already resolved — remove its ID from `--resolve-thread-ids` in the `resolve:` command. On `applied: false` fall through to the manual-edit path above. See the `commit-suggestion` section in the [CLI reference](cli-usage.md#pr-shepherd-commit-suggestion-pr---thread-id-id---message) for flags and output format.
+If `commit-suggestion` succeeded for `PRRT_kwDOSGizTs58XB1L` (`applied: true`), remove that ID from `--resolve-thread-ids` before running the command — it is already resolved on GitHub. If both succeed, the `--resolve-thread-ids` flag is omitted entirely. If both fail, both IDs stay.
 
 **What the monitor does:** Follow `## Instructions` in order. The instructions are self-contained and action-specific — no dispatch table needed in the monitor. See `## Instructions` in the output for the exact steps.
 
