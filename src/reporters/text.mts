@@ -67,11 +67,11 @@ export function formatText(report: ShepherdReport): string {
     ];
     if (report.checks.blockedByFilteredCheck) {
       lines.push(
-        "  Note: PR is BLOCKED and all filtered checks are non-PR-trigger — one of these filtered checks may be a required status check blocking merge.",
+        "> Note: PR is BLOCKED and all filtered checks are non-PR-trigger — one of these filtered checks may be a required status check blocking merge.",
       );
     } else if (report.mergeStatus.status === "BLOCKED") {
       lines.push(
-        "  Note: one or more of these filtered checks may be a required status check blocking merge.",
+        "> Note: one or more of these filtered checks may be a required status check blocking merge.",
       );
     }
     ciSubsections.push(lines.join("\n"));
