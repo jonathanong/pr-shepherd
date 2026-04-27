@@ -38,7 +38,12 @@ export async function runMonitor(opts: MonitorCommandOptions): Promise<MonitorRe
       `Invalid config: watch.maxTurns must be a positive integer, got ${JSON.stringify(maxTurns)}`,
     );
   }
-  const loopTag = `# pr-shepherd-loop:pr=${prNumber}`;
+  // No space after `#` — `# text` is a CommonMark ATX heading; `#text` is not.
+  // Trailing `:` prevents substring false positives: without it, the dedup grep
+  // for pr=1 would match a cron prompt for pr=135. Both the CronList check in
+  // step 1 of formatMonitorResult's ## Instructions and the in-prompt Self-dedup
+  // block depend on this exact string — don't change the format.
+  const loopTag = `#pr-shepherd-loop:pr=${prNumber}:`;
   const loopPrompt = buildLoopPrompt(prNumber, loopTag, opts.readyDelaySuffix);
   const loopArgs = `${interval} --max-turns ${maxTurns} --expires ${expiresHours}h`;
 

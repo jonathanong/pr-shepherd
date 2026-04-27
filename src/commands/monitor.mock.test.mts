@@ -24,9 +24,9 @@ describe("runMonitor", () => {
   it("returns prNumber, loopTag, loopArgs, loopPrompt for explicit PR", async () => {
     const result = await runMonitor({ format: "text", prNumber: 99 });
     expect(result.prNumber).toBe(99);
-    expect(result.loopTag).toBe("# pr-shepherd-loop:pr=99");
+    expect(result.loopTag).toBe("#pr-shepherd-loop:pr=99:");
     expect(result.loopArgs).toBe("4m --max-turns 50 --expires 8h");
-    expect(result.loopPrompt).toContain("# pr-shepherd-loop:pr=99");
+    expect(result.loopPrompt).toContain("#pr-shepherd-loop:pr=99:");
     expect(result.loopPrompt).toContain("npx pr-shepherd iterate 99");
     // loopArgs is a short one-liner — not the combined invocation string
     expect(result.loopArgs).not.toContain("npx pr-shepherd");
@@ -110,16 +110,16 @@ describe("runMonitor", () => {
 describe("formatMonitorResult", () => {
   const fixture: MonitorResult = {
     prNumber: 42,
-    loopTag: "# pr-shepherd-loop:pr=42",
+    loopTag: "#pr-shepherd-loop:pr=42:",
     loopArgs: "4m --max-turns 50 --expires 8h",
     loopPrompt:
-      "# pr-shepherd-loop:pr=42\n\n**IMPORTANT — recurrence rules:**\n- **Do NOT call `ScheduleWakeup` or `/loop`.** This session is fired by a recurring cron job. Either call creates a duplicate runner, causing concurrent git operations and `.git/index.lock` collisions.\n- End the turn cleanly after completing the actions below. The cron job handles the next fire.\n\n**Self-dedup:** Run `CronList`. If more than one job contains `# pr-shepherd-loop:pr=42`, keep the lowest job ID and `CronDelete` the rest (ignore errors — a concurrent runner may have already deleted them).\n\nRun in a single Bash call:\n  npx pr-shepherd iterate 42\n\nExit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with `# PR #42 [`), log the first line of stderr and continue — do not cancel the loop. The next cron fire will retry.\n\nThe output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Every output ends with a `## Instructions` section — follow those numbered steps exactly.",
+      "#pr-shepherd-loop:pr=42:\n\n**IMPORTANT — recurrence rules:**\n- **Do NOT call `ScheduleWakeup` or `/loop`.** This session is fired by a recurring cron job. Either call creates a duplicate runner, causing concurrent git operations and `.git/index.lock` collisions.\n- End the turn cleanly after completing the actions below. The cron job handles the next fire.\n\n**Self-dedup:** Run `CronList`. If more than one job contains `#pr-shepherd-loop:pr=42:`, keep the lowest job ID and `CronDelete` the rest (ignore errors — a concurrent runner may have already deleted them).\n\nRun in a single Bash call:\n  npx pr-shepherd iterate 42\n\nExit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with `# PR #42 [`), log the first line of stderr and continue — do not cancel the loop. The next cron fire will retry.\n\nThe output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Every output ends with a `## Instructions` section — follow those numbered steps exactly.",
   };
 
   it("emits MONITOR heading, loop tag, loop args, loop prompt, and instructions", () => {
     const md = formatMonitorResult(fixture);
     expect(md).toContain("# PR #42 [MONITOR]");
-    expect(md).toContain("Loop tag: `# pr-shepherd-loop:pr=42`");
+    expect(md).toContain("Loop tag: `#pr-shepherd-loop:pr=42:`");
     expect(md).toContain("Loop args: `4m --max-turns 50 --expires 8h`");
     expect(md).toContain("## Loop prompt");
     expect(md).toContain("## Instructions");
