@@ -56,52 +56,52 @@ describe("buildToolHandler", () => {
   it("routes shepherd_check to handleCheck", async () => {
     const handler = buildToolHandler(deps);
     const result = await handler("shepherd_check", {});
-    expect(result.content[0]!.text).toBe("check");
+    expect((result.content[0]! as { text: string }).text).toBe("check");
   });
 
   it("routes shepherd_resolve_fetch", async () => {
     const result = await buildToolHandler(deps)("shepherd_resolve_fetch", {});
-    expect(result.content[0]!.text).toBe("fetch");
+    expect((result.content[0]! as { text: string }).text).toBe("fetch");
   });
 
   it("routes shepherd_resolve_mutate", async () => {
     const result = await buildToolHandler(deps)("shepherd_resolve_mutate", {});
-    expect(result.content[0]!.text).toBe("mutate");
+    expect((result.content[0]! as { text: string }).text).toBe("mutate");
   });
 
   it("routes shepherd_commit_suggestion", async () => {
     const result = await buildToolHandler(deps)("shepherd_commit_suggestion", {});
-    expect(result.content[0]!.text).toBe("cs");
+    expect((result.content[0]! as { text: string }).text).toBe("cs");
   });
 
   it("routes shepherd_iterate", async () => {
     const result = await buildToolHandler(deps)("shepherd_iterate", {});
-    expect(result.content[0]!.text).toBe("iterate");
+    expect((result.content[0]! as { text: string }).text).toBe("iterate");
   });
 
   it("routes shepherd_monitor", async () => {
     const result = await buildToolHandler(deps)("shepherd_monitor", {});
-    expect(result.content[0]!.text).toBe("monitor");
+    expect((result.content[0]! as { text: string }).text).toBe("monitor");
   });
 
   it("routes shepherd_status", async () => {
     const result = await buildToolHandler(deps)("shepherd_status", {});
-    expect(result.content[0]!.text).toBe("status");
+    expect((result.content[0]! as { text: string }).text).toBe("status");
   });
 
   it("routes shepherd_log_file", async () => {
     const result = await buildToolHandler(deps)("shepherd_log_file", {});
-    expect(result.content[0]!.text).toBe("/tmp/log.md");
+    expect((result.content[0]! as { text: string }).text).toBe("/tmp/log.md");
   });
 
   it("routes shepherd_subscribe_pr", async () => {
     const result = await buildToolHandler(deps)("shepherd_subscribe_pr", { prNumber: 1 });
-    expect(result.content[0]!.text).toBe("subscribed");
+    expect((result.content[0]! as { text: string }).text).toBe("subscribed");
   });
 
   it("routes shepherd_unsubscribe_pr", async () => {
     const result = await buildToolHandler(deps)("shepherd_unsubscribe_pr", { prNumber: 1 });
-    expect(result.content[0]!.text).toBe("unsubscribed");
+    expect((result.content[0]! as { text: string }).text).toBe("unsubscribed");
   });
 
   it("returns error for unknown tool", async () => {
@@ -114,6 +114,6 @@ describe("buildToolHandler", () => {
     vi.mocked(handleCheck).mockRejectedValueOnce(new Error("boom"));
     const result = await buildToolHandler(deps)("shepherd_check", {});
     expect(result.isError).toBe(true);
-    expect(result.content[0]!.text).toContain("boom");
+    expect((result.content[0]! as { text: string }).text).toContain("boom");
   });
 });

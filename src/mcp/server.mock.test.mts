@@ -11,7 +11,6 @@ const {
   MockServer,
   MockStdioTransport,
   mockWebhookStart,
-  mockWebhookStop,
   MockWebhookServer,
   getCapturedOnEvent,
 } = vi.hoisted(() => {
@@ -46,7 +45,6 @@ const {
     MockServer,
     MockStdioTransport,
     mockWebhookStart,
-    mockWebhookStop,
     MockWebhookServer,
     getCapturedOnEvent: () => capturedOnEvent,
   };
