@@ -206,7 +206,6 @@ describe("projectIterateLean", () => {
     const fix = lean.fix as Record<string, unknown>;
     expect(fix.threads).toBeUndefined();
     expect(fix.actionableComments).toBeUndefined();
-    expect(fix.noiseCommentIds).toBeUndefined();
     expect(fix.reviewSummaryIds).toBeUndefined();
     expect(fix.surfacedApprovals).toBeUndefined();
     expect(fix.firstLookThreads).toBeUndefined();
@@ -228,7 +227,6 @@ describe("projectIterateLean", () => {
     result.fix.checks = [{ name: "ci", runId: "r1", detailsUrl: null }];
     result.fix.instructions = ["step 1"];
     result.fix.actionableComments = [{ id: "c1", author: "a", body: "nit", url: "" }];
-    result.fix.noiseCommentIds = ["c2"];
     result.fix.reviewSummaryIds = ["r1"];
     result.fix.surfacedApprovals = [{ id: "s1", author: "a", body: "summary" }];
     result.fix.firstLookThreads = [
@@ -271,7 +269,6 @@ describe("projectIterateLean", () => {
     expect((lean.checks as unknown[]).length).toBe(1);
     expect((fix.instructions as unknown[]).length).toBe(1);
     expect((fix.actionableComments as unknown[]).length).toBe(1);
-    expect((fix.noiseCommentIds as unknown[]).length).toBe(1);
     expect((fix.reviewSummaryIds as unknown[]).length).toBe(1);
     expect((fix.surfacedApprovals as unknown[]).length).toBe(1);
     expect((fix.firstLookThreads as unknown[]).length).toBe(1);

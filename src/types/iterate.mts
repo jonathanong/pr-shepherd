@@ -112,8 +112,6 @@ interface FixRebaseAndPush {
   threads: AgentThread[];
   /** Comments classified as actionable — require code changes. */
   actionableComments: AgentComment[];
-  /** IDs of comments classified as noise (quota warnings, bot acks, etc.) — minimize but do not act on. */
-  noiseCommentIds: string[];
   /** Review IDs (COMMENTED summaries and, if opted in, APPROVED reviews) to minimize — no code change needed. */
   reviewSummaryIds: string[];
   /** APPROVED-state reviews surfaced for visibility (when `iterate.minimizeApprovals` is false). */

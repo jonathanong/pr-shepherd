@@ -6,7 +6,7 @@ import {
   buildEscalateSuggestion,
   buildEscalateHumanMessage,
 } from "./escalate.mts";
-import { classifyComments, buildResolveCommand } from "./classify.mts";
+import { buildResolveCommand } from "./classify.mts";
 import { buildFixInstructions } from "./render.mts";
 import { applyStallGuard } from "./stall.mts";
 import { tryCancelRun } from "./helpers.mts";
@@ -108,16 +108,13 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
 
   const baseLookup = validateBaseBranch(report.baseBranch);
   const threads = report.threads.actionable.map(toAgentThread);
-  const { actionable: actionableComments, noiseIds: noiseCommentIds } = classifyComments(
-    report.comments.actionable.map(toAgentComment),
-  );
+  const actionableComments = report.comments.actionable.map(toAgentComment);
   const checks = toAgentChecks(failingChecks);
   const { changesRequestedReviews } = report;
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
 
   const allCommentIds = [
     ...actionableComments.map((c) => c.id),
-    ...noiseCommentIds,
     ...reviewSummaryIds,
   ];
   const resolveCommand = buildResolveCommand(
@@ -178,7 +175,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
         mode: "rebase-and-push" as const,
         threads,
         actionableComments,
-        noiseCommentIds,
         reviewSummaryIds,
         surfacedApprovals,
         checks,

@@ -219,10 +219,6 @@ AssertionError: expected true to be false
 
 - `PRR_kwDOSGizTs58XB1R` (@alice)
 
-## Noise (minimize only)
-
-- `IC_kwDOSGizTs7_ajT9`
-
 ## Cancelled runs
 
 - `24697658765`
@@ -230,7 +226,7 @@ AssertionError: expected true to be false
 ## Post-fix push
 
 - base: `main`
-- resolve: `npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
+- resolve: `npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
 
 ## Instructions
 
@@ -276,15 +272,14 @@ Step 1 is absent when no thread has a `[suggestion]` marker; step 2 omits the ma
    The numbered instructions split accordingly: for GitHub Actions checks (with runId), the agent examines the `logTail` fenced block and decides whether to run `gh run rerun <runId> --failed` (transient failure) or apply a code fix (real failure). For external status checks (detailsUrl only), the step says to open the URL in a browser. When both are absent, the step says to escalate to a human.
 
 5. `## Changes-requested reviews` — one bullet per `CHANGES_REQUESTED` review: ``- `<reviewId>` (@<author>)``.
-6. `## Noise (minimize only)` — one bullet per backticked ID of bot-noise comments (quota warnings, rate-limit acks). Minimize on GitHub but do not act on them.
-7. `## Review summaries (minimize only)` — one bullet per backticked review ID (`PRR_…`) of `COMMENTED` review summaries (and, if `iterate.minimizeApprovals` is `true`, `APPROVED` reviews) that will be minimized by the resolve command. Not emitted if the list is empty.
-8. `## Approvals (surfaced — not minimized)` — emitted when `iterate.minimizeApprovals` is `false` (default) and there are `APPROVED`-state reviews. Same H3-plus-blockquote shape as `## Review threads`; surfaced for visibility, but NOT included in `--minimize-comment-ids`.
-9. `## First-look items (N) — already closed on GitHub; acknowledge only` — threads and PR comments that are outdated, resolved, or minimized and have not yet been acknowledged by the agent. Emitted on first encounter only; a per-item seen-marker file (`src/state/seen-comments.mts`) suppresses them on subsequent runs. Each bullet carries a `[status: …]` tag: `outdated`, `outdated, auto-resolved`, `resolved`, or `minimized`. These IDs must **not** appear in `--resolve-thread-ids`, `--minimize-comment-ids`, or `--dismiss-review-ids` — they are already closed on GitHub. The agent's only task is to acknowledge each with a one-line classification. Not emitted when empty.
-10. `## Cancelled runs` — one bullet per backticked ID, emitted only when at least one pre-push REST cancellation succeeded.
-11. `## Post-fix push`:
+6. `## Review summaries (minimize only)` — one bullet per backticked review ID (`PRR_…`) of `COMMENTED` review summaries (and, if `iterate.minimizeApprovals` is `true`, `APPROVED` reviews) that will be minimized by the resolve command. Not emitted if the list is empty.
+7. `## Approvals (surfaced — not minimized)` — emitted when `iterate.minimizeApprovals` is `false` (default) and there are `APPROVED`-state reviews. Same H3-plus-blockquote shape as `## Review threads`; surfaced for visibility, but NOT included in `--minimize-comment-ids`.
+8. `## First-look items (N) — already closed on GitHub; acknowledge only` — threads and PR comments that are outdated, resolved, or minimized and have not yet been acknowledged by the agent. Emitted on first encounter only; a per-item seen-marker file (`src/state/seen-comments.mts`) suppresses them on subsequent runs. Each bullet carries a `[status: …]` tag: `outdated`, `outdated, auto-resolved`, `resolved`, or `minimized`. These IDs must **not** appear in `--resolve-thread-ids`, `--minimize-comment-ids`, or `--dismiss-review-ids` — they are already closed on GitHub. The agent's only task is to acknowledge each with a one-line classification. Not emitted when empty.
+9. `## Cancelled runs` — one bullet per backticked ID, emitted only when at least one pre-push REST cancellation succeeded.
+10. `## Post-fix push`:
     - ``- base: `<branch>` `` — rebase target for the push step.
-    - ``- resolve: `<argv>` `` — fully-quoted resolve command. `$DISMISS_MESSAGE` and `$HEAD_SHA` are always quoted so substituting a multi-word sentence keeps it as one argument. `--require-sha "$HEAD_SHA"` is appended only when a push is expected (threads/actionableComments/checks/reviews present); noise/summary-only dispatches omit it.
-12. `## Instructions` — numbered list to execute in order. The final instruction always refers back to the `resolve:` bullet rather than duplicating the command — that single source of truth is what the monitor executes.
+    - ``- resolve: `<argv>` `` — fully-quoted resolve command. `$DISMISS_MESSAGE` and `$HEAD_SHA` are always quoted so substituting a multi-word sentence keeps it as one argument. `--require-sha "$HEAD_SHA"` is appended only when a push is expected (threads/actionableComments/checks/reviews present); summary-only dispatches omit it.
+11. `## Instructions` — numbered list to execute in order. The final instruction always refers back to the `resolve:` bullet rather than duplicating the command — that single source of truth is what the monitor executes.
 
 **Instruction variants:**
 
@@ -294,17 +289,17 @@ Step 1 is absent when no thread has a `[suggestion]` marker; step 2 omits the ma
 - `Keep the PR title and description current:` is emitted immediately after the commit step and uses the same gate (`hasCodeChanges`). A `CONFLICTS`-only dispatch (no code to commit) omits it.
 - The rebase step switches wording based on `mergeStatus.status`. When conflicts are present it emits "Rebase with conflict resolution" and walks through `git rebase --continue` loops; otherwise it emits the clean one-liner `git fetch origin && git rebase origin/<base> && git push --force-with-lease`.
 - `## Failing checks` generates one instruction step per locator type present. When a check has a numeric `runId`, the step says to examine the log tail in the fenced block and decide: run `gh run rerun <runId> --failed` if the log shows a transient infrastructure failure, or apply a code fix if it shows a real test/build failure. When a check has only a `detailsUrl` (external status check — no `runId`), the step says to open the URL in a browser. When both are absent, the step says to escalate to a human.
-- The `resolve:` instruction is emitted when `resolveCommand.hasMutations` is true — i.e. when at least one of `threads`, `actionableComments`, `noiseCommentIds`, or `reviewSummaryIds` is non-empty. Noise-only and summary-only dispatches also emit the instruction. A `CONFLICTS`-only dispatch (none of those non-empty) omits it.
+- The `resolve:` instruction is emitted when `resolveCommand.hasMutations` is true — i.e. when at least one of `threads`, `actionableComments`, or `reviewSummaryIds` is non-empty. Summary-only dispatches also emit the instruction. A `CONFLICTS`-only dispatch (none of those non-empty) omits it.
 - A `Do not re-run \`gh run cancel\``instruction is appended when`cancelled` is non-empty and a push is required — it reminds the monitor that those IDs were cancelled pre-push and new runs have since been triggered.
-- A `For any large decisions or rejections …` (Shepherd Journal) instruction is appended when `resolveCommand.hasMutations` is true — i.e. when at least one of threads, actionable comments, noise IDs, or review summary IDs is non-empty. It asks the agent to add or update a `## Shepherd Journal` section in the PR description (`gh pr edit <N> --body …`) summarizing each decision and linking back to the originating comment, thread, or review. Conflicts-only dispatches (none of those non-empty) omit it.
+- A `For any large decisions or rejections …` (Shepherd Journal) instruction is appended when `resolveCommand.hasMutations` is true — i.e. when at least one of threads, actionable comments, or review summary IDs is non-empty. It asks the agent to add or update a `## Shepherd Journal` section in the PR description (`gh pr edit <N> --body …`) summarizing each decision and linking back to the originating comment, thread, or review. Conflicts-only dispatches (none of those non-empty) omit it.
 - An `Items in \`## First-look items\``step is appended when`firstLookThreads`or`firstLookComments` are non-empty — it tells the agent these items are already closed and must not be passed to the resolve command.
 - The final "iteration" step has three variants: `Stop this iteration — CI needs time to run on the new push before the next tick.` when a push occurred; `Stop this iteration before the next tick.` when only GitHub mutations were made (no push); `End this iteration.` when no push or mutations occurred.
 
-The JSON payload exposes the same data under `fix.{threads, actionableComments, noiseCommentIds, reviewSummaryIds, surfacedApprovals, checks, changesRequestedReviews, resolveCommand, instructions, mode, firstLookThreads, firstLookComments}` — where `fix.mode === "rebase-and-push"` is the type discriminator — plus top-level `baseBranch` (on `IterateResultBase`, not under `fix`) and `cancelled`. `reviewSummaryIds` are merged into `--minimize-comment-ids` inside `resolveCommand.argv`; `surfacedApprovals` are informational only. In lean JSON mode, `fix.*` arrays that are empty are omitted; `cancelled` is omitted when empty. Pass `--verbose` to include all fields. `firstLookThreads` and `firstLookComments` are informational — they carry `firstLookStatus` and (for outdated threads) `autoResolved` fields but must not be routed to resolve mutations.
+The JSON payload exposes the same data under `fix.{threads, actionableComments, reviewSummaryIds, surfacedApprovals, checks, changesRequestedReviews, resolveCommand, instructions, mode, firstLookThreads, firstLookComments}` — where `fix.mode === "rebase-and-push"` is the type discriminator — plus top-level `baseBranch` (on `IterateResultBase`, not under `fix`) and `cancelled`. `reviewSummaryIds` are merged into `--minimize-comment-ids` inside `resolveCommand.argv`; `surfacedApprovals` are informational only. In lean JSON mode, `fix.*` arrays that are empty are omitted; `cancelled` is omitted when empty. Pass `--verbose` to include all fields. `firstLookThreads` and `firstLookComments` are informational — they carry `firstLookStatus` and (for outdated threads) `autoResolved` fields but must not be routed to resolve mutations.
 
 **Resolve command rules (same in Markdown and JSON):**
 
-- `--require-sha "$HEAD_SHA"` is appended only when a push occurred. Noise-only minimizations omit it.
+- `--require-sha "$HEAD_SHA"` is appended only when a push occurred (threads/actionableComments/checks/reviews present); summary-only dispatches omit it.
 - `$DISMISS_MESSAGE` must be one specific sentence describing what changed — never generic text like "address review comments".
 
 ### Applying ` ```suggestion ` blocks

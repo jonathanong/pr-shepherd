@@ -52,9 +52,6 @@ export function projectIterateLean(result: IterateResult): unknown {
           ...(result.fix.actionableComments.length > 0 && {
             actionableComments: result.fix.actionableComments,
           }),
-          ...(result.fix.noiseCommentIds.length > 0 && {
-            noiseCommentIds: result.fix.noiseCommentIds,
-          }),
           ...(result.fix.reviewSummaryIds.length > 0 && {
             reviewSummaryIds: result.fix.reviewSummaryIds,
           }),

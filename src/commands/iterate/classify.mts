@@ -1,5 +1,4 @@
-import type { AgentThread, AgentComment, Review, ResolveCommand } from "../../types.mts";
-import type { AgentCheck } from "../../types.mts";
+import type { AgentThread, AgentComment, Review, ResolveCommand, AgentCheck } from "../../types.mts";
 
 export function classifyReviewSummaries(
   summaries: Review[],
@@ -12,36 +11,6 @@ export function classifyReviewSummaries(
     return { minimizeIds, surfacedApprovals: [] };
   }
   return { minimizeIds, surfacedApprovals: approvals };
-}
-
-// Patterns that indicate a comment is bot-generated noise rather than actionable feedback.
-// Conservative: only match explicit known patterns to avoid accidentally suppressing real reviews.
-const NOISE_PATTERNS = [
-  /you have reached your daily quota/i,
-  /please wait up to \d+ hours?/i,
-  /rate[\s-]?limit(?:ed)?\s*[-—:]\s*try again/i,
-  /resuming (monitoring|watch|checking)/i,
-  /restarting (monitoring|watch)/i,
-];
-
-function isNoiseComment(comment: AgentComment): boolean {
-  return NOISE_PATTERNS.some((p) => p.test(comment.body));
-}
-
-export function classifyComments(comments: AgentComment[]): {
-  actionable: AgentComment[];
-  noiseIds: string[];
-} {
-  const actionable: AgentComment[] = [];
-  const noiseIds: string[] = [];
-  for (const c of comments) {
-    if (isNoiseComment(c)) {
-      noiseIds.push(c.id);
-    } else {
-      actionable.push(c);
-    }
-  }
-  return { actionable, noiseIds };
 }
 
 export function buildResolveCommand(
@@ -67,7 +36,6 @@ export function buildResolveCommand(
   }
 
   // A push happens when there is code to change — threads, actionable comments, CI checks, or reviews.
-  // Noise-only comment minimization skips commit/push, so requiresHeadSha must be false.
   const requiresHeadSha =
     threads.length > 0 || actionableComments.length > 0 || checks.length > 0 || reviews.length > 0;
 
