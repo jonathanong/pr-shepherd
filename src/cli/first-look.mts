@@ -1,7 +1,9 @@
 import type { FirstLookThread, FirstLookComment } from "../types/report.mts";
 
 export function firstLine(text: string): string {
-  return (text.split("\n")[0] ?? "").trim().slice(0, 120);
+  const newlineIndex = text.indexOf("\n");
+  const line = newlineIndex === -1 ? text : text.slice(0, newlineIndex);
+  return line.trim().slice(0, 120);
 }
 
 export function renderFirstLookItems(

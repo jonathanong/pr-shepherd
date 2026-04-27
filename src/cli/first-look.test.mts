@@ -62,9 +62,7 @@ describe("renderFirstLookItems", () => {
 
   it("includes count and policy-hint suffix in heading", () => {
     const out = renderFirstLookItems([baseThread], [baseComment])!;
-    expect(out).toContain(
-      "## First-look items (2) — already closed on GitHub; acknowledge only",
-    );
+    expect(out).toContain("## First-look items (2) — already closed on GitHub; acknowledge only");
   });
 
   it("thread bullet uses backtick-wrapped threadId= prefix", () => {
@@ -205,7 +203,9 @@ function extractFirstLookSection(output: string): string {
   const start = output.indexOf("## First-look items");
   if (start === -1) throw new Error("## First-look items section not found in output");
   const nextSection = output.indexOf("\n## ", start + 1);
-  return nextSection === -1 ? output.slice(start).trimEnd() : output.slice(start, nextSection).trimEnd();
+  return nextSection === -1
+    ? output.slice(start).trimEnd()
+    : output.slice(start, nextSection).trimEnd();
 }
 
 describe("## First-look items — cross-call-site consistency", () => {

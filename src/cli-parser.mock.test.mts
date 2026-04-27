@@ -483,9 +483,7 @@ describe("main — resolve first-look rendering", () => {
     });
     await main(["node", "shepherd", "resolve", "42"]);
     const out = getStdout();
-    expect(out).toContain(
-      "## First-look items (2) — already closed on GitHub; acknowledge only",
-    );
+    expect(out).toContain("## First-look items (2) — already closed on GitHub; acknowledge only");
     expect(out).toContain("`threadId=PRRT_fl1`");
     expect(out).toContain("[status: resolved]");
     expect(out).toContain("`commentId=PRRC_fl2`");

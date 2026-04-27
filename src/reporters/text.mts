@@ -182,4 +182,3 @@ export function formatText(report: ShepherdReport): string {
 
   return parts.join("\n");
 }
-
