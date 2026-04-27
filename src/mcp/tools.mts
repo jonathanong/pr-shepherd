@@ -1,35 +1,27 @@
 /**
  * MCP tool definitions for pr-shepherd.
  *
- * Each tool delegates to the corresponding run*() command function and returns
- * formatted text output (same as CLI --format=text) as MCP TextContent.
+ * buildToolList()    — returns the Tool[] for ListTools responses.
+ * buildToolHandler() — returns a dispatcher that routes CallTool requests to
+ *                      the corresponding handler in tool-handlers.mts.
  */
 
 import type { Tool, CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
-import { runCheck } from "../commands/check.mts";
-import { runResolveFetch, runResolveMutate } from "../commands/resolve.mts";
-import { runCommitSuggestion } from "../commands/commit-suggestion.mts";
-import { runIterate } from "../commands/iterate.mts";
-import { runMonitor, formatMonitorResult } from "../commands/monitor.mts";
-import { runStatus, formatStatusTable } from "../commands/status.mts";
-import { runLogFile } from "../commands/log-file.mts";
-import { getRepoInfo } from "../github/client.mts";
-import { formatText } from "../reporters/text.mts";
-import {
-  formatFetchResult,
-  formatCommitSuggestionResult,
-  formatMutateResult,
-  formatIterateResult,
-} from "../cli/formatters.mts";
 import type { SubscriptionStore } from "./subscriptions.mts";
-
-// ---------------------------------------------------------------------------
-// Common types
-// ---------------------------------------------------------------------------
-
-const TEXT: "text" = "text";
-const FORMAT_TEXT = { format: TEXT } as const;
+import {
+  handleCheck,
+  handleResolveFetch,
+  handleResolveMutate,
+  handleCommitSuggestion,
+  handleIterate,
+  handleMonitor,
+  handleStatus,
+  handleLogFile,
+  handleSubscribePr,
+  handleUnsubscribePr,
+  err,
+} from "./tool-handlers.mts";
 
 export interface ToolDependencies {
   subscriptions: SubscriptionStore;
@@ -181,194 +173,20 @@ export function buildToolHandler(
   return async (name, input) => {
     try {
       switch (name) {
-        case "shepherd_check":
-          return await handleCheck(input);
-        case "shepherd_resolve_fetch":
-          return await handleResolveFetch(input);
-        case "shepherd_resolve_mutate":
-          return await handleResolveMutate(input);
-        case "shepherd_commit_suggestion":
-          return await handleCommitSuggestion(input);
-        case "shepherd_iterate":
-          return await handleIterate(input);
-        case "shepherd_monitor":
-          return await handleMonitor(input);
-        case "shepherd_status":
-          return await handleStatus(input);
-        case "shepherd_log_file":
-          return await handleLogFile();
-        case "shepherd_subscribe_pr":
-          return handleSubscribePr(input, deps.subscriptions);
-        case "shepherd_unsubscribe_pr":
-          return handleUnsubscribePr(input, deps.subscriptions);
-        default:
-          return err(`Unknown tool: ${name}`);
+        case "shepherd_check": return await handleCheck(input);
+        case "shepherd_resolve_fetch": return await handleResolveFetch(input);
+        case "shepherd_resolve_mutate": return await handleResolveMutate(input);
+        case "shepherd_commit_suggestion": return await handleCommitSuggestion(input);
+        case "shepherd_iterate": return await handleIterate(input);
+        case "shepherd_monitor": return await handleMonitor(input);
+        case "shepherd_status": return await handleStatus(input);
+        case "shepherd_log_file": return await handleLogFile();
+        case "shepherd_subscribe_pr": return handleSubscribePr(input, deps.subscriptions);
+        case "shepherd_unsubscribe_pr": return handleUnsubscribePr(input, deps.subscriptions);
+        default: return err(`Unknown tool: ${name}`);
       }
     } catch (e) {
       return err(e instanceof Error ? e.message : String(e));
     }
   };
-}
-
-// ---------------------------------------------------------------------------
-// Individual handlers
-// ---------------------------------------------------------------------------
-
-async function handleCheck(input: Record<string, unknown>): Promise<CallToolResult> {
-  const prNumber = optNum(input, "prNumber");
-  const skipTriage = optBool(input, "skipTriage");
-  const report = await runCheck({ ...FORMAT_TEXT, prNumber, skipTriage });
-  return ok(formatText(report));
-}
-
-async function handleResolveFetch(input: Record<string, unknown>): Promise<CallToolResult> {
-  const prNumber = optNum(input, "prNumber");
-  const result = await runResolveFetch({ ...FORMAT_TEXT, prNumber });
-  return ok(formatFetchResult(result));
-}
-
-async function handleResolveMutate(input: Record<string, unknown>): Promise<CallToolResult> {
-  const prNumber = optNum(input, "prNumber");
-  const resolveThreadIds = optStringArray(input, "resolveThreadIds");
-  const minimizeCommentIds = optStringArray(input, "minimizeCommentIds");
-  const dismissReviewIds = optStringArray(input, "dismissReviewIds");
-  const dismissMessage = optStr(input, "dismissMessage");
-  const requireSha = optStr(input, "requireSha");
-
-  const result = await runResolveMutate({
-    ...FORMAT_TEXT,
-    prNumber,
-    resolveThreadIds,
-    minimizeCommentIds,
-    dismissReviewIds,
-    dismissMessage,
-    requireSha,
-  });
-  return ok(formatMutateResult(result));
-}
-
-async function handleCommitSuggestion(input: Record<string, unknown>): Promise<CallToolResult> {
-  const prNumber = optNum(input, "prNumber");
-  const threadId = reqStr(input, "threadId");
-  const message = optStr(input, "message");
-  const description = optStr(input, "description");
-  const dryRun = optBool(input, "dryRun");
-  const result = await runCommitSuggestion({ ...FORMAT_TEXT, prNumber, threadId, message, description, dryRun });
-  return ok(formatCommitSuggestionResult(result));
-}
-
-async function handleIterate(input: Record<string, unknown>): Promise<CallToolResult> {
-  const prNumber = optNum(input, "prNumber");
-  const cooldownSeconds = optNum(input, "cooldownSeconds");
-  const readyDelaySeconds = optNum(input, "readyDelaySeconds");
-  const stallTimeoutSeconds = optNum(input, "stallTimeoutSeconds");
-  const noAutoMarkReady = optBool(input, "noAutoMarkReady");
-  const noAutoCancelActionable = optBool(input, "noAutoCancelActionable");
-  const result = await runIterate({
-    ...FORMAT_TEXT,
-    prNumber,
-    cooldownSeconds,
-    readyDelaySeconds,
-    stallTimeoutSeconds,
-    noAutoMarkReady,
-    noAutoCancelActionable,
-  });
-  return ok(formatIterateResult(result));
-}
-
-async function handleMonitor(input: Record<string, unknown>): Promise<CallToolResult> {
-  const prNumber = optNum(input, "prNumber");
-  const readyDelaySuffix = optStr(input, "readyDelaySuffix");
-  const result = await runMonitor({ ...FORMAT_TEXT, prNumber, readyDelaySuffix });
-  return ok(formatMonitorResult(result));
-}
-
-async function handleStatus(input: Record<string, unknown>): Promise<CallToolResult> {
-  const prNumbers = reqNumArray(input, "prNumbers");
-  const repo = await getRepoInfo();
-  const summaries = await runStatus({ ...FORMAT_TEXT, prNumbers });
-  return ok(formatStatusTable(summaries, `${repo.owner}/${repo.name}`));
-}
-
-async function handleLogFile(): Promise<CallToolResult> {
-  const result = await runLogFile();
-  return ok(result.path);
-}
-
-function handleSubscribePr(
-  input: Record<string, unknown>,
-  subs: SubscriptionStore,
-): CallToolResult {
-  const prNumber = reqNum(input, "prNumber");
-  subs.subscribe(prNumber);
-  const all = subs.listSubscribed();
-  return ok(
-    `Subscribed to PR #${prNumber}. Webhook events for this PR will be forwarded as MCP notifications.\nCurrently subscribed PRs: ${all.join(", ")}`,
-  );
-}
-
-function handleUnsubscribePr(
-  input: Record<string, unknown>,
-  subs: SubscriptionStore,
-): CallToolResult {
-  const prNumber = reqNum(input, "prNumber");
-  subs.unsubscribe(prNumber);
-  const all = subs.listSubscribed();
-  const remaining = all.length > 0 ? all.join(", ") : "(none)";
-  return ok(`Unsubscribed from PR #${prNumber}.\nCurrently subscribed PRs: ${remaining}`);
-}
-
-// ---------------------------------------------------------------------------
-// Result helpers
-// ---------------------------------------------------------------------------
-
-function ok(text: string): CallToolResult {
-  return { content: [{ type: TEXT, text }] };
-}
-
-function err(msg: string): CallToolResult {
-  return { content: [{ type: TEXT, text: `Error: ${msg}` }], isError: true };
-}
-
-// ---------------------------------------------------------------------------
-// Input coercion helpers
-// ---------------------------------------------------------------------------
-
-function optNum(input: Record<string, unknown>, key: string): number | undefined {
-  const v = input[key];
-  return typeof v === "number" ? v : undefined;
-}
-
-function reqNum(input: Record<string, unknown>, key: string): number {
-  const v = input[key];
-  if (typeof v !== "number") throw new Error(`${key} is required and must be a number`);
-  return v;
-}
-
-function optStr(input: Record<string, unknown>, key: string): string | undefined {
-  const v = input[key];
-  return typeof v === "string" ? v : undefined;
-}
-
-function reqStr(input: Record<string, unknown>, key: string): string {
-  const v = input[key];
-  if (typeof v !== "string" || v === "") throw new Error(`${key} is required and must be a non-empty string`);
-  return v;
-}
-
-function optBool(input: Record<string, unknown>, key: string): boolean | undefined {
-  const v = input[key];
-  return typeof v === "boolean" ? v : undefined;
-}
-
-function optStringArray(input: Record<string, unknown>, key: string): string[] | undefined {
-  const v = input[key];
-  if (!Array.isArray(v)) return undefined;
-  return v.filter((x): x is string => typeof x === "string");
-}
-
-function reqNumArray(input: Record<string, unknown>, key: string): number[] {
-  const v = input[key];
-  if (!Array.isArray(v) || v.length === 0) throw new Error(`${key} must be a non-empty array of numbers`);
-  return v.filter((x): x is number => typeof x === "number");
 }
