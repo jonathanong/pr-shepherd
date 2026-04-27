@@ -69,9 +69,7 @@ export function formatFetchResult(result: FetchResult): string {
     sections.push(`## Review summaries (${result.reviewSummaries.length})`);
     sections.push(
       result.reviewSummaries
-        .map(
-          (r) => `- \`reviewId=${r.id}\` (@${r.author}): ${r.body.split("\n")[0].slice(0, 100)}`,
-        )
+        .map((r) => `- \`reviewId=${r.id}\` (@${r.author}): ${r.body.split("\n")[0].slice(0, 100)}`)
         .join("\n"),
     );
   }
