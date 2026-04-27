@@ -62,7 +62,7 @@ export function buildFetchInstructions(
       `Read and edit each file referenced under \`## Actionable Review Threads\`, \`## Actionable PR Comments\`, and \`## Pending CHANGES_REQUESTED reviews\` above. Reclassify each fixed item as Fixed. If an item is too complex to address, leave it as Actionable for the final report.`,
     );
     instructions.push(
-      `Commit changed files: \`git add <files>\` (not \`git add -A\`), then \`git commit -m "<descriptive message>"\`.`,
+      `Commit changed files: \`git add <files>\` (not \`git add -A\`) \`&& git commit -m "<descriptive message>"\`.`,
     );
     instructions.push(
       `Keep the PR title and description current: if the fixes alter the PR's scope or intent, run \`gh pr edit ${prNumber} --title "<new title>" --body "<new body>"\` to reflect them. Skip if the existing title/body still accurately describe the PR.`,
@@ -76,7 +76,7 @@ export function buildFetchInstructions(
   }
 
   const requireShaHint = hasCodeItems
-    ? ` Include \`--require-sha $(git rev-parse HEAD)\` only when the commit-and-push step above ran.`
+    ? ` Include \`--require-sha $(git rev-parse HEAD)\` only when the rebase-and-push step above ran.`
     : "";
   const dismissNote =
     changesRequestedReviews.length > 0
