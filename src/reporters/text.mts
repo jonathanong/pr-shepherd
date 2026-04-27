@@ -1,5 +1,6 @@
 import type { ShepherdReport, TriagedCheck } from "../types.mts";
 import { buildCheckInstructions } from "./check-instructions.mts";
+import { firstLine, renderFirstLookItems } from "../cli/first-look.mts";
 
 export function formatText(report: ShepherdReport): string {
   const parts: string[] = [];
@@ -156,21 +157,9 @@ export function formatText(report: ShepherdReport): string {
     parts.push("");
   }
   const firstLookTotal = firstLookThreads.length + firstLookComments.length;
-  if (firstLookTotal > 0) {
-    parts.push("## First-look items");
-    parts.push("");
-    for (const t of firstLookThreads) {
-      const statusTag = t.autoResolved
-        ? `[status: outdated, auto-resolved]`
-        : `[status: ${t.firstLookStatus}]`;
-      const loc = t.path ? `${t.path}:${t.line ?? "?"}` : "(no location)";
-      parts.push(`- threadId=${t.id} ${loc} (@${t.author}) ${statusTag}`);
-      parts.push(`  ${firstLine(t.body)}`);
-    }
-    for (const c of firstLookComments) {
-      parts.push(`- commentId=${c.id} (@${c.author}) [status: minimized]`);
-      parts.push(`  ${firstLine(c.body)}`);
-    }
+  const firstLookBlock = renderFirstLookItems(firstLookThreads, firstLookComments);
+  if (firstLookBlock) {
+    parts.push(firstLookBlock);
     parts.push("");
   }
 
@@ -192,8 +181,4 @@ export function formatText(report: ShepherdReport): string {
   });
 
   return parts.join("\n");
-}
-
-function firstLine(text: string): string {
-  return (text.split("\n")[0] ?? "").trim().slice(0, 120);
 }
