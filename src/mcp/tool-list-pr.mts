@@ -10,8 +10,14 @@ export const PR_TOOLS: Tool[] = [
     inputSchema: {
       type: "object",
       properties: {
-        prNumber: { type: "number", description: "PR number (auto-detected from current branch if omitted)" },
-        skipTriage: { type: "boolean", description: "Skip fetching job info and log tails for failing checks" },
+        prNumber: {
+          type: "number",
+          description: "PR number (auto-detected from current branch if omitted)",
+        },
+        skipTriage: {
+          type: "boolean",
+          description: "Skip fetching job info and log tails for failing checks",
+        },
       },
     },
   },
@@ -22,7 +28,10 @@ export const PR_TOOLS: Tool[] = [
     inputSchema: {
       type: "object",
       properties: {
-        prNumber: { type: "number", description: "PR number (auto-detected from current branch if omitted)" },
+        prNumber: {
+          type: "number",
+          description: "PR number (auto-detected from current branch if omitted)",
+        },
       },
     },
   },
@@ -33,12 +42,30 @@ export const PR_TOOLS: Tool[] = [
     inputSchema: {
       type: "object",
       properties: {
-        prNumber: { type: "number", description: "PR number (auto-detected from current branch if omitted)" },
-        resolveThreadIds: { type: "array", items: { type: "string" }, description: "Thread node IDs to resolve" },
-        minimizeCommentIds: { type: "array", items: { type: "string" }, description: "Comment node IDs to minimize" },
-        dismissReviewIds: { type: "array", items: { type: "string" }, description: "Review node IDs to dismiss" },
+        prNumber: {
+          type: "number",
+          description: "PR number (auto-detected from current branch if omitted)",
+        },
+        resolveThreadIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "Thread node IDs to resolve",
+        },
+        minimizeCommentIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "Comment node IDs to minimize",
+        },
+        dismissReviewIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "Review node IDs to dismiss",
+        },
         dismissMessage: { type: "string", description: "Required when dismissing reviews" },
-        requireSha: { type: "string", description: "Wait for GitHub to receive this commit SHA before resolving" },
+        requireSha: {
+          type: "string",
+          description: "Wait for GitHub to receive this commit SHA before resolving",
+        },
       },
     },
   },
@@ -50,8 +77,14 @@ export const PR_TOOLS: Tool[] = [
       type: "object",
       required: ["threadId"],
       properties: {
-        prNumber: { type: "number", description: "PR number (auto-detected from current branch if omitted)" },
-        threadId: { type: "string", description: "Review thread node ID containing the suggestion" },
+        prNumber: {
+          type: "number",
+          description: "PR number (auto-detected from current branch if omitted)",
+        },
+        threadId: {
+          type: "string",
+          description: "Review thread node ID containing the suggestion",
+        },
         message: { type: "string", description: "Commit message (required unless dryRun is true)" },
         description: { type: "string", description: "Optional extended commit description" },
         dryRun: { type: "boolean", description: "Validate the patch without applying it" },
@@ -65,12 +98,27 @@ export const PR_TOOLS: Tool[] = [
     inputSchema: {
       type: "object",
       properties: {
-        prNumber: { type: "number", description: "PR number (auto-detected from current branch if omitted)" },
+        prNumber: {
+          type: "number",
+          description: "PR number (auto-detected from current branch if omitted)",
+        },
         cooldownSeconds: { type: "number", description: "Minimum seconds between code changes" },
-        readyDelaySeconds: { type: "number", description: "Seconds to wait after all checks pass before marking ready" },
-        stallTimeoutSeconds: { type: "number", description: "Abort if no progress after this many seconds" },
-        noAutoMarkReady: { type: "boolean", description: "Disable automatic draft → ready transition" },
-        noAutoCancelActionable: { type: "boolean", description: "Disable automatic cancellation of actionable checks" },
+        readyDelaySeconds: {
+          type: "number",
+          description: "Seconds to wait after all checks pass before marking ready",
+        },
+        stallTimeoutSeconds: {
+          type: "number",
+          description: "Abort if no progress after this many seconds",
+        },
+        noAutoMarkReady: {
+          type: "boolean",
+          description: "Disable automatic draft → ready transition",
+        },
+        noAutoCancelActionable: {
+          type: "boolean",
+          description: "Disable automatic cancellation of actionable checks",
+        },
       },
     },
   },

@@ -10,8 +10,14 @@ export const OPS_TOOLS: Tool[] = [
     inputSchema: {
       type: "object",
       properties: {
-        prNumber: { type: "number", description: "PR number (auto-detected from current branch if omitted)" },
-        readyDelaySuffix: { type: "string", description: "Ready-delay duration string, e.g. '15m'" },
+        prNumber: {
+          type: "number",
+          description: "PR number (auto-detected from current branch if omitted)",
+        },
+        readyDelaySuffix: {
+          type: "string",
+          description: "Ready-delay duration string, e.g. '15m'",
+        },
       },
     },
   },
