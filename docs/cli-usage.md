@@ -273,7 +273,7 @@ Example for `[FIX_CODE]` (richest action):
 
 ## Review threads
 
-### `PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate.mts:42` (@alice)
+### `threadId=PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate.mts:42` (@alice)
 
 > The variable name is misleading.
 >
