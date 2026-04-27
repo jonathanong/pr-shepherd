@@ -190,7 +190,7 @@ Actionable work needs a code fix, commit, and push.
 
 ## Review threads
 
-### `PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate.mts:42` (@alice)
+### `threadId=PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate.mts:42` (@alice)
 
 > The variable name is misleading.
 >
@@ -199,7 +199,7 @@ Actionable work needs a code fix, commit, and push.
 
 ## Actionable comments
 
-### `IC_kwDOSGizTs7_ajT8` (@bob)
+### `commentId=IC_kwDOSGizTs7_ajT8` (@bob)
 
 > Consider using a more descriptive name here.
 
@@ -217,7 +217,7 @@ AssertionError: expected true to be false
 
 ## Changes-requested reviews
 
-- `PRR_kwDOSGizTs58XB1R` (@alice)
+- `reviewId=PRR_kwDOSGizTs58XB1R` (@alice)
 
 ## Cancelled runs
 
@@ -260,8 +260,8 @@ Step 1 is absent when no thread has a `[suggestion]` marker; step 2 omits the ma
 **Section order:**
 
 1. Heading + base fields (always present).
-2. `## Review threads` — each thread under `### <id> — <loc> (@author) [suggestion]?` where `<loc>` is `` `path:line` `` for single-line threads or `` `path:startLine-endLine` `` for multi-line threads. The full body follows as a `>` blockquote. Multi-paragraph bodies preserve empty lines as `>` lines. Threads with a ` ```suggestion ` fence carry a `[suggestion]` tag in the heading and a `Replaces lines …` block after the body showing the parsed replacement.
-3. `## Actionable comments` — same shape as threads minus the `<loc>`.
+2. `## Review threads` — each thread under `### `threadId=<id>` — <loc> (@author) [suggestion]?` (or `### [threadId=<id>](<url>) — <loc> (@author) [suggestion]?` when a URL is available) where `<loc>` is `` `path:line` `` for single-line threads or `` `path:startLine-endLine` `` for multi-line threads. The full body follows as a `>` blockquote. Multi-paragraph bodies preserve empty lines as `>` lines. Threads with a ` ```suggestion ` fence carry a `[suggestion]` tag in the heading and a `Replaces lines …` block after the body showing the parsed replacement.
+3. `## Actionable comments` — same H3-plus-blockquote shape as threads minus the `<loc>`: `` ### `commentId=<id>` `` or `### [commentId=<id>](<url>)` when a URL is available.
 4. `## Failing checks` — one bullet per failing check. Shape varies by locator:
    - ``- `<runId>` — `<workflowName> › <jobName>` `` for GitHub Actions checks (`workflowName ›` prefix omitted when unavailable; `jobName` falls back to the check name when absent).
    - ``- external `<detailsUrl>` — `<name>` `` for external status checks (codecov, vercel, etc.) with null `runId` but a URL.
@@ -271,11 +271,11 @@ Step 1 is absent when no thread has a `[suggestion]` marker; step 2 omits the ma
 
    The numbered instructions split accordingly: for GitHub Actions checks (with runId), the agent examines the `logTail` fenced block and decides whether to run `gh run rerun <runId> --failed` (transient failure) or apply a code fix (real failure). For external status checks (detailsUrl only), the step says to open the URL in a browser. When both are absent, the step says to escalate to a human.
 
-5. `## Changes-requested reviews` — one bullet per `CHANGES_REQUESTED` review: ``- `<reviewId>` (@<author>)``.
-6. `## Review summaries (minimize only)` — one bullet per backticked review ID (`PRR_…`) of `COMMENTED` review summaries (and, if `iterate.minimizeApprovals` is `true`, `APPROVED` reviews) that will be minimized by the resolve command. Not emitted if the list is empty.
-7. `## Approvals (surfaced — not minimized)` — emitted when `iterate.minimizeApprovals` is `false` (default) and there are `APPROVED`-state reviews. Same H3-plus-blockquote shape as `## Review threads`; surfaced for visibility, but NOT included in `--minimize-comment-ids`.
+5. `## Changes-requested reviews` — one bullet per `CHANGES_REQUESTED` review: ``- `reviewId=<id>` (@<author>)``.
+6. `## Review summaries (minimize only)` — backticked review IDs (`PRR_…`) of `COMMENTED` review summaries (and, if `iterate.minimizeApprovals` is `true`, `APPROVED` reviews) that will be minimized by the resolve command. Not emitted if the list is empty.
+7. `## Approvals (surfaced — not minimized)` — emitted when `iterate.minimizeApprovals` is `false` (default) and there are `APPROVED`-state reviews. H3 heading uses `` `reviewId=<id>` `` (same prefix scheme as other item types); body is a `>` blockquote or `(no review body)` when empty. Surfaced for visibility, but NOT included in `--minimize-comment-ids`.
 8. `## First-look items (N) — already closed on GitHub; acknowledge only` — threads and PR comments that are outdated, resolved, or minimized and have not yet been acknowledged by the agent. Emitted on first encounter only; a per-item seen-marker file (`src/state/seen-comments.mts`) suppresses them on subsequent runs. Each bullet carries a `[status: …]` tag: `outdated`, `outdated, auto-resolved`, `resolved`, or `minimized`. These IDs must **not** appear in `--resolve-thread-ids`, `--minimize-comment-ids`, or `--dismiss-review-ids` — they are already closed on GitHub. The agent's only task is to acknowledge each with a one-line classification. Not emitted when empty.
-9. `## Cancelled runs` — one bullet per backticked ID, emitted only when at least one pre-push REST cancellation succeeded.
+9. `## Cancelled runs` — backticked IDs, emitted only when at least one pre-push REST cancellation succeeded.
 10. `## Post-fix push`:
     - ``- base: `<branch>` `` — rebase target for the push step.
     - ``- resolve: `<argv>` `` — fully-quoted resolve command. `$DISMISS_MESSAGE` and `$HEAD_SHA` are always quoted so substituting a multi-word sentence keeps it as one argument. `--require-sha "$HEAD_SHA"` is appended only when a push is expected (threads/actionableComments/checks/reviews present); summary-only dispatches omit it.
@@ -328,7 +328,7 @@ The manual-fallback clause is the action for threads where `commit-suggestion` r
 **Single-line suggestion.** Heading `src/foo.ts:42`:
 
 ````markdown
-### `PRRT_kwDOSGizTs58XB1L` — `src/foo.ts:42` (@alice) [suggestion]
+### `threadId=PRRT_kwDOSGizTs58XB1L` — `src/foo.ts:42` (@alice) [suggestion]
 
 > Rename `x` to `remainingSeconds` so readers don't have to trace back to the declaration.
 >
@@ -348,7 +348,7 @@ Structured path: `npx pr-shepherd commit-suggestion 42 --thread-id PRRT_kwDOSGiz
 **Multi-line suggestion.** When the thread spans a range, the heading shows `path:startLine-endLine` (e.g. `src/foo.ts:40-42`). The `Replaces lines 40–42:` block contains the replacement spliced in for that entire range. An empty block means "delete those lines"; a block containing a single blank line means "replace with one blank line".
 
 ````markdown
-### `PRRT_kwDOSGizTs58XB2M` — `src/foo.ts:40-42` (@alice) [suggestion]
+### `threadId=PRRT_kwDOSGizTs58XB2M` — `src/foo.ts:40-42` (@alice) [suggestion]
 
 > Collapse these three assignments into one.
 >
@@ -370,7 +370,7 @@ Structured path: `npx pr-shepherd commit-suggestion 42 --thread-id PRRT_kwDOSGiz
 ````markdown
 ## Review threads
 
-### `PRRT_kwDOSGizTs58XB1L` — `src/foo.ts:42` (@alice) [suggestion]
+### `threadId=PRRT_kwDOSGizTs58XB1L` — `src/foo.ts:42` (@alice) [suggestion]
 
 > ```suggestion
 > const remainingSeconds = computeRemaining();
@@ -382,7 +382,7 @@ Replaces line 42:
 const remainingSeconds = computeRemaining();
 ```
 
-### `PRRT_kwDOSGizTs58XC2M` — `src/bar.ts:17` (@alice) [suggestion]
+### `threadId=PRRT_kwDOSGizTs58XC2M` — `src/bar.ts:17` (@alice) [suggestion]
 
 > ```suggestion
 > return value ?? defaultValue;

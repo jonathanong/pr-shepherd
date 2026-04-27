@@ -57,8 +57,7 @@ Base: main
 
 ### Actionable (1)
 
-- threadId=RT_kwDOBxyz123 src/api.ts:47 (@reviewer)
-  Please add error handling here
+- `threadId=RT_kwDOBxyz123` `src/api.ts:47` (@reviewer): Please add error handling here
 
 ## Summary
 

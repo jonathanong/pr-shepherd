@@ -290,7 +290,7 @@ describe("formatText — threads and comments", () => {
       },
     });
     const out = formatText(report);
-    expect(out).toContain("(general)");
+    expect(out).toContain("`(no location)`");
   });
 
   it("shows path:line when thread has a path", () => {
@@ -317,8 +317,8 @@ describe("formatText — threads and comments", () => {
       },
     });
     const out = formatText(report);
-    expect(out).toContain("x".repeat(120));
-    expect(out).not.toContain("x".repeat(121));
+    expect(out).toContain("x".repeat(100));
+    expect(out).not.toContain("x".repeat(101));
     expect(out).not.toContain("should not appear");
   });
 
@@ -446,7 +446,7 @@ describe("formatText — baseBranch, reviewSummaries, approvedReviews", () => {
     });
     const out = formatText(report);
     expect(out).toContain("## Review Summaries");
-    expect(out).toContain("reviewId=PRR_1 (@copilot)");
+    expect(out).toContain("`reviewId=PRR_1` (@copilot)");
     expect(out).toContain("Looks good overall.");
   });
 
@@ -461,7 +461,7 @@ describe("formatText — baseBranch, reviewSummaries, approvedReviews", () => {
     });
     const out = formatText(report);
     expect(out).toContain("## Approved Reviews");
-    expect(out).toContain("reviewId=PRR_2 (@alice)");
+    expect(out).toContain("`reviewId=PRR_2` (@alice)");
     expect(out).toContain("LGTM!");
   });
 
