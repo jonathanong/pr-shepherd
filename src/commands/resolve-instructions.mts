@@ -62,7 +62,16 @@ export function buildFetchInstructions(
       `Read and edit each file referenced under \`## Actionable Review Threads\`, \`## Actionable PR Comments\`, and \`## Pending CHANGES_REQUESTED reviews\` above. Reclassify each fixed item as Fixed. If an item is too complex to address, leave it as Actionable for the final report.`,
     );
     instructions.push(
-      `Commit changed files: \`git add <files>\` (not \`git add -A\`) \`&& git commit -m "<descriptive message>"\`. If the fixes alter the PR's scope or intent, run \`gh pr edit ${prNumber} --title "<new title>" --body "<new body>"\` to reflect them. Then rebase and push: \`BASE_BRANCH=$(gh pr view ${prNumber} --json baseRefName --jq .baseRefName) && git fetch origin && git rebase "origin/$BASE_BRANCH" && git push --force-with-lease\`. Cancel stale in-progress runs: \`BRANCH=$(git rev-parse --abbrev-ref HEAD) && gh run list --branch "$BRANCH" --status in_progress --json databaseId --jq '.[].databaseId' | xargs -I{} gh run cancel {}\`.`,
+      `Commit changed files: \`git add <files>\` (not \`git add -A\`), then \`git commit -m "<descriptive message>"\`.`,
+    );
+    instructions.push(
+      `Keep the PR title and description current: if the fixes alter the PR's scope or intent, run \`gh pr edit ${prNumber} --title "<new title>" --body "<new body>"\` to reflect them. Skip if the existing title/body still accurately describe the PR.`,
+    );
+    instructions.push(
+      `Rebase and push: \`BASE_BRANCH=$(gh pr view ${prNumber} --json baseRefName --jq .baseRefName) && git fetch origin && git rebase "origin/$BASE_BRANCH" && git push --force-with-lease\`.`,
+    );
+    instructions.push(
+      `Cancel stale in-progress runs: \`BRANCH=$(git rev-parse --abbrev-ref HEAD) && gh run list --branch "$BRANCH" --status in_progress --json databaseId --jq '.[].databaseId' | xargs -I{} gh run cancel {}\`.`,
     );
   }
 
