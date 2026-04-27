@@ -27,3 +27,13 @@ chmodSync('bin/pr-shepherd', 0o755)
 try { unlinkSync('node_modules/.bin/pr-shepherd') } catch {}
 mkdirSync('node_modules/.bin', { recursive: true })
 symlinkSync('../../bin/pr-shepherd', 'node_modules/.bin/pr-shepherd')
+
+// 8. Write bin/pr-shepherd-mcp entry point
+writeFileSync('bin/pr-shepherd-mcp', '#!/usr/bin/env node\nimport("./mcp-index.mjs")\n')
+
+// 9. Set executable bit
+chmodSync('bin/pr-shepherd-mcp', 0o755)
+
+// 10. Self-link into node_modules/.bin so `npx pr-shepherd-mcp` resolves to this build
+try { unlinkSync('node_modules/.bin/pr-shepherd-mcp') } catch {}
+symlinkSync('../../bin/pr-shepherd-mcp', 'node_modules/.bin/pr-shepherd-mcp')
