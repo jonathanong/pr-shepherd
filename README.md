@@ -40,7 +40,7 @@ Loop args: `4m --max-turns 50 --expires 8h`
 after completing the actions below. The cron job handles the next fire.
 
 Run in a single Bash call:
-  npx pr-shepherd iterate 123 --no-cache
+  npx pr-shepherd iterate 123
 
 …(self-dedup guidance, error-handling instructions)…
 
