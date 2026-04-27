@@ -12,12 +12,12 @@ export function formatText(report: ShepherdReport): string {
   const ms = report.mergeStatus;
   parts.push("## Merge Status");
   parts.push("");
-  parts.push(`${ms.status}`);
-  parts.push(`  mergeStateStatus:        ${ms.mergeStateStatus}`);
-  parts.push(`  mergeable:               ${ms.mergeable}`);
-  parts.push(`  reviewDecision:          ${ms.reviewDecision ?? "(none)"}`);
-  parts.push(`  isDraft:                 ${ms.isDraft}`);
-  parts.push(`  copilotReviewInProgress: ${ms.copilotReviewInProgress}`);
+  parts.push(`- status: \`${ms.status}\``);
+  parts.push(`- mergeStateStatus: \`${ms.mergeStateStatus}\``);
+  parts.push(`- mergeable: \`${ms.mergeable}\``);
+  parts.push(`- reviewDecision: \`${ms.reviewDecision ?? "(none)"}\``);
+  parts.push(`- isDraft: \`${ms.isDraft}\``);
+  parts.push(`- copilotReviewInProgress: \`${ms.copilotReviewInProgress}\``);
   parts.push("");
 
   const { passing, failing, inProgress, skipped } = report.checks;
