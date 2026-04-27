@@ -1,6 +1,11 @@
 import type { ShepherdReport, TriagedCheck } from "../types.mts";
 import { buildCheckInstructions } from "./check-instructions.mts";
-import { firstLine, renderFirstLookItems } from "../cli/first-look.mts";
+import {
+  renderThreadBullet,
+  renderCommentBullet,
+  renderReviewBullet,
+  renderFirstLookStatusTag,
+} from "../cli/list-formatters.mts";
 
 export function formatText(report: ShepherdReport): string {
   const parts: string[] = [];
@@ -93,7 +98,7 @@ export function formatText(report: ShepherdReport): string {
     if (autoResolved.length > 0) {
       parts.push(`Auto-resolved outdated (${autoResolved.length}):`);
       for (const t of autoResolved) {
-        parts.push(`- threadId=${t.id} ${t.path ?? ""}:${t.line ?? "?"} (@${t.author})`);
+        parts.push(renderThreadBullet(t));
       }
       parts.push("");
     }
@@ -110,9 +115,7 @@ export function formatText(report: ShepherdReport): string {
       parts.push(`### Actionable (${actionableThreads.length})`);
       parts.push("");
       for (const t of actionableThreads) {
-        const label = t.path ? `${t.path}:${t.line ?? "?"}` : "(general)";
-        parts.push(`- threadId=${t.id} ${label} (@${t.author})`);
-        parts.push(`  ${firstLine(t.body)}`);
+        parts.push(renderThreadBullet(t));
       }
       parts.push("");
     }
@@ -125,7 +128,7 @@ export function formatText(report: ShepherdReport): string {
     parts.push(`### Actionable (${actionableComments.length})`);
     parts.push("");
     for (const c of actionableComments) {
-      parts.push(`- commentId=${c.id} (@${c.author}): ${firstLine(c.body)}`);
+      parts.push(renderCommentBullet(c));
     }
     parts.push("");
   }
@@ -134,7 +137,7 @@ export function formatText(report: ShepherdReport): string {
     parts.push("## CHANGES_REQUESTED Reviews");
     parts.push("");
     for (const r of report.changesRequestedReviews) {
-      parts.push(`- reviewId=${r.id} (@${r.author}): ${firstLine(r.body)}`);
+      parts.push(renderReviewBullet(r, { includeBody: true }));
     }
     parts.push("");
   }
@@ -143,7 +146,7 @@ export function formatText(report: ShepherdReport): string {
     parts.push("## Review Summaries");
     parts.push("");
     for (const r of report.reviewSummaries) {
-      parts.push(`- reviewId=${r.id} (@${r.author}): ${firstLine(r.body)}`);
+      parts.push(renderReviewBullet(r, { includeBody: true }));
     }
     parts.push("");
   }
@@ -152,14 +155,22 @@ export function formatText(report: ShepherdReport): string {
     parts.push("## Approved Reviews");
     parts.push("");
     for (const r of report.approvedReviews) {
-      parts.push(`- reviewId=${r.id} (@${r.author}): ${firstLine(r.body)}`);
+      parts.push(renderReviewBullet(r, { includeBody: true }));
     }
     parts.push("");
   }
   const firstLookTotal = firstLookThreads.length + firstLookComments.length;
-  const firstLookBlock = renderFirstLookItems(firstLookThreads, firstLookComments);
-  if (firstLookBlock) {
-    parts.push(firstLookBlock);
+  if (firstLookTotal > 0) {
+    parts.push(
+      `## First-look items (${firstLookTotal}) — already closed on GitHub; acknowledge only`,
+    );
+    parts.push("");
+    for (const t of firstLookThreads) {
+      parts.push(renderThreadBullet(t, { statusTag: renderFirstLookStatusTag(t) }));
+    }
+    for (const c of firstLookComments) {
+      parts.push(renderCommentBullet(c, { statusTag: "[status: minimized]" }));
+    }
     parts.push("");
   }
 

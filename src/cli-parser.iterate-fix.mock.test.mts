@@ -154,20 +154,20 @@ describe("main — iterate text format (fix_code and checks)", () => {
       cursor = idx + heading.length;
     }
 
-    // Thread section: H3 header with backticked id and location.
-    expect(out).toContain("### `PRRT_1` — `src/foo.ts:10` (@reviewer)");
+    // Thread section: H3 header with backticked threadId= and location.
+    expect(out).toContain("### `threadId=PRRT_1` — `src/foo.ts:10` (@reviewer)");
     // Multi-line body is blockquoted.
     expect(out).toContain("> fix\n> second line is now preserved");
     // Comment section
-    expect(out).toContain("### `PRRC_1` (@bot)");
+    expect(out).toContain("### `commentId=PRRC_1` (@bot)");
     expect(out).toContain("> please address");
     // Failing checks — GitHub Actions and external (no failureKind label).
     expect(out).toContain("- `run-42` — `lint`");
     expect(out).toContain("- external `https://app.codecov.io` — `codecov/patch`");
     // Reviews
-    expect(out).toContain("- `REV_1` (@reviewer)");
-    // Cancelled runs — one bullet per ID.
-    expect(out).toContain("- `run-99`");
+    expect(out).toContain("- `reviewId=REV_1` (@reviewer)");
+    // Cancelled runs
+    expect(out).toContain("`run-99`");
     // Post-fix push section uses backticked base + resolve command with --require-sha appended.
     expect(out).toContain("- base: `main`");
     expect(out).toContain(
@@ -215,7 +215,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     const out = getStdout();
 
     expect(out).toContain("## Approvals (surfaced — not minimized)");
-    expect(out).toContain("### `PRR_HUMAN` (@alice)");
+    expect(out).toContain("### `reviewId=PRR_HUMAN` (@alice)");
     expect(out).toContain("> Looks reasonable but please double-check X.");
   });
 
@@ -229,7 +229,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
 
-    expect(out).toContain("### `PRR_EMPTY` (@alice)");
+    expect(out).toContain("### `reviewId=PRR_EMPTY` (@alice)");
     expect(out).toContain("(no review body)");
     expect(out).not.toContain("\n>\n");
   });
@@ -259,7 +259,9 @@ describe("main — iterate text format (fix_code and checks)", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     const lines = out.split("\n");
-    const headerIdx = lines.findIndex((l) => l === "### `t-multi` — `src/x.ts:1` (@reviewer)");
+    const headerIdx = lines.findIndex(
+      (l) => l === "### `threadId=t-multi` — `src/x.ts:1` (@reviewer)",
+    );
     expect(headerIdx).toBeGreaterThan(-1);
     // Blockquote follows after a blank line; empty paragraphs are rendered as bare `>`.
     expect(lines[headerIdx + 2]).toBe("> First paragraph giving context.");
@@ -292,7 +294,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
 
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
-    expect(out).toContain("### `t-range` — `src/foo.ts:40-42` (@alice)");
+    expect(out).toContain("### `threadId=t-range` — `src/foo.ts:40-42` (@alice)");
     expect(out).toContain("[suggestion]");
     expect(out).toContain("Replaces lines 40–42:");
     expect(out).toContain("const x = 1;");
@@ -315,7 +317,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
 
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
-    expect(out).toContain("### `t-single` — `src/foo.ts:10` (@alice)");
+    expect(out).toContain("### `threadId=t-single` — `src/foo.ts:10` (@alice)");
     expect(out).not.toContain("10-10");
   });
 
@@ -391,10 +393,10 @@ describe("main — iterate text format (fix_code and checks)", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain(
-      "### [PRRT_linked](https://github.com/owner/repo/pull/1#discussion_r1) — `src/x.ts:5` (@reviewer)",
+      "### [threadId=PRRT_linked](https://github.com/owner/repo/pull/1#discussion_r1) — `src/x.ts:5` (@reviewer)",
     );
     expect(out).toContain(
-      "### [PRRC_linked](https://github.com/owner/repo/pull/1#issuecomment-1) (@bob)",
+      "### [commentId=PRRC_linked](https://github.com/owner/repo/pull/1#issuecomment-1) (@bob)",
     );
     expect(out).not.toContain("### `PRRT_linked`");
     expect(out).not.toContain("### `PRRC_linked`");

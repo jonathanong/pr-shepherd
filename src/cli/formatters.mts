@@ -2,8 +2,12 @@ export { formatIterateResult } from "./iterate-formatter.mts";
 export { projectIterateLean } from "./iterate-lean.mts";
 
 import { safeFence } from "./fence.mts";
-import { renderSuggestionBlock, renderLineRange } from "./suggestion-renderer.mts";
-import { renderFirstLookItems } from "./first-look.mts";
+import {
+  renderThreadBullet,
+  renderCommentBullet,
+  renderReviewBullet,
+  renderFirstLookStatusTag,
+} from "./list-formatters.mts";
 import type { FetchResult } from "../commands/resolve.mts";
 import type { CommitSuggestionResult } from "../types.mts";
 import type { ResolveResult } from "../comments/resolve.mts";
@@ -31,51 +35,45 @@ export function formatFetchResult(result: FetchResult): string {
       `## Actionable Review Threads (${result.actionableThreads.length})` +
         (result.commitSuggestionsEnabled ? " [commit-suggestions: enabled]" : ""),
     );
-    const threadBullets = result.actionableThreads.map((t) => {
-      const suggestionMarker = t.suggestion ? " [suggestion]" : "";
-      const link = t.url ? ` [↗](${t.url})` : "";
-      const loc = t.path
-        ? `\`${t.path}:${renderLineRange(t.startLine ?? undefined, t.line)}\``
-        : "`(no location)`";
-      const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (@${t.author})${suggestionMarker}: ${t.body.split("\n")[0].slice(0, 100)}`;
-      if (!t.suggestion) return bulletLine;
-      return `${bulletLine}\n${renderSuggestionBlock(t.suggestion)}`;
-    });
-    sections.push(threadBullets.join("\n\n"));
+    sections.push(
+      result.actionableThreads
+        .map((t) => renderThreadBullet(t, { renderSuggestion: true }))
+        .join("\n\n"),
+    );
   }
 
   if (result.actionableComments.length > 0) {
     sections.push(`## Actionable PR Comments (${result.actionableComments.length})`);
-    sections.push(
-      result.actionableComments
-        .map((c) => {
-          const link = c.url ? ` [↗](${c.url})` : "";
-          return `- \`commentId=${c.id}\`${link} (@${c.author}): ${c.body.split("\n")[0].slice(0, 100)}`;
-        })
-        .join("\n"),
-    );
+    sections.push(result.actionableComments.map((c) => renderCommentBullet(c)).join("\n"));
   }
 
   if (result.changesRequestedReviews.length > 0) {
     sections.push(
       `## Pending CHANGES_REQUESTED reviews (${result.changesRequestedReviews.length})`,
     );
-    sections.push(
-      result.changesRequestedReviews.map((r) => `- \`reviewId=${r.id}\` (@${r.author})`).join("\n"),
-    );
+    sections.push(result.changesRequestedReviews.map((r) => renderReviewBullet(r)).join("\n"));
   }
 
   if (result.reviewSummaries.length > 0) {
     sections.push(`## Review summaries (${result.reviewSummaries.length})`);
     sections.push(
-      result.reviewSummaries
-        .map((r) => `- \`reviewId=${r.id}\` (@${r.author}): ${r.body.split("\n")[0].slice(0, 100)}`)
-        .join("\n"),
+      result.reviewSummaries.map((r) => renderReviewBullet(r, { includeBody: true })).join("\n"),
     );
   }
 
-  const firstLook = renderFirstLookItems(result.firstLookThreads, result.firstLookComments);
-  if (firstLook) sections.push(firstLook);
+  if (firstLookTotal > 0) {
+    sections.push(
+      `## First-look items (${firstLookTotal}) — already closed on GitHub; acknowledge only`,
+    );
+    const bullets: string[] = [];
+    for (const t of result.firstLookThreads) {
+      bullets.push(renderThreadBullet(t, { statusTag: renderFirstLookStatusTag(t) }));
+    }
+    for (const c of result.firstLookComments) {
+      bullets.push(renderCommentBullet(c, { statusTag: "[status: minimized]" }));
+    }
+    sections.push(bullets.join("\n"));
+  }
 
   sections.push("## Summary");
   sections.push(
