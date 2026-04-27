@@ -25,6 +25,7 @@ describe("joinSections", () => {
 
   it("filters out sections that become empty after trimming newlines", () => {
     expect(joinSections(["\n\n", "a", "\n"])).toBe("a");
+    expect(joinSections(["\r\n\r\n", "a", "\r\n"])).toBe("a");
   });
 
   it("does not add a trailing newline when joining plain sections", () => {
