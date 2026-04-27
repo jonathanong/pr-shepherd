@@ -248,13 +248,13 @@ AssertionError: expected true to be false
 
 When one or more threads carry a `[suggestion]` marker, the `## Instructions` section opens with two different steps. Step 1 is new; step 2 gains a manual-fallback clause. All other steps renumber and are otherwise unchanged.
 
-````markdown
+```markdown
 ## Instructions
 
 1. For each thread marked `[suggestion]` under `## Review threads`: run `npx pr-shepherd commit-suggestion 42 --thread-id <id> --message "<one-sentence headline>" --format=json`, one thread at a time. On `applied: true` the CLI already resolved the thread — remove its ID from `--resolve-thread-ids` in the `resolve:` command below. On `applied: false` read `reason` and `patch`, fall through to the manual-edit step, and do not retry the same command. Optionally pass `--dry-run` (omitting `--message`) to preview the patch without mutating the working tree.
 2. Apply code fixes: read and edit each file referenced under `## Review threads` and `## Actionable comments` above. When applying a `[suggestion]` thread manually (e.g. after a failed `commit-suggestion` run), replace the exact line range shown in the heading (`path:startLine-endLine`) with the replacement shown in its `Replaces lines …` block verbatim — an empty replacement deletes those lines, a single blank line replaces the range with one blank line.
 3. [remaining steps — failing checks, reviews, commit, rebase/push, resolve, cancelled-runs guard, journal, stop — renumber starting here]
-````
+```
 
 Step 1 is absent when no thread has a `[suggestion]` marker; step 2 omits the manual-fallback clause in the same case.
 
