@@ -299,7 +299,7 @@ The JSON payload exposes the same data under `fix.{threads, actionableComments, 
 
 **Resolve command rules (same in Markdown and JSON):**
 
-- `--require-sha "$HEAD_SHA"` is appended only when a push occurred (threads/actionableComments/checks/reviews present); summary-only dispatches omit it.
+- `--require-sha "$HEAD_SHA"` is appended only when threads, CI failures, or changes-requested reviews are present — signals the CLI knows require a push. Comment-only and summary-only dispatches omit it.
 - `$DISMISS_MESSAGE` must be one specific sentence describing what changed — never generic text like "address review comments".
 
 ### Applying ` ```suggestion ` blocks

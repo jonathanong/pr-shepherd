@@ -113,13 +113,9 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const { changesRequestedReviews } = report;
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
 
-  const allCommentIds = [
-    ...actionableComments.map((c) => c.id),
-    ...reviewSummaryIds,
-  ];
+  const allCommentIds = [...actionableComments.map((c) => c.id), ...reviewSummaryIds];
   const resolveCommand = buildResolveCommand(
     threads,
-    actionableComments,
     allCommentIds,
     changesRequestedReviews,
     checks,
