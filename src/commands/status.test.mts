@@ -160,6 +160,24 @@ describe("formatStatusTable — formatting", () => {
     const out = formatStatusTable([makeSummary({ threadsTruncated: false })], "owner/repo");
     expect(out).not.toContain("threads truncated");
   });
+
+  it("renders a Markdown table header and separator", () => {
+    const out = formatStatusTable([makeSummary()], "owner/repo");
+    expect(out).toContain("| PR | Title | Verdict | CI |");
+    expect(out).toContain("| --- | --- | --- | --- |");
+  });
+
+  it("escapes pipe characters in titles", () => {
+    const out = formatStatusTable([makeSummary({ title: "feat: a|b" })], "owner/repo");
+    expect(out).toContain("a\\|b");
+    expect(out).not.toContain("a|b");
+  });
+
+  it("returns only heading for empty summaries", () => {
+    const out = formatStatusTable([], "owner/repo");
+    expect(out).toBe("# owner/repo — PR status (0)");
+    expect(out).not.toContain("| --- |");
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -132,21 +132,28 @@ async function paginateAndBuild(
 // ---------------------------------------------------------------------------
 
 export function formatStatusTable(summaries: PrSummary[], repoFull: string): string {
-  const lines: string[] = [`\n# ${repoFull} — PR status (${summaries.length})\n`];
+  const heading = `# ${repoFull} — PR status (${summaries.length})`;
+  if (summaries.length === 0) return heading;
 
-  for (const s of summaries) {
+  const rows = summaries.map((s) => {
     const verdict = deriveVerdict(s);
     const ciLabel = s.ciState ?? "—";
-    const title = s.title.slice(0, 50);
-    const truncNote = s.threadsTruncated
-      ? " (threads truncated — run shepherd check for full count)"
-      : "";
-    lines.push(
-      `PR #${String(s.number).padEnd(5)} ${title.padEnd(52)} ${verdict.padEnd(12)} ${ciLabel}${truncNote}`,
-    );
-  }
+    const title = s.title.slice(0, 50).replace(/\|/g, "\\|");
+    return `| #${s.number} | ${title} | ${verdict} | ${ciLabel} |`;
+  });
 
-  return lines.join("\n");
+  const table = [
+    "| PR | Title | Verdict | CI |",
+    "| --- | --- | --- | --- |",
+    ...rows,
+  ].join("\n");
+
+  const footnotes = summaries
+    .filter((s) => s.threadsTruncated)
+    .map((s) => `> Note: PR #${s.number} threads truncated — run \`pr-shepherd check ${s.number}\` for full count.`);
+
+  const parts = [heading, table, ...footnotes];
+  return parts.join("\n\n");
 }
 
 export function deriveVerdict(s: PrSummary): string {
