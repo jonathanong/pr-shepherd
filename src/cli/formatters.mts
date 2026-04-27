@@ -8,6 +8,7 @@ import {
   renderReviewBullet,
   renderFirstLookStatusTag,
 } from "./list-formatters.mts";
+import { joinSections } from "./markdown.mts";
 import type { FetchResult } from "../commands/resolve.mts";
 import type { CommitSuggestionResult } from "../types.mts";
 import type { ResolveResult } from "../comments/resolve.mts";
@@ -90,7 +91,7 @@ export function formatFetchResult(result: FetchResult): string {
   sections.push("## Instructions");
   sections.push(result.instructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n"));
 
-  return sections.join("\n\n");
+  return joinSections(sections);
 }
 
 export function formatCommitSuggestionResult(result: CommitSuggestionResult): string {

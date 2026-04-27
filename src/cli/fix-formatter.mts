@@ -1,5 +1,6 @@
 import { renderResolveCommand } from "../commands/iterate.mts";
 import { safeFence } from "./fence.mts";
+import { joinSections } from "./markdown.mts";
 import { renderSuggestionBlock, renderLineRange } from "./suggestion-renderer.mts";
 import {
   renderThreadBullet,
@@ -108,7 +109,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
   sections.push("## Instructions");
   sections.push(result.fix.instructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n"));
 
-  return sections.join("\n\n");
+  return joinSections(sections);
 }
 
 function blockquote(body: string): string {

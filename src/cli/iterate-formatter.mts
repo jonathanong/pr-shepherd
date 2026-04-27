@@ -1,5 +1,6 @@
 import type { IterateResult } from "../types.mts";
 import { formatFixCodeResult } from "./fix-formatter.mts";
+import { joinSections } from "./markdown.mts";
 
 /**
  * Format an IterateResult as human-readable Markdown.
@@ -49,55 +50,39 @@ export function formatIterateResult(result: IterateResult, opts?: { verbose?: bo
     case "cooldown":
       // In default mode: suppress base/summary lines — cooldown carries UNKNOWN/empty
       // placeholders that add no value. Emit only heading + log + Instructions.
-      return [
+      return joinSections([
         verbose ? header : heading,
-        "",
         result.log,
-        "",
-        "## Instructions",
-        "",
-        "1. End this iteration — the next cron fire will recheck once CI starts reporting.",
-      ].join("\n");
+        "## Instructions\n\n1. End this iteration — the next cron fire will recheck once CI starts reporting.",
+      ]);
 
-    case "wait": {
-      const parts = [
+    case "wait":
+      return joinSections([
         header,
         result.log,
-        "## Instructions",
-        "1. End this iteration — the next cron fire will recheck.",
-      ];
-      return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
-    }
+        "## Instructions\n\n1. End this iteration — the next cron fire will recheck.",
+      ]);
 
-    case "mark_ready": {
-      const parts = [
+    case "mark_ready":
+      return joinSections([
         header,
         result.log,
-        "## Instructions",
-        "1. The CLI already marked the PR ready for review — end this iteration.",
-      ];
-      return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
-    }
+        "## Instructions\n\n1. The CLI already marked the PR ready for review — end this iteration.",
+      ]);
 
-    case "cancel": {
-      const parts = [
+    case "cancel":
+      return joinSections([
         [`${heading} — ${result.reason}`, "", baseLine, summaryLine].join("\n"),
         result.log,
-        "## Instructions",
-        "1. Invoke `/loop cancel` via the Skill tool.\n2. Stop.",
-      ];
-      return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
-    }
+        "## Instructions\n\n1. Invoke `/loop cancel` via the Skill tool.\n2. Stop.",
+      ]);
 
-    case "escalate": {
-      const parts = [
+    case "escalate":
+      return joinSections([
         header,
         result.escalate.humanMessage,
-        "## Instructions",
-        "1. Invoke `/loop cancel` via the Skill tool.\n2. Stop — the PR needs human direction before monitoring can resume.",
-      ];
-      return parts.join("\n\n").replace(/\n\n\n+/g, "\n\n");
-    }
+        "## Instructions\n\n1. Invoke `/loop cancel` via the Skill tool.\n2. Stop — the PR needs human direction before monitoring can resume.",
+      ]);
 
     case "fix_code":
       return formatFixCodeResult(header, result);

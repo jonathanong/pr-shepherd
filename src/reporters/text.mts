@@ -6,81 +6,79 @@ import {
   renderReviewBullet,
   renderFirstLookStatusTag,
 } from "../cli/list-formatters.mts";
+import { joinSections } from "../cli/markdown.mts";
 
 export function formatText(report: ShepherdReport): string {
-  const parts: string[] = [];
-
-  parts.push(`# PR #${report.pr} [CHECK] — ${report.repo}`);
-  parts.push(`Status: ${report.status}`);
-  parts.push(`Base: ${report.baseBranch}`);
-  parts.push("");
+  const header = [
+    `# PR #${report.pr} [CHECK] — ${report.repo}`,
+    `Status: ${report.status}`,
+    `Base: ${report.baseBranch}`,
+  ].join("\n");
 
   const ms = report.mergeStatus;
-  parts.push("## Merge Status");
-  parts.push("");
-  parts.push(`- status: \`${ms.status}\``);
-  parts.push(`- mergeStateStatus: \`${ms.mergeStateStatus}\``);
-  parts.push(`- mergeable: \`${ms.mergeable}\``);
-  parts.push(`- reviewDecision: \`${ms.reviewDecision ?? "(none)"}\``);
-  parts.push(`- isDraft: \`${ms.isDraft}\``);
-  parts.push(`- copilotReviewInProgress: \`${ms.copilotReviewInProgress}\``);
-  parts.push("");
+  const mergeStatusSection = [
+    "## Merge Status",
+    "",
+    `- status: \`${ms.status}\``,
+    `- mergeStateStatus: \`${ms.mergeStateStatus}\``,
+    `- mergeable: \`${ms.mergeable}\``,
+    `- reviewDecision: \`${ms.reviewDecision ?? "(none)"}\``,
+    `- isDraft: \`${ms.isDraft}\``,
+    `- copilotReviewInProgress: \`${ms.copilotReviewInProgress}\``,
+  ].join("\n");
 
   const { passing, failing, inProgress, skipped } = report.checks;
   const total = passing.length + failing.length + inProgress.length + skipped.length;
 
-  parts.push("## CI Checks");
-  parts.push("");
-  parts.push(`${passing.length}/${total} passed`);
-  parts.push("");
+  const ciSubsections: string[] = [`${passing.length}/${total} passed`];
 
   if (failing.length > 0) {
-    parts.push(`### Failed (${failing.length})`);
-    parts.push("");
+    const lines = [`### Failed (${failing.length})`, ""];
     for (const c of failing) {
       const triaged = c as TriagedCheck;
       const prefix = triaged.workflowName ? `${triaged.workflowName} › ` : "";
-      parts.push(`- ${prefix}${c.name}: ${c.conclusion ?? c.status}`);
+      lines.push(`- ${prefix}${c.name}: ${c.conclusion ?? c.status}`);
       if (triaged.failedStep) {
-        parts.push(`    failed step: ${triaged.failedStep}`);
+        lines.push(`    failed step: ${triaged.failedStep}`);
       }
       if (triaged.summary) {
-        parts.push(`    summary: ${triaged.summary}`);
+        lines.push(`    summary: ${triaged.summary}`);
       }
     }
-    parts.push("");
+    ciSubsections.push(lines.join("\n"));
   }
 
   if (inProgress.length > 0) {
-    parts.push(`### In Progress (${inProgress.length})`);
-    parts.push("");
+    const lines = [`### In Progress (${inProgress.length})`, ""];
     for (const c of inProgress) {
-      parts.push(`- ${c.name}: ${c.status}`);
+      lines.push(`- ${c.name}: ${c.status}`);
     }
-    parts.push("");
+    ciSubsections.push(lines.join("\n"));
   }
 
   if (skipped.length > 0) {
-    parts.push(`### Skipped (${skipped.length}): ${skipped.map((c) => c.name).join(", ")}`);
-    parts.push("");
+    ciSubsections.push(
+      `### Skipped (${skipped.length}): ${skipped.map((c) => c.name).join(", ")}`,
+    );
   }
 
   if (report.checks.filtered.length > 0) {
-    parts.push(
+    const lines = [
       `### Filtered non-PR-trigger (${report.checks.filtered.length}): ${report.checks.filtered.map((c) => c.name).join(", ")}`,
-    );
-    parts.push("");
+    ];
     if (report.checks.blockedByFilteredCheck) {
-      parts.push(
-        "> Note: PR is BLOCKED and all filtered checks are non-PR-trigger — one of these filtered checks may be a required status check blocking merge.",
+      lines.push(
+        "  Note: PR is BLOCKED and all filtered checks are non-PR-trigger — one of these filtered checks may be a required status check blocking merge.",
       );
     } else if (report.mergeStatus.status === "BLOCKED") {
-      parts.push(
-        "> Note: one or more of these filtered checks may be a required status check blocking merge.",
+      lines.push(
+        "  Note: one or more of these filtered checks may be a required status check blocking merge.",
       );
     }
-    parts.push("");
+    ciSubsections.push(lines.join("\n"));
   }
+
+  const ciSection = `## CI Checks\n\n${ciSubsections.join("\n\n")}`;
 
   const {
     actionable: actionableThreads,
@@ -91,105 +89,100 @@ export function formatText(report: ShepherdReport): string {
   const hasThreadSection =
     autoResolved.length > 0 || autoResolveErrors.length > 0 || actionableThreads.length > 0;
 
+  let threadsSection: string | null = null;
   if (hasThreadSection) {
-    parts.push("## Review Threads");
-    parts.push("");
+    const subparts: string[] = [];
 
     if (autoResolved.length > 0) {
-      parts.push(`Auto-resolved outdated (${autoResolved.length}):`);
+      const lines = [`Auto-resolved outdated (${autoResolved.length}):`];
       for (const t of autoResolved) {
-        parts.push(renderThreadBullet(t));
+        lines.push(renderThreadBullet(t));
       }
-      parts.push("");
+      subparts.push(lines.join("\n"));
     }
 
     if (autoResolveErrors.length > 0) {
-      parts.push(`Auto-resolve errors (${autoResolveErrors.length}):`);
+      const lines = [`Auto-resolve errors (${autoResolveErrors.length}):`];
       for (const e of autoResolveErrors) {
-        parts.push(`- ${e}`);
+        lines.push(`- ${e}`);
       }
-      parts.push("");
+      subparts.push(lines.join("\n"));
     }
 
     if (actionableThreads.length > 0) {
-      parts.push(`### Actionable (${actionableThreads.length})`);
-      parts.push("");
+      const lines = [`### Actionable (${actionableThreads.length})`, ""];
       for (const t of actionableThreads) {
-        parts.push(renderThreadBullet(t));
+        lines.push(renderThreadBullet(t));
       }
-      parts.push("");
+      subparts.push(lines.join("\n"));
     }
+
+    threadsSection = `## Review Threads\n\n${subparts.join("\n\n")}`;
   }
 
   const { actionable: actionableComments, firstLook: firstLookComments } = report.comments;
+  let commentsSection: string | null = null;
   if (actionableComments.length > 0) {
-    parts.push("## PR Comments");
-    parts.push("");
-    parts.push(`### Actionable (${actionableComments.length})`);
-    parts.push("");
+    const lines = [`### Actionable (${actionableComments.length})`, ""];
     for (const c of actionableComments) {
-      parts.push(renderCommentBullet(c));
+      lines.push(renderCommentBullet(c));
     }
-    parts.push("");
+    commentsSection = `## PR Comments\n\n${lines.join("\n")}`;
   }
 
-  if (report.changesRequestedReviews.length > 0) {
-    parts.push("## CHANGES_REQUESTED Reviews");
-    parts.push("");
-    for (const r of report.changesRequestedReviews) {
-      parts.push(renderReviewBullet(r, { includeBody: true }));
-    }
-    parts.push("");
-  }
+  const changesRequestedSection = reviewListSection(
+    "CHANGES_REQUESTED Reviews",
+    report.changesRequestedReviews,
+  );
+  const reviewSummariesSection = reviewListSection("Review Summaries", report.reviewSummaries);
+  const approvedReviewsSection = reviewListSection("Approved Reviews", report.approvedReviews);
 
-  if (report.reviewSummaries.length > 0) {
-    parts.push("## Review Summaries");
-    parts.push("");
-    for (const r of report.reviewSummaries) {
-      parts.push(renderReviewBullet(r, { includeBody: true }));
-    }
-    parts.push("");
-  }
-
-  if (report.approvedReviews.length > 0) {
-    parts.push("## Approved Reviews");
-    parts.push("");
-    for (const r of report.approvedReviews) {
-      parts.push(renderReviewBullet(r, { includeBody: true }));
-    }
-    parts.push("");
-  }
   const firstLookTotal = firstLookThreads.length + firstLookComments.length;
+  let firstLookSection: string | null = null;
   if (firstLookTotal > 0) {
-    parts.push(
+    const lines = [
       `## First-look items (${firstLookTotal}) — already closed on GitHub; acknowledge only`,
-    );
-    parts.push("");
+      "",
+    ];
     for (const t of firstLookThreads) {
-      parts.push(renderThreadBullet(t, { statusTag: renderFirstLookStatusTag(t) }));
+      lines.push(renderThreadBullet(t, { statusTag: renderFirstLookStatusTag(t) }));
     }
     for (const c of firstLookComments) {
-      parts.push(renderCommentBullet(c, { statusTag: "[status: minimized]" }));
+      lines.push(renderCommentBullet(c, { statusTag: "[status: minimized]" }));
     }
-    parts.push("");
+    firstLookSection = lines.join("\n");
   }
 
   const totalActionable =
     actionableThreads.length + actionableComments.length + report.changesRequestedReviews.length;
-  parts.push("## Summary");
-  parts.push("");
   const counts: string[] = [];
   if (totalActionable > 0) counts.push(`${totalActionable} actionable`);
   if (firstLookTotal > 0) counts.push(`${firstLookTotal} first-look`);
   const summaryLine = counts.join(", ") || "0 actionable — all threads resolved/minimized";
-  parts.push(summaryLine);
-  parts.push("");
-  parts.push("## Instructions");
-  parts.push("");
-  const instructions = buildCheckInstructions(report);
-  instructions.forEach((step, i) => {
-    parts.push(`${i + 1}. ${step}`);
-  });
+  const summarySection = `## Summary\n\n${summaryLine}`;
 
-  return parts.join("\n");
+  const instructions = buildCheckInstructions(report);
+  const instructionsSection = `## Instructions\n\n${instructions.map((step, i) => `${i + 1}. ${step}`).join("\n")}`;
+
+  return joinSections([
+    header,
+    mergeStatusSection,
+    ciSection,
+    threadsSection,
+    commentsSection,
+    changesRequestedSection,
+    reviewSummariesSection,
+    approvedReviewsSection,
+    firstLookSection,
+    summarySection,
+    instructionsSection,
+  ]);
+}
+
+function reviewListSection(
+  heading: string,
+  items: { id: string; author: string; body?: string }[],
+): string | null {
+  if (items.length === 0) return null;
+  return `## ${heading}\n\n${items.map((r) => renderReviewBullet(r, { includeBody: true })).join("\n")}`;
 }
