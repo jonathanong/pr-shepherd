@@ -85,12 +85,13 @@ describe("formatText — header", () => {
     expect(out).toContain("Status: FAILING");
   });
 
-  it("includes merge status heading and fields", () => {
+  it("includes merge status heading and fields as a bullet list", () => {
     const out = formatText(makeReport());
     expect(out).toContain("## Merge Status");
-    expect(out).toContain("CLEAN");
-    expect(out).toContain("mergeStateStatus:");
-    expect(out).toContain("mergeable:");
+    expect(out).toContain("- status: `CLEAN`");
+    expect(out).toContain("- mergeStateStatus: `CLEAN`");
+    expect(out).toContain("- mergeable: `MERGEABLE`");
+    expect(out).not.toContain("  mergeStateStatus:");
   });
 });
 

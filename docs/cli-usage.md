@@ -41,12 +41,12 @@ Status: UNRESOLVED_COMMENTS
 
 ## Merge Status
 
-CLEAN
-  mergeStateStatus:        CLEAN
-  mergeable:               MERGEABLE
-  reviewDecision:          APPROVED
-  isDraft:                 false
-  copilotReviewInProgress: false
+- status: `CLEAN`
+- mergeStateStatus: `CLEAN`
+- mergeable: `MERGEABLE`
+- reviewDecision: `APPROVED`
+- isDraft: `false`
+- copilotReviewInProgress: `false`
 
 ## CI Checks
 
