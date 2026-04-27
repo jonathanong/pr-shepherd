@@ -168,10 +168,10 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain("- external `https://app.codecov.io` — `codecov/patch`");
     // Reviews
     expect(out).toContain("- `REV_1` (@reviewer)");
-    // Noise — backticked IDs, comma-separated.
-    expect(out).toContain("`c-noise-1`, `c-noise-2`");
-    // Cancelled runs
-    expect(out).toContain("`run-99`");
+    // Noise — one bullet per ID.
+    expect(out).toContain("- `c-noise-1`\n- `c-noise-2`");
+    // Cancelled runs — one bullet per ID.
+    expect(out).toContain("- `run-99`");
     // Post-fix push section uses backticked base + resolve command with --require-sha appended.
     expect(out).toContain("- base: `main`");
     expect(out).toContain(
@@ -199,7 +199,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     const out = getStdout();
 
     expect(out).toContain("## Review summaries (minimize only)");
-    expect(out).toContain("`PRR_BOT`, `PRR_AP`");
+    expect(out).toContain("- `PRR_BOT`\n- `PRR_AP`");
     expect(out).toContain(
       "- resolve: `npx pr-shepherd resolve 42 --minimize-comment-ids PRR_BOT,PRR_AP`",
     );
