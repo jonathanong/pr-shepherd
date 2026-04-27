@@ -140,10 +140,7 @@ describe("formatText — failed checks", () => {
     });
     const out = formatText(report);
     const lintLine = out.split("\n").find((l) => l.includes("- lint:"));
-    expect(lintLine).toBeDefined();
-    if (lintLine === undefined) {
-      throw new Error('Expected to find a line containing "- lint:"');
-    }
+    if (lintLine === undefined) throw new Error('Expected to find a line containing "- lint:"');
     expect(lintLine).not.toContain("[");
   });
 
