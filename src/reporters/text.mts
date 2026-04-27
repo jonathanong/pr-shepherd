@@ -57,9 +57,7 @@ export function formatText(report: ShepherdReport): string {
   }
 
   if (skipped.length > 0) {
-    ciSubsections.push(
-      `### Skipped (${skipped.length}): ${skipped.map((c) => c.name).join(", ")}`,
-    );
+    ciSubsections.push(`### Skipped (${skipped.length}): ${skipped.map((c) => c.name).join(", ")}`);
   }
 
   if (report.checks.filtered.length > 0) {
