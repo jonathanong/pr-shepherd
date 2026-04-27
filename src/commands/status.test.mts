@@ -144,11 +144,11 @@ describe("formatStatusTable — deriveVerdict precedence", () => {
 // ---------------------------------------------------------------------------
 
 describe("formatStatusTable — formatting", () => {
-  it("truncates title to 50 chars", () => {
+  it("truncates title with ellipsis at 50 chars total", () => {
     const longTitle = "A".repeat(60);
     const out = formatStatusTable([makeSummary({ title: longTitle })], "owner/repo");
-    expect(out).toContain("A".repeat(50));
-    expect(out).not.toContain("A".repeat(51));
+    expect(out).toContain("A".repeat(47) + "...");
+    expect(out).not.toContain("A".repeat(48));
   });
 
   it("appends threadsTruncated note when flag is true", () => {
@@ -159,6 +159,24 @@ describe("formatStatusTable — formatting", () => {
   it("does not append truncation note when false", () => {
     const out = formatStatusTable([makeSummary({ threadsTruncated: false })], "owner/repo");
     expect(out).not.toContain("threads truncated");
+  });
+
+  it("renders a Markdown table header and separator", () => {
+    const out = formatStatusTable([makeSummary()], "owner/repo");
+    expect(out).toContain("| PR | Title | Verdict | CI |");
+    expect(out).toContain("| --- | --- | --- | --- |");
+  });
+
+  it("escapes pipe characters in titles", () => {
+    const out = formatStatusTable([makeSummary({ title: "feat: a|b" })], "owner/repo");
+    expect(out).toContain("a\\|b");
+    expect(out).not.toContain("a|b");
+  });
+
+  it("returns only heading for empty summaries", () => {
+    const out = formatStatusTable([], "owner/repo");
+    expect(out).toBe("# owner/repo — PR status (0)");
+    expect(out).not.toContain("| --- |");
   });
 });
 

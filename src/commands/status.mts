@@ -132,21 +132,21 @@ async function paginateAndBuild(
 // ---------------------------------------------------------------------------
 
 export function formatStatusTable(summaries: PrSummary[], repoFull: string): string {
-  const lines: string[] = [`\n# ${repoFull} — PR status (${summaries.length})\n`];
-
-  for (const s of summaries) {
-    const verdict = deriveVerdict(s);
-    const ciLabel = s.ciState ?? "—";
-    const title = s.title.slice(0, 50);
-    const truncNote = s.threadsTruncated
-      ? " (threads truncated — run shepherd check for full count)"
-      : "";
-    lines.push(
-      `PR #${String(s.number).padEnd(5)} ${title.padEnd(52)} ${verdict.padEnd(12)} ${ciLabel}${truncNote}`,
+  const heading = `# ${repoFull} — PR status (${summaries.length})`;
+  if (summaries.length === 0) return heading;
+  const rows = summaries.map((s) => {
+    const raw = s.title.length > 50 ? `${s.title.slice(0, 47)}...` : s.title;
+    const title = raw.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\n/g, " ");
+    return `| #${s.number} | ${title} | ${deriveVerdict(s)} | ${s.ciState ?? "—"} |`;
+  });
+  const table = ["| PR | Title | Verdict | CI |", "| --- | --- | --- | --- |", ...rows].join("\n");
+  const footnotes = summaries
+    .filter((s) => s.threadsTruncated)
+    .map(
+      (s) =>
+        `> Note: PR #${s.number} threads truncated — run \`pr-shepherd check ${s.number}\` for full count.`,
     );
-  }
-
-  return lines.join("\n");
+  return [heading, table, ...footnotes].join("\n\n");
 }
 
 export function deriveVerdict(s: PrSummary): string {

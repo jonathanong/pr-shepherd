@@ -361,9 +361,13 @@ pr-shepherd status 100
 ```
 # owner/repo — PR status (3)
 
-PR #41    Add new feature for user authentication           READY        SUCCESS
-PR #42    Refactor internal module                          IN PROGRESS  PENDING
-PR #43    Fix edge case in parser                           BLOCKED      SUCCESS (threads truncated — run pr-shepherd check for full count)
+| PR | Title | Verdict | CI |
+| --- | --- | --- | --- |
+| #41 | Add new feature for user authentication | READY | SUCCESS |
+| #42 | Refactor internal module | IN PROGRESS | PENDING |
+| #43 | Fix edge case in parser | BLOCKED | SUCCESS |
+
+> Note: PR #43 threads truncated — run `pr-shepherd check 43` for full count.
 ```
 
 Exit code: `0` if every PR is READY, `1` otherwise.
