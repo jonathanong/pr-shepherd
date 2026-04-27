@@ -219,13 +219,14 @@ describe("handleSubscribePr / handleUnsubscribePr", () => {
     subs.subscribe(42);
     const out = handleUnsubscribePr({ prNumber: 42 }, subs);
     expect(subs.isSubscribed(42)).toBe(false);
-    expect((out.content[0]! as { text: string }).text).toContain("(none)");
+    expect((out.content[0]! as { text: string }).text).toContain("42");
   });
 
-  it("shows remaining PRs after unsubscribe", () => {
+  it("shows confirmation after unsubscribe", () => {
     subs.subscribe(1);
     subs.subscribe(2);
     const out = handleUnsubscribePr({ prNumber: 1 }, subs);
-    expect((out.content[0]! as { text: string }).text).toContain("2");
+    expect((out.content[0]! as { text: string }).text).toContain("1");
+    expect(subs.isSubscribed(1)).toBe(false);
   });
 });

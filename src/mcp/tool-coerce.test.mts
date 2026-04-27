@@ -89,8 +89,8 @@ describe("optStringArray", () => {
     expect(optStringArray({ a: ["x", "y"] }, "a")).toEqual(["x", "y"]);
   });
 
-  it("filters out non-strings", () => {
-    expect(optStringArray({ a: ["x", 42, "y"] }, "a")).toEqual(["x", "y"]);
+  it("throws on non-string element", () => {
+    expect(() => optStringArray({ a: ["x", 42, "y"] }, "a")).toThrow("a[1] must be a string");
   });
 
   it("returns undefined when not an array", () => {
@@ -104,8 +104,8 @@ describe("reqNumArray", () => {
     expect(reqNumArray({ a: [1, 2, 3] }, "a")).toEqual([1, 2, 3]);
   });
 
-  it("filters out non-numbers", () => {
-    expect(reqNumArray({ a: [1, "x", 2] }, "a")).toEqual([1, 2]);
+  it("throws on non-number element", () => {
+    expect(() => reqNumArray({ a: [1, "x", 2] }, "a")).toThrow("a[1] must be a number");
   });
 
   it("throws when missing", () => {

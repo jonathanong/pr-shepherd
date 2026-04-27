@@ -52,6 +52,12 @@ export async function startMcpServer(opts: McpServerOptions): Promise<void> {
 
   // Start HTTP webhook server if enabled.
   if (opts.webhookPort !== 0) {
+    if (!opts.webhookSecret) {
+      process.stderr.write(
+        `pr-shepherd-mcp: WARNING — GITHUB_WEBHOOK_SECRET is not set; webhook auth is disabled\n`,
+      );
+    }
+
     const webhookServer = new WebhookServer({
       port: opts.webhookPort,
       secret: opts.webhookSecret,
@@ -68,14 +74,22 @@ export async function startMcpServer(opts: McpServerOptions): Promise<void> {
     });
 
     await webhookServer.start();
-    process.stderr.write(`pr-shepherd-mcp: webhook server listening on port ${opts.webhookPort}\n`);
+    // start() swallows bind errors and sets server=null, so only log if it actually bound.
+    if (webhookServer.isRunning()) {
+      process.stderr.write(
+        `pr-shepherd-mcp: webhook server listening on port ${opts.webhookPort}\n`,
+      );
+    }
 
-    process.on("SIGTERM", () => {
-      void webhookServer.stop();
-    });
-    process.on("SIGINT", () => {
-      void webhookServer.stop();
-    });
+    const shutdown = (signal: string) => {
+      void (async () => {
+        process.stderr.write(`pr-shepherd-mcp: received ${signal}, shutting down\n`);
+        await webhookServer.stop();
+        process.exit(0);
+      })();
+    };
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
+    process.on("SIGINT", () => shutdown("SIGINT"));
   }
 
   const transport = new StdioServerTransport();
@@ -90,7 +104,7 @@ function formatWebhookNotification(payload: WebhookPayload): string {
   const lines: string[] = ["<github-webhook-activity>", `event: ${payload.event}`];
   if (payload.action !== undefined) lines.push(`action: ${payload.action}`);
   lines.push(`pr: ${payload.prNumber}`);
-  lines.push(`repo: ${payload.repoFullName}`);
+  if (payload.repoFullName !== undefined) lines.push(`repo: ${payload.repoFullName}`);
   if (payload.ref !== undefined) lines.push(`ref: ${payload.ref}`);
   if (payload.sha !== undefined) lines.push(`sha: ${payload.sha}`);
   if (payload.actor !== undefined) lines.push(`actor: ${payload.actor}`);

@@ -67,6 +67,13 @@ export async function handleResolveMutate(input: Record<string, unknown>): Promi
   const dismissReviewIds = optStringArray(input, "dismissReviewIds");
   const dismissMessage = optStr(input, "dismissMessage");
   const requireSha = optStr(input, "requireSha");
+
+  if (!resolveThreadIds?.length && !minimizeCommentIds?.length && !dismissReviewIds?.length) {
+    return err("Provide at least one of: resolveThreadIds, minimizeCommentIds, dismissReviewIds");
+  }
+  if (dismissReviewIds?.length && !dismissMessage) {
+    return err("dismissMessage is required when dismissReviewIds is non-empty");
+  }
   const result = await runResolveMutate({
     ...FORMAT_TEXT,
     prNumber,
@@ -142,9 +149,8 @@ export function handleSubscribePr(
 ): CallToolResult {
   const prNumber = reqNum(input, "prNumber");
   subs.subscribe(prNumber);
-  const all = subs.listSubscribed();
   return ok(
-    `Subscribed to PR #${prNumber}. Webhook events for this PR will be forwarded as MCP notifications.\nCurrently subscribed PRs: ${all.join(", ")}`,
+    `Subscribed to PR #${prNumber}. Webhook events for this PR will be forwarded as MCP notifications.`,
   );
 }
 
@@ -154,8 +160,5 @@ export function handleUnsubscribePr(
 ): CallToolResult {
   const prNumber = reqNum(input, "prNumber");
   subs.unsubscribe(prNumber);
-  const all = subs.listSubscribed();
-  return ok(
-    `Unsubscribed from PR #${prNumber}.\nCurrently subscribed PRs: ${all.length > 0 ? all.join(", ") : "(none)"}`,
-  );
+  return ok(`Unsubscribed from PR #${prNumber}.`);
 }

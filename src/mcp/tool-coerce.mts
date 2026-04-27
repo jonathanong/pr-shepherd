@@ -32,7 +32,10 @@ export function optBool(input: Record<string, unknown>, key: string): boolean | 
 export function optStringArray(input: Record<string, unknown>, key: string): string[] | undefined {
   const v = input[key];
   if (!Array.isArray(v)) return undefined;
-  return v.filter((x): x is string => typeof x === "string");
+  return v.map((x, i) => {
+    if (typeof x !== "string") throw new Error(`${key}[${i}] must be a string, got ${typeof x}`);
+    return x;
+  });
 }
 
 export function reqNumArray(input: Record<string, unknown>, key: string): number[] {
@@ -40,5 +43,9 @@ export function reqNumArray(input: Record<string, unknown>, key: string): number
   if (!Array.isArray(v) || v.length === 0) {
     throw new Error(`${key} must be a non-empty array of numbers`);
   }
-  return v.filter((x): x is number => typeof x === "number");
+  const result = v.map((x, i) => {
+    if (typeof x !== "number") throw new Error(`${key}[${i}] must be a number, got ${typeof x}`);
+    return x;
+  });
+  return result;
 }

@@ -9,11 +9,13 @@
 import { createServer, type Server as HttpServer } from "node:http";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+const MAX_BODY_BYTES = 5 * 1024 * 1024; // 5 MB
+
 export interface WebhookPayload {
   event: string;
   action?: string;
   prNumber: number;
-  repoFullName: string;
+  repoFullName?: string;
   ref?: string;
   sha?: string;
   actor?: string;
@@ -43,15 +45,34 @@ export class WebhookServer {
         return;
       }
 
+      if (req.url !== "/" && req.url !== "/webhook") {
+        res.writeHead(404).end("Not Found");
+        return;
+      }
+
+      let bodySize = 0;
       const chunks: Buffer[] = [];
-      req.on("data", (chunk: Buffer) => chunks.push(chunk));
+      req.on("data", (chunk: Buffer) => {
+        bodySize += chunk.length;
+        if (bodySize > MAX_BODY_BYTES) {
+          res.writeHead(413).end("Payload Too Large");
+          req.destroy();
+          return;
+        }
+        chunks.push(chunk);
+      });
       req.on("end", () => {
+        if (res.headersSent) return;
         const body = Buffer.concat(chunks);
 
         if (this.opts.secret) {
           const sig = req.headers["x-hub-signature-256"];
-          if (typeof sig !== "string" || !verifySignature(body, sig, this.opts.secret)) {
-            res.writeHead(400).end("Invalid signature");
+          if (typeof sig !== "string") {
+            res.writeHead(401).end("Missing signature");
+            return;
+          }
+          if (!verifySignature(body, sig, this.opts.secret)) {
+            res.writeHead(401).end("Invalid signature");
             return;
           }
         }
@@ -69,19 +90,36 @@ export class WebhookServer {
         const prNumber = extractPrNumber(eventStr, parsed);
 
         if (prNumber !== null && prNumber > 0) {
-          const payload = buildPayload(eventStr, parsed, prNumber);
-          this.opts.onEvent(payload);
+          try {
+            const payload = buildPayload(eventStr, parsed, prNumber);
+            this.opts.onEvent(payload);
+          } catch (e: unknown) {
+            process.stderr.write(`pr-shepherd-mcp: error processing webhook event: ${String(e)}\n`);
+          }
         }
 
         res.writeHead(204).end();
       });
-      req.on("error", () => res.writeHead(400).end("Request error"));
+      req.on("error", () => {
+        if (!res.headersSent) res.writeHead(400).end("Request error");
+      });
     });
 
-    await new Promise<void>((resolve, reject) => {
-      this.server!.listen(this.opts.port, () => resolve());
-      this.server!.once("error", reject);
-    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        this.server!.listen(this.opts.port, () => resolve());
+        this.server!.once("error", reject);
+      });
+    } catch (e: unknown) {
+      process.stderr.write(
+        `pr-shepherd-mcp: webhook port ${this.opts.port} unavailable (${String(e)}), notifications disabled\n`,
+      );
+      this.server = null;
+    }
+  }
+
+  isRunning(): boolean {
+    return this.server !== null;
   }
 
   async stop(): Promise<void> {
@@ -135,9 +173,10 @@ function buildPayload(
   const payload: WebhookPayload = {
     event,
     prNumber,
-    repoFullName: repo?.full_name ?? "unknown/unknown",
     timestamp: new Date().toISOString(),
   };
+
+  if (repo?.full_name) payload.repoFullName = repo.full_name;
 
   const action = body["action"];
   if (typeof action === "string") payload.action = action;

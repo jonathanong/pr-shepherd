@@ -7,7 +7,7 @@
 The CLI is pull-based — Claude Code calls `npx pr-shepherd` each time it wants data. The MCP server adds two things the CLI cannot do:
 
 1. **Direct tool calls** — Claude Code can call `shepherd_check`, `shepherd_iterate`, etc. without spawning a subprocess.
-2. **Push notifications** — The MCP server runs a webhook HTTP endpoint. When GitHub sends a PR event, the server immediately notifies the connected session via an MCP `notifications/message` containing a `<github-webhook-activity>` block — the same format handled by Claude Code's PR activity event system.
+2. **Push notifications** — The MCP server runs a webhook HTTP endpoint. When GitHub sends a PR event, the server immediately notifies the connected session via an MCP logging notification (`notifications/message` with `method: logging`) containing a `<github-webhook-activity>` block.
 
 ## Setup
 
@@ -180,5 +180,5 @@ Stop forwarding webhook events for a PR to this session.
 | Process model      | Short-lived per invocation | Long-lived, persistent connection     |
 | Invocation         | Bash subprocess            | Direct MCP tool call                  |
 | Webhook support    | None                       | HTTP endpoint + push notifications    |
-| Subscription state | None                       | Per-connection in-memory set          |
+| Subscription state | None                       | Per-process in-memory set             |
 | `setupLog()`       | Yes (stdout tee)           | No (stdout reserved for MCP protocol) |

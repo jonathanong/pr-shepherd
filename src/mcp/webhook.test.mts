@@ -177,7 +177,7 @@ describe("WebhookServer — signature validation", () => {
   it("rejects request with invalid signature", async () => {
     const body = JSON.stringify({ pull_request: { number: 1 } });
     const res = await postSigned(body, "sha256=deadbeef");
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     expect(events).toHaveLength(0);
   });
 
@@ -187,6 +187,6 @@ describe("WebhookServer — signature validation", () => {
       method: "POST",
       body,
     });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
   });
 });

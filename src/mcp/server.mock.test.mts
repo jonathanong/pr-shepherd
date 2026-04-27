@@ -35,7 +35,11 @@ const {
     onEvent: (p: unknown) => void;
   }) {
     capturedOnEvent = opts.onEvent;
-    return { start: mockWebhookStart, stop: mockWebhookStop };
+    return {
+      start: mockWebhookStart,
+      stop: mockWebhookStop,
+      isRunning: vi.fn().mockReturnValue(true),
+    };
   });
 
   return {
