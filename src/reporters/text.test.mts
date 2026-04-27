@@ -485,10 +485,12 @@ describe("formatText — first-look items", () => {
       comments: { actionable: [], firstLook: [comment] },
     });
     const out = formatText(report);
-    expect(out).toContain("## First-look items");
-    expect(out).toContain("threadId=PRRT_abc");
+    expect(out).toContain(
+      "## First-look items (2) — already closed on GitHub; acknowledge only",
+    );
+    expect(out).toContain("`threadId=PRRT_abc`");
     expect(out).toContain("[status: outdated]");
-    expect(out).toContain("commentId=PRRC_xyz");
+    expect(out).toContain("`commentId=PRRC_xyz`");
     expect(out).toContain("[status: minimized]");
   });
 });

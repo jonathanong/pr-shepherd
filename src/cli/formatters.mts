@@ -3,6 +3,7 @@ export { projectIterateLean } from "./iterate-lean.mts";
 
 import { safeFence } from "./fence.mts";
 import { renderSuggestionBlock, renderLineRange } from "./suggestion-renderer.mts";
+import { renderFirstLookItems } from "./first-look.mts";
 import type { FetchResult } from "../commands/resolve.mts";
 import type { CommitSuggestionResult } from "../types.mts";
 import type { ResolveResult } from "../comments/resolve.mts";
@@ -75,27 +76,8 @@ export function formatFetchResult(result: FetchResult): string {
     );
   }
 
-  if (firstLookTotal > 0) {
-    sections.push(
-      `## First-look items (${firstLookTotal}) — already closed on GitHub; acknowledge only`,
-    );
-    const bullets: string[] = [];
-    for (const t of result.firstLookThreads) {
-      const statusTag = t.autoResolved
-        ? `[status: outdated, auto-resolved]`
-        : `[status: ${t.firstLookStatus}]`;
-      const loc = t.path ? `\`${t.path}:${t.line ?? "?"}\`` : "(no location)";
-      bullets.push(
-        `- \`threadId=${t.id}\` ${loc} (@${t.author}) ${statusTag}: ${t.body.split("\n")[0]?.slice(0, 100) ?? ""}`,
-      );
-    }
-    for (const c of result.firstLookComments) {
-      bullets.push(
-        `- \`commentId=${c.id}\` (@${c.author}) [status: minimized]: ${c.body.split("\n")[0]?.slice(0, 100) ?? ""}`,
-      );
-    }
-    sections.push(bullets.join("\n"));
-  }
+  const firstLook = renderFirstLookItems(result.firstLookThreads, result.firstLookComments);
+  if (firstLook) sections.push(firstLook);
 
   sections.push("## Summary");
   sections.push(

@@ -1,6 +1,7 @@
 import { renderResolveCommand } from "../commands/iterate.mts";
 import { safeFence } from "./fence.mts";
 import { renderSuggestionBlock, renderLineRange } from "./suggestion-renderer.mts";
+import { renderFirstLookItems } from "./first-look.mts";
 import type { IterateResultFixCode } from "../types.mts";
 
 export function formatFixCodeResult(header: string, result: IterateResultFixCode): string {
@@ -79,28 +80,8 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     }
   }
 
-  const firstLookTotal = result.fix.firstLookThreads.length + result.fix.firstLookComments.length;
-  if (firstLookTotal > 0) {
-    sections.push(
-      `## First-look items (${firstLookTotal}) — already closed on GitHub; acknowledge only`,
-    );
-    const bullets: string[] = [];
-    for (const t of result.fix.firstLookThreads) {
-      const statusTag = t.autoResolved
-        ? `[status: outdated, auto-resolved]`
-        : `[status: ${t.firstLookStatus}]`;
-      const loc = t.path ? `\`${t.path}:${t.line ?? "?"}\`` : "(no location)";
-      bullets.push(
-        `- \`${t.id}\` ${loc} (@${t.author}) ${statusTag}: ${t.body.split("\n")[0]?.slice(0, 100) ?? ""}`,
-      );
-    }
-    for (const c of result.fix.firstLookComments) {
-      bullets.push(
-        `- \`${c.id}\` (@${c.author}) [status: minimized]: ${c.body.split("\n")[0]?.slice(0, 100) ?? ""}`,
-      );
-    }
-    sections.push(bullets.join("\n"));
-  }
+  const firstLook = renderFirstLookItems(result.fix.firstLookThreads, result.fix.firstLookComments);
+  if (firstLook) sections.push(firstLook);
 
   if (result.cancelled.length > 0) {
     sections.push("## Cancelled runs");
