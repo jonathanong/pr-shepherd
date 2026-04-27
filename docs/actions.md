@@ -311,11 +311,11 @@ GitHub reviewers can leave ` ```suggestion ` fenced blocks in review thread bodi
 - A `[suggestion]` marker on the heading.
 - A `Replaces line(s) …` block immediately after the blockquoted body, showing the parsed replacement. An empty suggestion (deletion) uses the label `Replaces line(s) … with nothing:` followed by an empty fenced block.
 
-When at least one thread has a `[suggestion]` marker, the agent sees these two instruction steps (quoted verbatim from the CLI):
+When at least one thread has a `[suggestion]` marker, the agent sees these two instruction steps. The CLI substitutes the real PR number; `<id>` and `<one-sentence headline>` are left for the agent to fill in.
 
 **Step 1 — structured path (preferred):**
 
-> For each thread marked `` `[suggestion]` `` under `` `## Review threads` ``: run `` `npx pr-shepherd commit-suggestion <PR> --thread-id <id> --message "<one-sentence headline>" --format=json` ``, one thread at a time. On `applied: true` the CLI already resolved the thread — remove its ID from `--resolve-thread-ids` in the `resolve:` command below. On `applied: false` read `reason` and `patch`, fall through to the manual-edit step, and do not retry the same command. Optionally pass `--dry-run` (omitting `--message`) to preview the patch without mutating the working tree.
+> For each thread marked `` `[suggestion]` `` under `` `## Review threads` ``: run `` `npx pr-shepherd commit-suggestion 42 --thread-id <id> --message "<one-sentence headline>" --format=json` ``, one thread at a time. On `applied: true` the CLI already resolved the thread — remove its ID from `--resolve-thread-ids` in the `resolve:` command below. On `applied: false` read `reason` and `patch`, fall through to the manual-edit step, and do not retry the same command. Optionally pass `--dry-run` (omitting `--message`) to preview the patch without mutating the working tree.
 
 `commit-suggestion` builds a unified diff from the `Replaces lines …` block, validates it with `git apply --check`, writes the file, commits with a `Co-authored-by: <reviewer>` trailer, and resolves the thread on GitHub — all in one command. It handles one thread at a time; for multi-suggestion PRs invoke it in sequence, then push all commits together. See the [`commit-suggestion` reference](cli-usage.md#pr-shepherd-commit-suggestion-pr---thread-id-id---message) for flags and output format.
 
