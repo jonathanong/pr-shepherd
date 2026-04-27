@@ -1,6 +1,6 @@
 import type { IterateResult } from "../types.mts";
 import { formatFixCodeResult } from "./fix-formatter.mts";
-import { joinSections } from "./markdown.mts";
+import { joinSections } from "../util/markdown.mts";
 
 /**
  * Format an IterateResult as human-readable Markdown.

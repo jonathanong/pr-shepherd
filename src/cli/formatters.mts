@@ -8,7 +8,7 @@ import {
   renderReviewBullet,
   renderFirstLookStatusTag,
 } from "./list-formatters.mts";
-import { joinSections } from "./markdown.mts";
+import { joinSections } from "../util/markdown.mts";
 import type { FetchResult } from "../commands/resolve.mts";
 import type { CommitSuggestionResult } from "../types.mts";
 import type { ResolveResult } from "../comments/resolve.mts";

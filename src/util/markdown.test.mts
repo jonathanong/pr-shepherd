@@ -10,9 +10,13 @@ describe("joinSections", () => {
     expect(joinSections(["a", null, undefined, "", "b"])).toBe("a\n\nb");
   });
 
-  it("collapses triple+ newlines to double", () => {
-    expect(joinSections(["a\n\n\nb", "c"])).toBe("a\n\nb\n\nc");
-    expect(joinSections(["a\n\n\n\nb"])).toBe("a\n\nb");
+  it("trims leading and trailing newlines from each section", () => {
+    expect(joinSections(["\n\na\n\n", "\nb\n"])).toBe("a\n\nb");
+    expect(joinSections(["a\n", "b"])).toBe("a\n\nb");
+  });
+
+  it("preserves internal newlines within a section unchanged", () => {
+    expect(joinSections(["a\n\n\nb", "c"])).toBe("a\n\n\nb\n\nc");
   });
 
   it("returns empty string for all-empty input", () => {

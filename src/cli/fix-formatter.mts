@@ -1,6 +1,6 @@
 import { renderResolveCommand } from "../commands/iterate.mts";
 import { safeFence } from "./fence.mts";
-import { joinSections } from "./markdown.mts";
+import { joinSections } from "../util/markdown.mts";
 import { renderSuggestionBlock, renderLineRange } from "./suggestion-renderer.mts";
 import {
   renderThreadBullet,

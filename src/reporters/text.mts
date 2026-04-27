@@ -6,7 +6,7 @@ import {
   renderReviewBullet,
   renderFirstLookStatusTag,
 } from "../cli/list-formatters.mts";
-import { joinSections } from "../cli/markdown.mts";
+import { joinSections } from "../util/markdown.mts";
 
 export function formatText(report: ShepherdReport): string {
   const header = [
@@ -63,6 +63,7 @@ export function formatText(report: ShepherdReport): string {
   if (report.checks.filtered.length > 0) {
     const lines = [
       `### Filtered non-PR-trigger (${report.checks.filtered.length}): ${report.checks.filtered.map((c) => c.name).join(", ")}`,
+      "",
     ];
     if (report.checks.blockedByFilteredCheck) {
       lines.push(
