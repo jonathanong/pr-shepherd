@@ -2,14 +2,15 @@
  * `shepherd status PR1 [PR2 PR3 …]`
  *
  * Fetches readiness status for one or more PRs and prints a table.
- * Uses a separate lightweight GraphQL query (MULTI_PR_STATUS_QUERY) per PR
- * rather than the heavy batch query, since we only need summary data.
+ * Issues a single GraphQL request with one alias per PR number rather than
+ * N separate requests, so the round-trip count is always 1 (plus optional
+ * per-PR pagination calls when a PR has > 100 review threads).
  *
  * Exit code: 0 if all PRs are READY, non-zero otherwise.
  */
 
 import { graphql, getRepoInfo } from "../github/client.mts";
-import { MULTI_PR_STATUS_QUERY, MULTI_PR_STATUS_QUERY_WITH_CURSOR } from "../github/queries.mts";
+import { MULTI_PR_STATUS_QUERY_WITH_CURSOR } from "../github/queries.mts";
 import type { GlobalOptions } from "../types.mts";
 
 // ---------------------------------------------------------------------------
@@ -37,9 +38,23 @@ export interface StatusCommandOptions extends GlobalOptions {
 }
 
 export async function runStatus(opts: StatusCommandOptions): Promise<PrSummary[]> {
+  if (opts.prNumbers.length === 0) return [];
+
   const repo = await getRepoInfo();
+  const doc = buildBatchStatusQuery(opts.prNumbers);
+  const result = await graphql<{ repository: Record<string, RawPrStatus | null> }>(doc, {
+    owner: repo.owner,
+    repo: repo.name,
+  });
+
   const summaries = await Promise.all(
-    opts.prNumbers.map((pr) => fetchSummary(pr, repo.owner, repo.name)),
+    opts.prNumbers.map((pr) => {
+      const rawPr = result.data.repository[`pr_${pr}`];
+      if (!rawPr) {
+        throw new Error(`PR #${pr} not found in ${repo.owner}/${repo.name}`);
+      }
+      return paginateAndBuild(pr, rawPr, repo.owner, repo.name);
+    }),
   );
   return summaries;
 }
@@ -48,23 +63,25 @@ export async function runStatus(opts: StatusCommandOptions): Promise<PrSummary[]
 // Internal
 // ---------------------------------------------------------------------------
 
-async function fetchSummary(pr: number, owner: string, repo: string): Promise<PrSummary> {
-  const result = await graphql<RawStatusResponse>(MULTI_PR_STATUS_QUERY, {
-    owner,
-    repo,
-    pr,
-  });
+function buildBatchStatusQuery(prNumbers: number[]): string {
+  const uniquePrs = [...new Set(prNumbers.filter((n) => n > 0))];
+  const f =
+    "number title state isDraft mergeStateStatus reviewDecision " +
+    "reviewThreads(last:100){totalCount pageInfo{hasPreviousPage startCursor} nodes{isResolved}} " +
+    "commits(last:1){nodes{commit{statusCheckRollup{state}}}}";
+  const aliases = uniquePrs.map((n) => `pr_${n}:pullRequest(number:${n}){${f}}`).join(" ");
+  return `query MultiPrStatusBatch($owner:String!,$repo:String!){repository(owner:$owner,name:$repo){${aliases}}}`;
+}
 
-  const p = result.data.repository.pullRequest;
-  if (!p) {
-    throw new Error(`PR #${pr} not found in ${owner}/${repo}`);
-  }
-
+async function paginateAndBuild(
+  pr: number,
+  p: RawPrStatus,
+  owner: string,
+  repo: string,
+): Promise<PrSummary> {
   let allNodes = p.reviewThreads.nodes;
 
-  // If the response was truncated, fetch additional pages to get the full count.
   if (p.reviewThreads.totalCount > p.reviewThreads.nodes.length) {
-    // Fetch additional pages backward until we have all threads.
     const MAX_THREAD_PAGES = 10;
     let pagesFetched = 0;
     const totalCount = p.reviewThreads.totalCount;
@@ -77,7 +94,7 @@ async function fetchSummary(pr: number, owner: string, repo: string): Promise<Pr
         break;
       }
       // eslint-disable-next-line no-await-in-loop
-      const extra = await graphql<RawStatusResponse>(MULTI_PR_STATUS_QUERY_WITH_CURSOR, {
+      const extra = await graphql<RawPagedResponse>(MULTI_PR_STATUS_QUERY_WITH_CURSOR, {
         owner,
         repo,
         pr,
@@ -95,7 +112,6 @@ async function fetchSummary(pr: number, owner: string, repo: string): Promise<Pr
 
   const unresolvedThreads = allNodes.filter((n) => !n.isResolved).length;
   const ciState = p.commits.nodes[0]?.commit.statusCheckRollup?.state ?? null;
-  // If we still have fewer nodes than totalCount, report truncation.
   const threadsTruncated = p.reviewThreads.totalCount > allNodes.length;
 
   return {
@@ -156,27 +172,29 @@ export function deriveVerdict(s: PrSummary): string {
 // Raw GraphQL types
 // ---------------------------------------------------------------------------
 
-interface RawStatusResponse {
+interface RawPrStatus {
+  number: number;
+  title: string;
+  state: string;
+  isDraft: boolean;
+  mergeStateStatus: string;
+  reviewDecision: string | null;
+  reviewThreads: {
+    totalCount: number;
+    pageInfo?: { hasPreviousPage: boolean; startCursor: string | null };
+    nodes: Array<{ isResolved: boolean }>;
+  };
+  commits: {
+    nodes: Array<{
+      commit: {
+        statusCheckRollup: { state: string } | null;
+      };
+    }>;
+  };
+}
+
+interface RawPagedResponse {
   repository: {
-    pullRequest: {
-      number: number;
-      title: string;
-      state: string;
-      isDraft: boolean;
-      mergeStateStatus: string;
-      reviewDecision: string | null;
-      reviewThreads: {
-        totalCount: number;
-        pageInfo?: { hasPreviousPage: boolean; startCursor: string | null };
-        nodes: Array<{ isResolved: boolean }>;
-      };
-      commits: {
-        nodes: Array<{
-          commit: {
-            statusCheckRollup: { state: string } | null;
-          };
-        }>;
-      };
-    } | null;
+    pullRequest: RawPrStatus | null;
   };
 }

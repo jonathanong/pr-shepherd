@@ -130,6 +130,8 @@ export function parseRawPr(
     mergeStateStatus: raw.mergeStateStatus as BatchPrData["mergeStateStatus"],
     reviewDecision: (raw.reviewDecision ?? null) as BatchPrData["reviewDecision"],
     headRefOid: raw.headRefOid,
+    headRefName: raw.headRefName,
+    headRepoWithOwner: raw.headRepository?.nameWithOwner ?? null,
     baseRefName: raw.baseRefName,
     reviewRequests,
     latestReviews,

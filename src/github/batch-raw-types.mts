@@ -15,6 +15,8 @@ export interface RawPr {
   mergeStateStatus: string;
   reviewDecision: string | null;
   headRefOid: string;
+  headRefName: string;
+  headRepository: { nameWithOwner: string } | null;
   baseRefName: string;
   reviewRequests: {
     nodes: Array<{

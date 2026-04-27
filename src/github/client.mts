@@ -76,56 +76,6 @@ export async function getPrHeadSha(pr: number, owner: string, name: string): Pro
   return sha;
 }
 
-export interface PrHeadInfo {
-  sha: string;
-  /** Branch name on the head repository. */
-  ref: string;
-  /** `"owner/name"` of the head repository — equals the base repo for same-repo PRs, differs for fork PRs. */
-  repoWithOwner: string;
-}
-
-/**
- * Full head info for a PR — sha, branch name, and the head repository's full name.
- * Needed by commit-suggestions to target the correct branch via `createCommitOnBranch`.
- */
-export async function getPrHead(pr: number, owner: string, name: string): Promise<PrHeadInfo> {
-  const data = await rest<{
-    head: { sha: string; ref: string; repo: { full_name: string } | null };
-  }>("GET", `/repos/${owner}/${name}/pulls/${pr}`);
-  if (!data.head.repo) {
-    throw new Error(`PR #${pr} head repository is unavailable (fork may have been deleted).`);
-  }
-  return {
-    sha: data.head.sha,
-    ref: data.head.ref,
-    repoWithOwner: data.head.repo.full_name,
-  };
-}
-
-/**
- * Fetch a file's raw text content at a given ref. Uses the REST contents endpoint,
- * which returns base64 for files under 1MB. Throws for binary / oversize files.
- */
-export async function getFileContents(
-  repoWithOwner: string,
-  path: string,
-  ref: string,
-): Promise<string> {
-  const data = await rest<{ content?: string; encoding?: string; size?: number }>(
-    "GET",
-    `/repos/${repoWithOwner}/contents/${encodePathForApi(path)}?ref=${encodeURIComponent(ref)}`,
-  );
-  if (!data.content || data.encoding !== "base64") {
-    throw new Error(`File ${path} could not be read as text (encoding=${data.encoding ?? "n/a"}).`);
-  }
-  return Buffer.from(data.content, "base64").toString("utf8");
-}
-
-// Encode every path segment but preserve the slashes between them.
-function encodePathForApi(path: string): string {
-  return path.split("/").map(encodeURIComponent).join("/");
-}
-
 /**
  * Fetches `mergeable` and `mergeStateStatus` via the REST API.
  *

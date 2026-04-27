@@ -165,6 +165,9 @@ export interface BatchPrData {
   mergeStateStatus: MergeStateStatus;
   reviewDecision: ReviewDecision;
   headRefOid: string;
+  headRefName: string;
+  /** `"owner/name"` of the head repository; null when the fork has been deleted. */
+  headRepoWithOwner: string | null;
   baseRefName: string;
   reviewRequests: Array<{ login: string }>;
   latestReviews: Array<{ login: string; state: string }>;
