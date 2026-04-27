@@ -37,7 +37,7 @@ export function formatFetchResult(result: FetchResult): string {
       const loc = t.path
         ? `\`${t.path}:${renderLineRange(t.startLine ?? undefined, t.line)}\``
         : "`(no location)`";
-      const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (@${t.author})${suggestionMarker}: ${t.body.split("\n")[0]?.slice(0, 100) ?? ""}`;
+      const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (@${t.author})${suggestionMarker}: ${t.body.split("\n")[0].slice(0, 100)}`;
       if (!t.suggestion) return bulletLine;
       return `${bulletLine}\n${renderSuggestionBlock(t.suggestion)}`;
     });
@@ -50,7 +50,7 @@ export function formatFetchResult(result: FetchResult): string {
       result.actionableComments
         .map((c) => {
           const link = c.url ? ` [↗](${c.url})` : "";
-          return `- \`commentId=${c.id}\`${link} (@${c.author}): ${c.body.split("\n")[0]?.slice(0, 100) ?? ""}`;
+          return `- \`commentId=${c.id}\`${link} (@${c.author}): ${c.body.split("\n")[0].slice(0, 100)}`;
         })
         .join("\n"),
     );
@@ -70,7 +70,7 @@ export function formatFetchResult(result: FetchResult): string {
     sections.push(
       result.reviewSummaries
         .map(
-          (r) => `- \`reviewId=${r.id}\` (@${r.author}): ${r.body.split("\n")[0]!.slice(0, 100)}`,
+          (r) => `- \`reviewId=${r.id}\` (@${r.author}): ${r.body.split("\n")[0].slice(0, 100)}`,
         )
         .join("\n"),
     );
@@ -94,7 +94,7 @@ export function formatFetchResult(result: FetchResult): string {
   sections.push("## Instructions");
   sections.push(result.instructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n"));
 
-  return `${sections.join("\n\n")}\n`;
+  return sections.join("\n\n");
 }
 
 export function formatCommitSuggestionResult(result: CommitSuggestionResult): string {
@@ -142,7 +142,7 @@ export function formatCommitSuggestionResult(result: CommitSuggestionResult): st
     lines.push("");
     lines.push(`1. ${result.postActionInstruction}`);
   }
-  return `${lines.join("\n")}\n`;
+  return lines.join("\n");
 }
 
 export function formatMutateResult(result: ResolveResult): string {
@@ -160,5 +160,5 @@ export function formatMutateResult(result: ResolveResult): string {
       `Dismissed reviews (${result.dismissedReviews.length}): ${result.dismissedReviews.join(", ")}`,
     );
   if (result.errors.length) lines.push(`Errors:\n  ${result.errors.join("\n  ")}`);
-  return `${lines.join("\n")}\n`;
+  return lines.join("\n");
 }
