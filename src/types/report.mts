@@ -6,6 +6,7 @@ import type {
   Review,
   MergeStatusResult,
   CheckConclusion,
+  SuggestionBlock,
 } from "./github.mts";
 
 // ---------------------------------------------------------------------------
@@ -94,9 +95,11 @@ export interface AgentThread {
   id: string;
   path: string | null;
   line: number | null;
+  startLine?: number; // multi-line range only; omitted when equal to line
   author: string;
   body: string;
   url: string;
+  suggestion?: SuggestionBlock; // present when body contains a ```suggestion fence
 }
 
 /** Comment shape emitted to the monitor agent — stripped of always-false flags. */
@@ -185,10 +188,8 @@ export type CommitSuggestionResult =
   | (CommitSuggestionResultBase & {
       applied: false;
       dryRun: true;
-      /** Whether `git apply --check` succeeded. */
-      valid: boolean;
-      /** Rejection message from `git apply --check`, or null when valid. */
-      reason: string | null;
+      valid: boolean; // whether `git apply --check` succeeded
+      reason: string | null; // rejection message or null when valid
     });
 
 // CLI options

@@ -306,8 +306,8 @@ describe("main — resolve", () => {
     const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
     expect(out).toContain("## Pending CHANGES_REQUESTED reviews (1)");
     expect(out).toContain("`reviewId=PRR_r1` (@carol)");
-    // null path/line fallbacks rendered
-    expect(out).toContain("`:?`");
+    // null path renders as (no location)
+    expect(out).toContain("`(no location)`");
   });
 
   it("formatFetchResult: thread and comment with url render ↗ link after id", async () => {

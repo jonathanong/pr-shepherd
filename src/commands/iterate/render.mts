@@ -56,9 +56,20 @@ export function buildFixInstructions(
 ): string[] {
   const instructions: string[] = [];
 
-  if (threads.length > 0 || actionableComments.length > 0) {
+  const hasSuggestions = threads.some((t) => t.suggestion);
+
+  if (hasSuggestions) {
     instructions.push(
-      `Apply code fixes: read and edit each file referenced under \`## Review threads\` and \`## Actionable comments\` above. If a comment body opens with a triple-backtick suggestion fence, treat its contents as a literal line replacement at the file and line range shown in the thread heading and apply it verbatim unless you have a specific reason to deviate.`,
+      `For each thread marked \`[suggestion]\` under \`## Review threads\`: run \`npx pr-shepherd commit-suggestion ${prNumber} --thread-id <id> --message "<one-sentence headline>" --format=json\`, one thread at a time. On \`applied: true\` the CLI already resolved the thread — remove its ID from \`--resolve-thread-ids\` in the \`resolve:\` command below. On \`applied: false\` read \`reason\` and \`patch\`, fall through to the manual-edit step, and do not retry the same command. Optionally pass \`--dry-run\` (omitting \`--message\`) to preview the patch without mutating the working tree.`,
+    );
+  }
+
+  if (threads.length > 0 || actionableComments.length > 0) {
+    const suggestionFallback = hasSuggestions
+      ? ` When applying a \`[suggestion]\` thread manually (e.g. after a failed \`commit-suggestion\` run), replace the exact line range shown in the heading (\`path:startLine-endLine\`) with the replacement shown in its \`Replaces lines …\` block verbatim — an empty replacement deletes those lines, a single blank line replaces the range with one blank line.`
+      : "";
+    instructions.push(
+      `Apply code fixes: read and edit each file referenced under \`## Review threads\` and \`## Actionable comments\` above.${suggestionFallback}`,
     );
   }
   const checksWithRunId = checks.filter((c) => c.runId);

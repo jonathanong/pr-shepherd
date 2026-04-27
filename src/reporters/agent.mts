@@ -8,6 +8,7 @@
  * The original domain types are preserved for check command output.
  */
 
+import { extractSuggestion } from "../suggestions/extract.mts";
 import type {
   ReviewThread,
   PrComment,
@@ -18,7 +19,19 @@ import type {
 } from "../types.mts";
 
 export function toAgentThread(t: ReviewThread): AgentThread {
-  return { id: t.id, path: t.path, line: t.line, author: t.author, body: t.body, url: t.url };
+  const suggestion = extractSuggestion(t) ?? undefined;
+  return {
+    id: t.id,
+    path: t.path,
+    line: t.line,
+    ...(t.line !== null &&
+      t.startLine !== null &&
+      t.startLine !== t.line && { startLine: t.startLine }),
+    author: t.author,
+    body: t.body,
+    url: t.url,
+    ...(suggestion !== undefined && { suggestion }),
+  };
 }
 
 export function toAgentComment(c: PrComment): AgentComment {

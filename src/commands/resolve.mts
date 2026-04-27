@@ -3,7 +3,7 @@ import { fetchPrBatch } from "../github/batch.mts";
 import { getOutdatedThreads } from "../comments/outdated.mts";
 import { autoResolveOutdated, applyResolveOptions } from "../comments/resolve.mts";
 import { loadConfig } from "../config/load.mts";
-import { parseSuggestion } from "../suggestions/parse.mts";
+import { extractSuggestion } from "../suggestions/extract.mts";
 import { buildFetchInstructions } from "./resolve-instructions.mts";
 import { loadSeenSet, markSeen } from "../state/seen-comments.mts";
 import type {
@@ -139,26 +139,6 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   };
 
   return { ...result, instructions: buildFetchInstructions(prNumber, result) };
-}
-
-/**
- * Attach a parsed suggestion block to a thread if the comment body contains one
- * and the thread has a resolvable line anchor. Threads without `path`/`line`
- * (rare — usually file-level comments) can't accept a suggestion commit.
- */
-function extractSuggestion(
-  thread: Omit<ReviewThread, "isResolved" | "isOutdated">,
-): SuggestionBlock | null {
-  if (!thread.path || thread.line === null) return null;
-  const parsed = parseSuggestion(thread.body);
-  if (!parsed) return null;
-  const startLine = thread.startLine ?? thread.line;
-  return {
-    startLine,
-    endLine: thread.line,
-    lines: parsed.lines,
-    author: thread.author,
-  };
 }
 
 /**

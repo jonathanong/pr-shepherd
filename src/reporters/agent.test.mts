@@ -52,6 +52,49 @@ describe("toAgentThread", () => {
     expect(result).not.toHaveProperty("isOutdated");
     expect(result).not.toHaveProperty("createdAtUnix");
   });
+
+  it("omits startLine when null (single-line thread)", () => {
+    const result = toAgentThread(thread);
+    expect(result).not.toHaveProperty("startLine");
+  });
+
+  it("omits startLine when equal to line (same-line range)", () => {
+    const result = toAgentThread({ ...thread, startLine: 10, line: 10 });
+    expect(result).not.toHaveProperty("startLine");
+  });
+
+  it("includes startLine when it differs from line (multi-line range)", () => {
+    const result = toAgentThread({ ...thread, startLine: 8, line: 10 });
+    expect(result.startLine).toBe(8);
+  });
+
+  it("attaches parsed suggestion when body contains a ```suggestion fence", () => {
+    const body = "```suggestion\nconst x = 1;\n```";
+    const result = toAgentThread({
+      ...thread,
+      path: "src/foo.mts",
+      line: 10,
+      startLine: null,
+      body,
+    });
+    expect(result.suggestion).toEqual({
+      startLine: 10,
+      endLine: 10,
+      lines: ["const x = 1;"],
+      author: "alice",
+    });
+  });
+
+  it("omits suggestion when body has no suggestion fence", () => {
+    const result = toAgentThread(thread);
+    expect(result).not.toHaveProperty("suggestion");
+  });
+
+  it("omits suggestion when path is null (file-level comment)", () => {
+    const body = "```suggestion\nconst x = 1;\n```";
+    const result = toAgentThread({ ...thread, path: null, body });
+    expect(result).not.toHaveProperty("suggestion");
+  });
 });
 
 describe("toAgentComment", () => {

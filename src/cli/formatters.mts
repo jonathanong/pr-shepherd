@@ -1,6 +1,8 @@
 export { formatIterateResult } from "./iterate-formatter.mts";
 export { projectIterateLean } from "./iterate-lean.mts";
 
+import { safeFence } from "./fence.mts";
+import { renderSuggestionBlock, renderLineRange } from "./suggestion-renderer.mts";
 import type { FetchResult } from "../commands/resolve.mts";
 import type { CommitSuggestionResult } from "../types.mts";
 import type { ResolveResult } from "../comments/resolve.mts";
@@ -28,15 +30,17 @@ export function formatFetchResult(result: FetchResult): string {
       `## Actionable Review Threads (${result.actionableThreads.length})` +
         (result.commitSuggestionsEnabled ? " [commit-suggestions: enabled]" : ""),
     );
-    sections.push(
-      result.actionableThreads
-        .map((t) => {
-          const suggestionMarker = t.suggestion ? " [suggestion]" : "";
-          const link = t.url ? ` [↗](${t.url})` : "";
-          return `- \`threadId=${t.id}\`${link} \`${t.path ?? ""}:${t.line ?? "?"}\` (@${t.author})${suggestionMarker}: ${t.body.split("\n")[0]?.slice(0, 100) ?? ""}`;
-        })
-        .join("\n"),
-    );
+    const threadBullets = result.actionableThreads.map((t) => {
+      const suggestionMarker = t.suggestion ? " [suggestion]" : "";
+      const link = t.url ? ` [↗](${t.url})` : "";
+      const loc = t.path
+        ? `\`${t.path}:${renderLineRange(t.startLine ?? undefined, t.line)}\``
+        : "`(no location)`";
+      const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (@${t.author})${suggestionMarker}: ${t.body.split("\n")[0]?.slice(0, 100) ?? ""}`;
+      if (!t.suggestion) return bulletLine;
+      return `${bulletLine}\n${renderSuggestionBlock(t.suggestion)}`;
+    });
+    sections.push(threadBullets.join("\n\n"));
   }
 
   if (result.actionableComments.length > 0) {
@@ -113,12 +117,20 @@ export function formatFetchResult(result: FetchResult): string {
 
 export function formatCommitSuggestionResult(result: CommitSuggestionResult): string {
   const lines: string[] = [];
+  const range =
+    result.startLine === result.endLine
+      ? `line ${result.startLine}`
+      : `lines ${result.startLine}–${result.endLine}`;
+
+  function pushPatch(patch: string) {
+    const fence = safeFence(patch);
+    lines.push("");
+    lines.push(`${fence}diff`);
+    lines.push(patch.trimEnd());
+    lines.push(fence);
+  }
 
   if (result.dryRun) {
-    const range =
-      result.startLine === result.endLine
-        ? `line ${result.startLine}`
-        : `lines ${result.startLine}-${result.endLine}`;
     if (result.valid) {
       lines.push(`Dry-run: would apply suggestion from @${result.author}:`);
       lines.push(`  ${result.path} (${range})`);
@@ -128,42 +140,25 @@ export function formatCommitSuggestionResult(result: CommitSuggestionResult): st
       lines.push(`- author: @${result.author}`);
       lines.push(`- reason: ${result.reason ?? "unknown"}`);
     }
-    if (result.patch) {
-      lines.push("");
-      lines.push("```diff");
-      lines.push(result.patch.trimEnd());
-      lines.push("```");
-    }
+    if (result.patch) pushPatch(result.patch);
   } else if (result.applied) {
     lines.push(`Applied suggestion from @${result.author}:`);
-    const range =
-      result.startLine === result.endLine
-        ? `line ${result.startLine}`
-        : `lines ${result.startLine}-${result.endLine}`;
     lines.push(`  ${result.path} (${range})`);
     if (result.commitSha) lines.push(`Commit: ${result.commitSha}`);
-    if (result.patch) {
-      lines.push("");
-      lines.push("```diff");
-      lines.push(result.patch.trimEnd());
-      lines.push("```");
-    }
+    if (result.patch) pushPatch(result.patch);
   } else {
     lines.push(`Failed to apply suggestion ${result.threadId}:`);
-    lines.push(`- path: ${result.path} (lines ${result.startLine}–${result.endLine})`);
+    lines.push(`- path: ${result.path} (${range})`);
     lines.push(`- author: @${result.author}`);
     lines.push(`- reason: ${result.reason ?? "unknown"}`);
-    if (result.patch) {
-      lines.push("");
-      lines.push("```diff");
-      lines.push(result.patch.trimEnd());
-      lines.push("```");
-    }
+    if (result.patch) pushPatch(result.patch);
   }
 
   if (result.postActionInstruction) {
     lines.push("");
-    lines.push(result.postActionInstruction);
+    lines.push("## Instructions");
+    lines.push("");
+    lines.push(`1. ${result.postActionInstruction}`);
   }
   return `${lines.join("\n")}\n`;
 }
