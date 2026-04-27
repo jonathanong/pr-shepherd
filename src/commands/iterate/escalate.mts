@@ -95,7 +95,7 @@ export function buildEscalateHumanMessage(
   pr: number,
 ): string {
   const lines: string[] = [];
-  lines.push("⚠️  /pr-shepherd:monitor paused — needs human direction");
+  lines.push("⚠️ /pr-shepherd:monitor paused — needs human direction");
   lines.push("");
   lines.push(`**Triggers:** ${escalate.triggers.map((t) => `\`${t}\``).join(", ")}`);
   lines.push("");

@@ -143,7 +143,7 @@ async function handleResolve(args: string[]): Promise<void> {
     process.stdout.write(
       globalOpts.format === "json"
         ? `${JSON.stringify(result, null, 2)}\n`
-        : formatFetchResult(result),
+        : `${formatFetchResult(result)}\n`,
     );
   } else {
     const result = await runResolveMutate({
@@ -158,7 +158,7 @@ async function handleResolve(args: string[]): Promise<void> {
     process.stdout.write(
       globalOpts.format === "json"
         ? `${JSON.stringify(result, null, 2)}\n`
-        : formatMutateResult(result),
+        : `${formatMutateResult(result)}\n`,
     );
   }
 }

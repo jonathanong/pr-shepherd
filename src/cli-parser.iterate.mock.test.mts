@@ -163,7 +163,7 @@ describe("main — iterate text format", () => {
     const out = getStdout();
     expect(out).toMatch(/^# PR #42 \[ESCALATE\]\n/);
     expect(out).toContain("**status** `IN_PROGRESS`");
-    expect(out).toContain("⚠️  /pr-shepherd:monitor paused — needs human direction");
+    expect(out).toContain("⚠️ /pr-shepherd:monitor paused — needs human direction");
     expect(out).toContain("## Instructions");
     expect(out).toContain("1. Invoke `/loop cancel` via the Skill tool.");
     expect(out).toContain("2. Stop — the PR needs human direction");

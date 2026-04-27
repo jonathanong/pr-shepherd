@@ -58,7 +58,7 @@ export async function handleCommitSuggestion(args: string[]): Promise<void> {
   process.stdout.write(
     globalOpts.format === "json"
       ? `${JSON.stringify(result, null, 2)}\n`
-      : formatCommitSuggestionResult(result),
+      : `${formatCommitSuggestionResult(result)}\n`,
   );
 
   if (result.dryRun) {
