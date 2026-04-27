@@ -142,7 +142,10 @@ export function formatStatusTable(summaries: PrSummary[], repoFull: string): str
   const table = ["| PR | Title | Verdict | CI |", "| --- | --- | --- | --- |", ...rows].join("\n");
   const footnotes = summaries
     .filter((s) => s.threadsTruncated)
-    .map((s) => `> Note: PR #${s.number} threads truncated — run \`pr-shepherd check ${s.number}\` for full count.`);
+    .map(
+      (s) =>
+        `> Note: PR #${s.number} threads truncated — run \`pr-shepherd check ${s.number}\` for full count.`,
+    );
   return [heading, table, ...footnotes].join("\n\n");
 }
 
