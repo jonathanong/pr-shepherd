@@ -170,8 +170,8 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain("- `REV_1` (@reviewer)");
     // Noise — one bullet per ID.
     expect(out).toContain("- `c-noise-1`\n- `c-noise-2`");
-    // Cancelled runs
-    expect(out).toContain("`run-99`");
+    // Cancelled runs — one bullet per ID.
+    expect(out).toContain("- `run-99`");
     // Post-fix push section uses backticked base + resolve command with --require-sha appended.
     expect(out).toContain("- base: `main`");
     expect(out).toContain(
