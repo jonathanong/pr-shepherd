@@ -308,7 +308,7 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
 
   it("escalates with base-branch-unknown when baseBranch contains unsafe characters", async () => {
     // Prevents shell interpolation via validateBaseBranch — a ref like
-    // `main;rm -rf /` must not flow into buildRebaseShellScript.
+    // `main;rm -rf /` must not flow into the rebase instruction string.
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",

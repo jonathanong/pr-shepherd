@@ -68,8 +68,8 @@ export interface BaseBranchLookup {
 /**
  * Validate the base branch name from the GraphQL batch (`report.baseBranch`)
  * and fall back safely if it's missing/unsafe. The branch is interpolated into
- * shell commands by `buildRebaseShellScript` and `buildFixInstructions`, so we
- * reject anything outside `[A-Za-z0-9._/-]` to prevent shell injection.
+ * shell commands by `buildFixInstructions`, so we reject anything outside
+ * `[A-Za-z0-9._/-]` to prevent shell injection.
  */
 export function validateBaseBranch(raw: string): BaseBranchLookup {
   const trimmed = raw.trim();
@@ -88,16 +88,6 @@ export function validateBaseBranch(raw: string): BaseBranchLookup {
     };
   }
   return { branch: trimmed, isFallback: false };
-}
-
-export function buildRebaseShellScript(baseBranch: string): string {
-  return [
-    `if ! git diff --quiet || ! git diff --cached --quiet; then`,
-    `  echo "SKIP rebase: dirty worktree (uncommitted changes present)"`,
-    `  exit 1`,
-    `fi`,
-    `git fetch origin && git rebase origin/${baseBranch} && git push --force-with-lease`,
-  ].join("\n");
 }
 
 export function buildEscalateHumanMessage(

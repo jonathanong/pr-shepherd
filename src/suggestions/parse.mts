@@ -3,8 +3,7 @@
  *
  * GitHub's "Commit suggestion" UI button treats the first ```suggestion fenced
  * block in a review comment as a replacement for the commented line range.
- * This module extracts that block from the comment body, plus applies a
- * parsed suggestion to a file's contents.
+ * This module extracts that block from the comment body.
  *
  * There is no GitHub API for applying suggestions — tools that reproduce the
  * button (this one included) must parse + commit themselves.
@@ -104,34 +103,4 @@ export function isCommittableSuggestion(parsed: ParsedSuggestion): boolean {
   if (replacement.includes("```suggestion")) return false;
   const fenceRuns = (replacement.match(/`{3,}/g) ?? []).length;
   return fenceRuns % 2 === 0;
-}
-
-/**
- * Apply a suggestion to a file's full contents by replacing lines
- * [startLine..endLine] (1-indexed, inclusive) with the given replacement lines.
- *
- * Pass `[]` to delete the range, `[""]` to replace with a single blank line,
- * or `["a", "b", ...]` for arbitrary replacements. The file's trailing-newline
- * state is preserved exactly.
- */
-export function applySuggestionToFile(
-  fileContent: string,
-  startLine: number,
-  endLine: number,
-  replacementLines: readonly string[],
-): string {
-  if (startLine < 1 || endLine < startLine) {
-    throw new Error(`Invalid line range: start=${startLine}, end=${endLine}`);
-  }
-  const endsWithNewline = fileContent.endsWith("\n");
-  // Strip a single trailing \n so split/join round-trips exactly.
-  const body = endsWithNewline ? fileContent.slice(0, -1) : fileContent;
-  const lines = body.split("\n");
-  if (endLine > lines.length) {
-    throw new Error(`Line ${endLine} is out of range (file has ${lines.length} line(s))`);
-  }
-  const before = lines.slice(0, startLine - 1);
-  const after = lines.slice(endLine);
-  const result = [...before, ...replacementLines, ...after].join("\n");
-  return endsWithNewline ? `${result}\n` : result;
 }

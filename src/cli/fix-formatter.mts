@@ -118,7 +118,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
   return sections.join("\n\n");
 }
 
-export function blockquote(body: string): string {
+function blockquote(body: string): string {
   return body
     .replace(/\r\n/g, "\n")
     .split("\n")
