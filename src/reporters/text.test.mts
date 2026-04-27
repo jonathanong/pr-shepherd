@@ -74,6 +74,10 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
 }
 
 describe("formatText — header", () => {
+  it("starts with H1 line — no leading blank line", () => {
+    expect(formatText(makeReport()).split("\n")[0]).toBe("# PR #42 [CHECK] — owner/repo");
+  });
+
   it("includes PR number and repo", () => {
     const out = formatText(makeReport());
     expect(out).toContain("PR #42");
@@ -134,8 +138,9 @@ describe("formatText — failed checks", () => {
       checks: { ...makeReport().checks, failing: [failing] },
     });
     const out = formatText(report);
-    expect(out).toContain("- lint:");
-    expect(out).not.toContain("[");
+    const lintLine = out.split("\n").find((l) => l.includes("- lint:"));
+    if (lintLine === undefined) throw new Error('Expected to find a line containing "- lint:"');
+    expect(lintLine).not.toContain("[");
   });
 
   it("renders failedStep when present", () => {
