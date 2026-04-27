@@ -57,7 +57,7 @@ Base: main
 
 ### Actionable (1)
 
-- `threadId=RT_kwDOBxyz123` `src/api.ts:47` (@reviewer): Please add error handling here
+- `threadId=RT_kwDOBxyz123` [↗](https://github.com/owner/repo/pull/42#discussion_r1234567890) `src/api.ts:47` (@reviewer): Please add error handling here
 
 ## Summary
 
