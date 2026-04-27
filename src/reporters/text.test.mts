@@ -75,8 +75,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
 
 describe("formatText — header", () => {
   it("starts with H1 line — no leading blank line", () => {
-    const out = formatText(makeReport());
-    expect(out.split("\n")[0]).toBe("# PR #42 [CHECK] — owner/repo");
+    expect(formatText(makeReport()).split("\n")[0]).toBe("# PR #42 [CHECK] — owner/repo");
   });
 
   it("includes PR number and repo", () => {
