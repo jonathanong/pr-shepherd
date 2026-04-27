@@ -221,11 +221,11 @@ AssertionError: expected true to be false
 
 ## Noise (minimize only)
 
-`IC_kwDOSGizTs7_ajT9`
+- `IC_kwDOSGizTs7_ajT9`
 
 ## Cancelled runs
 
-`24697658765`
+- `24697658765`
 
 ## Post-fix push
 
@@ -273,11 +273,11 @@ Step 1 is absent when no thread has a `[suggestion]` marker; step 2 omits the ma
    The numbered instructions split accordingly: for GitHub Actions checks (with runId), the agent examines the `logTail` fenced block and decides whether to run `gh run rerun <runId> --failed` (transient failure) or apply a code fix (real failure). For external status checks (detailsUrl only), the step says to open the URL in a browser. When both are absent, the step says to escalate to a human.
 
 5. `## Changes-requested reviews` — one bullet per `CHANGES_REQUESTED` review: ``- `<reviewId>` (@<author>)``.
-6. `## Noise (minimize only)` — backticked IDs of bot-noise comments (quota warnings, rate-limit acks). Minimize on GitHub but do not act on them.
-7. `## Review summaries (minimize only)` — backticked review IDs (`PRR_…`) of `COMMENTED` review summaries (and, if `iterate.minimizeApprovals` is `true`, `APPROVED` reviews) that will be minimized by the resolve command. Not emitted if the list is empty.
+6. `## Noise (minimize only)` — one bullet per backticked ID of bot-noise comments (quota warnings, rate-limit acks). Minimize on GitHub but do not act on them.
+7. `## Review summaries (minimize only)` — one bullet per backticked review ID (`PRR_…`) of `COMMENTED` review summaries (and, if `iterate.minimizeApprovals` is `true`, `APPROVED` reviews) that will be minimized by the resolve command. Not emitted if the list is empty.
 8. `## Approvals (surfaced — not minimized)` — emitted when `iterate.minimizeApprovals` is `false` (default) and there are `APPROVED`-state reviews. Same H3-plus-blockquote shape as `## Review threads`; surfaced for visibility, but NOT included in `--minimize-comment-ids`.
 9. `## First-look items (N) — already closed on GitHub; acknowledge only` — threads and PR comments that are outdated, resolved, or minimized and have not yet been acknowledged by the agent. Emitted on first encounter only; a per-item seen-marker file (`src/state/seen-comments.mts`) suppresses them on subsequent runs. Each bullet carries a `[status: …]` tag: `outdated`, `outdated, auto-resolved`, `resolved`, or `minimized`. These IDs must **not** appear in `--resolve-thread-ids`, `--minimize-comment-ids`, or `--dismiss-review-ids` — they are already closed on GitHub. The agent's only task is to acknowledge each with a one-line classification. Not emitted when empty.
-10. `## Cancelled runs` — backticked IDs, emitted only when at least one pre-push REST cancellation succeeded.
+10. `## Cancelled runs` — one bullet per backticked ID, emitted only when at least one pre-push REST cancellation succeeded.
 11. `## Post-fix push`:
     - ``- base: `<branch>` `` — rebase target for the push step.
     - ``- resolve: `<argv>` `` — fully-quoted resolve command. `$DISMISS_MESSAGE` and `$HEAD_SHA` are always quoted so substituting a multi-word sentence keeps it as one argument. `--require-sha "$HEAD_SHA"` is appended only when a push is expected (threads/actionableComments/checks/reviews present); noise/summary-only dispatches omit it.
