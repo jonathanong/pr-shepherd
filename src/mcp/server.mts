@@ -10,10 +10,7 @@
 import { readFileSync } from "node:fs";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 
 import { SubscriptionStore } from "./subscriptions.mts";
 import { WebhookServer } from "./webhook.mts";
@@ -71,9 +68,7 @@ export async function startMcpServer(opts: McpServerOptions): Promise<void> {
     });
 
     await webhookServer.start();
-    process.stderr.write(
-      `pr-shepherd-mcp: webhook server listening on port ${opts.webhookPort}\n`,
-    );
+    process.stderr.write(`pr-shepherd-mcp: webhook server listening on port ${opts.webhookPort}\n`);
 
     process.on("SIGTERM", () => {
       void webhookServer.stop();

@@ -52,11 +52,11 @@ Events for PR #123 will then appear as `<github-webhook-activity>` notifications
 
 ## Environment variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SHEPHERD_WEBHOOK_PORT` | `3000` | HTTP port for the webhook endpoint. Set to `0` to disable. |
-| `GITHUB_WEBHOOK_SECRET` | — | HMAC secret for `X-Hub-Signature-256` validation. Optional but recommended. |
-| `GH_TOKEN` / `GITHUB_TOKEN` | — | GitHub API token. Required for all tool calls. |
+| Variable                    | Default | Description                                                                 |
+| --------------------------- | ------- | --------------------------------------------------------------------------- |
+| `SHEPHERD_WEBHOOK_PORT`     | `3000`  | HTTP port for the webhook endpoint. Set to `0` to disable.                  |
+| `GITHUB_WEBHOOK_SECRET`     | —       | HMAC secret for `X-Hub-Signature-256` validation. Optional but recommended. |
+| `GH_TOKEN` / `GITHUB_TOKEN` | —       | GitHub API token. Required for all tool calls.                              |
 
 ## Webhook notification format
 
@@ -85,73 +85,73 @@ All tools return plain text output identical to the corresponding CLI command's 
 
 Get a PR status snapshot.
 
-| Input | Type | Required | Description |
-|-------|------|----------|-------------|
-| `prNumber` | number | no | PR number (auto-detected from current branch if omitted) |
-| `skipTriage` | boolean | no | Skip fetching job info and log tails for failing checks |
+| Input        | Type    | Required | Description                                              |
+| ------------ | ------- | -------- | -------------------------------------------------------- |
+| `prNumber`   | number  | no       | PR number (auto-detected from current branch if omitted) |
+| `skipTriage` | boolean | no       | Skip fetching job info and log tails for failing checks  |
 
 ### `shepherd_resolve_fetch`
 
 Fetch actionable review threads and comments. Auto-resolves outdated threads and surfaces first-look items with instructions.
 
-| Input | Type | Required | Description |
-|-------|------|----------|-------------|
-| `prNumber` | number | no | PR number |
+| Input      | Type   | Required | Description |
+| ---------- | ------ | -------- | ----------- |
+| `prNumber` | number | no       | PR number   |
 
 ### `shepherd_resolve_mutate`
 
 Resolve, minimize, or dismiss review items by ID.
 
-| Input | Type | Required | Description |
-|-------|------|----------|-------------|
-| `prNumber` | number | no | PR number |
-| `resolveThreadIds` | string[] | no | Thread node IDs to resolve |
-| `minimizeCommentIds` | string[] | no | Comment node IDs to minimize |
-| `dismissReviewIds` | string[] | no | Review node IDs to dismiss |
-| `dismissMessage` | string | no | Required when dismissing reviews |
-| `requireSha` | string | no | Wait for GitHub to receive this commit SHA before resolving |
+| Input                | Type     | Required | Description                                                 |
+| -------------------- | -------- | -------- | ----------------------------------------------------------- |
+| `prNumber`           | number   | no       | PR number                                                   |
+| `resolveThreadIds`   | string[] | no       | Thread node IDs to resolve                                  |
+| `minimizeCommentIds` | string[] | no       | Comment node IDs to minimize                                |
+| `dismissReviewIds`   | string[] | no       | Review node IDs to dismiss                                  |
+| `dismissMessage`     | string   | no       | Required when dismissing reviews                            |
+| `requireSha`         | string   | no       | Wait for GitHub to receive this commit SHA before resolving |
 
 ### `shepherd_commit_suggestion`
 
 Apply a suggestion block from a review thread and create a git commit.
 
-| Input | Type | Required | Description |
-|-------|------|----------|-------------|
-| `threadId` | string | **yes** | Review thread node ID |
-| `prNumber` | number | no | PR number |
-| `message` | string | no | Commit message (required unless `dryRun`) |
-| `description` | string | no | Extended commit description |
-| `dryRun` | boolean | no | Validate patch without applying |
+| Input         | Type    | Required | Description                               |
+| ------------- | ------- | -------- | ----------------------------------------- |
+| `threadId`    | string  | **yes**  | Review thread node ID                     |
+| `prNumber`    | number  | no       | PR number                                 |
+| `message`     | string  | no       | Commit message (required unless `dryRun`) |
+| `description` | string  | no       | Extended commit description               |
+| `dryRun`      | boolean | no       | Validate patch without applying           |
 
 ### `shepherd_iterate`
 
 Run one iterate cycle and return the next action (`fix_code`, `wait`, `mark_ready`, `cancel`, or `escalate`) with instructions.
 
-| Input | Type | Required | Description |
-|-------|------|----------|-------------|
-| `prNumber` | number | no | PR number |
-| `cooldownSeconds` | number | no | Min seconds between code changes |
-| `readyDelaySeconds` | number | no | Delay before marking ready |
-| `stallTimeoutSeconds` | number | no | Abort if no progress after N seconds |
-| `noAutoMarkReady` | boolean | no | Disable draft → ready transition |
-| `noAutoCancelActionable` | boolean | no | Disable auto-cancel of actionable checks |
+| Input                    | Type    | Required | Description                              |
+| ------------------------ | ------- | -------- | ---------------------------------------- |
+| `prNumber`               | number  | no       | PR number                                |
+| `cooldownSeconds`        | number  | no       | Min seconds between code changes         |
+| `readyDelaySeconds`      | number  | no       | Delay before marking ready               |
+| `stallTimeoutSeconds`    | number  | no       | Abort if no progress after N seconds     |
+| `noAutoMarkReady`        | boolean | no       | Disable draft → ready transition         |
+| `noAutoCancelActionable` | boolean | no       | Disable auto-cancel of actionable checks |
 
 ### `shepherd_monitor`
 
 Get the `/loop` arguments and prompt body to bootstrap continuous monitoring.
 
-| Input | Type | Required | Description |
-|-------|------|----------|-------------|
-| `prNumber` | number | no | PR number |
-| `readyDelaySuffix` | string | no | Ready-delay duration, e.g. `"15m"` |
+| Input              | Type   | Required | Description                        |
+| ------------------ | ------ | -------- | ---------------------------------- |
+| `prNumber`         | number | no       | PR number                          |
+| `readyDelaySuffix` | string | no       | Ready-delay duration, e.g. `"15m"` |
 
 ### `shepherd_status`
 
 Get a status table for one or more PRs.
 
-| Input | Type | Required | Description |
-|-------|------|----------|-------------|
-| `prNumbers` | number[] | **yes** | PR numbers to check (min 1) |
+| Input       | Type     | Required | Description                 |
+| ----------- | -------- | -------- | --------------------------- |
+| `prNumbers` | number[] | **yes**  | PR numbers to check (min 1) |
 
 ### `shepherd_log_file`
 
@@ -161,24 +161,24 @@ Return the path to the per-worktree debug log file. No inputs.
 
 Subscribe the current session to GitHub webhook events for a PR.
 
-| Input | Type | Required | Description |
-|-------|------|----------|-------------|
-| `prNumber` | number | **yes** | PR to subscribe to |
+| Input      | Type   | Required | Description        |
+| ---------- | ------ | -------- | ------------------ |
+| `prNumber` | number | **yes**  | PR to subscribe to |
 
 ### `shepherd_unsubscribe_pr`
 
 Stop forwarding webhook events for a PR to this session.
 
-| Input | Type | Required | Description |
-|-------|------|----------|-------------|
-| `prNumber` | number | **yes** | PR to unsubscribe from |
+| Input      | Type   | Required | Description            |
+| ---------- | ------ | -------- | ---------------------- |
+| `prNumber` | number | **yes**  | PR to unsubscribe from |
 
 ## Differences from CLI
 
-| | CLI (`npx pr-shepherd`) | MCP server (`pr-shepherd-mcp`) |
-|-|------------------------|-------------------------------|
-| Process model | Short-lived per invocation | Long-lived, persistent connection |
-| Invocation | Bash subprocess | Direct MCP tool call |
-| Webhook support | None | HTTP endpoint + push notifications |
-| Subscription state | None | Per-connection in-memory set |
-| `setupLog()` | Yes (stdout tee) | No (stdout reserved for MCP protocol) |
+|                    | CLI (`npx pr-shepherd`)    | MCP server (`pr-shepherd-mcp`)        |
+| ------------------ | -------------------------- | ------------------------------------- |
+| Process model      | Short-lived per invocation | Long-lived, persistent connection     |
+| Invocation         | Bash subprocess            | Direct MCP tool call                  |
+| Webhook support    | None                       | HTTP endpoint + push notifications    |
+| Subscription state | None                       | Per-connection in-memory set          |
+| `setupLog()`       | Yes (stdout tee)           | No (stdout reserved for MCP protocol) |

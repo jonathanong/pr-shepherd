@@ -109,16 +109,14 @@ function extractPrNumber(event: string, body: Record<string, unknown>): number |
   if (typeof body["number"] === "number") return body["number"];
 
   if (event === "check_run") {
-    const prs = (
-      body["check_run"] as { pull_requests?: Array<{ number: number }> } | undefined
-    )?.pull_requests;
+    const prs = (body["check_run"] as { pull_requests?: Array<{ number: number }> } | undefined)
+      ?.pull_requests;
     if (prs?.[0]) return prs[0].number;
   }
 
   if (event === "workflow_run") {
-    const prs = (
-      body["workflow_run"] as { pull_requests?: Array<{ number: number }> } | undefined
-    )?.pull_requests;
+    const prs = (body["workflow_run"] as { pull_requests?: Array<{ number: number }> } | undefined)
+      ?.pull_requests;
     if (prs?.[0]) return prs[0].number;
   }
 
