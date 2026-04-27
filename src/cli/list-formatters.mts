@@ -4,7 +4,9 @@ import { renderLineRange, renderSuggestionBlock } from "./suggestion-renderer.mt
 const BODY_PREVIEW_MAX = 100;
 
 export function renderBodyPreview(body: string): string {
-  return body.split("\n")[0]?.slice(0, BODY_PREVIEW_MAX) ?? "";
+  const normalizedBody = body.replace(/\r\n?/g, "\n");
+  const firstLine = normalizedBody.split("\n")[0]?.trim() ?? "";
+  return firstLine.slice(0, BODY_PREVIEW_MAX);
 }
 
 export function renderFirstLookStatusTag(t: {
