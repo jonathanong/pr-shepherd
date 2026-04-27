@@ -300,7 +300,10 @@ at Object.<anonymous> (src/commands/iterate.test.mts:58:22)
 ## Instructions
 
 1. Apply code fixes: read and edit each file referenced under `## Review threads` and `## Actionable comments` above.
-2. For each bullet in `## Failing checks`: the backticked locator at the start of each line is the runId. If a log tail is shown, examine it — if the failure looks transient (network error, flaky test), run `gh run rerun <runId> --failed`; otherwise apply a code fix. If no log tail appears, run `gh run view <runId> --log-failed` to diagnose first.
+2. For each failing check under `## Failing checks` with a run ID, examine the log tail in the fenced block to decide what to do:
+   - If the log tail shows a transient runner or infrastructure failure (network timeout, runner setup crash, OOM kill), run `gh run rerun <runId> --failed` and stop this iteration — CI will re-run automatically.
+   - If the log tail shows a real test or build failure, apply a code fix.
+   - If the fenced log block is absent, run `gh run view <runId> --log-failed` first to fetch it, then choose between rerun and fix above.
 3. Commit changed files: `git add <files> && git commit -m "<descriptive message>"`
 4. Keep the PR title and description current: if the changes alter the PR's scope or intent, run `gh pr edit 42 --title "<new title>" --body "<new body>"` to reflect them. Skip if the existing title/body still accurately describe the PR.
 5. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
