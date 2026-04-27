@@ -249,7 +249,6 @@ describe("runIterate — fix_code (actionable threads)", () => {
     if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       expect(result.fix.threads).toHaveLength(2);
       expect(result.fix.actionableComments).toHaveLength(0);
-      expect(result.fix.noiseCommentIds).toHaveLength(0);
       expect(result.fix.checks).toHaveLength(0);
       expect(result.cancelled).toHaveLength(0);
       const joined = result.fix.instructions.join("\n");

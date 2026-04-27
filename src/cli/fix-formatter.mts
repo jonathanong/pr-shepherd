@@ -62,11 +62,6 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     );
   }
 
-  if (result.fix.noiseCommentIds.length > 0) {
-    sections.push("## Noise (minimize only)");
-    sections.push(result.fix.noiseCommentIds.map((id) => `- \`${id}\``).join("\n"));
-  }
-
   if (result.fix.reviewSummaryIds.length > 0) {
     sections.push("## Review summaries (minimize only)");
     sections.push(result.fix.reviewSummaryIds.map((id) => `- \`${id}\``).join("\n"));

@@ -110,10 +110,8 @@ export interface ResolveCommand {
 interface FixRebaseAndPush {
   mode: "rebase-and-push";
   threads: AgentThread[];
-  /** Comments classified as actionable — require code changes. */
+  /** PR comment bodies surfaced to the agent for evaluation, including previously filtered bot/noise comments; do not treat `actionableComments.length` as a proxy for "must push code". */
   actionableComments: AgentComment[];
-  /** IDs of comments classified as noise (quota warnings, bot acks, etc.) — minimize but do not act on. */
-  noiseCommentIds: string[];
   /** Review IDs (COMMENTED summaries and, if opted in, APPROVED reviews) to minimize — no code change needed. */
   reviewSummaryIds: string[];
   /** APPROVED-state reviews surfaced for visibility (when `iterate.minimizeApprovals` is false). */

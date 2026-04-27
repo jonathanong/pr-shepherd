@@ -101,7 +101,6 @@ describe("main — iterate text format (fix_code and checks)", () => {
         },
       ],
       actionableComments: [{ id: "PRRC_1", author: "bot", body: "please address", url: "" }],
-      noiseCommentIds: ["c-noise-1", "c-noise-2"],
       reviewSummaryIds: [],
       surfacedApprovals: [],
       checks: [
@@ -138,13 +137,12 @@ describe("main — iterate text format (fix_code and checks)", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
 
-    // Section ordering: threads → comments → checks → reviews → noise → cancelled → Post-fix push → Instructions.
+    // Section ordering: threads → comments → checks → reviews → cancelled → Post-fix push → Instructions.
     const order = [
       "## Review threads",
       "## Actionable comments",
       "## Failing checks",
       "## Changes-requested reviews",
-      "## Noise (minimize only)",
       "## Cancelled runs",
       "## Post-fix push",
       "## Instructions",
@@ -168,8 +166,6 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain("- external `https://app.codecov.io` — `codecov/patch`");
     // Reviews
     expect(out).toContain("- `REV_1` (@reviewer)");
-    // Noise — one bullet per ID.
-    expect(out).toContain("- `c-noise-1`\n- `c-noise-2`");
     // Cancelled runs — one bullet per ID.
     expect(out).toContain("- `run-99`");
     // Post-fix push section uses backticked base + resolve command with --require-sha appended.
