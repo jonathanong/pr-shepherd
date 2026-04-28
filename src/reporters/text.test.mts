@@ -441,7 +441,9 @@ describe("formatText — baseBranch, reviewSummaries, approvedReviews", () => {
 
   it("includes ## Review Summaries section when non-empty", () => {
     const report = makeReport({
-      reviewSummaries: [{ id: "PRR_1", author: "copilot", body: "Looks good overall.\nSome details." }],
+      reviewSummaries: [
+        { id: "PRR_1", author: "copilot", body: "Looks good overall.\nSome details." },
+      ],
       firstLookSummaries: [{ id: "PRR_fl", author: "gemini", body: "First-look body." }],
     });
     const out = formatText(report);
@@ -452,9 +454,10 @@ describe("formatText — baseBranch, reviewSummaries, approvedReviews", () => {
     expect(out).toContain("First-look body.");
   });
 
-  it("omits ## Review Summaries section when empty", () => {
-    const out = formatText(makeReport({ reviewSummaries: [] }));
+  it("omits review-summaries and approved-reviews sections when empty", () => {
+    const out = formatText(makeReport());
     expect(out).not.toContain("## Review Summaries");
+    expect(out).not.toContain("## Approved Reviews");
   });
 
   it("includes ## Approved Reviews section when non-empty", () => {
@@ -465,11 +468,6 @@ describe("formatText — baseBranch, reviewSummaries, approvedReviews", () => {
     expect(out).toContain("## Approved Reviews");
     expect(out).toContain("`reviewId=PRR_2` (@alice)");
     expect(out).toContain("LGTM!");
-  });
-
-  it("omits ## Approved Reviews section when empty", () => {
-    const out = formatText(makeReport({ approvedReviews: [] }));
-    expect(out).not.toContain("## Approved Reviews");
   });
 
   it("renders ## First-look items section", () => {
