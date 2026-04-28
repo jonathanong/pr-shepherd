@@ -9,17 +9,7 @@ import type {
   FirstLookComment,
 } from "../../types.mts";
 
-/**
- * Render a ResolveCommand as a single-line command string for the monitor loop
- * to print or execute. This is NOT a general-purpose POSIX escaper — it wraps
- * the two known placeholders ($DISMISS_MESSAGE, $HEAD_SHA) and any whitespace-
- * bearing arg in double quotes so multi-word values don't split across flags.
- *
- * Contract for callers substituting placeholders: replace the entire quoted
- * token (including the surrounding `"`) with a properly shell-quoted literal.
- * Do not splice raw text inside the existing quotes — the output would then
- * re-expand `$…` / `$(…)` / embedded `"` and break.
- */
+// Wraps $DISMISS_MESSAGE and whitespace-bearing args in "…". Callers replacing placeholders must swap the entire quoted token to avoid re-expansion.
 export function renderResolveCommand(rc: ResolveCommand): string {
   // `$HEAD_SHA` is never in `rc.argv` — it is appended pre-quoted below when
   // `requiresHeadSha`. Only `$DISMISS_MESSAGE` (or whitespace-bearing values)
@@ -125,6 +115,19 @@ export function buildFixInstructions(
     }
   }
 
+  const firstLookTotal = firstLookThreads.length + firstLookComments.length;
+  if (firstLookTotal > 0) {
+    instructions.push(
+      `Items in \`## First-look items\` are for acknowledgement only — do not pass their IDs to \`--resolve-thread-ids\`, \`--minimize-comment-ids\`, or \`--dismiss-review-ids\`. Acknowledge each one with a one-line classification (e.g. "outdated — addressed by commit abc1234", "resolved — already fixed", "minimized — noise").`,
+    );
+  }
+
+  if (firstLookSummaries.length > 0) {
+    instructions.push(
+      `Review the bodies shown under \`## Review summaries (first look — to be minimized)\` — you are seeing these for the first time. Their IDs are already included in the \`resolve:\` command's \`--minimize-comment-ids\`; if any warrants a \`## Shepherd Journal\` entry, record it before running resolve.`,
+    );
+  }
+
   // Only tell the agent to run `resolve:` if the command actually mutates
   // GitHub state. A CONFLICTS-only flow has nothing to mutate on GitHub.
   if (resolveCommand.hasMutations) {
@@ -143,19 +146,6 @@ export function buildFixInstructions(
   if (needsPush && cancelledCount > 0) {
     instructions.push(
       `Do not re-run \`gh run cancel\` on the IDs listed under \`## Cancelled runs\` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.`,
-    );
-  }
-
-  const firstLookTotal = firstLookThreads.length + firstLookComments.length;
-  if (firstLookTotal > 0) {
-    instructions.push(
-      `Items in \`## First-look items\` are for acknowledgement only — do not pass their IDs to \`--resolve-thread-ids\`, \`--minimize-comment-ids\`, or \`--dismiss-review-ids\`. Acknowledge each one with a one-line classification (e.g. "outdated — addressed by commit abc1234", "resolved — already fixed", "minimized — noise").`,
-    );
-  }
-
-  if (firstLookSummaries.length > 0) {
-    instructions.push(
-      `Review the bodies shown under \`## Review summaries (first look — to be minimized)\` — you are seeing these for the first time. Their IDs are already included in the \`resolve:\` command's \`--minimize-comment-ids\`; if any warrants a \`## Shepherd Journal\` entry, record it before running resolve.`,
     );
   }
 

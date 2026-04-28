@@ -276,11 +276,11 @@ Step 1 is absent when no thread has a `[suggestion]` marker; step 2 omits the ma
 7. `## Review summaries (already surfaced — minimize queue)` — backticked review IDs (`PRR_…`) of `COMMENTED` review summaries (and, if `iterate.minimizeApprovals` is `true`, `APPROVED` reviews) whose bodies were surfaced in a **prior** iteration. All IDs (from both sections 6 and 7) are merged into `--minimize-comment-ids` in the resolve command. Not emitted when empty.
 8. `## Approvals (surfaced — not minimized)` — emitted when `iterate.minimizeApprovals` is `false` (default) and there are `APPROVED`-state reviews. H3 heading uses `` `reviewId=<id>` `` (same prefix scheme as other item types); body is a `>` blockquote or `(no review body)` when empty. Surfaced for visibility, but NOT included in `--minimize-comment-ids`.
 9. `## First-look items (N) — already closed on GitHub; acknowledge only` — threads and PR comments that are outdated, resolved, or minimized and have not yet been acknowledged by the agent. Emitted on first encounter only; a per-item seen-marker file (`src/state/seen-comments.mts`) suppresses them on subsequent runs. Each bullet carries a `[status: …]` tag: `outdated`, `outdated, auto-resolved`, `resolved`, or `minimized`. These IDs must **not** appear in `--resolve-thread-ids`, `--minimize-comment-ids`, or `--dismiss-review-ids` — they are already closed on GitHub. The agent's only task is to acknowledge each with a one-line classification. Not emitted when empty.
-11. `## Cancelled runs` — backticked IDs, emitted only when at least one pre-push REST cancellation succeeded.
-12. `## Post-fix push`:
+10. `## Cancelled runs` — backticked IDs, emitted only when at least one pre-push REST cancellation succeeded.
+11. `## Post-fix push`:
     - ``- base: `<branch>` `` — rebase target for the push step.
     - ``- resolve: `<argv>` `` — fully-quoted resolve command. `$DISMISS_MESSAGE` and `$HEAD_SHA` are always quoted so substituting a multi-word sentence keeps it as one argument. `--require-sha "$HEAD_SHA"` is appended only when a push is expected (threads/actionableComments/checks/reviews present); summary-only dispatches omit it.
-13. `## Instructions` — numbered list to execute in order. The final instruction always refers back to the `resolve:` bullet rather than duplicating the command — that single source of truth is what the monitor executes.
+12. `## Instructions` — numbered list to execute in order. The final instruction always refers back to the `resolve:` bullet rather than duplicating the command — that single source of truth is what the monitor executes.
 
 **Instruction variants:**
 

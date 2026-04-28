@@ -31,10 +31,6 @@ import type {
   FirstLookComment,
 } from "../types.mts";
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
 export interface CheckCommandOptions extends GlobalOptions {
   /** When true, auto-resolve outdated threads. */
   autoResolve?: boolean;
@@ -72,7 +68,6 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
     };
   }
 
-  // Classify checks.
   const classifiedChecks = classifyChecks(batchData.checks);
   const verdict = getCiVerdict(classifiedChecks);
 
@@ -94,7 +89,6 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
 
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
 
-  // Resolve threads and comments.
   const unresolvedThreads = batchData.reviewThreads.filter((t) => !t.isResolved && !t.isMinimized);
   const visibleComments = batchData.comments.filter((c) => !c.isMinimized);
 

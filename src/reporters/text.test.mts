@@ -470,9 +470,7 @@ describe("formatText — baseBranch, reviewSummaries, approvedReviews", () => {
     const out = formatText(makeReport({ approvedReviews: [] }));
     expect(out).not.toContain("## Approved Reviews");
   });
-});
 
-describe("formatText — first-look items", () => {
   it("renders ## First-look items section", () => {
     const thread = {
       ...makeThread({ id: "PRRT_abc", isOutdated: true }),
