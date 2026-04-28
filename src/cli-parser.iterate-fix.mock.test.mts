@@ -179,7 +179,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain("2. step two");
   });
 
-  it("fix_code: renders '## Review summaries (already surfaced — minimize queue)' for seen summary IDs", async () => {
+  it("fix_code: renders '## Review IDs to minimize queue' for seen summary IDs", async () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
     if (result.fix.mode !== "rebase-and-push") throw new Error("unreachable");
@@ -195,7 +195,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
 
-    expect(out).toContain("## Review summaries (already surfaced — minimize queue)");
+    expect(out).toContain("## Review IDs to minimize queue");
     expect(out).toContain("- `PRR_BOT`\n- `PRR_AP`");
     expect(out).toContain(
       "- resolve: `npx pr-shepherd resolve 42 --minimize-comment-ids PRR_BOT,PRR_AP`",
@@ -225,9 +225,9 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain("## Review summaries (first look — to be minimized)");
     expect(out).toContain("### `reviewId=PRR_FL` (@copilot)");
     expect(out).toContain("> Nice work overall.");
-    // ID is in the resolve command but NOT in the bare "already surfaced" section.
+    // ID is in the resolve command but NOT in the bare minimize-queue section.
     expect(out).toContain("--minimize-comment-ids PRR_FL");
-    expect(out).not.toContain("## Review summaries (already surfaced");
+    expect(out).not.toContain("## Review IDs to minimize queue");
   });
 
   it("fix_code: renders '## Approvals (surfaced — not minimized)' with H3 + blockquote", async () => {
