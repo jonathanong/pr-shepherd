@@ -26,12 +26,8 @@ import type {
  *   is appended separately below as the already-quoted token `"$HEAD_SHA"`.
  */
 export function renderResolveCommand(rc: ResolveCommand): string {
-  // `$HEAD_SHA` is never in `rc.argv` — it is appended pre-quoted below when
-  // `requiresHeadSha`. Only `$DISMISS_MESSAGE` (or whitespace-bearing values)
-  // need quoting here.
   const needsQuoting = (arg: string) => {
     if (arg === "$DISMISS_MESSAGE") return true;
-    // Assert no characters that would break the naive escaper are present in arg
     if (/["$`\\]/.test(arg)) {
       throw new Error(
         `Unexpected character in argv arg that needsQuoting can't handle: ${JSON.stringify(arg)}`,
@@ -61,7 +57,6 @@ export function buildFixInstructions(
   firstLookSummaries: Review[] = [],
 ): string[] {
   const instructions: string[] = [];
-
   const hasSuggestions = threads.some((t) => t.suggestion);
 
   if (hasSuggestions) {
@@ -105,7 +100,6 @@ export function buildFixInstructions(
   const hasCodeChanges =
     threads.length > 0 || actionableComments.length > 0 || checks.length > 0 || reviews.length > 0;
   const needsPush = hasCodeChanges || hasConflicts;
-
   if (hasCodeChanges) {
     instructions.push(
       `Commit changed files: \`git add <files> && git commit -m "<descriptive message>"\``,
@@ -142,9 +136,6 @@ export function buildFixInstructions(
       `Review the bodies shown under \`## Review summaries (first look — to be minimized)\` — you are seeing these for the first time. Their IDs are already included in the \`resolve:\` command's \`--minimize-comment-ids\`; if any warrants a \`## Shepherd Journal\` entry, record it before running resolve.`,
     );
   }
-
-  // Only tell the agent to run `resolve:` if the command actually mutates
-  // GitHub state. A CONFLICTS-only flow has nothing to mutate on GitHub.
   if (resolveCommand.hasMutations) {
     const substituteParts: string[] = [];
     if (resolveCommand.requiresHeadSha) {
@@ -157,19 +148,16 @@ export function buildFixInstructions(
       substituteParts.length > 0 ? `, substituting ${substituteParts.join(" and ")}` : "";
     instructions.push(`Run the \`resolve:\` command shown above${substituteHint}.`);
   }
-
   if (needsPush && cancelledCount > 0) {
     instructions.push(
       `Do not re-run \`gh run cancel\` on the IDs listed under \`## Cancelled runs\` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.`,
     );
   }
-
   if (resolveCommand.hasMutations) {
     instructions.push(
       `For any large decisions or rejections you made this iteration, add or update a \`## Shepherd Journal\` section in the PR description (\`gh pr edit ${prNumber} --body …\`) summarizing each decision. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID.`,
     );
   }
-
   if (needsPush) {
     instructions.push(
       `Stop this iteration — CI needs time to run on the new push before the next tick.`,
