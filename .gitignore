@@ -6,5 +6,6 @@ bin/
 .DS_Store
 *.log
 .pr-shepherdrc.yml
+.husky/_/
 .claude/worktrees/
 .claude/scheduled_tasks.lock
