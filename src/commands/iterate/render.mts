@@ -9,7 +9,22 @@ import type {
   FirstLookComment,
 } from "../../types.mts";
 
-// Wraps $DISMISS_MESSAGE and whitespace-bearing args in "…". Callers replacing placeholders must swap the entire quoted token to avoid re-expansion.
+/**
+ * Render a resolve command as a shell snippet for the narrow placeholder-based
+ * invocation used by iterate.
+ *
+ * This is not a general-purpose shell escaper. It only wraps
+ * `$DISMISS_MESSAGE` and whitespace-bearing `rc.argv` entries in double quotes
+ * so the surrounding command template can later substitute placeholder values.
+ *
+ * Callers must preserve that contract:
+ * - placeholder substitution must replace the entire quoted token (for example,
+ *   replace `"$DISMISS_MESSAGE"` as a whole, not text inside the quotes);
+ * - `rc.argv` must not contain `"`, `$`, `` ` ``, or `\`, because this helper
+ *   does not escape them and will throw if they are present;
+ * - `$HEAD_SHA` must not appear in `rc.argv`; when `requiresHeadSha` is set it
+ *   is appended separately below as the already-quoted token `"$HEAD_SHA"`.
+ */
 export function renderResolveCommand(rc: ResolveCommand): string {
   // `$HEAD_SHA` is never in `rc.argv` — it is appended pre-quoted below when
   // `requiresHeadSha`. Only `$DISMISS_MESSAGE` (or whitespace-bearing values)
