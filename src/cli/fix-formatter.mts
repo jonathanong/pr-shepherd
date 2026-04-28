@@ -77,7 +77,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
   const firstLookSummaryIds = new Set(result.fix.firstLookSummaries.map((r) => r.id));
   const seenSummaryIds = result.fix.reviewSummaryIds.filter((id) => !firstLookSummaryIds.has(id));
   if (seenSummaryIds.length > 0) {
-    sections.push("## Review summaries (already surfaced — minimize queue)");
+    sections.push("## Review IDs to minimize queue");
     sections.push(seenSummaryIds.map((id) => `- \`${id}\``).join("\n"));
   }
 
