@@ -67,8 +67,17 @@ export interface ShepherdReport {
     firstLook: FirstLookComment[];
   };
   changesRequestedReviews: Review[];
-  /** COMMENTED reviews with a non-empty, non-minimized body — surfaced for agent-driven minimize. */
+  /**
+   * COMMENTED reviews with a non-empty, non-minimized body that the agent has already seen
+   * at least once — eligible for `--minimize-comment-ids` without re-rendering the body.
+   */
   reviewSummaries: Review[];
+  /**
+   * COMMENTED reviews with a non-empty, non-minimized body not yet seen by the agent.
+   * The body must be surfaced to the agent before minimizing; the seen marker is written
+   * at the same time so subsequent runs move these into `reviewSummaries`.
+   */
+  firstLookSummaries: Review[];
   /** APPROVED reviews not yet minimized — opt-in minimize target. */
   approvedReviews: Review[];
 }

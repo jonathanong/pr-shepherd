@@ -133,9 +133,9 @@ export function formatText(report: ShepherdReport): string {
     "CHANGES_REQUESTED Reviews",
     report.changesRequestedReviews,
   );
-  const reviewSummariesSection = reviewListSection("Review Summaries", report.reviewSummaries);
+  const allSummaries = [...report.firstLookSummaries, ...report.reviewSummaries];
+  const reviewSummariesSection = reviewListSection("Review Summaries", allSummaries);
   const approvedReviewsSection = reviewListSection("Approved Reviews", report.approvedReviews);
-
   const firstLookTotal = firstLookThreads.length + firstLookComments.length;
   let firstLookSection: string | null = null;
   if (firstLookTotal > 0) {

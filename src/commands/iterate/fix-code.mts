@@ -30,6 +30,7 @@ interface HandleFixCodeContext {
   repoOwner: string;
   repoName: string;
   reviewSummaryIds: string[];
+  firstLookSummaries: Review[];
   surfacedApprovals: Review[];
 }
 
@@ -45,6 +46,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     repoOwner,
     repoName,
     reviewSummaryIds,
+    firstLookSummaries,
     surfacedApprovals,
   } = ctx;
 
@@ -155,6 +157,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     cancelled.length,
     firstLookThreads,
     firstLookComments,
+    firstLookSummaries,
   );
 
   return applyStallGuard(
@@ -172,6 +175,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
         threads,
         actionableComments,
         reviewSummaryIds,
+        firstLookSummaries,
         surfacedApprovals,
         checks,
         changesRequestedReviews,

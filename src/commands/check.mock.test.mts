@@ -301,24 +301,43 @@ describe("runCheck — BLOCKED + clean (hand off to humans)", () => {
 // ---------------------------------------------------------------------------
 
 describe("runCheck — reviewSummaries + approvedReviews pass-through", () => {
-  it("surfaces reviewSummaries and approvedReviews on the report", async () => {
+  it("surfaces an unseen summary in firstLookSummaries (not reviewSummaries) and marks it seen", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
         reviewSummaries: [{ id: "PRR_SUM", author: "copilot", body: "overview" }],
         approvedReviews: [{ id: "PRR_AP", author: "alice", body: "" }],
       }),
     });
+    // loadSeenSet default mock returns empty Set — summary not yet seen.
+    const report = await runCheck(BASE_OPTS);
+    expect(report.firstLookSummaries).toEqual([
+      { id: "PRR_SUM", author: "copilot", body: "overview" },
+    ]);
+    expect(report.reviewSummaries).toEqual([]);
+    expect(report.approvedReviews).toEqual([{ id: "PRR_AP", author: "alice", body: "" }]);
+    expect(mockMarkSeen).toHaveBeenCalledWith(expect.anything(), "PRR_SUM");
+  });
+
+  it("surfaces an already-seen summary in reviewSummaries (not firstLookSummaries)", async () => {
+    mockLoadSeenSet.mockResolvedValue(new Set(["PRR_SUM"]));
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        reviewSummaries: [{ id: "PRR_SUM", author: "copilot", body: "overview" }],
+      }),
+    });
     const report = await runCheck(BASE_OPTS);
     expect(report.reviewSummaries).toEqual([
       { id: "PRR_SUM", author: "copilot", body: "overview" },
     ]);
-    expect(report.approvedReviews).toEqual([{ id: "PRR_AP", author: "alice", body: "" }]);
+    expect(report.firstLookSummaries).toEqual([]);
+    expect(mockMarkSeen).not.toHaveBeenCalledWith(expect.anything(), "PRR_SUM");
   });
 
   it("defaults to empty arrays when batch has none", async () => {
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData() });
     const report = await runCheck(BASE_OPTS);
     expect(report.reviewSummaries).toEqual([]);
+    expect(report.firstLookSummaries).toEqual([]);
     expect(report.approvedReviews).toEqual([]);
   });
 });

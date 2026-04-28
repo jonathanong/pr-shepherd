@@ -138,10 +138,15 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
     .filter((c) => !seenSet.has(c.id))
     .map((c) => ({ ...c, firstLookStatus: "minimized" as const }));
 
+  // Split review summaries into first-look (unseen — surface body) vs seen (minimize silently).
+  const firstLookSummaries = batchData.reviewSummaries.filter((r) => !seenSet.has(r.id));
+  const seenSummaries = batchData.reviewSummaries.filter((r) => seenSet.has(r.id));
+
   // Mark first-look items as seen (best-effort — markSeen never throws).
   await Promise.allSettled([
     ...firstLookThreads.map((t) => markSeen(stateKey, t.id)),
     ...firstLookComments.map((c) => markSeen(stateKey, c.id)),
+    ...firstLookSummaries.map((r) => markSeen(stateKey, r.id)),
   ]);
 
   // Actionable: all active threads and all visible comments (no classification — LLM handles triage).
@@ -194,7 +199,8 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
       firstLook: firstLookComments,
     },
     changesRequestedReviews: batchData.changesRequestedReviews,
-    reviewSummaries: batchData.reviewSummaries,
+    reviewSummaries: seenSummaries,
+    firstLookSummaries,
     approvedReviews: batchData.approvedReviews,
   };
 }

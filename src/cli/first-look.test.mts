@@ -128,6 +128,7 @@ describe("## First-look items — cross-call-site consistency", () => {
       comments: { actionable: [], firstLook: [FL_COMMENT] },
       changesRequestedReviews: [],
       reviewSummaries: [],
+      firstLookSummaries: [],
       approvedReviews: [],
     };
     const siteC = extractFirstLookSection(formatText(report));

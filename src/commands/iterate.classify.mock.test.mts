@@ -111,6 +111,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
     comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
+    firstLookSummaries: [],
     approvedReviews: [],
     ...overrides,
   };
@@ -363,5 +364,23 @@ describe("runIterate — review summary auto-minimize", () => {
     expect(result.fix.mode).toBe("rebase-and-push");
     if (result.fix.mode !== "rebase-and-push") return;
     expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
+  });
+
+  it("surfaces body in firstLookSummaries when summary comes from report.firstLookSummaries", async () => {
+    const summary = { id: "PRR_FL", author: "copilot", body: "Nice work." };
+    mockRunCheck.mockResolvedValue(makeReport({ firstLookSummaries: [summary] }));
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    if (result.fix.mode !== "rebase-and-push") return;
+    expect(result.fix.firstLookSummaries).toEqual([summary]);
+    expect(result.fix.reviewSummaryIds).toContain("PRR_FL");
   });
 });

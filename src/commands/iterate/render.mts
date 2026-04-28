@@ -53,6 +53,7 @@ export function buildFixInstructions(
   cancelledCount: number,
   firstLookThreads: FirstLookThread[] = [],
   firstLookComments: FirstLookComment[] = [],
+  firstLookSummaries: Review[] = [],
 ): string[] {
   const instructions: string[] = [];
 
@@ -149,6 +150,12 @@ export function buildFixInstructions(
   if (firstLookTotal > 0) {
     instructions.push(
       `Items in \`## First-look items\` are for acknowledgement only — do not pass their IDs to \`--resolve-thread-ids\`, \`--minimize-comment-ids\`, or \`--dismiss-review-ids\`. Acknowledge each one with a one-line classification (e.g. "outdated — addressed by commit abc1234", "resolved — already fixed", "minimized — noise").`,
+    );
+  }
+
+  if (firstLookSummaries.length > 0) {
+    instructions.push(
+      `Review the bodies shown under \`## Review summaries (first look — to be minimized)\` — you are seeing these for the first time. Their IDs are already included in the \`resolve:\` command's \`--minimize-comment-ids\`; if any warrants a \`## Shepherd Journal\` entry, record it before running resolve.`,
     );
   }
 

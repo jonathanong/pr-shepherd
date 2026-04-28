@@ -1,16 +1,18 @@
 import type { AgentThread, Review, ResolveCommand, AgentCheck } from "../../types.mts";
 
 export function classifyReviewSummaries(
-  summaries: Review[],
+  summaries: { firstLook: Review[]; seen: Review[] },
   approvals: Review[],
   minimizeApprovals: boolean,
-): { minimizeIds: string[]; surfacedApprovals: Review[] } {
-  const minimizeIds = summaries.map((r) => r.id);
+): { minimizeIds: string[]; firstLookSummaries: Review[]; surfacedApprovals: Review[] } {
+  // Both first-look and seen summaries go into the minimize mutation; first-look bodies are
+  // rendered in the output so the agent sees them before the minimize happens.
+  const minimizeIds = [...summaries.firstLook, ...summaries.seen].map((r) => r.id);
   if (minimizeApprovals) {
     for (const r of approvals) minimizeIds.push(r.id);
-    return { minimizeIds, surfacedApprovals: [] };
+    return { minimizeIds, firstLookSummaries: summaries.firstLook, surfacedApprovals: [] };
   }
-  return { minimizeIds, surfacedApprovals: approvals };
+  return { minimizeIds, firstLookSummaries: summaries.firstLook, surfacedApprovals: approvals };
 }
 
 export function buildResolveCommand(
