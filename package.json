@@ -24,15 +24,16 @@
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
+    "@vitest/coverage-v8": "^4.1.4",
+    "husky": "^9.1.7",
     "oxfmt": "^0.46.0",
     "oxlint": "^1.60.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.4",
-    "@vitest/coverage-v8": "^4.1.4"
+    "vitest": "^4.1.4"
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "prepare": "node scripts/install-hooks.mjs && node scripts/install-plugin-symlink.mjs && npm run build",
+    "prepare": "node scripts/install-husky.mjs && node scripts/install-plugin-symlink.mjs && npm run build",
     "prepublishOnly": "npm run typecheck && npm test && npm run build",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint src/ plugin/skills/",
