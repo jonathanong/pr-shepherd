@@ -102,6 +102,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
       ],
       actionableComments: [{ id: "PRRC_1", author: "bot", body: "please address", url: "" }],
       reviewSummaryIds: [],
+      firstLookSummaries: [],
       surfacedApprovals: [],
       checks: [
         { name: "lint", runId: "run-42", detailsUrl: "https://x" },
@@ -178,7 +179,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain("2. step two");
   });
 
-  it("fix_code: renders '## Review summaries (minimize only)' section when reviewSummaryIds is non-empty", async () => {
+  it("fix_code: renders '## Review IDs to minimize queue' for seen summary IDs", async () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
     if (result.fix.mode !== "rebase-and-push") throw new Error("unreachable");
@@ -194,12 +195,39 @@ describe("main — iterate text format (fix_code and checks)", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
 
-    expect(out).toContain("## Review summaries (minimize only)");
+    expect(out).toContain("## Review IDs to minimize queue");
     expect(out).toContain("- `PRR_BOT`\n- `PRR_AP`");
     expect(out).toContain(
       "- resolve: `npx pr-shepherd resolve 42 --minimize-comment-ids PRR_BOT,PRR_AP`",
     );
     expect(out).not.toContain("## Approvals (surfaced");
+  });
+
+  it("fix_code: renders '## Review summaries (first look — to be minimized)' with body when firstLookSummaries is non-empty", async () => {
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    if (result.fix.mode !== "rebase-and-push") throw new Error("unreachable");
+    result.fix.firstLookSummaries = [
+      { id: "PRR_FL", author: "copilot", body: "Nice work overall." },
+    ];
+    result.fix.reviewSummaryIds = ["PRR_FL"];
+    result.fix.resolveCommand = {
+      argv: ["npx", "pr-shepherd", "resolve", "42", "--minimize-comment-ids", "PRR_FL"],
+      requiresHeadSha: false,
+      requiresDismissMessage: false,
+      hasMutations: true,
+    };
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+
+    expect(out).toContain("## Review summaries (first look — to be minimized)");
+    expect(out).toContain("### `reviewId=PRR_FL` (@copilot)");
+    expect(out).toContain("> Nice work overall.");
+    // ID is in the resolve command but NOT in the bare minimize-queue section.
+    expect(out).toContain("--minimize-comment-ids PRR_FL");
+    expect(out).not.toContain("## Review IDs to minimize queue");
   });
 
   it("fix_code: renders '## Approvals (surfaced — not minimized)' with H3 + blockquote", async () => {

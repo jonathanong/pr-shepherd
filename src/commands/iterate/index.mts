@@ -110,8 +110,12 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   const headSha = (await getCurrentHeadSha()) ?? "unknown";
   const stallKey = { owner: repoOwner, repo: repoName, pr: prNumber };
 
-  const { minimizeIds: reviewSummaryIds, surfacedApprovals } = classifyReviewSummaries(
-    report.reviewSummaries,
+  const {
+    minimizeIds: reviewSummaryIds,
+    firstLookSummaries,
+    surfacedApprovals,
+  } = classifyReviewSummaries(
+    { firstLook: report.firstLookSummaries, seen: report.reviewSummaries },
     report.approvedReviews,
     config.iterate.minimizeApprovals,
   );
@@ -135,6 +139,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       repoOwner,
       repoName,
       reviewSummaryIds,
+      firstLookSummaries,
       surfacedApprovals,
     });
   }

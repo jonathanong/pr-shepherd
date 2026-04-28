@@ -55,6 +55,9 @@ export function projectIterateLean(result: IterateResult): unknown {
           ...(result.fix.reviewSummaryIds.length > 0 && {
             reviewSummaryIds: result.fix.reviewSummaryIds,
           }),
+          ...(result.fix.firstLookSummaries.length > 0 && {
+            firstLookSummaries: result.fix.firstLookSummaries,
+          }),
           ...(result.fix.surfacedApprovals.length > 0 && {
             surfacedApprovals: result.fix.surfacedApprovals,
           }),

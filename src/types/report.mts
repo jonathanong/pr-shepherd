@@ -67,15 +67,20 @@ export interface ShepherdReport {
     firstLook: FirstLookComment[];
   };
   changesRequestedReviews: Review[];
-  /** COMMENTED reviews with a non-empty, non-minimized body — surfaced for agent-driven minimize. */
+  /**
+   * COMMENTED reviews with a non-empty, non-minimized body that the agent has already seen
+   * at least once — eligible for `--minimize-comment-ids` without re-rendering the body.
+   */
   reviewSummaries: Review[];
+  /**
+   * COMMENTED reviews with a non-empty, non-minimized body not yet seen by the agent.
+   * The body must be surfaced to the agent before minimizing; the seen marker is written
+   * at the same time so subsequent runs move these into `reviewSummaries`.
+   */
+  firstLookSummaries: Review[];
   /** APPROVED reviews not yet minimized — opt-in minimize target. */
   approvedReviews: Review[];
 }
-
-// ---------------------------------------------------------------------------
-// Resolve command input
-// ---------------------------------------------------------------------------
 
 export interface ResolveOptions {
   resolveThreadIds?: string[];
@@ -85,10 +90,6 @@ export interface ResolveOptions {
   /** When set, shepherd verifies GitHub has received this commit before resolving. */
   requireSha?: string;
 }
-
-// ---------------------------------------------------------------------------
-// Agent-facing projections (used by iterate output, not check output)
-// ---------------------------------------------------------------------------
 
 /** Thread shape emitted to the monitor agent — stripped of always-false flags. */
 export interface AgentThread {
@@ -130,10 +131,6 @@ export interface AgentCheck {
   /** Last N lines of the failing job's log. `undefined` for external checks or when log fetch fails. */
   logTail?: string;
 }
-
-// ---------------------------------------------------------------------------
-// Relevant check (iterate output — completed, non-skipped, PR-triggered)
-// ---------------------------------------------------------------------------
 
 /**
  * A single CI check that is relevant to PR readiness — triggered by a PR event

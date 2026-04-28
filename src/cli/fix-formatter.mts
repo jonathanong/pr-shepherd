@@ -66,9 +66,19 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     sections.push(result.fix.changesRequestedReviews.map((r) => renderReviewBullet(r)).join("\n"));
   }
 
-  if (result.fix.reviewSummaryIds.length > 0) {
-    sections.push("## Review summaries (minimize only)");
-    sections.push(result.fix.reviewSummaryIds.map((id) => `- \`${id}\``).join("\n"));
+  if (result.fix.firstLookSummaries.length > 0) {
+    sections.push("## Review summaries (first look — to be minimized)");
+    for (const r of result.fix.firstLookSummaries) {
+      sections.push(`### \`reviewId=${r.id}\` (@${r.author})`);
+      sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body));
+    }
+  }
+
+  const firstLookSummaryIds = new Set(result.fix.firstLookSummaries.map((r) => r.id));
+  const seenSummaryIds = result.fix.reviewSummaryIds.filter((id) => !firstLookSummaryIds.has(id));
+  if (seenSummaryIds.length > 0) {
+    sections.push("## Review IDs to minimize queue");
+    sections.push(seenSummaryIds.map((id) => `- \`${id}\``).join("\n"));
   }
 
   if (result.fix.surfacedApprovals.length > 0) {

@@ -114,6 +114,8 @@ interface FixRebaseAndPush {
   actionableComments: AgentComment[];
   /** Review IDs (COMMENTED summaries and, if opted in, APPROVED reviews) to minimize — no code change needed. */
   reviewSummaryIds: string[];
+  /** COMMENTED review summaries surfaced to the agent for the first time this iteration — body shown inline. */
+  firstLookSummaries: Review[];
   /** APPROVED-state reviews surfaced for visibility (when `iterate.minimizeApprovals` is false). */
   surfacedApprovals: Review[];
   checks: AgentCheck[];

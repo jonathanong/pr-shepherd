@@ -10,23 +10,24 @@ import type {
 } from "../../types.mts";
 
 /**
- * Render a ResolveCommand as a single-line command string for the monitor loop
- * to print or execute. This is NOT a general-purpose POSIX escaper — it wraps
- * the two known placeholders ($DISMISS_MESSAGE, $HEAD_SHA) and any whitespace-
- * bearing arg in double quotes so multi-word values don't split across flags.
+ * Render a resolve command as a shell snippet for the narrow placeholder-based
+ * invocation used by iterate.
  *
- * Contract for callers substituting placeholders: replace the entire quoted
- * token (including the surrounding `"`) with a properly shell-quoted literal.
- * Do not splice raw text inside the existing quotes — the output would then
- * re-expand `$…` / `$(…)` / embedded `"` and break.
+ * This is not a general-purpose shell escaper. It only wraps
+ * `$DISMISS_MESSAGE` and whitespace-bearing `rc.argv` entries in double quotes
+ * so the surrounding command template can later substitute placeholder values.
+ *
+ * Callers must preserve that contract:
+ * - placeholder substitution must replace the entire quoted token (for example,
+ *   replace `"$DISMISS_MESSAGE"` as a whole, not text inside the quotes);
+ * - `rc.argv` must not contain `"`, `$`, `` ` ``, or `\`, because this helper
+ *   does not escape them and will throw if they are present;
+ * - `$HEAD_SHA` must not appear in `rc.argv`; when `requiresHeadSha` is set it
+ *   is appended separately below as the already-quoted token `"$HEAD_SHA"`.
  */
 export function renderResolveCommand(rc: ResolveCommand): string {
-  // `$HEAD_SHA` is never in `rc.argv` — it is appended pre-quoted below when
-  // `requiresHeadSha`. Only `$DISMISS_MESSAGE` (or whitespace-bearing values)
-  // need quoting here.
   const needsQuoting = (arg: string) => {
     if (arg === "$DISMISS_MESSAGE") return true;
-    // Assert no characters that would break the naive escaper are present in arg
     if (/["$`\\]/.test(arg)) {
       throw new Error(
         `Unexpected character in argv arg that needsQuoting can't handle: ${JSON.stringify(arg)}`,
@@ -53,9 +54,9 @@ export function buildFixInstructions(
   cancelledCount: number,
   firstLookThreads: FirstLookThread[] = [],
   firstLookComments: FirstLookComment[] = [],
+  firstLookSummaries: Review[] = [],
 ): string[] {
   const instructions: string[] = [];
-
   const hasSuggestions = threads.some((t) => t.suggestion);
 
   if (hasSuggestions) {
@@ -99,7 +100,6 @@ export function buildFixInstructions(
   const hasCodeChanges =
     threads.length > 0 || actionableComments.length > 0 || checks.length > 0 || reviews.length > 0;
   const needsPush = hasCodeChanges || hasConflicts;
-
   if (hasCodeChanges) {
     instructions.push(
       `Commit changed files: \`git add <files> && git commit -m "<descriptive message>"\``,
@@ -124,8 +124,18 @@ export function buildFixInstructions(
     }
   }
 
-  // Only tell the agent to run `resolve:` if the command actually mutates
-  // GitHub state. A CONFLICTS-only flow has nothing to mutate on GitHub.
+  const firstLookTotal = firstLookThreads.length + firstLookComments.length;
+  if (firstLookTotal > 0) {
+    instructions.push(
+      `Items in \`## First-look items\` are for acknowledgement only — do not pass their IDs to \`--resolve-thread-ids\`, \`--minimize-comment-ids\`, or \`--dismiss-review-ids\`. Acknowledge each one with a one-line classification (e.g. "outdated — addressed by commit abc1234", "resolved — already fixed", "minimized — noise").`,
+    );
+  }
+
+  if (firstLookSummaries.length > 0) {
+    instructions.push(
+      `Review the bodies shown under \`## Review summaries (first look — to be minimized)\` — you are seeing these for the first time. Their IDs are already included in the \`resolve:\` command's \`--minimize-comment-ids\`; if any warrants a \`## Shepherd Journal\` entry, record it before running resolve.`,
+    );
+  }
   if (resolveCommand.hasMutations) {
     const substituteParts: string[] = [];
     if (resolveCommand.requiresHeadSha) {
@@ -138,26 +148,16 @@ export function buildFixInstructions(
       substituteParts.length > 0 ? `, substituting ${substituteParts.join(" and ")}` : "";
     instructions.push(`Run the \`resolve:\` command shown above${substituteHint}.`);
   }
-
   if (needsPush && cancelledCount > 0) {
     instructions.push(
       `Do not re-run \`gh run cancel\` on the IDs listed under \`## Cancelled runs\` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.`,
     );
   }
-
-  const firstLookTotal = firstLookThreads.length + firstLookComments.length;
-  if (firstLookTotal > 0) {
-    instructions.push(
-      `Items in \`## First-look items\` are for acknowledgement only — do not pass their IDs to \`--resolve-thread-ids\`, \`--minimize-comment-ids\`, or \`--dismiss-review-ids\`. Acknowledge each one with a one-line classification (e.g. "outdated — addressed by commit abc1234", "resolved — already fixed", "minimized — noise").`,
-    );
-  }
-
   if (resolveCommand.hasMutations) {
     instructions.push(
       `For any large decisions or rejections you made this iteration, add or update a \`## Shepherd Journal\` section in the PR description (\`gh pr edit ${prNumber} --body …\`) summarizing each decision. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID.`,
     );
   }
-
   if (needsPush) {
     instructions.push(
       `Stop this iteration — CI needs time to run on the new push before the next tick.`,

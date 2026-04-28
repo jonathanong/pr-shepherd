@@ -108,17 +108,22 @@ Any new code path that filters threads or comments by `isResolved`,
 `isOutdated`, or `isMinimized` must route them through the seen-marker gate
 before suppression — never drop them outright.
 
-**Scope note:** Minimized review summaries (`COMMENTED` reviews whose body
-has been minimized) are not yet covered — surfacing them would require
-fetching minimized reviews from the batch query, which is tracked as future
-work. The `reviewSummaries` field on `ShepherdReport` already excludes
-minimized summaries at the batch-parser level.
+**Non-minimized `COMMENTED` review summaries** are now gated: `check.mts`
+splits `batchData.reviewSummaries` into `firstLookSummaries` (unseen → body
+rendered in iterate output before minimizing) and `reviewSummaries` (already
+seen → bare IDs in the minimize queue). Both sets end up in
+`--minimize-comment-ids` in the same resolve command invocation. The body is
+surfaced exactly once.
 
-Implementation lives in `src/state/seen-comments.mts`. The two call sites
-are `src/commands/resolve.mts` (surfaced in `resolve --fetch` output under
+**Scope note:** Already-minimized `COMMENTED` reviews are not covered —
+`batch-parsers.mts` filters them out before any gate runs (`!r.isMinimized`),
+so their bodies are never fetched. This remains future work.
+
+Implementation lives in `src/state/seen-comments.mts`. The call sites are
+`src/commands/resolve.mts` (surfaced in `resolve --fetch` output under
 `## First-look items`) and `src/commands/check.mts` (surfaced in iterate's
-`fix_code` output and in `pr-shepherd check` text output under `## First-look
-items`).
+`fix_code` output under `## Review summaries (first look — to be minimized)`
+and in `pr-shepherd check` text output under `## First-look items`).
 
 ## Keep skills and loop prompts minimal
 

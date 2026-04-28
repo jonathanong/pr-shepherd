@@ -30,6 +30,7 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
         threads: [],
         actionableComments: [],
         reviewSummaryIds: [],
+        firstLookSummaries: [],
         surfacedApprovals: [],
         checks: [],
         changesRequestedReviews: [],

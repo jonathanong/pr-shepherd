@@ -68,6 +68,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
     comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
+    firstLookSummaries: [],
     approvedReviews: [],
     ...overrides,
   };
@@ -443,16 +444,20 @@ describe("formatText — baseBranch, reviewSummaries, approvedReviews", () => {
       reviewSummaries: [
         { id: "PRR_1", author: "copilot", body: "Looks good overall.\nSome details." },
       ],
+      firstLookSummaries: [{ id: "PRR_fl", author: "gemini", body: "First-look body." }],
     });
     const out = formatText(report);
     expect(out).toContain("## Review Summaries");
     expect(out).toContain("`reviewId=PRR_1` (@copilot)");
     expect(out).toContain("Looks good overall.");
+    expect(out).toContain("`reviewId=PRR_fl` (@gemini)");
+    expect(out).toContain("First-look body.");
   });
 
-  it("omits ## Review Summaries section when empty", () => {
-    const out = formatText(makeReport({ reviewSummaries: [] }));
+  it("omits review-summaries and approved-reviews sections when empty", () => {
+    const out = formatText(makeReport());
     expect(out).not.toContain("## Review Summaries");
+    expect(out).not.toContain("## Approved Reviews");
   });
 
   it("includes ## Approved Reviews section when non-empty", () => {
@@ -465,13 +470,6 @@ describe("formatText — baseBranch, reviewSummaries, approvedReviews", () => {
     expect(out).toContain("LGTM!");
   });
 
-  it("omits ## Approved Reviews section when empty", () => {
-    const out = formatText(makeReport({ approvedReviews: [] }));
-    expect(out).not.toContain("## Approved Reviews");
-  });
-});
-
-describe("formatText — first-look items", () => {
   it("renders ## First-look items section", () => {
     const thread = {
       ...makeThread({ id: "PRRT_abc", isOutdated: true }),
