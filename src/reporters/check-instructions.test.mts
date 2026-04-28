@@ -44,6 +44,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
     comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
+    firstLookSummaries: [],
     approvedReviews: [],
     ...overrides,
   };

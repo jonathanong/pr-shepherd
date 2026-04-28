@@ -106,7 +106,6 @@ function makeBatch(
     comments: [],
     changesRequestedReviews: [],
     reviewSummaries: [],
-    firstLookSummaries: [],
     approvedReviews: [],
   };
 }
