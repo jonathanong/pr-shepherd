@@ -20,7 +20,7 @@ npm install
 
 `npm install` triggers the `prepare` script, which builds `bin/` automatically. Do not skip this step — without it, `npx pr-shepherd` falls through to any globally installed binary, which may lack recent subcommands. Run `npm run build` directly only when you need to rebuild after editing TypeScript without reinstalling dependencies.
 
-`npm install` runs husky, which sets `core.hooksPath` to `.husky` and wires up `.husky/pre-push` (lint + typecheck + format:check). Husky overrides any existing local `core.hooksPath`. Bypass with `git push --no-verify`.
+`npm install` runs husky, which sets `core.hooksPath` to `.husky/_` and wires up `.husky/pre-push` (lint + typecheck + format:check). Husky overrides any existing local `core.hooksPath`. Bypass with `git push --no-verify`.
 
 Running `npm install` also updates the `~/.claude/plugins/marketplaces/local/plugins/pr-shepherd/skills` symlink to point at this worktree's `plugin/skills/`. After installing in a new worktree, run `/reload-plugins` (or restart Claude Code) so the plugin picks up the updated path.
 
