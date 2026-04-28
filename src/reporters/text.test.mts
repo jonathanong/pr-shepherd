@@ -441,14 +441,15 @@ describe("formatText — baseBranch, reviewSummaries, approvedReviews", () => {
 
   it("includes ## Review Summaries section when non-empty", () => {
     const report = makeReport({
-      reviewSummaries: [
-        { id: "PRR_1", author: "copilot", body: "Looks good overall.\nSome details." },
-      ],
+      reviewSummaries: [{ id: "PRR_1", author: "copilot", body: "Looks good overall.\nSome details." }],
+      firstLookSummaries: [{ id: "PRR_fl", author: "gemini", body: "First-look body." }],
     });
     const out = formatText(report);
     expect(out).toContain("## Review Summaries");
     expect(out).toContain("`reviewId=PRR_1` (@copilot)");
     expect(out).toContain("Looks good overall.");
+    expect(out).toContain("`reviewId=PRR_fl` (@gemini)");
+    expect(out).toContain("First-look body.");
   });
 
   it("omits ## Review Summaries section when empty", () => {
