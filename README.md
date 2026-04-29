@@ -126,7 +126,7 @@ Some other workflow improvements:
 Recommendations:
 
 - Run `pr-shepherd` on all your PRs before you go to sleep so that you wake up to reviewable PRs. As it uses `/loop`, it will continue working when your rate limit window is reset. There is a default timeout of 8 hours and 50 loops before exiting automatically.
-- Instruct your agents to write comments in a single review (comment, changes requested, or approved). This allows the entire review to be minimized/resolved, keeping your pull request history clean. If you write inline comments outside of a review, each comment would still show up in the pull request history and take up space.
+- Instruct your agents to write comments in a single review (comment, changes requested, or approved). This allows the review's comments/threads to be minimized or resolved together, keeping your pull request history clean. If you write inline comments outside of a review, each comment would still show up in the pull request history and take up space.
 - Avoid sticky comments as they will continue to be hidden. Instead, just make a new comment, especially on reviews. If you really want sticky comments, instruct your agent to unhide/unminimize them when updating them.
 
 ## Design Principles
