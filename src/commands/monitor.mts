@@ -9,7 +9,7 @@ export interface MonitorCommandOptions extends GlobalOptions {
 export interface MonitorResult {
   prNumber: number;
   loopTag: string;
-  /** The interval/flags line: "<interval> --max-turns N --expires Nh" */
+  /** The interval to pass to /loop (e.g. "4m"). */
   loopArgs: string;
   /** The loop prompt body. To build /loop args: `${loopArgs}\n\n${loopPrompt}` */
   loopPrompt: string;
@@ -22,20 +22,10 @@ export async function runMonitor(opts: MonitorCommandOptions): Promise<MonitorRe
     throw new Error("No open PR found for current branch. Pass a PR number explicitly.");
   }
 
-  const { interval, maxTurns, expiresHours } = config.watch;
+  const { interval } = config.watch;
   if (typeof interval !== "string" || !/^\d+[smhd]$/.test(interval)) {
     throw new Error(
       `Invalid config: watch.interval must be a duration string like "4m" or "1h", got ${JSON.stringify(interval)}`,
-    );
-  }
-  if (!Number.isFinite(expiresHours) || expiresHours <= 0 || !Number.isInteger(expiresHours)) {
-    throw new Error(
-      `Invalid config: watch.expiresHours must be a positive integer, got ${JSON.stringify(expiresHours)}`,
-    );
-  }
-  if (!Number.isFinite(maxTurns) || maxTurns <= 0 || !Number.isInteger(maxTurns)) {
-    throw new Error(
-      `Invalid config: watch.maxTurns must be a positive integer, got ${JSON.stringify(maxTurns)}`,
     );
   }
   // No space after `#` — `# text` is a CommonMark ATX heading; `#text` is not.
@@ -45,7 +35,7 @@ export async function runMonitor(opts: MonitorCommandOptions): Promise<MonitorRe
   // block depend on this exact string — don't change the format.
   const loopTag = `#pr-shepherd-loop:pr=${prNumber}:`;
   const loopPrompt = buildLoopPrompt(prNumber, loopTag, opts.readyDelaySuffix);
-  const loopArgs = `${interval} --max-turns ${maxTurns} --expires ${expiresHours}h`;
+  const loopArgs = interval;
 
   return { prNumber, loopTag, loopArgs, loopPrompt };
 }
@@ -70,7 +60,7 @@ export function formatMonitorResult(result: MonitorResult): string {
     "## Instructions",
     "",
     `1. Run \`CronList\`. If any job's prompt contains \`${loopTag}\`, run the \`## Loop prompt\` body once inline (as if it were a cron tick) then stop — do not create a duplicate loop.`,
-    `2. Otherwise, invoke the \`/loop\` skill via the Skill tool. Build the \`args\` parameter as: only the value inside the backticks on the \`Loop args\` line above (the interval/flags string — not the \`Loop args:\` label), then a blank line, then the full \`## Loop prompt\` body.`,
+    `2. Otherwise, invoke the \`/loop\` skill via the Skill tool. Build the \`args\` parameter as: only the value inside the backticks on the \`Loop args\` line above (the interval — not the \`Loop args:\` label), then a blank line, then the full \`## Loop prompt\` body.`,
   ].join("\n");
 }
 
