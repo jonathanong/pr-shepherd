@@ -7,9 +7,7 @@
   },
   "watch": {
     "interval": "4m",
-    "readyDelayMinutes": 10,
-    "expiresHours": 8,
-    "maxTurns": 50
+    "readyDelayMinutes": 10
   },
   "resolve": {
     "shaPoll": {

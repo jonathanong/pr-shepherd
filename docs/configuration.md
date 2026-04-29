@@ -16,7 +16,6 @@ iterate:
 watch:
   interval: 4m # /loop cadence
   readyDelayMinutes: 10 # settle window after PR first becomes READY
-  expiresHours: 8 # max loop lifetime
 
 resolve:
   shaPoll:
@@ -51,8 +50,6 @@ actions:
 | `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination). All `COMMENTED` summaries are always minimized. |
 | `watch.interval`                     | `"4m"`                                    | Monitor tick interval (tuned to Claude's 5-min prompt-cache TTL)                                                                       |
 | `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                                                              |
-| `watch.expiresHours`                 | `8`                                       | Max lifetime of a monitor cron job                                                                                                     |
-| `watch.maxTurns`                     | `50`                                      | Max monitor ticks per session                                                                                                          |
 | `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                                       |
 | `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                                                             |
 | `resolve.fetchReviewSummaries`       | `true`                                    | Surface `COMMENTED` review summaries in `resolve --fetch` output                                                                       |
@@ -130,14 +127,6 @@ The default of 4 minutes is chosen to keep Claude's prompt cache warm — the ca
 After the PR first reaches READY status (all checks green, no open threads), shepherd continues to loop for this many minutes before cancelling the loop. This settle window gives reviewers time to request changes or for a Copilot review to finish.
 
 The ready-delay countdown resets if the PR drops out of READY state at any tick.
-
-### `watch.expiresHours` — default `8`
-
-Maximum lifetime of a monitor loop, expressed in hours. After this time the loop stops regardless of PR state. The `/loop` skill receives this as `--expires Nh`.
-
-### `watch.maxTurns` — default `50`
-
-Maximum number of iterations before the `/loop` skill stops. This is the `--max-turns` argument, which counts iterations, not turns of dialogue. With a 4-minute interval, 50 turns ≈ 3.3 hours.
 
 ---
 

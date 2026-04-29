@@ -4,7 +4,7 @@ exports[`formatMonitorResult > matches snapshot 1`] = `
 "# PR #42 [MONITOR]
 
 Loop tag: \`#pr-shepherd-loop:pr=42:\`
-Loop args: \`4m --max-turns 50 --expires 8h\`
+Loop args: \`4m\`
 
 ## Loop prompt
 

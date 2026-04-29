@@ -13,7 +13,7 @@ import { loadConfig } from "../config/load.mts";
 import type { PrShepherdConfig } from "../config/load.mts";
 
 const defaultConfig = {
-  watch: { interval: "4m", maxTurns: 50, expiresHours: 8, readyDelayMinutes: 10 },
+  watch: { interval: "4m", readyDelayMinutes: 10 },
 } as unknown as PrShepherdConfig;
 
 describe("runMonitor", () => {
@@ -25,7 +25,7 @@ describe("runMonitor", () => {
     const result = await runMonitor({ format: "text", prNumber: 99 });
     expect(result.prNumber).toBe(99);
     expect(result.loopTag).toBe("#pr-shepherd-loop:pr=99:");
-    expect(result.loopArgs).toBe("4m --max-turns 50 --expires 8h");
+    expect(result.loopArgs).toBe("4m");
     expect(result.loopPrompt).toContain("#pr-shepherd-loop:pr=99:");
     expect(result.loopPrompt).toContain("npx pr-shepherd iterate 99");
     // loopArgs is a short one-liner — not the combined invocation string
@@ -45,37 +45,19 @@ describe("runMonitor", () => {
 
   it("throws a clear error when interval is not a valid duration string", async () => {
     vi.mocked(loadConfig).mockReturnValue({
-      watch: { interval: "every 4 minutes", maxTurns: 50, expiresHours: 8, readyDelayMinutes: 10 },
+      watch: { interval: "every 4 minutes", readyDelayMinutes: 10 },
     } as unknown as PrShepherdConfig);
     await expect(runMonitor({ format: "text", prNumber: 42 })).rejects.toThrow(
       "watch.interval must be a duration string",
     );
   });
 
-  it("throws a clear error when expiresHours is not a positive integer", async () => {
+  it("respects config override for interval", async () => {
     vi.mocked(loadConfig).mockReturnValue({
-      watch: { interval: "4m", maxTurns: 50, expiresHours: "8h", readyDelayMinutes: 10 },
-    } as unknown as PrShepherdConfig);
-    await expect(runMonitor({ format: "text", prNumber: 42 })).rejects.toThrow(
-      "watch.expiresHours must be a positive integer",
-    );
-  });
-
-  it("throws a clear error when maxTurns is not a positive integer", async () => {
-    vi.mocked(loadConfig).mockReturnValue({
-      watch: { interval: "4m", maxTurns: 0, expiresHours: 8, readyDelayMinutes: 10 },
-    } as unknown as PrShepherdConfig);
-    await expect(runMonitor({ format: "text", prNumber: 42 })).rejects.toThrow(
-      "watch.maxTurns must be a positive integer",
-    );
-  });
-
-  it("respects config overrides for interval/maxTurns/expiresHours", async () => {
-    vi.mocked(loadConfig).mockReturnValue({
-      watch: { interval: "8m", maxTurns: 30, expiresHours: 4, readyDelayMinutes: 10 },
+      watch: { interval: "8m", readyDelayMinutes: 10 },
     } as unknown as PrShepherdConfig);
     const result = await runMonitor({ format: "text", prNumber: 42 });
-    expect(result.loopArgs).toMatch(/^8m --max-turns 30 --expires 4h/);
+    expect(result.loopArgs).toBe("8m");
   });
 
   it("includes --ready-delay in loop prompt when readyDelaySuffix is valid", async () => {
@@ -111,7 +93,7 @@ describe("formatMonitorResult", () => {
   const fixture: MonitorResult = {
     prNumber: 42,
     loopTag: "#pr-shepherd-loop:pr=42:",
-    loopArgs: "4m --max-turns 50 --expires 8h",
+    loopArgs: "4m",
     loopPrompt:
       "#pr-shepherd-loop:pr=42:\n\n**IMPORTANT — recurrence rules:**\n- **Do NOT call `ScheduleWakeup` or `/loop`.** This session is fired by a recurring cron job. Either call creates a duplicate runner, causing concurrent git operations and `.git/index.lock` collisions.\n- End the turn cleanly after completing the actions below. The cron job handles the next fire.\n\n**Self-dedup:** Run `CronList`. If more than one job contains `#pr-shepherd-loop:pr=42:`, keep the lowest job ID and `CronDelete` the rest (ignore errors — a concurrent runner may have already deleted them).\n\nRun in a single Bash call:\n  npx pr-shepherd iterate 42\n\nExit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with `# PR #42 [`), log the first line of stderr and continue — do not cancel the loop. The next cron fire will retry.\n\nThe output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Every output ends with a `## Instructions` section — follow those numbered steps exactly.",
   };
@@ -120,7 +102,7 @@ describe("formatMonitorResult", () => {
     const md = formatMonitorResult(fixture);
     expect(md).toContain("# PR #42 [MONITOR]");
     expect(md).toContain("Loop tag: `#pr-shepherd-loop:pr=42:`");
-    expect(md).toContain("Loop args: `4m --max-turns 50 --expires 8h`");
+    expect(md).toContain("Loop args: `4m`");
     expect(md).toContain("## Loop prompt");
     expect(md).toContain("## Instructions");
   });

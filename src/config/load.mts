@@ -19,8 +19,6 @@ export interface PrShepherdConfig {
   watch: {
     interval: string;
     readyDelayMinutes: number;
-    expiresHours: number;
-    maxTurns: number;
   };
   resolve: {
     shaPoll: {

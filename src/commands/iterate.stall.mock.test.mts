@@ -146,7 +146,7 @@ function defaultConfig() {
       stallTimeoutMinutes: 30,
       minimizeApprovals: false,
     },
-    watch: { interval: "4m", readyDelayMinutes: 10, expiresHours: 8, maxTurns: 50 },
+    watch: { interval: "4m", readyDelayMinutes: 10 },
     resolve: {
       concurrency: 4,
       shaPoll: { intervalMs: 2000, maxAttempts: 10 },
