@@ -60,7 +60,7 @@ export function formatMonitorResult(result: MonitorResult): string {
     "## Instructions",
     "",
     `1. Run \`CronList\`. If any job's prompt contains \`${loopTag}\`, run the \`## Loop prompt\` body once inline (as if it were a cron tick) then stop — do not create a duplicate loop.`,
-    `2. Otherwise, invoke the \`/loop\` skill via the Skill tool. Build the \`args\` parameter as: only the value inside the backticks on the \`Loop args\` line above (the interval/flags string — not the \`Loop args:\` label), then a blank line, then the full \`## Loop prompt\` body.`,
+    `2. Otherwise, invoke the \`/loop\` skill via the Skill tool. Build the \`args\` parameter as: only the value inside the backticks on the \`Loop args\` line above (the interval — not the \`Loop args:\` label), then a blank line, then the full \`## Loop prompt\` body.`,
   ].join("\n");
 }
 

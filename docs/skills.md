@@ -6,7 +6,7 @@ Three Claude Code skills are included in the plugin.
 
 ## `/pr-shepherd:monitor`
 
-Start continuous CI monitoring for a PR. Runs `npx pr-shepherd monitor <PR>` to get a pre-built `/loop` bootstrap block (interval, max-turns, expires, and the recurring iterate prompt), then creates the cron job. The loop fires at the configured interval, calls `pr-shepherd iterate`, and follows the `## Instructions` in the output. The loop cancels automatically after the PR is merged/closed or after the configured ready-delay.
+Start continuous CI monitoring for a PR. Runs `npx pr-shepherd monitor <PR>` to get a pre-built `/loop` bootstrap block (interval and the recurring iterate prompt), then creates the cron job. The loop fires at the configured interval, calls `pr-shepherd iterate`, and follows the `## Instructions` in the output. The loop cancels automatically after the PR is merged/closed or after the configured ready-delay.
 
 ```
 /pr-shepherd:monitor        # infer PR from current branch
@@ -15,7 +15,7 @@ Start continuous CI monitoring for a PR. Runs `npx pr-shepherd monitor <PR>` to 
 
 The polling interval and ready-delay come from `watch.interval` and `watch.readyDelayMinutes` in `.pr-shepherdrc.yml` (defaults: 4 minutes and 10 minutes). The 4-minute default is intentional — it keeps Claude's prompt cache warm (5-minute TTL).
 
-**Loop deduplication:** The CLI output's `## Instructions` handles dedup — the skill checks `CronList` for a job tagged `# pr-shepherd-loop:pr=<N>` and runs one iteration inline if one already exists, instead of creating a duplicate.
+**Loop deduplication:** The CLI output's `## Instructions` handles dedup — the skill checks `CronList` for a job tagged `#pr-shepherd-loop:pr=<N>:` and runs one iteration inline if one already exists, instead of creating a duplicate.
 
 ## `/pr-shepherd:check`
 
