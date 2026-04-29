@@ -330,19 +330,19 @@ npx pr-shepherd monitor 42
 ```markdown
 # PR #42 [MONITOR]
 
-Loop tag: `# pr-shepherd-loop:pr=42`
+Loop tag: `#pr-shepherd-loop:pr=42:`
 Loop args: `4m`
 
 ## Loop prompt
 
-# pr-shepherd-loop:pr=42
+#pr-shepherd-loop:pr=42:
 
 **IMPORTANT — recurrence rules:**
 ...
 
 ## Instructions
 
-1. Run `CronList`. If any job's prompt contains `# pr-shepherd-loop:pr=42`, run the `## Loop prompt` body once inline (as if it were a cron tick) then stop — do not create a duplicate loop.
+1. Run `CronList`. If any job's prompt contains `#pr-shepherd-loop:pr=42:`, run the `## Loop prompt` body once inline (as if it were a cron tick) then stop — do not create a duplicate loop.
 2. Otherwise, invoke the `/loop` skill via the Skill tool. Build the `args` parameter as: only the value inside the backticks on the `Loop args` line above (the interval/flags string — not the `Loop args:` label), then a blank line, then the full `## Loop prompt` body.
 ```
 

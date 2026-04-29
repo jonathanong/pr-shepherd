@@ -29,12 +29,12 @@ At a high level, to start the monitor, the skill/command invokes a CLI that retu
 
 # PR #123 [MONITOR]
 
-Loop tag: `# pr-shepherd-loop:pr=123`
+Loop tag: `#pr-shepherd-loop:pr=123:`
 Loop args: `4m`
 
 ## Loop prompt
 
-# pr-shepherd-loop:pr=123
+#pr-shepherd-loop:pr=123:
 
 **IMPORTANT — recurrence rules:** Do not call ScheduleWakeup or /loop. End the turn
 after completing the actions below. The cron job handles the next fire.
