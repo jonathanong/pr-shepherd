@@ -218,6 +218,19 @@ describe("projectIterateLean", () => {
     expect(fix.resolveCommand).toBeDefined();
   });
 
+  it("fix_code: omits editedSummaries when empty", () => {
+    const lean = projectIterateLean(makeIterateResult("fix_code")) as Record<string, unknown>;
+    expect((lean.fix as Record<string, unknown>).editedSummaries).toBeUndefined();
+  });
+
+  it("fix_code: includes editedSummaries when non-empty", () => {
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    result.fix.editedSummaries = [{ id: "PRR_ED", author: "reviewer", body: "updated" }];
+    const lean = projectIterateLean(result) as Record<string, unknown>;
+    expect(((lean.fix as Record<string, unknown>).editedSummaries as unknown[]).length).toBe(1);
+  });
+
   it("fix_code (rich payload): includes non-empty arrays, omits empty ones", () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");

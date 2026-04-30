@@ -31,6 +31,7 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
         actionableComments: [],
         reviewSummaryIds: [],
         firstLookSummaries: [],
+        editedSummaries: [],
         surfacedApprovals: [],
         checks: [],
         changesRequestedReviews: [],

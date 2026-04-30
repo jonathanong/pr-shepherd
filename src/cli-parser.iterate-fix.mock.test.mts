@@ -103,6 +103,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
       actionableComments: [{ id: "PRRC_1", author: "bot", body: "please address", url: "" }],
       reviewSummaryIds: [],
       firstLookSummaries: [],
+      editedSummaries: [],
       surfacedApprovals: [],
       checks: [
         { name: "lint", runId: "run-42", detailsUrl: "https://x" },

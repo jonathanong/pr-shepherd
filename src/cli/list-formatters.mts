@@ -12,8 +12,12 @@ export function renderBodyPreview(body: string): string {
 export function renderFirstLookStatusTag(t: {
   autoResolved?: boolean;
   firstLookStatus: string;
+  edited?: boolean;
 }): string {
-  return t.autoResolved ? "[status: outdated, auto-resolved]" : `[status: ${t.firstLookStatus}]`;
+  const editedSuffix = t.edited ? ", edited" : "";
+  return t.autoResolved
+    ? `[status: outdated, auto-resolved${editedSuffix}]`
+    : `[status: ${t.firstLookStatus}${editedSuffix}]`;
 }
 
 interface ThreadBulletInput {

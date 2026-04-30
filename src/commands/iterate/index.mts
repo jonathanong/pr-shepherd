@@ -113,9 +113,14 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   const {
     minimizeIds: reviewSummaryIds,
     firstLookSummaries,
+    editedSummaries,
     surfacedApprovals,
   } = classifyReviewSummaries(
-    { firstLook: report.firstLookSummaries, seen: report.reviewSummaries },
+    {
+      firstLook: report.firstLookSummaries,
+      seen: report.reviewSummaries,
+      edited: report.editedSummaries,
+    },
     report.approvedReviews,
     config.iterate.minimizeApprovals,
   );
@@ -140,6 +145,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       repoName,
       reviewSummaryIds,
       firstLookSummaries,
+      editedSummaries,
       surfacedApprovals,
     });
   }

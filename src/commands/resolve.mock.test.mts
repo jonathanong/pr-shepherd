@@ -5,10 +5,14 @@ vi.mock("../github/client.mts", () => ({
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
 }));
 
-vi.mock("../state/seen-comments.mts", () => ({
-  loadSeenSet: vi.fn().mockResolvedValue(new Set()),
-  markSeen: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock("../state/seen-comments.mts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../state/seen-comments.mts")>();
+  return {
+    ...actual,
+    loadSeenMap: vi.fn().mockResolvedValue(new Map()),
+    markSeen: vi.fn().mockResolvedValue(undefined),
+  };
+});
 
 vi.mock("../github/batch.mts", () => ({
   fetchPrBatch: vi.fn(),
@@ -38,7 +42,7 @@ import { getCurrentPrNumber } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { autoResolveOutdated, applyResolveOptions } from "../comments/resolve.mts";
 import { loadConfig } from "../config/load.mts";
-import { loadSeenSet, markSeen } from "../state/seen-comments.mts";
+import { loadSeenMap, markSeen, hashBody } from "../state/seen-comments.mts";
 import type { BatchPrData, ReviewThread, PrComment } from "../types.mts";
 
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
@@ -46,7 +50,7 @@ const mockFetchPrBatch = vi.mocked(fetchPrBatch);
 const mockAutoResolveOutdated = vi.mocked(autoResolveOutdated);
 const mockApplyResolveOptions = vi.mocked(applyResolveOptions);
 const mockLoadConfig = vi.mocked(loadConfig);
-const mockLoadSeenSet = vi.mocked(loadSeenSet);
+const mockLoadSeenMap = vi.mocked(loadSeenMap);
 const mockMarkSeen = vi.mocked(markSeen);
 
 const BASE_OPTS = { format: "text" as const };
@@ -288,15 +292,8 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
 
   it("returns empty reviewSummaries when fetchReviewSummaries is false", async () => {
     mockLoadConfig.mockReturnValueOnce({
-      resolve: {
-        shaPoll: { intervalMs: 2000, maxAttempts: 10 },
-        fetchReviewSummaries: false,
-      },
-      actions: {
-        autoResolveOutdated: true,
-        autoMarkReady: true,
-        commitSuggestions: true,
-      },
+      resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 }, fetchReviewSummaries: false },
+      actions: { autoResolveOutdated: true, autoMarkReady: true, commitSuggestions: true },
     } as ReturnType<typeof loadConfig>);
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
@@ -348,15 +345,8 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
 
   it("instructions omit commit-suggestion step when commitSuggestionsEnabled is false", async () => {
     mockLoadConfig.mockReturnValueOnce({
-      resolve: {
-        shaPoll: { intervalMs: 2000, maxAttempts: 10 },
-        fetchReviewSummaries: true,
-      },
-      actions: {
-        autoResolveOutdated: true,
-        autoMarkReady: true,
-        commitSuggestions: false,
-      },
+      resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 }, fetchReviewSummaries: true },
+      actions: { autoResolveOutdated: true, autoMarkReady: true, commitSuggestions: false },
     } as ReturnType<typeof loadConfig>);
     const thread = makeThread({
       body: "```suggestion\nconst x = 1;\n```",
@@ -486,14 +476,17 @@ describe("runResolveFetch — first-look items", () => {
   });
 
   it("suppresses already-seen items and calls markSeen for new ones", async () => {
-    const outdated = makeThread({ id: "t-outdated", isOutdated: true });
-    const minimized = makeComment({ id: "c-min", isMinimized: true });
+    const outdated = makeThread({ id: "t-outdated", isOutdated: true, body: "fix this" });
+    const minimized = makeComment({ id: "c-min", isMinimized: true, body: "nit" });
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({ reviewThreads: [outdated], comments: [minimized] }),
     });
-    mockLoadSeenSet.mockResolvedValue(new Set(["t-outdated"]));
+    // Stored hash matches outdated body → unchanged (suppress)
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([["t-outdated", { seenAt: 1000, bodyHash: hashBody("fix this") }]]),
+    );
     const result = await runResolveFetch(BASE_OPTS);
     expect(result.firstLookThreads).toHaveLength(0);
-    expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "c-min");
+    expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "c-min", "nit");
   });
 });

@@ -1,18 +1,34 @@
 import type { AgentThread, Review, ResolveCommand, AgentCheck } from "../../types.mts";
 
 export function classifyReviewSummaries(
-  summaries: { firstLook: Review[]; seen: Review[] },
+  summaries: { firstLook: Review[]; seen: Review[]; edited: Review[] },
   approvals: Review[],
   minimizeApprovals: boolean,
-): { minimizeIds: string[]; firstLookSummaries: Review[]; surfacedApprovals: Review[] } {
-  // Both first-look and seen summaries go into the minimize mutation; first-look bodies are
-  // rendered in the output so the agent sees them before the minimize happens.
+): {
+  minimizeIds: string[];
+  firstLookSummaries: Review[];
+  editedSummaries: Review[];
+  surfacedApprovals: Review[];
+} {
+  // First-look and seen summaries go into the minimize mutation; edited summaries do NOT —
+  // they are already minimized server-side (body changed after minimize was applied).
+  // First-look bodies are rendered so the agent sees them before the minimize happens.
   const minimizeIds = [...summaries.firstLook, ...summaries.seen].map((r) => r.id);
   if (minimizeApprovals) {
     for (const r of approvals) minimizeIds.push(r.id);
-    return { minimizeIds, firstLookSummaries: summaries.firstLook, surfacedApprovals: [] };
+    return {
+      minimizeIds,
+      firstLookSummaries: summaries.firstLook,
+      editedSummaries: summaries.edited,
+      surfacedApprovals: [],
+    };
   }
-  return { minimizeIds, firstLookSummaries: summaries.firstLook, surfacedApprovals: approvals };
+  return {
+    minimizeIds,
+    firstLookSummaries: summaries.firstLook,
+    editedSummaries: summaries.edited,
+    surfacedApprovals: approvals,
+  };
 }
 
 export function buildResolveCommand(

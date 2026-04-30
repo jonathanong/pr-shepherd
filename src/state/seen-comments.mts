@@ -1,5 +1,6 @@
-import { readFile, writeFile, mkdir, access, readdir } from "node:fs/promises";
+import { readFile, writeFile, rename, unlink, mkdir, access, readdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
+import { createHash, randomUUID } from "node:crypto";
 import { SAFE_SEGMENT } from "../util/path-segment.mts";
 
 import { resolveStateBase } from "./base.mts";
@@ -24,6 +25,31 @@ interface StateKey {
 // Public API
 // ---------------------------------------------------------------------------
 
+/** Compute a 16-hex-char SHA-256 prefix of a comment body. */
+export function hashBody(body: string): string {
+  return createHash("sha256").update(body, "utf8").digest("hex").slice(0, 16);
+}
+
+/**
+ * Classify a candidate item against the seen map.
+ *
+ * - "new"       — no marker exists; surface the body and write the marker.
+ * - "edited"    — marker exists but stored hash differs from the current body;
+ *                 surface the updated body and update the marker hash.
+ * - "unchanged" — marker exists and hash matches (or marker has no hash, which
+ *                 is treated conservatively as unchanged).
+ */
+export function classifyItem(
+  id: string,
+  body: string,
+  map: Map<string, SeenMarker>,
+): "new" | "edited" | "unchanged" {
+  const m = map.get(id);
+  if (!m) return "new";
+  if (typeof m.bodyHash === "string" && m.bodyHash !== hashBody(body)) return "edited";
+  return "unchanged";
+}
+
 /**
  * Read the seen/ directory once and return a Set of already-seen IDs.
  * Prefer this over repeated hasSeen() calls to avoid EMFILE on large PRs.
@@ -39,6 +65,31 @@ export async function loadSeenSet(key: StateKey): Promise<Set<string>> {
   }
 }
 
+/**
+ * Read the seen/ directory and return a Map from ID to SeenMarker.
+ * Used when the caller needs the stored bodyHash to detect in-place edits.
+ * Returns an empty Map if the directory does not yet exist.
+ */
+export async function loadSeenMap(key: StateKey): Promise<Map<string, SeenMarker>> {
+  const map = new Map<string, SeenMarker>();
+  try {
+    const dir = resolveDir(key);
+    const entries = await readdir(dir);
+    const ids = entries.filter((e) => e.endsWith(".json")).map((e) => e.slice(0, -5));
+    for (const id of ids) {
+      try {
+        const raw = await readFile(join(dir, `${id}.json`), "utf8");
+        map.set(id, JSON.parse(raw) as SeenMarker);
+      } catch {
+        // unreadable or malformed — skip
+      }
+    }
+  } catch {
+    // directory doesn't exist or unreadable — return empty map
+  }
+  return map;
+}
+
 /** Return true if a "seen" marker exists for this id. */
 export async function hasSeen(key: StateKey, id: string): Promise<boolean> {
   try {
@@ -49,16 +100,45 @@ export async function hasSeen(key: StateKey, id: string): Promise<boolean> {
   }
 }
 
-/** Write a "seen" marker for this id. Idempotent — preserves original seenAt on double-write. */
-export async function markSeen(key: StateKey, id: string): Promise<void> {
+/**
+ * Write (or update) a "seen" marker for this id, storing the body hash so
+ * in-place edits can be detected on future fetches.
+ *
+ * - First call (no existing marker): creates `{ seenAt: now, bodyHash }`.
+ * - Subsequent call, hash unchanged: no-op (skips the write).
+ * - Subsequent call, hash changed: updates `bodyHash`, preserves original `seenAt`.
+ *
+ * All errors are silently swallowed — the marker is best-effort.
+ */
+export async function markSeen(key: StateKey, id: string, body: string): Promise<void> {
+  let tmp: string | undefined;
   try {
     const path = resolvePath(key, id);
     await mkdir(dirname(path), { recursive: true });
-    // O_EXCL: create-only — EEXIST means already marked, which is the idempotent success case.
-    // seenAt is unix milliseconds (Date.now()), matching JS convention for this module.
-    await writeFile(path, JSON.stringify({ seenAt: Date.now() }), { flag: "wx", encoding: "utf8" });
+    const newHash = hashBody(body);
+    let existing: SeenMarker | null = null;
+    try {
+      const raw = await readFile(path, "utf8");
+      existing = JSON.parse(raw) as SeenMarker;
+    } catch {
+      // no existing marker — will create below
+    }
+    if (existing !== null && existing.bodyHash === newHash) return;
+    const seenAt = existing?.seenAt ?? Date.now();
+    tmp = `${path}.${randomUUID()}.tmp`;
+    await writeFile(tmp, JSON.stringify({ seenAt, bodyHash: newHash }), "utf8");
+    await rename(tmp, path);
+    tmp = undefined;
   } catch {
-    // EEXIST = already seen. All other errors are best-effort.
+    // best-effort
+  } finally {
+    if (tmp !== undefined) {
+      try {
+        await unlink(tmp);
+      } catch {
+        // best-effort cleanup
+      }
+    }
   }
 }
 

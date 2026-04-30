@@ -96,24 +96,39 @@ $PR_SHEPHERD_STATE_DIR/<owner>-<repo>/worktrees/<basename>-<sha8>.md
 
 Print the path with `npx pr-shepherd log-file`. Disable with `PR_SHEPHERD_LOG_DISABLED=1`.
 
-One file per id — file existence is the marker. The marker is written with
-`O_EXCL` (exclusive create), so double-writes preserve the original `seenAt`
-timestamp and are safe under concurrent invocations. The JSON payload is
-`{ "seenAt": <unix> }` today; the schema is intentionally open so future
-fields (classification, agent-reply, etc.) can be added without breaking
-readers. Do not adopt formats that lock the schema (empty touch files, a
-single shared list).
+One file per id — file existence is the marker. The JSON payload is
+`{ "seenAt": <unix>, "bodyHash": "<16-hex-chars>" }` (SHA-256 of the item's
+body, truncated); the schema is intentionally open so future fields
+(classification, agent-reply, etc.) can be added without breaking readers.
+Do not adopt formats that lock the schema (empty touch files, a single
+shared list).
+
+The `bodyHash` enables **in-place edit detection**: on each fetch, if a
+candidate item is in the seen set but its current body hashes differently
+from the stored hash, Shepherd re-surfaces it as an "edited" item. The item
+is tagged `[status: …, edited]` or rendered under a new
+`## … (edited since first look)` section. The marker hash is updated after
+display; the original `seenAt` is preserved. Legacy markers without
+`bodyHash` are treated conservatively as unchanged and are not re-surfaced.
+
+Writes are no longer O_EXCL: `markSeen` reads any existing marker to
+preserve `seenAt`, then writes with `flag: "w"`. Under concurrent runs the
+last writer's hash wins — acceptable because both writes carry valid current
+state.
 
 Any new code path that filters threads or comments by `isResolved`,
 `isOutdated`, or `isMinimized` must route them through the seen-marker gate
 before suppression — never drop them outright.
 
 **Non-minimized `COMMENTED` review summaries** are now gated: `check.mts`
-splits `batchData.reviewSummaries` into `firstLookSummaries` (unseen → body
-rendered in iterate output before minimizing) and `reviewSummaries` (already
-seen → bare IDs in the minimize queue). Both sets end up in
+splits `batchData.reviewSummaries` into three buckets:
+- `firstLookSummaries` — never seen before; body rendered, ID in `--minimize-comment-ids`.
+- `editedSummaries` — seen before but body changed; body re-rendered, ID **NOT** in `--minimize-comment-ids` (already minimized server-side).
+- `reviewSummaries` — seen before, body unchanged; bare IDs only, in minimize queue.
+
+`firstLookSummaries` and `reviewSummaries` IDs are merged into
 `--minimize-comment-ids` in the same resolve command invocation. The body is
-surfaced exactly once.
+surfaced on first encounter and again whenever the author edits it.
 
 **Scope note:** Already-minimized `COMMENTED` reviews are not covered —
 `batch-parsers.mts` filters them out before any gate runs (`!r.isMinimized`),

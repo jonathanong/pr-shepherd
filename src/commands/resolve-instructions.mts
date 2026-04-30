@@ -50,6 +50,14 @@ export function buildFetchInstructions(
       `Items in \`## First-look items\` are for acknowledgement only — do not pass their IDs to \`--resolve-thread-ids\`, \`--minimize-comment-ids\`, or \`--dismiss-review-ids\`. Acknowledge each one with a one-line classification (e.g. "outdated — addressed by commit abc1234", "resolved — already fixed", "minimized — noise").`,
     );
   }
+  const editedTotal =
+    firstLookThreads.filter((t) => t.edited).length +
+    firstLookComments.filter((c) => c.edited).length;
+  if (editedTotal > 0) {
+    instructions.push(
+      `First-look bullets tagged \`, edited\` were updated by their author after you previously acknowledged them. Read the updated body. Do **not** include their IDs in \`--resolve-thread-ids\`, \`--minimize-comment-ids\`, or \`--dismiss-review-ids\` — they are already closed or minimized on GitHub.`,
+    );
+  }
 
   if (hasSuggestions) {
     instructions.push(
