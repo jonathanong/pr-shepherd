@@ -74,6 +74,16 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     }
   }
 
+  if (result.fix.editedSummaries.length > 0) {
+    sections.push(
+      "## Review summaries (edited since first look — already minimized; do not re-minimize)",
+    );
+    for (const r of result.fix.editedSummaries) {
+      sections.push(`### \`reviewId=${r.id}\` (@${r.author})`);
+      sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body));
+    }
+  }
+
   const firstLookSummaryIds = new Set(result.fix.firstLookSummaries.map((r) => r.id));
   const seenSummaryIds = result.fix.reviewSummaryIds.filter((id) => !firstLookSummaryIds.has(id));
   if (seenSummaryIds.length > 0) {
@@ -99,7 +109,8 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
       bullets.push(renderThreadBullet(t, { statusTag: renderFirstLookStatusTag(t) }));
     }
     for (const c of result.fix.firstLookComments) {
-      bullets.push(renderCommentBullet(c, { statusTag: "[status: minimized]" }));
+      const editedSuffix = c.edited ? ", edited" : "";
+      bullets.push(renderCommentBullet(c, { statusTag: `[status: minimized${editedSuffix}]` }));
     }
     sections.push(bullets.join("\n"));
   }

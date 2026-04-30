@@ -116,6 +116,11 @@ interface FixRebaseAndPush {
   reviewSummaryIds: string[];
   /** COMMENTED review summaries surfaced to the agent for the first time this iteration — body shown inline. */
   firstLookSummaries: Review[];
+  /**
+   * COMMENTED review summaries whose body changed since the agent first saw them.
+   * Body shown inline; IDs are NOT included in `reviewSummaryIds` / `--minimize-comment-ids`.
+   */
+  editedSummaries: Review[];
   /** APPROVED-state reviews surfaced for visibility (when `iterate.minimizeApprovals` is false). */
   surfacedApprovals: Review[];
   checks: AgentCheck[];

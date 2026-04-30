@@ -147,7 +147,8 @@ export function formatText(report: ShepherdReport): string {
       lines.push(renderThreadBullet(t, { statusTag: renderFirstLookStatusTag(t) }));
     }
     for (const c of firstLookComments) {
-      lines.push(renderCommentBullet(c, { statusTag: "[status: minimized]" }));
+      const editedSuffix = c.edited ? ", edited" : "";
+      lines.push(renderCommentBullet(c, { statusTag: `[status: minimized${editedSuffix}]` }));
     }
     firstLookSection = lines.join("\n");
   }

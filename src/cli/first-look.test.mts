@@ -129,6 +129,7 @@ describe("## First-look items — cross-call-site consistency", () => {
       changesRequestedReviews: [],
       reviewSummaries: [],
       firstLookSummaries: [],
+      editedSummaries: [],
       approvedReviews: [],
     };
     const siteC = extractFirstLookSection(formatText(report));

@@ -1,18 +1,3 @@
-/**
- * `shepherd check [PR]`
- *
- * Read-only snapshot of PR status. Fetches CI + comments + merge status in
- * one GraphQL request, applies all classifiers, and returns a ShepherdReport.
- *
- * Exit codes:
- *   0  READY — all checks passed, no unresolved threads, CLEAN merge status.
- *   1  FAILING — CI has red checks, or merge has conflicts.
- *   1  PENDING — CI passing but merge blocked (BLOCKED, UNSTABLE, or BEHIND).
- *   1  UNKNOWN — merge state unresolvable.
- *   2  IN_PROGRESS — CI checks still running.
- *   3  UNRESOLVED_COMMENTS — CI ok but actionable threads remain.
- */
-
 import { fetchPrBatch } from "../github/batch.mts";
 import { getRepoInfo, getCurrentPrNumber, getMergeableState } from "../github/client.mts";
 import { classifyChecks, getCiVerdict } from "../checks/classify.mts";
@@ -22,7 +7,7 @@ import { autoResolveOutdated } from "../comments/resolve.mts";
 import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
 import { computeStatus } from "./check-status.mts";
-import { loadSeenSet, markSeen } from "../state/seen-comments.mts";
+import { loadSeenMap, markSeen, classifyItem } from "../state/seen-comments.mts";
 import type {
   GlobalOptions,
   ShepherdReport,
@@ -47,15 +32,11 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
   }
 
   const config = loadConfig();
-  // Only paginate APPROVED reviews when the caller will actually minimize them.
-  // Otherwise the first-page cap of 50 (already in the batch) is plenty — no extra round-trip.
   const paginateApprovedReviews = config.iterate.minimizeApprovals;
   const result = await fetchPrBatch(prNumber, repo, { paginateApprovedReviews });
   let batchData = result.data;
 
-  // GraphQL sometimes returns UNKNOWN for mergeable/mergeStateStatus while the
-  // REST API already has the correct value. Fall back to REST in that case.
-  // Skip for non-OPEN PRs — REST also returns UNKNOWN for merged/closed PRs.
+  // Fall back to REST when GraphQL returns UNKNOWN — skip for non-OPEN PRs.
   if (
     (batchData.state ?? "OPEN") === "OPEN" &&
     (batchData.mergeable === "UNKNOWN" || batchData.mergeStateStatus === "UNKNOWN")
@@ -92,7 +73,6 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
   const unresolvedThreads = batchData.reviewThreads.filter((t) => !t.isResolved && !t.isMinimized);
   const visibleComments = batchData.comments.filter((c) => !c.isMinimized);
 
-  // Auto-resolve outdated threads.
   const outdated = getOutdatedThreads(unresolvedThreads);
   let autoResolved: typeof outdated = [];
   let autoResolveErrors: string[] = [];
@@ -103,7 +83,6 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
   }
 
   const activeThreads = unresolvedThreads.filter((t) => !t.isOutdated);
-  // First-look: collect previously-hidden items not yet seen by the agent.
   const outdatedCandidates = batchData.reviewThreads.filter((t) => t.isOutdated);
   const resolvedCandidates = batchData.reviewThreads.filter((t) => t.isResolved && !t.isOutdated);
   const minimizedThreadCandidates = batchData.reviewThreads.filter(
@@ -111,53 +90,66 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
   );
   const minimizedCommentCandidates = batchData.comments.filter((c) => c.isMinimized);
 
-  const seenSet = await loadSeenSet(stateKey);
+  const seenMap = await loadSeenMap(stateKey);
   const autoResolvedIds = new Set(autoResolved.map((t) => t.id));
   const firstLookThreads: FirstLookThread[] = [
-    ...outdatedCandidates
-      .filter((t) => !seenSet.has(t.id))
-      .map((t) => ({
+    ...outdatedCandidates.flatMap((t) => {
+      const cls = classifyItem(t.id, t.body, seenMap);
+      if (cls === "unchanged") return [];
+      const base = {
         ...t,
         firstLookStatus: "outdated" as const,
         autoResolved: autoResolvedIds.has(t.id),
-      })),
-    ...resolvedCandidates
-      .filter((t) => !seenSet.has(t.id))
-      .map((t) => ({ ...t, firstLookStatus: "resolved" as const })),
-    ...minimizedThreadCandidates
-      .filter((t) => !seenSet.has(t.id))
-      .map((t) => ({ ...t, firstLookStatus: "minimized" as const })),
+      };
+      return cls === "edited" ? [{ ...base, edited: true as const }] : [base];
+    }),
+    ...resolvedCandidates.flatMap((t) => {
+      const cls = classifyItem(t.id, t.body, seenMap);
+      if (cls === "unchanged") return [];
+      const base = { ...t, firstLookStatus: "resolved" as const };
+      return cls === "edited" ? [{ ...base, edited: true as const }] : [base];
+    }),
+    ...minimizedThreadCandidates.flatMap((t) => {
+      const cls = classifyItem(t.id, t.body, seenMap);
+      if (cls === "unchanged") return [];
+      const base = { ...t, firstLookStatus: "minimized" as const };
+      return cls === "edited" ? [{ ...base, edited: true as const }] : [base];
+    }),
   ];
-  const firstLookComments: FirstLookComment[] = minimizedCommentCandidates
-    .filter((c) => !seenSet.has(c.id))
-    .map((c) => ({ ...c, firstLookStatus: "minimized" as const }));
+  const firstLookComments: FirstLookComment[] = minimizedCommentCandidates.flatMap((c) => {
+    const cls = classifyItem(c.id, c.body, seenMap);
+    if (cls === "unchanged") return [];
+    const base = { ...c, firstLookStatus: "minimized" as const };
+    return cls === "edited" ? [{ ...base, edited: true as const }] : [base];
+  });
 
-  // Split review summaries into first-look (unseen — surface body) vs seen (minimize silently).
-  const firstLookSummaries = batchData.reviewSummaries.filter((r) => !seenSet.has(r.id));
-  const seenSummaries = batchData.reviewSummaries.filter((r) => seenSet.has(r.id));
+  const firstLookSummaries = batchData.reviewSummaries.filter(
+    (r) => classifyItem(r.id, r.body, seenMap) === "new",
+  );
+  const editedSummaries = batchData.reviewSummaries.filter(
+    (r) => classifyItem(r.id, r.body, seenMap) === "edited",
+  );
+  const seenSummaries = batchData.reviewSummaries.filter(
+    (r) => classifyItem(r.id, r.body, seenMap) === "unchanged",
+  );
 
-  // Mark first-look items as seen (best-effort — markSeen never throws).
   await Promise.allSettled([
-    ...firstLookThreads.map((t) => markSeen(stateKey, t.id)),
-    ...firstLookComments.map((c) => markSeen(stateKey, c.id)),
-    ...firstLookSummaries.map((r) => markSeen(stateKey, r.id)),
+    ...firstLookThreads.map((t) => markSeen(stateKey, t.id, t.body)),
+    ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
+    ...[...firstLookSummaries, ...editedSummaries].map((r) => markSeen(stateKey, r.id, r.body)),
   ]);
 
-  // Actionable: all active threads and all visible comments (no classification — LLM handles triage).
   const actionableThreads = activeThreads;
   const actionableComments = visibleComments;
 
-  // Derive merge status.
   const mergeStatus = deriveMergeStatus(batchData);
 
-  // Derive blockedByFilteredCheck ghost state.
   const blockedByFilteredCheck =
     mergeStatus.status === "BLOCKED" &&
     !verdict.anyFailing &&
     !verdict.anyInProgress &&
     verdict.filteredNames.length > 0;
 
-  // Compute overall status.
   const status = computeStatus(
     verdict,
     actionableThreads.length,
@@ -195,6 +187,7 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
     changesRequestedReviews: batchData.changesRequestedReviews,
     reviewSummaries: seenSummaries,
     firstLookSummaries,
+    editedSummaries,
     approvedReviews: batchData.approvedReviews,
   };
 }

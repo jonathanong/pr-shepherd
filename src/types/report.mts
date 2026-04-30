@@ -17,10 +17,14 @@ export interface FirstLookThread extends ReviewThread {
   firstLookStatus: "outdated" | "resolved" | "minimized";
   /** True when Shepherd auto-resolved this thread during the current run (outdated only). */
   autoResolved?: boolean;
+  /** True when the body was edited by the author after first acknowledgement. */
+  edited?: boolean;
 }
 
 export interface FirstLookComment extends PrComment {
   firstLookStatus: "minimized";
+  /** True when the body was edited by the author after first acknowledgement. */
+  edited?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -67,17 +71,12 @@ export interface ShepherdReport {
     firstLook: FirstLookComment[];
   };
   changesRequestedReviews: Review[];
-  /**
-   * COMMENTED reviews with a non-empty, non-minimized body that the agent has already seen
-   * at least once — eligible for `--minimize-comment-ids` without re-rendering the body.
-   */
+  /** COMMENTED reviews already seen — eligible for `--minimize-comment-ids` without re-rendering. */
   reviewSummaries: Review[];
-  /**
-   * COMMENTED reviews with a non-empty, non-minimized body not yet seen by the agent.
-   * The body must be surfaced to the agent before minimizing; the seen marker is written
-   * at the same time so subsequent runs move these into `reviewSummaries`.
-   */
+  /** COMMENTED reviews not yet seen — body must be surfaced before minimizing. */
   firstLookSummaries: Review[];
+  /** COMMENTED reviews whose body changed since last seen — surface updated body, but do NOT re-add to `--minimize-comment-ids`. */
+  editedSummaries: Review[];
   /** APPROVED reviews not yet minimized — opt-in minimize target. */
   approvedReviews: Review[];
 }

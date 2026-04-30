@@ -112,6 +112,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
     changesRequestedReviews: [],
     reviewSummaries: [],
     firstLookSummaries: [],
+    editedSummaries: [],
     approvedReviews: [],
     ...overrides,
   };

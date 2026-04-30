@@ -10,20 +10,9 @@ import type {
 } from "../../types.mts";
 
 /**
- * Render a resolve command as a shell snippet for the narrow placeholder-based
- * invocation used by iterate.
- *
- * This is not a general-purpose shell escaper. It only wraps
- * `$DISMISS_MESSAGE` and whitespace-bearing `rc.argv` entries in double quotes
- * so the surrounding command template can later substitute placeholder values.
- *
- * Callers must preserve that contract:
- * - placeholder substitution must replace the entire quoted token (for example,
- *   replace `"$DISMISS_MESSAGE"` as a whole, not text inside the quotes);
- * - `rc.argv` must not contain `"`, `$`, `` ` ``, or `\`, because this helper
- *   does not escape them and will throw if they are present;
- * - `$HEAD_SHA` must not appear in `rc.argv`; when `requiresHeadSha` is set it
- *   is appended separately below as the already-quoted token `"$HEAD_SHA"`.
+ * Render a resolve command as a shell snippet. Wraps `$DISMISS_MESSAGE` and whitespace-bearing
+ * argv entries in double quotes for placeholder substitution. Throws if argv contains `"$\`\`.
+ * `$HEAD_SHA` is appended separately when `requiresHeadSha` is set.
  */
 export function renderResolveCommand(rc: ResolveCommand): string {
   const needsQuoting = (arg: string) => {
@@ -55,6 +44,7 @@ export function buildFixInstructions(
   firstLookThreads: FirstLookThread[] = [],
   firstLookComments: FirstLookComment[] = [],
   firstLookSummaries: Review[] = [],
+  editedSummaries: Review[] = [],
 ): string[] {
   const instructions: string[] = [];
   const hasSuggestions = threads.some((t) => t.suggestion);
@@ -134,6 +124,15 @@ export function buildFixInstructions(
   if (firstLookSummaries.length > 0) {
     instructions.push(
       `Review the bodies shown under \`## Review summaries (first look — to be minimized)\` — you are seeing these for the first time. Their IDs are already included in the \`resolve:\` command's \`--minimize-comment-ids\`; if any warrants a \`## Shepherd Journal\` entry, record it before running resolve.`,
+    );
+  }
+  const editedTotal =
+    editedSummaries.length +
+    firstLookThreads.filter((t) => t.edited).length +
+    firstLookComments.filter((c) => c.edited).length;
+  if (editedTotal > 0) {
+    instructions.push(
+      `Items under \`## Review summaries (edited since first look)\` and any first-look bullet tagged \`, edited\` were updated by their author after you previously acknowledged them. Read the updated body. Do **not** include their IDs in \`--minimize-comment-ids\`, \`--resolve-thread-ids\`, or \`--dismiss-review-ids\` — they are already closed or minimized on GitHub.`,
     );
   }
   if (resolveCommand.hasMutations) {

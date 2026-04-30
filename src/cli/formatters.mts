@@ -71,7 +71,8 @@ export function formatFetchResult(result: FetchResult): string {
       bullets.push(renderThreadBullet(t, { statusTag: renderFirstLookStatusTag(t) }));
     }
     for (const c of result.firstLookComments) {
-      bullets.push(renderCommentBullet(c, { statusTag: "[status: minimized]" }));
+      const editedSuffix = c.edited ? ", edited" : "";
+      bullets.push(renderCommentBullet(c, { statusTag: `[status: minimized${editedSuffix}]` }));
     }
     sections.push(bullets.join("\n"));
   }

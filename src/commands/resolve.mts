@@ -5,7 +5,7 @@ import { autoResolveOutdated, applyResolveOptions } from "../comments/resolve.mt
 import { loadConfig } from "../config/load.mts";
 import { extractSuggestion } from "../suggestions/extract.mts";
 import { buildFetchInstructions } from "./resolve-instructions.mts";
-import { loadSeenSet, markSeen } from "../state/seen-comments.mts";
+import { loadSeenMap, markSeen, classifyItem } from "../state/seen-comments.mts";
 import type {
   GlobalOptions,
   ResolveOptions,
@@ -47,9 +47,7 @@ export interface ResolveCommandOptions extends GlobalOptions {
   fetch?: boolean;
 }
 
-/**
- * Fetch mode: auto-resolve outdated threads and return all active items for LLM triage.
- */
+/** Fetch mode: auto-resolve outdated threads and return all active items for LLM triage. */
 export async function runResolveFetch(opts: ResolveCommandOptions): Promise<FetchResult> {
   const repo = await getRepoInfo();
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
@@ -73,12 +71,32 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   );
   const minimizedCommentCandidates = data.comments.filter((c) => c.isMinimized);
 
-  const seenSet = await loadSeenSet(stateKey);
+  const seenMap = await loadSeenMap(stateKey);
 
-  const unseenOutdated = outdatedCandidates.filter((t) => !seenSet.has(t.id));
-  const unseenResolved = resolvedCandidates.filter((t) => !seenSet.has(t.id));
-  const unseenMinimizedThreads = minimizedThreadCandidates.filter((t) => !seenSet.has(t.id));
-  const unseenMinimizedComments = minimizedCommentCandidates.filter((c) => !seenSet.has(c.id));
+  const unseenOutdated = outdatedCandidates.filter(
+    (t) => classifyItem(t.id, t.body, seenMap) === "new",
+  );
+  const editedOutdated = outdatedCandidates.filter(
+    (t) => classifyItem(t.id, t.body, seenMap) === "edited",
+  );
+  const unseenResolved = resolvedCandidates.filter(
+    (t) => classifyItem(t.id, t.body, seenMap) === "new",
+  );
+  const editedResolved = resolvedCandidates.filter(
+    (t) => classifyItem(t.id, t.body, seenMap) === "edited",
+  );
+  const unseenMinimizedThreads = minimizedThreadCandidates.filter(
+    (t) => classifyItem(t.id, t.body, seenMap) === "new",
+  );
+  const editedMinimizedThreads = minimizedThreadCandidates.filter(
+    (t) => classifyItem(t.id, t.body, seenMap) === "edited",
+  );
+  const unseenMinimizedComments = minimizedCommentCandidates.filter(
+    (c) => classifyItem(c.id, c.body, seenMap) === "new",
+  );
+  const editedMinimizedComments = minimizedCommentCandidates.filter(
+    (c) => classifyItem(c.id, c.body, seenMap) === "edited",
+  );
 
   // Auto-resolve outdated (same as before — fires regardless of first-look status).
   const outdated = getOutdatedThreads(unresolvedThreads);
@@ -112,19 +130,39 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
       firstLookStatus: "outdated" as const,
       autoResolved: autoResolvedIds.has(t.id),
     })),
+    ...editedOutdated.map((t) => ({
+      ...t,
+      firstLookStatus: "outdated" as const,
+      autoResolved: autoResolvedIds.has(t.id),
+      edited: true as const,
+    })),
     ...unseenResolved.map((t) => ({ ...t, firstLookStatus: "resolved" as const })),
+    ...editedResolved.map((t) => ({
+      ...t,
+      firstLookStatus: "resolved" as const,
+      edited: true as const,
+    })),
     ...unseenMinimizedThreads.map((t) => ({ ...t, firstLookStatus: "minimized" as const })),
+    ...editedMinimizedThreads.map((t) => ({
+      ...t,
+      firstLookStatus: "minimized" as const,
+      edited: true as const,
+    })),
   ];
 
-  const firstLookComments: FirstLookComment[] = unseenMinimizedComments.map((c) => ({
-    ...c,
-    firstLookStatus: "minimized" as const,
-  }));
+  const firstLookComments: FirstLookComment[] = [
+    ...unseenMinimizedComments.map((c) => ({ ...c, firstLookStatus: "minimized" as const })),
+    ...editedMinimizedComments.map((c) => ({
+      ...c,
+      firstLookStatus: "minimized" as const,
+      edited: true as const,
+    })),
+  ];
 
-  // Mark first-look items as seen (best-effort — markSeen never throws).
+  // Mark new and edited items as seen (best-effort — markSeen never throws).
   await Promise.allSettled([
-    ...firstLookThreads.map((t) => markSeen(stateKey, t.id)),
-    ...firstLookComments.map((c) => markSeen(stateKey, c.id)),
+    ...firstLookThreads.map((t) => markSeen(stateKey, t.id, t.body)),
+    ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
   ]);
 
   const result: Omit<FetchResult, "instructions"> = {
@@ -141,9 +179,7 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   return { ...result, instructions: buildFetchInstructions(prNumber, result) };
 }
 
-/**
- * Mutation mode: resolve/minimize/dismiss by ID.
- */
+/** Mutation mode: resolve/minimize/dismiss by ID. */
 export async function runResolveMutate(
   opts: ResolveCommandOptions & ResolveOptions,
 ): Promise<import("../comments/resolve.mts").ResolveResult> {

@@ -12,16 +12,20 @@ vi.mock("../checks/triage.mts", () => ({
 vi.mock("../comments/resolve.mts", () => ({
   autoResolveOutdated: vi.fn().mockResolvedValue({ resolved: [], errors: [] }),
 }));
-vi.mock("../state/seen-comments.mts", () => ({
-  loadSeenSet: vi.fn().mockResolvedValue(new Set()),
-  markSeen: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock("../state/seen-comments.mts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../state/seen-comments.mts")>();
+  return {
+    ...actual,
+    loadSeenMap: vi.fn().mockResolvedValue(new Map()),
+    markSeen: vi.fn().mockResolvedValue(undefined),
+  };
+});
 
 import { runCheck } from "./check.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { getCurrentPrNumber, getMergeableState } from "../github/client.mts";
 import { triageFailingChecks } from "../checks/triage.mts";
-import { loadSeenSet, markSeen } from "../state/seen-comments.mts";
+import { loadSeenMap, markSeen, hashBody } from "../state/seen-comments.mts";
 import { autoResolveOutdated } from "../comments/resolve.mts";
 import type { BatchPrData, ClassifiedCheck, ReviewThread, PrComment } from "../types.mts";
 
@@ -29,7 +33,7 @@ const mockFetchPrBatch = vi.mocked(fetchPrBatch);
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockGetMergeableState = vi.mocked(getMergeableState);
 const mockTriageFailingChecks = vi.mocked(triageFailingChecks);
-const mockLoadSeenSet = vi.mocked(loadSeenSet);
+const mockLoadSeenMap = vi.mocked(loadSeenMap);
 const mockMarkSeen = vi.mocked(markSeen);
 const mockAutoResolveOutdated = vi.mocked(autoResolveOutdated);
 
@@ -79,9 +83,7 @@ beforeEach(() => {
   mockGetMergeableState.mockResolvedValue({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" });
 });
 
-// ---------------------------------------------------------------------------
 // No PR found
-// ---------------------------------------------------------------------------
 
 describe("runCheck — no PR", () => {
   it("throws when no PR number is found", async () => {
@@ -90,9 +92,7 @@ describe("runCheck — no PR", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // UNKNOWN merge state fallback
-// ---------------------------------------------------------------------------
 
 describe("runCheck — UNKNOWN merge state", () => {
   it("calls getMergeableState REST fallback when mergeStateStatus=UNKNOWN + state=OPEN", async () => {
@@ -112,9 +112,7 @@ describe("runCheck — UNKNOWN merge state", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // skipTriage
-// ---------------------------------------------------------------------------
 
 describe("runCheck — skipTriage", () => {
   it("skips triageFailingChecks when skipTriage=true", async () => {
@@ -136,9 +134,7 @@ describe("runCheck — skipTriage", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // blockedByFilteredCheck ghost flag
-// ---------------------------------------------------------------------------
 
 describe("runCheck — blockedByFilteredCheck", () => {
   it("sets blockedByFilteredCheck=true when BLOCKED + no failing/in-progress + filtered checks exist", async () => {
@@ -154,9 +150,7 @@ describe("runCheck — blockedByFilteredCheck", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // computeStatus precedence
-// ---------------------------------------------------------------------------
 
 describe("runCheck — computeStatus precedence", () => {
   it("returns FAILING when mergeStateStatus=DIRTY (CONFLICTS)", async () => {
@@ -192,9 +186,7 @@ describe("runCheck — computeStatus precedence", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // BLOCKED + clean — hand off to humans via ready-delay
-// ---------------------------------------------------------------------------
 
 describe("runCheck — BLOCKED + clean (hand off to humans)", () => {
   it("returns READY when CI passed and only human approval is missing", async () => {
@@ -296,9 +288,7 @@ describe("runCheck — BLOCKED + clean (hand off to humans)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // Thread minimization filtering
-// ---------------------------------------------------------------------------
 
 describe("runCheck — reviewSummaries + approvedReviews pass-through", () => {
   it("surfaces an unseen summary in firstLookSummaries (not reviewSummaries) and marks it seen", async () => {
@@ -308,18 +298,19 @@ describe("runCheck — reviewSummaries + approvedReviews pass-through", () => {
         approvedReviews: [{ id: "PRR_AP", author: "alice", body: "" }],
       }),
     });
-    // loadSeenSet default mock returns empty Set — summary not yet seen.
     const report = await runCheck(BASE_OPTS);
     expect(report.firstLookSummaries).toEqual([
       { id: "PRR_SUM", author: "copilot", body: "overview" },
     ]);
     expect(report.reviewSummaries).toEqual([]);
     expect(report.approvedReviews).toEqual([{ id: "PRR_AP", author: "alice", body: "" }]);
-    expect(mockMarkSeen).toHaveBeenCalledWith(expect.anything(), "PRR_SUM");
+    expect(mockMarkSeen).toHaveBeenCalledWith(expect.anything(), "PRR_SUM", "overview");
   });
 
   it("surfaces an already-seen summary in reviewSummaries (not firstLookSummaries)", async () => {
-    mockLoadSeenSet.mockResolvedValue(new Set(["PRR_SUM"]));
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([["PRR_SUM", { seenAt: 1000, bodyHash: hashBody("overview") }]]),
+    );
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
         reviewSummaries: [{ id: "PRR_SUM", author: "copilot", body: "overview" }],
@@ -330,7 +321,7 @@ describe("runCheck — reviewSummaries + approvedReviews pass-through", () => {
       { id: "PRR_SUM", author: "copilot", body: "overview" },
     ]);
     expect(report.firstLookSummaries).toEqual([]);
-    expect(mockMarkSeen).not.toHaveBeenCalledWith(expect.anything(), "PRR_SUM");
+    expect(mockMarkSeen).not.toHaveBeenCalledWith(expect.anything(), "PRR_SUM", expect.anything());
   });
 
   it("defaults to empty arrays when batch has none", async () => {
@@ -415,8 +406,7 @@ describe("runCheck — first-look items", () => {
   it("surfaces unseen outdated thread in threads.firstLook", async () => {
     const outdated = makeThread({ id: "t-outdated", isOutdated: true });
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [outdated] }) });
-    mockLoadSeenSet.mockResolvedValue(new Set());
-
+    mockLoadSeenMap.mockResolvedValue(new Map());
     const report = await runCheck(BASE_OPTS);
     expect(report.threads.firstLook).toHaveLength(1);
     expect(report.threads.firstLook[0]?.id).toBe("t-outdated");
@@ -427,9 +417,8 @@ describe("runCheck — first-look items", () => {
   it("marks auto-resolved outdated thread with autoResolved: true", async () => {
     const outdated = makeThread({ id: "t-auto", isOutdated: true });
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [outdated] }) });
-    mockLoadSeenSet.mockResolvedValue(new Set());
+    mockLoadSeenMap.mockResolvedValue(new Map());
     mockAutoResolveOutdated.mockResolvedValue({ resolved: ["t-auto"], errors: [] });
-
     const report = await runCheck({ ...BASE_OPTS, autoResolve: true });
     expect(report.threads.firstLook[0]?.autoResolved).toBe(true);
   });
@@ -437,8 +426,7 @@ describe("runCheck — first-look items", () => {
   it("surfaces unseen resolved thread in threads.firstLook", async () => {
     const resolved = makeThread({ id: "t-resolved", isResolved: true });
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [resolved] }) });
-    mockLoadSeenSet.mockResolvedValue(new Set());
-
+    mockLoadSeenMap.mockResolvedValue(new Map());
     const report = await runCheck(BASE_OPTS);
     expect(report.threads.firstLook).toHaveLength(1);
     expect(report.threads.firstLook[0]?.firstLookStatus).toBe("resolved");
@@ -447,8 +435,7 @@ describe("runCheck — first-look items", () => {
   it("surfaces unseen minimized thread in threads.firstLook", async () => {
     const minimized = makeThread({ id: "t-minimized", isMinimized: true });
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [minimized] }) });
-    mockLoadSeenSet.mockResolvedValue(new Set());
-
+    mockLoadSeenMap.mockResolvedValue(new Map());
     const report = await runCheck(BASE_OPTS);
     expect(report.threads.firstLook).toHaveLength(1);
     expect(report.threads.firstLook[0]?.firstLookStatus).toBe("minimized");
@@ -457,32 +444,57 @@ describe("runCheck — first-look items", () => {
   it("surfaces unseen minimized comment in comments.firstLook", async () => {
     const minimized = makeComment({ id: "c-min", isMinimized: true });
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ comments: [minimized] }) });
-    mockLoadSeenSet.mockResolvedValue(new Set());
+    mockLoadSeenMap.mockResolvedValue(new Map());
 
     const report = await runCheck(BASE_OPTS);
     expect(report.comments.firstLook).toHaveLength(1);
     expect(report.comments.firstLook[0]?.firstLookStatus).toBe("minimized");
   });
 
-  it("suppresses already-seen items", async () => {
-    const outdated = makeThread({ id: "t-outdated", isOutdated: true });
+  it("suppresses already-seen items (unchanged hash)", async () => {
+    const outdated = makeThread({ id: "t-outdated", isOutdated: true, body: "fix this" });
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [outdated] }) });
-    mockLoadSeenSet.mockResolvedValue(new Set(["t-outdated"]));
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([["t-outdated", { seenAt: 1000, bodyHash: hashBody("fix this") }]]),
+    );
 
     const report = await runCheck(BASE_OPTS);
     expect(report.threads.firstLook).toHaveLength(0);
   });
 
-  it("calls markSeen for each first-look item", async () => {
+  it("suppresses already-seen items (legacy marker without hash)", async () => {
     const outdated = makeThread({ id: "t-outdated", isOutdated: true });
-    const minimized = makeComment({ id: "c-min", isMinimized: true });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [outdated] }) });
+    mockLoadSeenMap.mockResolvedValue(new Map([["t-outdated", { seenAt: 1000 }]]));
+
+    const report = await runCheck(BASE_OPTS);
+    expect(report.threads.firstLook).toHaveLength(0);
+  });
+
+  it("re-surfaces edited item with edited: true", async () => {
+    const outdated = makeThread({ id: "t-outdated", isOutdated: true, body: "new body" });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [outdated] }) });
+    // Stored hash does NOT match current body → classified as "edited"
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([["t-outdated", { seenAt: 1000, bodyHash: hashBody("old body") }]]),
+    );
+
+    const report = await runCheck(BASE_OPTS);
+    expect(report.threads.firstLook).toHaveLength(1);
+    expect(report.threads.firstLook[0]?.edited).toBe(true);
+    expect(report.threads.firstLook[0]?.firstLookStatus).toBe("outdated");
+  });
+
+  it("calls markSeen for each first-look item with the item body", async () => {
+    const outdated = makeThread({ id: "t-outdated", isOutdated: true, body: "fix this" });
+    const minimized = makeComment({ id: "c-min", isMinimized: true, body: "nit" });
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({ reviewThreads: [outdated], comments: [minimized] }),
     });
-    mockLoadSeenSet.mockResolvedValue(new Set());
+    mockLoadSeenMap.mockResolvedValue(new Map());
 
     await runCheck(BASE_OPTS);
-    expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "t-outdated");
-    expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "c-min");
+    expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "t-outdated", "fix this");
+    expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "c-min", "nit");
   });
 });
