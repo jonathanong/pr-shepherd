@@ -128,7 +128,7 @@ Recommendations:
 - Run `pr-shepherd` on all your PRs before you go to sleep so that you wake up to reviewable PRs. As it uses `/loop`, it will continue working when your rate limit window is reset. The loop cancels automatically when the PR is merged, closed, or after the ready-delay elapses.
 - Instruct your agents to write comments in a single review (comment, changes requested, or approved). This allows the review's comments/threads to be minimized or resolved together, keeping your pull request history clean. If you write inline comments outside of a review, each comment would still show up in the pull request history and take up space.
 - Avoid sticky comments as they will continue to be hidden. Instead, just make a new comment, especially on reviews. If you really want sticky comments, instruct your agent to unhide/unminimize them when updating them.
-- Avoid having any automation update content in-place as they get minimized. Instead, always make a new review, comment, thread, etc.
+- Avoid having any automation update comments, reviews, or threads in-place because updated items get minimized. Instead, always make a new review, comment, thread, etc.
 
 ## Design Principles
 
