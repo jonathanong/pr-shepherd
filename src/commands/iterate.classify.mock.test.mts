@@ -367,6 +367,24 @@ describe("runIterate — review summary auto-minimize", () => {
     expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
   });
 
+  it("editedSummaries are surfaced in fix_code but excluded from reviewSummaryIds (not re-minimized)", async () => {
+    // A seen summary triggers fix_code (it needs minimizing); edited summary must NOT join the queue.
+    const seenSummary = { id: "PRR_SEEN", author: "copilot", body: "Old review." };
+    const editedSummary = { id: "PRR_ED", author: "copilot", body: "Updated." };
+    mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [seenSummary], editedSummaries: [editedSummary] }));
+    mockUpdateReadyDelay.mockResolvedValue({ isReady: false, shouldCancel: false, remainingSeconds: 600 });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    if (result.fix.mode !== "rebase-and-push") return;
+    expect(result.fix.editedSummaries).toEqual([editedSummary]);
+    expect(result.fix.reviewSummaryIds).toContain("PRR_SEEN");
+    expect(result.fix.reviewSummaryIds).not.toContain("PRR_ED");
+    expect(result.fix.instructions.join("\n")).toContain("edited since first look");
+  });
+
   it("surfaces body in firstLookSummaries when summary comes from report.firstLookSummaries", async () => {
     const summary = { id: "PRR_FL", author: "copilot", body: "Nice work." };
     mockRunCheck.mockResolvedValue(makeReport({ firstLookSummaries: [summary] }));
