@@ -371,8 +371,14 @@ describe("runIterate — review summary auto-minimize", () => {
     // A seen summary triggers fix_code (it needs minimizing); edited summary must NOT join the queue.
     const seenSummary = { id: "PRR_SEEN", author: "copilot", body: "Old review." };
     const editedSummary = { id: "PRR_ED", author: "copilot", body: "Updated." };
-    mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [seenSummary], editedSummaries: [editedSummary] }));
-    mockUpdateReadyDelay.mockResolvedValue({ isReady: false, shouldCancel: false, remainingSeconds: 600 });
+    mockRunCheck.mockResolvedValue(
+      makeReport({ reviewSummaries: [seenSummary], editedSummaries: [editedSummary] }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
 
     const result = await runIterate(makeOpts());
 
