@@ -55,7 +55,6 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
     throw new Error("No open PR found for current branch. Pass a PR number explicitly.");
   }
 
-  // Always bypass cache for resolve — we need fresh data before mutating.
   const { data } = await fetchPrBatch(prNumber, repo);
 
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
@@ -63,7 +62,6 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   const unresolvedThreads = data.reviewThreads.filter((t) => !t.isResolved && !t.isMinimized);
   const visibleComments = data.comments.filter((c) => !c.isMinimized);
 
-  // First-look: collect items that would normally be hidden and check seen markers.
   const outdatedCandidates = data.reviewThreads.filter((t) => t.isOutdated);
   const resolvedCandidates = data.reviewThreads.filter((t) => t.isResolved && !t.isOutdated);
   const minimizedThreadCandidates = data.reviewThreads.filter(
@@ -73,32 +71,35 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
 
   const seenMap = await loadSeenMap(stateKey);
 
-  const unseenOutdated = outdatedCandidates.filter(
-    (t) => classifyItem(t.id, t.body, seenMap) === "new",
-  );
-  const editedOutdated = outdatedCandidates.filter(
-    (t) => classifyItem(t.id, t.body, seenMap) === "edited",
-  );
-  const unseenResolved = resolvedCandidates.filter(
-    (t) => classifyItem(t.id, t.body, seenMap) === "new",
-  );
-  const editedResolved = resolvedCandidates.filter(
-    (t) => classifyItem(t.id, t.body, seenMap) === "edited",
-  );
-  const unseenMinimizedThreads = minimizedThreadCandidates.filter(
-    (t) => classifyItem(t.id, t.body, seenMap) === "new",
-  );
-  const editedMinimizedThreads = minimizedThreadCandidates.filter(
-    (t) => classifyItem(t.id, t.body, seenMap) === "edited",
-  );
-  const unseenMinimizedComments = minimizedCommentCandidates.filter(
-    (c) => classifyItem(c.id, c.body, seenMap) === "new",
-  );
-  const editedMinimizedComments = minimizedCommentCandidates.filter(
-    (c) => classifyItem(c.id, c.body, seenMap) === "edited",
-  );
+  const unseenOutdated: typeof outdatedCandidates = [];
+  const editedOutdated: typeof outdatedCandidates = [];
+  for (const t of outdatedCandidates) {
+    const cls = classifyItem(t.id, t.body, seenMap);
+    if (cls === "new") unseenOutdated.push(t);
+    else if (cls === "edited") editedOutdated.push(t);
+  }
+  const unseenResolved: typeof resolvedCandidates = [];
+  const editedResolved: typeof resolvedCandidates = [];
+  for (const t of resolvedCandidates) {
+    const cls = classifyItem(t.id, t.body, seenMap);
+    if (cls === "new") unseenResolved.push(t);
+    else if (cls === "edited") editedResolved.push(t);
+  }
+  const unseenMinimizedThreads: typeof minimizedThreadCandidates = [];
+  const editedMinimizedThreads: typeof minimizedThreadCandidates = [];
+  for (const t of minimizedThreadCandidates) {
+    const cls = classifyItem(t.id, t.body, seenMap);
+    if (cls === "new") unseenMinimizedThreads.push(t);
+    else if (cls === "edited") editedMinimizedThreads.push(t);
+  }
+  const unseenMinimizedComments: typeof minimizedCommentCandidates = [];
+  const editedMinimizedComments: typeof minimizedCommentCandidates = [];
+  for (const c of minimizedCommentCandidates) {
+    const cls = classifyItem(c.id, c.body, seenMap);
+    if (cls === "new") unseenMinimizedComments.push(c);
+    else if (cls === "edited") editedMinimizedComments.push(c);
+  }
 
-  // Auto-resolve outdated (same as before — fires regardless of first-look status).
   const outdated = getOutdatedThreads(unresolvedThreads);
   const autoResolvedIds = new Set<string>();
   if (outdated.length > 0) {

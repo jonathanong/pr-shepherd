@@ -123,15 +123,15 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
     return cls === "edited" ? [{ ...base, edited: true as const }] : [base];
   });
 
-  const firstLookSummaries = batchData.reviewSummaries.filter(
-    (r) => classifyItem(r.id, r.body, seenMap) === "new",
-  );
-  const editedSummaries = batchData.reviewSummaries.filter(
-    (r) => classifyItem(r.id, r.body, seenMap) === "edited",
-  );
-  const seenSummaries = batchData.reviewSummaries.filter(
-    (r) => classifyItem(r.id, r.body, seenMap) === "unchanged",
-  );
+  const firstLookSummaries: typeof batchData.reviewSummaries = [];
+  const editedSummaries: typeof batchData.reviewSummaries = [];
+  const seenSummaries: typeof batchData.reviewSummaries = [];
+  for (const r of batchData.reviewSummaries) {
+    const cls = classifyItem(r.id, r.body, seenMap);
+    if (cls === "new") firstLookSummaries.push(r);
+    else if (cls === "edited") editedSummaries.push(r);
+    else seenSummaries.push(r);
+  }
 
   await Promise.allSettled([
     ...firstLookThreads.map((t) => markSeen(stateKey, t.id, t.body)),

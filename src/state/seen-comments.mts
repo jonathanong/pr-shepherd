@@ -76,15 +76,12 @@ export async function loadSeenMap(key: StateKey): Promise<Map<string, SeenMarker
     const dir = resolveDir(key);
     const entries = await readdir(dir);
     const ids = entries.filter((e) => e.endsWith(".json")).map((e) => e.slice(0, -5));
-    const results = await Promise.allSettled(
-      ids.map(async (id) => {
+    for (const id of ids) {
+      try {
         const raw = await readFile(join(dir, `${id}.json`), "utf8");
-        return { id, marker: JSON.parse(raw) as SeenMarker };
-      }),
-    );
-    for (const r of results) {
-      if (r.status === "fulfilled") {
-        map.set(r.value.id, r.value.marker);
+        map.set(id, JSON.parse(raw) as SeenMarker);
+      } catch {
+        // unreadable or malformed — skip
       }
     }
   } catch {

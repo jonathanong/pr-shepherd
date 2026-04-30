@@ -11,8 +11,8 @@ import type {
 
 /**
  * Render a resolve command as a shell snippet. Wraps `$DISMISS_MESSAGE` and whitespace-bearing
- * argv entries in double quotes for placeholder substitution. Throws if argv contains `"$\`\`.
- * `$HEAD_SHA` is appended separately when `requiresHeadSha` is set.
+ * argv entries in double quotes for placeholder substitution. Throws if argv contains `"`, `$`,
+ * `` ` ``, or `\`. `$HEAD_SHA` is appended separately when `requiresHeadSha` is set.
  */
 export function renderResolveCommand(rc: ResolveCommand): string {
   const needsQuoting = (arg: string) => {
