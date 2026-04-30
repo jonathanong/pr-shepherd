@@ -1,6 +1,6 @@
-import { readFile, writeFile, mkdir, access, readdir } from "node:fs/promises";
+import { readFile, writeFile, rename, unlink, mkdir, access, readdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { SAFE_SEGMENT } from "../util/path-segment.mts";
 
 import { resolveStateBase } from "./base.mts";
@@ -111,11 +111,11 @@ export async function hasSeen(key: StateKey, id: string): Promise<boolean> {
  * All errors are silently swallowed — the marker is best-effort.
  */
 export async function markSeen(key: StateKey, id: string, body: string): Promise<void> {
+  let tmp: string | undefined;
   try {
     const path = resolvePath(key, id);
     await mkdir(dirname(path), { recursive: true });
     const newHash = hashBody(body);
-    // Read existing marker to preserve seenAt and skip no-op writes.
     let existing: SeenMarker | null = null;
     try {
       const raw = await readFile(path, "utf8");
@@ -125,12 +125,20 @@ export async function markSeen(key: StateKey, id: string, body: string): Promise
     }
     if (existing !== null && existing.bodyHash === newHash) return;
     const seenAt = existing?.seenAt ?? Date.now();
-    await writeFile(path, JSON.stringify({ seenAt, bodyHash: newHash }), {
-      flag: "w",
-      encoding: "utf8",
-    });
+    tmp = `${path}.${randomUUID()}.tmp`;
+    await writeFile(tmp, JSON.stringify({ seenAt, bodyHash: newHash }), "utf8");
+    await rename(tmp, path);
+    tmp = undefined;
   } catch {
     // best-effort
+  } finally {
+    if (tmp !== undefined) {
+      try {
+        await unlink(tmp);
+      } catch {
+        // best-effort cleanup
+      }
+    }
   }
 }
 
