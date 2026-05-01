@@ -70,6 +70,9 @@ export function projectIterateLean(result: IterateResult): unknown {
           ...(result.fix.firstLookComments.length > 0 && {
             firstLookComments: result.fix.firstLookComments,
           }),
+          ...(result.fix.inProgressRunIds.length > 0 && {
+            inProgressRunIds: result.fix.inProgressRunIds,
+          }),
           ...(result.fix.checks.length > 0 && { checks: result.fix.checks }),
           ...(result.fix.changesRequestedReviews.length > 0 && {
             changesRequestedReviews: result.fix.changesRequestedReviews,
