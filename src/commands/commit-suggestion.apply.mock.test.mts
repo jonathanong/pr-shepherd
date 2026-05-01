@@ -171,7 +171,7 @@ describe("runCommitSuggestion — output shape", () => {
     expect(result.postActionInstructions[4]).toContain("git push");
   });
 
-  it("multi-line range label in step 1 uses em-dash notation", async () => {
+  it("multi-line range label in step 1 uses en-dash notation", async () => {
     mockFetchBatch.mockResolvedValue({
       data: makeBatch([makeThread({ line: 7, startLine: 5 })]),
     });

@@ -114,10 +114,17 @@ export async function runCommitSuggestion(
   const quotedPath = `'${filePath.replace(/'/g, "'\\''")}'`;
   const range = startLine === endLine ? `line ${startLine}` : `lines ${startLine}–${endLine}`;
 
+  const sq = (s: string) => `'${s.replace(/'/g, "'\\''")}'`;
+  const commitCmd = [
+    "git commit",
+    `-m ${sq(commitMessageArg)}`,
+    ...commitBodyArg.split("\n\n").map((p) => `-m ${sq(p)}`),
+  ].join(" ");
+
   const postActionInstructions = [
     `Apply the patch to \`${filePath}\`: run \`git apply\` with the diff shown above, or edit the file directly using the line range (${range}).`,
     `Stage the file: \`git add -- ${quotedPath}\``,
-    `Commit: \`git commit -m ${JSON.stringify(commitMessageArg)} -m ${JSON.stringify(commitBodyArg)}\``,
+    `Commit: \`${commitCmd}\``,
     `Resolve the thread on GitHub: \`npx pr-shepherd resolve ${prNumber} --resolve-thread-ids ${opts.threadId}\``,
     `Push when ready: \`git push\` (or \`git push --force-with-lease\` after rebasing).`,
   ];
