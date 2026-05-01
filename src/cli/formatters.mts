@@ -103,6 +103,7 @@ export function formatCommitSuggestionResult(result: CommitSuggestionResult): st
       : `lines ${result.startLine}–${result.endLine}`;
 
   lines.push(`Suggestion from @${result.author} for PR #${result.pr} — thread ${result.threadId}:`);
+  lines.push(`  repo: ${result.repo}`);
   lines.push(`  ${result.path} (${range})`);
 
   if (result.patch) {

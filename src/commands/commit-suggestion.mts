@@ -69,6 +69,20 @@ export async function runCommitSuggestion(
     throw new Error(`Thread ${opts.threadId} has no file/line anchor.`);
   }
 
+  // Validate the target file is clean before generating the patch, so the emitted
+  // `git add -- <file>` instruction cannot accidentally stage unrelated local edits.
+  const { stdout: fileStatus } = await execFile("git", [
+    "status",
+    "--porcelain",
+    "--",
+    thread.path,
+  ]);
+  if (fileStatus.trim() !== "") {
+    throw new Error(
+      `${thread.path} has uncommitted changes. Commit or stash them before running commit-suggestion.`,
+    );
+  }
+
   const parsed = parseSuggestion(thread.body);
   if (!parsed) {
     throw new Error(`Thread ${opts.threadId} has no suggestion block in the comment body.`);

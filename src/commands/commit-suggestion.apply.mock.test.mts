@@ -117,6 +117,7 @@ describe("runCommitSuggestion — output shape", () => {
     (mockReadFile as any).mockResolvedValue(FILE_CONTENT);
     mockExecFile.mockImplementation((cmd: string, args: string[]) => {
       if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
+      if (cmd === "git" && args[0] === "status") return makeGitSuccess(""); // file is clean
       throw new Error(`Unexpected execFile: ${cmd} ${args.join(" ")}`);
     });
   });

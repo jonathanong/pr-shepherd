@@ -119,6 +119,7 @@ function setupHappyPath(): void {
 
   mockExecFile.mockImplementation((cmd: string, args: string[]) => {
     if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
+    if (cmd === "git" && args[0] === "status") return makeGitSuccess(""); // file is clean
     throw new Error(`Unexpected execFile call: ${cmd} ${args.join(" ")}`);
   });
 }
@@ -199,6 +200,17 @@ describe("runCommitSuggestion — preflight", () => {
     await expect(
       runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("head repository is unavailable");
+  });
+
+  it("throws when the target file has uncommitted local changes", async () => {
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
+      if (cmd === "git" && args[0] === "status") return makeGitSuccess("M src/foo.ts\n");
+      return makeGitSuccess("");
+    });
+    await expect(
+      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+    ).rejects.toThrow("uncommitted changes");
   });
 });
 
