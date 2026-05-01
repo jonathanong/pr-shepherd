@@ -111,6 +111,11 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     sections.push(bullets.join("\n"));
   }
 
+  if (result.fix.inProgressRunIds.length > 0) {
+    sections.push("## In-progress runs");
+    sections.push(result.fix.inProgressRunIds.map((id) => `- \`${id}\``).join("\n"));
+  }
+
   if (result.cancelled.length > 0) {
     sections.push("## Cancelled runs");
     sections.push(result.cancelled.map((id) => `- \`${id}\``).join("\n"));

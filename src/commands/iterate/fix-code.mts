@@ -9,7 +9,7 @@ import {
 import { buildResolveCommand } from "./classify.mts";
 import { buildFixInstructions } from "./render.mts";
 import { applyStallGuard } from "./stall.mts";
-import { tryCancelRun } from "./helpers.mts";
+import { tryCancelRun, buildInProgressRunIds } from "./helpers.mts";
 import type {
   EscalateDetails,
   IterateCommandOptions,
@@ -110,6 +110,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     cancelled = results.filter((id): id is string => id !== null);
   }
 
+  const cancelledSet = new Set(cancelled);
+  const inProgressRunIds = buildInProgressRunIds(report, cancelledSet);
   const baseLookup = validateBaseBranch(report.baseBranch);
   const threads = report.threads.actionable.map(toAgentThread);
   const actionableComments = report.comments.actionable.map(toAgentComment);
@@ -146,7 +148,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
 
   const firstLookThreads = report.threads.firstLook;
   const firstLookComments = report.comments.firstLook;
-
   const instructions = buildFixInstructions(
     threads,
     actionableComments,
@@ -161,6 +162,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     firstLookComments,
     firstLookSummaries,
     editedSummaries,
+    inProgressRunIds,
   );
 
   return applyStallGuard(
@@ -187,6 +189,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
         instructions,
         firstLookThreads,
         firstLookComments,
+        inProgressRunIds,
       },
       cancelled,
     } as IterateResult,

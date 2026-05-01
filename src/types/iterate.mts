@@ -129,6 +129,8 @@ interface FixRebaseAndPush {
   resolveCommand: ResolveCommand;
   /** Ordered steps for the model to follow. */
   instructions: string[];
+  /** Run IDs of in-progress checks the agent should cancel before applying fixes. Empty when CI is not running. */
+  inProgressRunIds: string[];
   /** First-look threads — previously hidden, surfaced for acknowledgment only. */
   firstLookThreads: FirstLookThread[];
   /** First-look comments — previously hidden, surfaced for acknowledgment only. */

@@ -11,6 +11,16 @@ import type {
 
 const execFile = promisify(execFileCb);
 
+export function buildInProgressRunIds(report: ShepherdReport, cancelledSet: Set<string>): string[] {
+  return [
+    ...new Set(
+      report.checks.inProgress
+        .map((c) => c.runId)
+        .filter((id): id is string => id !== null && !cancelledSet.has(id)),
+    ),
+  ];
+}
+
 export function buildSummary(report: ShepherdReport): IterateResultSummary {
   return {
     passing: report.checks.passing.length,
