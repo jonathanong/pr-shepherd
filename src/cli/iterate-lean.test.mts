@@ -237,7 +237,9 @@ describe("projectIterateLean", () => {
     result.fix.threads = [
       { id: "t1", path: "src/x.ts", line: 1, author: "a", body: "fix", url: "" },
     ];
-    result.fix.checks = [{ name: "ci", runId: "r1", detailsUrl: null }];
+    result.fix.checks = [
+      { name: "ci", runId: "r1", detailsUrl: null, conclusion: "FAILURE" as const },
+    ];
     result.fix.instructions = ["step 1"];
     result.fix.actionableComments = [{ id: "c1", author: "a", body: "nit", url: "" }];
     result.fix.reviewSummaryIds = ["r1"];

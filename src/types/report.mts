@@ -112,13 +112,16 @@ export interface AgentComment {
 
 /**
  * Check shape emitted to the monitor agent under `fix_code`.
- * Includes log tail so the agent can diagnose failures without a separate tool call.
+ * Cancelled checks carry only `name`/`runId`/`detailsUrl`/`conclusion` so the agent
+ * can rerun without log inspection. All other conclusions keep `failedStep`/`summary`.
  */
 export interface AgentCheck {
   name: string;
   runId: string | null;
   /** Fallback for checks where runId is null (e.g. external status checks). */
   detailsUrl: string | null;
+  /** Raw GitHub check conclusion. */
+  conclusion: Exclude<CheckConclusion, "SKIPPED" | "NEUTRAL" | null>;
   /** Workflow display name (e.g. `"CI"`). Populated on a best-effort basis when available from the jobs API. */
   workflowName?: string;
   /** Name of the matched job (e.g. `"tests (ubuntu)"`). Distinct from check name for matrix builds. */
@@ -127,8 +130,6 @@ export interface AgentCheck {
   failedStep?: string;
   /** One-line status text shown in the GitHub UI (e.g. "67.68% of diff hit (target 85.00%)"). */
   summary?: string;
-  /** Last N lines of the failing job's log. `undefined` for external checks or when log fetch fails. */
-  logTail?: string;
 }
 
 /**

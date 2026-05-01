@@ -289,7 +289,7 @@ describe("runIterate — fix_code agent projection", () => {
     }
   });
 
-  it("emits AgentCheck shape — no failureKind/conclusion/category on fix.checks", async () => {
+  it("emits AgentCheck shape — has conclusion; no failureKind/category/logTail on fix.checks", async () => {
     const check = makeActionableCheck("run-55");
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -319,9 +319,10 @@ describe("runIterate — fix_code agent projection", () => {
       expect(c.name).toBe("typecheck");
       expect(c.runId).toBe("run-55");
       expect(c.detailsUrl).toBeDefined();
+      expect(c).toHaveProperty("conclusion");
       expect(c).not.toHaveProperty("failureKind");
-      expect(c).not.toHaveProperty("conclusion");
       expect(c).not.toHaveProperty("category");
+      expect(c).not.toHaveProperty("logTail");
     }
   });
 
@@ -361,8 +362,8 @@ describe("runIterate — fix_code agent projection", () => {
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       const instructionsJoined = result.fix.instructions.join("\n");
-      // GitHub Actions check with runId — agent examines log tail and decides rerun vs fix
-      expect(instructionsJoined).toContain("examine the log tail");
+      // GitHub Actions check with runId — agent fetches logs and decides rerun vs fix
+      expect(instructionsJoined).toContain("gh run view <runId> --log-failed");
       expect(instructionsJoined).toContain("gh run rerun");
       // External check with detailsUrl but no runId — open details URL
       expect(instructionsJoined).toContain("external status check");

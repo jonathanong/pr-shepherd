@@ -17,9 +17,7 @@
     "fetchReviewSummaries": true
   },
   "checks": {
-    "ciTriggerEvents": ["pull_request", "pull_request_target"],
-    "logTailLines": 5,
-    "logTailChars": 200
+    "ciTriggerEvents": ["pull_request", "pull_request_target"]
   },
   "mergeStatus": {
     "blockingReviewerLogins": ["copilot"]

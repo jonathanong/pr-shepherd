@@ -21,7 +21,7 @@ flowchart TD
   S3C -->|yes| A_CAN
   S3C -->|no| S4{4. CONFLICTS or any<br/>failing CI / threads /<br/>comments / reviews?}
   S4 -->|yes| S4X[gh run cancel failing runIds]
-  S4X --> A_FIX([action: fix_code<br/>+ fix payload with logTail])
+  S4X --> A_FIX([action: fix_code<br/>+ fix payload with failedStep/conclusion])
   S4 -->|no| S5{5. READY + CLEAN<br/>+ isDraft<br/>+ !copilot?}
   S5 -->|yes| S5X[gh pr ready PR]
   S5X --> A_MR([action: mark_ready])
@@ -34,7 +34,7 @@ flowchart TD
   A_W --> DEC
 
   DEC -->|cancel| STOP["/loop cancel"]
-  DEC -->|fix_code| FIX[Examine logTail →<br/>rerun or edit+commit →<br/>fetch + rebase + push →<br/>pr-shepherd resolve --require-sha HEAD]
+  DEC -->|fix_code| FIX[gh run view --log-failed →<br/>rerun or edit+commit →<br/>fetch + rebase + push →<br/>pr-shepherd resolve --require-sha HEAD]
   FIX --> NEXT[Wait for next tick]
   DEC -->|other| NEXT
   NEXT --> CRON

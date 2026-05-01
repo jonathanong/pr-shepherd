@@ -106,11 +106,12 @@ describe("main — iterate text format (fix_code and checks)", () => {
       editedSummaries: [],
       surfacedApprovals: [],
       checks: [
-        { name: "lint", runId: "run-42", detailsUrl: "https://x" },
+        { name: "lint", runId: "run-42", detailsUrl: "https://x", conclusion: "FAILURE" as const },
         {
           name: "codecov/patch",
           runId: null,
           detailsUrl: "https://app.codecov.io",
+          conclusion: "FAILURE" as const,
         },
       ],
       changesRequestedReviews: [{ id: "REV_1", author: "reviewer", body: "please rework this" }],
@@ -381,11 +382,13 @@ describe("main — iterate text format (fix_code and checks)", () => {
         name: "codecov/patch",
         runId: null,
         detailsUrl: "https://app.codecov.io/a/b",
+        conclusion: "FAILURE" as const,
       },
       {
         name: "mystery-check",
         runId: null,
         detailsUrl: null,
+        conclusion: "FAILURE" as const,
       },
     ];
     mockRunIterate.mockResolvedValue(result);
@@ -431,28 +434,30 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).not.toContain("### `PRRC_linked`");
   });
 
-  it("fix_code: logTail with embedded backticks uses a fence longer than the longest run", async () => {
+  it("fix_code: cancelled check renders [conclusion: CANCELLED] tag without failedStep/summary", async () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code" || result.fix.mode !== "rebase-and-push") {
       throw new Error("unreachable");
     }
     result.fix.checks = [
       {
-        name: "build",
-        runId: "42",
+        name: "tests",
+        runId: "run-99",
         detailsUrl: null,
-        logTail: "error: expected ``` here\nbut got `foo` instead",
+        conclusion: "CANCELLED" as const,
+        failedStep: "Run tests",
+        summary: "3 tests failed",
       },
     ];
     mockRunIterate.mockResolvedValue(result);
 
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
-    // logTail contains ``` (3 backticks), so fence must be at least 4 backticks.
-    expect(out).toContain("  ````");
-    expect(out).not.toMatch(/^  ```\n/m);
-    // Content should be indented inside the fence.
-    expect(out).toContain("  error: expected ``` here");
+    // Cancelled check emits [conclusion: CANCELLED] tag
+    expect(out).toContain("- `run-99` — `tests` [conclusion: CANCELLED]");
+    // failedStep and summary are suppressed for cancelled checks
+    expect(out).not.toContain("> Run tests");
+    expect(out).not.toContain("> 3 tests failed");
   });
 
   it("non-fix_code actions do not emit ## Checks — check count is in summary header only", async () => {

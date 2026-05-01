@@ -448,7 +448,7 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
 
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
-      // Both AgentChecks are present — each may carry distinct job+logTail.
+      // Both AgentChecks are present — each may carry distinct workflowName/jobName.
       expect(result.fix.checks).toHaveLength(2);
       expect(result.fix.checks.map((c) => c.runId)).toEqual(["run-300", "run-300"]);
       expect(result.cancelled).toEqual(["run-300"]);

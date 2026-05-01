@@ -10,10 +10,10 @@ import {
   buildSummary,
   buildRelevantChecks,
   buildCooldownResult,
+  buildWaitLog,
 } from "./helpers.mts";
 import { classifyReviewSummaries } from "./classify.mts";
 import { applyStallGuard } from "./stall.mts";
-import { buildWaitLog } from "./render.mts";
 import { handleFixCode } from "./fix-code.mts";
 import type { IterateCommandOptions, IterateResult, IterateResultBase } from "../../types.mts";
 

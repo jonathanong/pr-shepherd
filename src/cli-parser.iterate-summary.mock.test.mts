@@ -103,12 +103,14 @@ describe("main — iterate summary field rendering in ## Failing checks", () => 
         name: "codecov/patch",
         runId: null,
         detailsUrl: "https://app.codecov.io/a/b",
+        conclusion: "FAILURE" as const,
         summary: "67.68% of diff hit (target 85.00%)",
       },
       {
         name: "lint",
         runId: "run-42",
         detailsUrl: null,
+        conclusion: "FAILURE" as const,
         // no summary
       },
     ];
@@ -131,6 +133,7 @@ describe("main — iterate summary field rendering in ## Failing checks", () => 
         name: "lint / typecheck / test (22.x)",
         runId: "run-99",
         detailsUrl: null,
+        conclusion: "FAILURE" as const,
         workflowName: "CI",
         failedStep: "Run npm run lint",
       },

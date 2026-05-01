@@ -3,7 +3,8 @@
  *
  * These strip fields that are always-false by the time items reach iterate
  * (isResolved, isOutdated, isMinimized, createdAtUnix) and check metadata the
- * monitor prompt never reads (event, status, conclusion, category).
+ * monitor prompt never reads (event, status, category).
+ * conclusion is preserved on AgentCheck so the formatter can branch on CANCELLED.
  * detailsUrl is preserved in AgentCheck as a fallback for external status checks.
  * The original domain types are preserved for check command output.
  */
@@ -43,11 +44,11 @@ export function toAgentCheck(c: TriagedCheck): AgentCheck {
     name: c.name,
     runId: c.runId,
     detailsUrl: c.detailsUrl,
+    conclusion: c.conclusion as AgentCheck["conclusion"],
     ...(c.workflowName !== undefined && { workflowName: c.workflowName }),
     ...(c.jobName !== undefined && { jobName: c.jobName }),
     ...(c.failedStep !== undefined && { failedStep: c.failedStep }),
     ...(c.summary !== undefined && { summary: c.summary }),
-    ...(c.logTail !== undefined && { logTail: c.logTail }),
   };
 }
 

@@ -1,47 +1,35 @@
-import { rest, restText } from "../github/http.mts";
+import { rest } from "../github/http.mts";
 import type { ClassifiedCheck, TriagedCheck } from "../types.mts";
 import type { RepoInfo } from "../github/client.mts";
 
 export function triageFailingChecks(
   failingChecks: ClassifiedCheck[],
   repo: RepoInfo,
-  logTailLines: number,
-  logTailChars = 200,
 ): Promise<TriagedCheck[]> {
   const jobsCache = new Map<string, Promise<JobsResponse["jobs"] | undefined>>();
-  return Promise.all(
-    failingChecks.map((c) => triageCheck(c, repo, jobsCache, logTailLines, logTailChars)),
-  );
+  return Promise.all(failingChecks.map((c) => triageCheck(c, repo, jobsCache)));
 }
 
 async function triageCheck(
   check: ClassifiedCheck,
   repo: RepoInfo,
   jobsCache: Map<string, Promise<JobsResponse["jobs"] | undefined>>,
-  logTailLines: number,
-  logTailChars: number,
 ): Promise<TriagedCheck> {
-  if (check.runId === null) {
+  if (check.runId === null || check.conclusion === "CANCELLED") {
     return { ...check };
   }
   const jobs = await fetchJobs(check.runId, repo, jobsCache);
   const jobInfo = jobs ? pickJobInfo(jobs, check.name) : undefined;
-  const logTail =
-    jobInfo?.jobId !== undefined && logTailLines > 0
-      ? await fetchLogTail(jobInfo.jobId, repo, logTailLines, logTailChars, jobInfo.failedStep)
-      : undefined;
   return {
     ...check,
     ...(jobInfo?.workflowName !== undefined && { workflowName: jobInfo.workflowName }),
     ...(jobInfo?.jobName !== undefined && { jobName: jobInfo.jobName }),
     ...(jobInfo?.failedStep !== undefined && { failedStep: jobInfo.failedStep }),
-    ...(logTail !== undefined && { logTail }),
   };
 }
 
 interface JobsResponse {
   jobs: Array<{
-    id: number;
     name: string;
     workflow_name?: string;
     conclusion: string | null;
@@ -53,7 +41,6 @@ interface JobInfo {
   workflowName?: string;
   jobName?: string;
   failedStep?: string;
-  jobId?: number;
 }
 
 function fetchJobs(
@@ -118,48 +105,5 @@ function pickJobInfo(jobs: JobsResponse["jobs"], checkName: string): JobInfo | u
     workflowName: job.workflow_name,
     jobName: job.name,
     failedStep,
-    jobId: job.id,
   };
-}
-
-async function fetchLogTail(
-  jobId: number,
-  repo: RepoInfo,
-  logTailLines: number,
-  logTailChars: number,
-  failedStepName?: string,
-): Promise<string | undefined> {
-  const { owner, name } = repo;
-  try {
-    const text = await restText(`/repos/${owner}/${name}/actions/jobs/${jobId}/logs`);
-    const allLines = text.split("\n");
-    const stepLines = failedStepName ? extractStepLines(allLines, failedStepName) : null;
-    const lines = stepLines ?? allLines;
-    const tail =
-      lines.length <= logTailLines ? lines.join("\n") : lines.slice(-logTailLines).join("\n");
-    return tail.length <= logTailChars ? tail : tail.slice(-logTailChars);
-  } catch {
-    return undefined;
-  }
-}
-
-// Extract the lines inside the ##[group]..##[endgroup] section for the named step.
-// Returns null when no matching group is found so the caller falls back to the full log.
-function extractStepLines(lines: string[], stepName: string): string[] | null {
-  const lowerStep = stepName.toLowerCase();
-  let inStep = false;
-  const result: string[] = [];
-  for (const line of lines) {
-    const content = line.replace(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z\s+/, "");
-    if (!inStep) {
-      if (content.startsWith("##[group]") && content.slice(9).toLowerCase().includes(lowerStep)) {
-        inStep = true;
-      }
-    } else if (content.startsWith("##[endgroup]")) {
-      inStep = false;
-    } else {
-      result.push(line);
-    }
-  }
-  return result.length > 0 ? result : null;
 }

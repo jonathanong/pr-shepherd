@@ -107,17 +107,22 @@ describe("toAgentComment", () => {
 });
 
 describe("toAgentCheck", () => {
-  it("keeps name/runId/detailsUrl and drops conclusion/category/failureKind; omits failedStep when absent", () => {
+  it("keeps name/runId/detailsUrl/conclusion and drops category/failureKind; omits failedStep when absent", () => {
     const result = toAgentCheck(makeCheck("run-1"));
     expect(result).toEqual({
       name: "typecheck",
       runId: "run-1",
       detailsUrl: "https://github.com/owner/repo/actions/runs/run-1",
+      conclusion: "FAILURE",
     });
     expect(result).not.toHaveProperty("failureKind");
     expect(result).not.toHaveProperty("logExcerpt");
-    expect(result).not.toHaveProperty("conclusion");
     expect(result).not.toHaveProperty("category");
+  });
+
+  it("preserves conclusion for CANCELLED checks", () => {
+    const result = toAgentCheck({ ...makeCheck("run-1"), conclusion: "CANCELLED" });
+    expect(result.conclusion).toBe("CANCELLED");
   });
 
   it("includes detailsUrl when runId is null", () => {
@@ -126,21 +131,19 @@ describe("toAgentCheck", () => {
     expect(result.detailsUrl).toBe("https://github.com/owner/repo/actions/runs/null");
   });
 
-  it("includes workflowName, jobName, failedStep, summary, logTail when present; omits when absent", () => {
+  it("includes workflowName, jobName, failedStep, summary when present; omits when absent", () => {
     const check: TriagedCheck = {
       ...makeCheck("run-1"),
       workflowName: "CI",
       jobName: "tests",
       failedStep: "Run tests",
       summary: "2 tests failed",
-      logTail: "FAILED: assertion error",
     };
     const result = toAgentCheck(check);
     expect(result.workflowName).toBe("CI");
     expect(result.jobName).toBe("tests");
     expect(result.failedStep).toBe("Run tests");
     expect(result.summary).toBe("2 tests failed");
-    expect(result.logTail).toBe("FAILED: assertion error");
 
     const bare = toAgentCheck(makeCheck("run-2"));
     expect(bare).not.toHaveProperty("workflowName");
@@ -157,7 +160,7 @@ describe("toAgentChecks", () => {
     expect(result).toHaveLength(2);
   });
 
-  it("keeps both checks when they share a runId (each may have distinct job+logTail)", () => {
+  it("keeps both checks when they share a runId (each may have distinct job info)", () => {
     const result = toAgentChecks([makeCheck("run-1", "typecheck"), makeCheck("run-1", "lint")]);
     expect(result).toHaveLength(2);
     expect(result[0]?.name).toBe("typecheck");
