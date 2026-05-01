@@ -112,16 +112,17 @@ export interface AgentComment {
 
 /**
  * Check shape emitted to the monitor agent under `fix_code`.
- * Cancelled checks carry only `name`/`runId`/`detailsUrl`/`conclusion` so the agent
- * can rerun without log inspection. All other conclusions keep `failedStep`/`summary`.
+ * For cancelled checks, agents should rely on `name`/`runId`/`detailsUrl`/`conclusion`
+ * to decide whether to rerun without log inspection; optional metadata such as
+ * `workflowName`, `jobName`, `failedStep`, and `summary` may still be present when available.
  */
 export interface AgentCheck {
   name: string;
   runId: string | null;
   /** Fallback for checks where runId is null (e.g. external status checks). */
   detailsUrl: string | null;
-  /** Raw GitHub check conclusion. */
-  conclusion: Exclude<CheckConclusion, "SKIPPED" | "NEUTRAL" | null>;
+  /** Raw GitHub check conclusion; may be null for some completed checks from upstream data. */
+  conclusion: Exclude<CheckConclusion, "SKIPPED" | "NEUTRAL">;
   /** Workflow display name (e.g. `"CI"`). Populated on a best-effort basis when available from the jobs API. */
   workflowName?: string;
   /** Name of the matched job (e.g. `"tests (ubuntu)"`). Distinct from check name for matrix builds. */

@@ -46,12 +46,12 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
         : ch.detailsUrl
           ? `external \`${ch.detailsUrl}\``
           : "(no runId)";
-      if (ch.conclusion === "CANCELLED") {
-        return `- ${locator} — \`${workflowPrefix}${jobLabel}\` [conclusion: CANCELLED]`;
+      const conclusionTag = ch.conclusion !== null ? ` [conclusion: ${ch.conclusion}]` : "";
+      const lines = [`- ${locator} — \`${workflowPrefix}${jobLabel}\`${conclusionTag}`];
+      if (ch.conclusion !== "CANCELLED") {
+        if (ch.failedStep) lines.push(`  > ${ch.failedStep}`);
+        if (ch.summary) lines.push(`  > ${ch.summary}`);
       }
-      const lines = [`- ${locator} — \`${workflowPrefix}${jobLabel}\``];
-      if (ch.failedStep) lines.push(`  > ${ch.failedStep}`);
-      if (ch.summary) lines.push(`  > ${ch.summary}`);
       return lines.join("\n");
     });
     sections.push(bullets.join("\n\n"));

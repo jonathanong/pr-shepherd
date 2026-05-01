@@ -40,11 +40,14 @@ export function toAgentComment(c: PrComment): AgentComment {
 }
 
 export function toAgentCheck(c: TriagedCheck): AgentCheck {
+  if (c.conclusion === "SKIPPED" || c.conclusion === "NEUTRAL") {
+    throw new Error(`Unexpected conclusion ${c.conclusion} in toAgentCheck`);
+  }
   return {
     name: c.name,
     runId: c.runId,
     detailsUrl: c.detailsUrl,
-    conclusion: c.conclusion as AgentCheck["conclusion"],
+    conclusion: c.conclusion,
     ...(c.workflowName !== undefined && { workflowName: c.workflowName }),
     ...(c.jobName !== undefined && { jobName: c.jobName }),
     ...(c.failedStep !== undefined && { failedStep: c.failedStep }),

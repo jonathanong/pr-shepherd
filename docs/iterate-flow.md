@@ -87,7 +87,7 @@ In-progress check **names** are included so that a long-running CI pipeline wher
 - `report.checks.failing.length > 0` (any failing check, regardless of conclusion)
 - `report.mergeStatus.status === 'CONFLICTS'`
 
-All failing checks — including timeout, cancelled, and flaky failures — route here. The `fix` payload carries `jobName`, `failedStep`, and `conclusion` for each failing check. The agent runs `gh run view <runId> --log-failed` to fetch the full log when needed and decides whether to rerun (transient failure) or apply a code fix (real failure). Cancelled checks carry a `[conclusion: CANCELLED]` tag — the agent reruns with `gh run rerun <runId>` (no `--failed`) if the cancellation looks unintended.
+All failing checks — including timeout, cancelled, and flaky failures — route here. The `fix` payload carries `conclusion` for each failing check; `workflowName`, `jobName`, and `failedStep` are populated only when triage runs (that is, for non-cancelled checks). The agent runs `gh run view <runId> --log-failed` to fetch the full log when needed and decides whether to rerun (transient failure) or apply a code fix (real failure). Cancelled checks carry a `[conclusion: CANCELLED]` tag — the agent reruns with `gh run rerun <runId>` (no `--failed`) if the cancellation looks unintended.
 
 CONFLICTS is included here because the `fix_code` handler already runs `git fetch origin && git rebase origin/<BASE_BRANCH> && git push --force-with-lease`, so merge conflicts and review comments are resolved together in a single push rather than across two separate ticks.
 
