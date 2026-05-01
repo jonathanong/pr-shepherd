@@ -51,7 +51,7 @@ export function buildFixInstructions(
 
   if (hasSuggestions) {
     instructions.push(
-      `For each thread marked \`[suggestion]\` under \`## Review threads\`: run \`npx pr-shepherd commit-suggestion ${prNumber} --thread-id <id> --message "<one-sentence headline>" --format=json\`, one thread at a time. On \`applied: true\` the CLI already resolved the thread — remove its ID from \`--resolve-thread-ids\` in the \`resolve:\` command below. On \`applied: false\` read \`reason\` and \`patch\`, fall through to the manual-edit step, and do not retry the same command. Optionally pass \`--dry-run\` (omitting \`--message\`) to preview the patch without mutating the working tree.`,
+      `For each thread marked \`[suggestion]\` under \`## Review threads\`: run \`npx pr-shepherd commit-suggestion ${prNumber} --thread-id <id> --message "<one-sentence headline>" --format=json\` to retrieve the patch and suggested commit. The CLI does not mutate the working tree — apply the patch yourself (run \`git apply\` with the diff shown, or edit the file directly using the line range), then stage the listed file and run the suggested \`git commit\` from the \`## Instructions\` section. Include the thread ID in \`--resolve-thread-ids\` in the \`resolve:\` command below (the thread is not auto-resolved). If the patch fails to apply, fall through to the manual-edit step. Do not retry the same command.`,
     );
   }
 

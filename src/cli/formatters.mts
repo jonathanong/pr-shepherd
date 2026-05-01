@@ -102,43 +102,31 @@ export function formatCommitSuggestionResult(result: CommitSuggestionResult): st
       ? `line ${result.startLine}`
       : `lines ${result.startLine}–${result.endLine}`;
 
-  function pushPatch(patch: string) {
-    const fence = safeFence(patch);
+  lines.push(`Suggestion from @${result.author} for PR #${result.pr} — thread ${result.threadId}:`);
+  lines.push(`  ${result.path} (${range})`);
+
+  if (result.patch) {
+    const fence = safeFence(result.patch);
     lines.push("");
     lines.push(`${fence}diff`);
-    lines.push(patch.trimEnd());
+    lines.push(result.patch.trimEnd());
     lines.push(fence);
   }
 
-  if (result.dryRun) {
-    if (result.valid) {
-      lines.push(`Dry-run: would apply suggestion from @${result.author}:`);
-      lines.push(`  ${result.path} (${range})`);
-    } else {
-      lines.push(`Dry-run: suggestion cannot apply cleanly:`);
-      lines.push(`- path: ${result.path} (${range})`);
-      lines.push(`- author: @${result.author}`);
-      lines.push(`- reason: ${result.reason ?? "unknown"}`);
-    }
-    if (result.patch) pushPatch(result.patch);
-  } else if (result.applied) {
-    lines.push(`Applied suggestion from @${result.author}:`);
-    lines.push(`  ${result.path} (${range})`);
-    if (result.commitSha) lines.push(`Commit: ${result.commitSha}`);
-    if (result.patch) pushPatch(result.patch);
-  } else {
-    lines.push(`Failed to apply suggestion ${result.threadId}:`);
-    lines.push(`- path: ${result.path} (${range})`);
-    lines.push(`- author: @${result.author}`);
-    lines.push(`- reason: ${result.reason ?? "unknown"}`);
-    if (result.patch) pushPatch(result.patch);
-  }
+  lines.push("");
+  lines.push("## Suggested commit message");
+  lines.push("");
+  lines.push(result.commitMessage);
+  lines.push("");
+  lines.push(result.commitBody);
 
-  if (result.postActionInstruction) {
+  if (result.postActionInstructions.length > 0) {
     lines.push("");
     lines.push("## Instructions");
     lines.push("");
-    lines.push(`1. ${result.postActionInstruction}`);
+    result.postActionInstructions.forEach((inst, i) => {
+      lines.push(`${i + 1}. ${inst}`);
+    });
   }
   return lines.join("\n");
 }

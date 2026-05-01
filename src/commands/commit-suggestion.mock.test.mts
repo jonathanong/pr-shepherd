@@ -26,8 +26,6 @@ vi.mock("node:child_process", () => ({
 
 vi.mock("node:fs/promises", () => ({
   readFile: vi.fn(),
-  writeFile: vi.fn().mockResolvedValue(undefined),
-  unlink: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../github/client.mts", () => ({
@@ -40,26 +38,15 @@ vi.mock("../github/batch.mts", () => ({
   fetchPrBatch: vi.fn(),
 }));
 
-vi.mock("../comments/resolve.mts", () => ({
-  applyResolveOptions: vi.fn().mockResolvedValue({
-    resolvedThreads: ["PRRT_x"],
-    minimizedComments: [],
-    dismissedReviews: [],
-    errors: [],
-  }),
-}));
-
 import { runCommitSuggestion } from "./commit-suggestion.mts";
 import { getCurrentBranch, getCurrentPrNumber } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
-import { applyResolveOptions } from "../comments/resolve.mts";
 import { readFile } from "node:fs/promises";
 import type { ReviewThread, BatchPrData } from "../types.mts";
 
 const mockGetCurrentBranch = vi.mocked(getCurrentBranch);
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockFetchBatch = vi.mocked(fetchPrBatch);
-const mockApplyResolveOptions = vi.mocked(applyResolveOptions);
 const mockReadFile = vi.mocked(readFile);
 
 // ---------------------------------------------------------------------------
@@ -130,17 +117,8 @@ function setupHappyPath(): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (mockReadFile as any).mockResolvedValue(FILE_CONTENT);
 
-  // Two rev-parse HEAD calls: preflight (must match head.sha="headsha") then post-commit.
-  let revParseCount = 0;
   mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-    if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
-    if (cmd === "git" && args[0] === "rev-parse") {
-      revParseCount++;
-      return revParseCount === 1 ? makeGitSuccess("headsha\n") : makeGitSuccess("newsha\n");
-    }
-    if (cmd === "git" && args[0] === "apply") return makeGitSuccess();
-    if (cmd === "git" && args[0] === "add") return makeGitSuccess();
-    if (cmd === "git" && args[0] === "commit") return makeGitSuccess();
+    if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
     throw new Error(`Unexpected execFile call: ${cmd} ${args.join(" ")}`);
   });
 }
@@ -195,19 +173,9 @@ describe("runCommitSuggestion — preflight", () => {
     ).rejects.toThrow("No open PR found");
   });
 
-  it("throws when worktree is dirty", async () => {
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "status") return makeGitSuccess("M src/foo.ts\n");
-      return makeGitSuccess("");
-    });
-    await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
-    ).rejects.toThrow("uncommitted changes");
-  });
-
   it("throws when current branch does not match PR head ref", async () => {
     mockGetCurrentBranch.mockResolvedValue("wrong-branch");
-    mockExecFile.mockImplementation(() => makeGitSuccess(""));
+    mockExecFile.mockImplementation(() => makeGitSuccess("headsha\n"));
     await expect(
       runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow('does not match PR head branch "feature/foo"');
@@ -215,7 +183,6 @@ describe("runCommitSuggestion — preflight", () => {
 
   it("throws when local HEAD SHA does not match PR head SHA", async () => {
     mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
       if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("divergedsha\n");
       return makeGitSuccess("");
     });
@@ -228,7 +195,7 @@ describe("runCommitSuggestion — preflight", () => {
     mockFetchBatch.mockResolvedValue({
       data: makeBatch([makeThread()], null),
     });
-    mockExecFile.mockImplementation(() => makeGitSuccess(""));
+    mockExecFile.mockImplementation(() => makeGitSuccess("headsha\n"));
     await expect(
       runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("head repository is unavailable");
@@ -318,6 +285,10 @@ describe("runCommitSuggestion — thread classification", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// File read failure
+// ---------------------------------------------------------------------------
+
 describe("runCommitSuggestion — file read failure", () => {
   it("propagates the underlying readFile error when file cannot be read", async () => {
     vi.clearAllMocks();
@@ -336,128 +307,85 @@ describe("runCommitSuggestion — file read failure", () => {
       runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("ENOENT");
   });
-
-  it("propagates a non-Error rejection from readFile", async () => {
-    vi.clearAllMocks();
-    mockGetCurrentBranch.mockResolvedValue("feature/foo");
-    mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
-      return makeGitSuccess("");
-    });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (mockReadFile as any).mockRejectedValue("plain string error");
-
-    await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
-    ).rejects.toThrow("plain string error");
-  });
 });
 
-describe("runCommitSuggestion — patch failure", () => {
+// ---------------------------------------------------------------------------
+// Happy path — pure suggestion (no git mutations)
+// ---------------------------------------------------------------------------
+
+describe("runCommitSuggestion — happy path", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetCurrentBranch.mockResolvedValue("feature/foo");
-    mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (mockReadFile as any).mockResolvedValue(FILE_CONTENT);
-  });
-
-  it("returns applied=false with reason and patch when git apply --check fails", async () => {
-    const applyError = Object.assign(new Error("apply failed"), {
-      stderr: "error: patch failed: src/foo.ts:5\nerror: src/foo.ts: patch does not apply",
-    });
-
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
-      if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
-      if (cmd === "git" && args[0] === "apply" && args.includes("--check")) {
-        return Promise.reject(applyError);
-      }
-      return makeGitSuccess("");
-    });
-
-    const result = await runCommitSuggestion({
-      ...GLOBAL_OPTS,
-      threadId: "PRRT_x",
-      message: "fix",
-    });
-
-    expect(result.applied).toBe(false);
-    if (result.applied) throw new Error("expected applied=false");
-    expect(result.reason).toContain("git apply rejected");
-    expect(result.reason).toContain("patch does not apply");
-    expect(result.patch).toContain("--- a/src/foo.ts");
-  });
-
-  it("uses String(err) as reason when apply error has no stderr", async () => {
-    const applyError = new Error("apply: context did not match");
-
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
-      if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
-      if (cmd === "git" && args[0] === "apply" && args.includes("--check")) {
-        return Promise.reject(applyError);
-      }
-      return makeGitSuccess("");
-    });
-
-    const result = await runCommitSuggestion({
-      ...GLOBAL_OPTS,
-      threadId: "PRRT_x",
-      message: "fix",
-    });
-
-    expect(result.applied).toBe(false);
-    if (result.applied) throw new Error("expected applied=false");
-    expect(result.reason).toContain("apply: context did not match");
-  });
-
-  it("does not call git commit when patch fails", async () => {
-    const applyError = Object.assign(new Error("apply failed"), { stderr: "context mismatch" });
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
-      if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
-      if (cmd === "git" && args[0] === "apply" && args.includes("--check")) {
-        return Promise.reject(applyError);
-      }
-      return makeGitSuccess("");
-    });
-
-    await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" });
-
-    const commitCall = mockExecFile.mock.calls.find(
-      (call) => call[0] === "git" && (call[1] as string[])[0] === "commit",
-    );
-    expect(commitCall).toBeUndefined();
-  });
-
-  it("does not call applyResolveOptions when patch fails", async () => {
-    const applyError = Object.assign(new Error("apply failed"), { stderr: "context mismatch" });
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
-      if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
-      if (cmd === "git" && args[0] === "apply" && args.includes("--check")) {
-        return Promise.reject(applyError);
-      }
-      return makeGitSuccess("");
-    });
-
-    await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" });
-    expect(mockApplyResolveOptions).not.toHaveBeenCalled();
-  });
-});
-
-describe("runCommitSuggestion — resolve failure", () => {
-  it("returns applied:true with error in postActionInstruction when resolve fails after commit", async () => {
-    vi.clearAllMocks();
-    mockGetCurrentBranch.mockResolvedValue("feature/foo");
     setupHappyPath();
-    mockApplyResolveOptions.mockResolvedValue({
-      resolvedThreads: [],
-      minimizedComments: [],
-      dismissedReviews: [],
-      errors: ["could not resolve PRRT_x"],
+  });
+
+  it("returns patch, commitMessage, commitBody, filesToStage, postActionInstructions", async () => {
+    const result = await runCommitSuggestion({
+      ...GLOBAL_OPTS,
+      threadId: "PRRT_x",
+      message: "apply suggestion",
+    });
+    expect(result.patch).toContain("--- a/src/foo.ts");
+    expect(result.patch).toContain("+const x = 10;");
+    expect(result.commitMessage).toBe("apply suggestion");
+    expect(result.commitBody).toContain("Co-authored-by: alice <alice@users.noreply.github.com>");
+    expect(result.filesToStage).toEqual(["src/foo.ts"]);
+    expect(result.postActionInstructions).toHaveLength(5);
+    expect(result.threadId).toBe("PRRT_x");
+    expect(result.author).toBe("alice");
+    expect(result.path).toBe("src/foo.ts");
+    expect(result.pr).toBe(42);
+    expect(result.repo).toBe("owner/repo");
+  });
+
+  it("never calls git apply, git add, or git commit", async () => {
+    await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" });
+
+    const mutatingCalls = mockExecFile.mock.calls.filter(
+      (call) =>
+        call[0] === "git" &&
+        ["apply", "add", "commit", "checkout"].includes((call[1] as string[])[0] ?? ""),
+    );
+    expect(mutatingCalls).toHaveLength(0);
+  });
+
+  it("prepends --description to commitBody before Co-authored-by", async () => {
+    const result = await runCommitSuggestion({
+      ...GLOBAL_OPTS,
+      threadId: "PRRT_x",
+      message: "apply suggestion",
+      description: "Reviewer asked to use const.",
+    });
+    expect(result.commitBody).toContain("Reviewer asked to use const.");
+    expect(result.commitBody).toContain("Co-authored-by: alice");
+    expect(result.commitBody.indexOf("Reviewer")).toBeLessThan(
+      result.commitBody.indexOf("Co-authored-by"),
+    );
+  });
+
+  it("postActionInstructions include git add, git commit, and pr-shepherd resolve steps", async () => {
+    const result = await runCommitSuggestion({
+      ...GLOBAL_OPTS,
+      threadId: "PRRT_x",
+      message: "fix",
+    });
+    const joined = result.postActionInstructions.join("\n");
+    expect(joined).toContain("git add");
+    expect(joined).toContain("git commit");
+    expect(joined).toContain("pr-shepherd resolve");
+    expect(joined).toContain("git push");
+  });
+
+  it("multi-line range: uses startLine from thread", async () => {
+    mockFetchBatch.mockResolvedValue({
+      data: makeBatch([
+        makeThread({
+          line: 6,
+          startLine: 4,
+          body: "```suggestion\nreplacement1\nreplacement2\nreplacement3\n```",
+        }),
+      ]),
     });
 
     const result = await runCommitSuggestion({
@@ -465,11 +393,7 @@ describe("runCommitSuggestion — resolve failure", () => {
       threadId: "PRRT_x",
       message: "fix",
     });
-    expect(result.applied).toBe(true);
-    if (result.applied) {
-      expect(result.commitSha).toBe("newsha");
-      expect(result.postActionInstruction).toMatch(/Commit created \(newsha\)/);
-      expect(result.postActionInstruction).toMatch(/could not resolve/);
-    }
+    expect(result.startLine).toBe(4);
+    expect(result.endLine).toBe(6);
   });
 });

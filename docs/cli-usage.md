@@ -141,9 +141,9 @@ Dismissed reviews (1): PRR_kwDO123
 
 `--require-sha` polls `GET /repos/{owner}/{repo}/pulls/{pr}` for `headRefOid` until it matches, then issues the mutations — ensures reviewers see the fix before threads are closed. Exit code: always `0`. `--message` must describe the specific fix; it is shown to the reviewer on GitHub.
 
-### pr-shepherd commit-suggestion [PR] --thread-id <id> [--message "…"] [--dry-run]
+### pr-shepherd commit-suggestion [PR] --thread-id <id> --message "…"
 
-Applies a single reviewer ` ```suggestion ` fenced block as a local git commit. Builds a unified diff from the suggestion, validates it with `git apply --check`, writes the file, and commits with the caller-supplied message plus a `Co-authored-by: <reviewer>` trailer. Resolves the thread on GitHub after the commit lands. Never pushes — the output tells the caller to `git push` when ready.
+Generates a suggestion for a single reviewer ` ```suggestion ` fenced block. Builds a unified diff from the suggestion, produces the suggested commit message and body (with a `Co-authored-by: <reviewer>` trailer), and emits numbered instructions for the caller to apply the patch, stage, commit, resolve the thread on GitHub, and push. The CLI does not mutate the working tree or git history — the calling agent executes the instructions.
 
 ```sh
 pr-shepherd commit-suggestion 42 \
@@ -152,38 +152,14 @@ pr-shepherd commit-suggestion 42 \
   --description "Optional longer body text."
 ```
 
-Pass `--dry-run` to preview the unified diff without modifying the working tree, staging, committing, or resolving the thread. (A temporary patch file is still written to the OS temp dir for `git apply --check`, but no working-tree files are changed.) `--message` is optional in dry-run mode. Exit code: `0` when the patch would apply cleanly, `1` on drift.
-
-```sh
-pr-shepherd commit-suggestion 42 --thread-id PRRT_abc --dry-run
-```
-
-Requires a clean working tree and that the current branch matches the PR head ref. Precondition or lookup failures (wrong branch, thread not found, already resolved, outdated, no suggestion block, nested fencing) are hard errors with specific reason strings. Patch rejection is a normal result with `applied: false` plus a `reason` — the CLI exits `1`. There is no `skipped` state; the caller must handle or retry hard errors or `applied: false` results.
+Requires that the current branch matches the PR head ref and that the local HEAD SHA matches the PR head SHA. Precondition or lookup failures (wrong branch, thread not found, already resolved, outdated, no suggestion block, nested fencing) are hard errors that exit `1` with a specific reason string.
 
 Gated by `actions.commitSuggestions` (default `true`) — `/pr-shepherd:resolve` calls this automatically for threads that `resolve --fetch` annotates with `[suggestion]`.
 
-**Example output (success):**
+**Example output:**
 
 ````
-Applied suggestion from @alice:
-  src/foo.ts (line 42)
-Commit: abc1234
-
-```diff
---- a/src/foo.ts
-+++ b/src/foo.ts
-@@ -42 +42 @@
--const x = computeRemaining();
-+const remainingSeconds = computeRemaining();
-```
-
-Run `git push` (or `git push --force-with-lease` after rebasing) to publish the commit.
-````
-
-**Example output (--dry-run, patch valid):**
-
-````
-Dry-run: would apply suggestion from @alice:
+Suggestion from @alice for PR #42 — thread PRRT_abc:
   src/foo.ts (line 42)
 
 ```diff
@@ -194,39 +170,38 @@ Dry-run: would apply suggestion from @alice:
 +const remainingSeconds = computeRemaining();
 ```
 
-Re-run without --dry-run to apply and commit.
+## Suggested commit message
+
+rename x to remainingSeconds
+
+Co-authored-by: alice <alice@users.noreply.github.com>
+
+## Instructions
+
+1. Apply the patch to `src/foo.ts`: run `git apply` with the diff shown above, or edit the file directly using the line range (line 42).
+2. Stage the file: `git add -- src/foo.ts`
+3. Commit: `git commit -m "rename x to remainingSeconds" -m "Co-authored-by: alice <alice@users.noreply.github.com>"`
+4. Resolve the thread on GitHub: `npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_abc`
+5. Push when ready: `git push` (or `git push --force-with-lease` after rebasing).
 ````
 
-**Example output (failure — patch rejected):**
+Exit codes: `0` suggestion produced · `1` any precondition or lookup error.
 
-````
-Failed to apply suggestion PRRT_abc:
-  path: src/foo.ts (lines 10-12)
-  author: @alice
-  reason: git apply rejected the patch: error: patch failed: src/foo.ts:10
-
-```diff
---- a/src/foo.ts
-+++ b/src/foo.ts
-@@ -10,3 +10,1 @@
- // context line
--const oldLine1 = value1;
--const oldLine2 = value2;
-+const newLine = value;
-```
-````
-
-Exit codes: `0` suggestion applied and committed, or dry-run patch is clean · `1` any error or dry-run drift.
-
-**Applying multiple suggestions.** Invoke once per thread — the command handles one suggestion at a time. For a PR with multiple suggestion threads, run in sequence then push all the resulting commits together:
+**Applying multiple suggestions.** Invoke once per thread — the command handles one suggestion at a time. For a PR with multiple suggestion threads, apply each in sequence and commit each separately (or amend as appropriate), then push all commits together:
 
 ```sh
-pr-shepherd commit-suggestion 42 --thread-id PRRT_aaa --message "rename x to remainingSeconds"
-pr-shepherd commit-suggestion 42 --thread-id PRRT_bbb --message "simplify loop body"
+# Get suggestion for first thread, apply it, then commit
+npx pr-shepherd commit-suggestion 42 --thread-id PRRT_aaa --message "rename x to remainingSeconds"
+# … follow the printed ## Instructions …
+
+# Get suggestion for second thread, apply it, then commit
+npx pr-shepherd commit-suggestion 42 --thread-id PRRT_bbb --message "simplify loop body"
+# … follow the printed ## Instructions …
+
 git push
 ```
 
-If `commit-suggestion` exits `1`, apply the fix manually as a regular code edit.
+If a patch fails to apply (drift since the suggestion was written), apply the fix manually using the line range shown in the output.
 
 ### pr-shepherd iterate [PR]
 

@@ -1,12 +1,9 @@
 import { execFile as execFileCb } from "node:child_process";
-import { readFile, writeFile, unlink } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 
 import { getRepoInfo, getCurrentPrNumber, getCurrentBranch } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
-import { applyResolveOptions } from "../comments/resolve.mts";
 import { parseSuggestion, isCommittableSuggestion } from "../suggestions/parse.mts";
 import { buildUnifiedDiff } from "../suggestions/patch.mts";
 import type { CommitSuggestionResult, GlobalOptions } from "../types.mts";
@@ -15,9 +12,8 @@ const execFile = promisify(execFileCb);
 
 export interface CommitSuggestionOptions extends GlobalOptions {
   threadId: string;
-  message?: string;
+  message: string;
   description?: string;
-  dryRun?: boolean;
 }
 
 export async function runCommitSuggestion(
@@ -26,15 +22,8 @@ export async function runCommitSuggestion(
   if (!opts.threadId) {
     throw new Error("--thread-id is required");
   }
-  if (!opts.dryRun && (!opts.message || opts.message.trim() === "")) {
+  if (!opts.message || opts.message.trim() === "") {
     throw new Error("--message is required and must be non-empty");
-  }
-
-  const { stdout: statusOut } = await execFile("git", ["status", "--porcelain"]);
-  if (statusOut.trim() !== "") {
-    throw new Error(
-      "Working tree has uncommitted changes. Commit or stash them before running commit-suggestion.",
-    );
   }
 
   const repo = await getRepoInfo();
@@ -103,83 +92,19 @@ export async function runCommitSuggestion(
     replacementLines: parsed.lines,
   });
 
-  const patchFile = join(
-    tmpdir(),
-    `pr-shepherd-${Date.now()}-${Math.random().toString(36).slice(2)}.patch`,
-  );
-
-  let patchError: string | null = null;
-  try {
-    await writeFile(patchFile, patch, { mode: 0o600 });
-
-    try {
-      await execFile("git", ["apply", "--check", patchFile]);
-    } catch (err) {
-      patchError = ((err as { stderr?: string }).stderr?.trim() || String(err)).trim();
-    }
-
-    if (opts.dryRun) {
-      return {
-        pr: prNumber,
-        repo: `${repo.owner}/${repo.name}`,
-        threadId: opts.threadId,
-        path: filePath,
-        startLine,
-        endLine,
-        author: thread.author,
-        applied: false as const,
-        dryRun: true as const,
-        valid: patchError === null,
-        reason: patchError !== null ? `git apply rejected the patch: ${patchError}` : null,
-        patch,
-        postActionInstruction:
-          patchError === null ? "Re-run without --dry-run to apply and commit." : "",
-      };
-    }
-
-    if (patchError !== null) {
-      return {
-        pr: prNumber,
-        repo: `${repo.owner}/${repo.name}`,
-        threadId: opts.threadId,
-        path: filePath,
-        startLine,
-        endLine,
-        author: thread.author,
-        applied: false as const,
-        reason: `git apply rejected the patch: ${patchError}`,
-        patch,
-        postActionInstruction: "",
-      };
-    }
-
-    try {
-      await execFile("git", ["apply", patchFile]);
-    } catch (applyErr) {
-      try {
-        await execFile("git", ["checkout", "--", filePath]);
-      } catch {
-        // best-effort rollback
-      }
-      throw applyErr;
-    }
-  } finally {
-    await unlink(patchFile).catch(() => undefined);
-  }
-
-  await execFile("git", ["add", "--", filePath]);
-
   const coAuthor = `Co-authored-by: ${thread.author} <${thread.author}@users.noreply.github.com>`;
   const commitBody = opts.description ? `${opts.description}\n\n${coAuthor}` : coAuthor;
-  await execFile("git", ["commit", "-m", opts.message!, "-m", commitBody]);
 
-  const { stdout: shaOut } = await execFile("git", ["rev-parse", "HEAD"]);
-  const commitSha = shaOut.trim();
+  const commitMessageArg = opts.message;
+  const commitBodyArg = commitBody;
 
-  const resolveResult = await applyResolveOptions(prNumber, repo, {
-    resolveThreadIds: [opts.threadId],
-  });
-  const resolveErrors = resolveResult.errors;
+  const postActionInstructions = [
+    `Apply the patch to \`${filePath}\`: run \`git apply\` with the diff shown above, or edit the file directly using the line range (${startLine === endLine ? `line ${startLine}` : `lines ${startLine}–${endLine}`}).`,
+    `Stage the file: \`git add -- ${filePath}\``,
+    `Commit: \`git commit -m ${JSON.stringify(commitMessageArg)} -m ${JSON.stringify(commitBodyArg)}\``,
+    `Resolve the thread on GitHub: \`npx pr-shepherd resolve ${prNumber} --resolve-thread-ids ${opts.threadId}\``,
+    `Push when ready: \`git push\` (or \`git push --force-with-lease\` after rebasing).`,
+  ];
 
   return {
     pr: prNumber,
@@ -189,12 +114,10 @@ export async function runCommitSuggestion(
     startLine,
     endLine,
     author: thread.author,
-    applied: true as const,
-    commitSha,
     patch,
-    postActionInstruction:
-      resolveErrors.length > 0
-        ? `Commit created (${commitSha}), but failed to resolve thread ${opts.threadId}: ${resolveErrors.join("; ")}. Run \`git push\` then resolve manually.`
-        : "Run `git push` (or `git push --force-with-lease` after rebasing) to publish the commit.",
+    commitMessage: commitMessageArg,
+    commitBody: commitBodyArg,
+    filesToStage: [filePath],
+    postActionInstructions,
   };
 }
