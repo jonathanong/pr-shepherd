@@ -47,11 +47,11 @@ export function buildFixInstructions(
   inProgressRunIds: string[] = [],
 ): string[] {
   const instructions: string[] = [];
-
-  if (inProgressRunIds.length > 0)
+  if (inProgressRunIds.length > 0) {
     instructions.push(
       `Cancel in-progress CI runs first: for each ID under \`## In-progress runs\`, run \`gh run cancel <id>\`. Do this before applying any code fixes — the push at the end of this iteration will supersede those runs anyway, so letting them continue burns CI minutes for results no one will read. If \`gh\` reports a run is already completed, ignore it and continue with the next ID.`,
     );
+  }
   const hasSuggestions = threads.some((t) => t.suggestion);
   if (hasSuggestions) {
     instructions.push(
@@ -99,6 +99,7 @@ export function buildFixInstructions(
       `For each bullet under \`## Changes-requested reviews\` above: read the review body and apply the requested changes.`,
     );
   }
+
   const hasCodeChanges =
     threads.length > 0 || actionableComments.length > 0 || checks.length > 0 || reviews.length > 0;
   const needsPush = hasCodeChanges || hasConflicts;

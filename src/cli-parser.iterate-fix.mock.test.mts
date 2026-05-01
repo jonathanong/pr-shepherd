@@ -476,4 +476,30 @@ describe("main — iterate text format (fix_code and checks)", () => {
     const out = getStdout();
     expect(out).not.toContain("## Checks");
   });
+
+  it("fix_code: ## In-progress runs renders before ## Cancelled runs; absent when empty", async () => {
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    result.fix = {
+      ...result.fix,
+      inProgressRunIds: ["run-in-1"],
+      instructions: [
+        "Cancel in-progress CI runs first: for each ID under `## In-progress runs`.",
+        "Apply code fixes.",
+      ],
+    };
+    result.cancelled = ["run-cancelled-1"];
+    mockRunIterate.mockResolvedValue(result);
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    expect(out).toContain("## In-progress runs");
+    expect(out).toContain("- `run-in-1`");
+    expect(out.indexOf("## In-progress runs")).toBeLessThan(out.indexOf("## Cancelled runs"));
+    expect(out).toMatch(/1\. Cancel in-progress CI runs first/);
+    result.fix = { ...result.fix, inProgressRunIds: [], instructions: ["Apply code fixes."] };
+    mockRunIterate.mockResolvedValue(result);
+    vi.clearAllMocks();
+    await main(["node", "shepherd", "iterate", "42"]);
+    expect(getStdout()).not.toContain("## In-progress runs");
+  });
 });

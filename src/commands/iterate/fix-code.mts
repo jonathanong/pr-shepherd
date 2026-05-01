@@ -53,7 +53,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   } = ctx;
 
   const failingChecks = report.checks.failing;
-
   const stored = await readFixAttempts({ owner: repoOwner, repo: repoName, pr: prNumber });
 
   const isNewSha = stored?.headSha !== headSha;
@@ -98,7 +97,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     { owner: repoOwner, repo: repoName, pr: prNumber },
     { headSha, threadAttempts: currentAttempts },
   );
-
   let cancelled: string[] = [];
   if (!opts.noAutoCancelActionable) {
     const uniqueRunIds = [
@@ -109,16 +107,20 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     );
     cancelled = results.filter((id): id is string => id !== null);
   }
-
   const cancelledSet = new Set(cancelled);
-  const inProgressRunIds = buildInProgressRunIds(report, cancelledSet);
   const baseLookup = validateBaseBranch(report.baseBranch);
   const threads = report.threads.actionable.map(toAgentThread);
   const actionableComments = report.comments.actionable.map(toAgentComment);
   const checks = toAgentChecks(failingChecks);
   const { changesRequestedReviews } = report;
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
-
+  const needsPush =
+    threads.length > 0 ||
+    actionableComments.length > 0 ||
+    checks.length > 0 ||
+    changesRequestedReviews.length > 0 ||
+    hasConflicts;
+  const inProgressRunIds = needsPush ? buildInProgressRunIds(report, cancelledSet) : [];
   const allCommentIds = [...actionableComments.map((c) => c.id), ...reviewSummaryIds];
   const resolveCommand = buildResolveCommand(
     threads,
@@ -127,7 +129,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     checks,
     prNumber,
   );
-
   if (baseLookup.isFallback && (resolveCommand.requiresHeadSha || hasConflicts)) {
     const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: ["base-branch-unknown"],
