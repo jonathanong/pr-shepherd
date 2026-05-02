@@ -74,4 +74,11 @@ describe("formatJson", () => {
     const parsed = JSON.parse(output) as { instructions: string[] };
     expect(parsed.instructions.some((s) => s.includes("/pr-shepherd:monitor"))).toBe(true);
   });
+
+  it("instructions include reusable iterate command for Codex", () => {
+    const output = formatJson(makeReport({ status: "FAILING" }), { runtime: "codex" });
+    const parsed = JSON.parse(output) as { instructions: string[] };
+    expect(parsed.instructions.some((s) => s.includes("npx pr-shepherd iterate"))).toBe(true);
+    expect(parsed.instructions.every((s) => !s.includes("/pr-shepherd:monitor"))).toBe(true);
+  });
 });

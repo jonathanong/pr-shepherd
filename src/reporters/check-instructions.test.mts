@@ -245,6 +245,14 @@ describe("buildCheckInstructions — monitoring pointer", () => {
     expect(steps[steps.length - 1]).toContain("/pr-shepherd:monitor");
   });
 
+  it("uses npx pr-shepherd iterate for Codex", () => {
+    const steps = buildCheckInstructions(makeReport({ status: "FAILING" }), {
+      runtime: "codex",
+    });
+    expect(steps[steps.length - 1]).toContain("npx pr-shepherd iterate");
+    expect(steps[steps.length - 1]).not.toContain("/pr-shepherd:monitor");
+  });
+
   it("omits the /pr-shepherd:monitor pointer when truly ready to merge (CLEAN + READY + no copilot)", () => {
     const steps = buildCheckInstructions(makeReport({ status: "READY" }));
     expect(steps.every((s) => !s.includes("/pr-shepherd:monitor"))).toBe(true);

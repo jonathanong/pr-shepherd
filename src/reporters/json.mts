@@ -6,8 +6,9 @@
  */
 
 import type { ShepherdReport } from "../types.mts";
+import type { AgentRuntime } from "../agent-runtime.mts";
 import { buildCheckInstructions } from "./check-instructions.mts";
 
-export function formatJson(report: ShepherdReport): string {
-  return JSON.stringify({ ...report, instructions: buildCheckInstructions(report) }, null, 2);
+export function formatJson(report: ShepherdReport, opts?: { runtime?: AgentRuntime }): string {
+  return JSON.stringify({ ...report, instructions: buildCheckInstructions(report, opts) }, null, 2);
 }

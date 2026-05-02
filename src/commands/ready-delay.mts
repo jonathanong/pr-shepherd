@@ -33,7 +33,8 @@ export interface ReadyDelayState {
  *   - If `isReady == true`: start or continue the ready timer.
  *   - If `isReady == false`: reset the timer.
  *
- * When `shouldCancel == true`, the slash command should invoke `/loop cancel`.
+ * When `shouldCancel == true`, the formatter tells loop-capable agents to cancel
+ * the loop and tells one-shot agents to stop.
  */
 export async function updateReadyDelay(
   prNumber: number,

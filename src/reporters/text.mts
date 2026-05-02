@@ -1,5 +1,6 @@
 import type { ShepherdReport, TriagedCheck } from "../types.mts";
 import { buildCheckInstructions } from "./check-instructions.mts";
+import type { AgentRuntime } from "../agent-runtime.mts";
 import {
   renderThreadBullet,
   renderCommentBullet,
@@ -8,7 +9,7 @@ import {
 } from "../cli/list-formatters.mts";
 import { joinSections } from "../util/markdown.mts";
 
-export function formatText(report: ShepherdReport): string {
+export function formatText(report: ShepherdReport, opts?: { runtime?: AgentRuntime }): string {
   const header = [
     `# PR #${report.pr} [CHECK] — ${report.repo}`,
     `Status: ${report.status}`,
@@ -161,7 +162,7 @@ export function formatText(report: ShepherdReport): string {
   const summaryLine = counts.join(", ") || "0 actionable — all threads resolved/minimized";
   const summarySection = `## Summary\n\n${summaryLine}`;
 
-  const instructions = buildCheckInstructions(report);
+  const instructions = buildCheckInstructions(report, opts);
   const instructionsSection = `## Instructions\n\n${instructions.map((step, i) => `${i + 1}. ${step}`).join("\n")}`;
 
   return joinSections([

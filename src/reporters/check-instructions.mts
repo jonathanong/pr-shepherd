@@ -1,11 +1,16 @@
 import type { ShepherdReport } from "../types.mts";
+import type { AgentRuntime } from "../agent-runtime.mts";
 
 /**
  * Build the numbered instruction steps for the agent to follow after a `check` run.
  * All rebase policy, CI budget policy, and ready-to-merge gating live here so the
  * skill stays a thin dispatcher and these rules co-evolve with the CLI data model.
  */
-export function buildCheckInstructions(report: ShepherdReport): string[] {
+export function buildCheckInstructions(
+  report: ShepherdReport,
+  opts?: { runtime?: AgentRuntime },
+): string[] {
+  const runtime = opts?.runtime ?? "claude";
   const { mergeStatus, checks, threads, comments, changesRequestedReviews, status } = report;
 
   const instructions: string[] = [];
@@ -68,7 +73,9 @@ export function buildCheckInstructions(report: ShepherdReport): string[] {
   // 5. Continuous monitoring pointer (suppressed only when truly ready to merge)
   if (!isReady) {
     instructions.push(
-      "This is a one-shot check. For continuous monitoring that acts on these signals automatically, use `/pr-shepherd:monitor`.",
+      runtime === "codex"
+        ? `This is a one-shot check. For follow-up monitoring, run \`npx pr-shepherd iterate ${report.pr}\`.`
+        : "This is a one-shot check. For continuous monitoring that acts on these signals automatically, use `/pr-shepherd:monitor`.",
     );
   }
 

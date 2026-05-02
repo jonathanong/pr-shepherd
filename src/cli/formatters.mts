@@ -1,5 +1,5 @@
 export { formatIterateResult } from "./iterate-formatter.mts";
-export { projectIterateLean } from "./iterate-lean.mts";
+export { projectIterateLean, projectIterateVerbose } from "./iterate-lean.mts";
 
 import { safeFence } from "./fence.mts";
 import {

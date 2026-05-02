@@ -432,6 +432,12 @@ describe("formatText — ## Instructions section", () => {
     const out = formatText(makeReport({ status: "FAILING" }));
     expect(out).toContain("/pr-shepherd:monitor");
   });
+
+  it("uses reusable iterate command for Codex", () => {
+    const out = formatText(makeReport({ status: "FAILING" }), { runtime: "codex" });
+    expect(out).toContain("npx pr-shepherd iterate");
+    expect(out).not.toContain("/pr-shepherd:monitor");
+  });
 });
 
 describe("formatText — baseBranch, reviewSummaries, approvedReviews", () => {

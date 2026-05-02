@@ -1,6 +1,12 @@
 import type { IterateResult } from "../types.mts";
 import { formatFixCodeResult } from "./fix-formatter.mts";
 import { joinSections } from "../util/markdown.mts";
+import type { AgentRuntime } from "../agent-runtime.mts";
+import {
+  adaptIterateLog,
+  buildSimpleIterateInstructions,
+  numberInstructions,
+} from "./iterate-instructions.mts";
 
 /**
  * Format an IterateResult as human-readable Markdown.
@@ -17,8 +23,13 @@ import { joinSections } from "../util/markdown.mts";
  *      unconditional: every action, every variant, always emits at least one step.
  *      The SKILL simply follows those steps; it does not need its own dispatch table.
  */
-export function formatIterateResult(result: IterateResult, opts?: { verbose?: boolean }): string {
+export function formatIterateResult(
+  result: IterateResult,
+  opts?: { verbose?: boolean; runtime?: AgentRuntime; readyDelaySuffix?: string },
+): string {
   const verbose = opts?.verbose ?? false;
+  const runtime = opts?.runtime ?? "claude";
+  const readyDelaySuffix = opts?.readyDelaySuffix;
 
   const heading = `# PR #${result.pr} [${result.action.toUpperCase()}]`;
   const reviewDecisionSeg =
@@ -52,39 +63,39 @@ export function formatIterateResult(result: IterateResult, opts?: { verbose?: bo
       // placeholders that add no value. Emit only heading + log + Instructions.
       return joinSections([
         verbose ? header : heading,
-        result.log,
-        "## Instructions\n\n1. End this iteration — the next cron fire will recheck once CI starts reporting.",
+        adaptIterateLog(result.log, runtime),
+        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix))}`,
       ]);
 
     case "wait":
       return joinSections([
         header,
-        result.log,
-        "## Instructions\n\n1. End this iteration — the next cron fire will recheck.",
+        adaptIterateLog(result.log, runtime),
+        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix))}`,
       ]);
 
     case "mark_ready":
       return joinSections([
         header,
-        result.log,
-        "## Instructions\n\n1. The CLI already marked the PR ready for review — end this iteration.",
+        adaptIterateLog(result.log, runtime),
+        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix))}`,
       ]);
 
     case "cancel":
       return joinSections([
         [`${heading} — ${result.reason}`, "", baseLine, summaryLine].join("\n"),
-        result.log,
-        "## Instructions\n\n1. Invoke `/loop cancel` via the Skill tool.\n2. Stop.",
+        adaptIterateLog(result.log, runtime),
+        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix))}`,
       ]);
 
     case "escalate":
       return joinSections([
         header,
         result.escalate.humanMessage,
-        "## Instructions\n\n1. Invoke `/loop cancel` via the Skill tool.\n2. Stop — the PR needs human direction before monitoring can resume.",
+        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix))}`,
       ]);
 
     case "fix_code":
-      return formatFixCodeResult(header, result);
+      return formatFixCodeResult(header, result, { runtime, readyDelaySuffix });
   }
 }

@@ -1,6 +1,6 @@
 # pr-shepherd
 
-Autonomous PR CI monitor and review-comment resolver for Claude Code.
+Autonomous PR CI monitor and review-comment resolver for agentic coding tools, including Claude Code and Codex.
 The goal is to have an agent take a plan to a human-reviewable PR autonomously.
 
 Example Workflow:
@@ -19,6 +19,8 @@ Example Workflow:
 ## How it works
 
 `pr-shepherd` optimizes token management, rate limits, and agentic orchestration by moving **ALL** deterministic logic and prompts to code via a CLI tool, enshrining what would be a large skill or command prompt (of which the agent would inevitably make mistakes) into the code and returning a clear, actionable prompt.
+
+The CLI adapts monitor instructions to the calling agent. Claude Code gets `/loop` bootstrap instructions. Codex is detected with `AGENT=codex` or the current Codex CLI signal `CODEX_CI=1`; it gets a reusable `npx pr-shepherd iterate <PR>` command and one-shot iterate instructions because Codex does not provide `/loop` scheduling in this workflow.
 
 At a high level, to start the monitor, the skill/command invokes a CLI that returns a prompt to be ingested by the agent _(schematic — paraphrased for brevity; actual output is more detailed)_:
 
@@ -125,7 +127,7 @@ Some other workflow improvements:
 
 Recommendations:
 
-- Run `pr-shepherd` on all your PRs before you go to sleep so that you wake up to reviewable PRs. As it uses `/loop`, it will continue working when your rate limit window is reset. The loop cancels automatically when the PR is merged, closed, or after the ready-delay elapses.
+- Run `pr-shepherd` on all your PRs before you go to sleep so that you wake up to reviewable PRs. In Claude Code, `/pr-shepherd:monitor` uses `/loop` and continues working when your rate limit window is reset. In Codex, rerun the reusable `npx pr-shepherd iterate <PR>` command when you want another check.
 - Instruct your agents to write comments in a single review (comment, changes requested, or approved). This allows the review's comments/threads to be minimized or resolved together, keeping your pull request history clean. If you write inline comments outside of a review, each comment would still show up in the pull request history and take up space.
 - Avoid sticky comments as they will continue to be hidden. Instead, just make a new comment, especially on reviews. If you really want sticky comments, instruct your agent to unhide/unminimize them when updating them.
 - Avoid having automation edit comments, reviews, or threads in place because updated items get minimized. Instead, always make a new review, comment, thread, etc.
@@ -142,15 +144,26 @@ Recommendations:
 
 ### Monitor a PR
 
-Creates a cron loop that fires every 4 minutes, checks CI and review
-comments, fixes issues, and marks the PR ready for review when clean. The
-loop cancels automatically when the PR is merged or closed.
+In Claude Code, creates a cron loop that fires every 4 minutes, checks CI and review comments, fixes issues, and marks the PR ready for review when clean. The loop cancels automatically when the PR is merged or closed.
+
+In Codex, run `npx pr-shepherd monitor <PR>` once to emit the one-shot prompt, then follow that prompt. Its reusable follow-up command is `npx pr-shepherd iterate <PR>`.
+
+Claude Code:
 
 ```
 /pr-shepherd:monitor                     # infer PR from current branch
 /pr-shepherd:monitor 42
 /pr-shepherd:monitor 42 every 8m
 /pr-shepherd:monitor 42 --ready-delay 15m
+```
+
+Codex:
+
+```sh
+npx pr-shepherd monitor                  # bootstrap from current branch, then follow its instructions
+npx pr-shepherd monitor 42               # bootstrap PR #42, then follow its instructions
+npx pr-shepherd iterate 42               # subsequent one-shot check/action tick
+npx pr-shepherd iterate 42 --ready-delay 15m
 ```
 
 ### Check a PR
@@ -208,6 +221,34 @@ claude /plugin install pr-shepherd
 
 This repo ships two `marketplace.json` files that serve different install flows: the root `marketplace.json` resolves the plugin from the npm registry (used by the `claude /plugin marketplace add` command above); `.claude-plugin/marketplace.json` is the owner-level registry manifest that resolves the plugin from the local plugin directory (used when Claude Code installs from a local or git-based source). Both files are needed to support these two install paths.
 
+### For Codex
+
+Codex does not use the Claude plugin or `/pr-shepherd:*` slash commands. Install the CLI where Codex will run it, then call `npx pr-shepherd` directly:
+
+```bash
+npm install --save-dev pr-shepherd
+```
+
+If your Codex environment does not already set `CODEX_CI=1`, set `AGENT=codex` so `pr-shepherd` emits Codex-compatible instructions instead of Claude `/loop` instructions:
+
+```bash
+export AGENT=codex
+```
+
+Then start a PR monitor from Codex:
+
+```bash
+npx pr-shepherd monitor 42
+```
+
+Follow the output's `## Instructions`. The monitor bootstrap runs one tick and prints the reusable follow-up command, usually:
+
+```bash
+npx pr-shepherd iterate 42
+```
+
+Rerun that `iterate` command whenever you want Codex to check the PR again. There is no background `/loop` scheduler in Codex.
+
 ### Without the plugin
 
 See [docs/custom-commands.md](docs/custom-commands.md) for a project-local slash command that wraps the CLI without the plugin.
@@ -234,7 +275,7 @@ actions:
   autoMarkReady: false # disable to stay draft until you manually promote
 ```
 
-Environment variables: `GH_TOKEN` / `GITHUB_TOKEN` (auth; falls back to `gh auth token`), `PR_SHEPHERD_STATE_DIR` (override loop-state and log base dir), `PR_SHEPHERD_LOG_DISABLED=1` (disable the per-worktree debug log).
+Environment variables: `GH_TOKEN` / `GITHUB_TOKEN` (auth; falls back to `gh auth token`), `PR_SHEPHERD_STATE_DIR` (override loop-state and log base dir), `PR_SHEPHERD_LOG_DISABLED=1` (disable the per-worktree debug log), `AGENT=codex` or `CODEX_CI=1` (emit Codex-compatible monitor instructions).
 
 See [docs/configuration.md](docs/configuration.md) for full semantics and deprecated-key migration.
 
