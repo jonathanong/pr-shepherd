@@ -106,13 +106,13 @@ describe("loadConfig — malformed YAML", () => {
 
 describe("loadConfig — findRcFile", () => {
   it("finds rc file in a parent directory when cwd is a nested subdir", async () => {
-    writeFileSync(join(tmpDir, RC), "checks:\n  logTailLines: 50\n");
+    writeFileSync(join(tmpDir, RC), "iterate:\n  cooldownSeconds: 50\n");
     const sub = join(tmpDir, "nested", "deep");
     mkdirSync(sub, { recursive: true });
     process.chdir(sub);
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
-    expect(result.checks.logTailLines).toBe(50);
+    expect(result.iterate.cooldownSeconds).toBe(50);
   });
 });
 
@@ -132,15 +132,15 @@ describe("loadConfig — caching", () => {
   });
 
   it("_resetConfigCache allows fresh load after cache is cleared", async () => {
-    writeFileSync(join(tmpDir, RC), "checks:\n  logTailLines: 7\n");
+    writeFileSync(join(tmpDir, RC), "iterate:\n  cooldownSeconds: 7\n");
     const mod = await import("./load.mts");
     const first = mod.loadConfig();
-    expect(first.checks.logTailLines).toBe(7);
+    expect(first.iterate.cooldownSeconds).toBe(7);
 
     // Update the file then reset the cache so the next call re-reads disk
-    writeFileSync(join(tmpDir, RC), "checks:\n  logTailLines: 11\n");
+    writeFileSync(join(tmpDir, RC), "iterate:\n  cooldownSeconds: 11\n");
     mod._resetConfigCache();
     const second = mod.loadConfig();
-    expect(second.checks.logTailLines).toBe(11);
+    expect(second.iterate.cooldownSeconds).toBe(11);
   });
 });

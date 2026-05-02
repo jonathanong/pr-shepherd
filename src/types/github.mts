@@ -68,8 +68,6 @@ export interface TriagedCheck extends ClassifiedCheck {
   jobName?: string;
   /** Name of the first failed step in the matched job (e.g. `"Run tests"`). */
   failedStep?: string;
-  /** Last N lines of the failing job's log. `undefined` when no matching job is found or log fetch fails. */
-  logTail?: string;
 }
 
 // ---------------------------------------------------------------------------

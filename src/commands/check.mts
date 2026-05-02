@@ -59,14 +59,7 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
   const filtered = classifiedChecks.filter((c) => c.category === "filtered");
 
   const triaged =
-    failing.length > 0 && !opts.skipTriage
-      ? await triageFailingChecks(
-          failing,
-          repo,
-          config.checks.logTailLines,
-          config.checks.logTailChars,
-        )
-      : failing;
+    failing.length > 0 && !opts.skipTriage ? await triageFailingChecks(failing, repo) : failing;
 
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
 

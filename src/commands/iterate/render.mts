@@ -4,7 +4,6 @@ import type {
   AgentCheck,
   Review,
   ResolveCommand,
-  IterateResultBase,
   FirstLookThread,
   FirstLookComment,
 } from "../../types.mts";
@@ -63,12 +62,22 @@ export function buildFixInstructions(
       `Apply code fixes: read and edit each file referenced under \`## Review threads\` and \`## Actionable comments\` above.${suggestionFallback}`,
     );
   }
-  const checksWithRunId = checks.filter((c) => c.runId);
+  const cancelledRunIdChecks = checks.filter((c) => c.runId && c.conclusion === "CANCELLED");
+  const failedRunIdChecks = checks.filter((c) => c.runId && c.conclusion !== "CANCELLED");
   const externalChecks = checks.filter((c) => !c.runId && c.detailsUrl);
   const bareChecks = checks.filter((c) => !c.runId && !c.detailsUrl);
-  if (checksWithRunId.length > 0) {
+  if (failedRunIdChecks.length > 0) {
     instructions.push(
-      `For each failing check under \`## Failing checks\` with a run ID, examine the log tail in the fenced block to decide what to do:\n   - If the log tail shows a transient runner or infrastructure failure (network timeout, runner setup crash, OOM kill), run \`gh run rerun <runId> --failed\` and stop this iteration — CI will re-run automatically.\n   - If the log tail shows a real test or build failure, apply a code fix.\n   - If the fenced log block is absent, run \`gh run view <runId> --log-failed\` first to fetch it, then choose between rerun and fix above.`,
+      `For each failing check under \`## Failing checks\` with a run ID and no \`[conclusion: CANCELLED]\` tag: run \`gh run view <runId> --log-failed\` to fetch the failing job's log.`,
+    );
+    instructions.push(
+      `If the log shows a transient infrastructure failure (network timeout, runner setup crash, OOM kill): run \`gh run rerun <runId> --failed\`.`,
+    );
+    instructions.push(`If the log shows a real test/build failure: apply a code fix.`);
+  }
+  if (cancelledRunIdChecks.length > 0) {
+    instructions.push(
+      `For each \`[conclusion: CANCELLED]\` bullet under \`## Failing checks\`: the run was cancelled outside Shepherd's control (manual cancel, newer push, concurrency-group eviction). Run \`gh run rerun <runId>\` only if the cancellation looks unintended; otherwise treat it as resolved by the superseding run. Do NOT confuse these with IDs under \`## Cancelled runs\` — those were cancelled by Shepherd itself.`,
     );
   }
   if (externalChecks.length > 0) {
@@ -168,32 +177,4 @@ export function buildFixInstructions(
   }
 
   return instructions;
-}
-
-export function buildWaitLog(base: IterateResultBase): string {
-  const { summary, remainingSeconds } = base;
-  const parts: string[] = [`WAIT: ${summary.passing} passing, ${summary.inProgress} in-progress`];
-
-  switch (base.mergeStatus) {
-    case "BLOCKED":
-      if (base.reviewDecision === "REVIEW_REQUIRED") parts.push("awaiting human review");
-      else if (base.reviewDecision === "APPROVED") parts.push("awaiting additional approvals");
-      else parts.push("awaiting human review or branch protection");
-      break;
-    case "BEHIND":
-      parts.push("branch is behind base");
-      break;
-    case "DRAFT":
-      parts.push("PR is a draft");
-      break;
-    case "UNSTABLE":
-      parts.push("some checks are unstable");
-      break;
-  }
-
-  if (remainingSeconds > 0) {
-    parts.push(`${remainingSeconds}s until auto-cancel`);
-  }
-
-  return parts.join(" — ");
 }

@@ -16,7 +16,7 @@ Quick entry point. For a command overview see [`../README.md`](../README.md).
 | [watch-loop.md](watch-loop.md)           | How the monitor skill + `/loop` + `iterate` interact              |
 | [ready-delay.md](ready-delay.md)         | Loop-state files: ready-since, fix-attempts, iterate-stall        |
 | [graphql.md](graphql.md)                 | Batch query, pagination strategy, REST fallbacks                  |
-| [checks.md](checks.md)                   | Classify → triage → `logTail`, `jobName`, event filtering         |
+| [checks.md](checks.md)                   | Classify → triage → `failedStep`, `jobName`, event filtering      |
 | [comments.md](comments.md)               | Threads vs comments, outdated detection, push-before-resolve      |
 | [merge-status.md](merge-status.md)       | `deriveMergeStatus` rules, edge cases                             |
 | [extending.md](extending.md)             | Recipes: add an action, classifier, mutation                      |

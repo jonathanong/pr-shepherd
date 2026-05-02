@@ -2,7 +2,12 @@ import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 import { rest } from "../../github/http.mts";
 import type { ShepherdReport } from "../../types.mts";
-import type { IterateResultSummary, RelevantCheck, IterateResult } from "../../types.mts";
+import type {
+  IterateResultSummary,
+  RelevantCheck,
+  IterateResult,
+  IterateResultBase,
+} from "../../types.mts";
 
 const execFile = promisify(execFileCb);
 
@@ -90,6 +95,34 @@ export async function getCurrentHeadSha(): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+export function buildWaitLog(base: IterateResultBase): string {
+  const { summary, remainingSeconds } = base;
+  const parts: string[] = [`WAIT: ${summary.passing} passing, ${summary.inProgress} in-progress`];
+
+  switch (base.mergeStatus) {
+    case "BLOCKED":
+      if (base.reviewDecision === "REVIEW_REQUIRED") parts.push("awaiting human review");
+      else if (base.reviewDecision === "APPROVED") parts.push("awaiting additional approvals");
+      else parts.push("awaiting human review or branch protection");
+      break;
+    case "BEHIND":
+      parts.push("branch is behind base");
+      break;
+    case "DRAFT":
+      parts.push("PR is a draft");
+      break;
+    case "UNSTABLE":
+      parts.push("some checks are unstable");
+      break;
+  }
+
+  if (remainingSeconds > 0) {
+    parts.push(`${remainingSeconds}s until auto-cancel`);
+  }
+
+  return parts.join(" — ");
 }
 
 export function buildCooldownResult(prNumber: number, readyDelaySeconds: number): IterateResult {

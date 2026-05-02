@@ -247,9 +247,9 @@ describe("runIterate — timeout/cancelled failures route to fix_code", () => {
       // Both failing checks are in the fix payload so the agent can decide.
       expect(result.fix.checks.map((c) => c.runId)).toContain("run-10");
       expect(result.fix.checks.map((c) => c.runId)).toContain("run-11");
-      // Instructions tell the agent to examine log tails.
+      // Instructions tell the agent to fetch logs and decide rerun vs fix.
       const joined = result.fix.instructions.join("\n");
-      expect(joined).toContain("examine the log tail");
+      expect(joined).toContain("gh run view <runId> --log-failed");
     }
   });
 

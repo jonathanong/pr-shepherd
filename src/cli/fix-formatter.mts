@@ -1,5 +1,4 @@
 import { renderResolveCommand } from "../commands/iterate.mts";
-import { safeFence } from "./fence.mts";
 import { joinSections } from "../util/markdown.mts";
 import { renderSuggestionBlock, renderLineRange } from "./suggestion-renderer.mts";
 import {
@@ -47,14 +46,11 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
         : ch.detailsUrl
           ? `external \`${ch.detailsUrl}\``
           : "(no runId)";
-      const lines = [`- ${locator} — \`${workflowPrefix}${jobLabel}\``];
-      if (ch.failedStep) lines.push(`  > ${ch.failedStep}`);
-      if (ch.summary) lines.push(`  > ${ch.summary}`);
-      if (ch.logTail) {
-        const fence = safeFence(ch.logTail);
-        lines.push(`  ${fence}`);
-        lines.push(ch.logTail.replace(/^/gm, "  ").trimEnd());
-        lines.push(`  ${fence}`);
+      const conclusionTag = ch.conclusion !== null ? ` [conclusion: ${ch.conclusion}]` : "";
+      const lines = [`- ${locator} — \`${workflowPrefix}${jobLabel}\`${conclusionTag}`];
+      if (ch.conclusion !== "CANCELLED") {
+        if (ch.failedStep) lines.push(`  > ${ch.failedStep}`);
+        if (ch.summary) lines.push(`  > ${ch.summary}`);
       }
       return lines.join("\n");
     });

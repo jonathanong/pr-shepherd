@@ -30,10 +30,6 @@ export interface PrShepherdConfig {
   };
   checks: {
     ciTriggerEvents: string[];
-    /** Lines to tail from the failing step's log section. Default 5. */
-    logTailLines: number;
-    /** Character limit on the log tail. Default 200. */
-    logTailChars: number;
   };
   mergeStatus: {
     blockingReviewerLogins: string[];

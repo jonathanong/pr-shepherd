@@ -174,7 +174,7 @@ Other body-line variants: `CANCEL: PR #42 is closed — stopping monitor`, `CANC
 
 Actionable work needs a code fix, commit, and push.
 
-**Trigger:** Any of: unresolved inline review threads, actionable PR-level comments, `CHANGES_REQUESTED` reviews, any failing CI check, merge conflicts (`mergeStatus.status === "CONFLICTS"`), or pending review summary IDs to minimize (both first-look and already-seen). Failing checks of all types (timeout, cancelled, actionable) route here — the agent reads the `logTail` in the output and decides whether to rerun or fix.
+**Trigger:** Any of: unresolved inline review threads, actionable PR-level comments, `CHANGES_REQUESTED` reviews, any failing CI check, merge conflicts (`mergeStatus.status === "CONFLICTS"`), or pending review summary IDs to minimize (both first-look and already-seen). Failing checks of all types (timeout, cancelled, actionable) route here — the agent runs `gh run view <runId> --log-failed` when it needs logs, and follows the `[conclusion: CANCELLED]` instruction for externally cancelled runs.
 
 **CLI side-effects:** Issues a `POST /repos/{owner}/{repo}/actions/runs/{runId}/cancel` REST call for each unique run ID of failing CI checks (best-effort; already-completed runs return 409 and are silently ignored). **Important:** this cancellation runs on the pre-push run IDs recorded in the sweep — do not re-cancel these IDs after you push, because the push replaces them with fresh runs whose IDs differ.
 
@@ -182,7 +182,7 @@ Actionable work needs a code fix, commit, and push.
 
 **Markdown output:**
 
-````markdown
+```markdown
 # PR #42 [FIX_CODE]
 
 **status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
@@ -205,15 +205,12 @@ Actionable work needs a code fix, commit, and push.
 
 ## Failing checks
 
-- `24697658766` — `CI › lint / typecheck / test (22.x)`
+- `24697658766` — `CI › lint / typecheck / test (22.x)` [conclusion: FAILURE]
+
   > Run tests
+  > 2 tests failed
 
-```
-
-Error: 2 tests failed
-AssertionError: expected true to be false
-
-```
+- `24697658767` — `CI › build` [conclusion: CANCELLED]
 
 ## Changes-requested reviews
 
@@ -231,19 +228,19 @@ AssertionError: expected true to be false
 ## Instructions
 
 1. Apply code fixes: read and edit each file referenced under `## Review threads` and `## Actionable comments` above.
-2. For each failing check under `## Failing checks` with a run ID, examine the log tail in the fenced block to decide what to do:
-   - If the log tail shows a transient runner or infrastructure failure (network timeout, runner setup crash, OOM kill), run `gh run rerun <runId> --failed` and stop this iteration — CI will re-run automatically.
-   - If the log tail shows a real test or build failure, apply a code fix.
-   - If the fenced log block is absent, run `gh run view <runId> --log-failed` first to fetch it, then choose between rerun and fix above.
-3. For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.
-4. Commit changed files: `git add <files> && git commit -m "<descriptive message>"`
-5. Keep the PR title and description current: if the changes alter the PR's scope or intent, run `gh pr edit 42 --title "<new title>" --body "<new body>"` to reflect them. Skip if the existing title/body still accurately describe the PR.
-6. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
-7. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
-8. Do not re-run `gh run cancel` on the IDs listed under `## Cancelled runs` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.
-9. For any large decisions or rejections you made this iteration, add or update a `## Shepherd Journal` section in the PR description (`gh pr edit 42 --body …`) summarizing each decision and linking back to the originating comment, thread, or review.
-10. Stop this iteration — CI needs time to run on the new push before the next tick.
-````
+2. For each failing check under `## Failing checks` with a run ID and no `[conclusion: CANCELLED]` tag: run `gh run view <runId> --log-failed` to fetch the failing job's log.
+3. If the log shows a transient infrastructure failure (network timeout, runner setup crash, OOM kill): run `gh run rerun <runId> --failed`.
+4. If the log shows a real test/build failure: apply a code fix.
+5. For each `[conclusion: CANCELLED]` bullet under `## Failing checks`: the run was cancelled outside Shepherd's control (manual cancel, newer push, concurrency-group eviction). Run `gh run rerun <runId>` only if the cancellation looks unintended; otherwise treat it as resolved by the superseding run. Do NOT confuse these with IDs under `## Cancelled runs` — those were cancelled by Shepherd itself.
+6. For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.
+7. Commit changed files: `git add <files> && git commit -m "<descriptive message>"`
+8. Keep the PR title and description current: if the changes alter the PR's scope or intent, run `gh pr edit 42 --title "<new title>" --body "<new body>"` to reflect them. Skip if the existing title/body still accurately describe the PR.
+9. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
+10. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
+11. Do not re-run `gh run cancel` on the IDs listed under `## Cancelled runs` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.
+12. For any large decisions or rejections you made this iteration, add or update a `## Shepherd Journal` section in the PR description (`gh pr edit 42 --body …`) summarizing each decision and linking back to the originating comment, thread, or review.
+13. Stop this iteration — CI needs time to run on the new push before the next tick.
+```
 
 When one or more threads carry a `[suggestion]` marker, the `## Instructions` section opens with two different steps. Step 1 is new; step 2 gains a manual-fallback clause. All other steps renumber and are otherwise unchanged.
 
@@ -267,9 +264,9 @@ Step 1 is absent when no thread has a `[suggestion]` marker; step 2 omits the ma
    - ``- external `<detailsUrl>` — `<name>` `` for external status checks (codecov, vercel, etc.) with null `runId` but a URL.
    - ``- (no runId) — `<name>` `` when both are null.
 
-   Each bullet may be followed by: a `> <failedStep>` blockquote line (the first step that failed, GitHub Actions only), a `> <summary>` blockquote line (one-line status text from the GitHub UI), and a fenced code block containing the last `checks.logTailLines` lines of the job log. All three are omitted when not available.
+   Every bullet carries a `[conclusion: <CONCLUSION>]` tag (e.g. `[conclusion: FAILURE]`, `[conclusion: TIMED_OUT]`, `[conclusion: CANCELLED]`); null conclusions produce no tag. Non-CANCELLED bullets may also carry a `> <failedStep>` blockquote line (the first step that failed, GitHub Actions only) and a `> <summary>` blockquote line (one-line status text from the GitHub UI), both omitted when not available.
 
-   The numbered instructions split accordingly: for GitHub Actions checks (with runId), the agent examines the `logTail` fenced block and decides whether to run `gh run rerun <runId> --failed` (transient failure) or apply a code fix (real failure). For external status checks (detailsUrl only), the step says to open the URL in a browser. When both are absent, the step says to escalate to a human.
+   The numbered instructions split accordingly: for GitHub Actions checks with a runId and no `[conclusion: CANCELLED]`, three steps are emitted — fetch logs with `gh run view <runId> --log-failed`, rerun with `gh run rerun <runId> --failed` if transient, or apply a code fix if a real failure. For `[conclusion: CANCELLED]` checks, a single step says to rerun with `gh run rerun <runId>` (no `--failed` flag) if the cancellation looks unintended. For external status checks (detailsUrl only), the step says to open the URL in a browser. When both are absent, the step says to escalate to a human.
 
 5. `## Changes-requested reviews` — one bullet per `CHANGES_REQUESTED` review: ``- `reviewId=<id>` (@<author>)``.
 6. `## Review summaries (first look — to be minimized)` — `COMMENTED` review summaries the agent has **not yet seen**. Each entry is rendered with an H3 heading (``### `reviewId=<id>` (@<author>)``) and the full body as a `>` blockquote. Their IDs are already included in `--minimize-comment-ids` in the resolve command, so no additional action is needed beyond reading them and recording any Shepherd Journal note. A per-item seen-marker file (`src/state/seen-comments.mts`) writes the marker on first encounter so subsequent runs skip the body. Not emitted when empty.
@@ -290,7 +287,7 @@ Step 1 is absent when no thread has a `[suggestion]` marker; step 2 omits the ma
 - `Commit changed files:` is only emitted when there are actual code changes to commit (threads/comments/checks/reviews present). A `CONFLICTS`-only state skips this step.
 - `Keep the PR title and description current:` is emitted immediately after the commit step and uses the same gate (`hasCodeChanges`). A `CONFLICTS`-only dispatch (no code to commit) omits it.
 - The rebase step switches wording based on `mergeStatus.status`. When conflicts are present it emits "Rebase with conflict resolution" and walks through `git rebase --continue` loops; otherwise it emits the clean one-liner `git fetch origin && git rebase origin/<base> && git push --force-with-lease`.
-- `## Failing checks` generates one instruction step per locator type present. When a check has a numeric `runId`, the step says to examine the log tail in the fenced block and decide: run `gh run rerun <runId> --failed` if the log shows a transient infrastructure failure, or apply a code fix if it shows a real test/build failure. When a check has only a `detailsUrl` (external status check — no `runId`), the step says to open the URL in a browser. When both are absent, the step says to escalate to a human.
+- `## Failing checks` generates one or more instruction steps per locator/conclusion type present. When non-cancelled checks have a `runId`, three steps are emitted: (1) fetch the log with `gh run view <runId> --log-failed`, (2) rerun with `gh run rerun <runId> --failed` if the log shows a transient infrastructure failure, (3) apply a code fix if the log shows a real test/build failure. When a check has `conclusion === "CANCELLED"` with a `runId`, a single separate step says to rerun with `gh run rerun <runId>` (no `--failed`) if the cancellation looks unintended. When a check has only a `detailsUrl` (external status check — no `runId`), the step says to open the URL in a browser. When both are absent, the step says to escalate to a human.
 - The `resolve:` instruction is emitted when `resolveCommand.hasMutations` is true — i.e. when at least one of `threads`, `actionableComments`, or `reviewSummaryIds` is non-empty. Summary-only dispatches also emit the instruction. A `CONFLICTS`-only dispatch (none of those non-empty) omits it.
 - A "do not re-run cancelled runs" instruction is appended when `cancelled` is non-empty and a push is required — it reminds the monitor that those IDs were cancelled pre-push and new runs have since been triggered.
 - A `For any large decisions or rejections …` (Shepherd Journal) instruction is appended when `resolveCommand.hasMutations` is true — i.e. when at least one of threads, actionable comments, or review summary IDs is non-empty. It asks the agent to add or update a `## Shepherd Journal` section in the PR description (`gh pr edit <N> --body …`) summarizing each decision and linking back to the originating comment, thread, or review. Conflicts-only dispatches (none of those non-empty) omit it.
@@ -470,7 +467,7 @@ The block after the base-fields line (separated by a blank line) is `escalate.hu
 
 ### `rerun_ci`
 
-> **This action is no longer emitted by `iterate`.** Transient CI failure detection (timeout / cancelled) has been moved to the agent: the `fix_code` action now carries `jobName` and `logTail` for every failing check, and the `## Instructions` section tells the agent to examine the log and decide whether to run `gh run rerun <runId> --failed` or apply a code fix. Current releases no longer include a `rerun_ci` action or `[RERUN_CI]` formatter output.
+> **This action is no longer emitted by `iterate`.** Transient CI failure detection (timeout / cancelled) has been moved to the agent: the `fix_code` action now carries `failedStep`/`conclusion` for every failing check, and the `## Instructions` section tells the agent to run `gh run view <runId> --log-failed` and decide whether to rerun or apply a code fix. Current releases no longer include a `rerun_ci` action or `[RERUN_CI]` formatter output.
 
 **Trigger:** Previously emitted when one or more failing checks had `failureKind === "timeout"` or `"cancelled"` and no actionable work was found. Removed in favour of routing all failing checks through `fix_code` with raw log data.
 

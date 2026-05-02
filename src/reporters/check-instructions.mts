@@ -41,8 +41,8 @@ export function buildCheckInstructions(report: ShepherdReport): string[] {
   for (const c of checks.failing) {
     const stepHint = c.failedStep ? ` (failed step: \`${c.failedStep}\`)` : "";
     const diagnosisHint = c.runId
-      ? c.logTail !== undefined
-        ? `examine the log tail${stepHint} — if transient, run \`gh run rerun ${c.runId} --failed\`; otherwise apply a fix`
+      ? c.conclusion === "CANCELLED"
+        ? `cancelled — if unintended, rerun with \`gh run rerun ${c.runId}\``
         : `run \`gh run view ${c.runId} --log-failed\`${stepHint} to diagnose — if transient, rerun with \`gh run rerun ${c.runId} --failed\`; otherwise apply a fix`
       : c.detailsUrl
         ? `open the check details (${c.detailsUrl}) to diagnose the failure`
