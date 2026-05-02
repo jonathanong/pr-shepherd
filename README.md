@@ -276,14 +276,14 @@ actions:
   autoMarkReady: false # disable to stay draft until you manually promote
 ```
 
-Environment variables: `GH_TOKEN` / `GITHUB_TOKEN` (auth; falls back to `gh auth token`), `PR_SHEPHERD_STATE_DIR` (override loop-state and log base dir), `PR_SHEPHERD_LOG_DISABLED=1` (disable the per-worktree debug log), `AGENT=codex` or `CODEX_CI=1` (emit Codex-compatible monitor instructions).
+Environment variables: `GH_TOKEN` / `GITHUB_TOKEN` (auth; falls back to `gh auth token`, then `GITHUB_PERSONAL_ACCESS_TOKEN`), `PR_SHEPHERD_STATE_DIR` (override loop-state and log base dir), `PR_SHEPHERD_LOG_DISABLED=1` (disable the per-worktree debug log), `AGENT=codex` or `CODEX_CI=1` (emit Codex-compatible monitor instructions).
 
 See [docs/configuration.md](docs/configuration.md) for full semantics and deprecated-key migration.
 
 ## Requirements
 
 - Node.js ≥ 22.0.0
-- A GitHub token: set `GH_TOKEN` or `GITHUB_TOKEN`, **or** install and authenticate the `gh` CLI (`gh auth login`) — pr-shepherd uses `gh auth token` as a fallback. The `repo` scope is required for private repositories.
+- A GitHub token: set `GH_TOKEN` or `GITHUB_TOKEN`, **or** install and authenticate the `gh` CLI (`gh auth login`) — pr-shepherd uses `gh auth token` as a fallback before trying `GITHUB_PERSONAL_ACCESS_TOKEN`. The `repo` scope is required for private repositories.
 - `git`
 
 ## Docs
