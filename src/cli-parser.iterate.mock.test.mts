@@ -254,7 +254,7 @@ describe("main — iterate text format", () => {
       "WAIT: 6 passing, 1 in-progress — awaiting human review or branch protection",
     );
     expect(out).toContain(
-      "1. End this iteration — rerun `npx pr-shepherd 42 --ready-delay 15m` later to recheck.",
+      "1. Continue the active Codex goal — wait about the configured interval (4m), then rerun `npx pr-shepherd 42 --ready-delay 15m` to recheck.",
     );
     expect(out).not.toContain("next cron fire");
     expect(out).not.toContain("auto-cancel");
@@ -266,7 +266,7 @@ describe("main — iterate text format", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain(
-      "1. End this iteration — rerun `npx pr-shepherd 42` after CI starts reporting.",
+      "1. Continue the active Codex goal — wait about the configured interval (4m), then rerun `npx pr-shepherd 42` after CI starts reporting.",
     );
     expect(out).not.toContain("next cron fire");
   });
@@ -277,7 +277,7 @@ describe("main — iterate text format", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain(
-      "1. The CLI already marked the PR ready for review — end this iteration. Rerun `npx pr-shepherd 42` later to recheck.",
+      "1. The CLI already marked the PR ready for review. Continue the active Codex goal until the ready-delay completes — wait about the configured interval (4m), then rerun `npx pr-shepherd 42` to recheck.",
     );
   });
 
@@ -324,7 +324,7 @@ describe("main — iterate text format", () => {
     await main(["node", "shepherd", "iterate", "42", "--format", "json"]);
     const parsed = JSON.parse(getStdout().trimEnd());
     expect(parsed.instructions).toEqual([
-      "End this iteration — rerun `npx pr-shepherd 42` later to recheck.",
+      "Continue the active Codex goal — wait about the configured interval (4m), then rerun `npx pr-shepherd 42` to recheck.",
     ]);
   });
 

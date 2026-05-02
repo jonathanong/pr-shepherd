@@ -92,7 +92,9 @@ describe("main — monitor", () => {
     expect(mockRunMonitor).toHaveBeenCalledWith(expect.objectContaining({ runtime: "codex" }));
     const out = getStdout();
     expect(out).toContain("Reusable command: `npx pr-shepherd 42`");
-    expect(out).toContain("Codex does not provide `/loop` scheduling");
+    expect(out).toContain(
+      "keep cycling with `npx pr-shepherd 42` about every configured interval (4m)",
+    );
     expect(out).not.toContain("Invoke the `/loop` skill");
   });
 
@@ -114,7 +116,9 @@ describe("main — monitor", () => {
     await main(["node", "shepherd", "monitor", "42", "--format=json"]);
     const parsed = JSON.parse(getStdout().trim());
     expect(parsed.reusableCommand).toBe("npx pr-shepherd 42");
-    expect(parsed.instructions.join("\n")).toContain("Codex does not provide `/loop` scheduling");
+    expect(parsed.instructions.join("\n")).toContain(
+      "keep cycling with `npx pr-shepherd 42` about every configured interval (4m)",
+    );
   });
 
   it("accepts --ready-delay and forwards it to runMonitor", async () => {
