@@ -1,7 +1,7 @@
 {
   "name": "pr-shepherd",
   "version": "0.11.0",
-  "description": "Autonomous PR CI monitor and review-comment resolver for Claude Code",
+  "description": "Autonomous PR CI monitor and review-comment resolver for agentic coding tools",
   "license": "MIT",
   "author": "Jonathan Ong",
   "type": "module",
@@ -49,6 +49,7 @@
     "ci",
     "code-review",
     "automation",
+    "codex",
     "claude",
     "claude-code"
   ],

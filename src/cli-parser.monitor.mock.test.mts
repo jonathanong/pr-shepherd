@@ -47,12 +47,15 @@ const MONITOR_RESULT = {
   prNumber: 42,
   loopTag: "#pr-shepherd-loop:pr=42:",
   loopArgs: "4m",
+  reusableCommand: "npx pr-shepherd iterate 42",
   loopPrompt: "#pr-shepherd-loop:pr=42:\nBODY",
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
   process.exitCode = undefined;
+  delete process.env.AGENT;
+  delete process.env.CODEX_CI;
   stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   mockRunStatus.mockResolvedValue([]);
@@ -61,6 +64,8 @@ beforeEach(() => {
 
 afterEach(() => {
   process.exitCode = undefined;
+  delete process.env.AGENT;
+  delete process.env.CODEX_CI;
   stdoutSpy.mockRestore();
   stderrSpy.mockRestore();
 });
@@ -69,18 +74,47 @@ describe("main — monitor", () => {
   it("dispatches to runMonitor and emits formatted output", async () => {
     await main(["node", "shepherd", "monitor", "42"]);
     expect(mockRunMonitor).toHaveBeenCalledTimes(1);
-    expect(mockRunMonitor).toHaveBeenCalledWith(expect.objectContaining({ prNumber: 42 }));
+    expect(mockRunMonitor).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: 42, runtime: "claude" }),
+    );
     const out = getStdout();
     expect(out).toContain("# PR #42 [MONITOR]");
+  });
+
+  it("uses Codex monitor output when AGENT=codex", async () => {
+    process.env.AGENT = "codex";
+    mockRunMonitor.mockResolvedValue({
+      ...MONITOR_RESULT,
+      loopPrompt:
+        "#pr-shepherd-loop:pr=42:\n\n**IMPORTANT — Codex recurrence rules:**\n\nRun in a single Bash call:\n  npx pr-shepherd iterate 42",
+    });
+    await main(["node", "shepherd", "monitor", "42"]);
+    expect(mockRunMonitor).toHaveBeenCalledWith(expect.objectContaining({ runtime: "codex" }));
+    const out = getStdout();
+    expect(out).toContain("Reusable command: `npx pr-shepherd iterate 42`");
+    expect(out).toContain("Codex does not provide `/loop` scheduling");
+    expect(out).not.toContain("Invoke the `/loop` skill");
   });
 
   it("emits JSON when --format=json", async () => {
     await main(["node", "shepherd", "monitor", "42", "--format=json"]);
     const out = getStdout();
-    const parsed = JSON.parse(out.trim()) as typeof MONITOR_RESULT;
+    const parsed = JSON.parse(out.trim());
     expect(parsed.prNumber).toBe(42);
     expect(parsed.loopTag).toBe("#pr-shepherd-loop:pr=42:");
     expect(parsed.loopArgs).toBe("4m");
+    expect(parsed.reusableCommand).toBeUndefined();
+    expect(
+      parsed.instructions.some((inst: string) => inst.includes("invoke the `/loop` skill")),
+    ).toBe(true);
+  });
+
+  it("emits Codex JSON instructions when CODEX_CI=1", async () => {
+    process.env.CODEX_CI = "1";
+    await main(["node", "shepherd", "monitor", "42", "--format=json"]);
+    const parsed = JSON.parse(getStdout().trim());
+    expect(parsed.reusableCommand).toBe("npx pr-shepherd iterate 42");
+    expect(parsed.instructions.join("\n")).toContain("Codex does not provide `/loop` scheduling");
   });
 
   it("accepts --ready-delay and forwards it to runMonitor", async () => {

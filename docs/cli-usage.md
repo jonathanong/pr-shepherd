@@ -70,6 +70,8 @@ Base: main
 3. This is a one-shot check. For continuous monitoring that acts on these signals automatically, use `/pr-shepherd:monitor`.
 ```
 
+In Codex output, the final instruction points to the reusable iterate command instead: `npx pr-shepherd iterate <PR>`.
+
 ### pr-shepherd resolve [PR]
 
 Two modes: **fetch** (default) auto-resolves outdated threads and returns actionable items; **mutate** resolves/minimizes/dismisses specific IDs after you push fixes.
@@ -238,6 +240,8 @@ WAIT: 3 passing, 0 in-progress — 540s until auto-cancel
 1. End this iteration — the next cron fire will recheck.
 ```
 
+When Codex output is selected, the `[WAIT]` body omits the `until auto-cancel` countdown and the instruction points to the reusable one-shot command instead. For example: ``End this iteration — rerun `npx pr-shepherd iterate 42` later to recheck.`` If the current command used `--ready-delay`, the rerun command includes the same flag.
+
 Example for `[FIX_CODE]` (richest action):
 
 ```markdown
@@ -293,7 +297,9 @@ Exit codes: `0` wait/cooldown/mark_ready · `1` fix_code · `2` cancel · `3` es
 
 ### pr-shepherd monitor [PR]
 
-Bootstrap command for `/pr-shepherd:monitor`. Reads `watch.interval` from config and emits the loop prompt body (for inline single-iteration use) and a short `Loop args` line (the interval). The monitor skill invokes this command and follows its `## Instructions` to either run one iteration inline (if a loop already exists) or start a new `/loop`.
+Bootstrap command used by the Claude `/pr-shepherd:monitor` skill and by Codex directly. Reads `watch.interval` from config and emits the monitor prompt body plus a short `Loop args` line (the interval).
+
+By default, output targets Claude Code and tells the monitor skill how to reuse an existing `/loop` or start a new one. When Codex is detected (`AGENT=codex` or `CODEX_CI=1`), output omits Cron and `/loop` instructions and instead tells Codex to run one `iterate` tick, then rerun the reusable `npx pr-shepherd iterate <PR>` prompt later.
 
 ```sh
 npx pr-shepherd monitor        # infer PR from current branch
@@ -320,6 +326,8 @@ Loop args: `4m`
 1. Run `CronList`. If any job's prompt contains `#pr-shepherd-loop:pr=42:`, run the `## Loop prompt` body once inline (as if it were a cron tick) then stop — do not create a duplicate loop.
 2. Otherwise, invoke the `/loop` skill via the Skill tool. Build the `args` parameter as: only the value inside the backticks on the `Loop args` line above (the interval — not the `Loop args:` label), then a blank line, then the full `## Loop prompt` body.
 ```
+
+Codex output includes the same PR, tag, interval, prompt body, and `## Instructions` shape, but the instructions say to run the loop prompt once and rerun `npx pr-shepherd iterate 42` later instead of creating or cancelling a `/loop`.
 
 The loop interval comes from `watch.interval` in `.pr-shepherdrc.yml` or the built-in default. Use `--format=json` to inspect the raw values programmatically.
 

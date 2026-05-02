@@ -8,6 +8,11 @@ import type {
   FirstLookComment,
 } from "../../types.mts";
 
+export const FIX_INSTRUCTION_STOP_AFTER_PUSH =
+  "Stop this iteration — CI needs time to run on the new push before the next tick.";
+export const FIX_INSTRUCTION_STOP_BEFORE_NEXT_TICK = "Stop this iteration before the next tick.";
+export const FIX_INSTRUCTION_END_ITERATION = "End this iteration.";
+
 /**
  * Render a resolve command as a shell snippet. Wraps `$DISMISS_MESSAGE` and whitespace-bearing
  * argv entries in double quotes for placeholder substitution. Throws if argv contains `"`, `$`,
@@ -168,13 +173,11 @@ export function buildFixInstructions(
     );
   }
   if (needsPush) {
-    instructions.push(
-      `Stop this iteration — CI needs time to run on the new push before the next tick.`,
-    );
+    instructions.push(FIX_INSTRUCTION_STOP_AFTER_PUSH);
   } else if (resolveCommand.hasMutations) {
-    instructions.push(`Stop this iteration before the next tick.`);
+    instructions.push(FIX_INSTRUCTION_STOP_BEFORE_NEXT_TICK);
   } else {
-    instructions.push(`End this iteration.`);
+    instructions.push(FIX_INSTRUCTION_END_ITERATION);
   }
 
   return instructions;

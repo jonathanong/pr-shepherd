@@ -1,9 +1,12 @@
 import { getCurrentPrNumber } from "../github/client.mts";
 import { loadConfig } from "../config/load.mts";
 import type { GlobalOptions } from "../types.mts";
+import type { AgentRuntime } from "../agent-runtime.mts";
+import { joinSections } from "../util/markdown.mts";
 
 export interface MonitorCommandOptions extends GlobalOptions {
   readyDelaySuffix?: string;
+  runtime?: AgentRuntime;
 }
 
 export interface MonitorResult {
@@ -13,6 +16,7 @@ export interface MonitorResult {
   loopArgs: string;
   /** The loop prompt body. To build /loop args: `${loopArgs}\n\n${loopPrompt}` */
   loopPrompt: string;
+  reusableCommand: string;
 }
 
 export async function runMonitor(opts: MonitorCommandOptions): Promise<MonitorResult> {
@@ -34,34 +38,59 @@ export async function runMonitor(opts: MonitorCommandOptions): Promise<MonitorRe
   // step 1 of formatMonitorResult's ## Instructions and the in-prompt Self-dedup
   // block depend on this exact string — don't change the format.
   const loopTag = `#pr-shepherd-loop:pr=${prNumber}:`;
-  const loopPrompt = buildLoopPrompt(prNumber, loopTag, opts.readyDelaySuffix);
   const loopArgs = interval;
+  const reusableCommand = buildIterateCommand(prNumber, opts.readyDelaySuffix);
+  const loopPrompt = buildLoopPrompt(prNumber, loopTag, reusableCommand, opts.runtime ?? "claude");
 
-  return { prNumber, loopTag, loopArgs, loopPrompt };
+  return {
+    prNumber,
+    loopTag,
+    loopArgs,
+    loopPrompt,
+    reusableCommand,
+  };
 }
 
 // ---------------------------------------------------------------------------
 // Formatters
 // ---------------------------------------------------------------------------
 
-export function formatMonitorResult(result: MonitorResult): string {
+export function formatMonitorResult(
+  result: MonitorResult,
+  opts?: { runtime?: AgentRuntime },
+): string {
   const { prNumber, loopTag, loopArgs, loopPrompt } = result;
+  const runtime = opts?.runtime ?? "claude";
 
-  return [
-    `# PR #${prNumber} [MONITOR]`,
-    "",
-    `Loop tag: \`${loopTag}\``,
-    `Loop args: \`${loopArgs}\``,
-    "",
+  const sections = [
+    [
+      `# PR #${prNumber} [MONITOR]`,
+      "",
+      `Loop tag: \`${loopTag}\``,
+      `Loop args: \`${loopArgs}\``,
+    ].join("\n"),
+    runtime === "codex" ? `Reusable command: \`${result.reusableCommand}\`` : null,
     "## Loop prompt",
-    "",
     loopPrompt,
-    "",
     "## Instructions",
-    "",
-    `1. Run \`CronList\`. If any job's prompt contains \`${loopTag}\`, run the \`## Loop prompt\` body once inline (as if it were a cron tick) then stop — do not create a duplicate loop.`,
-    `2. Otherwise, invoke the \`/loop\` skill via the Skill tool. Build the \`args\` parameter as: only the value inside the backticks on the \`Loop args\` line above (the interval — not the \`Loop args:\` label), then a blank line, then the full \`## Loop prompt\` body.`,
-  ].join("\n");
+    buildMonitorInstructions(result, runtime)
+      .map((inst, i) => `${i + 1}. ${inst}`)
+      .join("\n"),
+  ];
+  return joinSections(sections);
+}
+
+export function formatMonitorJson(
+  result: MonitorResult,
+  opts?: { runtime?: AgentRuntime },
+): Record<string, unknown> {
+  const runtime = opts?.runtime ?? "claude";
+  const { reusableCommand, ...base } = result;
+  return {
+    ...base,
+    ...(runtime === "codex" && { reusableCommand }),
+    instructions: buildMonitorInstructions(result, runtime),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -79,9 +108,33 @@ function validateReadyDelaySuffix(readyDelaySuffix?: string): string | undefined
   return trimmed;
 }
 
-function buildLoopPrompt(prNumber: number, loopTag: string, readyDelaySuffix?: string): string {
+function buildIterateCommand(prNumber: number, readyDelaySuffix?: string): string {
   const validatedDelay = validateReadyDelaySuffix(readyDelaySuffix);
-  const iterateCmd = `npx pr-shepherd iterate ${prNumber}${validatedDelay ? ` --ready-delay ${validatedDelay}` : ""}`;
+  return `npx pr-shepherd iterate ${prNumber}${validatedDelay ? ` --ready-delay ${validatedDelay}` : ""}`;
+}
+
+function buildLoopPrompt(
+  prNumber: number,
+  loopTag: string,
+  iterateCmd: string,
+  runtime: AgentRuntime = "claude",
+): string {
+  if (runtime === "codex") {
+    return [
+      loopTag,
+      "",
+      "**IMPORTANT — Codex recurrence rules:**",
+      "- Run the command below once, follow its `## Instructions` exactly, then stop.",
+      "- Codex does not provide `/loop` scheduling in this workflow. To check again later, rerun the reusable command from the monitor output.",
+      "",
+      "Run in a single Bash call:",
+      `  ${iterateCmd}`,
+      "",
+      `Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with \`# PR #${prNumber} [\`), report the first line of stderr and stop so the user can retry.`,
+      "",
+      "The output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Every output ends with a `## Instructions` section — follow those numbered steps exactly.",
+    ].join("\n");
+  }
   return [
     loopTag,
     "",
@@ -98,4 +151,17 @@ function buildLoopPrompt(prNumber: number, loopTag: string, readyDelaySuffix?: s
     "",
     "The output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Every output ends with a `## Instructions` section — follow those numbered steps exactly.",
   ].join("\n");
+}
+
+function buildMonitorInstructions(result: MonitorResult, runtime: AgentRuntime): string[] {
+  if (runtime === "codex") {
+    return [
+      "Run the `## Loop prompt` body once inline now.",
+      `When you want to check this PR again later, run \`${result.reusableCommand}\`. Codex does not provide \`/loop\` scheduling, so no recurring monitor is created.`,
+    ];
+  }
+  return [
+    `Run \`CronList\`. If any job's prompt contains \`${result.loopTag}\`, run the \`## Loop prompt\` body once inline (as if it were a cron tick) then stop — do not create a duplicate loop.`,
+    "Otherwise, invoke the `/loop` skill via the Skill tool. Build the `args` parameter as: only the value inside the backticks on the `Loop args` line above (the interval — not the `Loop args:` label), then a blank line, then the full `## Loop prompt` body.",
+  ];
 }

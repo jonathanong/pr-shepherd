@@ -1,11 +1,22 @@
 import type { IterateResult } from "../types.mts";
+import type { AgentRuntime } from "../agent-runtime.mts";
+import {
+  adaptIterateLog,
+  adaptFixCodeInstructions,
+  buildSimpleIterateInstructions,
+} from "./iterate-instructions.mts";
 
 /**
  * Project an IterateResult to a lean JSON shape for the default (non-verbose) output.
  * Omits fields that are the trivial default (false, 0, empty) or state-gated fields
  * outside the state where they are meaningful.
  */
-export function projectIterateLean(result: IterateResult): unknown {
+export function projectIterateLean(
+  result: IterateResult,
+  opts?: { runtime?: AgentRuntime; readyDelaySuffix?: string },
+): unknown {
+  const runtime = opts?.runtime ?? "claude";
+  const readyDelaySuffix = opts?.readyDelaySuffix;
   const base: Record<string, unknown> = {
     action: result.action,
     pr: result.pr,
@@ -33,14 +44,31 @@ export function projectIterateLean(result: IterateResult): unknown {
 
   switch (result.action) {
     case "cooldown":
-      return { ...base, log: result.log };
+      return {
+        ...base,
+        log: adaptIterateLog(result.log, runtime),
+        instructions: buildSimpleIterateInstructions(result, runtime, readyDelaySuffix),
+      };
     case "wait":
-      return { ...base, log: result.log };
+      return {
+        ...base,
+        log: adaptIterateLog(result.log, runtime),
+        instructions: buildSimpleIterateInstructions(result, runtime, readyDelaySuffix),
+      };
     case "cancel":
-      return { ...base, reason: result.reason, log: result.log };
+      return {
+        ...base,
+        reason: result.reason,
+        log: adaptIterateLog(result.log, runtime),
+        instructions: buildSimpleIterateInstructions(result, runtime, readyDelaySuffix),
+      };
     case "mark_ready":
       // drop markedReady — always true, redundant with action discriminator
-      return { ...base, log: result.log };
+      return {
+        ...base,
+        log: adaptIterateLog(result.log, runtime),
+        instructions: buildSimpleIterateInstructions(result, runtime, readyDelaySuffix),
+      };
     case "fix_code":
       return {
         ...base,
@@ -78,7 +106,14 @@ export function projectIterateLean(result: IterateResult): unknown {
             changesRequestedReviews: result.fix.changesRequestedReviews,
           }),
           resolveCommand: result.fix.resolveCommand,
-          ...(result.fix.instructions.length > 0 && { instructions: result.fix.instructions }),
+          ...(result.fix.instructions.length > 0 && {
+            instructions: adaptFixCodeInstructions(
+              result.fix.instructions,
+              result.pr,
+              runtime,
+              readyDelaySuffix,
+            ),
+          }),
         },
       };
     case "escalate":
@@ -102,6 +137,38 @@ export function projectIterateLean(result: IterateResult): unknown {
           suggestion: result.escalate.suggestion,
           humanMessage: result.escalate.humanMessage,
         },
+        instructions: buildSimpleIterateInstructions(result, runtime, readyDelaySuffix),
       };
   }
+}
+
+export function projectIterateVerbose(
+  result: IterateResult,
+  opts?: { runtime?: AgentRuntime; readyDelaySuffix?: string },
+): unknown {
+  const runtime = opts?.runtime ?? "claude";
+  const readyDelaySuffix = opts?.readyDelaySuffix;
+  if (result.action === "fix_code") {
+    return {
+      ...result,
+      fix: {
+        ...result.fix,
+        instructions: adaptFixCodeInstructions(
+          result.fix.instructions,
+          result.pr,
+          runtime,
+          readyDelaySuffix,
+        ),
+      },
+    };
+  }
+  const log =
+    "log" in result && typeof result.log === "string"
+      ? { log: adaptIterateLog(result.log, runtime) }
+      : {};
+  return {
+    ...result,
+    ...log,
+    instructions: buildSimpleIterateInstructions(result, runtime, readyDelaySuffix),
+  };
 }

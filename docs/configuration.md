@@ -61,6 +61,12 @@ actions:
 
 ---
 
+## Agent detection
+
+`pr-shepherd` uses the calling-agent environment only to choose instruction wording. `AGENT=codex` and `CODEX_CI=1` select Codex-compatible monitor output. Other environments keep the default Claude-compatible `/loop` instructions.
+
+---
+
 ## `iterate`
 
 ### `iterate.cooldownSeconds` — default `30`

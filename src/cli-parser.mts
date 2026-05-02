@@ -33,6 +33,7 @@ import {
   handleStatus,
 } from "./cli/handlers.mts";
 import { setupLog } from "./log/setup.mts";
+import { detectAgentRuntime } from "./agent-runtime.mts";
 
 // ---------------------------------------------------------------------------
 // Entry
@@ -99,9 +100,13 @@ function readVersion(): string {
 
 async function handleCheck(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts } = parseCommonArgs(args);
+  const runtime = detectAgentRuntime();
 
   const report = await runCheck({ ...globalOpts, prNumber, autoResolve: false });
-  const output = globalOpts.format === "json" ? formatJson(report) : formatText(report);
+  const output =
+    globalOpts.format === "json"
+      ? formatJson(report, { runtime })
+      : formatText(report, { runtime });
   process.stdout.write(`${output}\n`);
 
   process.exitCode = statusToExitCode(report.status);

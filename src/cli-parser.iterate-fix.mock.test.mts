@@ -44,6 +44,8 @@ function getStdout(): string {
 beforeEach(() => {
   vi.clearAllMocks();
   process.exitCode = undefined;
+  delete process.env.AGENT;
+  delete process.env.CODEX_CI;
   stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   mockRunStatus.mockResolvedValue([]);
@@ -51,6 +53,8 @@ beforeEach(() => {
 
 afterEach(() => {
   process.exitCode = undefined;
+  delete process.env.AGENT;
+  delete process.env.CODEX_CI;
   stdoutSpy.mockRestore();
   stderrSpy.mockRestore();
 });

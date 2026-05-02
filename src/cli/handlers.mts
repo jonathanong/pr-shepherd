@@ -1,9 +1,10 @@
 import { runCommitSuggestion } from "../commands/commit-suggestion.mts";
 import { runIterate } from "../commands/iterate.mts";
-import { runMonitor, formatMonitorResult } from "../commands/monitor.mts";
+import { runMonitor, formatMonitorResult, formatMonitorJson } from "../commands/monitor.mts";
 import { runStatus, formatStatusTable } from "../commands/status.mts";
 import { getRepoInfo } from "../github/client.mts";
 import { loadConfig } from "../config/load.mts";
+import { detectAgentRuntime } from "../agent-runtime.mts";
 import {
   parseCommonArgs,
   getFlag,
@@ -20,7 +21,9 @@ import {
   formatCommitSuggestionResult,
   formatIterateResult,
   projectIterateLean,
+  projectIterateVerbose,
 } from "./formatters.mts";
+import { validateDurationFlag } from "./duration-flag.mts";
 
 export async function handleCommitSuggestion(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
@@ -61,11 +64,19 @@ export async function handleCommitSuggestion(args: string[]): Promise<void> {
 
 export async function handleIterate(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
+  const runtime = detectAgentRuntime();
 
   const readyDelayStr = getFlag(extra, "--ready-delay");
+  const readyDelaySuffix = validateDurationFlag(
+    "pr-shepherd iterate",
+    "--ready-delay",
+    readyDelayStr,
+    hasFlag(extra, "--ready-delay"),
+  );
+  if (readyDelaySuffix === null) return;
   const cfg = loadConfig();
   const readyDelaySeconds =
-    parseDurationToMinutes(readyDelayStr ?? "", cfg.watch.readyDelayMinutes) * 60;
+    parseDurationToMinutes(readyDelaySuffix ?? "", cfg.watch.readyDelayMinutes) * 60;
   const cooldownSecondsStr = getFlag(extra, "--cooldown-seconds");
   const cooldownSeconds = cooldownSecondsStr
     ? parseIntStrict(cooldownSecondsStr, "--cooldown-seconds")
@@ -88,10 +99,18 @@ export async function handleIterate(args: string[]): Promise<void> {
   });
 
   if (globalOpts.format === "json") {
-    const output = globalOpts.verbose ? result : projectIterateLean(result);
+    const output = globalOpts.verbose
+      ? projectIterateVerbose(result, { runtime, readyDelaySuffix })
+      : projectIterateLean(result, { runtime, readyDelaySuffix });
     process.stdout.write(`${JSON.stringify(output)}\n`);
   } else {
-    process.stdout.write(`${formatIterateResult(result, { verbose: globalOpts.verbose })}\n`);
+    process.stdout.write(
+      `${formatIterateResult(result, {
+        verbose: globalOpts.verbose,
+        runtime,
+        readyDelaySuffix,
+      })}\n`,
+    );
   }
 
   process.exitCode = iterateActionToExitCode(result.action);
@@ -99,18 +118,16 @@ export async function handleIterate(args: string[]): Promise<void> {
 
 export async function handleMonitor(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
+  const runtime = detectAgentRuntime();
 
   const readyDelayStr = getFlag(extra, "--ready-delay");
-  if (
-    hasFlag(extra, "--ready-delay") &&
-    (readyDelayStr === null || readyDelayStr.startsWith("--"))
-  ) {
-    process.stderr.write(
-      "pr-shepherd monitor: --ready-delay requires a value (e.g. --ready-delay 15m)\n",
-    );
-    process.exitCode = 1;
-    return;
-  }
+  const readyDelaySuffix = validateDurationFlag(
+    "pr-shepherd monitor",
+    "--ready-delay",
+    readyDelayStr,
+    hasFlag(extra, "--ready-delay"),
+  );
+  if (readyDelaySuffix === null) return;
   const remaining: string[] = [];
   for (let i = 0; i < extra.length; i++) {
     const a = extra[i]!;
@@ -139,7 +156,8 @@ export async function handleMonitor(args: string[]): Promise<void> {
     result = await runMonitor({
       ...globalOpts,
       prNumber,
-      readyDelaySuffix: readyDelayStr ?? undefined,
+      readyDelaySuffix: readyDelaySuffix ?? undefined,
+      runtime,
     });
   } catch (err) {
     process.stderr.write(`${err instanceof Error ? err.message : String(err)}\n`);
@@ -149,8 +167,8 @@ export async function handleMonitor(args: string[]): Promise<void> {
 
   process.stdout.write(
     globalOpts.format === "json"
-      ? `${JSON.stringify(result, null, 2)}\n`
-      : `${formatMonitorResult(result)}\n`,
+      ? `${JSON.stringify(formatMonitorJson(result, { runtime }), null, 2)}\n`
+      : `${formatMonitorResult(result, { runtime })}\n`,
   );
 }
 
