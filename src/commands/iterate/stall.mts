@@ -20,6 +20,7 @@ export function computeStallFingerprint(
     ...report.checks.inProgress.map((p) => `inProgress:${p.name}`),
   ].sort();
   const threads = report.threads.actionable.map((t) => t.id).sort();
+  const resolutionOnlyThreads = report.threads.resolutionOnly.map((t) => t.id).sort();
   const comments = report.comments.actionable.map((c) => c.id).sort();
   const reviews = report.changesRequestedReviews.map((r) => r.id).sort();
   const summaries = [...reviewSummaryIds].sort();
@@ -32,6 +33,7 @@ export function computeStallFingerprint(
     isDraft: base.isDraft,
     checks,
     threads,
+    resolutionOnlyThreads,
     comments,
     reviews,
     summaries,
@@ -71,7 +73,9 @@ export async function applyStallGuard(
       const stalledMinutes = Math.floor(ageSeconds / 60);
       const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
         triggers: ["stall-timeout"],
-        unresolvedThreads: report.threads.actionable.map(toAgentThread),
+        unresolvedThreads: [...report.threads.actionable, ...report.threads.resolutionOnly].map(
+          toAgentThread,
+        ),
         ambiguousComments: report.comments.actionable.map(toAgentComment),
         changesRequestedReviews: report.changesRequestedReviews,
         suggestion: buildEscalateSuggestion(["stall-timeout"], String(stalledMinutes)),

@@ -18,7 +18,6 @@ import type {
   Review,
   ShepherdReport,
 } from "../../types.mts";
-
 interface HandleFixCodeContext {
   base: IterateResultBase;
   report: ShepherdReport;
@@ -34,7 +33,6 @@ interface HandleFixCodeContext {
   editedSummaries: Review[];
   surfacedApprovals: Review[];
 }
-
 export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateResult> {
   const {
     base,
@@ -51,14 +49,10 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     editedSummaries,
     surfacedApprovals,
   } = ctx;
-
   const failingChecks = report.checks.failing;
   const stored = await readFixAttempts({ owner: repoOwner, repo: repoName, pr: prNumber });
-
   const isNewSha = stored?.headSha !== headSha;
-  // Accumulate across shas — only increment when a push is detected (sha changed)
   const currentAttempts: Record<string, number> = stored ? { ...stored.threadAttempts } : {};
-
   if (isNewSha) {
     for (const t of report.threads.actionable) {
       currentAttempts[t.id] = (currentAttempts[t.id] ?? 0) + 1;
@@ -67,6 +61,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
 
   const escalateTriggers = checkEscalateTriggers(
     report.threads.actionable,
+    report.threads.resolutionOnly,
     report.comments.actionable,
     report.changesRequestedReviews,
     failingChecks,
@@ -76,7 +71,9 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   if (escalateTriggers.triggers.length > 0) {
     const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: escalateTriggers.triggers,
-      unresolvedThreads: report.threads.actionable.map(toAgentThread),
+      unresolvedThreads: [...report.threads.actionable, ...report.threads.resolutionOnly].map(
+        toAgentThread,
+      ),
       ambiguousComments: report.comments.actionable.map(toAgentComment),
       changesRequestedReviews: report.changesRequestedReviews,
       attemptHistory: escalateTriggers.thrashHistory,
@@ -91,8 +88,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       },
     };
   }
-
-  // Save updated state (only incremented on sha change)
   await writeFixAttempts(
     { owner: repoOwner, repo: repoName, pr: prNumber },
     { headSha, threadAttempts: currentAttempts },
@@ -110,6 +105,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const cancelledSet = new Set(cancelled);
   const baseLookup = validateBaseBranch(report.baseBranch);
   const threads = report.threads.actionable.map(toAgentThread);
+  const resolutionOnlyThreads = report.threads.resolutionOnly;
   const actionableComments = report.comments.actionable.map(toAgentComment);
   const checks = toAgentChecks(failingChecks);
   const { changesRequestedReviews } = report;
@@ -124,6 +120,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const allCommentIds = [...actionableComments.map((c) => c.id), ...reviewSummaryIds];
   const resolveCommand = buildResolveCommand(
     threads,
+    resolutionOnlyThreads,
     allCommentIds,
     changesRequestedReviews,
     checks,
@@ -132,7 +129,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   if (baseLookup.isFallback && (resolveCommand.requiresHeadSha || hasConflicts)) {
     const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: ["base-branch-unknown"],
-      unresolvedThreads: threads,
+      unresolvedThreads: [...threads, ...resolutionOnlyThreads.map(toAgentThread)],
       ambiguousComments: actionableComments,
       changesRequestedReviews,
       suggestion: buildEscalateSuggestion(["base-branch-unknown"], baseLookup.failureReason),
@@ -146,7 +143,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       },
     };
   }
-
   const firstLookThreads = report.threads.firstLook;
   const firstLookComments = report.comments.firstLook;
   const instructions = buildFixInstructions(
@@ -164,8 +160,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     firstLookSummaries,
     editedSummaries,
     inProgressRunIds,
+    resolutionOnlyThreads,
   );
-
   return applyStallGuard(
     stallKey,
     stallTimeoutSeconds,
@@ -179,6 +175,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       fix: {
         mode: "rebase-and-push" as const,
         threads,
+        resolutionOnlyThreads,
         actionableComments,
         reviewSummaryIds,
         firstLookSummaries,

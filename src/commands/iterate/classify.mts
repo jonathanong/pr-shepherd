@@ -1,4 +1,10 @@
-import type { AgentThread, Review, ResolveCommand, AgentCheck } from "../../types.mts";
+import type {
+  AgentThread,
+  Review,
+  ResolveCommand,
+  AgentCheck,
+  ReviewThread,
+} from "../../types.mts";
 
 export function classifyReviewSummaries(
   summaries: { firstLook: Review[]; seen: Review[]; edited: Review[] },
@@ -33,6 +39,7 @@ export function classifyReviewSummaries(
 
 export function buildResolveCommand(
   threads: AgentThread[],
+  resolutionOnlyThreads: ReviewThread[],
   allCommentIds: string[],
   reviews: Review[],
   checks: AgentCheck[],
@@ -40,8 +47,9 @@ export function buildResolveCommand(
 ): ResolveCommand {
   const argv = ["npx", "pr-shepherd", "resolve", String(prNumber)];
 
-  if (threads.length > 0) {
-    argv.push("--resolve-thread-ids", threads.map((t) => t.id).join(","));
+  const threadIds = [...threads.map((t) => t.id), ...resolutionOnlyThreads.map((t) => t.id)];
+  if (threadIds.length > 0) {
+    argv.push("--resolve-thread-ids", threadIds.join(","));
   }
   if (allCommentIds.length > 0) {
     argv.push("--minimize-comment-ids", allCommentIds.join(","));
@@ -61,7 +69,7 @@ export function buildResolveCommand(
   // --minimize-comment-ids, or --dismiss-review-ids. Returned explicitly
   // (rather than derived from argv.length) so callers don't couple to the
   // base-argv shape.
-  const hasMutations = threads.length > 0 || allCommentIds.length > 0 || reviews.length > 0;
+  const hasMutations = threadIds.length > 0 || allCommentIds.length > 0 || reviews.length > 0;
 
   return { argv, requiresHeadSha, requiresDismissMessage: hasDismiss, hasMutations };
 }

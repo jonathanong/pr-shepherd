@@ -31,6 +31,7 @@ Auto-resolve happens in `check.mts` when `opts.autoResolve === true` (set by `it
 Shepherd does **not** classify threads as "actionable" vs "informational" — that's the LLM's job. Shepherd surfaces:
 
 - All active (non-outdated, unresolved, non-minimized) threads in `report.threads.actionable`
+- Unresolved outdated or minimized threads in `report.threads.resolutionOnly`; these need a GitHub resolve mutation but do not require code edits unless the agent chooses to act on the body.
 - All visible (non-minimized) PR comments in `report.comments.actionable`
 
 The cron prompt reads these and decides what to fix.
@@ -46,7 +47,7 @@ First-look items appear in:
 - `resolve --fetch` output: `## First-look items` section in text; `firstLookThreads` / `firstLookComments` arrays in JSON.
 - `iterate fix_code` output: same `## First-look items` section when `fix_code` fires for other reasons.
 
-First-look items must **not** be passed to `--resolve-thread-ids`, `--minimize-comment-ids`, or `--dismiss-review-ids` — they are already closed on GitHub. The agent's only responsibility is to acknowledge each with a one-line classification.
+First-look items are for acknowledging status before acting. If a first-look thread also appears in `resolutionOnly`, its ID should be resolved through `--resolve-thread-ids`; otherwise, do not pass first-look-only IDs to mutation flags.
 
 State module: `src/state/seen-comments.mts`.
 

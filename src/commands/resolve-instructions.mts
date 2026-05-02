@@ -11,6 +11,7 @@ export function buildFetchInstructions(
 ): string[] {
   const {
     actionableThreads,
+    resolutionOnlyThreads,
     firstLookThreads,
     actionableComments,
     firstLookComments,
@@ -23,6 +24,7 @@ export function buildFetchInstructions(
 
   const total =
     actionableThreads.length +
+    resolutionOnlyThreads.length +
     actionableComments.length +
     changesRequestedReviews.length +
     reviewSummaries.length +
@@ -47,7 +49,7 @@ export function buildFetchInstructions(
 
   if (firstLookTotal > 0) {
     instructions.push(
-      `Items in \`## First-look items\` are for acknowledgement only — do not pass their IDs to \`--resolve-thread-ids\`, \`--minimize-comment-ids\`, or \`--dismiss-review-ids\`. Acknowledge each one with a one-line classification (e.g. "outdated — addressed by commit abc1234", "resolved — already fixed", "minimized — noise").`,
+      `Items in \`## First-look items\` are shown so you can acknowledge their current status before acting. If a first-look thread also appears under \`## Review threads to resolve\`, include its ID in \`--resolve-thread-ids\`; otherwise do not pass first-look-only IDs to mutation flags.`,
     );
   }
   const editedTotal =
@@ -55,7 +57,7 @@ export function buildFetchInstructions(
     firstLookComments.filter((c) => c.edited).length;
   if (editedTotal > 0) {
     instructions.push(
-      `First-look bullets tagged \`, edited\` were updated by their author after you previously acknowledged them. Read the updated body. Do **not** include their IDs in \`--resolve-thread-ids\`, \`--minimize-comment-ids\`, or \`--dismiss-review-ids\` — they are already closed or minimized on GitHub.`,
+      `First-look bullets tagged \`, edited\` were updated by their author after you previously acknowledged them. Read the updated body before deciding whether any matching \`## Review threads to resolve\` item should be resolved.`,
     );
   }
 
@@ -80,6 +82,12 @@ export function buildFetchInstructions(
     );
     instructions.push(
       `Cancel stale in-progress runs: \`BRANCH=$(git rev-parse --abbrev-ref HEAD) && CURRENT_SHA=$(git rev-parse HEAD) && gh run list --branch "$BRANCH" --status in_progress --json databaseId,headSha --jq ".[] | select(.headSha != \\"$CURRENT_SHA\\") | .databaseId" | xargs -I{} gh run cancel {}\`.`,
+    );
+  }
+
+  if (resolutionOnlyThreads.length > 0) {
+    instructions.push(
+      `Resolve each thread under \`## Review threads to resolve\` with \`--resolve-thread-ids\`. These threads are already outdated or minimized, so no code edit is required for them unless their body reveals separate work you choose to do.`,
     );
   }
 

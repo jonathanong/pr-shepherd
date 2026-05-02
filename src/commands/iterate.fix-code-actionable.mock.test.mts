@@ -107,7 +107,13 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       filteredNames: [],
       blockedByFilteredCheck: false,
     },
-    threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+    threads: {
+      actionable: [],
+      resolutionOnly: [],
+      autoResolved: [],
+      autoResolveErrors: [],
+      firstLook: [],
+    },
     comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
@@ -201,6 +207,51 @@ afterEach(() => {
 });
 
 describe("runIterate — fix_code (actionable threads)", () => {
+  it("routes resolution-only threads to resolve without requiring a push SHA", async () => {
+    const outdated = {
+      id: "thread-outdated",
+      isResolved: false,
+      isOutdated: true,
+      isMinimized: false,
+      path: "src/old.mts",
+      line: null,
+      startLine: null,
+      author: "reviewer",
+      body: "old location",
+      url: "",
+      createdAtUnix: NOW - 3600,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: {
+          actionable: [],
+          resolutionOnly: [outdated],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.threads).toHaveLength(0);
+      expect(result.fix.resolutionOnlyThreads.map((t) => t.id)).toEqual(["thread-outdated"]);
+      expect(result.fix.resolveCommand.argv).toContain("--resolve-thread-ids");
+      expect(result.fix.resolveCommand.argv).toContain("thread-outdated");
+      expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
+      expect(result.fix.instructions.join("\n")).not.toContain("Rebase and push");
+    }
+  });
+
   it("returns action: fix_code with 2 actionable threads and 0 CI failures", async () => {
     const thread1 = {
       id: "thread-1",
@@ -233,6 +284,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
         status: "UNRESOLVED_COMMENTS",
         threads: {
           actionable: [thread1, thread2],
+          resolutionOnly: [],
           autoResolved: [],
           autoResolveErrors: [],
           firstLook: [],
@@ -277,7 +329,13 @@ describe("runIterate — fix_code (actionable threads)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+        threads: {
+          actionable: [thread],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -312,7 +370,13 @@ describe("runIterate — fix_code (actionable threads)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+        threads: {
+          actionable: [thread],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({

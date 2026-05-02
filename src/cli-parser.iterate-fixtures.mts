@@ -28,6 +28,7 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
       fix: {
         mode: "rebase-and-push",
         threads: [],
+        resolutionOnlyThreads: [],
         actionableComments: [],
         reviewSummaryIds: [],
         firstLookSummaries: [],

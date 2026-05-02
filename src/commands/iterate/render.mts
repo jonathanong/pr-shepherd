@@ -6,6 +6,7 @@ import type {
   ResolveCommand,
   FirstLookThread,
   FirstLookComment,
+  ReviewThread,
 } from "../../types.mts";
 
 export const FIX_INSTRUCTION_STOP_AFTER_PUSH =
@@ -50,6 +51,7 @@ export function buildFixInstructions(
   firstLookSummaries: Review[] = [],
   editedSummaries: Review[] = [],
   inProgressRunIds: string[] = [],
+  resolutionOnlyThreads: ReviewThread[] = [],
 ): string[] {
   const instructions: string[] = [];
   if (inProgressRunIds.length > 0) {
@@ -69,6 +71,11 @@ export function buildFixInstructions(
       : "";
     instructions.push(
       `Apply code fixes: read and edit each file referenced under \`## Review threads\` and \`## Actionable comments\` above.${suggestionFallback}`,
+    );
+  }
+  if (resolutionOnlyThreads.length > 0) {
+    instructions.push(
+      `Resolve the threads under \`## Review threads to resolve\` with the \`resolve:\` command shown below. These threads are already outdated or minimized, so no code edit is required for them unless their body reveals separate work you choose to do.`,
     );
   }
   const cancelledRunIdChecks = checks.filter((c) => c.runId && c.conclusion === "CANCELLED");
@@ -133,7 +140,7 @@ export function buildFixInstructions(
   const firstLookTotal = firstLookThreads.length + firstLookComments.length;
   if (firstLookTotal > 0) {
     instructions.push(
-      `Items in \`## First-look items\` are for acknowledgement only — do not pass their IDs to \`--resolve-thread-ids\`, \`--minimize-comment-ids\`, or \`--dismiss-review-ids\`. Acknowledge each one with a one-line classification (e.g. "outdated — addressed by commit abc1234", "resolved — already fixed", "minimized — noise").`,
+      `Items in \`## First-look items\` are shown so you can acknowledge their current status before acting. If a first-look thread also appears under \`## Review threads to resolve\`, its ID is already included in the \`resolve:\` command; otherwise do not pass first-look-only IDs to mutation flags.`,
     );
   }
   if (firstLookSummaries.length > 0) {
@@ -147,7 +154,7 @@ export function buildFixInstructions(
     firstLookComments.filter((c) => c.edited).length;
   if (editedTotal > 0) {
     instructions.push(
-      `Items under \`## Review summaries (edited since first look)\` and any first-look bullet tagged \`, edited\` were updated by their author after you previously acknowledged them. Read the updated body. Do **not** include their IDs in \`--minimize-comment-ids\`, \`--resolve-thread-ids\`, or \`--dismiss-review-ids\` — they are already closed or minimized on GitHub.`,
+      `Items under \`## Review summaries (edited since first look)\` and any first-look bullet tagged \`, edited\` were updated by their author after you previously acknowledged them. Read the updated body before deciding whether any matching \`## Review threads to resolve\` item should be resolved.`,
     );
   }
   if (resolveCommand.hasMutations) {

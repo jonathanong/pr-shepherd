@@ -126,6 +126,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   );
   const hasActionableWork =
     report.threads.actionable.length > 0 ||
+    report.threads.resolutionOnly.length > 0 ||
     report.comments.actionable.length > 0 ||
     report.changesRequestedReviews.length > 0 ||
     report.checks.failing.length > 0 ||

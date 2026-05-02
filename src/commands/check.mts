@@ -63,7 +63,7 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
 
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
 
-  const unresolvedThreads = batchData.reviewThreads.filter((t) => !t.isResolved && !t.isMinimized);
+  const unresolvedThreads = batchData.reviewThreads.filter((t) => !t.isResolved);
   const visibleComments = batchData.comments.filter((c) => !c.isMinimized);
 
   const outdated = getOutdatedThreads(unresolvedThreads);
@@ -75,7 +75,7 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
     autoResolveErrors = errors;
   }
 
-  const activeThreads = unresolvedThreads.filter((t) => !t.isOutdated);
+  const activeThreads = unresolvedThreads.filter((t) => !t.isOutdated && !t.isMinimized);
   const outdatedCandidates = batchData.reviewThreads.filter((t) => t.isOutdated);
   const resolvedCandidates = batchData.reviewThreads.filter((t) => t.isResolved && !t.isOutdated);
   const minimizedThreadCandidates = batchData.reviewThreads.filter(
@@ -133,6 +133,9 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
   ]);
 
   const actionableThreads = activeThreads;
+  const resolutionOnlyThreads = unresolvedThreads.filter(
+    (t) => !autoResolvedIds.has(t.id) && (t.isOutdated || t.isMinimized),
+  );
   const actionableComments = visibleComments;
 
   const mergeStatus = deriveMergeStatus(batchData);
@@ -145,7 +148,7 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
 
   const status = computeStatus(
     verdict,
-    actionableThreads.length,
+    actionableThreads.length + resolutionOnlyThreads.length,
     actionableComments.length,
     mergeStatus,
     batchData.changesRequestedReviews.length,
@@ -169,6 +172,7 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
     },
     threads: {
       actionable: actionableThreads,
+      resolutionOnly: resolutionOnlyThreads,
       autoResolved,
       autoResolveErrors,
       firstLook: firstLookThreads,

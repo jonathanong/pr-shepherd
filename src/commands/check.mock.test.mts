@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("../github/batch.mts", () => ({ fetchPrBatch: vi.fn() }));
@@ -235,6 +236,41 @@ describe("runCheck — BLOCKED + clean (hand off to humans)", () => {
     });
     const report = await runCheck(BASE_OPTS);
     expect(report.status).toBe("PENDING");
+  });
+
+  it("returns PENDING when an unresolved outdated thread still needs resolution", async () => {
+    const outdated = makeThread({ id: "t-outdated", isOutdated: true });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        mergeStateStatus: "BLOCKED",
+        reviewDecision: "REVIEW_REQUIRED",
+        reviewThreads: [outdated],
+      }),
+    });
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.status).toBe("PENDING");
+    expect(report.threads.actionable).toHaveLength(0);
+    expect(report.threads.resolutionOnly.map((t) => t.id)).toEqual(["t-outdated"]);
+  });
+
+  it("does not keep auto-resolved outdated threads in resolutionOnly", async () => {
+    const outdated = makeThread({ id: "t-auto", isOutdated: true });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        mergeStateStatus: "BLOCKED",
+        reviewDecision: "REVIEW_REQUIRED",
+        reviewThreads: [outdated],
+      }),
+    });
+    mockAutoResolveOutdated.mockResolvedValue({ resolved: ["t-auto"], errors: [] });
+
+    const report = await runCheck({ ...BASE_OPTS, autoResolve: true });
+
+    expect(report.status).toBe("READY");
+    expect(report.threads.resolutionOnly).toHaveLength(0);
+    expect(report.threads.firstLook[0]?.autoResolved).toBe(true);
   });
 
   it("returns PENDING when copilot review is also in progress", async () => {

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, it, expect } from "vitest";
 import { formatText } from "./text.mts";
 import type {
@@ -64,7 +65,13 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       filteredNames: [],
       blockedByFilteredCheck: false,
     },
-    threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+    threads: {
+      actionable: [],
+      resolutionOnly: [],
+      autoResolved: [],
+      autoResolveErrors: [],
+      firstLook: [],
+    },
     comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
@@ -257,6 +264,7 @@ describe("formatText — threads and comments", () => {
     const report = makeReport({
       threads: {
         actionable: [],
+        resolutionOnly: [],
         autoResolved: [makeThread({ id: "t-1", path: "src/bar.ts", line: 5, author: "bob" })],
         autoResolveErrors: [],
         firstLook: [],
@@ -272,6 +280,7 @@ describe("formatText — threads and comments", () => {
     const report = makeReport({
       threads: {
         actionable: [],
+        resolutionOnly: [],
         autoResolved: [],
         autoResolveErrors: ["thread-x: GraphQL error"],
         firstLook: [],
@@ -286,6 +295,7 @@ describe("formatText — threads and comments", () => {
     const report = makeReport({
       threads: {
         actionable: [makeThread({ id: "t-1", path: null, line: null, author: "alice" })],
+        resolutionOnly: [],
         autoResolved: [],
         autoResolveErrors: [],
         firstLook: [],
@@ -299,6 +309,7 @@ describe("formatText — threads and comments", () => {
     const report = makeReport({
       threads: {
         actionable: [makeThread({ id: "t-2", path: "src/index.ts", line: 42, author: "alice" })],
+        resolutionOnly: [],
         autoResolved: [],
         autoResolveErrors: [],
         firstLook: [],
@@ -313,6 +324,7 @@ describe("formatText — threads and comments", () => {
     const report = makeReport({
       threads: {
         actionable: [makeThread({ body: longBody })],
+        resolutionOnly: [],
         autoResolved: [],
         autoResolveErrors: [],
         firstLook: [],
@@ -354,13 +366,14 @@ describe("formatText — threads and comments", () => {
 describe("formatText — summary line", () => {
   it("shows '0 actionable' when everything is clean", () => {
     const out = formatText(makeReport());
-    expect(out).toContain("0 actionable — all threads resolved/minimized");
+    expect(out).toContain("0 actionable — no unresolved review items");
   });
 
   it("shows count when actionable items remain", () => {
     const report = makeReport({
       threads: {
         actionable: [makeThread(), makeThread({ id: "t-2" })],
+        resolutionOnly: [],
         autoResolved: [],
         autoResolveErrors: [],
         firstLook: [],
@@ -368,6 +381,22 @@ describe("formatText — summary line", () => {
     });
     const out = formatText(report);
     expect(out).toContain("2 actionable");
+  });
+
+  it("shows resolution-only threads separately", () => {
+    const report = makeReport({
+      threads: {
+        actionable: [],
+        resolutionOnly: [makeThread({ id: "t-old", isOutdated: true, line: null })],
+        autoResolved: [],
+        autoResolveErrors: [],
+        firstLook: [],
+      },
+    });
+    const out = formatText(report);
+    expect(out).toContain("### Needs resolution only (1)");
+    expect(out).toContain("threadId=t-old");
+    expect(out).toContain("[status: outdated]");
   });
 });
 
@@ -492,11 +521,17 @@ describe("formatText — baseBranch, reviewSummaries, approvedReviews", () => {
       firstLookStatus: "minimized" as const,
     };
     const report = makeReport({
-      threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [thread] },
+      threads: {
+        actionable: [],
+        resolutionOnly: [],
+        autoResolved: [],
+        autoResolveErrors: [],
+        firstLook: [thread],
+      },
       comments: { actionable: [], firstLook: [comment] },
     });
     const out = formatText(report);
-    expect(out).toContain("## First-look items (2) — already closed on GitHub; acknowledge only");
+    expect(out).toContain("## First-look items (2) — acknowledge status before acting");
     expect(out).toContain("`threadId=PRRT_abc`");
     expect(out).toContain("[status: outdated]");
     expect(out).toContain("`commentId=PRRC_xyz`");

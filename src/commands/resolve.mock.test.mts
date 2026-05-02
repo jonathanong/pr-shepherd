@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("../github/client.mts", () => ({
@@ -165,6 +166,19 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
 
     const result = await runResolveFetch(BASE_OPTS);
     expect(result.actionableThreads.map((t) => t.id)).toEqual(["t-active"]);
+    expect(result.resolutionOnlyThreads.map((t) => t.id)).toEqual(["t-outdated"]);
+  });
+
+  it("routes minimized unresolved threads to resolutionOnlyThreads", async () => {
+    const minimized = makeThread({ id: "t-minimized", isMinimized: true });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ reviewThreads: [minimized] }),
+    });
+
+    const result = await runResolveFetch(BASE_OPTS);
+
+    expect(result.actionableThreads).toHaveLength(0);
+    expect(result.resolutionOnlyThreads.map((t) => t.id)).toEqual(["t-minimized"]);
   });
 
   it("attaches a parsed suggestion block to threads whose body contains one", async () => {
@@ -464,6 +478,7 @@ describe("runResolveFetch — first-look items", () => {
     mockAutoResolveOutdated.mockResolvedValue({ resolved: ["t-auto"], errors: [] });
     const result = await runResolveFetch(BASE_OPTS);
     expect(result.firstLookThreads[0]?.autoResolved).toBe(true);
+    expect(result.resolutionOnlyThreads).toHaveLength(0);
   });
 
   it("surfaces unseen minimized comment in firstLookComments", async () => {
@@ -471,6 +486,35 @@ describe("runResolveFetch — first-look items", () => {
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ comments: [minimized] }) });
     const result = await runResolveFetch(BASE_OPTS);
     expect(result.firstLookComments[0]?.firstLookStatus).toBe("minimized");
+  });
+
+  it("re-surfaces edited resolved and minimized threads", async () => {
+    const resolved = makeThread({
+      id: "t-resolved",
+      isResolved: true,
+      body: "new resolved body",
+    });
+    const minimized = makeThread({
+      id: "t-minimized",
+      isMinimized: true,
+      body: "new minimized body",
+    });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ reviewThreads: [resolved, minimized] }),
+    });
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([
+        ["t-resolved", { seenAt: 1000, bodyHash: hashBody("old resolved body") }],
+        ["t-minimized", { seenAt: 1000, bodyHash: hashBody("old minimized body") }],
+      ]),
+    );
+
+    const result = await runResolveFetch(BASE_OPTS);
+
+    expect(result.firstLookThreads.map((t) => [t.id, t.firstLookStatus, t.edited])).toEqual([
+      ["t-resolved", "resolved", true],
+      ["t-minimized", "minimized", true],
+    ]);
   });
 
   it("suppresses already-seen items and calls markSeen for new ones", async () => {

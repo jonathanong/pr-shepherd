@@ -17,10 +17,6 @@ import type {
   FirstLookComment,
 } from "../types.mts";
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
 export type FetchThread = Omit<ReviewThread, "isResolved" | "isOutdated"> & {
   /** Present when the comment body contains a parseable ```suggestion block. */
   suggestion?: SuggestionBlock;
@@ -29,6 +25,8 @@ export type FetchThread = Omit<ReviewThread, "isResolved" | "isOutdated"> & {
 export interface FetchResult {
   prNumber: number;
   actionableThreads: FetchThread[];
+  /** Unresolved threads that should be resolved on GitHub without requiring code edits. */
+  resolutionOnlyThreads: ReviewThread[];
   /** First-look threads — outdated/resolved/minimized, surfaced for agent acknowledgment on first encounter only. */
   firstLookThreads: FirstLookThread[];
   actionableComments: PrComment[];
@@ -43,11 +41,9 @@ export interface FetchResult {
 }
 
 export interface ResolveCommandOptions extends GlobalOptions {
-  /** When true, run in fetch mode regardless of other flags. */
   fetch?: boolean;
 }
 
-/** Fetch mode: auto-resolve outdated threads and return all active items for LLM triage. */
 export async function runResolveFetch(opts: ResolveCommandOptions): Promise<FetchResult> {
   const repo = await getRepoInfo();
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
@@ -59,7 +55,7 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
 
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
 
-  const unresolvedThreads = data.reviewThreads.filter((t) => !t.isResolved && !t.isMinimized);
+  const unresolvedThreads = data.reviewThreads.filter((t) => !t.isResolved);
   const visibleComments = data.comments.filter((c) => !c.isMinimized);
 
   const outdatedCandidates = data.reviewThreads.filter((t) => t.isOutdated);
@@ -112,7 +108,10 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
     }
   }
 
-  const activeThreads = unresolvedThreads.filter((t) => !t.isOutdated);
+  const activeThreads = unresolvedThreads.filter((t) => !t.isOutdated && !t.isMinimized);
+  const resolutionOnlyThreads = unresolvedThreads.filter(
+    (t) => !autoResolvedIds.has(t.id) && (t.isOutdated || t.isMinimized),
+  );
 
   const cfg = loadConfig();
 
@@ -169,6 +168,7 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   const result: Omit<FetchResult, "instructions"> = {
     prNumber,
     actionableThreads,
+    resolutionOnlyThreads,
     firstLookThreads,
     actionableComments: visibleComments,
     firstLookComments,
@@ -180,7 +180,6 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   return { ...result, instructions: buildFetchInstructions(prNumber, result) };
 }
 
-/** Mutation mode: resolve/minimize/dismiss by ID. */
 export async function runResolveMutate(
   opts: ResolveCommandOptions & ResolveOptions,
 ): Promise<import("../comments/resolve.mts").ResolveResult> {

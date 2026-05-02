@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 
+/* eslint-disable max-lines */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("./commands/check.mts", () => ({ runCheck: vi.fn() }));
@@ -66,7 +67,13 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       filteredNames: [],
       blockedByFilteredCheck: false,
     },
-    threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+    threads: {
+      actionable: [],
+      resolutionOnly: [],
+      autoResolved: [],
+      autoResolveErrors: [],
+      firstLook: [],
+    },
     comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
@@ -123,6 +130,7 @@ describe("main — resolve", () => {
     mockRunResolveFetch.mockResolvedValue({
       prNumber: 42,
       actionableThreads: [],
+      resolutionOnlyThreads: [],
       actionableComments: [],
       firstLookThreads: [],
       firstLookComments: [],
@@ -140,6 +148,7 @@ describe("main — resolve", () => {
     mockRunResolveFetch.mockResolvedValue({
       prNumber: 42,
       actionableThreads: [],
+      resolutionOnlyThreads: [],
       actionableComments: [],
       firstLookThreads: [],
       firstLookComments: [],
@@ -153,6 +162,42 @@ describe("main — resolve", () => {
     expect(out).toContain("## Review summaries (1)");
     expect(out).toContain("`reviewId=PRR_1` (@copilot): ## PR overview");
     expect(out).toContain("1 actionable");
+  });
+
+  it("formatFetchResult renders resolution-only review threads", async () => {
+    mockRunResolveFetch.mockResolvedValue({
+      prNumber: 42,
+      actionableThreads: [],
+      resolutionOnlyThreads: [
+        {
+          id: "PRT_old",
+          isResolved: false,
+          isOutdated: true,
+          isMinimized: false,
+          path: "src/old.ts",
+          line: null,
+          startLine: null,
+          author: "alice",
+          body: "old comment",
+          url: "",
+          createdAtUnix: 0,
+        },
+      ],
+      actionableComments: [],
+      firstLookThreads: [],
+      firstLookComments: [],
+      changesRequestedReviews: [],
+      reviewSummaries: [],
+      commitSuggestionsEnabled: true,
+      instructions: ["Resolve each thread."],
+    });
+
+    await main(["node", "shepherd", "resolve", "42"]);
+
+    const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
+    expect(out).toContain("## Review threads to resolve (1)");
+    expect(out).toContain("`threadId=PRT_old`");
+    expect(out).toContain("[status: outdated]");
   });
 
   it("calls runResolveMutate when --resolve-thread-ids is given", async () => {
@@ -182,6 +227,7 @@ describe("main — resolve", () => {
           createdAtUnix: 0,
         },
       ],
+      resolutionOnlyThreads: [],
       actionableComments: [
         {
           id: "IC_1",
@@ -233,6 +279,7 @@ describe("main — resolve", () => {
           suggestion: { startLine: 5, endLine: 5, lines: ["const x = 1;"], author: "alice" },
         },
       ],
+      resolutionOnlyThreads: [],
       actionableComments: [],
       firstLookThreads: [],
       firstLookComments: [],
@@ -257,6 +304,7 @@ describe("main — resolve", () => {
     mockRunResolveFetch.mockResolvedValue({
       prNumber: 42,
       actionableThreads: [],
+      resolutionOnlyThreads: [],
       actionableComments: [],
       firstLookThreads: [],
       firstLookComments: [],
@@ -287,6 +335,7 @@ describe("main — resolve", () => {
           createdAtUnix: 0,
         },
       ],
+      resolutionOnlyThreads: [],
       actionableComments: [
         {
           id: "IC_2",
@@ -328,6 +377,7 @@ describe("main — resolve", () => {
           createdAtUnix: 0,
         },
       ],
+      resolutionOnlyThreads: [],
       actionableComments: [
         {
           id: "IC_linked",
@@ -360,6 +410,7 @@ describe("main — resolve", () => {
     mockRunResolveFetch.mockResolvedValue({
       prNumber: 42,
       actionableThreads: [],
+      resolutionOnlyThreads: [],
       actionableComments: [],
       firstLookThreads: [],
       firstLookComments: [],
@@ -450,6 +501,7 @@ describe("main — resolve first-look rendering", () => {
     mockRunResolveFetch.mockResolvedValue({
       prNumber: 42,
       actionableThreads: [],
+      resolutionOnlyThreads: [],
       actionableComments: [],
       firstLookThreads: [
         {
@@ -485,7 +537,7 @@ describe("main — resolve first-look rendering", () => {
     });
     await main(["node", "shepherd", "resolve", "42"]);
     const out = getStdout();
-    expect(out).toContain("## First-look items (2) — already closed on GitHub; acknowledge only");
+    expect(out).toContain("## First-look items (2) — acknowledge status before acting");
     expect(out).toContain("`threadId=PRRT_fl1`");
     expect(out).toContain("[status: resolved]");
     expect(out).toContain("`commentId=PRRC_fl2`");

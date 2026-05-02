@@ -107,7 +107,13 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       filteredNames: [],
       blockedByFilteredCheck: false,
     },
-    threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+    threads: {
+      actionable: [],
+      resolutionOnly: [],
+      autoResolved: [],
+      autoResolveErrors: [],
+      firstLook: [],
+    },
     comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
@@ -133,6 +139,20 @@ const READY_STATE_DEFAULT = {
   isReady: true,
   shouldCancel: false,
   remainingSeconds: 300,
+};
+
+const RESOLUTION_ONLY_THREAD = {
+  id: "thread-resolution-only",
+  isResolved: false,
+  isOutdated: true,
+  isMinimized: false,
+  path: "src/old.mts",
+  line: null,
+  startLine: null,
+  author: "reviewer",
+  body: "Already addressed on an old diff",
+  url: "",
+  createdAtUnix: NOW - 3600,
 };
 
 // ---------------------------------------------------------------------------
@@ -266,6 +286,37 @@ describe("runIterate — stall-timeout guard", () => {
     if (result.action !== "escalate") return;
     expect(result.escalate.triggers).toContain("stall-timeout");
     expect(result.escalate.suggestion).toMatch(/30 minutes/);
+  });
+
+  it("includes resolution-only threads in stall-timeout escalation details", async () => {
+    const report = makeReport({
+      status: "UNRESOLVED_COMMENTS",
+      threads: {
+        actionable: [],
+        resolutionOnly: [RESOLUTION_ONLY_THREAD],
+        autoResolved: [],
+        autoResolveErrors: [],
+        firstLook: [],
+      },
+    });
+    mockRunCheck.mockResolvedValue(report);
+
+    mockReadStallState.mockResolvedValue(null);
+    await runIterate(makeOpts30mStall());
+    const realFingerprint = (mockWriteStallState.mock.calls[0]![1] as StallState).fingerprint;
+
+    mockWriteStallState.mockClear();
+    mockReadStallState.mockResolvedValue({
+      fingerprint: realFingerprint,
+      firstSeenAt: NOW - STALL_TIMEOUT_S,
+    });
+
+    const result = await runIterate(makeOpts30mStall());
+
+    expect(result.action).toBe("escalate");
+    if (result.action !== "escalate") return;
+    expect(result.escalate.unresolvedThreads.map((t) => t.id)).toEqual(["thread-resolution-only"]);
+    expect(result.escalate.humanMessage).toContain("thread-resolution-only");
   });
 
   it("resets firstSeenAt when fingerprint changes (different failing checks)", async () => {
