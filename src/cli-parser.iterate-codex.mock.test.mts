@@ -28,6 +28,7 @@ import { main } from "./cli-parser.mts";
 import { runIterate } from "./commands/iterate.mts";
 import { runStatus } from "./commands/status.mts";
 import { makeIterateResult } from "./cli-parser.iterate-fixtures.mts";
+import { buildCodexRetryDelay } from "./cli/iterate-instructions.mts";
 
 const mockRunIterate = vi.mocked(runIterate);
 const mockRunStatus = vi.mocked(runStatus);
@@ -60,6 +61,11 @@ afterEach(() => {
 });
 
 describe("main — iterate Codex fix_code output", () => {
+  it("falls back to the default interval label for malformed interval config values", () => {
+    expect(buildCodexRetryDelay(4)).toBe("the configured interval (default 4m)");
+    expect(buildCodexRetryDelay("five minutes")).toBe("the configured interval (default 4m)");
+  });
+
   it("text rewrites next-tick final instruction to reusable iterate command", async () => {
     process.env.AGENT = "codex";
     const result = makeIterateResult("fix_code");
@@ -73,7 +79,7 @@ describe("main — iterate Codex fix_code output", () => {
     await main(["node", "shepherd", "iterate", "42", "--ready-delay", "15m"]);
     const out = getStdout();
     expect(out).toContain(
-      "2. Stop this iteration — CI needs time to run on the new push. Rerun `npx pr-shepherd 42 --ready-delay 15m` later to recheck.",
+      "2. Continue the active Codex goal — CI needs time to run on the new push. Wait about the configured interval (4m), then rerun `npx pr-shepherd 42 --ready-delay 15m` to recheck.",
     );
     expect(out).not.toContain("before the next tick");
   });
@@ -90,7 +96,7 @@ describe("main — iterate Codex fix_code output", () => {
     await main(["node", "shepherd", "iterate", "42", "--format=json", "--ready-delay", "2h"]);
     const parsed = JSON.parse(getStdout().trimEnd());
     expect(parsed.fix.instructions).toEqual([
-      "Stop this iteration — CI needs time to run on the new push. Rerun `npx pr-shepherd 42 --ready-delay 2h` later to recheck.",
+      "Continue the active Codex goal — CI needs time to run on the new push. Wait about the configured interval (4m), then rerun `npx pr-shepherd 42 --ready-delay 2h` to recheck.",
     ]);
   });
 
@@ -104,7 +110,21 @@ describe("main — iterate Codex fix_code output", () => {
     await main(["node", "shepherd", "iterate", "42", "--format=json"]);
     const parsed = JSON.parse(getStdout().trimEnd());
     expect(parsed.fix.instructions).toEqual([
-      "Stop this iteration. Rerun `npx pr-shepherd 42` later to recheck.",
+      "Continue the active Codex goal — wait about the configured interval (4m), then rerun `npx pr-shepherd 42` to recheck.",
+    ]);
+  });
+
+  it("rewrites mutation-without-push final instruction for Codex", async () => {
+    process.env.AGENT = "codex";
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    result.fix.instructions = ["Stop this iteration before the next tick."];
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42", "--format=json"]);
+    const parsed = JSON.parse(getStdout().trimEnd());
+    expect(parsed.fix.instructions).toEqual([
+      "Continue the active Codex goal — wait about the configured interval (4m), then rerun `npx pr-shepherd 42` to recheck.",
     ]);
   });
 });

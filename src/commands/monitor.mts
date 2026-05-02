@@ -40,7 +40,13 @@ export async function runMonitor(opts: MonitorCommandOptions): Promise<MonitorRe
   const loopTag = `#pr-shepherd-loop:pr=${prNumber}:`;
   const loopArgs = interval;
   const reusableCommand = buildIterateCommand(prNumber, opts.readyDelaySuffix);
-  const loopPrompt = buildLoopPrompt(prNumber, loopTag, reusableCommand, opts.runtime ?? "claude");
+  const loopPrompt = buildLoopPrompt(
+    prNumber,
+    loopTag,
+    reusableCommand,
+    loopArgs,
+    opts.runtime ?? "claude",
+  );
 
   return {
     prNumber,
@@ -117,6 +123,7 @@ function buildLoopPrompt(
   prNumber: number,
   loopTag: string,
   iterateCmd: string,
+  loopArgs: string,
   runtime: AgentRuntime = "claude",
 ): string {
   if (runtime === "codex") {
@@ -124,8 +131,10 @@ function buildLoopPrompt(
       loopTag,
       "",
       "**IMPORTANT — Codex recurrence rules:**",
-      "- Run the command below once, follow its `## Instructions` exactly, then stop.",
-      "- Codex does not provide `/loop` scheduling in this workflow. To check again later, rerun the reusable command from the monitor output.",
+      "- Run the command below once and follow its `## Instructions` exactly.",
+      `- If the output tells you to continue the active Codex goal, wait about the configured interval (${loopArgs}) and rerun the reusable command from the monitor output.`,
+      "- Stop only when Shepherd emits `[CANCEL]` because the ready-delay completed or the PR was merged/closed, or when Shepherd emits `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures).",
+      "- Do not call `/loop`, `ScheduleWakeup`, `CronCreate`, or `npx pr-shepherd monitor`; Codex recurrence is explicit `iterate` command cycles.",
       "",
       "Run in a single Bash call:",
       `  ${iterateCmd}`,
@@ -157,7 +166,7 @@ function buildMonitorInstructions(result: MonitorResult, runtime: AgentRuntime):
   if (runtime === "codex") {
     return [
       "Run the `## Loop prompt` body once inline now.",
-      `When you want to check this PR again later, run \`${result.reusableCommand}\`. Codex does not provide \`/loop\` scheduling, so no recurring monitor is created.`,
+      `For an active Codex goal, keep cycling with \`${result.reusableCommand}\` about every configured interval (${result.loopArgs}) until a terminal condition is reached. Codex does not create a \`/loop\` monitor.`,
     ];
   }
   return [

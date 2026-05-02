@@ -13,10 +13,13 @@ import {
  */
 export function projectIterateLean(
   result: IterateResult,
-  opts?: { runtime?: AgentRuntime; readyDelaySuffix?: string },
+  opts?: { runtime?: AgentRuntime; readyDelaySuffix?: string; retryInterval?: string },
 ): unknown {
   const runtime = opts?.runtime ?? "claude";
   const readyDelaySuffix = opts?.readyDelaySuffix;
+  const retryInterval = opts?.retryInterval;
+  const simpleInstructions = (r: Exclude<IterateResult, { action: "fix_code" }>) =>
+    buildSimpleIterateInstructions(r, runtime, readyDelaySuffix, retryInterval);
   const base: Record<string, unknown> = {
     action: result.action,
     pr: result.pr,
@@ -47,27 +50,27 @@ export function projectIterateLean(
       return {
         ...base,
         log: adaptIterateLog(result.log, runtime),
-        instructions: buildSimpleIterateInstructions(result, runtime, readyDelaySuffix),
+        instructions: simpleInstructions(result),
       };
     case "wait":
       return {
         ...base,
         log: adaptIterateLog(result.log, runtime),
-        instructions: buildSimpleIterateInstructions(result, runtime, readyDelaySuffix),
+        instructions: simpleInstructions(result),
       };
     case "cancel":
       return {
         ...base,
         reason: result.reason,
         log: adaptIterateLog(result.log, runtime),
-        instructions: buildSimpleIterateInstructions(result, runtime, readyDelaySuffix),
+        instructions: simpleInstructions(result),
       };
     case "mark_ready":
       // drop markedReady — always true, redundant with action discriminator
       return {
         ...base,
         log: adaptIterateLog(result.log, runtime),
-        instructions: buildSimpleIterateInstructions(result, runtime, readyDelaySuffix),
+        instructions: simpleInstructions(result),
       };
     case "fix_code":
       return {
@@ -115,6 +118,7 @@ export function projectIterateLean(
               result.pr,
               runtime,
               readyDelaySuffix,
+              retryInterval,
             ),
           }),
         },
@@ -140,17 +144,18 @@ export function projectIterateLean(
           suggestion: result.escalate.suggestion,
           humanMessage: result.escalate.humanMessage,
         },
-        instructions: buildSimpleIterateInstructions(result, runtime, readyDelaySuffix),
+        instructions: simpleInstructions(result),
       };
   }
 }
 
 export function projectIterateVerbose(
   result: IterateResult,
-  opts?: { runtime?: AgentRuntime; readyDelaySuffix?: string },
+  opts?: { runtime?: AgentRuntime; readyDelaySuffix?: string; retryInterval?: string },
 ): unknown {
   const runtime = opts?.runtime ?? "claude";
   const readyDelaySuffix = opts?.readyDelaySuffix;
+  const retryInterval = opts?.retryInterval;
   if (result.action === "fix_code") {
     return {
       ...result,
@@ -161,6 +166,7 @@ export function projectIterateVerbose(
           result.pr,
           runtime,
           readyDelaySuffix,
+          retryInterval,
         ),
       },
     };
@@ -172,6 +178,6 @@ export function projectIterateVerbose(
   return {
     ...result,
     ...log,
-    instructions: buildSimpleIterateInstructions(result, runtime, readyDelaySuffix),
+    instructions: buildSimpleIterateInstructions(result, runtime, readyDelaySuffix, retryInterval),
   };
 }

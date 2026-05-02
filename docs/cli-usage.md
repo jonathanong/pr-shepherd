@@ -242,7 +242,7 @@ WAIT: 3 passing, 0 in-progress — 540s until auto-cancel
 1. End this iteration — the next cron fire will recheck.
 ```
 
-When Codex output is selected, the `[WAIT]` body omits the `until auto-cancel` countdown and the instruction points to the reusable one-shot command instead. For example: ``End this iteration — rerun `npx pr-shepherd 42` later to recheck.`` If the current command used `--ready-delay`, the rerun command includes the same flag.
+When Codex output is selected, the `[WAIT]` body omits the `until auto-cancel` countdown and the instruction tells Codex to keep the active goal running with the reusable command. For example: ``Continue the active Codex goal — wait about the configured interval (4m), then rerun `npx pr-shepherd 42` to recheck.`` If the current command used `--ready-delay`, the rerun command includes the same flag.
 
 Example for `[FIX_CODE]` (richest action):
 
@@ -301,7 +301,7 @@ Exit codes: `0` wait/cooldown/mark_ready · `1` fix_code · `2` cancel · `3` es
 
 Bootstrap command used by the Claude `/pr-shepherd:monitor` skill and by Codex directly. Reads `watch.interval` from config and emits the monitor prompt body plus a short `Loop args` line (the interval).
 
-By default, output targets Claude Code and tells the monitor skill how to reuse an existing `/loop` or start a new one. When Codex is detected (`AGENT=codex` or `CODEX_CI=1`), output omits Cron and `/loop` instructions and instead tells Codex to run one iterate tick, then rerun the reusable `npx pr-shepherd <PR>` prompt later.
+By default, output targets Claude Code and tells the monitor skill how to reuse an existing `/loop` or start a new one. When Codex is detected (`AGENT=codex` or `CODEX_CI=1`), output omits Cron and `/loop` instructions and instead tells Codex to run explicit iterate ticks every `watch.interval` (default 4m) until a terminal condition.
 
 ```sh
 npx pr-shepherd monitor        # infer PR from current branch
@@ -329,7 +329,7 @@ Loop args: `4m`
 2. Otherwise, invoke the `/loop` skill via the Skill tool. Build the `args` parameter as: only the value inside the backticks on the `Loop args` line above (the interval — not the `Loop args:` label), then a blank line, then the full `## Loop prompt` body.
 ```
 
-Codex output includes the same PR, tag, interval, prompt body, and `## Instructions` shape, but the instructions say to run the loop prompt once and rerun `npx pr-shepherd 42` later instead of creating or cancelling a `/loop`.
+Codex output includes the same PR, tag, interval, prompt body, and `## Instructions` shape, but the instructions say to run the loop prompt once and keep cycling with `npx pr-shepherd 42` every `Loop args` interval instead of creating or cancelling a `/loop`.
 
 The loop interval comes from `watch.interval` in `.pr-shepherdrc.yml` or the built-in default. Use `--format=json` to inspect the raw values programmatically.
 
