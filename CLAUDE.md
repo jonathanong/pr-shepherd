@@ -38,6 +38,14 @@ All GitHub I/O uses GraphQL by default. The only permitted REST call sites are:
 
 Any new `rest()` call outside these three cases must be justified against this list. GraphQL is preferred for all read paths; mutations that GitHub exposes via GraphQL must use GraphQL.
 
+## Git operations
+
+All git invocations from the CLI must be read-only (`status`, `rev-parse`, `log`, `diff`, `remote get-url`, `for-each-ref`, etc.). The CLI must never invoke git mutations (`add`, `commit`, `apply`, `checkout --`, `reset`, `rebase`, `merge`, `push`, `fetch`, `pull`, `stash`, `restore`, `switch`, `cherry-pick`, `revert`, `am`, `config --set`, `branch -d/-D`, `tag -d`, etc.).
+
+**Why:** mutating `git` subprocesses can leave `.git/index.lock` behind on hook failure, breaking every subsequent operation in the worktree until cleaned up by hand. The calling agent already owns the git lifecycle and has the retry / cleanup / sandbox-bypass machinery to handle this correctly.
+
+Instead, emit a suggestion: build the patch / commit message / file list and return it in the result, with a `## Instructions` block telling the caller what to run. The canonical example is `commit-suggestion` — it produces the patch and suggested git commands; the agent executes them.
+
 ## Dogfooding
 
 During development, run the CLI from this repository root with `npx pr-shepherd` (after `npm install && npm run build`).

@@ -26,8 +26,6 @@ vi.mock("node:child_process", () => ({
 
 vi.mock("node:fs/promises", () => ({
   readFile: vi.fn(),
-  writeFile: vi.fn().mockResolvedValue(undefined),
-  unlink: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../github/client.mts", () => ({
@@ -40,31 +38,15 @@ vi.mock("../github/batch.mts", () => ({
   fetchPrBatch: vi.fn(),
 }));
 
-vi.mock("../comments/resolve.mts", () => ({
-  applyResolveOptions: vi.fn().mockResolvedValue({
-    resolvedThreads: ["PRRT_x"],
-    minimizedComments: [],
-    dismissedReviews: [],
-    errors: [],
-  }),
-}));
-
 import { runCommitSuggestion } from "./commit-suggestion.mts";
 import { getCurrentBranch } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
-import { applyResolveOptions } from "../comments/resolve.mts";
-import { readFile, unlink } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import type { ReviewThread, BatchPrData } from "../types.mts";
 
 const mockGetCurrentBranch = vi.mocked(getCurrentBranch);
 const mockFetchBatch = vi.mocked(fetchPrBatch);
-const mockApplyResolveOptions = vi.mocked(applyResolveOptions);
 const mockReadFile = vi.mocked(readFile);
-const mockUnlink = vi.mocked(unlink);
-
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
 
 function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
   return {
@@ -122,284 +104,122 @@ function makeGitSuccess(stdout = ""): Promise<{ stdout: string; stderr: string }
   return Promise.resolve({ stdout, stderr: "" });
 }
 
-function setupHappyPath(): void {
-  mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (mockReadFile as any).mockResolvedValue(FILE_CONTENT);
-
-  // Two rev-parse HEAD calls: preflight (must match head.sha="headsha") then post-commit.
-  let revParseCount = 0;
-  mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-    if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
-    if (cmd === "git" && args[0] === "rev-parse") {
-      revParseCount++;
-      return revParseCount === 1 ? makeGitSuccess("headsha\n") : makeGitSuccess("newsha\n");
-    }
-    if (cmd === "git" && args[0] === "apply") return makeGitSuccess();
-    if (cmd === "git" && args[0] === "add") return makeGitSuccess();
-    if (cmd === "git" && args[0] === "commit") return makeGitSuccess();
-    throw new Error(`Unexpected execFile call: ${cmd} ${args.join(" ")}`);
-  });
-}
-
 // ---------------------------------------------------------------------------
-// Successful apply
+// Output shape and instruction content
 // ---------------------------------------------------------------------------
 
-describe("runCommitSuggestion — successful apply", () => {
+describe("runCommitSuggestion — output shape", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetCurrentBranch.mockResolvedValue("feature/foo");
-    setupHappyPath();
+    mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (mockReadFile as any).mockResolvedValue(FILE_CONTENT);
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
+      if (cmd === "git" && args[0] === "status") return makeGitSuccess(""); // file is clean
+      throw new Error(`Unexpected execFile: ${cmd} ${args.join(" ")}`);
+    });
   });
 
-  it("returns applied=true with commitSha and patch on success", async () => {
+  it("postActionInstructions step 1 mentions the file path and line range", async () => {
     const result = await runCommitSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
-      message: "apply suggestion",
+      message: "rename x",
     });
-    expect(result.applied).toBe(true);
-    if (!result.applied) throw new Error("expected applied=true");
-    expect(result.commitSha).toBe("newsha");
-    expect(result.threadId).toBe("PRRT_x");
-    expect(result.author).toBe("alice");
-    expect(result.path).toBe("src/foo.ts");
-    expect(result.patch).toContain("--- a/src/foo.ts");
-    expect(result.patch).toContain("+const x = 10;");
+    expect(result.postActionInstructions[0]).toContain("src/foo.ts");
+    expect(result.postActionInstructions[0]).toContain("line 5");
   });
 
-  it("runs git apply --check then git apply", async () => {
-    await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" });
-
-    const applyCalls = mockExecFile.mock.calls.filter(
-      (call) => call[0] === "git" && (call[1] as string[])[0] === "apply",
-    );
-    expect(applyCalls).toHaveLength(2);
-    expect(applyCalls[0]![1]).toContain("--check");
-    expect(applyCalls[1]![1]).not.toContain("--check");
-  });
-
-  it("commits with Co-authored-by trailer in body when --description omitted", async () => {
-    await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "apply suggestion" });
-
-    const commitCall = mockExecFile.mock.calls.find(
-      (call) => call[0] === "git" && (call[1] as string[])[0] === "commit",
-    );
-    expect(commitCall).toBeDefined();
-    const argv = commitCall![1] as string[];
-    // -m <headline> -m <body>
-    const headlineIdx = argv.indexOf("-m");
-    const bodyIdx = argv.indexOf("-m", headlineIdx + 2);
-    expect(argv[headlineIdx + 1]).toBe("apply suggestion");
-    expect(argv[bodyIdx + 1]).toContain("Co-authored-by: alice <alice@users.noreply.github.com>");
-  });
-
-  it("prepends --description to commit body before Co-authored-by", async () => {
-    await runCommitSuggestion({
+  it("postActionInstructions step 2 stages the exact file", async () => {
+    const result = await runCommitSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
-      message: "apply suggestion",
+      message: "rename x",
+    });
+    expect(result.postActionInstructions[1]).toContain("git add");
+    expect(result.postActionInstructions[1]).toContain("src/foo.ts");
+  });
+
+  it("postActionInstructions step 3 includes the literal commit message", async () => {
+    const result = await runCommitSuggestion({
+      ...GLOBAL_OPTS,
+      threadId: "PRRT_x",
+      message: "rename x to const",
+    });
+    expect(result.postActionInstructions[2]).toContain("git commit");
+    expect(result.postActionInstructions[2]).toContain("rename x to const");
+  });
+
+  it("postActionInstructions step 4 resolves the thread", async () => {
+    const result = await runCommitSuggestion({
+      ...GLOBAL_OPTS,
+      threadId: "PRRT_x",
+      message: "fix",
+    });
+    expect(result.postActionInstructions[3]).toContain("pr-shepherd resolve");
+    expect(result.postActionInstructions[3]).toContain("PRRT_x");
+  });
+
+  it("postActionInstructions step 5 mentions git push", async () => {
+    const result = await runCommitSuggestion({
+      ...GLOBAL_OPTS,
+      threadId: "PRRT_x",
+      message: "fix",
+    });
+    expect(result.postActionInstructions[4]).toContain("git push");
+  });
+
+  it("multi-line range label in step 1 uses en-dash notation", async () => {
+    mockFetchBatch.mockResolvedValue({
+      data: makeBatch([makeThread({ line: 7, startLine: 5 })]),
+    });
+    const result = await runCommitSuggestion({
+      ...GLOBAL_OPTS,
+      threadId: "PRRT_x",
+      message: "fix",
+    });
+    expect(result.postActionInstructions[0]).toContain("lines 5–7");
+  });
+
+  it("commitBody contains Co-authored-by with correct author login", async () => {
+    const result = await runCommitSuggestion({
+      ...GLOBAL_OPTS,
+      threadId: "PRRT_x",
+      message: "fix",
+    });
+    expect(result.commitBody).toBe("Co-authored-by: alice <alice@users.noreply.github.com>");
+  });
+
+  it("commitBody prepends description before Co-authored-by with blank separator", async () => {
+    const result = await runCommitSuggestion({
+      ...GLOBAL_OPTS,
+      threadId: "PRRT_x",
+      message: "fix",
       description: "Reviewer asked to use const.",
     });
-
-    const commitCall = mockExecFile.mock.calls.find(
-      (call) => call[0] === "git" && (call[1] as string[])[0] === "commit",
-    );
-    const argv = commitCall![1] as string[];
-    const headlineIdx = argv.indexOf("-m");
-    const bodyIdx = argv.indexOf("-m", headlineIdx + 2);
-    const body = argv[bodyIdx + 1]!;
-    expect(body).toContain("Reviewer asked to use const.");
-    expect(body).toContain("Co-authored-by: alice");
-    // Description comes before Co-authored-by
-    expect(body.indexOf("Reviewer")).toBeLessThan(body.indexOf("Co-authored-by"));
-  });
-
-  it("resolves the thread on GitHub after committing", async () => {
-    await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" });
-
-    expect(mockApplyResolveOptions).toHaveBeenCalledWith(
-      42,
-      { owner: "owner", name: "repo" },
-      { resolveThreadIds: ["PRRT_x"] },
+    expect(result.commitBody).toBe(
+      "Reviewer asked to use const.\n\nCo-authored-by: alice <alice@users.noreply.github.com>",
     );
   });
 
-  it("multi-line range: uses startLine from thread", async () => {
-    mockFetchBatch.mockResolvedValue({
-      data: makeBatch([
-        makeThread({
-          line: 6,
-          startLine: 4,
-          body: "```suggestion\nreplacement1\nreplacement2\nreplacement3\n```",
-        }),
-      ]),
-    });
-
+  it("filesToStage contains only the thread's file path", async () => {
     const result = await runCommitSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
       message: "fix",
     });
-    expect(result.startLine).toBe(4);
-    expect(result.endLine).toBe(6);
+    expect(result.filesToStage).toEqual(["src/foo.ts"]);
   });
 
-  it("postActionInstruction mentions git push", async () => {
+  it("patch contains the unified diff with the replacement line", async () => {
     const result = await runCommitSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
       message: "fix",
     });
-    expect(result.postActionInstruction).toContain("git push");
-  });
-
-  it("succeeds even when temp patch file unlink fails", async () => {
-    mockUnlink.mockRejectedValueOnce(new Error("ENOENT: unlink failed"));
-    const result = await runCommitSuggestion({
-      ...GLOBAL_OPTS,
-      threadId: "PRRT_x",
-      message: "fix",
-    });
-    expect(result.applied).toBe(true);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Dry-run
-// ---------------------------------------------------------------------------
-
-describe("runCommitSuggestion — dry-run", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetCurrentBranch.mockResolvedValue("feature/foo");
-    mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (mockReadFile as any).mockResolvedValue(FILE_CONTENT);
-  });
-
-  function setupDryRunHappyPath(): void {
-    let revParseCount = 0;
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
-      if (cmd === "git" && args[0] === "rev-parse") {
-        revParseCount++;
-        return revParseCount === 1 ? makeGitSuccess("headsha\n") : makeGitSuccess("newsha\n");
-      }
-      // Only --check is expected; bare apply must not be called.
-      if (cmd === "git" && args[0] === "apply" && args.includes("--check")) return makeGitSuccess();
-      throw new Error(`Unexpected execFile call: ${cmd} ${args.join(" ")}`);
-    });
-  }
-
-  it("returns dryRun=true, valid=true, reason=null when patch applies cleanly", async () => {
-    setupDryRunHappyPath();
-    const result = await runCommitSuggestion({
-      ...GLOBAL_OPTS,
-      threadId: "PRRT_x",
-      dryRun: true,
-    });
-
-    expect(result.applied).toBe(false);
-    if (!("dryRun" in result) || !result.dryRun) throw new Error("expected dryRun=true");
-    expect(result.valid).toBe(true);
-    expect(result.reason).toBeNull();
+    expect(result.patch).toContain("-const x = 1;");
     expect(result.patch).toContain("+const x = 10;");
-  });
-
-  it("calls git apply --check but not bare git apply, git add, git commit, or applyResolveOptions", async () => {
-    setupDryRunHappyPath();
-    await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", dryRun: true });
-
-    const applyCalls = mockExecFile.mock.calls.filter(
-      (call) => call[0] === "git" && (call[1] as string[])[0] === "apply",
-    );
-    // Exactly one --check call; no bare apply
-    expect(applyCalls).toHaveLength(1);
-    expect((applyCalls[0]![1] as string[]).includes("--check")).toBe(true);
-
-    const addCalls = mockExecFile.mock.calls.filter(
-      (call) => call[0] === "git" && (call[1] as string[])[0] === "add",
-    );
-    expect(addCalls).toHaveLength(0);
-
-    const commitCalls = mockExecFile.mock.calls.filter(
-      (call) => call[0] === "git" && (call[1] as string[])[0] === "commit",
-    );
-    expect(commitCalls).toHaveLength(0);
-
-    expect(mockApplyResolveOptions).not.toHaveBeenCalled();
-  });
-
-  it("postActionInstruction mentions re-run when valid", async () => {
-    setupDryRunHappyPath();
-    const result = await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", dryRun: true });
-    expect(result.postActionInstruction).toContain("--dry-run");
-  });
-
-  it("returns valid=false with reason when git apply --check fails", async () => {
-    let revParseCount = 0;
-    const checkErr = Object.assign(new Error("patch failed"), { stderr: "context mismatch" });
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
-      if (cmd === "git" && args[0] === "rev-parse") {
-        revParseCount++;
-        return revParseCount === 1 ? makeGitSuccess("headsha\n") : makeGitSuccess("newsha\n");
-      }
-      if (cmd === "git" && args[0] === "apply" && args.includes("--check"))
-        return Promise.reject(checkErr);
-      throw new Error(`Unexpected execFile call: ${cmd} ${args.join(" ")}`);
-    });
-
-    const result = await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", dryRun: true });
-    if (!("dryRun" in result) || !result.dryRun) throw new Error("expected dryRun=true");
-    expect(result.valid).toBe(false);
-    expect(result.reason).toContain("context mismatch");
-    expect(mockApplyResolveOptions).not.toHaveBeenCalled();
-  });
-
-  it("works without --message being set", async () => {
-    setupDryRunHappyPath();
-    // Should not throw even though message is undefined
-    await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", dryRun: true }),
-    ).resolves.toBeDefined();
-  });
-});
-
-describe("runCommitSuggestion — git apply rollback", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetCurrentBranch.mockResolvedValue("feature/foo");
-    mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (mockReadFile as any).mockResolvedValue(FILE_CONTENT);
-  });
-
-  it("calls git checkout -- on the file and rethrows when real git apply fails", async () => {
-    const applyError = Object.assign(new Error("apply failed mid-way"), { stderr: "patch failed" });
-    let revParseCount = 0;
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "status") return makeGitSuccess("");
-      if (cmd === "git" && args[0] === "rev-parse") {
-        revParseCount++;
-        return revParseCount === 1 ? makeGitSuccess("headsha\n") : makeGitSuccess("newsha\n");
-      }
-      if (cmd === "git" && args[0] === "apply" && args.includes("--check")) return makeGitSuccess();
-      if (cmd === "git" && args[0] === "apply") return Promise.reject(applyError);
-      if (cmd === "git" && args[0] === "checkout") return makeGitSuccess();
-      return makeGitSuccess("");
-    });
-
-    await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
-    ).rejects.toThrow("apply failed mid-way");
-
-    const checkoutCall = mockExecFile.mock.calls.find(
-      (call) => call[0] === "git" && (call[1] as string[])[0] === "checkout",
-    );
-    expect(checkoutCall).toBeDefined();
-    expect(checkoutCall![1] as string[]).toContain("src/foo.ts");
   });
 });

@@ -54,10 +54,10 @@ afterEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// commit-suggestion dispatch
+// Fixtures
 // ---------------------------------------------------------------------------
 
-const APPLIED_RESULT = {
+const SUGGESTION_RESULT = {
   pr: 42,
   repo: "owner/repo",
   threadId: "t1",
@@ -65,57 +65,22 @@ const APPLIED_RESULT = {
   startLine: 5,
   endLine: 5,
   author: "alice",
-  applied: true as const,
-  commitSha: "abc123",
   patch: "--- a/a.ts\n+++ b/a.ts\n@@ -5,1 +5,1 @@\n-old\n+new\n",
-  postActionInstruction: "Run `git push` to publish the commit.",
+  commitMessage: "apply fix",
+  commitBody: "Co-authored-by: alice <alice@users.noreply.github.com>",
+  filesToStage: ["a.ts"],
+  postActionInstructions: [
+    "Apply the patch to `a.ts`: run `git apply` with the diff shown above.",
+    "Stage the file: `git add -- a.ts`",
+    'Commit: `git commit -m "apply fix" -m "Co-authored-by: alice <alice@users.noreply.github.com>"`',
+    "Resolve the thread on GitHub: `npx pr-shepherd resolve 42 --resolve-thread-ids t1`",
+    "Push when ready: `git push` (or `git push --force-with-lease` after rebasing).",
+  ],
 };
 
-const FAILED_RESULT = {
-  pr: 42,
-  repo: "owner/repo",
-  threadId: "t1",
-  path: "a.ts",
-  startLine: 5,
-  endLine: 5,
-  author: "alice",
-  applied: false as const,
-  reason: "git apply rejected the patch: context mismatch",
-  patch: "--- a/a.ts\n+++ b/a.ts\n@@ -5,1 +5,1 @@\n-old\n+new\n",
-  postActionInstruction: "",
-};
-
-const DRY_RUN_VALID_RESULT = {
-  pr: 42,
-  repo: "owner/repo",
-  threadId: "t1",
-  path: "a.ts",
-  startLine: 5,
-  endLine: 5,
-  author: "alice",
-  applied: false as const,
-  dryRun: true as const,
-  valid: true,
-  reason: null,
-  patch: "--- a/a.ts\n+++ b/a.ts\n@@ -5,1 +5,1 @@\n-old\n+new\n",
-  postActionInstruction: "Re-run without --dry-run to apply and commit.",
-};
-
-const DRY_RUN_INVALID_RESULT = {
-  pr: 42,
-  repo: "owner/repo",
-  threadId: "t1",
-  path: "a.ts",
-  startLine: 5,
-  endLine: 5,
-  author: "alice",
-  applied: false as const,
-  dryRun: true as const,
-  valid: false,
-  reason: "git apply rejected the patch: context mismatch",
-  patch: "--- a/a.ts\n+++ b/a.ts\n@@ -5,1 +5,1 @@\n-old\n+new\n",
-  postActionInstruction: "",
-};
+// ---------------------------------------------------------------------------
+// commit-suggestion dispatch
+// ---------------------------------------------------------------------------
 
 describe("main — commit-suggestion", () => {
   it("errors when --thread-id is omitted", async () => {
@@ -134,8 +99,16 @@ describe("main — commit-suggestion", () => {
     expect(err).toContain("--message");
   });
 
-  it("calls runCommitSuggestion with correct args and exits 0 on applied", async () => {
-    mockRunCommitSuggestion.mockResolvedValue(APPLIED_RESULT);
+  it("errors when --message is whitespace only", async () => {
+    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "   "]);
+    expect(process.exitCode).toBe(1);
+    expect(mockRunCommitSuggestion).not.toHaveBeenCalled();
+    const err = stderrSpy.mock.calls.map((c: string[]) => c[0]).join("");
+    expect(err).toContain("--message");
+  });
+
+  it("calls runCommitSuggestion with correct args and exits 0 on success", async () => {
+    mockRunCommitSuggestion.mockResolvedValue(SUGGESTION_RESULT);
     await main([
       "node",
       "shepherd",
@@ -149,11 +122,11 @@ describe("main — commit-suggestion", () => {
     expect(mockRunCommitSuggestion).toHaveBeenCalledWith(
       expect.objectContaining({ prNumber: 42, threadId: "t1", message: "apply fix" }),
     );
-    expect(process.exitCode).toBe(0);
+    expect(process.exitCode).toBeUndefined();
   });
 
   it("passes --description when supplied", async () => {
-    mockRunCommitSuggestion.mockResolvedValue(APPLIED_RESULT);
+    mockRunCommitSuggestion.mockResolvedValue(SUGGESTION_RESULT);
     await main([
       "node",
       "shepherd",
@@ -170,50 +143,45 @@ describe("main — commit-suggestion", () => {
     );
   });
 
-  it("exits 1 when applied=false", async () => {
-    mockRunCommitSuggestion.mockResolvedValue(FAILED_RESULT);
-    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "fix"]);
-    expect(process.exitCode).toBe(1);
-  });
-
-  it("text output shows applied result with commit sha and post-action in ## Instructions", async () => {
-    mockRunCommitSuggestion.mockResolvedValue(APPLIED_RESULT);
+  it("text output shows suggestion header with author and thread id", async () => {
+    mockRunCommitSuggestion.mockResolvedValue(SUGGESTION_RESULT);
     await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "fix"]);
     const out = getStdout();
-    expect(out).toContain("Applied suggestion from @alice:");
+    expect(out).toContain("Suggestion from @alice");
+    expect(out).toContain("PR #42");
+    expect(out).toContain("thread t1");
     expect(out).toContain("a.ts (line 5)");
-    expect(out).toContain("Commit: abc123");
-    expect(out).toContain("## Instructions");
-    expect(out).toContain("1. Run `git push`");
   });
 
-  it("text output shows patch diff block in success result", async () => {
-    mockRunCommitSuggestion.mockResolvedValue(APPLIED_RESULT);
+  it("text output shows patch diff block", async () => {
+    mockRunCommitSuggestion.mockResolvedValue(SUGGESTION_RESULT);
     await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "fix"]);
     const out = getStdout();
     expect(out).toContain("```diff");
     expect(out).toContain("--- a/a.ts");
   });
 
-  it("errors when --message is whitespace only", async () => {
-    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "   "]);
-    expect(process.exitCode).toBe(1);
-    expect(mockRunCommitSuggestion).not.toHaveBeenCalled();
-    const err = stderrSpy.mock.calls.map((c: string[]) => c[0]).join("");
-    expect(err).toContain("--message");
-  });
-
-  it("text output shows failure with reason and patch", async () => {
-    mockRunCommitSuggestion.mockResolvedValue(FAILED_RESULT);
+  it("text output shows ## Suggested commit message section", async () => {
+    mockRunCommitSuggestion.mockResolvedValue(SUGGESTION_RESULT);
     await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "fix"]);
     const out = getStdout();
-    expect(out).toContain("Failed to apply suggestion t1:");
-    expect(out).toContain("git apply rejected");
-    expect(out).toContain("--- a/a.ts");
+    expect(out).toContain("## Suggested commit message");
+    expect(out).toContain("apply fix");
+    expect(out).toContain("Co-authored-by:");
+  });
+
+  it("text output shows ## Instructions with numbered steps", async () => {
+    mockRunCommitSuggestion.mockResolvedValue(SUGGESTION_RESULT);
+    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "fix"]);
+    const out = getStdout();
+    expect(out).toContain("## Instructions");
+    expect(out).toContain("1. Apply the patch");
+    expect(out).toContain("2. Stage");
+    expect(out).toContain("3. Commit");
   });
 
   it("json output serialises the full result", async () => {
-    mockRunCommitSuggestion.mockResolvedValue(APPLIED_RESULT);
+    mockRunCommitSuggestion.mockResolvedValue(SUGGESTION_RESULT);
     await main([
       "node",
       "shepherd",
@@ -227,80 +195,10 @@ describe("main — commit-suggestion", () => {
     ]);
     const out = getStdout();
     const parsed = JSON.parse(out.trim());
-    expect(parsed).toMatchObject({ applied: true, commitSha: "abc123", threadId: "t1" });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// commit-suggestion --dry-run dispatch
-// ---------------------------------------------------------------------------
-
-describe("main — commit-suggestion --dry-run", () => {
-  it("passes dryRun=true to runCommitSuggestion and does not require --message", async () => {
-    mockRunCommitSuggestion.mockResolvedValue(DRY_RUN_VALID_RESULT);
-    await main(["node", "shepherd", "commit-suggestion", "42", "--thread-id", "t1", "--dry-run"]);
-    expect(mockRunCommitSuggestion).toHaveBeenCalledWith(
-      expect.objectContaining({ prNumber: 42, threadId: "t1", dryRun: true }),
-    );
-    expect(process.exitCode).toBe(0);
-  });
-
-  it("exits 1 when dry-run valid=false", async () => {
-    mockRunCommitSuggestion.mockResolvedValue(DRY_RUN_INVALID_RESULT);
-    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--dry-run"]);
-    expect(process.exitCode).toBe(1);
-  });
-
-  it("text output shows dry-run valid header, diff, and ## Instructions", async () => {
-    mockRunCommitSuggestion.mockResolvedValue(DRY_RUN_VALID_RESULT);
-    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--dry-run"]);
-    const out = getStdout();
-    expect(out).toContain("Dry-run: would apply suggestion from @alice:");
-    expect(out).toContain("a.ts (line 5)");
-    expect(out).toContain("```diff");
-    expect(out).toContain("## Instructions");
-    expect(out).toContain("1. Re-run without --dry-run");
-  });
-
-  it("text output shows dry-run invalid header and reason", async () => {
-    mockRunCommitSuggestion.mockResolvedValue(DRY_RUN_INVALID_RESULT);
-    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--dry-run"]);
-    const out = getStdout();
-    expect(out).toContain("Dry-run: suggestion cannot apply cleanly:");
-    expect(out).toContain("context mismatch");
-    expect(out).toContain("```diff");
-  });
-
-  it("errors when --thread-id is omitted even with --dry-run", async () => {
-    await main(["node", "shepherd", "commit-suggestion", "--dry-run"]);
-    expect(process.exitCode).toBe(1);
-    expect(mockRunCommitSuggestion).not.toHaveBeenCalled();
-    const err = stderrSpy.mock.calls.map((c: string[]) => c[0]).join("");
-    expect(err).toContain("--thread-id");
-  });
-
-  it("errors when --message is omitted and --dry-run is NOT set", async () => {
-    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1"]);
-    expect(process.exitCode).toBe(1);
-    expect(mockRunCommitSuggestion).not.toHaveBeenCalled();
-    const err = stderrSpy.mock.calls.map((c: string[]) => c[0]).join("");
-    expect(err).toContain("--message");
-  });
-
-  it("json output for dry-run valid includes dryRun and valid fields", async () => {
-    mockRunCommitSuggestion.mockResolvedValue(DRY_RUN_VALID_RESULT);
-    await main([
-      "node",
-      "shepherd",
-      "commit-suggestion",
-      "--thread-id",
-      "t1",
-      "--dry-run",
-      "--format",
-      "json",
-    ]);
-    const out = getStdout();
-    const parsed = JSON.parse(out.trim());
-    expect(parsed).toMatchObject({ applied: false, dryRun: true, valid: true, reason: null });
+    expect(parsed).toMatchObject({
+      threadId: "t1",
+      commitMessage: "apply fix",
+      filesToStage: ["a.ts"],
+    });
   });
 });

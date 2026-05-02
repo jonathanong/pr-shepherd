@@ -61,7 +61,7 @@ export function buildFetchInstructions(
 
   if (hasSuggestions) {
     instructions.push(
-      `For each Actionable thread marked \`[suggestion]\` in \`## Actionable Review Threads\` above: run \`npx pr-shepherd commit-suggestion ${prNumber} --thread-id <id> --message "<one-sentence headline>" --format=json\`, one thread at a time. On \`applied: true\` mark it Fixed — the CLI already resolved the thread, so exclude the ID from \`--resolve-thread-ids\`. On \`applied: false\` read \`reason\` and \`patch\`, then fall through to the manual fix step — do not retry the same command. Optionally pass \`--dry-run\` (omitting \`--message\`) if you want to inspect the unified diff before it mutates the working tree — the CLI validates with \`git apply --check\`, returns the patch and \`valid: true/false\`, and exits \`1\` on drift without committing or resolving the thread.`,
+      `For each Actionable thread marked \`[suggestion]\` in \`## Actionable Review Threads\` above: run \`npx pr-shepherd commit-suggestion ${prNumber} --thread-id <id> --message "<one-sentence headline>" --format=json\` to retrieve the patch and suggested commit. The CLI does not mutate the working tree — apply the patch yourself (run \`git apply\` with the diff shown, or edit the file directly using the line range), then stage the listed file and run the suggested \`git commit\` from the \`## Instructions\` section. Include the thread ID in \`--resolve-thread-ids\` in the resolve command below (the thread is not auto-resolved). If the patch fails to apply (drift since the suggestion was written), fall through to the manual fix step. Do not retry the same \`commit-suggestion\` invocation.`,
     );
   }
 

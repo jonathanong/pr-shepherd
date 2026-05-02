@@ -156,10 +156,10 @@ export interface RelevantCheck {
 }
 
 // ---------------------------------------------------------------------------
-// commit-suggestion command (singular — one suggestion, one local commit)
+// commit-suggestion command (singular — produces a suggestion for the agent to apply)
 // ---------------------------------------------------------------------------
 
-interface CommitSuggestionResultBase {
+export interface CommitSuggestionResult {
   pr: number;
   repo: string;
   threadId: string;
@@ -167,28 +167,17 @@ interface CommitSuggestionResultBase {
   startLine: number;
   endLine: number;
   author: string;
-  /** The unified diff that was generated for this suggestion. */
+  /** The unified diff generated for this suggestion. */
   patch: string;
-  postActionInstruction: string;
+  /** The commit subject line (user-supplied --message). */
+  commitMessage: string;
+  /** The commit body (optional description + Co-authored-by trailer). */
+  commitBody: string;
+  /** Files the agent should stage before committing. */
+  filesToStage: string[];
+  /** Numbered steps the agent must execute to apply, commit, resolve, and push. */
+  postActionInstructions: string[];
 }
-
-export type CommitSuggestionResult =
-  | (CommitSuggestionResultBase & {
-      applied: true;
-      dryRun?: false;
-      commitSha: string;
-    })
-  | (CommitSuggestionResultBase & {
-      applied: false;
-      dryRun?: false;
-      reason: string;
-    })
-  | (CommitSuggestionResultBase & {
-      applied: false;
-      dryRun: true;
-      valid: boolean; // whether `git apply --check` succeeded
-      reason: string | null; // rejection message or null when valid
-    });
 
 // CLI options
 export interface GlobalOptions {
