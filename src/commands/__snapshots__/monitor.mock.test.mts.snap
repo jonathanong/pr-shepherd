@@ -17,7 +17,7 @@ Loop args: \`4m\`
 **Self-dedup:** Run \`CronList\`. If more than one job contains \`#pr-shepherd-loop:pr=42:\`, keep the lowest job ID and \`CronDelete\` the rest (ignore errors — a concurrent runner may have already deleted them).
 
 Run in a single Bash call:
-  npx pr-shepherd iterate 42
+  npx pr-shepherd 42
 
 Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with \`# PR #42 [\`), log the first line of stderr and continue — do not cancel the loop. The next cron fire will retry.
 

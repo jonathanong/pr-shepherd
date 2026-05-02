@@ -15,7 +15,7 @@
 **Fix:** Verify the fix is deployed. Check the iterate output:
 
 ```bash
-pr-shepherd iterate <PR> --format=json
+pr-shepherd <PR> --format=json
 ```
 
 Should return `{"action":"cancel","state":"MERGED",...}`.
@@ -33,7 +33,7 @@ If it still returns `wait`, check that `report.mergeStatus.state` is being set c
 **Fix:** Wait a minute and retry:
 
 ```bash
-pr-shepherd iterate <PR> --format=json
+pr-shepherd <PR> --format=json
 ```
 
 ---
@@ -92,7 +92,7 @@ If `state` is `OPEN` and both `mergeable` and `mergeStateStatus` are `UNKNOWN` a
 To replay a single iteration with full output:
 
 ```bash
-pr-shepherd iterate <PR> --format=json
+pr-shepherd <PR> --format=json
 ```
 
 For human-readable output:

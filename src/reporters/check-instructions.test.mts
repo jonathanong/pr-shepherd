@@ -245,11 +245,11 @@ describe("buildCheckInstructions — monitoring pointer", () => {
     expect(steps[steps.length - 1]).toContain("/pr-shepherd:monitor");
   });
 
-  it("uses npx pr-shepherd iterate for Codex", () => {
+  it("uses the default npx pr-shepherd command for Codex", () => {
     const steps = buildCheckInstructions(makeReport({ status: "FAILING" }), {
       runtime: "codex",
     });
-    expect(steps[steps.length - 1]).toContain("npx pr-shepherd iterate");
+    expect(steps[steps.length - 1]).toContain("npx pr-shepherd 42");
     expect(steps[steps.length - 1]).not.toContain("/pr-shepherd:monitor");
   });
 

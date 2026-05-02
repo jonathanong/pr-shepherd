@@ -3,6 +3,9 @@
  *
  * Usage:
  *   pr-shepherd --version
+ *   pr-shepherd [PR] [--format text|json] [--cooldown-seconds N] [--ready-delay Nm]
+ *                  [--stall-timeout <duration>] [--no-auto-mark-ready]
+ *                  [--no-auto-cancel-actionable]
  *   pr-shepherd check [PR] [--format text|json]
  *   pr-shepherd resolve [PR] [--fetch] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]
  *                            [--dismiss-review-ids Q] [--message MSG] [--require-sha SHA]
@@ -58,6 +61,11 @@ export async function main(argv: string[]): Promise<void> {
   // Initialize the per-worktree log and install a stdout tee.
   await setupLog(argv);
 
+  if (isDefaultIterateInvocation(subcommand)) {
+    await handleIterate(args);
+    return;
+  }
+
   switch (subcommand) {
     case "check":
       await handleCheck(args.slice(1));
@@ -86,6 +94,10 @@ export async function main(argv: string[]): Promise<void> {
       process.exitCode = 1;
       return;
   }
+}
+
+function isDefaultIterateInvocation(subcommand: string | undefined): boolean {
+  return subcommand === undefined || subcommand.startsWith("--") || /^\d+$/.test(subcommand);
 }
 
 function readVersion(): string {

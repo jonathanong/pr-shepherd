@@ -74,7 +74,7 @@ export function buildCheckInstructions(
   if (!isReady) {
     instructions.push(
       runtime === "codex"
-        ? `This is a one-shot check. For follow-up monitoring, run \`npx pr-shepherd iterate ${report.pr}\`.`
+        ? `This is a one-shot check. For follow-up monitoring, run \`npx pr-shepherd ${report.pr}\`.`
         : "This is a one-shot check. For continuous monitoring that acts on these signals automatically, use `/pr-shepherd:monitor`.",
     );
   }

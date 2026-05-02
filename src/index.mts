@@ -3,6 +3,7 @@
  * pr-shepherd — unified GitHub PR status + auto-resolve CLI
  *
  * Usage:
+ *   pr-shepherd [PR]
  *   pr-shepherd check [PR]
  *   pr-shepherd resolve [PR]
  *   pr-shepherd iterate [PR]

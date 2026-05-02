@@ -68,7 +68,7 @@ export async function handleIterate(args: string[]): Promise<void> {
 
   const readyDelayStr = getFlag(extra, "--ready-delay");
   const readyDelaySuffix = validateDurationFlag(
-    "pr-shepherd iterate",
+    "pr-shepherd",
     "--ready-delay",
     readyDelayStr,
     hasFlag(extra, "--ready-delay"),

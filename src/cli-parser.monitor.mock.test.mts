@@ -47,7 +47,7 @@ const MONITOR_RESULT = {
   prNumber: 42,
   loopTag: "#pr-shepherd-loop:pr=42:",
   loopArgs: "4m",
-  reusableCommand: "npx pr-shepherd iterate 42",
+  reusableCommand: "npx pr-shepherd 42",
   loopPrompt: "#pr-shepherd-loop:pr=42:\nBODY",
 };
 
@@ -86,12 +86,12 @@ describe("main — monitor", () => {
     mockRunMonitor.mockResolvedValue({
       ...MONITOR_RESULT,
       loopPrompt:
-        "#pr-shepherd-loop:pr=42:\n\n**IMPORTANT — Codex recurrence rules:**\n\nRun in a single Bash call:\n  npx pr-shepherd iterate 42",
+        "#pr-shepherd-loop:pr=42:\n\n**IMPORTANT — Codex recurrence rules:**\n\nRun in a single Bash call:\n  npx pr-shepherd 42",
     });
     await main(["node", "shepherd", "monitor", "42"]);
     expect(mockRunMonitor).toHaveBeenCalledWith(expect.objectContaining({ runtime: "codex" }));
     const out = getStdout();
-    expect(out).toContain("Reusable command: `npx pr-shepherd iterate 42`");
+    expect(out).toContain("Reusable command: `npx pr-shepherd 42`");
     expect(out).toContain("Codex does not provide `/loop` scheduling");
     expect(out).not.toContain("Invoke the `/loop` skill");
   });
@@ -113,7 +113,7 @@ describe("main — monitor", () => {
     process.env.CODEX_CI = "1";
     await main(["node", "shepherd", "monitor", "42", "--format=json"]);
     const parsed = JSON.parse(getStdout().trim());
-    expect(parsed.reusableCommand).toBe("npx pr-shepherd iterate 42");
+    expect(parsed.reusableCommand).toBe("npx pr-shepherd 42");
     expect(parsed.instructions.join("\n")).toContain("Codex does not provide `/loop` scheduling");
   });
 
