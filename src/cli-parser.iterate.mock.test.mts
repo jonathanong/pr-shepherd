@@ -83,12 +83,32 @@ describe("main — iterate", () => {
     expect(JSON.parse(getStdout().trimEnd()).pr).toBe(42);
   });
 
+  it("defaults to iterate when the first argument is a PR URL", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
+    await main(["node", "shepherd", "https://github.com/owner/repo/pull/42"]);
+    expect(mockRunIterate).toHaveBeenCalledWith(expect.objectContaining({ prNumber: 42 }));
+  });
+
   it("defaults to iterate when the first argument is an iterate flag", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
     await main(["node", "shepherd", "--ready-delay", "15m"]);
     expect(mockRunIterate).toHaveBeenCalledWith(
       expect.objectContaining({ readyDelaySeconds: 15 * 60 }),
     );
+  });
+
+  it("rejects unknown flag-first default invocations", async () => {
+    await main(["node", "shepherd", "--formt", "json"]);
+    expect(process.exitCode).toBe(1);
+    expect(mockRunIterate).not.toHaveBeenCalled();
+    expect(getStderr()).toContain("Unknown subcommand: --formt");
+  });
+
+  it("rejects extra positional arguments in default iterate form", async () => {
+    await main(["node", "shepherd", "42", "resolve"]);
+    expect(process.exitCode).toBe(1);
+    expect(mockRunIterate).not.toHaveBeenCalled();
+    expect(getStderr()).toContain("Unknown subcommand: resolve");
   });
 
   it("exits with iterateActionToExitCode(fix_code)=1", async () => {

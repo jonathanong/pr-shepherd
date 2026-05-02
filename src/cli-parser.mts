@@ -27,6 +27,7 @@ import { runLogFile } from "./commands/log-file.mts";
 import { formatJson } from "./reporters/json.mts";
 import { formatText } from "./reporters/text.mts";
 import { parseCommonArgs, getFlag, hasFlag, parseList } from "./cli/args.mts";
+import { isDefaultIterateInvocation, validateDefaultIterateArgs } from "./cli/default-iterate.mts";
 import { statusToExitCode } from "./cli/exit-codes.mts";
 import { formatFetchResult, formatMutateResult } from "./cli/formatters.mts";
 import {
@@ -62,6 +63,7 @@ export async function main(argv: string[]): Promise<void> {
   await setupLog(argv);
 
   if (isDefaultIterateInvocation(subcommand)) {
+    if (!validateDefaultIterateArgs(args)) return;
     await handleIterate(args);
     return;
   }
@@ -94,10 +96,6 @@ export async function main(argv: string[]): Promise<void> {
       process.exitCode = 1;
       return;
   }
-}
-
-function isDefaultIterateInvocation(subcommand: string | undefined): boolean {
-  return subcommand === undefined || subcommand.startsWith("--") || /^\d+$/.test(subcommand);
 }
 
 function readVersion(): string {

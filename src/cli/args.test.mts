@@ -138,6 +138,11 @@ describe("parseCommonArgs — PR number detection", () => {
     expect(prNumber).toBe(42);
   });
 
+  it("extracts PR number from a GitHub pull request URL", () => {
+    const { prNumber } = parseCommonArgs(["https://github.com/owner/repo/pull/42"]);
+    expect(prNumber).toBe(42);
+  });
+
   it("does NOT treat unknown flag values as PR numbers", () => {
     const { prNumber } = parseCommonArgs(["--last-push-time", "100", "42"]);
     expect(prNumber).toBe(42);

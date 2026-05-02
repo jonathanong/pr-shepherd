@@ -115,9 +115,9 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
   }
 
   const prIndex = args.findIndex(
-    (a, index) => !skipForPrDetect.has(index) && !a.startsWith("--") && /^\d+$/.test(a),
+    (a, index) => !skipForPrDetect.has(index) && !a.startsWith("--") && parsePrNumber(a) !== null,
   );
-  const prNumber = prIndex !== -1 ? parseInt(args[prIndex]!, 10) : undefined;
+  const prNumber = prIndex !== -1 ? parsePrNumber(args[prIndex]!)! : undefined;
 
   // Remove consumed global-flag indices (and the PR number itself) from extra.
   if (prIndex !== -1) {
@@ -131,6 +131,15 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
     global: { format, verbose },
     extra,
   };
+}
+
+export function parsePrNumber(value: string): number | null {
+  if (/^\d+$/.test(value)) return parseInt(value, 10);
+
+  const match = value.match(/^https?:\/\/github\.com\/[^/]+\/[^/]+\/pull\/(\d+)(?:[/?#].*)?$/);
+  if (match) return parseInt(match[1]!, 10);
+
+  return null;
 }
 
 /** Get the value of a flag like `--flag value` or `--flag=value`. */

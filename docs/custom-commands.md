@@ -56,6 +56,6 @@ For `monitor` and `resolve` custom commands, do **not** copy the
 frontmatter that is not valid for `.claude/commands/` files. Instead, create
 `.claude/commands/pr-monitor.md` and/or `.claude/commands/pr-resolve.md`
 using the same command-file structure as the `pr-check` example above, with
-the CLI invocation changed to `npx pr-shepherd ...` or
+the CLI invocation changed to `npx pr-shepherd monitor ...` or
 `npx pr-shepherd resolve ...`. To drive the CLI without Claude at all, see
 [cli-usage.md](cli-usage.md).
