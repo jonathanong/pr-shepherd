@@ -221,6 +221,14 @@ const THREAD = {
   createdAtUnix: NOW - 3600,
 };
 
+const RESOLUTION_ONLY_THREAD = {
+  ...THREAD,
+  id: "thread-resolution-only",
+  isOutdated: true,
+  line: null,
+  body: "Already addressed on an old diff",
+};
+
 describe("runIterate — escalate (fix-thrash)", () => {
   it("escalates when a thread has been attempted >= fixAttemptsPerThread times", async () => {
     mockReadFixAttempts.mockResolvedValue({ headSha: "abc123", threadAttempts: { "thread-1": 3 } });
@@ -369,6 +377,35 @@ describe("runIterate — escalate (pr-level-changes-requested)", () => {
     if (result.action === "escalate") {
       expect(result.escalate.triggers).toContain("pr-level-changes-requested");
       expect(result.escalate.changesRequestedReviews).toHaveLength(1);
+    }
+  });
+
+  it("does NOT escalate when changesRequestedReviews + resolution-only threads exist", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        changesRequestedReviews: [{ id: "review-1", author: "boss", body: "Needs rework" }],
+        threads: {
+          actionable: [],
+          resolutionOnly: [RESOLUTION_ONLY_THREAD],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
+        comments: { actionable: [], firstLook: [] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.resolveCommand.argv).toContain("thread-resolution-only");
     }
   });
 });

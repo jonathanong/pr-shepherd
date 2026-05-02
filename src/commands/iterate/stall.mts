@@ -73,7 +73,9 @@ export async function applyStallGuard(
       const stalledMinutes = Math.floor(ageSeconds / 60);
       const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
         triggers: ["stall-timeout"],
-        unresolvedThreads: report.threads.actionable.map(toAgentThread),
+        unresolvedThreads: [...report.threads.actionable, ...report.threads.resolutionOnly].map(
+          toAgentThread,
+        ),
         ambiguousComments: report.comments.actionable.map(toAgentComment),
         changesRequestedReviews: report.changesRequestedReviews,
         suggestion: buildEscalateSuggestion(["stall-timeout"], String(stalledMinutes)),

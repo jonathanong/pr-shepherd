@@ -18,7 +18,6 @@ import type {
   Review,
   ShepherdReport,
 } from "../../types.mts";
-
 interface HandleFixCodeContext {
   base: IterateResultBase;
   report: ShepherdReport;
@@ -34,7 +33,6 @@ interface HandleFixCodeContext {
   editedSummaries: Review[];
   surfacedApprovals: Review[];
 }
-
 export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateResult> {
   const {
     base,
@@ -51,7 +49,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     editedSummaries,
     surfacedApprovals,
   } = ctx;
-
   const failingChecks = report.checks.failing;
   const stored = await readFixAttempts({ owner: repoOwner, repo: repoName, pr: prNumber });
   const isNewSha = stored?.headSha !== headSha;
@@ -64,6 +61,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
 
   const escalateTriggers = checkEscalateTriggers(
     report.threads.actionable,
+    report.threads.resolutionOnly,
     report.comments.actionable,
     report.changesRequestedReviews,
     failingChecks,
@@ -73,7 +71,9 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   if (escalateTriggers.triggers.length > 0) {
     const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: escalateTriggers.triggers,
-      unresolvedThreads: report.threads.actionable.map(toAgentThread),
+      unresolvedThreads: [...report.threads.actionable, ...report.threads.resolutionOnly].map(
+        toAgentThread,
+      ),
       ambiguousComments: report.comments.actionable.map(toAgentComment),
       changesRequestedReviews: report.changesRequestedReviews,
       attemptHistory: escalateTriggers.thrashHistory,
@@ -88,7 +88,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       },
     };
   }
-
   await writeFixAttempts(
     { owner: repoOwner, repo: repoName, pr: prNumber },
     { headSha, threadAttempts: currentAttempts },
@@ -130,7 +129,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   if (baseLookup.isFallback && (resolveCommand.requiresHeadSha || hasConflicts)) {
     const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: ["base-branch-unknown"],
-      unresolvedThreads: threads,
+      unresolvedThreads: [...threads, ...resolutionOnlyThreads.map(toAgentThread)],
       ambiguousComments: actionableComments,
       changesRequestedReviews,
       suggestion: buildEscalateSuggestion(["base-branch-unknown"], baseLookup.failureReason),
@@ -144,7 +143,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       },
     };
   }
-
   const firstLookThreads = report.threads.firstLook;
   const firstLookComments = report.comments.firstLook;
   const instructions = buildFixInstructions(
@@ -164,7 +162,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     inProgressRunIds,
     resolutionOnlyThreads,
   );
-
   return applyStallGuard(
     stallKey,
     stallTimeoutSeconds,

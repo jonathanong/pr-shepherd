@@ -14,6 +14,7 @@ export interface EscalateCheck {
 
 export function checkEscalateTriggers(
   actionableThreads: ReviewThread[],
+  resolutionOnlyThreads: ReviewThread[],
   actionableComments: PrComment[],
   changesRequestedReviews: Review[],
   failingChecks: TriagedCheck[],
@@ -34,6 +35,7 @@ export function checkEscalateTriggers(
   if (
     changesRequestedReviews.length > 0 &&
     actionableThreads.length === 0 &&
+    resolutionOnlyThreads.length === 0 &&
     actionableComments.length === 0 &&
     failingChecks.length === 0 &&
     !hasConflicts
