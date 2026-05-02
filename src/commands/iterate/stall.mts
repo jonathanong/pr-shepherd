@@ -20,6 +20,7 @@ export function computeStallFingerprint(
     ...report.checks.inProgress.map((p) => `inProgress:${p.name}`),
   ].sort();
   const threads = report.threads.actionable.map((t) => t.id).sort();
+  const resolutionOnlyThreads = report.threads.resolutionOnly.map((t) => t.id).sort();
   const comments = report.comments.actionable.map((c) => c.id).sort();
   const reviews = report.changesRequestedReviews.map((r) => r.id).sort();
   const summaries = [...reviewSummaryIds].sort();
@@ -32,6 +33,7 @@ export function computeStallFingerprint(
     isDraft: base.isDraft,
     checks,
     threads,
+    resolutionOnlyThreads,
     comments,
     reviews,
     summaries,

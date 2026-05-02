@@ -20,6 +20,16 @@ export function renderFirstLookStatusTag(t: {
     : `[status: ${t.firstLookStatus}${editedSuffix}]`;
 }
 
+export function renderThreadResolutionStatusTag(t: {
+  isOutdated?: boolean;
+  isMinimized?: boolean;
+}): string {
+  const status = [t.isOutdated ? "outdated" : null, t.isMinimized ? "minimized" : null]
+    .filter(Boolean)
+    .join(", ");
+  return status ? `[status: ${status}]` : "[status: unresolved]";
+}
+
 interface ThreadBulletInput {
   id: string;
   url?: string;
@@ -64,4 +74,12 @@ export function renderReviewBullet(
   const bodySuffix =
     opts.includeBody && r.body != null && r.body !== "" ? `: ${renderBodyPreview(r.body)}` : "";
   return `- \`reviewId=${r.id}\` (@${r.author})${bodySuffix}`;
+}
+
+export function renderReviewListSection(
+  heading: string,
+  items: { id: string; author: string; body?: string }[],
+): string | null {
+  if (items.length === 0) return null;
+  return `## ${heading}\n\n${items.map((r) => renderReviewBullet(r, { includeBody: true })).join("\n")}`;
 }

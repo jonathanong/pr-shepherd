@@ -60,6 +60,8 @@ export interface ShepherdReport {
   };
   threads: {
     actionable: ReviewThread[];
+    /** Unresolved threads that need a GitHub resolve mutation but do not require code edits. */
+    resolutionOnly: ReviewThread[];
     autoResolved: ReviewThread[];
     autoResolveErrors: string[];
     /** First-look items — outdated/resolved/minimized threads not yet seen by the agent. */

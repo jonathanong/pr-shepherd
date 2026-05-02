@@ -6,6 +6,7 @@ import {
   renderCommentBullet,
   renderReviewBullet,
   renderFirstLookStatusTag,
+  renderThreadResolutionStatusTag,
 } from "./list-formatters.mts";
 import { adaptFixCodeInstructions, numberInstructions } from "./iterate-instructions.mts";
 import type { AgentRuntime } from "../agent-runtime.mts";
@@ -33,6 +34,15 @@ export function formatFixCodeResult(
         sections.push(renderSuggestionBlock(t.suggestion, ""));
       }
     }
+  }
+
+  if (result.fix.resolutionOnlyThreads.length > 0) {
+    sections.push("## Review threads to resolve");
+    sections.push(
+      result.fix.resolutionOnlyThreads
+        .map((t) => renderThreadBullet(t, { statusTag: renderThreadResolutionStatusTag(t) }))
+        .join("\n"),
+    );
   }
 
   if (result.fix.actionableComments.length > 0) {
@@ -105,9 +115,7 @@ export function formatFixCodeResult(
 
   const firstLookTotal = result.fix.firstLookThreads.length + result.fix.firstLookComments.length;
   if (firstLookTotal > 0) {
-    sections.push(
-      `## First-look items (${firstLookTotal}) — already closed on GitHub; acknowledge only`,
-    );
+    sections.push(`## First-look items (${firstLookTotal}) — acknowledge status before acting`);
     const bullets: string[] = [];
     for (const t of result.fix.firstLookThreads) {
       bullets.push(renderThreadBullet(t, { statusTag: renderFirstLookStatusTag(t) }));

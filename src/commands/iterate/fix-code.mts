@@ -54,11 +54,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
 
   const failingChecks = report.checks.failing;
   const stored = await readFixAttempts({ owner: repoOwner, repo: repoName, pr: prNumber });
-
   const isNewSha = stored?.headSha !== headSha;
-  // Accumulate across shas — only increment when a push is detected (sha changed)
   const currentAttempts: Record<string, number> = stored ? { ...stored.threadAttempts } : {};
-
   if (isNewSha) {
     for (const t of report.threads.actionable) {
       currentAttempts[t.id] = (currentAttempts[t.id] ?? 0) + 1;
@@ -92,7 +89,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     };
   }
 
-  // Save updated state (only incremented on sha change)
   await writeFixAttempts(
     { owner: repoOwner, repo: repoName, pr: prNumber },
     { headSha, threadAttempts: currentAttempts },
@@ -110,6 +106,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const cancelledSet = new Set(cancelled);
   const baseLookup = validateBaseBranch(report.baseBranch);
   const threads = report.threads.actionable.map(toAgentThread);
+  const resolutionOnlyThreads = report.threads.resolutionOnly;
   const actionableComments = report.comments.actionable.map(toAgentComment);
   const checks = toAgentChecks(failingChecks);
   const { changesRequestedReviews } = report;
@@ -124,6 +121,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const allCommentIds = [...actionableComments.map((c) => c.id), ...reviewSummaryIds];
   const resolveCommand = buildResolveCommand(
     threads,
+    resolutionOnlyThreads,
     allCommentIds,
     changesRequestedReviews,
     checks,
@@ -164,6 +162,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     firstLookSummaries,
     editedSummaries,
     inProgressRunIds,
+    resolutionOnlyThreads,
   );
 
   return applyStallGuard(
@@ -179,6 +178,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       fix: {
         mode: "rebase-and-push" as const,
         threads,
+        resolutionOnlyThreads,
         actionableComments,
         reviewSummaryIds,
         firstLookSummaries,

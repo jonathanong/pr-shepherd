@@ -89,6 +89,7 @@ describe("## First-look items — edited flag rendering", () => {
       formatFetchResult({
         prNumber: 42,
         actionableThreads: [],
+        resolutionOnlyThreads: [],
         actionableComments: [],
         firstLookThreads: [],
         firstLookComments: [editedComment],
@@ -124,7 +125,13 @@ describe("## First-look items — edited flag rendering", () => {
         filteredNames: [],
         blockedByFilteredCheck: false,
       },
-      threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+      threads: {
+        actionable: [],
+        resolutionOnly: [],
+        autoResolved: [],
+        autoResolveErrors: [],
+        firstLook: [],
+      },
       comments: { actionable: [], firstLook: [editedComment] },
       changesRequestedReviews: [],
       reviewSummaries: [],
@@ -172,6 +179,7 @@ describe("## First-look items — cross-call-site consistency", () => {
       formatFetchResult({
         prNumber: 42,
         actionableThreads: [],
+        resolutionOnlyThreads: [],
         actionableComments: [],
         firstLookThreads: [FL_THREAD_OUTDATED_AUTO, FL_THREAD_RESOLVED],
         firstLookComments: [FL_COMMENT],
@@ -209,6 +217,7 @@ describe("## First-look items — cross-call-site consistency", () => {
       },
       threads: {
         actionable: [],
+        resolutionOnly: [],
         autoResolved: [],
         autoResolveErrors: [],
         firstLook: [FL_THREAD_OUTDATED_AUTO, FL_THREAD_RESOLVED],

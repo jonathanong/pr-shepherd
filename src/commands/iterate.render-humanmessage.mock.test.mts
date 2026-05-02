@@ -107,7 +107,13 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       filteredNames: [],
       blockedByFilteredCheck: false,
     },
-    threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+    threads: {
+      actionable: [],
+      resolutionOnly: [],
+      autoResolved: [],
+      autoResolveErrors: [],
+      firstLook: [],
+    },
     comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
@@ -221,7 +227,13 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+        threads: {
+          actionable: [THREAD],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -255,7 +267,13 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
       makeReport({
         status: "UNRESOLVED_COMMENTS",
         baseBranch: "",
-        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+        threads: {
+          actionable: [THREAD],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -315,7 +333,13 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
       makeReport({
         status: "UNRESOLVED_COMMENTS",
         baseBranch: "main; rm -rf /",
-        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+        threads: {
+          actionable: [THREAD],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({

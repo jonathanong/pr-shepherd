@@ -77,6 +77,9 @@ export function projectIterateLean(
         fix: {
           mode: result.fix.mode,
           ...(result.fix.threads.length > 0 && { threads: result.fix.threads }),
+          ...(result.fix.resolutionOnlyThreads.length > 0 && {
+            resolutionOnlyThreads: result.fix.resolutionOnlyThreads,
+          }),
           ...(result.fix.actionableComments.length > 0 && {
             actionableComments: result.fix.actionableComments,
           }),

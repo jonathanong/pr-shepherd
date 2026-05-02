@@ -10,7 +10,13 @@ import type {
   FirstLookThread,
   FirstLookComment,
 } from "./report.mts";
-import type { MergeStateStatus, Review, ReviewDecision, ShepherdMergeStatus } from "./github.mts";
+import type {
+  MergeStateStatus,
+  Review,
+  ReviewDecision,
+  ReviewThread,
+  ShepherdMergeStatus,
+} from "./github.mts";
 
 export type ShepherdAction =
   | "cooldown"
@@ -110,6 +116,8 @@ export interface ResolveCommand {
 interface FixRebaseAndPush {
   mode: "rebase-and-push";
   threads: AgentThread[];
+  /** Unresolved threads that should be resolved on GitHub without requiring code edits. */
+  resolutionOnlyThreads: ReviewThread[];
   /** PR comment bodies surfaced to the agent for evaluation, including previously filtered bot/noise comments; do not treat `actionableComments.length` as a proxy for "must push code". */
   actionableComments: AgentComment[];
   /** Review IDs (COMMENTED summaries and, if opted in, APPROVED reviews) to minimize — no code change needed. */

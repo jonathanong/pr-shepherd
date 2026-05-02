@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Hoist mocks before imports so modules capture the mocked versions.
@@ -103,7 +104,13 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       filteredNames: [],
       blockedByFilteredCheck: false,
     },
-    threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+    threads: {
+      actionable: [],
+      resolutionOnly: [],
+      autoResolved: [],
+      autoResolveErrors: [],
+      firstLook: [],
+    },
     comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
@@ -220,7 +227,13 @@ describe("runIterate — escalate (fix-thrash)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+        threads: {
+          actionable: [THREAD],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -245,7 +258,13 @@ describe("runIterate — escalate (fix-thrash)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+        threads: {
+          actionable: [THREAD],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -268,7 +287,13 @@ describe("runIterate — escalate (fix-thrash)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+        threads: {
+          actionable: [THREAD],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -292,7 +317,13 @@ describe("runIterate — escalate (fix-thrash)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        threads: { actionable: [THREAD], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+        threads: {
+          actionable: [THREAD],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -316,7 +347,13 @@ describe("runIterate — escalate (pr-level-changes-requested)", () => {
       makeReport({
         status: "UNRESOLVED_COMMENTS",
         changesRequestedReviews: [{ id: "review-1", author: "boss", body: "Needs rework" }],
-        threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+        threads: {
+          actionable: [],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
         comments: { actionable: [], firstLook: [] },
       }),
     );
@@ -351,7 +388,13 @@ describe("runIterate — escalate (pr-level-changes-requested suppressed during 
           mergeStateStatus: "DIRTY",
         },
         changesRequestedReviews: [{ id: "review-1", author: "boss", body: "Needs rework" }],
-        threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+        threads: {
+          actionable: [],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
         comments: { actionable: [], firstLook: [] },
       }),
     );
@@ -373,7 +416,13 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
       makeReport({
         status: "UNRESOLVED_COMMENTS",
         changesRequestedReviews: [{ id: "review-1", author: "boss", body: "Needs rework" }],
-        threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+        threads: {
+          actionable: [],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
         comments: {
           actionable: [
             {

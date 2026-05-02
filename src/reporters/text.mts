@@ -4,8 +4,9 @@ import type { AgentRuntime } from "../agent-runtime.mts";
 import {
   renderThreadBullet,
   renderCommentBullet,
-  renderReviewBullet,
   renderFirstLookStatusTag,
+  renderReviewListSection,
+  renderThreadResolutionStatusTag,
 } from "../cli/list-formatters.mts";
 import { joinSections } from "../util/markdown.mts";
 
@@ -82,12 +83,16 @@ export function formatText(report: ShepherdReport, opts?: { runtime?: AgentRunti
 
   const {
     actionable: actionableThreads,
+    resolutionOnly: resolutionOnlyThreads,
     autoResolved,
     autoResolveErrors,
     firstLook: firstLookThreads,
   } = report.threads;
   const hasThreadSection =
-    autoResolved.length > 0 || autoResolveErrors.length > 0 || actionableThreads.length > 0;
+    autoResolved.length > 0 ||
+    autoResolveErrors.length > 0 ||
+    actionableThreads.length > 0 ||
+    resolutionOnlyThreads.length > 0;
 
   let threadsSection: string | null = null;
   if (hasThreadSection) {
@@ -117,6 +122,14 @@ export function formatText(report: ShepherdReport, opts?: { runtime?: AgentRunti
       subparts.push(lines.join("\n"));
     }
 
+    if (resolutionOnlyThreads.length > 0) {
+      const lines = [`### Needs resolution only (${resolutionOnlyThreads.length})`, ""];
+      for (const t of resolutionOnlyThreads) {
+        lines.push(renderThreadBullet(t, { statusTag: renderThreadResolutionStatusTag(t) }));
+      }
+      subparts.push(lines.join("\n"));
+    }
+
     threadsSection = `## Review Threads\n\n${subparts.join("\n\n")}`;
   }
 
@@ -130,18 +143,21 @@ export function formatText(report: ShepherdReport, opts?: { runtime?: AgentRunti
     commentsSection = `## PR Comments\n\n${lines.join("\n")}`;
   }
 
-  const changesRequestedSection = reviewListSection(
+  const changesRequestedSection = renderReviewListSection(
     "CHANGES_REQUESTED Reviews",
     report.changesRequestedReviews,
   );
   const allSummaries = [...report.firstLookSummaries, ...report.reviewSummaries];
-  const reviewSummariesSection = reviewListSection("Review Summaries", allSummaries);
-  const approvedReviewsSection = reviewListSection("Approved Reviews", report.approvedReviews);
+  const reviewSummariesSection = renderReviewListSection("Review Summaries", allSummaries);
+  const approvedReviewsSection = renderReviewListSection(
+    "Approved Reviews",
+    report.approvedReviews,
+  );
   const firstLookTotal = firstLookThreads.length + firstLookComments.length;
   let firstLookSection: string | null = null;
   if (firstLookTotal > 0) {
     const lines = [
-      `## First-look items (${firstLookTotal}) — already closed on GitHub; acknowledge only`,
+      `## First-look items (${firstLookTotal}) — acknowledge status before acting`,
       "",
     ];
     for (const t of firstLookThreads) {
@@ -155,11 +171,14 @@ export function formatText(report: ShepherdReport, opts?: { runtime?: AgentRunti
   }
 
   const totalActionable =
-    actionableThreads.length + actionableComments.length + report.changesRequestedReviews.length;
+    actionableThreads.length +
+    resolutionOnlyThreads.length +
+    actionableComments.length +
+    report.changesRequestedReviews.length;
   const counts: string[] = [];
   if (totalActionable > 0) counts.push(`${totalActionable} actionable`);
   if (firstLookTotal > 0) counts.push(`${firstLookTotal} first-look`);
-  const summaryLine = counts.join(", ") || "0 actionable — all threads resolved/minimized";
+  const summaryLine = counts.join(", ") || "0 actionable — no unresolved review items";
   const summarySection = `## Summary\n\n${summaryLine}`;
 
   const instructions = buildCheckInstructions(report, opts);
@@ -178,12 +197,4 @@ export function formatText(report: ShepherdReport, opts?: { runtime?: AgentRunti
     summarySection,
     instructionsSection,
   ]);
-}
-
-function reviewListSection(
-  heading: string,
-  items: { id: string; author: string; body?: string }[],
-): string | null {
-  if (items.length === 0) return null;
-  return `## ${heading}\n\n${items.map((r) => renderReviewBullet(r, { includeBody: true })).join("\n")}`;
 }

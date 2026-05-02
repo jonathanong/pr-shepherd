@@ -66,7 +66,13 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       filteredNames: [],
       blockedByFilteredCheck: false,
     },
-    threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+    threads: {
+      actionable: [],
+      resolutionOnly: [],
+      autoResolved: [],
+      autoResolveErrors: [],
+      firstLook: [],
+    },
     comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
@@ -123,6 +129,7 @@ describe("main — resolve", () => {
     mockRunResolveFetch.mockResolvedValue({
       prNumber: 42,
       actionableThreads: [],
+      resolutionOnlyThreads: [],
       actionableComments: [],
       firstLookThreads: [],
       firstLookComments: [],
@@ -140,6 +147,7 @@ describe("main — resolve", () => {
     mockRunResolveFetch.mockResolvedValue({
       prNumber: 42,
       actionableThreads: [],
+      resolutionOnlyThreads: [],
       actionableComments: [],
       firstLookThreads: [],
       firstLookComments: [],
@@ -182,6 +190,7 @@ describe("main — resolve", () => {
           createdAtUnix: 0,
         },
       ],
+      resolutionOnlyThreads: [],
       actionableComments: [
         {
           id: "IC_1",
@@ -233,6 +242,7 @@ describe("main — resolve", () => {
           suggestion: { startLine: 5, endLine: 5, lines: ["const x = 1;"], author: "alice" },
         },
       ],
+      resolutionOnlyThreads: [],
       actionableComments: [],
       firstLookThreads: [],
       firstLookComments: [],
@@ -257,6 +267,7 @@ describe("main — resolve", () => {
     mockRunResolveFetch.mockResolvedValue({
       prNumber: 42,
       actionableThreads: [],
+      resolutionOnlyThreads: [],
       actionableComments: [],
       firstLookThreads: [],
       firstLookComments: [],
@@ -287,6 +298,7 @@ describe("main — resolve", () => {
           createdAtUnix: 0,
         },
       ],
+      resolutionOnlyThreads: [],
       actionableComments: [
         {
           id: "IC_2",
@@ -328,6 +340,7 @@ describe("main — resolve", () => {
           createdAtUnix: 0,
         },
       ],
+      resolutionOnlyThreads: [],
       actionableComments: [
         {
           id: "IC_linked",
@@ -360,6 +373,7 @@ describe("main — resolve", () => {
     mockRunResolveFetch.mockResolvedValue({
       prNumber: 42,
       actionableThreads: [],
+      resolutionOnlyThreads: [],
       actionableComments: [],
       firstLookThreads: [],
       firstLookComments: [],
@@ -450,6 +464,7 @@ describe("main — resolve first-look rendering", () => {
     mockRunResolveFetch.mockResolvedValue({
       prNumber: 42,
       actionableThreads: [],
+      resolutionOnlyThreads: [],
       actionableComments: [],
       firstLookThreads: [
         {
@@ -485,7 +500,7 @@ describe("main — resolve first-look rendering", () => {
     });
     await main(["node", "shepherd", "resolve", "42"]);
     const out = getStdout();
-    expect(out).toContain("## First-look items (2) — already closed on GitHub; acknowledge only");
+    expect(out).toContain("## First-look items (2) — acknowledge status before acting");
     expect(out).toContain("`threadId=PRRT_fl1`");
     expect(out).toContain("[status: resolved]");
     expect(out).toContain("`commentId=PRRC_fl2`");

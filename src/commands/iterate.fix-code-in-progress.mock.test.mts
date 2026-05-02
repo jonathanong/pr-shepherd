@@ -79,7 +79,13 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       filteredNames: [],
       blockedByFilteredCheck: false,
     },
-    threads: { actionable: [], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+    threads: {
+      actionable: [],
+      resolutionOnly: [],
+      autoResolved: [],
+      autoResolveErrors: [],
+      firstLook: [],
+    },
     comments: { actionable: [], firstLook: [] },
     changesRequestedReviews: [],
     reviewSummaries: [],
@@ -168,7 +174,13 @@ describe("fix_code — in-progress run cancellation", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "FAILING",
-        threads: { actionable: [thread], autoResolved: [], autoResolveErrors: [], firstLook: [] },
+        threads: {
+          actionable: [thread],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
         checks: {
           passing: [],
           failing: [failingCheck],

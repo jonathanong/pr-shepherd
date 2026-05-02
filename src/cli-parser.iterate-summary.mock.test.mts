@@ -56,6 +56,7 @@ function makeFixCodeResult(): IterateResult & { action: "fix_code" } {
     fix: {
       mode: "rebase-and-push",
       threads: [],
+      resolutionOnlyThreads: [],
       actionableComments: [],
       reviewSummaryIds: [],
       firstLookSummaries: [],

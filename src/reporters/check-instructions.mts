@@ -17,7 +17,10 @@ export function buildCheckInstructions(
 
   // 1. Summary
   const totalActionable =
-    threads.actionable.length + comments.actionable.length + changesRequestedReviews.length;
+    threads.actionable.length +
+    threads.resolutionOnly.length +
+    comments.actionable.length +
+    changesRequestedReviews.length;
   const total =
     checks.passing.length +
     checks.failing.length +

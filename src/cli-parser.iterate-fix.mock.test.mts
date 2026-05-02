@@ -104,6 +104,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
           url: "",
         },
       ],
+      resolutionOnlyThreads: [],
       actionableComments: [{ id: "PRRC_1", author: "bot", body: "please address", url: "" }],
       reviewSummaryIds: [],
       firstLookSummaries: [],

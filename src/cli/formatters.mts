@@ -7,6 +7,7 @@ import {
   renderCommentBullet,
   renderReviewBullet,
   renderFirstLookStatusTag,
+  renderThreadResolutionStatusTag,
 } from "./list-formatters.mts";
 import { joinSections } from "../util/markdown.mts";
 import type { FetchResult } from "../commands/resolve.mts";
@@ -16,6 +17,7 @@ import type { ResolveResult } from "../comments/resolve.mts";
 export function formatFetchResult(result: FetchResult): string {
   const activeTotal =
     result.actionableThreads.length +
+    result.resolutionOnlyThreads.length +
     result.actionableComments.length +
     result.changesRequestedReviews.length +
     result.reviewSummaries.length;
@@ -43,6 +45,15 @@ export function formatFetchResult(result: FetchResult): string {
     );
   }
 
+  if (result.resolutionOnlyThreads.length > 0) {
+    sections.push(`## Review threads to resolve (${result.resolutionOnlyThreads.length})`);
+    sections.push(
+      result.resolutionOnlyThreads
+        .map((t) => renderThreadBullet(t, { statusTag: renderThreadResolutionStatusTag(t) }))
+        .join("\n"),
+    );
+  }
+
   if (result.actionableComments.length > 0) {
     sections.push(`## Actionable PR Comments (${result.actionableComments.length})`);
     sections.push(result.actionableComments.map((c) => renderCommentBullet(c)).join("\n"));
@@ -63,9 +74,7 @@ export function formatFetchResult(result: FetchResult): string {
   }
 
   if (firstLookTotal > 0) {
-    sections.push(
-      `## First-look items (${firstLookTotal}) — already closed on GitHub; acknowledge only`,
-    );
+    sections.push(`## First-look items (${firstLookTotal}) — acknowledge status before acting`);
     const bullets: string[] = [];
     for (const t of result.firstLookThreads) {
       bullets.push(renderThreadBullet(t, { statusTag: renderFirstLookStatusTag(t) }));
