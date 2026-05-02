@@ -129,6 +129,8 @@ interface FixRebaseAndPush {
   resolveCommand: ResolveCommand;
   /** Ordered steps for the model to follow. */
   instructions: string[];
+  /** Run IDs of in-progress checks the agent should cancel before applying fixes. Empty when there are no in-progress GitHub Actions run IDs to cancel (e.g. all in-progress runs are external status checks or already cancelled), or when no push is expected this iteration. */
+  inProgressRunIds: string[];
   /** First-look threads — previously hidden, surfaced for acknowledgment only. */
   firstLookThreads: FirstLookThread[];
   /** First-look comments — previously hidden, surfaced for acknowledgment only. */

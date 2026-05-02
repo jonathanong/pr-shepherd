@@ -44,16 +44,20 @@ export function buildFixInstructions(
   firstLookComments: FirstLookComment[] = [],
   firstLookSummaries: Review[] = [],
   editedSummaries: Review[] = [],
+  inProgressRunIds: string[] = [],
 ): string[] {
   const instructions: string[] = [];
+  if (inProgressRunIds.length > 0) {
+    instructions.push(
+      `Cancel in-progress CI runs first: for each ID under \`## In-progress runs\`, run \`gh run cancel <id>\`. Do this before applying any code fixes — the push at the end of this iteration will supersede those runs anyway, so letting them continue burns CI minutes for results no one will read. If \`gh\` reports a run is already completed, ignore it and continue with the next ID.`,
+    );
+  }
   const hasSuggestions = threads.some((t) => t.suggestion);
-
   if (hasSuggestions) {
     instructions.push(
       `For each thread marked \`[suggestion]\` under \`## Review threads\`: run \`npx pr-shepherd commit-suggestion ${prNumber} --thread-id <id> --message "<one-sentence headline>" --format=json\` to retrieve the patch and suggested commit. The CLI does not mutate the working tree — apply the patch yourself (run \`git apply\` with the diff shown, or edit the file directly using the line range), then stage the listed file and run the suggested \`git commit\` from the \`## Instructions\` section. Include the thread ID in \`--resolve-thread-ids\` in the \`resolve:\` command below (the thread is not auto-resolved). If the patch fails to apply, fall through to the manual-edit step. Do not retry the same command.`,
     );
   }
-
   if (threads.length > 0 || actionableComments.length > 0) {
     const suggestionFallback = hasSuggestions
       ? ` When applying a \`[suggestion]\` thread manually (e.g. after a failed \`commit-suggestion\` run), replace the exact line range shown in the heading (\`path:startLine-endLine\`) with the replacement shown in its \`Replaces lines …\` block verbatim — an empty replacement deletes those lines, a single blank line replaces the range with one blank line.`
@@ -107,7 +111,6 @@ export function buildFixInstructions(
       `Keep the PR title and description current: if the changes alter the PR's scope or intent, run \`gh pr edit ${prNumber} --title "<new title>" --body "<new body>"\` to reflect them. Skip if the existing title/body still accurately describe the PR.`,
     );
   }
-
   if (needsPush) {
     const captureHint = resolveCommand.requiresHeadSha
       ? ` — capture \`HEAD_SHA=$(git rev-parse HEAD)\``
@@ -122,14 +125,12 @@ export function buildFixInstructions(
       );
     }
   }
-
   const firstLookTotal = firstLookThreads.length + firstLookComments.length;
   if (firstLookTotal > 0) {
     instructions.push(
       `Items in \`## First-look items\` are for acknowledgement only — do not pass their IDs to \`--resolve-thread-ids\`, \`--minimize-comment-ids\`, or \`--dismiss-review-ids\`. Acknowledge each one with a one-line classification (e.g. "outdated — addressed by commit abc1234", "resolved — already fixed", "minimized — noise").`,
     );
   }
-
   if (firstLookSummaries.length > 0) {
     instructions.push(
       `Review the bodies shown under \`## Review summaries (first look — to be minimized)\` — you are seeing these for the first time. Their IDs are already included in the \`resolve:\` command's \`--minimize-comment-ids\`; if any warrants a \`## Shepherd Journal\` entry, record it before running resolve.`,

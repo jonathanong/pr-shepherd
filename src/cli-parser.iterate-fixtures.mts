@@ -44,6 +44,7 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
         instructions: ["End this iteration."],
         firstLookThreads: [],
         firstLookComments: [],
+        inProgressRunIds: [],
       },
       cancelled: [],
     };

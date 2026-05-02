@@ -216,6 +216,10 @@ Actionable work needs a code fix, commit, and push.
 
 - `reviewId=PRR_kwDOSGizTs58XB1R` (@alice)
 
+## In-progress runs
+
+- `24697658764`
+
 ## Cancelled runs
 
 - `24697658765`
@@ -227,19 +231,20 @@ Actionable work needs a code fix, commit, and push.
 
 ## Instructions
 
-1. Apply code fixes: read and edit each file referenced under `## Review threads` and `## Actionable comments` above.
-2. For each failing check under `## Failing checks` with a run ID and no `[conclusion: CANCELLED]` tag: run `gh run view <runId> --log-failed` to fetch the failing job's log.
-3. If the log shows a transient infrastructure failure (network timeout, runner setup crash, OOM kill): run `gh run rerun <runId> --failed`.
-4. If the log shows a real test/build failure: apply a code fix.
-5. For each `[conclusion: CANCELLED]` bullet under `## Failing checks`: the run was cancelled outside Shepherd's control (manual cancel, newer push, concurrency-group eviction). Run `gh run rerun <runId>` only if the cancellation looks unintended; otherwise treat it as resolved by the superseding run. Do NOT confuse these with IDs under `## Cancelled runs` — those were cancelled by Shepherd itself.
-6. For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.
-7. Commit changed files: `git add <files> && git commit -m "<descriptive message>"`
-8. Keep the PR title and description current: if the changes alter the PR's scope or intent, run `gh pr edit 42 --title "<new title>" --body "<new body>"` to reflect them. Skip if the existing title/body still accurately describe the PR.
-9. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
-10. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
-11. Do not re-run `gh run cancel` on the IDs listed under `## Cancelled runs` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.
-12. For any large decisions or rejections you made this iteration, add or update a `## Shepherd Journal` section in the PR description (`gh pr edit 42 --body …`) summarizing each decision and linking back to the originating comment, thread, or review.
-13. Stop this iteration — CI needs time to run on the new push before the next tick.
+1. Cancel in-progress CI runs first: for each ID under `## In-progress runs`, run `gh run cancel <id>`. Do this before applying any code fixes — the push at the end of this iteration will supersede those runs anyway, so letting them continue burns CI minutes for results no one will read. If `gh` reports a run is already completed, ignore it and continue with the next ID.
+2. Apply code fixes: read and edit each file referenced under `## Review threads` and `## Actionable comments` above.
+3. For each failing check under `## Failing checks` with a run ID and no `[conclusion: CANCELLED]` tag: run `gh run view <runId> --log-failed` to fetch the failing job's log.
+4. If the log shows a transient infrastructure failure (network timeout, runner setup crash, OOM kill): run `gh run rerun <runId> --failed`.
+5. If the log shows a real test/build failure: apply a code fix.
+6. For each `[conclusion: CANCELLED]` bullet under `## Failing checks`: the run was cancelled outside Shepherd's control (manual cancel, newer push, concurrency-group eviction). Run `gh run rerun <runId>` only if the cancellation looks unintended; otherwise treat it as resolved by the superseding run. Do NOT confuse these with IDs under `## Cancelled runs` — those were cancelled by Shepherd itself.
+7. For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.
+8. Commit changed files: `git add <files> && git commit -m "<descriptive message>"`
+9. Keep the PR title and description current: if the changes alter the PR's scope or intent, run `gh pr edit 42 --title "<new title>" --body "<new body>"` to reflect them. Skip if the existing title/body still accurately describe the PR.
+10. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
+11. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
+12. Do not re-run `gh run cancel` on the IDs listed under `## Cancelled runs` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.
+13. For any large decisions or rejections you made this iteration, add or update a `## Shepherd Journal` section in the PR description (`gh pr edit 42 --body …`) summarizing each decision and linking back to the originating comment, thread, or review.
+14. Stop this iteration — CI needs time to run on the new push before the next tick.
 ```
 
 When one or more threads carry a `[suggestion]` marker, the `## Instructions` section opens with two different steps. Step 1 is new; step 2 gains a manual-fallback clause. All other steps renumber and are otherwise unchanged.
@@ -274,15 +279,17 @@ Step 1 is absent when no thread has a `[suggestion]` marker; step 2 omits the ma
 8. `## Review summaries (already surfaced — minimize queue)` — backticked review IDs (`PRR_…`) of `COMMENTED` review summaries whose bodies were surfaced in a **prior** iteration and whose body has not changed since. If `iterate.minimizeApprovals` is `true`, this section may also include `APPROVED` review IDs queued for minimization even though their bodies were not previously surfaced. All IDs (from sections 6 and 8) are merged into `--minimize-comment-ids` in the resolve command. Not emitted when empty.
 9. `## Approvals (surfaced — not minimized)` — emitted when `iterate.minimizeApprovals` is `false` (default) and there are `APPROVED`-state reviews. H3 heading uses `` `reviewId=<id>` `` (same prefix scheme as other item types); body is a `>` blockquote or `(no review body)` when empty. Surfaced for visibility, but NOT included in `--minimize-comment-ids`.
 10. `## First-look items (N) — already closed on GitHub; acknowledge only` — threads and PR comments that are outdated, resolved, or minimized and have not yet been acknowledged by the agent. Emitted on first encounter only; a per-item seen-marker file (`src/state/seen-comments.mts`) suppresses them on subsequent runs. Each bullet carries a `[status: …]` tag: `outdated`, `outdated, auto-resolved`, `resolved`, or `minimized`. If the body was edited since the item was first acknowledged, the tag gains an `, edited` suffix (e.g. `[status: minimized, edited]`). These IDs must **not** appear in `--resolve-thread-ids`, `--minimize-comment-ids`, or `--dismiss-review-ids` — they are already closed on GitHub. The agent's only task is to read the body and acknowledge. Not emitted when empty.
-11. `## Cancelled runs` — backticked IDs, emitted only when at least one pre-push REST cancellation succeeded.
-12. `## Post-fix push`:
+11. `## In-progress runs` — backticked GitHub Actions run IDs of in-progress checks the agent should cancel before applying fixes. Emitted only when `fix.inProgressRunIds` is non-empty, which requires both (a) at least one in-progress check with a non-null run ID not already cancelled by the CLI and (b) a push is expected this iteration. The agent cancels these before applying code fixes (step 1 of `## Instructions`). Distinct from `## Cancelled runs`: those IDs were already cancelled by the CLI before the agent acts; these IDs the agent must cancel itself now. Not emitted when empty.
+12. `## Cancelled runs` — backticked IDs, emitted only when at least one pre-push REST cancellation succeeded.
+13. `## Post-fix push`:
     - ``- base: `<branch>` `` — rebase target for the push step.
     - ``- resolve: `<argv>` `` — fully-quoted resolve command. `$DISMISS_MESSAGE` and `$HEAD_SHA` are always quoted so substituting a multi-word sentence keeps it as one argument. `--require-sha "$HEAD_SHA"` is appended only when a push is expected (threads/actionableComments/checks/reviews present); summary-only dispatches omit it.
-13. `## Instructions` — numbered list to execute in order. The final instruction always refers back to the `resolve:` bullet rather than duplicating the command — that single source of truth is what the monitor executes.
+14. `## Instructions` — numbered list to execute in order. The final instruction always refers back to the `resolve:` bullet rather than duplicating the command — that single source of truth is what the monitor executes.
 
 **Instruction variants:**
 
-- The `commit-suggestion` step (step 1) is emitted only when at least one `## Review threads` entry carries a `[suggestion]` marker (`threads.some(t => t.suggestion)`). When absent, step numbers start at 1 with `Apply code fixes:`. Note: `commit-suggestion` does not mutate the working tree or resolve the thread — it emits the patch and instructions for the agent to execute.
+- A "Cancel in-progress CI runs first" step is prepended as step 1 when `fix.inProgressRunIds` is non-empty (i.e. at least one in-progress GitHub Actions run will be superseded by the push this iteration). It instructs the agent to run `gh run cancel <id>` for each ID under `## In-progress runs` before applying any code fixes. When absent (no in-progress run IDs, or no push expected), step numbers start at 1 with the `commit-suggestion` or `Apply code fixes:` step.
+- The `commit-suggestion` step is emitted only when at least one `## Review threads` entry carries a `[suggestion]` marker (`threads.some(t => t.suggestion)`). When absent, the next step is `Apply code fixes:`.
 - The `Apply code fixes:` step gains a manual-fallback clause — "When applying a `[suggestion]` thread manually …" — only when the `commit-suggestion` step is also present. When no suggestions are present, the step is the plain one-liner.
 - `Commit changed files:` is only emitted when there are actual code changes to commit (threads/comments/checks/reviews present). A `CONFLICTS`-only state skips this step.
 - `Keep the PR title and description current:` is emitted immediately after the commit step and uses the same gate (`hasCodeChanges`). A `CONFLICTS`-only dispatch (no code to commit) omits it.
@@ -296,7 +303,7 @@ Step 1 is absent when no thread has a `[suggestion]` marker; step 2 omits the ma
 - An edited-items step is appended when `editedSummaries` is non-empty or any first-look thread/comment carries `edited: true` — it tells the agent to read the updated body but **not** include these IDs in any mutation flag.
 - The final "iteration" step has three variants: `Stop this iteration — CI needs time to run on the new push before the next tick.` when a push occurred; `Stop this iteration before the next tick.` when only GitHub mutations were made (no push); `End this iteration.` when no push or mutations occurred.
 
-The JSON payload exposes the same data under `fix.{threads, actionableComments, reviewSummaryIds, firstLookSummaries, editedSummaries, surfacedApprovals, checks, changesRequestedReviews, resolveCommand, instructions, mode, firstLookThreads, firstLookComments}` — where `fix.mode === "rebase-and-push"` is the type discriminator — plus top-level `baseBranch` (on `IterateResultBase`, not under `fix`) and `cancelled`. `reviewSummaryIds` contains the IDs routed to `--minimize-comment-ids` for review-level minimization: this includes review summaries (both first-look and already-seen), and may also include APPROVED review IDs when approval minimization is enabled. `firstLookSummaries` carries the full `Review` objects for bodies seen this iteration for the first time. `editedSummaries` carries the full `Review` objects for summaries whose body changed since last seen — these IDs are **not** in `reviewSummaryIds`. Both `firstLookSummaries` and `reviewSummaryIds` are merged into `--minimize-comment-ids` inside `resolveCommand.argv`; `editedSummaries` and `surfacedApprovals` are informational only. In lean JSON mode, `fix.*` arrays that are empty are omitted; `cancelled` is omitted when empty. Pass `--verbose` to include all fields. `firstLookThreads` and `firstLookComments` are informational — they carry `firstLookStatus`, optional `autoResolved` (outdated only), and optional `edited` (true when body changed since first acknowledgement) fields but must not be routed to resolve mutations.
+The JSON payload exposes the same data under `fix.{threads, actionableComments, reviewSummaryIds, firstLookSummaries, editedSummaries, surfacedApprovals, checks, changesRequestedReviews, resolveCommand, instructions, mode, firstLookThreads, firstLookComments, inProgressRunIds}` — where `fix.mode === "rebase-and-push"` is the type discriminator — plus top-level `baseBranch` (on `IterateResultBase`, not under `fix`) and `cancelled`. `fix.inProgressRunIds` contains the GitHub Actions run IDs the agent must cancel before applying fixes (mirrors `## In-progress runs` in the Markdown output); it is an empty array when there are no in-progress GitHub Actions run IDs to cancel (external status checks or already-cancelled runs are excluded) or when no push is expected this iteration. `reviewSummaryIds` contains the IDs routed to `--minimize-comment-ids` for review-level minimization: this includes review summaries (both first-look and already-seen), and may also include APPROVED review IDs when approval minimization is enabled. `firstLookSummaries` carries the full `Review` objects for bodies seen this iteration for the first time. `editedSummaries` carries the full `Review` objects for summaries whose body changed since last seen — these IDs are **not** in `reviewSummaryIds`. Both `firstLookSummaries` and `reviewSummaryIds` are merged into `--minimize-comment-ids` inside `resolveCommand.argv`; `editedSummaries` and `surfacedApprovals` are informational only. In lean JSON mode, `fix.*` arrays that are empty are omitted; `cancelled` is omitted when empty. Pass `--verbose` to include all fields. `firstLookThreads` and `firstLookComments` are informational — they carry `firstLookStatus`, optional `autoResolved` (outdated only), and optional `edited` (true when body changed since first acknowledgement) fields but must not be routed to resolve mutations.
 
 **Resolve command rules (same in Markdown and JSON):**
 

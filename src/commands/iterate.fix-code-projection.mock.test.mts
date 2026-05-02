@@ -477,4 +477,5 @@ describe("runIterate — fix_code agent projection", () => {
   });
 });
 
+// fix_code (in-progress run cancellation) tests in iterate.fix-code-in-progress.mock.test.mts
 // fix_code (merge conflicts) tests moved to iterate.fix-code-conflicts.mock.test.mts
