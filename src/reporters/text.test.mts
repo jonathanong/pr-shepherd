@@ -464,7 +464,7 @@ describe("formatText — ## Instructions section", () => {
 
   it("uses reusable iterate command for Codex", () => {
     const out = formatText(makeReport({ status: "FAILING" }), { runtime: "codex" });
-    expect(out).toContain("npx pr-shepherd iterate");
+    expect(out).toContain("npx pr-shepherd 42");
     expect(out).not.toContain("/pr-shepherd:monitor");
   });
 });

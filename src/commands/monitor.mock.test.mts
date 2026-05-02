@@ -27,15 +27,15 @@ describe("runMonitor", () => {
     expect(result.loopTag).toBe("#pr-shepherd-loop:pr=99:");
     expect(result.loopArgs).toBe("4m");
     expect(result.loopPrompt).toContain("#pr-shepherd-loop:pr=99:");
-    expect(result.loopPrompt).toContain("npx pr-shepherd iterate 99");
-    expect(result.reusableCommand).toBe("npx pr-shepherd iterate 99");
+    expect(result.loopPrompt).toContain("npx pr-shepherd 99");
+    expect(result.reusableCommand).toBe("npx pr-shepherd 99");
     // loopArgs is a short one-liner — not the combined invocation string
     expect(result.loopArgs).not.toContain("npx pr-shepherd");
   });
 
   it("loopPrompt body is not doubled — key phrases appear exactly once", async () => {
     const result = await runMonitor({ format: "text", prNumber: 42 });
-    expect(result.loopPrompt.split("npx pr-shepherd iterate 42").length - 1).toBe(1);
+    expect(result.loopPrompt.split("npx pr-shepherd 42").length - 1).toBe(1);
     expect(result.loopPrompt.split("Self-dedup:").length - 1).toBe(1);
   });
 
@@ -73,14 +73,14 @@ describe("runMonitor", () => {
       readyDelaySuffix: "15m",
       runtime: "codex",
     });
-    expect(result.reusableCommand).toBe("npx pr-shepherd iterate 42 --ready-delay 15m");
-    expect(result.loopPrompt).toContain("npx pr-shepherd iterate 42 --ready-delay 15m");
+    expect(result.reusableCommand).toBe("npx pr-shepherd 42 --ready-delay 15m");
+    expect(result.loopPrompt).toContain("npx pr-shepherd 42 --ready-delay 15m");
   });
 
   it("builds a Codex prompt without /loop or Cron instructions", async () => {
     const result = await runMonitor({ format: "text", prNumber: 42, runtime: "codex" });
     expect(result.loopPrompt).toContain("Codex recurrence rules");
-    expect(result.loopPrompt).toContain("npx pr-shepherd iterate 42");
+    expect(result.loopPrompt).toContain("npx pr-shepherd 42");
     expect(result.loopPrompt).not.toContain("CronList");
     expect(result.loopPrompt).not.toContain("CronDelete");
     expect(result.loopPrompt).not.toContain("ScheduleWakeup");
@@ -116,9 +116,9 @@ describe("formatMonitorResult", () => {
     prNumber: 42,
     loopTag: "#pr-shepherd-loop:pr=42:",
     loopArgs: "4m",
-    reusableCommand: "npx pr-shepherd iterate 42",
+    reusableCommand: "npx pr-shepherd 42",
     loopPrompt:
-      "#pr-shepherd-loop:pr=42:\n\n**IMPORTANT — recurrence rules:**\n- **Do NOT call `ScheduleWakeup` or `/loop`.** This session is fired by a recurring cron job. Either call creates a duplicate runner, causing concurrent git operations and `.git/index.lock` collisions.\n- End the turn cleanly after completing the actions below. The cron job handles the next fire.\n\n**Self-dedup:** Run `CronList`. If more than one job contains `#pr-shepherd-loop:pr=42:`, keep the lowest job ID and `CronDelete` the rest (ignore errors — a concurrent runner may have already deleted them).\n\nRun in a single Bash call:\n  npx pr-shepherd iterate 42\n\nExit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with `# PR #42 [`), log the first line of stderr and continue — do not cancel the loop. The next cron fire will retry.\n\nThe output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Every output ends with a `## Instructions` section — follow those numbered steps exactly.",
+      "#pr-shepherd-loop:pr=42:\n\n**IMPORTANT — recurrence rules:**\n- **Do NOT call `ScheduleWakeup` or `/loop`.** This session is fired by a recurring cron job. Either call creates a duplicate runner, causing concurrent git operations and `.git/index.lock` collisions.\n- End the turn cleanly after completing the actions below. The cron job handles the next fire.\n\n**Self-dedup:** Run `CronList`. If more than one job contains `#pr-shepherd-loop:pr=42:`, keep the lowest job ID and `CronDelete` the rest (ignore errors — a concurrent runner may have already deleted them).\n\nRun in a single Bash call:\n  npx pr-shepherd 42\n\nExit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with `# PR #42 [`), log the first line of stderr and continue — do not cancel the loop. The next cron fire will retry.\n\nThe output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Every output ends with a `## Instructions` section — follow those numbered steps exactly.",
   };
 
   it("emits MONITOR heading, loop tag, loop args, loop prompt, and instructions", () => {
@@ -134,10 +134,10 @@ describe("formatMonitorResult", () => {
     const codexFixture: MonitorResult = {
       ...fixture,
       loopPrompt:
-        "#pr-shepherd-loop:pr=42:\n\n**IMPORTANT — Codex recurrence rules:**\n\nRun in a single Bash call:\n  npx pr-shepherd iterate 42",
+        "#pr-shepherd-loop:pr=42:\n\n**IMPORTANT — Codex recurrence rules:**\n\nRun in a single Bash call:\n  npx pr-shepherd 42",
     };
     const md = formatMonitorResult(codexFixture, { runtime: "codex" });
-    expect(md).toContain("Reusable command: `npx pr-shepherd iterate 42`");
+    expect(md).toContain("Reusable command: `npx pr-shepherd 42`");
     expect(md).toContain("Run the `## Loop prompt` body once inline now.");
     expect(md).toContain("Codex does not provide `/loop` scheduling");
     expect(md).not.toContain("Invoke the `/loop` skill");
@@ -151,7 +151,7 @@ describe("formatMonitorResult", () => {
 
   it("key prompt phrases appear exactly once — no body duplication", () => {
     const md = formatMonitorResult(fixture);
-    expect(md.match(/npx pr-shepherd iterate 42/g)?.length).toBe(1);
+    expect(md.match(/npx pr-shepherd 42/g)?.length).toBe(1);
     expect(md.match(/Self-dedup:/g)?.length).toBe(1);
   });
 

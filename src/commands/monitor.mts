@@ -110,7 +110,7 @@ function validateReadyDelaySuffix(readyDelaySuffix?: string): string | undefined
 
 function buildIterateCommand(prNumber: number, readyDelaySuffix?: string): string {
   const validatedDelay = validateReadyDelaySuffix(readyDelaySuffix);
-  return `npx pr-shepherd iterate ${prNumber}${validatedDelay ? ` --ready-delay ${validatedDelay}` : ""}`;
+  return `npx pr-shepherd ${prNumber}${validatedDelay ? ` --ready-delay ${validatedDelay}` : ""}`;
 }
 
 function buildLoopPrompt(

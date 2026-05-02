@@ -20,7 +20,7 @@ Example Workflow:
 
 `pr-shepherd` optimizes token management, rate limits, and agentic orchestration by moving **ALL** deterministic logic and prompts to code via a CLI tool, enshrining what would be a large skill or command prompt (of which the agent would inevitably make mistakes) into the code and returning a clear, actionable prompt.
 
-The CLI adapts monitor instructions to the calling agent. Claude Code gets `/loop` bootstrap instructions. Codex is detected with `AGENT=codex` or the current Codex CLI signal `CODEX_CI=1`; it gets a reusable `npx pr-shepherd iterate <PR>` command and one-shot iterate instructions because Codex does not provide `/loop` scheduling in this workflow.
+The CLI adapts monitor instructions to the calling agent. Claude Code gets `/loop` bootstrap instructions. Codex is detected with `AGENT=codex` or the current Codex CLI signal `CODEX_CI=1`; it gets a reusable `npx pr-shepherd <PR>` command and one-shot iterate instructions because Codex does not provide `/loop` scheduling in this workflow.
 
 At a high level, to start the monitor, the skill/command invokes a CLI that returns a prompt to be ingested by the agent _(schematic — paraphrased for brevity; actual output is more detailed)_:
 
@@ -42,7 +42,7 @@ Loop args: `4m`
 after completing the actions below. The cron job handles the next fire.
 
 Run in a single Bash call:
-  npx pr-shepherd iterate 123
+  npx pr-shepherd 123
 
 …(self-dedup guidance, error-handling instructions)…
 
@@ -52,10 +52,10 @@ Run in a single Bash call:
 2. Otherwise, invoke the /loop skill with Loop args and the full ## Loop prompt body.
 ```
 
-Each iteration calls `npx pr-shepherd iterate <PR>`, which provides actionable feedback directly to the agent:
+Each iteration calls `npx pr-shepherd <PR>`, which provides actionable feedback directly to the agent:
 
 ```
-> npx pr-shepherd iterate 123
+> npx pr-shepherd 123
 
 # PR #123 [FIX_CODE]
 
@@ -127,7 +127,7 @@ Some other workflow improvements:
 
 Recommendations:
 
-- Run `pr-shepherd` on all your PRs before you go to sleep so that you wake up to reviewable PRs. In Claude Code, `/pr-shepherd:monitor` uses `/loop` and continues working when your rate limit window is reset. In Codex, rerun the reusable `npx pr-shepherd iterate <PR>` command when you want another check.
+- Run `pr-shepherd` on all your PRs before you go to sleep so that you wake up to reviewable PRs. In Claude Code, `/pr-shepherd:monitor` uses `/loop` and continues working when your rate limit window is reset. In Codex, rerun the reusable `npx pr-shepherd <PR>` command when you want another check.
 - Instruct your agents to write comments in a single review (comment, changes requested, or approved). This allows the review's comments/threads to be minimized or resolved together, keeping your pull request history clean. If you write inline comments outside of a review, each comment would still show up in the pull request history and take up space.
 - Avoid sticky comments as they will continue to be hidden. Instead, just make a new comment, especially on reviews. If you really want sticky comments, instruct your agent to unhide/unminimize them when updating them.
 - Avoid having automation edit comments, reviews, or threads in place because updated items get minimized. Instead, always make a new review, comment, thread, etc.
@@ -146,7 +146,7 @@ Recommendations:
 
 In Claude Code, creates a cron loop that fires every 4 minutes, checks CI and review comments, fixes issues, and marks the PR ready for review when clean. The loop cancels automatically when the PR is merged or closed.
 
-In Codex, run `npx pr-shepherd monitor <PR>` once to emit the one-shot prompt, then follow that prompt. Its reusable follow-up command is `npx pr-shepherd iterate <PR>`.
+In Codex, run `npx pr-shepherd monitor <PR>` once to emit the one-shot prompt, then follow that prompt. Its reusable follow-up command is `npx pr-shepherd <PR>`.
 
 Claude Code:
 
@@ -162,8 +162,9 @@ Codex:
 ```sh
 npx pr-shepherd monitor                  # bootstrap from current branch, then follow its instructions
 npx pr-shepherd monitor 42               # bootstrap PR #42, then follow its instructions
-npx pr-shepherd iterate 42               # subsequent one-shot check/action tick
-npx pr-shepherd iterate 42 --ready-delay 15m
+npx pr-shepherd 42                       # subsequent one-shot check/action tick
+npx pr-shepherd 42 --ready-delay 15m
+npx pr-shepherd iterate 42               # legacy-compatible spelling
 ```
 
 ### Check a PR
@@ -244,10 +245,10 @@ npx pr-shepherd monitor 42
 Follow the output's `## Instructions`. The monitor bootstrap runs one tick and prints the reusable follow-up command, usually:
 
 ```bash
-npx pr-shepherd iterate 42
+npx pr-shepherd 42
 ```
 
-Rerun that `iterate` command whenever you want Codex to check the PR again. There is no background `/loop` scheduler in Codex.
+Rerun that command whenever you want Codex to check the PR again. `npx pr-shepherd iterate 42` remains supported for existing workflows. There is no background `/loop` scheduler in Codex.
 
 ### Without the plugin
 

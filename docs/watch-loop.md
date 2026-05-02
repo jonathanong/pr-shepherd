@@ -6,7 +6,7 @@
 
 The `/pr-shepherd:monitor <PR>` slash command starts a Claude Code cron loop that polls PR status at the configured interval (default `4m`, set via `watch.interval`). This document explains how all the pieces fit together.
 
-Codex does not provide `/loop` scheduling in this workflow. When `pr-shepherd` detects Codex (`AGENT=codex` or `CODEX_CI=1`), `monitor` output tells Codex to run one `iterate` tick and rerun the reusable `npx pr-shepherd iterate <PR>` prompt later.
+Codex does not provide `/loop` scheduling in this workflow. When `pr-shepherd` detects Codex (`AGENT=codex` or `CODEX_CI=1`), `monitor` output tells Codex to run one iterate tick and rerun the reusable `npx pr-shepherd <PR>` prompt later.
 
 ## Lifecycle
 
@@ -20,10 +20,10 @@ Claude Code lifecycle:
    - `/loop` schedules a tick at the interval from config (default `4m`, configurable via `watch.interval`).
    - The loop runs until the `cancel` action fires or the user cancels manually.
 
-3. **Each tick runs `shepherd iterate`**
+3. **Each tick runs `pr-shepherd`**
    - The cron prompt runs (single Bash invocation):
      ```bash
-     pr-shepherd iterate <PR>
+     pr-shepherd <PR>
      ```
    - Exit codes 0, 1, 2, and 3 are all valid (not errors).
 

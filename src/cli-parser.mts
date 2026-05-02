@@ -3,6 +3,9 @@
  *
  * Usage:
  *   pr-shepherd --version
+ *   pr-shepherd [PR] [--format text|json] [--cooldown-seconds N] [--ready-delay Nm]
+ *                  [--stall-timeout <duration>] [--no-auto-mark-ready]
+ *                  [--no-auto-cancel-actionable]
  *   pr-shepherd check [PR] [--format text|json]
  *   pr-shepherd resolve [PR] [--fetch] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]
  *                            [--dismiss-review-ids Q] [--message MSG] [--require-sha SHA]
@@ -24,6 +27,7 @@ import { runLogFile } from "./commands/log-file.mts";
 import { formatJson } from "./reporters/json.mts";
 import { formatText } from "./reporters/text.mts";
 import { parseCommonArgs, getFlag, hasFlag, parseList } from "./cli/args.mts";
+import { isDefaultIterateInvocation, validateDefaultIterateArgs } from "./cli/default-iterate.mts";
 import { statusToExitCode } from "./cli/exit-codes.mts";
 import { formatFetchResult, formatMutateResult } from "./cli/formatters.mts";
 import {
@@ -57,6 +61,12 @@ export async function main(argv: string[]): Promise<void> {
 
   // Initialize the per-worktree log and install a stdout tee.
   await setupLog(argv);
+
+  if (isDefaultIterateInvocation(subcommand)) {
+    if (!validateDefaultIterateArgs(args)) return;
+    await handleIterate(args);
+    return;
+  }
 
   switch (subcommand) {
     case "check":

@@ -2,11 +2,11 @@
 
 [← README](../README.md)
 
-Each iteration of `shepherd iterate` returns exactly one action. See [docs/iterate-flow.md](iterate-flow.md) for the decision order.
+Each default `pr-shepherd` invocation returns exactly one iterate action. The legacy `pr-shepherd iterate` spelling is still supported. See [docs/iterate-flow.md](iterate-flow.md) for the decision order.
 
-The default output format is Markdown — what you see when running `npx pr-shepherd iterate <PR>`, and what the monitor SKILL reads each cron tick. `--format=json` emits the same information as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
+The default output format is Markdown — what you see when running `npx pr-shepherd <PR>`, and what the monitor SKILL reads each cron tick. `--format=json` emits the same information as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
 
-Instruction wording is agent-aware. Claude-compatible output refers to the next cron fire and `/loop cancel`. Codex output is selected with `AGENT=codex` or `CODEX_CI=1`; it replaces those lines with reusable-prompt guidance such as rerunning `npx pr-shepherd iterate <PR>` later. The action data and section structure are otherwise the same.
+Instruction wording is agent-aware. Claude-compatible output refers to the next cron fire and `/loop cancel`. Codex output is selected with `AGENT=codex` or `CODEX_CI=1`; it replaces those lines with reusable-prompt guidance such as rerunning `npx pr-shepherd <PR>` later. The action data and section structure are otherwise the same.
 
 Pass `--verbose` to get more debug state. In JSON mode, the output starts from the full `IterateResult` shape (all fields, including `baseBranch`, `checks`, `shouldCancel`) and then applies the same agent-aware instruction projection as lean JSON: non-`fix_code` actions get a top-level `instructions` array, and Codex output may rewrite `fix.instructions` and simple-action instructions. In Markdown mode, `--verbose` restores the full header summary line (all four counts, `remainingSeconds`, `copilotReviewInProgress`, `isDraft`, `shouldCancel` always shown, and `[COOLDOWN]` no longer suppresses the base/summary block) — but Markdown is structurally different from JSON and does not guarantee field-for-field parity (array fields like `baseBranch` or `checks` are not added to Markdown for actions that do not normally render them). Lean mode is the default because most fields are `false`/`0`/`[]` on a typical healthy tick and add context noise without value.
 
@@ -70,7 +70,7 @@ SKIP: CI still starting — waiting for first check to appear
 1. End this iteration — the next cron fire will recheck once CI starts reporting.
 ```
 
-Codex variant: `End this iteration — rerun \`npx pr-shepherd iterate 42\` after CI starts reporting.`
+Codex variant: `End this iteration — rerun \`npx pr-shepherd 42\` after CI starts reporting.`
 
 `status`, `merge`, `state`, and `repo` are not emitted in default mode — they carry UNKNOWN/empty placeholders because the early return happens before any GitHub sweep. Pass `--verbose` to see all fields.
 
@@ -103,9 +103,9 @@ WAIT: 3 passing, 2 in-progress — 120s until auto-cancel
 1. End this iteration — the next cron fire will recheck.
 ```
 
-Codex variant: the body omits `until auto-cancel`, and the instruction is `End this iteration — rerun \`npx pr-shepherd iterate 42\` later to recheck.`
+Codex variant: the body omits `until auto-cancel`, and the instruction is `End this iteration — rerun \`npx pr-shepherd 42\` later to recheck.`
 
-When the current command includes a ready-delay override, Codex rerun guidance preserves it: `npx pr-shepherd iterate 42 --ready-delay 15m`.
+When the current command includes a ready-delay override, Codex rerun guidance preserves it: `npx pr-shepherd 42 --ready-delay 15m`.
 
 The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, `blocked by pending reviews or required status checks`, `PR is a draft`, or `some checks are unstable`.
 
@@ -138,7 +138,7 @@ MARKED READY: PR #42 converted from draft to ready for review
 1. The CLI already marked the PR ready for review — end this iteration.
 ```
 
-Codex variant: the same instruction with an added reminder to rerun `npx pr-shepherd iterate 42` later to recheck.
+Codex variant: the same instruction with an added reminder to rerun `npx pr-shepherd 42` later to recheck.
 
 **What the monitor does:** Follow `## Instructions` — end the iteration and continue monitoring on the next cron fire.
 
@@ -315,7 +315,7 @@ Step 1 is absent when no thread has a `[suggestion]` marker; step 2 omits the ma
 - A first-look summaries step is appended when `firstLookSummaries` is non-empty — it tells the agent these summaries are being seen for the first time and their IDs are already in the resolve command's `--minimize-comment-ids`.
 - An edited-items step is appended when `editedSummaries` is non-empty or any first-look thread/comment carries `edited: true` — it tells the agent to read the updated body but **not** include these IDs in any mutation flag.
 - The final "iteration" step has three variants: `Stop this iteration — CI needs time to run on the new push before the next tick.` when a push occurred; `Stop this iteration before the next tick.` when only GitHub mutations were made (no push); `End this iteration.` when no push or mutations occurred.
-- In Codex output, the two "next tick" variants are rewritten to say to rerun `npx pr-shepherd iterate <PR>` later.
+- In Codex output, the two "next tick" variants are rewritten to say to rerun `npx pr-shepherd <PR>` later.
 
 The JSON payload exposes the same data under `fix.{threads, resolutionOnlyThreads, actionableComments, reviewSummaryIds, firstLookSummaries, editedSummaries, surfacedApprovals, checks, changesRequestedReviews, resolveCommand, instructions, mode, firstLookThreads, firstLookComments, inProgressRunIds}` — where `fix.mode === "rebase-and-push"` is the type discriminator — plus top-level `baseBranch` (on `IterateResultBase`, not under `fix`) and `cancelled`. `fix.inProgressRunIds` contains the GitHub Actions run IDs the agent must cancel before applying fixes (mirrors `## In-progress runs` in the Markdown output); it is an empty array when there are no in-progress GitHub Actions run IDs to cancel (external status checks or already-cancelled runs are excluded) or when no push is expected this iteration. `resolutionOnlyThreads` contains unresolved outdated/minimized review threads routed to `--resolve-thread-ids` without causing a push or `--require-sha`. `reviewSummaryIds` contains the IDs routed to `--minimize-comment-ids` for review-level minimization: this includes review summaries (both first-look and already-seen), and may also include APPROVED review IDs when approval minimization is enabled. `firstLookSummaries` carries the full `Review` objects for bodies seen this iteration for the first time. `editedSummaries` carries the full `Review` objects for summaries whose body changed since last seen — these IDs are **not** in `reviewSummaryIds`. Both `firstLookSummaries` and `reviewSummaryIds` are merged into `--minimize-comment-ids` inside `resolveCommand.argv`; `editedSummaries` and `surfacedApprovals` are informational only. In lean JSON mode, `fix.*` arrays that are empty are omitted; `cancelled` is omitted when empty. Pass `--verbose` to include all fields. `firstLookThreads` and `firstLookComments` are informational unless the same thread appears in `resolutionOnlyThreads`.
 

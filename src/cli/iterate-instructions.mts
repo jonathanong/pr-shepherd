@@ -77,7 +77,7 @@ export function adaptIterateLog(log: string, runtime: AgentRuntime): string {
 
 export function buildCodexIterateCommand(pr: number, readyDelaySuffix?: string): string {
   const suffix = readyDelaySuffix?.trim();
-  return `npx pr-shepherd iterate ${pr}${suffix ? ` --ready-delay ${suffix}` : ""}`;
+  return `npx pr-shepherd ${pr}${suffix ? ` --ready-delay ${suffix}` : ""}`;
 }
 
 export function numberInstructions(instructions: string[]): string {

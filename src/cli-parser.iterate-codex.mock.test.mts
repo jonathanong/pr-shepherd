@@ -73,7 +73,7 @@ describe("main — iterate Codex fix_code output", () => {
     await main(["node", "shepherd", "iterate", "42", "--ready-delay", "15m"]);
     const out = getStdout();
     expect(out).toContain(
-      "2. Stop this iteration — CI needs time to run on the new push. Rerun `npx pr-shepherd iterate 42 --ready-delay 15m` later to recheck.",
+      "2. Stop this iteration — CI needs time to run on the new push. Rerun `npx pr-shepherd 42 --ready-delay 15m` later to recheck.",
     );
     expect(out).not.toContain("before the next tick");
   });
@@ -90,7 +90,7 @@ describe("main — iterate Codex fix_code output", () => {
     await main(["node", "shepherd", "iterate", "42", "--format=json", "--ready-delay", "2h"]);
     const parsed = JSON.parse(getStdout().trimEnd());
     expect(parsed.fix.instructions).toEqual([
-      "Stop this iteration — CI needs time to run on the new push. Rerun `npx pr-shepherd iterate 42 --ready-delay 2h` later to recheck.",
+      "Stop this iteration — CI needs time to run on the new push. Rerun `npx pr-shepherd 42 --ready-delay 2h` later to recheck.",
     ]);
   });
 
@@ -104,7 +104,7 @@ describe("main — iterate Codex fix_code output", () => {
     await main(["node", "shepherd", "iterate", "42", "--format=json"]);
     const parsed = JSON.parse(getStdout().trimEnd());
     expect(parsed.fix.instructions).toEqual([
-      "Stop this iteration. Rerun `npx pr-shepherd iterate 42` later to recheck.",
+      "Stop this iteration. Rerun `npx pr-shepherd 42` later to recheck.",
     ]);
   });
 });
