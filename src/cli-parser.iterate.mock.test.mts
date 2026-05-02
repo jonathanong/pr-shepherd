@@ -104,6 +104,13 @@ describe("main — iterate", () => {
     expect(getStderr()).toContain("Unknown subcommand: --formt");
   });
 
+  it("rejects missing values for value-taking default iterate flags", async () => {
+    await main(["node", "shepherd", "--cooldown-seconds"]);
+    expect(process.exitCode).toBe(1);
+    expect(mockRunIterate).not.toHaveBeenCalled();
+    expect(getStderr()).toContain("Unknown subcommand: --cooldown-seconds");
+  });
+
   it("rejects extra positional arguments in default iterate form", async () => {
     await main(["node", "shepherd", "42", "resolve"]);
     expect(process.exitCode).toBe(1);

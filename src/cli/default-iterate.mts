@@ -28,7 +28,11 @@ export function validateDefaultIterateArgs(args: string[]): boolean {
     const arg = args[i]!;
 
     if (DEFAULT_ITERATE_FLAGS_WITH_VALUES.has(arg)) {
-      if (i + 1 < args.length && !args[i + 1]!.startsWith("--")) i += 1;
+      if (i + 1 >= args.length || args[i + 1]!.startsWith("--")) {
+        writeDefaultUsageError(arg);
+        return false;
+      }
+      i += 1;
       continue;
     }
 
