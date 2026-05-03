@@ -1,6 +1,6 @@
 ---
 name: pr-shepherd
-description: Codex-only skill for checking, updating, monitoring, or resolving a GitHub pull request with pr-shepherd. Use for requests like "check this PR", "use pr-shepherd", "iterate PR #123", "resolve this PR's comments", or "run pr-shepherd until this PR is ready". For open-ended requests, create a Codex goal and run explicit `npx --no-install pr-shepherd iterate PR_NUMBER` cycles every configured interval until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` including repeated unchanged CI failures.
+description: 'Codex-only skill for checking, updating, monitoring, or resolving a GitHub pull request with pr-shepherd. Use for requests like "check this PR", "use pr-shepherd", "iterate PR #123", "resolve this PR''s comments", or "run pr-shepherd until this PR is ready". For open-ended requests, create a Codex goal and run explicit `npx --no-install pr-shepherd iterate PR_NUMBER` cycles every configured interval until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` including repeated unchanged CI failures.'
 ---
 
 # pr-shepherd
