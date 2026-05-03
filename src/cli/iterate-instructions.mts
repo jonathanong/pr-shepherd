@@ -39,14 +39,14 @@ export function buildSimpleIterateInstructions(
       return [
         runtime === "codex"
           ? "Stop — no recurring Codex monitor is running to cancel."
-          : "Stop — do not schedule another dynamic wakeup.",
+          : "Stop — do not schedule another dynamic wakeup. If this loop was started with a fixed-interval `/loop` schedule, cancel the cron job now with `CronDelete`.",
         "Stop.",
       ];
     case "escalate":
       return [
         runtime === "codex"
           ? "Stop — no recurring Codex monitor is running to cancel."
-          : "Stop — do not schedule another dynamic wakeup.",
+          : "Stop — do not schedule another dynamic wakeup. If this loop was started with a fixed-interval `/loop` schedule, cancel the cron job now with `CronDelete`.",
         "Stop — the PR needs human direction before monitoring can resume.",
       ];
   }

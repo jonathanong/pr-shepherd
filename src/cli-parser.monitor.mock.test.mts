@@ -104,7 +104,7 @@ describe("main — monitor", () => {
     expect(parsed.loopArgs).toBeUndefined();
     expect(parsed.reusableCommand).toBeUndefined();
     expect(
-      parsed.instructions.some((inst: string) => inst.includes("invoke the `/loop` skill")),
+      parsed.instructions.some((inst: string) => inst.toLowerCase().includes("invoke the `/loop` skill")),
     ).toBe(true);
   });
 

@@ -14,11 +14,10 @@ Claude Code lifecycle:
 
 1. **User runs `/pr-shepherd:monitor <PR>`**
    - The skill runs `npx pr-shepherd monitor <PR>`, which emits an interval-free dynamic scheduling bootstrap block.
-   - The skill follows `## Instructions` in that output: calls `CronList`, checks active scheduled tasks for an existing task whose prompt contains the loop tag, reuses it if present, and otherwise invokes `/loop` with `args` set to the full `## Loop prompt` body and no fixed interval prefix.
+   - The skill follows `## Instructions` in that output: invokes `/loop` with `args` set to the full `## Loop prompt` body and no fixed interval prefix.
 
 2. **`/loop` enters dynamic mode**
    - Dynamic `/loop` is not cron-backed. At the end of each nonterminal tick, the agent calls `ScheduleWakeup` with `delaySeconds` between 60 and 240 using the same loop prompt body.
-   - Each tick also calls `CronList`, checks active scheduled tasks for duplicate prompts with the same loop tag, keeps the lowest task ID, and cancels duplicates with `CronDelete` before running `pr-shepherd`.
    - The loop runs until the `cancel` action fires, Shepherd escalates, or the user cancels manually.
 
 3. **Each tick runs `pr-shepherd`**

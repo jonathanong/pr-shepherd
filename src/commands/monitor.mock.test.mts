@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 
 vi.mock("../github/client.mts", () => ({
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
@@ -84,13 +84,11 @@ describe("runMonitor", () => {
 });
 
 describe("formatMonitorResult", () => {
-  const fixture: MonitorResult = {
-    prNumber: 42,
-    loopTag: "#pr-shepherd-loop:pr=42:",
-    reusableCommand: "npx pr-shepherd 42",
-    loopPrompt:
-      "#pr-shepherd-loop:pr=42:\n\n**IMPORTANT — dynamic recurrence rules:**\n- This prompt runs in dynamic `/loop` mode. Do not invoke `/loop` again from inside this prompt; that creates a duplicate runner.\n- If Shepherd's `## Instructions` tell you to continue or end a nonterminal iteration, end the turn by calling `ScheduleWakeup` with `delaySeconds` between 60 and 240 and this same `## Loop prompt` body.\n- If Shepherd emits `[CANCEL]` or `[ESCALATE]`, follow its `## Instructions` and do not call `ScheduleWakeup`.\n\nRun in a single Bash call:\n  npx pr-shepherd 42\n\nExit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with `# PR #42 [`), log the first line of stderr and schedule a retry with `ScheduleWakeup` using `delaySeconds` between 60 and 240.\n\nThe output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Every output ends with a `## Instructions` section — follow those numbered steps exactly.",
-  };
+  let fixture: MonitorResult;
+
+  beforeAll(async () => {
+    fixture = await runMonitor({ format: "text", prNumber: 42 });
+  });
 
   it("emits MONITOR heading, loop tag, loop prompt, and instructions", () => {
     const md = formatMonitorResult(fixture);

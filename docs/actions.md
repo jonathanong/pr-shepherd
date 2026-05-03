@@ -6,7 +6,7 @@ Each default `pr-shepherd` invocation returns exactly one iterate action. The le
 
 The default output format is Markdown — what you see when running `npx pr-shepherd <PR>`, and what the monitor SKILL reads each dynamic tick. `--format=json` emits the same information as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
 
-Instruction wording is agent-aware. Claude-compatible output schedules the next dynamic wakeup with `ScheduleWakeup` (`delaySeconds` 60-240) or stops without scheduling another wakeup for terminal states; the monitor bootstrap also calls `CronList` to check active scheduled tasks for an existing loop tag before starting a new dynamic `/loop`. If duplicates exist, it keeps the lowest task ID and cancels the rest with `CronDelete`. Codex output is selected with `AGENT=codex` or `CODEX_CI=1`; it replaces those lines with active-goal guidance to pick a fresh sleep/timeout between 1 and 4 minutes before rerunning `npx pr-shepherd <PR>`. The action data and section structure are otherwise the same.
+Instruction wording is agent-aware. Claude-compatible output schedules the next dynamic wakeup with `ScheduleWakeup` (`delaySeconds` 60-240) or stops without scheduling another wakeup for terminal states; the monitor bootstrap invokes `/loop` with no fixed interval prefix to enter dynamic mode. Codex output is selected with `AGENT=codex` or `CODEX_CI=1`; it replaces those lines with active-goal guidance to pick a fresh sleep/timeout between 1 and 4 minutes before rerunning `npx pr-shepherd <PR>`. The action data and section structure are otherwise the same.
 
 Pass `--verbose` to get more debug state. In JSON mode, the output starts from the full `IterateResult` shape (all fields, including `baseBranch`, `checks`, `shouldCancel`) and then applies the same agent-aware instruction projection as lean JSON: non-`fix_code` actions get a top-level `instructions` array, and Codex output may rewrite `fix.instructions` and simple-action instructions. In Markdown mode, `--verbose` restores the full header summary line (all four counts, `remainingSeconds`, `copilotReviewInProgress`, `isDraft`, `shouldCancel` always shown, and `[COOLDOWN]` no longer suppresses the base/summary block) — but Markdown is structurally different from JSON and does not guarantee field-for-field parity (array fields like `baseBranch` or `checks` are not added to Markdown for actions that do not normally render them). Lean mode is the default because most fields are `false`/`0`/`[]` on a typical healthy tick and add context noise without value.
 
@@ -168,7 +168,7 @@ CANCEL: PR #42 is merged — stopping monitor
 
 ## Instructions
 
-1. Stop — do not schedule another dynamic wakeup.
+1. Stop — do not schedule another dynamic wakeup. If this loop was started with a fixed-interval `/loop` schedule, cancel the cron job now with `CronDelete`.
 2. Stop.
 ```
 
@@ -474,7 +474,7 @@ After fixing manually, rerun `/pr-shepherd:monitor 42` to resume.
 
 ## Instructions
 
-1. Stop — do not schedule another dynamic wakeup.
+1. Stop — do not schedule another dynamic wakeup. If this loop was started with a fixed-interval `/loop` schedule, cancel the cron job now with `CronDelete`.
 2. Stop — the PR needs human direction before monitoring can resume.
 ```
 
