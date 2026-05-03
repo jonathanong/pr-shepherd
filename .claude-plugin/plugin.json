@@ -9,12 +9,6 @@
   "homepage": "https://github.com/jonathanong/pr-shepherd",
   "repository": "https://github.com/jonathanong/pr-shepherd",
   "license": "MIT",
-  "keywords": [
-    "github",
-    "pull-request",
-    "ci",
-    "code-review",
-    "automation"
-  ],
+  "keywords": ["github", "pull-request", "ci", "code-review", "automation"],
   "skills": "./plugin/skills/"
 }
