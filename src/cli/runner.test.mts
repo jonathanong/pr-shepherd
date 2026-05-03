@@ -77,20 +77,28 @@ describe("resolveCliRunner", () => {
   });
 
   it("does not consult home directory lockfiles when start dir has no signals", () => {
-    // Arrange: a fake home with yarn.lock; startDir is a subdir of home with no signals.
-    // The stop-condition (current === home) must fire before inspecting home's own lockfiles.
     const fakeHome = mkdtempSync(join(tmpdir(), "shepherd-runner-home-"));
     try {
       writeFileSync(join(fakeHome, "yarn.lock"), "");
       vi.stubEnv("HOME", fakeHome);
 
-      // startDir is a child of fakeHome with no package manager signals
       const startDir = join(fakeHome, "projects", "my-project");
       mkdirSync(startDir, { recursive: true });
 
-      // fakeHome acts as repo root (no .git needed — repoRoot can be null, and
-      // current === home fires first since startDir is a child of fakeHome)
       expect(resolveCliRunner("auto", startDir)).toBe("npx");
+    } finally {
+      rmSync(fakeHome, { recursive: true, force: true });
+    }
+  });
+
+  it("reads signals at home when home is the repo root (dotfiles repo)", () => {
+    const fakeHome = mkdtempSync(join(tmpdir(), "shepherd-runner-home-"));
+    try {
+      mkdirSync(join(fakeHome, ".git"));
+      writeFileSync(join(fakeHome, "pnpm-lock.yaml"), "");
+      vi.stubEnv("HOME", fakeHome);
+
+      expect(resolveCliRunner("auto", fakeHome)).toBe("pnpm");
     } finally {
       rmSync(fakeHome, { recursive: true, force: true });
     }

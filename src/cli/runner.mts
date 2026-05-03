@@ -69,25 +69,22 @@ function detectPackageRunner(startDir: string): Exclude<CliRunner, "auto"> {
   const repoRoot = findRepoRoot(startDir);
   let current = startDir;
   while (true) {
-    // Stop before reading home's signals — home is outside the project tree.
-    if (current === home || current === dirname(current)) {
-      return cacheRunner(startDir, "npx");
+    const atBoundary = current === repoRoot || current === home || current === dirname(current);
+    // Read signals for this directory unless it is home without being the repo root.
+    // This lets dotfiles repos (repoRoot === home) detect their own package manager
+    // while still preventing home's lockfiles from influencing unrelated projects.
+    if (!atBoundary || current === repoRoot) {
+      const packageManager = readPackageManager(current);
+      if (packageManager?.startsWith("pnpm@")) return cacheRunner(startDir, "pnpm");
+      if (packageManager?.startsWith("yarn@")) return cacheRunner(startDir, "yarn");
+      if (packageManager?.startsWith("npm@")) return cacheRunner(startDir, "npx");
+
+      if (isFile(join(current, "pnpm-lock.yaml"))) return cacheRunner(startDir, "pnpm");
+      if (isFile(join(current, "yarn.lock"))) return cacheRunner(startDir, "yarn");
+      if (isFile(join(current, "package-lock.json"))) return cacheRunner(startDir, "npx");
     }
 
-    const packageManager = readPackageManager(current);
-    if (packageManager?.startsWith("pnpm@")) return cacheRunner(startDir, "pnpm");
-    if (packageManager?.startsWith("yarn@")) return cacheRunner(startDir, "yarn");
-    if (packageManager?.startsWith("npm@")) return cacheRunner(startDir, "npx");
-
-    if (isFile(join(current, "pnpm-lock.yaml"))) return cacheRunner(startDir, "pnpm");
-    if (isFile(join(current, "yarn.lock"))) return cacheRunner(startDir, "yarn");
-    if (isFile(join(current, "package-lock.json"))) return cacheRunner(startDir, "npx");
-
-    // Stop after reading signals at the repo root — don't walk outside the repo.
-    if (current === repoRoot) {
-      return cacheRunner(startDir, "npx");
-    }
-
+    if (atBoundary) return cacheRunner(startDir, "npx");
     current = dirname(current);
   }
 }
