@@ -1,6 +1,6 @@
 {
   "name": "pr-shepherd",
-  "version": "0.12.1",
+  "version": "0.13.0",
   "description": "Autonomous PR CI monitor and review-comment resolver for agentic coding tools",
   "license": "MIT",
   "author": "Jonathan Ong",
