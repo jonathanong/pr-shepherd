@@ -133,7 +133,7 @@ These values are read by the `/pr-shepherd:monitor` skill when setting up the `/
 
 ### `watch.interval` — default `"4m"`
 
-The `/loop` polling cadence. Format: `"Nm"` for minutes, `"Nh"` for hours.
+The `/loop` polling cadence. Format: `"Ns"` for seconds, `"Nm"` for minutes, `"Nh"` for hours, `"Nd"` for days.
 
 The default of 4 minutes is chosen to keep Claude's prompt cache warm — the cache TTL is 5 minutes, so a 4-minute loop means each tick still benefits from a warm cache.
 

@@ -316,7 +316,7 @@ describe("main — iterate text format", () => {
     expect(parsed.action).toBe("wait");
     expect(parsed.pr).toBe(42);
     expect(parsed.instructions).toEqual([
-      "Schedule the next dynamic wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240 and the same loop prompt, then end this iteration.",
+      "Schedule the next dynamic wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240 and the same loop prompt (skip if running under a fixed-interval cron loop — the next scheduled fire handles it), then end this iteration.",
     ]);
   });
 

@@ -10,7 +10,7 @@ import { buildPrShepherdCommand, type CliRunner } from "./runner.mts";
 const DEFAULT_CODEX_RETRY_INTERVAL = "4m";
 const VALID_RETRY_INTERVAL = /^\d+[smhd]$/;
 const CLAUDE_DYNAMIC_WAKEUP =
-  "Schedule the next dynamic wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240 and the same loop prompt, then end this iteration.";
+  "Schedule the next dynamic wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240 and the same loop prompt (skip if running under a fixed-interval cron loop — the next scheduled fire handles it), then end this iteration.";
 
 export function buildSimpleIterateInstructions(
   result: Exclude<IterateResult, { action: "fix_code" }>,
