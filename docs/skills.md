@@ -6,7 +6,20 @@ Three Claude Code skills are included in the Claude plugin. A separate Codex plu
 
 ## Codex setup
 
-Codex does not install or run the Claude plugin skills. Install or enable the Codex plugin from this repo's `.agents/plugins/marketplace.json`, then install the CLI in the repository where Codex will work:
+Codex does not install or run the Claude plugin skills. Add this repository as a local Codex marketplace in `~/.codex/config.toml`:
+
+```toml
+[marketplaces.jonathanong]
+source_type = "local"
+source = "/path/to/pr-shepherd"
+
+[plugins."pr-shepherd@jonathanong"]
+enabled = true
+```
+
+The `source` path must point at a checkout or package directory that contains `.agents/plugins/marketplace.json` and `plugins/pr-shepherd/`.
+
+Then install the CLI in the repository where Codex will work:
 
 ```sh
 npm install --save-dev pr-shepherd

@@ -205,7 +205,18 @@ On each tick (4-minute default, tunable via `watch.interval`): fetch PR state in
 >
 > A plain `npm install pr-shepherd` adds it to regular dependencies instead; use that only if you specifically want it under `dependencies`. Or install globally: `npm install -g pr-shepherd`.
 
-### As individual skills via `npx skills`
+### Claude Code
+
+Install as a Claude Code plugin:
+
+```bash
+claude /plugin marketplace add jonathanong/pr-shepherd
+claude /plugin install pr-shepherd
+```
+
+This repo ships two `marketplace.json` files that serve different Claude install flows: the root `marketplace.json` resolves the plugin from the npm registry (used by the `claude /plugin marketplace add` command above); `.claude-plugin/marketplace.json` is the owner-level registry manifest that resolves the plugin from the local plugin directory (used when Claude Code installs from a local or git-based source). Both files are needed to support these two install paths.
+
+Alternatively, install the Claude skills individually via `npx skills`:
 
 ```bash
 npx skills add jonathanong/pr-shepherd
@@ -213,18 +224,22 @@ npx skills add jonathanong/pr-shepherd
 
 Installs the three skills (`check`, `monitor`, `resolve`) into your agent's skill directory (`.claude/skills/` for project scope, `~/.claude/skills/` with `-g` for global scope). Powered by [skills.sh](https://skills.sh).
 
-### As a Claude Code plugin (recommended)
-
-```bash
-claude /plugin marketplace add jonathanong/pr-shepherd
-claude /plugin install pr-shepherd
-```
-
-This repo ships two `marketplace.json` files that serve different install flows: the root `marketplace.json` resolves the plugin from the npm registry (used by the `claude /plugin marketplace add` command above); `.claude-plugin/marketplace.json` is the owner-level registry manifest that resolves the plugin from the local plugin directory (used when Claude Code installs from a local or git-based source). Both files are needed to support these two install paths.
-
-### For Codex
+### Codex
 
 Codex uses the repo-shipped Codex plugin rather than the Claude plugin or `/pr-shepherd:*` slash commands. The plugin provides one umbrella `pr-shepherd` skill for check, resolve, monitor, and iterate workflows.
+
+Add this repository as a local Codex marketplace in `~/.codex/config.toml`:
+
+```toml
+[marketplaces.jonathanong]
+source_type = "local"
+source = "/path/to/pr-shepherd"
+
+[plugins."pr-shepherd@jonathanong"]
+enabled = true
+```
+
+The `source` path must point at a checkout or package directory that contains `.agents/plugins/marketplace.json` and `plugins/pr-shepherd/`.
 
 Install the CLI where Codex will run it:
 
@@ -232,7 +247,7 @@ Install the CLI where Codex will run it:
 npm install --save-dev pr-shepherd
 ```
 
-Then install or enable the Codex plugin from this repo's local marketplace entry at `.agents/plugins/marketplace.json`. The plugin only installs the skill; it does not install the CLI into target repositories.
+The plugin only installs the skill; it does not install the CLI into target repositories.
 
 If your Codex environment does not already set `CODEX_CI=1`, set `AGENT=codex` so `pr-shepherd` emits Codex-compatible instructions instead of Claude `/loop` instructions:
 
