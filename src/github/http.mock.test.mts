@@ -57,6 +57,7 @@ beforeEach(() => {
   _resetTokenCache();
   delete process.env["GH_TOKEN"];
   delete process.env["GITHUB_TOKEN"];
+  delete process.env["GITHUB_PERSONAL_ACCESS_TOKEN"];
 });
 
 // ---------------------------------------------------------------------------
@@ -89,6 +90,36 @@ describe("token resolution", () => {
     expect(mockExecFile).toHaveBeenCalledWith("gh", ["auth", "token"]);
     const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect((init.headers as Record<string, string>)["Authorization"]).toBe("Bearer fallback-token");
+  });
+
+  it("prefers `gh auth token` over GITHUB_PERSONAL_ACCESS_TOKEN", async () => {
+    process.env["GITHUB_PERSONAL_ACCESS_TOKEN"] = "codex-token";
+    mockExecFile.mockResolvedValue({ stdout: "fallback-token\n", stderr: "" });
+    mockFetch.mockResolvedValue(gqlOk({}));
+    await graphql("{ q }");
+    expect(mockExecFile).toHaveBeenCalledWith("gh", ["auth", "token"]);
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect((init.headers as Record<string, string>)["Authorization"]).toBe("Bearer fallback-token");
+  });
+
+  it("falls back to GITHUB_PERSONAL_ACCESS_TOKEN when `gh auth token` is unavailable", async () => {
+    process.env["GITHUB_PERSONAL_ACCESS_TOKEN"] = "codex-token";
+    mockExecFile.mockRejectedValue(new Error("not authenticated"));
+    mockFetch.mockResolvedValue(gqlOk({}));
+    await graphql("{ q }");
+    expect(mockExecFile).toHaveBeenCalledWith("gh", ["auth", "token"]);
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect((init.headers as Record<string, string>)["Authorization"]).toBe("Bearer codex-token");
+  });
+
+  it("falls back to GITHUB_PERSONAL_ACCESS_TOKEN when `gh auth token` is empty", async () => {
+    process.env["GITHUB_PERSONAL_ACCESS_TOKEN"] = "codex-token";
+    mockExecFile.mockResolvedValue({ stdout: "\n", stderr: "" });
+    mockFetch.mockResolvedValue(gqlOk({}));
+    await graphql("{ q }");
+    expect(mockExecFile).toHaveBeenCalledWith("gh", ["auth", "token"]);
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect((init.headers as Record<string, string>)["Authorization"]).toBe("Bearer codex-token");
   });
 
   it("throws a helpful error when no token is available", async () => {

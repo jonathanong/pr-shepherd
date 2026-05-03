@@ -48,7 +48,15 @@ async function resolveToken(): Promise<string> {
     // fall through to error
   }
 
-  throw new Error("No GitHub token found. Set GH_TOKEN or GITHUB_TOKEN, or run `gh auth login`.");
+  const codexToken = process.env["GITHUB_PERSONAL_ACCESS_TOKEN"];
+  if (codexToken) {
+    _token = codexToken;
+    return _token;
+  }
+
+  throw new Error(
+    "No GitHub token found. Set GH_TOKEN, GITHUB_TOKEN, or GITHUB_PERSONAL_ACCESS_TOKEN, or run `gh auth login`.",
+  );
 }
 
 async function makeHeaders(): Promise<Record<string, string>> {

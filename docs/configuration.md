@@ -205,7 +205,7 @@ Disable if you want the agent to read and re-implement every suggestion (e.g. be
 
 ## Environment variables
 
-| Variable                    | Effect                                                                                                           |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `PR_SHEPHERD_STATE_DIR`     | Override the loop-state base directory (default `$TMPDIR/pr-shepherd-state`)                                     |
-| `GH_TOKEN` / `GITHUB_TOKEN` | GitHub auth token. Resolution order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` fallback (requires `gh` CLI). |
+| Variable                                                     | Effect                                                                                                                                            |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PR_SHEPHERD_STATE_DIR`                                      | Override the loop-state base directory (default `$TMPDIR/pr-shepherd-state`)                                                                      |
+| `GH_TOKEN` / `GITHUB_TOKEN` / `GITHUB_PERSONAL_ACCESS_TOKEN` | GitHub auth token. Resolution order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` fallback (requires `gh` CLI) → `GITHUB_PERSONAL_ACCESS_TOKEN`. |
