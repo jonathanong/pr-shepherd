@@ -111,11 +111,18 @@ export function loadConfig(): PrShepherdConfig {
       defaults as unknown as Record<string, unknown>,
       parsed,
     ) as unknown as PrShepherdConfig;
-    // Validate cli.runner at load time so invalid values are caught and reported
-    // once (with the rc file path in the error message) rather than later during
-    // instruction rendering where the context would be opaque.
-    if (config.cli !== null && typeof config.cli === "object") {
-      config.cli.runner = parseCliRunner(config.cli.runner);
+    // Validate cli and watch at load time so misconfigurations are caught once
+    // with the rc file path in context, rather than during instruction rendering.
+    if (config.cli === null || Array.isArray(config.cli) || typeof config.cli !== "object") {
+      throw new Error(
+        `Invalid config: cli must be a plain object, got ${JSON.stringify(config.cli)}`,
+      );
+    }
+    config.cli.runner = parseCliRunner(config.cli.runner);
+    if (typeof config.watch?.interval !== "string" || !/^\d+[smhd]$/.test(config.watch.interval)) {
+      throw new Error(
+        `Invalid config: watch.interval must be a duration string like "4m" or "1h", got ${JSON.stringify(config.watch?.interval)}`,
+      );
     }
     configCache.set(cwd, config);
     return config;

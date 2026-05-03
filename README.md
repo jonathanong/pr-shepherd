@@ -143,7 +143,7 @@ Recommendations:
 
 ### Monitor a PR
 
-In Claude Code, creates a dynamic loop that checks CI and review comments, fixes issues, and marks the PR ready for review when clean. Each recurrence schedules the next wakeup with a fresh interval between 1 and 4 minutes. The loop stops automatically when the PR is merged or closed.
+In Claude Code, creates a fixed-interval loop (default every 4 minutes, configurable via `watch.interval`) that checks CI and review comments, fixes issues, and marks the PR ready for review when clean. The loop runs as a cron job that fires on schedule — agents end each turn cleanly and the cron fires again automatically. The loop stops automatically when the PR is merged or closed (auto-expires after 7 days).
 
 In Codex, run `pr-shepherd monitor <PR>` once through the repo package runner to emit the goal-friendly recurrence prompt, then follow that prompt. Its reusable follow-up command is emitted by the CLI.
 
