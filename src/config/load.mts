@@ -5,7 +5,7 @@ import { parse } from "yaml";
 import builtins from "../config.json" with { type: "json" };
 
 export interface PrShepherdConfig {
-  cli: {
+  cli?: {
     /** Command runner used in generated prompts. `auto` detects pnpm/yarn/npm from package metadata. */
     runner: "auto" | "npx" | "pnpm" | "yarn";
   };

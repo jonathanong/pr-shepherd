@@ -50,14 +50,14 @@ describe("loadConfig — no rc file", () => {
   it("defaults cli.runner to auto", async () => {
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
-    expect(result.cli.runner).toBe("auto");
+    expect(result.cli?.runner).toBe("auto");
   });
 
   it("overrides cli.runner when set in rc file", async () => {
     writeFileSync(join(tmpDir, RC), "cli:\n  runner: pnpm\n");
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
-    expect(result.cli.runner).toBe("pnpm");
+    expect(result.cli?.runner).toBe("pnpm");
   });
 
   it("overrides iterate.minimizeApprovals when set in rc file", async () => {

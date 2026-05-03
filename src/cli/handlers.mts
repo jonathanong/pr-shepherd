@@ -110,12 +110,8 @@ export async function handleIterate(args: string[]): Promise<void> {
       : projectIterateLean(result, projectionOpts);
     process.stdout.write(`${JSON.stringify(output)}\n`);
   } else {
-    process.stdout.write(
-      `${formatIterateResult(result, {
-        verbose: globalOpts.verbose,
-        ...projectionOpts,
-      })}\n`,
-    );
+    const text = formatIterateResult(result, { verbose: globalOpts.verbose, ...projectionOpts });
+    process.stdout.write(`${text}\n`);
   }
 
   process.exitCode = iterateActionToExitCode(result.action);
@@ -179,7 +175,9 @@ export async function handleMonitor(args: string[]): Promise<void> {
 
 export async function handleStatus(args: string[]): Promise<void> {
   const { global: globalOpts } = parseCommonArgs(args);
+
   const prNumbers = parseStatusPrNumbers(args);
+
   if (prNumbers.length === 0) {
     process.stderr.write("Usage: pr-shepherd status PR1 [PR2 …]\n");
     process.exitCode = 1;

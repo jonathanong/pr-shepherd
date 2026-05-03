@@ -49,7 +49,11 @@ function baseArgvForRunner(runner: Exclude<CliRunner, "auto">): string[] {
   }
 }
 
-const runnerCache = new Map<string, Exclude<CliRunner, "auto">>();
+export const runnerCache = new Map<string, Exclude<CliRunner, "auto">>();
+
+export function __resetRunnerCache(): void {
+  runnerCache.clear();
+}
 
 function detectPackageRunner(startDir: string): Exclude<CliRunner, "auto"> {
   const cached = runnerCache.get(startDir);

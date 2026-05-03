@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
+  __resetRunnerCache,
   buildPrShepherdCommand,
   parseCliRunner,
   renderShellCommand,
@@ -18,6 +19,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  __resetRunnerCache();
   if (tmpDir) rmSync(tmpDir, { recursive: true, force: true });
 });
 

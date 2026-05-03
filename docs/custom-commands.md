@@ -36,16 +36,13 @@ without prompting to install the package.
    ```bash
    npx pr-shepherd check <PR_NUMBER> --format=json
    ```
-   ````
 
    Parse the JSON and report:
+
    - **Merge status** (`mergeStatus.status`): CLEAN | BEHIND | CONFLICTS | BLOCKED | UNSTABLE | DRAFT | UNKNOWN
    - **CI check results** (`checks.passing`, `checks.failing`, `checks.inProgress`): passing count, failing names, in-progress names
    - **Unresolved review comments** (`threads.actionable` + `comments.actionable`): count + details
-
-   ```
-
-   ```
+   ````
 
 3. **Use it in Claude Code:**
 
