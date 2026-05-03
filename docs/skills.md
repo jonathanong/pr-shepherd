@@ -41,15 +41,17 @@ If Codex is not already setting `CODEX_CI=1`, set `AGENT=codex` before invoking 
 export AGENT=codex
 ```
 
-Run `npx pr-shepherd monitor <PR>` once to bootstrap the workflow. Follow the output's `## Instructions`, then keep an active Codex goal cycling the emitted `npx pr-shepherd <PR>` command. Before each rerun, pick a fresh sleep/timeout between 1 and 4 minutes until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). Codex does not provide the Claude `/loop` scheduler in this workflow.
+Run `pr-shepherd monitor <PR>` once through the repo package runner to bootstrap the workflow. Follow the output's `## Instructions`, then keep an active Codex goal cycling the emitted command every `watch.interval` (default 4m) until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). Codex does not provide the Claude `/loop` scheduler in this workflow.
+
+The examples below use `npx pr-shepherd` as the default spelling. The actual runner depends on `cli.runner` in `.pr-shepherdrc.yml` (default `auto`, which detects pnpm/yarn from `packageManager` or lockfiles). Skills invoke the CLI through the detected runner; the CLI then emits follow-up commands using the same runner.
 
 The Codex plugin skill handles PR-number discovery, one-off check/resolve commands, and open-ended goal setup. It still delegates policy and state transitions to the CLI output's own `## Instructions` section.
 
 ## `/pr-shepherd:monitor`
 
-Start continuous CI monitoring for a PR in Claude Code. Runs `npx pr-shepherd monitor <PR>` to get a pre-built dynamic `/loop` bootstrap block. The bootstrap invokes `/loop` with no fixed interval prefix; each nonterminal tick schedules the next wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240. The loop stops after the PR is merged/closed, Shepherd escalates, or the configured ready-delay elapses.
+Start continuous CI monitoring for a PR in Claude Code. Runs `pr-shepherd monitor <PR>` through the repo package runner to get a pre-built `/loop` bootstrap block (interval and the recurring iterate prompt), then creates the cron job. The loop fires at the configured interval, calls `pr-shepherd <PR>`, and follows the `## Instructions` in the output. The loop cancels automatically after the PR is merged/closed or after the configured ready-delay.
 
-In Codex, run the CLI directly instead of the Claude slash command. `npx pr-shepherd monitor <PR>` emits explicit iterate instructions instead of `/loop` setup. After the bootstrap step, rerun the emitted `npx pr-shepherd <PR>` command after a fresh 1-4 minute sleep/timeout while the goal remains active.
+In Codex, run the CLI directly instead of the Claude slash command. `pr-shepherd monitor <PR>` emits explicit iterate instructions instead of `/loop` setup. After the bootstrap step, rerun the emitted command every `watch.interval` while the goal remains active.
 
 Claude Code:
 

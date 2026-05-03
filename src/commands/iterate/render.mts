@@ -8,6 +8,7 @@ import type {
   FirstLookComment,
   ReviewThread,
 } from "../../types.mts";
+import { buildPrShepherdCommand, renderShellCommand, type CliRunner } from "../../cli/runner.mts";
 
 export const FIX_INSTRUCTION_STOP_AFTER_PUSH =
   "Stop this iteration — CI needs time to run on the new push before the next tick.";
@@ -15,25 +16,16 @@ export const FIX_INSTRUCTION_STOP_BEFORE_NEXT_TICK = "Stop this iteration before
 export const FIX_INSTRUCTION_END_ITERATION = "End this iteration.";
 
 /**
- * Render a resolve command as a shell snippet. Wraps `$DISMISS_MESSAGE` and whitespace-bearing
- * argv entries in double quotes for placeholder substitution. Throws if argv contains `"`, `$`,
- * `` ` ``, or `\`. `$HEAD_SHA` is appended separately when `requiresHeadSha` is set.
+ * Render a resolve command as a shell snippet. Wraps `$DISMISS_MESSAGE`, `$HEAD_SHA`, and
+ * whitespace-bearing argv entries for placeholder substitution. `$HEAD_SHA` is appended separately
+ * when `requiresHeadSha` is set.
  */
 export function renderResolveCommand(rc: ResolveCommand): string {
-  const needsQuoting = (arg: string) => {
-    if (arg === "$DISMISS_MESSAGE") return true;
-    if (/["$`\\]/.test(arg)) {
-      throw new Error(
-        `Unexpected character in argv arg that needsQuoting can't handle: ${JSON.stringify(arg)}`,
-      );
-    }
-    return /\s/.test(arg);
-  };
-  const parts = rc.argv.map((a) => (needsQuoting(a) ? `"${a}"` : a));
+  const parts = [...rc.argv];
   if (rc.requiresHeadSha) {
-    parts.push("--require-sha", '"$HEAD_SHA"');
+    parts.push("--require-sha", "$HEAD_SHA");
   }
-  return parts.join(" ");
+  return renderShellCommand(parts);
 }
 
 export function buildFixInstructions(
@@ -52,6 +44,7 @@ export function buildFixInstructions(
   editedSummaries: Review[] = [],
   inProgressRunIds: string[] = [],
   resolutionOnlyThreads: ReviewThread[] = [],
+  runner?: CliRunner,
 ): string[] {
   const instructions: string[] = [];
   if (inProgressRunIds.length > 0) {
@@ -61,8 +54,20 @@ export function buildFixInstructions(
   }
   const hasSuggestions = threads.some((t) => t.suggestion);
   if (hasSuggestions) {
+    const commitSuggestionCommand = buildPrShepherdCommand(
+      [
+        "commit-suggestion",
+        String(prNumber),
+        "--thread-id",
+        "<id>",
+        "--message",
+        "<one-sentence headline>",
+        "--format=json",
+      ],
+      { runner },
+    ).text;
     instructions.push(
-      `For each thread marked \`[suggestion]\` under \`## Review threads\`: run \`npx pr-shepherd commit-suggestion ${prNumber} --thread-id <id> --message "<one-sentence headline>" --format=json\` to retrieve the patch and suggested commit. The CLI does not mutate the working tree — apply the patch yourself (run \`git apply\` with the diff shown, or edit the file directly using the line range), then stage the listed file and run the suggested \`git commit\` from the \`## Instructions\` section. Include the thread ID in \`--resolve-thread-ids\` in the \`resolve:\` command below (the thread is not auto-resolved). If the patch fails to apply, fall through to the manual-edit step. Do not retry the same command.`,
+      `For each thread marked \`[suggestion]\` under \`## Review threads\`: run \`${commitSuggestionCommand}\` to retrieve the patch and suggested commit. The CLI does not mutate the working tree — apply the patch yourself (run \`git apply\` with the diff shown, or edit the file directly using the line range), then stage the listed file and run the suggested \`git commit\` from the \`## Instructions\` section. Include the thread ID in \`--resolve-thread-ids\` in the \`resolve:\` command below (the thread is not auto-resolved). If the patch fails to apply, fall through to the manual-edit step. Do not retry the same command.`,
     );
   }
   if (threads.length > 0 || actionableComments.length > 0) {

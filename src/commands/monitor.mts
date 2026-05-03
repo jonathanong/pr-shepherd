@@ -1,7 +1,9 @@
 import { getCurrentPrNumber } from "../github/client.mts";
+import { loadConfig } from "../config/load.mts";
 import type { GlobalOptions } from "../types.mts";
 import type { AgentRuntime } from "../agent-runtime.mts";
 import { joinSections } from "../util/markdown.mts";
+import { buildPrShepherdCommand, type CliRunner } from "../cli/runner.mts";
 
 export interface MonitorCommandOptions extends GlobalOptions {
   readyDelaySuffix?: string;
@@ -11,27 +13,47 @@ export interface MonitorCommandOptions extends GlobalOptions {
 export interface MonitorResult {
   prNumber: number;
   loopTag: string;
-  /** The prompt body to pass to /loop, without an interval prefix. */
+  /** The interval to pass to /loop (e.g. "4m"). */
+  loopArgs: string;
+  /** The loop prompt body. To build /loop args: `${loopArgs}\n\n${loopPrompt}` */
   loopPrompt: string;
   reusableCommand: string;
 }
 
 export async function runMonitor(opts: MonitorCommandOptions): Promise<MonitorResult> {
+  const config = loadConfig();
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
   if (prNumber === null) {
     throw new Error("No open PR found for current branch. Pass a PR number explicitly.");
   }
 
+  const { interval } = config.watch;
+  if (typeof interval !== "string" || !/^\d+[smhd]$/.test(interval)) {
+    throw new Error(
+      `Invalid config: watch.interval must be a duration string like "4m" or "1h", got ${JSON.stringify(interval)}`,
+    );
+  }
   // No space after `#` — `# text` is a CommonMark ATX heading; `#text` is not.
-  // Trailing `:` prevents substring false positives if agents search for this
-  // tag in conversation or task state.
+  // Trailing `:` prevents substring false positives: without it, the dedup grep
+  // for pr=1 would match a cron prompt for pr=135. Both the CronList check in
+  // step 1 of formatMonitorResult's ## Instructions and the in-prompt Self-dedup
+  // block depend on this exact string — don't change the format.
   const loopTag = `#pr-shepherd-loop:pr=${prNumber}:`;
-  const reusableCommand = buildIterateCommand(prNumber, opts.readyDelaySuffix);
-  const loopPrompt = buildLoopPrompt(prNumber, loopTag, reusableCommand, opts.runtime ?? "claude");
+  const loopArgs = interval;
+  const reusableCommand = buildIterateCommand(prNumber, opts.readyDelaySuffix, config.cli?.runner);
+  const loopPrompt = buildLoopPrompt(
+    prNumber,
+    loopTag,
+    reusableCommand,
+    loopArgs,
+    opts.runtime ?? "claude",
+    config.cli?.runner,
+  );
 
   return {
     prNumber,
     loopTag,
+    loopArgs,
     loopPrompt,
     reusableCommand,
   };
@@ -45,11 +67,16 @@ export function formatMonitorResult(
   result: MonitorResult,
   opts?: { runtime?: AgentRuntime },
 ): string {
-  const { prNumber, loopTag, loopPrompt } = result;
+  const { prNumber, loopTag, loopArgs, loopPrompt } = result;
   const runtime = opts?.runtime ?? "claude";
 
   const sections = [
-    [`# PR #${prNumber} [MONITOR]`, "", `Loop tag: \`${loopTag}\``].join("\n"),
+    [
+      `# PR #${prNumber} [MONITOR]`,
+      "",
+      `Loop tag: \`${loopTag}\``,
+      `Loop args: \`${loopArgs}\``,
+    ].join("\n"),
     runtime === "codex" ? `Reusable command: \`${result.reusableCommand}\`` : null,
     "## Loop prompt",
     loopPrompt,
@@ -89,16 +116,25 @@ function validateReadyDelaySuffix(readyDelaySuffix?: string): string | undefined
   return trimmed;
 }
 
-function buildIterateCommand(prNumber: number, readyDelaySuffix?: string): string {
+function buildIterateCommand(
+  prNumber: number,
+  readyDelaySuffix?: string,
+  runner?: CliRunner,
+): string {
   const validatedDelay = validateReadyDelaySuffix(readyDelaySuffix);
-  return `npx pr-shepherd ${prNumber}${validatedDelay ? ` --ready-delay ${validatedDelay}` : ""}`;
+  return buildPrShepherdCommand(
+    [String(prNumber), ...(validatedDelay ? ["--ready-delay", validatedDelay] : [])],
+    { runner },
+  ).text;
 }
 
 function buildLoopPrompt(
   prNumber: number,
   loopTag: string,
   iterateCmd: string,
+  loopArgs: string,
   runtime: AgentRuntime = "claude",
+  runner?: CliRunner,
 ): string {
   if (runtime === "codex") {
     return [
@@ -106,9 +142,9 @@ function buildLoopPrompt(
       "",
       "**IMPORTANT — Codex recurrence rules:**",
       "- Run the command below once and follow its `## Instructions` exactly.",
-      "- If the output tells you to continue the active Codex goal, pick a fresh sleep/timeout between 1 and 4 minutes, wait that long, then rerun the reusable command from the monitor output.",
+      `- If the output tells you to continue the active Codex goal, wait about the configured interval (${loopArgs}) and rerun the reusable command from the monitor output.`,
       "- Stop only when Shepherd emits `[CANCEL]` because the ready-delay completed or the PR was merged/closed, or when Shepherd emits `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures).",
-      "- Do not call `/loop`, `ScheduleWakeup`, `CronCreate`, or `npx pr-shepherd monitor`; Codex recurrence is explicit `iterate` command cycles.",
+      `- Do not call \`/loop\`, \`ScheduleWakeup\`, \`CronCreate\`, or \`${buildPrShepherdCommand(["monitor", String(prNumber)], { runner }).text}\`; Codex recurrence is explicit \`iterate\` command cycles.`,
       "",
       "Run in a single Bash call:",
       `  ${iterateCmd}`,
@@ -121,15 +157,16 @@ function buildLoopPrompt(
   return [
     loopTag,
     "",
-    "**IMPORTANT — dynamic recurrence rules:**",
-    "- This prompt runs in dynamic `/loop` mode. Do not invoke `/loop` again from inside this prompt; that creates a duplicate runner.",
-    "- If Shepherd's `## Instructions` tell you to continue or end a nonterminal iteration, end the turn by calling `ScheduleWakeup` with `delaySeconds` between 60 and 240 and this same `## Loop prompt` body.",
-    "- If Shepherd emits `[CANCEL]` or `[ESCALATE]`, follow its `## Instructions` and do not call `ScheduleWakeup`.",
+    "**IMPORTANT — recurrence rules:**",
+    "- **Do NOT call `ScheduleWakeup` or `/loop`.** This session is fired by a recurring cron job. Either call creates a duplicate runner, causing concurrent git operations and `.git/index.lock` collisions.",
+    "- End the turn cleanly after completing the actions below. The cron job handles the next fire.",
+    "",
+    `**Self-dedup:** Run \`CronList\`. If more than one job contains \`${loopTag}\`, keep the lowest job ID and \`CronDelete\` the rest (ignore errors — a concurrent runner may have already deleted them).`,
     "",
     "Run in a single Bash call:",
     `  ${iterateCmd}`,
     "",
-    `Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with \`# PR #${prNumber} [\`), log the first line of stderr and schedule a retry with \`ScheduleWakeup\` using \`delaySeconds\` between 60 and 240.`,
+    `Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with \`# PR #${prNumber} [\`), log the first line of stderr and continue — do not cancel the loop. The next cron fire will retry.`,
     "",
     "The output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Every output ends with a `## Instructions` section — follow those numbered steps exactly.",
   ].join("\n");
@@ -139,10 +176,11 @@ function buildMonitorInstructions(result: MonitorResult, runtime: AgentRuntime):
   if (runtime === "codex") {
     return [
       "Run the `## Loop prompt` body once inline now.",
-      `For an active Codex goal, keep cycling with \`${result.reusableCommand}\`; before each rerun, pick a fresh sleep/timeout between 1 and 4 minutes. Codex does not create a \`/loop\` monitor.`,
+      `For an active Codex goal, keep cycling with \`${result.reusableCommand}\` about every configured interval (${result.loopArgs}) until a terminal condition is reached. Codex does not create a \`/loop\` monitor.`,
     ];
   }
   return [
-    "Invoke the `/loop` skill via the Skill tool with the full `## Loop prompt` body as `args`. Do not prefix an interval; this enters dynamic mode, where the prompt schedules each next wakeup with `ScheduleWakeup`.",
+    `Run \`CronList\`. If any job's prompt contains \`${result.loopTag}\`, run the \`## Loop prompt\` body once inline (as if it were a cron tick) then stop — do not create a duplicate loop.`,
+    "Otherwise, invoke the `/loop` skill via the Skill tool. Build the `args` parameter as: only the value inside the backticks on the `Loop args` line above (the interval — not the `Loop args:` label), then a blank line, then the full `## Loop prompt` body.",
   ];
 }

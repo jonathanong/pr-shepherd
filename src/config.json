@@ -1,4 +1,7 @@
 {
+  "cli": {
+    "runner": "auto"
+  },
   "iterate": {
     "cooldownSeconds": 30,
     "fixAttemptsPerThread": 3,
@@ -6,6 +9,7 @@
     "minimizeApprovals": false
   },
   "watch": {
+    "interval": "4m",
     "readyDelayMinutes": 10
   },
   "resolve": {

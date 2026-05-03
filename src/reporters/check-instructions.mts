@@ -1,5 +1,6 @@
 import type { ShepherdReport } from "../types.mts";
 import type { AgentRuntime } from "../agent-runtime.mts";
+import { buildPrShepherdCommand, type CliRunner } from "../cli/runner.mts";
 
 /**
  * Build the numbered instruction steps for the agent to follow after a `check` run.
@@ -8,7 +9,7 @@ import type { AgentRuntime } from "../agent-runtime.mts";
  */
 export function buildCheckInstructions(
   report: ShepherdReport,
-  opts?: { runtime?: AgentRuntime },
+  opts?: { runtime?: AgentRuntime; runner?: CliRunner },
 ): string[] {
   const runtime = opts?.runtime ?? "claude";
   const { mergeStatus, checks, threads, comments, changesRequestedReviews, status } = report;
@@ -77,7 +78,7 @@ export function buildCheckInstructions(
   if (!isReady) {
     instructions.push(
       runtime === "codex"
-        ? `This is a one-shot check. For follow-up monitoring, run \`npx pr-shepherd ${report.pr}\`.`
+        ? `This is a one-shot check. For follow-up monitoring, run \`${buildPrShepherdCommand([String(report.pr)], { runner: opts?.runner }).text}\`.`
         : "This is a one-shot check. For continuous monitoring that acts on these signals automatically, use `/pr-shepherd:monitor`.",
     );
   }

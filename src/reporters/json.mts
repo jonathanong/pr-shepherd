@@ -8,7 +8,11 @@
 import type { ShepherdReport } from "../types.mts";
 import type { AgentRuntime } from "../agent-runtime.mts";
 import { buildCheckInstructions } from "./check-instructions.mts";
+import type { CliRunner } from "../cli/runner.mts";
 
-export function formatJson(report: ShepherdReport, opts?: { runtime?: AgentRuntime }): string {
+export function formatJson(
+  report: ShepherdReport,
+  opts?: { runtime?: AgentRuntime; runner?: CliRunner },
+): string {
   return JSON.stringify({ ...report, instructions: buildCheckInstructions(report, opts) }, null, 2);
 }

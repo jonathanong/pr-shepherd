@@ -5,6 +5,7 @@ import type {
   AgentCheck,
   ReviewThread,
 } from "../../types.mts";
+import { buildPrShepherdCommand, type CliRunner } from "../../cli/runner.mts";
 
 export function classifyReviewSummaries(
   summaries: { firstLook: Review[]; seen: Review[]; edited: Review[] },
@@ -44,8 +45,9 @@ export function buildResolveCommand(
   reviews: Review[],
   checks: AgentCheck[],
   prNumber: number,
+  runner?: CliRunner,
 ): ResolveCommand {
-  const argv = ["npx", "pr-shepherd", "resolve", String(prNumber)];
+  const argv = buildPrShepherdCommand(["resolve", String(prNumber)], { runner }).argv;
 
   const threadIds = [...threads.map((t) => t.id), ...resolutionOnlyThreads.map((t) => t.id)];
   if (threadIds.length > 0) {

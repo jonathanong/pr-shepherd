@@ -1,4 +1,5 @@
 import type { FetchResult } from "./resolve.mts";
+import { buildPrShepherdCommand, type CliRunner } from "../cli/runner.mts";
 
 /**
  * Build the numbered triage/fix/resolve instruction steps for the agent to follow.
@@ -8,6 +9,7 @@ import type { FetchResult } from "./resolve.mts";
 export function buildFetchInstructions(
   prNumber: number,
   result: Omit<FetchResult, "instructions">,
+  runner?: CliRunner,
 ): string[] {
   const {
     actionableThreads,
@@ -62,8 +64,20 @@ export function buildFetchInstructions(
   }
 
   if (hasSuggestions) {
+    const commitSuggestionCommand = buildPrShepherdCommand(
+      [
+        "commit-suggestion",
+        String(prNumber),
+        "--thread-id",
+        "<id>",
+        "--message",
+        "<one-sentence headline>",
+        "--format=json",
+      ],
+      { runner },
+    ).text;
     instructions.push(
-      `For each Actionable thread marked \`[suggestion]\` in \`## Actionable Review Threads\` above: run \`npx pr-shepherd commit-suggestion ${prNumber} --thread-id <id> --message "<one-sentence headline>" --format=json\` to retrieve the patch and suggested commit. The CLI does not mutate the working tree — apply the patch yourself (run \`git apply\` with the diff shown, or edit the file directly using the line range), then stage the listed file and run the suggested \`git commit\` from the \`## Instructions\` section. Include the thread ID in \`--resolve-thread-ids\` in the resolve command below (the thread is not auto-resolved). If the patch fails to apply (drift since the suggestion was written), fall through to the manual fix step. Do not retry the same \`commit-suggestion\` invocation.`,
+      `For each Actionable thread marked \`[suggestion]\` in \`## Actionable Review Threads\` above: run \`${commitSuggestionCommand}\` to retrieve the patch and suggested commit. The CLI does not mutate the working tree — apply the patch yourself (run \`git apply\` with the diff shown, or edit the file directly using the line range), then stage the listed file and run the suggested \`git commit\` from the \`## Instructions\` section. Include the thread ID in \`--resolve-thread-ids\` in the resolve command below (the thread is not auto-resolved). If the patch fails to apply (drift since the suggestion was written), fall through to the manual fix step. Do not retry the same \`commit-suggestion\` invocation.`,
     );
   }
 
@@ -101,8 +115,13 @@ export function buildFetchInstructions(
         ? ` Review-summary IDs (\`PRR_…\` from \`## Review summaries\`) go into \`--minimize-comment-ids\`.`
         : "";
 
+  const resolveCommand = `${
+    buildPrShepherdCommand(["resolve", String(prNumber)], {
+      runner,
+    }).text
+  } [--resolve-thread-ids <ids>] [--minimize-comment-ids <ids>] [--dismiss-review-ids <ids> --message "<reason>"]`;
   instructions.push(
-    `Run \`npx pr-shepherd resolve ${prNumber} [--resolve-thread-ids <ids>] [--minimize-comment-ids <ids>] [--dismiss-review-ids <ids> --message "<reason>"]\` with only the non-empty flag subsets. Skip the command entirely if all three ID lists are empty.${requireShaHint}${dismissNote}`,
+    `Run \`${resolveCommand}\` with only the non-empty flag subsets. Skip the command entirely if all three ID lists are empty.${requireShaHint}${dismissNote}`,
   );
 
   instructions.push(

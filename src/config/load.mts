@@ -3,8 +3,13 @@ import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { parse } from "yaml";
 import builtins from "../config.json" with { type: "json" };
+import { parseCliRunner } from "../cli/runner.mts";
 
 export interface PrShepherdConfig {
+  cli?: {
+    /** Command runner used in generated prompts. `auto` detects pnpm/yarn/npm from package metadata. */
+    runner: "auto" | "npx" | "pnpm" | "yarn";
+  };
   iterate: {
     cooldownSeconds: number;
     fixAttemptsPerThread: number;
@@ -17,6 +22,8 @@ export interface PrShepherdConfig {
     minimizeApprovals: boolean;
   };
   watch: {
+    /** /loop polling interval, e.g. "4m". */
+    interval: string;
     readyDelayMinutes: number;
   };
   resolve: {
@@ -83,7 +90,7 @@ function deepMerge(
   return result;
 }
 
-const defaults: PrShepherdConfig = builtins;
+const defaults = builtins as PrShepherdConfig;
 
 const configCache = new Map<string, PrShepherdConfig>();
 
@@ -104,6 +111,19 @@ export function loadConfig(): PrShepherdConfig {
       defaults as unknown as Record<string, unknown>,
       parsed,
     ) as unknown as PrShepherdConfig;
+    // Validate cli and watch at load time so misconfigurations are caught once
+    // with the rc file path in context, rather than during instruction rendering.
+    if (config.cli === null || Array.isArray(config.cli) || typeof config.cli !== "object") {
+      throw new Error(
+        `Invalid config: cli must be a plain object, got ${JSON.stringify(config.cli)}`,
+      );
+    }
+    config.cli.runner = parseCliRunner(config.cli.runner);
+    if (typeof config.watch?.interval !== "string" || !/^\d+[smhd]$/.test(config.watch.interval)) {
+      throw new Error(
+        `Invalid config: watch.interval must be a duration string like "4m" or "1h", got ${JSON.stringify(config.watch?.interval)}`,
+      );
+    }
     configCache.set(cwd, config);
     return config;
   } catch (err) {

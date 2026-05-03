@@ -98,19 +98,20 @@ export async function handleIterate(args: string[]): Promise<void> {
     noAutoCancelActionable,
   });
 
-  const projectionOpts = { runtime, readyDelaySuffix };
+  const projectionOpts = {
+    runtime,
+    readyDelaySuffix,
+    retryInterval: cfg.watch.interval,
+    runner: cfg.cli?.runner,
+  };
   if (globalOpts.format === "json") {
     const output = globalOpts.verbose
       ? projectIterateVerbose(result, projectionOpts)
       : projectIterateLean(result, projectionOpts);
     process.stdout.write(`${JSON.stringify(output)}\n`);
   } else {
-    process.stdout.write(
-      `${formatIterateResult(result, {
-        verbose: globalOpts.verbose,
-        ...projectionOpts,
-      })}\n`,
-    );
+    const text = formatIterateResult(result, { verbose: globalOpts.verbose, ...projectionOpts });
+    process.stdout.write(`${text}\n`);
   }
 
   process.exitCode = iterateActionToExitCode(result.action);

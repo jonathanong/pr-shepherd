@@ -105,7 +105,7 @@ export interface ResolveCommand {
   requiresHeadSha: boolean;
   /** Whether the model must substitute $DISMISS_MESSAGE with a specific description of the fix. */
   requiresDismissMessage: boolean;
-  /** True when any mutation flag was appended (threads/comments/reviews). False for a bare `npx pr-shepherd resolve <PR>` with nothing to do. Callers use this to gate emitting a "run the resolve command" instruction — coupling to argv length would break silently if the base argv ever grew a global flag. */
+  /** True when any mutation flag was appended (threads/comments/reviews). False for a bare runner-specific `pr-shepherd resolve <PR>` with nothing to do. Callers use this to gate emitting a "run the resolve command" instruction — coupling to argv length would break silently if the base argv ever grew a global flag. */
   hasMutations: boolean;
 }
 

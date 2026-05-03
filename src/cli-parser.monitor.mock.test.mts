@@ -46,6 +46,7 @@ function getStdout(): string {
 const MONITOR_RESULT = {
   prNumber: 42,
   loopTag: "#pr-shepherd-loop:pr=42:",
+  loopArgs: "4m",
   reusableCommand: "npx pr-shepherd 42",
   loopPrompt: "#pr-shepherd-loop:pr=42:\nBODY",
 };
@@ -91,7 +92,9 @@ describe("main — monitor", () => {
     expect(mockRunMonitor).toHaveBeenCalledWith(expect.objectContaining({ runtime: "codex" }));
     const out = getStdout();
     expect(out).toContain("Reusable command: `npx pr-shepherd 42`");
-    expect(out).toContain("before each rerun, pick a fresh sleep/timeout between 1 and 4 minutes");
+    expect(out).toContain(
+      "keep cycling with `npx pr-shepherd 42` about every configured interval (4m)",
+    );
     expect(out).not.toContain("Invoke the `/loop` skill");
   });
 
@@ -101,7 +104,7 @@ describe("main — monitor", () => {
     const parsed = JSON.parse(out.trim());
     expect(parsed.prNumber).toBe(42);
     expect(parsed.loopTag).toBe("#pr-shepherd-loop:pr=42:");
-    expect(parsed.loopArgs).toBeUndefined();
+    expect(parsed.loopArgs).toBe("4m");
     expect(parsed.reusableCommand).toBeUndefined();
     expect(
       parsed.instructions.some((inst: string) =>
@@ -116,7 +119,7 @@ describe("main — monitor", () => {
     const parsed = JSON.parse(getStdout().trim());
     expect(parsed.reusableCommand).toBe("npx pr-shepherd 42");
     expect(parsed.instructions.join("\n")).toContain(
-      "before each rerun, pick a fresh sleep/timeout between 1 and 4 minutes",
+      "keep cycling with `npx pr-shepherd 42` about every configured interval (4m)",
     );
   });
 
