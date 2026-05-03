@@ -2,11 +2,34 @@
 
 [← README](../README.md)
 
-Three Claude Code skills are included in the plugin. The CLI can also emit Codex-compatible monitor instructions when called from Codex (`AGENT=codex` or `CODEX_CI=1`).
+Three Claude Code skills are included in the Claude plugin. A separate Codex plugin ships one umbrella `pr-shepherd` skill for check, resolve, monitor, and iterate workflows. The CLI can also emit Codex-compatible monitor instructions when called from Codex (`AGENT=codex` or `CODEX_CI=1`).
 
 ## Codex setup
 
-Codex does not install or run the Claude plugin skills. Install the CLI in the repository where Codex will work:
+Codex does not install or run the Claude plugin skills.
+
+Install the Codex plugin marketplace from GitHub:
+
+```sh
+codex plugin marketplace add jonathanong/pr-shepherd
+```
+
+Or pin a branch/tag/ref:
+
+```sh
+codex plugin marketplace add jonathanong/pr-shepherd --ref main
+```
+
+For local development, point Codex at a checkout:
+
+```sh
+git clone https://github.com/jonathanong/pr-shepherd ~/.codex/plugin-sources/pr-shepherd
+codex plugin marketplace add ~/.codex/plugin-sources/pr-shepherd
+```
+
+After adding the marketplace, open the Codex plugin directory, choose the `jonathanong` marketplace, and install/enable `pr-shepherd`. The marketplace root must contain `.agents/plugins/marketplace.json` and `plugins/pr-shepherd/`.
+
+Then install the CLI in the repository where Codex will work:
 
 ```sh
 npm install --save-dev pr-shepherd
@@ -19,6 +42,8 @@ export AGENT=codex
 ```
 
 Run `npx pr-shepherd monitor <PR>` once to bootstrap the workflow. Follow the output's `## Instructions`, then keep an active Codex goal cycling the emitted `npx pr-shepherd <PR>` command every `watch.interval` (default 4m) until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). Codex does not provide the Claude `/loop` scheduler in this workflow.
+
+The Codex plugin skill handles PR-number discovery, one-off check/resolve commands, and open-ended goal setup. It still delegates policy and state transitions to the CLI output's own `## Instructions` section.
 
 ## `/pr-shepherd:monitor`
 

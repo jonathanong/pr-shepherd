@@ -1,0 +1,33 @@
+{
+  "name": "pr-shepherd",
+  "version": "0.12.1",
+  "description": "Autonomous PR CI monitor and review-comment resolver for Codex.",
+  "author": {
+    "name": "Jonathan Ong",
+    "email": "jonathanrichardong@gmail.com",
+    "url": "https://github.com/jonathanong"
+  },
+  "homepage": "https://github.com/jonathanong/pr-shepherd",
+  "repository": "https://github.com/jonathanong/pr-shepherd",
+  "license": "MIT",
+  "keywords": ["github", "pull-request", "ci", "code-review", "automation", "codex"],
+  "skills": "../skills/",
+  "interface": {
+    "displayName": "pr-shepherd",
+    "shortDescription": "Monitor PR CI and review comments from Codex",
+    "longDescription": "Use pr-shepherd from Codex to check pull requests, resolve review feedback, and keep explicit iterate cycles running until a PR is ready, merged, closed, or escalated.",
+    "developerName": "Jonathan Ong",
+    "category": "Coding",
+    "capabilities": ["Interactive", "Write"],
+    "websiteURL": "https://github.com/jonathanong/pr-shepherd",
+    "privacyPolicyURL": "https://github.com/jonathanong/pr-shepherd",
+    "termsOfServiceURL": "https://github.com/jonathanong/pr-shepherd",
+    "defaultPrompt": [
+      "Check this PR with pr-shepherd",
+      "Run pr-shepherd until this PR is ready",
+      "Resolve this PR's review comments"
+    ],
+    "brandColor": "#2563EB",
+    "screenshots": []
+  }
+}
