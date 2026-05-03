@@ -224,11 +224,15 @@ This repo ships two `marketplace.json` files that serve different install flows:
 
 ### For Codex
 
-Codex does not use the Claude plugin or `/pr-shepherd:*` slash commands. Install the CLI where Codex will run it, then call `npx pr-shepherd` directly:
+Codex uses the repo-shipped Codex plugin rather than the Claude plugin or `/pr-shepherd:*` slash commands. The plugin provides one umbrella `pr-shepherd` skill for check, resolve, monitor, and iterate workflows.
+
+Install the CLI where Codex will run it:
 
 ```bash
 npm install --save-dev pr-shepherd
 ```
+
+Then install or enable the Codex plugin from this repo's local marketplace entry at `.agents/plugins/marketplace.json`. The plugin only installs the skill; it does not install the CLI into target repositories.
 
 If your Codex environment does not already set `CODEX_CI=1`, set `AGENT=codex` so `pr-shepherd` emits Codex-compatible instructions instead of Claude `/loop` instructions:
 
@@ -242,7 +246,7 @@ Then start a PR monitor from Codex:
 npx pr-shepherd monitor 42
 ```
 
-Follow the output's `## Instructions`. The monitor bootstrap runs one tick and prints the reusable follow-up command, usually:
+Or ask Codex to use the `pr-shepherd` skill, for example: `run pr-shepherd until this PR is ready`. Follow the output's `## Instructions`. The monitor bootstrap runs one tick and prints the reusable follow-up command, usually:
 
 ```bash
 npx pr-shepherd 42
