@@ -111,7 +111,7 @@ When `false` (default), approval reviews are surfaced under `## Approvals (surfa
 
 ## `watch`
 
-These values are read by the `/pr-shepherd:monitor` skill and iterate loop. The loop interval itself is dynamic and not configurable: Claude and Codex choose a fresh 1-4 minute delay for each nonterminal recurrence.
+The ready-delay value is consumed by the iterate loop. The monitor bootstrap itself is interval-free; Claude and Codex choose a fresh 1-4 minute delay for each nonterminal recurrence.
 
 ### `watch.readyDelayMinutes` — default `10`
 

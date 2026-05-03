@@ -37,8 +37,9 @@ Loop tag: `#pr-shepherd-loop:pr=123:`
 
 #pr-shepherd-loop:pr=123:
 
-**IMPORTANT — recurrence rules:** Do not call ScheduleWakeup or /loop. End the turn
-after completing the actions below. The dynamic cron job handles the next fire.
+**IMPORTANT — recurrence rules:** Do not call ScheduleWakeup or /loop. Let `/loop`
+choose a fresh 1-4 minute interval for each recurrence. End the turn after completing
+the actions below. The cron job handles the next fire.
 
 Run in a single Bash call:
   npx pr-shepherd 123

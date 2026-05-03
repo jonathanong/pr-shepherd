@@ -13,7 +13,7 @@ Codex does not provide `/loop` scheduling in this workflow. When `pr-shepherd` d
 Claude Code lifecycle:
 
 1. **User runs `/pr-shepherd:monitor <PR>`**
-   - The skill runs `npx pr-shepherd monitor <PR>`, which reads `watch.*` config and emits a bootstrap Markdown block.
+   - The skill runs `npx pr-shepherd monitor <PR>`, which emits an interval-free dynamic scheduling bootstrap block.
    - The skill follows `## Instructions` in that output: checks for an existing loop (dedup), then invokes the `/loop` skill with `args` set to the full `## Loop prompt` body and no fixed interval prefix.
 
 2. **`/loop` schedules cron ticks**
