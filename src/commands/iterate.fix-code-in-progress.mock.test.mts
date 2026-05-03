@@ -249,7 +249,7 @@ describe("fix_code — in-progress run cancellation", () => {
     }
   });
 
-  it("inProgressRunIds is populated for comment-only fixes because instructions include a push", async () => {
+  it("inProgressRunIds is empty for comment-only fixes because no push is guaranteed", async () => {
     const inProgressCheck = {
       name: "ci",
       status: "IN_PROGRESS" as const,
@@ -297,8 +297,9 @@ describe("fix_code — in-progress run cancellation", () => {
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       expect(result.fix.actionableComments).toHaveLength(1);
-      expect(result.fix.inProgressRunIds).toEqual(["run-in-comment-only"]);
-      expect(result.fix.instructions[0]).toMatch(/Cancel in-progress CI runs first/);
+      expect(result.fix.inProgressRunIds).toHaveLength(0);
+      expect(result.fix.instructions.join("\n")).not.toMatch(/Cancel in-progress CI runs first/);
+      expect(result.fix.instructions.join("\n")).not.toMatch(/Rebase and push/);
     }
   });
 });

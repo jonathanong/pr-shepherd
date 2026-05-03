@@ -111,11 +111,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const { changesRequestedReviews } = report;
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
   const hasGuaranteedSupersedingPush =
-    threads.length > 0 ||
-    actionableComments.length > 0 ||
-    checks.length > 0 ||
-    changesRequestedReviews.length > 0 ||
-    hasConflicts;
+    threads.length > 0 || checks.length > 0 || changesRequestedReviews.length > 0 || hasConflicts;
   const inProgressRunIds = hasGuaranteedSupersedingPush
     ? buildInProgressRunIds(report, cancelledSet)
     : [];
