@@ -4,9 +4,9 @@
 
 ## Overview
 
-The `/pr-shepherd:monitor <PR>` slash command starts a Claude Code cron loop that polls PR status at the configured interval (default `4m`, set via `watch.interval`). This document explains how all the pieces fit together.
+The `/pr-shepherd:monitor <PR>` slash command starts a Claude Code cron loop that polls PR status on a dynamic cadence. This document explains how all the pieces fit together.
 
-Codex does not provide `/loop` scheduling in this workflow. When `pr-shepherd` detects Codex (`AGENT=codex` or `CODEX_CI=1`), `monitor` output tells Codex to run explicit iterate ticks with the reusable `npx pr-shepherd <PR>` command every `watch.interval` (default 4m) until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures).
+Codex does not provide `/loop` scheduling in this workflow. When `pr-shepherd` detects Codex (`AGENT=codex` or `CODEX_CI=1`), `monitor` output tells Codex to run explicit iterate ticks with the reusable `npx pr-shepherd <PR>` command. Before each rerun, Codex picks a fresh sleep/timeout between 1 and 4 minutes until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures).
 
 ## Lifecycle
 
@@ -14,10 +14,10 @@ Claude Code lifecycle:
 
 1. **User runs `/pr-shepherd:monitor <PR>`**
    - The skill runs `npx pr-shepherd monitor <PR>`, which reads `watch.*` config and emits a bootstrap Markdown block.
-   - The skill follows `## Instructions` in that output: checks for an existing loop (dedup), then invokes the `/loop` skill with `args` built as the interval/flags value from the `Loop args` line concatenated with a blank line and the full `## Loop prompt` body.
+   - The skill follows `## Instructions` in that output: checks for an existing loop (dedup), then invokes the `/loop` skill with `args` set to the full `## Loop prompt` body and no fixed interval prefix.
 
 2. **`/loop` schedules cron ticks**
-   - `/loop` schedules a tick at the interval from config (default `4m`, configurable via `watch.interval`).
+   - `/loop` schedules dynamic ticks. Claude chooses a fresh interval between 1 and 4 minutes for each recurrence.
    - The loop runs until the `cancel` action fires or the user cancels manually.
 
 3. **Each tick runs `pr-shepherd`**
@@ -44,9 +44,9 @@ User                    Main Agent              shepherd iterate
  |                          |                        |
  |-- /pr-shepherd:monitor <PR> ------> |                        |
  |                          |-- CronCreate           |
- |                          |   every <interval>     |
+ |                          |   dynamic 1-4m         |
  |                          |                        |
- |            [cron tick every <interval>]           |
+ |            [dynamic cron tick]                    |
  |                          |-- iterate <PR> ------> |
  |                          |                        |-- GraphQL fetch
  |                          |                        |-- classify
@@ -67,4 +67,4 @@ User                    Main Agent              shepherd iterate
 
 - The cron prompt does not fetch GitHub directly — it consumes only the structured output emitted by `shepherd iterate` (text by default, or JSON with `--format=json`; both carry the same information). The `fix_code` action includes GitHub-derived excerpts (threads, comments, check output), but the full GraphQL response is never read by the loop.
 - Code changes (fix_code, rebase) are handled inline by the cron prompt — no separate agent is spawned.
-- The loop interval (default `4m`) and the ready-delay (default 10 minutes) are read from `watch.interval` and `watch.readyDelayMinutes` in `.pr-shepherdrc.yml`. There is no per-invocation override — change the config file to adjust these values. See [ready-delay.md](ready-delay.md) and [configuration.md](configuration.md).
+- The loop interval is dynamic and not configurable. The ready-delay (default 10 minutes) is read from `watch.readyDelayMinutes` in `.pr-shepherdrc.yml`. See [ready-delay.md](ready-delay.md) and [configuration.md](configuration.md).

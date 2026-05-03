@@ -17,7 +17,6 @@ export interface PrShepherdConfig {
     minimizeApprovals: boolean;
   };
   watch: {
-    interval: string;
     readyDelayMinutes: number;
   };
   resolve: {

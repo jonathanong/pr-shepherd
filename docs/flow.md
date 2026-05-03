@@ -5,8 +5,8 @@ flowchart TD
   U(["/pr-shepherd:monitor PR"]) --> SC["/pr-shepherd:monitor slash command"]
   SC -->|CronList| EX{Loop exists<br/>for this PR?}
   EX -->|yes| NOW[Run iterate once<br/>inline and act]
-  EX -->|no| CREATE[CronCreate:<br/>every 4m]
-  CREATE --> CRON[(cron tick)]
+  EX -->|no| CREATE[CronCreate:<br/>dynamic 1-4m]
+  CREATE --> CRON[(dynamic cron tick)]
   NOW --> ITER
   CRON --> ITER[pr-shepherd<br/>iterate PR]
 

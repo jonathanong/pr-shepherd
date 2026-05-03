@@ -13,13 +13,12 @@ import {
  */
 export function projectIterateLean(
   result: IterateResult,
-  opts?: { runtime?: AgentRuntime; readyDelaySuffix?: string; retryInterval?: string },
+  opts?: { runtime?: AgentRuntime; readyDelaySuffix?: string },
 ): unknown {
   const runtime = opts?.runtime ?? "claude";
   const readyDelaySuffix = opts?.readyDelaySuffix;
-  const retryInterval = opts?.retryInterval;
   const simpleInstructions = (r: Exclude<IterateResult, { action: "fix_code" }>) =>
-    buildSimpleIterateInstructions(r, runtime, readyDelaySuffix, retryInterval);
+    buildSimpleIterateInstructions(r, runtime, readyDelaySuffix);
   const base: Record<string, unknown> = {
     action: result.action,
     pr: result.pr,
@@ -118,7 +117,6 @@ export function projectIterateLean(
               result.pr,
               runtime,
               readyDelaySuffix,
-              retryInterval,
             ),
           }),
         },
@@ -151,11 +149,10 @@ export function projectIterateLean(
 
 export function projectIterateVerbose(
   result: IterateResult,
-  opts?: { runtime?: AgentRuntime; readyDelaySuffix?: string; retryInterval?: string },
+  opts?: { runtime?: AgentRuntime; readyDelaySuffix?: string },
 ): unknown {
   const runtime = opts?.runtime ?? "claude";
   const readyDelaySuffix = opts?.readyDelaySuffix;
-  const retryInterval = opts?.retryInterval;
   if (result.action === "fix_code") {
     return {
       ...result,
@@ -166,7 +163,6 @@ export function projectIterateVerbose(
           result.pr,
           runtime,
           readyDelaySuffix,
-          retryInterval,
         ),
       },
     };
@@ -178,6 +174,6 @@ export function projectIterateVerbose(
   return {
     ...result,
     ...log,
-    instructions: buildSimpleIterateInstructions(result, runtime, readyDelaySuffix, retryInterval),
+    instructions: buildSimpleIterateInstructions(result, runtime, readyDelaySuffix),
   };
 }

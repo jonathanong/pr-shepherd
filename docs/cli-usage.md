@@ -242,7 +242,7 @@ WAIT: 3 passing, 0 in-progress — 540s until auto-cancel
 1. End this iteration — the next cron fire will recheck.
 ```
 
-When Codex output is selected, the `[WAIT]` body omits the `until auto-cancel` countdown and the instruction tells Codex to keep the active goal running with the reusable command. For example: ``Continue the active Codex goal — wait about the configured interval (4m), then rerun `npx pr-shepherd 42` to recheck.`` If the current command used `--ready-delay`, the rerun command includes the same flag.
+When Codex output is selected, the `[WAIT]` body omits the `until auto-cancel` countdown and the instruction tells Codex to keep the active goal running with the reusable command. For example: ``Continue the active Codex goal — pick a fresh sleep/timeout between 1 and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.`` If the current command used `--ready-delay`, the rerun command includes the same flag.
 
 Example for `[FIX_CODE]` (richest action):
 
@@ -299,9 +299,9 @@ Exit codes: `0` wait/cooldown/mark_ready · `1` fix_code · `2` cancel · `3` es
 
 ### pr-shepherd monitor [PR]
 
-Bootstrap command used by the Claude `/pr-shepherd:monitor` skill and by Codex directly. Reads `watch.interval` from config and emits the monitor prompt body plus a short `Loop args` line (the interval).
+Bootstrap command used by the Claude `/pr-shepherd:monitor` skill and by Codex directly. Emits the monitor prompt body for dynamic scheduling.
 
-By default, output targets Claude Code and tells the monitor skill how to reuse an existing `/loop` or start a new one. When Codex is detected (`AGENT=codex` or `CODEX_CI=1`), output omits Cron and `/loop` instructions and instead tells Codex to run explicit iterate ticks every `watch.interval` (default 4m) until a terminal condition.
+By default, output targets Claude Code and tells the monitor skill how to reuse an existing `/loop` or start a new one without a fixed interval. When Codex is detected (`AGENT=codex` or `CODEX_CI=1`), output omits Cron and `/loop` instructions and instead tells Codex to run explicit iterate ticks after a fresh 1-4 minute sleep/timeout until a terminal condition.
 
 ```sh
 npx pr-shepherd monitor        # infer PR from current branch
@@ -314,7 +314,6 @@ npx pr-shepherd monitor 42
 # PR #42 [MONITOR]
 
 Loop tag: `#pr-shepherd-loop:pr=42:`
-Loop args: `4m`
 
 ## Loop prompt
 
@@ -326,12 +325,10 @@ Loop args: `4m`
 ## Instructions
 
 1. Run `CronList`. If any job's prompt contains `#pr-shepherd-loop:pr=42:`, run the `## Loop prompt` body once inline (as if it were a cron tick) then stop — do not create a duplicate loop.
-2. Otherwise, invoke the `/loop` skill via the Skill tool. Build the `args` parameter as: only the value inside the backticks on the `Loop args` line above (the interval — not the `Loop args:` label), then a blank line, then the full `## Loop prompt` body.
+2. Otherwise, invoke the `/loop` skill via the Skill tool with the full `## Loop prompt` body as `args`. Do not prefix an interval; let `/loop` choose dynamically within the 1-4 minute range stated in the prompt.
 ```
 
-Codex output includes the same PR, tag, interval, prompt body, and `## Instructions` shape, but the instructions say to run the loop prompt once and keep cycling with `npx pr-shepherd 42` every `Loop args` interval instead of creating or cancelling a `/loop`.
-
-The loop interval comes from `watch.interval` in `.pr-shepherdrc.yml` or the built-in default. Use `--format=json` to inspect the raw values programmatically.
+Codex output includes the same PR, tag, prompt body, and `## Instructions` shape, but the instructions say to run the loop prompt once and keep cycling with `npx pr-shepherd 42` after choosing a fresh 1-4 minute sleep/timeout instead of creating or cancelling a `/loop`.
 
 Exit code: `0`
 

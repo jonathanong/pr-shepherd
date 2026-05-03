@@ -4,33 +4,20 @@ vi.mock("../github/client.mts", () => ({
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
 }));
 
-vi.mock("../config/load.mts", () => ({
-  loadConfig: vi.fn(),
-}));
-
 import { runMonitor, formatMonitorResult, type MonitorResult } from "./monitor.mts";
-import { loadConfig } from "../config/load.mts";
-import type { PrShepherdConfig } from "../config/load.mts";
-
-const defaultConfig = {
-  watch: { interval: "4m", readyDelayMinutes: 10 },
-} as unknown as PrShepherdConfig;
 
 describe("runMonitor", () => {
   beforeEach(() => {
-    vi.mocked(loadConfig).mockReturnValue(defaultConfig);
+    vi.clearAllMocks();
   });
 
-  it("returns prNumber, loopTag, loopArgs, loopPrompt for explicit PR", async () => {
+  it("returns prNumber, loopTag, loopPrompt for explicit PR", async () => {
     const result = await runMonitor({ format: "text", prNumber: 99 });
     expect(result.prNumber).toBe(99);
     expect(result.loopTag).toBe("#pr-shepherd-loop:pr=99:");
-    expect(result.loopArgs).toBe("4m");
     expect(result.loopPrompt).toContain("#pr-shepherd-loop:pr=99:");
     expect(result.loopPrompt).toContain("npx pr-shepherd 99");
     expect(result.reusableCommand).toBe("npx pr-shepherd 99");
-    // loopArgs is a short one-liner — not the combined invocation string
-    expect(result.loopArgs).not.toContain("npx pr-shepherd");
   });
 
   it("loopPrompt body is not doubled — key phrases appear exactly once", async () => {
@@ -42,23 +29,6 @@ describe("runMonitor", () => {
   it("infers PR number from branch when none provided", async () => {
     const result = await runMonitor({ format: "text" });
     expect(result.prNumber).toBe(42);
-  });
-
-  it("throws a clear error when interval is not a valid duration string", async () => {
-    vi.mocked(loadConfig).mockReturnValue({
-      watch: { interval: "every 4 minutes", readyDelayMinutes: 10 },
-    } as unknown as PrShepherdConfig);
-    await expect(runMonitor({ format: "text", prNumber: 42 })).rejects.toThrow(
-      "watch.interval must be a duration string",
-    );
-  });
-
-  it("respects config override for interval", async () => {
-    vi.mocked(loadConfig).mockReturnValue({
-      watch: { interval: "8m", readyDelayMinutes: 10 },
-    } as unknown as PrShepherdConfig);
-    const result = await runMonitor({ format: "text", prNumber: 42 });
-    expect(result.loopArgs).toBe("8m");
   });
 
   it("includes --ready-delay in loop prompt when readyDelaySuffix is valid", async () => {
@@ -80,7 +50,7 @@ describe("runMonitor", () => {
   it("builds a Codex prompt without /loop or Cron instructions", async () => {
     const result = await runMonitor({ format: "text", prNumber: 42, runtime: "codex" });
     expect(result.loopPrompt).toContain("Codex recurrence rules");
-    expect(result.loopPrompt).toContain("wait about the configured interval (4m)");
+    expect(result.loopPrompt).toContain("pick a fresh sleep/timeout between 1 and 4 minutes");
     expect(result.loopPrompt).toContain("Stop only when Shepherd emits `[CANCEL]`");
     expect(result.loopPrompt).toContain("npx pr-shepherd 42");
     expect(result.loopPrompt).not.toContain("CronList");
@@ -117,17 +87,16 @@ describe("formatMonitorResult", () => {
   const fixture: MonitorResult = {
     prNumber: 42,
     loopTag: "#pr-shepherd-loop:pr=42:",
-    loopArgs: "4m",
     reusableCommand: "npx pr-shepherd 42",
     loopPrompt:
-      "#pr-shepherd-loop:pr=42:\n\n**IMPORTANT — recurrence rules:**\n- **Do NOT call `ScheduleWakeup` or `/loop`.** This session is fired by a recurring cron job. Either call creates a duplicate runner, causing concurrent git operations and `.git/index.lock` collisions.\n- End the turn cleanly after completing the actions below. The cron job handles the next fire.\n\n**Self-dedup:** Run `CronList`. If more than one job contains `#pr-shepherd-loop:pr=42:`, keep the lowest job ID and `CronDelete` the rest (ignore errors — a concurrent runner may have already deleted them).\n\nRun in a single Bash call:\n  npx pr-shepherd 42\n\nExit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with `# PR #42 [`), log the first line of stderr and continue — do not cancel the loop. The next cron fire will retry.\n\nThe output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Every output ends with a `## Instructions` section — follow those numbered steps exactly.",
+      "#pr-shepherd-loop:pr=42:\n\n**IMPORTANT — recurrence rules:**\n- **Do NOT call `ScheduleWakeup` or `/loop`.** This session is fired by a recurring cron job. Either call creates a duplicate runner, causing concurrent git operations and `.git/index.lock` collisions.\n- This prompt is scheduled dynamically. Let `/loop` choose the next interval, constrained to a fresh timeout between 1 and 4 minutes for each recurrence.\n- End the turn cleanly after completing the actions below. The cron job handles the next fire.\n\n**Self-dedup:** Run `CronList`. If more than one job contains `#pr-shepherd-loop:pr=42:`, keep the lowest job ID and `CronDelete` the rest (ignore errors — a concurrent runner may have already deleted them).\n\nRun in a single Bash call:\n  npx pr-shepherd 42\n\nExit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with `# PR #42 [`), log the first line of stderr and continue — do not cancel the loop. The next cron fire will retry.\n\nThe output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Every output ends with a `## Instructions` section — follow those numbered steps exactly.",
   };
 
-  it("emits MONITOR heading, loop tag, loop args, loop prompt, and instructions", () => {
+  it("emits MONITOR heading, loop tag, loop prompt, and instructions", () => {
     const md = formatMonitorResult(fixture);
     expect(md).toContain("# PR #42 [MONITOR]");
     expect(md).toContain("Loop tag: `#pr-shepherd-loop:pr=42:`");
-    expect(md).toContain("Loop args: `4m`");
+    expect(md).not.toContain("Loop args:");
     expect(md).toContain("## Loop prompt");
     expect(md).toContain("## Instructions");
   });
@@ -141,9 +110,7 @@ describe("formatMonitorResult", () => {
     const md = formatMonitorResult(codexFixture, { runtime: "codex" });
     expect(md).toContain("Reusable command: `npx pr-shepherd 42`");
     expect(md).toContain("Run the `## Loop prompt` body once inline now.");
-    expect(md).toContain(
-      "keep cycling with `npx pr-shepherd 42` about every configured interval (4m)",
-    );
+    expect(md).toContain("before each rerun, pick a fresh sleep/timeout between 1 and 4 minutes");
     expect(md).not.toContain("Invoke the `/loop` skill");
     expect(md).not.toContain("CronList");
   });

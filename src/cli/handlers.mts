@@ -98,7 +98,7 @@ export async function handleIterate(args: string[]): Promise<void> {
     noAutoCancelActionable,
   });
 
-  const projectionOpts = { runtime, readyDelaySuffix, retryInterval: cfg.watch.interval };
+  const projectionOpts = { runtime, readyDelaySuffix };
   if (globalOpts.format === "json") {
     const output = globalOpts.verbose
       ? projectIterateVerbose(result, projectionOpts)
