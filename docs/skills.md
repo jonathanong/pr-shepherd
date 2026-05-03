@@ -47,7 +47,7 @@ The Codex plugin skill handles PR-number discovery, one-off check/resolve comman
 
 ## `/pr-shepherd:monitor`
 
-Start continuous CI monitoring for a PR in Claude Code. Runs `npx pr-shepherd monitor <PR>` to get a pre-built dynamic `/loop` bootstrap block. Claude starts `/loop` with no fixed interval; each nonterminal tick schedules the next wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240. The loop stops after the PR is merged/closed, Shepherd escalates, or the configured ready-delay elapses.
+Start continuous CI monitoring for a PR in Claude Code. Runs `npx pr-shepherd monitor <PR>` to get a pre-built dynamic `/loop` bootstrap block. The bootstrap checks scheduled tasks for an existing loop tag before starting a new task. Claude starts `/loop` with no fixed interval; each nonterminal tick schedules the next wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240. The loop stops after the PR is merged/closed, Shepherd escalates, or the configured ready-delay elapses.
 
 In Codex, run the CLI directly instead of the Claude slash command. `npx pr-shepherd monitor <PR>` emits explicit iterate instructions instead of `/loop` setup. After the bootstrap step, rerun the emitted `npx pr-shepherd <PR>` command after a fresh 1-4 minute sleep/timeout while the goal remains active.
 

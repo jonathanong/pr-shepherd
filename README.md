@@ -48,7 +48,8 @@ Run in a single Bash call:
 
 ## Instructions
 
-1. Invoke the /loop skill with the full ## Loop prompt body and no fixed interval.
+1. List scheduled tasks. If one already contains the loop tag, run the ## Loop prompt inline and stop.
+2. Otherwise, invoke the /loop skill with the full ## Loop prompt body and no fixed interval.
 ```
 
 Each iteration calls `npx pr-shepherd <PR>`, which provides actionable feedback directly to the agent:

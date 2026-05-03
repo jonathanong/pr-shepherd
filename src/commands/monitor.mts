@@ -123,6 +123,7 @@ function buildLoopPrompt(
     "",
     "**IMPORTANT — dynamic recurrence rules:**",
     "- This prompt runs in dynamic `/loop` mode. Do not invoke `/loop` again from inside this prompt; that creates a duplicate runner.",
+    `- At the start of each tick, list scheduled tasks. If more than one active task prompt contains \`${loopTag}\`, keep one task and cancel the duplicates before continuing.`,
     "- If Shepherd's `## Instructions` tell you to continue or end a nonterminal iteration, end the turn by calling `ScheduleWakeup` with `delaySeconds` between 60 and 240 and this same `## Loop prompt` body.",
     "- If Shepherd emits `[CANCEL]` or `[ESCALATE]`, follow its `## Instructions` and do not call `ScheduleWakeup`.",
     "",
@@ -143,6 +144,7 @@ function buildMonitorInstructions(result: MonitorResult, runtime: AgentRuntime):
     ];
   }
   return [
-    "Invoke the `/loop` skill via the Skill tool with the full `## Loop prompt` body as `args`. Do not prefix an interval; this enters dynamic mode, where the prompt schedules each next wakeup with `ScheduleWakeup`.",
+    `List scheduled tasks. If an active task prompt already contains \`${result.loopTag}\`, run the \`## Loop prompt\` body once inline now and stop; if multiple tasks contain it, cancel duplicates first.`,
+    "If no active task contains the loop tag, invoke the `/loop` skill via the Skill tool with the full `## Loop prompt` body as `args`. Do not prefix an interval; this enters dynamic mode, where the prompt schedules each next wakeup with `ScheduleWakeup`.",
   ];
 }

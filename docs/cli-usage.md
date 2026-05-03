@@ -301,7 +301,7 @@ Exit codes: `0` wait/cooldown/mark_ready · `1` fix_code · `2` cancel · `3` es
 
 Bootstrap command used by the Claude `/pr-shepherd:monitor` skill and by Codex directly. Emits the monitor prompt body for dynamic scheduling.
 
-By default, output targets Claude Code and tells the monitor skill how to start dynamic `/loop` mode without a fixed interval. Dynamic recurrence is `ScheduleWakeup`-based: each nonterminal tick schedules the next wakeup with `delaySeconds` between 60 and 240. When Codex is detected (`AGENT=codex` or `CODEX_CI=1`), output omits `/loop` instructions and instead tells Codex to run explicit iterate ticks after a fresh 1-4 minute sleep/timeout until a terminal condition.
+By default, output targets Claude Code and tells the monitor skill how to reuse an existing scheduled task with the same loop tag or start dynamic `/loop` mode without a fixed interval. Dynamic recurrence is `ScheduleWakeup`-based: each nonterminal tick schedules the next wakeup with `delaySeconds` between 60 and 240. When Codex is detected (`AGENT=codex` or `CODEX_CI=1`), output omits `/loop` instructions and instead tells Codex to run explicit iterate ticks after a fresh 1-4 minute sleep/timeout until a terminal condition.
 
 ```sh
 npx pr-shepherd monitor        # infer PR from current branch
@@ -324,7 +324,8 @@ Loop tag: `#pr-shepherd-loop:pr=42:`
 
 ## Instructions
 
-1. Invoke the `/loop` skill via the Skill tool with the full `## Loop prompt` body as `args`. Do not prefix an interval; this enters dynamic mode, where the prompt schedules each next wakeup with `ScheduleWakeup`.
+1. List scheduled tasks. If an active task prompt already contains `#pr-shepherd-loop:pr=42:`, run the `## Loop prompt` body once inline now and stop; if multiple tasks contain it, cancel duplicates first.
+2. If no active task contains the loop tag, invoke the `/loop` skill via the Skill tool with the full `## Loop prompt` body as `args`. Do not prefix an interval; this enters dynamic mode, where the prompt schedules each next wakeup with `ScheduleWakeup`.
 ```
 
 Codex output includes the same PR, tag, prompt body, and `## Instructions` shape, but the instructions say to run the loop prompt once and keep cycling with `npx pr-shepherd 42` after choosing a fresh 1-4 minute sleep/timeout instead of creating or cancelling a `/loop`.
