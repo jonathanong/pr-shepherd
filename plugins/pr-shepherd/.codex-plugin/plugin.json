@@ -11,7 +11,7 @@
   "repository": "https://github.com/jonathanong/pr-shepherd",
   "license": "MIT",
   "keywords": ["github", "pull-request", "ci", "code-review", "automation", "codex"],
-  "skills": "./skills/",
+  "skills": "../skills/",
   "interface": {
     "displayName": "pr-shepherd",
     "shortDescription": "Monitor PR CI and review comments from Codex",
