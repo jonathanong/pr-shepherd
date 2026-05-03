@@ -27,7 +27,13 @@ export function resolveCliRunner(
 }
 
 export function parseCliRunner(runner: unknown): CliRunner {
-  const value = typeof runner === "string" ? runner.trim() : "auto";
+  if (runner === undefined) return "auto";
+  if (typeof runner !== "string") {
+    throw new Error(
+      `Invalid config: cli.runner must be one of "auto", "npx", "pnpm", or "yarn", got ${JSON.stringify(runner)}`,
+    );
+  }
+  const value = runner.trim();
   if (value === "auto" || value === "npx" || value === "pnpm" || value === "yarn") return value;
   throw new Error(
     `Invalid config: cli.runner must be one of "auto", "npx", "pnpm", or "yarn", got ${JSON.stringify(runner)}`,

@@ -88,6 +88,13 @@ describe("resolveCliRunner", () => {
   it("rejects unsupported config values", () => {
     expect(() => parseCliRunner("bun")).toThrow("cli.runner");
   });
+
+  it("rejects non-string, non-undefined config values", () => {
+    expect(() => parseCliRunner(true)).toThrow("cli.runner");
+    expect(() => parseCliRunner(1)).toThrow("cli.runner");
+    expect(() => parseCliRunner(null)).toThrow("cli.runner");
+    expect(parseCliRunner(undefined)).toBe("auto");
+  });
 });
 
 describe("buildPrShepherdCommand", () => {
