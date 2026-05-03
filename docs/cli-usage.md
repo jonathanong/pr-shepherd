@@ -324,8 +324,7 @@ Loop tag: `#pr-shepherd-loop:pr=42:`
 
 ## Instructions
 
-1. Call `CronList` and find active scheduled tasks whose prompt contains `#pr-shepherd-loop:pr=42:`. If one matching task exists, run the `## Loop prompt` body once inline now and stop. If multiple matching tasks exist, keep the matching task with the lowest stable task ID, cancel every other matching task with `CronDelete`, then run the `## Loop prompt` body once inline now and stop.
-2. If no active task contains the loop tag, invoke the `/loop` skill via the Skill tool with the full `## Loop prompt` body as `args`. Do not prefix an interval; this enters dynamic mode, where the prompt schedules each next wakeup with `ScheduleWakeup`.
+1. Invoke the `/loop` skill via the Skill tool with the full `## Loop prompt` body as `args`. Do not prefix an interval; this enters dynamic mode, where the prompt schedules each next wakeup with `ScheduleWakeup`.
 ```
 
 Codex output includes the same PR, tag, prompt body, and `## Instructions` shape, but the instructions say to run the loop prompt once and keep cycling with `npx pr-shepherd 42` after choosing a fresh 1-4 minute sleep/timeout instead of creating or cancelling a `/loop`.

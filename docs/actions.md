@@ -168,7 +168,7 @@ CANCEL: PR #42 is merged — stopping monitor
 
 ## Instructions
 
-1. Stop — do not schedule another dynamic wakeup. If this loop was started with a fixed-interval `/loop` schedule, cancel the cron job now with `CronDelete`.
+1. Stop — do not schedule another dynamic wakeup. If this loop was started with a fixed-interval `/loop` schedule, call `CronList`, find the job whose prompt contains `#pr-shepherd-loop:pr=42:`, and cancel it with `CronDelete`.
 2. Stop.
 ```
 
@@ -474,7 +474,7 @@ After fixing manually, rerun `/pr-shepherd:monitor 42` to resume.
 
 ## Instructions
 
-1. Stop — do not schedule another dynamic wakeup. If this loop was started with a fixed-interval `/loop` schedule, cancel the cron job now with `CronDelete`.
+1. Stop — do not schedule another dynamic wakeup. If this loop was started with a fixed-interval `/loop` schedule, call `CronList`, find the job whose prompt contains `#pr-shepherd-loop:pr=<N>:`, and cancel it with `CronDelete`.
 2. Stop — the PR needs human direction before monitoring can resume.
 ```
 
