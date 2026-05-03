@@ -15,11 +15,10 @@ import type { IterateResultFixCode } from "../types.mts";
 export function formatFixCodeResult(
   header: string,
   result: IterateResultFixCode,
-  opts?: { runtime?: AgentRuntime; readyDelaySuffix?: string; retryInterval?: string },
+  opts?: { runtime?: AgentRuntime; readyDelaySuffix?: string },
 ): string {
   const runtime = opts?.runtime ?? "claude";
   const readyDelaySuffix = opts?.readyDelaySuffix;
-  const retryInterval = opts?.retryInterval;
   const sections: string[] = [header];
 
   if (result.fix.threads.length > 0) {
@@ -148,13 +147,7 @@ export function formatFixCodeResult(
   sections.push("## Instructions");
   sections.push(
     numberInstructions(
-      adaptFixCodeInstructions(
-        result.fix.instructions,
-        result.pr,
-        runtime,
-        readyDelaySuffix,
-        retryInterval,
-      ),
+      adaptFixCodeInstructions(result.fix.instructions, result.pr, runtime, readyDelaySuffix),
     ),
   );
 

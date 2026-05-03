@@ -6,7 +6,6 @@
     "minimizeApprovals": false
   },
   "watch": {
-    "interval": "4m",
     "readyDelayMinutes": 10
   },
   "resolve": {

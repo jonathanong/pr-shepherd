@@ -14,7 +14,6 @@ iterate:
   minimizeApprovals: false # set true to also minimize APPROVED-state reviews
 
 watch:
-  interval: 4m # /loop cadence
   readyDelayMinutes: 10 # settle window after PR first becomes READY
 
 resolve:
@@ -48,7 +47,6 @@ actions:
 | `iterate.fixAttemptsPerThread`       | `3`                                       | Max fix attempts per unresolved thread before `escalate`                                                                               |
 | `iterate.stallTimeoutMinutes`        | `30`                                      | Minutes the loop may repeat the same action without progress before `escalate` with `stall-timeout`; `0` disables                      |
 | `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination). All `COMMENTED` summaries are always minimized. |
-| `watch.interval`                     | `"4m"`                                    | Monitor tick interval (tuned to Claude's 5-min prompt-cache TTL)                                                                       |
 | `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                                                              |
 | `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                                       |
 | `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                                                             |
@@ -113,18 +111,7 @@ When `false` (default), approval reviews are surfaced under `## Approvals (surfa
 
 ## `watch`
 
-These values are read by the `/pr-shepherd:monitor` skill when setting up the `/loop`.
-
-### `watch.interval` — default `"4m"`
-
-The `/loop` polling cadence. Format: `"Nm"` for minutes, `"Nh"` for hours.
-
-The default of 4 minutes is chosen to keep Claude's prompt cache warm — the cache TTL is 5 minutes, so a 4-minute loop means each tick still benefits from a warm cache.
-
-- **Raise** if you want a lighter polling footprint.
-- **Lower** if you want faster detection of CI state changes (costs more API budget).
-
-> These `watch.*` keys are the only way to tune the loop interval and ready-delay. The `/pr-shepherd:monitor` skill reads them from config via `npx pr-shepherd monitor` — there are no per-invocation flags.
+The ready-delay value is consumed by the iterate loop. The monitor bootstrap itself is interval-free; Claude and Codex choose a fresh 1-4 minute delay for each nonterminal recurrence.
 
 ### `watch.readyDelayMinutes` — default `10`
 

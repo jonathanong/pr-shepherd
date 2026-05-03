@@ -32,14 +32,14 @@ At a high level, to start the monitor, the skill/command invokes a CLI that retu
 # PR #123 [MONITOR]
 
 Loop tag: `#pr-shepherd-loop:pr=123:`
-Loop args: `4m`
 
 ## Loop prompt
 
 #pr-shepherd-loop:pr=123:
 
-**IMPORTANT — recurrence rules:** Do not call ScheduleWakeup or /loop. End the turn
-after completing the actions below. The cron job handles the next fire.
+**IMPORTANT — dynamic recurrence rules:** Do not invoke `/loop` again from inside
+this prompt. For nonterminal iterations, call `ScheduleWakeup` with `delaySeconds`
+between 60 and 240 and this same prompt body.
 
 Run in a single Bash call:
   npx pr-shepherd 123
@@ -48,8 +48,7 @@ Run in a single Bash call:
 
 ## Instructions
 
-1. Run `CronList`. If any job's prompt contains the loop tag, run the ## Loop prompt inline then stop.
-2. Otherwise, invoke the /loop skill with Loop args and the full ## Loop prompt body.
+1. Invoke the /loop skill with the full ## Loop prompt body and no fixed interval.
 ```
 
 Each iteration calls `npx pr-shepherd <PR>`, which provides actionable feedback directly to the agent:
@@ -127,7 +126,7 @@ Some other workflow improvements:
 
 Recommendations:
 
-- Run `pr-shepherd` on all your PRs before you go to sleep so that you wake up to reviewable PRs. In Claude Code, `/pr-shepherd:monitor` uses `/loop` and continues working when your rate limit window is reset. In Codex, keep an active goal cycling the reusable `npx pr-shepherd <PR>` command every `watch.interval` (default 4m) until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures).
+- Run `pr-shepherd` on all your PRs before you go to sleep so that you wake up to reviewable PRs. In Claude Code, `/pr-shepherd:monitor` uses dynamic `/loop` scheduling and continues working when your rate limit window is reset. In Codex, keep an active goal cycling the reusable `npx pr-shepherd <PR>` command; before each rerun, pick a fresh sleep/timeout between 1 and 4 minutes until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures).
 - Instruct your agents to write comments in a single review (comment, changes requested, or approved). This allows the review's comments/threads to be minimized or resolved together, keeping your pull request history clean. If you write inline comments outside of a review, each comment would still show up in the pull request history and take up space.
 - Avoid sticky comments as they will continue to be hidden. Instead, just make a new comment, especially on reviews. If you really want sticky comments, instruct your agent to unhide/unminimize them when updating them.
 - Avoid having automation edit comments, reviews, or threads in place because updated items get minimized. Instead, always make a new review, comment, thread, etc.
@@ -144,7 +143,7 @@ Recommendations:
 
 ### Monitor a PR
 
-In Claude Code, creates a cron loop that fires every 4 minutes, checks CI and review comments, fixes issues, and marks the PR ready for review when clean. The loop cancels automatically when the PR is merged or closed.
+In Claude Code, creates a dynamic loop that checks CI and review comments, fixes issues, and marks the PR ready for review when clean. Each recurrence schedules the next wakeup with a fresh interval between 1 and 4 minutes. The loop stops automatically when the PR is merged or closed.
 
 In Codex, run `npx pr-shepherd monitor <PR>` once to emit the goal-friendly recurrence prompt, then follow that prompt. Its reusable follow-up command is `npx pr-shepherd <PR>`.
 
@@ -153,7 +152,6 @@ Claude Code:
 ```
 /pr-shepherd:monitor                     # infer PR from current branch
 /pr-shepherd:monitor 42
-/pr-shepherd:monitor 42 every 8m
 /pr-shepherd:monitor 42 --ready-delay 15m
 ```
 
@@ -193,7 +191,7 @@ See [docs/skills.md](docs/skills.md) for full argument reference.
 
 ## Iterate decision loop
 
-On each tick (4-minute default, tunable via `watch.interval`): fetch PR state in one GraphQL batch → classify CI, comments, and merge status → take one action (`fix_code`, `mark_ready`, `cancel`, `escalate`, `wait`, or `cooldown`). See [docs/iterate-flow.md](docs/iterate-flow.md) for the decision table and [docs/flow.md](docs/flow.md) for the end-to-end flow diagram.
+On each dynamic tick: fetch PR state in one GraphQL batch → classify CI, comments, and merge status → take one action (`fix_code`, `mark_ready`, `cancel`, `escalate`, `wait`, or `cooldown`). Claude and Codex both choose a fresh wait between 1 and 4 minutes for each nonterminal recurrence. See [docs/iterate-flow.md](docs/iterate-flow.md) for the decision table and [docs/flow.md](docs/flow.md) for the end-to-end flow diagram.
 
 ## Install
 
@@ -275,7 +273,7 @@ Or ask Codex to use the `pr-shepherd` skill, for example: `run pr-shepherd until
 npx pr-shepherd 42
 ```
 
-For an active Codex goal, rerun that command every `watch.interval` (default 4m) until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). `npx pr-shepherd iterate 42` remains supported for existing workflows. There is no background `/loop` scheduler in Codex.
+For an active Codex goal, pick a fresh sleep/timeout between 1 and 4 minutes before each rerun until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). `npx pr-shepherd iterate 42` remains supported for existing workflows. There is no background `/loop` scheduler in Codex.
 
 ### Without the plugin
 

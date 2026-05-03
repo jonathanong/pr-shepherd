@@ -34,7 +34,7 @@ Shepherd does **not** classify threads as "actionable" vs "informational" — th
 - Unresolved outdated or minimized threads in `report.threads.resolutionOnly`; these need a GitHub resolve mutation but do not require code edits unless the agent chooses to act on the body.
 - All visible (non-minimized) PR comments in `report.comments.actionable`
 
-The cron prompt reads these and decides what to fix.
+The loop prompt reads these and decides what to fix.
 
 ## First-look items (comment visibility invariant)
 

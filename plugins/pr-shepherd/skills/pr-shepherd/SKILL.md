@@ -1,6 +1,6 @@
 ---
 name: pr-shepherd
-description: 'Codex-only skill for checking, updating, monitoring, or resolving a GitHub pull request with pr-shepherd. Use for requests like "check this PR", "use pr-shepherd", "iterate PR #123", "resolve this PR''s comments", or "run pr-shepherd until this PR is ready". For open-ended requests, create a Codex goal and run explicit `npx --no-install pr-shepherd PR_NUMBER` cycles every configured interval until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` including repeated unchanged CI failures.'
+description: 'Codex-only skill for checking, updating, monitoring, or resolving a GitHub pull request with pr-shepherd. Use for requests like "check this PR", "use pr-shepherd", "iterate PR #123", "resolve this PR''s comments", or "run pr-shepherd until this PR is ready". For open-ended requests, create a Codex goal and run explicit `npx --no-install pr-shepherd PR_NUMBER` cycles, picking a fresh sleep/timeout between 1 and 4 minutes before each rerun until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` including repeated unchanged CI failures.'
 ---
 
 # pr-shepherd
@@ -19,7 +19,7 @@ Codex-only workflow for getting actionable PR updates from `pr-shepherd`.
 2. Decide whether this is one cycle or an open-ended goal.
    - For one-off requests such as "check this PR", "run pr-shepherd once", or "resolve this PR's comments", run one explicit CLI command.
    - For requests such as "continue", "until ready", "until this PR is ready", or "keep iterating", create a Codex goal before the first recurring cycle with this objective:
-     `Run npx --no-install pr-shepherd PR_NUMBER cycles every configured interval until Shepherd emits [CANCEL] for ready-delay completion or PR #PR_NUMBER is merged/closed, or pr-shepherd escalates, including repeated unchanged CI failures.`
+     `Run npx --no-install pr-shepherd PR_NUMBER cycles, picking a fresh sleep/timeout between 1 and 4 minutes before each rerun, until Shepherd emits [CANCEL] for ready-delay completion or PR #PR_NUMBER is merged/closed, or pr-shepherd escalates, including repeated unchanged CI failures.`
 
 3. Verify the CLI is available.
    - In the pr-shepherd source checkout, before any `npx --no-install pr-shepherd` invocation, verify `bin/` and `node_modules/` exist. If either is missing, run:
@@ -41,7 +41,7 @@ Codex-only workflow for getting actionable PR updates from `pr-shepherd`.
 
 6. Do not call `/loop`, `ScheduleWakeup`, `CronCreate`, or `npx pr-shepherd monitor` for recurrence. Codex does explicit `pr-shepherd PR_NUMBER` cycles.
 
-7. For open-ended goal requests, complete the CLI-provided instructions for the current cycle. If the output says to continue the active Codex goal, wait for the configured interval named in the output and run another explicit `pr-shepherd PR_NUMBER` cycle.
+7. For open-ended goal requests, complete the CLI-provided instructions for the current cycle. If the output says to continue the active Codex goal, pick a fresh sleep/timeout between 1 and 4 minutes, wait that long, and run another explicit `pr-shepherd PR_NUMBER` cycle.
 
 8. Do not stop an open-ended goal only because the output is `[WAIT]`, `[COOLDOWN]`, `[MARK_READY]`, or a post-fix CI wait. These are nonterminal Codex recurrence states.
 

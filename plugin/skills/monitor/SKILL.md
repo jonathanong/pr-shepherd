@@ -4,7 +4,18 @@ description: "Start continuous CI monitoring — marks PR ready for review when 
 argument-hint: "[PR number or URL]"
 user-invocable: true
 allowed-tools:
-  ["Bash", "Read", "Grep", "Edit", "Write", "Glob", "Skill", "CronCreate", "CronList", "CronDelete"]
+  [
+    "Bash",
+    "Read",
+    "Grep",
+    "Edit",
+    "Write",
+    "Glob",
+    "Skill",
+    "ScheduleWakeup",
+    "CronList",
+    "CronDelete",
+  ]
 ---
 
 # pr-shepherd monitor — Continuous PR Monitor
