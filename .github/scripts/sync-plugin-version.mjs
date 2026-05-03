@@ -1,3 +1,4 @@
+import { execFileSync } from 'child_process'
 import { readFileSync, writeFileSync } from 'fs'
 
 const version = JSON.parse(readFileSync('package.json', 'utf8')).version
@@ -11,3 +12,6 @@ for (const pluginPath of pluginPaths) {
   plugin.version = version
   writeFileSync(pluginPath, JSON.stringify(plugin, null, 2) + '\n')
 }
+
+const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx'
+execFileSync(npx, ['oxfmt', ...pluginPaths], { stdio: 'inherit' })

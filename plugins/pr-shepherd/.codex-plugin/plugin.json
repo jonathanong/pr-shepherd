@@ -10,14 +10,7 @@
   "homepage": "https://github.com/jonathanong/pr-shepherd",
   "repository": "https://github.com/jonathanong/pr-shepherd",
   "license": "MIT",
-  "keywords": [
-    "github",
-    "pull-request",
-    "ci",
-    "code-review",
-    "automation",
-    "codex"
-  ],
+  "keywords": ["github", "pull-request", "ci", "code-review", "automation", "codex"],
   "skills": "../skills/",
   "interface": {
     "displayName": "pr-shepherd",
@@ -25,10 +18,7 @@
     "longDescription": "Use pr-shepherd from Codex to check pull requests, resolve review feedback, and keep explicit iterate cycles running until a PR is ready, merged, closed, or escalated.",
     "developerName": "Jonathan Ong",
     "category": "Coding",
-    "capabilities": [
-      "Interactive",
-      "Write"
-    ],
+    "capabilities": ["Interactive", "Write"],
     "websiteURL": "https://github.com/jonathanong/pr-shepherd",
     "privacyPolicyURL": "https://github.com/jonathanong/pr-shepherd",
     "termsOfServiceURL": "https://github.com/jonathanong/pr-shepherd",
