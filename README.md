@@ -48,7 +48,7 @@ Run in a single Bash call:
 
 ## Instructions
 
-1. List scheduled tasks. If one already contains the loop tag, run the ## Loop prompt inline and stop.
+1. Call CronList. If one active task prompt already contains the loop tag, run the ## Loop prompt inline and stop. If multiple active task prompts contain the loop tag, keep the lowest task ID, cancel the others with CronDelete, then run the ## Loop prompt inline and stop.
 2. Otherwise, invoke the /loop skill with the full ## Loop prompt body and no fixed interval.
 ```
 

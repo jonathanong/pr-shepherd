@@ -23,6 +23,6 @@ The output is Markdown. The first line is an H1 heading of the form \`# PR #<N> 
 
 ## Instructions
 
-1. List scheduled tasks. If an active task prompt already contains \`#pr-shepherd-loop:pr=42:\`, run the \`## Loop prompt\` body once inline now and stop; if multiple tasks contain it, cancel duplicates first.
+1. Call \`CronList\` and find active scheduled tasks whose prompt contains \`#pr-shepherd-loop:pr=42:\`. If one matching task exists, run the \`## Loop prompt\` body once inline now and stop. If multiple matching tasks exist, keep the matching task with the lowest stable task ID, cancel every other matching task with \`CronDelete\`, then run the \`## Loop prompt\` body once inline now and stop.
 2. If no active task contains the loop tag, invoke the \`/loop\` skill via the Skill tool with the full \`## Loop prompt\` body as \`args\`. Do not prefix an interval; this enters dynamic mode, where the prompt schedules each next wakeup with \`ScheduleWakeup\`."
 `;
