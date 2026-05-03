@@ -34,7 +34,7 @@ In `marketplace.json`:
 
 ## 2. Rename the loop tag
 
-The monitor prompt includes `#pr-shepherd-loop:pr=<N>:` so agents and logs can identify the PR being monitored. Change this string in `skills/monitor/SKILL.md` to avoid conflicts with other installations:
+The monitor prompt includes `#pr-shepherd-loop:pr=<N>:` so agents and logs can identify the PR being monitored. Change this string in `plugin/skills/monitor/SKILL.md` to avoid conflicts with other installations:
 
 ```
 #my-shepherd-loop:pr=<PR_NUMBER>:
