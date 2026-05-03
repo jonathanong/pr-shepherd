@@ -174,7 +174,7 @@ describe("main — iterate text format", () => {
     expect(lines[3]).toBe("");
     expect(lines[4]).toBe("## Instructions");
     expect(lines[5]).toBe("");
-    expect(lines[6]).toMatch(/End this iteration/);
+    expect(lines[6]).toMatch(/Schedule the next dynamic wakeup/);
     // No base/summary lines in default mode
     expect(getStdout()).not.toContain("**status**");
     expect(getStdout()).not.toContain("**summary**");
@@ -195,7 +195,7 @@ describe("main — iterate text format", () => {
     expect(lines[6]).toBe("");
     expect(lines[7]).toBe("## Instructions");
     expect(lines[8]).toBe("");
-    expect(lines[9]).toMatch(/End this iteration/);
+    expect(lines[9]).toMatch(/Schedule the next dynamic wakeup/);
   });
 
   it("wait: heading includes [WAIT] tag, log body follows header, ## Instructions present", async () => {
@@ -205,7 +205,7 @@ describe("main — iterate text format", () => {
     expect(out).toMatch(/^# PR #42 \[WAIT\]\n/);
     expect(out).toContain("WAIT: 0 passing, 1 in-progress");
     expect(out).toContain("## Instructions");
-    expect(out).toContain("1. End this iteration");
+    expect(out).toContain("1. Schedule the next dynamic wakeup");
   });
 
   it("mark_ready: heading includes [MARK_READY] tag and ## Instructions with end-iteration step", async () => {
@@ -218,18 +218,18 @@ describe("main — iterate text format", () => {
     expect(out).toContain("1. The CLI already marked the PR ready for review");
   });
 
-  it("cancel: heading includes [CANCEL] tag with reason and ## Instructions with loop-cancel steps", async () => {
+  it("cancel: heading includes [CANCEL] tag with reason and ## Instructions with stop steps", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain("# PR #42 [CANCEL]");
     expect(out).toContain("— ready-delay-elapsed");
     expect(out).toContain("## Instructions");
-    expect(out).toContain("1. Invoke `/loop cancel` via the Skill tool.");
+    expect(out).toContain("1. Stop — do not schedule another dynamic wakeup.");
     expect(out).toContain("2. Stop.");
   });
 
-  it("escalate: heading, base/summary, humanMessage, then ## Instructions with loop-cancel steps", async () => {
+  it("escalate: heading, base/summary, humanMessage, then ## Instructions with stop steps", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("escalate"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
@@ -237,7 +237,7 @@ describe("main — iterate text format", () => {
     expect(out).toContain("**status** `IN_PROGRESS`");
     expect(out).toContain("⚠️ /pr-shepherd:monitor paused — needs human direction");
     expect(out).toContain("## Instructions");
-    expect(out).toContain("1. Invoke `/loop cancel` via the Skill tool.");
+    expect(out).toContain("1. Stop — do not schedule another dynamic wakeup.");
     expect(out).toContain("2. Stop — the PR needs human direction");
   });
 
@@ -315,7 +315,9 @@ describe("main — iterate text format", () => {
     const parsed = JSON.parse(out);
     expect(parsed.action).toBe("wait");
     expect(parsed.pr).toBe(42);
-    expect(parsed.instructions).toEqual(["End this iteration — the next cron fire will recheck."]);
+    expect(parsed.instructions).toEqual([
+      "Schedule the next dynamic wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240 and the same loop prompt, then end this iteration.",
+    ]);
   });
 
   it("codex json format: emits Codex-specific instructions", async () => {

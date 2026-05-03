@@ -3,12 +3,9 @@
 ```mermaid
 flowchart TD
   U(["/pr-shepherd:monitor PR"]) --> SC["/pr-shepherd:monitor slash command"]
-  SC -->|CronList| EX{Loop exists<br/>for this PR?}
-  EX -->|yes| NOW[Run iterate once<br/>inline and act]
-  EX -->|no| CREATE[CronCreate:<br/>dynamic 1-4m]
-  CREATE --> CRON[(dynamic cron tick)]
-  NOW --> ITER
-  CRON --> ITER[pr-shepherd<br/>iterate PR]
+  SC --> LOOP[/loop dynamic:<br/>no fixed interval]
+  LOOP --> WAKE[(ScheduleWakeup<br/>60-240s)]
+  WAKE --> ITER[pr-shepherd<br/>iterate PR]
 
   ITER --> S1{1. last commit<br/>age lt cooldown?}
   S1 -->|yes| A_COOL([action: cooldown])
@@ -27,15 +24,15 @@ flowchart TD
   S5X --> A_MR([action: mark_ready])
   S5 -->|no| A_W([action: wait])
 
-  A_COOL --> DEC{Cron prompt<br/>acts on action}
+  A_COOL --> DEC{Loop prompt<br/>acts on action}
   A_CAN --> DEC
   A_FIX --> DEC
   A_MR --> DEC
   A_W --> DEC
 
-  DEC -->|cancel| STOP["/loop cancel"]
+  DEC -->|cancel| STOP["stop scheduling"]
   DEC -->|fix_code| FIX[gh run view --log-failed →<br/>rerun or edit+commit →<br/>fetch + rebase + push →<br/>pr-shepherd resolve --require-sha HEAD]
-  FIX --> NEXT[Wait for next tick]
+  FIX --> NEXT[ScheduleWakeup<br/>60-240s]
   DEC -->|other| NEXT
-  NEXT --> CRON
+  NEXT --> WAKE
 ```

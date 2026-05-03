@@ -37,9 +37,9 @@ Loop tag: `#pr-shepherd-loop:pr=123:`
 
 #pr-shepherd-loop:pr=123:
 
-**IMPORTANT — recurrence rules:** Do not call ScheduleWakeup or /loop. Let `/loop`
-choose a fresh 1-4 minute interval for each recurrence. End the turn after completing
-the actions below. The cron job handles the next fire.
+**IMPORTANT — dynamic recurrence rules:** Do not invoke `/loop` again from inside
+this prompt. For nonterminal iterations, call `ScheduleWakeup` with `delaySeconds`
+between 60 and 240 and this same prompt body.
 
 Run in a single Bash call:
   npx pr-shepherd 123
@@ -48,8 +48,7 @@ Run in a single Bash call:
 
 ## Instructions
 
-1. Run `CronList`. If any job's prompt contains the loop tag, run the ## Loop prompt inline then stop.
-2. Otherwise, invoke the /loop skill with the full ## Loop prompt body and no fixed interval.
+1. Invoke the /loop skill with the full ## Loop prompt body and no fixed interval.
 ```
 
 Each iteration calls `npx pr-shepherd <PR>`, which provides actionable feedback directly to the agent:
@@ -144,7 +143,7 @@ Recommendations:
 
 ### Monitor a PR
 
-In Claude Code, creates a dynamic cron loop that checks CI and review comments, fixes issues, and marks the PR ready for review when clean. Each recurrence lets Claude choose a fresh interval between 1 and 4 minutes. The loop cancels automatically when the PR is merged or closed.
+In Claude Code, creates a dynamic loop that checks CI and review comments, fixes issues, and marks the PR ready for review when clean. Each recurrence schedules the next wakeup with a fresh interval between 1 and 4 minutes. The loop stops automatically when the PR is merged or closed.
 
 In Codex, run `npx pr-shepherd monitor <PR>` once to emit the goal-friendly recurrence prompt, then follow that prompt. Its reusable follow-up command is `npx pr-shepherd <PR>`.
 

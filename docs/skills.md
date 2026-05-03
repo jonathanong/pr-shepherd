@@ -47,7 +47,7 @@ The Codex plugin skill handles PR-number discovery, one-off check/resolve comman
 
 ## `/pr-shepherd:monitor`
 
-Start continuous CI monitoring for a PR in Claude Code. Runs `npx pr-shepherd monitor <PR>` to get a pre-built `/loop` bootstrap block, then creates the cron job without a fixed interval. Claude chooses a fresh recurrence between 1 and 4 minutes, calls `pr-shepherd <PR>`, and follows the `## Instructions` in the output. The loop cancels automatically after the PR is merged/closed or after the configured ready-delay.
+Start continuous CI monitoring for a PR in Claude Code. Runs `npx pr-shepherd monitor <PR>` to get a pre-built dynamic `/loop` bootstrap block. Claude starts `/loop` with no fixed interval; each nonterminal tick schedules the next wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240. The loop stops after the PR is merged/closed, Shepherd escalates, or the configured ready-delay elapses.
 
 In Codex, run the CLI directly instead of the Claude slash command. `npx pr-shepherd monitor <PR>` emits explicit iterate instructions instead of `/loop` setup. After the bootstrap step, rerun the emitted `npx pr-shepherd <PR>` command after a fresh 1-4 minute sleep/timeout while the goal remains active.
 
@@ -67,8 +67,6 @@ npx pr-shepherd 42             # subsequent explicit tick
 ```
 
 The ready-delay comes from `watch.readyDelayMinutes` in `.pr-shepherdrc.yml` (default: 10 minutes). The polling interval is dynamic: Claude and Codex choose a fresh 1-4 minute delay for each nonterminal recurrence.
-
-**Loop deduplication:** The CLI output's `## Instructions` handles dedup — the skill checks `CronList` for a job tagged `#pr-shepherd-loop:pr=<N>:` and runs one iteration inline if one already exists, instead of creating a duplicate.
 
 ## `/pr-shepherd:check`
 

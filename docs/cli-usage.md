@@ -239,7 +239,7 @@ WAIT: 3 passing, 0 in-progress — 540s until auto-cancel
 
 ## Instructions
 
-1. End this iteration — the next cron fire will recheck.
+1. Schedule the next dynamic wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240 and the same loop prompt, then end this iteration.
 ```
 
 When Codex output is selected, the `[WAIT]` body omits the `until auto-cancel` countdown and the instruction tells Codex to keep the active goal running with the reusable command. For example: ``Continue the active Codex goal — pick a fresh sleep/timeout between 1 and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.`` If the current command used `--ready-delay`, the rerun command includes the same flag.
@@ -288,7 +288,7 @@ at Object.<anonymous> (src/commands/iterate.test.mts:58:22)
 5. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
 6. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
 7. For any large decisions made, add or update a `## Shepherd Journal` section in the PR description: `gh pr edit 42 --body …`
-8. Stop this iteration — CI needs time to run on the new push before the next tick.
+8. CI needs time to run on the new push. Schedule the next dynamic wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240 and the same loop prompt, then end this iteration.
 ```
 
 See [actions.md](actions.md) for all six actions and their complete output shapes.
@@ -301,7 +301,7 @@ Exit codes: `0` wait/cooldown/mark_ready · `1` fix_code · `2` cancel · `3` es
 
 Bootstrap command used by the Claude `/pr-shepherd:monitor` skill and by Codex directly. Emits the monitor prompt body for dynamic scheduling.
 
-By default, output targets Claude Code and tells the monitor skill how to reuse an existing `/loop` or start a new one without a fixed interval. When Codex is detected (`AGENT=codex` or `CODEX_CI=1`), output omits Cron and `/loop` instructions and instead tells Codex to run explicit iterate ticks after a fresh 1-4 minute sleep/timeout until a terminal condition.
+By default, output targets Claude Code and tells the monitor skill how to start dynamic `/loop` mode without a fixed interval. Dynamic recurrence is `ScheduleWakeup`-based: each nonterminal tick schedules the next wakeup with `delaySeconds` between 60 and 240. When Codex is detected (`AGENT=codex` or `CODEX_CI=1`), output omits `/loop` instructions and instead tells Codex to run explicit iterate ticks after a fresh 1-4 minute sleep/timeout until a terminal condition.
 
 ```sh
 npx pr-shepherd monitor        # infer PR from current branch
@@ -319,13 +319,12 @@ Loop tag: `#pr-shepherd-loop:pr=42:`
 
 #pr-shepherd-loop:pr=42:
 
-**IMPORTANT — recurrence rules:**
+**IMPORTANT — dynamic recurrence rules:**
 ...
 
 ## Instructions
 
-1. Run `CronList`. If any job's prompt contains `#pr-shepherd-loop:pr=42:`, run the `## Loop prompt` body once inline (as if it were a cron tick) then stop — do not create a duplicate loop.
-2. Otherwise, invoke the `/loop` skill via the Skill tool with the full `## Loop prompt` body as `args`. Do not prefix an interval; let `/loop` choose dynamically within the 1-4 minute range stated in the prompt.
+1. Invoke the `/loop` skill via the Skill tool with the full `## Loop prompt` body as `args`. Do not prefix an interval; this enters dynamic mode, where the prompt schedules each next wakeup with `ScheduleWakeup`.
 ```
 
 Codex output includes the same PR, tag, prompt body, and `## Instructions` shape, but the instructions say to run the loop prompt once and keep cycling with `npx pr-shepherd 42` after choosing a fresh 1-4 minute sleep/timeout instead of creating or cancelling a `/loop`.

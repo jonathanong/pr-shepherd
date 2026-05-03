@@ -4,7 +4,7 @@
 
 ## Overview
 
-The `/pr-shepherd:monitor <PR>` slash command starts a Claude Code cron loop that polls PR status on a dynamic cadence. This document explains how all the pieces fit together.
+The `/pr-shepherd:monitor <PR>` slash command starts a Claude Code dynamic loop that polls PR status on an agent-chosen cadence. This document explains how all the pieces fit together.
 
 Codex does not provide `/loop` scheduling in this workflow. When `pr-shepherd` detects Codex (`AGENT=codex` or `CODEX_CI=1`), `monitor` output tells Codex to run explicit iterate ticks with the reusable `npx pr-shepherd <PR>` command. Before each rerun, Codex picks a fresh sleep/timeout between 1 and 4 minutes until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures).
 
@@ -14,25 +14,25 @@ Claude Code lifecycle:
 
 1. **User runs `/pr-shepherd:monitor <PR>`**
    - The skill runs `npx pr-shepherd monitor <PR>`, which emits an interval-free dynamic scheduling bootstrap block.
-   - The skill follows `## Instructions` in that output: checks for an existing loop (dedup), then invokes the `/loop` skill with `args` set to the full `## Loop prompt` body and no fixed interval prefix.
+   - The skill follows `## Instructions` in that output: invokes the `/loop` skill with `args` set to the full `## Loop prompt` body and no fixed interval prefix.
 
-2. **`/loop` schedules cron ticks**
-   - `/loop` schedules dynamic ticks. Claude chooses a fresh interval between 1 and 4 minutes for each recurrence.
-   - The loop runs until the `cancel` action fires or the user cancels manually.
+2. **`/loop` enters dynamic mode**
+   - Dynamic `/loop` is not cron-backed. At the end of each nonterminal tick, the agent calls `ScheduleWakeup` with `delaySeconds` between 60 and 240 using the same loop prompt body.
+   - The loop runs until the `cancel` action fires, Shepherd escalates, or the user cancels manually.
 
 3. **Each tick runs `pr-shepherd`**
-   - The cron prompt runs (single Bash invocation):
+   - The loop prompt runs (single Bash invocation):
      ```bash
      pr-shepherd <PR>
      ```
    - Exit codes 0, 1, 2, and 3 are all valid (not errors).
 
-4. **Cron prompt reads text output and acts**
+4. **Loop prompt reads text output and acts**
    - Reads the `[ACTION]` tag in the first line of stdout (see [actions.md](actions.md) for the output shape).
    - Acts on it inline — no subagent is spawned.
 
-5. **Loop cancels**
-   - When `action === 'cancel'`, the cron prompt invokes `/loop cancel`.
+5. **Loop stops**
+   - When `action === 'cancel'`, the loop prompt does not schedule another wakeup.
    - This happens when the PR is merged/closed OR when the ready-delay has elapsed.
 
 For the full mermaid diagram see [flow.md](flow.md).
@@ -43,10 +43,10 @@ For the full mermaid diagram see [flow.md](flow.md).
 User                    Main Agent              shepherd iterate
  |                          |                        |
  |-- /pr-shepherd:monitor <PR> ------> |                        |
- |                          |-- CronCreate           |
- |                          |   dynamic 1-4m         |
+ |                          |-- /loop dynamic        |
+ |                          |   no fixed interval    |
  |                          |                        |
- |            [dynamic cron tick]                    |
+ |            [ScheduleWakeup 60-240s]               |
  |                          |-- iterate <PR> ------> |
  |                          |                        |-- GraphQL fetch
  |                          |                        |-- classify
@@ -54,7 +54,7 @@ User                    Main Agent              shepherd iterate
  |                          |<-- text [ACTION] ------|
  |                          |                        |
  |           [if cancel]    |                        |
- |                          |-- /loop cancel ------> |
+ |                          |-- stop scheduling ----> |
  |                          |                   [loop stops]
  |           [if fix_code]  |                        |
  |                          |-- fix code             |
@@ -65,6 +65,6 @@ User                    Main Agent              shepherd iterate
 
 ## Notes
 
-- The cron prompt does not fetch GitHub directly — it consumes only the structured output emitted by `shepherd iterate` (text by default, or JSON with `--format=json`; both carry the same information). The `fix_code` action includes GitHub-derived excerpts (threads, comments, check output), but the full GraphQL response is never read by the loop.
-- Code changes (fix_code, rebase) are handled inline by the cron prompt — no separate agent is spawned.
+- The loop prompt does not fetch GitHub directly — it consumes only the structured output emitted by `shepherd iterate` (text by default, or JSON with `--format=json`; both carry the same information). The `fix_code` action includes GitHub-derived excerpts (threads, comments, check output), but the full GraphQL response is never read by the loop.
+- Code changes (fix_code, rebase) are handled inline by the loop prompt — no separate agent is spawned.
 - The loop interval is dynamic and not configurable. The ready-delay (default 10 minutes) is read from `watch.readyDelayMinutes` in `.pr-shepherdrc.yml`. See [ready-delay.md](ready-delay.md) and [configuration.md](configuration.md).

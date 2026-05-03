@@ -33,7 +33,7 @@ updateReadyDelay(pr, isReady, readyDelaySeconds, owner, repo)
 | Non-READY sweep                             | Deleted (countdown resets)                                  |
 | PR merged/closed (step 2.5)                 | Not reached — `updateReadyDelay` is skipped entirely        |
 
-The file is **left in place** when `shouldCancel: true` fires. This prevents the countdown from restarting if the loop somehow continues after the cancel (e.g., a race condition between cron ticks).
+The file is **left in place** when `shouldCancel: true` fires. This prevents the countdown from restarting if the loop somehow continues after the cancel (e.g., a race condition between overlapping dynamic ticks).
 
 ## Clock-skew guard
 

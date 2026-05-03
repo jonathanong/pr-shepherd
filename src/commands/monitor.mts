@@ -23,10 +23,8 @@ export async function runMonitor(opts: MonitorCommandOptions): Promise<MonitorRe
   }
 
   // No space after `#` — `# text` is a CommonMark ATX heading; `#text` is not.
-  // Trailing `:` prevents substring false positives: without it, the dedup grep
-  // for pr=1 would match a cron prompt for pr=135. Both the CronList check in
-  // step 1 of formatMonitorResult's ## Instructions and the in-prompt Self-dedup
-  // block depend on this exact string — don't change the format.
+  // Trailing `:` prevents substring false positives if agents search for this
+  // tag in conversation or task state.
   const loopTag = `#pr-shepherd-loop:pr=${prNumber}:`;
   const reusableCommand = buildIterateCommand(prNumber, opts.readyDelaySuffix);
   const loopPrompt = buildLoopPrompt(prNumber, loopTag, reusableCommand, opts.runtime ?? "claude");
@@ -123,17 +121,15 @@ function buildLoopPrompt(
   return [
     loopTag,
     "",
-    "**IMPORTANT — recurrence rules:**",
-    "- **Do NOT call `ScheduleWakeup` or `/loop`.** This session is fired by a recurring cron job. Either call creates a duplicate runner, causing concurrent git operations and `.git/index.lock` collisions.",
-    "- This prompt is scheduled dynamically. Let `/loop` choose the next interval, constrained to a fresh timeout between 1 and 4 minutes for each recurrence.",
-    "- End the turn cleanly after completing the actions below. The cron job handles the next fire.",
-    "",
-    `**Self-dedup:** Run \`CronList\`. If more than one job contains \`${loopTag}\`, keep the lowest job ID and \`CronDelete\` the rest (ignore errors — a concurrent runner may have already deleted them).`,
+    "**IMPORTANT — dynamic recurrence rules:**",
+    "- This prompt runs in dynamic `/loop` mode. Do not invoke `/loop` again from inside this prompt; that creates a duplicate runner.",
+    "- If Shepherd's `## Instructions` tell you to continue or end a nonterminal iteration, end the turn by calling `ScheduleWakeup` with `delaySeconds` between 60 and 240 and this same `## Loop prompt` body.",
+    "- If Shepherd emits `[CANCEL]` or `[ESCALATE]`, follow its `## Instructions` and do not call `ScheduleWakeup`.",
     "",
     "Run in a single Bash call:",
     `  ${iterateCmd}`,
     "",
-    `Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with \`# PR #${prNumber} [\`), log the first line of stderr and continue — do not cancel the loop. The next cron fire will retry.`,
+    `Exit codes 0–3 are all valid. If the command crashes (non-zero exit, no markdown output starting with \`# PR #${prNumber} [\`), log the first line of stderr and schedule a retry with \`ScheduleWakeup\` using \`delaySeconds\` between 60 and 240.`,
     "",
     "The output is Markdown. The first line is an H1 heading of the form `# PR #<N> [<ACTION>]`. Every output ends with a `## Instructions` section — follow those numbered steps exactly.",
   ].join("\n");
@@ -147,7 +143,6 @@ function buildMonitorInstructions(result: MonitorResult, runtime: AgentRuntime):
     ];
   }
   return [
-    `Run \`CronList\`. If any job's prompt contains \`${result.loopTag}\`, run the \`## Loop prompt\` body once inline (as if it were a cron tick) then stop — do not create a duplicate loop.`,
-    "Otherwise, invoke the `/loop` skill via the Skill tool with the full `## Loop prompt` body as `args`. Do not prefix an interval; let `/loop` choose dynamically within the 1-4 minute range stated in the prompt.",
+    "Invoke the `/loop` skill via the Skill tool with the full `## Loop prompt` body as `args`. Do not prefix an interval; this enters dynamic mode, where the prompt schedules each next wakeup with `ScheduleWakeup`.",
   ];
 }

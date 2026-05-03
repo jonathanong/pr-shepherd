@@ -7,6 +7,8 @@ import {
 import type { IterateResult } from "../types.mts";
 
 const CODEX_DYNAMIC_RETRY_DELAY = "a fresh sleep/timeout between 1 and 4 minutes";
+const CLAUDE_DYNAMIC_WAKEUP =
+  "Schedule the next dynamic wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240 and the same loop prompt, then end this iteration.";
 
 export function buildSimpleIterateInstructions(
   result: Exclude<IterateResult, { action: "fix_code" }>,
@@ -19,32 +21,32 @@ export function buildSimpleIterateInstructions(
       return [
         runtime === "codex"
           ? `Continue the active Codex goal — pick ${CODEX_DYNAMIC_RETRY_DELAY}, wait that long, then rerun \`${rerunCommand}\` after CI starts reporting.`
-          : "End this iteration — the next cron fire will recheck once CI starts reporting.",
+          : `CI still needs time to start reporting. ${CLAUDE_DYNAMIC_WAKEUP}`,
       ];
     case "wait":
       return [
         runtime === "codex"
           ? `Continue the active Codex goal — pick ${CODEX_DYNAMIC_RETRY_DELAY}, wait that long, then rerun \`${rerunCommand}\` to recheck.`
-          : "End this iteration — the next cron fire will recheck.",
+          : CLAUDE_DYNAMIC_WAKEUP,
       ];
     case "mark_ready":
       return [
         runtime === "codex"
           ? `The CLI already marked the PR ready for review. Continue the active Codex goal until the ready-delay completes — pick ${CODEX_DYNAMIC_RETRY_DELAY}, wait that long, then rerun \`${rerunCommand}\` to recheck.`
-          : "The CLI already marked the PR ready for review — end this iteration.",
+          : `The CLI already marked the PR ready for review. ${CLAUDE_DYNAMIC_WAKEUP}`,
       ];
     case "cancel":
       return [
         runtime === "codex"
           ? "Stop — no recurring Codex monitor is running to cancel."
-          : "Invoke `/loop cancel` via the Skill tool.",
+          : "Stop — do not schedule another dynamic wakeup.",
         "Stop.",
       ];
     case "escalate":
       return [
         runtime === "codex"
           ? "Stop — no recurring Codex monitor is running to cancel."
-          : "Invoke `/loop cancel` via the Skill tool.",
+          : "Stop — do not schedule another dynamic wakeup.",
         "Stop — the PR needs human direction before monitoring can resume.",
       ];
   }
@@ -56,9 +58,20 @@ export function adaptFixCodeInstructions(
   runtime: AgentRuntime,
   readyDelaySuffix?: string,
 ): string[] {
-  if (runtime !== "codex") return instructions;
   const rerunCommand = buildCodexIterateCommand(pr, readyDelaySuffix);
   return instructions.map((instruction) => {
+    if (runtime !== "codex") {
+      if (instruction === FIX_INSTRUCTION_STOP_AFTER_PUSH) {
+        return `CI needs time to run on the new push. ${CLAUDE_DYNAMIC_WAKEUP}`;
+      }
+      if (
+        instruction === FIX_INSTRUCTION_STOP_BEFORE_NEXT_TICK ||
+        instruction === FIX_INSTRUCTION_END_ITERATION
+      ) {
+        return CLAUDE_DYNAMIC_WAKEUP;
+      }
+      return instruction;
+    }
     if (instruction === FIX_INSTRUCTION_STOP_AFTER_PUSH) {
       return `Continue the active Codex goal — CI needs time to run on the new push. Pick ${CODEX_DYNAMIC_RETRY_DELAY}, wait that long, then rerun \`${rerunCommand}\` to recheck.`;
     }
