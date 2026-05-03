@@ -177,7 +177,7 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
     commitSuggestionsEnabled: cfg.actions.commitSuggestions,
   };
 
-  return { ...result, instructions: buildFetchInstructions(prNumber, result) };
+  return { ...result, instructions: buildFetchInstructions(prNumber, result, cfg.cli?.runner) };
 }
 
 export async function runResolveMutate(

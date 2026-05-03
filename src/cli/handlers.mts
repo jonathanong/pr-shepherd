@@ -98,7 +98,12 @@ export async function handleIterate(args: string[]): Promise<void> {
     noAutoCancelActionable,
   });
 
-  const projectionOpts = { runtime, readyDelaySuffix };
+  const projectionOpts = {
+    runtime,
+    readyDelaySuffix,
+    retryInterval: cfg.watch.interval,
+    runner: cfg.cli?.runner,
+  };
   if (globalOpts.format === "json") {
     const output = globalOpts.verbose
       ? projectIterateVerbose(result, projectionOpts)
@@ -174,9 +179,7 @@ export async function handleMonitor(args: string[]): Promise<void> {
 
 export async function handleStatus(args: string[]): Promise<void> {
   const { global: globalOpts } = parseCommonArgs(args);
-
   const prNumbers = parseStatusPrNumbers(args);
-
   if (prNumbers.length === 0) {
     process.stderr.write("Usage: pr-shepherd status PR1 [PR2 …]\n");
     process.exitCode = 1;

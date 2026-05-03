@@ -355,6 +355,25 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     expect(joined).toContain("does not mutate the working tree");
   });
 
+  it("instructions use configured package runner", async () => {
+    mockLoadConfig.mockReturnValueOnce({
+      resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 }, fetchReviewSummaries: true },
+      actions: { autoResolveOutdated: true, autoMarkReady: true, commitSuggestions: true },
+      cli: { runner: "yarn" },
+    } as ReturnType<typeof loadConfig>);
+    const thread = makeThread({
+      body: "```suggestion\nconst x = 1;\n```",
+      path: "src/foo.ts",
+      line: 5,
+    });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
+
+    const result = await runResolveFetch(BASE_OPTS);
+    const joined = result.instructions.join("\n");
+    expect(joined).toContain("yarn run pr-shepherd commit-suggestion 42");
+    expect(joined).toContain("yarn run pr-shepherd resolve 42");
+  });
+
   it("instructions omit commit-suggestion step when commitSuggestionsEnabled is false", async () => {
     mockLoadConfig.mockReturnValueOnce({
       resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 }, fetchReviewSummaries: true },

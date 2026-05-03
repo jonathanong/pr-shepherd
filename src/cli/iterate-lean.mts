@@ -5,6 +5,13 @@ import {
   adaptFixCodeInstructions,
   buildSimpleIterateInstructions,
 } from "./iterate-instructions.mts";
+import type { CliRunner } from "./runner.mts";
+interface IterateProjectionOptions {
+  runtime?: AgentRuntime;
+  readyDelaySuffix?: string;
+  retryInterval?: string;
+  runner?: CliRunner;
+}
 
 /**
  * Project an IterateResult to a lean JSON shape for the default (non-verbose) output.
@@ -13,12 +20,14 @@ import {
  */
 export function projectIterateLean(
   result: IterateResult,
-  opts?: { runtime?: AgentRuntime; readyDelaySuffix?: string },
+  opts?: IterateProjectionOptions,
 ): unknown {
   const runtime = opts?.runtime ?? "claude";
   const readyDelaySuffix = opts?.readyDelaySuffix;
+  const retryInterval = opts?.retryInterval;
+  const runner = opts?.runner;
   const simpleInstructions = (r: Exclude<IterateResult, { action: "fix_code" }>) =>
-    buildSimpleIterateInstructions(r, runtime, readyDelaySuffix);
+    buildSimpleIterateInstructions(r, runtime, readyDelaySuffix, retryInterval, runner);
   const base: Record<string, unknown> = {
     action: result.action,
     pr: result.pr,
@@ -117,6 +126,8 @@ export function projectIterateLean(
               result.pr,
               runtime,
               readyDelaySuffix,
+              retryInterval,
+              runner,
             ),
           }),
         },
@@ -149,10 +160,12 @@ export function projectIterateLean(
 
 export function projectIterateVerbose(
   result: IterateResult,
-  opts?: { runtime?: AgentRuntime; readyDelaySuffix?: string },
+  opts?: IterateProjectionOptions,
 ): unknown {
   const runtime = opts?.runtime ?? "claude";
   const readyDelaySuffix = opts?.readyDelaySuffix;
+  const retryInterval = opts?.retryInterval;
+  const runner = opts?.runner;
   if (result.action === "fix_code") {
     return {
       ...result,
@@ -163,6 +176,8 @@ export function projectIterateVerbose(
           result.pr,
           runtime,
           readyDelaySuffix,
+          retryInterval,
+          runner,
         ),
       },
     };
@@ -174,6 +189,12 @@ export function projectIterateVerbose(
   return {
     ...result,
     ...log,
-    instructions: buildSimpleIterateInstructions(result, runtime, readyDelaySuffix),
+    instructions: buildSimpleIterateInstructions(
+      result,
+      runtime,
+      readyDelaySuffix,
+      retryInterval,
+      runner,
+    ),
   };
 }

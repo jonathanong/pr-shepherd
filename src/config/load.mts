@@ -5,6 +5,10 @@ import { parse } from "yaml";
 import builtins from "../config.json" with { type: "json" };
 
 export interface PrShepherdConfig {
+  cli: {
+    /** Command runner used in generated prompts. `auto` detects pnpm/yarn/npm from package metadata. */
+    runner: "auto" | "npx" | "pnpm" | "yarn";
+  };
   iterate: {
     cooldownSeconds: number;
     fixAttemptsPerThread: number;
@@ -83,7 +87,7 @@ function deepMerge(
   return result;
 }
 
-const defaults: PrShepherdConfig = builtins;
+const defaults = builtins as PrShepherdConfig;
 
 const configCache = new Map<string, PrShepherdConfig>();
 

@@ -38,6 +38,11 @@ vi.mock("../github/batch.mts", () => ({
   fetchPrBatch: vi.fn(),
 }));
 
+const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
+vi.mock("../config/load.mts", () => ({
+  loadConfig: mockLoadConfig,
+}));
+
 import { runCommitSuggestion } from "./commit-suggestion.mts";
 import { getCurrentBranch, getCurrentPrNumber } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
@@ -123,6 +128,10 @@ function setupHappyPath(): void {
     throw new Error(`Unexpected execFile call: ${cmd} ${args.join(" ")}`);
   });
 }
+
+beforeEach(() => {
+  mockLoadConfig.mockReturnValue({ cli: { runner: "auto" } });
+});
 
 // ---------------------------------------------------------------------------
 // Validation
@@ -387,6 +396,18 @@ describe("runCommitSuggestion — happy path", () => {
     expect(joined).toContain("git commit");
     expect(joined).toContain("pr-shepherd resolve");
     expect(joined).toContain("git push");
+  });
+
+  it("postActionInstructions use configured package runner", async () => {
+    mockLoadConfig.mockReturnValue({ cli: { runner: "pnpm" } });
+    const result = await runCommitSuggestion({
+      ...GLOBAL_OPTS,
+      threadId: "PRRT_x",
+      message: "fix",
+    });
+    expect(result.postActionInstructions.join("\n")).toContain(
+      "pnpm exec pr-shepherd resolve 42 --resolve-thread-ids PRRT_x",
+    );
   });
 
   it("multi-line range: uses startLine from thread", async () => {

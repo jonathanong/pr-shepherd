@@ -20,7 +20,7 @@ Example Workflow:
 
 `pr-shepherd` optimizes token management, rate limits, and agentic orchestration by moving **ALL** deterministic logic and prompts to code via a CLI tool, enshrining what would be a large skill or command prompt (of which the agent would inevitably make mistakes) into the code and returning a clear, actionable prompt.
 
-The CLI adapts monitor instructions to the calling agent. Claude Code gets `/loop` bootstrap instructions. Codex is detected with `AGENT=codex` or the current Codex CLI signal `CODEX_CI=1`; it gets a reusable `npx pr-shepherd <PR>` command and explicit goal-friendly iterate instructions because Codex does not provide `/loop` scheduling in this workflow.
+The CLI adapts monitor instructions to the calling agent. Claude Code gets `/loop` bootstrap instructions. Codex is detected with `AGENT=codex` or the current Codex CLI signal `CODEX_CI=1`; it gets a reusable pr-shepherd command and explicit goal-friendly iterate instructions because Codex does not provide `/loop` scheduling in this workflow. Generated commands use `cli.runner` from `.pr-shepherdrc.yml`: `auto` (default), `npx`, `pnpm`, or `yarn`.
 
 At a high level, to start the monitor, the skill/command invokes a CLI that returns a prompt to be ingested by the agent _(schematic — paraphrased for brevity; actual output is more detailed)_:
 
@@ -51,7 +51,7 @@ Run in a single Bash call:
 1. Invoke the /loop skill with the full ## Loop prompt body and no fixed interval.
 ```
 
-Each iteration calls `npx pr-shepherd <PR>`, which provides actionable feedback directly to the agent:
+Each iteration calls `pr-shepherd <PR>` through the selected package runner, which provides actionable feedback directly to the agent:
 
 ```
 > npx pr-shepherd 123
@@ -126,7 +126,7 @@ Some other workflow improvements:
 
 Recommendations:
 
-- Run `pr-shepherd` on all your PRs before you go to sleep so that you wake up to reviewable PRs. In Claude Code, `/pr-shepherd:monitor` uses dynamic `/loop` scheduling and continues working when your rate limit window is reset. In Codex, keep an active goal cycling the reusable `npx pr-shepherd <PR>` command; before each rerun, pick a fresh sleep/timeout between 1 and 4 minutes until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures).
+- Run `pr-shepherd` on all your PRs before you go to sleep so that you wake up to reviewable PRs. In Claude Code, `/pr-shepherd:monitor` uses `/loop` and continues working when your rate limit window is reset. In Codex, keep an active goal cycling the reusable command every `watch.interval` (default 4m) until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures).
 - Instruct your agents to write comments in a single review (comment, changes requested, or approved). This allows the review's comments/threads to be minimized or resolved together, keeping your pull request history clean. If you write inline comments outside of a review, each comment would still show up in the pull request history and take up space.
 - Avoid sticky comments as they will continue to be hidden. Instead, just make a new comment, especially on reviews. If you really want sticky comments, instruct your agent to unhide/unminimize them when updating them.
 - Avoid having automation edit comments, reviews, or threads in place because updated items get minimized. Instead, always make a new review, comment, thread, etc.
@@ -145,7 +145,7 @@ Recommendations:
 
 In Claude Code, creates a dynamic loop that checks CI and review comments, fixes issues, and marks the PR ready for review when clean. Each recurrence schedules the next wakeup with a fresh interval between 1 and 4 minutes. The loop stops automatically when the PR is merged or closed.
 
-In Codex, run `npx pr-shepherd monitor <PR>` once to emit the goal-friendly recurrence prompt, then follow that prompt. Its reusable follow-up command is `npx pr-shepherd <PR>`.
+In Codex, run `pr-shepherd monitor <PR>` once through the repo package runner to emit the goal-friendly recurrence prompt, then follow that prompt. Its reusable follow-up command is emitted by the CLI.
 
 Claude Code:
 
@@ -195,7 +195,7 @@ On each dynamic tick: fetch PR state in one GraphQL batch → classify CI, comme
 
 ## Install
 
-> **Note:** Skill and plugin install methods add the skill definitions only — they do not install the `pr-shepherd` CLI. The skills invoke `npx pr-shepherd`, so you also need the CLI available. If you're using `pr-shepherd` as development tooling for your repo, install it as a dev dependency so `npx` resolves it without prompting:
+> **Note:** Skill and plugin install methods add the skill definitions only — they do not install the `pr-shepherd` CLI. The skills invoke `pr-shepherd` through the repo package runner, so you also need the CLI available. If you're using `pr-shepherd` as development tooling for your repo, install it as a dev dependency so the selected runner resolves it without prompting:
 >
 > ```bash
 > npm install --save-dev pr-shepherd
@@ -273,7 +273,7 @@ Or ask Codex to use the `pr-shepherd` skill, for example: `run pr-shepherd until
 npx pr-shepherd 42
 ```
 
-For an active Codex goal, pick a fresh sleep/timeout between 1 and 4 minutes before each rerun until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). `npx pr-shepherd iterate 42` remains supported for existing workflows. There is no background `/loop` scheduler in Codex.
+For an active Codex goal, rerun that command every `watch.interval` (default 4m) until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). `pr-shepherd iterate 42` remains supported for existing workflows. There is no background `/loop` scheduler in Codex.
 
 ### Without the plugin
 

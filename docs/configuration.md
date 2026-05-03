@@ -7,6 +7,9 @@ pr-shepherd looks for a `.pr-shepherdrc.yml` file starting from the current work
 ## Example
 
 ```yaml
+cli:
+  runner: auto # auto-detect npm/pnpm/yarn for generated commands
+
 iterate:
   cooldownSeconds: 60 # wait 60s after a push before reading CI
   fixAttemptsPerThread: 5 # raise before escalating to manual review
@@ -43,6 +46,7 @@ actions:
 
 | Key                                  | Default                                   | Purpose                                                                                                                                |
 | ------------------------------------ | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `cli.runner`                         | `"auto"`                                  | Package runner used in generated commands (`auto`, `npx`, `pnpm`, or `yarn`)                                                           |
 | `iterate.cooldownSeconds`            | `30`                                      | Wait after a push before reading CI                                                                                                    |
 | `iterate.fixAttemptsPerThread`       | `3`                                       | Max fix attempts per unresolved thread before `escalate`                                                                               |
 | `iterate.stallTimeoutMinutes`        | `30`                                      | Minutes the loop may repeat the same action without progress before `escalate` with `stall-timeout`; `0` disables                      |
@@ -62,6 +66,20 @@ actions:
 ## Agent detection
 
 `pr-shepherd` uses the calling-agent environment only to choose instruction wording. `AGENT=codex` and `CODEX_CI=1` select Codex-compatible monitor output. Other environments keep the default Claude-compatible `/loop` instructions.
+
+---
+
+## `cli`
+
+### `cli.runner` — default `"auto"`
+
+Controls how generated instructions invoke the CLI. `auto` inspects the nearest `package.json` and lockfiles from the current working directory:
+
+- `packageManager: "pnpm@…"` or `pnpm-lock.yaml` -> `pnpm exec pr-shepherd`
+- `packageManager: "yarn@…"` or `yarn.lock` -> `yarn run pr-shepherd`
+- `packageManager: "npm@…"`, `package-lock.json`, or no package-manager signal -> `npx pr-shepherd`
+
+Set `cli.runner` to `npx`, `pnpm`, or `yarn` to force a specific command in monitor prompts, Codex rerun guidance, resolve commands, and commit-suggestion follow-ups.
 
 ---
 
@@ -111,7 +129,18 @@ When `false` (default), approval reviews are surfaced under `## Approvals (surfa
 
 ## `watch`
 
-The ready-delay value is consumed by the iterate loop. The monitor bootstrap itself is interval-free; Claude and Codex choose a fresh 1-4 minute delay for each nonterminal recurrence.
+These values are read by the `/pr-shepherd:monitor` skill when setting up the `/loop`.
+
+### `watch.interval` — default `"4m"`
+
+The `/loop` polling cadence. Format: `"Nm"` for minutes, `"Nh"` for hours.
+
+The default of 4 minutes is chosen to keep Claude's prompt cache warm — the cache TTL is 5 minutes, so a 4-minute loop means each tick still benefits from a warm cache.
+
+- **Raise** if you want a lighter polling footprint.
+- **Lower** if you want faster detection of CI state changes (costs more API budget).
+
+> These `watch.*` keys are the only way to tune the loop interval and ready-delay. The `/pr-shepherd:monitor` skill reads them from config via the selected pr-shepherd runner — there are no per-invocation flags.
 
 ### `watch.readyDelayMinutes` — default `10`
 

@@ -1,4 +1,7 @@
 {
+  "cli": {
+    "runner": "auto"
+  },
   "iterate": {
     "cooldownSeconds": 30,
     "fixAttemptsPerThread": 3,

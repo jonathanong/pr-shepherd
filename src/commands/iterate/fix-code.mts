@@ -18,6 +18,7 @@ import type {
   Review,
   ShepherdReport,
 } from "../../types.mts";
+import type { CliRunner } from "../../cli/runner.mts";
 interface HandleFixCodeContext {
   base: IterateResultBase;
   report: ShepherdReport;
@@ -32,6 +33,7 @@ interface HandleFixCodeContext {
   firstLookSummaries: Review[];
   editedSummaries: Review[];
   surfacedApprovals: Review[];
+  cliRunner?: CliRunner;
 }
 export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateResult> {
   const {
@@ -48,6 +50,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     firstLookSummaries,
     editedSummaries,
     surfacedApprovals,
+    cliRunner,
   } = ctx;
   const failingChecks = report.checks.failing;
   const stored = await readFixAttempts({ owner: repoOwner, repo: repoName, pr: prNumber });
@@ -123,6 +126,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     changesRequestedReviews,
     checks,
     prNumber,
+    cliRunner,
   );
   if (baseLookup.isFallback && (resolveCommand.requiresHeadSha || hasConflicts)) {
     const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
@@ -159,6 +163,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     editedSummaries,
     inProgressRunIds,
     resolutionOnlyThreads,
+    cliRunner,
   );
   return applyStallGuard(
     stallKey,

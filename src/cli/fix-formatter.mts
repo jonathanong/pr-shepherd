@@ -11,14 +11,22 @@ import {
 import { adaptFixCodeInstructions, numberInstructions } from "./iterate-instructions.mts";
 import type { AgentRuntime } from "../agent-runtime.mts";
 import type { IterateResultFixCode } from "../types.mts";
+import type { CliRunner } from "./runner.mts";
 
 export function formatFixCodeResult(
   header: string,
   result: IterateResultFixCode,
-  opts?: { runtime?: AgentRuntime; readyDelaySuffix?: string },
+  opts?: {
+    runtime?: AgentRuntime;
+    readyDelaySuffix?: string;
+    retryInterval?: string;
+    runner?: CliRunner;
+  },
 ): string {
   const runtime = opts?.runtime ?? "claude";
   const readyDelaySuffix = opts?.readyDelaySuffix;
+  const retryInterval = opts?.retryInterval;
+  const runner = opts?.runner;
   const sections: string[] = [header];
 
   if (result.fix.threads.length > 0) {
@@ -147,7 +155,14 @@ export function formatFixCodeResult(
   sections.push("## Instructions");
   sections.push(
     numberInstructions(
-      adaptFixCodeInstructions(result.fix.instructions, result.pr, runtime, readyDelaySuffix),
+      adaptFixCodeInstructions(
+        result.fix.instructions,
+        result.pr,
+        runtime,
+        readyDelaySuffix,
+        retryInterval,
+        runner,
+      ),
     ),
   );
 
