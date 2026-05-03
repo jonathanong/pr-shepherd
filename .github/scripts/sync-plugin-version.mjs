@@ -14,4 +14,4 @@ for (const pluginPath of pluginPaths) {
 }
 
 const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx'
-execFileSync(npx, ['oxfmt', ...pluginPaths], { stdio: 'inherit' })
+execFileSync(npx, ['--no-install', 'oxfmt', ...pluginPaths], { stdio: 'inherit' })
