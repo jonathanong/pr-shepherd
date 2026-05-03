@@ -8,40 +8,26 @@ Three Claude Code skills are included in the Claude plugin. A separate Codex plu
 
 Codex does not install or run the Claude plugin skills.
 
-Install the Codex plugin from npm:
+Install the Codex plugin marketplace from GitHub:
 
 ```sh
-npm install -g pr-shepherd
-npm root -g
+codex plugin marketplace add jonathanong/pr-shepherd
 ```
 
-Then add the installed package as a Codex marketplace in `~/.codex/config.toml`, replacing `/path/from/npm/root/pr-shepherd` with the package path printed by `npm root -g` plus `/pr-shepherd`:
+Or pin a branch/tag/ref:
 
-```toml
-[marketplaces.jonathanong]
-source_type = "local"
-source = "/path/from/npm/root/pr-shepherd"
-
-[plugins."pr-shepherd@jonathanong"]
-enabled = true
+```sh
+codex plugin marketplace add jonathanong/pr-shepherd --ref main
 ```
 
-To install the plugin from GitHub instead, clone the repo and point Codex at that checkout:
+For local development, point Codex at a checkout:
 
 ```sh
 git clone https://github.com/jonathanong/pr-shepherd ~/.codex/plugin-sources/pr-shepherd
+codex plugin marketplace add ~/.codex/plugin-sources/pr-shepherd
 ```
 
-```toml
-[marketplaces.jonathanong]
-source_type = "local"
-source = "/Users/you/.codex/plugin-sources/pr-shepherd"
-
-[plugins."pr-shepherd@jonathanong"]
-enabled = true
-```
-
-Codex currently reads this plugin through a local marketplace path. That path can come from the npm package, a GitHub checkout, or a development checkout, but it must contain `.agents/plugins/marketplace.json` and `plugins/pr-shepherd/`.
+After adding the marketplace, open the Codex plugin directory, choose the `jonathanong` marketplace, and install/enable `pr-shepherd`. The marketplace root must contain `.agents/plugins/marketplace.json` and `plugins/pr-shepherd/`.
 
 Then install the CLI in the repository where Codex will work:
 

@@ -228,40 +228,26 @@ Installs the three skills (`check`, `monitor`, `resolve`) into your agent's skil
 
 Codex uses the repo-shipped Codex plugin rather than the Claude plugin or `/pr-shepherd:*` slash commands. The plugin provides one umbrella `pr-shepherd` skill for check, resolve, monitor, and iterate workflows.
 
-Install the Codex plugin from npm:
+Install the Codex plugin marketplace from GitHub:
 
 ```bash
-npm install -g pr-shepherd
-npm root -g
+codex plugin marketplace add jonathanong/pr-shepherd
 ```
 
-Then add the installed package as a Codex marketplace in `~/.codex/config.toml`, replacing `/path/from/npm/root/pr-shepherd` with the package path printed by `npm root -g` plus `/pr-shepherd`:
+Or pin a branch/tag/ref:
 
-```toml
-[marketplaces.jonathanong]
-source_type = "local"
-source = "/path/from/npm/root/pr-shepherd"
-
-[plugins."pr-shepherd@jonathanong"]
-enabled = true
+```bash
+codex plugin marketplace add jonathanong/pr-shepherd --ref main
 ```
 
-To install the plugin from GitHub instead, clone the repo and point Codex at that checkout:
+For local development, point Codex at a checkout:
 
 ```bash
 git clone https://github.com/jonathanong/pr-shepherd ~/.codex/plugin-sources/pr-shepherd
+codex plugin marketplace add ~/.codex/plugin-sources/pr-shepherd
 ```
 
-```toml
-[marketplaces.jonathanong]
-source_type = "local"
-source = "/Users/you/.codex/plugin-sources/pr-shepherd"
-
-[plugins."pr-shepherd@jonathanong"]
-enabled = true
-```
-
-Codex currently reads this plugin through a local marketplace path. That path can come from the npm package, a GitHub checkout, or a development checkout, but it must contain `.agents/plugins/marketplace.json` and `plugins/pr-shepherd/`.
+After adding the marketplace, open the Codex plugin directory, choose the `jonathanong` marketplace, and install/enable `pr-shepherd`. The marketplace root must contain `.agents/plugins/marketplace.json` and `plugins/pr-shepherd/`.
 
 Install the CLI where Codex will run it:
 
@@ -269,7 +255,7 @@ Install the CLI where Codex will run it:
 npm install --save-dev pr-shepherd
 ```
 
-The plugin only installs the skill; it does not install the CLI into target repositories.
+The plugin only installs the skill; it does not install the CLI into target repositories. To install the CLI globally instead, use `npm install -g pr-shepherd`.
 
 If your Codex environment does not already set `CODEX_CI=1`, set `AGENT=codex` so `pr-shepherd` emits Codex-compatible instructions instead of Claude `/loop` instructions:
 
