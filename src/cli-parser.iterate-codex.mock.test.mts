@@ -73,9 +73,9 @@ describe("main — iterate Codex fix_code output", () => {
     await main(["node", "shepherd", "iterate", "42", "--ready-delay", "15m"]);
     const out = getStdout();
     expect(out).toContain(
-      "2. Continue the active Codex goal — CI needs time to run on the new push. Pick a fresh sleep/timeout between 1 and 4 minutes, wait that long, then rerun `npx pr-shepherd 42 --ready-delay 15m` to recheck.",
+      "2. Continue the active Codex goal — CI needs time to run on the new push. Wait about the configured interval (4m), then rerun `npx pr-shepherd 42 --ready-delay 15m` to recheck.",
     );
-    expect(out).not.toContain("configured interval");
+    expect(out).not.toContain("before the next tick");
     expect(out).not.toContain("before the next tick");
   });
 
@@ -91,7 +91,7 @@ describe("main — iterate Codex fix_code output", () => {
     await main(["node", "shepherd", "iterate", "42", "--format=json", "--ready-delay", "2h"]);
     const parsed = JSON.parse(getStdout().trimEnd());
     expect(parsed.fix.instructions).toEqual([
-      "Continue the active Codex goal — CI needs time to run on the new push. Pick a fresh sleep/timeout between 1 and 4 minutes, wait that long, then rerun `npx pr-shepherd 42 --ready-delay 2h` to recheck.",
+      "Continue the active Codex goal — CI needs time to run on the new push. Wait about the configured interval (4m), then rerun `npx pr-shepherd 42 --ready-delay 2h` to recheck.",
     ]);
   });
 
@@ -105,7 +105,7 @@ describe("main — iterate Codex fix_code output", () => {
     await main(["node", "shepherd", "iterate", "42", "--format=json"]);
     const parsed = JSON.parse(getStdout().trimEnd());
     expect(parsed.fix.instructions).toEqual([
-      "Continue the active Codex goal — pick a fresh sleep/timeout between 1 and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.",
+      "Continue the active Codex goal — wait about the configured interval (4m), then rerun `npx pr-shepherd 42` to recheck.",
     ]);
   });
 
@@ -119,7 +119,7 @@ describe("main — iterate Codex fix_code output", () => {
     await main(["node", "shepherd", "iterate", "42", "--format=json"]);
     const parsed = JSON.parse(getStdout().trimEnd());
     expect(parsed.fix.instructions).toEqual([
-      "Continue the active Codex goal — pick a fresh sleep/timeout between 1 and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.",
+      "Continue the active Codex goal — wait about the configured interval (4m), then rerun `npx pr-shepherd 42` to recheck.",
     ]);
   });
 });

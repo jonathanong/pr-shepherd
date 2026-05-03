@@ -84,7 +84,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     // Fallback instruction always present for consistency with the invariant that
     // every iterate output ends with ## Instructions.
     expect(out).toContain("## Instructions");
-    expect(out).toContain("1. Schedule the next dynamic wakeup");
+    expect(out).toContain("1. End this iteration.");
   });
 
   it("fix_code (rich payload): sections appear in fixed order with backtick-quoted codes", async () => {

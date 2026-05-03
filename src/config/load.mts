@@ -3,6 +3,7 @@ import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { parse } from "yaml";
 import builtins from "../config.json" with { type: "json" };
+import { parseCliRunner } from "../cli/runner.mjs";
 
 export interface PrShepherdConfig {
   cli?: {
@@ -21,6 +22,8 @@ export interface PrShepherdConfig {
     minimizeApprovals: boolean;
   };
   watch: {
+    /** /loop polling interval, e.g. "4m". */
+    interval: string;
     readyDelayMinutes: number;
   };
   resolve: {
@@ -108,6 +111,12 @@ export function loadConfig(): PrShepherdConfig {
       defaults as unknown as Record<string, unknown>,
       parsed,
     ) as unknown as PrShepherdConfig;
+    // Validate cli.runner at load time so invalid values are caught and reported
+    // once (with the rc file path in the error message) rather than later during
+    // instruction rendering where the context would be opaque.
+    if (config.cli !== undefined) {
+      config.cli.runner = parseCliRunner(config.cli.runner);
+    }
     configCache.set(cwd, config);
     return config;
   } catch (err) {

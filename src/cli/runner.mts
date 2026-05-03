@@ -55,7 +55,7 @@ function baseArgvForRunner(runner: Exclude<CliRunner, "auto">): string[] {
   }
 }
 
-export const runnerCache = new Map<string, Exclude<CliRunner, "auto">>();
+const runnerCache = new Map<string, Exclude<CliRunner, "auto">>();
 
 export function __resetRunnerCache(): void {
   runnerCache.clear();

@@ -22,7 +22,7 @@ Example Workflow:
 
 The CLI adapts monitor instructions to the calling agent. Claude Code gets `/loop` bootstrap instructions. Codex is detected with `AGENT=codex` or the current Codex CLI signal `CODEX_CI=1`; it gets a reusable pr-shepherd command and explicit goal-friendly iterate instructions because Codex does not provide `/loop` scheduling in this workflow. Generated commands use `cli.runner` from `.pr-shepherdrc.yml`: `auto` (default), `npx`, `pnpm`, or `yarn`.
 
-At a high level, to start the monitor, the skill/command invokes a CLI that returns a prompt to be ingested by the agent _(schematic — paraphrased for brevity; actual output is more detailed)_:
+At a high level, to start the monitor, the skill/command invokes a CLI that returns a prompt to be ingested by the agent _(schematic — paraphrased for brevity; actual output is more detailed; examples use `npx` as the default spelling — a pnpm or yarn repo would emit `pnpm exec` or `yarn run` instead)_:
 
 ```
 /pr-shepherd:monitor

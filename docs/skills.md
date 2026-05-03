@@ -43,6 +43,8 @@ export AGENT=codex
 
 Run `pr-shepherd monitor <PR>` once through the repo package runner to bootstrap the workflow. Follow the output's `## Instructions`, then keep an active Codex goal cycling the emitted command every `watch.interval` (default 4m) until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). Codex does not provide the Claude `/loop` scheduler in this workflow.
 
+The examples below use `npx pr-shepherd` as the default spelling. The actual runner depends on `cli.runner` in `.pr-shepherdrc.yml` (default `auto`, which detects pnpm/yarn from `packageManager` or lockfiles). Skills invoke the CLI through the detected runner; the CLI then emits follow-up commands using the same runner.
+
 The Codex plugin skill handles PR-number discovery, one-off check/resolve commands, and open-ended goal setup. It still delegates policy and state transitions to the CLI output's own `## Instructions` section.
 
 ## `/pr-shepherd:monitor`
