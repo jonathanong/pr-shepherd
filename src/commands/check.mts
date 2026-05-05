@@ -1,7 +1,8 @@
 import { fetchPrBatch } from "../github/batch.mts";
 import { getRepoInfo, getCurrentPrNumber, getMergeableState } from "../github/client.mts";
 import { classifyChecks, getCiVerdict } from "../checks/classify.mts";
-import { triageFailingChecks } from "../checks/triage.mts";
+import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
+import { fetchStartupFailureChecks, triageFailingChecks } from "../checks/triage.mts";
 import { getOutdatedThreads } from "../comments/outdated.mts";
 import { autoResolveOutdated } from "../comments/resolve.mts";
 import { deriveMergeStatus } from "../merge-status/derive.mts";
@@ -49,7 +50,13 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
     };
   }
 
-  const classifiedChecks = classifyChecks(batchData.checks);
+  const startupFailureChecks = await fetchStartupFailureChecks(
+    repo,
+    batchData.headRefOid,
+    prNumber,
+  );
+  const allChecks = mergeStartupFailureChecks(batchData.checks, startupFailureChecks);
+  const classifiedChecks = classifyChecks(allChecks);
   const verdict = getCiVerdict(classifiedChecks);
 
   const passing = classifiedChecks.filter((c) => c.category === "passed");

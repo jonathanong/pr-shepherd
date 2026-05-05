@@ -4,7 +4,17 @@
 
 ## Classification pipeline
 
-CI check runs flow through two stages: classify → triage.
+CI check runs flow through three stages: supplement → classify → triage.
+
+### Stage 0: Supplement startup failures (`checks/triage.mts`)
+
+GitHub can complete a workflow run with `conclusion === "startup_failure"` before it creates any job or check-run context. Those runs may be absent from GraphQL `statusCheckRollup`, so Shepherd supplements the GraphQL check list with a REST Actions run query for the PR head SHA:
+
+- `GET /repos/{owner}/{repo}/actions/runs?head_sha=<sha>&status=startup_failure`
+- Runs are kept only when the REST `pull_requests` association includes the current PR number and head SHA, because the endpoint is repository-wide for the commit SHA.
+- Each returned run is mapped to a `CheckRun` with `conclusion: "STARTUP_FAILURE"`, the run ID, the run URL, the raw event, the workflow name, and `display_title` as `summary`.
+- If the same run ID already exists in the GraphQL check list, the startup-failure conclusion updates that entry instead of adding a duplicate.
+- The supplement is best-effort. If the Actions runs request fails, Shepherd logs a warning and continues with the GraphQL check data already fetched.
 
 ### Stage 1: Classify (`checks/classify.mts`)
 
@@ -45,7 +55,7 @@ For each failing check, triage fetches additional context from the GitHub Action
 - **`jobName`** — the name of the matched job (falls back to the check name when not available).
 - **`failedStep`** — the first step whose conclusion is not `success`, `skipped`, or `neutral` (e.g. a step with `failure` or `timed_out` conclusion).
 
-Checks with `conclusion === "CANCELLED"` short-circuit triage entirely — no jobs API call is made, and `workflowName`/`jobName`/`failedStep` are not populated. The output bullet carries a `[conclusion: CANCELLED]` tag instead. The agent runs `gh run view <runId> --log-failed` when it needs the full log for non-cancelled failures.
+Checks with `conclusion === "CANCELLED"` or `conclusion === "STARTUP_FAILURE"` short-circuit triage entirely — no jobs API call is made, and `workflowName`/`jobName`/`failedStep` are not populated. Cancelled output carries a `[conclusion: CANCELLED]` tag. Startup-failure output carries a `[conclusion: STARTUP_FAILURE]` tag and may include the workflow run display title as `summary`. The agent runs `gh run view <runId> --log-failed` when it needs the full log for ordinary non-cancelled failures; startup failures use `gh run view <runId>` because failed job logs may not exist.
 
 ## Report output
 

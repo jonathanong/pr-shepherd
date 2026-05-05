@@ -95,6 +95,11 @@ describe("classifyChecks — conclusion mapping", () => {
     expect(c!.category).toBe("failing");
   });
 
+  it("classifies STARTUP_FAILURE as failing", () => {
+    const [c] = classifyChecks([makeCheck({ conclusion: "STARTUP_FAILURE" })]);
+    expect(c!.category).toBe("failing");
+  });
+
   it("classifies in-progress check (QUEUED) as in_progress", () => {
     const [c] = classifyChecks([makeCheck({ status: "QUEUED", conclusion: null })]);
     expect(c!.category).toBe("in_progress");

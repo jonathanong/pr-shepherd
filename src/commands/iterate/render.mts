@@ -9,6 +9,7 @@ import type {
   ReviewThread,
 } from "../../types.mts";
 import { buildPrShepherdCommand, renderShellCommand, type CliRunner } from "../../cli/runner.mts";
+import { buildFailingCheckInstructions } from "./check-instructions.mts";
 
 export const FIX_INSTRUCTION_STOP_AFTER_PUSH =
   "Stop this iteration — CI needs time to run on the new push before the next tick.";
@@ -83,34 +84,7 @@ export function buildFixInstructions(
       `Resolve the threads under \`## Review threads to resolve\` with the \`resolve:\` command shown below. These threads are already outdated or minimized, so no code edit is required for them unless their body reveals separate work you choose to do.`,
     );
   }
-  const cancelledRunIdChecks = checks.filter((c) => c.runId && c.conclusion === "CANCELLED");
-  const failedRunIdChecks = checks.filter((c) => c.runId && c.conclusion !== "CANCELLED");
-  const externalChecks = checks.filter((c) => !c.runId && c.detailsUrl);
-  const bareChecks = checks.filter((c) => !c.runId && !c.detailsUrl);
-  if (failedRunIdChecks.length > 0) {
-    instructions.push(
-      `For each failing check under \`## Failing checks\` with a run ID and no \`[conclusion: CANCELLED]\` tag: run \`gh run view <runId> --log-failed\` to fetch the failing job's log.`,
-    );
-    instructions.push(
-      `If the log shows a transient infrastructure failure (network timeout, runner setup crash, OOM kill): run \`gh run rerun <runId> --failed\`.`,
-    );
-    instructions.push(`If the log shows a real test/build failure: apply a code fix.`);
-  }
-  if (cancelledRunIdChecks.length > 0) {
-    instructions.push(
-      `For each \`[conclusion: CANCELLED]\` bullet under \`## Failing checks\`: the run was cancelled outside Shepherd's control (manual cancel, newer push, concurrency-group eviction). Run \`gh run rerun <runId>\` only if the cancellation looks unintended; otherwise treat it as resolved by the superseding run. Do NOT confuse these with IDs under \`## Cancelled runs\` — those were cancelled by Shepherd itself.`,
-    );
-  }
-  if (externalChecks.length > 0) {
-    instructions.push(
-      `For each bullet in \`## Failing checks\` starting with \`external\` (external status check): open the linked URL in a browser to inspect the failure — log tails are not available for external checks.`,
-    );
-  }
-  if (bareChecks.length > 0) {
-    instructions.push(
-      `For each bullet in \`## Failing checks\` starting with \`(no runId)\`: there is no run or details URL to inspect. Escalate these to a human — they require manual investigation outside the pr-shepherd flow.`,
-    );
-  }
+  instructions.push(...buildFailingCheckInstructions(checks));
   if (reviews.length > 0) {
     instructions.push(
       `For each bullet under \`## Changes-requested reviews\` above: read the review body and apply the requested changes.`,
