@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
-import { triageFailingChecks } from "./triage.mts";
+import { fetchStartupFailureChecks, triageFailingChecks } from "./triage.mts";
 import type { ClassifiedCheck } from "../types.mts";
 
 const REPO = { owner: "owner", name: "repo" };
@@ -52,6 +52,16 @@ function makeErrorResponse(status: number): Response {
     status,
     headers: new Headers(),
     text: () => Promise.resolve("error"),
+  } as unknown as Response;
+}
+
+function makeWorkflowRunsResponse(runs: unknown[]): Response {
+  return {
+    ok: true,
+    status: 200,
+    headers: new Headers({ "content-type": "application/json" }),
+    json: () => Promise.resolve({ workflow_runs: runs }),
+    text: () => Promise.resolve(JSON.stringify({ workflow_runs: runs })),
   } as unknown as Response;
 }
 
@@ -105,19 +115,79 @@ describe("triageFailingChecks — job info", () => {
     expect(mockFetch).toHaveBeenCalled();
   });
 
-  it("STARTUP_FAILURE: treated the same as any other non-cancelled conclusion", async () => {
-    mockFetch.mockResolvedValueOnce(makeJobsResponse([{ name: "tests", conclusion: "cancelled" }]));
+  it("STARTUP_FAILURE with runId: skips jobs fetch, returns only base check fields", async () => {
     const [result] = await triageFailingChecks(
       [makeCheck({ conclusion: "STARTUP_FAILURE" })],
       REPO,
     );
+    expect(result!.conclusion).toBe("STARTUP_FAILURE");
     expect(result!.workflowName).toBeUndefined();
+    expect(result!.jobName).toBeUndefined();
+    expect(result!.failedStep).toBeUndefined();
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it("STALE: treated the same as any other non-cancelled conclusion", async () => {
     mockFetch.mockResolvedValueOnce(makeJobsResponse([{ name: "tests", conclusion: "cancelled" }]));
     const [result] = await triageFailingChecks([makeCheck({ conclusion: "STALE" })], REPO);
     expect(result).toBeDefined();
+  });
+});
+
+describe("fetchStartupFailureChecks", () => {
+  it("maps startup_failure workflow runs to CheckRun fields", async () => {
+    mockFetch.mockResolvedValueOnce(
+      makeWorkflowRunsResponse([
+        {
+          id: 25406234225,
+          name: "CI",
+          event: "pull_request",
+          status: "completed",
+          conclusion: "startup_failure",
+          html_url: "https://github.com/owner/repo/actions/runs/25406234225",
+          display_title: "ci: skip secret-backed jobs for dependency bots",
+        },
+      ]),
+    );
+
+    const checks = await fetchStartupFailureChecks(REPO, "abc123");
+
+    expect(checks).toEqual([
+      {
+        name: "CI",
+        status: "COMPLETED",
+        conclusion: "STARTUP_FAILURE",
+        detailsUrl: "https://github.com/owner/repo/actions/runs/25406234225",
+        event: "pull_request",
+        runId: "25406234225",
+        summary: "ci: skip secret-backed jobs for dependency bots",
+      },
+    ]);
+    const [url] = mockFetch.mock.calls[0] as [string];
+    expect(url).toContain("/actions/runs");
+    expect(url).toContain("head_sha=abc123");
+    expect(url).toContain("status=startup_failure");
+  });
+
+  it("falls back to workflow run id when the run name is blank", async () => {
+    mockFetch.mockResolvedValueOnce(
+      makeWorkflowRunsResponse([
+        {
+          id: 123,
+          name: " ",
+          event: "pull_request",
+          status: "completed",
+          conclusion: "startup_failure",
+          html_url: "https://github.com/owner/repo/actions/runs/123",
+          display_title: "",
+        },
+      ]),
+    );
+
+    const [check] = await fetchStartupFailureChecks(REPO, "abc123");
+
+    expect(check!.name).toBe("workflow run 123");
+    expect(check).not.toHaveProperty("summary");
   });
 });
 

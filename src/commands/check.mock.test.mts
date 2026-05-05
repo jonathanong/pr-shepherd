@@ -9,6 +9,7 @@ vi.mock("../github/client.mts", () => ({
 }));
 vi.mock("../checks/triage.mts", () => ({
   triageFailingChecks: vi.fn((checks: unknown[]) => Promise.resolve(checks)),
+  fetchStartupFailureChecks: vi.fn().mockResolvedValue([]),
 }));
 vi.mock("../comments/resolve.mts", () => ({
   autoResolveOutdated: vi.fn().mockResolvedValue({ resolved: [], errors: [] }),
@@ -25,7 +26,7 @@ vi.mock("../state/seen-comments.mts", async (importOriginal) => {
 import { runCheck } from "./check.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { getCurrentPrNumber, getMergeableState } from "../github/client.mts";
-import { triageFailingChecks } from "../checks/triage.mts";
+import { fetchStartupFailureChecks, triageFailingChecks } from "../checks/triage.mts";
 import { loadSeenMap, markSeen, hashBody } from "../state/seen-comments.mts";
 import { autoResolveOutdated } from "../comments/resolve.mts";
 import type { BatchPrData, ClassifiedCheck, ReviewThread, PrComment } from "../types.mts";
@@ -34,6 +35,7 @@ const mockFetchPrBatch = vi.mocked(fetchPrBatch);
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockGetMergeableState = vi.mocked(getMergeableState);
 const mockTriageFailingChecks = vi.mocked(triageFailingChecks);
+const mockFetchStartupFailureChecks = vi.mocked(fetchStartupFailureChecks);
 const mockLoadSeenMap = vi.mocked(loadSeenMap);
 const mockMarkSeen = vi.mocked(markSeen);
 const mockAutoResolveOutdated = vi.mocked(autoResolveOutdated);
@@ -82,6 +84,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockFetchPrBatch.mockResolvedValue({ data: makeBatchData() });
   mockGetMergeableState.mockResolvedValue({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" });
+  mockFetchStartupFailureChecks.mockResolvedValue([]);
 });
 
 // No PR found
@@ -132,6 +135,100 @@ describe("runCheck — skipTriage", () => {
     });
     await runCheck(BASE_OPTS);
     expect(mockTriageFailingChecks).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("runCheck — startup failure workflow runs", () => {
+  it("adds REST startup failures before classification so they block readiness", async () => {
+    mockFetchStartupFailureChecks.mockResolvedValue([
+      {
+        name: "CI",
+        status: "COMPLETED",
+        conclusion: "STARTUP_FAILURE",
+        detailsUrl: "https://github.com/owner/repo/actions/runs/25406234225",
+        event: "pull_request",
+        runId: "25406234225",
+        summary: "ci: skip secret-backed jobs for dependency bots",
+      },
+    ]);
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(mockFetchStartupFailureChecks).toHaveBeenCalledWith(
+      { owner: "owner", name: "repo" },
+      "abc123",
+    );
+    expect(report.status).toBe("FAILING");
+    expect(report.checks.failing).toEqual([
+      expect.objectContaining({
+        name: "CI",
+        conclusion: "STARTUP_FAILURE",
+        runId: "25406234225",
+        summary: "ci: skip secret-backed jobs for dependency bots",
+      }),
+    ]);
+    expect(mockTriageFailingChecks).toHaveBeenCalledWith(
+      [expect.objectContaining({ conclusion: "STARTUP_FAILURE" })],
+      { owner: "owner", name: "repo" },
+    );
+  });
+
+  it("overwrites an existing check from the same run instead of duplicating it", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        checks: [
+          makeCheck({
+            name: "CI",
+            conclusion: "SUCCESS",
+            runId: "25406234225",
+            detailsUrl: "https://github.com/owner/repo/actions/runs/25406234225/job/1",
+          }),
+        ],
+      }),
+    });
+    mockFetchStartupFailureChecks.mockResolvedValue([
+      {
+        name: "CI",
+        status: "COMPLETED",
+        conclusion: "STARTUP_FAILURE",
+        detailsUrl: "https://github.com/owner/repo/actions/runs/25406234225",
+        event: "pull_request",
+        runId: "25406234225",
+      },
+    ]);
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.checks.passing).toHaveLength(0);
+    expect(report.checks.failing).toHaveLength(1);
+    expect(report.checks.failing[0]).toEqual(
+      expect.objectContaining({
+        name: "CI",
+        conclusion: "STARTUP_FAILURE",
+        detailsUrl: "https://github.com/owner/repo/actions/runs/25406234225",
+      }),
+    );
+  });
+
+  it("keeps non-PR startup failures filtered out of the readiness verdict", async () => {
+    mockFetchStartupFailureChecks.mockResolvedValue([
+      {
+        name: "nightly",
+        status: "COMPLETED",
+        conclusion: "STARTUP_FAILURE",
+        detailsUrl: "https://github.com/owner/repo/actions/runs/123",
+        event: "workflow_dispatch",
+        runId: "123",
+      },
+    ]);
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.status).toBe("READY");
+    expect(report.checks.failing).toHaveLength(0);
+    expect(report.checks.filtered).toEqual([
+      expect.objectContaining({ name: "nightly", conclusion: "STARTUP_FAILURE" }),
+    ]);
   });
 });
 

@@ -1,6 +1,8 @@
 import { rest } from "../github/http.mts";
-import type { ClassifiedCheck, TriagedCheck } from "../types.mts";
+import type { CheckRun, ClassifiedCheck, TriagedCheck } from "../types.mts";
 import type { RepoInfo } from "../github/client.mts";
+
+const STARTUP_FAILURE_STATUS = "startup_failure";
 
 export function triageFailingChecks(
   failingChecks: ClassifiedCheck[],
@@ -15,7 +17,11 @@ async function triageCheck(
   repo: RepoInfo,
   jobsCache: Map<string, Promise<JobsResponse["jobs"] | undefined>>,
 ): Promise<TriagedCheck> {
-  if (check.runId === null || check.conclusion === "CANCELLED") {
+  if (
+    check.runId === null ||
+    check.conclusion === "CANCELLED" ||
+    check.conclusion === "STARTUP_FAILURE"
+  ) {
     return { ...check };
   }
   const jobs = await fetchJobs(check.runId, repo, jobsCache);
@@ -28,6 +34,30 @@ async function triageCheck(
   };
 }
 
+export async function fetchStartupFailureChecks(
+  repo: RepoInfo,
+  headSha: string,
+): Promise<CheckRun[]> {
+  const { owner, name } = repo;
+  const perPage = 100;
+  const MAX_RUN_PAGES = 10;
+  const checks: CheckRun[] = [];
+  for (let page = 1; page <= MAX_RUN_PAGES; page++) {
+    const data = await rest<WorkflowRunsResponse>(
+      "GET",
+      `/repos/${owner}/${name}/actions/runs?head_sha=${encodeURIComponent(headSha)}&status=${STARTUP_FAILURE_STATUS}&per_page=${perPage}&page=${page}`,
+    );
+    checks.push(...data.workflow_runs.map(workflowRunToCheckRun));
+    if (data.workflow_runs.length < perPage) break;
+    if (page === MAX_RUN_PAGES) {
+      process.stderr.write(
+        `pr-shepherd: startup-failure run pagination cap (${MAX_RUN_PAGES * perPage} runs) reached for ${headSha} — startup-failure detection may be incomplete\n`,
+      );
+    }
+  }
+  return checks;
+}
+
 interface JobsResponse {
   jobs: Array<{
     name: string;
@@ -37,10 +67,35 @@ interface JobsResponse {
   }>;
 }
 
+interface WorkflowRunsResponse {
+  workflow_runs: Array<{
+    id: number;
+    name: string | null;
+    event: string | null;
+    status: string | null;
+    conclusion: string | null;
+    html_url: string;
+    display_title?: string | null;
+  }>;
+}
+
 interface JobInfo {
   workflowName?: string;
   jobName?: string;
   failedStep?: string;
+}
+
+function workflowRunToCheckRun(run: WorkflowRunsResponse["workflow_runs"][number]): CheckRun {
+  const summary = run.display_title?.trim() || undefined;
+  return {
+    name: run.name?.trim() || `workflow run ${run.id}`,
+    status: "COMPLETED",
+    conclusion: "STARTUP_FAILURE",
+    detailsUrl: run.html_url,
+    event: run.event,
+    runId: String(run.id),
+    ...(summary !== undefined && { summary }),
+  };
 }
 
 function fetchJobs(

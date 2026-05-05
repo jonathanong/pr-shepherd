@@ -4,7 +4,7 @@
  * These strip fields that are always-false by the time items reach iterate
  * (isResolved, isOutdated, isMinimized, createdAtUnix) and check metadata the
  * monitor prompt never reads (event, status, category).
- * conclusion is preserved on AgentCheck so the formatter can branch on CANCELLED.
+ * conclusion is preserved on AgentCheck so the formatter can branch on run-level conclusions.
  * detailsUrl is preserved in AgentCheck as a fallback for external status checks.
  * The original domain types are preserved for check command output.
  */

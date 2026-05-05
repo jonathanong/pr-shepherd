@@ -369,6 +369,51 @@ describe("runIterate — prescriptive fields: log strings", () => {
     expect(result.action).toBe("fix_code");
   });
 
+  it("fix_code startup failure instructions avoid failed job logs", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        checks: {
+          passing: [],
+          failing: [
+            {
+              name: "CI",
+              status: "COMPLETED",
+              conclusion: "STARTUP_FAILURE",
+              detailsUrl: "https://github.com/owner/repo/actions/runs/25406234225",
+              event: "pull_request",
+              runId: "25406234225",
+              category: "failing",
+              summary: "ci: skip secret-backed jobs for dependency bots",
+            },
+          ],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      const joined = result.fix.instructions.join("\n");
+      expect(joined).toContain("[conclusion: STARTUP_FAILURE]");
+      expect(joined).toContain("gh run view <runId>");
+      expect(joined).toContain("gh run rerun <runId>");
+      expect(joined).not.toContain("gh run view <runId> --log-failed");
+      expect(joined).not.toContain("gh run rerun <runId> --failed");
+    }
+  });
+
   it("mark_ready.log mentions PR number", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({

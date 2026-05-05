@@ -164,6 +164,26 @@ describe("buildCheckInstructions — CI budget policy", () => {
     expect(step).not.toContain("gh run view");
   });
 
+  it("emits startup-failure hint without failed-log or failed-rerun flags", () => {
+    const failing: TriagedCheck = {
+      ...makeCheck({
+        name: "CI",
+        category: "failing",
+        conclusion: "STARTUP_FAILURE",
+        runId: "25406234225",
+      }),
+    };
+    const report = makeReport({ checks: { ...makeReport().checks, failing: [failing] } });
+    const steps = buildCheckInstructions(report);
+    const step = steps.find((s) => s.includes("Failing check:") && s.includes("CI"));
+    expect(step).toBeDefined();
+    expect(step).toContain("startup failure");
+    expect(step).toContain("gh run view 25406234225");
+    expect(step).toContain("gh run rerun 25406234225");
+    expect(step).not.toContain("--log-failed");
+    expect(step).not.toContain("--failed");
+  });
+
   it("includes failedStep hint in instruction when failedStep is set", () => {
     const failing: TriagedCheck = {
       ...makeCheck({ name: "ci", category: "failing", conclusion: "FAILURE", runId: "12345" }),

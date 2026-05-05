@@ -52,7 +52,9 @@ export function buildCheckInstructions(
     const diagnosisHint = c.runId
       ? c.conclusion === "CANCELLED"
         ? `cancelled — if unintended, rerun with \`gh run rerun ${c.runId}\``
-        : `run \`gh run view ${c.runId} --log-failed\`${stepHint} to diagnose — if transient, rerun with \`gh run rerun ${c.runId} --failed\`; otherwise apply a fix`
+        : c.conclusion === "STARTUP_FAILURE"
+          ? `startup failure — run \`gh run view ${c.runId}\` to inspect the workflow run; rerun with \`gh run rerun ${c.runId}\` if appropriate`
+          : `run \`gh run view ${c.runId} --log-failed\`${stepHint} to diagnose — if transient, rerun with \`gh run rerun ${c.runId} --failed\`; otherwise apply a fix`
       : c.detailsUrl
         ? `open the check details (${c.detailsUrl}) to diagnose the failure`
         : `no run or details URL available — escalate to a human`;
