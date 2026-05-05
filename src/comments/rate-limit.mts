@@ -16,9 +16,11 @@ export function rateLimitFromError(
     retryAfterSeconds?: unknown;
   };
   const message = err instanceof Error ? err.message : fallbackMessage;
+  const status = finiteNumber(maybe.status);
+  const hasRateLimitStatus = status === 403 || status === 429;
   if (
     !isRateLimitMessage(message) &&
-    maybe.retryAfterSeconds === undefined &&
+    !(hasRateLimitStatus && maybe.retryAfterSeconds !== undefined) &&
     maybe.rateLimit?.remaining !== 0
   )
     return null;

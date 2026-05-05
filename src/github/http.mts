@@ -4,7 +4,7 @@ import { appendEntry, nextEntry } from "../log/log-file.mts";
 import { formatRequestEntry, formatResponseEntry } from "../log/session.mts";
 import { GitHubRequestError } from "./errors.mts";
 
-export { GitHubRequestError } from "./errors.mts";
+export { GitHubRequestError };
 
 const execFile = promisify(execFileCb);
 

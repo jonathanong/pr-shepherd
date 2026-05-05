@@ -100,6 +100,36 @@ describe("applyResolveOptions — mutations", () => {
     ]);
   });
 
+  it("does not classify retry-after alone as a rate-limit stop without rate-limit status", async () => {
+    mockGraphql.mockRejectedValueOnce(
+      Object.assign(new Error("Service unavailable"), {
+        status: 503,
+        retryAfterSeconds: 30,
+      }),
+    );
+
+    const result = await applyResolveOptions(1, REPO, { resolveThreadIds: ["t-1"] });
+
+    expect(result.rateLimit).toBeUndefined();
+    expect(result.unresolvedThreads).toBeUndefined();
+    expect(result.errors).toEqual(["t-1: Service unavailable"]);
+  });
+
+  it("classifies retry-after with a rate-limit status as a rate-limit stop", async () => {
+    mockGraphql.mockRejectedValueOnce(
+      Object.assign(new Error("Forbidden"), {
+        status: 403,
+        retryAfterSeconds: 30,
+      }),
+    );
+
+    const result = await applyResolveOptions(1, REPO, { resolveThreadIds: ["t-1", "t-2"] });
+
+    expect(result.rateLimit).toMatchObject({ message: "Forbidden", retryAfterSeconds: 30 });
+    expect(result.unresolvedThreads).toEqual(["t-1", "t-2"]);
+    expect(result.errors).toEqual(["rate limit: Forbidden"]);
+  });
+
   it("stops on a thrown rate limit and reports unattempted IDs", async () => {
     const ids = Array.from({ length: 25 }, (_, i) => `c-${i}`);
     mockGraphql
