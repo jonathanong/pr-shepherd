@@ -210,6 +210,34 @@ describe("runCheck — startup failure workflow runs", () => {
     );
   });
 
+  it("overwrites all existing checks from the same startup-failure run", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        checks: [
+          makeCheck({ name: "build", conclusion: "SUCCESS", runId: "25406234225" }),
+          makeCheck({ name: "test", conclusion: "SUCCESS", runId: "25406234225" }),
+        ],
+      }),
+    });
+    mockFetchStartupFailureChecks.mockResolvedValue([
+      {
+        name: "CI",
+        status: "COMPLETED",
+        conclusion: "STARTUP_FAILURE",
+        detailsUrl: "https://github.com/owner/repo/actions/runs/25406234225",
+        event: "pull_request",
+        runId: "25406234225",
+      },
+    ]);
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.checks.passing).toHaveLength(0);
+    expect(report.checks.failing).toHaveLength(2);
+    expect(report.checks.failing.map((c) => c.name)).toEqual(["build", "test"]);
+    expect(report.checks.failing.every((c) => c.conclusion === "STARTUP_FAILURE")).toBe(true);
+  });
+
   it("keeps non-PR startup failures filtered out of the readiness verdict", async () => {
     mockFetchStartupFailureChecks.mockResolvedValue([
       {

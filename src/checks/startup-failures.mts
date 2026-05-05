@@ -4,19 +4,24 @@ export function mergeStartupFailureChecks(
   checks: CheckRun[],
   startupFailureChecks: CheckRun[],
 ): CheckRun[] {
-  const byRunId = new Map<string, number>();
+  const byRunId = new Map<string, number[]>();
   checks.forEach((check, index) => {
-    if (check.runId !== null) byRunId.set(check.runId, index);
+    if (check.runId === null) return;
+    const indices = byRunId.get(check.runId) ?? [];
+    indices.push(index);
+    byRunId.set(check.runId, indices);
   });
 
   const merged = [...checks];
   for (const startupFailure of startupFailureChecks) {
-    const index = startupFailure.runId === null ? undefined : byRunId.get(startupFailure.runId);
-    if (index === undefined) {
+    const indices = startupFailure.runId === null ? undefined : byRunId.get(startupFailure.runId);
+    if (indices === undefined) {
       merged.push(startupFailure);
       continue;
     }
-    merged[index] = mergeStartupFailureCheck(merged[index]!, startupFailure);
+    for (const index of indices) {
+      merged[index] = mergeStartupFailureCheck(merged[index]!, startupFailure);
+    }
   }
   return merged;
 }
