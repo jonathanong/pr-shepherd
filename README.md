@@ -198,6 +198,8 @@ On each dynamic tick: fetch PR state in one GraphQL batch → classify CI, comme
 > **Note:** Skill and plugin install methods add the skill definitions only — they do not install the `pr-shepherd` CLI. The skills invoke `pr-shepherd` through the repo package runner, so you also need the CLI available. If you're using `pr-shepherd` as development tooling for your repo, install it as a dev dependency so the selected runner resolves it without prompting:
 >
 > ```bash
+> pnpm add -D pr-shepherd      # pnpm repos
+> yarn add -D pr-shepherd      # yarn repos
 > npm install --save-dev pr-shepherd
 > ```
 >
@@ -250,6 +252,8 @@ After adding the marketplace, open the Codex plugin directory, choose the `jonat
 Install the CLI where Codex will run it:
 
 ```bash
+pnpm add -D pr-shepherd      # pnpm repos
+yarn add -D pr-shepherd      # yarn repos
 npm install --save-dev pr-shepherd
 ```
 
@@ -266,6 +270,8 @@ Then start a PR monitor from Codex:
 ```bash
 npx pr-shepherd monitor 42
 ```
+
+Use the target repository's package runner for the command. For example, a repo like `~/filaments` that declares `packageManager: "pnpm@..."` and has `pnpm-lock.yaml` should use `pnpm exec pr-shepherd monitor 42`.
 
 Or ask Codex to use the `pr-shepherd` skill, for example: `run pr-shepherd until this PR is ready`. Follow the output's `## Instructions`. The monitor bootstrap runs one tick and prints the reusable follow-up command, usually:
 

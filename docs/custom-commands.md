@@ -5,8 +5,9 @@
 If you don't want the full plugin, create a project-local (or user-scope)
 slash command that wraps the CLI directly. This still requires `pr-shepherd`
 to be installed in the repository first (preferably as a dev dependency:
-`npm install --save-dev pr-shepherd`), so that `npx pr-shepherd ...` runs
-without prompting to install the package.
+`pnpm add -D pr-shepherd`, `yarn add -D pr-shepherd`, or
+`npm install --save-dev pr-shepherd`), so that the repo package runner
+resolves `pr-shepherd ...` without prompting to install the package.
 
 1. **Create the command file:**
    - Project-scope: `.claude/commands/pr-check.md`
@@ -33,8 +34,11 @@ without prompting to install the package.
 
    ## Run the check
 
+   Use the repository package runner selected by `packageManager` or lockfile
+   (`pnpm exec`, `yarn run`, or `npx`).
+
    ```bash
-   npx pr-shepherd check <PR_NUMBER> --format=json
+   pr-shepherd check <PR_NUMBER> --format=json
    ```
 
    Parse the JSON and report:
@@ -56,6 +60,6 @@ For `monitor` and `resolve` custom commands, do **not** copy the
 frontmatter that is not valid for `.claude/commands/` files. Instead, create
 `.claude/commands/pr-monitor.md` and/or `.claude/commands/pr-resolve.md`
 using the same command-file structure as the `pr-check` example above, with
-the CLI invocation changed to `npx pr-shepherd monitor ...` or
-`npx pr-shepherd resolve ...`. To drive the CLI without Claude at all, see
+the CLI invocation changed to `pr-shepherd monitor ...` or
+`pr-shepherd resolve ...` through the selected package runner. To drive the CLI without Claude at all, see
 [cli-usage.md](cli-usage.md).

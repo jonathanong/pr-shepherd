@@ -28,9 +28,11 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
    If `MERGED`, invoke `/loop cancel` via the Skill tool, output a merged message, and stop.
 
 3. **Fetch and follow instructions:**
+   Use the repository package runner selected by `packageManager` or lockfile
+   (`pnpm exec`, `yarn run`, or `npx`).
 
    ```bash
-   npx pr-shepherd resolve <N> --fetch
+   pr-shepherd resolve <N> --fetch
    ```
 
    Print the full output. Follow the `## Instructions` section exactly.
