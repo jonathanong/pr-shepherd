@@ -8,11 +8,19 @@
 
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
-import { graphql as httpGraphql, rest, type RateLimitInfo, type GraphQlResult } from "./http.mts";
+import {
+  graphql as httpGraphql,
+  rest,
+  type RateLimitInfo,
+  type GraphQlResult,
+  type GitHubGraphQlError,
+  GitHubRequestError,
+} from "./http.mts";
 import { PR_NUMBER_BY_BRANCH_QUERY, GET_PR_HEAD_SHA_QUERY } from "./queries.mts";
 import type { MergeableState, MergeStateStatus } from "../types.mts";
 
-export type { RateLimitInfo, GraphQlResult };
+export type { RateLimitInfo, GraphQlResult, GitHubGraphQlError };
+export { GitHubRequestError };
 
 const execFile = promisify(execFileCb);
 

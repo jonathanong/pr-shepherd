@@ -68,6 +68,8 @@ rm $TMPDIR/pr-shepherd-state/acme-myrepo/42/ready-since.txt
 
 1. Pause or cancel the monitor loop if API budget is tight. Scheduling is dynamic and fixed to agent-chosen 1-4 minute waits, so there is no polling interval config to raise.
 2. Check `x-ratelimit-remaining` in the reporter JSON output to monitor consumption
+3. For `resolve` mutate output, retry only the IDs listed under `Not resolved`,
+   `Not minimized`, or `Not dismissed`; IDs listed as completed already succeeded.
 
 ---
 

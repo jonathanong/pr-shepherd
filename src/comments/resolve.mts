@@ -1,12 +1,22 @@
-import { graphql, getPrHeadSha, type RepoInfo } from "../github/client.mts";
+import { graphqlWithRateLimit, type RepoInfo } from "../github/client.mts";
 import type { ResolveOptions } from "../types.mts";
-import { loadConfig } from "../config/load.mts";
+import {
+  rateLimitFromError,
+  rateLimitFromGraphQlResult,
+  type ResolveRateLimitStop,
+} from "./rate-limit.mts";
+import { setPendingOps, type ResolveMutationOp } from "./pending-ops.mts";
+import { waitForSha } from "./sha-poll.mts";
 
 export interface ResolveResult {
   resolvedThreads: string[];
   minimizedComments: string[];
   dismissedReviews: string[];
   errors: string[];
+  rateLimit?: ResolveRateLimitStop;
+  unresolvedThreads?: string[];
+  unminimizedComments?: string[];
+  undismissedReviews?: string[];
 }
 
 export async function applyResolveOptions(
@@ -55,8 +65,8 @@ export async function autoResolveOutdated(
   return { resolved: result.resolvedThreads, errors: result.errors };
 }
 
-// Chunk at 50 so a single oversized list never fails the entire call.
-const BULK_CHUNK_SIZE = 50;
+// Keep mutation batches small so rate-limit stops leave a precise pending list.
+const BULK_CHUNK_SIZE = 10;
 
 function buildBulkMutation(
   resolveIds: string[],
@@ -94,8 +104,7 @@ async function bulkApply(
   dismissMessage: string,
   result: ResolveResult,
 ): Promise<void> {
-  type Op = { kind: "r"; id: string } | { kind: "m"; id: string } | { kind: "d"; id: string };
-  const allOps: Op[] = [
+  const allOps: ResolveMutationOp[] = [
     ...resolveIds.map((id) => ({ kind: "r" as const, id })),
     ...minimizeIds.map((id) => ({ kind: "m" as const, id })),
     ...dismissIds.map((id) => ({ kind: "d" as const, id })),
@@ -104,13 +113,18 @@ async function bulkApply(
   for (let i = 0; i < allOps.length; i += BULK_CHUNK_SIZE) {
     const chunk = allOps.slice(i, i + BULK_CHUNK_SIZE);
     // eslint-disable-next-line no-await-in-loop
-    await bulkApplyChunk(
+    const stopped = await bulkApplyChunk(
       chunk.filter((o) => o.kind === "r").map((o) => o.id),
       chunk.filter((o) => o.kind === "m").map((o) => o.id),
       chunk.filter((o) => o.kind === "d").map((o) => o.id),
       dismissMessage,
       result,
+      i + BULK_CHUNK_SIZE < allOps.length,
     );
+    if (stopped) {
+      setPendingOps(result, allOps.slice(i));
+      return;
+    }
   }
 }
 
@@ -120,21 +134,34 @@ async function bulkApplyChunk(
   dismissIds: string[],
   dismissMessage: string,
   result: ResolveResult,
-): Promise<void> {
-  if (resolveIds.length === 0 && minimizeIds.length === 0 && dismissIds.length === 0) return;
+  hasPendingAfter: boolean,
+): Promise<boolean> {
+  if (resolveIds.length === 0 && minimizeIds.length === 0 && dismissIds.length === 0) return false;
 
   const doc = buildBulkMutation(resolveIds, minimizeIds, dismissIds, dismissMessage);
 
   let data: Record<string, unknown>;
+  let rateLimitStop: ResolveRateLimitStop | undefined;
   try {
-    const resp = await graphql<Record<string, unknown>>(doc, {});
+    const resp = await graphqlWithRateLimit<Record<string, unknown>>(doc, {});
     data = resp.data;
+    rateLimitStop = rateLimitFromGraphQlResult(resp.errors?.map((e) => e.message) ?? [], {
+      rateLimit: resp.rateLimit,
+      retryAfterSeconds: resp.retryAfterSeconds,
+      stopOnZeroRemaining: hasPendingAfter,
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    const stop = rateLimitFromError(err, msg);
+    if (stop) {
+      result.errors.push(`rate limit: ${stop.message}`);
+      result.rateLimit = stop;
+      return true;
+    }
     for (const id of resolveIds) result.errors.push(`${id}: ${msg}`);
     for (const id of minimizeIds) result.errors.push(`${id}: ${msg}`);
     for (const id of dismissIds) result.errors.push(`${id}: ${msg}`);
-    return;
+    return false;
   }
 
   for (let i = 0; i < resolveIds.length; i++) {
@@ -154,33 +181,12 @@ async function bulkApplyChunk(
     if (d?.pullRequestReview != null) result.dismissedReviews.push(dismissIds[i]!);
     else result.errors.push(`${dismissIds[i]}: dismiss returned null`);
   }
-}
 
-async function waitForSha(pr: number, repo: RepoInfo, expectedSha: string): Promise<void> {
-  const { intervalMs: SHA_POLL_INTERVAL_MS, maxAttempts: SHA_POLL_MAX_ATTEMPTS } =
-    loadConfig().resolve.shaPoll;
-  for (let attempt = 0; attempt < SHA_POLL_MAX_ATTEMPTS; attempt++) {
-    try {
-      // eslint-disable-next-line no-await-in-loop
-      const currentSha = await getPrHeadSha(pr, repo.owner, repo.name);
-      if (currentSha === expectedSha) return;
-    } catch (err) {
-      if (attempt === SHA_POLL_MAX_ATTEMPTS - 1) throw err;
-    }
-
-    if (attempt < SHA_POLL_MAX_ATTEMPTS - 1) {
-      // eslint-disable-next-line no-await-in-loop
-      await sleep(SHA_POLL_INTERVAL_MS);
-    }
+  if (rateLimitStop) {
+    result.errors.push(`rate limit: ${rateLimitStop.message}`);
+    result.rateLimit = rateLimitStop;
+    return true;
   }
 
-  throw new Error(
-    `Timeout: GitHub PR #${pr} head SHA has not updated to ${expectedSha} after ${
-      ((SHA_POLL_MAX_ATTEMPTS - 1) * SHA_POLL_INTERVAL_MS) / 1000
-    }s. Push may still be in transit — retry shortly.`,
-  );
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return false;
 }

@@ -71,6 +71,14 @@ All mutations live in `comments/resolve.mts`:
 
 Review summary IDs (`PRR_…` from `reviewSummaries`) go through `--minimize-comment-ids`, not `--dismiss-review-ids`. The `dismiss` path is reserved for CHANGES_REQUESTED reviews.
 
+Mutation mode batches resolve/minimize/dismiss operations in groups of 10. On a
+GitHub primary or secondary rate-limit response, Shepherd stops instead of
+continuing through later IDs. The mutate result keeps the successful arrays
+(`resolvedThreads`, `minimizedComments`, `dismissedReviews`) and adds pending
+arrays for IDs that still need another run (`unresolvedThreads`,
+`unminimizedComments`, `undismissedReviews`), plus `rateLimit` metadata when
+GitHub provided retry or reset details.
+
 ## Applying reviewer suggestions
 
 For review threads whose body contains a ` ```suggestion ` fenced block, `resolve --fetch` attaches a parsed `suggestion` field (`{ startLine, endLine, lines, author }`, where `lines: string[]` losslessly carries the replacement — `[]` means "delete these lines", `[""]` means "replace with one blank line") and emits `commitSuggestionsEnabled` mirroring `actions.commitSuggestions`. The agent can then invoke [`pr-shepherd commit-suggestion`](cli-usage.md#pr-shepherd-commit-suggestion-pr---thread-id-id---message) (singular) per thread — one thread at a time — to build a unified diff and produce the suggested commit message + body (with `Co-authored-by: <reviewer>` trailer). The CLI does not mutate the working tree or git history; the agent applies the patch, stages, commits, and resolves the thread using the `## Instructions` section in the output.
