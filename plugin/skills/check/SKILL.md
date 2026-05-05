@@ -25,9 +25,11 @@ allowed-tools: ["Bash"]
    If `MERGED`, output: `PR #N is already merged. Nothing to check.` and skip.
 
 3. **Run the check and follow instructions:**
+   Use the repository package runner selected by `packageManager` or lockfile
+   (for example, `pnpm exec`, `yarn run`, or `npx --no-install`).
 
    ```bash
-   npx pr-shepherd check <N>
+   <runner> pr-shepherd check <N>
    ```
 
    Print the full output. Follow the `## Instructions` section exactly.

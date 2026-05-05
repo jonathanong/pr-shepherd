@@ -12,7 +12,7 @@ State-machine actions (`fix_code`, `cancel`, `mark_ready`, `wait`, `escalate`) a
 
 ## Setup
 
-**Before any `npx pr-shepherd` or `/pr-shepherd:*` invocation in this worktree**, verify `bin/` and `node_modules/` exist. If either is missing, run:
+**Before any `npx pr-shepherd` or `/pr-shepherd:*` invocation in this worktree**, verify `bin/` and `node_modules/` exist. If either is missing, run this source checkout's package-manager install command. This checkout uses npm (`package-lock.json`), so run:
 
 ```bash
 npm install
@@ -48,7 +48,7 @@ Instead, emit a suggestion: build the patch / commit message / file list and ret
 
 ## Dogfooding
 
-During development, run the CLI from this repository root with `npx pr-shepherd` (after `npm install && npm run build`).
+During development, run the CLI from this repository root with `npx pr-shepherd` (after the source checkout's package-manager install command and build; currently `npm install && npm run build`).
 This ensures you are using the built local CLI from this checkout rather than any globally installed version.
 Use it from the same worktree/repository so it picks up the skills and configuration checked into this local checkout.
 
