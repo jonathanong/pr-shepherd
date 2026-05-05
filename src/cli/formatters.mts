@@ -155,6 +155,39 @@ export function formatMutateResult(result: ResolveResult): string {
     lines.push(
       `Dismissed reviews (${result.dismissedReviews.length}): ${result.dismissedReviews.join(", ")}`,
     );
-  if (result.errors.length) lines.push(`Errors:\n  ${result.errors.join("\n  ")}`);
+  if (result.rateLimit) {
+    const details = [
+      result.rateLimit.retryAfterSeconds !== undefined
+        ? `retry after ${result.rateLimit.retryAfterSeconds}s`
+        : null,
+      result.rateLimit.remaining !== undefined && result.rateLimit.limit !== undefined
+        ? `remaining ${result.rateLimit.remaining}/${result.rateLimit.limit}`
+        : null,
+      result.rateLimit.resetAt !== undefined
+        ? `reset at ${new Date(result.rateLimit.resetAt * 1000).toISOString()}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(", ");
+    lines.push(
+      `Stopped: GitHub rate limit hit — ${result.rateLimit.message}${details ? ` (${details})` : ""}`,
+    );
+  }
+  if (result.unresolvedThreads?.length)
+    lines.push(
+      `Not resolved due to rate limit (${result.unresolvedThreads.length}): ${result.unresolvedThreads.join(", ")}`,
+    );
+  if (result.unminimizedComments?.length)
+    lines.push(
+      `Not minimized due to rate limit (${result.unminimizedComments.length}): ${result.unminimizedComments.join(", ")}`,
+    );
+  if (result.undismissedReviews?.length)
+    lines.push(
+      `Not dismissed due to rate limit (${result.undismissedReviews.length}): ${result.undismissedReviews.join(", ")}`,
+    );
+  const errors = result.rateLimit
+    ? result.errors.filter((e) => !e.startsWith("rate limit:"))
+    : result.errors;
+  if (errors.length) lines.push(`Errors:\n  ${errors.join("\n  ")}`);
   return lines.join("\n");
 }

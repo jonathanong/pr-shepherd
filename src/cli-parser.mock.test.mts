@@ -211,6 +211,61 @@ describe("main — resolve", () => {
     expect(mockRunResolveMutate).toHaveBeenCalledTimes(1);
   });
 
+  it("formatMutateResult renders rate-limit stop and pending IDs", async () => {
+    mockRunResolveMutate.mockResolvedValue({
+      resolvedThreads: [],
+      minimizedComments: ["c-1", "c-2"],
+      dismissedReviews: [],
+      errors: ["rate limit: API rate limit exceeded"],
+      rateLimit: {
+        message: "API rate limit exceeded",
+        retryAfterSeconds: 60,
+        remaining: 0,
+        limit: 5000,
+        resetAt: 1700000000,
+      },
+      unminimizedComments: ["c-3", "c-4"],
+    });
+
+    await main(["node", "shepherd", "resolve", "42", "--minimize-comment-ids", "c-1,c-2,c-3,c-4"]);
+
+    const out = getStdout();
+    expect(out).toContain("Minimized comments (2): c-1, c-2");
+    expect(out).toContain("Stopped: GitHub rate limit hit");
+    expect(out).toContain("retry after 60s");
+    expect(out).toContain("reset at 2023-11-14T22:13:20.000Z");
+    expect(out).toContain("Not minimized due to rate limit (2): c-3, c-4");
+    expect(out).not.toContain("Errors:");
+  });
+
+  it("resolve mutate --format=json includes rate-limit stop and pending IDs", async () => {
+    mockRunResolveMutate.mockResolvedValue({
+      resolvedThreads: ["t-1"],
+      minimizedComments: [],
+      dismissedReviews: [],
+      errors: ["rate limit: secondary rate limit"],
+      rateLimit: { message: "secondary rate limit" },
+      unresolvedThreads: ["t-2"],
+    });
+
+    await main([
+      "node",
+      "shepherd",
+      "resolve",
+      "42",
+      "--resolve-thread-ids",
+      "t-1,t-2",
+      "--format=json",
+    ]);
+
+    const parsed = JSON.parse(getStdout()) as {
+      rateLimit: { message: string };
+      unresolvedThreads: string[];
+    };
+    expect(parsed.rateLimit.message).toBe("secondary rate limit");
+    expect(parsed.unresolvedThreads).toEqual(["t-2"]);
+  });
+
   it("formatFetchResult emits H1 heading, Markdown sections, and ## Instructions", async () => {
     mockRunResolveFetch.mockResolvedValue({
       prNumber: 42,

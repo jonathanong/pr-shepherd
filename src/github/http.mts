@@ -2,6 +2,9 @@ import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 import { appendEntry, nextEntry } from "../log/log-file.mts";
 import { formatRequestEntry, formatResponseEntry } from "../log/session.mts";
+import { GitHubRequestError } from "./errors.mts";
+
+export { GitHubRequestError };
 
 const execFile = promisify(execFileCb);
 
@@ -13,9 +16,15 @@ export interface RateLimitInfo {
   resetAt: number;
 }
 
+export interface GitHubGraphQlError {
+  message: string;
+}
+
 export interface GraphQlResult<T = unknown> {
   data: T;
   rateLimit?: RateLimitInfo;
+  retryAfterSeconds?: number;
+  errors?: GitHubGraphQlError[];
 }
 
 // ---------------------------------------------------------------------------
@@ -113,7 +122,12 @@ async function requestWithTokenRetry(
 async function graphqlInner<T>(
   query: string,
   vars: Record<string, unknown>,
-): Promise<{ data: T; rateLimit: RateLimitInfo | null }> {
+): Promise<{
+  data: T;
+  rateLimit: RateLimitInfo | null;
+  retryAfterSeconds: number | undefined;
+  errors: GitHubGraphQlError[] | undefined;
+}> {
   const url = `${BASE_URL}/graphql`;
   const n = nextEntry();
   appendEntry(
@@ -151,6 +165,7 @@ async function graphqlInner<T>(
 
   const durationMs = Math.round(performance.now() - retryT0);
   const rateLimit = parseRateLimit(res.headers);
+  const retryAfterSeconds = parseRetryAfter(res.headers);
 
   if (!res.ok) {
     const body = await res.text();
@@ -166,10 +181,13 @@ async function graphqlInner<T>(
         attempt: attempt > 1 ? attempt : undefined,
       }),
     );
-    throw new Error(`GitHub GraphQL request failed: ${res.status} ${sanitizeBody(body)}`);
+    throw new GitHubRequestError(
+      `GitHub GraphQL request failed: ${res.status} ${sanitizeBody(body)}`,
+      { status: res.status, rateLimit: rateLimit ?? undefined, retryAfterSeconds },
+    );
   }
 
-  const parsed = (await res.json()) as { data: T | null; errors?: Array<{ message: string }> };
+  const parsed = (await res.json()) as { data: T | null; errors?: GitHubGraphQlError[] };
   appendEntry(
     formatResponseEntry({
       n,
@@ -184,15 +202,19 @@ async function graphqlInner<T>(
   );
 
   if (parsed.data == null) {
-    const messages = (parsed.errors ?? []).map((e: { message: string }) => e.message).join("; ");
-    throw new Error(`GitHub GraphQL error (no data): ${messages}`);
+    const messages = (parsed.errors ?? []).map((e) => e.message).join("; ");
+    throw new GitHubRequestError(`GitHub GraphQL error (no data): ${messages}`, {
+      status: res.status,
+      rateLimit: rateLimit ?? undefined,
+      retryAfterSeconds,
+    });
   }
   if (parsed.errors?.length) {
-    const messages = parsed.errors.map((e: { message: string }) => e.message).join("; ");
+    const messages = parsed.errors.map((e) => e.message).join("; ");
     process.stderr.write(`pr-shepherd: GraphQL non-fatal errors: ${messages}\n`);
   }
 
-  return { data: parsed.data, rateLimit };
+  return { data: parsed.data, rateLimit, retryAfterSeconds, errors: parsed.errors };
 }
 
 export async function graphql<T = unknown>(
@@ -207,8 +229,8 @@ export async function graphqlWithRateLimit<T = unknown>(
   query: string,
   vars: Record<string, unknown> = {},
 ): Promise<GraphQlResult<T>> {
-  const { data, rateLimit } = await graphqlInner<T>(query, vars);
-  return { data, rateLimit: rateLimit ?? undefined };
+  const { data, rateLimit, retryAfterSeconds, errors } = await graphqlInner<T>(query, vars);
+  return { data, rateLimit: rateLimit ?? undefined, retryAfterSeconds, errors };
 }
 
 // ---------------------------------------------------------------------------
@@ -409,4 +431,10 @@ function parseRateLimit(headers: Headers): RateLimitInfo | null {
     return { remaining, limit, resetAt };
   }
   return null;
+}
+
+function parseRetryAfter(headers: Headers): number | undefined {
+  const raw = headers.get("retry-after");
+  const seconds = Number(raw);
+  return raw !== null && Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined;
 }

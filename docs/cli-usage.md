@@ -131,6 +131,20 @@ Minimized comments (1): IC_kwDOxyz
 Dismissed reviews (1): PRR_kwDO123
 ```
 
+Mutation batches are sent in groups of 10. If GitHub returns a primary or secondary
+rate-limit response, Shepherd stops immediately and reports both completed IDs and
+the IDs still pending:
+
+```text
+Minimized comments (35): IC_1, IC_2, …
+Stopped: GitHub rate limit hit — API rate limit exceeded (retry after 60s, remaining 0/5000, reset at 2023-11-14T22:13:20.000Z)
+Not minimized due to rate limit (5): IC_36, IC_37, IC_38, IC_39, IC_40
+```
+
+Retry a later run with the pending IDs only. JSON output exposes the same data in
+`rateLimit`, `unresolvedThreads`, `unminimizedComments`, and
+`undismissedReviews`.
+
 **Flags:**
 
 | Flag                     | Description                                                    |

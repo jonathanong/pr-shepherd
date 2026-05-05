@@ -25,7 +25,14 @@ vi.mock("node:child_process", () => ({
   },
 }));
 
-import { graphql, graphqlWithRateLimit, rest, restText, _resetTokenCache } from "./http.mts";
+import {
+  GitHubRequestError,
+  graphql,
+  graphqlWithRateLimit,
+  rest,
+  restText,
+  _resetTokenCache,
+} from "./http.mts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -233,6 +240,43 @@ describe("graphqlWithRateLimit — header parsing", () => {
     });
     const result = await graphqlWithRateLimit("{ q }");
     expect(result.rateLimit).toEqual({ remaining: 42, limit: 5000, resetAt: 1700000000 });
+  });
+
+  it("returns retry-after and GraphQL errors on partial data", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "retry-after": "30" }),
+      json: () =>
+        Promise.resolve({
+          data: { m0: null },
+          errors: [{ message: "You have exceeded a secondary rate limit" }],
+        }),
+    });
+    const result = await graphqlWithRateLimit("{ q }");
+    expect(result.retryAfterSeconds).toBe(30);
+    expect(result.errors).toEqual([{ message: "You have exceeded a secondary rate limit" }]);
+  });
+
+  it("throws GitHubRequestError with rate-limit metadata on failed response", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 403,
+      headers: new Headers({
+        "retry-after": "60",
+        "x-ratelimit-remaining": "0",
+        "x-ratelimit-limit": "5000",
+        "x-ratelimit-reset": "1700000000",
+      }),
+      text: () => Promise.resolve("API rate limit exceeded"),
+    });
+
+    await expect(graphqlWithRateLimit("{ q }")).rejects.toMatchObject({
+      name: "GitHubRequestError",
+      status: 403,
+      retryAfterSeconds: 60,
+      rateLimit: { remaining: 0, limit: 5000, resetAt: 1700000000 },
+    } satisfies Partial<GitHubRequestError>);
   });
 
   it("returns rateLimit: undefined when rate-limit headers are absent", async () => {
