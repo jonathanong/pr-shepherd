@@ -35,10 +35,10 @@ resolves `pr-shepherd ...` without prompting to install the package.
    ## Run the check
 
    Use the repository package runner selected by `packageManager` or lockfile
-   (`pnpm exec`, `yarn run`, or `npx`).
+   (for example, `pnpm exec`, `yarn run`, or `npx --no-install`).
 
    ```bash
-   pr-shepherd check <PR_NUMBER> --format=json
+   <runner> pr-shepherd check <PR_NUMBER> --format=json
    ```
 
    Parse the JSON and report:
@@ -60,6 +60,6 @@ For `monitor` and `resolve` custom commands, do **not** copy the
 frontmatter that is not valid for `.claude/commands/` files. Instead, create
 `.claude/commands/pr-monitor.md` and/or `.claude/commands/pr-resolve.md`
 using the same command-file structure as the `pr-check` example above, with
-the CLI invocation changed to `pr-shepherd monitor ...` or
-`pr-shepherd resolve ...` through the selected package runner. To drive the CLI without Claude at all, see
-[cli-usage.md](cli-usage.md).
+the CLI invocation changed to `<runner> pr-shepherd monitor ...` or
+`<runner> pr-shepherd resolve ...`. To drive the CLI without Claude at all,
+see [cli-usage.md](cli-usage.md).

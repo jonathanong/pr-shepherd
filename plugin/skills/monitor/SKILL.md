@@ -31,10 +31,10 @@ allowed-tools:
 
 2. **Run the bootstrap command and follow its instructions:**
    Use the repository package runner selected by `packageManager` or lockfile
-   (`pnpm exec`, `yarn run`, or `npx`).
+   (for example, `pnpm exec`, `yarn run`, or `npx --no-install`).
 
    ```bash
-   pr-shepherd monitor <PR_NUMBER>
+   <runner> pr-shepherd monitor <PR_NUMBER>
    ```
 
    Print the full output. Follow the `## Instructions` section exactly.

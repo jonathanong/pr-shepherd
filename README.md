@@ -265,18 +265,18 @@ If your Codex environment does not already set `CODEX_CI=1`, set `AGENT=codex` s
 export AGENT=codex
 ```
 
-Then start a PR monitor from Codex:
+Then start a PR monitor from Codex with the target repository's package runner:
 
 ```bash
-npx pr-shepherd monitor 42
+<runner> pr-shepherd monitor 42
 ```
 
-Use the target repository's package runner for the command. For example, a repo like `~/filaments` that declares `packageManager: "pnpm@..."` and has `pnpm-lock.yaml` should use `pnpm exec pr-shepherd monitor 42`.
+For example, a repo like `~/filaments` that declares `packageManager: "pnpm@..."` and has `pnpm-lock.yaml` should use `pnpm exec pr-shepherd monitor 42`. For npm repos, use `npx --no-install pr-shepherd monitor 42`.
 
 Or ask Codex to use the `pr-shepherd` skill, for example: `run pr-shepherd until this PR is ready`. Follow the output's `## Instructions`. The monitor bootstrap runs one tick and prints the reusable follow-up command, usually:
 
 ```bash
-npx pr-shepherd 42
+<runner> pr-shepherd 42
 ```
 
 For an active Codex goal, rerun that command every `watch.interval` (default 4m) until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). `pr-shepherd iterate 42` remains supported for existing workflows. There is no background `/loop` scheduler in Codex.

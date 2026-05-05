@@ -29,10 +29,10 @@ Resolve unresolved review threads and minimize PR comments on the current PR —
 
 3. **Fetch and follow instructions:**
    Use the repository package runner selected by `packageManager` or lockfile
-   (`pnpm exec`, `yarn run`, or `npx`).
+   (for example, `pnpm exec`, `yarn run`, or `npx --no-install`).
 
    ```bash
-   pr-shepherd resolve <N> --fetch
+   <runner> pr-shepherd resolve <N> --fetch
    ```
 
    Print the full output. Follow the `## Instructions` section exactly.

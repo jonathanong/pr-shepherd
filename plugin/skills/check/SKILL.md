@@ -26,10 +26,10 @@ allowed-tools: ["Bash"]
 
 3. **Run the check and follow instructions:**
    Use the repository package runner selected by `packageManager` or lockfile
-   (`pnpm exec`, `yarn run`, or `npx`).
+   (for example, `pnpm exec`, `yarn run`, or `npx --no-install`).
 
    ```bash
-   pr-shepherd check <N>
+   <runner> pr-shepherd check <N>
    ```
 
    Print the full output. Follow the `## Instructions` section exactly.
