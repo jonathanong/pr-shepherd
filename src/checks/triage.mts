@@ -38,6 +38,21 @@ export async function fetchStartupFailureChecks(
   repo: RepoInfo,
   headSha: string,
 ): Promise<CheckRun[]> {
+  try {
+    return await fetchStartupFailureChecksUncached(repo, headSha);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(
+      `pr-shepherd: startup-failure run fetch failed for ${headSha} (ignored): ${msg}\n`,
+    );
+    return [];
+  }
+}
+
+async function fetchStartupFailureChecksUncached(
+  repo: RepoInfo,
+  headSha: string,
+): Promise<CheckRun[]> {
   const { owner, name } = repo;
   const perPage = 100;
   const MAX_RUN_PAGES = 10;

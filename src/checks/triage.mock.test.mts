@@ -189,6 +189,22 @@ describe("fetchStartupFailureChecks", () => {
     expect(check!.name).toBe("workflow run 123");
     expect(check).not.toHaveProperty("summary");
   });
+
+  it("returns an empty supplement when the Actions runs fetch fails", async () => {
+    mockFetch.mockResolvedValueOnce(makeErrorResponse(403));
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
+    try {
+      const checks = await fetchStartupFailureChecks(REPO, "abc123");
+
+      expect(checks).toEqual([]);
+      expect(stderrSpy).toHaveBeenCalledWith(
+        expect.stringContaining("startup-failure run fetch failed for abc123 (ignored)"),
+      );
+    } finally {
+      stderrSpy.mockRestore();
+    }
+  });
 });
 
 describe("triageFailingChecks — failedStep", () => {
