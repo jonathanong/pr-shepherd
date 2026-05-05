@@ -7,5 +7,6 @@ bin/
 *.log
 .pr-shepherdrc.yml
 .husky/_/
+.codex/worktrees/
 .claude/worktrees/
 .claude/scheduled_tasks.lock
