@@ -1,6 +1,7 @@
 import { graphqlWithRateLimit, type RepoInfo } from "../github/client.mts";
 import type { ResolveOptions } from "../types.mts";
 import {
+  isRateLimitMessage,
   rateLimitFromError,
   rateLimitFromGraphQlResult,
   type ResolveRateLimitStop,
@@ -142,10 +143,13 @@ async function bulkApplyChunk(
 
   let data: Record<string, unknown>;
   let rateLimitStop: ResolveRateLimitStop | undefined;
+  let suppressCurrentChunkErrors = false;
   try {
     const resp = await graphqlWithRateLimit<Record<string, unknown>>(doc, {});
     data = resp.data;
-    rateLimitStop = rateLimitFromGraphQlResult(resp.errors?.map((e) => e.message) ?? [], {
+    const graphQlErrorMessages = resp.errors?.map((e) => e.message) ?? [];
+    suppressCurrentChunkErrors = graphQlErrorMessages.some(isRateLimitMessage);
+    rateLimitStop = rateLimitFromGraphQlResult(graphQlErrorMessages, {
       rateLimit: resp.rateLimit,
       retryAfterSeconds: resp.retryAfterSeconds,
       stopOnZeroRemaining: hasPendingAfter,
@@ -167,21 +171,22 @@ async function bulkApplyChunk(
   for (let i = 0; i < resolveIds.length; i++) {
     const r = data[`r${i}`] as { thread?: { isResolved?: boolean } } | null | undefined;
     if (r?.thread?.isResolved === true) result.resolvedThreads.push(resolveIds[i]!);
-    else if (!rateLimitStop)
+    else if (!suppressCurrentChunkErrors)
       result.errors.push(`${resolveIds[i]}: resolve returned null or thread not resolved`);
   }
 
   for (let i = 0; i < minimizeIds.length; i++) {
     const m = data[`m${i}`] as { minimizedComment?: { isMinimized?: boolean } } | null | undefined;
     if (m?.minimizedComment?.isMinimized === true) result.minimizedComments.push(minimizeIds[i]!);
-    else if (!rateLimitStop)
+    else if (!suppressCurrentChunkErrors)
       result.errors.push(`${minimizeIds[i]}: minimize returned null or comment not minimized`);
   }
 
   for (let i = 0; i < dismissIds.length; i++) {
     const d = data[`d${i}`] as { pullRequestReview?: { state?: string } } | null | undefined;
     if (d?.pullRequestReview != null) result.dismissedReviews.push(dismissIds[i]!);
-    else if (!rateLimitStop) result.errors.push(`${dismissIds[i]}: dismiss returned null`);
+    else if (!suppressCurrentChunkErrors)
+      result.errors.push(`${dismissIds[i]}: dismiss returned null`);
   }
 
   if (rateLimitStop) {

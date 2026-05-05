@@ -16,7 +16,12 @@ export function rateLimitFromError(
     retryAfterSeconds?: unknown;
   };
   const message = err instanceof Error ? err.message : fallbackMessage;
-  if (!isRateLimitMessage(message) && maybe.status !== 403 && maybe.status !== 429) return null;
+  if (
+    !isRateLimitMessage(message) &&
+    maybe.retryAfterSeconds === undefined &&
+    maybe.rateLimit?.remaining !== 0
+  )
+    return null;
   return buildRateLimitStop(message, {
     rateLimit: maybe.rateLimit,
     retryAfterSeconds: maybe.retryAfterSeconds,
@@ -62,6 +67,6 @@ function finiteNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
-function isRateLimitMessage(message: string): boolean {
+export function isRateLimitMessage(message: string): boolean {
   return /rate limit|rate-limit|secondary limit|secondary rate/i.test(message);
 }

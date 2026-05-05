@@ -83,6 +83,23 @@ describe("applyResolveOptions — mutations", () => {
     expect(result.errors[0]).toContain("server unavailable");
   });
 
+  it("does not classify non-rate-limit 403 errors as retryable rate limits", async () => {
+    mockGraphql.mockRejectedValueOnce(
+      Object.assign(new Error("Resource not accessible by integration"), { status: 403 }),
+    );
+
+    const result = await applyResolveOptions(1, REPO, {
+      minimizeCommentIds: ["c-bad", "c-later"],
+    });
+
+    expect(result.rateLimit).toBeUndefined();
+    expect(result.unminimizedComments).toBeUndefined();
+    expect(result.errors).toEqual([
+      "c-bad: Resource not accessible by integration",
+      "c-later: Resource not accessible by integration",
+    ]);
+  });
+
   it("stops on a thrown rate limit and reports unattempted IDs", async () => {
     const ids = Array.from({ length: 25 }, (_, i) => `c-${i}`);
     mockGraphql
@@ -149,6 +166,30 @@ describe("applyResolveOptions — mutations", () => {
     expect(result.minimizedComments).toEqual(ids.slice(0, 10));
     expect(result.unminimizedComments).toEqual(ids.slice(10));
     expect(result.rateLimit?.message).toContain("remaining is 0");
+  });
+
+  it("preserves current-batch alias failures when only headers show remaining zero", async () => {
+    const ids = Array.from({ length: 12 }, (_, i) => `c-${i}`);
+    mockGraphql.mockResolvedValueOnce({
+      data: {
+        m0: { minimizedComment: { isMinimized: true } },
+        m1: null,
+        m2: { minimizedComment: { isMinimized: true } },
+        m3: { minimizedComment: { isMinimized: true } },
+        m4: { minimizedComment: { isMinimized: true } },
+        m5: { minimizedComment: { isMinimized: true } },
+        m6: { minimizedComment: { isMinimized: true } },
+        m7: { minimizedComment: { isMinimized: true } },
+        m8: { minimizedComment: { isMinimized: true } },
+        m9: { minimizedComment: { isMinimized: true } },
+      },
+      rateLimit: { remaining: 0, limit: 5000, resetAt: 1700000000 },
+    });
+
+    const result = await applyResolveOptions(1, REPO, { minimizeCommentIds: ids });
+
+    expect(result.errors).toContain("c-1: minimize returned null or comment not minimized");
+    expect(result.unminimizedComments).toEqual(["c-1", "c-10", "c-11"]);
   });
 
   it("records error when resolve alias returns non-resolved thread", async () => {
