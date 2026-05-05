@@ -11,8 +11,10 @@ CI check runs flow through three stages: supplement → classify → triage.
 GitHub can complete a workflow run with `conclusion === "startup_failure"` before it creates any job or check-run context. Those runs may be absent from GraphQL `statusCheckRollup`, so Shepherd supplements the GraphQL check list with a REST Actions run query for the PR head SHA:
 
 - `GET /repos/{owner}/{repo}/actions/runs?head_sha=<sha>&status=startup_failure`
+- Runs are kept only when the REST `pull_requests` association includes the current PR number and head SHA, because the endpoint is repository-wide for the commit SHA.
 - Each returned run is mapped to a `CheckRun` with `conclusion: "STARTUP_FAILURE"`, the run ID, the run URL, the raw event, the workflow name, and `display_title` as `summary`.
 - If the same run ID already exists in the GraphQL check list, the startup-failure conclusion updates that entry instead of adding a duplicate.
+- The supplement is best-effort. If the Actions runs request fails, Shepherd logs a warning and continues with the GraphQL check data already fetched.
 
 ### Stage 1: Classify (`checks/classify.mts`)
 

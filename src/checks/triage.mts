@@ -37,13 +37,14 @@ async function triageCheck(
 export async function fetchStartupFailureChecks(
   repo: RepoInfo,
   headSha: string,
+  prNumber: number,
 ): Promise<CheckRun[]> {
   try {
-    return await fetchStartupFailureChecksUncached(repo, headSha);
+    return await fetchStartupFailureChecksUncached(repo, headSha, prNumber);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     process.stderr.write(
-      `pr-shepherd: startup-failure run fetch failed for ${headSha} (ignored): ${msg}\n`,
+      `pr-shepherd: startup-failure run fetch failed for PR #${prNumber} at ${headSha} (ignored): ${msg}\n`,
     );
     return [];
   }
@@ -52,6 +53,7 @@ export async function fetchStartupFailureChecks(
 async function fetchStartupFailureChecksUncached(
   repo: RepoInfo,
   headSha: string,
+  prNumber: number,
 ): Promise<CheckRun[]> {
   const { owner, name } = repo;
   const perPage = 100;
@@ -62,7 +64,11 @@ async function fetchStartupFailureChecksUncached(
       "GET",
       `/repos/${owner}/${name}/actions/runs?head_sha=${encodeURIComponent(headSha)}&status=${STARTUP_FAILURE_STATUS}&per_page=${perPage}&page=${page}`,
     );
-    checks.push(...data.workflow_runs.map(workflowRunToCheckRun));
+    checks.push(
+      ...data.workflow_runs
+        .filter((run) => runBelongsToPr(run, prNumber, headSha))
+        .map(workflowRunToCheckRun),
+    );
     if (data.workflow_runs.length < perPage) break;
     if (page === MAX_RUN_PAGES) {
       process.stderr.write(
@@ -91,6 +97,10 @@ interface WorkflowRunsResponse {
     conclusion: string | null;
     html_url: string;
     display_title?: string | null;
+    pull_requests?: Array<{
+      number?: number | null;
+      head?: { sha?: string | null } | null;
+    }>;
   }>;
 }
 
@@ -111,6 +121,16 @@ function workflowRunToCheckRun(run: WorkflowRunsResponse["workflow_runs"][number
     runId: String(run.id),
     ...(summary !== undefined && { summary }),
   };
+}
+
+function runBelongsToPr(
+  run: WorkflowRunsResponse["workflow_runs"][number],
+  prNumber: number,
+  headSha: string,
+): boolean {
+  return (run.pull_requests ?? []).some(
+    (pr) => pr.number === prNumber && (pr.head?.sha ?? headSha) === headSha,
+  );
 }
 
 function fetchJobs(

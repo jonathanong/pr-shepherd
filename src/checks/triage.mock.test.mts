@@ -146,11 +146,12 @@ describe("fetchStartupFailureChecks", () => {
           conclusion: "startup_failure",
           html_url: "https://github.com/owner/repo/actions/runs/25406234225",
           display_title: "ci: skip secret-backed jobs for dependency bots",
+          pull_requests: [{ number: 42, head: { sha: "abc123" } }],
         },
       ]),
     );
 
-    const checks = await fetchStartupFailureChecks(REPO, "abc123");
+    const checks = await fetchStartupFailureChecks(REPO, "abc123", 42);
 
     expect(checks).toEqual([
       {
@@ -180,14 +181,44 @@ describe("fetchStartupFailureChecks", () => {
           conclusion: "startup_failure",
           html_url: "https://github.com/owner/repo/actions/runs/123",
           display_title: "",
+          pull_requests: [{ number: 42, head: { sha: "abc123" } }],
         },
       ]),
     );
 
-    const [check] = await fetchStartupFailureChecks(REPO, "abc123");
+    const [check] = await fetchStartupFailureChecks(REPO, "abc123", 42);
 
     expect(check!.name).toBe("workflow run 123");
     expect(check).not.toHaveProperty("summary");
+  });
+
+  it("filters out startup-failure runs from other PRs sharing the same head SHA", async () => {
+    mockFetch.mockResolvedValueOnce(
+      makeWorkflowRunsResponse([
+        {
+          id: 123,
+          name: "CI",
+          event: "pull_request",
+          status: "completed",
+          conclusion: "startup_failure",
+          html_url: "https://github.com/owner/repo/actions/runs/123",
+          pull_requests: [{ number: 41, head: { sha: "abc123" } }],
+        },
+        {
+          id: 456,
+          name: "CI",
+          event: "pull_request",
+          status: "completed",
+          conclusion: "startup_failure",
+          html_url: "https://github.com/owner/repo/actions/runs/456",
+          pull_requests: [{ number: 42, head: { sha: "abc123" } }],
+        },
+      ]),
+    );
+
+    const checks = await fetchStartupFailureChecks(REPO, "abc123", 42);
+
+    expect(checks.map((c) => c.runId)).toEqual(["456"]);
   });
 
   it("returns an empty supplement when the Actions runs fetch fails", async () => {
@@ -195,11 +226,11 @@ describe("fetchStartupFailureChecks", () => {
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
 
     try {
-      const checks = await fetchStartupFailureChecks(REPO, "abc123");
+      const checks = await fetchStartupFailureChecks(REPO, "abc123", 42);
 
       expect(checks).toEqual([]);
       expect(stderrSpy).toHaveBeenCalledWith(
-        expect.stringContaining("startup-failure run fetch failed for abc123 (ignored)"),
+        expect.stringContaining("startup-failure run fetch failed for PR #42 at abc123 (ignored)"),
       );
     } finally {
       stderrSpy.mockRestore();

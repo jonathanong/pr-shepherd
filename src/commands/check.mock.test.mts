@@ -157,6 +157,7 @@ describe("runCheck — startup failure workflow runs", () => {
     expect(mockFetchStartupFailureChecks).toHaveBeenCalledWith(
       { owner: "owner", name: "repo" },
       "abc123",
+      42,
     );
     expect(report.status).toBe("FAILING");
     expect(report.checks.failing).toEqual([
@@ -173,7 +174,7 @@ describe("runCheck — startup failure workflow runs", () => {
     );
   });
 
-  it("overwrites an existing check from the same run instead of duplicating it", async () => {
+  it("replaces an existing check from the same run instead of preserving stale metadata", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
         checks: [
@@ -182,6 +183,7 @@ describe("runCheck — startup failure workflow runs", () => {
             conclusion: "SUCCESS",
             runId: "25406234225",
             detailsUrl: "https://github.com/owner/repo/actions/runs/25406234225/job/1",
+            summary: "stale job summary",
           }),
         ],
       }),
@@ -194,6 +196,7 @@ describe("runCheck — startup failure workflow runs", () => {
         detailsUrl: "https://github.com/owner/repo/actions/runs/25406234225",
         event: "pull_request",
         runId: "25406234225",
+        summary: "startup failure title",
       },
     ]);
 
@@ -206,11 +209,13 @@ describe("runCheck — startup failure workflow runs", () => {
         name: "CI",
         conclusion: "STARTUP_FAILURE",
         detailsUrl: "https://github.com/owner/repo/actions/runs/25406234225",
+        summary: "startup failure title",
       }),
     );
+    expect(report.checks.failing[0]!.summary).not.toBe("stale job summary");
   });
 
-  it("overwrites all existing checks from the same startup-failure run", async () => {
+  it("replaces all existing checks from the same startup-failure run with one run entry", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
         checks: [
@@ -233,9 +238,10 @@ describe("runCheck — startup failure workflow runs", () => {
     const report = await runCheck(BASE_OPTS);
 
     expect(report.checks.passing).toHaveLength(0);
-    expect(report.checks.failing).toHaveLength(2);
-    expect(report.checks.failing.map((c) => c.name)).toEqual(["build", "test"]);
-    expect(report.checks.failing.every((c) => c.conclusion === "STARTUP_FAILURE")).toBe(true);
+    expect(report.checks.failing).toHaveLength(1);
+    expect(report.checks.failing[0]).toEqual(
+      expect.objectContaining({ name: "CI", conclusion: "STARTUP_FAILURE" }),
+    );
   });
 
   it("keeps non-PR startup failures filtered out of the readiness verdict", async () => {

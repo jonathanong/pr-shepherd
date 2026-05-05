@@ -50,7 +50,11 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
     };
   }
 
-  const startupFailureChecks = await fetchStartupFailureChecks(repo, batchData.headRefOid);
+  const startupFailureChecks = await fetchStartupFailureChecks(
+    repo,
+    batchData.headRefOid,
+    prNumber,
+  );
   const allChecks = mergeStartupFailureChecks(batchData.checks, startupFailureChecks);
   const classifiedChecks = classifyChecks(allChecks);
   const verdict = getCiVerdict(classifiedChecks);

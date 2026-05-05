@@ -13,27 +13,15 @@ export function mergeStartupFailureChecks(
   });
 
   const merged = [...checks];
+  const removed = new Set<number>();
   for (const startupFailure of startupFailureChecks) {
     const indices = startupFailure.runId === null ? undefined : byRunId.get(startupFailure.runId);
     if (indices === undefined) {
       merged.push(startupFailure);
       continue;
     }
-    for (const index of indices) {
-      merged[index] = mergeStartupFailureCheck(merged[index]!, startupFailure);
-    }
+    merged[indices[0]!] = startupFailure;
+    indices.slice(1).forEach((index) => removed.add(index));
   }
-  return merged;
-}
-
-function mergeStartupFailureCheck(existing: CheckRun, startupFailure: CheckRun): CheckRun {
-  const replacement: CheckRun = {
-    ...existing,
-    conclusion: "STARTUP_FAILURE",
-    status: "COMPLETED",
-    detailsUrl: startupFailure.detailsUrl || existing.detailsUrl,
-    event: startupFailure.event,
-  };
-  if (startupFailure.summary !== undefined) replacement.summary = startupFailure.summary;
-  return replacement;
+  return merged.filter((_, index) => !removed.has(index));
 }
