@@ -163,7 +163,9 @@ export function formatMutateResult(result: ResolveResult): string {
       result.rateLimit.remaining !== undefined && result.rateLimit.limit !== undefined
         ? `remaining ${result.rateLimit.remaining}/${result.rateLimit.limit}`
         : null,
-      result.rateLimit.resetAt !== undefined ? `reset ${result.rateLimit.resetAt}` : null,
+      result.rateLimit.resetAt !== undefined
+        ? `reset at ${new Date(result.rateLimit.resetAt * 1000).toISOString()}`
+        : null,
     ]
       .filter(Boolean)
       .join(", ");
@@ -183,6 +185,9 @@ export function formatMutateResult(result: ResolveResult): string {
     lines.push(
       `Not dismissed due to rate limit (${result.undismissedReviews.length}): ${result.undismissedReviews.join(", ")}`,
     );
-  if (result.errors.length) lines.push(`Errors:\n  ${result.errors.join("\n  ")}`);
+  const errors = result.rateLimit
+    ? result.errors.filter((e) => !e.startsWith("rate limit:"))
+    : result.errors;
+  if (errors.length) lines.push(`Errors:\n  ${errors.join("\n  ")}`);
   return lines.join("\n");
 }

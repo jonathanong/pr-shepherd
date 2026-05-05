@@ -133,7 +133,7 @@ describe("applyResolveOptions — mutations", () => {
     expect(mockGraphql).toHaveBeenCalledTimes(1);
     expect(result.minimizedComments).toEqual(["c-0", "c-1"]);
     expect(result.unminimizedComments).toEqual(ids.slice(2));
-    expect(result.errors).toContain("rate limit: You have exceeded a secondary rate limit");
+    expect(result.errors).toEqual(["rate limit: You have exceeded a secondary rate limit"]);
   });
 
   it("stops before the next batch when remaining rate-limit budget reaches zero", async () => {

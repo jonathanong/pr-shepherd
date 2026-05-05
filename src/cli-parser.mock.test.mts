@@ -233,7 +233,9 @@ describe("main — resolve", () => {
     expect(out).toContain("Minimized comments (2): c-1, c-2");
     expect(out).toContain("Stopped: GitHub rate limit hit");
     expect(out).toContain("retry after 60s");
+    expect(out).toContain("reset at 2023-11-14T22:13:20.000Z");
     expect(out).toContain("Not minimized due to rate limit (2): c-3, c-4");
+    expect(out).not.toContain("Errors:");
   });
 
   it("resolve mutate --format=json includes rate-limit stop and pending IDs", async () => {

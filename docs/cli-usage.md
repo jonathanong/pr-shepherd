@@ -137,10 +137,8 @@ the IDs still pending:
 
 ```text
 Minimized comments (35): IC_1, IC_2, …
-Stopped: GitHub rate limit hit — API rate limit exceeded (retry after 60s, remaining 0/5000)
+Stopped: GitHub rate limit hit — API rate limit exceeded (retry after 60s, remaining 0/5000, reset at 2023-11-14T22:13:20.000Z)
 Not minimized due to rate limit (5): IC_36, IC_37, IC_38, IC_39, IC_40
-Errors:
-  rate limit: API rate limit exceeded
 ```
 
 Retry a later run with the pending IDs only. JSON output exposes the same data in
