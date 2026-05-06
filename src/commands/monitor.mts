@@ -45,7 +45,6 @@ export async function runMonitor(opts: MonitorCommandOptions): Promise<MonitorRe
     prNumber,
     loopTag,
     reusableCommand,
-    loopArgs,
     opts.runtime ?? "claude",
     config.cli?.runner,
   );
@@ -75,8 +74,10 @@ export function formatMonitorResult(
       `# PR #${prNumber} [MONITOR]`,
       "",
       `Loop tag: \`${loopTag}\``,
-      `Loop args: \`${loopArgs}\``,
-    ].join("\n"),
+      runtime === "codex" ? null : `Loop args: \`${loopArgs}\``,
+    ]
+      .filter((line) => line !== null)
+      .join("\n"),
     runtime === "codex" ? `Reusable command: \`${result.reusableCommand}\`` : null,
     "## Loop prompt",
     loopPrompt,
@@ -93,10 +94,20 @@ export function formatMonitorJson(
   opts?: { runtime?: AgentRuntime },
 ): Record<string, unknown> {
   const runtime = opts?.runtime ?? "claude";
-  const { reusableCommand, ...base } = result;
+  if (runtime === "codex") {
+    return {
+      prNumber: result.prNumber,
+      loopTag: result.loopTag,
+      loopPrompt: result.loopPrompt,
+      reusableCommand: result.reusableCommand,
+      instructions: buildMonitorInstructions(result, runtime),
+    };
+  }
   return {
-    ...base,
-    ...(runtime === "codex" && { reusableCommand }),
+    prNumber: result.prNumber,
+    loopTag: result.loopTag,
+    loopArgs: result.loopArgs,
+    loopPrompt: result.loopPrompt,
     instructions: buildMonitorInstructions(result, runtime),
   };
 }
@@ -132,7 +143,6 @@ function buildLoopPrompt(
   prNumber: number,
   loopTag: string,
   iterateCmd: string,
-  loopArgs: string,
   runtime: AgentRuntime = "claude",
   runner?: CliRunner,
 ): string {
@@ -142,7 +152,7 @@ function buildLoopPrompt(
       "",
       "**IMPORTANT — Codex recurrence rules:**",
       "- Run the command below once and follow its `## Instructions` exactly.",
-      `- If the output tells you to continue the active Codex goal, wait about the configured interval (${loopArgs}) and rerun the reusable command from the monitor output.`,
+      "- If the output tells you to continue the active Codex goal, pick a fresh sleep/timeout between 1 and 4 minutes, wait that long, and rerun the reusable command from the monitor output.",
       "- Stop only when Shepherd emits `[CANCEL]` because the ready-delay completed or the PR was merged/closed, or when Shepherd emits `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures).",
       `- Do not call \`/loop\`, \`ScheduleWakeup\`, \`CronCreate\`, or \`${buildPrShepherdCommand(["monitor", String(prNumber)], { runner }).text}\`; Codex recurrence is explicit \`iterate\` command cycles.`,
       "",
@@ -176,7 +186,7 @@ function buildMonitorInstructions(result: MonitorResult, runtime: AgentRuntime):
   if (runtime === "codex") {
     return [
       "Run the `## Loop prompt` body once inline now.",
-      `For an active Codex goal, keep cycling with \`${result.reusableCommand}\` about every configured interval (${result.loopArgs}) until a terminal condition is reached. Codex does not create a \`/loop\` monitor.`,
+      `For an active Codex goal, keep cycling with \`${result.reusableCommand}\` by picking a fresh sleep/timeout between 1 and 4 minutes before each rerun until a terminal condition is reached. Codex does not create a \`/loop\` monitor.`,
     ];
   }
   return [

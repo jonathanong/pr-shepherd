@@ -92,8 +92,9 @@ describe("main — monitor", () => {
     expect(mockRunMonitor).toHaveBeenCalledWith(expect.objectContaining({ runtime: "codex" }));
     const out = getStdout();
     expect(out).toContain("Reusable command: `npx pr-shepherd 42`");
+    expect(out).not.toContain("Loop args:");
     expect(out).toContain(
-      "keep cycling with `npx pr-shepherd 42` about every configured interval (4m)",
+      "keep cycling with `npx pr-shepherd 42` by picking a fresh sleep/timeout between 1 and 4 minutes before each rerun",
     );
     expect(out).not.toContain("Invoke the `/loop` skill");
   });
@@ -118,8 +119,9 @@ describe("main — monitor", () => {
     await main(["node", "shepherd", "monitor", "42", "--format=json"]);
     const parsed = JSON.parse(getStdout().trim());
     expect(parsed.reusableCommand).toBe("npx pr-shepherd 42");
+    expect(parsed.loopArgs).toBeUndefined();
     expect(parsed.instructions.join("\n")).toContain(
-      "keep cycling with `npx pr-shepherd 42` about every configured interval (4m)",
+      "keep cycling with `npx pr-shepherd 42` by picking a fresh sleep/timeout between 1 and 4 minutes before each rerun",
     );
   });
 

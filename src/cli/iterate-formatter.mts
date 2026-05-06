@@ -30,14 +30,12 @@ export function formatIterateResult(
     verbose?: boolean;
     runtime?: AgentRuntime;
     readyDelaySuffix?: string;
-    retryInterval?: string;
     runner?: CliRunner;
   },
 ): string {
   const verbose = opts?.verbose ?? false;
   const runtime = opts?.runtime ?? "claude";
   const readyDelaySuffix = opts?.readyDelaySuffix;
-  const retryInterval = opts?.retryInterval;
   const runner = opts?.runner;
 
   const heading = `# PR #${result.pr} [${result.action.toUpperCase()}]`;
@@ -73,42 +71,41 @@ export function formatIterateResult(
       return joinSections([
         verbose ? header : heading,
         adaptIterateLog(result.log, runtime),
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix, retryInterval, runner))}`,
+        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix, runner))}`,
       ]);
 
     case "wait":
       return joinSections([
         header,
         adaptIterateLog(result.log, runtime),
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix, retryInterval, runner))}`,
+        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix, runner))}`,
       ]);
 
     case "mark_ready":
       return joinSections([
         header,
         adaptIterateLog(result.log, runtime),
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix, retryInterval, runner))}`,
+        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix, runner))}`,
       ]);
 
     case "cancel":
       return joinSections([
         [`${heading} — ${result.reason}`, "", baseLine, summaryLine].join("\n"),
         adaptIterateLog(result.log, runtime),
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix, retryInterval, runner))}`,
+        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix, runner))}`,
       ]);
 
     case "escalate":
       return joinSections([
         header,
         result.escalate.humanMessage,
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix, retryInterval, runner))}`,
+        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix, runner))}`,
       ]);
 
     case "fix_code":
       return formatFixCodeResult(header, result, {
         runtime,
         readyDelaySuffix,
-        retryInterval,
         runner,
       });
   }
