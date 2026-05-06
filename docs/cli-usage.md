@@ -256,7 +256,7 @@ WAIT: 3 passing, 0 in-progress — 540s until auto-cancel
 1. Schedule the next dynamic wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240 and the same loop prompt, then end this iteration.
 ```
 
-When Codex output is selected, the `[WAIT]` body omits the `until auto-cancel` countdown and the instruction tells Codex to keep the active goal running with the reusable command. For example: ``Continue the active Codex goal — wait about the configured interval (4m), then rerun `npx pr-shepherd 42` to recheck.`` If `cli.runner` selects pnpm or Yarn, that command is rendered as `pnpm exec pr-shepherd 42` or `yarn run pr-shepherd 42`; if the current command used `--ready-delay`, the rerun command includes the same flag.
+When Codex output is selected, the `[WAIT]` body omits the `until auto-cancel` countdown and the instruction tells Codex to keep the active goal running with the reusable command. For example: ``Continue the active Codex goal — pick a fresh sleep/timeout between 1 and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.`` If `cli.runner` selects pnpm or Yarn, that command is rendered as `pnpm exec pr-shepherd 42` or `yarn run pr-shepherd 42`; if the current command used `--ready-delay`, the rerun command includes the same flag.
 
 Example for `[FIX_CODE]` (richest action):
 
@@ -341,9 +341,9 @@ Loop tag: `#pr-shepherd-loop:pr=42:`
 1. Invoke the `/loop` skill via the Skill tool with the full `## Loop prompt` body as `args`. Do not prefix an interval; this enters dynamic mode, where the prompt schedules each next wakeup with `ScheduleWakeup`.
 ```
 
-Codex output includes the same PR, tag, interval, prompt body, and `## Instructions` shape, but the instructions say to run the loop prompt once and keep cycling with the configured pr-shepherd command every `Loop args` interval instead of creating or cancelling a `/loop`.
+Codex output includes the same PR, tag, prompt body, and `## Instructions` shape, but the instructions say to run the loop prompt once and keep cycling with the configured pr-shepherd command after a fresh 1-4 minute sleep instead of creating or cancelling a `/loop`.
 
-The loop interval comes from `watch.interval` in `.pr-shepherdrc.yml` or the built-in default. Use `--format=json` to inspect the raw values programmatically.
+For Claude output, the loop interval comes from `watch.interval` in `.pr-shepherdrc.yml` or the built-in default. Use `--format=json` to inspect the raw values programmatically.
 
 Exit code: `0`
 

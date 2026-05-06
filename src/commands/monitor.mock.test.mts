@@ -90,7 +90,9 @@ describe("runMonitor", () => {
   it("builds a Codex prompt without /loop or Cron instructions", async () => {
     const result = await runMonitor({ format: "text", prNumber: 42, runtime: "codex" });
     expect(result.loopPrompt).toContain("Codex recurrence rules");
-    expect(result.loopPrompt).toContain("wait about the configured interval (4m)");
+    expect(result.loopPrompt).toContain(
+      "pick a fresh sleep/timeout between 1 and 4 minutes, wait that long",
+    );
     expect(result.loopPrompt).toContain("Stop only when Shepherd emits `[CANCEL]`");
     expect(result.loopPrompt).toContain("npx pr-shepherd 42");
     expect(result.loopPrompt).not.toContain("CronList");
@@ -150,9 +152,10 @@ describe("formatMonitorResult", () => {
     };
     const md = formatMonitorResult(codexFixture, { runtime: "codex" });
     expect(md).toContain("Reusable command: `npx pr-shepherd 42`");
+    expect(md).not.toContain("Loop args:");
     expect(md).toContain("Run the `## Loop prompt` body once inline now.");
     expect(md).toContain(
-      "keep cycling with `npx pr-shepherd 42` about every configured interval (4m)",
+      "keep cycling with `npx pr-shepherd 42` by picking a fresh sleep/timeout between 1 and 4 minutes before each rerun",
     );
     expect(md).not.toContain("Invoke the `/loop` skill");
     expect(md).not.toContain("CronList");

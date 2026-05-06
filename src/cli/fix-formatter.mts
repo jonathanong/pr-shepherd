@@ -19,13 +19,11 @@ export function formatFixCodeResult(
   opts?: {
     runtime?: AgentRuntime;
     readyDelaySuffix?: string;
-    retryInterval?: string;
     runner?: CliRunner;
   },
 ): string {
   const runtime = opts?.runtime ?? "claude";
   const readyDelaySuffix = opts?.readyDelaySuffix;
-  const retryInterval = opts?.retryInterval;
   const runner = opts?.runner;
   const sections: string[] = [header];
 
@@ -160,7 +158,6 @@ export function formatFixCodeResult(
         result.pr,
         runtime,
         readyDelaySuffix,
-        retryInterval,
         runner,
       ),
     ),

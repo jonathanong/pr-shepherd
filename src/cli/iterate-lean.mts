@@ -9,7 +9,6 @@ import type { CliRunner } from "./runner.mts";
 interface IterateProjectionOptions {
   runtime?: AgentRuntime;
   readyDelaySuffix?: string;
-  retryInterval?: string;
   runner?: CliRunner;
 }
 
@@ -24,10 +23,9 @@ export function projectIterateLean(
 ): unknown {
   const runtime = opts?.runtime ?? "claude";
   const readyDelaySuffix = opts?.readyDelaySuffix;
-  const retryInterval = opts?.retryInterval;
   const runner = opts?.runner;
   const simpleInstructions = (r: Exclude<IterateResult, { action: "fix_code" }>) =>
-    buildSimpleIterateInstructions(r, runtime, readyDelaySuffix, retryInterval, runner);
+    buildSimpleIterateInstructions(r, runtime, readyDelaySuffix, runner);
   const base: Record<string, unknown> = {
     action: result.action,
     pr: result.pr,
@@ -126,7 +124,6 @@ export function projectIterateLean(
               result.pr,
               runtime,
               readyDelaySuffix,
-              retryInterval,
               runner,
             ),
           }),
@@ -164,7 +161,6 @@ export function projectIterateVerbose(
 ): unknown {
   const runtime = opts?.runtime ?? "claude";
   const readyDelaySuffix = opts?.readyDelaySuffix;
-  const retryInterval = opts?.retryInterval;
   const runner = opts?.runner;
   if (result.action === "fix_code") {
     return {
@@ -176,7 +172,6 @@ export function projectIterateVerbose(
           result.pr,
           runtime,
           readyDelaySuffix,
-          retryInterval,
           runner,
         ),
       },
@@ -189,12 +184,6 @@ export function projectIterateVerbose(
   return {
     ...result,
     ...log,
-    instructions: buildSimpleIterateInstructions(
-      result,
-      runtime,
-      readyDelaySuffix,
-      retryInterval,
-      runner,
-    ),
+    instructions: buildSimpleIterateInstructions(result, runtime, readyDelaySuffix, runner),
   };
 }

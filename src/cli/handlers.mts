@@ -101,7 +101,6 @@ export async function handleIterate(args: string[]): Promise<void> {
   const projectionOpts = {
     runtime,
     readyDelaySuffix,
-    retryInterval: cfg.watch.interval,
     runner: cfg.cli?.runner,
   };
   if (globalOpts.format === "json") {

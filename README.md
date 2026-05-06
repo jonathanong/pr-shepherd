@@ -126,7 +126,7 @@ Some other workflow improvements:
 
 Recommendations:
 
-- Run `pr-shepherd` on all your PRs before you go to sleep so that you wake up to reviewable PRs. In Claude Code, `/pr-shepherd:monitor` uses `/loop` and continues working when your rate limit window is reset. In Codex, keep an active goal cycling the reusable command every `watch.interval` (default 4m) until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures).
+- Run `pr-shepherd` on all your PRs before you go to sleep so that you wake up to reviewable PRs. In Claude Code, `/pr-shepherd:monitor` uses `/loop` and continues working when your rate limit window is reset. In Codex, keep an active goal cycling the reusable command with a fresh 1-4 minute sleep before each rerun until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures).
 - Instruct your agents to write comments in a single review (comment, changes requested, or approved). This allows the review's comments/threads to be minimized or resolved together, keeping your pull request history clean. If you write inline comments outside of a review, each comment would still show up in the pull request history and take up space.
 - Avoid sticky comments as they will continue to be hidden. Instead, just make a new comment, especially on reviews. If you really want sticky comments, instruct your agent to unhide/unminimize them when updating them.
 - Avoid having automation edit comments, reviews, or threads in place because updated items get minimized. Instead, always make a new review, comment, thread, etc.
@@ -279,7 +279,7 @@ Or ask Codex to use the `pr-shepherd` skill, for example: `run pr-shepherd until
 <runner> pr-shepherd 42
 ```
 
-For an active Codex goal, rerun that command every `watch.interval` (default 4m) until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). `pr-shepherd iterate 42` remains supported for existing workflows. There is no background `/loop` scheduler in Codex.
+For an active Codex goal, rerun that command after picking a fresh 1-4 minute sleep until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). `pr-shepherd iterate 42` remains supported for existing workflows. There is no background `/loop` scheduler in Codex.
 
 ### Without the plugin
 

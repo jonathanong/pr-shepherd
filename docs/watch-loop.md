@@ -6,7 +6,7 @@
 
 The `/pr-shepherd:monitor <PR>` slash command starts a Claude Code fixed-interval loop that polls PR status on a configurable cadence. This document explains how all the pieces fit together.
 
-Codex does not provide `/loop` scheduling in this workflow. When `pr-shepherd` detects Codex (`AGENT=codex` or `CODEX_CI=1`), `monitor` output tells Codex to run explicit iterate ticks with the reusable pr-shepherd command every `watch.interval` (default 4m) until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures).
+Codex does not provide `/loop` scheduling in this workflow. When `pr-shepherd` detects Codex (`AGENT=codex` or `CODEX_CI=1`), `monitor` output tells Codex to run explicit iterate ticks with the reusable pr-shepherd command after a fresh 1-4 minute sleep until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures).
 
 ## Lifecycle
 
