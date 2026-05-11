@@ -438,7 +438,9 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
   it("instructions include Shepherd Journal step when there are actionable items", async () => {
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [makeThread()] }) });
     const result = await runResolveFetch(BASE_OPTS);
-    expect(result.instructions.join("\n")).toContain("Shepherd Journal");
+    const instructions = result.instructions.join("\n");
+    expect(instructions).toContain("Shepherd Journal");
+    expect(instructions.match(/## Shepherd Journal/g)?.length ?? 0).toBe(1);
   });
 
   it("instructions omit Shepherd Journal step when there are no actionable items", async () => {

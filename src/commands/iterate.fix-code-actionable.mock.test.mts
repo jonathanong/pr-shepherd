@@ -390,7 +390,12 @@ describe("runIterate — fix_code (actionable threads)", () => {
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
       const joined = result.fix.instructions.join("\n");
+      const journalMentions = joined.match(/## Shepherd Journal/g)?.length ?? 0;
       expect(joined).toContain("Shepherd Journal");
+      expect(journalMentions).toBe(1);
+      expect(joined).toContain(
+        "If this section already exists, append your entries under it instead of creating a duplicate heading.",
+      );
     }
   });
 });

@@ -301,7 +301,7 @@ at Object.<anonymous> (src/commands/iterate.test.mts:58:22)
 4. Keep the PR title and description current: if the changes alter the PR's scope or intent, run `gh pr edit 42 --title "<new title>" --body "<new body>"` to reflect them. Skip if the existing title/body still accurately describe the PR.
 5. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
 6. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
-7. For any large decisions made, add or update a `## Shepherd Journal` section in the PR description: `gh pr edit 42 --body …`
+7. For any large decisions made, add or update a `## Shepherd Journal` section in the PR description (`gh pr edit 42 --body …`), appending entries under the existing heading if present.
 8. CI needs time to run on the new push. Schedule the next dynamic wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240 and the same loop prompt, then end this iteration.
 ```
 

@@ -1,5 +1,9 @@
 import type { FetchResult } from "./resolve.mts";
 import { buildPrShepherdCommand, type CliRunner } from "../cli/runner.mts";
+import {
+  SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEMS,
+  buildShepherdJournalInstruction,
+} from "./shepherd-journal.mts";
 
 /**
  * Build the numbered triage/fix/resolve instruction steps for the agent to follow.
@@ -125,7 +129,10 @@ export function buildFetchInstructions(
   );
 
   instructions.push(
-    `For any large decisions or rejections you made this iteration, add or update a \`## Shepherd Journal\` section in the PR description (\`gh pr edit ${prNumber} --body …\`) summarizing each decision. For threads and comments, use the markdown link shown in each item's bullet above; for reviews, reference the review ID.`,
+    buildShepherdJournalInstruction(
+      prNumber,
+      SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEMS,
+    ),
   );
 
   instructions.push(

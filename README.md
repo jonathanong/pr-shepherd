@@ -89,7 +89,7 @@ _(schematic — actual steps depend on PR state)_
 3. Commit changed files.
 4. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`.
 5. Run the `resolve:` command above, substituting `"$HEAD_SHA"`.
-6. Add a `## Shepherd Journal` entry to the PR description for any large decisions made.
+6. Add or update a `## Shepherd Journal` section in the PR description for any large decisions made, appending under the existing heading if it already exists.
 7. Stop this iteration.
 ```
 
