@@ -438,7 +438,49 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
   it("instructions include Shepherd Journal step when there are actionable items", async () => {
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [makeThread()] }) });
     const result = await runResolveFetch(BASE_OPTS);
-    expect(result.instructions.join("\n")).toContain("Shepherd Journal");
+    const instructions = result.instructions.join("\n");
+    expect(instructions).toContain("Shepherd Journal");
+    expect(instructions.match(/## Shepherd Journal/g)?.length ?? 0).toBe(1);
+  });
+
+  it.each([
+    ["an actionable thread", makeBatchData({ reviewThreads: [makeThread()] })],
+    [
+      "an outdated actionable thread",
+      makeBatchData({
+        reviewThreads: [
+          makeThread({
+            id: "t-outdated",
+            isOutdated: true,
+            isResolved: false,
+          }),
+        ],
+      }),
+    ],
+    ["an actionable comment", makeBatchData({ comments: [makeComment()] })],
+    [
+      "a review summary",
+      makeBatchData({
+        reviewSummaries: [{ id: "PRR_2", author: "copilot", body: "ok" }],
+      }),
+    ],
+    [
+      "a first-look comment candidate",
+      makeBatchData({ comments: [makeComment({ id: "c-min", isMinimized: true })] }),
+    ],
+    [
+      "a changes-requested review",
+      makeBatchData({
+        changesRequestedReviews: [{ id: "PRR_3", author: "alice", body: "fix needed" }],
+      }),
+    ],
+  ])("includes Shepherd Journal once when %s exists", async (_label, data) => {
+    mockFetchPrBatch.mockResolvedValue({ data });
+    const result = await runResolveFetch(BASE_OPTS);
+    const instructions = result.instructions.join("\n");
+    const mentions = instructions.match(/## Shepherd Journal/g)?.length ?? 0;
+    expect(mentions).toBe(1);
+    expect(instructions).toContain("For threads and comments");
   });
 
   it("instructions omit Shepherd Journal step when there are no actionable items", async () => {

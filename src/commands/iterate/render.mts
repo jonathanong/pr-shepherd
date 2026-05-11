@@ -10,6 +10,11 @@ import type {
 } from "../../types.mts";
 import { buildPrShepherdCommand, renderShellCommand, type CliRunner } from "../../cli/runner.mts";
 import { buildFailingCheckInstructions } from "./check-instructions.mts";
+import {
+  SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE,
+  SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
+  buildShepherdJournalInstruction,
+} from "../shepherd-journal.mts";
 
 export const FIX_INSTRUCTION_STOP_AFTER_PUSH =
   "Stop this iteration — CI needs time to run on the new push before the next tick.";
@@ -122,9 +127,7 @@ export function buildFixInstructions(
     );
   }
   if (firstLookSummaries.length > 0) {
-    instructions.push(
-      `Review the bodies shown under \`## Review summaries (first look — to be minimized)\` — you are seeing these for the first time. Their IDs are already included in the \`resolve:\` command's \`--minimize-comment-ids\`; if any warrants a \`## Shepherd Journal\` entry, record it before running resolve.`,
-    );
+    instructions.push(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
   }
   const editedTotal =
     editedSummaries.length +
@@ -154,7 +157,10 @@ export function buildFixInstructions(
   }
   if (resolveCommand.hasMutations) {
     instructions.push(
-      `For any large decisions or rejections you made this iteration, add or update a \`## Shepherd Journal\` section in the PR description (\`gh pr edit ${prNumber} --body …\`) summarizing each decision. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID.`,
+      buildShepherdJournalInstruction(
+        prNumber,
+        SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
+      ),
     );
   }
   if (needsPush) {
