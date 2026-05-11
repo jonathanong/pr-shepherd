@@ -82,7 +82,9 @@ describe("shepherd journal instruction helpers", () => {
 
     expect(text).toContain(SHEPHERD_JOURNAL_SECTION);
     expect(text).toContain(SHEPHERD_JOURNAL_APPEND_HINT);
-    expect(text).toContain(SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS);
+    expect(text).toContain(
+      SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
+    );
     expect(text).toContain(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
     expect(countMentions(text, SHEPHERD_JOURNAL_SECTION)).toBe(1);
     expect(text).not.toContain("`## Shepherd Journal` entry");
@@ -134,17 +136,7 @@ describe("shepherd journal instruction helpers", () => {
       hasMutations: false,
     };
 
-    const instructions = buildFixInstructions(
-      [],
-      [],
-      [],
-      [],
-      "main",
-      resolveCommand,
-      false,
-      42,
-      0,
-    );
+    const instructions = buildFixInstructions([], [], [], [], "main", resolveCommand, false, 42, 0);
 
     const text = instructions.join("\n");
     expect(text).not.toContain(SHEPHERD_JOURNAL_SECTION);

@@ -14,7 +14,7 @@ import {
   SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE,
   SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
   buildShepherdJournalInstruction,
-} from "./shepherd-journal.mts";
+} from "../shepherd-journal.mts";
 
 export const FIX_INSTRUCTION_STOP_AFTER_PUSH =
   "Stop this iteration — CI needs time to run on the new push before the next tick.";
