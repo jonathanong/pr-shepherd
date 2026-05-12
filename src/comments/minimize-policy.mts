@@ -15,5 +15,7 @@ export function shouldMinimizeAuthor(
       return authorType === "User";
     case "none":
       return false;
+    default:
+      return true;
   }
 }

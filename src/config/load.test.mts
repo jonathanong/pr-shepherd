@@ -80,6 +80,16 @@ describe("loadConfig — no rc file", () => {
     expect(result.iterate.minimizeComments).toBe("bots");
   });
 
+  it("rejects invalid iterate.minimizeComments values and falls back to defaults", async () => {
+    writeFileSync(join(tmpDir, RC), "iterate:\n  minimizeComments: sometimes\n");
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const loadConfig = await freshLoadConfig();
+    const result = loadConfig();
+    expect(result.iterate.minimizeComments).toBe("all");
+    const output = stderrSpy.mock.calls.map((c) => c[0]).join("");
+    expect(output).toContain("iterate.minimizeComments");
+  });
+
   it("returns defaults for empty YAML (yaml.parse returns null)", async () => {
     writeFileSync(join(tmpDir, RC), "");
     const loadConfig = await freshLoadConfig();

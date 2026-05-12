@@ -7,6 +7,8 @@ import { parseCliRunner } from "../cli/runner.mts";
 
 export type MinimizeCommentsPolicy = "all" | "bots" | "users" | "none";
 
+const MINIMIZE_COMMENTS_POLICIES = new Set<string>(["all", "bots", "users", "none"]);
+
 export interface PrShepherdConfig {
   cli?: {
     /** Command runner used in generated prompts. `auto` detects pnpm/yarn/npm from package metadata. */
@@ -94,6 +96,15 @@ function deepMerge(
   return result;
 }
 
+function parseMinimizeCommentsPolicy(value: unknown): MinimizeCommentsPolicy {
+  if (typeof value === "string" && MINIMIZE_COMMENTS_POLICIES.has(value)) {
+    return value as MinimizeCommentsPolicy;
+  }
+  throw new Error(
+    `Invalid config: iterate.minimizeComments must be one of "all", "bots", "users", or "none", got ${JSON.stringify(value)}`,
+  );
+}
+
 const defaults = builtins as PrShepherdConfig;
 
 const configCache = new Map<string, PrShepherdConfig>();
@@ -123,6 +134,7 @@ export function loadConfig(): PrShepherdConfig {
       );
     }
     config.cli.runner = parseCliRunner(config.cli.runner);
+    config.iterate.minimizeComments = parseMinimizeCommentsPolicy(config.iterate.minimizeComments);
     configCache.set(cwd, config);
     return config;
   } catch (err) {
