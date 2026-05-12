@@ -1,4 +1,5 @@
 import type {
+  AuthorType,
   BatchPrData,
   CheckConclusion,
   CheckRun,
@@ -46,6 +47,7 @@ export function parseRawPr(
       line: comment?.line ?? null,
       startLine: comment?.startLine ?? null,
       author: comment?.author?.login ?? "unknown",
+      authorType: mapAuthorType(comment?.author?.__typename),
       body: comment?.body ?? "",
       url: comment?.url ?? "",
       createdAtUnix: comment ? parseCreatedAt(comment.createdAt) : 0,
@@ -56,6 +58,7 @@ export function parseRawPr(
     id: c.id,
     isMinimized: c.isMinimized,
     author: c.author?.login ?? "unknown",
+    authorType: mapAuthorType(c.author?.__typename),
     body: c.body,
     url: c.url,
     createdAtUnix: parseCreatedAt(c.createdAt),
@@ -64,6 +67,7 @@ export function parseRawPr(
   const changesRequestedReviews: Review[] = rawReviewNodes.map((r) => ({
     id: r.id,
     author: r.author?.login ?? "unknown",
+    authorType: mapAuthorType(r.author?.__typename),
     body: r.body,
   }));
 
@@ -72,6 +76,7 @@ export function parseRawPr(
     .map((r) => ({
       id: r.id,
       author: r.author?.login ?? "unknown",
+      authorType: mapAuthorType(r.author?.__typename),
       body: r.body,
     }));
 
@@ -83,6 +88,7 @@ export function parseRawPr(
     .map((r) => ({
       id: r.id,
       author: r.author?.login ?? "unknown",
+      authorType: mapAuthorType(r.author?.__typename),
       body: r.body,
     }));
 
@@ -142,6 +148,11 @@ export function parseRawPr(
     approvedReviews,
     checks,
   };
+}
+
+function mapAuthorType(typeName: string | undefined | null): AuthorType {
+  if (typeName === "User" || typeName === "Bot") return typeName;
+  return "Unknown";
 }
 
 function parseCreatedAt(iso: string): number {

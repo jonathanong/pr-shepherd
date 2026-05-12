@@ -10,7 +10,7 @@
 | PR comment     | Top-level comment on the PR (not attached to a file)    | `pullRequest.comments`                         |
 | Review summary | PR-level body of a COMMENTED review (e.g. bot overview) | `pullRequest.reviews(states: COMMENTED)` (new) |
 
-Shepherd surfaces review threads and PR comments in the `report.threads` and `report.comments` fields respectively. Review summaries are also surfaced on `ShepherdReport` — as `reviewSummaries` (COMMENTED reviews) and `approvedReviews` (APPROVED-state reviews). All `COMMENTED` review summaries are always minimized by the `iterate` / monitor loop via `--minimize-comment-ids`. [`iterate.minimizeApprovals`](configuration.md#iterateminimizeapprovals) controls whether `APPROVED`-state reviews are also minimized (default off — approvals stay visible); it does not gate whether those fields are present on `ShepherdReport`. The manual `/pr-shepherd:resolve` skill reads summaries from `resolve --fetch`'s `reviewSummaries` array, which is separately gated by `resolve.fetchReviewSummaries`.
+Shepherd surfaces review threads and PR comments in the `report.threads` and `report.comments` fields respectively. Review summaries are also surfaced on `ShepherdReport` — as `reviewSummaries` (COMMENTED reviews) and `approvedReviews` (APPROVED-state reviews). COMMENTED review summaries and visible PR comments are minimized by the `iterate` / monitor loop via `--minimize-comment-ids` only when their GitHub `authorType` matches [`iterate.minimizeComments`](configuration.md#iterateminimizecomments). [`iterate.minimizeApprovals`](configuration.md#iterateminimizeapprovals) controls whether `APPROVED`-state reviews are also considered for minimization (default off — approvals stay visible); it does not gate whether those fields are present on `ShepherdReport`. The manual `/pr-shepherd:resolve` skill reads summaries from `resolve --fetch`'s `reviewSummaries` array, which is separately gated by `resolve.fetchReviewSummaries`.
 
 ## `isOutdated` flag
 
@@ -32,7 +32,7 @@ Shepherd does **not** classify threads as "actionable" vs "informational" — th
 
 - All active (non-outdated, unresolved, non-minimized) threads in `report.threads.actionable`
 - Unresolved outdated or minimized threads in `report.threads.resolutionOnly`; these need a GitHub resolve mutation but do not require code edits unless the agent chooses to act on the body.
-- All visible (non-minimized) PR comments in `report.comments.actionable`
+- Visible (non-minimized) PR comments in `report.comments.actionable`. Comments excluded by `iterate.minimizeComments` are marker-gated, so unchanged seen comments are suppressed on later ticks instead of being sent to the agent forever.
 
 The loop prompt reads these and decides what to fix.
 
@@ -48,6 +48,8 @@ First-look items appear in:
 - `iterate fix_code` output: same `## First-look items` section when `fix_code` fires for other reasons.
 
 First-look items are for acknowledging status before acting. If a first-look thread also appears in `resolutionOnly`, its ID should be resolved through `--resolve-thread-ids`; otherwise, do not pass first-look-only IDs to mutation flags.
+
+The same marker gate is used for visible PR comments and review summaries excluded by `iterate.minimizeComments`: they are surfaced when new, suppressed when unchanged, and re-surfaced when the author edits the body.
 
 State module: `src/state/seen-comments.mts`.
 

@@ -43,6 +43,7 @@ query BatchPr(
       latestReviews(last: 100) {
         nodes {
           author {
+            __typename
             login
           }
           state
@@ -64,6 +65,7 @@ query BatchPr(
               isMinimized
               url
               author {
+                __typename
                 login
               }
               body
@@ -85,6 +87,7 @@ query BatchPr(
           isMinimized
           url
           author {
+            __typename
             login
           }
           body
@@ -103,6 +106,7 @@ query BatchPr(
         nodes {
           id
           author {
+            __typename
             login
           }
           body
@@ -117,6 +121,7 @@ query BatchPr(
           id
           isMinimized
           author {
+            __typename
             login
           }
           body
@@ -131,6 +136,7 @@ query BatchPr(
           id
           isMinimized
           author {
+            __typename
             login
           }
           body

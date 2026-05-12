@@ -282,6 +282,45 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     expect(result.actionableComments.map((c) => c.id)).toEqual(["c-visible"]);
   });
 
+  it("marker-gates visible comments excluded by minimizeComments policy", async () => {
+    mockLoadConfig.mockReturnValueOnce({
+      iterate: { minimizeComments: "bots" },
+      resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 }, fetchReviewSummaries: true },
+      actions: { autoResolveOutdated: true, autoMarkReady: true, commitSuggestions: true },
+    } as ReturnType<typeof loadConfig>);
+    const human = makeComment({
+      id: "c-human",
+      authorType: "User",
+      body: "human note",
+    });
+    const bot = makeComment({ id: "c-bot", authorType: "Bot", body: "bot note" });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ comments: [human, bot] }) });
+    mockLoadSeenMap.mockResolvedValue(new Map());
+
+    const result = await runResolveFetch(BASE_OPTS);
+
+    expect(result.actionableComments.map((c) => c.id)).toEqual(["c-human", "c-bot"]);
+    expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "c-human", "human note");
+    expect(mockMarkSeen).not.toHaveBeenCalledWith(expect.any(Object), "c-bot", expect.anything());
+  });
+
+  it("suppresses unchanged visible comments excluded by minimizeComments policy", async () => {
+    mockLoadConfig.mockReturnValueOnce({
+      iterate: { minimizeComments: "none" },
+      resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 }, fetchReviewSummaries: true },
+      actions: { autoResolveOutdated: true, autoMarkReady: true, commitSuggestions: true },
+    } as ReturnType<typeof loadConfig>);
+    const comment = makeComment({ id: "c-human", authorType: "User", body: "seen" });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ comments: [comment] }) });
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([["c-human", { seenAt: 1000, bodyHash: hashBody("seen") }]]),
+    );
+
+    const result = await runResolveFetch(BASE_OPTS);
+
+    expect(result.actionableComments).toEqual([]);
+  });
+
   it("actionableThreads excludes threads whose top comment is minimized", async () => {
     const visible = makeThread({ id: "t-visible", isMinimized: false });
     const minimized = makeThread({ id: "t-minimized", isMinimized: true });

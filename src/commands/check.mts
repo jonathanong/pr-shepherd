@@ -7,6 +7,7 @@ import { getOutdatedThreads } from "../comments/outdated.mts";
 import { autoResolveOutdated } from "../comments/resolve.mts";
 import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
+import { classifyVisibleComments } from "../comments/visible-comments.mts";
 import { computeStatus } from "./check-status.mts";
 import { loadSeenMap, markSeen, classifyItem } from "../state/seen-comments.mts";
 import type {
@@ -26,7 +27,6 @@ export interface CheckCommandOptions extends GlobalOptions {
 
 export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdReport> {
   const repo = await getRepoInfo();
-
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
   if (prNumber === null) {
     throw new Error("No open PR found for current branch. Pass a PR number explicitly.");
@@ -71,8 +71,6 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
 
   const unresolvedThreads = batchData.reviewThreads.filter((t) => !t.isResolved);
-  const visibleComments = batchData.comments.filter((c) => !c.isMinimized);
-
   const outdated = getOutdatedThreads(unresolvedThreads);
   let autoResolved: typeof outdated = [];
   let autoResolveErrors: string[] = [];
@@ -91,6 +89,11 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
   const minimizedCommentCandidates = batchData.comments.filter((c) => c.isMinimized);
 
   const seenMap = await loadSeenMap(stateKey);
+  const visibleCommentClassification = classifyVisibleComments(
+    batchData.comments,
+    seenMap,
+    config.iterate.minimizeComments,
+  );
   const autoResolvedIds = new Set(autoResolved.map((t) => t.id));
   const firstLookThreads: FirstLookThread[] = [
     ...outdatedCandidates.flatMap((t) => {
@@ -136,14 +139,13 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
   await Promise.allSettled([
     ...firstLookThreads.map((t) => markSeen(stateKey, t.id, t.body)),
     ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
+    ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
     ...[...firstLookSummaries, ...editedSummaries].map((r) => markSeen(stateKey, r.id, r.body)),
   ]);
 
-  const actionableThreads = activeThreads;
   const resolutionOnlyThreads = unresolvedThreads.filter(
     (t) => !autoResolvedIds.has(t.id) && (t.isOutdated || t.isMinimized),
   );
-  const actionableComments = visibleComments;
 
   const mergeStatus = deriveMergeStatus(batchData);
 
@@ -155,8 +157,8 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
 
   const status = computeStatus(
     verdict,
-    actionableThreads.length + resolutionOnlyThreads.length,
-    actionableComments.length,
+    activeThreads.length + resolutionOnlyThreads.length,
+    visibleCommentClassification.actionable.length,
     mergeStatus,
     batchData.changesRequestedReviews.length,
   );
@@ -178,14 +180,15 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
       blockedByFilteredCheck,
     },
     threads: {
-      actionable: actionableThreads,
+      actionable: activeThreads,
       resolutionOnly: resolutionOnlyThreads,
       autoResolved,
       autoResolveErrors,
       firstLook: firstLookThreads,
     },
     comments: {
-      actionable: actionableComments,
+      actionable: visibleCommentClassification.actionable,
+      minimizeIds: visibleCommentClassification.minimizeIds,
       firstLook: firstLookComments,
     },
     changesRequestedReviews: batchData.changesRequestedReviews,

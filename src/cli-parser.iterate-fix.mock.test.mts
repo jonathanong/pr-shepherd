@@ -201,7 +201,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).not.toContain("## Approvals (surfaced");
   });
 
-  it("fix_code: renders '## Review summaries (first look — to be minimized)' with body when firstLookSummaries is non-empty", async () => {
+  it("fix_code: renders '## Review summaries (first look)' with body when firstLookSummaries is non-empty", async () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
 
@@ -220,7 +220,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
 
-    expect(out).toContain("## Review summaries (first look — to be minimized)");
+    expect(out).toContain("## Review summaries (first look)");
     expect(out).toContain("### `reviewId=PRR_FL` (@copilot)");
     expect(out).toContain("> Nice work overall.");
     // ID is in the resolve command but NOT in the bare minimize-queue section.

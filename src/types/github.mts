@@ -38,6 +38,8 @@ export type MergeStateStatus =
 
 export type ReviewDecision = "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
 
+export type AuthorType = "User" | "Bot" | "Unknown";
+
 // ---------------------------------------------------------------------------
 // Check runs
 // ---------------------------------------------------------------------------
@@ -84,6 +86,7 @@ export interface ReviewThread {
   /** Start of the comment's line range. Null for single-line comments (use `line` for both). */
   startLine: number | null;
   author: string;
+  authorType?: AuthorType;
   body: string;
   url: string;
   createdAtUnix: number;
@@ -116,6 +119,7 @@ export interface PrComment {
   id: string;
   isMinimized: boolean;
   author: string;
+  authorType?: AuthorType;
   body: string;
   url: string;
   createdAtUnix: number;
@@ -124,6 +128,7 @@ export interface PrComment {
 export interface Review {
   id: string;
   author: string;
+  authorType?: AuthorType;
   body: string;
 }
 

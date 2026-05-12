@@ -5,7 +5,8 @@
   "iterate": {
     "fixAttemptsPerThread": 3,
     "stallTimeoutMinutes": 30,
-    "minimizeApprovals": false
+    "minimizeApprovals": false,
+    "minimizeComments": "all"
   },
   "watch": {
     "readyDelayMinutes": 10

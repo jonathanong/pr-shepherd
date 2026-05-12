@@ -6,11 +6,14 @@ import type {
   ReviewThread,
 } from "../../types.mts";
 import { buildPrShepherdCommand, type CliRunner } from "../../cli/runner.mts";
+import { shouldMinimizeAuthor } from "../../comments/minimize-policy.mts";
+import type { MinimizeCommentsPolicy } from "../../config/load.mts";
 
 export function classifyReviewSummaries(
   summaries: { firstLook: Review[]; seen: Review[]; edited: Review[] },
   approvals: Review[],
   minimizeApprovals: boolean,
+  minimizeComments: MinimizeCommentsPolicy | undefined = "all",
 ): {
   minimizeIds: string[];
   firstLookSummaries: Review[];
@@ -20,9 +23,13 @@ export function classifyReviewSummaries(
   // First-look and seen summaries go into the minimize mutation; edited summaries do NOT —
   // they are already minimized server-side (body changed after minimize was applied).
   // First-look bodies are rendered so the agent sees them before the minimize happens.
-  const minimizeIds = [...summaries.firstLook, ...summaries.seen].map((r) => r.id);
+  const minimizeIds = [...summaries.firstLook, ...summaries.seen]
+    .filter((r) => shouldMinimizeAuthor(r.authorType, minimizeComments))
+    .map((r) => r.id);
   if (minimizeApprovals) {
-    for (const r of approvals) minimizeIds.push(r.id);
+    for (const r of approvals) {
+      if (shouldMinimizeAuthor(r.authorType, minimizeComments)) minimizeIds.push(r.id);
+    }
     return {
       minimizeIds,
       firstLookSummaries: summaries.firstLook,

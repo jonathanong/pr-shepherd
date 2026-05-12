@@ -5,6 +5,8 @@ import { parse } from "yaml";
 import builtins from "../config.json" with { type: "json" };
 import { parseCliRunner } from "../cli/runner.mts";
 
+export type MinimizeCommentsPolicy = "all" | "bots" | "users" | "none";
+
 export interface PrShepherdConfig {
   cli?: {
     /** Command runner used in generated prompts. `auto` detects pnpm/yarn/npm from package metadata. */
@@ -14,11 +16,16 @@ export interface PrShepherdConfig {
     fixAttemptsPerThread: number;
     stallTimeoutMinutes: number;
     /**
-     * All COMMENTED review summaries and PR-level comments are minimized once acted on; review
-     * threads are resolved. When `true`, APPROVED-state reviews are also minimized — defaults to
-     * `false` so approvals stay visible.
+     * When `true`, APPROVED-state reviews are also eligible for minimization — defaults to `false`
+     * so approvals stay visible. `minimizeComments` still filters by GitHub author type.
      */
     minimizeApprovals: boolean;
+    /**
+     * Which GitHub author classes should be auto-minimized for minimizable PR comments and review
+     * summaries. Items excluded by this policy are still surfaced once (and after edits) via seen
+     * markers so they do not repeat forever.
+     */
+    minimizeComments: MinimizeCommentsPolicy;
   };
   watch: {
     readyDelayMinutes: number;

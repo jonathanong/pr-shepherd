@@ -69,6 +69,8 @@ export interface ShepherdReport {
   };
   comments: {
     actionable: PrComment[];
+    /** Visible PR comments that should be passed to `--minimize-comment-ids`. */
+    minimizeIds?: string[];
     /** First-look items — minimized comments not yet seen by the agent. */
     firstLook: FirstLookComment[];
   };
@@ -99,6 +101,7 @@ export interface AgentThread {
   line: number | null;
   startLine?: number; // multi-line range only; omitted when equal to line
   author: string;
+  authorType?: "User" | "Bot" | "Unknown";
   body: string;
   url: string;
   suggestion?: SuggestionBlock; // present when body contains a ```suggestion fence
@@ -108,6 +111,7 @@ export interface AgentThread {
 export interface AgentComment {
   id: string;
   author: string;
+  authorType?: "User" | "Bot" | "Unknown";
   body: string;
   url: string;
 }
