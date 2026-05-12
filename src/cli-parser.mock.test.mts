@@ -73,14 +73,21 @@ describe("main — resolve", () => {
       firstLookThreads: [],
       firstLookComments: [],
       changesRequestedReviews: [],
-      reviewSummaries: [{ id: "PRR_1", author: "copilot", body: "## PR overview\nsome detail" }],
+      reviewSummaries: [
+        {
+          id: "PRR_1",
+          author: "copilot",
+          authorType: "Unknown" as const,
+          body: "## PR overview\nsome detail",
+        },
+      ],
       commitSuggestionsEnabled: true,
       instructions: ["Classify every item."],
     });
     await main(["node", "shepherd", "resolve", "42"]);
     const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
     expect(out).toContain("## Review summaries (1)");
-    expect(out).toContain("`reviewId=PRR_1` (@copilot): ## PR overview");
+    expect(out).toContain("`reviewId=PRR_1` (@copilot · Unknown): ## PR overview");
     expect(out).toContain("1 actionable");
   });
 
@@ -98,6 +105,7 @@ describe("main — resolve", () => {
           line: null,
           startLine: null,
           author: "alice",
+          authorType: "Unknown" as const,
           body: "old comment",
           url: "",
           createdAtUnix: 0,
@@ -197,6 +205,7 @@ describe("main — resolve", () => {
           startLine: null,
           isMinimized: false,
           author: "alice",
+          authorType: "Unknown" as const,
           body: "Consider renaming this",
           url: "",
           createdAtUnix: 0,
@@ -207,6 +216,7 @@ describe("main — resolve", () => {
         {
           id: "IC_1",
           author: "bob",
+          authorType: "Unknown" as const,
           body: "Typo here",
           isMinimized: false,
           url: "",
@@ -248,6 +258,7 @@ describe("main — resolve", () => {
           startLine: null,
           isMinimized: false,
           author: "alice",
+          authorType: "Unknown" as const,
           body: "Use const",
           url: "",
           createdAtUnix: 0,
@@ -305,6 +316,7 @@ describe("main — resolve", () => {
           startLine: null,
           isMinimized: false,
           author: "alice",
+          authorType: "Unknown" as const,
           body: "no location",
           url: "",
           createdAtUnix: 0,
@@ -315,6 +327,7 @@ describe("main — resolve", () => {
         {
           id: "IC_2",
           author: "bob",
+          authorType: "Unknown" as const,
           body: "comment",
           isMinimized: false,
           url: "",
@@ -323,7 +336,9 @@ describe("main — resolve", () => {
       ],
       firstLookThreads: [],
       firstLookComments: [],
-      changesRequestedReviews: [{ id: "PRR_r1", author: "carol", body: "needs work" }],
+      changesRequestedReviews: [
+        { id: "PRR_r1", author: "carol", authorType: "Unknown" as const, body: "needs work" },
+      ],
       reviewSummaries: [],
       commitSuggestionsEnabled: false,
       instructions: ["Classify every item.", "Fix items.", "Resolve.", "Report."],
@@ -331,7 +346,7 @@ describe("main — resolve", () => {
     await main(["node", "shepherd", "resolve", "42"]);
     const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
     expect(out).toContain("## Pending CHANGES_REQUESTED reviews (1)");
-    expect(out).toContain("`reviewId=PRR_r1` (@carol)");
+    expect(out).toContain("`reviewId=PRR_r1` (@carol · Unknown)");
     // null path renders as (no location)
     expect(out).toContain("`(no location)`");
   });
@@ -347,6 +362,7 @@ describe("main — resolve", () => {
           startLine: null,
           isMinimized: false,
           author: "alice",
+          authorType: "Unknown" as const,
           body: "nit",
           url: "https://github.com/owner/repo/pull/1#discussion_r1",
           createdAtUnix: 0,
@@ -357,6 +373,7 @@ describe("main — resolve", () => {
         {
           id: "IC_linked",
           author: "bob",
+          authorType: "Unknown" as const,
           body: "fix me",
           isMinimized: false,
           url: "https://github.com/owner/repo/pull/1#issuecomment-1",
@@ -456,6 +473,7 @@ describe("main — resolve first-look rendering", () => {
           line: 5,
           startLine: null,
           author: "alice",
+          authorType: "Unknown" as const,
           body: "already fixed",
           url: "",
           createdAtUnix: 0,
@@ -467,6 +485,7 @@ describe("main — resolve first-look rendering", () => {
           id: "PRRC_fl2",
           isMinimized: true,
           author: "bot",
+          authorType: "Unknown" as const,
           body: "quota warning",
           url: "",
           createdAtUnix: 0,

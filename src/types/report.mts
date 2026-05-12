@@ -1,5 +1,6 @@
 import type {
   ClassifiedCheck,
+  AuthorType,
   TriagedCheck,
   ReviewThread,
   PrComment,
@@ -101,7 +102,7 @@ export interface AgentThread {
   line: number | null;
   startLine?: number; // multi-line range only; omitted when equal to line
   author: string;
-  authorType?: "User" | "Bot" | "Unknown";
+  authorType?: AuthorType;
   body: string;
   url: string;
   suggestion?: SuggestionBlock; // present when body contains a ```suggestion fence
@@ -111,7 +112,7 @@ export interface AgentThread {
 export interface AgentComment {
   id: string;
   author: string;
-  authorType?: "User" | "Bot" | "Unknown";
+  authorType?: AuthorType;
   body: string;
   url: string;
 }

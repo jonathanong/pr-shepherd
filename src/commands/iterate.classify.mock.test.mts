@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // ---------------------------------------------------------------------------
@@ -59,7 +60,7 @@ import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
 import { readStallState, writeStallState } from "../state/iterate-stall.mts";
-import type { ShepherdReport, IterateCommandOptions } from "../types.mts";
+import type { ShepherdReport, IterateCommandOptions, Review } from "../types.mts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -131,6 +132,10 @@ function makeOpts(overrides: Partial<IterateCommandOptions> = {}): IterateComman
     readyDelaySeconds: 600,
     ...overrides,
   };
+}
+
+function makeReview(id: string, author: string, body: string): Review {
+  return { id, author, authorType: "Unknown", body };
 }
 
 const NOW = 1_700_000_000;
@@ -206,10 +211,10 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("runIterate — review summary auto-minimize", () => {
-  const botSummary = { id: "PRR_BOT", author: "copilot-pull-request-reviewer", body: "overview" };
-  const genericBotSummary = { id: "PRR_GEM", author: "gemini-code-assist", body: "overview" };
-  const bracketBotSummary = { id: "PRR_BRK", author: "github-actions[bot]", body: "overview" };
-  const humanSummary = { id: "PRR_HUMAN", author: "alice", body: "nice work" };
+  const botSummary = makeReview("PRR_BOT", "copilot-pull-request-reviewer", "overview");
+  const genericBotSummary = makeReview("PRR_GEM", "gemini-code-assist", "overview");
+  const bracketBotSummary = makeReview("PRR_BRK", "github-actions[bot]", "overview");
+  const humanSummary = makeReview("PRR_HUMAN", "alice", "nice work");
 
   it("emits fix_code with reviewSummaryIds when only a bot summary exists", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary] }));
@@ -336,7 +341,9 @@ describe("runIterate — review summary auto-minimize", () => {
   it("omits APPROVED reviews from minimize list by default (approvals: false)", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
-        approvedReviews: [{ id: "PRR_AP", author: "alice", body: "" }],
+        approvedReviews: [
+          { id: "PRR_AP", author: "alice", authorType: "Unknown" as const, body: "" },
+        ],
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -354,7 +361,9 @@ describe("runIterate — review summary auto-minimize", () => {
     mockLoadConfig.mockReturnValue(cfg);
     mockRunCheck.mockResolvedValue(
       makeReport({
-        approvedReviews: [{ id: "PRR_AP", author: "alice", body: "" }],
+        approvedReviews: [
+          { id: "PRR_AP", author: "alice", authorType: "Unknown" as const, body: "" },
+        ],
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -414,6 +423,7 @@ describe("runIterate — review summary auto-minimize", () => {
       line: 10,
       startLine: null,
       author: "reviewer",
+      authorType: "Unknown" as const,
       body: "Use a const here.\n\n```suggestion\nconst foo = 1;\n```",
       url: "",
       createdAtUnix: NOW - 3600,
@@ -447,8 +457,8 @@ describe("runIterate — review summary auto-minimize", () => {
 
   it("editedSummaries are surfaced in fix_code but excluded from reviewSummaryIds (not re-minimized)", async () => {
     // A seen summary triggers fix_code (it needs minimizing); edited summary must NOT join the queue.
-    const seenSummary = { id: "PRR_SEEN", author: "copilot", body: "Old review." };
-    const editedSummary = { id: "PRR_ED", author: "copilot", body: "Updated." };
+    const seenSummary = makeReview("PRR_SEEN", "copilot", "Old review.");
+    const editedSummary = makeReview("PRR_ED", "copilot", "Updated.");
     mockRunCheck.mockResolvedValue(
       makeReport({ reviewSummaries: [seenSummary], editedSummaries: [editedSummary] }),
     );
@@ -470,7 +480,7 @@ describe("runIterate — review summary auto-minimize", () => {
   });
 
   it("surfaces body in firstLookSummaries when summary comes from report.firstLookSummaries", async () => {
-    const summary = { id: "PRR_FL", author: "copilot", body: "Nice work." };
+    const summary = makeReview("PRR_FL", "copilot", "Nice work.");
     mockRunCheck.mockResolvedValue(makeReport({ firstLookSummaries: [summary] }));
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: false,

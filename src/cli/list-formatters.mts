@@ -1,9 +1,9 @@
-import type { SuggestionBlock } from "../types.mts";
+import type { AuthorType, SuggestionBlock } from "../types.mts";
 import { renderLineRange, renderSuggestionBlock } from "./suggestion-renderer.mts";
 
 const BODY_PREVIEW_MAX = 100;
 
-export function renderAuthor(author: string, authorType?: string): string {
+export function renderAuthor(author: string, authorType?: AuthorType): string {
   return authorType ? `@${author} · ${authorType}` : `@${author}`;
 }
 
@@ -41,7 +41,7 @@ interface ThreadBulletInput {
   startLine?: number | null;
   line?: number | null;
   author: string;
-  authorType?: string;
+  authorType?: AuthorType;
   body: string;
   suggestion?: SuggestionBlock;
 }
@@ -64,7 +64,7 @@ export function renderThreadBullet(
 }
 
 export function renderCommentBullet(
-  c: { id: string; url?: string; author: string; authorType?: string; body: string },
+  c: { id: string; url?: string; author: string; authorType?: AuthorType; body: string },
   opts: { statusTag?: string } = {},
 ): string {
   const link = c.url ? ` [↗](${c.url})` : "";
@@ -73,7 +73,7 @@ export function renderCommentBullet(
 }
 
 export function renderReviewBullet(
-  r: { id: string; author: string; authorType?: string; body?: string },
+  r: { id: string; author: string; authorType?: AuthorType; body?: string },
   opts: { includeBody?: boolean } = {},
 ): string {
   const bodySuffix =
@@ -83,7 +83,7 @@ export function renderReviewBullet(
 
 export function renderReviewListSection(
   heading: string,
-  items: { id: string; author: string; authorType?: string; body?: string }[],
+  items: { id: string; author: string; authorType?: AuthorType; body?: string }[],
 ): string | null {
   if (items.length === 0) return null;
   return `## ${heading}\n\n${items.map((r) => renderReviewBullet(r, { includeBody: true })).join("\n")}`;

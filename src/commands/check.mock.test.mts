@@ -386,6 +386,7 @@ describe("runCheck — BLOCKED + clean (hand off to humans)", () => {
             line: 1,
             startLine: null,
             author: "alice",
+            authorType: "Unknown" as const,
             body: "fix this",
             url: "",
             createdAtUnix: 0,
@@ -489,16 +490,22 @@ describe("runCheck — reviewSummaries + approvedReviews pass-through", () => {
   it("surfaces an unseen summary in firstLookSummaries (not reviewSummaries) and marks it seen", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
-        reviewSummaries: [{ id: "PRR_SUM", author: "copilot", body: "overview" }],
-        approvedReviews: [{ id: "PRR_AP", author: "alice", body: "" }],
+        reviewSummaries: [
+          { id: "PRR_SUM", author: "copilot", authorType: "Unknown" as const, body: "overview" },
+        ],
+        approvedReviews: [
+          { id: "PRR_AP", author: "alice", authorType: "Unknown" as const, body: "" },
+        ],
       }),
     });
     const report = await runCheck(BASE_OPTS);
     expect(report.firstLookSummaries).toEqual([
-      { id: "PRR_SUM", author: "copilot", body: "overview" },
+      { id: "PRR_SUM", author: "copilot", authorType: "Unknown" as const, body: "overview" },
     ]);
     expect(report.reviewSummaries).toEqual([]);
-    expect(report.approvedReviews).toEqual([{ id: "PRR_AP", author: "alice", body: "" }]);
+    expect(report.approvedReviews).toEqual([
+      { id: "PRR_AP", author: "alice", authorType: "Unknown" as const, body: "" },
+    ]);
     expect(mockMarkSeen).toHaveBeenCalledWith(expect.anything(), "PRR_SUM", "overview");
   });
 
@@ -508,12 +515,14 @@ describe("runCheck — reviewSummaries + approvedReviews pass-through", () => {
     );
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
-        reviewSummaries: [{ id: "PRR_SUM", author: "copilot", body: "overview" }],
+        reviewSummaries: [
+          { id: "PRR_SUM", author: "copilot", authorType: "Unknown" as const, body: "overview" },
+        ],
       }),
     });
     const report = await runCheck(BASE_OPTS);
     expect(report.reviewSummaries).toEqual([
-      { id: "PRR_SUM", author: "copilot", body: "overview" },
+      { id: "PRR_SUM", author: "copilot", authorType: "Unknown" as const, body: "overview" },
     ]);
     expect(report.firstLookSummaries).toEqual([]);
     expect(mockMarkSeen).not.toHaveBeenCalledWith(expect.anything(), "PRR_SUM", expect.anything());
@@ -542,6 +551,7 @@ describe("runCheck — minimized thread filtering", () => {
             line: 1,
             startLine: null,
             author: "alice",
+            authorType: "Unknown" as const,
             body: "fix this",
             url: "",
             createdAtUnix: 0,
@@ -555,6 +565,7 @@ describe("runCheck — minimized thread filtering", () => {
             line: 2,
             startLine: null,
             author: "gemini-code-assist",
+            authorType: "Unknown" as const,
             body: "You have reached your daily quota limit.",
             url: "",
             createdAtUnix: 0,
@@ -578,6 +589,7 @@ function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
     line: 1,
     startLine: null,
     author: "alice",
+    authorType: "Unknown" as const,
     body: "fix this",
     url: "",
     createdAtUnix: 1_700_000_000,
@@ -590,6 +602,7 @@ function makeComment(overrides: Partial<PrComment> = {}): PrComment {
     id: "c-1",
     isMinimized: false,
     author: "bob",
+    authorType: "Unknown" as const,
     body: "nit",
     url: "",
     createdAtUnix: 1_700_000_000,

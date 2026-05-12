@@ -43,6 +43,7 @@ describe("shepherd journal instruction helpers", () => {
       path: "src/foo.ts",
       line: 10,
       author: "alice",
+      authorType: "Unknown" as const,
       body: "please fix",
       url: "https://github.com/org/repo/pull/42#thread",
     };
@@ -69,6 +70,7 @@ describe("shepherd journal instruction helpers", () => {
         {
           id: "PRR_1",
           author: "reviewer",
+          authorType: "Unknown" as const,
           body: "Looks good overall with one suggestion.",
         },
       ],
@@ -104,6 +106,7 @@ describe("shepherd journal instruction helpers", () => {
             line: 10,
             startLine: null,
             author: "alice",
+            authorType: "Unknown" as const,
             body: "please fix",
             url: "https://github.com/org/repo/pull/42#thread",
             createdAtUnix: 1_700_000_000,
@@ -148,6 +151,7 @@ describe("shepherd journal instruction helpers", () => {
       path: "src/foo.ts",
       line: 10,
       author: "alice",
+      authorType: "Unknown" as const,
       body: "fix with summary",
       url: "https://github.com/org/repo/pull/42#thread",
     };
@@ -174,6 +178,7 @@ describe("shepherd journal instruction helpers", () => {
         {
           id: "PRR_1",
           author: "reviewer",
+          authorType: "Unknown" as const,
           body: "New first-look summary.",
         },
       ],
@@ -223,6 +228,7 @@ describe("shepherd journal instruction helpers", () => {
             line: 10,
             startLine: null,
             author: "alice",
+            authorType: "Unknown" as const,
             body: "please fix",
             url: "https://github.com/org/repo/pull/42#thread",
             createdAtUnix: 1_700_000_000,
@@ -237,6 +243,7 @@ describe("shepherd journal instruction helpers", () => {
           {
             id: "PRR_1",
             author: "copilot",
+            authorType: "Unknown" as const,
             body: "first look summary",
           },
         ],

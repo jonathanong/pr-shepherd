@@ -144,6 +144,7 @@ describe("fix_code — in-progress run cancellation", () => {
       body: "fix this",
       url: "https://github.com/owner/repo/pull/42#discussion_r1",
       author: "alice",
+      authorType: "Unknown" as const,
       isOutdated: false,
       isResolved: false,
       isMinimized: false,
@@ -230,7 +231,9 @@ describe("fix_code — in-progress run cancellation", () => {
           filteredNames: [],
           blockedByFilteredCheck: false,
         },
-        reviewSummaries: [{ id: "PRR_BOT", author: "bot", body: "looks good" }],
+        reviewSummaries: [
+          { id: "PRR_BOT", author: "bot", authorType: "Unknown" as const, body: "looks good" },
+        ],
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -275,6 +278,7 @@ describe("fix_code — in-progress run cancellation", () => {
               id: "IC_comment_only",
               isMinimized: false,
               author: "reviewer",
+              authorType: "Unknown" as const,
               body: "Please consider this note.",
               url: "https://github.com/owner/repo/pull/42#issuecomment-1",
               createdAtUnix: 0,

@@ -210,6 +210,7 @@ const THREAD = {
   line: 10,
   startLine: null,
   author: "reviewer",
+  authorType: "Unknown" as const,
   body: "Fix this",
   url: "",
   createdAtUnix: NOW - 3600,

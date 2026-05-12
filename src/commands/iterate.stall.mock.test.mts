@@ -149,6 +149,7 @@ const RESOLUTION_ONLY_THREAD = {
   line: null,
   startLine: null,
   author: "reviewer",
+  authorType: "Unknown" as const,
   body: "Already addressed on an old diff",
   url: "",
   createdAtUnix: NOW - 3600,

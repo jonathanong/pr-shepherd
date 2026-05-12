@@ -21,6 +21,7 @@ const FL_THREAD_OUTDATED_AUTO: FirstLookThread = {
   line: 7,
   startLine: null,
   author: "alice",
+  authorType: "Unknown" as const,
   body: "old comment",
   url: "",
   createdAtUnix: 0,
@@ -37,6 +38,7 @@ const FL_THREAD_RESOLVED: FirstLookThread = {
   line: 3,
   startLine: null,
   author: "bob",
+  authorType: "Unknown" as const,
   body: "already addressed",
   url: "",
   createdAtUnix: 0,
@@ -47,6 +49,7 @@ const FL_COMMENT: FirstLookComment = {
   id: "PRRC_fl1",
   isMinimized: true,
   author: "bot",
+  authorType: "Unknown" as const,
   body: "quota warning",
   url: "",
   createdAtUnix: 0,
@@ -103,7 +106,12 @@ describe("## First-look items — edited flag rendering", () => {
 
 describe("## Review summaries (edited since first look) — fix-formatter rendering", () => {
   it("renders the edited-summaries section when editedSummaries is non-empty", () => {
-    const editedSummary = { id: "PRR_ED", author: "reviewer", body: "Updated review comment." };
+    const editedSummary = {
+      id: "PRR_ED",
+      author: "reviewer",
+      authorType: "Unknown" as const,
+      body: "Updated review comment.",
+    };
     const iterResult: IterateResult = { ...makeIterateResult("fix_code") };
     if (iterResult.action !== "fix_code") throw new Error("unreachable");
     iterResult.fix = { ...iterResult.fix, editedSummaries: [editedSummary] };

@@ -86,7 +86,7 @@ export interface ReviewThread {
   /** Start of the comment's line range. Null for single-line comments (use `line` for both). */
   startLine: number | null;
   author: string;
-  authorType?: AuthorType;
+  authorType: AuthorType;
   body: string;
   url: string;
   createdAtUnix: number;
@@ -119,7 +119,7 @@ export interface PrComment {
   id: string;
   isMinimized: boolean;
   author: string;
-  authorType?: AuthorType;
+  authorType: AuthorType;
   body: string;
   url: string;
   createdAtUnix: number;
@@ -128,7 +128,7 @@ export interface PrComment {
 export interface Review {
   id: string;
   author: string;
-  authorType?: AuthorType;
+  authorType: AuthorType;
   body: string;
 }
 

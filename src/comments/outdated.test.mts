@@ -12,6 +12,7 @@ function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
     line: 10,
     startLine: null,
     author: "alice",
+    authorType: "Unknown" as const,
     body: "please fix",
     url: "",
     createdAtUnix: 1_700_000_000,

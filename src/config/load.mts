@@ -5,9 +5,9 @@ import { parse } from "yaml";
 import builtins from "../config.json" with { type: "json" };
 import { parseCliRunner } from "../cli/runner.mts";
 
-export type MinimizeCommentsPolicy = "all" | "bots" | "users" | "none";
+const MINIMIZE_COMMENTS_POLICIES = ["all", "bots", "users", "none"] as const;
 
-const MINIMIZE_COMMENTS_POLICIES = new Set<string>(["all", "bots", "users", "none"]);
+export type MinimizeCommentsPolicy = (typeof MINIMIZE_COMMENTS_POLICIES)[number];
 
 export interface PrShepherdConfig {
   cli?: {
@@ -96,10 +96,12 @@ function deepMerge(
   return result;
 }
 
+function isMinimizeCommentsPolicy(value: unknown): value is MinimizeCommentsPolicy {
+  return MINIMIZE_COMMENTS_POLICIES.some((policy) => policy === value);
+}
+
 function parseMinimizeCommentsPolicy(value: unknown): MinimizeCommentsPolicy {
-  if (typeof value === "string" && MINIMIZE_COMMENTS_POLICIES.has(value)) {
-    return value as MinimizeCommentsPolicy;
-  }
+  if (isMinimizeCommentsPolicy(value)) return value;
   throw new Error(
     `Invalid config: iterate.minimizeComments must be one of "all", "bots", "users", or "none", got ${JSON.stringify(value)}`,
   );
