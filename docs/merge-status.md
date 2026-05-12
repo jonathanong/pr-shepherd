@@ -10,7 +10,7 @@ Located in `src/merge-status/derive.mts`. Given a `BatchPrData`, returns a `Merg
 | -------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------- |
 | 0        | `state !== 'OPEN'`                                | (pass through) | `iterate` cancels loop at step 2.5; status field is still derived normally |
 | 1        | `mergeable === 'CONFLICTING'`                     | `CONFLICTS`    | GraphQL merge conflict signal                                              |
-| 2        | `blockingBotReviewInProgress`                         | `BLOCKED`      | Takes priority over BEHIND to avoid hiding a real blocker                  |
+| 2        | `blockingBotReviewInProgress`                     | `BLOCKED`      | Takes priority over BEHIND to avoid hiding a real blocker                  |
 | 3        | `mergeStateStatus === 'DIRTY'`                    | `CONFLICTS`    | REST-layer merge conflict signal                                           |
 | 4        | `mergeStateStatus === 'BEHIND'`                   | `BEHIND`       | Branch needs rebase                                                        |
 | 5        | `mergeStateStatus === 'BLOCKED'` or `'HAS_HOOKS'` | `BLOCKED`      | Protected branch rules blocking merge                                      |

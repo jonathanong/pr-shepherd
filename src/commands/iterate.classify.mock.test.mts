@@ -223,7 +223,6 @@ describe("runIterate — review summary auto-minimize", () => {
     expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") return;
 
-
     expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
     expect(result.fix.surfacedApprovals).toEqual([]);
     expect(result.fix.resolveCommand.argv).toContain("--minimize-comment-ids");
@@ -368,7 +367,6 @@ describe("runIterate — review summary auto-minimize", () => {
 
     expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") return;
-
 
     expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
   });
