@@ -20,7 +20,7 @@ shepherd/
 ├── cli/                   # formatting and argument helpers
 │   ├── args.mts           # low-level argv parsing helpers (getFlag, hasFlag, parseCommonArgs, …)
 │   ├── exit-codes.mts     # exit-code derivation + parseDurationToMinutes
-│   ├── handlers.mts       # async handlers wired from cli-parser (iterate, monitor, status, commit-suggestion)
+│   ├── handlers.mts       # async handlers wired from cli-parser (iterate, commit-suggestion)
 │   ├── formatters.mts     # barrel for per-output formatters
 │   ├── iterate-formatter.mts  # Markdown formatter for IterateResult
 │   ├── iterate-lean.mts   # lean JSON projection for default --format=json output
@@ -39,11 +39,9 @@ shepherd/
 │   │   ├── helpers.mts    # shared small utilities
 │   │   ├── render.mts     # renderResolveCommand
 │   │   └── stall.mts      # stall-timeout guard
-│   ├── monitor.mts        # runMonitor — wraps iterate for cron/loop use
 │   ├── ready-delay.mts    # ready-delay state machine (ready-since.txt marker)
 │   ├── resolve.mts        # fetch + mutate modes (resolve threads, minimize comments, dismiss reviews)
-│   ├── resolve-instructions.mts  # builds fetch-instructions Markdown
-│   └── status.mts         # multi-PR status table
+│   └── resolve-instructions.mts  # builds fetch-instructions Markdown
 │
 ├── config/
 │   └── load.mts           # RC file loader with deepMerge
@@ -79,10 +77,7 @@ shepherd/
 │   └── derive.mts         # CLEAN/BEHIND/CONFLICTS/BLOCKED/UNSTABLE/DRAFT/UNKNOWN derivation
 │
 ├── reporters/
-│   ├── agent.mts          # agent-facing output helpers
-│   ├── check-instructions.mts  # Markdown instructions for check command output
-│   ├── json.mts           # machine-readable JSON output
-│   └── text.mts           # human-readable text output
+│   └── agent.mts          # agent-facing output helpers
 │
 ├── suggestions/
 │   ├── parse.mts          # parse ```suggestion blocks from review thread bodies

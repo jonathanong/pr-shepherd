@@ -19,9 +19,6 @@ export const BATCH_PR_QUERY = gql("batch-pr.gql");
 /** Returns the current head commit SHA for a PR. Used by waitForSha polling. */
 export const GET_PR_HEAD_SHA_QUERY = gql("get-pr-head-sha.gql");
 
-/** Paginated follow-up for `shepherd status` — used when reviewThreads is truncated (totalCount > 100). */
-export const MULTI_PR_STATUS_QUERY_WITH_CURSOR = gql("multi-pr-status-paged.gql");
-
 /** Look up PR number by branch name (for getCurrentPrNumber). */
 export const PR_NUMBER_BY_BRANCH_QUERY = gql("pr-number-by-branch.gql");
 

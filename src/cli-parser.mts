@@ -3,42 +3,31 @@
  *
  * Usage:
  *   pr-shepherd --version
- *   pr-shepherd [PR] [--format text|json] [--cooldown-seconds N] [--ready-delay Nm]
+ *   pr-shepherd [PR] [--format text|json] [--ready-delay Nm]
  *                  [--stall-timeout <duration>] [--no-auto-mark-ready]
  *                  [--no-auto-cancel-actionable]
- *   pr-shepherd check [PR] [--format text|json]
  *   pr-shepherd resolve [PR] [--fetch] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]
  *                            [--dismiss-review-ids Q] [--message MSG] [--require-sha SHA]
  *   pr-shepherd commit-suggestion [PR] --thread-id ID [--message MSG] [--description DESC]
  *                                      [--dry-run] [--format text|json]
  *   (--message is required unless --dry-run is set)
- *   pr-shepherd iterate [PR] [--format text|json] [--cooldown-seconds N] [--ready-delay Nm]
+ *   pr-shepherd iterate [PR] [--format text|json] [--ready-delay Nm]
  *                              [--stall-timeout <duration>] [--no-auto-mark-ready]
  *                              [--no-auto-cancel-actionable]
- *   pr-shepherd monitor [PR] [--format text|json]
- *   pr-shepherd status PR1 [PR2 …]
  */
 
 import { readFileSync } from "node:fs";
 
-import { runCheck } from "./commands/check.mts";
 import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
 import { runLogFile } from "./commands/log-file.mts";
-import { formatJson } from "./reporters/json.mts";
-import { formatText } from "./reporters/text.mts";
 import { parseCommonArgs, getFlag, hasFlag, parseList } from "./cli/args.mts";
 import { isDefaultIterateInvocation, validateDefaultIterateArgs } from "./cli/default-iterate.mts";
-import { statusToExitCode } from "./cli/exit-codes.mts";
 import { formatFetchResult, formatMutateResult } from "./cli/formatters.mts";
 import {
   handleCommitSuggestion,
   handleIterate,
-  handleMonitor,
-  handleStatus,
 } from "./cli/handlers.mts";
 import { setupLog } from "./log/setup.mts";
-import { detectAgentRuntime } from "./agent-runtime.mts";
-import { loadConfig } from "./config/load.mts";
 
 // ---------------------------------------------------------------------------
 // Entry
@@ -70,9 +59,6 @@ export async function main(argv: string[]): Promise<void> {
   }
 
   switch (subcommand) {
-    case "check":
-      await handleCheck(args.slice(1));
-      break;
     case "resolve":
       await handleResolve(args.slice(1));
       break;
@@ -82,16 +68,10 @@ export async function main(argv: string[]): Promise<void> {
     case "iterate":
       await handleIterate(args.slice(1));
       break;
-    case "monitor":
-      await handleMonitor(args.slice(1));
-      break;
-    case "status":
-      await handleStatus(args.slice(1));
-      break;
     default:
       process.stderr.write(`Unknown subcommand: ${subcommand ?? "(none)"}\n`);
       process.stderr.write(
-        "Usage: pr-shepherd <check|resolve|commit-suggestion|iterate|monitor|status|log-file> [options]\n" +
+        "Usage: pr-shepherd <resolve|commit-suggestion|iterate|log-file> [options]\n" +
           "       pr-shepherd --version | -v\n",
       );
       process.exitCode = 1;
@@ -108,21 +88,6 @@ function readVersion(): string {
 // ---------------------------------------------------------------------------
 // Subcommand handlers
 // ---------------------------------------------------------------------------
-
-async function handleCheck(args: string[]): Promise<void> {
-  const { prNumber, global: globalOpts } = parseCommonArgs(args);
-  const runtime = detectAgentRuntime();
-  const cfg = loadConfig();
-
-  const report = await runCheck({ ...globalOpts, prNumber, autoResolve: false });
-  const output =
-    globalOpts.format === "json"
-      ? formatJson(report, { runtime, runner: cfg.cli?.runner })
-      : formatText(report, { runtime, runner: cfg.cli?.runner });
-  process.stdout.write(`${output}\n`);
-
-  process.exitCode = statusToExitCode(report.status);
-}
 
 async function handleLogFile(args: string[]): Promise<void> {
   const jsonOut =

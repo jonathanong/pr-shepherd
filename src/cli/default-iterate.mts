@@ -3,7 +3,6 @@ import { parsePrNumber } from "./args.mts";
 const DEFAULT_ITERATE_FLAGS_WITH_VALUES = new Set([
   "--format",
   "--ready-delay",
-  "--cooldown-seconds",
   "--stall-timeout",
 ]);
 
@@ -62,7 +61,7 @@ function writeDefaultUsageError(arg: string): void {
   process.stderr.write(`Unknown subcommand: ${arg}\n`);
   process.stderr.write(
     "Usage: pr-shepherd [PR] [options]\n" +
-      "       pr-shepherd <check|resolve|commit-suggestion|iterate|monitor|status|log-file> [options]\n" +
+      "       pr-shepherd <resolve|commit-suggestion|iterate|log-file> [options]\n" +
       "       pr-shepherd --version | -v\n",
   );
   process.exitCode = 1;

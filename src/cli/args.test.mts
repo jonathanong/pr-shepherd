@@ -11,9 +11,7 @@ import {
   parseDurationToMinutes,
   statusToExitCode,
   iterateActionToExitCode,
-  deriveSimpleReady,
 } from "./exit-codes.mts";
-import type { PrSummary } from "../commands/status.mts";
 import type { ShepherdAction } from "../types.mts";
 
 // ---------------------------------------------------------------------------
@@ -30,20 +28,20 @@ describe("parseIntStrict", () => {
   });
 
   it("throws for a float string like '10.5'", () => {
-    expect(() => parseIntStrict("10.5", "--cooldown-seconds")).toThrow(
-      'Invalid value for --cooldown-seconds: "10.5" is not an integer',
+    expect(() => parseIntStrict("10.5", "--stall-timeout")).toThrow(
+      'Invalid value for --stall-timeout: "10.5" is not an integer',
     );
   });
 
   it("throws for a partial integer like '10abc'", () => {
-    expect(() => parseIntStrict("10abc", "--cooldown-seconds")).toThrow(
-      'Invalid value for --cooldown-seconds: "10abc" is not an integer',
+    expect(() => parseIntStrict("10abc", "--stall-timeout")).toThrow(
+      'Invalid value for --stall-timeout: "10abc" is not an integer',
     );
   });
 
   it("throws for a non-numeric string", () => {
-    expect(() => parseIntStrict("abc", "--cooldown-seconds")).toThrow(
-      'Invalid value for --cooldown-seconds: "abc" is not an integer',
+    expect(() => parseIntStrict("abc", "--stall-timeout")).toThrow(
+      'Invalid value for --stall-timeout: "abc" is not an integer',
     );
   });
 });
@@ -164,22 +162,22 @@ describe("parseCommonArgs — PR number detection", () => {
   });
 
   it("keeps subcommand-specific flags in extra", () => {
-    const { extra } = parseCommonArgs(["--format", "json", "--cooldown-seconds", "60"]);
-    expect(extra).toContain("--cooldown-seconds");
+    const { extra } = parseCommonArgs(["--format", "json", "--stall-timeout", "60"]);
+    expect(extra).toContain("--stall-timeout");
     expect(extra).toContain("60");
   });
 
   it("strips global flags from extra", () => {
-    const { extra } = parseCommonArgs(["--format", "json", "--cooldown-seconds", "60"]);
+    const { extra } = parseCommonArgs(["--format", "json", "--stall-timeout", "60"]);
     expect(extra).not.toContain("--format");
     expect(extra).not.toContain("json");
-    expect(extra).toContain("--cooldown-seconds");
+    expect(extra).toContain("--stall-timeout");
   });
 
   it("strips inline --format=json form from extra", () => {
-    const { extra } = parseCommonArgs(["--format=json", "--cooldown-seconds", "30"]);
+    const { extra } = parseCommonArgs(["--format=json", "--stall-timeout", "30"]);
     expect(extra).not.toContain("--format=json");
-    expect(extra).toContain("--cooldown-seconds");
+    expect(extra).toContain("--stall-timeout");
   });
 });
 
@@ -247,7 +245,6 @@ describe("iterateActionToExitCode", () => {
     ["fix_code", 1],
     ["cancel", 2],
     ["escalate", 3],
-    ["cooldown", 0],
     ["wait", 0],
     ["mark_ready", 0],
   ])("%s → %d", (action, code) => {
@@ -255,47 +252,3 @@ describe("iterateActionToExitCode", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// deriveSimpleReady
-// ---------------------------------------------------------------------------
-
-describe("deriveSimpleReady", () => {
-  function makeSummary(overrides: Partial<PrSummary> = {}): PrSummary {
-    return {
-      number: 1,
-      title: "My PR",
-      state: "OPEN",
-      isDraft: false,
-      mergeStateStatus: "CLEAN",
-      reviewDecision: "APPROVED",
-      unresolvedThreads: 0,
-      ciState: "SUCCESS",
-      threadsTruncated: false,
-      ...overrides,
-    };
-  }
-
-  it("returns true for a fully-ready PR", () => {
-    expect(deriveSimpleReady(makeSummary())).toBe(true);
-  });
-
-  it("returns false when mergeStateStatus is not CLEAN", () => {
-    expect(deriveSimpleReady(makeSummary({ mergeStateStatus: "BLOCKED" }))).toBe(false);
-  });
-
-  it("returns false when ciState is not SUCCESS", () => {
-    expect(deriveSimpleReady(makeSummary({ ciState: "FAILURE" }))).toBe(false);
-  });
-
-  it("returns false when there are unresolved threads", () => {
-    expect(deriveSimpleReady(makeSummary({ unresolvedThreads: 2 }))).toBe(false);
-  });
-
-  it("returns false when reviewDecision is CHANGES_REQUESTED", () => {
-    expect(deriveSimpleReady(makeSummary({ reviewDecision: "CHANGES_REQUESTED" }))).toBe(false);
-  });
-
-  it("returns false when isDraft", () => {
-    expect(deriveSimpleReady(makeSummary({ isDraft: true }))).toBe(false);
-  });
-});

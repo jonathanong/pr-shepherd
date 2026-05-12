@@ -11,7 +11,6 @@ export interface PrShepherdConfig {
     runner: "auto" | "npx" | "pnpm" | "yarn";
   };
   iterate: {
-    cooldownSeconds: number;
     fixAttemptsPerThread: number;
     stallTimeoutMinutes: number;
     /**
@@ -22,8 +21,6 @@ export interface PrShepherdConfig {
     minimizeApprovals: boolean;
   };
   watch: {
-    /** /loop polling interval, e.g. "4m". */
-    interval: string;
     readyDelayMinutes: number;
   };
   resolve: {
@@ -119,11 +116,6 @@ export function loadConfig(): PrShepherdConfig {
       );
     }
     config.cli.runner = parseCliRunner(config.cli.runner);
-    if (typeof config.watch?.interval !== "string" || !/^\d+[smhd]$/.test(config.watch.interval)) {
-      throw new Error(
-        `Invalid config: watch.interval must be a duration string like "4m" or "1h", got ${JSON.stringify(config.watch?.interval)}`,
-      );
-    }
     configCache.set(cwd, config);
     return config;
   } catch (err) {

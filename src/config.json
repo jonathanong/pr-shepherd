@@ -3,13 +3,11 @@
     "runner": "auto"
   },
   "iterate": {
-    "cooldownSeconds": 30,
     "fixAttemptsPerThread": 3,
     "stallTimeoutMinutes": 30,
     "minimizeApprovals": false
   },
   "watch": {
-    "interval": "4m",
     "readyDelayMinutes": 10
   },
   "resolve": {

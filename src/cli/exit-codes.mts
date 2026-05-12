@@ -1,7 +1,5 @@
 import { loadConfig } from "../config/load.mts";
-import { deriveVerdict } from "../commands/status.mts";
 import type { ShepherdAction } from "../types.mts";
-import type { PrSummary } from "../commands/status.mts";
 
 export function parseDurationToMinutes(s: string, defaultMinutes?: number): number {
   const m = /^(\d+)(m|min|minutes?|h|hours?)?$/.exec(s.trim());
@@ -38,6 +36,3 @@ export function iterateActionToExitCode(action: ShepherdAction): number {
   }
 }
 
-export function deriveSimpleReady(s: PrSummary): boolean {
-  return deriveVerdict(s) === "READY";
-}

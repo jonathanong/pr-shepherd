@@ -126,7 +126,6 @@ function makeOpts(overrides: Partial<IterateCommandOptions> = {}): IterateComman
   return {
     prNumber: 42,
     format: "json",
-    cooldownSeconds: 30,
     readyDelaySeconds: 600,
     ...overrides,
   };
@@ -146,12 +145,11 @@ const READY_STATE_DEFAULT = {
 function defaultConfig() {
   return {
     iterate: {
-      cooldownSeconds: 30,
       fixAttemptsPerThread: 3,
       stallTimeoutMinutes: 30,
       minimizeApprovals: false,
     },
-    watch: { interval: "4m", readyDelayMinutes: 10 },
+    watch: { readyDelayMinutes: 10 },
     resolve: {
       concurrency: 4,
       shaPoll: { intervalMs: 2000, maxAttempts: 10 },
@@ -178,11 +176,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockLoadConfig.mockReturnValue(defaultConfig());
   process.env["GH_TOKEN"] = "test-token";
-  // Default: last commit was 60s ago (outside cooldown)
   mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-    if (cmd === "git" && args[0] === "log") {
-      return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
-    }
     if (cmd === "git" && args[0] === "rev-parse") {
       return Promise.resolve({ stdout: "abc123", stderr: "" });
     }
@@ -207,42 +201,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
-});
-
-describe("runIterate — cooldown", () => {
-  it("returns action: cooldown when last commit is 5s ago", async () => {
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "log") {
-        return Promise.resolve({ stdout: String(NOW - 5), stderr: "" });
-      }
-      return Promise.resolve({ stdout: "", stderr: "" });
-    });
-
-    const result = await runIterate(makeOpts({ cooldownSeconds: 30 }));
-
-    expect(result.action).toBe("cooldown");
-    expect(mockRunCheck).not.toHaveBeenCalled();
-  });
-
-  it("skips cooldown and proceeds when git log fails (null lastCommitTime)", async () => {
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "log") return Promise.reject(new Error("not a git repo"));
-      if (cmd === "git" && args[0] === "rev-parse")
-        return Promise.resolve({ stdout: "abc\n", stderr: "" });
-      return Promise.resolve({ stdout: "", stderr: "" });
-    });
-    mockRunCheck.mockResolvedValue(makeReport());
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
-      shouldCancel: false,
-      remainingSeconds: 300,
-    });
-
-    const result = await runIterate(makeOpts({ cooldownSeconds: 30, noAutoMarkReady: true }));
-
-    expect(result.action).not.toBe("cooldown");
-    expect(mockRunCheck).toHaveBeenCalled();
-  });
 });
 
 describe("runIterate — wait", () => {

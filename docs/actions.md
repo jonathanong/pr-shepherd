@@ -6,11 +6,11 @@ Each default `pr-shepherd` invocation returns exactly one iterate action. The le
 
 The default output format is Markdown — what you see when running `pr-shepherd <PR>` through the selected package runner, and what the monitor SKILL reads each cron tick. `--format=json` emits the same information as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
 
-Instruction wording is agent-aware. Claude-compatible output refers to the next cron fire and `/loop cancel`. Codex output is selected with `AGENT=codex` or `CODEX_CI=1`; it replaces those lines with active-goal guidance such as picking a fresh sleep/timeout between 1 and 4 minutes and rerunning the configured pr-shepherd command. The action data and section structure are otherwise the same.
+Instruction wording uses unified sleep guidance for all runtimes: pick a fresh sleep/timeout between 30 seconds and 4 minutes and rerun the configured pr-shepherd command. The action data and section structure are otherwise the same.
 
 Command examples use the default npm spelling (`npx pr-shepherd`). Repos can set `cli.runner` to `auto`, `npx`, `pnpm`, or `yarn`; generated text and JSON argv then use the selected runner (for example `pnpm exec pr-shepherd` or `yarn run pr-shepherd`) everywhere a pr-shepherd follow-up command is emitted.
 
-Pass `--verbose` to get more debug state. In JSON mode, the output starts from the full `IterateResult` shape (all fields, including `baseBranch`, `checks`, `shouldCancel`) and then applies the same agent-aware instruction projection as lean JSON: non-`fix_code` actions get a top-level `instructions` array, and Codex output may rewrite `fix.instructions` and simple-action instructions. In Markdown mode, `--verbose` restores the full header summary line (all four counts, `remainingSeconds`, `copilotReviewInProgress`, `isDraft`, `shouldCancel` always shown, and `[COOLDOWN]` no longer suppresses the base/summary block) — but Markdown is structurally different from JSON and does not guarantee field-for-field parity (array fields like `baseBranch` or `checks` are not added to Markdown for actions that do not normally render them). Lean mode is the default because most fields are `false`/`0`/`[]` on a typical healthy tick and add context noise without value.
+Pass `--verbose` to get more debug state. In JSON mode, the output starts from the full `IterateResult` shape (all fields, including `baseBranch`, `checks`, `shouldCancel`) and then applies the same instruction projection as lean JSON: non-`fix_code` actions get a top-level `instructions` array, and `fix.instructions` may be rewritten. In Markdown mode, `--verbose` restores the full header summary line (all four counts, `remainingSeconds`, `copilotReviewInProgress`, `isDraft`, `shouldCancel` always shown) — but Markdown is structurally different from JSON and does not guarantee field-for-field parity (array fields like `baseBranch` or `checks` are not added to Markdown for actions that do not normally render them). Lean mode is the default because most fields are `false`/`0`/`[]` on a typical healthy tick and add context noise without value.
 
 **Output shape (every action, default lean format):**
 
@@ -33,7 +33,6 @@ Lean-mode rules for the summary line:
 - `remainingSeconds` is shown only when the ready-delay timer is actively counting down (`status === "READY"` and `remainingSeconds > 0`).
 - `copilotReviewInProgress` and `isDraft` are shown only when `true`.
 - `shouldCancel` is never shown (it is fully implied by `action === "cancel"`).
-- `[COOLDOWN]` suppresses the base/summary lines entirely — the action carries only UNKNOWN/empty placeholders.
 
 `--verbose` restores the full summary line: all four counts, `remainingSeconds`, `copilotReviewInProgress`, `isDraft`, and `shouldCancel` always present.
 
@@ -47,36 +46,6 @@ Load-bearing conventions (the monitor SKILL depends on these):
 4. Under `[REBASE]`, the shell script is inside a ```bash fenced block — instruction 1 tells the monitor to extract and run it.
 5. Under `[FIX_CODE]`, the `## Post-fix push` section has a `` resolve: `<command>` `` bullet — the instructions reference this bullet so the monitor strips backticks and runs the command.
 6. Passing check counts are surfaced only via the `**summary**` line — no per-check detail is emitted for passing checks. Failing check detail appears in `## Failing checks` (within `[FIX_CODE]` output). JSON surfaces check data as `checks: RelevantCheck[]` only on `fix_code` actions in lean mode; `--format=json --verbose` includes `checks` on all actions (full IterateResult).
-
----
-
-## `cooldown`
-
-Skips all work because the last commit is too fresh for CI checks to have started.
-
-**Trigger:** `nowSeconds − lastCommitTime < cooldownSeconds` (default 30s). No sweep is run.
-
-**CLI side-effects:** None.
-
-**Exit code:** 0
-
-**Markdown output:**
-
-```markdown
-# PR #42 [COOLDOWN]
-
-SKIP: CI still starting — waiting for first check to appear
-
-## Instructions
-
-1. CI still needs time to start reporting. Schedule the next dynamic wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240 and the same loop prompt, then end this iteration.
-```
-
-Codex variant: `Continue the active Codex goal — pick a fresh sleep/timeout between 1 and 4 minutes, wait that long, then rerun \`npx pr-shepherd 42\` after CI starts reporting.`
-
-`status`, `merge`, `state`, and `repo` are not emitted in default mode — they carry UNKNOWN/empty placeholders because the early return happens before any GitHub sweep. Pass `--verbose` to see all fields.
-
-**What the monitor does:** Follow `## Instructions` — schedule the next dynamic wakeup.
 
 ---
 
@@ -102,16 +71,14 @@ WAIT: 3 passing, 2 in-progress — 120s until auto-cancel
 
 ## Instructions
 
-1. Schedule the next dynamic wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240 and the same loop prompt, then end this iteration.
+1. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to continue the active goal.
 ```
 
-Codex variant: the body omits `until auto-cancel`, and the instruction is `Continue the active Codex goal — pick a fresh sleep/timeout between 1 and 4 minutes, wait that long, then rerun \`npx pr-shepherd 42\` to recheck.`
-
-When the current command includes a ready-delay override, Codex rerun guidance preserves it: `npx pr-shepherd 42 --ready-delay 15m`.
+When the current command includes a ready-delay override, the rerun command preserves it: `npx pr-shepherd 42 --ready-delay 15m`.
 
 The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, `blocked by pending reviews or required status checks`, `PR is a draft`, or `some checks are unstable`.
 
-**What the monitor does:** Follow `## Instructions` — schedule the next dynamic wakeup.
+**What the monitor does:** Follow `## Instructions` — pick a fresh sleep/timeout and rerun.
 
 ---
 
@@ -137,12 +104,10 @@ MARKED READY: PR #42 converted from draft to ready for review
 
 ## Instructions
 
-1. The CLI already marked the PR ready for review. Schedule the next dynamic wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240 and the same loop prompt, then end this iteration.
+1. The CLI already marked the PR ready for review. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.
 ```
 
-Codex variant: the same instruction with added active-goal guidance to continue until the ready-delay completes, pick a fresh sleep/timeout between 1 and 4 minutes, wait that long, and rerun `npx pr-shepherd 42` to recheck.
-
-**What the monitor does:** Follow `## Instructions` — schedule the next dynamic wakeup.
+**What the monitor does:** Follow `## Instructions` — pick a fresh sleep/timeout and rerun.
 
 ---
 
@@ -170,17 +135,14 @@ CANCEL: PR #42 is merged — stopping monitor
 
 ## Instructions
 
-1. Stop — do not schedule another dynamic wakeup. If this loop was started with a fixed-interval `/loop` schedule, call `CronList`, find the job whose prompt contains `#pr-shepherd-loop:pr=42:`, and cancel it with `CronDelete`.
-2. Stop.
+1. Stop — the active goal is complete.
 ```
-
-Codex variant: `Stop — no recurring Codex monitor is running to cancel.` followed by `Stop.`
 
 Other heading variants: `# PR #42 [CANCEL] — closed`, `# PR #42 [CANCEL] — ready-delay-elapsed`.
 
 Other body-line variants: `CANCEL: PR #42 is closed — stopping monitor`, `CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping monitor`.
 
-**What the monitor does:** Follow `## Instructions` — stop without scheduling another wakeup.
+**What the monitor does:** Follow `## Instructions` — stop.
 
 ---
 
@@ -259,7 +221,7 @@ Actionable work needs a code fix, commit, and push.
 12. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
 13. Do not re-run `gh run cancel` on the IDs listed under `## Cancelled runs` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.
 14. For any large decisions or rejections you made this iteration, add or update a `## Shepherd Journal` section in the PR description (`gh pr edit 42 --body …`) summarizing each decision and linking back to the originating comment, thread, or review. If this section already exists, append entries under it instead of creating a duplicate heading.
-15. CI needs time to run on the new push. Schedule the next dynamic wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240 and the same loop prompt, then end this iteration.
+15. CI needs time to run on the new push. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.
 ```
 
 When one or more threads carry a `[suggestion]` marker, the `## Instructions` section opens with two different steps. Step 1 is new; step 2 gains a manual-fallback clause. All other steps renumber and are otherwise unchanged.
@@ -317,8 +279,7 @@ Step 1 is absent when no thread has a `[suggestion]` marker; step 2 omits the ma
 - A first-look acknowledgement step is appended when `firstLookThreads` or `firstLookComments` are non-empty — it tells the agent to acknowledge current status before acting and to rely on `## Review threads to resolve` for any resolve mutation IDs.
 - A first-look summaries step is appended when `firstLookSummaries` is non-empty — it tells the agent these summaries are being seen for the first time and their IDs are already in the resolve command's `--minimize-comment-ids`.
 - An edited-items step is appended when `editedSummaries` is non-empty or any first-look thread/comment carries `edited: true` — it tells the agent to read the updated body but **not** include these IDs in any mutation flag.
-- The final "iteration" step has three variants: `Stop this iteration — CI needs time to run on the new push before the next tick.` when a push occurred; `Stop this iteration before the next tick.` when only GitHub mutations were made (no push); `End this iteration.` when no push or mutations occurred.
-- In Codex output, the "next tick" variants are rewritten to tell Codex to continue the active goal, pick a fresh sleep/timeout between 1 and 4 minutes, and rerun the configured pr-shepherd command.
+- The final "recheck" step has three variants: `CI needs time to run on the new push. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun \`npx pr-shepherd 42\` to recheck.` when a push occurred; `Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun \`npx pr-shepherd 42\` to recheck.` when only GitHub mutations were made or no push/mutations occurred.
 
 The JSON payload exposes the same data under `fix.{threads, resolutionOnlyThreads, actionableComments, reviewSummaryIds, firstLookSummaries, editedSummaries, surfacedApprovals, checks, changesRequestedReviews, resolveCommand, instructions, mode, firstLookThreads, firstLookComments, inProgressRunIds}` — where `fix.mode === "rebase-and-push"` is the type discriminator — plus top-level `baseBranch` (on `IterateResultBase`, not under `fix`) and `cancelled`. `fix.inProgressRunIds` contains the GitHub Actions run IDs the agent must cancel before applying fixes (mirrors `## In-progress runs` in the Markdown output); it is an empty array when there are no in-progress GitHub Actions run IDs to cancel (external status checks or already-cancelled runs are excluded) or when no push is expected this iteration. `resolutionOnlyThreads` contains unresolved outdated/minimized review threads routed to `--resolve-thread-ids` without causing a push or `--require-sha`. `reviewSummaryIds` contains the IDs routed to `--minimize-comment-ids` for review-level minimization: this includes review summaries (both first-look and already-seen), and may also include APPROVED review IDs when approval minimization is enabled. `firstLookSummaries` carries the full `Review` objects for bodies seen this iteration for the first time. `editedSummaries` carries the full `Review` objects for summaries whose body changed since last seen — these IDs are **not** in `reviewSummaryIds`. Both `firstLookSummaries` and `reviewSummaryIds` are merged into `--minimize-comment-ids` inside `resolveCommand.argv`; `editedSummaries` and `surfacedApprovals` are informational only. `resolveCommand.argv` starts with the configured runner argv (`["npx", "pr-shepherd", …]`, `["pnpm", "exec", "pr-shepherd", …]`, or `["yarn", "run", "pr-shepherd", …]`). In lean JSON mode, `fix.*` arrays that are empty are omitted; `cancelled` is omitted when empty. Pass `--verbose` to include all fields. `firstLookThreads` and `firstLookComments` are informational unless the same thread appears in `resolutionOnlyThreads`.
 
@@ -477,19 +438,22 @@ After fixing manually, rerun `/pr-shepherd:monitor 42` to resume.
 
 ## Instructions
 
-1. Stop — do not schedule another dynamic wakeup. If this loop was started with a fixed-interval `/loop` schedule, call `CronList`, find the job whose prompt contains `#pr-shepherd-loop:pr=<N>:`, and cancel it with `CronDelete`.
-2. Stop — the PR needs human direction before monitoring can resume.
+1. Stop — the PR needs human direction before monitoring can resume.
 ```
-
-Codex variant: `Stop — no recurring Codex monitor is running to cancel.` followed by the same human-direction stop instruction.
 
 The block after the base-fields line (separated by a blank line) is `escalate.humanMessage` in JSON — ready to print verbatim.
 
-**What the monitor does:** Follow `## Instructions` — stop without scheduling another wakeup.
+**What the monitor does:** Follow `## Instructions` — stop.
 
 ---
 
 ## Archived / no longer emitted
+
+### `cooldown`
+
+> **This action is no longer emitted by `iterate`.** The cooldown early-return (skip if last commit is too fresh for CI) has been removed. `iterate` now always runs the full sweep. Agents use the unified "pick a fresh sleep/timeout between 30 seconds and 4 minutes" guidance instead.
+
+**Trigger:** Previously emitted when `nowSeconds − lastCommitTime < cooldownSeconds` (default 30s). Removed to simplify the decision tree — the sweep is cheap and CI may already have started.
 
 ### `rerun_ci`
 

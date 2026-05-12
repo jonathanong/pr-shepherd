@@ -4,13 +4,10 @@
 
 ```
 pr-shepherd -v|--version
-pr-shepherd [PR] [--verbose] [--cooldown-seconds N] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]
-pr-shepherd check [PR]
+pr-shepherd [PR] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]
 pr-shepherd resolve [PR] [--fetch | --resolve-thread-ids … | --minimize-comment-ids … | --dismiss-review-ids … | --message "…" | --require-sha <sha>]
 pr-shepherd commit-suggestion [PR] --thread-id <id> --message "…"
-pr-shepherd iterate [PR] [--verbose] [--cooldown-seconds N] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]  # legacy-compatible spelling
-pr-shepherd monitor [PR]
-pr-shepherd status PR1 [PR2 …]
+pr-shepherd iterate [PR] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]  # legacy-compatible spelling
 pr-shepherd log-file
 ```
 
@@ -22,56 +19,6 @@ All subcommands accept:
 | --------------------- | ------- | ------------------------------------------------------------------------------------------------- |
 | `--format text\|json` | `text`  | Output format                                                                                     |
 | `--verbose`           | false   | (`iterate` only) emit full `IterateResult` JSON / show all base/summary fields in Markdown output |
-
-### pr-shepherd check [PR]
-
-Read-only PR status snapshot. Fetches CI results, merge state, and review comments in one GraphQL batch. PR number is inferred from the current branch when omitted.
-
-```sh
-pr-shepherd check           # infer PR from current branch
-pr-shepherd check 42
-```
-
-Exit codes: `0` READY · `2` IN_PROGRESS · `3` UNRESOLVED_COMMENTS · `1` all other statuses
-
-**Example output:**
-
-```
-# PR #42 [CHECK] — owner/repo
-Status: UNRESOLVED_COMMENTS
-Base: main
-
-## Merge Status
-
-- status: `CLEAN`
-- mergeStateStatus: `CLEAN`
-- mergeable: `MERGEABLE`
-- reviewDecision: `APPROVED`
-- isDraft: `false`
-- copilotReviewInProgress: `false`
-
-## CI Checks
-
-3/3 passed
-
-## Review Threads
-
-### Actionable (1)
-
-- `threadId=RT_kwDOBxyz123` [↗](https://github.com/owner/repo/pull/42#discussion_r1234567890) `src/api.ts:47` (@reviewer): Please add error handling here
-
-## Summary
-
-1 actionable
-
-## Instructions
-
-1. Report: merge status is CLEAN, CI 3/3 passed, 1 actionable review item(s).
-2. Do not declare this PR ready to merge: status is UNRESOLVED_COMMENTS (not READY).
-3. This is a one-shot check. For continuous monitoring that acts on these signals automatically, use `/pr-shepherd:monitor`.
-```
-
-In Codex output, the final instruction points to the reusable default iterate command instead, using the configured package runner (default npm spelling: `npx pr-shepherd <PR>`).
 
 ### pr-shepherd resolve [PR]
 
@@ -236,7 +183,6 @@ pr-shepherd iterate 42                    # legacy-compatible spelling
 | ----------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `--verbose`                   | false                                   | Full JSON output (all fields); restores full summary line in Markdown. See [actions.md](actions.md). |
 | `--ready-delay Nm`            | `watch.readyDelayMinutes` in config     | Settle window before the loop cancels after READY                                                    |
-| `--cooldown-seconds N`        | `iterate.cooldownSeconds` in config     | Wait after a push before reading CI                                                                  |
 | `--stall-timeout <duration>`  | `iterate.stallTimeoutMinutes` in config | Override the stall-detection window (e.g. `--stall-timeout 1h`)                                      |
 | `--no-auto-mark-ready`        | false                                   | Skip converting draft → ready-for-review                                                             |
 | `--no-auto-cancel-actionable` | false                                   | Skip cancelling actionable failing runs                                                              |
@@ -253,10 +199,10 @@ WAIT: 3 passing, 0 in-progress — 540s until auto-cancel
 
 ## Instructions
 
-1. Schedule the next dynamic wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240 and the same loop prompt, then end this iteration.
+1. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to continue the active goal.
 ```
 
-When Codex output is selected, the `[WAIT]` body omits the `until auto-cancel` countdown and the instruction tells Codex to keep the active goal running with the reusable command. For example: ``Continue the active Codex goal — pick a fresh sleep/timeout between 1 and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.`` If `cli.runner` selects pnpm or Yarn, that command is rendered as `pnpm exec pr-shepherd 42` or `yarn run pr-shepherd 42`; if the current command used `--ready-delay`, the rerun command includes the same flag.
+The instruction tells the agent to pick a fresh sleep/timeout between 30 seconds and 4 minutes and rerun the configured command. If `cli.runner` selects pnpm or Yarn, that command is rendered as `pnpm exec pr-shepherd 42` or `yarn run pr-shepherd 42`; if the current command used `--ready-delay`, the rerun command includes the same flag.
 
 Example for `[FIX_CODE]` (richest action):
 
@@ -302,73 +248,14 @@ at Object.<anonymous> (src/commands/iterate.test.mts:58:22)
 5. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
 6. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
 7. For any large decisions made, add or update a `## Shepherd Journal` section in the PR description (`gh pr edit 42 --body …`), appending entries under the existing heading if present.
-8. CI needs time to run on the new push. Schedule the next dynamic wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240 and the same loop prompt, then end this iteration.
+8. CI needs time to run on the new push. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42 --ready-delay 15m` to recheck.
 ```
 
-See [actions.md](actions.md) for all six actions and their complete output shapes.
+See [actions.md](actions.md) for all five actions and their complete output shapes.
 
 Both `--format=text` (default Markdown) and `--format=json` carry equivalent information — every field exposed in JSON has a corresponding Markdown representation, and vice versa.
 
-Exit codes: `0` wait/cooldown/mark_ready · `1` fix_code · `2` cancel · `3` escalate
-
-### pr-shepherd monitor [PR]
-
-Bootstrap command used by the Claude `/pr-shepherd:monitor` skill and by Codex directly. Emits the monitor prompt body for dynamic scheduling.
-
-By default, output targets Claude Code and tells the monitor skill how to reuse an existing scheduled task with the same loop tag or start dynamic `/loop` mode without a fixed interval. Dynamic recurrence is `ScheduleWakeup`-based: each nonterminal tick schedules the next wakeup with `delaySeconds` between 60 and 240. When Codex is detected (`AGENT=codex` or `CODEX_CI=1`), output omits `/loop` instructions and instead tells Codex to run explicit iterate ticks after a fresh 1-4 minute sleep/timeout until a terminal condition.
-
-```sh
-npx pr-shepherd monitor        # infer PR from current branch
-npx pr-shepherd monitor 42
-```
-
-**Example output:**
-
-```markdown
-# PR #42 [MONITOR]
-
-Loop tag: `#pr-shepherd-loop:pr=42:`
-
-## Loop prompt
-
-#pr-shepherd-loop:pr=42:
-
-**IMPORTANT — dynamic recurrence rules:**
-...
-
-## Instructions
-
-1. Invoke the `/loop` skill via the Skill tool with the full `## Loop prompt` body as `args`. Do not prefix an interval; this enters dynamic mode, where the prompt schedules each next wakeup with `ScheduleWakeup`.
-```
-
-Codex output includes the same PR, tag, prompt body, and `## Instructions` shape, but the instructions say to run the loop prompt once and keep cycling with the configured pr-shepherd command after a fresh 1-4 minute sleep instead of creating or cancelling a `/loop`.
-
-For Claude output, the loop interval comes from `watch.interval` in `.pr-shepherdrc.yml` or the built-in default. Use `--format=json` to inspect the raw values programmatically.
-
-Exit code: `0`
-
-### pr-shepherd status PR1 [PR2 …]
-
-Multi-PR summary table. One lightweight GraphQL query per PR, run in parallel.
-
-```sh
-pr-shepherd status 41 42 43
-pr-shepherd status 100
-```
-
-```
-# owner/repo — PR status (3)
-
-| PR | Title | Verdict | CI |
-| --- | --- | --- | --- |
-| #41 | Add new feature for user authentication | READY | SUCCESS |
-| #42 | Refactor internal module | IN PROGRESS | PENDING |
-| #43 | Fix edge case in parser | BLOCKED | SUCCESS |
-
-> Note: PR #43 threads truncated — run `pr-shepherd check 43` for full count.
-```
-
-Exit code: `0` if every PR is READY, `1` otherwise.
+Exit codes: `0` wait/mark_ready · `1` fix_code · `2` cancel · `3` escalate
 
 ### pr-shepherd log-file
 

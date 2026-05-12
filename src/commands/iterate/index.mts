@@ -5,11 +5,9 @@ import { graphql } from "../../github/http.mts";
 import { MARK_PR_READY_MUTATION } from "../../github/queries.mts";
 import { loadConfig } from "../../config/load.mts";
 import {
-  getLastCommitTime,
   getCurrentHeadSha,
   buildSummary,
   buildRelevantChecks,
-  buildCooldownResult,
   buildWaitLog,
 } from "./helpers.mts";
 import { classifyReviewSummaries } from "./classify.mts";
@@ -19,7 +17,6 @@ import type { IterateCommandOptions, IterateResult, IterateResultBase } from "..
 
 export async function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
   const config = loadConfig();
-  const cooldownSeconds = opts.cooldownSeconds ?? config.iterate.cooldownSeconds;
   const readyDelaySeconds = opts.readyDelaySeconds ?? config.watch.readyDelayMinutes * 60;
   const stallTimeoutSeconds = opts.stallTimeoutSeconds ?? config.iterate.stallTimeoutMinutes * 60;
 
@@ -28,12 +25,6 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     throw new Error("No open PR found for current branch. Pass a PR number explicitly.");
   }
   const optsWithPr = { ...opts, prNumber };
-
-  const lastCommitTime = await getLastCommitTime();
-  const nowSeconds = Math.floor(Date.now() / 1000);
-  if (lastCommitTime !== null && nowSeconds - lastCommitTime < cooldownSeconds) {
-    return buildCooldownResult(prNumber, readyDelaySeconds);
-  }
 
   const report = await runCheck({
     ...optsWithPr,

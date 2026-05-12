@@ -11,7 +11,6 @@ cli:
   runner: auto # auto-detect npm/pnpm/yarn for generated commands
 
 iterate:
-  cooldownSeconds: 60 # wait 60s after a push before reading CI
   fixAttemptsPerThread: 5 # raise before escalating to manual review
   stallTimeoutMinutes: 30 # escalate if state unchanged for this many minutes
   minimizeApprovals: false # set true to also minimize APPROVED-state reviews
@@ -47,7 +46,6 @@ actions:
 | Key                                  | Default                                   | Purpose                                                                                                                                |
 | ------------------------------------ | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `cli.runner`                         | `"auto"`                                  | Package runner used in generated commands (`auto`, `npx`, `pnpm`, or `yarn`)                                                           |
-| `iterate.cooldownSeconds`            | `30`                                      | Wait after a push before reading CI                                                                                                    |
 | `iterate.fixAttemptsPerThread`       | `3`                                       | Max fix attempts per unresolved thread before `escalate`                                                                               |
 | `iterate.stallTimeoutMinutes`        | `30`                                      | Minutes the loop may repeat the same action without progress before `escalate` with `stall-timeout`; `0` disables                      |
 | `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination). All `COMMENTED` summaries are always minimized. |
@@ -85,13 +83,6 @@ Set `cli.runner` to `npx`, `pnpm`, or `yarn` to force a specific command in moni
 
 ## `iterate`
 
-### `iterate.cooldownSeconds` — default `30`
-
-How long (in seconds) shepherd waits after the most recent commit before calling GitHub. CI hasn't started yet for very recent pushes; polling immediately produces noise and wastes API calls.
-
-- **Raise** if your CI takes a long time to queue (e.g. self-hosted runners with startup latency).
-- **Lower** if you want faster initial feedback after a push.
-
 ### `iterate.fixAttemptsPerThread` — default `3`
 
 Maximum number of times shepherd dispatches the `fix_code` action for the same review thread without it being resolved. Once a thread hits this count, shepherd escalates to the `escalate` action instead of retrying.
@@ -128,19 +119,6 @@ When `false` (default), approval reviews are surfaced under `## Approvals (surfa
 ---
 
 ## `watch`
-
-These values are read by the `/pr-shepherd:monitor` skill when setting up the `/loop`.
-
-### `watch.interval` — default `"4m"`
-
-The `/loop` polling cadence. Format: `"Ns"` for seconds, `"Nm"` for minutes, `"Nh"` for hours, `"Nd"` for days.
-
-The default of 4 minutes is chosen to keep Claude's prompt cache warm — the cache TTL is 5 minutes, so a 4-minute loop means each tick still benefits from a warm cache.
-
-- **Raise** if you want a lighter polling footprint.
-- **Lower** if you want faster detection of CI state changes (costs more API budget).
-
-> These `watch.*` keys are the only way to tune the loop interval and ready-delay. The `/pr-shepherd:monitor` skill reads them from config via the selected pr-shepherd runner — there are no per-invocation flags.
 
 ### `watch.readyDelayMinutes` — default `10`
 

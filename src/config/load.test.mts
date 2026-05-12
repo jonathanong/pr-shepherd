@@ -119,13 +119,13 @@ describe("loadConfig — malformed YAML", () => {
 
 describe("loadConfig — findRcFile", () => {
   it("finds rc file in a parent directory when cwd is a nested subdir", async () => {
-    writeFileSync(join(tmpDir, RC), "iterate:\n  cooldownSeconds: 50\n");
+    writeFileSync(join(tmpDir, RC), "iterate:\n  fixAttemptsPerThread: 50\n");
     const sub = join(tmpDir, "nested", "deep");
     mkdirSync(sub, { recursive: true });
     process.chdir(sub);
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
-    expect(result.iterate.cooldownSeconds).toBe(50);
+    expect(result.iterate.fixAttemptsPerThread).toBe(50);
   });
 });
 
@@ -135,7 +135,7 @@ describe("loadConfig — findRcFile", () => {
 
 describe("loadConfig — caching", () => {
   it("returns the same object reference on repeated calls (no re-parse)", async () => {
-    writeFileSync(join(tmpDir, RC), "iterate:\n  cooldownSeconds: 60\n");
+    writeFileSync(join(tmpDir, RC), "iterate:\n  fixAttemptsPerThread: 60\n");
     const loadConfig = await freshLoadConfig();
     const first = loadConfig();
     // Delete the file to prove the second call does not re-read disk
@@ -145,15 +145,15 @@ describe("loadConfig — caching", () => {
   });
 
   it("_resetConfigCache allows fresh load after cache is cleared", async () => {
-    writeFileSync(join(tmpDir, RC), "iterate:\n  cooldownSeconds: 7\n");
+    writeFileSync(join(tmpDir, RC), "iterate:\n  fixAttemptsPerThread: 7\n");
     const mod = await import("./load.mts");
     const first = mod.loadConfig();
-    expect(first.iterate.cooldownSeconds).toBe(7);
+    expect(first.iterate.fixAttemptsPerThread).toBe(7);
 
     // Update the file then reset the cache so the next call re-reads disk
-    writeFileSync(join(tmpDir, RC), "iterate:\n  cooldownSeconds: 11\n");
+    writeFileSync(join(tmpDir, RC), "iterate:\n  fixAttemptsPerThread: 11\n");
     mod._resetConfigCache();
     const second = mod.loadConfig();
-    expect(second.iterate.cooldownSeconds).toBe(11);
+    expect(second.iterate.fixAttemptsPerThread).toBe(11);
   });
 });
