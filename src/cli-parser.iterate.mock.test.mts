@@ -8,13 +8,13 @@ vi.mock("./commands/resolve.mts", () => ({
 vi.mock("./commands/commit-suggestion.mts", () => ({
   runCommitSuggestion: vi.fn(),
 }));
-vi.mock("./commands/iterate.mts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./commands/iterate.mts")>();
+vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./commands/iterate/index.mts")>();
   return { ...actual, runIterate: vi.fn() };
 });
 
 import { main } from "./cli-parser.mts";
-import { runIterate } from "./commands/iterate.mts";
+import { runIterate } from "./commands/iterate/index.mts";
 import type { CancelReason, IterateResult } from "./types.mts";
 import { makeIterateResult } from "./cli-parser.iterate-fixtures.mts";
 
@@ -175,9 +175,9 @@ describe("main — iterate text format", () => {
     const out = getStdout();
     expect(out).toMatch(/^# PR #42 \[ESCALATE\]\n/);
     expect(out).toContain("**status** `IN_PROGRESS`");
-    expect(out).toContain("⚠️ /pr-shepherd:monitor paused — needs human direction");
+    expect(out).toContain("⚠️ /pr-shepherd:pr-shepherd paused — needs human direction");
     expect(out).toContain("## Instructions");
-    expect(out).toContain("1. Stop — the PR needs human direction before monitoring can resume.");
+    expect(out).toContain("1. Stop — the PR needs human direction before iterating can resume.");
   });
 
   it("wait: instructions use unified sleep wording with rerun command", async () => {
@@ -219,7 +219,7 @@ describe("main — iterate text format", () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("escalate"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
-    expect(out).toContain("1. Stop — the PR needs human direction before monitoring can resume.");
+    expect(out).toContain("1. Stop — the PR needs human direction before iterating can resume.");
     expect(out).not.toContain("CronList");
   });
 
@@ -266,7 +266,7 @@ describe("main — iterate text format", () => {
   // ---------------------------------------------------------------------------
 
   it("lean mode (default): summary line omits zero counts, false booleans, and non-READY remainingSeconds", async () => {
-    // fixture: status=IN_PROGRESS, remainingSeconds=60, copilotReviewInProgress=false, isDraft=false
+    // fixture: status=IN_PROGRESS, remainingSeconds=60, blockingBotReviewInProgress=false, isDraft=false
     mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
     await main(["node", "shepherd", "iterate", "42"]);
     const text = getStdout();
@@ -275,7 +275,7 @@ describe("main — iterate text format", () => {
     expect(text).not.toContain("filtered");
     // False booleans omitted
     expect(text).not.toContain("shouldCancel");
-    expect(text).not.toContain("copilotReviewInProgress");
+    expect(text).not.toContain("blockingBotReviewInProgress");
     expect(text).not.toContain("isDraft");
     // remainingSeconds omitted when status != READY
     expect(text).not.toContain("remainingSeconds");
@@ -292,16 +292,16 @@ describe("main — iterate text format", () => {
     expect(getStdout()).toContain("**remainingSeconds** 300");
   });
 
-  it("lean mode: copilotReviewInProgress and isDraft shown only when true", async () => {
+  it("lean mode: blockingBotReviewInProgress and isDraft shown only when true", async () => {
     const result = {
       ...makeIterateResult("wait"),
-      copilotReviewInProgress: true,
+      blockingBotReviewInProgress: true,
       isDraft: true,
     };
     mockRunIterate.mockResolvedValue(result);
     await main(["node", "shepherd", "iterate", "42"]);
     const text = getStdout();
-    expect(text).toContain("**copilotReviewInProgress**");
+    expect(text).toContain("**blockingBotReviewInProgress**");
     expect(text).toContain("**isDraft**");
   });
 
@@ -311,7 +311,7 @@ describe("main — iterate text format", () => {
     const text = getStdout();
     expect(text).toContain("shouldCancel");
     expect(text).toContain(`**remainingSeconds** 60`);
-    expect(text).toContain("copilotReviewInProgress");
+    expect(text).toContain("blockingBotReviewInProgress");
     expect(text).toContain("isDraft");
     expect(text).toContain("0 skipped");
     expect(text).toContain("0 filtered");
@@ -338,7 +338,7 @@ describe("main — iterate text format", () => {
     await main(["node", "shepherd", "iterate", "42", "--format", "json"]);
     const parsed = JSON.parse(getStdout().trimEnd());
     expect(parsed.shouldCancel).toBeUndefined();
-    expect(parsed.copilotReviewInProgress).toBeUndefined();
+    expect(parsed.blockingBotReviewInProgress).toBeUndefined();
     expect(parsed.isDraft).toBeUndefined();
     expect(parsed.remainingSeconds).toBeUndefined();
     // checks omitted for wait action
@@ -360,7 +360,7 @@ describe("main — iterate text format", () => {
     await main(["node", "shepherd", "iterate", "42", "--format", "json", "--verbose"]);
     const parsed = JSON.parse(getStdout().trimEnd());
     expect(parsed.shouldCancel).toBe(false);
-    expect(parsed.copilotReviewInProgress).toBe(false);
+    expect(parsed.blockingBotReviewInProgress).toBe(false);
     expect(parsed.isDraft).toBe(false);
     expect(parsed.remainingSeconds).toBe(60);
     expect(parsed.summary.skipped).toBe(0);

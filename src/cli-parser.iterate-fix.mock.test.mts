@@ -8,8 +8,8 @@ vi.mock("./commands/resolve.mts", () => ({
 vi.mock("./commands/commit-suggestion.mts", () => ({
   runCommitSuggestion: vi.fn(),
 }));
-vi.mock("./commands/iterate.mts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./commands/iterate.mts")>();
+vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./commands/iterate/index.mts")>();
   return { ...actual, runIterate: vi.fn() };
 });
 vi.mock("./github/client.mts", () => ({
@@ -17,7 +17,7 @@ vi.mock("./github/client.mts", () => ({
 }));
 
 import { main } from "./cli-parser.mts";
-import { runIterate } from "./commands/iterate.mts";
+import { runIterate } from "./commands/iterate/index.mts";
 import type { IterateResult } from "./types.mts";
 import { makeIterateResult } from "./cli-parser.iterate-fixtures.mts";
 
@@ -84,7 +84,6 @@ describe("main — iterate text format (fix_code and checks)", () => {
     };
     if (result.action !== "fix_code") throw new Error("unreachable");
     result.fix = {
-      mode: "rebase-and-push",
       threads: [
         {
           id: "PRRT_1",
@@ -181,7 +180,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
   it("fix_code: renders '## Review IDs to minimize queue' for seen summary IDs", async () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
-    if (result.fix.mode !== "rebase-and-push") throw new Error("unreachable");
+
     result.fix.reviewSummaryIds = ["PRR_BOT", "PRR_AP"];
     result.fix.resolveCommand = {
       argv: ["npx", "pr-shepherd", "resolve", "42", "--minimize-comment-ids", "PRR_BOT,PRR_AP"],
@@ -205,7 +204,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
   it("fix_code: renders '## Review summaries (first look — to be minimized)' with body when firstLookSummaries is non-empty", async () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
-    if (result.fix.mode !== "rebase-and-push") throw new Error("unreachable");
+
     result.fix.firstLookSummaries = [
       { id: "PRR_FL", author: "copilot", body: "Nice work overall." },
     ];
@@ -232,7 +231,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
   it("fix_code: renders '## Approvals (surfaced — not minimized)' with H3 + blockquote", async () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
-    if (result.fix.mode !== "rebase-and-push") throw new Error("unreachable");
+
     result.fix.surfacedApprovals = [
       { id: "PRR_HUMAN", author: "alice", body: "Looks reasonable but please double-check X." },
     ];
@@ -249,7 +248,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
   it("fix_code: approval with empty body renders '(no review body)' instead of bare blockquote", async () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
-    if (result.fix.mode !== "rebase-and-push") throw new Error("unreachable");
+
     result.fix.surfacedApprovals = [{ id: "PRR_EMPTY", author: "alice", body: "" }];
     mockRunIterate.mockResolvedValue(result);
 
@@ -371,7 +370,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
 
   it("fix_code: check with runId=null + detailsUrl renders 'external `<url>`', without detailsUrl falls back to '(no runId)'", async () => {
     const result = makeIterateResult("fix_code");
-    if (result.action !== "fix_code" || result.fix.mode !== "rebase-and-push") {
+    if (result.action !== "fix_code") {
       throw new Error("unreachable");
     }
     result.fix.checks = [
@@ -433,7 +432,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
 
   it("fix_code: cancelled check renders [conclusion: CANCELLED] tag without failedStep/summary", async () => {
     const result = makeIterateResult("fix_code");
-    if (result.action !== "fix_code" || result.fix.mode !== "rebase-and-push") {
+    if (result.action !== "fix_code") {
       throw new Error("unreachable");
     }
     result.fix.checks = [

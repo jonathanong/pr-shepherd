@@ -1,4 +1,4 @@
-import { renderResolveCommand } from "../commands/iterate.mts";
+import { renderResolveCommand } from "../commands/iterate/render.mts";
 import { joinSections } from "../util/markdown.mts";
 import { renderSuggestionBlock, renderLineRange } from "./suggestion-renderer.mts";
 import {

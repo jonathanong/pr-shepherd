@@ -54,7 +54,7 @@ vi.mock("../state/iterate-stall.mts", () => ({
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
-import { runIterate } from "./iterate.mts";
+import { runIterate } from "./iterate/index.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
@@ -85,7 +85,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       isDraft: false,
       mergeable: "MERGEABLE",
       reviewDecision: "APPROVED",
-      copilotReviewInProgress: false,
+      blockingBotReviewInProgress: false,
       mergeStateStatus: "CLEAN",
     },
     checks: {
@@ -211,7 +211,7 @@ describe("runIterate — mark_ready", () => {
           isDraft: true,
           mergeable: "MERGEABLE",
           reviewDecision: "APPROVED",
-          copilotReviewInProgress: false,
+          blockingBotReviewInProgress: false,
           mergeStateStatus: "CLEAN",
         },
       }),
@@ -236,7 +236,7 @@ describe("runIterate — mark_ready", () => {
     expect(graphqlCalls).toHaveLength(1);
   });
 
-  it("does NOT mark ready when copilotReviewInProgress", async () => {
+  it("does NOT mark ready when blockingBotReviewInProgress", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "READY",
@@ -246,7 +246,7 @@ describe("runIterate — mark_ready", () => {
           isDraft: true,
           mergeable: "MERGEABLE",
           reviewDecision: "APPROVED",
-          copilotReviewInProgress: true,
+          blockingBotReviewInProgress: true,
           mergeStateStatus: "CLEAN",
         },
       }),
@@ -277,7 +277,7 @@ describe("runIterate — triage via runCheck", () => {
           isDraft: false,
           mergeable: "UNKNOWN",
           reviewDecision: null,
-          copilotReviewInProgress: false,
+          blockingBotReviewInProgress: false,
           mergeStateStatus: "UNKNOWN",
         },
         checks: {
@@ -317,7 +317,7 @@ describe("runIterate — triage via runCheck", () => {
           isDraft: false,
           mergeable: "CONFLICTING",
           reviewDecision: null,
-          copilotReviewInProgress: false,
+          blockingBotReviewInProgress: false,
           mergeStateStatus: "DIRTY",
         },
         checks: {
@@ -385,7 +385,7 @@ describe("runIterate — triage via runCheck", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       expect(result.fix.checks).toHaveLength(1);
       expect(result.fix.checks[0]?.name).toBe("typecheck");
       expect(result.fix.checks[0]?.runId).toBe("run-3");

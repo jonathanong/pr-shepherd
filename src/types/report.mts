@@ -92,7 +92,7 @@ export interface ResolveOptions {
   requireSha?: string;
 }
 
-/** Thread shape emitted to the monitor agent — stripped of always-false flags. */
+/** Thread shape emitted to the iterate agent — stripped of always-false flags. */
 export interface AgentThread {
   id: string;
   path: string | null;
@@ -104,7 +104,7 @@ export interface AgentThread {
   suggestion?: SuggestionBlock; // present when body contains a ```suggestion fence
 }
 
-/** Comment shape emitted to the monitor agent — stripped of always-false flags. */
+/** Comment shape emitted to the iterate agent — stripped of always-false flags. */
 export interface AgentComment {
   id: string;
   author: string;
@@ -113,10 +113,16 @@ export interface AgentComment {
 }
 
 /**
- * Check shape emitted to the monitor agent under `fix_code`.
+ * Check shape emitted to the iterate agent under `fix_code`.
  * For cancelled checks, agents should rely on `name`/`runId`/`detailsUrl`/`conclusion`
  * to decide whether to rerun without log inspection; optional metadata such as
  * `workflowName`, `jobName`, `failedStep`, and `summary` may still be present when available.
+ *
+ * TODO(C1): Collapse AgentCheck into RelevantCheck — the only difference is that
+ * AgentCheck allows a null conclusion while RelevantCheck excludes null. Once
+ * toAgentCheck in reporters/agent.mts is confirmed to never receive a null conclusion
+ * (i.e., all upstream TriagedCheck sources guard against it), remove AgentCheck and
+ * replace all usages with RelevantCheck.
  */
 export interface AgentCheck {
   name: string;

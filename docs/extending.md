@@ -25,9 +25,9 @@ Four recipes for common extension patterns.
 
    Add it to the `IterateResult` union.
 
-3. **Add the dispatch step** — in `commands/iterate.mts`, insert a new numbered step in the decision chain. Return the new result shape.
+3. **Add the dispatch step** — in `commands/iterate/index.mts`, insert a new numbered step in the decision chain. Return the new result shape.
 
-4. **Add the formatter** — in `cli/iterate-formatter.mts`, add a `case "my_action":` branch that emits the action-specific body and a numbered `## Instructions` section. The monitor skill follows those steps verbatim — no changes to `skills/monitor/SKILL.md` are required.
+4. **Add the formatter** — in `cli/iterate-formatter.mts`, add a `case "my_action":` branch that emits the action-specific body and a numbered `## Instructions` section. The iterate skill follows those steps verbatim — no changes to `skills/pr-shepherd/SKILL.md` are required.
 
 5. **Add tests** — in `commands/iterate.mock.test.mts`, add a `describe('runIterate — my_action')` block.
 

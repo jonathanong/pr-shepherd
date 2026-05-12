@@ -8,8 +8,8 @@ vi.mock("./commands/resolve.mts", () => ({
 vi.mock("./commands/commit-suggestion.mts", () => ({
   runCommitSuggestion: vi.fn(),
 }));
-vi.mock("./commands/iterate.mts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./commands/iterate.mts")>();
+vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./commands/iterate/index.mts")>();
   return { ...actual, runIterate: vi.fn() };
 });
 vi.mock("./github/client.mts", () => ({
@@ -17,7 +17,7 @@ vi.mock("./github/client.mts", () => ({
 }));
 
 import { main } from "./cli-parser.mts";
-import { runIterate } from "./commands/iterate.mts";
+import { runIterate } from "./commands/iterate/index.mts";
 import type { IterateResult } from "./types.mts";
 
 const mockRunIterate = vi.mocked(runIterate);
@@ -35,7 +35,7 @@ function makeFixCodeResult(): IterateResult & { action: "fix_code" } {
     mergeStateStatus: "BLOCKED" as const,
     mergeStatus: "BLOCKED" as const,
     reviewDecision: null,
-    copilotReviewInProgress: false,
+    blockingBotReviewInProgress: false,
     isDraft: false,
     shouldCancel: false,
     remainingSeconds: 60,
@@ -44,7 +44,6 @@ function makeFixCodeResult(): IterateResult & { action: "fix_code" } {
     checks: [],
     action: "fix_code",
     fix: {
-      mode: "rebase-and-push",
       threads: [],
       resolutionOnlyThreads: [],
       actionableComments: [],

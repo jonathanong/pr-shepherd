@@ -62,7 +62,7 @@ When making changes, review [`docs/`](docs/) and [`README.md`](README.md) for im
 
 CLI output should only include information that is relevant or actionable in the current state. Omit fields and lines that add noise without value:
 
-- Do not emit a field, flag, or line when its value is the trivial default (false, null, 0, empty). For example: do not emit `copilotReviewInProgress` unless it is `true`.
+- Do not emit a field, flag, or line when its value is the trivial default (false, null, 0, empty). For example: do not emit `blockingBotReviewInProgress` unless it is `true`.
 - Do not emit time-bounded or state-specific fields outside the state where they are meaningful. For example: do not emit `remainingSeconds` unless the PR is in the final ready-delay countdown.
 - Do not repeat information the reader already has from an earlier line in the same output block.
 - Omit section headers and labels when the section would be empty.
@@ -145,8 +145,7 @@ so their bodies are never fetched. This remains future work.
 Implementation lives in `src/state/seen-comments.mts`. The call sites are
 `src/commands/resolve.mts` (surfaced in `resolve --fetch` output under
 `## First-look items`) and `src/commands/check.mts` (surfaced in iterate's
-`fix_code` output under `## Review summaries (first look — to be minimized)`
-and in `pr-shepherd check` text output under `## First-look items`).
+`fix_code` output under `## Review summaries (first look — to be minimized)`).
 
 ## Keep skills and loop prompts minimal
 
@@ -158,7 +157,7 @@ Skills (`plugin/skills/*/SKILL.md`) and `/loop` prompts should be thin dispatche
 4. Print the full output.
 5. Follow the output's own `## Instructions` section exactly.
 
-The canonical example is `plugin/skills/resolve/SKILL.md` — 37 lines, pure dispatcher, no policy.
+The canonical example is `plugin/skills/pr-shepherd/SKILL.md` — pure dispatcher, no policy.
 
 Everything else belongs in the CLI's Markdown `## Instructions` output, not in the skill:
 

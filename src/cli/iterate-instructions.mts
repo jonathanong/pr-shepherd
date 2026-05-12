@@ -26,7 +26,7 @@ export function buildSimpleIterateInstructions(
     case "cancel":
       return ["Stop — the active goal is complete."];
     case "escalate":
-      return ["Stop — the PR needs human direction before monitoring can resume."];
+      return ["Stop — the PR needs human direction before iterating can resume."];
   }
 }
 

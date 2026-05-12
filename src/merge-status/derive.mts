@@ -6,7 +6,7 @@
  *
  * Interpretation order for `status` — first match wins:
  *   1. mergeable == CONFLICTING       → CONFLICTS (hard conflict even for drafts)
- *   2. copilotReviewInProgress        → BLOCKED
+ *   2. blockingBotReviewInProgress        → BLOCKED
  *   3. mergeStateStatus DIRTY         → CONFLICTS (GitHub merge conflicts, even for drafts)
  *   4. isDraft                        → DRAFT
  *   5. mergeStateStatus BEHIND        → BEHIND
@@ -20,13 +20,13 @@ import type { BatchPrData, MergeStatusResult } from "../types.mts";
 import { loadConfig } from "../config/load.mts";
 
 export function deriveMergeStatus(pr: BatchPrData): MergeStatusResult {
-  const copilotReviewInProgress = detectCopilotReview(pr);
+  const blockingBotReviewInProgress = detectBlockingBotReview(pr);
 
   let status: MergeStatusResult["status"];
 
   if (pr.mergeable === "CONFLICTING") {
     status = "CONFLICTS";
-  } else if (copilotReviewInProgress) {
+  } else if (blockingBotReviewInProgress) {
     status = "BLOCKED";
   } else if (pr.mergeStateStatus === "DIRTY") {
     // DIRTY means GitHub detected merge conflicts — surface as CONFLICTS even for drafts.
@@ -51,16 +51,16 @@ export function deriveMergeStatus(pr: BatchPrData): MergeStatusResult {
     isDraft: pr.isDraft,
     mergeable: pr.mergeable,
     reviewDecision: pr.reviewDecision,
-    copilotReviewInProgress,
+    blockingBotReviewInProgress,
     mergeStateStatus: pr.mergeStateStatus,
   };
 }
 
 // ---------------------------------------------------------------------------
-// Copilot review detection
+// Blocking bot review detection
 // ---------------------------------------------------------------------------
 
-function detectCopilotReview(pr: BatchPrData): boolean {
+function detectBlockingBotReview(pr: BatchPrData): boolean {
   // A blocking bot review is "in progress" when:
   //   1. Any reviewRequest has a login starting with one of the configured prefixes, OR
   //   2. Any latestReview has such a login AND state == "PENDING"

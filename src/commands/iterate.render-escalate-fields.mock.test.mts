@@ -54,7 +54,7 @@ vi.mock("../state/iterate-stall.mts", () => ({
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
-import { runIterate } from "./iterate.mts";
+import { runIterate } from "./iterate/index.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
@@ -85,7 +85,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       isDraft: false,
       mergeable: "MERGEABLE",
       reviewDecision: "APPROVED",
-      copilotReviewInProgress: false,
+      blockingBotReviewInProgress: false,
       mergeStateStatus: "CLEAN",
     },
     checks: {
@@ -256,7 +256,7 @@ describe("runIterate — prescriptive fields: resolveCommand shape", () => {
 
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       const { resolveCommand } = result.fix;
       expect(resolveCommand.argv).toContain("--resolve-thread-ids");
       expect(resolveCommand.argv.join(" ")).toContain("thread-1");
@@ -300,7 +300,7 @@ describe("runIterate — prescriptive fields: resolveCommand shape", () => {
 
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       const { resolveCommand } = result.fix;
       expect(resolveCommand.argv).toContain("--dismiss-review-ids");
       expect(resolveCommand.argv.join(" ")).toContain("r-1");

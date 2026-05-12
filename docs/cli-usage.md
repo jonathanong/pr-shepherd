@@ -7,7 +7,7 @@ pr-shepherd -v|--version
 pr-shepherd [PR] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]
 pr-shepherd resolve [PR] [--fetch | --resolve-thread-ids … | --minimize-comment-ids … | --dismiss-review-ids … | --message "…" | --require-sha <sha>]
 pr-shepherd commit-suggestion [PR] --thread-id <id> --message "…"
-pr-shepherd iterate [PR] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]  # legacy-compatible spelling
+pr-shepherd iterate [PR] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]  # legacy alias for pr-shepherd [PR]
 pr-shepherd log-file
 ```
 
@@ -169,12 +169,12 @@ If a patch fails to apply (drift since the suggestion was written), apply the fi
 
 ### pr-shepherd [PR]
 
-One monitor tick: classifies current PR state and emits a single action. Used by the cron loop — the monitor skill calls this on each tick and follows the `## Instructions` section verbatim. `pr-shepherd iterate [PR]` remains supported for backwards compatibility. See [iterate-flow.md](iterate-flow.md) for the decision tree and [actions.md](actions.md) for every action's full output shape.
+One iterate tick: classifies current PR state and emits a single action. The skill calls this on each tick and follows the `## Instructions` section verbatim. `pr-shepherd iterate [PR]` remains supported as a legacy alias. See [iterate-flow.md](iterate-flow.md) for the decision tree and [actions.md](actions.md) for every action's full output shape.
 
 ```sh
 pr-shepherd 42
 pr-shepherd 42 --ready-delay 15m          # override ready-delay for this run
-pr-shepherd iterate 42                    # legacy-compatible spelling
+pr-shepherd iterate 42                    # legacy alias
 ```
 
 **Flags:**
@@ -187,7 +187,7 @@ pr-shepherd iterate 42                    # legacy-compatible spelling
 | `--no-auto-mark-ready`        | false                                   | Skip converting draft → ready-for-review                                                             |
 | `--no-auto-cancel-actionable` | false                                   | Skip cancelling actionable failing runs                                                              |
 
-**Default (Markdown) output.** Every action emits an H1 heading, a bolded base-fields line, a bolded summary line, then an action-specific body. Zero counts (`skipped`, `filtered`, `inProgress`) are omitted in lean mode; `copilotReviewInProgress` and `isDraft` are only shown when `true`; `shouldCancel` is never shown. Example for `[WAIT]`:
+**Default (Markdown) output.** Every action emits an H1 heading, a bolded base-fields line, a bolded summary line, then an action-specific body. Zero counts (`skipped`, `filtered`, `inProgress`) are omitted in lean mode; `blockingBotReviewInProgress` and `isDraft` are only shown when `true`; `shouldCancel` is never shown. Example for `[WAIT]`:
 
 ```markdown
 # PR #42 [WAIT]

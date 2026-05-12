@@ -42,7 +42,7 @@ describe("deriveMergeStatus", () => {
       makePr({ reviewRequests: [{ login: "copilot-pull-request-reviewer[bot]" }] }),
     );
     expect(result.status).toBe("BLOCKED");
-    expect(result.copilotReviewInProgress).toBe(true);
+    expect(result.blockingBotReviewInProgress).toBe(true);
   });
 
   it("Copilot review PENDING in latestReviews → BLOCKED", () => {
@@ -52,7 +52,7 @@ describe("deriveMergeStatus", () => {
       }),
     );
     expect(result.status).toBe("BLOCKED");
-    expect(result.copilotReviewInProgress).toBe(true);
+    expect(result.blockingBotReviewInProgress).toBe(true);
   });
 
   it("Copilot review APPROVED in latestReviews → not copilotInProgress", () => {
@@ -61,7 +61,7 @@ describe("deriveMergeStatus", () => {
         latestReviews: [{ login: "copilot[bot]", state: "APPROVED" }],
       }),
     );
-    expect(result.copilotReviewInProgress).toBe(false);
+    expect(result.blockingBotReviewInProgress).toBe(false);
   });
 
   it("CONFLICTING takes priority over copilot blocked", () => {

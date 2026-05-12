@@ -26,7 +26,7 @@ export interface FetchPrBatchOptions {
    * When false (default), the first-page approvedReviews are returned but
    * backward pagination is skipped. Iterate's approvals-minimize flow sets this
    * to true only when the user opts in, so long-lived PRs with > 50 approvals
-   * don't pay extra GraphQL round-trips per monitor tick for data no consumer
+   * don't pay extra GraphQL round-trips per iterate call for data no consumer
    * currently uses. The first page is free — already inside the one batch
    * request — so there's no need to conditionally omit the field itself.
    */

@@ -51,7 +51,7 @@ vi.mock("../state/iterate-stall.mts", () => ({
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
-import { runIterate } from "./iterate.mts";
+import { runIterate } from "./iterate/index.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
@@ -82,7 +82,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       isDraft: false,
       mergeable: "MERGEABLE",
       reviewDecision: "APPROVED",
-      copilotReviewInProgress: false,
+      blockingBotReviewInProgress: false,
       mergeStateStatus: "CLEAN",
     },
     checks: {
@@ -249,9 +249,9 @@ describe("runIterate — escalate (fix-thrash)", () => {
     expect(result.action).toBe("escalate");
     if (result.action === "escalate") {
       expect(result.escalate.triggers).toContain("fix-thrash");
-      expect(result.escalate.attemptHistory).toHaveLength(1);
-      expect(result.escalate.attemptHistory?.[0]?.threadId).toBe("thread-1");
-      expect(result.escalate.attemptHistory?.[0]?.attempts).toBe(3);
+      expect(result.escalate.thrashHistory).toHaveLength(1);
+      expect(result.escalate.thrashHistory?.[0]?.threadId).toBe("thread-1");
+      expect(result.escalate.thrashHistory?.[0]?.attempts).toBe(3);
     }
   });
 
@@ -415,7 +415,7 @@ describe("runIterate — escalate (pr-level-changes-requested suppressed during 
           isDraft: false,
           mergeable: "CONFLICTING",
           reviewDecision: null,
-          copilotReviewInProgress: false,
+          blockingBotReviewInProgress: false,
           mergeStateStatus: "DIRTY",
         },
         changesRequestedReviews: [{ id: "review-1", author: "boss", body: "Needs rework" }],
@@ -492,7 +492,7 @@ function makeBlockedReadyReport(reviewDecision: "REVIEW_REQUIRED" | "APPROVED" |
       isDraft: false,
       mergeable: "MERGEABLE",
       reviewDecision,
-      copilotReviewInProgress: false,
+      blockingBotReviewInProgress: false,
       mergeStateStatus: "BLOCKED",
     },
   });

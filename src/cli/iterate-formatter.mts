@@ -12,17 +12,17 @@ import {
 /**
  * Format an IterateResult as human-readable Markdown.
  *
- * Load-bearing conventions the monitor SKILL relies on:
+ * Load-bearing conventions the iterate skill relies on:
  *   1. The H1 heading on line 1 contains `[<ACTION>]` — the action tag identifies
  *      the output for logging and validation. Behavior is driven by `## Instructions`,
  *      not by dispatching on the tag.
  *   2. `[FIX_CODE]` uses the `rebase-and-push` variant: the `resolve` bullet under
- *      `## Post-fix push` wraps the resolve command in backticks — the SKILL
+ *      `## Post-fix push` wraps the resolve command in backticks — the skill
  *      extracts the backticked content for execution.
  *   3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … —
- *      that tells the monitor exactly what to do with this output. The section is
+ *      that tells the agent exactly what to do with this output. The section is
  *      unconditional: every action, every variant, always emits at least one step.
- *      The SKILL simply follows those steps; it does not need its own dispatch table.
+ *      The skill simply follows those steps; it does not need its own dispatch table.
  */
 export function formatIterateResult(
   result: IterateResult,
@@ -47,7 +47,7 @@ export function formatIterateResult(
 
   let summaryLine: string;
   if (verbose) {
-    summaryLine = `**summary** ${result.summary.passing} passing, ${result.summary.skipped} skipped, ${result.summary.filtered} filtered, ${result.summary.inProgress} inProgress · **remainingSeconds** ${result.remainingSeconds} · **copilotReviewInProgress** ${result.copilotReviewInProgress} · **isDraft** ${result.isDraft} · **shouldCancel** ${result.shouldCancel}`;
+    summaryLine = `**summary** ${result.summary.passing} passing, ${result.summary.skipped} skipped, ${result.summary.filtered} filtered, ${result.summary.inProgress} inProgress · **remainingSeconds** ${result.remainingSeconds} · **blockingBotReviewInProgress** ${result.blockingBotReviewInProgress} · **isDraft** ${result.isDraft} · **shouldCancel** ${result.shouldCancel}`;
   } else {
     const counts = [`${result.summary.passing} passing`];
     if (result.summary.skipped > 0) counts.push(`${result.summary.skipped} skipped`);
@@ -57,7 +57,7 @@ export function formatIterateResult(
     if (result.status === "READY" && result.remainingSeconds > 0) {
       segs.push(`**remainingSeconds** ${result.remainingSeconds}`);
     }
-    if (result.copilotReviewInProgress) segs.push(`**copilotReviewInProgress**`);
+    if (result.blockingBotReviewInProgress) segs.push(`**blockingBotReviewInProgress**`);
     if (result.isDraft) segs.push(`**isDraft**`);
     summaryLine = segs.join(" · ");
   }

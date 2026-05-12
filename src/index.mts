@@ -4,10 +4,8 @@
  *
  * Usage:
  *   pr-shepherd [PR]
- *   pr-shepherd check [PR]
  *   pr-shepherd resolve [PR]
  *   pr-shepherd iterate [PR]
- *   pr-shepherd status PR1 [PR2 …]
  */
 
 import { main } from "./cli-parser.mts";

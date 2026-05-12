@@ -79,7 +79,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       ),
       ambiguousComments: report.comments.actionable.map(toAgentComment),
       changesRequestedReviews: report.changesRequestedReviews,
-      attemptHistory: escalateTriggers.thrashHistory,
+      thrashHistory: escalateTriggers.thrashHistory,
       suggestion: buildEscalateSuggestion(escalateTriggers.triggers),
     };
     return {
@@ -176,7 +176,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       baseBranch: baseLookup.branch,
       action: "fix_code" as const,
       fix: {
-        mode: "rebase-and-push" as const,
         threads,
         resolutionOnlyThreads,
         actionableComments,

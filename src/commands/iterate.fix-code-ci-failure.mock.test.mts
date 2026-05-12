@@ -54,7 +54,7 @@ vi.mock("../state/iterate-stall.mts", () => ({
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
-import { runIterate } from "./iterate.mts";
+import { runIterate } from "./iterate/index.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
@@ -85,7 +85,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       isDraft: false,
       mergeable: "MERGEABLE",
       reviewDecision: "APPROVED",
-      copilotReviewInProgress: false,
+      blockingBotReviewInProgress: false,
       mergeStateStatus: "CLEAN",
     },
     checks: {
@@ -238,7 +238,7 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       expect(result.fix.checks).toHaveLength(1);
       expect(result.cancelled).toEqual(["run-99"]);
       const joined = result.fix.instructions.join("\n");
@@ -296,7 +296,7 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       expect(result.fix.checks).toHaveLength(2);
       expect(result.cancelled).toEqual(["run-101"]);
     }
@@ -334,7 +334,7 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
 
     // The fix_code decision must survive even when cancel side-effect fails entirely.
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       expect(result.fix.checks).toHaveLength(1);
       expect(result.cancelled).toEqual([]);
     }
@@ -373,7 +373,7 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
       const result = await runIterate(makeOpts());
 
       expect(result.action).toBe("fix_code");
-      if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+      if (result.action === "fix_code") {
         expect(result.cancelled).toEqual([]);
       }
       expect(stderrSpy).not.toHaveBeenCalled();
@@ -447,7 +447,7 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       // Both AgentChecks are present — each may carry distinct workflowName/jobName.
       expect(result.fix.checks).toHaveLength(2);
       expect(result.fix.checks.map((c) => c.runId)).toEqual(["run-300", "run-300"]);

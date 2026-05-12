@@ -1,5 +1,6 @@
 import type {
   EscalateDetails,
+  EscalateTrigger,
   ReviewThread,
   PrComment,
   Review,
@@ -8,8 +9,8 @@ import type {
 import { loadConfig } from "../../config/load.mts";
 
 export interface EscalateCheck {
-  triggers: string[];
-  thrashHistory?: EscalateDetails["attemptHistory"];
+  triggers: EscalateTrigger[];
+  thrashHistory?: EscalateDetails["thrashHistory"];
 }
 
 export function checkEscalateTriggers(
@@ -21,7 +22,7 @@ export function checkEscalateTriggers(
   threadAttempts: Record<string, number>,
   hasConflicts: boolean,
 ): EscalateCheck {
-  const triggers: string[] = [];
+  const triggers: EscalateTrigger[] = [];
   const maxAttempts = loadConfig().iterate.fixAttemptsPerThread;
 
   // Trigger 1: fix thrash — same thread dispatched too many times without resolving.
@@ -97,7 +98,7 @@ export function buildEscalateHumanMessage(
   pr: number,
 ): string {
   const lines: string[] = [];
-  lines.push("⚠️ /pr-shepherd:monitor paused — needs human direction");
+  lines.push("⚠️ /pr-shepherd:pr-shepherd paused — needs human direction");
   lines.push("");
   lines.push(`**Triggers:** ${escalate.triggers.map((t) => `\`${t}\``).join(", ")}`);
   lines.push("");
@@ -125,10 +126,10 @@ export function buildEscalateHumanMessage(
     }
   }
 
-  if (escalate.attemptHistory && escalate.attemptHistory.length > 0) {
+  if (escalate.thrashHistory && escalate.thrashHistory.length > 0) {
     lines.push("");
     lines.push("## Fix attempts");
-    for (const a of escalate.attemptHistory) {
+    for (const a of escalate.thrashHistory) {
       lines.push(`- thread \`${a.threadId}\` attempted ${a.attempts} times`);
     }
   }
@@ -136,12 +137,12 @@ export function buildEscalateHumanMessage(
   lines.push("");
   lines.push("---");
   lines.push("");
-  lines.push(`Run \`/pr-shepherd:check ${pr}\` to see current state.`);
-  lines.push(`After fixing manually, rerun \`/pr-shepherd:monitor ${pr}\` to resume.`);
+  lines.push(`Run \`/pr-shepherd:pr-shepherd ${pr}\` to see current state.`);
+  lines.push(`After fixing manually, rerun \`/pr-shepherd:pr-shepherd ${pr}\` to resume.`);
   return lines.join("\n");
 }
 
-export function buildEscalateSuggestion(triggers: string[], detail?: string): string {
+export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: string): string {
   if (triggers.includes("stall-timeout")) {
     const mins = detail ?? "30";
     return `No progress detected for ${mins} minute${parseInt(mins, 10) === 1 ? "" : "s"} — state has not changed. Inspect the PR and resume manually once the blocking issue is resolved.`;
@@ -151,7 +152,7 @@ export function buildEscalateSuggestion(triggers: string[], detail?: string): st
     return `Could not determine the PR's base branch${reason} — refusing to emit a rebase that could force-push onto the wrong base. Run the rebase manually against the PR's real target branch.`;
   }
   if (triggers.includes("fix-thrash")) {
-    return "Same thread(s) attempted multiple times without resolution — fix manually then rerun /pr-shepherd:monitor";
+    return "Same thread(s) attempted multiple times without resolution — fix manually then rerun /pr-shepherd:pr-shepherd";
   }
   if (triggers.includes("pr-level-changes-requested")) {
     return "Reviewer requested changes but left no inline comments — read the review and act manually";

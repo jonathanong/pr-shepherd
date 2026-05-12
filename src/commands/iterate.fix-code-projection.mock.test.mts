@@ -54,7 +54,7 @@ vi.mock("../state/iterate-stall.mts", () => ({
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
-import { runIterate } from "./iterate.mts";
+import { runIterate } from "./iterate/index.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
@@ -85,7 +85,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       isDraft: false,
       mergeable: "MERGEABLE",
       reviewDecision: "APPROVED",
-      copilotReviewInProgress: false,
+      blockingBotReviewInProgress: false,
       mergeStateStatus: "CLEAN",
     },
     checks: {
@@ -248,7 +248,7 @@ describe("runIterate — fix_code agent projection", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       const t = result.fix.threads[0]!;
       expect(t.id).toBe("t-1");
       expect(t.path).toBe("src/foo.mts");
@@ -285,7 +285,7 @@ describe("runIterate — fix_code agent projection", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       const c = result.fix.actionableComments[0]!;
       expect(c.id).toBe("c-1");
       expect(c.author).toBe("bob");
@@ -320,7 +320,7 @@ describe("runIterate — fix_code agent projection", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       const c = result.fix.checks[0]!;
       expect(c.name).toBe("typecheck");
       expect(c.runId).toBe("run-55");
@@ -366,7 +366,7 @@ describe("runIterate — fix_code agent projection", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       const instructionsJoined = result.fix.instructions.join("\n");
       // GitHub Actions check with runId — agent fetches logs and decides rerun vs fix
       expect(instructionsJoined).toContain("gh run view <runId> --log-failed");
@@ -412,7 +412,7 @@ describe("runIterate — fix_code agent projection", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       const instructionsJoined = result.fix.instructions.join("\n");
       expect(instructionsJoined).toContain("(no runId)");
       expect(instructionsJoined).toMatch(/escalate/i);
@@ -468,7 +468,7 @@ describe("runIterate — fix_code agent projection", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       expect(result.fix.checks).toHaveLength(3);
       const joined = result.fix.instructions.join("\n");
       // All three instruction variants present:

@@ -9,7 +9,7 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
     mergeStateStatus: "BLOCKED" as const,
     mergeStatus: "BLOCKED" as const,
     reviewDecision: null as null,
-    copilotReviewInProgress: false,
+    blockingBotReviewInProgress: false,
     isDraft: false,
     shouldCancel: false,
     remainingSeconds: 60,
@@ -25,7 +25,6 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
       ...base,
       action: "fix_code",
       fix: {
-        mode: "rebase-and-push",
         threads: [],
         resolutionOnlyThreads: [],
         actionableComments: [],
@@ -54,7 +53,7 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
       ...base,
       action: "cancel",
       reason: "ready-delay-elapsed" as const,
-      log: "CANCEL: PR #42 — stopping monitor",
+      log: "CANCEL: PR #42 — stopping",
     };
   if (action === "escalate") {
     return {
@@ -66,7 +65,7 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
         ambiguousComments: [],
         changesRequestedReviews: [],
         suggestion: "check manually",
-        humanMessage: "⚠️ /pr-shepherd:monitor paused — needs human direction",
+        humanMessage: "⚠️ /pr-shepherd:pr-shepherd paused — needs human direction",
       },
     };
   }
