@@ -55,11 +55,9 @@ resolves `pr-shepherd ...` without prompting to install the package.
    /pr-check 42
    ```
 
-For `monitor` and `resolve` custom commands, do **not** copy the
+For a `resolve` custom command, do **not** copy the
 [`plugin/skills/`](../plugin/skills/) files directly — those contain skill/plugin-specific
 frontmatter that is not valid for `.claude/commands/` files. Instead, create
-`.claude/commands/pr-monitor.md` and/or `.claude/commands/pr-resolve.md`
-using the same command-file structure as the `pr-check` example above, with
-the CLI invocation changed to `<runner> pr-shepherd monitor ...` or
-`<runner> pr-shepherd resolve ...`. To drive the CLI without Claude at all,
-see [cli-usage.md](cli-usage.md).
+`.claude/commands/pr-resolve.md` using the same command-file structure as the `pr-check`
+example above, with the CLI invocation changed to `<runner> pr-shepherd resolve ...`.
+To drive the CLI without Claude at all, see [cli-usage.md](cli-usage.md).

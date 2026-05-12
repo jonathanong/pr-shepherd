@@ -36,13 +36,13 @@ describe("projectIterateLean", () => {
   });
 
   it("omits repo when empty string", () => {
-    const result = { ...makeIterateResult("cooldown"), repo: "" };
+    const result = { ...makeIterateResult("wait"), repo: "" };
     const lean = projectIterateLean(result) as Record<string, unknown>;
     expect(lean.repo).toBeUndefined();
   });
 
   it("omits baseBranch when empty string", () => {
-    const result = { ...makeIterateResult("cooldown"), baseBranch: "" };
+    const result = { ...makeIterateResult("wait"), baseBranch: "" };
     const lean = projectIterateLean(result) as Record<string, unknown>;
     expect(lean.baseBranch).toBeUndefined();
   });
@@ -145,18 +145,6 @@ describe("projectIterateLean", () => {
     };
     const lean = projectIterateLean(result) as Record<string, unknown>;
     expect(lean.reviewDecision).toBeUndefined();
-  });
-
-  // ---------------------------------------------------------------------------
-  // cooldown
-  // ---------------------------------------------------------------------------
-
-  it("cooldown: includes log, omits checks", () => {
-    const result = makeIterateResult("cooldown");
-    const lean = projectIterateLean(result) as Record<string, unknown>;
-    expect(lean.action).toBe("cooldown");
-    expect(lean.log).toBe("SKIP: CI still starting");
-    expect(lean.checks).toBeUndefined();
   });
 
   // ---------------------------------------------------------------------------

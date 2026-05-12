@@ -12,26 +12,13 @@ vi.mock("./commands/iterate.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./commands/iterate.mts")>();
   return { ...actual, runIterate: vi.fn() };
 });
-vi.mock("./commands/status.mts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./commands/status.mts")>();
-  return {
-    ...actual,
-    runStatus: vi.fn(),
-    formatStatusTable: vi.fn().mockReturnValue("status table"),
-  };
-});
-vi.mock("./github/client.mts", () => ({
-  getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
-}));
 
 import { main } from "./cli-parser.mts";
 import { runIterate } from "./commands/iterate.mts";
-import { runStatus } from "./commands/status.mts";
 import type { CancelReason, IterateResult } from "./types.mts";
 import { makeIterateResult } from "./cli-parser.iterate-fixtures.mts";
 
 const mockRunIterate = vi.mocked(runIterate);
-const mockRunStatus = vi.mocked(runStatus);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let stdoutSpy: any;
@@ -52,7 +39,6 @@ beforeEach(() => {
   delete process.env.CODEX_CI;
   stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-  mockRunStatus.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -104,13 +90,6 @@ describe("main — iterate", () => {
     expect(getStderr()).toContain("Unknown subcommand: --formt");
   });
 
-  it("rejects missing values for value-taking default iterate flags", async () => {
-    await main(["node", "shepherd", "--cooldown-seconds"]);
-    expect(process.exitCode).toBe(1);
-    expect(mockRunIterate).not.toHaveBeenCalled();
-    expect(getStderr()).toContain("Unknown subcommand: --cooldown-seconds");
-  });
-
   it("rejects extra positional arguments in default iterate form", async () => {
     await main(["node", "shepherd", "42", "resolve"]);
     expect(process.exitCode).toBe(1);
@@ -138,12 +117,6 @@ describe("main — iterate", () => {
     );
   });
 
-  it("--cooldown-seconds passes parsed value to runIterate", async () => {
-    mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
-    await main(["node", "shepherd", "iterate", "42", "--cooldown-seconds", "120"]);
-    expect(mockRunIterate).toHaveBeenCalledWith(expect.objectContaining({ cooldownSeconds: 120 }));
-  });
-
   it("invalid --ready-delay exits before runIterate", async () => {
     await main(["node", "shepherd", "iterate", "42", "--ready-delay", "notaduration"]);
     expect(process.exitCode).toBe(1);
@@ -164,40 +137,6 @@ describe("main — iterate", () => {
 // ---------------------------------------------------------------------------
 
 describe("main — iterate text format", () => {
-  it("cooldown (default): only heading, log, and ## Instructions — no base/summary lines", async () => {
-    mockRunIterate.mockResolvedValue(makeIterateResult("cooldown"));
-    await main(["node", "shepherd", "iterate", "42"]);
-    const lines = getStdout().trimEnd().split("\n");
-    expect(lines[0]).toBe("# PR #42 [COOLDOWN]");
-    expect(lines[1]).toBe("");
-    expect(lines[2]).toBe("SKIP: CI still starting");
-    expect(lines[3]).toBe("");
-    expect(lines[4]).toBe("## Instructions");
-    expect(lines[5]).toBe("");
-    expect(lines[6]).toMatch(/Schedule the next dynamic wakeup/);
-    // No base/summary lines in default mode
-    expect(getStdout()).not.toContain("**status**");
-    expect(getStdout()).not.toContain("**summary**");
-  });
-
-  it("cooldown (verbose): heading, full base/summary, log, then ## Instructions", async () => {
-    mockRunIterate.mockResolvedValue(makeIterateResult("cooldown"));
-    await main(["node", "shepherd", "iterate", "42", "--verbose"]);
-    const lines = getStdout().trimEnd().split("\n");
-    expect(lines[0]).toBe("# PR #42 [COOLDOWN]");
-    expect(lines[1]).toBe("");
-    expect(lines[2]).toBe(
-      "**status** `IN_PROGRESS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`",
-    );
-    expect(lines[3]).toMatch(/^\*\*summary\*\* 0 passing, 0 skipped, 0 filtered, 1 inProgress /);
-    expect(lines[4]).toBe("");
-    expect(lines[5]).toBe("SKIP: CI still starting");
-    expect(lines[6]).toBe("");
-    expect(lines[7]).toBe("## Instructions");
-    expect(lines[8]).toBe("");
-    expect(lines[9]).toMatch(/Schedule the next dynamic wakeup/);
-  });
-
   it("wait: heading includes [WAIT] tag, log body follows header, ## Instructions present", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
     await main(["node", "shepherd", "iterate", "42"]);
@@ -205,7 +144,7 @@ describe("main — iterate text format", () => {
     expect(out).toMatch(/^# PR #42 \[WAIT\]\n/);
     expect(out).toContain("WAIT: 0 passing, 1 in-progress");
     expect(out).toContain("## Instructions");
-    expect(out).toContain("1. Schedule the next dynamic wakeup");
+    expect(out).toContain("1. Pick a fresh sleep/timeout between 30 seconds and 4 minutes");
   });
 
   it("mark_ready: heading includes [MARK_READY] tag and ## Instructions with end-iteration step", async () => {
@@ -215,7 +154,9 @@ describe("main — iterate text format", () => {
     expect(out).toContain("# PR #42 [MARK_READY]");
     expect(out).toContain("MARKED READY: PR 42");
     expect(out).toContain("## Instructions");
-    expect(out).toContain("1. The CLI already marked the PR ready for review");
+    expect(out).toContain(
+      "1. The CLI already marked the PR ready for review. Pick a fresh sleep/timeout between 30 seconds and 4 minutes",
+    );
   });
 
   it("cancel: heading includes [CANCEL] tag with reason and ## Instructions with stop steps", async () => {
@@ -225,8 +166,7 @@ describe("main — iterate text format", () => {
     expect(out).toContain("# PR #42 [CANCEL]");
     expect(out).toContain("— ready-delay-elapsed");
     expect(out).toContain("## Instructions");
-    expect(out).toContain("1. Stop — do not schedule another dynamic wakeup.");
-    expect(out).toContain("2. Stop.");
+    expect(out).toContain("1. Stop — the active goal is complete.");
   });
 
   it("escalate: heading, base/summary, humanMessage, then ## Instructions with stop steps", async () => {
@@ -237,12 +177,10 @@ describe("main — iterate text format", () => {
     expect(out).toContain("**status** `IN_PROGRESS`");
     expect(out).toContain("⚠️ /pr-shepherd:monitor paused — needs human direction");
     expect(out).toContain("## Instructions");
-    expect(out).toContain("1. Stop — do not schedule another dynamic wakeup.");
-    expect(out).toContain("2. Stop — the PR needs human direction");
+    expect(out).toContain("1. Stop — the PR needs human direction before monitoring can resume.");
   });
 
-  it("codex wait: instructions point to reusable iterate command instead of next cron fire", async () => {
-    process.env.AGENT = "codex";
+  it("wait: instructions use unified sleep wording with rerun command", async () => {
     const result = makeIterateResult("wait");
     if (result.action !== "wait") throw new Error("unreachable");
     result.log =
@@ -254,55 +192,39 @@ describe("main — iterate text format", () => {
       "WAIT: 6 passing, 1 in-progress — awaiting human review or branch protection",
     );
     expect(out).toContain(
-      "1. Continue the active Codex goal — pick a fresh sleep/timeout between 1 and 4 minutes, wait that long, then rerun `npx pr-shepherd 42 --ready-delay 15m` to recheck.",
+      "1. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42 --ready-delay 15m` to continue the active goal.",
     );
-    expect(out).not.toContain("next cron fire");
     expect(out).not.toContain("auto-cancel");
   });
 
-  it("codex cooldown: instructions point to reusable iterate command", async () => {
-    process.env.AGENT = "codex";
-    mockRunIterate.mockResolvedValue(makeIterateResult("cooldown"));
-    await main(["node", "shepherd", "iterate", "42"]);
-    const out = getStdout();
-    expect(out).toContain(
-      "1. Continue the active Codex goal — pick a fresh sleep/timeout between 1 and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` after CI starts reporting.",
-    );
-    expect(out).not.toContain("next cron fire");
-  });
-
-  it("codex mark_ready: instructions point to reusable iterate command", async () => {
-    process.env.AGENT = "codex";
+  it("mark_ready: instructions use unified sleep wording with rerun command", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("mark_ready"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain(
-      "1. The CLI already marked the PR ready for review. Continue the active Codex goal until the ready-delay completes — pick a fresh sleep/timeout between 1 and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.",
+      "1. The CLI already marked the PR ready for review. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.",
     );
   });
 
-  it("codex cancel: instructions do not invoke /loop cancel", async () => {
-    process.env.AGENT = "codex";
+  it("cancel: instructions say active goal is complete", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
-    expect(out).toContain("1. Stop — no recurring Codex monitor is running to cancel.");
-    expect(out).toContain("2. Stop.");
-    expect(out).not.toContain("Invoke `/loop cancel`");
+    expect(out).toContain("1. Stop — the active goal is complete.");
+    expect(out).not.toContain("CronList");
+    expect(out).not.toContain("/loop cancel");
   });
 
-  it("codex escalate: instructions do not invoke /loop cancel", async () => {
-    process.env.CODEX_CI = "1";
+  it("escalate: instructions say PR needs human direction", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("escalate"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
-    expect(out).toContain("1. Stop — no recurring Codex monitor is running to cancel.");
-    expect(out).toContain("2. Stop — the PR needs human direction");
-    expect(out).not.toContain("Invoke `/loop cancel`");
+    expect(out).toContain("1. Stop — the PR needs human direction before monitoring can resume.");
+    expect(out).not.toContain("CronList");
   });
 
-  it("## Checks section is absent when checks is empty (cooldown keeps no-checks invariant)", async () => {
-    mockRunIterate.mockResolvedValue(makeIterateResult("cooldown")); // checks: []
+  it("## Checks section is absent when checks is empty", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("wait")); // checks: []
     await main(["node", "shepherd", "iterate", "42"]);
     expect(getStdout()).not.toContain("## Checks");
   });
@@ -316,17 +238,7 @@ describe("main — iterate text format", () => {
     expect(parsed.action).toBe("wait");
     expect(parsed.pr).toBe(42);
     expect(parsed.instructions).toEqual([
-      "Schedule the next dynamic wakeup with `ScheduleWakeup` using `delaySeconds` between 60 and 240 and the same loop prompt (skip if running under a fixed-interval cron loop — the next scheduled fire handles it), then end this iteration.",
-    ]);
-  });
-
-  it("codex json format: emits Codex-specific instructions", async () => {
-    process.env.CODEX_CI = "1";
-    mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
-    await main(["node", "shepherd", "iterate", "42", "--format", "json"]);
-    const parsed = JSON.parse(getStdout().trimEnd());
-    expect(parsed.instructions).toEqual([
-      "Continue the active Codex goal — pick a fresh sleep/timeout between 1 and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.",
+      "Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to continue the active goal.",
     ]);
   });
 

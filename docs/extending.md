@@ -11,7 +11,7 @@ Four recipes for common extension patterns.
 1. **Add the type** — in `types/iterate.mts`, add to the `ShepherdAction` union:
 
    ```ts
-   export type ShepherdAction = 'cooldown' | 'wait' | ... | 'my_action'
+   export type ShepherdAction = 'wait' | ... | 'my_action'
    ```
 
 2. **Add the result interface** — in `types/iterate.mts`, add:
@@ -78,8 +78,8 @@ All tunable constants live in `src/config.json`. Edit there — do not hardcode 
 ```json
 {
   "cache": { "ttlSeconds": 300 },
-  "iterate": { "cooldownSeconds": 30, "fixAttemptsPerThread": 3 },
-  "watch": { "interval": "4m", "readyDelayMinutes": 10 },
+  "iterate": { "fixAttemptsPerThread": 3 },
+  "watch": { "readyDelayMinutes": 10 },
   "resolve": { "shaPoll": { "maxAttempts": 10, "intervalMs": 2000 } }
 }
 ```

@@ -65,15 +65,6 @@ export function formatIterateResult(
   const header = [heading, "", baseLine, summaryLine].join("\n");
 
   switch (result.action) {
-    case "cooldown":
-      // In default mode: suppress base/summary lines — cooldown carries UNKNOWN/empty
-      // placeholders that add no value. Emit only heading + log + Instructions.
-      return joinSections([
-        verbose ? header : heading,
-        adaptIterateLog(result.log, runtime),
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix, runner))}`,
-      ]);
-
     case "wait":
       return joinSections([
         header,

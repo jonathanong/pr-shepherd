@@ -128,7 +128,6 @@ function makeOpts(overrides: Partial<IterateCommandOptions> = {}): IterateComman
   return {
     prNumber: 42,
     format: "json",
-    cooldownSeconds: 30,
     readyDelaySeconds: 600,
     ...overrides,
   };
@@ -148,12 +147,11 @@ const READY_STATE_DEFAULT = {
 function defaultConfig() {
   return {
     iterate: {
-      cooldownSeconds: 30,
       fixAttemptsPerThread: 3,
       stallTimeoutMinutes: 30,
       minimizeApprovals: false,
     },
-    watch: { interval: "4m", readyDelayMinutes: 10 },
+    watch: { readyDelayMinutes: 10 },
     resolve: {
       concurrency: 4,
       shaPoll: { intervalMs: 2000, maxAttempts: 10 },
@@ -175,11 +173,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockLoadConfig.mockReturnValue(defaultConfig());
   process.env["GH_TOKEN"] = "test-token";
-  // Default: last commit was 60s ago (outside cooldown)
   mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-    if (cmd === "git" && args[0] === "log") {
-      return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
-    }
     if (cmd === "git" && args[0] === "rev-parse") {
       return Promise.resolve({ stdout: "abc123", stderr: "" });
     }

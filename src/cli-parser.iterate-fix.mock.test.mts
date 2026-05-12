@@ -12,26 +12,16 @@ vi.mock("./commands/iterate.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./commands/iterate.mts")>();
   return { ...actual, runIterate: vi.fn() };
 });
-vi.mock("./commands/status.mts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./commands/status.mts")>();
-  return {
-    ...actual,
-    runStatus: vi.fn(),
-    formatStatusTable: vi.fn().mockReturnValue("status table"),
-  };
-});
 vi.mock("./github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
 }));
 
 import { main } from "./cli-parser.mts";
 import { runIterate } from "./commands/iterate.mts";
-import { runStatus } from "./commands/status.mts";
 import type { IterateResult } from "./types.mts";
 import { makeIterateResult } from "./cli-parser.iterate-fixtures.mts";
 
 const mockRunIterate = vi.mocked(runIterate);
-const mockRunStatus = vi.mocked(runStatus);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let stdoutSpy: any;
@@ -48,7 +38,6 @@ beforeEach(() => {
   delete process.env.CODEX_CI;
   stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-  mockRunStatus.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -84,7 +73,9 @@ describe("main — iterate text format (fix_code and checks)", () => {
     // Fallback instruction always present for consistency with the invariant that
     // every iterate output ends with ## Instructions.
     expect(out).toContain("## Instructions");
-    expect(out).toContain("1. End this iteration.");
+    expect(out).toContain(
+      "1. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.",
+    );
   });
 
   it("fix_code (rich payload): sections appear in fixed order with backtick-quoted codes", async () => {

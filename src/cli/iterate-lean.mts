@@ -52,12 +52,6 @@ export function projectIterateLean(
   };
 
   switch (result.action) {
-    case "cooldown":
-      return {
-        ...base,
-        log: adaptIterateLog(result.log, runtime),
-        instructions: simpleInstructions(result),
-      };
     case "wait":
       return {
         ...base,

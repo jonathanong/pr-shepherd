@@ -10,7 +10,6 @@ import type { GlobalOptions } from "../types.mts";
 const FLAGS_WITH_VALUES = new Set([
   "--format",
   "--ready-delay",
-  "--cooldown-seconds",
   "--stall-timeout",
   "--require-sha",
   "--message",

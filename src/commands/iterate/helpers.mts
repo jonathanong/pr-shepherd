@@ -2,12 +2,7 @@ import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 import { rest } from "../../github/http.mts";
 import type { ShepherdReport } from "../../types.mts";
-import type {
-  IterateResultSummary,
-  RelevantCheck,
-  IterateResult,
-  IterateResultBase,
-} from "../../types.mts";
+import type { IterateResultSummary, RelevantCheck, IterateResultBase } from "../../types.mts";
 
 const execFile = promisify(execFileCb);
 
@@ -70,15 +65,6 @@ export function buildRelevantChecks(report: ShepherdReport): RelevantCheck[] {
   return [...passing, ...failing];
 }
 
-export async function getLastCommitTime(): Promise<number | null> {
-  try {
-    const { stdout } = await execFile("git", ["log", "-1", "--format=%ct", "HEAD"]);
-    return parseInt(stdout.trim(), 10);
-  } catch {
-    return null;
-  }
-}
-
 // Best-effort: cancelling a completed run is a no-op, not an error.
 export async function tryCancelRun(
   runId: string,
@@ -133,25 +119,4 @@ export function buildWaitLog(base: IterateResultBase): string {
   }
 
   return parts.join(" — ");
-}
-
-export function buildCooldownResult(prNumber: number, readyDelaySeconds: number): IterateResult {
-  return {
-    action: "cooldown",
-    pr: prNumber,
-    repo: "",
-    status: "UNKNOWN",
-    state: "UNKNOWN" as const,
-    mergeStateStatus: "UNKNOWN",
-    mergeStatus: "UNKNOWN",
-    reviewDecision: null,
-    copilotReviewInProgress: false,
-    isDraft: false,
-    shouldCancel: false,
-    remainingSeconds: readyDelaySeconds,
-    summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 0 },
-    baseBranch: "",
-    checks: [],
-    log: "SKIP: CI still starting — waiting for first check to appear",
-  };
 }

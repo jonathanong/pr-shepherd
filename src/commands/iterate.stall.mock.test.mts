@@ -128,7 +128,6 @@ function makeOpts(overrides: Partial<IterateCommandOptions> = {}): IterateComman
   return {
     prNumber: 42,
     format: "json",
-    cooldownSeconds: 30,
     readyDelaySeconds: 600,
     ...overrides,
   };
@@ -162,12 +161,11 @@ const RESOLUTION_ONLY_THREAD = {
 function defaultConfig() {
   return {
     iterate: {
-      cooldownSeconds: 30,
       fixAttemptsPerThread: 3,
       stallTimeoutMinutes: 30,
       minimizeApprovals: false,
     },
-    watch: { interval: "4m", readyDelayMinutes: 10 },
+    watch: { readyDelayMinutes: 10 },
     resolve: {
       concurrency: 4,
       shaPoll: { intervalMs: 2000, maxAttempts: 10 },
@@ -189,11 +187,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockLoadConfig.mockReturnValue(defaultConfig());
   process.env["GH_TOKEN"] = "test-token";
-  // Default: last commit was 60s ago (outside cooldown)
   mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-    if (cmd === "git" && args[0] === "log") {
-      return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
-    }
     if (cmd === "git" && args[0] === "rev-parse") {
       return Promise.resolve({ stdout: "abc123", stderr: "" });
     }
@@ -374,14 +368,12 @@ describe("runIterate — stall-timeout guard", () => {
 
     // Second call: HEAD SHA changes to def456.
     mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "log") {
-        return Promise.resolve({ stdout: String(NOW - 60), stderr: "" });
-      }
       if (cmd === "git" && args[0] === "rev-parse") {
         return Promise.resolve({ stdout: "def456", stderr: "" });
       }
       return Promise.resolve({ stdout: "", stderr: "" });
     });
+
     mockWriteStallState.mockClear();
     mockReadStallState.mockResolvedValue({ fingerprint: fp1, firstSeenAt: NOW - STALL_TIMEOUT_S });
 
@@ -391,21 +383,6 @@ describe("runIterate — stall-timeout guard", () => {
     const written = mockWriteStallState.mock.calls[0]![1] as StallState;
     expect(written.fingerprint).not.toBe(fp1); // headSha changed → fingerprint changed
     expect(written.firstSeenAt).toBe(NOW);
-  });
-
-  it("does not touch stall state on cooldown (pre-sweep early return)", async () => {
-    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === "git" && args[0] === "log") {
-        return Promise.resolve({ stdout: String(NOW - 5), stderr: "" });
-      }
-      return Promise.resolve({ stdout: "", stderr: "" });
-    });
-
-    const result = await runIterate(makeOpts30mStall({ cooldownSeconds: 30 }));
-
-    expect(result.action).toBe("cooldown");
-    expect(mockWriteStallState).not.toHaveBeenCalled();
-    expect(mockReadStallState).not.toHaveBeenCalled();
   });
 
   it("does not touch stall state on cancel (ready-delay elapsed)", async () => {

@@ -2,11 +2,28 @@
 
 [← README](../README.md)
 
-Three Claude Code skills are included in the Claude plugin. A separate Codex plugin ships one umbrella `pr-shepherd` skill for check, resolve, monitor, and iterate workflows. The CLI can also emit Codex-compatible monitor instructions when called from Codex (`AGENT=codex` or `CODEX_CI=1`).
+One skill is shipped for both Claude Code and Codex: `pr-shepherd`. It is a thin one-tick dispatcher — it runs `<runner> pr-shepherd <PR>` and follows the `## Instructions` embedded in the output. All policy, state transitions, and per-action guidance live in the CLI output, not in the skill.
 
-## Codex setup
+## Claude Code
 
-Codex does not install or run the Claude plugin skills.
+Install the plugin:
+
+```bash
+claude /plugin marketplace add jonathanong/pr-shepherd
+claude /plugin install pr-shepherd
+```
+
+Use the skill inside a `/goal`:
+
+```
+/goal /pr-shepherd:pr-shepherd        # infer PR from current branch
+/goal /pr-shepherd:pr-shepherd 42
+/goal /pr-shepherd:pr-shepherd 42 --ready-delay 15m
+```
+
+The goal loop handles recurrence. Each tick the skill runs one iterate cycle and prints the output. The CLI's `## Instructions` tell the active goal to pick a fresh 30s–4m delay then rerun for non-terminal actions, or to stop on `[CANCEL]`/`[ESCALATE]`.
+
+## Codex
 
 Install the Codex plugin marketplace from GitHub:
 
@@ -27,7 +44,7 @@ git clone https://github.com/jonathanong/pr-shepherd ~/.codex/plugin-sources/pr-
 codex plugin marketplace add ~/.codex/plugin-sources/pr-shepherd
 ```
 
-After adding the marketplace, open the Codex plugin directory, choose the `jonathanong` marketplace, and install/enable `pr-shepherd`. The marketplace root must contain `.agents/plugins/marketplace.json` and `plugins/pr-shepherd/`.
+After adding the marketplace, open the Codex plugin directory, choose the `jonathanong` marketplace, and install/enable `pr-shepherd`.
 
 Then install the CLI in the repository where Codex will work:
 
@@ -37,58 +54,25 @@ yarn add -D pr-shepherd      # yarn repos
 npm install --save-dev pr-shepherd
 ```
 
-If Codex is not already setting `CODEX_CI=1`, set `AGENT=codex` before invoking the CLI:
+Use the skill inside a `/goal`:
+
+```
+/goal $pr-shepherd        # infer PR from current branch
+/goal $pr-shepherd 42
+```
+
+Codex runs the same skill — one tick per goal iteration. The CLI detects Codex via `CODEX_CI=1` or `AGENT=codex` and adapts its `## Instructions` wording accordingly. If Codex is not already setting `CODEX_CI=1`, set `AGENT=codex` before invoking the CLI:
 
 ```sh
 export AGENT=codex
 ```
 
-Run `pr-shepherd monitor <PR>` once through the repo package runner to bootstrap the workflow. Follow the output's `## Instructions`, then keep an active Codex goal cycling the emitted command with a fresh 1-4 minute sleep before each rerun until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). Codex does not provide the Claude `/loop` scheduler in this workflow.
-
-The examples below use `npx pr-shepherd` as the default spelling. The actual runner depends on `cli.runner` in `.pr-shepherdrc.yml` (default `auto`, which detects pnpm/yarn from `packageManager` or lockfiles). Skills invoke the CLI through the detected runner; the CLI then emits follow-up commands using the same runner. For example, a repo like `~/filaments` that declares `packageManager: "pnpm@..."` and has `pnpm-lock.yaml` should use `pnpm exec pr-shepherd ...`.
-
-The Codex plugin skill handles PR-number discovery, one-off check/resolve commands, and open-ended goal setup. It still delegates policy and state transitions to the CLI output's own `## Instructions` section.
-
-## `/pr-shepherd:monitor`
-
-Start continuous CI monitoring for a PR in Claude Code. Runs `pr-shepherd monitor <PR>` through the repo package runner to get a pre-built `/loop` bootstrap block (interval and the recurring iterate prompt), then creates the cron job. The loop fires at the configured interval, calls `pr-shepherd <PR>`, and follows the `## Instructions` in the output. The loop cancels automatically after the PR is merged/closed or after the configured ready-delay.
-
-In Codex, run the CLI directly instead of the Claude slash command. `pr-shepherd monitor <PR>` emits explicit iterate instructions instead of `/loop` setup. After the bootstrap step, pick a fresh 1-4 minute sleep before each rerun of the emitted command while the goal remains active.
-
-Claude Code:
-
-```
-/pr-shepherd:monitor        # infer PR from current branch
-/pr-shepherd:monitor 42
-```
-
-Codex:
-
-```sh
-npx pr-shepherd monitor        # bootstrap from current branch, then follow its instructions
-npx pr-shepherd monitor 42     # bootstrap PR #42, then follow its instructions
-npx pr-shepherd 42             # subsequent explicit tick
-```
-
-The ready-delay comes from `watch.readyDelayMinutes` in `.pr-shepherdrc.yml` (default: 10 minutes). Codex chooses a fresh 1-4 minute delay for each nonterminal recurrence; Claude's `/loop` cadence is configured by `watch.interval`.
-
-## `/pr-shepherd:check`
-
-One-shot PR status snapshot. Reports merge status, CI results, and unresolved comments. The skill is a thin dispatcher: it runs `pr-shepherd check <N>`, prints the Markdown output, then follows the `## Instructions` section embedded in that output. All rebase policy, CI budget rules, and ready-to-merge gating are described in the CLI output itself — not in the skill.
-
-```
-/pr-shepherd:check        # infer from branch
-/pr-shepherd:check 42
-/pr-shepherd:check 41 42 43
-```
-
 ## `/pr-shepherd:resolve`
 
-Fetch all actionable review threads and comments, triage them, fix the code, push, and resolve/minimize/dismiss via the CLI. Uses `--require-sha` to ensure GitHub has seen the push before resolving.
+To fix review comments without starting a full goal loop, run `pr-shepherd resolve` directly:
 
-```
-/pr-shepherd:resolve       # infer from branch
-/pr-shepherd:resolve 42
+```bash
+<runner> pr-shepherd resolve <N> --fetch
 ```
 
-The skill is a thin dispatcher: it runs `pr-shepherd resolve <N> --fetch`, prints the Markdown output, then follows the `## Instructions` section embedded in that output. All triage logic, commit-suggestion preference, fix-and-push steps, and reporting invariants are described in the CLI output itself — not in the skill.
+Follow the `## Instructions` in the output. The resolve skill has been folded into the main `pr-shepherd` skill — the CLI's `fix_code` action emits the exact `resolve` command to run after pushing fixes.

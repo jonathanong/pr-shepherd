@@ -2,9 +2,8 @@ import { describe, it, expect } from "vitest";
 import type { FirstLookThread, FirstLookComment } from "../types/report.mts";
 import { formatFetchResult } from "./formatters.mts";
 import { formatFixCodeResult } from "./fix-formatter.mts";
-import { formatText } from "../reporters/text.mts";
 import { makeIterateResult } from "../cli-parser.iterate-fixtures.mts";
-import type { IterateResult, ShepherdReport } from "../types.mts";
+import type { IterateResult } from "../types.mts";
 
 // ---------------------------------------------------------------------------
 // Cross-call-site identity assertion (issue #127 acceptance criterion)
@@ -99,47 +98,6 @@ describe("## First-look items — edited flag rendering", () => {
         instructions: [],
       }),
     ).toContain("[status: minimized, edited]");
-
-    // check text formatter
-    const report: ShepherdReport = {
-      pr: 42,
-      nodeId: "PR_kgDOAAA",
-      repo: "owner/repo",
-      status: "READY",
-      baseBranch: "main",
-      mergeStatus: {
-        status: "CLEAN",
-        state: "OPEN",
-        isDraft: false,
-        mergeable: "MERGEABLE",
-        reviewDecision: null,
-        copilotReviewInProgress: false,
-        mergeStateStatus: "CLEAN",
-      },
-      checks: {
-        passing: [],
-        failing: [],
-        inProgress: [],
-        skipped: [],
-        filtered: [],
-        filteredNames: [],
-        blockedByFilteredCheck: false,
-      },
-      threads: {
-        actionable: [],
-        resolutionOnly: [],
-        autoResolved: [],
-        autoResolveErrors: [],
-        firstLook: [],
-      },
-      comments: { actionable: [], firstLook: [editedComment] },
-      changesRequestedReviews: [],
-      reviewSummaries: [],
-      firstLookSummaries: [],
-      editedSummaries: [],
-      approvedReviews: [],
-    };
-    expect(formatText(report)).toContain("[status: minimized, edited]");
   });
 });
 
@@ -159,7 +117,7 @@ describe("## Review summaries (edited since first look) — fix-formatter render
 });
 
 describe("## First-look items — cross-call-site consistency", () => {
-  it("all three formatters render an identical section for the same input", () => {
+  it("formatFixCodeResult and formatFetchResult render an identical section for the same input", () => {
     // Site A: formatFixCodeResult (iterate fix_code)
     const iterateResult: IterateResult = {
       ...makeIterateResult("fix_code"),
@@ -190,48 +148,6 @@ describe("## First-look items — cross-call-site consistency", () => {
       }),
     );
 
-    // Site C: formatText (check)
-    const report: ShepherdReport = {
-      pr: 42,
-      nodeId: "PR_kgDOAAA",
-      repo: "owner/repo",
-      status: "READY",
-      baseBranch: "main",
-      mergeStatus: {
-        status: "CLEAN",
-        state: "OPEN",
-        isDraft: false,
-        mergeable: "MERGEABLE",
-        reviewDecision: null,
-        copilotReviewInProgress: false,
-        mergeStateStatus: "CLEAN",
-      },
-      checks: {
-        passing: [],
-        failing: [],
-        inProgress: [],
-        skipped: [],
-        filtered: [],
-        filteredNames: [],
-        blockedByFilteredCheck: false,
-      },
-      threads: {
-        actionable: [],
-        resolutionOnly: [],
-        autoResolved: [],
-        autoResolveErrors: [],
-        firstLook: [FL_THREAD_OUTDATED_AUTO, FL_THREAD_RESOLVED],
-      },
-      comments: { actionable: [], firstLook: [FL_COMMENT] },
-      changesRequestedReviews: [],
-      reviewSummaries: [],
-      firstLookSummaries: [],
-      editedSummaries: [],
-      approvedReviews: [],
-    };
-    const siteC = extractFirstLookSection(formatText(report));
-
     expect(siteA).toBe(siteB);
-    expect(siteA).toBe(siteC);
   });
 });

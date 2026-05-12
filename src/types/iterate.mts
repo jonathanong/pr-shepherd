@@ -18,13 +18,7 @@ import type {
   ShepherdMergeStatus,
 } from "./github.mts";
 
-export type ShepherdAction =
-  | "cooldown"
-  | "wait"
-  | "fix_code"
-  | "mark_ready"
-  | "cancel"
-  | "escalate";
+export type ShepherdAction = "wait" | "fix_code" | "mark_ready" | "cancel" | "escalate";
 
 export interface EscalateDetails {
   triggers: string[];
@@ -50,7 +44,6 @@ export interface IterateResultBase {
   pr: number;
   repo: string;
   status: ShepherdStatus;
-  /** `'UNKNOWN'` during the cooldown early-return (no sweep has been run yet). */
   state: "OPEN" | "CLOSED" | "MERGED" | "UNKNOWN";
   mergeStateStatus: MergeStateStatus;
   /**
@@ -66,7 +59,7 @@ export interface IterateResultBase {
   shouldCancel: boolean;
   remainingSeconds: number;
   summary: IterateResultSummary;
-  /** Validated base branch (e.g. "main") for this PR. Echoed from `ShepherdReport.baseBranch` after `validateBaseBranch` whenever a sweep/report has run; `""` only for early-return cases where no sweep has run yet (for example, cooldown). */
+  /** Validated base branch (e.g. "main") for this PR. */
   baseBranch: string;
   /**
    * All CI checks that are relevant to PR readiness: triggered by a PR event
@@ -74,15 +67,9 @@ export interface IterateResultBase {
    * completed (status === COMPLETED), and not skipped/neutral.
    *
    * Includes both passing and failing checks. Failing entries carry
-   * `workflowName`, `jobName`, `failedStep`, and `summary`. Empty (`[]`)
-   * during the `cooldown` early-return (no sweep ran).
+   * `workflowName`, `jobName`, `failedStep`, and `summary`.
    */
   checks: RelevantCheck[];
-}
-
-interface IterateResultCooldown extends IterateResultBase {
-  action: "cooldown";
-  log: string;
 }
 
 interface IterateResultWait extends IterateResultBase {
@@ -163,7 +150,6 @@ interface IterateResultEscalate extends IterateResultBase {
 }
 
 export type IterateResult =
-  | IterateResultCooldown
   | IterateResultWait
   | IterateResultCancel
   | IterateResultFixCode
@@ -171,7 +157,6 @@ export type IterateResult =
   | IterateResultEscalate;
 
 export interface IterateCommandOptions extends GlobalOptions {
-  cooldownSeconds?: number;
   readyDelaySeconds?: number;
   noAutoMarkReady?: boolean;
   noAutoCancelActionable?: boolean;

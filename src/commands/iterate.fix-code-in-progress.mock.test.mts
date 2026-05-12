@@ -100,7 +100,6 @@ function makeOpts(overrides: Partial<IterateCommandOptions> = {}): IterateComman
   return {
     prNumber: 42,
     format: "json",
-    cooldownSeconds: 30,
     readyDelaySeconds: 600,
     ...overrides,
   };
@@ -111,12 +110,11 @@ beforeEach(() => {
   mockExecFile.mockResolvedValue({ stdout: "abc1234\n", stderr: "" });
   mockLoadConfig.mockReturnValue({
     iterate: {
-      cooldownSeconds: 30,
       fixAttemptsPerThread: 3,
       stallTimeoutMinutes: 60,
       minimizeApprovals: false,
     },
-    watch: { interval: "4m", readyDelayMinutes: 10 },
+    watch: { readyDelayMinutes: 10 },
     resolve: {
       concurrency: 4,
       shaPoll: { intervalMs: 2000, maxAttempts: 10 },

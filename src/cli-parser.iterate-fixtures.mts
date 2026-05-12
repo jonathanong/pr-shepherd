@@ -17,7 +17,6 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
     baseBranch: "main",
     checks: [] as RelevantCheck[],
   };
-  if (action === "cooldown") return { ...base, action: "cooldown", log: "SKIP: CI still starting" };
   if (action === "wait") return { ...base, action: "wait", log: "WAIT: 0 passing, 1 in-progress" };
   if (action === "mark_ready")
     return { ...base, action: "mark_ready", markedReady: true, log: "MARKED READY: PR 42" };

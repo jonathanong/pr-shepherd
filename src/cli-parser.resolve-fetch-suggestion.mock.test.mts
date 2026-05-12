@@ -10,20 +10,14 @@ vi.mock("./commands/iterate.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./commands/iterate.mts")>();
   return { ...actual, runIterate: vi.fn() };
 });
-vi.mock("./commands/status.mts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./commands/status.mts")>();
-  return { ...actual, runStatus: vi.fn(), formatStatusTable: vi.fn().mockReturnValue("") };
-});
 vi.mock("./github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
 }));
 
 import { main } from "./cli-parser.mts";
 import { runResolveFetch } from "./commands/resolve.mts";
-import { runStatus } from "./commands/status.mts";
 
 const mockRunResolveFetch = vi.mocked(runResolveFetch);
-const mockRunStatus = vi.mocked(runStatus);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let stdoutSpy: any;
@@ -38,7 +32,6 @@ beforeEach(() => {
   process.exitCode = undefined;
   stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-  mockRunStatus.mockResolvedValue([]);
 });
 
 afterEach(() => {

@@ -2,37 +2,31 @@
 
 ```mermaid
 flowchart TD
-  U(["/pr-shepherd:monitor PR"]) --> SC["/pr-shepherd:monitor slash command"]
-  SC --> LOOP[/loop dynamic:<br/>no fixed interval]
-  LOOP --> WAKE[(ScheduleWakeup<br/>60-240s)]
-  WAKE --> ITER[pr-shepherd<br/>iterate PR]
+  U(["pr-shepherd skill"]) --> ITER[pr-shepherd<br/>iterate PR]
 
-  ITER --> S1{1. last commit<br/>age lt cooldown?}
-  S1 -->|yes| A_COOL([action: cooldown])
-  S1 -->|no| S2[2. runCheck skipTriage:true autoResolve:true<br/>batch GraphQL + cache bypassed<br/>classify + deriveMergeStatus + autoResolveOutdated<br/>triage deferred to step 4]
+  ITER --> S1[1. runCheck autoResolve:true<br/>batch GraphQL<br/>classify + deriveMergeStatus + autoResolveOutdated]
 
-  S2 --> S25{2.5 state != OPEN?}
-  S25 -->|yes| A_CAN([action: cancel])
-  S25 -->|no| S3[3. updateReadyDelay<br/>ready-since.txt]
-  S3 --> S3C{shouldCancel?}
-  S3C -->|yes| A_CAN
-  S3C -->|no| S4{4. CONFLICTS or any<br/>failing CI / threads /<br/>comments / reviews?}
-  S4 -->|yes| S4X[gh run cancel failing runIds]
-  S4X --> A_FIX([action: fix_code<br/>+ fix payload with failedStep/conclusion])
-  S4 -->|no| S5{5. READY + CLEAN<br/>+ isDraft<br/>+ !copilot?}
-  S5 -->|yes| S5X[gh pr ready PR]
-  S5X --> A_MR([action: mark_ready])
-  S5 -->|no| A_W([action: wait])
+  S1 --> S15{1.5 state != OPEN?}
+  S15 -->|yes| A_CAN([action: cancel])
+  S15 -->|no| S2[2. updateReadyDelay<br/>ready-since.txt]
+  S2 --> S2C{shouldCancel?}
+  S2C -->|yes| A_CAN
+  S2C -->|no| S3{3. CONFLICTS or any<br/>failing CI / threads /<br/>comments / reviews?}
+  S3 -->|yes| S3X[gh run cancel failing runIds]
+  S3X --> A_FIX([action: fix_code<br/>+ fix payload with failedStep/conclusion])
+  S3 -->|no| S4{4. READY + CLEAN<br/>+ isDraft<br/>+ !copilot?}
+  S4 -->|yes| S4X[gh pr ready PR]
+  S4X --> A_MR([action: mark_ready])
+  S4 -->|no| A_W([action: wait])
 
-  A_COOL --> DEC{Loop prompt<br/>acts on action}
-  A_CAN --> DEC
+  A_CAN --> DEC{Follow ## Instructions}
   A_FIX --> DEC
   A_MR --> DEC
   A_W --> DEC
 
-  DEC -->|cancel| STOP["stop scheduling"]
+  DEC -->|cancel/escalate| STOP["stop"]
   DEC -->|fix_code| FIX[gh run view --log-failed →<br/>rerun or edit+commit →<br/>fetch + rebase + push →<br/>pr-shepherd resolve --require-sha HEAD]
-  FIX --> NEXT[ScheduleWakeup<br/>60-240s]
-  DEC -->|other| NEXT
-  NEXT --> WAKE
+  FIX --> SLEEP[sleep 30s-4m]
+  DEC -->|other| SLEEP
+  SLEEP --> ITER
 ```
