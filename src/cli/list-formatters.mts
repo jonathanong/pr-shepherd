@@ -3,7 +3,7 @@ import { renderLineRange, renderSuggestionBlock } from "./suggestion-renderer.mt
 
 const BODY_PREVIEW_MAX = 100;
 
-function renderAuthor(author: string, authorType?: string): string {
+export function renderAuthor(author: string, authorType?: string): string {
   return authorType ? `@${author} · ${authorType}` : `@${author}`;
 }
 

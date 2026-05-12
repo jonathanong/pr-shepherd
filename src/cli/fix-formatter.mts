@@ -7,6 +7,7 @@ import {
   renderReviewBullet,
   renderFirstLookStatusTag,
   renderThreadResolutionStatusTag,
+  renderAuthor,
 } from "./list-formatters.mts";
 import { adaptFixCodeInstructions, numberInstructions } from "./iterate-instructions.mts";
 import type { AgentRuntime } from "../agent-runtime.mts";
@@ -174,8 +175,4 @@ function blockquote(body: string): string {
     .split("\n")
     .map((line) => (line === "" ? ">" : `> ${line}`))
     .join("\n");
-}
-
-function renderAuthor(author: string, authorType?: string): string {
-  return authorType ? `@${author} · ${authorType}` : `@${author}`;
 }
