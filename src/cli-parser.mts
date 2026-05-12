@@ -23,10 +23,7 @@ import { runLogFile } from "./commands/log-file.mts";
 import { parseCommonArgs, getFlag, hasFlag, parseList } from "./cli/args.mts";
 import { isDefaultIterateInvocation, validateDefaultIterateArgs } from "./cli/default-iterate.mts";
 import { formatFetchResult, formatMutateResult } from "./cli/formatters.mts";
-import {
-  handleCommitSuggestion,
-  handleIterate,
-} from "./cli/handlers.mts";
+import { handleCommitSuggestion, handleIterate } from "./cli/handlers.mts";
 import { setupLog } from "./log/setup.mts";
 
 // ---------------------------------------------------------------------------

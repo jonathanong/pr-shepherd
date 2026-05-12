@@ -154,7 +154,9 @@ describe("main — iterate text format", () => {
     expect(out).toContain("# PR #42 [MARK_READY]");
     expect(out).toContain("MARKED READY: PR 42");
     expect(out).toContain("## Instructions");
-    expect(out).toContain("1. The CLI already marked the PR ready for review. Pick a fresh sleep/timeout between 30 seconds and 4 minutes");
+    expect(out).toContain(
+      "1. The CLI already marked the PR ready for review. Pick a fresh sleep/timeout between 30 seconds and 4 minutes",
+    );
   });
 
   it("cancel: heading includes [CANCEL] tag with reason and ## Instructions with stop steps", async () => {

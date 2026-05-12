@@ -107,12 +107,12 @@ CONFLICTS is included here because the `fix_code` handler already runs `git fetc
 
 ## Decision table
 
-| Step     | Condition                                               | Action       | Exit code |
-| -------- | ------------------------------------------------------- | ------------ | --------- |
-| 1.5      | `state !== 'OPEN'`                                      | `cancel`     | 2         |
-| 2 cont.  | `shouldCancel`                                          | `cancel`     | 2         |
-| 2.5      | Same fingerprint for ≥ `stallTimeoutMinutes` (any step) | `escalate`   | 3         |
-| 3        | Actionable threads/comments/any failing CI or CONFLICTS | `fix_code`   | 1         |
-| 3 esc.   | Same thread hit `fixAttemptsPerThread` times            | `escalate`   | 3         |
-| 4        | READY + CLEAN + isDraft                                 | `mark_ready` | 0         |
-| 5        | Fallthrough                                             | `wait`       | 0         |
+| Step    | Condition                                               | Action       | Exit code |
+| ------- | ------------------------------------------------------- | ------------ | --------- |
+| 1.5     | `state !== 'OPEN'`                                      | `cancel`     | 2         |
+| 2 cont. | `shouldCancel`                                          | `cancel`     | 2         |
+| 2.5     | Same fingerprint for ≥ `stallTimeoutMinutes` (any step) | `escalate`   | 3         |
+| 3       | Actionable threads/comments/any failing CI or CONFLICTS | `fix_code`   | 1         |
+| 3 esc.  | Same thread hit `fixAttemptsPerThread` times            | `escalate`   | 3         |
+| 4       | READY + CLEAN + isDraft                                 | `mark_ready` | 0         |
+| 5       | Fallthrough                                             | `wait`       | 0         |

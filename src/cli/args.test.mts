@@ -251,4 +251,3 @@ describe("iterateActionToExitCode", () => {
     expect(iterateActionToExitCode(action)).toBe(code);
   });
 });
-

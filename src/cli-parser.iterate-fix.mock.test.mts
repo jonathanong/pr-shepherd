@@ -73,7 +73,9 @@ describe("main — iterate text format (fix_code and checks)", () => {
     // Fallback instruction always present for consistency with the invariant that
     // every iterate output ends with ## Instructions.
     expect(out).toContain("## Instructions");
-    expect(out).toContain("1. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.");
+    expect(out).toContain(
+      "1. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.",
+    );
   });
 
   it("fix_code (rich payload): sections appear in fixed order with backtick-quoted codes", async () => {

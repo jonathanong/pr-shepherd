@@ -2,11 +2,7 @@ import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 import { rest } from "../../github/http.mts";
 import type { ShepherdReport } from "../../types.mts";
-import type {
-  IterateResultSummary,
-  RelevantCheck,
-  IterateResultBase,
-} from "../../types.mts";
+import type { IterateResultSummary, RelevantCheck, IterateResultBase } from "../../types.mts";
 
 const execFile = promisify(execFileCb);
 
@@ -124,4 +120,3 @@ export function buildWaitLog(base: IterateResultBase): string {
 
   return parts.join(" — ");
 }
-

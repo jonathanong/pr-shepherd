@@ -1,10 +1,6 @@
 import { parsePrNumber } from "./args.mts";
 
-const DEFAULT_ITERATE_FLAGS_WITH_VALUES = new Set([
-  "--format",
-  "--ready-delay",
-  "--stall-timeout",
-]);
+const DEFAULT_ITERATE_FLAGS_WITH_VALUES = new Set(["--format", "--ready-delay", "--stall-timeout"]);
 
 const DEFAULT_ITERATE_BOOLEAN_FLAGS = new Set([
   "--verbose",

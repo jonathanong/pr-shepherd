@@ -98,7 +98,6 @@ describe("## First-look items — edited flag rendering", () => {
         instructions: [],
       }),
     ).toContain("[status: minimized, edited]");
-
   });
 });
 

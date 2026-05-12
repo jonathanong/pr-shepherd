@@ -35,4 +35,3 @@ export function iterateActionToExitCode(action: ShepherdAction): number {
       return 0;
   }
 }
-

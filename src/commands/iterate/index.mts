@@ -4,12 +4,7 @@ import { getCurrentPrNumber } from "../../github/client.mts";
 import { graphql } from "../../github/http.mts";
 import { MARK_PR_READY_MUTATION } from "../../github/queries.mts";
 import { loadConfig } from "../../config/load.mts";
-import {
-  getCurrentHeadSha,
-  buildSummary,
-  buildRelevantChecks,
-  buildWaitLog,
-} from "./helpers.mts";
+import { getCurrentHeadSha, buildSummary, buildRelevantChecks, buildWaitLog } from "./helpers.mts";
 import { classifyReviewSummaries } from "./classify.mts";
 import { applyStallGuard } from "./stall.mts";
 import { handleFixCode } from "./fix-code.mts";

@@ -2,15 +2,8 @@ import { runCommitSuggestion } from "../commands/commit-suggestion.mts";
 import { runIterate } from "../commands/iterate.mts";
 import { loadConfig } from "../config/load.mts";
 import { detectAgentRuntime } from "../agent-runtime.mts";
-import {
-  parseCommonArgs,
-  getFlag,
-  hasFlag,
-} from "./args.mts";
-import {
-  parseDurationToMinutes,
-  iterateActionToExitCode,
-} from "./exit-codes.mts";
+import { parseCommonArgs, getFlag, hasFlag } from "./args.mts";
+import { parseDurationToMinutes, iterateActionToExitCode } from "./exit-codes.mts";
 import {
   formatCommitSuggestionResult,
   formatIterateResult,
@@ -104,4 +97,3 @@ export async function handleIterate(args: string[]): Promise<void> {
 
   process.exitCode = iterateActionToExitCode(result.action);
 }
-

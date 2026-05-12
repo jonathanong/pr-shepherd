@@ -1,8 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  BATCH_PR_QUERY,
-  GET_PR_HEAD_SHA_QUERY,
-} from "./queries.mts";
+import { BATCH_PR_QUERY, GET_PR_HEAD_SHA_QUERY } from "./queries.mts";
 
 describe("queries — GQL constants load at import time", () => {
   it("BATCH_PR_QUERY is a non-empty query string", () => {
