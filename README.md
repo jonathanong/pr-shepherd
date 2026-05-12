@@ -34,7 +34,7 @@ At a high level, the skill invokes `pr-shepherd <PR>` through the selected packa
 
 ## Review threads
 
-### `PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate.mts:42` (@alice)
+### `PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate/index.mts:42` (@alice)
 
 > The variable name is misleading.
 >

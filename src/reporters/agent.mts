@@ -6,7 +6,7 @@
  * agent/iterate prompt never reads (event, status, category).
  * conclusion is preserved on AgentCheck so the formatter can branch on run-level conclusions.
  * detailsUrl is preserved in AgentCheck as a fallback for external status checks.
- * The original domain types are preserved for check command output.
+ * The original domain types are preserved as internal snapshot types.
  */
 
 import { extractSuggestion } from "../suggestions/extract.mts";

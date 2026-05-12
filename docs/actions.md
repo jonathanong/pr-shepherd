@@ -165,7 +165,7 @@ Actionable work needs a code fix, commit, and push.
 
 ## Review threads
 
-### `threadId=PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate.mts:42` (@alice)
+### `threadId=PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate/index.mts:42` (@alice)
 
 > The variable name is misleading.
 >
