@@ -11,11 +11,14 @@ Both runtimes use the same `pr-shepherd` skill. Claude Code users invoke it with
 ## Lifecycle
 
 1. **User starts the goal**
+
    ```
    /goal /pr-shepherd:pr-shepherd <PR>   # Claude Code
    /goal $pr-shepherd <PR>              # Codex
    ```
+
    The skill resolves the PR number, picks the package runner, and runs one iterate tick:
+
    ```bash
    <runner> pr-shepherd <PR>
    ```
