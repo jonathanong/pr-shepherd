@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // ---------------------------------------------------------------------------
@@ -59,7 +60,7 @@ import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
 import { readStallState, writeStallState } from "../state/iterate-stall.mts";
-import type { ShepherdReport, IterateCommandOptions } from "../types.mts";
+import type { ShepherdReport, IterateCommandOptions, Review } from "../types.mts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -133,6 +134,10 @@ function makeOpts(overrides: Partial<IterateCommandOptions> = {}): IterateComman
   };
 }
 
+function makeReview(id: string, author: string, body: string): Review {
+  return { id, author, authorType: "Unknown", body };
+}
+
 const NOW = 1_700_000_000;
 const READY_STATE_DEFAULT = {
   isReady: true,
@@ -150,6 +155,7 @@ function defaultConfig() {
       fixAttemptsPerThread: 3,
       stallTimeoutMinutes: 30,
       minimizeApprovals: false,
+      minimizeComments: "all" as "all" | "bots" | "users" | "none",
     },
     watch: { readyDelayMinutes: 10 },
     resolve: {
@@ -205,10 +211,10 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("runIterate — review summary auto-minimize", () => {
-  const botSummary = { id: "PRR_BOT", author: "copilot-pull-request-reviewer", body: "overview" };
-  const genericBotSummary = { id: "PRR_GEM", author: "gemini-code-assist", body: "overview" };
-  const bracketBotSummary = { id: "PRR_BRK", author: "github-actions[bot]", body: "overview" };
-  const humanSummary = { id: "PRR_HUMAN", author: "alice", body: "nice work" };
+  const botSummary = makeReview("PRR_BOT", "copilot-pull-request-reviewer", "overview");
+  const genericBotSummary = makeReview("PRR_GEM", "gemini-code-assist", "overview");
+  const bracketBotSummary = makeReview("PRR_BRK", "github-actions[bot]", "overview");
+  const humanSummary = makeReview("PRR_HUMAN", "alice", "nice work");
 
   it("emits fix_code with reviewSummaryIds when only a bot summary exists", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary] }));
@@ -284,10 +290,60 @@ describe("runIterate — review summary auto-minimize", () => {
     expect(result.fix.surfacedApprovals).toEqual([]);
   });
 
+  it("minimizes only GitHub-classified bot summaries when minimizeComments=bots", async () => {
+    const cfg = defaultConfig();
+    cfg.iterate.minimizeComments = "bots";
+    mockLoadConfig.mockReturnValue(cfg);
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        reviewSummaries: [
+          { ...botSummary, authorType: "Bot" },
+          { ...humanSummary, authorType: "User" },
+        ],
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
+    expect(result.fix.resolveCommand.argv).toContain("PRR_BOT");
+    expect(result.fix.resolveCommand.argv).not.toContain("PRR_HUMAN");
+  });
+
+  it("surfaces first-look summaries without minimization when minimizeComments=none", async () => {
+    const cfg = defaultConfig();
+    cfg.iterate.minimizeComments = "none";
+    mockLoadConfig.mockReturnValue(cfg);
+    const summary = { id: "PRR_FL", author: "alice", authorType: "User" as const, body: "FYI" };
+    mockRunCheck.mockResolvedValue(makeReport({ firstLookSummaries: [summary] }));
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.firstLookSummaries).toEqual([summary]);
+    expect(result.fix.reviewSummaryIds).toEqual([]);
+    expect(result.fix.resolveCommand.hasMutations).toBe(false);
+  });
+
   it("omits APPROVED reviews from minimize list by default (approvals: false)", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
-        approvedReviews: [{ id: "PRR_AP", author: "alice", body: "" }],
+        approvedReviews: [
+          { id: "PRR_AP", author: "alice", authorType: "Unknown" as const, body: "" },
+        ],
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -305,7 +361,9 @@ describe("runIterate — review summary auto-minimize", () => {
     mockLoadConfig.mockReturnValue(cfg);
     mockRunCheck.mockResolvedValue(
       makeReport({
-        approvedReviews: [{ id: "PRR_AP", author: "alice", body: "" }],
+        approvedReviews: [
+          { id: "PRR_AP", author: "alice", authorType: "Unknown" as const, body: "" },
+        ],
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -317,6 +375,31 @@ describe("runIterate — review summary auto-minimize", () => {
     if (result.action !== "fix_code") return;
 
     expect(result.fix.reviewSummaryIds).toEqual(["PRR_AP"]);
+  });
+
+  it("filters APPROVED reviews through minimizeComments when approval minimization is enabled", async () => {
+    const cfg = defaultConfig();
+    cfg.iterate.minimizeApprovals = true;
+    cfg.iterate.minimizeComments = "bots";
+    mockLoadConfig.mockReturnValue(cfg);
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        approvedReviews: [
+          { id: "PRR_AP_BOT", author: "app", authorType: "Bot", body: "" },
+          { id: "PRR_AP_USER", author: "alice", authorType: "User", body: "" },
+        ],
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+    if (result.action !== "fix_code") return;
+
+    expect(result.fix.reviewSummaryIds).toEqual(["PRR_AP_BOT"]);
   });
 
   it("summary-only PR triggers fix_code (not wait) so the summary can be minimized", async () => {
@@ -340,6 +423,7 @@ describe("runIterate — review summary auto-minimize", () => {
       line: 10,
       startLine: null,
       author: "reviewer",
+      authorType: "Unknown" as const,
       body: "Use a const here.\n\n```suggestion\nconst foo = 1;\n```",
       url: "",
       createdAtUnix: NOW - 3600,
@@ -373,8 +457,8 @@ describe("runIterate — review summary auto-minimize", () => {
 
   it("editedSummaries are surfaced in fix_code but excluded from reviewSummaryIds (not re-minimized)", async () => {
     // A seen summary triggers fix_code (it needs minimizing); edited summary must NOT join the queue.
-    const seenSummary = { id: "PRR_SEEN", author: "copilot", body: "Old review." };
-    const editedSummary = { id: "PRR_ED", author: "copilot", body: "Updated." };
+    const seenSummary = makeReview("PRR_SEEN", "copilot", "Old review.");
+    const editedSummary = makeReview("PRR_ED", "copilot", "Updated.");
     mockRunCheck.mockResolvedValue(
       makeReport({ reviewSummaries: [seenSummary], editedSummaries: [editedSummary] }),
     );
@@ -396,7 +480,7 @@ describe("runIterate — review summary auto-minimize", () => {
   });
 
   it("surfaces body in firstLookSummaries when summary comes from report.firstLookSummaries", async () => {
-    const summary = { id: "PRR_FL", author: "copilot", body: "Nice work." };
+    const summary = makeReview("PRR_FL", "copilot", "Nice work.");
     mockRunCheck.mockResolvedValue(makeReport({ firstLookSummaries: [summary] }));
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: false,

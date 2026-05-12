@@ -214,7 +214,9 @@ describe("projectIterateLean", () => {
   it("fix_code: includes editedSummaries when non-empty", () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
-    result.fix.editedSummaries = [{ id: "PRR_ED", author: "reviewer", body: "updated" }];
+    result.fix.editedSummaries = [
+      { id: "PRR_ED", author: "reviewer", authorType: "Unknown" as const, body: "updated" },
+    ];
     const lean = projectIterateLean(result) as Record<string, unknown>;
     expect(((lean.fix as Record<string, unknown>).editedSummaries as unknown[]).length).toBe(1);
   });
@@ -229,15 +231,20 @@ describe("projectIterateLean", () => {
       { name: "ci", runId: "r1", detailsUrl: null, conclusion: "FAILURE" as const },
     ];
     result.fix.instructions = ["step 1"];
-    result.fix.actionableComments = [{ id: "c1", author: "a", body: "nit", url: "" }];
+    result.fix.actionableComments = [
+      { id: "c1", author: "a", authorType: "Unknown" as const, body: "nit", url: "" },
+    ];
     result.fix.reviewSummaryIds = ["r1"];
-    result.fix.surfacedApprovals = [{ id: "s1", author: "a", body: "summary" }];
+    result.fix.surfacedApprovals = [
+      { id: "s1", author: "a", authorType: "Unknown" as const, body: "summary" },
+    ];
     result.fix.firstLookThreads = [
       {
         id: "t2",
         path: "src/y.ts",
         line: 5,
         author: "b",
+        authorType: "Unknown" as const,
         body: "note",
         url: "",
         isResolved: false,
@@ -252,6 +259,7 @@ describe("projectIterateLean", () => {
       {
         id: "c3",
         author: "b",
+        authorType: "Unknown" as const,
         body: "old",
         url: "",
         isMinimized: true,
@@ -259,7 +267,9 @@ describe("projectIterateLean", () => {
         firstLookStatus: "minimized",
       },
     ];
-    result.fix.changesRequestedReviews = [{ id: "rv1", author: "a", body: "" }];
+    result.fix.changesRequestedReviews = [
+      { id: "rv1", author: "a", authorType: "Unknown" as const, body: "" },
+    ];
     result.checks = [
       { name: "lint", conclusion: "FAILURE" as const, runId: "r2", detailsUrl: null },
     ];
@@ -304,8 +314,12 @@ describe("projectIterateLean", () => {
     result.escalate.unresolvedThreads = [
       { id: "t1", path: "f.ts", line: 1, author: "a", body: "b", url: "" },
     ];
-    result.escalate.ambiguousComments = [{ id: "c1", author: "a", body: "?", url: "" }];
-    result.escalate.changesRequestedReviews = [{ id: "rv1", author: "a", body: "" }];
+    result.escalate.ambiguousComments = [
+      { id: "c1", author: "a", authorType: "Unknown" as const, body: "?", url: "" },
+    ];
+    result.escalate.changesRequestedReviews = [
+      { id: "rv1", author: "a", authorType: "Unknown" as const, body: "" },
+    ];
     result.escalate.thrashHistory = [{ threadId: "t1", attempts: 3 }];
 
     const lean = projectIterateLean(result) as Record<string, unknown>;

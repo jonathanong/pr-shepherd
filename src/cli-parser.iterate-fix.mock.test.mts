@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("./commands/check.mts", () => ({ runCheck: vi.fn() }));
@@ -90,12 +91,21 @@ describe("main — iterate text format (fix_code and checks)", () => {
           path: "src/foo.ts",
           line: 10,
           author: "reviewer",
+          authorType: "Unknown" as const,
           body: "fix\nsecond line is now preserved",
           url: "",
         },
       ],
       resolutionOnlyThreads: [],
-      actionableComments: [{ id: "PRRC_1", author: "bot", body: "please address", url: "" }],
+      actionableComments: [
+        {
+          id: "PRRC_1",
+          author: "bot",
+          authorType: "Unknown" as const,
+          body: "please address",
+          url: "",
+        },
+      ],
       reviewSummaryIds: [],
       firstLookSummaries: [],
       editedSummaries: [],
@@ -109,7 +119,14 @@ describe("main — iterate text format (fix_code and checks)", () => {
           conclusion: "FAILURE" as const,
         },
       ],
-      changesRequestedReviews: [{ id: "REV_1", author: "reviewer", body: "please rework this" }],
+      changesRequestedReviews: [
+        {
+          id: "REV_1",
+          author: "reviewer",
+          authorType: "Unknown" as const,
+          body: "please rework this",
+        },
+      ],
       resolveCommand: {
         argv: [
           "npx",
@@ -154,17 +171,17 @@ describe("main — iterate text format (fix_code and checks)", () => {
     }
 
     // Thread section: H3 header with backticked threadId= and location.
-    expect(out).toContain("### `threadId=PRRT_1` — `src/foo.ts:10` (@reviewer)");
+    expect(out).toContain("### `threadId=PRRT_1` — `src/foo.ts:10` (@reviewer · Unknown)");
     // Multi-line body is blockquoted.
     expect(out).toContain("> fix\n> second line is now preserved");
     // Comment section
-    expect(out).toContain("### `commentId=PRRC_1` (@bot)");
+    expect(out).toContain("### `commentId=PRRC_1` (@bot · Unknown)");
     expect(out).toContain("> please address");
     // Failing checks — GitHub Actions and external (no failureKind label).
     expect(out).toContain("- `run-42` — `lint`");
     expect(out).toContain("- external `https://app.codecov.io` — `codecov/patch`");
     // Reviews
-    expect(out).toContain("- `reviewId=REV_1` (@reviewer)");
+    expect(out).toContain("- `reviewId=REV_1` (@reviewer · Unknown)");
     // Cancelled runs
     expect(out).toContain("`run-99`");
     // Post-fix push section uses backticked base + resolve command with --require-sha appended.
@@ -201,12 +218,17 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).not.toContain("## Approvals (surfaced");
   });
 
-  it("fix_code: renders '## Review summaries (first look — to be minimized)' with body when firstLookSummaries is non-empty", async () => {
+  it("fix_code: renders '## Review summaries (first look)' with body when firstLookSummaries is non-empty", async () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
 
     result.fix.firstLookSummaries = [
-      { id: "PRR_FL", author: "copilot", body: "Nice work overall." },
+      {
+        id: "PRR_FL",
+        author: "copilot",
+        authorType: "Unknown" as const,
+        body: "Nice work overall.",
+      },
     ];
     result.fix.reviewSummaryIds = ["PRR_FL"];
     result.fix.resolveCommand = {
@@ -220,8 +242,8 @@ describe("main — iterate text format (fix_code and checks)", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
 
-    expect(out).toContain("## Review summaries (first look — to be minimized)");
-    expect(out).toContain("### `reviewId=PRR_FL` (@copilot)");
+    expect(out).toContain("## Review summaries (first look)");
+    expect(out).toContain("### `reviewId=PRR_FL` (@copilot · Unknown)");
     expect(out).toContain("> Nice work overall.");
     // ID is in the resolve command but NOT in the bare minimize-queue section.
     expect(out).toContain("--minimize-comment-ids PRR_FL");
@@ -233,7 +255,12 @@ describe("main — iterate text format (fix_code and checks)", () => {
     if (result.action !== "fix_code") throw new Error("unreachable");
 
     result.fix.surfacedApprovals = [
-      { id: "PRR_HUMAN", author: "alice", body: "Looks reasonable but please double-check X." },
+      {
+        id: "PRR_HUMAN",
+        author: "alice",
+        authorType: "Unknown" as const,
+        body: "Looks reasonable but please double-check X.",
+      },
     ];
     mockRunIterate.mockResolvedValue(result);
 
@@ -241,7 +268,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     const out = getStdout();
 
     expect(out).toContain("## Approvals (surfaced — not minimized)");
-    expect(out).toContain("### `reviewId=PRR_HUMAN` (@alice)");
+    expect(out).toContain("### `reviewId=PRR_HUMAN` (@alice · Unknown)");
     expect(out).toContain("> Looks reasonable but please double-check X.");
   });
 
@@ -249,13 +276,15 @@ describe("main — iterate text format (fix_code and checks)", () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
 
-    result.fix.surfacedApprovals = [{ id: "PRR_EMPTY", author: "alice", body: "" }];
+    result.fix.surfacedApprovals = [
+      { id: "PRR_EMPTY", author: "alice", authorType: "Unknown" as const, body: "" },
+    ];
     mockRunIterate.mockResolvedValue(result);
 
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
 
-    expect(out).toContain("### `reviewId=PRR_EMPTY` (@alice)");
+    expect(out).toContain("### `reviewId=PRR_EMPTY` (@alice · Unknown)");
     expect(out).toContain("(no review body)");
     expect(out).not.toContain("\n>\n");
   });
@@ -276,6 +305,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
         path: "src/x.ts",
         line: 1,
         author: "reviewer",
+        authorType: "Unknown" as const,
         body: multiParagraphBody,
         url: "",
       },
@@ -286,7 +316,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     const out = getStdout();
     const lines = out.split("\n");
     const headerIdx = lines.findIndex(
-      (l) => l === "### `threadId=t-multi` — `src/x.ts:1` (@reviewer)",
+      (l) => l === "### `threadId=t-multi` — `src/x.ts:1` (@reviewer · Unknown)",
     );
     expect(headerIdx).toBeGreaterThan(-1);
     // Blockquote follows after a blank line; empty paragraphs are rendered as bare `>`.
@@ -311,6 +341,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
         line: 42,
         startLine: 40,
         author: "alice",
+        authorType: "Unknown" as const,
         body: "Collapse these.",
         url: "",
         suggestion: { startLine: 40, endLine: 42, lines: ["const x = 1;"], author: "alice" },
@@ -320,7 +351,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
 
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
-    expect(out).toContain("### `threadId=t-range` — `src/foo.ts:40-42` (@alice)");
+    expect(out).toContain("### `threadId=t-range` — `src/foo.ts:40-42` (@alice · Unknown)");
     expect(out).toContain("[suggestion]");
     expect(out).toContain("Replaces lines 40–42:");
     expect(out).toContain("const x = 1;");
@@ -335,6 +366,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
         path: "src/foo.ts",
         line: 10,
         author: "alice",
+        authorType: "Unknown" as const,
         body: "Fix this.",
         url: "",
       },
@@ -343,7 +375,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
 
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
-    expect(out).toContain("### `threadId=t-single` — `src/foo.ts:10` (@alice)");
+    expect(out).toContain("### `threadId=t-single` — `src/foo.ts:10` (@alice · Unknown)");
     expect(out).not.toContain("10-10");
   });
 
@@ -356,6 +388,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
         path: "src/x.ts",
         line: 1,
         author: "reviewer",
+        authorType: "Unknown" as const,
         body: "First line.\r\nSecond line.",
         url: "",
       },
@@ -404,6 +437,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
         path: "src/x.ts",
         line: 5,
         author: "reviewer",
+        authorType: "Unknown" as const,
         body: "nit",
         url: "https://github.com/owner/repo/pull/1#discussion_r1",
       },
@@ -412,6 +446,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
       {
         id: "PRRC_linked",
         author: "bob",
+        authorType: "Unknown" as const,
         body: "please fix",
         url: "https://github.com/owner/repo/pull/1#issuecomment-1",
       },
@@ -421,10 +456,10 @@ describe("main — iterate text format (fix_code and checks)", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain(
-      "### [threadId=PRRT_linked](https://github.com/owner/repo/pull/1#discussion_r1) — `src/x.ts:5` (@reviewer)",
+      "### [threadId=PRRT_linked](https://github.com/owner/repo/pull/1#discussion_r1) — `src/x.ts:5` (@reviewer · Unknown)",
     );
     expect(out).toContain(
-      "### [commentId=PRRC_linked](https://github.com/owner/repo/pull/1#issuecomment-1) (@bob)",
+      "### [commentId=PRRC_linked](https://github.com/owner/repo/pull/1#issuecomment-1) (@bob · Unknown)",
     );
     expect(out).not.toContain("### `PRRT_linked`");
     expect(out).not.toContain("### `PRRC_linked`");

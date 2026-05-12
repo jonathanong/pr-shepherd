@@ -91,6 +91,7 @@ function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
     line: 1,
     startLine: null,
     author: "alice",
+    authorType: "Unknown" as const,
     body: "fix this",
     url: "",
     createdAtUnix: 1_700_000_000,
@@ -103,6 +104,7 @@ function makeComment(overrides: Partial<PrComment> = {}): PrComment {
     id: "c-1",
     isMinimized: false,
     author: "bob",
+    authorType: "Unknown" as const,
     body: "nit",
     url: "",
     createdAtUnix: 1_700_000_000,
@@ -188,6 +190,7 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
       line: 10,
       startLine: null,
       author: "reviewer",
+      authorType: "Unknown" as const,
       body: "Consider this change:\n\n```suggestion\nconst x = 42;\n```",
     });
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
@@ -282,6 +285,45 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     expect(result.actionableComments.map((c) => c.id)).toEqual(["c-visible"]);
   });
 
+  it("marker-gates visible comments excluded by minimizeComments policy", async () => {
+    mockLoadConfig.mockReturnValueOnce({
+      iterate: { minimizeComments: "bots" },
+      resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 }, fetchReviewSummaries: true },
+      actions: { autoResolveOutdated: true, autoMarkReady: true, commitSuggestions: true },
+    } as ReturnType<typeof loadConfig>);
+    const human = makeComment({
+      id: "c-human",
+      authorType: "User",
+      body: "human note",
+    });
+    const bot = makeComment({ id: "c-bot", authorType: "Bot", body: "bot note" });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ comments: [human, bot] }) });
+    mockLoadSeenMap.mockResolvedValue(new Map());
+
+    const result = await runResolveFetch(BASE_OPTS);
+
+    expect(result.actionableComments.map((c) => c.id)).toEqual(["c-human", "c-bot"]);
+    expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "c-human", "human note");
+    expect(mockMarkSeen).not.toHaveBeenCalledWith(expect.any(Object), "c-bot", expect.anything());
+  });
+
+  it("suppresses unchanged visible comments excluded by minimizeComments policy", async () => {
+    mockLoadConfig.mockReturnValueOnce({
+      iterate: { minimizeComments: "none" },
+      resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 }, fetchReviewSummaries: true },
+      actions: { autoResolveOutdated: true, autoMarkReady: true, commitSuggestions: true },
+    } as ReturnType<typeof loadConfig>);
+    const comment = makeComment({ id: "c-human", authorType: "User", body: "seen" });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ comments: [comment] }) });
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([["c-human", { seenAt: 1000, bodyHash: hashBody("seen") }]]),
+    );
+
+    const result = await runResolveFetch(BASE_OPTS);
+
+    expect(result.actionableComments).toEqual([]);
+  });
+
   it("actionableThreads excludes threads whose top comment is minimized", async () => {
     const visible = makeThread({ id: "t-visible", isMinimized: false });
     const minimized = makeThread({ id: "t-minimized", isMinimized: true });
@@ -296,12 +338,16 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
   it("surfaces reviewSummaries when fetchReviewSummaries is true", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
-        reviewSummaries: [{ id: "PRR_1", author: "copilot", body: "overview" }],
+        reviewSummaries: [
+          { id: "PRR_1", author: "copilot", authorType: "Unknown" as const, body: "overview" },
+        ],
       }),
     });
 
     const result = await runResolveFetch(BASE_OPTS);
-    expect(result.reviewSummaries).toEqual([{ id: "PRR_1", author: "copilot", body: "overview" }]);
+    expect(result.reviewSummaries).toEqual([
+      { id: "PRR_1", author: "copilot", authorType: "Unknown" as const, body: "overview" },
+    ]);
   });
 
   it("returns empty reviewSummaries when fetchReviewSummaries is false", async () => {
@@ -311,7 +357,9 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     } as ReturnType<typeof loadConfig>);
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
-        reviewSummaries: [{ id: "PRR_1", author: "copilot", body: "overview" }],
+        reviewSummaries: [
+          { id: "PRR_1", author: "copilot", authorType: "Unknown" as const, body: "overview" },
+        ],
       }),
     });
 
@@ -403,7 +451,12 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
   });
 
   it("instructions dismissNote includes CHANGES_REQUESTED guidance when reviews present", async () => {
-    const review = { id: "PRR_review1", author: "alice", body: "needs changes" };
+    const review = {
+      id: "PRR_review1",
+      author: "alice",
+      authorType: "Unknown" as const,
+      body: "needs changes",
+    };
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({ changesRequestedReviews: [review] }),
     });
@@ -420,7 +473,9 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
   it("instructions dismissNote mentions review-summary minimize guidance when reviewSummaries present but no changes-requested", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
-        reviewSummaries: [{ id: "PRR_s1", author: "copilot", body: "summary" }],
+        reviewSummaries: [
+          { id: "PRR_s1", author: "copilot", authorType: "Unknown" as const, body: "summary" },
+        ],
       }),
     });
 
@@ -461,7 +516,9 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     [
       "a review summary",
       makeBatchData({
-        reviewSummaries: [{ id: "PRR_2", author: "copilot", body: "ok" }],
+        reviewSummaries: [
+          { id: "PRR_2", author: "copilot", authorType: "Unknown" as const, body: "ok" },
+        ],
       }),
     ],
     [
@@ -471,7 +528,9 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     [
       "a changes-requested review",
       makeBatchData({
-        changesRequestedReviews: [{ id: "PRR_3", author: "alice", body: "fix needed" }],
+        changesRequestedReviews: [
+          { id: "PRR_3", author: "alice", authorType: "Unknown" as const, body: "fix needed" },
+        ],
       }),
     ],
   ])("includes Shepherd Journal once when %s exists", async (_label, data) => {

@@ -29,6 +29,7 @@ export function toAgentThread(t: ReviewThread): AgentThread {
       t.startLine !== null &&
       t.startLine !== t.line && { startLine: t.startLine }),
     author: t.author,
+    ...(t.authorType !== undefined && { authorType: t.authorType }),
     body: t.body,
     url: t.url,
     ...(suggestion !== undefined && { suggestion }),
@@ -36,7 +37,13 @@ export function toAgentThread(t: ReviewThread): AgentThread {
 }
 
 export function toAgentComment(c: PrComment): AgentComment {
-  return { id: c.id, author: c.author, body: c.body, url: c.url };
+  return {
+    id: c.id,
+    author: c.author,
+    ...(c.authorType !== undefined && { authorType: c.authorType }),
+    body: c.body,
+    url: c.url,
+  };
 }
 
 export function toAgentCheck(c: TriagedCheck): AgentCheck {

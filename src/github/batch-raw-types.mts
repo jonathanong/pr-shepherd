@@ -25,7 +25,7 @@ export interface RawPr {
   };
   latestReviews: {
     nodes: Array<{
-      author: { login: string } | null;
+      author: RawAuthor | null;
       state: string;
     }>;
   };
@@ -64,6 +64,11 @@ export interface RawPr {
   };
 }
 
+export interface RawAuthor {
+  __typename?: string;
+  login: string;
+}
+
 export interface RawThread {
   id: string;
   isResolved: boolean;
@@ -73,7 +78,7 @@ export interface RawThread {
       id: string;
       isMinimized: boolean;
       url: string;
-      author: { login: string } | null;
+      author: RawAuthor | null;
       body: string;
       path: string | null;
       line: number | null;
@@ -87,21 +92,21 @@ export interface RawComment {
   id: string;
   isMinimized: boolean;
   url: string;
-  author: { login: string } | null;
+  author: RawAuthor | null;
   body: string;
   createdAt: string;
 }
 
 export interface RawReview {
   id: string;
-  author: { login: string } | null;
+  author: RawAuthor | null;
   body: string;
 }
 
 export interface RawReviewSummary {
   id: string;
   isMinimized: boolean;
-  author: { login: string } | null;
+  author: RawAuthor | null;
   body: string;
 }
 

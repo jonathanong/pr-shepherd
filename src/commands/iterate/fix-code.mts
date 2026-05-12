@@ -118,7 +118,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const inProgressRunIds = hasGuaranteedSupersedingPush
     ? buildInProgressRunIds(report, cancelledSet)
     : [];
-  const allCommentIds = [...actionableComments.map((c) => c.id), ...reviewSummaryIds];
+  const commentMinimizeIds = report.comments.minimizeIds ?? actionableComments.map((c) => c.id);
+  const allCommentIds = [...commentMinimizeIds, ...reviewSummaryIds];
   const resolveCommand = buildResolveCommand(
     threads,
     resolutionOnlyThreads,

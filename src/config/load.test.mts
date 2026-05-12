@@ -47,6 +47,12 @@ describe("loadConfig — no rc file", () => {
     expect(result.iterate.minimizeApprovals).toBe(false);
   });
 
+  it("defaults iterate.minimizeComments to all", async () => {
+    const loadConfig = await freshLoadConfig();
+    const result = loadConfig();
+    expect(result.iterate.minimizeComments).toBe("all");
+  });
+
   it("defaults cli.runner to auto", async () => {
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
@@ -65,6 +71,23 @@ describe("loadConfig — no rc file", () => {
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
     expect(result.iterate.minimizeApprovals).toBe(true);
+  });
+
+  it("overrides iterate.minimizeComments when set in rc file", async () => {
+    writeFileSync(join(tmpDir, RC), "iterate:\n  minimizeComments: bots\n");
+    const loadConfig = await freshLoadConfig();
+    const result = loadConfig();
+    expect(result.iterate.minimizeComments).toBe("bots");
+  });
+
+  it("rejects invalid iterate.minimizeComments values and falls back to defaults", async () => {
+    writeFileSync(join(tmpDir, RC), "iterate:\n  minimizeComments: sometimes\n");
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const loadConfig = await freshLoadConfig();
+    const result = loadConfig();
+    expect(result.iterate.minimizeComments).toBe("all");
+    const output = stderrSpy.mock.calls.map((c) => c[0]).join("");
+    expect(output).toContain("iterate.minimizeComments");
   });
 
   it("returns defaults for empty YAML (yaml.parse returns null)", async () => {

@@ -235,6 +235,7 @@ Create a `.pr-shepherdrc.yml` in your project root (or any parent directory) to 
 ```yaml
 iterate:
   fixAttemptsPerThread: 5 # raise before escalating to manual review
+  minimizeComments: all # all | bots | users | none
 checks:
   ciTriggerEvents:
     - pull_request

@@ -1,14 +1,14 @@
 import { getRepoInfo, getCurrentPrNumber } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { getOutdatedThreads } from "../comments/outdated.mts";
-import { autoResolveOutdated, applyResolveOptions } from "../comments/resolve.mts";
+import { autoResolveOutdated } from "../comments/resolve.mts";
 import { loadConfig } from "../config/load.mts";
+import { classifyVisibleComments } from "../comments/visible-comments.mts";
 import { extractSuggestion } from "../suggestions/extract.mts";
 import { buildFetchInstructions } from "./resolve-instructions.mts";
 import { loadSeenMap, markSeen, classifyItem } from "../state/seen-comments.mts";
 import type {
   GlobalOptions,
-  ResolveOptions,
   ReviewThread,
   PrComment,
   Review,
@@ -16,6 +16,8 @@ import type {
   FirstLookThread,
   FirstLookComment,
 } from "../types.mts";
+
+export { runResolveMutate } from "./resolve-mutate.mts";
 
 export type FetchThread = Omit<ReviewThread, "isResolved" | "isOutdated"> & {
   /** Present when the comment body contains a parseable ```suggestion block. */
@@ -56,7 +58,6 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
 
   const unresolvedThreads = data.reviewThreads.filter((t) => !t.isResolved);
-  const visibleComments = data.comments.filter((c) => !c.isMinimized);
 
   const outdatedCandidates = data.reviewThreads.filter((t) => t.isOutdated);
   const resolvedCandidates = data.reviewThreads.filter((t) => t.isResolved && !t.isOutdated);
@@ -114,6 +115,11 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   );
 
   const cfg = loadConfig();
+  const visibleCommentClassification = classifyVisibleComments(
+    data.comments,
+    seenMap,
+    cfg.iterate?.minimizeComments,
+  );
 
   const actionableThreads: FetchThread[] = activeThreads.map(
     ({ isResolved: _r, isOutdated: _o, ...rest }) => {
@@ -163,6 +169,7 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   await Promise.allSettled([
     ...firstLookThreads.map((t) => markSeen(stateKey, t.id, t.body)),
     ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
+    ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
   ]);
 
   const result: Omit<FetchResult, "instructions"> = {
@@ -170,7 +177,7 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
     actionableThreads,
     resolutionOnlyThreads,
     firstLookThreads,
-    actionableComments: visibleComments,
+    actionableComments: visibleCommentClassification.actionable,
     firstLookComments,
     changesRequestedReviews: data.changesRequestedReviews,
     reviewSummaries: cfg.resolve.fetchReviewSummaries ? data.reviewSummaries : [],
@@ -178,22 +185,4 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   };
 
   return { ...result, instructions: buildFetchInstructions(prNumber, result, cfg.cli?.runner) };
-}
-
-export async function runResolveMutate(
-  opts: ResolveCommandOptions & ResolveOptions,
-): Promise<import("../comments/resolve.mts").ResolveResult> {
-  const repo = await getRepoInfo();
-  const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
-  if (prNumber === null) {
-    throw new Error("No open PR found for current branch. Pass a PR number explicitly.");
-  }
-
-  return applyResolveOptions(prNumber, repo, {
-    resolveThreadIds: opts.resolveThreadIds,
-    minimizeCommentIds: opts.minimizeCommentIds,
-    dismissReviewIds: opts.dismissReviewIds,
-    dismissMessage: opts.dismissMessage,
-    requireSha: opts.requireSha,
-  });
 }

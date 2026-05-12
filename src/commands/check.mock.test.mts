@@ -22,6 +22,8 @@ vi.mock("../state/seen-comments.mts", async (importOriginal) => {
     markSeen: vi.fn().mockResolvedValue(undefined),
   };
 });
+const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
+vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
 import { runCheck } from "./check.mts";
 import { fetchPrBatch } from "../github/batch.mts";
@@ -41,6 +43,31 @@ const mockMarkSeen = vi.mocked(markSeen);
 const mockAutoResolveOutdated = vi.mocked(autoResolveOutdated);
 
 const BASE_OPTS = { format: "text" as const };
+
+function defaultConfig() {
+  return {
+    iterate: {
+      fixAttemptsPerThread: 3,
+      stallTimeoutMinutes: 30,
+      minimizeApprovals: false,
+      minimizeComments: "all" as "all" | "bots" | "users" | "none",
+    },
+    watch: { readyDelayMinutes: 10 },
+    resolve: {
+      shaPoll: { intervalMs: 2000, maxAttempts: 10 },
+      fetchReviewSummaries: true,
+    },
+    checks: {
+      ciTriggerEvents: ["pull_request", "pull_request_target"],
+    },
+    mergeStatus: { blockingReviewerLogins: ["copilot"] },
+    actions: {
+      autoResolveOutdated: true,
+      autoMarkReady: true,
+      commitSuggestions: true,
+    },
+  };
+}
 
 function makeCheck(overrides: Partial<ClassifiedCheck> = {}): ClassifiedCheck {
   return {
@@ -82,6 +109,7 @@ function makeBatchData(overrides: Partial<BatchPrData> = {}): BatchPrData {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockLoadConfig.mockReturnValue(defaultConfig());
   mockFetchPrBatch.mockResolvedValue({ data: makeBatchData() });
   mockGetMergeableState.mockResolvedValue({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" });
   mockFetchStartupFailureChecks.mockResolvedValue([]);
@@ -358,6 +386,7 @@ describe("runCheck — BLOCKED + clean (hand off to humans)", () => {
             line: 1,
             startLine: null,
             author: "alice",
+            authorType: "Unknown" as const,
             body: "fix this",
             url: "",
             createdAtUnix: 0,
@@ -461,16 +490,22 @@ describe("runCheck — reviewSummaries + approvedReviews pass-through", () => {
   it("surfaces an unseen summary in firstLookSummaries (not reviewSummaries) and marks it seen", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
-        reviewSummaries: [{ id: "PRR_SUM", author: "copilot", body: "overview" }],
-        approvedReviews: [{ id: "PRR_AP", author: "alice", body: "" }],
+        reviewSummaries: [
+          { id: "PRR_SUM", author: "copilot", authorType: "Unknown" as const, body: "overview" },
+        ],
+        approvedReviews: [
+          { id: "PRR_AP", author: "alice", authorType: "Unknown" as const, body: "" },
+        ],
       }),
     });
     const report = await runCheck(BASE_OPTS);
     expect(report.firstLookSummaries).toEqual([
-      { id: "PRR_SUM", author: "copilot", body: "overview" },
+      { id: "PRR_SUM", author: "copilot", authorType: "Unknown" as const, body: "overview" },
     ]);
     expect(report.reviewSummaries).toEqual([]);
-    expect(report.approvedReviews).toEqual([{ id: "PRR_AP", author: "alice", body: "" }]);
+    expect(report.approvedReviews).toEqual([
+      { id: "PRR_AP", author: "alice", authorType: "Unknown" as const, body: "" },
+    ]);
     expect(mockMarkSeen).toHaveBeenCalledWith(expect.anything(), "PRR_SUM", "overview");
   });
 
@@ -480,12 +515,14 @@ describe("runCheck — reviewSummaries + approvedReviews pass-through", () => {
     );
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
-        reviewSummaries: [{ id: "PRR_SUM", author: "copilot", body: "overview" }],
+        reviewSummaries: [
+          { id: "PRR_SUM", author: "copilot", authorType: "Unknown" as const, body: "overview" },
+        ],
       }),
     });
     const report = await runCheck(BASE_OPTS);
     expect(report.reviewSummaries).toEqual([
-      { id: "PRR_SUM", author: "copilot", body: "overview" },
+      { id: "PRR_SUM", author: "copilot", authorType: "Unknown" as const, body: "overview" },
     ]);
     expect(report.firstLookSummaries).toEqual([]);
     expect(mockMarkSeen).not.toHaveBeenCalledWith(expect.anything(), "PRR_SUM", expect.anything());
@@ -514,6 +551,7 @@ describe("runCheck — minimized thread filtering", () => {
             line: 1,
             startLine: null,
             author: "alice",
+            authorType: "Unknown" as const,
             body: "fix this",
             url: "",
             createdAtUnix: 0,
@@ -527,6 +565,7 @@ describe("runCheck — minimized thread filtering", () => {
             line: 2,
             startLine: null,
             author: "gemini-code-assist",
+            authorType: "Unknown" as const,
             body: "You have reached your daily quota limit.",
             url: "",
             createdAtUnix: 0,
@@ -550,6 +589,7 @@ function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
     line: 1,
     startLine: null,
     author: "alice",
+    authorType: "Unknown" as const,
     body: "fix this",
     url: "",
     createdAtUnix: 1_700_000_000,
@@ -562,6 +602,7 @@ function makeComment(overrides: Partial<PrComment> = {}): PrComment {
     id: "c-1",
     isMinimized: false,
     author: "bob",
+    authorType: "Unknown" as const,
     body: "nit",
     url: "",
     createdAtUnix: 1_700_000_000,
@@ -616,6 +657,74 @@ describe("runCheck — first-look items", () => {
     const report = await runCheck(BASE_OPTS);
     expect(report.comments.firstLook).toHaveLength(1);
     expect(report.comments.firstLook[0]?.firstLookStatus).toBe("minimized");
+  });
+
+  it("marker-gates visible comments excluded by minimizeComments policy", async () => {
+    const cfg = defaultConfig();
+    cfg.iterate.minimizeComments = "bots";
+    mockLoadConfig.mockReturnValue(cfg);
+    const human = makeComment({
+      id: "c-human",
+      author: "alice",
+      authorType: "User",
+      body: "please consider this",
+    });
+    const bot = makeComment({
+      id: "c-bot",
+      author: "app",
+      authorType: "Bot",
+      body: "automated note",
+    });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ comments: [human, bot] }) });
+    mockLoadSeenMap.mockResolvedValue(new Map());
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.comments.actionable.map((c) => c.id)).toEqual(["c-human", "c-bot"]);
+    expect(report.comments.minimizeIds).toEqual(["c-bot"]);
+    expect(mockMarkSeen).toHaveBeenCalledWith(
+      expect.any(Object),
+      "c-human",
+      "please consider this",
+    );
+    expect(mockMarkSeen).not.toHaveBeenCalledWith(expect.any(Object), "c-bot", expect.anything());
+  });
+
+  it("suppresses unchanged visible comments excluded by minimizeComments policy", async () => {
+    const cfg = defaultConfig();
+    cfg.iterate.minimizeComments = "bots";
+    mockLoadConfig.mockReturnValue(cfg);
+    const human = makeComment({
+      id: "c-human",
+      authorType: "User",
+      body: "already seen",
+    });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ comments: [human] }) });
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([["c-human", { seenAt: 1000, bodyHash: hashBody("already seen") }]]),
+    );
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.comments.actionable).toEqual([]);
+    expect(report.comments.minimizeIds).toEqual([]);
+  });
+
+  it("re-surfaces edited visible comments excluded by minimizeComments policy", async () => {
+    const cfg = defaultConfig();
+    cfg.iterate.minimizeComments = "none";
+    mockLoadConfig.mockReturnValue(cfg);
+    const comment = makeComment({ id: "c-human", authorType: "User", body: "new text" });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ comments: [comment] }) });
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([["c-human", { seenAt: 1000, bodyHash: hashBody("old text") }]]),
+    );
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.comments.actionable.map((c) => c.id)).toEqual(["c-human"]);
+    expect(report.comments.minimizeIds).toEqual([]);
+    expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "c-human", "new text");
   });
 
   it("suppresses already-seen items (unchanged hash)", async () => {

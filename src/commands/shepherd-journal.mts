@@ -5,7 +5,7 @@ export const SHEPHERD_JOURNAL_APPEND_HINT =
   "If this section already exists, append your entries under it instead of creating a duplicate heading.";
 
 export const SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE =
-  "Review the bodies shown under `## Review summaries (first look — to be minimized)` — you are seeing these for the first time. Their IDs are already included in the resolve command's `--minimize-comment-ids`; if any warrants a Shepherd Journal note, append it before running resolve.";
+  "Review the bodies shown under `## Review summaries (first look)` — you are seeing these for the first time. Any IDs eligible for minimization are already included in the resolve command's `--minimize-comment-ids`; if any warrants a Shepherd Journal note, append it before running resolve.";
 
 export function buildShepherdJournalInstruction(
   prNumber: number,

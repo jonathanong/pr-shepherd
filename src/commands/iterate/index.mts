@@ -109,6 +109,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     },
     report.approvedReviews,
     config.iterate.minimizeApprovals,
+    config.iterate.minimizeComments,
   );
   const hasActionableWork =
     report.threads.actionable.length > 0 ||
@@ -117,7 +118,9 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     report.changesRequestedReviews.length > 0 ||
     report.checks.failing.length > 0 ||
     report.mergeStatus.status === "CONFLICTS" ||
-    reviewSummaryIds.length > 0;
+    reviewSummaryIds.length > 0 ||
+    firstLookSummaries.length > 0 ||
+    editedSummaries.length > 0;
 
   if (hasActionableWork) {
     return handleFixCode({

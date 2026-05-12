@@ -210,6 +210,7 @@ const THREAD = {
   line: 10,
   startLine: null,
   author: "reviewer",
+  authorType: "Unknown" as const,
   body: "Fix this",
   url: "",
   createdAtUnix: NOW - 3600,
@@ -348,7 +349,9 @@ describe("runIterate — escalate (pr-level-changes-requested)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        changesRequestedReviews: [{ id: "review-1", author: "boss", body: "Needs rework" }],
+        changesRequestedReviews: [
+          { id: "review-1", author: "boss", authorType: "Unknown" as const, body: "Needs rework" },
+        ],
         threads: {
           actionable: [],
           resolutionOnly: [],
@@ -378,7 +381,9 @@ describe("runIterate — escalate (pr-level-changes-requested)", () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        changesRequestedReviews: [{ id: "review-1", author: "boss", body: "Needs rework" }],
+        changesRequestedReviews: [
+          { id: "review-1", author: "boss", authorType: "Unknown" as const, body: "Needs rework" },
+        ],
         threads: {
           actionable: [],
           resolutionOnly: [RESOLUTION_ONLY_THREAD],
@@ -418,7 +423,9 @@ describe("runIterate — escalate (pr-level-changes-requested suppressed during 
           blockingBotReviewInProgress: false,
           mergeStateStatus: "DIRTY",
         },
-        changesRequestedReviews: [{ id: "review-1", author: "boss", body: "Needs rework" }],
+        changesRequestedReviews: [
+          { id: "review-1", author: "boss", authorType: "Unknown" as const, body: "Needs rework" },
+        ],
         threads: {
           actionable: [],
           resolutionOnly: [],
@@ -446,7 +453,9 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        changesRequestedReviews: [{ id: "review-1", author: "boss", body: "Needs rework" }],
+        changesRequestedReviews: [
+          { id: "review-1", author: "boss", authorType: "Unknown" as const, body: "Needs rework" },
+        ],
         threads: {
           actionable: [],
           resolutionOnly: [],
@@ -460,6 +469,7 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
               id: "comment-1",
               isMinimized: false,
               author: "boss",
+              authorType: "Unknown" as const,
               body: "See review",
               url: "",
               createdAtUnix: NOW - 100,

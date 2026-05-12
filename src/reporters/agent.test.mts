@@ -11,6 +11,7 @@ const thread: ReviewThread = {
   line: 10,
   startLine: null,
   author: "alice",
+  authorType: "User",
   body: "Please fix this method.",
   url: "",
   createdAtUnix: 1700000000,
@@ -20,6 +21,7 @@ const comment: PrComment = {
   id: "c-1",
   isMinimized: false,
   author: "bob",
+  authorType: "Bot",
   body: "Consider renaming.",
   url: "",
   createdAtUnix: 1700000001,
@@ -45,6 +47,7 @@ describe("toAgentThread", () => {
       path: "src/foo.mts",
       line: 10,
       author: "alice",
+      authorType: "User",
       body: "Please fix this method.",
       url: "",
     });
@@ -100,7 +103,13 @@ describe("toAgentThread", () => {
 describe("toAgentComment", () => {
   it("keeps id/author/body and drops isMinimized/createdAtUnix", () => {
     const result = toAgentComment(comment);
-    expect(result).toEqual({ id: "c-1", author: "bob", body: "Consider renaming.", url: "" });
+    expect(result).toEqual({
+      id: "c-1",
+      author: "bob",
+      authorType: "Bot",
+      body: "Consider renaming.",
+      url: "",
+    });
     expect(result).not.toHaveProperty("isMinimized");
     expect(result).not.toHaveProperty("createdAtUnix");
   });

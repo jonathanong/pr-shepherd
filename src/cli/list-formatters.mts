@@ -1,7 +1,11 @@
-import type { SuggestionBlock } from "../types.mts";
+import type { AuthorType, SuggestionBlock } from "../types.mts";
 import { renderLineRange, renderSuggestionBlock } from "./suggestion-renderer.mts";
 
 const BODY_PREVIEW_MAX = 100;
+
+export function renderAuthor(author: string, authorType?: AuthorType): string {
+  return authorType ? `@${author} · ${authorType}` : `@${author}`;
+}
 
 export function renderBodyPreview(body: string): string {
   const normalizedBody = body.replace(/\r\n?/g, "\n");
@@ -37,6 +41,7 @@ interface ThreadBulletInput {
   startLine?: number | null;
   line?: number | null;
   author: string;
+  authorType?: AuthorType;
   body: string;
   suggestion?: SuggestionBlock;
 }
@@ -51,7 +56,7 @@ export function renderThreadBullet(
     : "`(no location)`";
   const suggestionMarker = t.suggestion ? " [suggestion]" : "";
   const statusSuffix = opts.statusTag ? ` ${opts.statusTag}` : "";
-  const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (@${t.author})${suggestionMarker}${statusSuffix}: ${renderBodyPreview(t.body)}`;
+  const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (${renderAuthor(t.author, t.authorType)})${suggestionMarker}${statusSuffix}: ${renderBodyPreview(t.body)}`;
   if (t.suggestion && opts.renderSuggestion) {
     return `${bulletLine}\n${renderSuggestionBlock(t.suggestion)}`;
   }
@@ -59,26 +64,26 @@ export function renderThreadBullet(
 }
 
 export function renderCommentBullet(
-  c: { id: string; url?: string; author: string; body: string },
+  c: { id: string; url?: string; author: string; authorType?: AuthorType; body: string },
   opts: { statusTag?: string } = {},
 ): string {
   const link = c.url ? ` [↗](${c.url})` : "";
   const statusSuffix = opts.statusTag ? ` ${opts.statusTag}` : "";
-  return `- \`commentId=${c.id}\`${link} (@${c.author})${statusSuffix}: ${renderBodyPreview(c.body)}`;
+  return `- \`commentId=${c.id}\`${link} (${renderAuthor(c.author, c.authorType)})${statusSuffix}: ${renderBodyPreview(c.body)}`;
 }
 
 export function renderReviewBullet(
-  r: { id: string; author: string; body?: string },
+  r: { id: string; author: string; authorType?: AuthorType; body?: string },
   opts: { includeBody?: boolean } = {},
 ): string {
   const bodySuffix =
     opts.includeBody && r.body != null && r.body !== "" ? `: ${renderBodyPreview(r.body)}` : "";
-  return `- \`reviewId=${r.id}\` (@${r.author})${bodySuffix}`;
+  return `- \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType)})${bodySuffix}`;
 }
 
 export function renderReviewListSection(
   heading: string,
-  items: { id: string; author: string; body?: string }[],
+  items: { id: string; author: string; authorType?: AuthorType; body?: string }[],
 ): string | null {
   if (items.length === 0) return null;
   return `## ${heading}\n\n${items.map((r) => renderReviewBullet(r, { includeBody: true })).join("\n")}`;

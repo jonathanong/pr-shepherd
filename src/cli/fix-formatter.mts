@@ -7,6 +7,7 @@ import {
   renderReviewBullet,
   renderFirstLookStatusTag,
   renderThreadResolutionStatusTag,
+  renderAuthor,
 } from "./list-formatters.mts";
 import { adaptFixCodeInstructions, numberInstructions } from "./iterate-instructions.mts";
 import type { AgentRuntime } from "../agent-runtime.mts";
@@ -34,7 +35,9 @@ export function formatFixCodeResult(
       const loc = t.path ? `\`${t.path}:${lineLabel}\`` : "(no location)";
       const heading = t.url ? `[threadId=${t.id}](${t.url})` : `\`threadId=${t.id}\``;
       const suggestionMarker = t.suggestion ? " [suggestion]" : "";
-      sections.push(`### ${heading} — ${loc} (@${t.author})${suggestionMarker}`);
+      sections.push(
+        `### ${heading} — ${loc} (${renderAuthor(t.author, t.authorType)})${suggestionMarker}`,
+      );
       sections.push(blockquote(t.body));
       if (t.suggestion) {
         sections.push(renderSuggestionBlock(t.suggestion, ""));
@@ -55,7 +58,7 @@ export function formatFixCodeResult(
     sections.push("## Actionable comments");
     for (const c of result.fix.actionableComments) {
       const heading = c.url ? `[commentId=${c.id}](${c.url})` : `\`commentId=${c.id}\``;
-      sections.push(`### ${heading} (@${c.author})`);
+      sections.push(`### ${heading} (${renderAuthor(c.author, c.authorType)})`);
       sections.push(blockquote(c.body));
     }
   }
@@ -87,9 +90,9 @@ export function formatFixCodeResult(
   }
 
   if (result.fix.firstLookSummaries.length > 0) {
-    sections.push("## Review summaries (first look — to be minimized)");
+    sections.push("## Review summaries (first look)");
     for (const r of result.fix.firstLookSummaries) {
-      sections.push(`### \`reviewId=${r.id}\` (@${r.author})`);
+      sections.push(`### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType)})`);
       sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body));
     }
   }
@@ -99,7 +102,7 @@ export function formatFixCodeResult(
       "## Review summaries (edited since first look — already minimized; do not re-minimize)",
     );
     for (const r of result.fix.editedSummaries) {
-      sections.push(`### \`reviewId=${r.id}\` (@${r.author})`);
+      sections.push(`### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType)})`);
       sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body));
     }
   }
@@ -114,7 +117,7 @@ export function formatFixCodeResult(
   if (result.fix.surfacedApprovals.length > 0) {
     sections.push("## Approvals (surfaced — not minimized)");
     for (const r of result.fix.surfacedApprovals) {
-      sections.push(`### \`reviewId=${r.id}\` (@${r.author})`);
+      sections.push(`### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType)})`);
       sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body));
     }
   }

@@ -210,6 +210,7 @@ const THREAD = {
   line: 10,
   startLine: null,
   author: "reviewer",
+  authorType: "Unknown" as const,
   body: "Fix this",
   url: "",
   createdAtUnix: NOW - 3600,
@@ -222,6 +223,7 @@ describe("runIterate — prescriptive fields: resolveCommand shape", () => {
       id: "c-1",
       isMinimized: false,
       author: "reviewer",
+      authorType: "Unknown" as const,
       body: "Fix the types here",
       url: "",
       createdAtUnix: NOW,
@@ -268,7 +270,12 @@ describe("runIterate — prescriptive fields: resolveCommand shape", () => {
   });
 
   it("resolveCommand includes dismiss-review-ids and $DISMISS_MESSAGE when changesRequested", async () => {
-    const review = { id: "r-1", author: "reviewer", body: "Please address the naming" };
+    const review = {
+      id: "r-1",
+      author: "reviewer",
+      authorType: "Unknown" as const,
+      body: "Please address the naming",
+    };
     const thread = { ...THREAD };
     mockRunCheck.mockResolvedValue(
       makeReport({
