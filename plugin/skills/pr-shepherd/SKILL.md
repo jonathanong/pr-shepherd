@@ -20,7 +20,7 @@ One-tick dispatcher for iterating a PR to completion.
    - Otherwise, infer: `gh pr view --json number --jq .number`
    - If no PR found, report an error and stop.
 
-2. **Short-circuit if merged:**
+2. **Short-circuit if merged or closed:**
 
    ```bash
    gh pr view <N> --json state --jq '.state'
