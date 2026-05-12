@@ -146,7 +146,7 @@ export interface MergeStatusResult {
   isDraft: boolean;
   mergeable: MergeableState;
   reviewDecision: ReviewDecision;
-  copilotReviewInProgress: boolean;
+  blockingBotReviewInProgress: boolean;
   mergeStateStatus: MergeStateStatus;
 }
 
@@ -174,7 +174,7 @@ export interface BatchPrData {
   changesRequestedReviews: Review[];
   /** COMMENTED reviews with a non-empty, non-minimized body — surfaced for agent-driven minimize. */
   reviewSummaries: Review[];
-  /** APPROVED reviews that are not minimized — opt-in minimize target for the monitor loop. */
+  /** APPROVED reviews that are not minimized — opt-in minimize target for the iterate loop. */
   approvedReviews: Review[];
   checks: CheckRun[];
 }

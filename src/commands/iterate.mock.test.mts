@@ -52,7 +52,7 @@ vi.mock("../state/iterate-stall.mts", () => ({
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
-import { runIterate } from "./iterate.mts";
+import { runIterate } from "./iterate/index.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
@@ -83,7 +83,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       isDraft: false,
       mergeable: "MERGEABLE",
       reviewDecision: "APPROVED",
-      copilotReviewInProgress: false,
+      blockingBotReviewInProgress: false,
       mergeStateStatus: "CLEAN",
     },
     checks: {
@@ -248,7 +248,7 @@ describe("runIterate — cancel on merged/closed PR", () => {
           isDraft: false,
           mergeable: "UNKNOWN",
           reviewDecision: null,
-          copilotReviewInProgress: false,
+          blockingBotReviewInProgress: false,
           mergeStateStatus: "UNKNOWN",
         },
       }),
@@ -270,7 +270,7 @@ describe("runIterate — cancel on merged/closed PR", () => {
           isDraft: false,
           mergeable: "UNKNOWN",
           reviewDecision: null,
-          copilotReviewInProgress: false,
+          blockingBotReviewInProgress: false,
           mergeStateStatus: "UNKNOWN",
         },
       }),

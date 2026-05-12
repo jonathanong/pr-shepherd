@@ -10,7 +10,7 @@ The timer also starts when the PR is BLOCKED but shepherd has nothing left to do
 
 ## The `updateReadyDelay` function
 
-Located in `commands/ready-delay.mts`, called from `iterate.mts` (step 3).
+Located in `commands/ready-delay.mts`, called from `commands/iterate/index.mts` (step 3).
 
 ```
 updateReadyDelay(pr, isReady, readyDelaySeconds, owner, repo)

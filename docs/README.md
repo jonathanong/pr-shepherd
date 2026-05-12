@@ -13,7 +13,7 @@ Quick entry point. For a command overview see [`../README.md`](../README.md).
 | [architecture.md](architecture.md)       | Module map, dependency rules, where to put new code                        |
 | [iterate-flow.md](iterate-flow.md)       | Full 8-step dispatch walkthrough inside `iterate`                          |
 | [actions.md](actions.md)                 | Every action: trigger, side-effects, prescriptive output fields            |
-| [watch-loop.md](watch-loop.md)           | How the monitor skill + `/loop` + `iterate` interact                       |
+| [watch-loop.md](watch-loop.md)           | How the pr-shepherd skill and `iterate` interact                           |
 | [ready-delay.md](ready-delay.md)         | Loop-state files: ready-since, fix-attempts, iterate-stall                 |
 | [graphql.md](graphql.md)                 | Batch query, pagination strategy, REST fallbacks                           |
 | [checks.md](checks.md)                   | Classify → triage → `failedStep`, `jobName`, event filtering               |

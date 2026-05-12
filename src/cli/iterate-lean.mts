@@ -35,7 +35,7 @@ export function projectIterateLean(
     mergeStateStatus: result.mergeStateStatus,
     ...(result.mergeStatus === "BLOCKED" &&
       result.reviewDecision !== null && { reviewDecision: result.reviewDecision }),
-    ...(result.copilotReviewInProgress && { copilotReviewInProgress: true }),
+    ...(result.blockingBotReviewInProgress && { blockingBotReviewInProgress: true }),
     ...(result.isDraft && { isDraft: true }),
     summary: {
       passing: result.summary.passing,
@@ -78,7 +78,6 @@ export function projectIterateLean(
         ...(result.checks.length > 0 && { checks: result.checks }),
         ...(result.cancelled.length > 0 && { cancelled: result.cancelled }),
         fix: {
-          mode: result.fix.mode,
           ...(result.fix.threads.length > 0 && { threads: result.fix.threads }),
           ...(result.fix.resolutionOnlyThreads.length > 0 && {
             resolutionOnlyThreads: result.fix.resolutionOnlyThreads,
@@ -137,9 +136,9 @@ export function projectIterateLean(
           ...(result.escalate.changesRequestedReviews.length > 0 && {
             changesRequestedReviews: result.escalate.changesRequestedReviews,
           }),
-          ...(result.escalate.attemptHistory &&
-            result.escalate.attemptHistory.length > 0 && {
-              attemptHistory: result.escalate.attemptHistory,
+          ...(result.escalate.thrashHistory &&
+            result.escalate.thrashHistory.length > 0 && {
+              thrashHistory: result.escalate.thrashHistory,
             }),
           suggestion: result.escalate.suggestion,
           humanMessage: result.escalate.humanMessage,

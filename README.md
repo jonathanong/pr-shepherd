@@ -9,7 +9,7 @@ Example Workflow:
 2. Create a plan
 3. Accept the plan
 4. Switch to Auto Mode
-5. Prompt: `make a PR, then run /pr-shepherd:monitor`
+5. Prompt: `make a PR, then run /pr-shepherd:pr-shepherd`
 6. Agent makes a draft PR
 7. PR has passing CI -> draft is marked Ready for Review
 8. Review bots begin providing reviews
@@ -34,7 +34,7 @@ At a high level, the skill invokes `pr-shepherd <PR>` through the selected packa
 
 ## Review threads
 
-### `PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate.mts:42` (@alice)
+### `PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate/index.mts:42` (@alice)
 
 > The variable name is misleading.
 >
@@ -112,9 +112,9 @@ Recommendations:
 
 ## Usage
 
-### Monitor a PR
+### Iterate a PR to completion
 
-One-tick dispatcher — checks CI and review comments, fixes issues, and marks the PR ready for review when clean. Loops by sleeping between 30 seconds and 4 minutes and rerunning the configured command until the CLI emits `[CANCEL]` or `[ESCALATE]`.
+One-tick dispatcher — checks CI and review comments, fixes issues, and marks the PR ready for review when clean. Each non-terminal tick emits an `## Instructions` section telling the agent to pick a fresh 30s–4m delay and rerun; the loop continues until `[CANCEL]` or `[ESCALATE]`.
 
 Claude Code (via `pr-shepherd` skill):
 
@@ -208,13 +208,13 @@ If your Codex environment does not already set `CODEX_CI=1`, set `AGENT=codex` s
 export AGENT=codex
 ```
 
-Then start a PR monitor from Codex with the target repository's package runner:
+Then iterate a PR from Codex with the target repository's package runner:
 
 ```bash
-<runner> pr-shepherd monitor 42
+<runner> pr-shepherd iterate 42
 ```
 
-For example, a repo like `~/filaments` that declares `packageManager: "pnpm@..."` and has `pnpm-lock.yaml` should use `pnpm exec pr-shepherd monitor 42`. For npm repos, use `npx --no-install pr-shepherd monitor 42`.
+For example, a repo like `~/filaments` that declares `packageManager: "pnpm@..."` and has `pnpm-lock.yaml` should use `pnpm exec pr-shepherd iterate 42`. For npm repos, use `npx --no-install pr-shepherd iterate 42`.
 
 Or ask Codex to use the `pr-shepherd` skill, for example: `run pr-shepherd until this PR is ready`. Follow the output's `## Instructions`. The skill runs one tick and the instructions tell you to pick a fresh sleep/timeout between 30 seconds and 4 minutes before the next rerun. Continue until Shepherd emits `[CANCEL]` or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). `pr-shepherd iterate 42` remains supported for existing workflows.
 

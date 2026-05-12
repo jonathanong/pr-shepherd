@@ -54,7 +54,7 @@ vi.mock("../state/iterate-stall.mts", () => ({
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
-import { runIterate } from "./iterate.mts";
+import { runIterate } from "./iterate/index.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
@@ -85,7 +85,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       isDraft: false,
       mergeable: "MERGEABLE",
       reviewDecision: "APPROVED",
-      copilotReviewInProgress: false,
+      blockingBotReviewInProgress: false,
       mergeStateStatus: "CLEAN",
     },
     checks: {
@@ -294,7 +294,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       expect(result.fix.threads).toHaveLength(2);
       expect(result.fix.actionableComments).toHaveLength(0);
       expect(result.fix.checks).toHaveLength(0);
@@ -382,7 +382,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       const joined = result.fix.instructions.join("\n");
       const journalMentions = joined.match(/## Shepherd Journal/g)?.length ?? 0;
       expect(joined).toContain("Shepherd Journal");
@@ -448,7 +448,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       expect(result.fix.checks).toHaveLength(1);
       const joined = result.fix.instructions.join("\n");
       const mentions = joined.match(/## Shepherd Journal/g)?.length ?? 0;

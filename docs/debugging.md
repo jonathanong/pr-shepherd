@@ -100,5 +100,5 @@ pr-shepherd <PR> --format=json
 For human-readable output:
 
 ```bash
-pr-shepherd check <PR>
+pr-shepherd iterate <PR>
 ```

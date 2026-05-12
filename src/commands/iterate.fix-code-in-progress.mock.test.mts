@@ -40,7 +40,7 @@ vi.mock("../state/iterate-stall.mts", () => ({
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
-import { runIterate } from "./iterate.mts";
+import { runIterate } from "./iterate/index.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
@@ -67,7 +67,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       isDraft: false,
       mergeable: "MERGEABLE",
       reviewDecision: "APPROVED",
-      copilotReviewInProgress: false,
+      blockingBotReviewInProgress: false,
       mergeStateStatus: "CLEAN",
     },
     checks: {
@@ -201,7 +201,7 @@ describe("fix_code — in-progress run cancellation", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       expect(result.fix.inProgressRunIds).toContain("run-in-1");
       expect(result.fix.inProgressRunIds).not.toContain("run-fail-1");
       expect(result.fix.instructions[0]).toMatch(/Cancel in-progress CI runs first/);
@@ -241,7 +241,7 @@ describe("fix_code — in-progress run cancellation", () => {
 
     const result = await runIterate(makeOpts());
 
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       expect(result.fix.inProgressRunIds).toHaveLength(0);
       expect(result.fix.instructions.join("\n")).not.toMatch(/Cancel in-progress CI runs first/);
     }
@@ -293,7 +293,7 @@ describe("fix_code — in-progress run cancellation", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       expect(result.fix.actionableComments).toHaveLength(1);
       expect(result.fix.inProgressRunIds).toHaveLength(0);
       expect(result.fix.instructions.join("\n")).not.toMatch(/Cancel in-progress CI runs first/);

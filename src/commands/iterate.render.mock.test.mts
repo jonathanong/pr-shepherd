@@ -54,7 +54,7 @@ vi.mock("../state/iterate-stall.mts", () => ({
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
-import { runIterate } from "./iterate.mts";
+import { runIterate } from "./iterate/index.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
@@ -85,7 +85,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       isDraft: false,
       mergeable: "MERGEABLE",
       reviewDecision: "APPROVED",
-      copilotReviewInProgress: false,
+      blockingBotReviewInProgress: false,
       mergeStateStatus: "CLEAN",
     },
     checks: {
@@ -232,7 +232,7 @@ describe("runIterate — prescriptive fields: log strings", () => {
           isDraft: mergeStatusVal === "DRAFT",
           mergeable: "MERGEABLE",
           reviewDecision: null,
-          copilotReviewInProgress: false,
+          blockingBotReviewInProgress: false,
           mergeStateStatus: mergeStatusVal,
         },
       }),
@@ -258,7 +258,7 @@ describe("runIterate — prescriptive fields: log strings", () => {
           isDraft: false,
           mergeable: "MERGEABLE",
           reviewDecision: "APPROVED",
-          copilotReviewInProgress: false,
+          blockingBotReviewInProgress: false,
           mergeStateStatus: "CLEAN",
         },
       }),
@@ -282,7 +282,7 @@ describe("runIterate — prescriptive fields: log strings", () => {
           isDraft: false,
           mergeable: "UNKNOWN",
           reviewDecision: null,
-          copilotReviewInProgress: false,
+          blockingBotReviewInProgress: false,
           mergeStateStatus: "UNKNOWN",
         },
       }),
@@ -402,7 +402,7 @@ describe("runIterate — prescriptive fields: log strings", () => {
           isDraft: true,
           mergeable: "MERGEABLE",
           reviewDecision: "APPROVED",
-          copilotReviewInProgress: false,
+          blockingBotReviewInProgress: false,
           mergeStateStatus: "DRAFT",
         },
       }),
@@ -438,7 +438,7 @@ describe("runIterate — HAS_HOOKS (derived BLOCKED)", () => {
         isDraft: false,
         mergeable: "MERGEABLE",
         reviewDecision,
-        copilotReviewInProgress: false,
+        blockingBotReviewInProgress: false,
         mergeStateStatus: "HAS_HOOKS",
       },
     });

@@ -54,7 +54,7 @@ vi.mock("../state/iterate-stall.mts", () => ({
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
-import { runIterate } from "./iterate.mts";
+import { runIterate } from "./iterate/index.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
@@ -85,7 +85,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       isDraft: false,
       mergeable: "MERGEABLE",
       reviewDecision: "APPROVED",
-      copilotReviewInProgress: false,
+      blockingBotReviewInProgress: false,
       mergeStateStatus: "CLEAN",
     },
     checks: {
@@ -222,8 +222,7 @@ describe("runIterate — review summary auto-minimize", () => {
 
     expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") return;
-    expect(result.fix.mode).toBe("rebase-and-push");
-    if (result.fix.mode !== "rebase-and-push") return;
+
     expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
     expect(result.fix.surfacedApprovals).toEqual([]);
     expect(result.fix.resolveCommand.argv).toContain("--minimize-comment-ids");
@@ -240,7 +239,7 @@ describe("runIterate — review summary auto-minimize", () => {
     });
     const result = await runIterate(makeOpts());
     if (result.action !== "fix_code") return;
-    if (result.fix.mode !== "rebase-and-push") return;
+
     expect(result.fix.reviewSummaryIds).toEqual(["PRR_BRK"]);
   });
 
@@ -253,7 +252,7 @@ describe("runIterate — review summary auto-minimize", () => {
     });
     const result = await runIterate(makeOpts());
     if (result.action !== "fix_code") return;
-    if (result.fix.mode !== "rebase-and-push") return;
+
     expect(result.fix.reviewSummaryIds).toEqual(["PRR_GEM"]);
   });
 
@@ -266,7 +265,7 @@ describe("runIterate — review summary auto-minimize", () => {
     });
     const result = await runIterate(makeOpts());
     if (result.action !== "fix_code") return;
-    if (result.fix.mode !== "rebase-and-push") return;
+
     expect(result.fix.reviewSummaryIds).toEqual(["PRR_HUMAN"]);
     expect(result.fix.surfacedApprovals).toEqual([]);
   });
@@ -280,7 +279,7 @@ describe("runIterate — review summary auto-minimize", () => {
     });
     const result = await runIterate(makeOpts());
     if (result.action !== "fix_code") return;
-    if (result.fix.mode !== "rebase-and-push") return;
+
     expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT", "PRR_HUMAN"]);
     expect(result.fix.surfacedApprovals).toEqual([]);
   });
@@ -316,7 +315,7 @@ describe("runIterate — review summary auto-minimize", () => {
     });
     const result = await runIterate(makeOpts());
     if (result.action !== "fix_code") return;
-    if (result.fix.mode !== "rebase-and-push") return;
+
     expect(result.fix.reviewSummaryIds).toEqual(["PRR_AP"]);
   });
 
@@ -368,8 +367,7 @@ describe("runIterate — review summary auto-minimize", () => {
 
     expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") return;
-    expect(result.fix.mode).toBe("rebase-and-push");
-    if (result.fix.mode !== "rebase-and-push") return;
+
     expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
   });
 
@@ -390,7 +388,7 @@ describe("runIterate — review summary auto-minimize", () => {
 
     expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") return;
-    if (result.fix.mode !== "rebase-and-push") return;
+
     expect(result.fix.editedSummaries).toEqual([editedSummary]);
     expect(result.fix.reviewSummaryIds).toContain("PRR_SEEN");
     expect(result.fix.reviewSummaryIds).not.toContain("PRR_ED");
@@ -410,7 +408,7 @@ describe("runIterate — review summary auto-minimize", () => {
 
     expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") return;
-    if (result.fix.mode !== "rebase-and-push") return;
+
     expect(result.fix.firstLookSummaries).toEqual([summary]);
     expect(result.fix.reviewSummaryIds).toContain("PRR_FL");
   });

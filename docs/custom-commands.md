@@ -38,7 +38,7 @@ resolves `pr-shepherd ...` without prompting to install the package.
    (for example, `pnpm exec`, `yarn run`, or `npx --no-install`).
 
    ```bash
-   <runner> pr-shepherd check <PR_NUMBER> --format=json
+   <runner> pr-shepherd iterate <PR_NUMBER> --format=json
    ```
 
    Parse the JSON and report:

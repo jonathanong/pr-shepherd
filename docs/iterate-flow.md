@@ -2,7 +2,7 @@
 
 [← README](../README.md) | [actions.md](actions.md)
 
-`commands/iterate.mts` is the heart of the watch loop. Each dynamic tick calls it once and interprets the JSON result.
+`commands/iterate/index.mts` is the heart of the iterate loop. Each tick calls it once and follows the `## Instructions` in the result.
 
 ## Steps
 
@@ -89,7 +89,7 @@ CONFLICTS is included here because the `fix_code` handler already runs `git fetc
 
 ### 4. Mark ready
 
-**Check:** `report.status === 'READY'` AND `mergeStateStatus` is `CLEAN` (or `DRAFT` when `isDraft`) AND `!copilotReviewInProgress` AND `isDraft` AND `!shouldCancel`.
+**Check:** `report.status === 'READY'` AND `mergeStateStatus` is `CLEAN` (or `DRAFT` when `isDraft`) AND `!blockingBotReviewInProgress` AND `isDraft` AND `!shouldCancel`.
 
 **Side-effects:** `gh pr ready <PR>`
 

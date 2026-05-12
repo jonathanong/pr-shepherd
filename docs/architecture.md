@@ -27,11 +27,10 @@ shepherd/
 │   └── fix-formatter.mts  # Markdown formatter for fix_code variant
 │
 ├── commands/              # one file (or dir) per subcommand
-│   ├── check.mts          # read-only snapshot (GraphQL fetch → classify → report)
-│   ├── check-status.mts   # derives check-command ShepherdStatus from a report
+│   ├── check.mts          # read-only snapshot (GraphQL fetch → classify → report); internal helper
+│   ├── check-status.mts   # derives ShepherdStatus from a report
 │   ├── commit-suggestion.mts  # applies a reviewer ```suggestion block as a commit
-│   ├── iterate.mts        # re-exports runIterate + renderResolveCommand
-│   ├── iterate/           # iterate subcommand internals
+│   ├── iterate/           # iterate subcommand (default invocation)
 │   │   ├── index.mts      # main runIterate orchestrator
 │   │   ├── classify.mts   # classifyReviewSummaries
 │   │   ├── escalate.mts   # escalation predicate

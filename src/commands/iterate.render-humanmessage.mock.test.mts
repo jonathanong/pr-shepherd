@@ -54,7 +54,7 @@ vi.mock("../state/iterate-stall.mts", () => ({
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
-import { runIterate } from "./iterate.mts";
+import { runIterate } from "./iterate/index.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
@@ -85,7 +85,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       isDraft: false,
       mergeable: "MERGEABLE",
       reviewDecision: "APPROVED",
-      copilotReviewInProgress: false,
+      blockingBotReviewInProgress: false,
       mergeStateStatus: "CLEAN",
     },
     checks: {
@@ -251,8 +251,8 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
       expect(humanMessage).toMatch(/fix-thrash/);
       expect(humanMessage).toMatch(/thread-1/);
       expect(humanMessage).toMatch(/src\/foo\.mts/);
-      expect(humanMessage).toMatch(/pr-shepherd:check 42/);
-      expect(humanMessage).toMatch(/pr-shepherd:monitor 42` to resume/);
+      expect(humanMessage).toMatch(/pr-shepherd:pr-shepherd 42/);
+      expect(humanMessage).toMatch(/pr-shepherd:pr-shepherd 42` to resume/);
     }
   });
 
@@ -301,7 +301,7 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
           isDraft: false,
           mergeable: "CONFLICTING",
           reviewDecision: null,
-          copilotReviewInProgress: false,
+          blockingBotReviewInProgress: false,
           mergeStateStatus: "DIRTY",
         },
       }),

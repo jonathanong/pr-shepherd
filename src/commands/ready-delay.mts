@@ -22,7 +22,7 @@ export interface ReadyDelayState {
    * longer than the configured ready-delay.
    */
   shouldCancel: boolean;
-  /** How many seconds remain in the ready-delay cooldown. */
+  /** How many seconds remain in the ready-delay. */
   remainingSeconds: number;
 }
 

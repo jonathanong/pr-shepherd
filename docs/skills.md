@@ -67,12 +67,12 @@ Codex runs the same skill — one tick per goal iteration. The CLI detects Codex
 export AGENT=codex
 ```
 
-## `/pr-shepherd:resolve`
+## Resolve without iterating
 
-To fix review comments without starting a full goal loop, run `pr-shepherd resolve` directly:
+To fix review comments without starting a full iterate loop, run `pr-shepherd resolve` directly:
 
 ```bash
 <runner> pr-shepherd resolve <N> --fetch
 ```
 
-Follow the `## Instructions` in the output. The resolve skill has been folded into the main `pr-shepherd` skill — the CLI's `fix_code` action emits the exact `resolve` command to run after pushing fixes.
+Follow the `## Instructions` in the output. The `fix_code` action emits the exact `resolve` command to run after pushing fixes — so a full `pr-shepherd` iterate tick also covers resolve.

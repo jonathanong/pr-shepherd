@@ -1,5 +1,5 @@
 import { runCommitSuggestion } from "../commands/commit-suggestion.mts";
-import { runIterate } from "../commands/iterate.mts";
+import { runIterate } from "../commands/iterate/index.mts";
 import { loadConfig } from "../config/load.mts";
 import { detectAgentRuntime } from "../agent-runtime.mts";
 import { parseCommonArgs, getFlag, hasFlag } from "./args.mts";

@@ -35,7 +35,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       mergeStateStatus: report.mergeStatus.mergeStateStatus,
       mergeStatus: report.mergeStatus.status,
       reviewDecision: report.mergeStatus.reviewDecision,
-      copilotReviewInProgress: report.mergeStatus.copilotReviewInProgress,
+      blockingBotReviewInProgress: report.mergeStatus.blockingBotReviewInProgress,
       isDraft: report.mergeStatus.isDraft,
       shouldCancel: true,
       remainingSeconds: 0,
@@ -45,7 +45,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       checks: buildRelevantChecks(report),
       action: "cancel",
       reason: report.mergeStatus.state === "MERGED" ? "merged" : "closed",
-      log: `CANCEL: PR #${report.pr} is ${state} — stopping monitor`,
+      log: `CANCEL: PR #${report.pr} is ${state} — stopping`,
     };
   }
 
@@ -70,7 +70,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     mergeStateStatus: report.mergeStatus.mergeStateStatus,
     mergeStatus: report.mergeStatus.status,
     reviewDecision: report.mergeStatus.reviewDecision,
-    copilotReviewInProgress: report.mergeStatus.copilotReviewInProgress,
+    blockingBotReviewInProgress: report.mergeStatus.blockingBotReviewInProgress,
     isDraft: report.mergeStatus.isDraft,
     shouldCancel: readyState.shouldCancel,
     remainingSeconds: readyState.remainingSeconds,
@@ -89,7 +89,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       ...base,
       action: "cancel",
       reason: "ready-delay-elapsed",
-      log: `CANCEL: PR #${base.pr} ${cancelNote} — ready-delay elapsed, stopping monitor`,
+      log: `CANCEL: PR #${base.pr} ${cancelNote} — ready-delay elapsed, stopping`,
     };
   }
 
@@ -141,7 +141,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   const canMarkReady =
     report.status === "READY" &&
     report.mergeStatus.isDraft &&
-    !report.mergeStatus.copilotReviewInProgress &&
+    !report.mergeStatus.blockingBotReviewInProgress &&
     !readyState.shouldCancel;
 
   if (canMarkReady && !opts.noAutoMarkReady && config.actions.autoMarkReady) {

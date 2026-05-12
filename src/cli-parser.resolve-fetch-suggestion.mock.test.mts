@@ -6,8 +6,8 @@ vi.mock("./commands/resolve.mts", () => ({
   runResolveMutate: vi.fn(),
 }));
 vi.mock("./commands/commit-suggestion.mts", () => ({ runCommitSuggestion: vi.fn() }));
-vi.mock("./commands/iterate.mts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./commands/iterate.mts")>();
+vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./commands/iterate/index.mts")>();
   return { ...actual, runIterate: vi.fn() };
 });
 vi.mock("./github/client.mts", () => ({

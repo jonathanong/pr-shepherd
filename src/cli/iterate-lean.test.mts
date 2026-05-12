@@ -13,15 +13,15 @@ describe("projectIterateLean", () => {
     expect(lean.shouldCancel).toBeUndefined();
   });
 
-  it("omits copilotReviewInProgress when false", () => {
+  it("omits blockingBotReviewInProgress when false", () => {
     const lean = projectIterateLean(makeIterateResult("wait")) as Record<string, unknown>;
-    expect(lean.copilotReviewInProgress).toBeUndefined();
+    expect(lean.blockingBotReviewInProgress).toBeUndefined();
   });
 
-  it("includes copilotReviewInProgress: true when set", () => {
-    const result = { ...makeIterateResult("wait"), copilotReviewInProgress: true };
+  it("includes blockingBotReviewInProgress: true when set", () => {
+    const result = { ...makeIterateResult("wait"), blockingBotReviewInProgress: true };
     const lean = projectIterateLean(result) as Record<string, unknown>;
-    expect(lean.copilotReviewInProgress).toBe(true);
+    expect(lean.blockingBotReviewInProgress).toBe(true);
   });
 
   it("omits isDraft when false", () => {
@@ -292,7 +292,7 @@ describe("projectIterateLean", () => {
     expect(esc.unresolvedThreads).toBeUndefined();
     expect(esc.ambiguousComments).toBeUndefined();
     expect(esc.changesRequestedReviews).toBeUndefined();
-    expect(esc.attemptHistory).toBeUndefined();
+    expect(esc.thrashHistory).toBeUndefined();
     expect(esc.suggestion).toBe("check manually");
     expect(esc.humanMessage).toBeDefined();
   });
@@ -306,7 +306,7 @@ describe("projectIterateLean", () => {
     ];
     result.escalate.ambiguousComments = [{ id: "c1", author: "a", body: "?", url: "" }];
     result.escalate.changesRequestedReviews = [{ id: "rv1", author: "a", body: "" }];
-    result.escalate.attemptHistory = [{ threadId: "t1", attempts: 3 }];
+    result.escalate.thrashHistory = [{ threadId: "t1", attempts: 3 }];
 
     const lean = projectIterateLean(result) as Record<string, unknown>;
     const esc = lean.escalate as Record<string, unknown>;
@@ -314,6 +314,6 @@ describe("projectIterateLean", () => {
     expect((esc.unresolvedThreads as unknown[]).length).toBe(1);
     expect((esc.ambiguousComments as unknown[]).length).toBe(1);
     expect((esc.changesRequestedReviews as unknown[]).length).toBe(1);
-    expect((esc.attemptHistory as unknown[]).length).toBe(1);
+    expect((esc.thrashHistory as unknown[]).length).toBe(1);
   });
 });

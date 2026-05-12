@@ -54,7 +54,8 @@ vi.mock("../state/iterate-stall.mts", () => ({
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
-import { runIterate, renderResolveCommand } from "./iterate.mts";
+import { runIterate } from "./iterate/index.mts";
+import { renderResolveCommand } from "./iterate/render.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
@@ -85,7 +86,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       isDraft: false,
       mergeable: "MERGEABLE",
       reviewDecision: "APPROVED",
-      copilotReviewInProgress: false,
+      blockingBotReviewInProgress: false,
       mergeStateStatus: "CLEAN",
     },
     checks: {
@@ -380,7 +381,7 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
 
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code" && result.fix.mode === "rebase-and-push") {
+    if (result.action === "fix_code") {
       expect(result.fix.resolveCommand.argv).not.toContain("$HEAD_SHA");
       expect(result.fix.resolveCommand.argv).not.toContain("--require-sha");
       expect(result.fix.resolveCommand.requiresHeadSha).toBe(true);

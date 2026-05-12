@@ -20,13 +20,20 @@ import type {
 
 export type ShepherdAction = "wait" | "fix_code" | "mark_ready" | "cancel" | "escalate";
 
+export type EscalateTrigger =
+  | "fix-thrash"
+  | "base-branch-unknown"
+  | "stall-timeout"
+  | "thread-missing-location"
+  | "pr-level-changes-requested";
+
 export interface EscalateDetails {
-  triggers: string[];
+  triggers: EscalateTrigger[];
   unresolvedThreads: AgentThread[];
   ambiguousComments: AgentComment[];
   changesRequestedReviews: Review[];
   /** Populated when fix-thrash triggered — threads that have been attempted too many times. */
-  attemptHistory?: Array<{ threadId: string; attempts: number }>;
+  thrashHistory?: Array<{ threadId: string; attempts: number }>;
   /** One-line hint for the human on what to do. */
   suggestion: string;
   /** Full human-readable block ready to print: headline, triggers, suggestions, thread list. */
@@ -50,11 +57,16 @@ export interface IterateResultBase {
    * Shepherd-derived merge classification (from deriveMergeStatus). Use this
    * (not raw mergeStateStatus) when gating on "is this PR merge-blocked?":
    * it collapses BLOCKED+HAS_HOOKS into "BLOCKED" and accounts for
-   * copilotReviewInProgress and isDraft overrides.
+   * blockingBotReviewInProgress and isDraft overrides.
+   *
+   * TODO(C2): Consider removing this field in favour of always using `mergeStateStatus`
+   * (the raw GitHub value). `mergeStateStatus` is more useful for agents since it
+   * distinguishes BLOCKED from HAS_HOOKS. Blocked by the large surface area of tests
+   * and formatters that currently branch on `mergeStatus`.
    */
   mergeStatus: ShepherdMergeStatus;
   reviewDecision: ReviewDecision;
-  copilotReviewInProgress: boolean;
+  blockingBotReviewInProgress: boolean;
   isDraft: boolean;
   shouldCancel: boolean;
   remainingSeconds: number;
@@ -101,7 +113,6 @@ export interface ResolveCommand {
  * then runs the pre-built resolve command. Emitted under `## Post-fix push`.
  */
 interface FixRebaseAndPush {
-  mode: "rebase-and-push";
   threads: AgentThread[];
   /** Unresolved threads that should be resolved on GitHub without requiring code edits. */
   resolutionOnlyThreads: ReviewThread[];

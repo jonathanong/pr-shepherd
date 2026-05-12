@@ -4,13 +4,13 @@
 
 Each default `pr-shepherd` invocation returns exactly one iterate action. The legacy `pr-shepherd iterate` spelling is still supported. See [docs/iterate-flow.md](iterate-flow.md) for the decision order.
 
-The default output format is Markdown — what you see when running `pr-shepherd <PR>` through the selected package runner, and what the monitor SKILL reads each cron tick. `--format=json` emits the same information as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
+The default output format is Markdown — what you see when running `pr-shepherd <PR>` through the selected package runner, and what the iterate skill reads on each tick. `--format=json` emits the same information as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
 
 Instruction wording uses unified sleep guidance for all runtimes: pick a fresh sleep/timeout between 30 seconds and 4 minutes and rerun the configured pr-shepherd command. The action data and section structure are otherwise the same.
 
 Command examples use the default npm spelling (`npx pr-shepherd`). Repos can set `cli.runner` to `auto`, `npx`, `pnpm`, or `yarn`; generated text and JSON argv then use the selected runner (for example `pnpm exec pr-shepherd` or `yarn run pr-shepherd`) everywhere a pr-shepherd follow-up command is emitted.
 
-Pass `--verbose` to get more debug state. In JSON mode, the output starts from the full `IterateResult` shape (all fields, including `baseBranch`, `checks`, `shouldCancel`) and then applies the same instruction projection as lean JSON: non-`fix_code` actions get a top-level `instructions` array, and `fix.instructions` may be rewritten. In Markdown mode, `--verbose` restores the full header summary line (all four counts, `remainingSeconds`, `copilotReviewInProgress`, `isDraft`, `shouldCancel` always shown) — but Markdown is structurally different from JSON and does not guarantee field-for-field parity (array fields like `baseBranch` or `checks` are not added to Markdown for actions that do not normally render them). Lean mode is the default because most fields are `false`/`0`/`[]` on a typical healthy tick and add context noise without value.
+Pass `--verbose` to get more debug state. In JSON mode, the output starts from the full `IterateResult` shape (all fields, including `baseBranch`, `checks`, `shouldCancel`) and then applies the same instruction projection as lean JSON: non-`fix_code` actions get a top-level `instructions` array, and `fix.instructions` may be rewritten. In Markdown mode, `--verbose` restores the full header summary line (all four counts, `remainingSeconds`, `blockingBotReviewInProgress`, `isDraft`, `shouldCancel` always shown) — but Markdown is structurally different from JSON and does not guarantee field-for-field parity (array fields like `baseBranch` or `checks` are not added to Markdown for actions that do not normally render them). Lean mode is the default because most fields are `false`/`0`/`[]` on a typical healthy tick and add context noise without value.
 
 **Output shape (every action, default lean format):**
 
@@ -18,34 +18,33 @@ Pass `--verbose` to get more debug state. In JSON mode, the output starts from t
 # PR #<N> [ACTION]
 
 **status** `<…>` · **merge** `<…>` · **state** `<…>` · **repo** `<…>`
-**summary** <N> passing[, <N> skipped][, <N> filtered][, <N> inProgress][· **remainingSeconds** <N>][· **copilotReviewInProgress**][· **isDraft**]
+**summary** <N> passing[, <N> skipped][, <N> filtered][, <N> inProgress][· **remainingSeconds** <N>][· **blockingBotReviewInProgress**][· **isDraft**]
 
 <action-specific body>
 
 ## Instructions
 
-1. <numbered steps telling the monitor exactly what to do>
+1. <numbered steps telling the agent exactly what to do>
 ```
 
 Lean-mode rules for the summary line:
 
 - Zero counts (`skipped`, `filtered`, `inProgress`) are omitted.
 - `remainingSeconds` is shown only when the ready-delay timer is actively counting down (`status === "READY"` and `remainingSeconds > 0`).
-- `copilotReviewInProgress` and `isDraft` are shown only when `true`.
+- `blockingBotReviewInProgress` and `isDraft` are shown only when `true`.
 - `shouldCancel` is never shown (it is fully implied by `action === "cancel"`).
 
-`--verbose` restores the full summary line: all four counts, `remainingSeconds`, `copilotReviewInProgress`, `isDraft`, and `shouldCancel` always present.
+`--verbose` restores the full summary line: all four counts, `remainingSeconds`, `blockingBotReviewInProgress`, `isDraft`, and `shouldCancel` always present.
 
 **Note on `mergeStatus` in JSON lean mode.** The lean JSON projection (`--format=json`, default) emits `mergeStateStatus` (the raw GitHub value) but **omits the derived `mergeStatus` discriminator** (`CLEAN | BEHIND | CONFLICTS | BLOCKED | UNSTABLE | DRAFT | UNKNOWN`). Scripts that branch on `mergeStatus` must use `--verbose` to get the full `IterateResult`. `mergeStateStatus` is always present in both modes.
 
-Load-bearing conventions (the monitor SKILL depends on these):
+Load-bearing conventions (the iterate skill depends on these):
 
 1. Line 1 is always an H1 heading of the form `# PR #<N> [<ACTION>]`. The action tag identifies the output for logging and validation — behavior is driven by the `## Instructions` section, not by dispatching on the tag.
 2. Lines 3–4 carry the base fields (status, merge, state, repo, summary). In lean mode, fields at their trivial default are omitted; `--verbose` restores the full scalar header/summary line in Markdown. JSON verbose mode returns the complete `IterateResult` including fields not present in Markdown (e.g. `baseBranch`, `checks` on all actions); Markdown is structurally lossy relative to JSON and `--verbose` does not close that gap.
-3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … — that tells the monitor exactly what to do. The monitor follows those steps; it does not need its own dispatch table.
-4. Under `[REBASE]`, the shell script is inside a ```bash fenced block — instruction 1 tells the monitor to extract and run it.
-5. Under `[FIX_CODE]`, the `## Post-fix push` section has a `` resolve: `<command>` `` bullet — the instructions reference this bullet so the monitor strips backticks and runs the command.
-6. Passing check counts are surfaced only via the `**summary**` line — no per-check detail is emitted for passing checks. Failing check detail appears in `## Failing checks` (within `[FIX_CODE]` output). JSON surfaces check data as `checks: RelevantCheck[]` only on `fix_code` actions in lean mode; `--format=json --verbose` includes `checks` on all actions (full IterateResult).
+3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … — that tells the agent exactly what to do. The skill follows those steps; it does not need its own dispatch table.
+4. Under `[FIX_CODE]`, the `## Post-fix push` section has a `` resolve: `<command>` `` bullet — the instructions reference this bullet so the skill strips backticks and runs the command.
+5. Passing check counts are surfaced only via the `**summary**` line — no per-check detail is emitted for passing checks. Failing check detail appears in `## Failing checks` (within `[FIX_CODE]` output). JSON surfaces check data as `checks: RelevantCheck[]` only on `fix_code` actions in lean mode; `--format=json --verbose` includes `checks` on all actions (full IterateResult).
 
 ---
 
@@ -78,7 +77,7 @@ When the current command includes a ready-delay override, the rerun command pres
 
 The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, `blocked by pending reviews or required status checks`, `PR is a draft`, or `some checks are unstable`.
 
-**What the monitor does:** Follow `## Instructions` — pick a fresh sleep/timeout and rerun.
+**What the skill does:** Follow `## Instructions` — pick a fresh sleep/timeout and rerun.
 
 ---
 
@@ -107,13 +106,13 @@ MARKED READY: PR #42 converted from draft to ready for review
 1. The CLI already marked the PR ready for review. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.
 ```
 
-**What the monitor does:** Follow `## Instructions` — pick a fresh sleep/timeout and rerun.
+**What the skill does:** Follow `## Instructions` — pick a fresh sleep/timeout and rerun.
 
 ---
 
 ## `cancel`
 
-Stops the monitor loop — no further iterations needed.
+Stops the iterate loop — no further iterations needed.
 
 **Trigger:** Either the PR is merged or closed (`state !== "OPEN"`), or the ready-delay timer elapsed (`readyState.shouldCancel`).
 
@@ -131,7 +130,7 @@ Stops the monitor loop — no further iterations needed.
 **status** `READY` · **merge** `CLEAN` · **state** `MERGED` · **repo** `owner/repo`
 **summary** 5 passing
 
-CANCEL: PR #42 is merged — stopping monitor
+CANCEL: PR #42 is merged — stopping
 
 ## Instructions
 
@@ -140,9 +139,9 @@ CANCEL: PR #42 is merged — stopping monitor
 
 Other heading variants: `# PR #42 [CANCEL] — closed`, `# PR #42 [CANCEL] — ready-delay-elapsed`.
 
-Other body-line variants: `CANCEL: PR #42 is closed — stopping monitor`, `CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping monitor`.
+Other body-line variants: `CANCEL: PR #42 is closed — stopping`, `CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping`.
 
-**What the monitor does:** Follow `## Instructions` — stop.
+**What the skill does:** Follow `## Instructions` — stop.
 
 ---
 
@@ -166,7 +165,7 @@ Actionable work needs a code fix, commit, and push.
 
 ## Review threads
 
-### `threadId=PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate.mts:42` (@alice)
+### `threadId=PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate/index.mts:42` (@alice)
 
 > The variable name is misleading.
 >
@@ -240,8 +239,9 @@ Step 1 is absent when no thread has a `[suggestion]` marker; step 2 omits the ma
 
 1. Heading + base fields (always present).
 2. `## Review threads` — each thread under ``### `threadId=<id>` — <loc> (@author) [suggestion]?`` (or `### [threadId=<id>](<url>) — <loc> (@author) [suggestion]?` when a URL is available) where `<loc>` is `` `path:line` `` for single-line threads or `` `path:startLine-endLine` `` for multi-line threads. The full body follows as a `>` blockquote. Multi-paragraph bodies preserve empty lines as `>` lines. Threads with a ` ```suggestion ` fence carry a `[suggestion]` tag in the heading and a `Replaces lines …` block after the body showing the parsed replacement.
-3. `## Actionable comments` — same H3-plus-blockquote shape as threads minus the `<loc>`: ``### `commentId=<id>` `` or `### [commentId=<id>](<url>)` when a URL is available.
-4. `## Failing checks` — one bullet per failing check. Shape varies by locator:
+3. `## Review threads to resolve` — unresolved outdated/minimized inline threads that should be passed to `--resolve-thread-ids` but do not require code edits unless the agent chooses to act on the body.
+4. `## Actionable comments` — same H3-plus-blockquote shape as threads minus the `<loc>`: ``### `commentId=<id>` `` or `### [commentId=<id>](<url>)` when a URL is available.
+5. `## Failing checks` — one bullet per failing check. Shape varies by locator:
    - ``- `<runId>` — `<workflowName> › <jobName>` `` for GitHub Actions checks (`workflowName ›` prefix omitted when unavailable; `jobName` falls back to the check name when absent).
    - ``- external `<detailsUrl>` — `<name>` `` for external status checks (codecov, vercel, etc.) with null `runId` but a URL.
    - ``- (no runId) — `<name>` `` when both are null.
@@ -250,11 +250,10 @@ Step 1 is absent when no thread has a `[suggestion]` marker; step 2 omits the ma
 
    The numbered instructions split accordingly: for GitHub Actions checks with a runId and no `[conclusion: CANCELLED]` or `[conclusion: STARTUP_FAILURE]`, three steps are emitted — fetch logs with `gh run view <runId> --log-failed`, rerun with `gh run rerun <runId> --failed` if transient, or apply a code fix if a real failure. For `[conclusion: CANCELLED]` checks, a single step says to rerun with `gh run rerun <runId>` (no `--failed` flag) if the cancellation looks unintended. For `[conclusion: STARTUP_FAILURE]` checks, a single step says to inspect metadata with `gh run view <runId>` and rerun with `gh run rerun <runId>` if the workflow should be attempted again. For external status checks (detailsUrl only), the step says to open the URL in a browser. When both are absent, the step says to escalate to a human.
 
-5. `## Review threads to resolve` — unresolved outdated/minimized inline threads that should be passed to `--resolve-thread-ids` but do not require code edits unless the agent chooses to act on the body.
 6. `## Changes-requested reviews` — one bullet per `CHANGES_REQUESTED` review: ``- `reviewId=<id>` (@<author>)``.
 7. `## Review summaries (first look — to be minimized)` — `COMMENTED` review summaries the agent has **not yet seen**. Each entry is rendered with an H3 heading (``### `reviewId=<id>` (@<author>)``) and the full body as a `>` blockquote. Their IDs are already included in `--minimize-comment-ids` in the resolve command, so no additional action is needed beyond reading them and recording any Shepherd Journal note. A per-item seen-marker file (`src/state/seen-comments.mts`) writes the marker on first encounter so subsequent runs skip the body. Not emitted when empty.
 8. `## Review summaries (edited since first look — already minimized; do not re-minimize)` — `COMMENTED` review summaries whose body was edited by the author after Shepherd last surfaced them. Each entry is rendered the same way as section 7 (H3 heading + `>` blockquote). These IDs are **NOT** included in `--minimize-comment-ids` — the review is already minimized on GitHub (or was in a prior iteration's minimize queue). Read the updated body and record any Shepherd Journal note, but do not pass these IDs to any mutation flag. The seen-marker hash is updated after display so the next run only re-surfaces them if the body changes again. Not emitted when empty.
-9. `## Review summaries (already surfaced — minimize queue)` — backticked review IDs (`PRR_…`) of `COMMENTED` review summaries whose bodies were surfaced in a **prior** iteration and whose body has not changed since. If `iterate.minimizeApprovals` is `true`, this section may also include `APPROVED` review IDs queued for minimization even though their bodies were not previously surfaced. All IDs (from sections 7 and 9) are merged into `--minimize-comment-ids` in the resolve command. Not emitted when empty.
+9. `## Review IDs to minimize queue` — backticked review IDs (`PRR_…`) of `COMMENTED` review summaries whose bodies were surfaced in a **prior** iteration and whose body has not changed since. If `iterate.minimizeApprovals` is `true`, this section may also include `APPROVED` review IDs queued for minimization even though their bodies were not previously surfaced. All IDs (from sections 7 and 9) are merged into `--minimize-comment-ids` in the resolve command. Not emitted when empty.
 10. `## Approvals (surfaced — not minimized)` — emitted when `iterate.minimizeApprovals` is `false` (default) and there are `APPROVED`-state reviews. H3 heading uses `` `reviewId=<id>` `` (same prefix scheme as other item types); body is a `>` blockquote or `(no review body)` when empty. Surfaced for visibility, but NOT included in `--minimize-comment-ids`.
 11. `## First-look items (N) — acknowledge status before acting` — threads and PR comments that are outdated, resolved, or minimized and have not yet been acknowledged by the agent. Emitted on first encounter only; a per-item seen-marker file (`src/state/seen-comments.mts`) suppresses them on subsequent runs. Each bullet carries a `[status: …]` tag: `outdated`, `outdated, auto-resolved`, `resolved`, or `minimized`. If the body was edited since the item was first acknowledged, the tag gains an `, edited` suffix (e.g. `[status: minimized, edited]`). If a first-look thread also appears under `## Review threads to resolve`, its ID is already included in the resolve command; otherwise do not pass first-look-only IDs to mutation flags. Not emitted when empty.
 12. `## In-progress runs` — backticked GitHub Actions run IDs of in-progress checks the agent should cancel before applying fixes. Emitted only when `fix.inProgressRunIds` is non-empty, which requires both (a) at least one in-progress check with a non-null run ID not already cancelled by the CLI and (b) a push is guaranteed this iteration (review threads, failing checks, changes-requested reviews, or rebase conflicts). Comment-only iterations do not emit this section because the agent may only minimize or acknowledge comments without making a superseding push. The agent cancels these before applying code fixes (step 1 of `## Instructions`). Distinct from `## Cancelled runs`: those IDs were already cancelled by the CLI before the agent acts; these IDs the agent must cancel itself now. Not emitted when empty.
@@ -262,7 +261,7 @@ Step 1 is absent when no thread has a `[suggestion]` marker; step 2 omits the ma
 14. `## Post-fix push`:
     - ``- base: `<branch>` `` — rebase target for the push step.
     - ``- resolve: `<argv>` `` — fully-quoted resolve command. `$DISMISS_MESSAGE` and `$HEAD_SHA` are always quoted so substituting a multi-word sentence keeps it as one argument. `--require-sha "$HEAD_SHA"` is appended only when a push is required for the resolve mutation (threads/checks/reviews present); comment-only and summary-only dispatches omit it.
-15. `## Instructions` — numbered list to execute in order. The final instruction always refers back to the `resolve:` bullet rather than duplicating the command — that single source of truth is what the monitor executes.
+15. `## Instructions` — numbered list to execute in order. The final instruction always refers back to the `resolve:` bullet rather than duplicating the command — that single source of truth is what the skill executes.
 
 **Instruction variants:**
 
@@ -281,7 +280,7 @@ Step 1 is absent when no thread has a `[suggestion]` marker; step 2 omits the ma
 - An edited-items step is appended when `editedSummaries` is non-empty or any first-look thread/comment carries `edited: true` — it tells the agent to read the updated body but **not** include these IDs in any mutation flag.
 - The final "recheck" step has three variants: `CI needs time to run on the new push. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun \`npx pr-shepherd 42\` to recheck.`when a push occurred;`Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun \`npx pr-shepherd 42\` to recheck.` when only GitHub mutations were made or no push/mutations occurred.
 
-The JSON payload exposes the same data under `fix.{threads, resolutionOnlyThreads, actionableComments, reviewSummaryIds, firstLookSummaries, editedSummaries, surfacedApprovals, checks, changesRequestedReviews, resolveCommand, instructions, mode, firstLookThreads, firstLookComments, inProgressRunIds}` — where `fix.mode === "rebase-and-push"` is the type discriminator — plus top-level `baseBranch` (on `IterateResultBase`, not under `fix`) and `cancelled`. `fix.inProgressRunIds` contains the GitHub Actions run IDs the agent must cancel before applying fixes (mirrors `## In-progress runs` in the Markdown output); it is an empty array when there are no in-progress GitHub Actions run IDs to cancel (external status checks or already-cancelled runs are excluded) or when no push is expected this iteration. `resolutionOnlyThreads` contains unresolved outdated/minimized review threads routed to `--resolve-thread-ids` without causing a push or `--require-sha`. `reviewSummaryIds` contains the IDs routed to `--minimize-comment-ids` for review-level minimization: this includes review summaries (both first-look and already-seen), and may also include APPROVED review IDs when approval minimization is enabled. `firstLookSummaries` carries the full `Review` objects for bodies seen this iteration for the first time. `editedSummaries` carries the full `Review` objects for summaries whose body changed since last seen — these IDs are **not** in `reviewSummaryIds`. Both `firstLookSummaries` and `reviewSummaryIds` are merged into `--minimize-comment-ids` inside `resolveCommand.argv`; `editedSummaries` and `surfacedApprovals` are informational only. `resolveCommand.argv` starts with the configured runner argv (`["npx", "pr-shepherd", …]`, `["pnpm", "exec", "pr-shepherd", …]`, or `["yarn", "run", "pr-shepherd", …]`). In lean JSON mode, `fix.*` arrays that are empty are omitted; `cancelled` is omitted when empty. Pass `--verbose` to include all fields. `firstLookThreads` and `firstLookComments` are informational unless the same thread appears in `resolutionOnlyThreads`.
+The JSON payload exposes the same data under `fix.{threads, resolutionOnlyThreads, actionableComments, reviewSummaryIds, firstLookSummaries, editedSummaries, surfacedApprovals, checks, changesRequestedReviews, resolveCommand, instructions, firstLookThreads, firstLookComments, inProgressRunIds}` plus top-level `baseBranch` (on `IterateResultBase`, not under `fix`) and `cancelled`. `fix.inProgressRunIds` contains the GitHub Actions run IDs the agent must cancel before applying fixes (mirrors `## In-progress runs` in the Markdown output); it is an empty array when there are no in-progress GitHub Actions run IDs to cancel (external status checks or already-cancelled runs are excluded) or when no push is expected this iteration. `resolutionOnlyThreads` contains unresolved outdated/minimized review threads routed to `--resolve-thread-ids` without causing a push or `--require-sha`. `reviewSummaryIds` contains the IDs routed to `--minimize-comment-ids` for review-level minimization: this includes review summaries (both first-look and already-seen), and may also include APPROVED review IDs when approval minimization is enabled. `firstLookSummaries` carries the full `Review` objects for bodies seen this iteration for the first time. `editedSummaries` carries the full `Review` objects for summaries whose body changed since last seen — these IDs are **not** in `reviewSummaryIds`. Both `firstLookSummaries` and `reviewSummaryIds` are merged into `--minimize-comment-ids` inside `resolveCommand.argv`; `editedSummaries` and `surfacedApprovals` are informational only. `resolveCommand.argv` starts with the configured runner argv (`["npx", "pr-shepherd", …]`, `["pnpm", "exec", "pr-shepherd", …]`, or `["yarn", "run", "pr-shepherd", …]`). In lean JSON mode, `fix.*` arrays that are empty are omitted; `cancelled` is omitted when empty. Pass `--verbose` to include all fields. `firstLookThreads` and `firstLookComments` are informational unless the same thread appears in `resolutionOnlyThreads`.
 
 **Resolve command rules (same in Markdown and JSON):**
 
@@ -389,13 +388,13 @@ The `resolve:` command at the bottom of `## Post-fix push` includes both IDs:
 
 Both IDs stay in `--resolve-thread-ids` — `commit-suggestion` no longer resolves threads automatically. If a patch failed to apply and was handled manually instead, the ID still belongs in `--resolve-thread-ids`.
 
-**What the monitor does:** Follow `## Instructions` in order. The instructions are self-contained and action-specific — no dispatch table needed in the monitor. See `## Instructions` in the output for the exact steps.
+**What the skill does:** Follow `## Instructions` in order. The instructions are self-contained and action-specific — no dispatch table needed. See `## Instructions` in the output for the exact steps.
 
 ---
 
 ## `escalate`
 
-Ambiguous state that requires human judgement — the monitor stops and surfaces details.
+Ambiguous state that requires human judgement — iteration stops and surfaces details.
 
 **Trigger:** Any of:
 
@@ -403,7 +402,7 @@ Ambiguous state that requires human judgement — the monitor stops and surfaces
 - **`fix-thrash`** — same thread dispatched ≥ `config.iterate.fixAttemptsPerThread` times (default 3) without resolving.
 - **`pr-level-changes-requested`** — reviewer requested changes but left no inline threads, comments, or CI failures to act on (not triggered when merge conflicts are present).
 - **`thread-missing-location`** — an actionable review thread has no file or line reference, so the code location cannot be found automatically.
-- **`base-branch-unknown`** — the GraphQL batch did not yield a usable base branch name: the derived value was empty or contained unsafe characters. Preempts both `[REBASE]` and any `[FIX_CODE]` that would require a push, since rebasing onto the wrong base is worse than pausing the monitor.
+- **`base-branch-unknown`** — the GraphQL batch did not yield a usable base branch name: the derived value was empty or contained unsafe characters. Preempts any `[FIX_CODE]` that would require a push, since rebasing onto the wrong base is worse than pausing iteration.
 
 **CLI side-effects:** None.
 
@@ -417,15 +416,15 @@ Ambiguous state that requires human judgement — the monitor stops and surfaces
 **status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 0 passing
 
-⚠️ /pr-shepherd:monitor paused — needs human direction
+⚠️ /pr-shepherd:pr-shepherd paused — needs human direction
 
 **Triggers:** `fix-thrash`
 
-Same thread(s) attempted multiple times without resolution — fix manually then rerun /pr-shepherd:monitor
+Same thread(s) attempted multiple times without resolution — fix manually then rerun /pr-shepherd:pr-shepherd
 
 ## Items needing attention
 
-- thread `PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate.mts:42` (@alice): The variable name is misleading
+- thread `PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate/index.mts:42` (@alice): The variable name is misleading
 
 ## Fix attempts
 
@@ -433,36 +432,24 @@ Same thread(s) attempted multiple times without resolution — fix manually then
 
 ---
 
-Run `/pr-shepherd:check 42` to see current state.
-After fixing manually, rerun `/pr-shepherd:monitor 42` to resume.
+Run `/pr-shepherd:pr-shepherd 42` to see current state.
+After fixing manually, rerun `/pr-shepherd:pr-shepherd 42` to resume.
 
 ## Instructions
 
-1. Stop — the PR needs human direction before monitoring can resume.
+1. Stop — the PR needs human direction before iterating can resume.
 ```
 
 The block after the base-fields line (separated by a blank line) is `escalate.humanMessage` in JSON — ready to print verbatim.
 
-**What the monitor does:** Follow `## Instructions` — stop.
+**What the skill does:** Follow `## Instructions` — stop.
 
 ---
 
 ## Archived / no longer emitted
-
-### `cooldown`
-
-> **This action is no longer emitted by `iterate`.** The cooldown early-return (skip if last commit is too fresh for CI) has been removed. `iterate` now always runs the full sweep. Agents use the unified "pick a fresh sleep/timeout between 30 seconds and 4 minutes" guidance instead.
-
-**Trigger:** Previously emitted when `nowSeconds − lastCommitTime < cooldownSeconds` (default 30s). Removed to simplify the decision tree — the sweep is cheap and CI may already have started.
 
 ### `rerun_ci`
 
 > **This action is no longer emitted by `iterate`.** Transient CI failure detection (timeout / cancelled) has been moved to the agent: the `fix_code` action now carries `failedStep`/`conclusion` for every failing check, and the `## Instructions` section tells the agent to run `gh run view <runId> --log-failed` and decide whether to rerun or apply a code fix. Current releases no longer include a `rerun_ci` action or `[RERUN_CI]` formatter output.
 
 **Trigger:** Previously emitted when one or more failing checks had `failureKind === "timeout"` or `"cancelled"` and no actionable work was found. Removed in favour of routing all failing checks through `fix_code` with raw log data.
-
-### `rebase`
-
-> **This action is no longer emitted by `iterate`.** Branch rebasing is now handled inside the `fix_code` instructions (see `## Post-fix push` and the rebase step in `## Instructions`). Current releases no longer include a dedicated `rebase` action or `[REBASE]` formatter output.
-
-**Trigger:** Previously emitted when a branch was `BEHIND` its base and no other actionable items were pending. Removed in favour of embedding the rebase step inside `fix_code` when conflicts are present.
