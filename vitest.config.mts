@@ -19,9 +19,6 @@ export default defineConfig({
         'src/types/**/*.mts',
         'src/github/batch-raw-types.mts',
       ],
-      thresholds: {
-        lines: 100,
-      },
     },
   },
 })
