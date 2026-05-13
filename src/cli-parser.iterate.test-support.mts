@@ -63,7 +63,6 @@ export {
   main,
   makeIterateResult,
   mockRunIterate,
-  registerHooks,
   runIterate,
   stderrSpy,
   stdoutSpy,

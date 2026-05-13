@@ -83,5 +83,4 @@ export {
   makeResponse,
   mockGraphql,
   mockGraphqlWithRateLimit,
-  registerHooks,
 };

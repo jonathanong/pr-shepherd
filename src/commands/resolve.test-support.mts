@@ -145,7 +145,6 @@ export {
   mockLoadConfig,
   mockLoadSeenMap,
   mockMarkSeen,
-  registerHooks,
   runResolveFetch,
   runResolveMutate,
 };

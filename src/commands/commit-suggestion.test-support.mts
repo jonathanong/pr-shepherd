@@ -157,7 +157,6 @@ export {
   mockLoadConfig,
   mockReadFile,
   readFile,
-  registerHooks,
   runCommitSuggestion,
   setupHappyPath,
 };

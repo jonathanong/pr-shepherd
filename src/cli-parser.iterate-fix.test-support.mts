@@ -54,14 +54,5 @@ export function registerHooks(): void {
   });
 }
 
-export {
-  getStdout,
-  main,
-  makeIterateResult,
-  mockRunIterate,
-  registerHooks,
-  runIterate,
-  stderrSpy,
-  stdoutSpy,
-};
+export { getStdout, main, makeIterateResult, mockRunIterate, runIterate, stderrSpy, stdoutSpy };
 export type { IterateResult };

@@ -87,7 +87,6 @@ export {
   makeWorkflowRunsResponse,
   mergeStartupFailureChecks,
   mockFetch,
-  registerHooks,
   triageFailingChecks,
 };
 export type { ClassifiedCheck, JobStub };

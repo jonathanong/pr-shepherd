@@ -78,7 +78,6 @@ export {
   getStdout,
   main,
   mockRunCommitSuggestion,
-  registerHooks,
   runCommitSuggestion,
   stderrSpy,
   stdoutSpy,

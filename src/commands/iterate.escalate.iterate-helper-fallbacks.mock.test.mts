@@ -95,4 +95,27 @@ describe("iterate helper fallbacks", () => {
       }),
     ).toContain("branch is behind base");
   });
+
+  it("covers draft and unstable wait-log branches", () => {
+    const base = {
+      pr: 42,
+      repo: "owner/repo",
+      status: "IN_PROGRESS" as const,
+      state: "OPEN" as const,
+      mergeStateStatus: "DRAFT",
+      reviewDecision: null,
+      blockingBotReviewInProgress: false,
+      isDraft: false,
+      shouldCancel: false,
+      remainingSeconds: 0,
+      summary: { passing: 1, skipped: 0, filtered: 0, inProgress: 0 },
+      baseBranch: "main",
+      checks: [],
+    };
+
+    expect(buildWaitLog({ ...base, mergeStatus: "DRAFT" })).toContain("PR is a draft");
+    expect(buildWaitLog({ ...base, mergeStatus: "UNSTABLE" })).toContain(
+      "some checks are unstable",
+    );
+  });
 });

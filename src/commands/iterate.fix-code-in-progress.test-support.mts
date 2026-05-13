@@ -150,7 +150,6 @@ export {
   mockWriteStallState,
   readFixAttempts,
   readStallState,
-  registerHooks,
   runCheck,
   runIterate,
   updateReadyDelay,

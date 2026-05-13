@@ -107,6 +107,37 @@ function makeBatchData(overrides: Partial<BatchPrData> = {}): BatchPrData {
   };
 }
 
+function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
+  return {
+    id: "t1",
+    isResolved: false,
+    isOutdated: false,
+    isMinimized: false,
+    path: "src/foo.mts",
+    line: 10,
+    startLine: null,
+    author: "reviewer",
+    authorType: "Unknown",
+    body: "fix this",
+    url: "",
+    createdAtUnix: 0,
+    ...overrides,
+  };
+}
+
+function makeComment(overrides: Partial<PrComment> = {}): PrComment {
+  return {
+    id: "c1",
+    author: "commenter",
+    authorType: "Unknown",
+    body: "comment body",
+    url: "",
+    createdAtUnix: 0,
+    isMinimized: false,
+    ...overrides,
+  };
+}
+
 // No PR found
 
 export function registerHooks(): void {
@@ -131,6 +162,8 @@ export {
   loadSeenMap,
   makeBatchData,
   makeCheck,
+  makeComment,
+  makeThread,
   markSeen,
   mockAutoResolveOutdated,
   mockFetchPrBatch,
@@ -141,7 +174,6 @@ export {
   mockLoadSeenMap,
   mockMarkSeen,
   mockTriageFailingChecks,
-  registerHooks,
   runCheck,
   triageFailingChecks,
 };

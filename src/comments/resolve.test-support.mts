@@ -51,5 +51,4 @@ export {
   makeBulkResponse,
   mockGetPrHeadSha,
   mockGraphql,
-  registerHooks,
 };

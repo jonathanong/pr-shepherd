@@ -83,7 +83,6 @@ export {
   jsonOk,
   mockExecFile,
   mockFetch,
-  registerHooks,
   rest,
   restText,
 };

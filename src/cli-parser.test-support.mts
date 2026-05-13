@@ -54,7 +54,6 @@ export {
   mockRunResolveFetch,
   mockRunResolveMutate,
   readFileSync,
-  registerHooks,
   runLogFile,
   runResolveFetch,
   runResolveMutate,
