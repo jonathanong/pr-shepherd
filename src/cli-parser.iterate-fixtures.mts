@@ -40,7 +40,7 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
           requiresDismissMessage: false,
           hasMutations: false,
         },
-        instructions: ["End this iteration."],
+        instructions: ["Stop this iteration before the next tick."],
         firstLookThreads: [],
         firstLookComments: [],
         inProgressRunIds: [],

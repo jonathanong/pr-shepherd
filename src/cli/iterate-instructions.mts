@@ -1,11 +1,14 @@
 import type { AgentRuntime } from "../agent-runtime.mts";
 import {
-  FIX_INSTRUCTION_END_ITERATION,
   FIX_INSTRUCTION_STOP_AFTER_PUSH,
   FIX_INSTRUCTION_STOP_BEFORE_NEXT_TICK,
 } from "../commands/iterate/render.mts";
 import type { IterateResult } from "../types.mts";
 import { buildPrShepherdCommand, type CliRunner } from "./runner.mts";
+
+function buildRecheckInstruction(rerunCommand: string, tail: string): string {
+  return `Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun \`${rerunCommand}\` ${tail}`;
+}
 
 export function buildSimpleIterateInstructions(
   result: Exclude<IterateResult, { action: "fix_code" }>,
@@ -16,12 +19,10 @@ export function buildSimpleIterateInstructions(
   const rerunCommand = buildCodexIterateCommand(result.pr, readyDelaySuffix, runner);
   switch (result.action) {
     case "wait":
-      return [
-        `Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun \`${rerunCommand}\` to continue the active goal.`,
-      ];
+      return [buildRecheckInstruction(rerunCommand, "to continue the active goal.")];
     case "mark_ready":
       return [
-        `The CLI already marked the PR ready for review. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun \`${rerunCommand}\` to recheck.`,
+        `The CLI already marked the PR ready for review. ${buildRecheckInstruction(rerunCommand, "to recheck.")}`,
       ];
     case "cancel":
       return ["Stop — the active goal is complete."];
@@ -40,13 +41,10 @@ export function adaptFixCodeInstructions(
   const rerunCommand = buildCodexIterateCommand(pr, readyDelaySuffix, runner);
   return instructions.map((instruction) => {
     if (instruction === FIX_INSTRUCTION_STOP_AFTER_PUSH) {
-      return `CI needs time to run on the new push. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun \`${rerunCommand}\` to recheck.`;
+      return `CI needs time to run on the new push. ${buildRecheckInstruction(rerunCommand, "to recheck.")}`;
     }
-    if (
-      instruction === FIX_INSTRUCTION_STOP_BEFORE_NEXT_TICK ||
-      instruction === FIX_INSTRUCTION_END_ITERATION
-    ) {
-      return `Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun \`${rerunCommand}\` to recheck.`;
+    if (instruction === FIX_INSTRUCTION_STOP_BEFORE_NEXT_TICK) {
+      return buildRecheckInstruction(rerunCommand, "to recheck.");
     }
     return instruction;
   });

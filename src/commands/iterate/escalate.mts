@@ -137,7 +137,6 @@ export function buildEscalateHumanMessage(
   lines.push("");
   lines.push("---");
   lines.push("");
-  lines.push(`Run \`/pr-shepherd:pr-shepherd ${pr}\` to see current state.`);
   lines.push(`After fixing manually, rerun \`/pr-shepherd:pr-shepherd ${pr}\` to resume.`);
   return lines.join("\n");
 }

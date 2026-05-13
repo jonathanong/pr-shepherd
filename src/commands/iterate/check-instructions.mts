@@ -13,9 +13,7 @@ export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   const bareChecks = checks.filter((c) => !c.runId && !c.detailsUrl);
   if (failedRunIdChecks.length > 0) {
     instructions.push(
-      `For each failing check under \`## Failing checks\` with a run ID and no \`[conclusion: CANCELLED]\` or \`[conclusion: STARTUP_FAILURE]\` tag: run \`gh run view <runId> --log-failed\` to fetch the failing job's log.`,
-      `If the log shows a transient infrastructure failure (network timeout, runner setup crash, OOM kill): run \`gh run rerun <runId> --failed\`.`,
-      `If the log shows a real test/build failure: apply a code fix.`,
+      `For each failing check under \`## Failing checks\` with a run ID and no \`[conclusion: CANCELLED]\` or \`[conclusion: STARTUP_FAILURE]\` tag: run \`gh run view <runId> --log-failed\` to fetch the failing job's log. If the log shows a transient infrastructure failure (network timeout, runner setup crash, OOM kill), run \`gh run rerun <runId> --failed\`. If the log shows a real test/build failure, apply a code fix.`,
     );
   }
   if (cancelledRunIdChecks.length > 0) {
