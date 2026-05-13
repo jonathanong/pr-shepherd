@@ -21,7 +21,7 @@ Use the skill inside a `/goal`:
 /goal /pr-shepherd:pr-shepherd 42 --ready-delay 15m
 ```
 
-The goal loop handles recurrence. Each tick the skill runs one iterate cycle and prints the output. The CLI's `## Instructions` tell the active goal to pick a fresh 30s–4m delay then rerun for non-terminal actions, or to stop on `[CANCEL]`/`[ESCALATE]`.
+The goal loop handles recurrence. Each tick the skill runs one iterate cycle and prints the output. For non-terminal actions, the CLI's `## Instructions` tell Claude to schedule exactly one next session-only iteration after a fresh 30s-4m delay and end the turn. Claude should not sleep inline or create a recurring cron. `[CANCEL]` and `[ESCALATE]` stop the goal.
 
 ## Codex
 
@@ -61,7 +61,7 @@ Use the skill inside a `/goal`:
 /goal $pr-shepherd 42
 ```
 
-Codex runs the same skill — one tick per goal iteration. The CLI detects Codex via `CODEX_CI=1` or `AGENT=codex` and adapts its `## Instructions` wording accordingly. If Codex is not already setting `CODEX_CI=1`, set `AGENT=codex` before invoking the CLI:
+Codex runs the same skill — one tick per goal iteration. The CLI detects Codex via `CODEX_CI=1` or `AGENT=codex` and adapts its `## Instructions` wording so Codex sleeps inline for a fresh 30s-4m delay before rerunning. If Codex is not already setting `CODEX_CI=1`, set `AGENT=codex` before invoking the CLI:
 
 ```sh
 export AGENT=codex

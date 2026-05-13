@@ -49,7 +49,8 @@ afterEach(() => {
 });
 
 describe("main — iterate fix_code instruction rewriting", () => {
-  it("text rewrites stop-after-push instruction to unified sleep wording", async () => {
+  it("text rewrites stop-after-push instruction to Codex sleep wording", async () => {
+    process.env.AGENT = "codex";
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
     result.fix.instructions = [
@@ -67,6 +68,7 @@ describe("main — iterate fix_code instruction rewriting", () => {
   });
 
   it("json rewrites stop-after-push instruction", async () => {
+    process.env.AGENT = "codex";
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
     result.fix.instructions = [
@@ -81,7 +83,8 @@ describe("main — iterate fix_code instruction rewriting", () => {
     ]);
   });
 
-  it("rewrites no-push final instruction to unified sleep wording", async () => {
+  it("rewrites no-push final instruction to Codex sleep wording", async () => {
+    process.env.AGENT = "codex";
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
     result.fix.instructions = ["Stop this iteration before the next tick."];
@@ -94,7 +97,8 @@ describe("main — iterate fix_code instruction rewriting", () => {
     ]);
   });
 
-  it("rewrites mutation-without-push final instruction to unified sleep wording", async () => {
+  it("rewrites mutation-without-push final instruction to Codex sleep wording", async () => {
+    process.env.AGENT = "codex";
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
     result.fix.instructions = ["Stop this iteration before the next tick."];

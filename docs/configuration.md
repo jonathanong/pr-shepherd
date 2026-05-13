@@ -65,7 +65,7 @@ actions:
 
 ## Agent detection
 
-`pr-shepherd` uses the calling-agent environment only to choose instruction wording. `AGENT=codex` and `CODEX_CI=1` select Codex-compatible monitor output. Other environments keep the default Claude-compatible `/loop` instructions.
+`pr-shepherd` uses the calling-agent environment only to choose instruction wording. `AGENT=codex` and `CODEX_CI=1` select Codex-compatible monitor output that sleeps inline before rerunning. Other environments keep the default Claude-compatible instructions that schedule exactly one next session-only iteration and end the turn.
 
 ---
 

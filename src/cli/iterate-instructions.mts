@@ -6,23 +6,30 @@ import {
 import type { IterateResult } from "../types.mts";
 import { buildPrShepherdCommand, type CliRunner } from "./runner.mts";
 
-function buildRecheckInstruction(rerunCommand: string, tail: string): string {
-  return `Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun \`${rerunCommand}\` ${tail}`;
+function buildRecheckInstruction(
+  runtime: AgentRuntime,
+  rerunCommand: string,
+  purpose: string,
+): string {
+  if (runtime === "codex") {
+    return `Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun \`${rerunCommand}\` to ${purpose}.`;
+  }
+  return `Schedule one session-only follow-up task to run \`${rerunCommand}\` to ${purpose} once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.`;
 }
 
 export function buildSimpleIterateInstructions(
   result: Exclude<IterateResult, { action: "fix_code" }>,
-  _runtime: AgentRuntime,
+  runtime: AgentRuntime,
   readyDelaySuffix?: string,
   runner?: CliRunner,
 ): string[] {
-  const rerunCommand = buildCodexIterateCommand(result.pr, readyDelaySuffix, runner);
+  const rerunCommand = buildIterateCommand(result.pr, readyDelaySuffix, runner);
   switch (result.action) {
     case "wait":
-      return [buildRecheckInstruction(rerunCommand, "to continue the active goal.")];
+      return [buildRecheckInstruction(runtime, rerunCommand, "continue the active goal")];
     case "mark_ready":
       return [
-        `The CLI already marked the PR ready for review. ${buildRecheckInstruction(rerunCommand, "to recheck.")}`,
+        `The CLI already marked the PR ready for review. ${buildRecheckInstruction(runtime, rerunCommand, "recheck")}`,
       ];
     case "cancel":
       return ["Stop — the active goal is complete."];
@@ -34,17 +41,17 @@ export function buildSimpleIterateInstructions(
 export function adaptFixCodeInstructions(
   instructions: string[],
   pr: number,
-  _runtime: AgentRuntime,
+  runtime: AgentRuntime,
   readyDelaySuffix?: string,
   runner?: CliRunner,
 ): string[] {
-  const rerunCommand = buildCodexIterateCommand(pr, readyDelaySuffix, runner);
+  const rerunCommand = buildIterateCommand(pr, readyDelaySuffix, runner);
   return instructions.map((instruction) => {
     if (instruction === FIX_INSTRUCTION_STOP_AFTER_PUSH) {
-      return `CI needs time to run on the new push. ${buildRecheckInstruction(rerunCommand, "to recheck.")}`;
+      return `CI needs time to run on the new push. ${buildRecheckInstruction(runtime, rerunCommand, "recheck")}`;
     }
     if (instruction === FIX_INSTRUCTION_STOP_BEFORE_NEXT_TICK) {
-      return buildRecheckInstruction(rerunCommand, "to recheck.");
+      return buildRecheckInstruction(runtime, rerunCommand, "recheck");
     }
     return instruction;
   });
@@ -54,7 +61,7 @@ export function adaptIterateLog(log: string, _runtime: AgentRuntime): string {
   return log.replace(/\s+—\s+\d+s until auto-cancel/g, "");
 }
 
-export function buildCodexIterateCommand(
+export function buildIterateCommand(
   pr: number,
   readyDelaySuffix?: string,
   runner?: CliRunner,
