@@ -29,8 +29,8 @@ One-tick dispatcher for iterating a PR to completion.
    If `MERGED` or `CLOSED`, output: `PR #N is already merged/closed. Nothing to do.` and stop.
 
 3. **Select the package runner** from the target repository root:
-   - Prefer `package.json` `packageManager`: `pnpm@...` → `pnpm exec`, `yarn@...` → `yarn run`, `npm@...` → `npx --no-install`.
-   - If `packageManager` is absent, use lockfiles: `pnpm-lock.yaml` → `pnpm exec`, `yarn.lock` → `yarn run`, `package-lock.json` or no signal → `npx --no-install`.
+   - Prefer `package.json` `packageManager`: `pnpm@...` → `pnpm exec`, `yarn@...` → `yarn run`, `npm@...` → `npx`.
+   - If `packageManager` is absent, use lockfiles: `pnpm-lock.yaml` → `pnpm exec`, `yarn.lock` → `yarn run`, `package-lock.json` or no signal → `npx`.
 
 4. **Run one iterate tick:**
 

@@ -214,13 +214,9 @@ Then iterate a PR from Codex with the target repository's package runner:
 <runner> pr-shepherd iterate 42
 ```
 
-For example, a repo like `~/filaments` that declares `packageManager: "pnpm@..."` and has `pnpm-lock.yaml` should use `pnpm exec pr-shepherd iterate 42`. For npm repos, use `npx --no-install pr-shepherd iterate 42`.
+For example, a repo like `~/filaments` that declares `packageManager: "pnpm@..."` and has `pnpm-lock.yaml` should use `pnpm exec pr-shepherd iterate 42`. For npm repos, use `npx pr-shepherd iterate 42`.
 
 Or ask Codex to use the `pr-shepherd` skill, for example: `run pr-shepherd until this PR is ready`. Follow the output's `## Instructions`. The skill runs one tick and the instructions tell you to pick a fresh sleep/timeout between 30 seconds and 4 minutes before the next rerun. Continue until Shepherd emits `[CANCEL]` or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). `pr-shepherd iterate 42` remains supported for existing workflows.
-
-### Without the plugin
-
-See [docs/custom-commands.md](docs/custom-commands.md) for a project-local slash command that wraps the CLI without the plugin.
 
 ### As a global CLI
 
