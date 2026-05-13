@@ -30,6 +30,8 @@ These are two different signals for the same underlying condition (merge conflic
 
 Both map to `CONFLICTS` in shepherd's derived status.
 
+`runCheck` also refreshes mergeability for candidate READY handoffs. This catches short-lived GraphQL lag where the batch query still reports `CLEAN` but the REST pull-request endpoint already reports `DIRTY`; in that case the refreshed value maps to `CONFLICTS` before iterate can complete ready-delay.
+
 ### Terminal PRs use state, not mergeability
 
 GitHub often reports `mergeable: UNKNOWN` and `mergeStateStatus: UNKNOWN` after a PR is merged or closed. Shepherd treats `state` as authoritative for those PRs: `runCheck` returns top-level `status: "MERGED"` or `status: "CLOSED"` and skips CI/comment processing, while `deriveMergeStatus` continues to pass through the raw `state` and derived mergeability fields.

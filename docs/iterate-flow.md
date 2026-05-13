@@ -32,6 +32,8 @@
 - On subsequent READY sweeps: checks if `now − readySince >= readyDelaySeconds`. If so, `shouldCancel: true`.
 - On non-READY sweep: deletes the file (resets the countdown).
 
+Before a READY sweep reaches the ready-delay state machine, `runCheck` performs one fresh REST mergeability read unless the UNKNOWN fallback already did so. If the refreshed mergeability reports `CONFLICTING`/`DIRTY`, the sweep becomes `FAILING`/`CONFLICTS`, resets the ready-delay marker, and routes to `fix_code`.
+
 See [ready-delay.md](ready-delay.md) for full lifecycle.
 
 ---

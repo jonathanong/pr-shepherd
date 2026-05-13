@@ -114,9 +114,9 @@ MARKED READY: PR #42 converted from draft to ready for review
 
 Stops the iterate loop — no further iterations needed.
 
-**Trigger:** Either the PR is merged or closed (`state !== "OPEN"`), or the ready-delay timer elapsed (`readyState.shouldCancel`).
+**Trigger:** Either the PR is merged or closed (`state !== "OPEN"`), or the ready-delay timer elapsed after the current sweep still verifies the PR as a READY handoff state. Candidate READY reports get a fresh mergeability read before the timer can complete, so newly detected conflicts route to `fix_code` instead of `cancel`.
 
-**CLI side-effects:** None. The `ready-since.txt` file is left in place.
+**CLI side-effects:** None. The `ready-since.txt` file is deleted when ready-delay elapses.
 
 **Exit code:** 2
 

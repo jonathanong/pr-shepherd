@@ -1,5 +1,5 @@
 import { fetchPrBatch } from "../github/batch.mts";
-import { getRepoInfo, getCurrentPrNumber, getMergeableState } from "../github/client.mts";
+import { getRepoInfo, getCurrentPrNumber } from "../github/client.mts";
 import { classifyChecks, getCiVerdict } from "../checks/classify.mts";
 import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
 import { fetchStartupFailureChecks, triageFailingChecks } from "../checks/triage.mts";
@@ -10,6 +10,11 @@ import { loadConfig } from "../config/load.mts";
 import { classifyVisibleComments } from "../comments/visible-comments.mts";
 import { computeStatus } from "./check-status.mts";
 import { buildTerminalReport } from "./check-terminal-report.mts";
+import {
+  isBlockedByFilteredCheck,
+  refreshReadyMergeability,
+  refreshUnknownMergeability,
+} from "./ready-mergeability.mts";
 import { loadSeenMap, markSeen, classifyItem } from "../state/seen-comments.mts";
 import type {
   GlobalOptions,
@@ -32,21 +37,10 @@ export async function runCheck(
   const paginateApprovedReviews = config.iterate.minimizeApprovals;
   const result = await fetchPrBatch(prNumber, repo, { paginateApprovedReviews });
   let batchData = result.data;
-
-  // Fall back to REST when GraphQL returns UNKNOWN — skip for non-OPEN PRs.
-  if (
-    (batchData.state ?? "OPEN") === "OPEN" &&
-    (batchData.mergeable === "UNKNOWN" || batchData.mergeStateStatus === "UNKNOWN")
-  ) {
-    const restState = await getMergeableState(prNumber, repo.owner, repo.name);
-    batchData = {
-      ...batchData,
-      mergeable: restState.mergeable ?? batchData.mergeable,
-      mergeStateStatus: restState.mergeStateStatus ?? batchData.mergeStateStatus,
-    };
-  }
-
-  const mergeStatus = deriveMergeStatus(batchData);
+  const unknownRefresh = await refreshUnknownMergeability(prNumber, repo, batchData);
+  batchData = unknownRefresh.batchData;
+  const didRefreshMergeability = unknownRefresh.didRefresh;
+  let mergeStatus = deriveMergeStatus(batchData);
   if (mergeStatus.state === "MERGED" || mergeStatus.state === "CLOSED") {
     return buildTerminalReport(prNumber, repo, batchData, mergeStatus, mergeStatus.state);
   }
@@ -59,18 +53,14 @@ export async function runCheck(
   const allChecks = mergeStartupFailureChecks(batchData.checks, startupFailureChecks);
   const classifiedChecks = classifyChecks(allChecks);
   const verdict = getCiVerdict(classifiedChecks);
-
   const passing = classifiedChecks.filter((c) => c.category === "passed");
   const failing = classifiedChecks.filter((c) => c.category === "failing");
   const inProgress = classifiedChecks.filter((c) => c.category === "in_progress");
   const skipped = classifiedChecks.filter((c) => c.category === "skipped");
   const filtered = classifiedChecks.filter((c) => c.category === "filtered");
-
   const triaged =
     failing.length > 0 && !opts.skipTriage ? await triageFailingChecks(failing, repo) : failing;
-
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
-
   const unresolvedThreads = batchData.reviewThreads.filter((t) => !t.isResolved);
   const outdated = getOutdatedThreads(unresolvedThreads);
   let autoResolved: typeof outdated = [];
@@ -126,7 +116,6 @@ export async function runCheck(
     const base = { ...c, firstLookStatus: "minimized" as const };
     return cls === "edited" ? [{ ...base, edited: true as const }] : [base];
   });
-
   const firstLookSummaries: typeof batchData.reviewSummaries = [];
   const editedSummaries: typeof batchData.reviewSummaries = [];
   const seenSummaries: typeof batchData.reviewSummaries = [];
@@ -143,24 +132,33 @@ export async function runCheck(
     ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
     ...[...firstLookSummaries, ...editedSummaries].map((r) => markSeen(stateKey, r.id, r.body)),
   ]);
-
   const resolutionOnlyThreads = unresolvedThreads.filter(
     (t) => !autoResolvedIds.has(t.id) && (t.isOutdated || t.isMinimized),
   );
 
-  const blockedByFilteredCheck =
-    mergeStatus.status === "BLOCKED" &&
-    !verdict.anyFailing &&
-    !verdict.anyInProgress &&
-    verdict.filteredNames.length > 0;
-
-  const status = computeStatus(
+  let status = computeStatus(
     verdict,
     activeThreads.length + resolutionOnlyThreads.length,
     visibleCommentClassification.actionable.length,
     mergeStatus,
     batchData.changesRequestedReviews.length,
   );
+
+  if (status === "READY" && !didRefreshMergeability) {
+    const refreshed = await refreshReadyMergeability(
+      prNumber,
+      repo,
+      batchData,
+      verdict,
+      activeThreads.length + resolutionOnlyThreads.length,
+      visibleCommentClassification.actionable.length,
+    );
+    batchData = refreshed.batchData;
+    mergeStatus = refreshed.mergeStatus;
+    status = refreshed.status;
+  }
+
+  const blockedByFilteredCheck = isBlockedByFilteredCheck(mergeStatus, verdict);
 
   return {
     pr: prNumber,

@@ -144,6 +144,57 @@ describe("runCheck — UNKNOWN merge state", () => {
   });
 });
 
+describe("runCheck — READY mergeability recheck", () => {
+  it("refreshes mergeability before returning READY and returns FAILING when REST reports conflicts", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" }),
+    });
+    mockGetMergeableState.mockResolvedValue({
+      mergeable: "CONFLICTING",
+      mergeStateStatus: "DIRTY",
+    });
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(mockGetMergeableState).toHaveBeenCalledTimes(1);
+    expect(report.status).toBe("FAILING");
+    expect(report.mergeStatus.status).toBe("CONFLICTS");
+    expect(report.mergeStatus.mergeable).toBe("CONFLICTING");
+    expect(report.mergeStatus.mergeStateStatus).toBe("DIRTY");
+  });
+
+  it("keeps READY when the refresh reports a human handoff state", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" }),
+    });
+    mockGetMergeableState.mockResolvedValue({
+      mergeable: "MERGEABLE",
+      mergeStateStatus: "BLOCKED",
+    });
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.status).toBe("READY");
+    expect(report.mergeStatus.status).toBe("BLOCKED");
+    expect(report.mergeStatus.mergeStateStatus).toBe("BLOCKED");
+  });
+
+  it("does not recheck twice when UNKNOWN fallback already refreshed mergeability", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ mergeable: "UNKNOWN", mergeStateStatus: "UNKNOWN" }),
+    });
+    mockGetMergeableState.mockResolvedValue({
+      mergeable: "MERGEABLE",
+      mergeStateStatus: "CLEAN",
+    });
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.status).toBe("READY");
+    expect(mockGetMergeableState).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("runCheck — terminal PR state", () => {
   it("returns MERGED and skips CI/comment processing when PR is MERGED", async () => {
     const failingCheck = makeCheck({ category: "failing", conclusion: "FAILURE" });
@@ -411,6 +462,10 @@ describe("runCheck — BLOCKED + clean (hand off to humans)", () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({ mergeStateStatus: "BLOCKED", reviewDecision: "REVIEW_REQUIRED" }),
     });
+    mockGetMergeableState.mockResolvedValue({
+      mergeable: "MERGEABLE",
+      mergeStateStatus: "BLOCKED",
+    });
     const report = await runCheck(BASE_OPTS);
     expect(report.status).toBe("READY");
     expect(report.mergeStatus.status).toBe("BLOCKED");
@@ -534,6 +589,10 @@ describe("runCheck — BLOCKED + clean (hand off to humans)", () => {
   it("returns READY when HAS_HOOKS (derived BLOCKED) and CI passed", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({ mergeStateStatus: "HAS_HOOKS", reviewDecision: "REVIEW_REQUIRED" }),
+    });
+    mockGetMergeableState.mockResolvedValue({
+      mergeable: "MERGEABLE",
+      mergeStateStatus: "HAS_HOOKS",
     });
     const report = await runCheck(BASE_OPTS);
     expect(report.status).toBe("READY");
