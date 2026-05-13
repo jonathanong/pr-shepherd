@@ -7,7 +7,6 @@ Quick entry point. For a command overview see [`../README.md`](../README.md).
 | [cli-usage.md](cli-usage.md)         | CLI command reference and flags                                            |
 | [skills.md](skills.md)               | Claude Code skill usage and Codex-compatible CLI output (`/pr-shepherd:*`) |
 | [configuration.md](configuration.md) | `.pr-shepherdrc.yml` reference                                             |
-| [forking.md](forking.md)             | How to fork and customize pr-shepherd                                      |
 | [flow.md](flow.md)                   | End-to-end mermaid flow diagram                                            |
 | [architecture.md](architecture.md)   | Module map, dependency rules, where to put new code                        |
 | [iterate-flow.md](iterate-flow.md)   | Full 8-step dispatch walkthrough inside `iterate`                          |

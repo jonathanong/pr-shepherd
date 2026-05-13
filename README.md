@@ -259,10 +259,6 @@ Full reference: [docs/README.md](docs/README.md) — CLI usage, skills, configur
 
 See [docs/architecture.md](docs/architecture.md) for the module map and dependency rules.
 
-## Forking
-
-See [docs/forking.md](docs/forking.md) if you want to customize pr-shepherd for your own use or team.
-
 ## License
 
 [MIT](LICENSE)
