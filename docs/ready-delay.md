@@ -27,13 +27,13 @@ updateReadyDelay(pr, isReady, readyDelaySeconds, owner, repo)
 
 ## Lifecycle
 
-| Event                                       | Effect on `ready-since.txt`                          |
-| ------------------------------------------- | ---------------------------------------------------- |
-| First READY sweep                           | Created with current timestamp                       |
-| Subsequent READY sweeps (delay not elapsed) | Read; `remainingSeconds` decremented                 |
-| READY sweep, delay elapsed                  | Read; `shouldCancel: true` returned; file deleted    |
-| Non-READY sweep                             | Deleted (countdown resets)                           |
-| PR merged/closed (step 2.5)                 | Not reached — `updateReadyDelay` is skipped entirely |
+| Event                                       | Effect on `ready-since.txt`                                                                             |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| First READY sweep                           | Created with current timestamp                                                                          |
+| Subsequent READY sweeps (delay not elapsed) | Read; `remainingSeconds` decremented                                                                    |
+| READY sweep, delay elapsed                  | Read; `shouldCancel: true` returned; existing `updateReadyDelay` code deletes the file before returning |
+| Non-READY sweep                             | Deleted (countdown resets)                                                                              |
+| PR merged/closed (step 2.5)                 | Not reached — `updateReadyDelay` is skipped entirely                                                    |
 
 ## Clock-skew guard
 
