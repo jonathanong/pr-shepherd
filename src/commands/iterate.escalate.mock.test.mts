@@ -55,8 +55,15 @@ vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 import { runIterate } from "./iterate/index.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
+import { getCurrentPrNumber } from "../github/client.mts";
 import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
 import { readStallState, writeStallState } from "../state/iterate-stall.mts";
+import {
+  buildEscalateHumanMessage,
+  buildEscalateSuggestion,
+  checkEscalateTriggers,
+} from "./iterate/escalate.mts";
+import { buildRelevantChecks, buildWaitLog, getCurrentHeadSha } from "./iterate/helpers.mts";
 import type { ShepherdReport, IterateCommandOptions } from "../types.mts";
 
 // ---------------------------------------------------------------------------
@@ -65,6 +72,7 @@ import type { ShepherdReport, IterateCommandOptions } from "../types.mts";
 
 const mockRunCheck = vi.mocked(runCheck);
 const mockUpdateReadyDelay = vi.mocked(updateReadyDelay);
+const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockReadFixAttempts = vi.mocked(readFixAttempts);
 const mockWriteFixAttempts = vi.mocked(writeFixAttempts);
 const mockReadStallState = vi.mocked(readStallState);
@@ -342,6 +350,169 @@ describe("runIterate — escalate (fix-thrash)", () => {
     expect(mockWriteFixAttempts).toHaveBeenCalledOnce();
     const [, written] = mockWriteFixAttempts.mock.calls[0]!;
     expect(written.threadAttempts["thread-1"]).toBe(2);
+  });
+});
+
+describe("escalate message helpers", () => {
+  it("includes ambiguous comments and fallback suggestions", () => {
+    const message = buildEscalateHumanMessage(
+      {
+        triggers: ["thread-missing-location"],
+        unresolvedThreads: [],
+        ambiguousComments: [
+          {
+            id: "c-ambiguous",
+            author: "reviewer",
+            authorType: "User",
+            body: "Please consider the whole design\nmore detail",
+            url: "",
+          },
+        ],
+        changesRequestedReviews: [],
+        suggestion: "manual",
+      },
+      42,
+    );
+
+    expect(message).toContain("comment `c-ambiguous`");
+    expect(message).toContain("Please consider the whole design");
+    expect(buildEscalateSuggestion([])).toBe("Ambiguous state — inspect the PR and act manually");
+  });
+
+  it("renders thread/review item fallbacks, thrash attempts, and singular stall wording", () => {
+    const message = buildEscalateHumanMessage(
+      {
+        triggers: ["fix-thrash"],
+        unresolvedThreads: [
+          {
+            id: "t-no-loc",
+            path: null,
+            line: null,
+            startLine: undefined,
+            author: "reviewer",
+            authorType: "User",
+            body: "Thread body\nmore detail",
+            url: "",
+          },
+        ],
+        ambiguousComments: [],
+        changesRequestedReviews: [
+          { id: "r1", author: "reviewer", authorType: "User", body: "Review body\nmore detail" },
+        ],
+        thrashHistory: [{ threadId: "t-no-loc", attempts: 3 }],
+        suggestion: "manual",
+      },
+      42,
+    );
+
+    expect(message).toContain("(no location)");
+    expect(message).toContain("review `r1`");
+    expect(message).toContain("attempted 3 times");
+    expect(buildEscalateSuggestion(["stall-timeout"], "1")).toContain("1 minute —");
+    expect(buildEscalateSuggestion(["base-branch-unknown"])).toContain("base branch");
+  });
+
+  it("uses zero attempts for missing thread attempt records", () => {
+    mockLoadConfig.mockReturnValue(defaultConfig());
+    const { triggers, thrashHistory } = checkEscalateTriggers(
+      [
+        {
+          id: "t1",
+          isResolved: false,
+          isOutdated: false,
+          isMinimized: false,
+          path: "src/a.ts",
+          line: 1,
+          startLine: null,
+          author: "reviewer",
+          authorType: "User",
+          body: "body",
+          url: "",
+          createdAtUnix: 0,
+        },
+      ],
+      [],
+      [],
+      [],
+      [],
+      {},
+      false,
+    );
+
+    expect(triggers).toEqual([]);
+    expect(thrashHistory).toBeUndefined();
+  });
+});
+
+describe("iterate helper fallbacks", () => {
+  it("returns null when current HEAD cannot be read", async () => {
+    mockExecFile.mockRejectedValueOnce(new Error("not a git repo"));
+    await expect(getCurrentHeadSha()).resolves.toBeNull();
+  });
+
+  it("covers relevant-check filtering and wait-log branches", () => {
+    const report = makeReport({
+      checks: {
+        passing: [
+          {
+            name: "skipped",
+            status: "COMPLETED",
+            conclusion: "SKIPPED",
+            detailsUrl: "",
+            event: "pull_request",
+            runId: "run-skip",
+            category: "passed",
+          },
+        ],
+        failing: [
+          {
+            name: "failed",
+            status: "COMPLETED",
+            conclusion: "FAILURE",
+            detailsUrl: "",
+            event: "pull_request",
+            runId: "run-fail",
+            category: "failing",
+            workflowName: "CI",
+            jobName: "test",
+            failedStep: "Run tests",
+            summary: "failed summary",
+          },
+        ],
+        inProgress: [],
+        skipped: [],
+        filtered: [],
+        filteredNames: [],
+        blockedByFilteredCheck: false,
+      },
+    });
+
+    expect(buildRelevantChecks(report).map((check) => check.name)).toEqual(["failed"]);
+    expect(
+      buildWaitLog({
+        pr: 42,
+        repo: "owner/repo",
+        status: "IN_PROGRESS",
+        state: "OPEN",
+        mergeStateStatus: "BEHIND",
+        mergeStatus: "BEHIND",
+        reviewDecision: null,
+        blockingBotReviewInProgress: false,
+        isDraft: false,
+        shouldCancel: false,
+        remainingSeconds: 0,
+        summary: { passing: 1, skipped: 0, filtered: 0, inProgress: 0 },
+        baseBranch: "main",
+        checks: [],
+      }),
+    ).toContain("branch is behind base");
+  });
+});
+
+describe("runIterate — no PR", () => {
+  it("throws when no PR number is passed and no current PR is found", async () => {
+    mockGetCurrentPrNumber.mockResolvedValueOnce(null);
+    await expect(runIterate({ format: "json" })).rejects.toThrow("No open PR found");
   });
 });
 

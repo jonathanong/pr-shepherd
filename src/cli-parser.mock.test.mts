@@ -7,6 +7,9 @@ vi.mock("./commands/resolve.mts", () => ({
   runResolveFetch: vi.fn(),
   runResolveMutate: vi.fn(),
 }));
+vi.mock("./commands/log-file.mts", () => ({
+  runLogFile: vi.fn(),
+}));
 vi.mock("./commands/commit-suggestion.mts", () => ({
   runCommitSuggestion: vi.fn(),
 }));
@@ -15,10 +18,12 @@ vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
   return { ...actual, runIterate: vi.fn() };
 });
 import { main } from "./cli-parser.mts";
+import { runLogFile } from "./commands/log-file.mts";
 import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
 
 const mockRunResolveFetch = vi.mocked(runResolveFetch);
 const mockRunResolveMutate = vi.mocked(runResolveMutate);
+const mockRunLogFile = vi.mocked(runLogFile);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let stdoutSpy: any;
@@ -39,6 +44,34 @@ afterEach(() => {
   process.exitCode = undefined;
   stdoutSpy.mockRestore();
   stderrSpy.mockRestore();
+});
+
+describe("main — log-file", () => {
+  it("prints the log path as text without initializing normal command dispatch", async () => {
+    mockRunLogFile.mockResolvedValue({ path: "/tmp/shepherd.md" });
+    await main(["node", "shepherd", "log-file"]);
+    expect(getStdout()).toBe("/tmp/shepherd.md\n");
+    expect(mockRunResolveFetch).not.toHaveBeenCalled();
+  });
+
+  it("prints the log path as JSON for --format=json", async () => {
+    mockRunLogFile.mockResolvedValue({ path: "/tmp/shepherd.md" });
+    await main(["node", "shepherd", "log-file", "--format=json"]);
+    expect(JSON.parse(getStdout())).toEqual({ path: "/tmp/shepherd.md" });
+  });
+
+  it("prints the log path as JSON for --format json", async () => {
+    mockRunLogFile.mockResolvedValue({ path: "/tmp/shepherd.md" });
+    await main(["node", "shepherd", "log-file", "--format", "json"]);
+    expect(JSON.parse(getStdout())).toEqual({ path: "/tmp/shepherd.md" });
+  });
+
+  it("reports log-file errors and sets exitCode", async () => {
+    mockRunLogFile.mockRejectedValue(new Error("not in repo"));
+    await main(["node", "shepherd", "log-file"]);
+    expect(stderrSpy).toHaveBeenCalledWith("pr-shepherd: log-file: Error: not in repo\n");
+    expect(process.exitCode).toBe(1);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -164,6 +197,66 @@ describe("main — resolve", () => {
     expect(out).toContain("reset at 2023-11-14T22:13:20.000Z");
     expect(out).toContain("Not minimized due to rate limit (2): c-3, c-4");
     expect(out).not.toContain("Errors:");
+  });
+
+  it("formatMutateResult renders rate-limit stop without optional limit details", async () => {
+    mockRunResolveMutate.mockResolvedValue({
+      resolvedThreads: [],
+      minimizedComments: [],
+      dismissedReviews: [],
+      errors: ["rate limit: secondary limit"],
+      rateLimit: { message: "secondary limit" },
+    });
+
+    await main(["node", "shepherd", "resolve", "42", "--resolve-thread-ids", "t-1"]);
+
+    const out = getStdout();
+    expect(out).toContain("Stopped: GitHub rate limit hit — secondary limit");
+    expect(out).not.toContain("retry after");
+    expect(out).not.toContain("remaining");
+    expect(out).not.toContain("reset at");
+  });
+
+  it("formatMutateResult renders dismissed reviews, unresolved, unminimized, and undismissed IDs", async () => {
+    mockRunResolveMutate.mockResolvedValue({
+      resolvedThreads: [],
+      minimizedComments: [],
+      dismissedReviews: ["r-1"],
+      errors: [],
+      unresolvedThreads: ["t-1"],
+      unminimizedComments: ["c-1"],
+      undismissedReviews: ["r-2"],
+    });
+
+    await main([
+      "node",
+      "shepherd",
+      "resolve",
+      "42",
+      "--dismiss-review-ids",
+      "r-1,r-2",
+      "--message",
+      "done",
+    ]);
+
+    const out = getStdout();
+    expect(out).toContain("Dismissed reviews (1): r-1");
+    expect(out).toContain("Not resolved due to rate limit (1): t-1");
+    expect(out).toContain("Not minimized due to rate limit (1): c-1");
+    expect(out).toContain("Not dismissed due to rate limit (1): r-2");
+  });
+
+  it("formatMutateResult renders non-rate-limit errors", async () => {
+    mockRunResolveMutate.mockResolvedValue({
+      resolvedThreads: [],
+      minimizedComments: [],
+      dismissedReviews: [],
+      errors: ["t-1: nope"],
+    });
+
+    await main(["node", "shepherd", "resolve", "42", "--resolve-thread-ids", "t-1"]);
+
+    expect(getStdout()).toContain("Errors:\n  t-1: nope");
   });
 
   it("resolve mutate --format=json includes rate-limit stop and pending IDs", async () => {

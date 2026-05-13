@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ---------------------------------------------------------------------------
@@ -8,6 +9,7 @@ const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
 import { fetchStartupFailureChecks, triageFailingChecks } from "./triage.mts";
+import { mergeStartupFailureChecks } from "./startup-failures.mts";
 import type { ClassifiedCheck } from "../types.mts";
 
 const REPO = { owner: "owner", name: "repo" };
@@ -192,6 +194,44 @@ describe("fetchStartupFailureChecks", () => {
     expect(check).not.toHaveProperty("summary");
   });
 
+  it("omits summary when GitHub omits display_title", async () => {
+    mockFetch.mockResolvedValueOnce(
+      makeWorkflowRunsResponse([
+        {
+          id: 124,
+          name: "CI",
+          event: "pull_request",
+          status: "completed",
+          conclusion: "startup_failure",
+          html_url: "https://github.com/owner/repo/actions/runs/124",
+          pull_requests: [{ number: 42, head: { sha: "abc123" } }],
+        },
+      ]),
+    );
+
+    const [check] = await fetchStartupFailureChecks(REPO, "abc123", 42);
+
+    expect(check!.name).toBe("CI");
+    expect(check).not.toHaveProperty("summary");
+  });
+
+  it("filters out runs when GitHub omits pull_requests", async () => {
+    mockFetch.mockResolvedValueOnce(
+      makeWorkflowRunsResponse([
+        {
+          id: 125,
+          name: "CI",
+          event: "pull_request",
+          status: "completed",
+          conclusion: "startup_failure",
+          html_url: "https://github.com/owner/repo/actions/runs/125",
+        },
+      ]),
+    );
+
+    await expect(fetchStartupFailureChecks(REPO, "abc123", 42)).resolves.toEqual([]);
+  });
+
   it("filters out startup-failure runs from other PRs sharing the same head SHA", async () => {
     mockFetch.mockResolvedValueOnce(
       makeWorkflowRunsResponse([
@@ -221,6 +261,56 @@ describe("fetchStartupFailureChecks", () => {
     expect(checks.map((c) => c.runId)).toEqual(["456"]);
   });
 
+  it("matches startup-failure runs when GitHub omits the PR head SHA", async () => {
+    mockFetch.mockResolvedValueOnce(
+      makeWorkflowRunsResponse([
+        {
+          id: 789,
+          name: "CI",
+          event: "pull_request",
+          status: "completed",
+          conclusion: "startup_failure",
+          html_url: "https://github.com/owner/repo/actions/runs/789",
+          pull_requests: [{ number: 42, head: null }],
+        },
+      ]),
+    );
+
+    const checks = await fetchStartupFailureChecks(REPO, "abc123", 42);
+
+    expect(checks.map((c) => c.runId)).toEqual(["789"]);
+  });
+
+  it("warns when startup-failure pagination reaches the cap", async () => {
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      for (let page = 0; page < 10; page++) {
+        mockFetch.mockResolvedValueOnce(
+          makeWorkflowRunsResponse(
+            Array.from({ length: 100 }, (_, i) => ({
+              id: page * 100 + i,
+              name: "CI",
+              event: "pull_request",
+              status: "completed",
+              conclusion: "startup_failure",
+              html_url: `https://github.com/owner/repo/actions/runs/${page * 100 + i}`,
+              pull_requests: [{ number: 42, head: { sha: "abc123" } }],
+            })),
+          ),
+        );
+      }
+
+      const checks = await fetchStartupFailureChecks(REPO, "abc123", 42);
+
+      expect(checks).toHaveLength(1000);
+      expect(stderrSpy).toHaveBeenCalledWith(
+        expect.stringContaining("startup-failure run pagination cap"),
+      );
+    } finally {
+      stderrSpy.mockRestore();
+    }
+  });
+
   it("returns an empty supplement when the Actions runs fetch fails", async () => {
     mockFetch.mockResolvedValueOnce(makeErrorResponse(403));
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
@@ -235,6 +325,36 @@ describe("fetchStartupFailureChecks", () => {
     } finally {
       stderrSpy.mockRestore();
     }
+  });
+});
+
+describe("mergeStartupFailureChecks", () => {
+  it("replaces duplicate check runs and removes superseded duplicates", () => {
+    const original = [
+      makeCheck({ name: "old first", runId: "run-1", conclusion: "FAILURE" }),
+      makeCheck({ name: "old duplicate", runId: "run-1", conclusion: "FAILURE" }),
+      makeCheck({ name: "status context", runId: null, conclusion: "FAILURE" }),
+    ];
+    const startup = [
+      makeCheck({ name: "startup", runId: "run-1", conclusion: "STARTUP_FAILURE" }),
+      makeCheck({ name: "new startup", runId: "run-2", conclusion: "STARTUP_FAILURE" }),
+    ];
+
+    expect(mergeStartupFailureChecks(original, startup).map((check) => check.name)).toEqual([
+      "startup",
+      "status context",
+      "new startup",
+    ]);
+  });
+
+  it("appends startup failures that do not have a runId", () => {
+    const startup = makeCheck({
+      name: "startup without run id",
+      runId: null,
+      conclusion: "STARTUP_FAILURE",
+    });
+
+    expect(mergeStartupFailureChecks([], [startup])).toEqual([startup]);
   });
 });
 
@@ -339,6 +459,34 @@ describe("triageFailingChecks — failedStep", () => {
     mockFetch.mockResolvedValueOnce(makeErrorResponse(500));
     const [result] = await triageFailingChecks([makeCheck({ conclusion: "FAILURE" })], REPO);
     expect(result!.failedStep).toBeUndefined();
+  });
+
+  it("warns and returns accumulated jobs when job pagination reaches the cap", async () => {
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      for (let page = 0; page < 20; page++) {
+        mockFetch.mockResolvedValueOnce(
+          makeJobsResponse(
+            Array.from({ length: 100 }, (_, i) => ({
+              name: page === 0 && i === 0 ? "tests" : `job-${page}-${i}`,
+              workflow_name: "CI",
+              conclusion: page === 0 && i === 0 ? "failure" : "success",
+              steps:
+                page === 0 && i === 0
+                  ? [{ name: "Run tests", number: 1, conclusion: "failure" }]
+                  : [],
+            })),
+          ),
+        );
+      }
+
+      const [result] = await triageFailingChecks([makeCheck()], REPO);
+
+      expect(result!.failedStep).toBe("Run tests");
+      expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("job pagination cap"));
+    } finally {
+      stderrSpy.mockRestore();
+    }
   });
 });
 

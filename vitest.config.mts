@@ -9,7 +9,15 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov'],
       include: ['src/**/*.mts'],
-      exclude: ['src/**/*.{test,mock.test}.mts'],
+      exclude: [
+        'src/**/*.{test,mock.test}.mts',
+        'src/types.mts',
+        'src/types/**/*.mts',
+        'src/github/batch-raw-types.mts',
+      ],
+      thresholds: {
+        lines: 100,
+      },
     },
   },
 })

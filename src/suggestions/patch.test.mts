@@ -157,6 +157,21 @@ describe("buildUnifiedDiff", () => {
     expect(patch).toContain("\\ No newline at end of file\n");
   });
 
+  it("emits no-newline marker when the last line appears in before-context", () => {
+    const content = "a\nb";
+    const patch = buildUnifiedDiff({
+      path: "f.ts",
+      originalContent: content,
+      startLine: 3,
+      endLine: 2,
+      replacementLines: ["c"],
+      context: 1,
+    });
+    expect(patch).toContain(" b\n");
+    expect(patch).toContain("\\ No newline at end of file\n");
+    expect(patch).toContain("+c\n");
+  });
+
   it("emits no-newline marker for after-context lines when last line is in after-context", () => {
     // File has no trailing newline; last line falls in the after-context of the hunk
     const content = "a\nb\nc"; // 3 lines, no trailing newline

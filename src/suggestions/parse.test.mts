@@ -70,6 +70,16 @@ describe("parseSuggestion", () => {
     expect(parseSuggestion(body)).toEqual({ lines: ["foo"] });
   });
 
+  it("returns null when inline-close fallback cannot match the final line", () => {
+    const body = "```suggestion\nfoo";
+    expect(parseSuggestion(body)).toBeNull();
+  });
+
+  it("preserves unprefixed lines inside a quoted block", () => {
+    const body = ["> ```suggestion", "> prefixed", "not prefixed", "> ```"].join("\n");
+    expect(parseSuggestion(body)).toEqual({ lines: ["prefixed", "not prefixed"] });
+  });
+
   it("preserves a nested ```suggestion substring in the body content (issue #68)", () => {
     // The old regex stopped at the inner ``` and silently truncated the body.
     // The new line-based parser treats mid-line ``` as content, not a closer.

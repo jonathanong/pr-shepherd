@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ---------------------------------------------------------------------------
@@ -171,6 +172,17 @@ describe("graphql — error handling", () => {
     await expect(graphql("{ q }")).rejects.toThrow(/bad field/);
   });
 
+  it("throws on a GraphQL null data payload without errors", async () => {
+    process.env["GH_TOKEN"] = "tok";
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: () => Promise.resolve({ data: null }),
+    });
+    await expect(graphql("{ q }")).rejects.toThrow(/GitHub GraphQL error \(no data\)/);
+  });
+
   it("succeeds and logs to stderr when data is present but errors[] is non-empty", async () => {
     process.env["GH_TOKEN"] = "tok";
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
@@ -300,6 +312,17 @@ describe("graphqlWithRateLimit — header parsing", () => {
     const result = await graphqlWithRateLimit("{ q }");
     expect(result.rateLimit).toBeUndefined();
   });
+
+  it("ignores invalid retry-after values", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "retry-after": "-1" }),
+      json: () => Promise.resolve({ data: {} }),
+    });
+    const result = await graphqlWithRateLimit("{ q }");
+    expect(result.retryAfterSeconds).toBeUndefined();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -340,6 +363,13 @@ describe("rest", () => {
     );
   });
 
+  it("sends a JSON request body when provided", async () => {
+    mockFetch.mockResolvedValue(jsonOk({ ok: true }));
+    await rest("POST", "/repos/o/r/dispatches", { event_type: "test" });
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(init.body).toBe(JSON.stringify({ event_type: "test" }));
+  });
+
   it("retries rest on 401 and succeeds after token refresh", async () => {
     mockFetch
       .mockResolvedValueOnce({
@@ -352,6 +382,25 @@ describe("rest", () => {
     const result = await rest<{ merged: boolean }>("PUT", "/repos/o/r/pulls/1/merge");
     expect(result).toEqual({ merged: true });
     expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("records retry attempt metadata when a retried rest request still fails", async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        headers: new Headers(),
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+        text: () => Promise.resolve("Unauthorized"),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        headers: new Headers(),
+        text: () => Promise.resolve("server error"),
+      });
+
+    await expect(rest("GET", "/repos/o/r")).rejects.toThrow(/500/);
   });
 });
 
@@ -393,6 +442,43 @@ describe("restText — redirect handling", () => {
     expect(text).toBe("direct log content");
   });
 
+  it("handles direct text responses with invalid content-length", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "content-length": "not-a-number" }),
+      text: () => Promise.resolve("direct log content"),
+    });
+    await expect(restText("/repos/o/r/actions/jobs/1/logs")).resolves.toBe("direct log content");
+  });
+
+  it("handles redirect target responses with valid content-length", async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 302,
+        headers: new Headers({ location: "https://storage.example.com/logs/job-1.txt" }),
+        text: () => Promise.resolve(""),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ "content-length": "11" }),
+        text: () => Promise.resolve("hello world"),
+      });
+    await expect(restText("/repos/o/r/actions/jobs/1/logs")).resolves.toBe("hello world");
+  });
+
+  it("falls through redirects with no location and throws the original response", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 302,
+      headers: new Headers(),
+      text: () => Promise.resolve("missing location"),
+    });
+    await expect(restText("/repos/o/r/actions/jobs/1/logs")).rejects.toThrow(/failed: 302/);
+  });
+
   it("throws when redirect target returns non-2xx", async () => {
     mockFetch
       .mockResolvedValueOnce({
@@ -410,6 +496,18 @@ describe("restText — redirect handling", () => {
     await expect(restText("/repos/o/r/actions/jobs/1/logs")).rejects.toThrow(
       /redirect target.*failed: 403/,
     );
+  });
+
+  it("logs and attempts invalid redirect locations without URL parsing", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 302,
+      headers: new Headers({ location: "%%%" }),
+      text: () => Promise.resolve(""),
+    });
+    mockFetch.mockRejectedValueOnce(new TypeError("Invalid URL"));
+
+    await expect(restText("/repos/o/r/actions/jobs/1/logs")).rejects.toThrow("Invalid URL");
   });
 
   it("throws on non-2xx non-redirect responses", async () => {

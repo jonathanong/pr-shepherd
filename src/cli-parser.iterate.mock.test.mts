@@ -15,6 +15,7 @@ vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
 
 import { main } from "./cli-parser.mts";
 import { runIterate } from "./commands/iterate/index.mts";
+import { formatIterateResult } from "./cli/iterate-formatter.mts";
 import type { CancelReason, IterateResult } from "./types.mts";
 import { makeIterateResult } from "./cli-parser.iterate-fixtures.mts";
 
@@ -293,6 +294,16 @@ describe("main — iterate text format", () => {
     expect(getStdout()).toContain("**remainingSeconds** 300");
   });
 
+  it("lean mode: summary shows non-zero skipped, filtered, and in-progress counts", async () => {
+    const result = {
+      ...makeIterateResult("wait"),
+      summary: { passing: 2, skipped: 1, filtered: 1, inProgress: 3 },
+    };
+    mockRunIterate.mockResolvedValue(result);
+    await main(["node", "shepherd", "iterate", "42"]);
+    expect(getStdout()).toContain("2 passing, 1 skipped, 1 filtered, 3 inProgress");
+  });
+
   it("lean mode: blockingBotReviewInProgress and isDraft shown only when true", async () => {
     const result = {
       ...makeIterateResult("wait"),
@@ -316,6 +327,10 @@ describe("main — iterate text format", () => {
     expect(text).toContain("isDraft");
     expect(text).toContain("0 skipped");
     expect(text).toContain("0 filtered");
+  });
+
+  it("formatIterateResult uses default options when called directly", () => {
+    expect(formatIterateResult(makeIterateResult("wait"))).toContain("# PR #42 [WAIT]");
   });
 
   // Per CLAUDE.md output-format invariant: text and JSON must surface equivalent

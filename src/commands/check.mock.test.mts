@@ -645,6 +645,36 @@ describe("runCheck — reviewSummaries + approvedReviews pass-through", () => {
     expect(mockMarkSeen).not.toHaveBeenCalledWith(expect.anything(), "PRR_SUM", expect.anything());
   });
 
+  it("re-surfaces edited summaries separately and marks the updated body seen", async () => {
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([["PRR_SUM", { seenAt: 1000, bodyHash: hashBody("old overview") }]]),
+    );
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        reviewSummaries: [
+          {
+            id: "PRR_SUM",
+            author: "copilot",
+            authorType: "Unknown" as const,
+            body: "new overview",
+          },
+        ],
+      }),
+    });
+    const report = await runCheck(BASE_OPTS);
+    expect(report.editedSummaries).toEqual([
+      {
+        id: "PRR_SUM",
+        author: "copilot",
+        authorType: "Unknown" as const,
+        body: "new overview",
+      },
+    ]);
+    expect(report.firstLookSummaries).toEqual([]);
+    expect(report.reviewSummaries).toEqual([]);
+    expect(mockMarkSeen).toHaveBeenCalledWith(expect.anything(), "PRR_SUM", "new overview");
+  });
+
   it("defaults to empty arrays when batch has none", async () => {
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData() });
     const report = await runCheck(BASE_OPTS);
@@ -876,6 +906,48 @@ describe("runCheck — first-look items", () => {
     expect(report.threads.firstLook).toHaveLength(1);
     expect(report.threads.firstLook[0]?.edited).toBe(true);
     expect(report.threads.firstLook[0]?.firstLookStatus).toBe("outdated");
+  });
+
+  it("re-surfaces edited resolved and minimized threads and minimized comments", async () => {
+    const resolved = makeThread({
+      id: "t-resolved",
+      isResolved: true,
+      isOutdated: false,
+      body: "resolved new",
+    });
+    const minimizedThread = makeThread({
+      id: "t-minimized",
+      isMinimized: true,
+      body: "minimized new",
+    });
+    const minimizedComment = makeComment({
+      id: "c-minimized",
+      isMinimized: true,
+      body: "comment new",
+    });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        reviewThreads: [resolved, minimizedThread],
+        comments: [minimizedComment],
+      }),
+    });
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([
+        ["t-resolved", { seenAt: 1000, bodyHash: hashBody("resolved old") }],
+        ["t-minimized", { seenAt: 1000, bodyHash: hashBody("minimized old") }],
+        ["c-minimized", { seenAt: 1000, bodyHash: hashBody("comment old") }],
+      ]),
+    );
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.threads.firstLook.map((t) => [t.id, t.firstLookStatus, t.edited])).toEqual([
+      ["t-resolved", "resolved", true],
+      ["t-minimized", "minimized", true],
+    ]);
+    expect(report.comments.firstLook.map((c) => [c.id, c.firstLookStatus, c.edited])).toEqual([
+      ["c-minimized", "minimized", true],
+    ]);
   });
 
   it("calls markSeen for each first-look item with the item body", async () => {

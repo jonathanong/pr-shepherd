@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { projectIterateLean } from "./iterate-lean.mts";
+import { projectIterateLean, projectIterateVerbose } from "./iterate-lean.mts";
 import { makeIterateResult } from "../cli-parser.iterate-fixtures.mts";
 
 describe("projectIterateLean", () => {
@@ -235,6 +235,25 @@ describe("projectIterateLean", () => {
       { id: "c1", author: "a", authorType: "Unknown" as const, body: "nit", url: "" },
     ];
     result.fix.reviewSummaryIds = ["r1"];
+    result.fix.resolutionOnlyThreads = [
+      {
+        id: "t-resolve",
+        path: "src/old.ts",
+        line: 2,
+        startLine: null,
+        author: "a",
+        authorType: "Unknown" as const,
+        body: "old",
+        url: "",
+        isResolved: false,
+        isOutdated: true,
+        isMinimized: false,
+        createdAtUnix: 0,
+      },
+    ];
+    result.fix.firstLookSummaries = [
+      { id: "summary-1", author: "a", authorType: "Unknown" as const, body: "summary" },
+    ];
     result.fix.surfacedApprovals = [
       { id: "s1", author: "a", authorType: "Unknown" as const, body: "summary" },
     ];
@@ -274,20 +293,51 @@ describe("projectIterateLean", () => {
       { name: "lint", conclusion: "FAILURE" as const, runId: "r2", detailsUrl: null },
     ];
     result.cancelled = ["run-1"];
+    result.fix.inProgressRunIds = ["run-2"];
 
     const lean = projectIterateLean(result) as Record<string, unknown>;
     const fix = lean.fix as Record<string, unknown>;
     expect((fix.threads as unknown[]).length).toBe(1);
+    expect((fix.resolutionOnlyThreads as unknown[]).length).toBe(1);
     expect((fix.checks as unknown[]).length).toBe(1);
     expect((lean.checks as unknown[]).length).toBe(1);
     expect((fix.instructions as unknown[]).length).toBe(1);
     expect((fix.actionableComments as unknown[]).length).toBe(1);
     expect((fix.reviewSummaryIds as unknown[]).length).toBe(1);
+    expect((fix.firstLookSummaries as unknown[]).length).toBe(1);
     expect((fix.surfacedApprovals as unknown[]).length).toBe(1);
     expect((fix.firstLookThreads as unknown[]).length).toBe(1);
     expect((fix.firstLookComments as unknown[]).length).toBe(1);
+    expect((fix.inProgressRunIds as unknown[]).length).toBe(1);
     expect((fix.changesRequestedReviews as unknown[]).length).toBe(1);
     expect((lean.cancelled as unknown[]).length).toBe(1);
+  });
+
+  it("projectIterateVerbose adapts fix_code instructions", () => {
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    result.fix.instructions = ["Stop this iteration before the next tick."];
+    const verbose = projectIterateVerbose(result, { runtime: "codex" }) as typeof result;
+    expect(verbose.fix.instructions[0]).toContain("rerun `npx pr-shepherd 42`");
+  });
+
+  it("projectIterateVerbose adapts non-fix logs and adds instructions", () => {
+    const verbose = projectIterateVerbose(makeIterateResult("wait"), {
+      runtime: "codex",
+    }) as Record<string, unknown>;
+    expect(verbose.log).toContain("WAIT");
+    expect(verbose.instructions).toBeDefined();
+  });
+
+  it("projectIterateVerbose uses default options for fix_code and wait", () => {
+    const fixResult = makeIterateResult("fix_code");
+    if (fixResult.action !== "fix_code") throw new Error("unreachable");
+    expect((projectIterateVerbose(fixResult) as typeof fixResult).fix.instructions[0]).toContain(
+      "npx pr-shepherd 42",
+    );
+
+    const wait = projectIterateVerbose(makeIterateResult("wait")) as Record<string, unknown>;
+    expect(wait.instructions).toBeDefined();
   });
 
   // ---------------------------------------------------------------------------

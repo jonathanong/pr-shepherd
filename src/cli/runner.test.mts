@@ -113,6 +113,13 @@ describe("resolveCliRunner", () => {
     expect(resolveCliRunner("auto", nested)).toBe("npx");
   });
 
+  it("caches detected runners per start directory", () => {
+    writePackage({ packageManager: "pnpm@10.0.0" });
+    expect(resolveCliRunner("auto", tmpDir)).toBe("pnpm");
+    writePackage({ packageManager: "yarn@4.0.0" });
+    expect(resolveCliRunner("auto", tmpDir)).toBe("pnpm");
+  });
+
   it("rejects unsupported config values", () => {
     expect(() => parseCliRunner("bun")).toThrow("cli.runner");
   });
@@ -144,5 +151,13 @@ describe("buildPrShepherdCommand", () => {
     expect(renderShellCommand(["--message", "$DISMISS_MESSAGE", "hello world"])).toBe(
       '--message "$DISMISS_MESSAGE" "hello world"',
     );
+  });
+
+  it("single-quotes args with double quotes or dollar signs when possible", () => {
+    expect(renderShellCommand(["--message", 'hello "$USER"'])).toBe("--message 'hello \"$USER\"'");
+  });
+
+  it("throws for args that cannot be safely quoted", () => {
+    expect(() => renderShellCommand(["can't use $USER"])).toThrow("Unexpected character");
   });
 });

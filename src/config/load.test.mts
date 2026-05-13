@@ -90,6 +90,15 @@ describe("loadConfig — no rc file", () => {
     expect(output).toContain("iterate.minimizeComments");
   });
 
+  it("rejects invalid cli config shapes and falls back to defaults", async () => {
+    writeFileSync(join(tmpDir, RC), "cli: null\n");
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const loadConfig = await freshLoadConfig();
+    const result = loadConfig();
+    expect(result.cli?.runner).toBe("auto");
+    expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain("cli must be a plain object");
+  });
+
   it("returns defaults for empty YAML (yaml.parse returns null)", async () => {
     writeFileSync(join(tmpDir, RC), "");
     const loadConfig = await freshLoadConfig();

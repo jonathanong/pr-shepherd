@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // ---------------------------------------------------------------------------
@@ -56,6 +57,7 @@ const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
 import { runIterate } from "./iterate/index.mts";
+import { buildFixInstructions } from "./iterate/render.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
@@ -199,6 +201,47 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+});
+
+describe("buildFixInstructions", () => {
+  it("adds edited guidance for edited first-look threads", () => {
+    const instructions = buildFixInstructions(
+      [],
+      [],
+      [],
+      [],
+      "main",
+      {
+        argv: ["npx", "pr-shepherd", "resolve", "42"],
+        requiresHeadSha: false,
+        requiresDismissMessage: false,
+        hasMutations: false,
+      },
+      false,
+      42,
+      0,
+      [
+        {
+          id: "t-edited",
+          isResolved: false,
+          isOutdated: true,
+          isMinimized: false,
+          path: "src/a.ts",
+          line: 1,
+          startLine: null,
+          author: "reviewer",
+          authorType: "User",
+          body: "updated",
+          url: "",
+          createdAtUnix: 0,
+          firstLookStatus: "outdated",
+          edited: true,
+        },
+      ],
+    );
+
+    expect(instructions.join("\n")).toContain("were updated by their author");
+  });
 });
 
 describe("runIterate — prescriptive fields: log strings", () => {

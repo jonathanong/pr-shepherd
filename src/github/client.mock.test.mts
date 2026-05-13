@@ -198,6 +198,14 @@ describe("getRepoInfo — remote URL parsing", () => {
     });
     expect(await getRepoInfo()).toEqual({ owner: "owner", name: "repo" });
   });
+
+  it("throws for unsupported remote URL shapes", async () => {
+    mockExecFile.mockResolvedValue({
+      stdout: "https://github.com/owner/repo/extra.git\n",
+      stderr: "",
+    });
+    await expect(getRepoInfo()).rejects.toThrow("Cannot parse GitHub remote URL");
+  });
 });
 
 // ---------------------------------------------------------------------------

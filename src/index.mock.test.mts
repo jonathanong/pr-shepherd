@@ -55,6 +55,26 @@ describe("index — error exit", () => {
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
+  it("formats non-Error causes", async () => {
+    const err = new Error("outer");
+    err.cause = "plain cause";
+    mockMain.mockRejectedValueOnce(err);
+    await loadIndex();
+    expect(stderrSpy.mock.calls[0][0]).toBe("pr-shepherd error: outer (cause: plain cause)\n");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it("falls back to the cause message when an Error has no stack", async () => {
+    const cause = new Error("stackless cause");
+    cause.stack = undefined;
+    const err = new Error("outer");
+    err.cause = cause;
+    mockMain.mockRejectedValueOnce(err);
+    await loadIndex();
+    expect(stderrSpy.mock.calls[0][0]).toContain("(cause: stackless cause)");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
   it("does not recurse infinitely for circular cause chains", async () => {
     const err = new Error("outer");
     err.cause = err;
