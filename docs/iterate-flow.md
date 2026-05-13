@@ -18,9 +18,9 @@
 
 **Check:** `report.mergeStatus.state !== 'OPEN'`
 
-**Why:** GitHub returns `mergeable: UNKNOWN` and `mergeStateStatus: UNKNOWN` for merged/closed PRs. `runCheck` surfaces this as top-level `status: 'MERGED'` or `status: 'CLOSED'`, and this branch stops the loop before ready-delay or actionable checks.
+**Why:** GitHub returns `mergeable: UNKNOWN` and `mergeStateStatus: UNKNOWN` for merged/closed PRs. `runCheck` surfaces this as top-level `status: 'MERGED'` or `status: 'CLOSED'`, and this branch stops the loop before actionable checks.
 
-**Emits:** `action: 'cancel'` — skips ready-delay, skips all actionable checks.
+**Emits:** `action: 'cancel'` — clears any stale ready-delay marker, skips all actionable checks.
 
 ---
 
@@ -31,6 +31,8 @@
 - On first READY sweep: creates the file with the current timestamp.
 - On subsequent READY sweeps: checks if `now − readySince >= readyDelaySeconds`. If so, `shouldCancel: true`.
 - On non-READY sweep: deletes the file (resets the countdown).
+
+Before a READY sweep reaches the ready-delay state machine, `runCheck` performs one fresh REST mergeability read unless the UNKNOWN fallback already did so. If the refreshed mergeability reports `CONFLICTING`/`DIRTY`, the sweep becomes `FAILING`/`CONFLICTS`, resets the ready-delay marker, and routes to `fix_code`.
 
 See [ready-delay.md](ready-delay.md) for full lifecycle.
 
