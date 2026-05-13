@@ -240,7 +240,7 @@ describe("runIterate — cancel", () => {
 });
 
 describe("runIterate — cancel on merged/closed PR", () => {
-  it("returns action: cancel and does not call updateReadyDelay when PR is MERGED", async () => {
+  it("returns action: cancel and clears ready-delay when PR is MERGED", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "MERGED",
@@ -261,10 +261,10 @@ describe("runIterate — cancel on merged/closed PR", () => {
     expect(result.action).toBe("cancel");
     expect(result.status).toBe("MERGED");
     expect(result.state).toBe("MERGED");
-    expect(mockUpdateReadyDelay).not.toHaveBeenCalled();
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo");
   });
 
-  it("returns action: cancel when PR is CLOSED", async () => {
+  it("returns action: cancel and clears ready-delay when PR is CLOSED", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "CLOSED",
@@ -285,7 +285,7 @@ describe("runIterate — cancel on merged/closed PR", () => {
     expect(result.action).toBe("cancel");
     expect(result.status).toBe("CLOSED");
     expect(result.state).toBe("CLOSED");
-    expect(mockUpdateReadyDelay).not.toHaveBeenCalled();
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo");
   });
 });
 

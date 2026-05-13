@@ -35,6 +35,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
 
   if (report.mergeStatus.state !== "OPEN") {
     const state = report.mergeStatus.state.toLowerCase();
+    await updateReadyDelay(report.pr, false, readyDelaySeconds, repoOwner, repoName);
     await clearStallState(stallKey);
     return {
       pr: report.pr,

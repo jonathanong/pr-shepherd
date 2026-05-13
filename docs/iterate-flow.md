@@ -18,9 +18,9 @@
 
 **Check:** `report.mergeStatus.state !== 'OPEN'`
 
-**Why:** GitHub returns `mergeable: UNKNOWN` and `mergeStateStatus: UNKNOWN` for merged/closed PRs. `runCheck` surfaces this as top-level `status: 'MERGED'` or `status: 'CLOSED'`, and this branch stops the loop before ready-delay or actionable checks.
+**Why:** GitHub returns `mergeable: UNKNOWN` and `mergeStateStatus: UNKNOWN` for merged/closed PRs. `runCheck` surfaces this as top-level `status: 'MERGED'` or `status: 'CLOSED'`, and this branch stops the loop before actionable checks.
 
-**Emits:** `action: 'cancel'` — skips ready-delay, skips all actionable checks.
+**Emits:** `action: 'cancel'` — clears any stale ready-delay marker, skips all actionable checks.
 
 ---
 

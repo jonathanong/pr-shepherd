@@ -33,7 +33,7 @@ updateReadyDelay(pr, isReady, readyDelaySeconds, owner, repo)
 | Subsequent READY sweeps (delay not elapsed) | Read; `remainingSeconds` decremented                                                                    |
 | READY sweep, delay elapsed                  | Read; `shouldCancel: true` returned; existing `updateReadyDelay` code deletes the file before returning |
 | Non-READY sweep                             | Deleted (countdown resets)                                                                              |
-| PR merged/closed (step 2.5)                 | Not reached — `updateReadyDelay` is skipped entirely                                                    |
+| PR merged/closed (step 1.5)                 | Deleted before iterate returns `cancel`                                                                 |
 
 ## Clock-skew guard
 
