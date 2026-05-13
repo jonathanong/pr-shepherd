@@ -224,6 +224,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
 
     const result = await runIterate(makeOpts());
 
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo");
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       expect(result.fix.threads).toHaveLength(0);
@@ -284,6 +285,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
 
     const result = await runIterate(makeOpts());
 
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo");
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       expect(result.fix.threads).toHaveLength(1);

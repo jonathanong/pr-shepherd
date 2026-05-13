@@ -237,6 +237,7 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
 
     const result = await runIterate(makeOpts());
 
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo");
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       expect(result.fix.checks).toHaveLength(1);

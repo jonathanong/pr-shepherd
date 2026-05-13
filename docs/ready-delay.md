@@ -4,7 +4,7 @@
 
 ## What it does
 
-The ready-delay prevents shepherd from cancelling the loop the instant CI goes green. It waits for a configurable window of consecutive READY status before emitting `action: cancel`. This gives reviewers time to post comments before the loop exits.
+The ready-delay prevents shepherd from cancelling the loop the instant CI goes green. It waits for a configurable window of consecutive clean handoff status before emitting `action: cancel`. A clean handoff means the current sweep is `READY` and has no actionable Shepherd work such as failing CI, conflicts, unresolved comments, review-summary minimization, or first-look items. This gives reviewers time to post comments before the loop exits without letting stale readiness survive a newly unclean PR.
 
 The timer also starts when the PR is BLOCKED but shepherd has nothing left to do — all CI is green, no unresolved threads or comments, no Copilot review pending. This covers any branch-protection reason: awaiting a first human review (`REVIEW_REQUIRED`), awaiting additional approvals (`APPROVED` but not enough), required signed commits, or other policy. From shepherd's perspective these are all hand-off states — it cannot resolve them — so the ready-delay countdown applies and the loop cancels once it elapses.
 
@@ -19,6 +19,8 @@ updateReadyDelay(pr, isReady, readyDelaySeconds, owner, repo)
   → { isReady, shouldCancel, remainingSeconds }
 ```
 
+`isReady` is `true` only after iterate confirms the sweep is a clean handoff. A top-level `READY` report with actionable work still passes `false` so the marker resets before `fix_code` is emitted.
+
 ## Marker file
 
 **Path:** `$TMPDIR/pr-shepherd-state/<owner>-<repo>/<pr>/ready-since.txt`
@@ -27,13 +29,13 @@ updateReadyDelay(pr, isReady, readyDelaySeconds, owner, repo)
 
 ## Lifecycle
 
-| Event                                       | Effect on `ready-since.txt`                                                                             |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| First READY sweep                           | Created with current timestamp                                                                          |
-| Subsequent READY sweeps (delay not elapsed) | Read; `remainingSeconds` decremented                                                                    |
-| READY sweep, delay elapsed                  | Read; `shouldCancel: true` returned; existing `updateReadyDelay` code deletes the file before returning |
-| Non-READY sweep                             | Deleted (countdown resets)                                                                              |
-| PR merged/closed (step 1.5)                 | Deleted before iterate returns `cancel`                                                                 |
+| Event                                                | Effect on `ready-since.txt`                                                                             |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| First clean handoff sweep                            | Created with current timestamp                                                                          |
+| Subsequent clean handoff sweeps (delay not elapsed)  | Read; `remainingSeconds` decremented                                                                    |
+| Clean handoff sweep, delay elapsed                   | Read; `shouldCancel: true` returned; existing `updateReadyDelay` code deletes the file before returning |
+| Non-READY sweep, or READY sweep with actionable work | Deleted (countdown resets)                                                                              |
+| PR merged/closed (step 1.5)                          | Deleted before iterate returns `cancel`                                                                 |
 
 ## Clock-skew guard
 
