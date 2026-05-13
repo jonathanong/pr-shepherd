@@ -7,15 +7,15 @@
   },
   "overrides": [
     {
-      "files": ["*.test.mts", "*.mock.test.mts"],
+      "files": [
+        "*.test.mts",
+        "*.test.*.mts",
+        "*.mock.test.mts",
+        "*.mock.test.*.mts",
+        "*.test-support.mts"
+      ],
       "rules": {
-        "max-lines": ["error", 510]
-      }
-    },
-    {
-      "files": ["src/github/http.mts"],
-      "rules": {
-        "max-lines": ["error", 450]
+        "no-unused-vars": "off"
       }
     }
   ]

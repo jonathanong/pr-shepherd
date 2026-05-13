@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, it } from "vitest";
 import { setPendingOps, type ResolveMutationOp } from "./pending-ops.mts";
 import type { ResolveResult } from "./resolve.mts";

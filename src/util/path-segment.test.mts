@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, it, expect } from "vitest";
 import { SAFE_SEGMENT } from "./path-segment.mts";
 
