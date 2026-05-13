@@ -34,7 +34,7 @@ In `marketplace.json`:
 
 ## 2. Rename the loop tag
 
-The iterate skill includes `#pr-shepherd-loop:pr=<N>:` so agents and logs can identify the PR being iterated. Change this string in `plugin/skills/pr-shepherd/SKILL.md` to avoid conflicts with other installations:
+The iterate skill includes `#pr-shepherd-loop:pr=<N>:` so agents and logs can identify the PR being iterated. Change this string in `plugins/pr-shepherd/skills/pr-shepherd/SKILL.md` to avoid conflicts with other installations:
 
 ```
 #my-shepherd-loop:pr=<PR_NUMBER>:

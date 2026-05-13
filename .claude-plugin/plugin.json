@@ -10,5 +10,5 @@
   "repository": "https://github.com/jonathanong/pr-shepherd",
   "license": "MIT",
   "keywords": ["github", "pull-request", "ci", "code-review", "automation"],
-  "skills": "./plugin/skills/"
+  "skills": "./plugins/pr-shepherd/skills/"
 }

@@ -7,6 +7,7 @@ import { loadConfig } from "../../config/load.mts";
 import { getCurrentHeadSha, buildSummary, buildRelevantChecks, buildWaitLog } from "./helpers.mts";
 import { classifyReviewSummaries } from "./classify.mts";
 import { applyStallGuard } from "./stall.mts";
+import { clearStallState } from "../../state/iterate-stall.mts";
 import { handleFixCode } from "./fix-code.mts";
 import type { IterateCommandOptions, IterateResult, IterateResultBase } from "../../types.mts";
 
@@ -26,8 +27,15 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     autoResolve: config.actions.autoResolveOutdated,
   });
 
+  const [repoOwner, repoName] = report.repo.split("/");
+  if (!repoOwner || !repoName) {
+    throw new Error(`Unexpected repo format: "${report.repo}" (expected "owner/name")`);
+  }
+  const stallKey = { owner: repoOwner, repo: repoName, pr: prNumber };
+
   if (report.mergeStatus.state !== "OPEN") {
     const state = report.mergeStatus.state.toLowerCase();
+    await clearStallState(stallKey);
     return {
       pr: report.pr,
       repo: report.repo,
@@ -49,10 +57,6 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     };
   }
 
-  const [repoOwner, repoName] = report.repo.split("/");
-  if (!repoOwner || !repoName) {
-    throw new Error(`Unexpected repo format: "${report.repo}" (expected "owner/name")`);
-  }
   const isReady = report.status === "READY";
   const readyState = await updateReadyDelay(
     report.pr,
@@ -80,6 +84,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   };
 
   if (readyState.shouldCancel) {
+    await clearStallState(stallKey);
     let cancelNote: string;
     if (base.mergeStatus !== "BLOCKED") cancelNote = "has been ready for review";
     else if (base.reviewDecision === "REVIEW_REQUIRED") cancelNote = "is awaiting human review";
@@ -94,7 +99,6 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   }
 
   const headSha = (await getCurrentHeadSha()) ?? "unknown";
-  const stallKey = { owner: repoOwner, repo: repoName, pr: prNumber };
 
   const {
     minimizeIds: reviewSummaryIds,

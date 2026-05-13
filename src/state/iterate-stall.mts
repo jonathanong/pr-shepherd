@@ -54,6 +54,15 @@ export async function readStallState(key: StateKey): Promise<StallState | null> 
   }
 }
 
+/** Clear stall state so the next invocation starts a fresh timer (fire-and-forget — never throws). */
+export async function clearStallState(key: StateKey): Promise<void> {
+  try {
+    await unlink(resolvePath(key));
+  } catch {
+    // Best-effort — file may not exist.
+  }
+}
+
 /** Write stall state (fire-and-forget — never throws). */
 export async function writeStallState(key: StateKey, state: StallState): Promise<void> {
   let tmp: string | undefined;

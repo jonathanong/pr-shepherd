@@ -2,7 +2,12 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { randomBytes } from "node:crypto";
 import { rm, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { readStallState, writeStallState, type StallState } from "./iterate-stall.mts";
+import {
+  readStallState,
+  writeStallState,
+  clearStallState,
+  type StallState,
+} from "./iterate-stall.mts";
 
 let testStateDir: string;
 
@@ -110,5 +115,19 @@ describe("writeStallState — fire and forget", () => {
     await expect(
       writeStallState({ owner: "a", repo: "b", pr: 1 }, { fingerprint: "x", firstSeenAt: 1 }),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe("clearStallState", () => {
+  it("removes an existing stall state file", async () => {
+    const state: StallState = { fingerprint: "abc", firstSeenAt: 1700000000 };
+    await writeStallState(testKey, state);
+    expect(await readStallState(testKey)).not.toBeNull();
+    await clearStallState(testKey);
+    expect(await readStallState(testKey)).toBeNull();
+  });
+
+  it("does not throw when no file exists", async () => {
+    await expect(clearStallState(testKey)).resolves.toBeUndefined();
   });
 });
