@@ -7,6 +7,7 @@ import { loadConfig } from "../../config/load.mts";
 import { getCurrentHeadSha, buildSummary, buildRelevantChecks, buildWaitLog } from "./helpers.mts";
 import { classifyReviewSummaries } from "./classify.mts";
 import { applyStallGuard } from "./stall.mts";
+import { clearStallState } from "../../state/iterate-stall.mts";
 import { handleFixCode } from "./fix-code.mts";
 import type { IterateCommandOptions, IterateResult, IterateResultBase } from "../../types.mts";
 
@@ -80,6 +81,8 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   };
 
   if (readyState.shouldCancel) {
+    const stallKey = { owner: repoOwner, repo: repoName, pr: prNumber };
+    await clearStallState(stallKey);
     let cancelNote: string;
     if (base.mergeStatus !== "BLOCKED") cancelNote = "has been ready for review";
     else if (base.reviewDecision === "REVIEW_REQUIRED") cancelNote = "is awaiting human review";

@@ -47,6 +47,7 @@ vi.mock("../state/fix-attempts.mts", () => ({
 vi.mock("../state/iterate-stall.mts", () => ({
   readStallState: vi.fn().mockResolvedValue(null),
   writeStallState: vi.fn().mockResolvedValue(undefined),
+  clearStallState: vi.fn().mockResolvedValue(undefined),
 }));
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));

@@ -49,6 +49,7 @@ vi.mock("../state/fix-attempts.mts", () => ({
 vi.mock("../state/iterate-stall.mts", () => ({
   readStallState: vi.fn().mockResolvedValue(null),
   writeStallState: vi.fn().mockResolvedValue(undefined),
+  clearStallState: vi.fn().mockResolvedValue(undefined),
 }));
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
@@ -58,7 +59,12 @@ import { runIterate } from "./iterate/index.mts";
 import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
-import { readStallState, writeStallState, type StallState } from "../state/iterate-stall.mts";
+import {
+  readStallState,
+  writeStallState,
+  clearStallState,
+  type StallState,
+} from "../state/iterate-stall.mts";
 import type { ShepherdReport, IterateCommandOptions } from "../types.mts";
 
 // ---------------------------------------------------------------------------
@@ -71,6 +77,7 @@ const mockReadFixAttempts = vi.mocked(readFixAttempts);
 const mockWriteFixAttempts = vi.mocked(writeFixAttempts);
 const mockReadStallState = vi.mocked(readStallState);
 const mockWriteStallState = vi.mocked(writeStallState);
+const mockClearStallState = vi.mocked(clearStallState);
 
 function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
   return {
@@ -209,6 +216,7 @@ beforeEach(() => {
   mockWriteFixAttempts.mockResolvedValue(undefined);
   mockReadStallState.mockResolvedValue(null);
   mockWriteStallState.mockResolvedValue(undefined);
+  mockClearStallState.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -386,7 +394,7 @@ describe("runIterate — stall-timeout guard", () => {
     expect(written.firstSeenAt).toBe(NOW);
   });
 
-  it("does not touch stall state on cancel (ready-delay elapsed)", async () => {
+  it("clears stall state on cancel (ready-delay elapsed) so re-invocation starts fresh", async () => {
     mockRunCheck.mockResolvedValue(makeReport());
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: true,
@@ -398,6 +406,7 @@ describe("runIterate — stall-timeout guard", () => {
 
     expect(result.action).toBe("cancel");
     expect(mockWriteStallState).not.toHaveBeenCalled();
+    expect(mockClearStallState).toHaveBeenCalledOnce();
   });
 
   it("resets firstSeenAt when inProgress check names change (exercises inProgress fingerprint path)", async () => {
