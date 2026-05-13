@@ -1,7 +1,7 @@
 {
   "name": "pr-shepherd",
   "description": "Autonomous PR CI monitor and review-comment resolver for agentic coding tools",
-  "version": "0.16.2",
+  "version": "0.16.3",
   "author": {
     "name": "Jonathan Ong",
     "email": "jonathanrichardong@gmail.com"
