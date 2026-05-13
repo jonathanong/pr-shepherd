@@ -147,7 +147,7 @@ Implementation lives in `src/state/seen-comments.mts`. The call sites are
 
 ## Keep skills and loop prompts minimal
 
-Skills (`skills/*/SKILL.md`) and `/loop` prompts should be thin dispatchers with this shape:
+Skills (`plugins/pr-shepherd/skills/*/SKILL.md`) and `/loop` prompts should be thin dispatchers with this shape:
 
 1. Parse arguments.
 2. Short-circuit trivial cases (e.g. merged PR).
@@ -155,7 +155,7 @@ Skills (`skills/*/SKILL.md`) and `/loop` prompts should be thin dispatchers with
 4. Print the full output.
 5. Follow the output's own `## Instructions` section exactly.
 
-The canonical example is `skills/pr-shepherd/SKILL.md` — pure dispatcher, no policy.
+The canonical example is `plugins/pr-shepherd/skills/pr-shepherd/SKILL.md` — pure dispatcher, no policy.
 
 Everything else belongs in the CLI's Markdown `## Instructions` output, not in the skill:
 
