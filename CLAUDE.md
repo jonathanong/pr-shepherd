@@ -22,8 +22,6 @@ npm install
 
 `npm install` runs husky, which sets `core.hooksPath` to `.husky/_` and wires up `.husky/pre-push` (lint + typecheck + format:check). Husky overrides any existing local `core.hooksPath`. Bypass with `git push --no-verify`.
 
-Running `npm install` also updates the `~/.claude/plugins/marketplaces/local/plugins/pr-shepherd/skills` symlink to point at this worktree's `plugin/skills/`. After installing in a new worktree, run `/reload-plugins` (or restart Claude Code) so the plugin picks up the updated path.
-
 ## Output format invariant
 
 `--format=json` and `--format=text` (default) must surface equivalent information. Every field exposed in JSON output should have a corresponding representation in text output, and vice versa. Do not add data to one format without updating the other.
@@ -149,7 +147,7 @@ Implementation lives in `src/state/seen-comments.mts`. The call sites are
 
 ## Keep skills and loop prompts minimal
 
-Skills (`plugin/skills/*/SKILL.md`) and `/loop` prompts should be thin dispatchers with this shape:
+Skills (`skills/*/SKILL.md`) and `/loop` prompts should be thin dispatchers with this shape:
 
 1. Parse arguments.
 2. Short-circuit trivial cases (e.g. merged PR).
@@ -157,7 +155,7 @@ Skills (`plugin/skills/*/SKILL.md`) and `/loop` prompts should be thin dispatche
 4. Print the full output.
 5. Follow the output's own `## Instructions` section exactly.
 
-The canonical example is `plugin/skills/pr-shepherd/SKILL.md` — pure dispatcher, no policy.
+The canonical example is `skills/pr-shepherd/SKILL.md` — pure dispatcher, no policy.
 
 Everything else belongs in the CLI's Markdown `## Instructions` output, not in the skill:
 

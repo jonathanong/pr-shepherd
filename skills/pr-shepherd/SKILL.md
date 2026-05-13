@@ -32,12 +32,7 @@ One-tick dispatcher for iterating a PR to completion.
    - Prefer `package.json` `packageManager`: `pnpm@...` → `pnpm exec`, `yarn@...` → `yarn run`, `npm@...` → `npx --no-install`.
    - If `packageManager` is absent, use lockfiles: `pnpm-lock.yaml` → `pnpm exec`, `yarn.lock` → `yarn run`, `package-lock.json` or no signal → `npx --no-install`.
 
-4. **Verify CLI availability** (only when the target repository itself is the pr-shepherd source checkout):
-   - Only when the target repository itself is the pr-shepherd source checkout, verify `bin/` and `node_modules/` exist before any local CLI invocation. If either is missing, run the source checkout's package-manager install command. This repository currently uses npm, so run:
-     `npm install`
-   - In other repositories, run through the selected package runner. If the package is missing, tell the user to install `pr-shepherd` with the matching dev-dependency command: `pnpm add -D pr-shepherd`, `yarn add -D pr-shepherd`, or `npm install --save-dev pr-shepherd`.
-
-5. **Run one iterate tick:**
+4. **Run one iterate tick:**
 
    ```bash
    <runner> pr-shepherd <N>
@@ -45,7 +40,7 @@ One-tick dispatcher for iterating a PR to completion.
 
    Print the full output. Follow the `## Instructions` section exactly.
 
-6. **Stop conditions:**
+5. **Stop conditions:**
    - Stop when the CLI emits `[CANCEL]` (ready-delay completed, or PR merged/closed).
    - Stop when the CLI emits `[ESCALATE]`, including `stall-timeout` for repeated unchanged CI failures.
    - All other actions (`[WAIT]`, `[MARK_READY]`, `[FIX_CODE]`) are non-terminal: follow the `## Instructions` to sleep/wait and rerun.

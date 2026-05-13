@@ -56,7 +56,7 @@ resolves `pr-shepherd ...` without prompting to install the package.
    ```
 
 For a `resolve` custom command, do **not** copy the
-[`plugin/skills/`](../plugin/skills/) files directly — those contain skill/plugin-specific
+[`skills/`](../skills/) files directly — those contain skill/plugin-specific
 frontmatter that is not valid for `.claude/commands/` files. Instead, create
 `.claude/commands/pr-resolve.md` using the same command-file structure as the `pr-check`
 example above, with the CLI invocation changed to `<runner> pr-shepherd resolve ...`.
