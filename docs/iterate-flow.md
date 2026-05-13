@@ -26,11 +26,11 @@
 
 ### 2. Ready-delay state machine
 
-**What:** `updateReadyDelay(pr, isReady, readyDelaySeconds, owner, repo)` reads/writes `ready-since.txt`.
+**What:** `updateReadyDelay(pr, isCleanReadyHandoff, readyDelaySeconds, owner, repo)` reads/writes `ready-since.txt`.
 
-- On first READY sweep: creates the file with the current timestamp.
-- On subsequent READY sweeps: checks if `now − readySince >= readyDelaySeconds`. If so, `shouldCancel: true`.
-- On non-READY sweep: deletes the file (resets the countdown).
+- On first clean handoff sweep: creates the file with the current timestamp.
+- On subsequent clean handoff sweeps: checks if `now − readySince >= readyDelaySeconds`. If so, `shouldCancel: true`.
+- On any unclean sweep: deletes the file (resets the countdown). This includes non-READY status, failing CI, conflicts, unresolved/actionable comments, review-summary minimization, and first-look items.
 
 Before a READY sweep reaches the ready-delay state machine, `runCheck` performs one fresh REST mergeability read unless the UNKNOWN fallback already did so. If the refreshed mergeability reports `CONFLICTING`/`DIRTY`, the sweep becomes `FAILING`/`CONFLICTS`, resets the ready-delay marker, and routes to `fix_code`.
 
