@@ -34,6 +34,8 @@ One-tick dispatcher for iterating a PR to completion.
 
 4. **Run one iterate tick:**
 
+   If the package is missing in the target repository, tell the user to install pr-shepherd with the matching dev-dependency command: `pnpm add -D pr-shepherd`, `yarn add -D pr-shepherd`, or `npm install --save-dev pr-shepherd`.
+
    ```bash
    <runner> pr-shepherd <N>
    ```
