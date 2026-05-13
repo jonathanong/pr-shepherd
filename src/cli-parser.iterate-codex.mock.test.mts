@@ -49,6 +49,30 @@ afterEach(() => {
 });
 
 describe("main — iterate fix_code instruction rewriting", () => {
+  it("rewrites wait instruction to Codex sleep wording", async () => {
+    process.env.AGENT = "codex";
+    mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
+
+    await main(["node", "shepherd", "iterate", "42", "--ready-delay", "15m"]);
+    const out = getStdout();
+    expect(out).toContain(
+      "1. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42 --ready-delay 15m` to continue the active goal.",
+    );
+    expect(out).not.toContain("Schedule one session-only");
+  });
+
+  it("rewrites mark_ready instruction to Codex sleep wording", async () => {
+    process.env.AGENT = "codex";
+    mockRunIterate.mockResolvedValue(makeIterateResult("mark_ready"));
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+    expect(out).toContain(
+      "1. The CLI already marked the PR ready for review. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.",
+    );
+    expect(out).not.toContain("Schedule one session-only");
+  });
+
   it("text rewrites stop-after-push instruction to Codex sleep wording", async () => {
     process.env.AGENT = "codex";
     const result = makeIterateResult("fix_code");

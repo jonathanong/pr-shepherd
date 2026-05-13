@@ -77,7 +77,7 @@ When the current command includes a ready-delay override, the rerun command pres
 
 The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, `blocked by pending reviews or required status checks`, `PR is a draft`, or `some checks are unstable`.
 
-**What the skill does:** Follow `## Instructions` — schedule exactly one next session-only iteration and end the turn.
+**What the skill does:** Follow `## Instructions`. For the Claude-compatible output shown above, schedule exactly one next session-only iteration and end the turn; Codex-compatible output sleeps inline and reruns the same command.
 
 ---
 
@@ -106,7 +106,7 @@ MARKED READY: PR #42 converted from draft to ready for review
 1. The CLI already marked the PR ready for review. Schedule one session-only follow-up task to run `npx pr-shepherd 42` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
 ```
 
-**What the skill does:** Follow `## Instructions` — schedule exactly one next session-only iteration and end the turn.
+**What the skill does:** Follow `## Instructions`. For the Claude-compatible output shown above, schedule exactly one next session-only iteration and end the turn; Codex-compatible output sleeps inline and reruns the same command.
 
 ---
 
