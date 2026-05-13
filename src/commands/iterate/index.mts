@@ -76,7 +76,10 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   const hasActionableWork =
     report.threads.actionable.length > 0 ||
     report.threads.resolutionOnly.length > 0 ||
+    report.threads.firstLook.length > 0 ||
     report.comments.actionable.length > 0 ||
+    (report.comments.minimizeIds?.length ?? 0) > 0 ||
+    report.comments.firstLook.length > 0 ||
     report.changesRequestedReviews.length > 0 ||
     report.checks.failing.length > 0 ||
     report.mergeStatus.status === "CONFLICTS" ||
