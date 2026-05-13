@@ -165,4 +165,4 @@ Everything else belongs in the CLI's Markdown `## Instructions` output, not in t
 
 Rule of thumb: if a skill contains a table, policy, or interpretation block whose inputs come from CLI output fields, that content belongs in the CLI's `## Instructions` section instead.
 
-Skills must not link to files outside the `plugin/` directory (such as `docs/**` or `README.md`). Those files are not included in the published plugin and will be dead links for consumers. All information a skill consumer needs must come from the CLI output itself or be written inline in the skill.
+Skills must not link to files outside the `plugins/pr-shepherd/` directory (such as `docs/**` or `README.md`). Those files are not included in the published plugin and will be dead links for consumers. All information a skill consumer needs must come from the CLI output itself or be written inline in the skill.

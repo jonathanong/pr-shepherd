@@ -10,7 +10,7 @@
   },
   "files": [
     "bin/**",
-        "plugins/**",
+    "plugins/**",
     "plugins/**/.codex-plugin/**",
     ".claude-plugin/**",
     ".agents/plugins/marketplace.json",
