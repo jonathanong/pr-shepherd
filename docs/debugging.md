@@ -18,9 +18,9 @@
 pr-shepherd <PR> --format=json
 ```
 
-Should return `{"action":"cancel","state":"MERGED",...}`.
+Should return `{"action":"cancel","status":"MERGED","state":"MERGED",...}`.
 
-If it still returns `wait`, check that `report.mergeStatus.state` is being set correctly in the JSON output.
+If it still returns `wait`, check that `report.mergeStatus.state` is being set correctly in the JSON output. If it returns `cancel` but the status is not `MERGED` or `CLOSED`, check that `runCheck` is short-circuiting terminal PRs before CI/comment processing.
 
 ---
 

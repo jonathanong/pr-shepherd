@@ -12,6 +12,8 @@ export function parseDurationToMinutes(s: string, defaultMinutes?: number): numb
 
 export function statusToExitCode(status: string): number {
   switch (status) {
+    case "MERGED":
+    case "CLOSED":
     case "READY":
       return 0;
     case "IN_PROGRESS":

@@ -127,8 +127,8 @@ Stops the iterate loop — no further iterations needed.
 ```markdown
 # PR #42 [CANCEL] — merged
 
-**status** `READY` · **merge** `CLEAN` · **state** `MERGED` · **repo** `owner/repo`
-**summary** 5 passing
+**status** `MERGED` · **merge** `UNKNOWN` · **state** `MERGED` · **repo** `owner/repo`
+**summary** 0 passing
 
 CANCEL: PR #42 is merged — stopping
 
@@ -139,7 +139,7 @@ CANCEL: PR #42 is merged — stopping
 
 Other heading variants: `# PR #42 [CANCEL] — closed`, `# PR #42 [CANCEL] — ready-delay-elapsed`.
 
-Other body-line variants: `CANCEL: PR #42 is closed — stopping`, `CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping`.
+Merged and closed PRs surface terminal top-level statuses (`MERGED` or `CLOSED`) because `runCheck` short-circuits before CI/comment processing. Other body-line variants: `CANCEL: PR #42 is closed — stopping`, `CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping`.
 
 **What the skill does:** Follow `## Instructions` — stop.
 

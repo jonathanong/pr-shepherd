@@ -225,6 +225,8 @@ describe("parseDurationToMinutes", () => {
 
 describe("statusToExitCode", () => {
   it.each<[string, number]>([
+    ["MERGED", 0],
+    ["CLOSED", 0],
     ["READY", 0],
     ["IN_PROGRESS", 2],
     ["UNRESOLVED_COMMENTS", 3],
