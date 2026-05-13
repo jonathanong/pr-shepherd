@@ -144,7 +144,8 @@ describe("main — iterate text format", () => {
     expect(out).toMatch(/^# PR #42 \[WAIT\]\n/);
     expect(out).toContain("WAIT: 0 passing, 1 in-progress");
     expect(out).toContain("## Instructions");
-    expect(out).toContain("1. Pick a fresh sleep/timeout between 30 seconds and 4 minutes");
+    expect(out).toContain("1. Schedule one session-only follow-up task");
+    expect(out).toContain("Do not sleep or rerun inline.");
   });
 
   it("mark_ready: heading includes [MARK_READY] tag and ## Instructions with end-iteration step", async () => {
@@ -155,7 +156,7 @@ describe("main — iterate text format", () => {
     expect(out).toContain("MARKED READY: PR 42");
     expect(out).toContain("## Instructions");
     expect(out).toContain(
-      "1. The CLI already marked the PR ready for review. Pick a fresh sleep/timeout between 30 seconds and 4 minutes",
+      "1. The CLI already marked the PR ready for review. Schedule one session-only follow-up task",
     );
   });
 
@@ -180,7 +181,7 @@ describe("main — iterate text format", () => {
     expect(out).toContain("1. Stop — the PR needs human direction before iterating can resume.");
   });
 
-  it("wait: instructions use unified sleep wording with rerun command", async () => {
+  it("wait: instructions use Claude one-shot scheduling wording with rerun command", async () => {
     const result = makeIterateResult("wait");
     if (result.action !== "wait") throw new Error("unreachable");
     result.log =
@@ -192,17 +193,17 @@ describe("main — iterate text format", () => {
       "WAIT: 6 passing, 1 in-progress — awaiting human review or branch protection",
     );
     expect(out).toContain(
-      "1. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42 --ready-delay 15m` to continue the active goal.",
+      "1. Schedule one session-only follow-up task to run `npx pr-shepherd 42 --ready-delay 15m` to continue the active goal once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.",
     );
     expect(out).not.toContain("auto-cancel");
   });
 
-  it("mark_ready: instructions use unified sleep wording with rerun command", async () => {
+  it("mark_ready: instructions use Claude one-shot scheduling wording with rerun command", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("mark_ready"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain(
-      "1. The CLI already marked the PR ready for review. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.",
+      "1. The CLI already marked the PR ready for review. Schedule one session-only follow-up task to run `npx pr-shepherd 42` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.",
     );
   });
 
@@ -238,7 +239,7 @@ describe("main — iterate text format", () => {
     expect(parsed.action).toBe("wait");
     expect(parsed.pr).toBe(42);
     expect(parsed.instructions).toEqual([
-      "Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to continue the active goal.",
+      "Schedule one session-only follow-up task to run `npx pr-shepherd 42` to continue the active goal once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.",
     ]);
   });
 

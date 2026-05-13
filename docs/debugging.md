@@ -62,7 +62,7 @@ rm $TMPDIR/pr-shepherd-state/acme-myrepo/42/ready-since.txt
 
 **Symptom:** Shepherd errors with `API rate limit exceeded` or `secondary rate limit`.
 
-**Cause:** Too many API calls. Common when the cache is bypassed frequently or the cron interval is very short.
+**Cause:** Too many API calls. Common when the cache is bypassed frequently or non-terminal ticks are scheduled too aggressively.
 
 **Fix options:**
 

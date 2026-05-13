@@ -6,7 +6,7 @@ Each default `pr-shepherd` invocation returns exactly one iterate action. The le
 
 The default output format is Markdown — what you see when running `pr-shepherd <PR>` through the selected package runner, and what the iterate skill reads on each tick. `--format=json` emits the same information as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
 
-Instruction wording uses unified sleep guidance for all runtimes: pick a fresh sleep/timeout between 30 seconds and 4 minutes and rerun the configured pr-shepherd command. The action data and section structure are otherwise the same.
+Instruction wording is runtime-specific. Claude-compatible output schedules exactly one next session-only iteration after a fresh delay between 30 seconds and 4 minutes, then ends the turn. Codex-compatible output sleeps inline for that delay, then reruns the configured pr-shepherd command. The action data and section structure are otherwise the same.
 
 Command examples use the default npm spelling (`npx pr-shepherd`). Repos can set `cli.runner` to `auto`, `npx`, `pnpm`, or `yarn`; generated text and JSON argv then use the selected runner (for example `pnpm exec pr-shepherd` or `yarn run pr-shepherd`) everywhere a pr-shepherd follow-up command is emitted.
 
@@ -70,14 +70,14 @@ WAIT: 3 passing, 2 in-progress — 120s until auto-cancel
 
 ## Instructions
 
-1. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to continue the active goal.
+1. Schedule one session-only follow-up task to run `npx pr-shepherd 42` to continue the active goal once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
 ```
 
 When the current command includes a ready-delay override, the rerun command preserves it: `npx pr-shepherd 42 --ready-delay 15m`.
 
 The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, `blocked by pending reviews or required status checks`, `PR is a draft`, or `some checks are unstable`.
 
-**What the skill does:** Follow `## Instructions` — pick a fresh sleep/timeout and rerun.
+**What the skill does:** Follow `## Instructions`. For the Claude-compatible output shown above, schedule exactly one next session-only iteration and end the turn; Codex-compatible output sleeps inline and reruns the same command.
 
 ---
 
@@ -103,10 +103,10 @@ MARKED READY: PR #42 converted from draft to ready for review
 
 ## Instructions
 
-1. The CLI already marked the PR ready for review. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.
+1. The CLI already marked the PR ready for review. Schedule one session-only follow-up task to run `npx pr-shepherd 42` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
 ```
 
-**What the skill does:** Follow `## Instructions` — pick a fresh sleep/timeout and rerun.
+**What the skill does:** Follow `## Instructions`. For the Claude-compatible output shown above, schedule exactly one next session-only iteration and end the turn; Codex-compatible output sleeps inline and reruns the same command.
 
 ---
 
@@ -218,7 +218,7 @@ Actionable work needs a code fix, commit, and push.
 10. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
 11. Do not re-run `gh run cancel` on the IDs listed under `## Cancelled runs` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.
 12. For any large decisions or rejections you made this iteration, add or update a `## Shepherd Journal` section in the PR description (`gh pr edit 42 --body …`) summarizing each decision and linking back to the originating comment, thread, or review. If this section already exists, append entries under it instead of creating a duplicate heading.
-13. CI needs time to run on the new push. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.
+13. CI needs time to run on the new push. Schedule one session-only follow-up task to run `npx pr-shepherd 42` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
 ```
 
 When one or more threads carry a `[suggestion]` marker, the `## Instructions` section opens with two different steps. Step 1 is new; step 2 gains a manual-fallback clause. All other steps renumber and are otherwise unchanged.
