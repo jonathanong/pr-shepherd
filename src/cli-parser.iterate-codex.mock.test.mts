@@ -81,10 +81,10 @@ describe("main — iterate fix_code instruction rewriting", () => {
     ]);
   });
 
-  it("rewrites end-iteration final instruction to unified sleep wording", async () => {
+  it("rewrites no-push final instruction to unified sleep wording", async () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
-    result.fix.instructions = ["End this iteration."];
+    result.fix.instructions = ["Stop this iteration before the next tick."];
     mockRunIterate.mockResolvedValue(result);
 
     await main(["node", "shepherd", "iterate", "42", "--format=json"]);

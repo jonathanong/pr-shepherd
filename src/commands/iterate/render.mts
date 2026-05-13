@@ -8,18 +8,18 @@ import type {
   FirstLookComment,
   ReviewThread,
 } from "../../types.mts";
-import { buildPrShepherdCommand, renderShellCommand, type CliRunner } from "../../cli/runner.mts";
+import { renderShellCommand, type CliRunner } from "../../cli/runner.mts";
 import { buildFailingCheckInstructions } from "./check-instructions.mts";
 import {
   SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE,
   SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
   buildShepherdJournalInstruction,
 } from "../shepherd-journal.mts";
+import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
 
 export const FIX_INSTRUCTION_STOP_AFTER_PUSH =
   "Stop this iteration — CI needs time to run on the new push before the next tick.";
 export const FIX_INSTRUCTION_STOP_BEFORE_NEXT_TICK = "Stop this iteration before the next tick.";
-export const FIX_INSTRUCTION_END_ITERATION = "End this iteration.";
 
 /**
  * Render a resolve command as a shell snippet. Wraps `$DISMISS_MESSAGE`, `$HEAD_SHA`, and
@@ -55,25 +55,13 @@ export function buildFixInstructions(
   const instructions: string[] = [];
   if (inProgressRunIds.length > 0) {
     instructions.push(
-      `Cancel in-progress CI runs first: for each ID under \`## In-progress runs\`, run \`gh run cancel <id>\`. Do this before applying any code fixes — the push at the end of this iteration will supersede those runs anyway, so letting them continue burns CI minutes for results no one will read. If \`gh\` reports a run is already completed, ignore it and continue with the next ID.`,
+      `Cancel in-progress CI runs first: for each ID under \`## In-progress runs\`, run \`gh run cancel <id>\` before applying code fixes. If \`gh\` reports a run is already completed, ignore it and continue with the next ID.`,
     );
   }
   const hasSuggestions = threads.some((t) => t.suggestion);
   if (hasSuggestions) {
-    const commitSuggestionCommand = buildPrShepherdCommand(
-      [
-        "commit-suggestion",
-        String(prNumber),
-        "--thread-id",
-        "<id>",
-        "--message",
-        "<one-sentence headline>",
-        "--format=json",
-      ],
-      { runner },
-    ).text;
     instructions.push(
-      `For each thread marked \`[suggestion]\` under \`## Review threads\`: run \`${commitSuggestionCommand}\` to retrieve the patch and suggested commit. The CLI does not mutate the working tree — apply the patch yourself (run \`git apply\` with the diff shown, or edit the file directly using the line range), then stage the listed file and run the suggested \`git commit\` from the \`## Instructions\` section. Include the thread ID in \`--resolve-thread-ids\` in the \`resolve:\` command below (the thread is not auto-resolved). If the patch fails to apply, fall through to the manual-edit step. Do not retry the same command.`,
+      buildCommitSuggestionInstruction(prNumber, "## Review threads", false, runner),
     );
   }
   if (threads.length > 0 || actionableComments.length > 0) {
@@ -165,10 +153,8 @@ export function buildFixInstructions(
   }
   if (needsPush) {
     instructions.push(FIX_INSTRUCTION_STOP_AFTER_PUSH);
-  } else if (resolveCommand.hasMutations) {
-    instructions.push(FIX_INSTRUCTION_STOP_BEFORE_NEXT_TICK);
   } else {
-    instructions.push(FIX_INSTRUCTION_END_ITERATION);
+    instructions.push(FIX_INSTRUCTION_STOP_BEFORE_NEXT_TICK);
   }
 
   return instructions;

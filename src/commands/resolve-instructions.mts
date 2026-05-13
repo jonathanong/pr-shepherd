@@ -1,9 +1,11 @@
 import type { FetchResult } from "./resolve.mts";
-import { buildPrShepherdCommand, type CliRunner } from "../cli/runner.mts";
+import type { CliRunner } from "../cli/runner.mts";
+import { buildPrShepherdCommand } from "../cli/runner.mts";
 import {
   SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEMS,
   buildShepherdJournalInstruction,
 } from "./shepherd-journal.mts";
+import { buildCommitSuggestionInstruction } from "./commit-suggestion-instruction.mts";
 
 /**
  * Build the numbered triage/fix/resolve instruction steps for the agent to follow.
@@ -68,20 +70,8 @@ export function buildFetchInstructions(
   }
 
   if (hasSuggestions) {
-    const commitSuggestionCommand = buildPrShepherdCommand(
-      [
-        "commit-suggestion",
-        String(prNumber),
-        "--thread-id",
-        "<id>",
-        "--message",
-        "<one-sentence headline>",
-        "--format=json",
-      ],
-      { runner },
-    ).text;
     instructions.push(
-      `For each Actionable thread marked \`[suggestion]\` in \`## Actionable Review Threads\` above: run \`${commitSuggestionCommand}\` to retrieve the patch and suggested commit. The CLI does not mutate the working tree — apply the patch yourself (run \`git apply\` with the diff shown, or edit the file directly using the line range), then stage the listed file and run the suggested \`git commit\` from the \`## Instructions\` section. Include the thread ID in \`--resolve-thread-ids\` in the resolve command below (the thread is not auto-resolved). If the patch fails to apply (drift since the suggestion was written), fall through to the manual fix step. Do not retry the same \`commit-suggestion\` invocation.`,
+      buildCommitSuggestionInstruction(prNumber, "## Actionable Review Threads", true, runner),
     );
   }
 
