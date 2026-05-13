@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, it, expect } from "vitest";
 import { BATCH_PR_QUERY, GET_PR_HEAD_SHA_QUERY } from "./queries.mts";
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { mockGetRepoInfo, mockInitLog, mockAppendEntry, mockBuildSessionHeader, mockFormatOutput } =

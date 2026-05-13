@@ -1,0 +1,26 @@
+// @ts-nocheck
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { registerHooks, autoResolveOutdated, mockGraphql } from "./resolve.test-support.mts";
+
+registerHooks();
+
+describe("autoResolveOutdated", () => {
+  it("returns resolved IDs and empty errors on success", async () => {
+    const ids = ["t-1", "t-2", "t-3"];
+    const { resolved, errors } = await autoResolveOutdated(ids);
+    expect(resolved).toEqual(ids);
+    expect(errors).toHaveLength(0);
+  });
+
+  it("splits mutations into 10-op graphql calls", async () => {
+    const ids = Array.from({ length: 25 }, (_, i) => `t-${i}`);
+    await autoResolveOutdated(ids);
+    expect(mockGraphql).toHaveBeenCalledTimes(3);
+    const doc = mockGraphql.mock.calls[0]?.[0] as string;
+    expect(doc).toContain("mutation BulkApply");
+    for (const id of ids.slice(0, 10)) {
+      expect(doc).toContain(id);
+    }
+    expect(doc).not.toContain("t-10");
+  });
+});

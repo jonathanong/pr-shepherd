@@ -11,6 +11,10 @@ export default defineConfig({
       include: ['src/**/*.mts'],
       exclude: [
         'src/**/*.{test,mock.test}.mts',
+        'src/**/*.test.*.mts',
+        'src/**/*.mock.test.*.mts',
+        'src/**/*.test-support.mts',
+        'src/**/*-test-support.mts',
         'src/types.mts',
         'src/types/**/*.mts',
         'src/github/batch-raw-types.mts',
