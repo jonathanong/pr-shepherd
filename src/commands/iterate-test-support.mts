@@ -190,6 +190,7 @@ export {
   mockClearStallState,
   mockLoadConfig,
   mockReadFixAttempts,
+  mockReadStallState,
   mockRunCheck,
   mockUpdateReadyDelay,
   mockWriteFixAttempts,
