@@ -4,6 +4,17 @@ import { formatFetchResult } from "./formatters.mts";
 import { formatFixCodeResult } from "./fix-formatter.mts";
 import { makeIterateResult } from "../cli-parser.iterate-fixtures.mts";
 import type { IterateResult } from "../types.mts";
+import {
+  renderAuthor,
+  renderBodyPreview,
+  renderCommentBullet,
+  renderReviewBullet,
+  renderReviewListSection,
+  renderThreadBullet,
+  renderThreadResolutionStatusTag,
+} from "./list-formatters.mts";
+import { renderLineRange, renderSuggestionBlock } from "./suggestion-renderer.mts";
+import { safeFence } from "./fence.mts";
 
 // ---------------------------------------------------------------------------
 // Cross-call-site identity assertion (issue #127 acceptance criterion)
@@ -124,6 +135,55 @@ describe("## Review summaries (edited since first look) — fix-formatter render
   });
 });
 
+describe("formatFixCodeResult — fallback branches", () => {
+  it("renders missing locations, missing check metadata, cancelled checks, and empty review bodies", () => {
+    const iterResult: IterateResult = { ...makeIterateResult("fix_code") };
+    if (iterResult.action !== "fix_code") throw new Error("unreachable");
+    iterResult.fix = {
+      ...iterResult.fix,
+      threads: [
+        {
+          id: "T_NO_LOC",
+          path: null,
+          line: null,
+          startLine: undefined,
+          author: "alice",
+          authorType: "User",
+          body: "thread body",
+          url: "",
+        },
+      ],
+      checks: [
+        {
+          name: "external-check",
+          conclusion: null,
+          detailsUrl: "https://checks.example/1",
+          runId: null,
+        },
+        {
+          name: "cancelled-check",
+          jobName: "cancelled-job",
+          conclusion: "CANCELLED",
+          detailsUrl: null,
+          runId: null,
+          failedStep: "should not render",
+          summary: "should not render",
+        },
+      ],
+      firstLookSummaries: [{ id: "R_EMPTY", author: "reviewer", authorType: "User", body: "   " }],
+      editedSummaries: [{ id: "R_EDITED_EMPTY", author: "reviewer", authorType: "User", body: "" }],
+    };
+
+    const output = formatFixCodeResult("# PR #42 [FIX_CODE]", iterResult);
+
+    expect(output).toContain("(no location)");
+    expect(output).toContain("external `https://checks.example/1`");
+    expect(output).toContain("[conclusion: CANCELLED]");
+    expect(output).not.toContain("should not render");
+    expect(output).toContain("(no review body)");
+  });
+});
+
 describe("## First-look items — cross-call-site consistency", () => {
   it("formatFixCodeResult and formatFetchResult render an identical section for the same input", () => {
     // Site A: formatFixCodeResult (iterate fix_code)
@@ -157,5 +217,90 @@ describe("## First-look items — cross-call-site consistency", () => {
     );
 
     expect(siteA).toBe(siteB);
+  });
+});
+
+describe("list and suggestion render helpers", () => {
+  it("renders author, body preview, line ranges, and safe fences", () => {
+    expect(renderAuthor("alice")).toBe("@alice");
+    expect(renderBodyPreview("  first line  \r\nsecond")).toBe("first line");
+    expect(renderBodyPreview("x".repeat(120))).toHaveLength(100);
+    expect(renderLineRange(undefined, null)).toBe("?");
+    expect(renderLineRange(2, 5)).toBe("2-5");
+    expect(renderLineRange(5, 5)).toBe("5");
+    expect(safeFence("no ticks")).toBe("```");
+    expect(safeFence("````")).toBe("`````");
+  });
+
+  it("renders thread/comment/review bullets across optional branches", () => {
+    expect(renderThreadResolutionStatusTag({})).toBe("[status: unresolved]");
+    expect(renderThreadResolutionStatusTag({ isOutdated: true, isMinimized: true })).toBe(
+      "[status: outdated, minimized]",
+    );
+    expect(
+      renderThreadBullet({
+        id: "T1",
+        path: null,
+        startLine: null,
+        line: null,
+        author: "alice",
+        body: "body",
+        suggestion: { startLine: 1, endLine: 1, lines: ["x"], author: "alice" },
+      }),
+    ).toContain("`(no location)`");
+    expect(
+      renderThreadBullet(
+        {
+          id: "T2",
+          url: "https://example.com/t",
+          path: "src/a.ts",
+          startLine: 1,
+          line: 2,
+          author: "alice",
+          authorType: "User",
+          body: "body",
+          suggestion: { startLine: 1, endLine: 2, lines: ["x"], author: "alice" },
+        },
+        { renderSuggestion: true, statusTag: "[status: unresolved]" },
+      ),
+    ).toContain("Replaces lines 1–2");
+    expect(
+      renderCommentBullet(
+        { id: "C1", url: "https://example.com/c", author: "bot", body: "comment" },
+        { statusTag: "[status: minimized]" },
+      ),
+    ).toContain("[↗](https://example.com/c)");
+    expect(
+      renderReviewBullet({ id: "R1", author: "reviewer", body: "" }, { includeBody: true }),
+    ).not.toContain(": ");
+    expect(
+      renderReviewBullet({ id: "R2", author: "reviewer", body: "summary" }, { includeBody: true }),
+    ).toContain(": summary");
+  });
+
+  it("renders review list sections only when non-empty", () => {
+    expect(renderReviewListSection("Reviews", [])).toBeNull();
+    expect(
+      renderReviewListSection("Reviews", [{ id: "R1", author: "alice", body: "looks good" }]),
+    ).toBe("## Reviews\n\n- `reviewId=R1` (@alice): looks good");
+  });
+
+  it("renders deletion, blank-line, and multiline suggestion blocks", () => {
+    expect(renderSuggestionBlock({ startLine: 1, endLine: 1, lines: [], author: "a" })).toContain(
+      "with nothing",
+    );
+    expect(renderSuggestionBlock({ startLine: 1, endLine: 1, lines: [""], author: "a" })).toContain(
+      "with a blank line",
+    );
+    expect(
+      renderSuggestionBlock({ startLine: 1, endLine: 2, lines: ["a", "b"], author: "a" }, ""),
+    ).toContain("a\nb");
+  });
+});
+
+describe("iterate fixture fallback", () => {
+  it("falls back to wait for unknown actions at runtime", () => {
+    const result = makeIterateResult("unknown" as never);
+    expect(result.action).toBe("wait");
   });
 });

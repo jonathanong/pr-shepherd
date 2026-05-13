@@ -150,6 +150,21 @@ describe("main — commit-suggestion", () => {
     expect(out).toContain("--- a/a.ts");
   });
 
+  it("text output handles multi-line suggestions without a patch or follow-up instructions", async () => {
+    mockRunCommitSuggestion.mockResolvedValue({
+      ...SUGGESTION_RESULT,
+      startLine: 5,
+      endLine: 7,
+      patch: "",
+      postActionInstructions: [],
+    });
+    await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "fix"]);
+    const out = getStdout();
+    expect(out).toContain("a.ts (lines 5–7)");
+    expect(out).not.toContain("```diff");
+    expect(out).not.toContain("## Instructions");
+  });
+
   it("text output shows ## Suggested commit message section", async () => {
     mockRunCommitSuggestion.mockResolvedValue(SUGGESTION_RESULT);
     await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "fix"]);

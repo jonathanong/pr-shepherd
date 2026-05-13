@@ -45,6 +45,17 @@ describe("applyResolveOptions — validation", () => {
       "--message is required",
     );
   });
+
+  it("does nothing when no mutation IDs are provided", async () => {
+    const result = await applyResolveOptions(1, REPO, {});
+    expect(result).toEqual({
+      resolvedThreads: [],
+      minimizedComments: [],
+      dismissedReviews: [],
+      errors: [],
+    });
+    expect(mockGraphql).not.toHaveBeenCalled();
+  });
 });
 
 describe("applyResolveOptions — mutations", () => {

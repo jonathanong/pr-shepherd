@@ -42,7 +42,7 @@
     "format": "oxfmt src/ plugins/ .agents/plugins/ docs/ README.md",
     "format:check": "oxfmt --check src/ plugins/ .agents/plugins/ docs/ README.md",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage && node scripts/strip-lcov-branches.mjs",
     "test:watch": "vitest"
   },
   "keywords": [

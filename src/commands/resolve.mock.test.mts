@@ -276,6 +276,70 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     expect(result.commitSuggestionsEnabled).toBe(true);
   });
 
+  it("re-surfaces edited outdated threads and edited minimized comments", async () => {
+    const outdated = makeThread({
+      id: "t-edited-outdated",
+      isOutdated: true,
+      isResolved: false,
+      body: "new outdated body",
+    });
+    const minimizedComment = makeComment({
+      id: "c-edited-min",
+      isMinimized: true,
+      body: "new minimized body",
+    });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ reviewThreads: [outdated], comments: [minimizedComment] }),
+    });
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([
+        ["t-edited-outdated", { seenAt: 1, bodyHash: hashBody("old outdated body") }],
+        ["c-edited-min", { seenAt: 1, bodyHash: hashBody("old minimized body") }],
+      ]),
+    );
+
+    const result = await runResolveFetch(BASE_OPTS);
+
+    expect(result.firstLookThreads).toMatchObject([
+      { id: "t-edited-outdated", firstLookStatus: "outdated", edited: true },
+    ]);
+    expect(result.firstLookComments).toMatchObject([
+      { id: "c-edited-min", firstLookStatus: "minimized", edited: true },
+    ]);
+  });
+
+  it("re-surfaces edited resolved and minimized threads", async () => {
+    const resolved = makeThread({
+      id: "t-edited-resolved",
+      isResolved: true,
+      isOutdated: false,
+      body: "new resolved body",
+    });
+    const minimized = makeThread({
+      id: "t-edited-min",
+      isResolved: false,
+      isOutdated: false,
+      isMinimized: true,
+      body: "new minimized body",
+    });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ reviewThreads: [resolved, minimized] }),
+    });
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([
+        ["t-edited-resolved", { seenAt: 1, bodyHash: hashBody("old resolved body") }],
+        ["t-edited-min", { seenAt: 1, bodyHash: hashBody("old minimized body") }],
+      ]),
+    );
+
+    const result = await runResolveFetch(BASE_OPTS);
+
+    expect(result.firstLookThreads).toMatchObject([
+      { id: "t-edited-resolved", firstLookStatus: "resolved", edited: true },
+      { id: "t-edited-min", firstLookStatus: "minimized", edited: true },
+    ]);
+  });
+
   it("actionableComments excludes minimized comments", async () => {
     const visible = makeComment({ id: "c-visible", isMinimized: false });
     const minimized = makeComment({ id: "c-min", isMinimized: true });
@@ -650,5 +714,37 @@ describe("runResolveFetch — first-look items", () => {
     const result = await runResolveFetch(BASE_OPTS);
     expect(result.firstLookThreads).toHaveLength(0);
     expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "c-min", "nit");
+  });
+
+  it("suppresses unchanged resolved/minimized threads and minimized comments", async () => {
+    const resolved = makeThread({ id: "t-resolved", isResolved: true, body: "resolved" });
+    const minimizedThread = makeThread({
+      id: "t-minimized",
+      isMinimized: true,
+      body: "minimized thread",
+    });
+    const minimizedComment = makeComment({
+      id: "c-minimized",
+      isMinimized: true,
+      body: "minimized comment",
+    });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        reviewThreads: [resolved, minimizedThread],
+        comments: [minimizedComment],
+      }),
+    });
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([
+        ["t-resolved", { seenAt: 1000, bodyHash: hashBody("resolved") }],
+        ["t-minimized", { seenAt: 1000, bodyHash: hashBody("minimized thread") }],
+        ["c-minimized", { seenAt: 1000, bodyHash: hashBody("minimized comment") }],
+      ]),
+    );
+
+    const result = await runResolveFetch(BASE_OPTS);
+
+    expect(result.firstLookThreads).toEqual([]);
+    expect(result.firstLookComments).toEqual([]);
   });
 });
