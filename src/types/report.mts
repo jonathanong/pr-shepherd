@@ -28,11 +28,9 @@ export interface FirstLookComment extends PrComment {
   edited?: boolean;
 }
 
-// ---------------------------------------------------------------------------
-// Shepherd check report (output of the check command)
-// ---------------------------------------------------------------------------
-
 export type ShepherdStatus =
+  | "MERGED"
+  | "CLOSED"
   | "READY"
   | "FAILING"
   | "PENDING"

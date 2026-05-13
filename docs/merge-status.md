@@ -6,18 +6,18 @@
 
 Located in `src/merge-status/derive.mts`. Given a `BatchPrData`, returns a `MergeStatusResult`.
 
-| Priority | Condition                                         | Status         | Notes                                                                      |
-| -------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------- |
-| 0        | `state !== 'OPEN'`                                | (pass through) | `iterate` cancels loop at step 2.5; status field is still derived normally |
-| 1        | `mergeable === 'CONFLICTING'`                     | `CONFLICTS`    | GraphQL merge conflict signal                                              |
-| 2        | `blockingBotReviewInProgress`                     | `BLOCKED`      | Takes priority over BEHIND to avoid hiding a real blocker                  |
-| 3        | `mergeStateStatus === 'DIRTY'`                    | `CONFLICTS`    | REST-layer merge conflict signal                                           |
-| 4        | `mergeStateStatus === 'BEHIND'`                   | `BEHIND`       | Branch needs rebase                                                        |
-| 5        | `mergeStateStatus === 'BLOCKED'` or `'HAS_HOOKS'` | `BLOCKED`      | Protected branch rules blocking merge                                      |
-| 6        | `mergeStateStatus === 'UNSTABLE'`                 | `UNSTABLE`     | Some checks not passing                                                    |
-| 7        | `isDraft` or `mergeStateStatus === 'DRAFT'`       | `DRAFT`        | Draft PR state                                                             |
-| 8        | `mergeStateStatus === 'UNKNOWN'`                  | `UNKNOWN`      | GitHub hasn't computed merge state yet                                     |
-| 9        | (fallthrough)                                     | `CLEAN`        | Ready to merge                                                             |
+| Priority | Condition                                         | Status         | Notes                                                                          |
+| -------- | ------------------------------------------------- | -------------- | ------------------------------------------------------------------------------ |
+| 0        | `state !== 'OPEN'`                                | (pass through) | `runCheck` returns top-level `MERGED`/`CLOSED`; derived merge status stays raw |
+| 1        | `mergeable === 'CONFLICTING'`                     | `CONFLICTS`    | GraphQL merge conflict signal                                                  |
+| 2        | `blockingBotReviewInProgress`                     | `BLOCKED`      | Takes priority over BEHIND to avoid hiding a real blocker                      |
+| 3        | `mergeStateStatus === 'DIRTY'`                    | `CONFLICTS`    | REST-layer merge conflict signal                                               |
+| 4        | `mergeStateStatus === 'BEHIND'`                   | `BEHIND`       | Branch needs rebase                                                            |
+| 5        | `mergeStateStatus === 'BLOCKED'` or `'HAS_HOOKS'` | `BLOCKED`      | Protected branch rules blocking merge                                          |
+| 6        | `mergeStateStatus === 'UNSTABLE'`                 | `UNSTABLE`     | Some checks not passing                                                        |
+| 7        | `isDraft` or `mergeStateStatus === 'DRAFT'`       | `DRAFT`        | Draft PR state                                                                 |
+| 8        | `mergeStateStatus === 'UNKNOWN'`                  | `UNKNOWN`      | GitHub hasn't computed merge state yet                                         |
+| 9        | (fallthrough)                                     | `CLEAN`        | Ready to merge                                                                 |
 
 ## Gotchas
 
@@ -29,6 +29,10 @@ These are two different signals for the same underlying condition (merge conflic
 - `mergeStateStatus === 'DIRTY'` — REST API's signal. The `getMergeableState` REST fallback can return `DIRTY` when GraphQL returns `UNKNOWN`.
 
 Both map to `CONFLICTS` in shepherd's derived status.
+
+### Terminal PRs use state, not mergeability
+
+GitHub often reports `mergeable: UNKNOWN` and `mergeStateStatus: UNKNOWN` after a PR is merged or closed. Shepherd treats `state` as authoritative for those PRs: `runCheck` returns top-level `status: "MERGED"` or `status: "CLOSED"` and skips CI/comment processing, while `deriveMergeStatus` continues to pass through the raw `state` and derived mergeability fields.
 
 ### Blocking-bot detection takes priority over BEHIND
 

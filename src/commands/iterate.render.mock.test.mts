@@ -253,6 +253,7 @@ describe("runIterate — prescriptive fields: log strings", () => {
   it("cancel.log mentions PR state and reason=merged when PR is merged", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
+        status: "MERGED",
         mergeStatus: {
           status: "CLEAN",
           state: "MERGED",
@@ -267,6 +268,7 @@ describe("runIterate — prescriptive fields: log strings", () => {
 
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("cancel");
+    expect(result.status).toBe("MERGED");
     if (result.action === "cancel") {
       expect(result.reason).toBe("merged");
       expect(result.log).toMatch(/CANCEL/);
@@ -277,6 +279,7 @@ describe("runIterate — prescriptive fields: log strings", () => {
   it("cancel.reason=closed and log mentions closed when PR is closed", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
+        status: "CLOSED",
         mergeStatus: {
           status: "UNKNOWN",
           state: "CLOSED",
@@ -291,6 +294,7 @@ describe("runIterate — prescriptive fields: log strings", () => {
 
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("cancel");
+    expect(result.status).toBe("CLOSED");
     if (result.action === "cancel") {
       expect(result.reason).toBe("closed");
       expect(result.log).toMatch(/CANCEL/);

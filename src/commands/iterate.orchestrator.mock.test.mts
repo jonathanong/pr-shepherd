@@ -272,6 +272,7 @@ describe("runIterate — triage via runCheck", () => {
   it("returns action: cancel when PR is MERGED even with failing checks", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
+        status: "MERGED",
         mergeStatus: {
           status: "UNKNOWN",
           state: "MERGED",
@@ -306,6 +307,7 @@ describe("runIterate — triage via runCheck", () => {
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("cancel");
+    expect(result.status).toBe("MERGED");
   });
 
   it("returns fix_code for CONFLICTS even with a failing check (CONFLICTS is always actionable)", async () => {

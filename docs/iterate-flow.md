@@ -8,7 +8,7 @@
 
 ### 1. Sweep
 
-**What:** `runCheck({ autoResolve: true })` fires one GraphQL batch query (CI checks + review threads + PR comments + merge state). Also auto-resolves any threads GitHub has marked `isOutdated`.
+**What:** `runCheck({ autoResolve: true })` fires one GraphQL batch query (CI checks + review threads + PR comments + merge state). If the PR is already merged or closed, it returns a terminal report immediately; otherwise it auto-resolves any threads GitHub has marked `isOutdated`.
 
 **Why:** Auto-resolving outdated threads here means the main agent doesn't have to manually call `resolve` after every push.
 
@@ -18,7 +18,7 @@
 
 **Check:** `report.mergeStatus.state !== 'OPEN'`
 
-**Why:** GitHub returns `mergeable: UNKNOWN` and `mergeStateStatus: UNKNOWN` for merged/closed PRs. Without this branch the loop falls through to `action: wait` and polls forever.
+**Why:** GitHub returns `mergeable: UNKNOWN` and `mergeStateStatus: UNKNOWN` for merged/closed PRs. `runCheck` surfaces this as top-level `status: 'MERGED'` or `status: 'CLOSED'`, and this branch stops the loop before ready-delay or actionable checks.
 
 **Emits:** `action: 'cancel'` — skips ready-delay, skips all actionable checks.
 

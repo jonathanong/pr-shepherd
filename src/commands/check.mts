@@ -9,6 +9,7 @@ import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
 import { classifyVisibleComments } from "../comments/visible-comments.mts";
 import { computeStatus } from "./check-status.mts";
+import { buildTerminalReport } from "./check-terminal-report.mts";
 import { loadSeenMap, markSeen, classifyItem } from "../state/seen-comments.mts";
 import type {
   GlobalOptions,
@@ -18,14 +19,9 @@ import type {
   FirstLookComment,
 } from "../types.mts";
 
-export interface CheckCommandOptions extends GlobalOptions {
-  /** When true, auto-resolve outdated threads. */
-  autoResolve?: boolean;
-  /** When true, skip fetching job info and log tails for failing checks. */
-  skipTriage?: boolean;
-}
-
-export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdReport> {
+export async function runCheck(
+  opts: GlobalOptions & { autoResolve?: boolean; skipTriage?: boolean },
+): Promise<ShepherdReport> {
   const repo = await getRepoInfo();
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
   if (prNumber === null) {
@@ -48,6 +44,11 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
       mergeable: restState.mergeable ?? batchData.mergeable,
       mergeStateStatus: restState.mergeStateStatus ?? batchData.mergeStateStatus,
     };
+  }
+
+  const mergeStatus = deriveMergeStatus(batchData);
+  if (mergeStatus.state === "MERGED" || mergeStatus.state === "CLOSED") {
+    return buildTerminalReport(prNumber, repo, batchData, mergeStatus, mergeStatus.state);
   }
 
   const startupFailureChecks = await fetchStartupFailureChecks(
@@ -146,8 +147,6 @@ export async function runCheck(opts: CheckCommandOptions): Promise<ShepherdRepor
   const resolutionOnlyThreads = unresolvedThreads.filter(
     (t) => !autoResolvedIds.has(t.id) && (t.isOutdated || t.isMinimized),
   );
-
-  const mergeStatus = deriveMergeStatus(batchData);
 
   const blockedByFilteredCheck =
     mergeStatus.status === "BLOCKED" &&
