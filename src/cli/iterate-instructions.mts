@@ -14,7 +14,7 @@ function buildRecheckInstruction(
   if (runtime === "codex") {
     return `Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun \`${rerunCommand}\` to ${purpose}.`;
   }
-  return `Schedule one session-only follow-up task to run \`${rerunCommand}\` to ${purpose} once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.`;
+  return `Single-shot continuation: schedule one session-only follow-up task to run \`${rerunCommand}\` to ${purpose} once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.`;
 }
 
 export function buildSimpleIterateInstructions(

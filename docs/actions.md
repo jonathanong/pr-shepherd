@@ -8,6 +8,8 @@ The default output format is Markdown — what you see when running `pr-shepherd
 
 Instruction wording is runtime-specific. Claude-compatible output schedules exactly one next session-only iteration after a fresh delay between 30 seconds and 4 minutes, then ends the turn. Codex-compatible output sleeps inline for that delay, then reruns the configured pr-shepherd command. The action data and section structure are otherwise the same.
 
+Non-terminal outputs are single-shot by design: do not run `while true`/polling loops, and do not reschedule more than one follow-up per tick.
+
 Command examples use the default npm spelling (`npx pr-shepherd`). Repos can set `cli.runner` to `auto`, `npx`, `pnpm`, or `yarn`; generated text and JSON argv then use the selected runner (for example `pnpm exec pr-shepherd` or `yarn run pr-shepherd`) everywhere a pr-shepherd follow-up command is emitted.
 
 Pass `--verbose` to get more debug state. In JSON mode, the output starts from the full `IterateResult` shape (all fields, including `baseBranch`, `checks`, `shouldCancel`) and then applies the same instruction projection as lean JSON: non-`fix_code` actions get a top-level `instructions` array, and `fix.instructions` may be rewritten. In Markdown mode, `--verbose` restores the full header summary line (all four counts, `remainingSeconds`, `blockingBotReviewInProgress`, `isDraft`, `shouldCancel` always shown) — but Markdown is structurally different from JSON and does not guarantee field-for-field parity (array fields like `baseBranch` or `checks` are not added to Markdown for actions that do not normally render them). Lean mode is the default because most fields are `false`/`0`/`[]` on a typical healthy tick and add context noise without value.
@@ -70,14 +72,14 @@ WAIT: 3 passing, 2 in-progress — 120s until auto-cancel
 
 ## Instructions
 
-1. Schedule one session-only follow-up task to run `npx pr-shepherd 42` to continue the active goal once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
+1. Single-shot continuation: schedule one session-only follow-up task to run `npx pr-shepherd 42` to continue the active goal once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
 ```
 
 When the current command includes a ready-delay override, the rerun command preserves it: `npx pr-shepherd 42 --ready-delay 15m`.
 
 The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, `blocked by pending reviews or required status checks`, `PR is a draft`, or `some checks are unstable`.
 
-**What the skill does:** Follow `## Instructions`. For the Claude-compatible output shown above, schedule exactly one next session-only iteration and end the turn; Codex-compatible output sleeps inline and reruns the same command.
+**What the skill does:** Follow `## Instructions`. For the Claude-compatible output shown above, schedule exactly one next session-only iteration and end the turn; Codex-compatible output sleeps inline and reruns the same command. Do not convert this into a polling loop.
 
 ---
 
@@ -103,10 +105,10 @@ MARKED READY: PR #42 converted from draft to ready for review
 
 ## Instructions
 
-1. The CLI already marked the PR ready for review. Schedule one session-only follow-up task to run `npx pr-shepherd 42` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
+1. The CLI already marked the PR ready for review. Single-shot continuation: schedule one session-only follow-up task to run `npx pr-shepherd 42` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
 ```
 
-**What the skill does:** Follow `## Instructions`. For the Claude-compatible output shown above, schedule exactly one next session-only iteration and end the turn; Codex-compatible output sleeps inline and reruns the same command.
+**What the skill does:** Follow `## Instructions`. For the Claude-compatible output shown above, schedule exactly one next session-only iteration and end the turn; Codex-compatible output sleeps inline and reruns the same command. Do not run this as a polling loop.
 
 ---
 
@@ -218,7 +220,7 @@ Actionable work needs a code fix, commit, and push.
 10. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
 11. Do not re-run `gh run cancel` on the IDs listed under `## Cancelled runs` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.
 12. For any large decisions or rejections you made this iteration, add or update a `## Shepherd Journal` section in the PR description (`gh pr edit 42 --body …`) summarizing each decision and linking back to the originating comment, thread, or review. If this section already exists, append entries under it instead of creating a duplicate heading.
-13. CI needs time to run on the new push. Schedule one session-only follow-up task to run `npx pr-shepherd 42` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
+13. Single-shot continuation: CI needs time to run on the new push. Schedule one session-only follow-up task to run `npx pr-shepherd 42` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
 ```
 
 When one or more threads carry a `[suggestion]` marker, the `## Instructions` section opens with two different steps. Step 1 is new; step 2 gains a manual-fallback clause. All other steps renumber and are otherwise unchanged.
@@ -369,7 +371,7 @@ The `resolve:` command at the bottom of `## Post-fix push` includes both IDs:
 
 Both IDs stay in `--resolve-thread-ids` — `commit-suggestion` no longer resolves threads automatically. If a patch failed to apply and was handled manually instead, the ID still belongs in `--resolve-thread-ids`.
 
-**What the skill does:** Follow `## Instructions` in order. The instructions are self-contained and action-specific — no dispatch table needed. See `## Instructions` in the output for the exact steps.
+**What the skill does:** Follow `## Instructions` in order. The instructions are self-contained and action-specific — no dispatch table needed. See `## Instructions` in the output for the exact steps. This output is designed for a single re-entry tick; do not wrap it in shell polling loops.
 
 ---
 
