@@ -98,7 +98,7 @@ describe("buildFixInstructions", () => {
         argv: ["npx", "pr-shepherd", "resolve", "42"],
         requiresHeadSha: true,
         requiresDismissMessage: false,
-        hasMutations: false,
+        hasMutations: true,
       },
       false,
       42,
