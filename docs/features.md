@@ -102,8 +102,8 @@ The module supports a focused automation loop for PR monitoring and deterministi
 
 ## References
 
-- Command surface and argument parsing: [src/cli-parser.mts](../src/cli-parser.mts)
-- CLI usage reference: [docs/cli-usage.md](./cli-usage.md)
-- Action model and flow: [docs/actions.md](./actions.md), [docs/iterate-flow.md](./iterate-flow.md)
-- Configuration options: [docs/configuration.md](./configuration.md)
-- Comments/thread/summaries behavior: [docs/comments.md](./comments.md)
+- Command surface and argument parsing: [src/cli-parser.mts](/src/cli-parser.mts)
+- CLI usage reference: [docs/cli-usage.md](/docs/cli-usage.md)
+- Action model and flow: [docs/actions.md](/docs/actions.md), [docs/iterate-flow.md](/docs/iterate-flow.md)
+- Configuration options: [docs/configuration.md](/docs/configuration.md)
+- Comments/thread/summaries behavior: [docs/comments.md](/docs/comments.md)
