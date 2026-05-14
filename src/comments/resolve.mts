@@ -27,6 +27,11 @@ const COMMENTED_DISMISS_ERROR_PATTERNS = [
   /cannot dismiss.*commented pull request review/i,
 ];
 
+interface GraphQlErrorLike {
+  message: string;
+  path?: unknown;
+}
+
 function dedupeIds(ids: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
@@ -180,13 +185,14 @@ async function bulkApplyChunk(
   const doc = buildBulkMutation(resolveIds, minimizeIds, dismissIds, dismissMessage);
 
   let data: Record<string, unknown> = {};
-  let graphQlErrorMessages: string[] = [];
+  let graphQlErrors: GraphQlErrorLike[] = [];
   let rateLimitStop: ResolveRateLimitStop | undefined;
   let suppressCurrentChunkErrors = false;
   try {
     const resp = await graphqlWithRateLimit<Record<string, unknown>>(doc, {});
     data = resp.data;
-    graphQlErrorMessages = resp.errors?.map((e) => e.message) ?? [];
+    graphQlErrors = (resp.errors ?? []) as GraphQlErrorLike[];
+    const graphQlErrorMessages = graphQlErrors.map((e) => e.message);
     suppressCurrentChunkErrors = graphQlErrorMessages.some(isRateLimitMessage);
     rateLimitStop = rateLimitFromGraphQlResult(graphQlErrorMessages, {
       rateLimit: resp.rateLimit,
@@ -226,7 +232,7 @@ async function bulkApplyChunk(
     if (d?.pullRequestReview != null) result.dismissedReviews.push(dismissIds[i]!);
     else if (!suppressCurrentChunkErrors)
       result.errors.push(
-        isCommentedDismissError(graphQlErrorMessages)
+        isCommentedDismissErrorForIndex(i, graphQlErrors, dismissIds.length === 1)
           ? dismissedReviewNonDismissableMessage(dismissIds[i]!)
           : `${dismissIds[i]}: dismiss returned null`,
       );
@@ -239,4 +245,30 @@ async function bulkApplyChunk(
   }
 
   return false;
+}
+
+function dismissErrorAliasIndex(error: GraphQlErrorLike): number | undefined {
+  if (!Array.isArray(error.path)) return undefined;
+  const alias = error.path.find((part) => typeof part === "string" && /^d\\d+$/.test(part));
+  if (typeof alias !== "string") return undefined;
+  const parsed = Number.parseInt(alias.slice(1), 10);
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
+function isCommentedDismissErrorForIndex(
+  index: number,
+  graphQlErrors: GraphQlErrorLike[],
+  fallbackSingleDismiss: boolean,
+): boolean {
+  const byAlias = graphQlErrors.some(
+    (error) => dismissErrorAliasIndex(error) === index && isCommentedDismissError([error.message]),
+  );
+  if (byAlias) return true;
+  if (!fallbackSingleDismiss) return false;
+
+  const unmappedErrors = graphQlErrors.filter(
+    (error) =>
+      isCommentedDismissError([error.message]) && dismissErrorAliasIndex(error) === undefined,
+  );
+  return unmappedErrors.length > 0;
 }

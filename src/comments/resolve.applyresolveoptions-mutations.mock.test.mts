@@ -65,7 +65,7 @@ describe("applyResolveOptions — mutations", () => {
   it("returns actionable guidance when GitHub rejects dismissing a COMMENTED review", async () => {
     mockGraphql.mockResolvedValueOnce({
       data: { d0: null },
-      errors: [{ message: "Can not dismiss a commented pull request review" }],
+      errors: [{ message: "Can not dismiss a commented pull request review", path: ["d0"] }],
     });
 
     const result = await applyResolveOptions(1, REPO, {
@@ -76,6 +76,29 @@ describe("applyResolveOptions — mutations", () => {
     expect(result.dismissedReviews).toEqual([]);
     expect(result.errors).toEqual([
       "Not dismissed: PRR_1 is a COMMENTED review. Use --minimize-comment-ids instead; --dismiss-review-ids is only for CHANGES_REQUESTED reviews.",
+    ]);
+  });
+  it("attributes COMMENTED review dismiss errors to only the matching dismiss operation", async () => {
+    mockGraphql.mockResolvedValueOnce({
+      data: { d0: null, d1: null },
+      errors: [
+        { message: "Invalid review state for dismissal", path: ["d0", "dismissPullRequestReview"] },
+        {
+          message: "Can not dismiss a commented pull request review",
+          path: ["d1", "dismissPullRequestReview"],
+        },
+      ],
+    });
+
+    const result = await applyResolveOptions(1, REPO, {
+      dismissReviewIds: ["PRR_1", "PRR_2"],
+      dismissMessage: "done",
+    });
+
+    expect(result.dismissedReviews).toEqual([]);
+    expect(result.errors).toEqual([
+      "PRR_1: dismiss returned null",
+      "Not dismissed: PRR_2 is a COMMENTED review. Use --minimize-comment-ids instead; --dismiss-review-ids is only for CHANGES_REQUESTED reviews.",
     ]);
   });
   it("collects errors as 'id: message' without throwing", async () => {
