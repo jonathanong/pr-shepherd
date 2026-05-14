@@ -64,6 +64,14 @@ export function buildResolveCommand(
     argv.push("--minimize-comment-ids", allCommentIds.join(","));
   }
   const commentIdSet = new Set(allCommentIds);
+  const overlappingReviewIds = reviews.filter((review) => commentIdSet.has(review.id));
+  if (overlappingReviewIds.length > 0) {
+    process.stderr.write(
+      `pr-shepherd: resolve command overlap: ${overlappingReviewIds.length} ` +
+        `CHANGES_REQUESTED review IDs were also in minimize/comment IDs and were dropped: ` +
+        `${overlappingReviewIds.map((review) => review.id).join(", ")}\n`,
+    );
+  }
   const filteredReviewIds = reviews.filter((review) => !commentIdSet.has(review.id));
   const hasDismiss = filteredReviewIds.length > 0;
   if (hasDismiss) {

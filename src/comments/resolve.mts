@@ -15,6 +15,7 @@ export interface ResolveResult {
   minimizedComments: string[];
   dismissedReviews: string[];
   errors: string[];
+  skippedDismissals?: string[];
   rateLimit?: ResolveRateLimitStop;
   unresolvedThreads?: string[];
   unminimizedComments?: string[];
@@ -67,10 +68,11 @@ export async function applyResolveOptions(
     minimizedComments: [],
     dismissedReviews: [],
     errors: [],
+    skippedDismissals: [],
   };
 
   for (const id of overlappingDismissIds) {
-    result.errors.push(dismissReviewNonDismissibleMessage(id));
+    result.skippedDismissals?.push(id);
   }
 
   if (filteredDismissReviewIds.length > 0 && !opts.dismissMessage) {
@@ -225,12 +227,22 @@ async function bulkApplyChunk(
       result.errors.push(`${minimizeIds[i]}: minimize returned null or comment not minimized`);
   }
 
+  const singleDismiss = dismissIds.length === 1;
+  const commentedDismissErrorIndexes = new Set<number>();
+  const hasUnmappedCommentedDismissError = graphQlErrors.some((error) => {
+    if (!isCommentedDismissError([error.message])) return false;
+    const alias = dismissErrorAliasIndex(error);
+    if (alias === undefined) return true;
+    commentedDismissErrorIndexes.add(alias);
+    return false;
+  });
+
   for (let i = 0; i < dismissIds.length; i++) {
     const d = data[`d${i}`] as { pullRequestReview?: { state?: string } } | null | undefined;
     if (d?.pullRequestReview != null) result.dismissedReviews.push(dismissIds[i]!);
     else if (!suppressCurrentChunkErrors)
       result.errors.push(
-        isCommentedDismissErrorForIndex(i, graphQlErrors, dismissIds.length === 1)
+        commentedDismissErrorIndexes.has(i) || (singleDismiss && hasUnmappedCommentedDismissError)
           ? dismissReviewNonDismissibleMessage(dismissIds[i]!)
           : `${dismissIds[i]}: dismiss returned null`,
       );
@@ -251,22 +263,4 @@ function dismissErrorAliasIndex(error: GraphQlErrorLike): number | undefined {
   if (typeof alias !== "string") return undefined;
   const parsed = Number.parseInt(alias.slice(1), 10);
   return Number.isNaN(parsed) ? undefined : parsed;
-}
-
-function isCommentedDismissErrorForIndex(
-  index: number,
-  graphQlErrors: GraphQlErrorLike[],
-  fallbackSingleDismiss: boolean,
-): boolean {
-  const byAlias = graphQlErrors.some(
-    (error) => dismissErrorAliasIndex(error) === index && isCommentedDismissError([error.message]),
-  );
-  if (byAlias) return true;
-  if (!fallbackSingleDismiss) return false;
-
-  const unmappedErrors = graphQlErrors.filter(
-    (error) =>
-      isCommentedDismissError([error.message]) && dismissErrorAliasIndex(error) === undefined,
-  );
-  return unmappedErrors.length > 0;
 }

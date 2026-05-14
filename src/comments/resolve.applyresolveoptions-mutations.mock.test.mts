@@ -39,9 +39,8 @@ describe("applyResolveOptions — mutations", () => {
     });
 
     expect(result.dismissedReviews).toEqual(["PRR_2"]);
-    expect(result.errors).toEqual([
-      "Not dismissed: PRR_1 is a COMMENTED review. Use --minimize-comment-ids instead; --dismiss-review-ids is only for CHANGES_REQUESTED reviews.",
-    ]);
+    expect(result.skippedDismissals).toEqual(["PRR_1"]);
+    expect(result.errors).toEqual([]);
     const doc = mockGraphql.mock.calls[0]?.[0] as string;
     expect(doc).toContain(
       'm0: minimizeComment(input: { subjectId: "PRR_1", classifier: RESOLVED })',
@@ -59,9 +58,8 @@ describe("applyResolveOptions — mutations", () => {
       dismissReviewIds: ["PRR_1"],
     });
     expect(result.dismissedReviews).toEqual([]);
-    expect(result.errors).toEqual([
-      "Not dismissed: PRR_1 is a COMMENTED review. Use --minimize-comment-ids instead; --dismiss-review-ids is only for CHANGES_REQUESTED reviews.",
-    ]);
+    expect(result.skippedDismissals).toEqual(["PRR_1"]);
+    expect(result.errors).toEqual([]);
   });
   it("returns actionable guidance when GitHub rejects dismissing a COMMENTED review", async () => {
     mockGraphql.mockResolvedValueOnce({

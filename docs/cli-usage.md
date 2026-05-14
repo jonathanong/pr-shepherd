@@ -89,8 +89,8 @@ Not minimized due to rate limit (5): IC_36, IC_37, IC_38, IC_39, IC_40
 ```
 
 Retry a later run with the pending IDs only. JSON output exposes the same data in
-`rateLimit`, `unresolvedThreads`, `unminimizedComments`, and
-`undismissedReviews`.
+`rateLimit`, `unresolvedThreads`, `unminimizedComments`, `undismissedReviews`, and
+`skippedDismissals`.
 
 **Flags:**
 
