@@ -44,9 +44,11 @@ describe("main — iterate text format", () => {
     const out = getStdout();
     expect(out).toMatch(/^# PR #42 \[ESCALATE\]\n/);
     expect(out).toContain("**status** `IN_PROGRESS`");
-    expect(out).toContain("⚠️ /pr-shepherd:pr-shepherd paused — needs human direction");
+    expect(out).toContain("⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required");
     expect(out).toContain("## Instructions");
-    expect(out).toContain("1. Stop — the PR needs human direction before iterating can resume.");
+    expect(out).toContain(
+      "1. Stop — the PR needs human direction before iterating can resume. This is a manual handoff; do not continue automated fix attempts.",
+    );
   });
   it("wait: instructions use Claude one-shot scheduling wording with rerun command", async () => {
     const result = makeIterateResult("wait");
@@ -84,7 +86,9 @@ describe("main — iterate text format", () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("escalate"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
-    expect(out).toContain("1. Stop — the PR needs human direction before iterating can resume.");
+    expect(out).toContain(
+      "1. Stop — the PR needs human direction before iterating can resume. This is a manual handoff; do not continue automated fix attempts.",
+    );
     expect(out).not.toContain("CronList");
   });
   it("## Checks section is absent when checks is empty", async () => {

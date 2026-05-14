@@ -98,7 +98,7 @@ export function buildEscalateHumanMessage(
   pr: number,
 ): string {
   const lines: string[] = [];
-  lines.push("⚠️ /pr-shepherd:pr-shepherd paused — needs human direction");
+  lines.push("⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required");
   lines.push("");
   lines.push(`**Triggers:** ${escalate.triggers.map((t) => `\`${t}\``).join(", ")}`);
   lines.push("");
@@ -137,27 +137,29 @@ export function buildEscalateHumanMessage(
   lines.push("");
   lines.push("---");
   lines.push("");
-  lines.push(`After fixing manually, rerun \`/pr-shepherd:pr-shepherd ${pr}\` to resume.`);
+  lines.push(
+    `After completing manual fixes (and pushing if required), rerun \`/pr-shepherd:pr-shepherd ${pr}\` to resume.`,
+  );
   return lines.join("\n");
 }
 
 export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: string): string {
   if (triggers.includes("stall-timeout")) {
     const mins = detail ?? "30";
-    return `No progress detected for ${mins} minute${parseInt(mins, 10) === 1 ? "" : "s"} — state has not changed. Inspect the PR and resume manually once the blocking issue is resolved.`;
+    return `No progress detected for ${mins} minute${parseInt(mins, 10) === 1 ? "" : "s"} — state has not changed. This is a manual checkpoint: inspect the PR and apply a manual fix before resuming.`;
   }
   if (triggers.includes("base-branch-unknown")) {
     const reason = detail ? ` (${detail})` : "";
-    return `Could not determine the PR's base branch${reason} — refusing to emit a rebase that could force-push onto the wrong base. Run the rebase manually against the PR's real target branch.`;
+    return `Could not determine the PR's base branch${reason} — automated rebases are paused because branch safety is unclear. Run the rebase manually against the PR's real target branch.`;
   }
   if (triggers.includes("fix-thrash")) {
-    return "Same thread(s) attempted multiple times without resolution — fix manually then rerun /pr-shepherd:pr-shepherd";
+    return "Same thread(s) reached the automated attempt limit — treat this as a manual handoff. Apply the fix by hand.";
   }
   if (triggers.includes("pr-level-changes-requested")) {
-    return "Reviewer requested changes but left no inline comments — read the review and act manually";
+    return "Reviewer requested changes but left no inline comments — read the review and act manually.";
   }
   if (triggers.includes("thread-missing-location")) {
-    return "Review thread has no file/line reference — cannot locate code to edit automatically";
+    return "Review thread has no file/line reference — automated location routing failed and manual handling is required.";
   }
-  return "Ambiguous state — inspect the PR and act manually";
+  return "Ambiguous state — automated handling cannot proceed safely. Inspect the PR and act manually.";
 }

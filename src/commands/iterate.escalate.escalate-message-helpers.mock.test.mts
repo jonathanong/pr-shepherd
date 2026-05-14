@@ -64,7 +64,9 @@ describe("escalate message helpers", () => {
 
     expect(message).toContain("comment `c-ambiguous`");
     expect(message).toContain("Please consider the whole design");
-    expect(buildEscalateSuggestion([])).toBe("Ambiguous state — inspect the PR and act manually");
+    expect(buildEscalateSuggestion([])).toBe(
+      "Ambiguous state — automated handling cannot proceed safely. Inspect the PR and act manually.",
+    );
   });
 
   it("renders thread/review item fallbacks, thrash attempts, and singular stall wording", () => {
