@@ -80,7 +80,8 @@ export function buildResolveCommand(
   // --minimize-comment-ids, or --dismiss-review-ids. Returned explicitly
   // (rather than derived from argv.length) so callers don't couple to the
   // base-argv shape.
-  const hasMutations = threadIds.length > 0 || allCommentIds.length > 0 || filteredReviewIds.length > 0;
+  const hasMutations =
+    threadIds.length > 0 || allCommentIds.length > 0 || filteredReviewIds.length > 0;
 
   return { argv, requiresHeadSha, requiresDismissMessage: hasDismiss, hasMutations };
 }

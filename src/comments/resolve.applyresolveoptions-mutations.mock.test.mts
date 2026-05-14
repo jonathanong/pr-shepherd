@@ -42,9 +42,15 @@ describe("applyResolveOptions — mutations", () => {
       "Not dismissed: PRR_1 is a COMMENTED review. Use --minimize-comment-ids instead; --dismiss-review-ids is only for CHANGES_REQUESTED reviews.",
     ]);
     const doc = mockGraphql.mock.calls[0]?.[0] as string;
-    expect(doc).toContain('m0: minimizeComment(input: { subjectId: "PRR_1", classifier: RESOLVED })');
-    expect(doc).toContain('d0: dismissPullRequestReview(input: { pullRequestReviewId: "PRR_2", message: "addressed in follow-up" })');
-    expect(doc).not.toContain('d0: dismissPullRequestReview(input: { pullRequestReviewId: "PRR_1",');
+    expect(doc).toContain(
+      'm0: minimizeComment(input: { subjectId: "PRR_1", classifier: RESOLVED })',
+    );
+    expect(doc).toContain(
+      'd0: dismissPullRequestReview(input: { pullRequestReviewId: "PRR_2", message: "addressed in follow-up" })',
+    );
+    expect(doc).not.toContain(
+      'd0: dismissPullRequestReview(input: { pullRequestReviewId: "PRR_1",',
+    );
   });
   it("does not require --message when all dismiss IDs are also minimize IDs", async () => {
     const result = await applyResolveOptions(1, REPO, {
