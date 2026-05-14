@@ -382,7 +382,7 @@ Ambiguous state that requires human judgement — iteration stops and surfaces d
 **Trigger:** Any of:
 
 - **`stall-timeout`** — the iterate result has not materially changed for `config.iterate.stallTimeoutMinutes` minutes (default 30). Catches loops where the same failing test, transient error, or pending state repeats indefinitely without progress. The timer resets whenever the HEAD SHA, failing-check set, or actionable item IDs change. Override with `--stall-timeout <duration>` (e.g. `--stall-timeout 1h`).
-- **`fix-thrash`** — same thread dispatched ≥ `config.iterate.fixAttemptsPerThread` times (default 3) without resolving.
+- **`fix-thrash`** — same thread dispatched ≥ `config.iterate.fixAttemptsPerThread` times (default 3) without resolving. This is a manual handoff: automated fixes pause.
 - **`pr-level-changes-requested`** — reviewer requested changes but left no inline threads, comments, or CI failures to act on (not triggered when merge conflicts are present).
 - **`thread-missing-location`** — an actionable review thread has no file or line reference, so the code location cannot be found automatically.
 - **`base-branch-unknown`** — the GraphQL batch did not yield a usable base branch name: the derived value was empty or contained unsafe characters. Preempts any `[FIX_CODE]` that would require a push, since rebasing onto the wrong base is worse than pausing iteration.
@@ -399,11 +399,11 @@ Ambiguous state that requires human judgement — iteration stops and surfaces d
 **status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 0 passing
 
-⚠️ /pr-shepherd:pr-shepherd paused — needs human direction
+⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required
 
 **Triggers:** `fix-thrash`
 
-Same thread(s) attempted multiple times without resolution — fix manually then rerun /pr-shepherd:pr-shepherd
+Same thread(s) reached the automated attempt limit — treat this as a manual handoff. Apply the fix by hand, then rerun /pr-shepherd:pr-shepherd.
 
 ## Items needing attention
 
@@ -415,7 +415,7 @@ Same thread(s) attempted multiple times without resolution — fix manually then
 
 ---
 
-After fixing manually, rerun `/pr-shepherd:pr-shepherd 42` to resume.
+After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-shepherd 42` to resume.
 
 ## Instructions
 

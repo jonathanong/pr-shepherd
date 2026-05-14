@@ -44,7 +44,7 @@ describe("main — iterate text format", () => {
     const out = getStdout();
     expect(out).toMatch(/^# PR #42 \[ESCALATE\]\n/);
     expect(out).toContain("**status** `IN_PROGRESS`");
-    expect(out).toContain("⚠️ /pr-shepherd:pr-shepherd paused — needs human direction");
+    expect(out).toContain("⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required");
     expect(out).toContain("## Instructions");
     expect(out).toContain("1. Stop — the PR needs human direction before iterating can resume.");
   });

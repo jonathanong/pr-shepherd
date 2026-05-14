@@ -65,7 +65,7 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
         ambiguousComments: [],
         changesRequestedReviews: [],
         suggestion: "check manually",
-        humanMessage: "⚠️ /pr-shepherd:pr-shepherd paused — needs human direction",
+        humanMessage: "⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required",
       },
     };
   }
