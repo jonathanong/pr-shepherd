@@ -125,13 +125,13 @@ describe("fix_code — in-progress run cancellation", () => {
     if (result.action === "fix_code") {
       expect(result.fix.actionableComments).toHaveLength(1);
       expect(result.fix.changesRequestedReviews).toHaveLength(1);
-      expect(result.fix.inProgressRunIds).toHaveLength(0);
-      expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
+      expect(result.fix.inProgressRunIds).toEqual(["run-in-review-only"]);
+      expect(result.fix.resolveCommand.requiresHeadSha).toBe(true);
       expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
       expect(result.fix.resolveCommand.argv).toContain("PRR_review_change_request");
       const instructions = result.fix.instructions.join("\n");
-      expect(instructions).not.toMatch(/Cancel in-progress CI runs first/);
-      expect(instructions).not.toMatch(/Rebase and push/);
+      expect(instructions).toMatch(/Cancel in-progress CI runs first/);
+      expect(instructions).toMatch(/Rebase and push/);
     }
   });
 });

@@ -51,8 +51,11 @@ export function buildFixInstructions(
   inProgressRunIds: string[] = [],
   resolutionOnlyThreads: ReviewThread[] = [],
   runner?: CliRunner,
+  needsPush = false,
 ): string[] {
   const instructions: string[] = [];
+  const hasCodeChanges = threads.length > 0 || checks.length > 0 || reviews.length > 0;
+  const effectiveNeedsPush = needsPush || hasCodeChanges || hasConflicts;
   if (inProgressRunIds.length > 0) {
     instructions.push(
       `Cancel in-progress CI runs first: for each ID under \`## In-progress runs\`, run \`gh run cancel <id>\` before applying code fixes. If \`gh\` reports a run is already completed, ignore it and continue with the next ID.`,
@@ -84,8 +87,6 @@ export function buildFixInstructions(
     );
   }
 
-  const hasCodeChanges = threads.length > 0 || checks.length > 0;
-  const needsPush = hasCodeChanges || hasConflicts;
   if (hasCodeChanges) {
     instructions.push(
       `Commit changed files: \`git add <files> && git commit -m "<descriptive message>"\``,
@@ -94,7 +95,7 @@ export function buildFixInstructions(
       `Keep the PR title and description current: if the changes alter the PR's scope or intent, run \`gh pr edit ${prNumber} --title "<new title>" --body "<new body>"\` to reflect them. Skip if the existing title/body still accurately describe the PR.`,
     );
   }
-  if (needsPush) {
+  if (effectiveNeedsPush) {
     const captureHint = resolveCommand.requiresHeadSha
       ? ` — capture \`HEAD_SHA=$(git rev-parse HEAD)\``
       : "";
@@ -129,7 +130,8 @@ export function buildFixInstructions(
   if (resolveCommand.hasMutations) {
     const substituteParts: string[] = [];
     if (resolveCommand.requiresHeadSha) {
-      substituteParts.push(`"$HEAD_SHA" with the pushed commit SHA`);
+      const shaSource = effectiveNeedsPush ? "pushed commit SHA" : "current HEAD SHA";
+      substituteParts.push(`"$HEAD_SHA" with the ${shaSource}`);
     }
     if (resolveCommand.requiresDismissMessage) {
       substituteParts.push(`$DISMISS_MESSAGE with a one-sentence description of what you changed`);
@@ -138,7 +140,7 @@ export function buildFixInstructions(
       substituteParts.length > 0 ? `, substituting ${substituteParts.join(" and ")}` : "";
     instructions.push(`Run the \`resolve:\` command shown above${substituteHint}.`);
   }
-  if (needsPush && cancelledCount > 0) {
+  if (effectiveNeedsPush && cancelledCount > 0) {
     instructions.push(
       `Do not re-run \`gh run cancel\` on the IDs listed under \`## Cancelled runs\` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.`,
     );
@@ -151,7 +153,7 @@ export function buildFixInstructions(
       ),
     );
   }
-  if (needsPush) {
+  if (effectiveNeedsPush) {
     instructions.push(FIX_INSTRUCTION_STOP_AFTER_PUSH);
   } else {
     instructions.push(FIX_INSTRUCTION_STOP_BEFORE_NEXT_TICK);

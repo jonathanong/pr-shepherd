@@ -45,7 +45,7 @@ describe("buildFixInstructions", () => {
     expect(instructions.join("\n")).toContain("were updated by their author");
   });
 
-  it("treats changes-requested reviews as metadata-only when no threads/checks exist", () => {
+  it("treats changes-requested reviews as code-resolution work when no threads/checks exist", () => {
     const instructions = buildFixInstructions(
       [],
       [],
@@ -73,8 +73,42 @@ describe("buildFixInstructions", () => {
     expect(instructions.join("\n")).toContain(
       "For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.",
     );
-    expect(instructions.join("\n")).toContain("Stop this iteration before the next tick.");
-    expect(instructions.join("\n")).not.toMatch(/Commit changed files/);
-    expect(instructions.join("\n")).not.toMatch(/Rebase and push/);
+    expect(instructions.join("\n")).toContain("Commit changed files: `git add <files> && git commit -m \"<descriptive message>\"`");
+    expect(instructions.join("\n")).toContain(
+      "Stop this iteration — CI needs time to run on the new push before the next tick.",
+    );
+    expect(instructions.join("\n")).toContain("Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease`");
+  });
+
+  it("uses pushed commit SHA substitution when reviews require resolve with a new push", () => {
+    const instructions = buildFixInstructions(
+      [],
+      [],
+      [],
+      [
+        {
+          id: "r-2",
+          author: "reviewer",
+          authorType: "Unknown" as const,
+          body: "Please tweak the PR body one last time.",
+        },
+      ],
+      "main",
+      {
+        argv: ["npx", "pr-shepherd", "resolve", "42"],
+        requiresHeadSha: true,
+        requiresDismissMessage: false,
+        hasMutations: false,
+      },
+      false,
+      42,
+      0,
+    );
+
+    const text = instructions.join("\n");
+    expect(text).toContain(
+      'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA',
+    );
+    expect(text).toContain("Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease`");
   });
 });
