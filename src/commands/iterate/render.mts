@@ -84,7 +84,7 @@ export function buildFixInstructions(
     );
   }
 
-  const hasCodeChanges = threads.length > 0 || checks.length > 0 || reviews.length > 0;
+  const hasCodeChanges = threads.length > 0 || checks.length > 0;
   const needsPush = hasCodeChanges || hasConflicts;
   if (hasCodeChanges) {
     instructions.push(

@@ -79,5 +79,14 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
+      expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
+      expect(result.fix.resolveCommand.argv).toContain("review-1");
+      expect(result.fix.instructions.join("\n")).not.toContain("Rebase and push");
+      expect(result.fix.instructions.join("\n")).not.toContain(
+        "Stop this iteration — CI needs time to run on the new push",
+      );
+    }
   });
 });

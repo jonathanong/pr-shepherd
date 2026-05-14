@@ -66,4 +66,72 @@ describe("fix_code — in-progress run cancellation", () => {
       expect(result.fix.instructions.join("\n")).not.toMatch(/Rebase and push/);
     }
   });
+
+  it("inProgressRunIds is empty for review-only + comments fixes because no push is guaranteed", async () => {
+    const inProgressCheck = {
+      name: "ci",
+      status: "IN_PROGRESS" as const,
+      conclusion: null,
+      detailsUrl: "https://github.com/owner/repo/actions/runs/run-in-review-only",
+      event: "pull_request" as const,
+      runId: "run-in-review-only",
+      category: "in_progress" as const,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        checks: {
+          passing: [],
+          failing: [],
+          inProgress: [inProgressCheck],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+        comments: {
+          actionable: [
+            {
+              id: "IC_comment_only_with_review",
+              isMinimized: false,
+              author: "reviewer",
+              authorType: "Unknown" as const,
+              body: "Please rename this for clarity.",
+              url: "https://github.com/owner/repo/pull/42#issuecomment-2",
+              createdAtUnix: 0,
+            },
+          ],
+          firstLook: [],
+        },
+        changesRequestedReviews: [
+          {
+            id: "PRR_review_change_request",
+            author: "reviewer",
+            authorType: "Unknown" as const,
+            body: "Can you tweak the PR body and update the title wording?",
+          },
+        ],
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.actionableComments).toHaveLength(1);
+      expect(result.fix.changesRequestedReviews).toHaveLength(1);
+      expect(result.fix.inProgressRunIds).toHaveLength(0);
+      expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
+      expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
+      expect(result.fix.resolveCommand.argv).toContain("PRR_review_change_request");
+      const instructions = result.fix.instructions.join("\n");
+      expect(instructions).not.toMatch(/Cancel in-progress CI runs first/);
+      expect(instructions).not.toMatch(/Rebase and push/);
+    }
+  });
 });
