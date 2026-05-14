@@ -22,9 +22,7 @@ export interface ResolveResult {
 }
 
 const COMMENTED_DISMISS_ERROR_PATTERNS = [
-  /can\s*not dismiss a commented pull request review/i,
-  /cannot dismiss a commented pull request review/i,
-  /cannot dismiss.*commented pull request review/i,
+  /can\s*not\s+dismiss[\s\S]*?commented pull request review/i,
 ];
 
 interface GraphQlErrorLike {
@@ -49,7 +47,7 @@ function isCommentedDismissError(messages: string[]): boolean {
   );
 }
 
-function dismissedReviewNonDismissableMessage(id: string): string {
+function dismissReviewNonDismissibleMessage(id: string): string {
   return `Not dismissed: ${id} is a COMMENTED review. Use --minimize-comment-ids instead; --dismiss-review-ids is only for CHANGES_REQUESTED reviews.`;
 }
 
@@ -59,10 +57,10 @@ export async function applyResolveOptions(
   opts: ResolveOptions,
 ): Promise<ResolveResult> {
   const minimizeCommentIds = dedupeIds(opts.minimizeCommentIds ?? []);
-  const dismissedReviewIds = dedupeIds(opts.dismissReviewIds ?? []);
+  const dismissReviewIds = dedupeIds(opts.dismissReviewIds ?? []);
   const minimizeCommentIdSet = new Set(minimizeCommentIds);
-  const filteredDismissReviewIds = dismissedReviewIds.filter((id) => !minimizeCommentIdSet.has(id));
-  const overlappingDismissIds = dismissedReviewIds.filter((id) => minimizeCommentIdSet.has(id));
+  const filteredDismissReviewIds = dismissReviewIds.filter((id) => !minimizeCommentIdSet.has(id));
+  const overlappingDismissIds = dismissReviewIds.filter((id) => minimizeCommentIdSet.has(id));
 
   const result: ResolveResult = {
     resolvedThreads: [],
@@ -72,7 +70,7 @@ export async function applyResolveOptions(
   };
 
   for (const id of overlappingDismissIds) {
-    result.errors.push(dismissedReviewNonDismissableMessage(id));
+    result.errors.push(dismissReviewNonDismissibleMessage(id));
   }
 
   if (filteredDismissReviewIds.length > 0 && !opts.dismissMessage) {
@@ -86,7 +84,7 @@ export async function applyResolveOptions(
   }
 
   await bulkApply(
-    opts.resolveThreadIds ?? [],
+    dedupeIds(opts.resolveThreadIds ?? []),
     minimizeCommentIds,
     filteredDismissReviewIds,
     opts.dismissMessage ?? "",
@@ -233,7 +231,7 @@ async function bulkApplyChunk(
     else if (!suppressCurrentChunkErrors)
       result.errors.push(
         isCommentedDismissErrorForIndex(i, graphQlErrors, dismissIds.length === 1)
-          ? dismissedReviewNonDismissableMessage(dismissIds[i]!)
+          ? dismissReviewNonDismissibleMessage(dismissIds[i]!)
           : `${dismissIds[i]}: dismiss returned null`,
       );
   }
