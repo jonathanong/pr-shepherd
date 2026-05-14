@@ -259,7 +259,7 @@ async function bulkApplyChunk(
 
 function dismissErrorAliasIndex(error: GraphQlErrorLike): number | undefined {
   if (!Array.isArray(error.path)) return undefined;
-  const alias = error.path.find((part) => typeof part === "string" && /^d\\d+$/.test(part));
+  const alias = error.path.find((part) => typeof part === "string" && /^d\d+$/.test(part));
   if (typeof alias !== "string") return undefined;
   const parsed = Number.parseInt(alias.slice(1), 10);
   return Number.isNaN(parsed) ? undefined : parsed;
