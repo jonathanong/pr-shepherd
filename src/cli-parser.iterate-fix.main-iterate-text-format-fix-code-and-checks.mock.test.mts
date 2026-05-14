@@ -33,7 +33,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     // every iterate output ends with ## Instructions.
     expect(out).toContain("## Instructions");
     expect(out).toContain(
-      "1. Schedule one session-only follow-up task to run `npx pr-shepherd 42` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.",
+      "1. Single-shot continuation: schedule one session-only follow-up task to run `npx pr-shepherd 42` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.",
     );
   });
   it("fix_code (rich payload): sections appear in fixed order with backtick-quoted codes", async () => {
