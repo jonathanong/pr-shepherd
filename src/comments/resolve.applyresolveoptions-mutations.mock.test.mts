@@ -30,6 +30,48 @@ describe("applyResolveOptions — mutations", () => {
     expect(doc).toContain("r-1");
     expect(doc).toContain("addressed in follow-up");
   });
+  it("ignores dismiss IDs that are already in minimize-comment-ids", async () => {
+    const result = await applyResolveOptions(1, REPO, {
+      minimizeCommentIds: ["PRR_1"],
+      dismissReviewIds: ["PRR_1", "PRR_2"],
+      dismissMessage: "addressed in follow-up",
+    });
+
+    expect(result.dismissedReviews).toEqual(["PRR_2"]);
+    expect(result.errors).toEqual([
+      "Not dismissed: PRR_1 is a COMMENTED review. Use --minimize-comment-ids instead; --dismiss-review-ids is only for CHANGES_REQUESTED reviews.",
+    ]);
+    const doc = mockGraphql.mock.calls[0]?.[0] as string;
+    expect(doc).toContain('m0: minimizeComment(input: { subjectId: "PRR_1", classifier: RESOLVED })');
+    expect(doc).toContain('d0: dismissPullRequestReview(input: { pullRequestReviewId: "PRR_2", message: "addressed in follow-up" })');
+    expect(doc).not.toContain('d0: dismissPullRequestReview(input: { pullRequestReviewId: "PRR_1",');
+  });
+  it("does not require --message when all dismiss IDs are also minimize IDs", async () => {
+    const result = await applyResolveOptions(1, REPO, {
+      minimizeCommentIds: ["PRR_1"],
+      dismissReviewIds: ["PRR_1"],
+    });
+    expect(result.dismissedReviews).toEqual([]);
+    expect(result.errors).toEqual([
+      "Not dismissed: PRR_1 is a COMMENTED review. Use --minimize-comment-ids instead; --dismiss-review-ids is only for CHANGES_REQUESTED reviews.",
+    ]);
+  });
+  it("returns actionable guidance when GitHub rejects dismissing a COMMENTED review", async () => {
+    mockGraphql.mockResolvedValueOnce({
+      data: { d0: null },
+      errors: [{ message: "Can not dismiss a commented pull request review" }],
+    });
+
+    const result = await applyResolveOptions(1, REPO, {
+      dismissReviewIds: ["PRR_1"],
+      dismissMessage: "done",
+    });
+
+    expect(result.dismissedReviews).toEqual([]);
+    expect(result.errors).toEqual([
+      "Not dismissed: PRR_1 is a COMMENTED review. Use --minimize-comment-ids instead; --dismiss-review-ids is only for CHANGES_REQUESTED reviews.",
+    ]);
+  });
   it("collects errors as 'id: message' without throwing", async () => {
     mockGraphql.mockRejectedValueOnce(new Error("server unavailable"));
     const result = await applyResolveOptions(1, REPO, { resolveThreadIds: ["t-bad"] });

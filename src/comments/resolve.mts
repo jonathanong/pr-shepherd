@@ -20,12 +20,56 @@ export interface ResolveResult {
   undismissedReviews?: string[];
 }
 
+const COMMENTED_DISMISS_ERROR_PATTERNS = [
+  /can\s*not dismiss a commented pull request review/i,
+  /cannot dismiss a commented pull request review/i,
+  /cannot dismiss.*commented pull request review/i,
+];
+
+function dedupeIds(ids: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const id of ids) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+}
+
+function isCommentedDismissError(messages: string[]): boolean {
+  return messages.some((message) =>
+    COMMENTED_DISMISS_ERROR_PATTERNS.some((pattern) => pattern.test(message)),
+  );
+}
+
+function dismissedReviewNonDismissableMessage(id: string): string {
+  return `Not dismissed: ${id} is a COMMENTED review. Use --minimize-comment-ids instead; --dismiss-review-ids is only for CHANGES_REQUESTED reviews.`;
+}
+
 export async function applyResolveOptions(
   pr: number,
   repo: RepoInfo,
   opts: ResolveOptions,
 ): Promise<ResolveResult> {
-  if ((opts.dismissReviewIds?.length ?? 0) > 0 && !opts.dismissMessage) {
+  const minimizeCommentIds = dedupeIds(opts.minimizeCommentIds ?? []);
+  const dismissedReviewIds = dedupeIds(opts.dismissReviewIds ?? []);
+  const minimizeCommentIdSet = new Set(minimizeCommentIds);
+  const filteredDismissReviewIds = dismissedReviewIds.filter((id) => !minimizeCommentIdSet.has(id));
+  const overlappingDismissIds = dismissedReviewIds.filter((id) => minimizeCommentIdSet.has(id));
+
+  const result: ResolveResult = {
+    resolvedThreads: [],
+    minimizedComments: [],
+    dismissedReviews: [],
+    errors: [],
+  };
+
+  for (const id of overlappingDismissIds) {
+    result.errors.push(dismissedReviewNonDismissableMessage(id));
+  }
+
+  if (filteredDismissReviewIds.length > 0 && !opts.dismissMessage) {
     throw new Error("--message is required when dismissing reviews");
   }
 
@@ -35,17 +79,10 @@ export async function applyResolveOptions(
     await waitForSha(pr, repo, opts.requireSha);
   }
 
-  const result: ResolveResult = {
-    resolvedThreads: [],
-    minimizedComments: [],
-    dismissedReviews: [],
-    errors: [],
-  };
-
   await bulkApply(
     opts.resolveThreadIds ?? [],
-    opts.minimizeCommentIds ?? [],
-    opts.dismissReviewIds ?? [],
+    minimizeCommentIds,
+    filteredDismissReviewIds,
     opts.dismissMessage ?? "",
     result,
   );
@@ -141,13 +178,14 @@ async function bulkApplyChunk(
 
   const doc = buildBulkMutation(resolveIds, minimizeIds, dismissIds, dismissMessage);
 
-  let data: Record<string, unknown>;
+  let data: Record<string, unknown> = {};
+  let graphQlErrorMessages: string[] = [];
   let rateLimitStop: ResolveRateLimitStop | undefined;
   let suppressCurrentChunkErrors = false;
   try {
     const resp = await graphqlWithRateLimit<Record<string, unknown>>(doc, {});
     data = resp.data;
-    const graphQlErrorMessages = resp.errors?.map((e) => e.message) ?? [];
+    graphQlErrorMessages = resp.errors?.map((e) => e.message) ?? [];
     suppressCurrentChunkErrors = graphQlErrorMessages.some(isRateLimitMessage);
     rateLimitStop = rateLimitFromGraphQlResult(graphQlErrorMessages, {
       rateLimit: resp.rateLimit,
@@ -186,7 +224,11 @@ async function bulkApplyChunk(
     const d = data[`d${i}`] as { pullRequestReview?: { state?: string } } | null | undefined;
     if (d?.pullRequestReview != null) result.dismissedReviews.push(dismissIds[i]!);
     else if (!suppressCurrentChunkErrors)
-      result.errors.push(`${dismissIds[i]}: dismiss returned null`);
+      result.errors.push(
+        isCommentedDismissError(graphQlErrorMessages)
+          ? dismissedReviewNonDismissableMessage(dismissIds[i]!)
+          : `${dismissIds[i]}: dismiss returned null`,
+      );
   }
 
   if (rateLimitStop) {
