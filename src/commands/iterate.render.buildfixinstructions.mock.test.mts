@@ -111,4 +111,42 @@ describe("buildFixInstructions", () => {
     );
     expect(text).toContain("Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease`");
   });
+
+  it("treats non-metadata review changes as code changes", () => {
+    const instructions = buildFixInstructions(
+      [],
+      [],
+      [],
+      [
+        {
+          id: "r-3",
+          author: "reviewer",
+          authorType: "Unknown" as const,
+          body: "Please fix the failing logic in src/util.ts.",
+        },
+      ],
+      "main",
+      {
+        argv: ["npx", "pr-shepherd", "resolve", "42"],
+        requiresHeadSha: true,
+        requiresDismissMessage: true,
+        hasMutations: true,
+      },
+      false,
+      42,
+      0,
+    );
+
+    const text = instructions.join("\n");
+    expect(text).toContain(
+      'Commit changed files: `git add <files> && git commit -m "<descriptive message>"`',
+    );
+    expect(text).toContain(
+      "Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease`",
+    );
+    expect(text).toContain(
+      'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA',
+    );
+    expect(text).not.toContain("Stop this iteration before the next tick.");
+  });
 });
