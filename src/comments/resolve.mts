@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { graphqlWithRateLimit, type RepoInfo } from "../github/client.mts";
 import type { ResolveOptions } from "../types.mts";
 import {
