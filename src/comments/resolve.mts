@@ -42,10 +42,8 @@ function dedupeIds(ids: string[]): string[] {
   return out;
 }
 
-function isCommentedDismissError(messages: string[]): boolean {
-  return messages.some((message) =>
-    COMMENTED_DISMISS_ERROR_PATTERNS.some((pattern) => pattern.test(message)),
-  );
+function isCommentedDismissError(message: string): boolean {
+  return COMMENTED_DISMISS_ERROR_PATTERNS.some((pattern) => pattern.test(message));
 }
 
 function dismissReviewNonDismissibleMessage(id: string): string {
@@ -57,7 +55,8 @@ export async function applyResolveOptions(
   repo: RepoInfo,
   opts: ResolveOptions,
 ): Promise<ResolveResult> {
-  const minimizeCommentIds = dedupeIds(opts.minimizeCommentIds ?? []);
+  const resolveThreadIds = dedupeIds(opts.resolveThreadIds ?? []);
+  const minimizeCommentIds = opts.minimizeCommentIds ?? [];
   const dismissReviewIds = dedupeIds(opts.dismissReviewIds ?? []);
   const minimizeCommentIdSet = new Set(minimizeCommentIds);
   const filteredDismissReviewIds = dismissReviewIds.filter((id) => !minimizeCommentIdSet.has(id));
@@ -68,11 +67,13 @@ export async function applyResolveOptions(
     minimizedComments: [],
     dismissedReviews: [],
     errors: [],
-    skippedDismissals: [],
   };
 
-  for (const id of overlappingDismissIds) {
-    result.skippedDismissals?.push(id);
+  if (overlappingDismissIds.length > 0) {
+    result.skippedDismissals = [];
+    for (const id of overlappingDismissIds) {
+      result.skippedDismissals.push(id);
+    }
   }
 
   if (filteredDismissReviewIds.length > 0 && !opts.dismissMessage) {
@@ -86,7 +87,7 @@ export async function applyResolveOptions(
   }
 
   await bulkApply(
-    dedupeIds(opts.resolveThreadIds ?? []),
+    resolveThreadIds,
     minimizeCommentIds,
     filteredDismissReviewIds,
     opts.dismissMessage ?? "",
@@ -229,13 +230,16 @@ async function bulkApplyChunk(
 
   const singleDismiss = dismissIds.length === 1;
   const commentedDismissErrorIndexes = new Set<number>();
-  const hasUnmappedCommentedDismissError = graphQlErrors.some((error) => {
-    if (!isCommentedDismissError([error.message])) return false;
+  let hasUnmappedCommentedDismissError = false;
+  for (const error of graphQlErrors) {
+    if (!isCommentedDismissError(error.message)) continue;
     const alias = dismissErrorAliasIndex(error);
-    if (alias === undefined) return true;
+    if (alias === undefined) {
+      hasUnmappedCommentedDismissError = true;
+      continue;
+    }
     commentedDismissErrorIndexes.add(alias);
-    return false;
-  });
+  }
 
   for (let i = 0; i < dismissIds.length; i++) {
     const d = data[`d${i}`] as { pullRequestReview?: { state?: string } } | null | undefined;

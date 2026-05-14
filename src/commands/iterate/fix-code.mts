@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { readFixAttempts, writeFixAttempts } from "../../state/fix-attempts.mts";
 import { toAgentThread, toAgentComment, toAgentChecks } from "../../reporters/agent.mts";
 import {
@@ -129,6 +130,14 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     prNumber,
     cliRunner,
   );
+  const overlappingReviewIds = resolveCommand.droppedDismissReviewIds ?? [];
+  if (overlappingReviewIds.length > 0) {
+    process.stderr.write(
+      `pr-shepherd: resolve command overlap: ${overlappingReviewIds.length} ` +
+        `review IDs were also in minimize/comment IDs and were dropped from --dismiss-review-ids: ` +
+        `${overlappingReviewIds.join(", ")}\n`,
+    );
+  }
   if (baseLookup.isFallback && (resolveCommand.requiresHeadSha || hasConflicts)) {
     const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: ["base-branch-unknown"],

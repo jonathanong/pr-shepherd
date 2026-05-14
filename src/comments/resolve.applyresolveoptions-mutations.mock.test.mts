@@ -12,6 +12,14 @@ describe("applyResolveOptions — mutations", () => {
     expect(result.resolvedThreads).toEqual(["t-1", "t-2"]);
     expect(result.errors).toHaveLength(0);
   });
+  it("dedupes resolve thread IDs", async () => {
+    const result = await applyResolveOptions(1, REPO, { resolveThreadIds: ["t-1", "t-1"] });
+    expect(result.resolvedThreads).toEqual(["t-1"]);
+    expect(result.errors).toHaveLength(0);
+    const doc = mockGraphql.mock.calls[0]?.[0] as string;
+    expect(doc).toContain('r0: resolveReviewThread(input: { threadId: "t-1" })');
+    expect(doc).not.toContain('r1: resolveReviewThread(input: { threadId: "t-1" })');
+  });
   it("minimizes comments with classifier RESOLVED", async () => {
     const result = await applyResolveOptions(1, REPO, { minimizeCommentIds: ["c-1"] });
     expect(result.minimizedComments).toEqual(["c-1"]);
@@ -82,6 +90,29 @@ describe("applyResolveOptions — mutations", () => {
       data: { d0: null, d1: null },
       errors: [
         { message: "Invalid review state for dismissal", path: ["d0", "dismissPullRequestReview"] },
+        {
+          message: "Can not dismiss a commented pull request review",
+          path: ["d1", "dismissPullRequestReview"],
+        },
+      ],
+    });
+
+    const result = await applyResolveOptions(1, REPO, {
+      dismissReviewIds: ["PRR_1", "PRR_2"],
+      dismissMessage: "done",
+    });
+
+    expect(result.dismissedReviews).toEqual([]);
+    expect(result.errors).toEqual([
+      "PRR_1: dismiss returned null",
+      "Not dismissed: PRR_2 is a COMMENTED review. Use --minimize-comment-ids instead; --dismiss-review-ids is only for CHANGES_REQUESTED reviews.",
+    ]);
+  });
+  it("continues COMMENTED error attribution across mixed mapped and unmapped errors", async () => {
+    mockGraphql.mockResolvedValueOnce({
+      data: { d0: null, d1: null },
+      errors: [
+        { message: "Can not dismiss a commented pull request review" },
         {
           message: "Can not dismiss a commented pull request review",
           path: ["d1", "dismissPullRequestReview"],
