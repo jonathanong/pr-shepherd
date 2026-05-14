@@ -131,6 +131,27 @@ describe("applyResolveOptions — mutations", () => {
       "Not dismissed: PRR_2 is a COMMENTED review. Use --minimize-comment-ids instead; --dismiss-review-ids is only for CHANGES_REQUESTED reviews.",
     ]);
   });
+  it("treats malformed commented-dismiss path entries as overlapping aliases for single dismiss attempts", async () => {
+    mockGraphql.mockResolvedValueOnce({
+      data: { d0: null },
+      errors: [
+        {
+          message: "Can not dismiss a commented pull request review",
+          path: [0],
+        },
+      ],
+    });
+
+    const result = await applyResolveOptions(1, REPO, {
+      dismissReviewIds: ["PRR_1"],
+      dismissMessage: "done",
+    });
+
+    expect(result.dismissedReviews).toEqual([]);
+    expect(result.errors).toEqual([
+      "Not dismissed: PRR_1 is a COMMENTED review. Use --minimize-comment-ids instead; --dismiss-review-ids is only for CHANGES_REQUESTED reviews.",
+    ]);
+  });
   it("collects errors as 'id: message' without throwing", async () => {
     mockGraphql.mockRejectedValueOnce(new Error("server unavailable"));
     const result = await applyResolveOptions(1, REPO, { resolveThreadIds: ["t-bad"] });

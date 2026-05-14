@@ -5,6 +5,7 @@ import {
   NOW,
   makeOpts,
   makeReport,
+  makeReview,
   mockRunCheck,
   mockUpdateReadyDelay,
 } from "./iterate-test-support.mts";
@@ -117,6 +118,64 @@ describe("runIterate — fix_code (actionable threads)", () => {
       // push with no cancelled → stop-iteration but no no-recancel warning
       expect(joined).toContain("Stop this iteration");
       expect(joined).not.toContain("Do not re-run");
+    }
+  });
+
+  it("logs overlap warning when dismiss IDs overlap minimize/comment IDs", async () => {
+    const writeSpy = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    try {
+      const thread = {
+        id: "thread-overlap",
+        isResolved: false,
+        isOutdated: false,
+        isMinimized: false,
+        path: "src/foo.mts",
+        line: 10,
+        startLine: null,
+        author: "reviewer",
+        authorType: "Unknown" as const,
+        body: "fix this",
+        url: "",
+        createdAtUnix: NOW - 3600,
+      };
+      const review = makeReview("PRR_SHARED", "copilot", "Please update this section.");
+      const reviewAsRequest = {
+        id: "PRR_SHARED",
+        author: review.author,
+        authorType: review.authorType,
+        body: review.body,
+      };
+      mockRunCheck.mockResolvedValue(
+        makeReport({
+          status: "UNRESOLVED_COMMENTS",
+          threads: {
+            actionable: [thread],
+            resolutionOnly: [],
+            autoResolved: [],
+            autoResolveErrors: [],
+            firstLook: [],
+          },
+          reviewSummaries: [review],
+          changesRequestedReviews: [reviewAsRequest],
+        }),
+      );
+      mockUpdateReadyDelay.mockResolvedValue({
+        isReady: false,
+        shouldCancel: false,
+        remainingSeconds: 600,
+      });
+
+      const result = await runIterate(makeOpts());
+
+      expect(result.action).toBe("fix_code");
+      const messages = writeSpy.mock.calls.map(([chunk]) => String(chunk ?? ""));
+      expect(
+        messages.some((message) =>
+          message.includes("pr-shepherd: resolve command overlap: 1 review IDs"),
+        ),
+      ).toBe(true);
+    } finally {
+      writeSpy.mockRestore();
     }
   });
 });
