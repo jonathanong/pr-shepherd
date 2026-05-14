@@ -250,7 +250,7 @@ at Object.<anonymous> (src/commands/iterate.test.mts:58:22)
 5. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
 6. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
 7. For any large decisions made, add or update a `## Shepherd Journal` section in the PR description (`gh pr edit 42 --body …`), appending entries under the existing heading if present.
-8. Single-shot rerun: CI needs time to run on the new push. Schedule one session-only follow-up task to run `npx pr-shepherd 42 --ready-delay 15m` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
+8. Single-shot continuation: CI needs time to run on the new push. Schedule one session-only follow-up task to run `npx pr-shepherd 42 --ready-delay 15m` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
 ```
 
 See [actions.md](actions.md) for all five actions and their complete output shapes.
