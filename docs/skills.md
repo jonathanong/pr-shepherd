@@ -21,7 +21,7 @@ Use the skill inside a `/goal`:
 /goal /pr-shepherd:pr-shepherd 42 --ready-delay 15m
 ```
 
-The goal loop handles recurrence. Each tick the skill runs one iterate cycle and prints the output. For non-terminal actions, the CLI's `## Instructions` tell Claude to schedule exactly one next session-only iteration after a fresh 30s-4m delay and end the turn. Claude should not sleep inline or create a recurring cron. `[CANCEL]` and `[ESCALATE]` stop the goal.
+The goal loop handles recurrence. Each tick the skill runs one iterate cycle and prints the output. For non-terminal actions, the CLI's `## Instructions` tell Claude to schedule exactly one next session-only iteration after a fresh 30s-4m delay and end the turn. Claude should not sleep inline, create a recurring cron, or execute a polling loop. `[CANCEL]` and `[ESCALATE]` stop the goal.
 
 ## Codex
 

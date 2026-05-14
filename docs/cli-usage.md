@@ -199,10 +199,12 @@ WAIT: 3 passing, 0 in-progress — 540s until auto-cancel
 
 ## Instructions
 
-1. Schedule one session-only follow-up task to run `npx pr-shepherd 42` to continue the active goal once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
+1. Single-shot continuation: schedule one session-only follow-up task to run `npx pr-shepherd 42` to continue the active goal once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
 ```
 
 Claude-compatible instructions tell the agent to schedule one next session-only iteration and end the turn. Codex-compatible instructions tell the agent to pick a fresh sleep/timeout between 30 seconds and 4 minutes and rerun the configured command inline. If `cli.runner` selects pnpm or Yarn, that command is rendered as `pnpm exec pr-shepherd 42` or `yarn run pr-shepherd 42`; if the current command used `--ready-delay`, the rerun command includes the same flag.
+
+This is a one-shot loop contract: do not translate it into shell-level polling (`while true`, fixed-interval sleeps, etc.).
 
 Example for `[FIX_CODE]` (richest action):
 
@@ -248,7 +250,7 @@ at Object.<anonymous> (src/commands/iterate.test.mts:58:22)
 5. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
 6. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
 7. For any large decisions made, add or update a `## Shepherd Journal` section in the PR description (`gh pr edit 42 --body …`), appending entries under the existing heading if present.
-8. CI needs time to run on the new push. Schedule one session-only follow-up task to run `npx pr-shepherd 42 --ready-delay 15m` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
+8. Single-shot rerun: CI needs time to run on the new push. Schedule one session-only follow-up task to run `npx pr-shepherd 42 --ready-delay 15m` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
 ```
 
 See [actions.md](actions.md) for all five actions and their complete output shapes.

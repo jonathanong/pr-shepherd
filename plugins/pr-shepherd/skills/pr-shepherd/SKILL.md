@@ -45,4 +45,4 @@ One-tick dispatcher for iterating a PR to completion.
 5. **Stop conditions:**
    - Stop when the CLI emits `[CANCEL]` (ready-delay completed, or PR merged/closed).
    - Stop when the CLI emits `[ESCALATE]`, including `stall-timeout` for repeated unchanged CI failures.
-   - All other actions (`[WAIT]`, `[MARK_READY]`, `[FIX_CODE]`) are non-terminal: follow the `## Instructions`. For Claude, schedule exactly one next session-only iteration and end the turn; do not sleep inline and do not create a recurring cron.
+   - All other actions (`[WAIT]`, `[MARK_READY]`, `[FIX_CODE]`) are non-terminal: follow the `## Instructions`. For Claude, schedule exactly one next session-only iteration and end the turn; do not sleep inline and do not create a recurring cron or polling loop (`while true`, repeated polling, etc.).
