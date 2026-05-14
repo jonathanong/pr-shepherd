@@ -9,6 +9,17 @@ import { buildPrShepherdCommand, type CliRunner } from "../../cli/runner.mts";
 import { shouldMinimizeAuthor } from "../../comments/minimize-policy.mts";
 import type { MinimizeCommentsPolicy } from "../../config/load.mts";
 
+function dedupeIds(ids: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const id of ids) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+}
+
 export function classifyReviewSummaries(
   summaries: { firstLook: Review[]; seen: Review[]; edited: Review[] },
   approvals: Review[],
@@ -56,29 +67,44 @@ export function buildResolveCommand(
 ): ResolveCommand {
   const argv = buildPrShepherdCommand(["resolve", String(prNumber)], { runner }).argv;
 
-  const threadIds = [...threads.map((t) => t.id), ...resolutionOnlyThreads.map((t) => t.id)];
+  const resolveThreadIds = dedupeIds(threads.map((t) => t.id));
+  const threadIds = dedupeIds([...resolveThreadIds, ...resolutionOnlyThreads.map((t) => t.id)]);
   if (threadIds.length > 0) {
     argv.push("--resolve-thread-ids", threadIds.join(","));
   }
   if (allCommentIds.length > 0) {
     argv.push("--minimize-comment-ids", allCommentIds.join(","));
   }
-  const hasDismiss = reviews.length > 0;
+  const commentIdSet = new Set(allCommentIds);
+  const filteredReviewIds: string[] = [];
+  const droppedDismissReviewIds: string[] = [];
+  for (const review of reviews) {
+    if (commentIdSet.has(review.id)) droppedDismissReviewIds.push(review.id);
+    else filteredReviewIds.push(review.id);
+  }
+  const hasDismiss = filteredReviewIds.length > 0;
   if (hasDismiss) {
-    argv.push("--dismiss-review-ids", reviews.map((r) => r.id).join(","));
+    argv.push("--dismiss-review-ids", filteredReviewIds.join(","));
     argv.push("--message", "$DISMISS_MESSAGE");
   }
 
-  // A push is required when threads, CI failures, or changes-requested reviews are present — the
-  // CLI knows those imply code edits. Comments are surfaced for the agent to evaluate; the CLI
-  // cannot know whether a given comment will require a push, so comments are excluded here.
-  const requiresHeadSha = threads.length > 0 || checks.length > 0 || reviews.length > 0;
+  // A push is required when actionable threads, CI failures, or CHANGES_REQUESTED reviews are present.
+  // Resolution-only threads are already stale or minimized and do not require a fresh SHA.
+  const requiresHeadSha =
+    resolveThreadIds.length > 0 || checks.length > 0 || filteredReviewIds.length > 0;
 
   // hasMutations = we appended at least one of --resolve-thread-ids,
   // --minimize-comment-ids, or --dismiss-review-ids. Returned explicitly
   // (rather than derived from argv.length) so callers don't couple to the
   // base-argv shape.
-  const hasMutations = threadIds.length > 0 || allCommentIds.length > 0 || reviews.length > 0;
+  const hasMutations =
+    threadIds.length > 0 || allCommentIds.length > 0 || filteredReviewIds.length > 0;
 
-  return { argv, requiresHeadSha, requiresDismissMessage: hasDismiss, hasMutations };
+  return {
+    argv,
+    requiresHeadSha,
+    requiresDismissMessage: hasDismiss,
+    ...(droppedDismissReviewIds.length > 0 ? { droppedDismissReviewIds } : undefined),
+    hasMutations,
+  };
 }

@@ -40,6 +40,30 @@ describe("main — resolve", () => {
     expect(out).toContain("Not minimized due to rate limit (1): c-1");
     expect(out).toContain("Not dismissed due to rate limit (1): r-2");
   });
+  it("formatMutateResult renders skipped dismissals", async () => {
+    mockRunResolveMutate.mockResolvedValue({
+      resolvedThreads: [],
+      minimizedComments: [],
+      dismissedReviews: ["r-1"],
+      errors: [],
+      skippedDismissals: ["r-2", "r-3"],
+    });
+
+    await main([
+      "node",
+      "shepherd",
+      "resolve",
+      "42",
+      "--dismiss-review-ids",
+      "r-1,r-2,r-3",
+      "--message",
+      "done",
+    ]);
+
+    const out = getStdout();
+    expect(out).toContain("Dismissed reviews (1): r-1");
+    expect(out).toContain("Skipped dismissals (2): r-2, r-3");
+  });
   it("formatMutateResult renders non-rate-limit errors", async () => {
     mockRunResolveMutate.mockResolvedValue({
       resolvedThreads: [],

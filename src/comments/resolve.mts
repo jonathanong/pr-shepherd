@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { graphqlWithRateLimit, type RepoInfo } from "../github/client.mts";
 import type { ResolveOptions } from "../types.mts";
 import {
@@ -14,10 +15,39 @@ export interface ResolveResult {
   minimizedComments: string[];
   dismissedReviews: string[];
   errors: string[];
+  skippedDismissals?: string[];
   rateLimit?: ResolveRateLimitStop;
   unresolvedThreads?: string[];
   unminimizedComments?: string[];
   undismissedReviews?: string[];
+}
+
+const COMMENTED_DISMISS_ERROR_PATTERNS = [
+  /can\s*not\s+dismiss[\s\S]*?commented pull request review/i,
+];
+
+interface GraphQlErrorLike {
+  message: string;
+  path?: unknown;
+}
+
+function dedupeIds(ids: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const id of ids) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+}
+
+function isCommentedDismissError(message: string): boolean {
+  return COMMENTED_DISMISS_ERROR_PATTERNS.some((pattern) => pattern.test(message));
+}
+
+function dismissReviewNonDismissibleMessage(id: string): string {
+  return `Not dismissed: ${id} is a COMMENTED review. Use --minimize-comment-ids instead; --dismiss-review-ids is only for CHANGES_REQUESTED reviews.`;
 }
 
 export async function applyResolveOptions(
@@ -25,7 +55,28 @@ export async function applyResolveOptions(
   repo: RepoInfo,
   opts: ResolveOptions,
 ): Promise<ResolveResult> {
-  if ((opts.dismissReviewIds?.length ?? 0) > 0 && !opts.dismissMessage) {
+  const resolveThreadIds = dedupeIds(opts.resolveThreadIds ?? []);
+  const minimizeCommentIds = opts.minimizeCommentIds ?? [];
+  const dismissReviewIds = dedupeIds(opts.dismissReviewIds ?? []);
+  const minimizeCommentIdSet = new Set(minimizeCommentIds);
+  const filteredDismissReviewIds = dismissReviewIds.filter((id) => !minimizeCommentIdSet.has(id));
+  const overlappingDismissIds = dismissReviewIds.filter((id) => minimizeCommentIdSet.has(id));
+
+  const result: ResolveResult = {
+    resolvedThreads: [],
+    minimizedComments: [],
+    dismissedReviews: [],
+    errors: [],
+  };
+
+  if (overlappingDismissIds.length > 0) {
+    result.skippedDismissals = [];
+    for (const id of overlappingDismissIds) {
+      result.skippedDismissals.push(id);
+    }
+  }
+
+  if (filteredDismissReviewIds.length > 0 && !opts.dismissMessage) {
     throw new Error("--message is required when dismissing reviews");
   }
 
@@ -35,17 +86,10 @@ export async function applyResolveOptions(
     await waitForSha(pr, repo, opts.requireSha);
   }
 
-  const result: ResolveResult = {
-    resolvedThreads: [],
-    minimizedComments: [],
-    dismissedReviews: [],
-    errors: [],
-  };
-
   await bulkApply(
-    opts.resolveThreadIds ?? [],
-    opts.minimizeCommentIds ?? [],
-    opts.dismissReviewIds ?? [],
+    resolveThreadIds,
+    minimizeCommentIds,
+    filteredDismissReviewIds,
     opts.dismissMessage ?? "",
     result,
   );
@@ -141,13 +185,15 @@ async function bulkApplyChunk(
 
   const doc = buildBulkMutation(resolveIds, minimizeIds, dismissIds, dismissMessage);
 
-  let data: Record<string, unknown>;
+  let data: Record<string, unknown> = {};
+  let graphQlErrors: GraphQlErrorLike[] = [];
   let rateLimitStop: ResolveRateLimitStop | undefined;
   let suppressCurrentChunkErrors = false;
   try {
     const resp = await graphqlWithRateLimit<Record<string, unknown>>(doc, {});
     data = resp.data;
-    const graphQlErrorMessages = resp.errors?.map((e) => e.message) ?? [];
+    graphQlErrors = (resp.errors ?? []) as GraphQlErrorLike[];
+    const graphQlErrorMessages = graphQlErrors.map((e) => e.message);
     suppressCurrentChunkErrors = graphQlErrorMessages.some(isRateLimitMessage);
     rateLimitStop = rateLimitFromGraphQlResult(graphQlErrorMessages, {
       rateLimit: resp.rateLimit,
@@ -182,11 +228,28 @@ async function bulkApplyChunk(
       result.errors.push(`${minimizeIds[i]}: minimize returned null or comment not minimized`);
   }
 
+  const singleDismiss = dismissIds.length === 1;
+  const commentedDismissErrorIndexes = new Set<number>();
+  let hasUnmappedCommentedDismissError = false;
+  for (const error of graphQlErrors) {
+    if (!isCommentedDismissError(error.message)) continue;
+    const alias = dismissErrorAliasIndex(error);
+    if (alias === undefined) {
+      hasUnmappedCommentedDismissError = true;
+      continue;
+    }
+    commentedDismissErrorIndexes.add(alias);
+  }
+
   for (let i = 0; i < dismissIds.length; i++) {
     const d = data[`d${i}`] as { pullRequestReview?: { state?: string } } | null | undefined;
     if (d?.pullRequestReview != null) result.dismissedReviews.push(dismissIds[i]!);
     else if (!suppressCurrentChunkErrors)
-      result.errors.push(`${dismissIds[i]}: dismiss returned null`);
+      result.errors.push(
+        commentedDismissErrorIndexes.has(i) || (singleDismiss && hasUnmappedCommentedDismissError)
+          ? dismissReviewNonDismissibleMessage(dismissIds[i]!)
+          : `${dismissIds[i]}: dismiss returned null`,
+      );
   }
 
   if (rateLimitStop) {
@@ -196,4 +259,12 @@ async function bulkApplyChunk(
   }
 
   return false;
+}
+
+function dismissErrorAliasIndex(error: GraphQlErrorLike): number | undefined {
+  if (!Array.isArray(error.path)) return undefined;
+  const alias = error.path.find((part) => typeof part === "string" && /^d\d+$/.test(part));
+  if (typeof alias !== "string") return undefined;
+  const parsed = Number.parseInt(alias.slice(1), 10);
+  return Number.isNaN(parsed) ? undefined : parsed;
 }

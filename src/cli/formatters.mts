@@ -155,6 +155,10 @@ export function formatMutateResult(result: ResolveResult): string {
     lines.push(
       `Dismissed reviews (${result.dismissedReviews.length}): ${result.dismissedReviews.join(", ")}`,
     );
+  if (result.skippedDismissals?.length)
+    lines.push(
+      `Skipped dismissals (${result.skippedDismissals.length}): ${result.skippedDismissals.join(", ")}`,
+    );
   if (result.rateLimit) {
     const details = [
       result.rateLimit.retryAfterSeconds !== undefined
