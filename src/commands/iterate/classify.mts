@@ -74,7 +74,7 @@ export function buildResolveCommand(
   // A push is required when threads, CI failures, or changes-requested reviews are present — the
   // CLI knows those imply code edits. Comments are surfaced for the agent to evaluate; the CLI
   // cannot know whether a given comment will require a push, so comments are excluded here.
-  const requiresHeadSha = threadIds.length > 0 || checks.length > 0 || filteredReviewIds.length > 0;
+  const requiresHeadSha = threads.length > 0 || checks.length > 0 || filteredReviewIds.length > 0;
 
   // hasMutations = we appended at least one of --resolve-thread-ids,
   // --minimize-comment-ids, or --dismiss-review-ids. Returned explicitly
