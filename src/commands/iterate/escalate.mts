@@ -153,7 +153,7 @@ export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: st
     return `Could not determine the PR's base branch${reason} — automated rebases are paused because branch safety is unclear. Run the rebase manually against the PR's real target branch.`;
   }
   if (triggers.includes("fix-thrash")) {
-    return "Same thread(s) reached the automated attempt limit — treat this as a manual handoff. Apply the fix by hand, then rerun /pr-shepherd:pr-shepherd.";
+    return "Same thread(s) reached the automated attempt limit — treat this as a manual handoff. Apply the fix by hand.";
   }
   if (triggers.includes("pr-level-changes-requested")) {
     return "Reviewer requested changes but left no inline comments — read the review and act manually.";

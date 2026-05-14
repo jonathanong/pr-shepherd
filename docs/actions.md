@@ -403,7 +403,7 @@ Ambiguous state that requires human judgement — iteration stops and surfaces d
 
 **Triggers:** `fix-thrash`
 
-Same thread(s) reached the automated attempt limit — treat this as a manual handoff. Apply the fix by hand, then rerun /pr-shepherd:pr-shepherd.
+Same thread(s) reached the automated attempt limit — treat this as a manual handoff. Apply the fix by hand.
 
 ## Items needing attention
 
@@ -419,7 +419,7 @@ After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-
 
 ## Instructions
 
-1. Stop — the PR needs human direction before iterating can resume.
+1. Stop — the PR needs human direction before iterating can resume. This is a manual handoff; do not continue automated fix attempts.
 ```
 
 The block after the base-fields line (separated by a blank line) is `escalate.humanMessage` in JSON — ready to print verbatim.
