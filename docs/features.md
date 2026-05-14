@@ -8,9 +8,9 @@ The module supports a focused automation loop for PR monitoring and deterministi
 
 - Supports default invocation `pr-shepherd [PR]` for one iterate tick.
 - Supports explicit `pr-shepherd iterate [PR]` for compatibility with the legacy spelling.
-- Supports `pr-shepherd resolve [PR]` fetch mode when no mutation flags are passed.
+- Supports `pr-shepherd resolve [PR]` fetch mode (via `--fetch` or when no mutation flags are passed).
 - Supports `pr-shepherd resolve [PR]` mutate mode with `--resolve-thread-ids`, `--minimize-comment-ids`, `--dismiss-review-ids`.
-- Supports `pr-shepherd commit-suggestion [PR] --thread-id <id> --message "<..."` for suggestion-thread patch generation.
+- Supports `pr-shepherd commit-suggestion [PR] --thread-id <id> --message "<one-sentence headline>"` for suggestion-thread patch generation.
 - Supports `pr-shepherd log-file` to print the per-worktree debug log path.
 - Supports `--version`/`-v`.
 - Supports `--format text|json`, and `--verbose` output mode (iterate only).
@@ -102,8 +102,8 @@ The module supports a focused automation loop for PR monitoring and deterministi
 
 ## References
 
-- Command surface and argument parsing: [src/cli-parser.mts](src/cli-parser.mts)
-- CLI usage reference: [docs/cli-usage.md](docs/cli-usage.md)
-- Action model and flow: [docs/actions.md](docs/actions.md), [docs/iterate-flow.md](docs/iterate-flow.md)
-- Configuration options: [docs/configuration.md](docs/configuration.md)
-- Comments/thread/summaries behavior: [docs/comments.md](docs/comments.md)
+- Command surface and argument parsing: [src/cli-parser.mts](../src/cli-parser.mts)
+- CLI usage reference: [docs/cli-usage.md](./cli-usage.md)
+- Action model and flow: [docs/actions.md](./actions.md), [docs/iterate-flow.md](./iterate-flow.md)
+- Configuration options: [docs/configuration.md](./configuration.md)
+- Comments/thread/summaries behavior: [docs/comments.md](./comments.md)
