@@ -7,10 +7,10 @@ The module supports a focused automation loop for PR monitoring and deterministi
 ### CLI commands and invocation
 
 - Supports default invocation `pr-shepherd [PR]` for one iterate tick.
-- Supports explicit `pr-shepherd iterate [PR]` for compatibility with the legacy spelling.
+- Supports explicit `pr-shepherd iterate [PR]` as the legacy alias spelling.
 - Supports `pr-shepherd resolve [PR]` fetch mode (via `--fetch` or when no mutation flags are passed).
 - Supports `pr-shepherd resolve [PR]` mutate mode with `--resolve-thread-ids`, `--minimize-comment-ids`, `--dismiss-review-ids`.
-- Supports `pr-shepherd commit-suggestion [PR] --thread-id <id> --message "<one-sentence headline>"` for suggestion-thread patch generation.
+- Supports `pr-shepherd commit-suggestion [PR] --thread-id <id> --message "<one-sentence headline>"` (or `--description`) for suggestion-thread patch generation.
 - Supports `pr-shepherd log-file` to print the per-worktree debug log path.
 - Supports `--version`/`-v`.
 - Supports `--format text|json`, and `--verbose` output mode (iterate only).
@@ -61,7 +61,7 @@ The module supports a focused automation loop for PR monitoring and deterministi
 - Supports minimizing minimizable objects by ID (`--minimize-comment-ids`), including review summaries/review IDs.
 - Supports dismissing `CHANGES_REQUESTED` reviews with a message (`--dismiss-review-ids` + `--message`).
 - Supports batching mutation IDs in groups of 10.
-- Supports explicit `--require-sha <sha>` polling before mutating so closes/reopen actions follow the pushed commit.
+- Supports explicit `--require-sha <sha>` polling before mutating so close/reopen actions follow the pushed commit.
 
 ### Suggestion-thread workflow
 
@@ -94,7 +94,7 @@ The module supports a focused automation loop for PR monitoring and deterministi
 - Does not modify files or apply suggestion patches to the working tree automatically; it only emits what to run.
 - Does not guarantee CI rerun-versus-code-fix decisions; it surfaces failures and delegates action choice to the caller.
 - Does not auto-reply to inline comments when resolving threads.
-- Does not auto-classify every surfaced thread/comment as “actionable” vs “informational”; it exposes raw structured triage data.
+- Does not auto-classify every surfaced thread/comment as `actionable` vs `informational`; it exposes raw structured triage data.
 - Does not automatically apply edits for threads without line/locatable references.
 - Does not minimize already-hidden/sticky comment content beyond existing CLI mutation paths.
 - Does not support hidden unknown/unsupported subcommands; unknown input returns usage and non-zero exit.
@@ -102,8 +102,8 @@ The module supports a focused automation loop for PR monitoring and deterministi
 
 ## References
 
-- Command surface and argument parsing: [src/cli-parser.mts](/src/cli-parser.mts)
-- CLI usage reference: [docs/cli-usage.md](/docs/cli-usage.md)
-- Action model and flow: [docs/actions.md](/docs/actions.md), [docs/iterate-flow.md](/docs/iterate-flow.md)
-- Configuration options: [docs/configuration.md](/docs/configuration.md)
-- Comments/thread/summaries behavior: [docs/comments.md](/docs/comments.md)
+- Command surface and argument parsing: [src/cli-parser.mts](src/cli-parser.mts)
+- CLI usage reference: [docs/cli-usage.md](docs/cli-usage.md)
+- Action model and flow: [docs/actions.md](docs/actions.md), [docs/iterate-flow.md](docs/iterate-flow.md)
+- Configuration options: [docs/configuration.md](docs/configuration.md)
+- Comments/thread/summaries behavior: [docs/comments.md](docs/comments.md)
