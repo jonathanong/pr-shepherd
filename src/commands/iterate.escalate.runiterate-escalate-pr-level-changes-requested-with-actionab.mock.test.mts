@@ -90,7 +90,7 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
     }
   });
 
-  it("does NOT escalate when changesRequestedReviews + actionable comments exist", async () => {
+  it("escalates when changesRequestedReviews + actionable comments exist with missing base branch", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
@@ -129,15 +129,11 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
-      expect(result.fix.resolveCommand.requiresHeadSha).toBe(true);
-      expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
-      expect(result.fix.resolveCommand.argv).toContain("review-2");
-      expect(result.fix.instructions.join("\n")).toContain("Rebase and push:");
-      expect(result.fix.instructions.join("\n")).toContain(
-        "Stop this iteration — CI needs time to run on the new push",
-      );
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toContain("base-branch-unknown");
+      expect(result.escalate.changesRequestedReviews).toHaveLength(1);
+      expect(result.escalate.changesRequestedReviews[0]?.id).toBe("review-2");
     }
   });
 });
