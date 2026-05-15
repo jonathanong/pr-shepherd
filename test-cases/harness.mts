@@ -47,6 +47,7 @@ vi.mock("../src/checks/triage.mts", () => ({
 }));
 vi.mock("../src/comments/resolve.mts", () => ({
   autoResolveOutdated: vi.fn().mockResolvedValue({ resolved: [], errors: [] }),
+  applyResolveOptions: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../src/state/seen-comments.mts", async (importOriginal) => {
   const actual = await importOriginal();
@@ -338,6 +339,9 @@ export async function captureRun(fixture: Fixture): Promise<RunResult> {
  */
 export async function captureTwoTickStallRun(fixture: Fixture): Promise<RunResult> {
   const args = ["42", ...(fixture.args ?? [])];
+
+  // Clear write history so we only inspect calls from this run's tick 1.
+  mockWriteStallState.mockClear();
 
   // Tick 1: readStallState returns null → writeStallState called with real fingerprint
   await runMain(args);
