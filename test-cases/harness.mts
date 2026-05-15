@@ -314,11 +314,14 @@ async function runMain(args: string[]): Promise<{ out: string; exitCode: number 
   });
   const errSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   process.exitCode = undefined;
-  await main(["node", "pr-shepherd", ...args]);
+  try {
+    await main(["node", "pr-shepherd", ...args]);
+  } finally {
+    outSpy.mockRestore();
+    errSpy.mockRestore();
+  }
   const out = chunks.join("");
   const exitCode = process.exitCode as number | undefined;
-  outSpy.mockRestore();
-  errSpy.mockRestore();
   return { out, exitCode };
 }
 

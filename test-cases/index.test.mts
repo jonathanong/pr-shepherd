@@ -41,6 +41,11 @@ for (const name of listFixtureNames()) {
       const claudeResult = await runAgent(fixture, "claude");
       const codexResult = await runAgent(fixture, "codex");
 
+      // Every fixture must produce non-empty output
+      expect(claudeResult.textOut, "claude text output must not be empty").toBeTruthy();
+      expect(codexResult.textOut, "codex text output must not be empty").toBeTruthy();
+      expect(claudeResult.jsonOut, "json output must not be empty").toBeTruthy();
+
       // Per-agent text snapshots
       await expect(claudeResult.textOut).toMatchFileSnapshot(
         join(__dir, "snapshots", name, "claude.text.md"),
