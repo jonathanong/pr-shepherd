@@ -1,0 +1,35 @@
+{
+  "batchData": {
+    "reviewThreads": [
+      {
+        "id": "PRRT_noloc",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": null,
+        "line": null,
+        "startLine": null,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "This thread has no file location.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r20",
+        "createdAtUnix": 1715700000
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

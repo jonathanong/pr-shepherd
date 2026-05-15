@@ -1,0 +1,25 @@
+{
+  "batchData": {
+    "reviewThreads": [
+      {
+        "id": "PRRT_suggest",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/parser.ts",
+        "line": 15,
+        "startLine": 15,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Use a constant here:\n```suggestion\nconst MAX_RETRIES = 3;\n```",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r3",
+        "createdAtUnix": 1715700000
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "batchData": {
+    "checks": [
+      {
+        "name": "CI / build",
+        "status": "COMPLETED",
+        "conclusion": "CANCELLED",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/555",
+        "runId": "555"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "batchData": {
+    "baseRefName": "",
+    "reviewThreads": [
+      {
+        "id": "PRRT_base",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/main.ts",
+        "line": 1,
+        "startLine": null,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Please fix the import order.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r30",
+        "createdAtUnix": 1715700000
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

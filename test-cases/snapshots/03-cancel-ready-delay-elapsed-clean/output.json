@@ -1,0 +1,1 @@
+{"action":"cancel","pr":42,"repo":"owner/repo","status":"READY","state":"OPEN","mergeStateStatus":"CLEAN","summary":{"passing":1},"baseBranch":"main","reason":"ready-delay-elapsed","log":"CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping","instructions":["Stop — the active goal is complete."]}

@@ -1,0 +1,19 @@
+{
+  "batchData": {
+    "checks": [
+      {
+        "name": "CI / build",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/111",
+        "runId": "111"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

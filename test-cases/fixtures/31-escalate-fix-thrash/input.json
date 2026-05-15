@@ -1,0 +1,41 @@
+{
+  "batchData": {
+    "reviewThreads": [
+      {
+        "id": "PRRT_thrash",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/auth.ts",
+        "line": 88,
+        "startLine": null,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "This authentication logic is too complex, please simplify.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r10",
+        "createdAtUnix": 1715700000
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "fixAttempts": {
+    "headSha": "oldhash123",
+    "threadAttempts": {
+      "PRRT_thrash": 2
+    }
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

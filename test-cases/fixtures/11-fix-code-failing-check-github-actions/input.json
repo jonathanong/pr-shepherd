@@ -1,0 +1,33 @@
+{
+  "batchData": {
+    "checks": [
+      {
+        "name": "CI / tests (ubuntu)",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/1234567890",
+        "runId": "1234567890"
+      }
+    ]
+  },
+  "triagedChecks": [
+    {
+      "name": "CI / tests (ubuntu)",
+      "status": "COMPLETED",
+      "conclusion": "FAILURE",
+      "event": "pull_request",
+      "detailsUrl": "https://github.com/owner/repo/actions/runs/1234567890",
+      "runId": "1234567890",
+      "category": "failing",
+      "workflowName": "CI",
+      "jobName": "tests (ubuntu)",
+      "failedStep": "Run tests"
+    }
+  ],
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

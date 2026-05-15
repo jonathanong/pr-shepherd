@@ -1,0 +1,10 @@
+{
+  "batchData": {
+    "state": "MERGED"
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

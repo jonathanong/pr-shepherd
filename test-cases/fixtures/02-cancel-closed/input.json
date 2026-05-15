@@ -1,0 +1,10 @@
+{
+  "batchData": {
+    "state": "CLOSED"
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

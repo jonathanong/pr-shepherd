@@ -1,0 +1,33 @@
+{
+  "batchData": {
+    "reviewSummaries": [
+      {
+        "id": "PRR_edit",
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Updated review: looks better now, just a few minor issues remain."
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "seenMap": {
+    "PRR_edit": {
+      "seenAt": 1715700000,
+      "bodyHash": "aaaaaaaaaaaaaaaa"
+    }
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

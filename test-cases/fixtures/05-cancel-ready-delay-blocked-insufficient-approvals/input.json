@@ -1,0 +1,25 @@
+{
+  "batchData": {
+    "mergeStateStatus": "BLOCKED",
+    "reviewDecision": "APPROVED",
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "mergeableFallback": {
+    "mergeable": "MERGEABLE",
+    "mergeStateStatus": "BLOCKED"
+  },
+  "readyDelayState": {
+    "isReady": true,
+    "shouldCancel": true,
+    "remainingSeconds": 0
+  }
+}
