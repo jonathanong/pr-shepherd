@@ -51,6 +51,7 @@ Then install the CLI in the repository where Codex will work:
 ```sh
 pnpm add -D pr-shepherd      # pnpm repos
 yarn add -D pr-shepherd      # yarn repos
+bun add -d pr-shepherd       # bun repos
 npm install --save-dev pr-shepherd
 ```
 

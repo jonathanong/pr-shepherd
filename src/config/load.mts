@@ -11,8 +11,8 @@ export type MinimizeCommentsPolicy = (typeof MINIMIZE_COMMENTS_POLICIES)[number]
 
 export interface PrShepherdConfig {
   cli?: {
-    /** Command runner used in generated prompts. `auto` detects pnpm/yarn/npm from package metadata. */
-    runner: "auto" | "npx" | "pnpm" | "yarn";
+    /** Command runner used in generated prompts. `auto` detects pnpm/yarn/npm/bun from package metadata. */
+    runner: "auto" | "npx" | "pnpm" | "yarn" | "bun";
   };
   iterate: {
     fixAttemptsPerThread: number;

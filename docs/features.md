@@ -73,7 +73,7 @@ The module supports a focused automation loop for PR monitoring and deterministi
 ### Configuration and environment
 
 - Supports `.pr-shepherdrc.yml` with documented keys for CLI, iterate behavior, checks, merge status, resolve, and actions.
-- Supports runner selection via `cli.runner` (`auto`, `npx`, `pnpm`, `yarn`) for generated follow-up commands.
+- Supports runner selection via `cli.runner` (`auto`, `npx`, `pnpm`, `yarn`, `bun`) for generated follow-up commands.
 - Supports lock-based default runner inference in repo-local contexts.
 - Supports auth discovery via `GH_TOKEN`, `GITHUB_TOKEN`, and `gh auth token` fallback, then `GITHUB_PERSONAL_ACCESS_TOKEN`.
 - Supports per-worktree/run state directory override via `PR_SHEPHERD_STATE_DIR`.

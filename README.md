@@ -20,7 +20,7 @@ Example Workflow:
 
 `pr-shepherd` optimizes token management, rate limits, and agentic orchestration by moving **ALL** deterministic logic and prompts to code via a CLI tool, enshrining what would be a large skill or command prompt (of which the agent would inevitably make mistakes) into the code and returning a clear, actionable prompt.
 
-The CLI emits runtime-specific retry instructions. Claude-compatible output schedules exactly one next session-only iteration after a fresh delay between 30 seconds and 4 minutes, then ends the turn. Codex-compatible output sleeps inline for that delay, then reruns the configured pr-shepherd command. Codex is detected with `AGENT=codex` or the current Codex CLI signal `CODEX_CI=1`. Generated commands use `cli.runner` from `.pr-shepherdrc.yml`: `auto` (default), `npx`, `pnpm`, or `yarn`.
+The CLI emits runtime-specific retry instructions. Claude-compatible output schedules exactly one next session-only iteration after a fresh delay between 30 seconds and 4 minutes, then ends the turn. Codex-compatible output sleeps inline for that delay, then reruns the configured pr-shepherd command. Codex is detected with `AGENT=codex` or the current Codex CLI signal `CODEX_CI=1`. Generated commands use `cli.runner` from `.pr-shepherdrc.yml`: `auto` (default), `npx`, `pnpm`, `yarn`, or `bun`.
 
 At a high level, the skill invokes `pr-shepherd <PR>` through the selected package runner, which provides actionable feedback directly to the agent:
 
@@ -143,6 +143,7 @@ On each tick: fetch PR state in one GraphQL batch → classify CI, comments, and
 > ```bash
 > pnpm add -D pr-shepherd      # pnpm repos
 > yarn add -D pr-shepherd      # yarn repos
+> bun add -d pr-shepherd       # bun repos
 > npm install --save-dev pr-shepherd
 > ```
 >
@@ -197,6 +198,7 @@ Install the CLI where Codex will run it:
 ```bash
 pnpm add -D pr-shepherd      # pnpm repos
 yarn add -D pr-shepherd      # yarn repos
+bun add -d pr-shepherd       # bun repos
 npm install --save-dev pr-shepherd
 ```
 
@@ -214,7 +216,7 @@ Then iterate a PR from Codex with the target repository's package runner:
 <runner> pr-shepherd iterate 42
 ```
 
-For example, a repo like `~/filaments` that declares `packageManager: "pnpm@..."` and has `pnpm-lock.yaml` should use `pnpm exec pr-shepherd iterate 42`. For npm repos, use `npx pr-shepherd iterate 42`.
+For example, a repo like `~/filaments` that declares `packageManager: "pnpm@..."` and has `pnpm-lock.yaml` should use `pnpm exec pr-shepherd iterate 42`. For Bun repos (with `bun.lock` or `bun.lockb`), use `bunx pr-shepherd iterate 42`. For npm repos, use `npx pr-shepherd iterate 42`.
 
 Or ask Codex to use the `pr-shepherd` skill, for example: `run pr-shepherd until this PR is ready`. Follow the output's `## Instructions`. The skill runs one tick and Codex-compatible instructions tell you to pick a fresh sleep/timeout between 30 seconds and 4 minutes before the next rerun. Continue until Shepherd emits `[CANCEL]` or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). `pr-shepherd iterate 42` remains supported for existing workflows.
 
