@@ -94,9 +94,9 @@ export function buildResolveCommand(
   // base-argv shape.
   const hasMutations =
     threadIds.length > 0 || allCommentIds.length > 0 || filteredReviewIds.length > 0;
-  // `requiresHeadSha` is only needed when we both require a SHA-sensitive
-  // mutation (thread/check resolution or review dismissal) and the resolve command
-  // is actually going to run (has mutations).
+  // `requiresHeadSha` is only needed when this resolve command includes a
+  // SHA-sensitive mutation (resolving inline threads and/or dismissing
+  // CHANGES_REQUESTED reviews) and can become stale if the branch head moves.
   const hasCodeMutations =
     hasMutations && (threads.length > 0 || checks.length > 0 || filteredReviewIds.length > 0);
   const requiresHeadSha = hasCodeMutations;
