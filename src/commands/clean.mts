@@ -124,6 +124,11 @@ async function resolveTarget(base: string, opts: CleanOptions): Promise<string> 
   const { variant, value } = opts;
 
   if (variant === "all") {
+    if (value !== undefined) {
+      throw new Error(
+        `"clean all" does not accept a positional argument; got "${value}". Did you mean "clean repo" or "clean pr"?`,
+      );
+    }
     return base;
   }
 
@@ -142,6 +147,11 @@ async function resolveTarget(base: string, opts: CleanOptions): Promise<string> 
   const ownerRepo = `${owner}-${name}`;
 
   if (variant === "repo") {
+    if (value !== undefined) {
+      throw new Error(
+        `"clean repo" does not accept a positional argument; got "${value}". Did you mean "clean pr" or "clean branch"?`,
+      );
+    }
     return join(base, ownerRepo);
   }
 
