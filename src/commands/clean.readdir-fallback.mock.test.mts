@@ -9,6 +9,8 @@ const { mockStat, mockReaddir, mockRealpath } = vi.hoisted(() => ({
   mockRealpath: vi.fn(),
 }));
 
+const { mockRm } = vi.hoisted(() => ({ mockRm: vi.fn() }));
+
 vi.mock("node:fs/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs/promises")>();
   return {
@@ -16,6 +18,7 @@ vi.mock("node:fs/promises", async (importOriginal) => {
     realpath: mockRealpath,
     stat: mockStat,
     readdir: mockReaddir,
+    rm: mockRm,
   };
 });
 
@@ -35,6 +38,7 @@ beforeEach(() => {
   mockRealpath.mockImplementation((p: string) => Promise.resolve(p));
   mockStat.mockResolvedValue({});
   mockReaddir.mockResolvedValue([]);
+  mockRm.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -58,5 +62,14 @@ describe("clean — stat non-ENOENT error", () => {
     const result = await runClean({ variant: "all" });
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/Failed to stat target/);
+  });
+});
+
+describe("clean — rm failure", () => {
+  it("returns ok=false when rm throws", async () => {
+    mockRm.mockRejectedValue(new Error("EACCES: permission denied"));
+    const result = await runClean({ variant: "all" });
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/Failed to remove target/);
   });
 });

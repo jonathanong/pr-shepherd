@@ -106,4 +106,18 @@ describe("main — clean dispatch", () => {
       expect.objectContaining({ variant: "pr", value: "42" }),
     );
   });
+
+  it("writes error to stderr and exits 1 for unknown flag", async () => {
+    await main(["node", "shepherd", "clean", "all", "--dryrun"]);
+    expect(getStderr()).toContain("unknown flag");
+    expect(process.exitCode).toBe(1);
+    expect(mockRunClean).not.toHaveBeenCalled();
+  });
+
+  it("writes error to stderr and exits 1 for invalid --format value", async () => {
+    await main(["node", "shepherd", "clean", "all", "--format", "xml"]);
+    expect(getStderr()).toContain("invalid --format value");
+    expect(process.exitCode).toBe(1);
+    expect(mockRunClean).not.toHaveBeenCalled();
+  });
 });

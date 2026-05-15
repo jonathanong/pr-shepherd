@@ -103,7 +103,20 @@ export async function runClean(opts: CleanOptions): Promise<CleanResult> {
     };
   }
 
-  await rm(target, { recursive: true, force: true });
+  try {
+    await rm(target, { recursive: true, force: true });
+  } catch (e) {
+    return {
+      ok: false,
+      variant: opts.variant,
+      dryRun: false,
+      base,
+      target,
+      deleted: [],
+      skipped: [],
+      error: `Failed to remove target: ${(e as Error).message}`,
+    };
+  }
   return {
     ok: true,
     variant: opts.variant,

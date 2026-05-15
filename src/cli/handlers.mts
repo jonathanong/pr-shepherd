@@ -29,15 +29,33 @@ export async function handleClean(args: string[]): Promise<void> {
 
   const rest = args.slice(1);
 
-  const jsonOut =
-    rest.some((a) => a === "--format=json") ||
-    (() => {
-      const idx = rest.indexOf("--format");
-      return idx !== -1 && rest[idx + 1] === "json";
-    })();
+  for (const a of rest) {
+    if (!a.startsWith("--")) continue;
+    if (a === "--dry-run" || a === "--format" || a.startsWith("--format=")) continue;
+    process.stderr.write(`pr-shepherd: clean: unknown flag: "${a}"\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const fmtIdx = rest.indexOf("--format");
+  const fmtEqEntry = rest.find((a) => a.startsWith("--format="));
+  let formatValue: string | undefined;
+  if (fmtEqEntry !== undefined) {
+    formatValue = fmtEqEntry.slice("--format=".length);
+  } else if (fmtIdx !== -1 && fmtIdx + 1 < rest.length && !rest[fmtIdx + 1]!.startsWith("--")) {
+    formatValue = rest[fmtIdx + 1];
+  }
+  if (formatValue !== undefined && formatValue !== "text" && formatValue !== "json") {
+    process.stderr.write(
+      `pr-shepherd: clean: invalid --format value: "${formatValue}". Expected "text" or "json".\n`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  const jsonOut = formatValue === "json";
   const dryRun = rest.includes("--dry-run");
   // Skip the value consumed by --format <value> so it isn't mistaken for the positional.
-  const fmtIdx = rest.indexOf("--format");
   const flagConsumedIndices = new Set<number>();
   if (fmtIdx !== -1 && fmtIdx + 1 < rest.length && !rest[fmtIdx + 1]!.startsWith("--")) {
     flagConsumedIndices.add(fmtIdx);
