@@ -83,14 +83,14 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
       expect(result.fix.resolveCommand.requiresHeadSha).toBe(true);
       expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
       expect(result.fix.resolveCommand.argv).toContain("review-1");
-      expect(result.fix.instructions.join("\n")).toContain("Rebase and push");
+      expect(result.fix.instructions.join("\n")).toContain("Rebase and push:");
       expect(result.fix.instructions.join("\n")).toContain(
-        "Stop this iteration — CI needs time to run on the new push before the next tick.",
+        "Stop this iteration — CI needs time to run on the new push",
       );
     }
   });
 
-  it("does NOT escalate review-only + comments path when baseBranch is empty", async () => {
+  it("escalates review-only + comments path when baseBranch is empty", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
@@ -129,6 +129,6 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("escalate");
   });
 });

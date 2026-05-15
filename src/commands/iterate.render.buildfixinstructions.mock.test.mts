@@ -45,7 +45,7 @@ describe("buildFixInstructions", () => {
     expect(instructions.join("\n")).toContain("were updated by their author");
   });
 
-  it("treats changes-requested reviews as code-resolution work when no threads/checks exist", () => {
+  it("treats changes-requested reviews as fix-required when no threads/checks exist", () => {
     const instructions = buildFixInstructions(
       [],
       [],
@@ -73,14 +73,18 @@ describe("buildFixInstructions", () => {
     expect(instructions.join("\n")).toContain(
       "For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.",
     );
-    expect(instructions.join("\n")).toContain("Commit changed files: `git add <files> && git commit -m \"<descriptive message>\"`");
     expect(instructions.join("\n")).toContain(
-      "Stop this iteration — CI needs time to run on the new push before the next tick.",
+      'Commit changed files: `git add <files> && git commit -m "<descriptive message>"`',
     );
-    expect(instructions.join("\n")).toContain("Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease`");
+    expect(instructions.join("\n")).toContain(
+      "Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease`",
+    );
+    expect(instructions.join("\n")).toContain(
+      'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA',
+    );
   });
 
-  it("uses pushed commit SHA substitution when reviews require resolve with a new push", () => {
+  it("uses pushed commit SHA substitution when review requests require a push", () => {
     const instructions = buildFixInstructions(
       [],
       [],
@@ -109,7 +113,7 @@ describe("buildFixInstructions", () => {
     expect(text).toContain(
       'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA',
     );
-    expect(text).toContain("Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease`");
+    expect(text).not.toContain('substituting "$HEAD_SHA" with the current HEAD SHA');
   });
 
   it("treats non-metadata review changes as code changes", () => {
