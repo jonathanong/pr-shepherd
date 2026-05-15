@@ -9,6 +9,7 @@ pr-shepherd resolve [PR] [--fetch | --resolve-thread-ids … | --minimize-commen
 pr-shepherd commit-suggestion [PR] --thread-id <id> --message "…"
 pr-shepherd iterate [PR] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]  # legacy alias for pr-shepherd [PR]
 pr-shepherd log-file
+pr-shepherd clean <pr|branch|current|repo|all> [value] [--dry-run] [--format text|json]
 ```
 
 ## Common flags
@@ -287,3 +288,29 @@ All entries carry an ISO-8601 millisecond timestamp. HTTP response entries also 
 **Override base directory:** set `PR_SHEPHERD_STATE_DIR` (same env var as the loop-state directory). The log lives at `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/worktrees/<basename>-<sha8>.md`.
 
 Exit code: `0` on success · `1` if not in a git repo or repo identity cannot be resolved.
+
+### pr-shepherd clean \<variant\> [value]
+
+Removes pr-shepherd state files. State lives under `$PR_SHEPHERD_STATE_DIR` (default `$TMPDIR/pr-shepherd-state`) and includes per-PR seen markers, fix-attempt counters, stall fingerprints, and ready-delay timers.
+
+| Variant         | What it removes                                                                                                   |
+| --------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `pr [number]`   | State for a specific PR: `<base>/<owner>-<repo>/<pr>/`. Defaults to the current branch's open PR.                 |
+| `branch [name]` | Resolves the branch to its open PR, then removes that PR's state. Defaults to the current branch.                 |
+| `current`       | Alias for `branch` against the current branch.                                                                    |
+| `repo`          | All state for the current repository: `<base>/<owner>-<repo>/` (includes all PRs and the worktree debug-log dir). |
+| `all`           | All pr-shepherd state: `<base>/`.                                                                                 |
+
+```sh
+pr-shepherd clean current              # remove state for the current branch's PR
+pr-shepherd clean pr 42                # remove state for PR #42
+pr-shepherd clean branch feature/foo   # remove state for the PR on branch feature/foo
+pr-shepherd clean repo                 # remove all state for this repo
+pr-shepherd clean all                  # remove all pr-shepherd state
+pr-shepherd clean current --dry-run    # preview what would be removed
+pr-shepherd clean repo --format=json   # machine-readable output
+```
+
+`--dry-run` lists the paths that would be deleted without touching the filesystem. A nonexistent target is not an error — the command exits `0` and reports nothing to clean.
+
+Exit codes: `0` on success · `1` on error (invalid variant, no PR found, not in a git repo).

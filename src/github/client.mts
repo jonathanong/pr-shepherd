@@ -58,9 +58,22 @@ export async function getCurrentPrNumber(): Promise<number | null> {
     const branch = await getCurrentBranch();
     if (branch === "HEAD") return null;
     const repo = await getRepoInfo();
+    return getPrNumberForBranch(branch, repo.owner, repo.name);
+  } catch {
+    return null;
+  }
+}
+
+/** Returns the PR number for a given branch, or null if no open PR is found. */
+export async function getPrNumberForBranch(
+  branch: string,
+  owner: string,
+  repo: string,
+): Promise<number | null> {
+  try {
     const result = await httpGraphql<{
       repository: { pullRequests: { nodes: Array<{ number: number }> } } | null;
-    }>(PR_NUMBER_BY_BRANCH_QUERY, { owner: repo.owner, repo: repo.name, branch });
+    }>(PR_NUMBER_BY_BRANCH_QUERY, { owner, repo, branch });
     return result.data.repository?.pullRequests.nodes[0]?.number ?? null;
   } catch {
     return null;
