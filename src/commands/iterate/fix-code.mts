@@ -115,7 +115,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const { changesRequestedReviews } = report;
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
   const hasReviewRequestedCodeLikeChanges =
-    changesRequestedReviews.length > 0 && actionableComments.length > 0;
+    changesRequestedReviews.length > 0 &&
+    (actionableComments.length > 0 || resolutionOnlyThreads.length > 0);
   const hasGuaranteedPush =
     threads.length > 0 || checks.length > 0 || hasConflicts || hasReviewRequestedCodeLikeChanges;
   const shouldPush = hasGuaranteedPush;
