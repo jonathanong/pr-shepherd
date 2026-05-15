@@ -1,0 +1,1 @@
+{"action":"cancel","pr":42,"repo":"owner/repo","status":"READY","state":"OPEN","mergeStateStatus":"HAS_HOOKS","summary":{"passing":1},"baseBranch":"main","reason":"ready-delay-elapsed","log":"CANCEL: PR #42 is awaiting human review or branch protection resolution — ready-delay elapsed, stopping","instructions":["Stop — the active goal is complete."]}

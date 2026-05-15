@@ -1,0 +1,19 @@
+{
+  "batchData": {},
+  "startupFailureChecks": [
+    {
+      "name": "CI (startup failure)",
+      "status": "COMPLETED",
+      "conclusion": "STARTUP_FAILURE",
+      "event": "pull_request",
+      "detailsUrl": "https://github.com/owner/repo/actions/runs/999",
+      "runId": "999",
+      "summary": "Process exited early"
+    }
+  ],
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

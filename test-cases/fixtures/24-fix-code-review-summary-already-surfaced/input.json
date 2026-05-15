@@ -1,0 +1,32 @@
+{
+  "batchData": {
+    "reviewSummaries": [
+      {
+        "id": "PRR_seen",
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "LGTM with minor comments."
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "seenMap": {
+    "PRR_seen": {
+      "seenAt": 1715700000
+    }
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

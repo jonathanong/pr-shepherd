@@ -1,0 +1,50 @@
+{
+  "batchData": {
+    "reviewThreads": [
+      {
+        "id": "PRRT_thread1",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/auth.ts",
+        "line": 10,
+        "body": "Please fix this.",
+        "author": "reviewer",
+        "authorType": "User",
+        "diffHunk": "@@ -8,6 +8,8 @@ function auth() {"
+      }
+    ],
+    "changesRequestedReviews": [
+      {
+        "id": "PRR_overlap",
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Please refactor the auth module."
+      }
+    ],
+    "reviewSummaries": [
+      {
+        "id": "PRR_overlap",
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Please refactor the auth module.",
+        "isMinimized": false
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

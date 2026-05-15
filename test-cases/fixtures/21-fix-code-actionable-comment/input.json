@@ -1,0 +1,30 @@
+{
+  "batchData": {
+    "comments": [
+      {
+        "id": "IC_actionable",
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "This approach might cause a race condition. Please review the locking strategy.",
+        "url": "https://github.com/owner/repo/pull/42#issuecomment-1",
+        "createdAtUnix": 1715700000,
+        "isMinimized": false
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

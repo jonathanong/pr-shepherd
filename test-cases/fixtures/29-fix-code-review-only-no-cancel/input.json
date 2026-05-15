@@ -1,0 +1,41 @@
+{
+  "batchData": {
+    "changesRequestedReviews": [
+      {
+        "id": "PRR_changes_only",
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "High-level design issue — please discuss in a follow-up PR."
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/777",
+        "runId": "777"
+      }
+    ],
+    "reviewThreads": [
+      {
+        "id": "PRRT_inline1",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/index.ts",
+        "line": 5,
+        "body": "Please rename this variable.",
+        "author": "reviewer",
+        "authorType": "User",
+        "diffHunk": "@@ -3,6 +3,8 @@ export function main() {"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

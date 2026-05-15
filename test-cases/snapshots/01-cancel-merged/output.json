@@ -1,0 +1,1 @@
+{"action":"cancel","pr":42,"repo":"owner/repo","status":"MERGED","state":"MERGED","mergeStateStatus":"CLEAN","summary":{"passing":0},"baseBranch":"main","reason":"merged","log":"CANCEL: PR #42 is merged — stopping","instructions":["Stop — the active goal is complete."]}

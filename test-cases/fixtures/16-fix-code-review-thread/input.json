@@ -1,0 +1,25 @@
+{
+  "batchData": {
+    "reviewThreads": [
+      {
+        "id": "PRRT_active",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/index.ts",
+        "line": 42,
+        "startLine": null,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Please rename this variable to be more descriptive.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r1",
+        "createdAtUnix": 1715700000
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

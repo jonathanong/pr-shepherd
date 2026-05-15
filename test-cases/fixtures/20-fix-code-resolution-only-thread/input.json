@@ -1,0 +1,40 @@
+{
+  "batchData": {
+    "reviewThreads": [
+      {
+        "id": "PRRT_minimized",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": true,
+        "path": "src/helpers.ts",
+        "line": 5,
+        "startLine": null,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Minor nit: trailing whitespace.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r5",
+        "createdAtUnix": 1715700000
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "seenMap": {
+    "PRRT_minimized": {
+      "seenAt": 1715700000
+    }
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

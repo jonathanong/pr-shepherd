@@ -1,0 +1,25 @@
+{
+  "batchData": {
+    "reviewThreads": [
+      {
+        "id": "PRRT_nested",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/template.ts",
+        "line": 7,
+        "startLine": null,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "The suggestion body itself contains a code fence:\n```suggestion\nconst x = ````nested fence````;\n```",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r4",
+        "createdAtUnix": 1715700000
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}
