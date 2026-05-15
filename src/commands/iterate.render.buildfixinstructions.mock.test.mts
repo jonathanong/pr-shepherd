@@ -200,7 +200,7 @@ describe("buildFixInstructions", () => {
 
     const text = instructions.join("\n");
     expect(text).toContain(
-      'For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.',
+      "For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.",
     );
     expect(text).toContain(
       'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the current HEAD SHA',
