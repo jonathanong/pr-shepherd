@@ -1,4 +1,5 @@
 import type { AuthorType, SuggestionBlock } from "../types.mts";
+import type { FirstLookThread, FirstLookComment } from "../types/report.mts";
 import { renderLineRange, renderSuggestionBlock } from "./suggestion-renderer.mts";
 
 const BODY_PREVIEW_MAX = 100;
@@ -88,4 +89,30 @@ export function renderReviewListSection(
 ): string | null {
   if (items.length === 0) return null;
   return `## ${heading}\n\n${items.map((r) => renderReviewBullet(r, { includeBody: true })).join("\n")}`;
+}
+
+/**
+ * Build bullet strings for the `## First-look items` section.
+ * Threads that also appear in resolutionOnlyIds have their body suppressed
+ * (already shown in `## Review threads to resolve`).
+ */
+export function buildFirstLookBullets(
+  firstLookThreads: FirstLookThread[],
+  resolutionOnlyIds: Set<string>,
+  firstLookComments: FirstLookComment[],
+): string[] {
+  const bullets: string[] = [];
+  for (const t of firstLookThreads) {
+    bullets.push(
+      renderThreadBullet(t, {
+        statusTag: renderFirstLookStatusTag(t),
+        noBody: resolutionOnlyIds.has(t.id),
+      }),
+    );
+  }
+  for (const c of firstLookComments) {
+    const editedSuffix = c.edited ? ", edited" : "";
+    bullets.push(renderCommentBullet(c, { statusTag: `[status: minimized${editedSuffix}]` }));
+  }
+  return bullets;
 }

@@ -6,8 +6,8 @@ import {
   renderThreadBullet,
   renderCommentBullet,
   renderReviewBullet,
-  renderFirstLookStatusTag,
   renderThreadResolutionStatusTag,
+  buildFirstLookBullets,
 } from "./list-formatters.mts";
 import { joinSections } from "../util/markdown.mts";
 import type { FetchResult } from "../commands/resolve.mts";
@@ -75,15 +75,14 @@ export function formatFetchResult(result: FetchResult): string {
 
   if (firstLookTotal > 0) {
     sections.push(`## First-look items (${firstLookTotal}) — acknowledge status before acting`);
-    const bullets: string[] = [];
-    for (const t of result.firstLookThreads) {
-      bullets.push(renderThreadBullet(t, { statusTag: renderFirstLookStatusTag(t) }));
-    }
-    for (const c of result.firstLookComments) {
-      const editedSuffix = c.edited ? ", edited" : "";
-      bullets.push(renderCommentBullet(c, { statusTag: `[status: minimized${editedSuffix}]` }));
-    }
-    sections.push(bullets.join("\n"));
+    const resolutionOnlyIds = new Set(result.resolutionOnlyThreads.map((t) => t.id));
+    sections.push(
+      buildFirstLookBullets(
+        result.firstLookThreads,
+        resolutionOnlyIds,
+        result.firstLookComments,
+      ).join("\n"),
+    );
   }
 
   sections.push("## Summary");
