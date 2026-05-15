@@ -97,7 +97,9 @@ export function buildFixInstructions(
     );
   }
   if (!needsPush && resolveCommand.requiresHeadSha) {
-    instructions.push('Capture the current HEAD SHA before resolving with: `HEAD_SHA=$(git rev-parse HEAD)`.');
+    instructions.push(
+      "Capture the current HEAD SHA before resolving with: `HEAD_SHA=$(git rev-parse HEAD)`.",
+    );
   }
   if (needsPush) {
     const captureHint = resolveCommand.requiresHeadSha
