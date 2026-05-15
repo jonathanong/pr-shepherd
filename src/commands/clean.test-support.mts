@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { vi, beforeEach, afterEach } from "vitest";
 import { join } from "node:path";
-import { mkdtemp, rm, mkdir, writeFile, stat } from "node:fs/promises";
+import { mkdtemp, realpath, rm, mkdir, writeFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 
 vi.mock("../github/client.mts", () => ({
@@ -27,7 +27,8 @@ export let stateDir: string;
 
 export function registerHooks() {
   beforeEach(async () => {
-    stateDir = await mkdtemp(join(tmpdir(), "shepherd-clean-test-"));
+    const tmpPath = await mkdtemp(join(tmpdir(), "shepherd-clean-test-"));
+    stateDir = await realpath(tmpPath);
     process.env["PR_SHEPHERD_STATE_DIR"] = stateDir;
     vi.clearAllMocks();
     mockGetRepoInfo.mockResolvedValue({ owner: "acme", name: "widgets" });

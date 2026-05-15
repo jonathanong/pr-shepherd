@@ -1,5 +1,5 @@
-import { rm, readdir, stat } from "node:fs/promises";
-import { join, resolve, sep } from "node:path";
+import { rm, readdir, realpath, stat } from "node:fs/promises";
+import { join } from "node:path";
 import { resolveStateBase } from "../state/base.mts";
 import {
   getRepoInfo,
@@ -33,7 +33,8 @@ export interface CleanResult {
 
 export async function runClean(opts: CleanOptions): Promise<CleanResult> {
   const dryRun = opts.dryRun ?? false;
-  const base = resolveStateBase();
+  const rawBase = resolveStateBase();
+  const base = await realpath(rawBase).catch(() => rawBase);
 
   let target: string;
   try {
@@ -51,29 +52,23 @@ export async function runClean(opts: CleanOptions): Promise<CleanResult> {
     };
   }
 
-  // Ensure target is within the state base to prevent accidental deletion outside it.
-  const resolvedTarget = resolve(target);
-  const resolvedBase = resolve(base);
-  const basePrefix = resolvedBase.endsWith(sep) ? resolvedBase : resolvedBase + sep;
-  if (resolvedTarget !== resolvedBase && !resolvedTarget.startsWith(basePrefix)) {
-    return {
-      ok: false,
-      variant: opts.variant,
-      dryRun,
-      base,
-      target,
-      deleted: [],
-      skipped: [],
-      error: `Target path escapes state base: ${target}`,
-    };
-  }
-
   let targetExists = false;
   try {
     await stat(target);
     targetExists = true;
-  } catch {
-    // does not exist
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      return {
+        ok: false,
+        variant: opts.variant,
+        dryRun,
+        base,
+        target,
+        deleted: [],
+        skipped: [],
+        error: `Failed to stat target: ${(e as Error).message}`,
+      };
+    }
   }
 
   if (!targetExists) {
@@ -171,6 +166,11 @@ async function resolveTarget(base: string, opts: CleanOptions): Promise<string> 
     }
   } else {
     // "branch" or "current"
+    if (variant === "current" && value !== undefined) {
+      throw new Error(
+        `"clean current" does not accept a positional argument; got "${value}". Did you mean "clean branch"?`,
+      );
+    }
     const branchName = value ?? (await getCurrentBranch());
     if (branchName === "HEAD") {
       throw new Error("Could not resolve current branch (detached HEAD)");

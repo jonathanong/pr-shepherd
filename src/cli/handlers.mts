@@ -43,7 +43,15 @@ export async function handleClean(args: string[]): Promise<void> {
     flagConsumedIndices.add(fmtIdx);
     flagConsumedIndices.add(fmtIdx + 1);
   }
-  const value = rest.find((a, i) => !flagConsumedIndices.has(i) && !a.startsWith("--"));
+  const positionals = rest.filter((a, i) => !flagConsumedIndices.has(i) && !a.startsWith("--"));
+  if (positionals.length > 1) {
+    process.stderr.write(
+      `pr-shepherd: clean: too many positional arguments (expected at most 1, got ${positionals.length})\n`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+  const value = positionals[0];
 
   const result = await runClean({ variant: variant as CleanVariant, value, dryRun });
 

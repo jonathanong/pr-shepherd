@@ -92,6 +92,13 @@ describe("main — clean dispatch", () => {
     expect(mockRunClean).toHaveBeenCalledWith(expect.objectContaining({ dryRun: true }));
   });
 
+  it("writes error to stderr and exits 1 for extra positional arguments", async () => {
+    await main(["node", "shepherd", "clean", "pr", "42", "99"]);
+    expect(getStderr()).toContain("too many positional");
+    expect(process.exitCode).toBe(1);
+    expect(mockRunClean).not.toHaveBeenCalled();
+  });
+
   it("passes positional value for pr variant", async () => {
     mockRunClean.mockResolvedValue({ ...OK_RESULT, variant: "pr" });
     await main(["node", "shepherd", "clean", "pr", "42"]);

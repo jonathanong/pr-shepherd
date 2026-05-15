@@ -67,6 +67,14 @@ describe("clean current", () => {
   });
 });
 
+describe("clean current — stray positional rejected", () => {
+  it("errors when a positional argument is provided to 'current'", async () => {
+    const result = await runClean({ variant: "current", value: "feature/foo" });
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/does not accept a positional/);
+  });
+});
+
 describe("path safety", () => {
   it("errors when git repo owner contains invalid characters", async () => {
     mockGetRepoInfo.mockResolvedValueOnce({ owner: "../evil", name: "widgets" });
