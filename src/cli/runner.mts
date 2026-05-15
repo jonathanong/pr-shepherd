@@ -34,7 +34,13 @@ export function parseCliRunner(runner: unknown): CliRunner {
     );
   }
   const value = runner.trim();
-  if (value === "auto" || value === "npx" || value === "pnpm" || value === "yarn" || value === "bun")
+  if (
+    value === "auto" ||
+    value === "npx" ||
+    value === "pnpm" ||
+    value === "yarn" ||
+    value === "bun"
+  )
     return value;
   throw new Error(
     `Invalid config: cli.runner must be one of "auto", "npx", "pnpm", "yarn", or "bun", got ${JSON.stringify(runner)}`,
