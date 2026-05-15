@@ -2,7 +2,7 @@ import { readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 
-export type CliRunner = "auto" | "npx" | "pnpm" | "yarn";
+export type CliRunner = "auto" | "npx" | "pnpm" | "yarn" | "bun";
 
 export interface PrShepherdCommand {
   argv: string[];
@@ -30,13 +30,14 @@ export function parseCliRunner(runner: unknown): CliRunner {
   if (runner === undefined) return "auto";
   if (typeof runner !== "string") {
     throw new Error(
-      `Invalid config: cli.runner must be one of "auto", "npx", "pnpm", or "yarn", got ${JSON.stringify(runner)}`,
+      `Invalid config: cli.runner must be one of "auto", "npx", "pnpm", "yarn", or "bun", got ${JSON.stringify(runner)}`,
     );
   }
   const value = runner.trim();
-  if (value === "auto" || value === "npx" || value === "pnpm" || value === "yarn") return value;
+  if (value === "auto" || value === "npx" || value === "pnpm" || value === "yarn" || value === "bun")
+    return value;
   throw new Error(
-    `Invalid config: cli.runner must be one of "auto", "npx", "pnpm", or "yarn", got ${JSON.stringify(runner)}`,
+    `Invalid config: cli.runner must be one of "auto", "npx", "pnpm", "yarn", or "bun", got ${JSON.stringify(runner)}`,
   );
 }
 
@@ -52,6 +53,8 @@ function baseArgvForRunner(runner: Exclude<CliRunner, "auto">): string[] {
       return ["pnpm", "exec", "pr-shepherd"];
     case "yarn":
       return ["yarn", "run", "pr-shepherd"];
+    case "bun":
+      return ["bunx", "pr-shepherd"];
   }
 }
 
@@ -78,9 +81,12 @@ function detectPackageRunner(startDir: string): Exclude<CliRunner, "auto"> {
       if (packageManager?.startsWith("pnpm@")) return cacheRunner(startDir, "pnpm");
       if (packageManager?.startsWith("yarn@")) return cacheRunner(startDir, "yarn");
       if (packageManager?.startsWith("npm@")) return cacheRunner(startDir, "npx");
+      if (packageManager?.startsWith("bun@")) return cacheRunner(startDir, "bun");
 
       if (isFile(join(current, "pnpm-lock.yaml"))) return cacheRunner(startDir, "pnpm");
       if (isFile(join(current, "yarn.lock"))) return cacheRunner(startDir, "yarn");
+      if (isFile(join(current, "bun.lock"))) return cacheRunner(startDir, "bun");
+      if (isFile(join(current, "bun.lockb"))) return cacheRunner(startDir, "bun");
       if (isFile(join(current, "package-lock.json"))) return cacheRunner(startDir, "npx");
     }
 

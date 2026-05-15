@@ -122,7 +122,28 @@ describe("resolveCliRunner", () => {
   });
 
   it("rejects unsupported config values", () => {
-    expect(() => parseCliRunner("bun")).toThrow("cli.runner");
+    expect(() => parseCliRunner("deno")).toThrow("cli.runner");
+  });
+
+  it("accepts bun as a valid runner", () => {
+    expect(parseCliRunner("bun")).toBe("bun");
+  });
+
+  it("detects bun from packageManager", () => {
+    writePackage({ packageManager: "bun@1.2.0" });
+    expect(resolveCliRunner("auto", tmpDir)).toBe("bun");
+  });
+
+  it("detects bun from bun.lockb lockfile", () => {
+    writePackage();
+    writeFileSync(join(tmpDir, "bun.lockb"), "");
+    expect(resolveCliRunner("auto", tmpDir)).toBe("bun");
+  });
+
+  it("detects bun from bun.lock lockfile", () => {
+    writePackage();
+    writeFileSync(join(tmpDir, "bun.lock"), "");
+    expect(resolveCliRunner("auto", tmpDir)).toBe("bun");
   });
 
   it("rejects non-string, non-undefined config values", () => {
@@ -146,6 +167,13 @@ describe("buildPrShepherdCommand", () => {
       "pnpm exec pr-shepherd 42",
     );
     expect(buildPrShepherdCommand(["42"], { runner: "yarn" }).text).toBe("yarn run pr-shepherd 42");
+  });
+
+  it("renders bun commands", () => {
+    expect(buildPrShepherdCommand(["42"], { runner: "bun" })).toEqual({
+      argv: ["bunx", "pr-shepherd", "42"],
+      text: "bunx pr-shepherd 42",
+    });
   });
 
   it("quotes shell placeholders and whitespace-bearing args", () => {

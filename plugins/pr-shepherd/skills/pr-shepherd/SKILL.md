@@ -29,12 +29,12 @@ One-tick dispatcher for iterating a PR to completion.
    If `MERGED` or `CLOSED`, output: `PR #N is already merged/closed. Nothing to do.` and stop.
 
 3. **Select the package runner** from the target repository root:
-   - Prefer `package.json` `packageManager`: `pnpm@...` → `pnpm exec`, `yarn@...` → `yarn run`, `npm@...` → `npx`.
-   - If `packageManager` is absent, use lockfiles: `pnpm-lock.yaml` → `pnpm exec`, `yarn.lock` → `yarn run`, `package-lock.json` or no signal → `npx`.
+   - Prefer `package.json` `packageManager`: `pnpm@...` → `pnpm exec`, `yarn@...` → `yarn run`, `bun@...` → `bunx`, `npm@...` → `npx`.
+   - If `packageManager` is absent, use lockfiles: `pnpm-lock.yaml` → `pnpm exec`, `yarn.lock` → `yarn run`, `bun.lock` / `bun.lockb` → `bunx`, `package-lock.json` or no signal → `npx`.
 
 4. **Run one iterate tick:**
 
-   If the package is missing in the target repository, tell the user to install pr-shepherd with the matching dev-dependency command: `pnpm add -D pr-shepherd`, `yarn add -D pr-shepherd`, or `npm install --save-dev pr-shepherd`.
+   If the package is missing in the target repository, tell the user to install pr-shepherd with the matching dev-dependency command: `pnpm add -D pr-shepherd`, `yarn add -D pr-shepherd`, `bun add -d pr-shepherd`, or `npm install --save-dev pr-shepherd`.
 
    ```bash
    <runner> pr-shepherd <N>

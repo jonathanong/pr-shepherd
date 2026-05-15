@@ -202,7 +202,7 @@ WAIT: 3 passing, 0 in-progress — 540s until auto-cancel
 1. Single-shot continuation: schedule one session-only follow-up task to run `npx pr-shepherd 42` to continue the active goal once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
 ```
 
-Claude-compatible instructions tell the agent to schedule one next session-only iteration and end the turn. Codex-compatible instructions tell the agent to pick a fresh sleep/timeout between 30 seconds and 4 minutes and rerun the configured command inline. If `cli.runner` selects pnpm or Yarn, that command is rendered as `pnpm exec pr-shepherd 42` or `yarn run pr-shepherd 42`; if the current command used `--ready-delay`, the rerun command includes the same flag.
+Claude-compatible instructions tell the agent to schedule one next session-only iteration and end the turn. Codex-compatible instructions tell the agent to pick a fresh sleep/timeout between 30 seconds and 4 minutes and rerun the configured command inline. If `cli.runner` selects pnpm, Yarn, or Bun, that command is rendered as `pnpm exec pr-shepherd 42`, `yarn run pr-shepherd 42`, or `bunx pr-shepherd 42`; if the current command used `--ready-delay`, the rerun command includes the same flag.
 
 This is a one-shot loop contract: do not translate it into shell-level polling (`while true`, fixed-interval sleeps, etc.).
 
