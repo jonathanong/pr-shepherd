@@ -1,4 +1,5 @@
 // @ts-nocheck
+/* eslint-disable max-lines */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderResolveCommand } from "./iterate/render.mts";
 import {
