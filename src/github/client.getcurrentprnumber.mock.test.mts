@@ -34,6 +34,7 @@ import {
   getMergeableState,
   getPrHeadSha,
   getRepoInfo,
+  getPrNumberForBranch,
 } from "./client.mts";
 import { _resetTokenCache } from "./http.mts";
 
@@ -111,5 +112,19 @@ describe("getCurrentPrNumber", () => {
   it("returns null when any call throws", async () => {
     mockExecFile.mockRejectedValue(new Error("not authenticated"));
     expect(await getCurrentPrNumber()).toBeNull();
+  });
+});
+
+describe("getPrNumberForBranch", () => {
+  it("returns PR number on success", async () => {
+    mockFetch.mockResolvedValue(
+      gqlOk({ repository: { pullRequests: { nodes: [{ number: 77 }] } } }),
+    );
+    expect(await getPrNumberForBranch("my-branch", "owner", "repo")).toBe(77);
+  });
+
+  it("returns null when GraphQL call throws", async () => {
+    mockFetch.mockRejectedValue(new Error("network error"));
+    expect(await getPrNumberForBranch("my-branch", "owner", "repo")).toBeNull();
   });
 });
