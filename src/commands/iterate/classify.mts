@@ -95,8 +95,8 @@ export function buildResolveCommand(
   const hasMutations =
     threadIds.length > 0 || allCommentIds.length > 0 || filteredReviewIds.length > 0;
   // `requiresHeadSha` is only added when this resolve command includes a
-  // mutation that can race with a moving HEAD: resolving inline/resolution-only
-  // threads, dismissing CHANGES_REQUESTED reviews, or addressing failing checks.
+  // mutation that can race with a moving HEAD: resolving actionable threads,
+  // dismissing CHANGES_REQUESTED reviews, or addressing failing checks.
   const hasCodeMutations =
     hasMutations && (threads.length > 0 || checks.length > 0 || filteredReviewIds.length > 0);
   const requiresHeadSha = hasCodeMutations;
