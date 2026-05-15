@@ -40,7 +40,7 @@ const RESOLUTION_ONLY_THREAD = {
 };
 
 describe("runIterate — escalate (pr-level-changes-requested with actionable comments)", () => {
-  it("does NOT escalate when changesRequestedReviews + actionable comments exist (second case)", async () => {
+  it("does NOT escalate when changesRequestedReviews + actionable comments exist (no inline threads)", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
@@ -83,14 +83,19 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
       expect(result.fix.resolveCommand.requiresHeadSha).toBe(true);
       expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
       expect(result.fix.resolveCommand.argv).toContain("review-1");
-      expect(result.fix.instructions.join("\n")).toContain("Rebase and push:");
       expect(result.fix.instructions.join("\n")).toContain(
-        "Stop this iteration — CI needs time to run on the new push",
+        "Capture the current HEAD SHA before resolving with: `HEAD_SHA=$(git rev-parse HEAD)`.",
+      );
+      expect(result.fix.instructions.join("\n")).toContain(
+        'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the current HEAD SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.',
+      );
+      expect(result.fix.instructions.join("\n")).toContain(
+        "Stop this iteration before the next tick.",
       );
     }
   });
 
-  it("escalates when changesRequestedReviews + actionable comments exist with missing base branch", async () => {
+  it("does NOT escalate when base branch is missing if only manual-comment/review work exists", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
@@ -129,11 +134,17 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("escalate");
-    if (result.action === "escalate") {
-      expect(result.escalate.triggers).toContain("base-branch-unknown");
-      expect(result.escalate.changesRequestedReviews).toHaveLength(1);
-      expect(result.escalate.changesRequestedReviews[0]?.id).toBe("review-2");
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.resolveCommand.requiresHeadSha).toBe(true);
+      expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
+      expect(result.fix.resolveCommand.argv).toContain("review-2");
+      expect(result.fix.instructions.join("\n")).toContain(
+        "Capture the current HEAD SHA before resolving with",
+      );
+      expect(result.fix.instructions.join("\n")).toContain(
+        'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the current HEAD SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.',
+      );
     }
   });
 });
