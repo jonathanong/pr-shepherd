@@ -54,10 +54,8 @@ export function buildFixInstructions(
   needsPushInput?: boolean,
 ): string[] {
   const instructions: string[] = [];
-  const hasCodeWork =
-    threads.length > 0 || checks.length > 0 || actionableComments.length > 0 || hasConflicts;
-  const hasActionableWork = hasCodeWork || changesRequestedReviews.length > 0;
-  const needsPush = needsPushInput ?? hasCodeWork;
+  const hasCodeWork = threads.length > 0 || checks.length > 0;
+  const needsPush = needsPushInput ?? (hasCodeWork || hasConflicts);
   if (inProgressRunIds.length > 0) {
     instructions.push(
       `Cancel in-progress CI runs first: for each ID under \`## In-progress runs\`, run \`gh run cancel <id>\` before applying code fixes. If \`gh\` reports a run is already completed, ignore it and continue with the next ID.`,
@@ -94,7 +92,7 @@ export function buildFixInstructions(
       `Commit changed files: \`git add <files> && git commit -m "<descriptive message>"\``,
     );
   }
-  if (changesRequestedReviews.length > 0 || (needsPush && hasActionableWork)) {
+  if (changesRequestedReviews.length > 0) {
     instructions.push(
       `Keep the PR title and description current: if the changes alter the PR's scope or intent, run \`gh pr edit ${prNumber} --title "<new title>" --body "<new body>"\` to reflect them. Skip if the existing title/body still accurately describe the PR.`,
     );

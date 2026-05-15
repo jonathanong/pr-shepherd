@@ -116,6 +116,7 @@ describe("buildFixInstructions", () => {
       [],
       [],
       [],
+      [],
       undefined,
       true,
     );
@@ -127,7 +128,7 @@ describe("buildFixInstructions", () => {
     expect(text).not.toContain('substituting "$HEAD_SHA" with the current HEAD SHA');
   });
 
-  it("uses explicit needsPushInput override to force commit/push", () => {
+  it("uses explicit needsPushInput override to force push-style guidance", () => {
     const instructions = buildFixInstructions(
       [],
       [],
@@ -161,9 +162,7 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(text).toContain(
-      'Commit changed files: `git add <files> && git commit -m "<descriptive message>"`',
-    );
+    expect(text).not.toContain("Commit changed files:");
     expect(text).toContain(
       "Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease`",
     );
