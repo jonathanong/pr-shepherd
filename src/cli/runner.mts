@@ -26,24 +26,20 @@ export function resolveCliRunner(
   return configured === "auto" ? detectPackageRunner(cwd) : configured;
 }
 
+const VALID_RUNNERS = ["auto", "npx", "pnpm", "yarn", "bun"] as const;
+const VALID_RUNNERS_LIST = VALID_RUNNERS.map((v) => `"${v}"`).join(", ");
+
 export function parseCliRunner(runner: unknown): CliRunner {
   if (runner === undefined) return "auto";
   if (typeof runner !== "string") {
     throw new Error(
-      `Invalid config: cli.runner must be one of "auto", "npx", "pnpm", "yarn", or "bun", got ${JSON.stringify(runner)}`,
+      `Invalid config: cli.runner must be one of ${VALID_RUNNERS_LIST}, got ${JSON.stringify(runner)}`,
     );
   }
   const value = runner.trim();
-  if (
-    value === "auto" ||
-    value === "npx" ||
-    value === "pnpm" ||
-    value === "yarn" ||
-    value === "bun"
-  )
-    return value;
+  if ((VALID_RUNNERS as readonly string[]).includes(value)) return value as CliRunner;
   throw new Error(
-    `Invalid config: cli.runner must be one of "auto", "npx", "pnpm", "yarn", or "bun", got ${JSON.stringify(runner)}`,
+    `Invalid config: cli.runner must be one of ${VALID_RUNNERS_LIST}, got ${JSON.stringify(runner)}`,
   );
 }
 
