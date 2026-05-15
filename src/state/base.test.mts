@@ -28,4 +28,9 @@ describe("resolveStateBase", () => {
     process.env["PR_SHEPHERD_STATE_DIR"] = "/custom/state";
     expect(resolveStateBase()).toBe(resolveStateBase());
   });
+
+  it("returns default when env var is set to empty string", () => {
+    process.env["PR_SHEPHERD_STATE_DIR"] = "";
+    expect(resolveStateBase()).toBe(join(tmpdir(), "pr-shepherd-state"));
+  });
 });

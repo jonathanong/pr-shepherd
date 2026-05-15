@@ -58,6 +58,14 @@ describe("clean all", () => {
   });
 });
 
+describe("clean all — extra positional rejected", () => {
+  it("errors when a positional argument is provided to 'all'", async () => {
+    const result = await runClean({ variant: "all", value: "typo" });
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/does not accept a positional/);
+  });
+});
+
 describe("clean repo", () => {
   it("deletes the owner-repo directory", async () => {
     await seedPrDir(sd(), 42);
@@ -85,5 +93,11 @@ describe("clean repo", () => {
   it("target is set to base/owner-repo", async () => {
     const result = await runClean({ variant: "repo" });
     expect(result.target).toBe(join(sd(), "acme-widgets"));
+  });
+
+  it("errors when a positional argument is provided to 'repo'", async () => {
+    const result = await runClean({ variant: "repo", value: "extra" });
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/does not accept a positional/);
   });
 });
