@@ -120,7 +120,11 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const hasGuaranteedPush =
     threads.length > 0 || checks.length > 0 || hasConflicts || hasReviewRequestedCodeLikeChanges;
   const shouldPush = hasGuaranteedPush;
-  const inProgressRunIds = shouldPush ? buildInProgressRunIds(report, cancelledSet) : [];
+  // Only cancel in-progress runs for paths that produce a new code commit. A
+  // conflict-only rebase push will supersede any in-progress run on its own.
+  const hasCodeLikePush =
+    threads.length > 0 || checks.length > 0 || hasReviewRequestedCodeLikeChanges;
+  const inProgressRunIds = hasCodeLikePush ? buildInProgressRunIds(report, cancelledSet) : [];
   const commentMinimizeIds = report.comments.minimizeIds ?? actionableComments.map((c) => c.id);
   const allCommentIds = [...commentMinimizeIds, ...reviewSummaryIds];
   const resolveCommand = buildResolveCommand(
