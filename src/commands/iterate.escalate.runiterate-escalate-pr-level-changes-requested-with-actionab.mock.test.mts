@@ -83,19 +83,17 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
       expect(result.fix.resolveCommand.requiresHeadSha).toBe(true);
       expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
       expect(result.fix.resolveCommand.argv).toContain("review-1");
+      expect(result.fix.instructions.join("\n")).toContain("Commit changed files:");
       expect(result.fix.instructions.join("\n")).toContain(
-        "Capture the current HEAD SHA before resolving with: `HEAD_SHA=$(git rev-parse HEAD)`.",
+        'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.',
       );
       expect(result.fix.instructions.join("\n")).toContain(
-        'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the current HEAD SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.',
-      );
-      expect(result.fix.instructions.join("\n")).toContain(
-        "Stop this iteration before the next tick.",
+        "Stop this iteration — CI needs time to run on the new push before the next tick.",
       );
     }
   });
 
-  it("does NOT escalate when base branch is missing if only manual-comment/review work exists", async () => {
+  it("escalates when base branch is missing and review/comment path requires a push", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
@@ -134,17 +132,9 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
-      expect(result.fix.resolveCommand.requiresHeadSha).toBe(true);
-      expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
-      expect(result.fix.resolveCommand.argv).toContain("review-2");
-      expect(result.fix.instructions.join("\n")).toContain(
-        "Capture the current HEAD SHA before resolving with",
-      );
-      expect(result.fix.instructions.join("\n")).toContain(
-        'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the current HEAD SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.',
-      );
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toContain("base-branch-unknown");
     }
   });
 });
