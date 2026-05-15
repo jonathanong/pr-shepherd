@@ -13,7 +13,7 @@ import { runClean } from "./clean.mts";
 registerHooks();
 
 // Use a getter so tests always read the current per-test value.
-const sd = () => (stateDirRef as unknown as string);
+const sd = () => stateDirRef as unknown as string;
 
 describe("clean all", () => {
   it("deletes the entire state base", async () => {

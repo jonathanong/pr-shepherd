@@ -12,7 +12,7 @@ import { runClean } from "./clean.mts";
 
 registerHooks();
 
-const sd = () => (stateDirRef as unknown as string);
+const sd = () => stateDirRef as unknown as string;
 
 describe("clean pr (explicit number)", () => {
   it("deletes the PR state directory", async () => {

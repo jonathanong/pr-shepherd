@@ -14,7 +14,7 @@ import { runClean } from "./clean.mts";
 
 registerHooks();
 
-const sd = () => (stateDirRef as unknown as string);
+const sd = () => stateDirRef as unknown as string;
 
 describe("clean branch", () => {
   it("resolves branch to PR and deletes state", async () => {
