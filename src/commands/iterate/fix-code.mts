@@ -114,11 +114,13 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const checks = toAgentChecks(failingChecks);
   const { changesRequestedReviews } = report;
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
-  const hasGuaranteedSupersedingPush =
-    threads.length > 0 || checks.length > 0 || changesRequestedReviews.length > 0 || hasConflicts;
-  const inProgressRunIds = hasGuaranteedSupersedingPush
-    ? buildInProgressRunIds(report, cancelledSet)
-    : [];
+  const hasReviewRequestedCodeLikeChanges =
+    changesRequestedReviews.length > 0 &&
+    (actionableComments.length > 0 || resolutionOnlyThreads.length > 0);
+  const hasGuaranteedPush =
+    threads.length > 0 || checks.length > 0 || hasConflicts || hasReviewRequestedCodeLikeChanges;
+  const shouldPush = hasGuaranteedPush;
+  const inProgressRunIds = shouldPush ? buildInProgressRunIds(report, cancelledSet) : [];
   const commentMinimizeIds = report.comments.minimizeIds ?? actionableComments.map((c) => c.id);
   const allCommentIds = [...commentMinimizeIds, ...reviewSummaryIds];
   const resolveCommand = buildResolveCommand(
@@ -138,7 +140,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
         `${overlappingReviewIds.join(", ")}\n`,
     );
   }
-  if (baseLookup.isFallback && (resolveCommand.requiresHeadSha || hasConflicts)) {
+  if (baseLookup.isFallback && shouldPush) {
     const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: ["base-branch-unknown"],
       unresolvedThreads: [...threads, ...resolutionOnlyThreads.map(toAgentThread)],
@@ -174,6 +176,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     inProgressRunIds,
     resolutionOnlyThreads,
     cliRunner,
+    shouldPush,
   );
   return applyStallGuard(
     stallKey,

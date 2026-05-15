@@ -38,7 +38,7 @@ export function buildFixInstructions(
   threads: AgentThread[],
   actionableComments: AgentComment[],
   checks: AgentCheck[],
-  reviews: Review[],
+  changesRequestedReviews: Review[],
   baseBranch: string,
   resolveCommand: ResolveCommand,
   hasConflicts: boolean,
@@ -51,8 +51,11 @@ export function buildFixInstructions(
   inProgressRunIds: string[] = [],
   resolutionOnlyThreads: ReviewThread[] = [],
   runner?: CliRunner,
+  needsPushInput?: boolean,
 ): string[] {
   const instructions: string[] = [];
+  const hasCodeWork = threads.length > 0 || checks.length > 0;
+  const needsPush = needsPushInput ?? (hasCodeWork || hasConflicts);
   if (inProgressRunIds.length > 0) {
     instructions.push(
       `Cancel in-progress CI runs first: for each ID under \`## In-progress runs\`, run \`gh run cancel <id>\` before applying code fixes. If \`gh\` reports a run is already completed, ignore it and continue with the next ID.`,
@@ -78,20 +81,25 @@ export function buildFixInstructions(
     );
   }
   instructions.push(...buildFailingCheckInstructions(checks));
-  if (reviews.length > 0) {
+  if (changesRequestedReviews.length > 0) {
     instructions.push(
       `For each bullet under \`## Changes-requested reviews\` above: read the review body and apply the requested changes.`,
     );
   }
 
-  const hasCodeChanges = threads.length > 0 || checks.length > 0 || reviews.length > 0;
-  const needsPush = hasCodeChanges || hasConflicts;
-  if (hasCodeChanges) {
+  if (needsPush && (hasCodeWork || changesRequestedReviews.length > 0)) {
     instructions.push(
       `Commit changed files: \`git add <files> && git commit -m "<descriptive message>"\``,
     );
+  }
+  if (changesRequestedReviews.length > 0) {
     instructions.push(
       `Keep the PR title and description current: if the changes alter the PR's scope or intent, run \`gh pr edit ${prNumber} --title "<new title>" --body "<new body>"\` to reflect them. Skip if the existing title/body still accurately describe the PR.`,
+    );
+  }
+  if (!needsPush && resolveCommand.requiresHeadSha) {
+    instructions.push(
+      "Capture the current HEAD SHA before resolving with: `HEAD_SHA=$(git rev-parse HEAD)`.",
     );
   }
   if (needsPush) {
@@ -129,7 +137,8 @@ export function buildFixInstructions(
   if (resolveCommand.hasMutations) {
     const substituteParts: string[] = [];
     if (resolveCommand.requiresHeadSha) {
-      substituteParts.push(`"$HEAD_SHA" with the pushed commit SHA`);
+      const shaSource = needsPush ? "pushed commit SHA" : "current HEAD SHA";
+      substituteParts.push(`"$HEAD_SHA" with the ${shaSource}`);
     }
     if (resolveCommand.requiresDismissMessage) {
       substituteParts.push(`$DISMISS_MESSAGE with a one-sentence description of what you changed`);

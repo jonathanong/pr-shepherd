@@ -40,7 +40,7 @@ const RESOLUTION_ONLY_THREAD = {
 };
 
 describe("runIterate — escalate (pr-level-changes-requested with actionable comments)", () => {
-  it("does NOT escalate when changesRequestedReviews + actionable comments exist", async () => {
+  it("does NOT escalate when changesRequestedReviews + actionable comments exist (no inline threads)", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
@@ -79,5 +79,62 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.resolveCommand.requiresHeadSha).toBe(true);
+      expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
+      expect(result.fix.resolveCommand.argv).toContain("review-1");
+      expect(result.fix.instructions.join("\n")).toContain("Commit changed files:");
+      expect(result.fix.instructions.join("\n")).toContain(
+        'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.',
+      );
+      expect(result.fix.instructions.join("\n")).toContain(
+        "Stop this iteration — CI needs time to run on the new push before the next tick.",
+      );
+    }
+  });
+
+  it("escalates when base branch is missing and review/comment path requires a push", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        baseBranch: "",
+        changesRequestedReviews: [
+          { id: "review-2", author: "boss", authorType: "Unknown" as const, body: "Needs rework" },
+        ],
+        threads: {
+          actionable: [],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
+        comments: {
+          actionable: [
+            {
+              id: "comment-2",
+              isMinimized: false,
+              author: "boss",
+              authorType: "Unknown" as const,
+              body: "Also related review comment",
+              url: "",
+              createdAtUnix: NOW - 100,
+            },
+          ],
+          firstLook: [],
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toContain("base-branch-unknown");
+    }
   });
 });

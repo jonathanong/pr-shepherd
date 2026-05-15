@@ -1,4 +1,5 @@
 // @ts-nocheck
+/* eslint-disable max-lines */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderResolveCommand } from "./iterate/render.mts";
 import {
@@ -180,5 +181,34 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     expect(result.fix.resolveCommand.argv).not.toContain("--dismiss-review-ids");
     expect(result.fix.resolveCommand.requiresDismissMessage).toBe(false);
     expect(result.fix.resolveCommand.droppedDismissReviewIds).toEqual(["PRR_DUP"]);
+  });
+
+  it("keeps pr-level review requests in escalate when no inline/actionable work exists", async () => {
+    const review = makeReview("PRR_ONLY", "reviewer", "Please update the API contract wording.");
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        reviewSummaries: [review],
+        changesRequestedReviews: [
+          {
+            ...review,
+            authorType: "Unknown" as const,
+            body: "Please update the API contract wording.",
+          },
+        ],
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toContain("pr-level-changes-requested");
+      expect(result.escalate.changesRequestedReviews).toHaveLength(1);
+    }
   });
 });

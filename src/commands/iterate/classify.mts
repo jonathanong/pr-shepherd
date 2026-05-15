@@ -88,18 +88,18 @@ export function buildResolveCommand(
     argv.push("--message", "$DISMISS_MESSAGE");
   }
 
-  // A push is required when actionable threads, CI failures, or CHANGES_REQUESTED reviews are present.
-  // Resolution-only threads are already stale or minimized and do not require a fresh SHA.
-  const requiresHeadSha =
-    resolveThreadIds.length > 0 || checks.length > 0 || filteredReviewIds.length > 0;
-
   // hasMutations = we appended at least one of --resolve-thread-ids,
   // --minimize-comment-ids, or --dismiss-review-ids. Returned explicitly
   // (rather than derived from argv.length) so callers don't couple to the
   // base-argv shape.
   const hasMutations =
     threadIds.length > 0 || allCommentIds.length > 0 || filteredReviewIds.length > 0;
-
+  // `requiresHeadSha` is only added when this resolve command includes a
+  // mutation that can race with a moving HEAD: resolving actionable threads,
+  // dismissing CHANGES_REQUESTED reviews, or addressing failing checks.
+  const hasCodeMutations =
+    hasMutations && (threads.length > 0 || checks.length > 0 || filteredReviewIds.length > 0);
+  const requiresHeadSha = hasCodeMutations;
   return {
     argv,
     requiresHeadSha,
