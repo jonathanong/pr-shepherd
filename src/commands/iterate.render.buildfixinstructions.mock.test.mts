@@ -162,7 +162,7 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(text).not.toContain("Commit changed files:");
+    expect(text).toContain("Commit changed files: `git add <files> && git commit -m \"<descriptive message>\"`");
     expect(text).toContain(
       "Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease`",
     );
