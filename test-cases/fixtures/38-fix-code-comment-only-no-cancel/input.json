@@ -1,0 +1,30 @@
+{
+  "batchData": {
+    "comments": [
+      {
+        "id": "IC_comment1",
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Please update the README with usage examples.",
+        "url": "https://github.com/owner/repo/pull/42#issuecomment-1",
+        "createdAtUnix": 1715700000,
+        "isMinimized": false
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / build",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/111",
+        "runId": "111"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

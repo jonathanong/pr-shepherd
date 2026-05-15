@@ -10,6 +10,7 @@
 Reviewer requested changes but left no inline comments — read the review and act manually.
 
 ## Items needing attention
+
 - review `PRR_prlevel` (@architect): The overall architecture needs to be reconsidered before merging.
 
 ---

@@ -3,11 +3,10 @@ import { joinSections } from "../util/markdown.mts";
 import { renderSuggestionBlock, renderLineRange } from "./suggestion-renderer.mts";
 import {
   renderThreadBullet,
-  renderCommentBullet,
   renderReviewBullet,
-  renderFirstLookStatusTag,
   renderThreadResolutionStatusTag,
   renderAuthor,
+  buildFirstLookBullets,
 } from "./list-formatters.mts";
 import { adaptFixCodeInstructions, numberInstructions } from "./iterate-instructions.mts";
 import type { AgentRuntime } from "../agent-runtime.mts";
@@ -125,15 +124,14 @@ export function formatFixCodeResult(
   const firstLookTotal = result.fix.firstLookThreads.length + result.fix.firstLookComments.length;
   if (firstLookTotal > 0) {
     sections.push(`## First-look items (${firstLookTotal}) — acknowledge status before acting`);
-    const bullets: string[] = [];
-    for (const t of result.fix.firstLookThreads) {
-      bullets.push(renderThreadBullet(t, { statusTag: renderFirstLookStatusTag(t) }));
-    }
-    for (const c of result.fix.firstLookComments) {
-      const editedSuffix = c.edited ? ", edited" : "";
-      bullets.push(renderCommentBullet(c, { statusTag: `[status: minimized${editedSuffix}]` }));
-    }
-    sections.push(bullets.join("\n"));
+    const resolutionOnlyIds = new Set(result.fix.resolutionOnlyThreads.map((t) => t.id));
+    sections.push(
+      buildFirstLookBullets(
+        result.fix.firstLookThreads,
+        resolutionOnlyIds,
+        result.fix.firstLookComments,
+      ).join("\n"),
+    );
   }
 
   if (result.fix.inProgressRunIds.length > 0) {

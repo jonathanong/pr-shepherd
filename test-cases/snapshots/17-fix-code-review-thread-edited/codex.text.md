@@ -9,7 +9,7 @@
 
 ## First-look items (1) — acknowledge status before acting
 
-- `threadId=PRRT_outdated` [↗](https://github.com/owner/repo/pull/42#discussion_r2) `src/util.ts:10` (@reviewer · User) [status: outdated, edited]: Updated feedback: this is now outdated but body has changed.
+- `threadId=PRRT_outdated` [↗](https://github.com/owner/repo/pull/42#discussion_r2) `src/util.ts:10` (@reviewer · User) [status: outdated, edited]
 
 ## Post-fix push
 

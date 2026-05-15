@@ -111,6 +111,7 @@ export function buildEscalateHumanMessage(
   if (hasItems) {
     lines.push("");
     lines.push("## Items needing attention");
+    lines.push("");
     for (const t of escalate.unresolvedThreads) {
       const loc = t.path ? `\`${t.path}:${t.line ?? "?"}\`` : "(no location)";
       const firstLine = t.body.split("\n")[0] ?? "";
@@ -129,6 +130,7 @@ export function buildEscalateHumanMessage(
   if (escalate.thrashHistory && escalate.thrashHistory.length > 0) {
     lines.push("");
     lines.push("## Fix attempts");
+    lines.push("");
     for (const a of escalate.thrashHistory) {
       lines.push(`- thread \`${a.threadId}\` attempted ${a.attempts} times`);
     }

@@ -1,0 +1,54 @@
+{
+  "batchData": {
+    "reviewThreads": [
+      {
+        "id": "PRRT_main",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/api.ts",
+        "line": 5,
+        "body": "Rename this function for clarity.",
+        "author": "alice",
+        "authorType": "User",
+        "diffHunk": "@@ -3,6 +3,8 @@ function api() {"
+      }
+    ],
+    "reviewSummaries": [
+      {
+        "id": "PRR_bot1",
+        "author": "dependabot[bot]",
+        "authorType": "Bot",
+        "body": "Bumped dependency x from 1.0.0 to 1.1.0.",
+        "isMinimized": false
+      },
+      {
+        "id": "PRR_user1",
+        "author": "alice",
+        "authorType": "User",
+        "body": "LGTM but please add tests.",
+        "isMinimized": false
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "config": {
+    "iterate": {
+      "minimizeComments": "bots"
+    }
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

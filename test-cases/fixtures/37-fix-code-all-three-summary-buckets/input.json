@@ -8,18 +8,33 @@
         "isMinimized": false,
         "path": "src/auth.ts",
         "line": 10,
-        "body": "Please improve the error handling here.",
+        "body": "Please add a docstring here.",
         "author": "reviewer",
         "authorType": "User",
         "diffHunk": "@@ -8,6 +8,8 @@ function auth() {"
       }
     ],
-    "changesRequestedReviews": [
+    "reviewSummaries": [
       {
-        "id": "PRR_cr",
-        "author": "reviewer",
+        "id": "PRR_first",
+        "author": "alice",
         "authorType": "User",
-        "body": "Please address the performance concerns I mentioned in the inline comments."
+        "body": "First-look comment — never seen before.",
+        "isMinimized": false
+      },
+      {
+        "id": "PRR_edited",
+        "author": "bob",
+        "authorType": "User",
+        "body": "Updated review comment.",
+        "isMinimized": false
+      },
+      {
+        "id": "PRR_seen",
+        "author": "carol",
+        "authorType": "User",
+        "body": "This PR looks good overall.",
+        "isMinimized": false
       }
     ],
     "checks": [
@@ -32,6 +47,10 @@
         "runId": "100"
       }
     ]
+  },
+  "seenMap": {
+    "PRR_edited": { "seenAt": 1715000000, "bodyHash": "984453e31788d96f" },
+    "PRR_seen": { "seenAt": 1715000000, "bodyHash": "ac6d8b69317607e4" }
   },
   "readyDelayState": {
     "isReady": false,
