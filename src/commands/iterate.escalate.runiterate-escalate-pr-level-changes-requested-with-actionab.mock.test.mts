@@ -40,7 +40,7 @@ const RESOLUTION_ONLY_THREAD = {
 };
 
 describe("runIterate — escalate (pr-level-changes-requested with actionable comments)", () => {
-  it("does NOT escalate when changesRequestedReviews + actionable comments exist", async () => {
+  it("does NOT escalate when changesRequestedReviews + actionable comments exist (second case)", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
