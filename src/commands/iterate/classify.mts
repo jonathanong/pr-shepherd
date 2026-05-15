@@ -100,8 +100,6 @@ export function buildResolveCommand(
   const hasCodeMutations =
     hasMutations && (threads.length > 0 || checks.length > 0 || filteredReviewIds.length > 0);
   const requiresHeadSha = hasCodeMutations;
-  const hasReviewDismissals = filteredReviewIds.length > 0;
-
   return {
     argv,
     requiresHeadSha,
