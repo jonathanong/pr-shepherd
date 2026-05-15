@@ -217,7 +217,7 @@ Actionable work needs a code fix, commit, and push.
 7. Commit changed files: `git add <files> && git commit -m "<descriptive message>"`
 8. Keep the PR title and description current: if the changes alter the PR's scope or intent, run `gh pr edit 42 --title "<new title>" --body "<new body>"` to reflect them. Skip if the existing title/body still accurately describe the PR.
 9. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
-10. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA (or current HEAD SHA if this iteration did not push) and $DISMISS_MESSAGE with a one-sentence description of what you changed.
+10. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
 11. Do not re-run `gh run cancel` on the IDs listed under `## Cancelled runs` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.
 12. For any large decisions or rejections you made this iteration, add or update a `## Shepherd Journal` section in the PR description (`gh pr edit 42 --body …`) summarizing each decision and linking back to the originating comment, thread, or review. If this section already exists, append entries under it instead of creating a duplicate heading.
 13. Single-shot continuation: CI needs time to run on the new push. Schedule one session-only follow-up task to run `npx pr-shepherd 42` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
@@ -267,7 +267,7 @@ The JSON payload exposes the same data under `fix.{threads, resolutionOnlyThread
 
 **Resolve command rules (same in Markdown and JSON):**
 
-- `--require-sha "$HEAD_SHA"` is appended when actionable threads, failing checks, CHANGES_REQUESTED reviews with actionable PR-level comments or resolution-only threads, or rebase conflicts are present — signals the CLI knows a resolve mutation should be tied to the current PR SHA. Comment-only and summary-only dispatches omit it.
+- `--require-sha "$HEAD_SHA"` is appended when a mutation may become stale on a moving HEAD — specifically when `--resolve-thread-ids` is present, `--dismiss-review-ids` is present, or there are failing checks to address — signals the CLI knows a resolve mutation should be tied to the current PR SHA. Comment-only and summary-only dispatches omit it.
 - `$DISMISS_MESSAGE` must be one specific sentence describing what changed — never generic text like "address review comments".
 
 ### Applying ` ```suggestion ` blocks
