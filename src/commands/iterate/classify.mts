@@ -88,20 +88,19 @@ export function buildResolveCommand(
     argv.push("--message", "$DISMISS_MESSAGE");
   }
 
-  // A resolve command can become stale when it includes actionable thread resolution,
-  // check failures, or CHANGES_REQUESTED review handling (via actual review dismissals).
-  // Resolution-only thread IDs are included for cleanup only and do not require
-  // a specific head SHA.
-  const hasCodeMutations = threads.length > 0 || checks.length > 0 || filteredReviewIds.length > 0;
-  const hasReviewDismissals = filteredReviewIds.length > 0;
-  const requiresHeadSha = hasCodeMutations || hasReviewDismissals;
-
   // hasMutations = we appended at least one of --resolve-thread-ids,
   // --minimize-comment-ids, or --dismiss-review-ids. Returned explicitly
   // (rather than derived from argv.length) so callers don't couple to the
   // base-argv shape.
   const hasMutations =
     threadIds.length > 0 || allCommentIds.length > 0 || filteredReviewIds.length > 0;
+  // `requiresHeadSha` is only needed when we both require a SHA-sensitive
+  // mutation (thread/check resolution or review dismissal) and the resolve command
+  // is actually going to run (has mutations).
+  const hasCodeMutations =
+    hasMutations && (threads.length > 0 || checks.length > 0 || filteredReviewIds.length > 0);
+  const requiresHeadSha = hasCodeMutations;
+  const hasReviewDismissals = filteredReviewIds.length > 0;
 
   return {
     argv,

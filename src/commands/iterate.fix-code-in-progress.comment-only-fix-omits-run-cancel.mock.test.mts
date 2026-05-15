@@ -67,7 +67,7 @@ describe("fix_code — in-progress run cancellation", () => {
     }
   });
 
-  it("does not cancel in-progress runs for review-only + comments-only paths", async () => {
+  it("does not cancel in-progress runs for review-only + comments paths", async () => {
     const inProgressCheck = {
       name: "ci",
       status: "IN_PROGRESS" as const,
@@ -131,8 +131,12 @@ describe("fix_code — in-progress run cancellation", () => {
       expect(result.fix.resolveCommand.argv).toContain("PRR_review_change_request");
       const instructions = result.fix.instructions.join("\n");
       expect(instructions).not.toMatch(/Cancel in-progress CI runs first/);
-      expect(instructions).not.toMatch(/Rebase and push/);
-      expect(instructions).toContain("Stop this iteration before the next tick.");
+      expect(instructions).toContain(
+        "Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease`",
+      );
+      expect(instructions).toContain(
+        "Stop this iteration — CI needs time to run on the new push before the next tick.",
+      );
     }
   });
 });
