@@ -46,7 +46,7 @@ describe("buildFixInstructions", () => {
     expect(instructions.join("\n")).toContain("were updated by their author");
   });
 
-  it("treats changes-requested reviews as code changes when no threads/checks exist", () => {
+  it("treats changes-requested reviews as review-only when no threads/checks exist", () => {
     const instructions = buildFixInstructions(
       [],
       [],
@@ -75,14 +75,17 @@ describe("buildFixInstructions", () => {
       "For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.",
     );
     expect(instructions.join("\n")).toContain(
-      'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA',
+      `Keep the PR title and description current: if the changes alter the PR's scope or intent, run \`gh pr edit 42 --title "<new title>" --body "<new body>"\` to reflect them. Skip if the existing title/body still accurately describe the PR.`,
     );
     expect(instructions.join("\n")).toContain(
-      'Commit changed files: `git add <files> && git commit -m "<descriptive message>"`',
+      'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the current HEAD SHA',
     );
     expect(instructions.join("\n")).toContain(
-      "Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease`",
+      "Capture the current HEAD SHA before resolving with: `HEAD_SHA=$(git rev-parse HEAD)`.",
     );
+    expect(instructions.join("\n")).not.toContain("Commit changed files:");
+    expect(instructions.join("\n")).not.toContain("Rebase and push:");
+    expect(instructions.join("\n")).toContain("Stop this iteration before the next tick.");
   });
 
   it("uses pushed commit SHA substitution when review requests require a push", () => {
@@ -108,6 +111,13 @@ describe("buildFixInstructions", () => {
       false,
       42,
       0,
+      [],
+      [],
+      [],
+      [],
+      [],
+      undefined,
+      true,
     );
 
     const text = instructions.join("\n");
@@ -199,6 +209,9 @@ describe("buildFixInstructions", () => {
     const text = instructions.join("\n");
     expect(text).toContain(
       "For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.",
+    );
+    expect(text).toContain(
+      `Keep the PR title and description current: if the changes alter the PR's scope or intent, run \`gh pr edit 42 --title "<new title>" --body "<new body>"\` to reflect them. Skip if the existing title/body still accurately describe the PR.`,
     );
     expect(text).toContain(
       'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the current HEAD SHA',
