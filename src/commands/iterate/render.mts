@@ -87,7 +87,7 @@ export function buildFixInstructions(
     );
   }
 
-  if (needsPush && hasCodeWork) {
+  if (needsPush && (hasCodeWork || changesRequestedReviews.length > 0)) {
     instructions.push(
       `Commit changed files: \`git add <files> && git commit -m "<descriptive message>"\``,
     );

@@ -89,10 +89,10 @@ export function buildResolveCommand(
   }
 
   // A resolve command can become stale when it includes actionable thread resolution,
-  // check failures, or CHANGES_REQUESTED review handling (either via dismiss or review-only
-  // changes). Resolution-only thread IDs are included for cleanup only and do not require
+  // check failures, or CHANGES_REQUESTED review handling (via actual review dismissals).
+  // Resolution-only thread IDs are included for cleanup only and do not require
   // a specific head SHA.
-  const hasCodeMutations = threads.length > 0 || checks.length > 0 || reviews.length > 0;
+  const hasCodeMutations = threads.length > 0 || checks.length > 0 || filteredReviewIds.length > 0;
   const hasReviewDismissals = filteredReviewIds.length > 0;
   const requiresHeadSha = hasCodeMutations || hasReviewDismissals;
 
