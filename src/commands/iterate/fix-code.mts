@@ -136,7 +136,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
         `${overlappingReviewIds.join(", ")}\n`,
     );
   }
-  if (baseLookup.isFallback && hasGuaranteedPush) {
+  if (baseLookup.isFallback && needsPush) {
     const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: ["base-branch-unknown"],
       unresolvedThreads: [...threads, ...resolutionOnlyThreads.map(toAgentThread)],

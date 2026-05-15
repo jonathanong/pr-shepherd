@@ -192,8 +192,6 @@ describe("buildFixInstructions", () => {
       [],
       [],
       [],
-      [],
-      [],
       undefined,
       false,
     );
@@ -203,7 +201,7 @@ describe("buildFixInstructions", () => {
       "For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.",
     );
     expect(text).toContain(
-      'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the current HEAD SHA',
+      'Run the `resolve:` command shown above, substituting $DISMISS_MESSAGE with a one-sentence description of what you changed.',
     );
     expect(text).not.toContain("Commit changed files:");
     expect(text).not.toContain("Rebase and push:");
