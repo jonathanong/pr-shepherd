@@ -96,6 +96,9 @@ export function buildFixInstructions(
       `Keep the PR title and description current: if the changes alter the PR's scope or intent, run \`gh pr edit ${prNumber} --title "<new title>" --body "<new body>"\` to reflect them. Skip if the existing title/body still accurately describe the PR.`,
     );
   }
+  if (!needsPush && resolveCommand.requiresHeadSha) {
+    instructions.push('Capture the current HEAD SHA before resolving with: `HEAD_SHA=$(git rev-parse HEAD)`.');
+  }
   if (needsPush) {
     const captureHint = resolveCommand.requiresHeadSha
       ? ` — capture \`HEAD_SHA=$(git rev-parse HEAD)\``

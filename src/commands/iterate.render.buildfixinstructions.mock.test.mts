@@ -179,7 +179,7 @@ describe("buildFixInstructions", () => {
       "main",
       {
         argv: ["npx", "pr-shepherd", "resolve", "42"],
-        requiresHeadSha: false,
+        requiresHeadSha: true,
         requiresDismissMessage: true,
         hasMutations: true,
       },
@@ -201,7 +201,10 @@ describe("buildFixInstructions", () => {
       "For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.",
     );
     expect(text).toContain(
-      'Run the `resolve:` command shown above, substituting $DISMISS_MESSAGE with a one-sentence description of what you changed.',
+      'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the current HEAD SHA',
+    );
+    expect(text).toContain(
+      "Capture the current HEAD SHA before resolving with: `HEAD_SHA=$(git rev-parse HEAD)`.",
     );
     expect(text).not.toContain("Commit changed files:");
     expect(text).not.toContain("Rebase and push:");

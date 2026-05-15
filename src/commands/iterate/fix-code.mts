@@ -116,7 +116,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
   const hasGuaranteedPush = threads.length > 0 || checks.length > 0 || hasConflicts;
   const needsPush = hasGuaranteedPush || changesRequestedReviews.length > 0;
-  const inProgressRunIds = hasGuaranteedPush ? buildInProgressRunIds(report, cancelledSet) : [];
+  const inProgressRunIds = needsPush ? buildInProgressRunIds(report, cancelledSet) : [];
   const commentMinimizeIds = report.comments.minimizeIds ?? actionableComments.map((c) => c.id);
   const allCommentIds = [...commentMinimizeIds, ...reviewSummaryIds];
   const resolveCommand = buildResolveCommand(
