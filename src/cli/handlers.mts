@@ -36,8 +36,14 @@ export async function handleClean(args: string[]): Promise<void> {
       return idx !== -1 && rest[idx + 1] === "json";
     })();
   const dryRun = rest.includes("--dry-run");
-  // First non-flag arg is the optional positional (PR number or branch name).
-  const value = rest.find((a) => !a.startsWith("--"));
+  // Skip the value consumed by --format <value> so it isn't mistaken for the positional.
+  const fmtIdx = rest.indexOf("--format");
+  const flagConsumedIndices = new Set<number>();
+  if (fmtIdx !== -1 && fmtIdx + 1 < rest.length && !rest[fmtIdx + 1]!.startsWith("--")) {
+    flagConsumedIndices.add(fmtIdx);
+    flagConsumedIndices.add(fmtIdx + 1);
+  }
+  const value = rest.find((a, i) => !flagConsumedIndices.has(i) && !a.startsWith("--"));
 
   const result = await runClean({ variant: variant as CleanVariant, value, dryRun });
 

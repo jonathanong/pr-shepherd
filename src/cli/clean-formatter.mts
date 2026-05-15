@@ -7,9 +7,9 @@ export function formatCleanResult(result: CleanResult): string {
   }
 
   const heading = result.dryRun ? "## Would clean" : "## Cleaned";
-  const paths = result.dryRun ? result.deleted : result.deleted;
+  const paths = result.deleted;
 
-  if (paths.length === 0) {
+  if (result.skipped.length > 0) {
     const label = result.dryRun ? "Nothing to clean (dry-run)" : "Nothing to clean";
     return `${label} — ${result.target} does not exist.`;
   }
