@@ -67,7 +67,7 @@ describe("fix_code — in-progress run cancellation", () => {
     }
   });
 
-  it("cancels in-progress runs before review-only + comments fixes that now require push", async () => {
+  it("does not cancel in-progress runs for review-only + comments-only paths that still need a push", async () => {
     const inProgressCheck = {
       name: "ci",
       status: "IN_PROGRESS" as const,
@@ -125,14 +125,14 @@ describe("fix_code — in-progress run cancellation", () => {
     if (result.action === "fix_code") {
       expect(result.fix.actionableComments).toHaveLength(1);
       expect(result.fix.changesRequestedReviews).toHaveLength(1);
-      expect(result.fix.inProgressRunIds).toHaveLength(1);
-      expect(result.fix.inProgressRunIds).toContain("run-in-review-only");
+      expect(result.fix.inProgressRunIds).toHaveLength(0);
       expect(result.fix.resolveCommand.requiresHeadSha).toBe(true);
       expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
       expect(result.fix.resolveCommand.argv).toContain("PRR_review_change_request");
       const instructions = result.fix.instructions.join("\n");
-      expect(instructions).toMatch(/Cancel in-progress CI runs first/);
-      expect(instructions).toMatch(/Rebase and push:/);
+      expect(instructions).not.toMatch(/Cancel in-progress CI runs first/);
+      expect(instructions).toMatch(/Rebase and push/);
+      expect(instructions).toMatch(/Stop this iteration — CI needs time to run on the new push/);
     }
   });
 });

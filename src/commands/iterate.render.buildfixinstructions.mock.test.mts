@@ -45,7 +45,7 @@ describe("buildFixInstructions", () => {
     expect(instructions.join("\n")).toContain("were updated by their author");
   });
 
-  it("treats changes-requested reviews as fix-required when no threads/checks exist", () => {
+  it("treats changes-requested reviews as code changes when no threads/checks exist", () => {
     const instructions = buildFixInstructions(
       [],
       [],
@@ -74,13 +74,13 @@ describe("buildFixInstructions", () => {
       "For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.",
     );
     expect(instructions.join("\n")).toContain(
+      'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA',
+    );
+    expect(instructions.join("\n")).toContain(
       'Commit changed files: `git add <files> && git commit -m "<descriptive message>"`',
     );
     expect(instructions.join("\n")).toContain(
       "Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease`",
-    );
-    expect(instructions.join("\n")).toContain(
-      'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA',
     );
   });
 
@@ -116,7 +116,7 @@ describe("buildFixInstructions", () => {
     expect(text).not.toContain('substituting "$HEAD_SHA" with the current HEAD SHA');
   });
 
-  it("treats non-metadata review changes as code changes", () => {
+  it("uses explicit needsPushInput override to force commit/push", () => {
     const instructions = buildFixInstructions(
       [],
       [],
@@ -139,6 +139,14 @@ describe("buildFixInstructions", () => {
       false,
       42,
       0,
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      undefined,
+      true,
     );
 
     const text = instructions.join("\n");
@@ -152,5 +160,53 @@ describe("buildFixInstructions", () => {
       'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA',
     );
     expect(text).not.toContain("Stop this iteration before the next tick.");
+  });
+
+  it("does not emit commit/push guidance when review changes are review-only but needsPush is forced off", () => {
+    const instructions = buildFixInstructions(
+      [],
+      [],
+      [],
+      [
+        {
+          id: "r-4",
+          author: "reviewer",
+          authorType: "Unknown" as const,
+          body: "Please adjust wording in the docs only.",
+        },
+      ],
+      "main",
+      {
+        argv: ["npx", "pr-shepherd", "resolve", "42"],
+        requiresHeadSha: false,
+        requiresDismissMessage: true,
+        hasMutations: true,
+      },
+      false,
+      42,
+      0,
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      undefined,
+      false,
+    );
+
+    const text = instructions.join("\n");
+    expect(text).toContain(
+      'For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.',
+    );
+    expect(text).toContain(
+      'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the current HEAD SHA',
+    );
+    expect(text).not.toContain("Commit changed files:");
+    expect(text).not.toContain("Rebase and push:");
+    expect(text).not.toContain("Stop this iteration — CI needs time to run on the new push");
+    expect(text).toContain("Stop this iteration before the next tick.");
   });
 });

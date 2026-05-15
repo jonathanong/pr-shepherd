@@ -88,10 +88,11 @@ export function buildResolveCommand(
     argv.push("--message", "$DISMISS_MESSAGE");
   }
 
-  // A push is required when threads or CI failures are present — the CLI knows those imply code
-  // edits. Reviews can still trigger resolve mutations (dismiss/minimize), so we also guard
-  // resolve with the current HEAD SHA in that case.
-  const requiresHeadSha = threads.length > 0 || checks.length > 0 || reviews.length > 0;
+  // A resolve command can become stale when it includes actionable thread resolution,
+  // code check failures, or CHANGES_REQUESTED review dismissals.
+  const hasCodeMutations = threadIds.length > 0 || checks.length > 0;
+  const hasReviewDismissals = filteredReviewIds.length > 0;
+  const requiresHeadSha = hasCodeMutations || hasReviewDismissals;
 
   // hasMutations = we appended at least one of --resolve-thread-ids,
   // --minimize-comment-ids, or --dismiss-review-ids. Returned explicitly

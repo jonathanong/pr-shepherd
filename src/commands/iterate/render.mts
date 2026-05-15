@@ -38,7 +38,7 @@ export function buildFixInstructions(
   threads: AgentThread[],
   actionableComments: AgentComment[],
   checks: AgentCheck[],
-  reviews: Review[],
+  changesRequestedReviews: Review[],
   baseBranch: string,
   resolveCommand: ResolveCommand,
   hasConflicts: boolean,
@@ -54,7 +54,8 @@ export function buildFixInstructions(
   needsPushInput?: boolean,
 ): string[] {
   const instructions: string[] = [];
-  const hasCodeChanges = threads.length > 0 || checks.length > 0 || reviews.length > 0;
+  const hasCodeChanges =
+    threads.length > 0 || checks.length > 0 || changesRequestedReviews.length > 0;
   const needsPush = needsPushInput ?? (hasCodeChanges || hasConflicts);
   if (inProgressRunIds.length > 0) {
     instructions.push(
@@ -81,13 +82,13 @@ export function buildFixInstructions(
     );
   }
   instructions.push(...buildFailingCheckInstructions(checks));
-  if (reviews.length > 0) {
+  if (changesRequestedReviews.length > 0) {
     instructions.push(
       `For each bullet under \`## Changes-requested reviews\` above: read the review body and apply the requested changes.`,
     );
   }
 
-  if (hasCodeChanges) {
+  if (needsPush && hasCodeChanges) {
     instructions.push(
       `Commit changed files: \`git add <files> && git commit -m "<descriptive message>"\``,
     );
