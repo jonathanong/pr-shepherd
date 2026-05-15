@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 // @ts-nocheck
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { registerIterateHooks } from "./iterate-test-support.mts";
