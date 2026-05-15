@@ -136,6 +136,18 @@ npx pr-shepherd iterate 42               # legacy-compatible spelling
 
 On each tick: fetch PR state in one GraphQL batch → classify CI, comments, and merge status → take one action (`fix_code`, `mark_ready`, `cancel`, `escalate`, or `wait`). Claude schedules one next session-only iteration after a fresh 30s-4m delay; Codex sleeps inline for that delay and reruns. See [docs/iterate-flow.md](docs/iterate-flow.md) for the decision table and [docs/flow.md](docs/flow.md) for the end-to-end flow diagram.
 
+## Cleaning state
+
+`pr-shepherd` accumulates state under `$PR_SHEPHERD_STATE_DIR` (seen markers, fix-attempt counters, stall fingerprints, etc.). To reset it:
+
+```sh
+npx pr-shepherd clean current    # remove state for the current branch's PR
+npx pr-shepherd clean repo       # remove all state for this repo
+npx pr-shepherd clean all        # remove all pr-shepherd state
+```
+
+Add `--dry-run` to preview what would be removed. See [docs/cli-usage.md](docs/cli-usage.md) for the full `clean` reference.
+
 ## Install
 
 > **Note:** Skill and plugin install methods add the skill definitions only — they do not install the `pr-shepherd` CLI. The skills invoke `pr-shepherd` through the repo package runner, so you also need the CLI available. If you're using `pr-shepherd` as development tooling for your repo, install it as a dev dependency so the selected runner resolves it without prompting:
