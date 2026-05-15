@@ -1,21 +1,30 @@
-# PR #42 [ESCALATE]
+# PR #42 [FIX_CODE]
 
 **status** `UNRESOLVED_COMMENTS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 1 passing
 
-⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required
+## Review threads
 
-**Triggers:** `pr-level-changes-requested`
+### `threadId=PRRT_thread1` — `src/auth.ts:10` (@reviewer · User)
 
-Reviewer requested changes but left no inline comments — read the review and act manually.
+> Please improve the error handling here.
 
-## Items needing attention
-- review `PRR_cr` (@reviewer): Please address the performance concerns I mentioned in the inline comments.
+## Changes-requested reviews
 
----
+- `reviewId=PRR_cr` (@reviewer · User)
 
-After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-shepherd 42` to resume.
+## Post-fix push
+
+- base: `main`
+- resolve: `npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_thread1 --dismiss-review-ids PRR_cr --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
 
 ## Instructions
 
-1. Stop — the PR needs human direction before iterating can resume. This is a manual handoff; do not continue automated fix attempts.
+1. Apply code fixes: read and edit each file referenced under `## Review threads` and `## Actionable comments` above.
+2. For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.
+3. Commit changed files: `git add <files> && git commit -m "<descriptive message>"`
+4. Keep the PR title and description current: if the changes alter the PR's scope or intent, run `gh pr edit 42 --title "<new title>" --body "<new body>"` to reflect them. Skip if the existing title/body still accurately describe the PR.
+5. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
+6. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
+7. For any large decisions or rejections you made this iteration, add or update a `## Shepherd Journal` section in the PR description (`gh pr edit 42 --body …`) summarizing each decision. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. If this section already exists, append your entries under it instead of creating a duplicate heading.
+8. CI needs time to run on the new push. Single-shot continuation: schedule one session-only follow-up task to run `npx pr-shepherd 42` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.

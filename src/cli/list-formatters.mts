@@ -48,7 +48,7 @@ interface ThreadBulletInput {
 
 export function renderThreadBullet(
   t: ThreadBulletInput,
-  opts: { statusTag?: string; renderSuggestion?: boolean } = {},
+  opts: { statusTag?: string; renderSuggestion?: boolean; noBody?: boolean } = {},
 ): string {
   const link = t.url ? ` [↗](${t.url})` : "";
   const loc = t.path
@@ -56,7 +56,8 @@ export function renderThreadBullet(
     : "`(no location)`";
   const suggestionMarker = t.suggestion ? " [suggestion]" : "";
   const statusSuffix = opts.statusTag ? ` ${opts.statusTag}` : "";
-  const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (${renderAuthor(t.author, t.authorType)})${suggestionMarker}${statusSuffix}: ${renderBodyPreview(t.body)}`;
+  const bodySuffix = opts.noBody ? "" : `: ${renderBodyPreview(t.body)}`;
+  const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (${renderAuthor(t.author, t.authorType)})${suggestionMarker}${statusSuffix}${bodySuffix}`;
   if (t.suggestion && opts.renderSuggestion) {
     return `${bulletLine}\n${renderSuggestionBlock(t.suggestion)}`;
   }

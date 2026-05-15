@@ -10,6 +10,7 @@
 Could not determine the PR's base branch (GraphQL batch returned an empty base branch name) — automated rebases are paused because branch safety is unclear. Run the rebase manually against the PR's real target branch.
 
 ## Items needing attention
+
 - thread `PRRT_base` — `src/main.ts:1` (@reviewer): Please fix the import order.
 
 ---

@@ -125,9 +125,15 @@ export function formatFixCodeResult(
   const firstLookTotal = result.fix.firstLookThreads.length + result.fix.firstLookComments.length;
   if (firstLookTotal > 0) {
     sections.push(`## First-look items (${firstLookTotal}) — acknowledge status before acting`);
+    const resolutionOnlyIds = new Set(result.fix.resolutionOnlyThreads.map((t) => t.id));
     const bullets: string[] = [];
     for (const t of result.fix.firstLookThreads) {
-      bullets.push(renderThreadBullet(t, { statusTag: renderFirstLookStatusTag(t) }));
+      bullets.push(
+        renderThreadBullet(t, {
+          statusTag: renderFirstLookStatusTag(t),
+          noBody: resolutionOnlyIds.has(t.id),
+        }),
+      );
     }
     for (const c of result.fix.firstLookComments) {
       const editedSuffix = c.edited ? ", edited" : "";

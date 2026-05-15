@@ -10,6 +10,7 @@
 Review thread has no file/line reference — automated location routing failed and manual handling is required.
 
 ## Items needing attention
+
 - thread `PRRT_noloc` — (no location) (@reviewer): This thread has no file location.
 
 ---
