@@ -138,7 +138,12 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   // would need the correct base to rebase safely. This is a conservative guard, not a
   // prediction that the agent *will* push.
   const pushIsPlausible =
-    threads.length > 0 || checks.length > 0 || hasConflicts || changesRequestedReviews.length > 0;
+    threads.length > 0 ||
+    checks.length > 0 ||
+    hasConflicts ||
+    changesRequestedReviews.length > 0 ||
+    actionableComments.length > 0 ||
+    resolutionOnlyThreads.length > 0;
   if (baseLookup.isFallback && pushIsPlausible) {
     const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: ["base-branch-unknown"],

@@ -11,6 +11,7 @@ import { resolveStateBase } from "./base.mts";
 
 export interface SeenMarker {
   seenAt: number;
+  id?: string;
   // Open schema — future fields may be added without breaking older readers.
   [key: string]: unknown;
 }
@@ -56,30 +57,31 @@ export function classifyItem(
  * Returns an empty Set if the directory does not yet exist.
  */
 export async function loadSeenSet(key: StateKey): Promise<Set<string>> {
-  try {
-    const dir = resolveDir(key);
-    const entries = await readdir(dir);
-    return new Set(entries.filter((e) => e.endsWith(".json")).map((e) => e.slice(0, -5)));
-  } catch {
-    return new Set();
-  }
+  const map = await loadSeenMap(key);
+  return new Set(map.keys());
 }
 
 /**
  * Read the seen/ directory and return a Map from ID to SeenMarker.
  * Used when the caller needs the stored bodyHash to detect in-place edits.
  * Returns an empty Map if the directory does not yet exist.
+ *
+ * Map keys are the stored `id` field when present (guarding against
+ * case-insensitive filesystem collisions), falling back to the filename for
+ * legacy markers that predate this field.
  */
 export async function loadSeenMap(key: StateKey): Promise<Map<string, SeenMarker>> {
   const map = new Map<string, SeenMarker>();
   try {
     const dir = resolveDir(key);
     const entries = await readdir(dir);
-    const ids = entries.filter((e) => e.endsWith(".json")).map((e) => e.slice(0, -5));
-    for (const id of ids) {
+    for (const entry of entries.filter((e) => e.endsWith(".json"))) {
       try {
-        const raw = await readFile(join(dir, `${id}.json`), "utf8");
-        map.set(id, JSON.parse(raw) as SeenMarker);
+        const raw = await readFile(join(dir, entry), "utf8");
+        const marker = JSON.parse(raw) as SeenMarker;
+        // Prefer the stored id field; fall back to filename stem for legacy markers.
+        const mapKey = typeof marker.id === "string" ? marker.id : entry.slice(0, -5);
+        map.set(mapKey, marker);
       } catch {
         // unreadable or malformed — skip
       }
@@ -104,7 +106,7 @@ export async function hasSeen(key: StateKey, id: string): Promise<boolean> {
  * Write (or update) a "seen" marker for this id, storing the body hash so
  * in-place edits can be detected on future fetches.
  *
- * - First call (no existing marker): creates `{ seenAt: now, bodyHash }`.
+ * - First call (no existing marker): creates `{ seenAt: now, bodyHash, id }`.
  * - Subsequent call, hash unchanged: no-op (skips the write).
  * - Subsequent call, hash changed: updates `bodyHash`, preserves original `seenAt`.
  *
@@ -126,7 +128,10 @@ export async function markSeen(key: StateKey, id: string, body: string): Promise
     if (existing !== null && existing.bodyHash === newHash) return;
     const seenAt = existing?.seenAt ?? Date.now();
     tmp = `${path}.${randomUUID()}.tmp`;
-    await writeFile(tmp, JSON.stringify({ seenAt, bodyHash: newHash }), "utf8");
+    // Store `id` in the payload so loadSeenMap can key by the original ID
+    // rather than the filename, guarding against case-insensitive filesystems
+    // (e.g. macOS APFS) where IDs differing only in case would collide.
+    await writeFile(tmp, JSON.stringify({ seenAt, bodyHash: newHash, id }), "utf8");
     await rename(tmp, path);
     tmp = undefined;
   } catch {
@@ -173,5 +178,11 @@ function resolvePath(key: StateKey, id: string): string {
   if (!SAFE_SEGMENT.test(id)) {
     throw new Error(`Invalid state key segment "id": ${id}`);
   }
-  return join(resolveDir(key), `${id}.json`);
+  // Hash the ID to produce a case-insensitive filename. On case-insensitive
+  // filesystems (macOS APFS), IDs that differ only in case (e.g. base64 IDs
+  // from GitHub like `ChG7F` vs `ChG7f`) would otherwise share the same file,
+  // causing seen-markers to overwrite each other and items to re-surface every
+  // tick. SHA-256 is case-sensitive so distinct IDs get distinct files.
+  const hash = createHash("sha256").update(id, "utf8").digest("hex");
+  return join(resolveDir(key), `${hash}.json`);
 }

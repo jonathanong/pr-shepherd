@@ -54,4 +54,6 @@ One-tick dispatcher for iterating a PR to completion.
    - **Scheduled wakeup + one tick** — schedule a single session-only follow-up task to rerun `<runner> pr-shepherd <N>` after a fresh 30s–4m delay, then end the turn. Recommended for Claude.
    - **Inline sleep + rerun** — sleep inline for a fresh 30s–4m delay, then rerun. Recommended for Codex when scheduling is unavailable.
 
-   Do not combine strategies (e.g., poll AND schedule a wakeup). Do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`. Remember step 5 — every non-terminal output requires a follow-up tick.
+   **Never write a custom polling loop** (shell `while`/`until` loops, script files that loop over pr-shepherd output, etc.). Custom loops poll only for terminal states and silently skip `[FIX_CODE]` handling — actionable review threads, failing checks, and resolve commands get missed. Use `pr-shepherd poll` for WAIT-state waiting; it exits on any non-WAIT action so the caller handles `[FIX_CODE]` and other actionable outputs normally.
+
+   Do not combine strategies (e.g., poll AND schedule a wakeup). Remember step 5 — every non-terminal output requires a follow-up tick.
