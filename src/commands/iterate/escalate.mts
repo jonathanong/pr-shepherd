@@ -2,9 +2,6 @@ import type {
   EscalateDetails,
   EscalateTrigger,
   ReviewThread,
-  PrComment,
-  Review,
-  TriagedCheck,
 } from "../../types.mts";
 import { loadConfig } from "../../config/load.mts";
 
@@ -15,12 +12,7 @@ export interface EscalateCheck {
 
 export function checkEscalateTriggers(
   actionableThreads: ReviewThread[],
-  resolutionOnlyThreads: ReviewThread[],
-  actionableComments: PrComment[],
-  changesRequestedReviews: Review[],
-  failingChecks: TriagedCheck[],
   threadAttempts: Record<string, number>,
-  hasConflicts: boolean,
 ): EscalateCheck {
   const triggers: EscalateTrigger[] = [];
   const maxAttempts = loadConfig().iterate.fixAttemptsPerThread;
@@ -31,20 +23,7 @@ export function checkEscalateTriggers(
     triggers.push("fix-thrash");
   }
 
-  // Trigger 2: PR-level CHANGES_REQUESTED with no inline threads/comments/CI to act on.
-  // Skip when there are merge conflicts — fix_code handles conflict resolution, not escalation.
-  if (
-    changesRequestedReviews.length > 0 &&
-    actionableThreads.length === 0 &&
-    resolutionOnlyThreads.length === 0 &&
-    actionableComments.length === 0 &&
-    failingChecks.length === 0 &&
-    !hasConflicts
-  ) {
-    triggers.push("pr-level-changes-requested");
-  }
-
-  // Trigger 3: actionable thread has no file/line — cannot locate code to edit.
+  // Trigger 2: actionable thread has no file/line — cannot locate code to edit.
   const unlocatable = actionableThreads.filter((t) => t.path === null || t.line === null);
   if (unlocatable.length > 0) {
     triggers.push("thread-missing-location");
@@ -162,9 +141,6 @@ export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: st
   }
   if (triggers.includes("fix-thrash")) {
     return "Same thread(s) reached the automated attempt limit — treat this as a manual handoff. Apply the fix by hand.";
-  }
-  if (triggers.includes("pr-level-changes-requested")) {
-    return "Reviewer requested changes but left no inline comments — read the review and act manually.";
   }
   if (triggers.includes("thread-missing-location")) {
     return "Review thread has no file/line reference — automated location routing failed and manual handling is required.";

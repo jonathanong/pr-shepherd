@@ -63,15 +63,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     }
   }
 
-  const escalateTriggers = checkEscalateTriggers(
-    report.threads.actionable,
-    report.threads.resolutionOnly,
-    report.comments.actionable,
-    report.changesRequestedReviews,
-    failingChecks,
-    currentAttempts,
-    report.mergeStatus.status === "CONFLICTS",
-  );
+  const escalateTriggers = checkEscalateTriggers(report.threads.actionable, currentAttempts);
   if (escalateTriggers.triggers.length > 0) {
     const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: escalateTriggers.triggers,
@@ -114,7 +106,16 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const checks = toAgentChecks(failingChecks);
   const { changesRequestedReviews } = report;
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
-  const inProgressRunIds = buildInProgressRunIds(report, cancelledSet);
+  // Only surface in-progress runs when a push is plausible — resolution-only and
+  // summary-only iterations have no path to a push, so listing runs would prompt
+  // unnecessary cancellation.
+  const pushLikely =
+    threads.length > 0 ||
+    checks.length > 0 ||
+    hasConflicts ||
+    changesRequestedReviews.length > 0 ||
+    actionableComments.length > 0;
+  const inProgressRunIds = pushLikely ? buildInProgressRunIds(report, cancelledSet) : [];
   const commentMinimizeIds = report.comments.minimizeIds ?? actionableComments.map((c) => c.id);
   const allCommentIds = [...commentMinimizeIds, ...reviewSummaryIds];
   const resolveCommand = buildResolveCommand(

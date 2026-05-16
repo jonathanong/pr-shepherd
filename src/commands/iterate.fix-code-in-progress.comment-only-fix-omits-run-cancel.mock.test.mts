@@ -12,7 +12,7 @@ import { runIterate } from "./iterate/index.mts";
 registerHooks();
 
 describe("fix_code — in-progress run cancellation", () => {
-  it("inProgressRunIds is included for comment-only fixes so agent can decide whether to cancel", async () => {
+  it("inProgressRunIds is included for actionable-comment fixes so agent can decide whether to cancel", async () => {
     const inProgressCheck = {
       name: "ci",
       status: "IN_PROGRESS" as const,
@@ -61,7 +61,7 @@ describe("fix_code — in-progress run cancellation", () => {
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       expect(result.fix.actionableComments).toHaveLength(1);
-      // inProgressRunIds is always populated so the agent can decide whether to cancel
+      // actionable comments may require code edits, so in-progress runs are surfaced
       expect(result.fix.inProgressRunIds).toContain("run-in-comment-only");
       // Instruction is conditional ("If you decide to push") rather than mandatory
       expect(result.fix.instructions.join("\n")).toMatch(/If you decide to push new commits/);

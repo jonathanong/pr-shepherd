@@ -39,8 +39,8 @@ const RESOLUTION_ONLY_THREAD = {
   body: "Already addressed on an old diff",
 };
 
-describe("runIterate — escalate (pr-level-changes-requested suppressed during CONFLICTS)", () => {
-  it("does NOT escalate when changesRequestedReviews + merge CONFLICTS (fix_code handles rebase)", async () => {
+describe("runIterate — CHANGES_REQUESTED review with merge CONFLICTS routes to fix_code", () => {
+  it("routes to fix_code when changesRequestedReviews + merge CONFLICTS (rebase + dismiss)", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "FAILING",
