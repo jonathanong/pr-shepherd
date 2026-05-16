@@ -26,6 +26,7 @@ import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
 import { runLogFile } from "./commands/log-file.mts";
 import { parseCommonArgs, getFlag, hasFlag, parseList } from "./cli/args.mts";
 import { isDefaultIterateInvocation, validateDefaultIterateArgs } from "./cli/default-iterate.mts";
+import { USAGE, maybePrintHelp } from "./cli/help.mts";
 import { formatFetchResult, formatMutateResult } from "./cli/formatters.mts";
 import { handleClean, handleCommitSuggestion, handleIterate } from "./cli/handlers.mts";
 import { handlePoll } from "./cli/poll-handler.mts";
@@ -42,6 +43,11 @@ export async function main(argv: string[]): Promise<void> {
 
   if (subcommand === "--version" || subcommand === "-v") {
     process.stdout.write(`${readVersion()}\n`);
+    return;
+  }
+
+  if (subcommand === "--help" || subcommand === "-h") {
+    process.stdout.write(`${USAGE.top}\n`);
     return;
   }
 
@@ -78,10 +84,7 @@ export async function main(argv: string[]): Promise<void> {
       break;
     default:
       process.stderr.write(`Unknown subcommand: ${subcommand ?? "(none)"}\n`);
-      process.stderr.write(
-        "Usage: pr-shepherd <resolve|commit-suggestion|iterate|poll|log-file|clean> [options]\n" +
-          "       pr-shepherd --version | -v\n",
-      );
+      process.stderr.write(`${USAGE.top}\n`);
       process.exitCode = 1;
       return;
   }
@@ -98,6 +101,7 @@ function readVersion(): string {
 // ---------------------------------------------------------------------------
 
 async function handleLogFile(args: string[]): Promise<void> {
+  if (maybePrintHelp(args, "log-file")) return;
   const jsonOut =
     args.some((a) => a === "--format=json") ||
     (() => {
@@ -115,6 +119,7 @@ async function handleLogFile(args: string[]): Promise<void> {
 }
 
 async function handleResolve(args: string[]): Promise<void> {
+  if (maybePrintHelp(args, "resolve")) return;
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
 
   const resolveThreadIds = parseList(getFlag(extra, "--resolve-thread-ids"));
