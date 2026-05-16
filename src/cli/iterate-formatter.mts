@@ -81,10 +81,14 @@ export function formatIterateResult(
     if (bp.requiresConversationResolution) {
       requiredParts.push("conversation-resolution required");
     }
-    if (bp.requiresStatusChecks && bp.requiredStatusCheckContexts.length > 0) {
-      requiredParts.push(
-        `checks: ${bp.requiredStatusCheckContexts.map((c) => `\`${c}\``).join(", ")}`,
-      );
+    if (bp.requiresStatusChecks) {
+      if (bp.requiredStatusCheckContexts.length > 0) {
+        requiredParts.push(
+          `checks: ${bp.requiredStatusCheckContexts.map((c) => `\`${c}\``).join(", ")}`,
+        );
+      } else {
+        requiredParts.push("status checks required");
+      }
     }
   }
   const requiredLine = requiredParts.length > 0 ? `**required** ${requiredParts.join(", ")}` : null;

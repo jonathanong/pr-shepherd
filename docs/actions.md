@@ -44,7 +44,7 @@ The `**required**` line is emitted only when branch-protection rules are non-tri
 
 - `approvals \`<N>\``— emitted when`requiredApprovingReviewCount > 0`
 - `conversation-resolution required` — emitted when `requiresConversationResolution`
-- `checks: \`<context>\`, …`— lists required status-check context names; emitted when`requiresStatusChecks` and contexts are present
+- `checks: \`<context>\`, …`— lists required status-check context names; emitted when`requiresStatusChecks` and contexts are present. When`requiresStatusChecks`is true but the context list is empty or unknown,`status checks required` is emitted instead.
 
 The agent cross-references this line against per-check bullets in `## Failing checks` to know which checks are gating merge.
 

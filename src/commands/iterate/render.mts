@@ -70,12 +70,19 @@ export function buildFixInstructions(
     const sectionRef =
       actionableSections.length > 0 ? `under ${actionableSections.join(", ")}` : "above";
     const resolveClause = resolveCommand.hasMutations ? ", then run the `resolve:` command" : "";
-    const skipClause = resolveCommand.hasMutations
-      ? "skip cancellation/commit/push and run only the `resolve:` command"
-      : "no push is needed";
-    instructions.push(
-      `Decide for each item ${sectionRef} whether a code change is warranted. **If any code changes are needed:** cancel in-progress runs first, apply edits, commit, rebase if the header shows \`**branch**\` behind/conflicts, push${resolveClause}. **If no code changes are needed:** ${skipClause}.`,
-    );
+    if (hasConflicts) {
+      // Conflicts make push mandatory regardless of whether code edits are needed.
+      instructions.push(
+        `The branch has merge conflicts that require rebase before merging. Cancel in-progress runs first, apply any code edits for items ${sectionRef}, commit if edits were made, rebase onto \`origin/${baseBranch}\` per your repository's conventions, push${resolveClause}.`,
+      );
+    } else {
+      const skipClause = resolveCommand.hasMutations
+        ? "skip cancellation/commit/push and run only the `resolve:` command"
+        : "no push is needed";
+      instructions.push(
+        `Decide for each item ${sectionRef} whether a code change is warranted. **If any code changes are needed:** cancel in-progress runs first, apply edits, commit, push${resolveClause}. **If no code changes are needed:** ${skipClause}.`,
+      );
+    }
   } else if (hasConflicts) {
     instructions.push(
       `The branch has merge conflicts — rebase onto \`origin/${baseBranch}\` per your repository's conventions to resolve them, then push.`,
