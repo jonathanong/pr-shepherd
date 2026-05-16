@@ -108,12 +108,15 @@ export function formatIterateResult(
         `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix, runner))}`,
       ]);
 
-    case "cancel":
+    case "cancel": {
+      const cancelHeaderLines = [`${heading} — ${result.reason}`, "", baseLine, summaryLine];
+      if (requiredLine) cancelHeaderLines.push(requiredLine);
       return joinSections([
-        [`${heading} — ${result.reason}`, "", baseLine, summaryLine].join("\n"),
+        cancelHeaderLines.join("\n"),
         adaptIterateLog(result.log, runtime),
         `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix, runner))}`,
       ]);
+    }
 
     case "escalate":
       return joinSections([

@@ -40,7 +40,13 @@ Lean-mode rules for the summary line:
 
 The `**branch**` line is emitted on any action when `mergeStatus.status` is `"BEHIND"` or `"CONFLICTS"`. It surfaces the raw branch state so the agent can decide whether to rebase without further tool calls.
 
-The `**required**` line is emitted only when branch-protection rules are non-trivial (any of: approvals required, conversation-resolution required, or required check contexts present). When all fields are at their trivial defaults the line is omitted. Fields: `approvals \`<N>\``when`requiredApprovingReviewCount > 0`, `conversation-resolution required`when`requiresConversationResolution`, `checks: \`<context>\`, …`listing required status-check context names. The agent cross-references this line against per-check bullets in`## Failing checks` to know which checks are gating merge.
+The `**required**` line is emitted only when branch-protection rules are non-trivial (any of: approvals required, conversation-resolution required, or required check contexts present). When all fields are at their trivial defaults the line is omitted. Possible fields (each omitted when its condition is false):
+
+- `approvals \`<N>\``— emitted when`requiredApprovingReviewCount > 0`
+- `conversation-resolution required` — emitted when `requiresConversationResolution`
+- `checks: \`<context>\`, …`— lists required status-check context names; emitted when`requiresStatusChecks` and contexts are present
+
+The agent cross-references this line against per-check bullets in `## Failing checks` to know which checks are gating merge.
 
 `--verbose` restores the full summary line: all four counts, `remainingSeconds`, `blockingBotReviewInProgress`, `isDraft`, and `shouldCancel` always present.
 
