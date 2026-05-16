@@ -10,10 +10,15 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function writeTickProgress(tick: number, elapsedSeconds: number, intervalSeconds: number): void {
-  if (process.stderr.isTTY || process.env["SHEPHERD_POLL_VERBOSE"] === "1") {
+function writeTickProgress(
+  tick: number,
+  elapsedSeconds: number,
+  sleepSeconds: number,
+  verbose: boolean,
+): void {
+  if (process.stderr.isTTY || verbose) {
     process.stderr.write(
-      `[poll tick ${tick} / +${elapsedSeconds}s] WAIT — sleeping ${intervalSeconds}s\n`,
+      `[poll tick ${tick} / +${elapsedSeconds}s] WAIT — sleeping ${sleepSeconds}s\n`,
     );
   }
 }
@@ -25,6 +30,7 @@ export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> 
   const start = Date.now();
   let tick = 0;
   let lastResult: IterateResult | undefined;
+  const verbose = opts.verbose === true;
 
   while (true) {
     tick += 1;
@@ -32,9 +38,11 @@ export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> 
     if (lastResult.action !== "wait") return lastResult;
 
     const elapsedMs = Date.now() - start;
-    if (elapsedMs + intervalMs >= timeoutMs) return lastResult;
+    const remainingMs = timeoutMs - elapsedMs;
+    if (remainingMs <= 0) return lastResult;
 
-    writeTickProgress(tick, Math.round(elapsedMs / 1000), intervalSeconds);
-    await sleep(intervalMs);
+    const nextSleepMs = Math.min(intervalMs, remainingMs);
+    writeTickProgress(tick, Math.round(elapsedMs / 1000), Math.round(nextSleepMs / 1000), verbose);
+    await sleep(nextSleepMs);
   }
 }

@@ -34,10 +34,9 @@ describe("runPoll — tick progress logging", () => {
     Object.defineProperty(process.stderr, "isTTY", { value: originalIsTTY, configurable: true });
   });
 
-  it("writes progress when SHEPHERD_POLL_VERBOSE=1 even on non-TTY", async () => {
+  it("writes progress when verbose:true even on non-TTY", async () => {
     const originalIsTTY = process.stderr.isTTY;
     Object.defineProperty(process.stderr, "isTTY", { value: false, configurable: true });
-    process.env["SHEPHERD_POLL_VERBOSE"] = "1";
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
 
     mockRunIterate.mockResolvedValueOnce(makeWaitResult()).mockResolvedValue(makeCancelResult());
@@ -45,6 +44,7 @@ describe("runPoll — tick progress logging", () => {
     const pollPromise = runPoll({
       prNumber: 42,
       format: "text",
+      verbose: true,
       intervalSeconds: 30,
       timeoutSeconds: 300,
     });
@@ -55,7 +55,6 @@ describe("runPoll — tick progress logging", () => {
     expect(stderrSpy.mock.calls.some((args) => String(args[0]).includes("[poll tick"))).toBe(true);
 
     stderrSpy.mockRestore();
-    delete process.env["SHEPHERD_POLL_VERBOSE"];
     Object.defineProperty(process.stderr, "isTTY", { value: originalIsTTY, configurable: true });
   });
 });

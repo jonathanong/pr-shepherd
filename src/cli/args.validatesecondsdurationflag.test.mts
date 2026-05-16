@@ -39,6 +39,17 @@ describe("validateSecondsDurationFlag", () => {
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("invalid --interval"));
   });
 
+  it("rejects zero", () => {
+    expect(validateSecondsDurationFlag("cmd", "--interval", "0", true)).toBeNull();
+    expect(process.exitCode).toBe(1);
+    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("invalid --interval"));
+  });
+
+  it("rejects 0s", () => {
+    expect(validateSecondsDurationFlag("cmd", "--interval", "0s", true)).toBeNull();
+    expect(process.exitCode).toBe(1);
+  });
+
   it("accepts bare integer (seconds)", () => {
     expect(validateSecondsDurationFlag("cmd", "--interval", "30", true)).toBe("30");
     expect(stderrSpy).not.toHaveBeenCalled();

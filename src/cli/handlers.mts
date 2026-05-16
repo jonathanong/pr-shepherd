@@ -4,15 +4,9 @@ import { runClean, type CleanVariant } from "../commands/clean.mts";
 import { loadConfig } from "../config/load.mts";
 import { detectAgentRuntime } from "../agent-runtime.mts";
 import { parseCommonArgs, getFlag } from "./args.mts";
-import { iterateActionToExitCode } from "./exit-codes.mts";
-import {
-  formatCommitSuggestionResult,
-  formatCleanResult,
-  formatIterateResult,
-  projectIterateLean,
-  projectIterateVerbose,
-} from "./formatters.mts";
+import { formatCommitSuggestionResult, formatCleanResult } from "./formatters.mts";
 import { parseIterateFlags } from "./iterate-flags.mts";
+import { emitIterateResult } from "./iterate-emitter.mts";
 
 const CLEAN_VARIANTS = new Set<string>(["pr", "branch", "current", "repo", "all"]);
 
@@ -138,20 +132,11 @@ export async function handleIterate(args: string[]): Promise<void> {
     noAutoCancelActionable: flags.noAutoCancelActionable,
   });
 
-  const projectionOpts = {
+  emitIterateResult(result, {
+    format: globalOpts.format,
+    verbose: globalOpts.verbose ?? false,
     runtime,
     readyDelaySuffix: flags.readyDelaySuffix ?? undefined,
     runner: cfg.cli?.runner,
-  };
-  if (globalOpts.format === "json") {
-    const output = globalOpts.verbose
-      ? projectIterateVerbose(result, projectionOpts)
-      : projectIterateLean(result, projectionOpts);
-    process.stdout.write(`${JSON.stringify(output)}\n`);
-  } else {
-    const text = formatIterateResult(result, { verbose: globalOpts.verbose, ...projectionOpts });
-    process.stdout.write(`${text}\n`);
-  }
-
-  process.exitCode = iterateActionToExitCode(result.action);
+  });
 }

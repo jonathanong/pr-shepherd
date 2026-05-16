@@ -6,11 +6,10 @@ import { runPoll } from "./poll.mts";
 registerPollHooks();
 
 describe("runPoll — timeout returns final wait", () => {
-  it("returns the last wait result when timeout would be exceeded", async () => {
+  it("returns the last wait result when timeout is exhausted", async () => {
     mockRunIterate.mockResolvedValue(makeWaitResult());
 
-    // interval=30s, timeout=60s → after first wait: elapsed~0ms, next tick would put us at ~30s;
-    // after second wait: elapsed~30s, next tick would put us at ~60s >= 60s, so loop exits.
+    // interval=30s, timeout=60s → tick1 at t=0 (sleep 30s), tick2 at t=30s (sleep 30s), tick3 at t=60s (remaining=0 → return)
     const pollPromise = runPoll({
       prNumber: 42,
       format: "text",
@@ -18,12 +17,11 @@ describe("runPoll — timeout returns final wait", () => {
       timeoutSeconds: 60,
     });
 
-    await vi.advanceTimersByTimeAsync(30_000);
+    await vi.advanceTimersByTimeAsync(60_000);
 
     const result = await pollPromise;
 
     expect(result.action).toBe("wait");
-    // exactly 2 calls: first tick (elapsed~0, 0+30<60 → sleep), second tick (elapsed~30, 30+30>=60 → return)
-    expect(mockRunIterate).toHaveBeenCalledTimes(2);
+    expect(mockRunIterate).toHaveBeenCalledTimes(3);
   });
 });

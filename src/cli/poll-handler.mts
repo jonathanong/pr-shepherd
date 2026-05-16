@@ -2,10 +2,10 @@ import { runPoll } from "../commands/poll.mts";
 import { loadConfig } from "../config/load.mts";
 import { detectAgentRuntime } from "../agent-runtime.mts";
 import { parseCommonArgs, getFlag, hasFlag } from "./args.mts";
-import { parseDurationToSeconds, iterateActionToExitCode } from "./exit-codes.mts";
-import { formatIterateResult, projectIterateLean, projectIterateVerbose } from "./formatters.mts";
+import { parseDurationToSeconds } from "./exit-codes.mts";
 import { validateSecondsDurationFlag } from "./duration-flag.mts";
 import { parseIterateFlags } from "./iterate-flags.mts";
+import { emitIterateResult } from "./iterate-emitter.mts";
 
 const DEFAULT_POLL_INTERVAL_SECONDS = 30;
 const DEFAULT_POLL_TIMEOUT_SECONDS = 300;
@@ -41,10 +41,6 @@ export async function handlePoll(args: string[]): Promise<void> {
   if (timeoutSuffix === null) return;
   const timeoutSeconds = parseDurationToSeconds(timeoutSuffix ?? "", DEFAULT_POLL_TIMEOUT_SECONDS);
 
-  if (globalOpts.verbose) {
-    process.env["SHEPHERD_POLL_VERBOSE"] = "1";
-  }
-
   const result = await runPoll({
     ...globalOpts,
     prNumber,
@@ -56,20 +52,11 @@ export async function handlePoll(args: string[]): Promise<void> {
     timeoutSeconds,
   });
 
-  const projectionOpts = {
+  emitIterateResult(result, {
+    format: globalOpts.format,
+    verbose: globalOpts.verbose ?? false,
     runtime,
     readyDelaySuffix: flags.readyDelaySuffix ?? undefined,
     runner: cfg.cli?.runner,
-  };
-  if (globalOpts.format === "json") {
-    const output = globalOpts.verbose
-      ? projectIterateVerbose(result, projectionOpts)
-      : projectIterateLean(result, projectionOpts);
-    process.stdout.write(`${JSON.stringify(output)}\n`);
-  } else {
-    const text = formatIterateResult(result, { verbose: globalOpts.verbose, ...projectionOpts });
-    process.stdout.write(`${text}\n`);
-  }
-
-  process.exitCode = iterateActionToExitCode(result.action);
+  });
 }

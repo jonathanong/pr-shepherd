@@ -97,12 +97,13 @@ describe("main — poll subcommand", () => {
     expect(parsed.action).toBe("cancel");
   });
 
-  it("sets SHEPHERD_POLL_VERBOSE when --verbose is passed", async () => {
+  it("accepts --verbose without error", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
 
     await main(["node", "shepherd", "poll", "42", "--verbose"]);
 
-    expect(process.env["SHEPHERD_POLL_VERBOSE"]).toBe("1");
+    expect(process.exitCode).not.toBe(1);
+    expect(mockRunIterate).toHaveBeenCalledTimes(1);
   });
 
   it("rejects an invalid --interval value", async () => {

@@ -18,7 +18,7 @@ export function validateSecondsDurationFlag(
     process.exitCode = 1;
     return null;
   }
-  if (!/^\d+(?:s|sec|seconds?|m|min|minutes?|h|hours?)?$/.test(trimmed)) {
+  if (!/^[1-9]\d*(?:s|sec|seconds?|m|min|minutes?|h|hours?)?$/.test(trimmed)) {
     process.stderr.write(
       `${command}: invalid ${flag}: ${value}. Expected a duration like 30s, 5m, 1h, or bare seconds (e.g. 30).\n`,
     );
