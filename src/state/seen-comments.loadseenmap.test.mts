@@ -50,7 +50,11 @@ describe("loadSeenMap", () => {
     const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr), "seen");
     await mkdir(dir, { recursive: true });
     // Write a legacy-format file (no id field) at the hash-based path.
-    await writeFile(join(dir, `${hash}.json`), JSON.stringify({ seenAt: 1234, bodyHash: "abc" }), "utf8");
+    await writeFile(
+      join(dir, `${hash}.json`),
+      JSON.stringify({ seenAt: 1234, bodyHash: "abc" }),
+      "utf8",
+    );
     const map = await loadSeenMap(testKey);
     // The key should be the hash stem (legacy fallback), not the original ID.
     expect(map.has(hash)).toBe(true);
