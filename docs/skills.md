@@ -21,11 +21,11 @@ Use the skill inside a `/goal`:
 /goal /pr-shepherd:pr-shepherd 42 --ready-delay 15m
 ```
 
-The goal loop handles recurrence. Each tick the skill runs one iterate cycle and prints the output. For non-terminal actions, the CLI's `## Instructions` nudge the iteration strategy. Pick one:
+The goal loop handles recurrence. Each tick the skill runs one iterate cycle and prints the output. For non-terminal actions, follow the CLI's `## Instructions`. Pick one iteration strategy:
 
-- **Scheduled wakeup** (recommended for Claude) — schedule exactly one next session-only iteration after a fresh 30s–4m delay, then end the turn.
+- **Scheduled wakeup** — schedule exactly one next session-only iteration after a fresh 30s–4m delay, then end the turn.
 - **Blocking poll** — run `<runner> pr-shepherd poll <N>` to loop internally until a non-WAIT action appears (bounded by `--timeout`, default 5m).
-- **Inline sleep** (Codex default) — sleep inline for a fresh 30s–4m delay, then rerun.
+- **Inline sleep** — sleep inline for a fresh 30s–4m delay, then rerun.
 
 Do not combine strategies and do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`. `[CANCEL]` and `[ESCALATE]` stop the goal regardless of strategy.
 
@@ -68,11 +68,7 @@ Use the skill inside a `/goal`:
 /goal $pr-shepherd 42
 ```
 
-Codex runs the same skill — one tick per goal iteration. The CLI detects Codex via `CODEX_CI=1` or `AGENT=codex` and adapts its `## Instructions` wording to prefer inline sleep before rerunning. Alternatively, Codex can run `<runner> pr-shepherd poll <N>` to block until a non-WAIT action appears. If Codex is not already setting `CODEX_CI=1`, set `AGENT=codex` before invoking the CLI:
-
-```sh
-export AGENT=codex
-```
+Codex runs the same skill — one tick per goal iteration. Alternatively, Codex can run `<runner> pr-shepherd poll <N>` to block until a non-WAIT action appears.
 
 ## Resolve without iterating
 

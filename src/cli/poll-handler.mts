@@ -1,6 +1,5 @@
 import { runPoll } from "../commands/poll.mts";
 import { loadConfig } from "../config/load.mts";
-import { detectAgentRuntime } from "../agent-runtime.mts";
 import { parseCommonArgs, getFlag, hasFlag } from "./args.mts";
 import { parseDurationToSeconds } from "./exit-codes.mts";
 import { validateSecondsDurationFlag } from "./duration-flag.mts";
@@ -12,7 +11,6 @@ const DEFAULT_POLL_TIMEOUT_SECONDS = 300;
 
 export async function handlePoll(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
-  const runtime = detectAgentRuntime();
   const cfg = loadConfig();
 
   const flags = parseIterateFlags(extra, cfg);
@@ -55,7 +53,6 @@ export async function handlePoll(args: string[]): Promise<void> {
   emitIterateResult(result, {
     format: globalOpts.format,
     verbose: globalOpts.verbose ?? false,
-    runtime,
     readyDelaySuffix: flags.readyDelaySuffix ?? undefined,
     runner: cfg.cli?.runner,
   });

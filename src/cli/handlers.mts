@@ -2,7 +2,6 @@ import { runCommitSuggestion } from "../commands/commit-suggestion.mts";
 import { runIterate } from "../commands/iterate/index.mts";
 import { runClean, type CleanVariant } from "../commands/clean.mts";
 import { loadConfig } from "../config/load.mts";
-import { detectAgentRuntime } from "../agent-runtime.mts";
 import { parseCommonArgs, getFlag } from "./args.mts";
 import { formatCommitSuggestionResult, formatCleanResult } from "./formatters.mts";
 import { parseIterateFlags } from "./iterate-flags.mts";
@@ -117,7 +116,6 @@ export async function handleCommitSuggestion(args: string[]): Promise<void> {
 
 export async function handleIterate(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
-  const runtime = detectAgentRuntime();
   const cfg = loadConfig();
 
   const flags = parseIterateFlags(extra, cfg);
@@ -135,7 +133,6 @@ export async function handleIterate(args: string[]): Promise<void> {
   emitIterateResult(result, {
     format: globalOpts.format,
     verbose: globalOpts.verbose ?? false,
-    runtime,
     readyDelaySuffix: flags.readyDelaySuffix ?? undefined,
     runner: cfg.cli?.runner,
   });

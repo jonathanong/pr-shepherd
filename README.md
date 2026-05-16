@@ -20,7 +20,7 @@ Example Workflow:
 
 `pr-shepherd` optimizes token management, rate limits, and agentic orchestration by moving **ALL** deterministic logic and prompts to code via a CLI tool, enshrining what would be a large skill or command prompt (of which the agent would inevitably make mistakes) into the code and returning a clear, actionable prompt.
 
-The CLI emits runtime-specific retry instructions. Claude-compatible output schedules exactly one next session-only iteration after a fresh delay between 30 seconds and 4 minutes, then ends the turn. Codex-compatible output sleeps inline for that delay, then reruns the configured pr-shepherd command. Codex is detected with `AGENT=codex` or the current Codex CLI signal `CODEX_CI=1`. Generated commands use `cli.runner` from `.pr-shepherdrc.yml`: `auto` (default), `npx`, `pnpm`, `yarn`, or `bun`.
+The CLI emits unified recheck instructions. Generated commands use `cli.runner` from `.pr-shepherdrc.yml`: `auto` (default), `npx`, `pnpm`, `yarn`, or `bun`.
 
 At a high level, the skill invokes `pr-shepherd <PR>` through the selected package runner, which provides actionable feedback directly to the agent:
 
@@ -97,7 +97,7 @@ Some other workflow improvements:
 
 Recommendations:
 
-- Run `pr-shepherd` on all your PRs before you go to sleep so that you wake up to reviewable PRs. Keep an active goal cycling the reusable command until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). Claude schedules one next session-only iteration per tick; Codex sleeps inline and reruns.
+- Run `pr-shepherd` on all your PRs before you go to sleep so that you wake up to reviewable PRs. Keep an active goal cycling the reusable command until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures).
 - Instruct your agents to write comments in a single review (comment, changes requested, or approved). This allows the review's comments/threads to be minimized or resolved together, keeping your pull request history clean. If you write inline comments outside of a review, each comment would still show up in the pull request history and take up space.
 - Avoid sticky comments as they will continue to be hidden. Instead, just make a new comment, especially on reviews. If you really want sticky comments, instruct your agent to unhide/unminimize them when updating them.
 - Avoid having automation edit comments, reviews, or threads in place because updated items get minimized. Instead, always make a new review, comment, thread, etc.
@@ -134,7 +134,7 @@ npx pr-shepherd iterate 42               # legacy-compatible spelling
 
 ## Iterate decision loop
 
-On each tick: fetch PR state in one GraphQL batch → classify CI, comments, and merge status → take one action (`fix_code`, `mark_ready`, `cancel`, `escalate`, or `wait`). Claude schedules one next session-only iteration after a fresh 30s-4m delay; Codex sleeps inline for that delay and reruns. See [docs/iterate-flow.md](docs/iterate-flow.md) for the decision table and [docs/flow.md](docs/flow.md) for the end-to-end flow diagram.
+On each tick: fetch PR state in one GraphQL batch → classify CI, comments, and merge status → take one action (`fix_code`, `mark_ready`, `cancel`, `escalate`, or `wait`). See [docs/iterate-flow.md](docs/iterate-flow.md) for the decision table and [docs/flow.md](docs/flow.md) for the end-to-end flow diagram.
 
 ## Cleaning state
 
@@ -216,13 +216,7 @@ npm install --save-dev pr-shepherd
 
 The plugin only installs the skill; it does not install the CLI into target repositories. To install the CLI globally instead, use `npm install -g pr-shepherd`.
 
-If your Codex environment does not already set `CODEX_CI=1`, set `AGENT=codex` so `pr-shepherd` emits Codex-compatible instructions instead of Claude `/loop` instructions:
-
-```bash
-export AGENT=codex
-```
-
-Then iterate a PR from Codex with the target repository's package runner:
+Iterate a PR from Codex with the target repository's package runner:
 
 ```bash
 <runner> pr-shepherd iterate 42
@@ -230,7 +224,7 @@ Then iterate a PR from Codex with the target repository's package runner:
 
 For example, a repo like `~/filaments` that declares `packageManager: "pnpm@..."` and has `pnpm-lock.yaml` should use `pnpm exec pr-shepherd iterate 42`. For Bun repos (with `bun.lock` or `bun.lockb`), use `bunx pr-shepherd iterate 42`. For npm repos, use `npx pr-shepherd iterate 42`.
 
-Or ask Codex to use the `pr-shepherd` skill, for example: `run pr-shepherd until this PR is ready`. Follow the output's `## Instructions`. The skill runs one tick and Codex-compatible instructions tell you to pick a fresh sleep/timeout between 30 seconds and 4 minutes before the next rerun. Continue until Shepherd emits `[CANCEL]` or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). `pr-shepherd iterate 42` remains supported for existing workflows.
+Or ask Codex to use the `pr-shepherd` skill, for example: `run pr-shepherd until this PR is ready`. Follow the output's `## Instructions`. Continue until Shepherd emits `[CANCEL]` or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). `pr-shepherd iterate 42` remains supported for existing workflows.
 
 ### As a global CLI
 
@@ -255,7 +249,7 @@ actions:
   autoMarkReady: false # disable to stay draft until you manually promote
 ```
 
-Environment variables: `GH_TOKEN` / `GITHUB_TOKEN` (auth; falls back to `gh auth token`, then `GITHUB_PERSONAL_ACCESS_TOKEN`), `PR_SHEPHERD_STATE_DIR` (override loop-state and log base dir), `PR_SHEPHERD_LOG_DISABLED=1` (disable the per-worktree debug log), `AGENT=codex` or `CODEX_CI=1` (emit Codex-compatible monitor instructions).
+Environment variables: `GH_TOKEN` / `GITHUB_TOKEN` (auth; falls back to `gh auth token`, then `GITHUB_PERSONAL_ACCESS_TOKEN`), `PR_SHEPHERD_STATE_DIR` (override loop-state and log base dir), `PR_SHEPHERD_LOG_DISABLED=1` (disable the per-worktree debug log).
 
 See [docs/configuration.md](docs/configuration.md) for full semantics and deprecated-key migration.
 

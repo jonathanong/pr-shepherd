@@ -26,7 +26,7 @@ flowchart TD
 
   DEC -->|cancel/escalate| STOP["stop"]
   DEC -->|fix_code| FIX[gh run view --log-failed →<br/>rerun or edit+commit →<br/>fetch + rebase + push →<br/>pr-shepherd resolve --require-sha HEAD]
-  FIX --> SLEEP[Claude schedules next tick<br/>Codex sleeps 30s-4m]
+  FIX --> SLEEP[Schedule or sleep 30s-4m,<br/>then rerun]
   DEC -->|other| SLEEP
   SLEEP --> ITER
 ```

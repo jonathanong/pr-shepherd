@@ -361,59 +361,6 @@ export async function captureTwoTickStallRun(fixture: Fixture): Promise<RunResul
 }
 
 // ---------------------------------------------------------------------------
-// Cross-agent invariant assertion
-// ---------------------------------------------------------------------------
-
-const CODEX_PATTERN = /Pick a fresh sleep\/timeout between/;
-const CLAUDE_PATTERN = /Single-shot continuation:/;
-
-/**
- * Strip agent-specific `instructions` fields from a JSON output string so the
- * structural data can be compared across agents.  Removes top-level and nested
- * `instructions` arrays (the only agent-specific content in the lean JSON).
- */
-export function stripJsonInstructions(json: string): string {
-  try {
-    const obj = JSON.parse(json);
-    function strip(o: unknown): unknown {
-      if (Array.isArray(o)) return o.map(strip);
-      if (o !== null && typeof o === "object") {
-        const result: Record<string, unknown> = {};
-        for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
-          if (k === "instructions") continue;
-          result[k] = strip(v);
-        }
-        return result;
-      }
-      return o;
-    }
-    return JSON.stringify(strip(obj));
-  } catch {
-    return json;
-  }
-}
-
-/** Assert outputs differ only in the recheck instruction wording. */
-export function assertCrossAgentInvariant(claudeOut: string, codexOut: string): void {
-  const strip = (s: string) =>
-    s
-      .split("\n")
-      .filter((l) => !CODEX_PATTERN.test(l) && !CLAUDE_PATTERN.test(l))
-      .join("\n");
-  const a = strip(claudeOut);
-  const b = strip(codexOut);
-  if (a !== b) {
-    const diff = a
-      .split("\n")
-      .map((line, i) => (line !== b.split("\n")[i] ? `line ${i + 1}: ${JSON.stringify(line)} vs ${JSON.stringify(b.split("\n")[i])}` : null))
-      .filter(Boolean)
-      .slice(0, 10)
-      .join("\n");
-    throw new Error(`Cross-agent invariant violated — outputs differ beyond instruction wording:\n${diff}`);
-  }
-}
-
-// ---------------------------------------------------------------------------
 // beforeEach / afterEach registration
 // ---------------------------------------------------------------------------
 
@@ -421,8 +368,6 @@ export function registerHarnessBefore(): void {
   beforeEach(() => {
     vi.clearAllMocks();
     process.exitCode = undefined;
-    delete process.env.AGENT;
-    delete process.env.CODEX_CI;
     process.env.GH_TOKEN = "test-token";
     vi.useFakeTimers();
     vi.setSystemTime(NOW * 1000);
@@ -443,8 +388,6 @@ export function registerHarnessBefore(): void {
 
   afterEach(() => {
     vi.useRealTimers();
-    delete process.env.AGENT;
-    delete process.env.CODEX_CI;
     delete process.env.GH_TOKEN;
     process.exitCode = undefined;
   });

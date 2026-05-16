@@ -6,8 +6,8 @@
 
 pr-shepherd iterates a PR to completion via the active goal loops of Claude Code and Codex. Three iteration strategies are valid:
 
-- **Scheduled wakeup + one tick** (Claude default) — schedule a single session-only follow-up task after a fresh 30s–4m delay, then end the turn.
-- **Inline sleep + rerun** (Codex default) — sleep inline for a fresh 30s–4m delay, then rerun the iterate command.
+- **Scheduled wakeup + one tick** — schedule a single session-only follow-up task after a fresh 30s–4m delay, then end the turn.
+- **Inline sleep + rerun** — sleep inline for a fresh 30s–4m delay, then rerun the iterate command.
 - **Blocking poll** — run `<runner> pr-shepherd poll <PR>` to loop internally until a non-WAIT action appears (bounded by `--timeout`, default 5m).
 
 Each non-terminal action is a single tick (or a bounded poll session). Do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`.
@@ -34,9 +34,9 @@ Both runtimes use the same `pr-shepherd` skill. Claude Code users invoke it with
 
 3. **Non-terminal actions** (`[WAIT]`, `[MARK_READY]`, `[FIX_CODE]`)
    The `## Instructions` tell the active goal how to continue. Pick one strategy:
-   - Claude: schedule one next session-only follow-up task and end the turn.
-   - Codex: sleep inline for a fresh 30s–4m delay, then rerun `<runner> pr-shepherd <PR>`.
-   - Either: run `<runner> pr-shepherd poll <PR>` to block until the action is non-WAIT.
+   - Schedule one next session-only follow-up task and end the turn.
+   - Sleep inline for a fresh 30s–4m delay, then rerun `<runner> pr-shepherd <PR>`.
+   - Run `<runner> pr-shepherd poll <PR>` to block until the action is non-WAIT.
 
    Do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`.
 
@@ -60,8 +60,8 @@ User                    Active Goal             shepherd iterate / poll
  |                          |<-- [ACTION] + ## Instructions
  |                          |                        |
  |  [if non-terminal]       |                        |
- |                          |-- schedule next tick   |  (Claude: one-tick)
- |                          |-- sleep + rerun inline |  (Codex: one-tick)
+ |                          |-- schedule next tick   |  (one-tick strategy)
+ |                          |-- sleep + rerun inline |  (inline strategy)
  |                          |-- poll loops + sleep   |  (poll mode: internal)
  |                          |-- pr-shepherd <PR> --> |
  |                          |                        |
@@ -73,8 +73,7 @@ User                    Active Goal             shepherd iterate / poll
  |                          |-- commit               |
  |                          |-- push                 |
  |                          |-- resolve threads      |
- |                          |-- schedule recheck     |  (Claude)
- |                          |-- sleep + rerun inline |  (Codex)
+ |                          |-- schedule or sleep    |
  |                          |-- pr-shepherd <PR> --> |
 ```
 

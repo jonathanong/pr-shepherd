@@ -63,12 +63,6 @@ actions:
 
 ---
 
-## Agent detection
-
-`pr-shepherd` uses the calling-agent environment only to choose instruction wording. `AGENT=codex` and `CODEX_CI=1` select Codex-compatible monitor output that sleeps inline before rerunning. Other environments keep the default Claude-compatible instructions that schedule exactly one next session-only iteration and end the turn.
-
----
-
 ## `cli`
 
 ### `cli.runner` — default `"auto"`
@@ -80,7 +74,7 @@ Controls how generated instructions invoke the CLI. `auto` inspects the nearest 
 - `packageManager: "bun@…"`, `bun.lock`, or `bun.lockb` -> `bunx pr-shepherd`
 - `packageManager: "npm@…"`, `package-lock.json`, or no package-manager signal -> `npx pr-shepherd`
 
-Set `cli.runner` to `npx`, `pnpm`, `yarn`, or `bun` to force a specific command in monitor prompts, Codex rerun guidance, resolve commands, and commit-suggestion follow-ups.
+Set `cli.runner` to `npx`, `pnpm`, `yarn`, or `bun` to force a specific command in monitor prompts, resolve commands, and commit-suggestion follow-ups.
 
 ---
 
