@@ -10,7 +10,7 @@ export const USAGE = {
     "  pr-shepherd resolve [PR] [--fetch] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]\n" +
     "                           [--dismiss-review-ids Q] [--message MSG] [--require-sha SHA]\n" +
     "  pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [--description DESC]\n" +
-    "                                     [--dry-run] [--format text|json]\n" +
+    "                                     [--format text|json]\n" +
     "  pr-shepherd iterate [PR] [--format text|json] [--ready-delay Nm]\n" +
     "                             [--stall-timeout <duration>] [--no-auto-mark-ready]\n" +
     "                             [--no-auto-cancel-actionable]\n" +

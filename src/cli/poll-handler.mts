@@ -2,7 +2,6 @@ import { runPoll } from "../commands/poll.mts";
 import { loadConfig } from "../config/load.mts";
 import { detectAgentRuntime } from "../agent-runtime.mts";
 import { parseCommonArgs, getFlag, hasFlag } from "./args.mts";
-import { maybePrintHelp } from "./help.mts";
 import { parseDurationToSeconds } from "./exit-codes.mts";
 import { validateSecondsDurationFlag } from "./duration-flag.mts";
 import { parseIterateFlags } from "./iterate-flags.mts";
@@ -12,7 +11,6 @@ const DEFAULT_POLL_INTERVAL_SECONDS = 30;
 const DEFAULT_POLL_TIMEOUT_SECONDS = 300;
 
 export async function handlePoll(args: string[]): Promise<void> {
-  if (maybePrintHelp(args, "poll")) return;
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
   const runtime = detectAgentRuntime();
   const cfg = loadConfig();

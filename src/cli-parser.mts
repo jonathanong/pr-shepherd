@@ -56,9 +56,17 @@ export async function main(argv: string[]): Promise<void> {
     return;
   }
 
-  // Short-circuit help for the default-iterate path before any I/O.
-  if (isDefaultIterateInvocation(subcommand) && (hasFlag(args, "--help") || hasFlag(args, "-h"))) {
-    process.stdout.write(`${USAGE.iterate}\n`);
+  // Short-circuit all --help/-h before any I/O or logging.
+  if (hasFlag(args, "--help") || hasFlag(args, "-h")) {
+    if (isDefaultIterateInvocation(subcommand)) {
+      process.stdout.write(`${USAGE.iterate}\n`);
+    } else {
+      const key =
+        subcommand != null && (subcommand as string) in USAGE
+          ? (subcommand as keyof typeof USAGE)
+          : "top";
+      process.stdout.write(`${USAGE[key]}\n`);
+    }
     return;
   }
 
@@ -124,7 +132,6 @@ async function handleLogFile(args: string[]): Promise<void> {
 }
 
 async function handleResolve(args: string[]): Promise<void> {
-  if (maybePrintHelp(args, "resolve")) return;
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
 
   const resolveThreadIds = parseList(getFlag(extra, "--resolve-thread-ids"));

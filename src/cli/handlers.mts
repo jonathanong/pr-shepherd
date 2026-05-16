@@ -4,7 +4,7 @@ import { runClean, type CleanVariant } from "../commands/clean.mts";
 import { loadConfig } from "../config/load.mts";
 import { detectAgentRuntime } from "../agent-runtime.mts";
 import { parseCommonArgs, getFlag } from "./args.mts";
-import { maybePrintHelp } from "./help.mts";
+import { USAGE } from "./help.mts";
 import { formatCommitSuggestionResult, formatCleanResult } from "./formatters.mts";
 import { parseIterateFlags } from "./iterate-flags.mts";
 import { emitIterateResult } from "./iterate-emitter.mts";
@@ -12,13 +12,10 @@ import { emitIterateResult } from "./iterate-emitter.mts";
 const CLEAN_VARIANTS = new Set<string>(["pr", "branch", "current", "repo", "all"]);
 
 export async function handleClean(args: string[]): Promise<void> {
-  if (maybePrintHelp(args, "clean")) return;
   const variant = args[0];
 
   if (!variant || !CLEAN_VARIANTS.has(variant)) {
-    process.stderr.write(
-      "Usage: pr-shepherd clean <pr|branch|current|repo|all> [value] [--dry-run] [--format text|json]\n",
-    );
+    process.stderr.write(`${USAGE.clean}\n`);
     process.exitCode = 1;
     return;
   }
@@ -81,14 +78,11 @@ export async function handleClean(args: string[]): Promise<void> {
 }
 
 export async function handleCommitSuggestion(args: string[]): Promise<void> {
-  if (maybePrintHelp(args, "commit-suggestion")) return;
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
 
   const threadId = getFlag(extra, "--thread-id");
   if (!threadId) {
-    process.stderr.write(
-      "Usage: pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [--description DESC]\n",
-    );
+    process.stderr.write(`${USAGE["commit-suggestion"]}\n`);
     process.exitCode = 1;
     return;
   }
@@ -119,7 +113,6 @@ export async function handleCommitSuggestion(args: string[]): Promise<void> {
 }
 
 export async function handleIterate(args: string[]): Promise<void> {
-  if (maybePrintHelp(args, "iterate")) return;
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
   const runtime = detectAgentRuntime();
   const cfg = loadConfig();
