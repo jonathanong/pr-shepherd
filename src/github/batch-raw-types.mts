@@ -118,7 +118,7 @@ export interface RawBranchProtectionRule {
   requiredApprovingReviewCount: number;
   requiresConversationResolution: boolean;
   requiresStatusChecks: boolean;
-  requiredStatusCheckContexts: string[];
+  requiredStatusCheckContexts: string[] | null;
 }
 
 export type RawContextNode =

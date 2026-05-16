@@ -53,26 +53,32 @@ export function buildFixInstructions(
 ): string[] {
   const instructions: string[] = [];
 
-  const hasAnyCodeHints =
+  const hasNonConflictHints =
     threads.length > 0 ||
     checks.length > 0 ||
     changesRequestedReviews.length > 0 ||
-    actionableComments.length > 0 ||
-    hasConflicts;
+    actionableComments.length > 0;
 
-  // Leading if/else decision: agent decides whether code changes are warranted.
-  if (hasAnyCodeHints) {
+  // Leading decision or mandatory instruction depending on what actionable items exist.
+  if (hasNonConflictHints) {
     const actionableSections: string[] = [];
     if (threads.length > 0) actionableSections.push("`## Review threads`");
     if (actionableComments.length > 0) actionableSections.push("`## Actionable comments`");
     if (checks.length > 0) actionableSections.push("`## Failing checks`");
     if (changesRequestedReviews.length > 0)
       actionableSections.push("`## Changes-requested reviews`");
-    if (hasConflicts) actionableSections.push("the `**branch** conflicts`");
     const sectionRef =
       actionableSections.length > 0 ? `under ${actionableSections.join(", ")}` : "above";
+    const resolveClause = resolveCommand.hasMutations ? ", then run the `resolve:` command" : "";
+    const skipClause = resolveCommand.hasMutations
+      ? "skip cancellation/commit/push and run only the `resolve:` command"
+      : "no push is needed";
     instructions.push(
-      `Decide for each item ${sectionRef} whether a code change is warranted. **If any code changes are needed:** cancel in-progress runs first, apply edits, commit, rebase if the header shows \`**branch**\` behind/conflicts, push, then run the \`resolve:\` command. **If no code changes are needed:** skip cancellation/commit/push and run only the \`resolve:\` command.`,
+      `Decide for each item ${sectionRef} whether a code change is warranted. **If any code changes are needed:** cancel in-progress runs first, apply edits, commit, rebase if the header shows \`**branch**\` behind/conflicts, push${resolveClause}. **If no code changes are needed:** ${skipClause}.`,
+    );
+  } else if (hasConflicts) {
+    instructions.push(
+      `The branch has merge conflicts — rebase onto \`origin/${baseBranch}\` per your repository's conventions to resolve them, then push.`,
     );
   }
 
@@ -112,7 +118,7 @@ export function buildFixInstructions(
     );
   }
 
-  if (hasAnyCodeHints) {
+  if (hasNonConflictHints) {
     instructions.push(
       `If you applied code edits: commit them with a descriptive message, then rebase onto \`origin/${baseBranch}\` per your repository's conventions before pushing.`,
     );

@@ -46,7 +46,13 @@ export function formatIterateResult(
 
   let summaryLine: string;
   if (verbose) {
-    summaryLine = `**summary** ${result.summary.passing} passing, ${result.summary.skipped} skipped, ${result.summary.filtered} filtered, ${result.summary.inProgress} inProgress · **remainingSeconds** ${result.remainingSeconds} · **blockingBotReviewInProgress** ${result.blockingBotReviewInProgress} · **isDraft** ${result.isDraft} · **shouldCancel** ${result.shouldCancel}`;
+    let verboseBranch = "";
+    if (result.mergeStatus === "BEHIND" && result.baseBranch) {
+      verboseBranch = ` · **branch** behind \`origin/${result.baseBranch}\``;
+    } else if (result.mergeStatus === "CONFLICTS" && result.baseBranch) {
+      verboseBranch = ` · **branch** conflicts with \`origin/${result.baseBranch}\``;
+    }
+    summaryLine = `**summary** ${result.summary.passing} passing, ${result.summary.skipped} skipped, ${result.summary.filtered} filtered, ${result.summary.inProgress} inProgress · **remainingSeconds** ${result.remainingSeconds} · **blockingBotReviewInProgress** ${result.blockingBotReviewInProgress} · **isDraft** ${result.isDraft} · **shouldCancel** ${result.shouldCancel}${verboseBranch}`;
   } else {
     const counts = [`${result.summary.passing} passing`];
     if (result.summary.skipped > 0) counts.push(`${result.summary.skipped} skipped`);

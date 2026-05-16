@@ -139,7 +139,7 @@ export function parseRawPr(
         requiredApprovingReviewCount: rawProtection.requiredApprovingReviewCount,
         requiresConversationResolution: rawProtection.requiresConversationResolution,
         requiresStatusChecks: rawProtection.requiresStatusChecks,
-        requiredStatusCheckContexts: rawProtection.requiredStatusCheckContexts,
+        requiredStatusCheckContexts: rawProtection.requiredStatusCheckContexts ?? [],
       }
     : null;
 
