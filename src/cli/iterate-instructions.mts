@@ -4,14 +4,11 @@ import type { IterateResult } from "../types.mts";
 import { buildPrShepherdCommand, type CliRunner } from "./runner.mts";
 
 function buildRecheckInstruction(
-  runtime: AgentRuntime,
+  _runtime: AgentRuntime,
   rerunCommand: string,
   purpose: string,
 ): string {
-  if (runtime === "codex") {
-    return `Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun \`${rerunCommand}\` to ${purpose}.`;
-  }
-  return `Single-shot continuation: schedule one session-only follow-up task to run \`${rerunCommand}\` to ${purpose} once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.`;
+  return `Recheck: rerun \`${rerunCommand}\` to ${purpose} once after a fresh 30s–4m delay.`;
 }
 
 export function buildSimpleIterateInstructions(
