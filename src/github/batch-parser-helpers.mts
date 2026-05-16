@@ -1,0 +1,47 @@
+import type { AuthorType, CheckConclusion, CheckStatus } from "../types.mts";
+
+export function mapAuthorType(typeName: string | undefined | null): AuthorType {
+  if (typeName === "User" || typeName === "Bot") return typeName;
+  return "Unknown";
+}
+
+export function parseCreatedAt(iso: string): number {
+  const ms = new Date(iso).getTime();
+  return Number.isFinite(ms) ? Math.floor(ms / 1000) : 0;
+}
+
+export function extractRunId(url: string | undefined | null): string | null {
+  if (!url) return null;
+  const m = /\/runs\/(\d+)/.exec(url);
+  return m ? (m[1] ?? null) : null;
+}
+
+export function extractCheckRunSummary(
+  title: string | null | undefined,
+  summary: string | null | undefined,
+): string | undefined {
+  const t = title?.trim();
+  if (t) return t;
+  const firstLine = summary
+    ?.split("\n")
+    ?.find((l) => l.trim() !== "")
+    ?.trim();
+  return firstLine || undefined;
+}
+
+export function mapStatusContextState(state: string): {
+  status: CheckStatus;
+  conclusion: CheckConclusion;
+} {
+  switch (state) {
+    case "SUCCESS":
+      return { status: "COMPLETED", conclusion: "SUCCESS" };
+    case "FAILURE":
+    case "ERROR":
+      return { status: "COMPLETED", conclusion: "FAILURE" };
+    case "PENDING":
+    case "EXPECTED":
+    default:
+      return { status: "IN_PROGRESS", conclusion: null };
+  }
+}
