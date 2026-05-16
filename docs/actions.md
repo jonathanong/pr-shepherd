@@ -41,9 +41,9 @@ The `**branch**` segment is appended to the `**summary**` line on any action whe
 
 The `**required**` line is emitted only when branch-protection rules are non-trivial (any of: approvals required, conversation-resolution required, or required check contexts present). When all fields are at their trivial defaults the line is omitted. Possible fields (each omitted when its condition is false):
 
-- `approvals \`<N>\``— emitted when`requiredApprovingReviewCount > 0`
+- `approvals N` — emitted when `requiredApprovingReviewCount > 0`
 - `conversation-resolution required` — emitted when `requiresConversationResolution`
-- `checks: \`<context>\`, …`— lists required status-check context names; emitted when`requiresStatusChecks` and contexts are present. When`requiresStatusChecks`is true but the context list is empty or unknown,`status checks required` is emitted instead.
+- `checks: context, …` — lists required status-check context names; emitted when `requiresStatusChecks` and contexts are present. When `requiresStatusChecks` is true but the context list is empty or unknown, `status checks required` is emitted instead.
 
 The agent cross-references this line against per-check bullets in `## Failing checks` to know which checks are gating merge.
 
@@ -174,8 +174,7 @@ Actionable work exists — whether it requires code edits or only resolution is 
 # PR #42 [FIX_CODE]
 
 **status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 3 passing
-**branch** behind `origin/main`
+**summary** 3 passing · **branch** behind `origin/main`
 **required** approvals `1`, conversation-resolution required, checks: `ci/build`, `ci/test`
 
 ## Review threads
