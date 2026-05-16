@@ -1,8 +1,4 @@
-import type {
-  EscalateDetails,
-  EscalateTrigger,
-  ReviewThread,
-} from "../../types.mts";
+import type { EscalateDetails, EscalateTrigger, ReviewThread } from "../../types.mts";
 import { loadConfig } from "../../config/load.mts";
 
 export interface EscalateCheck {
