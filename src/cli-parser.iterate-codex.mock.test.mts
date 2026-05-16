@@ -50,31 +50,29 @@ afterEach(() => {
 });
 
 describe("main — iterate fix_code instruction rewriting", () => {
-  it("rewrites wait instruction to Codex sleep wording", async () => {
+  it("rewrites wait instruction with unified recheck wording", async () => {
     process.env.AGENT = "codex";
     mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
 
     await main(["node", "shepherd", "iterate", "42", "--ready-delay", "15m"]);
     const out = getStdout();
     expect(out).toContain(
-      "1. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42 --ready-delay 15m` to continue the active goal.",
+      "1. Recheck: rerun `npx pr-shepherd 42 --ready-delay 15m` to continue the active goal once after a fresh 30s–4m delay.",
     );
-    expect(out).not.toContain("Schedule one session-only");
   });
 
-  it("rewrites mark_ready instruction to Codex sleep wording", async () => {
+  it("rewrites mark_ready instruction with unified recheck wording", async () => {
     process.env.AGENT = "codex";
     mockRunIterate.mockResolvedValue(makeIterateResult("mark_ready"));
 
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain(
-      "1. The CLI already marked the PR ready for review. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.",
+      "1. The CLI already marked the PR ready for review. Recheck: rerun `npx pr-shepherd 42` to recheck once after a fresh 30s–4m delay.",
     );
-    expect(out).not.toContain("Schedule one session-only");
   });
 
-  it("text rewrites stop instruction to Codex sleep wording", async () => {
+  it("text rewrites stop instruction with unified recheck wording", async () => {
     process.env.AGENT = "codex";
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
@@ -87,7 +85,7 @@ describe("main — iterate fix_code instruction rewriting", () => {
     await main(["node", "shepherd", "iterate", "42", "--ready-delay", "15m"]);
     const out = getStdout();
     expect(out).toContain(
-      "2. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42 --ready-delay 15m` to recheck.",
+      "2. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick. Recheck: rerun `npx pr-shepherd 42 --ready-delay 15m` to recheck once after a fresh 30s–4m delay.",
     );
   });
 
@@ -103,7 +101,7 @@ describe("main — iterate fix_code instruction rewriting", () => {
     await main(["node", "shepherd", "iterate", "42", "--format=json", "--ready-delay", "2h"]);
     const parsed = JSON.parse(getStdout().trimEnd());
     expect(parsed.fix.instructions).toEqual([
-      "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42 --ready-delay 2h` to recheck.",
+      "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick. Recheck: rerun `npx pr-shepherd 42 --ready-delay 2h` to recheck once after a fresh 30s–4m delay.",
     ]);
   });
 });
