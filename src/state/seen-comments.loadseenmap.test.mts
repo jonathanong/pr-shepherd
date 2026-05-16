@@ -43,6 +43,33 @@ describe("loadSeenMap", () => {
     expect(marker!.bodyHash).toBe(hashBody("body text"));
   });
 
+  it("hash-based marker (with id field) wins over legacy marker on the same key", async () => {
+    // After the hash-based filename migration, a legacy <id>.json file may
+    // still exist alongside the new <hash>.json file. Both map to the same key
+    // but the legacy file may have a stale bodyHash. The hash-based entry must
+    // always win so the stale legacy file cannot re-surface the item.
+    const id = "PRRT_kwDOTest123";
+    const hash = createHash("sha256").update(id, "utf8").digest("hex");
+    const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr), "seen");
+    await mkdir(dir, { recursive: true });
+    // Legacy file with stale hash.
+    await writeFile(
+      join(dir, `${id}.json`),
+      JSON.stringify({ seenAt: 1000, bodyHash: "stale" }),
+      "utf8",
+    );
+    // Hash-based file with current hash.
+    await writeFile(
+      join(dir, `${hash}.json`),
+      JSON.stringify({ seenAt: 2000, bodyHash: "current", id }),
+      "utf8",
+    );
+    const map = await loadSeenMap({ ...testKey });
+    // The hash-based entry should win.
+    expect(map.get(id)!.bodyHash).toBe("current");
+    expect(map.get(id)!.seenAt).toBe(2000);
+  });
+
   it("falls back to filename stem as key when marker has no id field (legacy format)", async () => {
     // Legacy markers written before the id field was added use the filename stem as key.
     const legacyId = "PRRT_kwDOLegacy123";

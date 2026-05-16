@@ -81,7 +81,12 @@ export async function loadSeenMap(key: StateKey): Promise<Map<string, SeenMarker
         const marker = JSON.parse(raw) as SeenMarker;
         // Prefer the stored id field; fall back to filename stem for legacy markers.
         const mapKey = typeof marker.id === "string" ? marker.id : entry.slice(0, -5);
-        map.set(mapKey, marker);
+        // Hash-based markers (those with an id field) take priority over legacy
+        // filename-based markers so that a stale legacy file cannot overwrite a
+        // newer hash-based entry that maps to the same key.
+        if (!map.has(mapKey) || typeof marker.id === "string") {
+          map.set(mapKey, marker);
+        }
       } catch {
         // unreadable or malformed — skip
       }
