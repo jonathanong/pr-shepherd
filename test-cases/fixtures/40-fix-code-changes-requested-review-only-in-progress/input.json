@@ -1,0 +1,28 @@
+{
+  "description": "CHANGES_REQUESTED review with no inline threads and an in-progress CI check. Demonstrates fix for #223: routes to fix_code (not escalate) with --dismiss-review-ids. Also shows in-progress runs are listed because changesRequestedReviews is code-shaped work.",
+  "batchData": {
+    "changesRequestedReviews": [
+      {
+        "id": "PRR_no_threads",
+        "author": "architect",
+        "authorType": "User",
+        "body": "The overall design needs to be reconsidered. Please see my comments in the review summary above."
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/999",
+        "runId": "999"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}
