@@ -8,9 +8,8 @@
  *                  [--no-auto-cancel-actionable]
  *   pr-shepherd resolve [PR] [--fetch] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]
  *                            [--dismiss-review-ids Q] [--message MSG] [--require-sha SHA]
- *   pr-shepherd commit-suggestion [PR] --thread-id ID [--message MSG] [--description DESC]
- *                                      [--dry-run] [--format text|json]
- *   (--message is required unless --dry-run is set)
+ *   pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [--description DESC]
+ *                                      [--format text|json]
  *   pr-shepherd iterate [PR] [--format text|json] [--ready-delay Nm]
  *                              [--stall-timeout <duration>] [--no-auto-mark-ready]
  *                              [--no-auto-cancel-actionable]
@@ -26,6 +25,7 @@ import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
 import { runLogFile } from "./commands/log-file.mts";
 import { parseCommonArgs, getFlag, hasFlag, parseList } from "./cli/args.mts";
 import { isDefaultIterateInvocation, validateDefaultIterateArgs } from "./cli/default-iterate.mts";
+import { USAGE, maybePrintHelp } from "./cli/help.mts";
 import { formatFetchResult, formatMutateResult } from "./cli/formatters.mts";
 import { handleClean, handleCommitSuggestion, handleIterate } from "./cli/handlers.mts";
 import { handlePoll } from "./cli/poll-handler.mts";
@@ -45,9 +45,28 @@ export async function main(argv: string[]): Promise<void> {
     return;
   }
 
+  if (subcommand === "--help" || subcommand === "-h") {
+    process.stdout.write(`${USAGE.top}\n`);
+    return;
+  }
+
   // log-file must run before the stdout tee and log init to avoid recursion.
   if (subcommand === "log-file") {
     await handleLogFile(args.slice(1));
+    return;
+  }
+
+  // Short-circuit all --help/-h before any I/O or logging.
+  if (hasFlag(args, "--help") || hasFlag(args, "-h")) {
+    if (isDefaultIterateInvocation(subcommand)) {
+      process.stdout.write(`${USAGE.iterate}\n`);
+    } else {
+      const key =
+        subcommand != null && (subcommand as string) in USAGE
+          ? (subcommand as keyof typeof USAGE)
+          : "top";
+      process.stdout.write(`${USAGE[key]}\n`);
+    }
     return;
   }
 
@@ -78,10 +97,7 @@ export async function main(argv: string[]): Promise<void> {
       break;
     default:
       process.stderr.write(`Unknown subcommand: ${subcommand ?? "(none)"}\n`);
-      process.stderr.write(
-        "Usage: pr-shepherd <resolve|commit-suggestion|iterate|poll|log-file|clean> [options]\n" +
-          "       pr-shepherd --version | -v\n",
-      );
+      process.stderr.write(`${USAGE.top}\n`);
       process.exitCode = 1;
       return;
   }
@@ -98,6 +114,7 @@ function readVersion(): string {
 // ---------------------------------------------------------------------------
 
 async function handleLogFile(args: string[]): Promise<void> {
+  if (maybePrintHelp(args, "log-file")) return;
   const jsonOut =
     args.some((a) => a === "--format=json") ||
     (() => {

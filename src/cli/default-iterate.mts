@@ -1,4 +1,5 @@
 import { parsePrNumber } from "./args.mts";
+import { USAGE } from "./help.mts";
 
 const DEFAULT_ITERATE_FLAGS_WITH_VALUES = new Set(["--format", "--ready-delay", "--stall-timeout"]);
 
@@ -9,6 +10,7 @@ const DEFAULT_ITERATE_BOOLEAN_FLAGS = new Set([
 ]);
 
 export function isDefaultIterateInvocation(subcommand: string | undefined): boolean {
+  if (subcommand === "--help" || subcommand === "-h") return false;
   return (
     subcommand === undefined ||
     parsePrNumber(subcommand) !== null ||
@@ -55,10 +57,6 @@ function isDefaultIterateFlag(arg: string): boolean {
 
 function writeDefaultUsageError(arg: string): void {
   process.stderr.write(`Unknown subcommand: ${arg}\n`);
-  process.stderr.write(
-    "Usage: pr-shepherd [PR] [options]\n" +
-      "       pr-shepherd <resolve|commit-suggestion|iterate|poll|log-file|clean> [options]\n" +
-      "       pr-shepherd --version | -v\n",
-  );
+  process.stderr.write(`${USAGE.top}\n`);
   process.exitCode = 1;
 }

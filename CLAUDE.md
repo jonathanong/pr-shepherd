@@ -172,3 +172,13 @@ However, the CLI's `## Instructions` output must not duplicate guidance the call
 - Phrase multi-branch logic as inline `if` conditions in the same instruction step, not as separate CLI-predicated sections.
 
 Skills must not link to files outside the `plugins/pr-shepherd/` directory (such as `docs/**` or `README.md`). Those files are not included in the published plugin and will be dead links for consumers. All information a skill consumer needs must come from the CLI output itself or be written inline in the skill.
+
+## Help flags
+
+Every subcommand (and the top-level CLI) must honor `--help` and `-h`:
+
+- The flag short-circuits before any I/O, work, or validation.
+- It prints the command's usage string to stdout and exits 0.
+- Usage strings live in `src/cli/help.mts` (one per command). Adding a new subcommand requires adding its usage entry and an early `if (maybePrintHelp(args, "<key>")) return;` line in its handler.
+- Top-level `pr-shepherd --help` / `-h` is intercepted in `main()` in `src/cli-parser.mts` before `setupLog`, matching the `--version` precedent.
+- The default-iterate path (`pr-shepherd [PR] [flags]`) also honors `--help`/`-h` anywhere in the arg list via `validateDefaultIterateArgs` in `src/cli/default-iterate.mts`.
