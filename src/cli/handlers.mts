@@ -3,16 +3,10 @@ import { runIterate } from "../commands/iterate/index.mts";
 import { runClean, type CleanVariant } from "../commands/clean.mts";
 import { loadConfig } from "../config/load.mts";
 import { detectAgentRuntime } from "../agent-runtime.mts";
-import { parseCommonArgs, getFlag, hasFlag } from "./args.mts";
-import { parseDurationToMinutes, iterateActionToExitCode } from "./exit-codes.mts";
-import {
-  formatCommitSuggestionResult,
-  formatCleanResult,
-  formatIterateResult,
-  projectIterateLean,
-  projectIterateVerbose,
-} from "./formatters.mts";
-import { validateDurationFlag } from "./duration-flag.mts";
+import { parseCommonArgs, getFlag } from "./args.mts";
+import { formatCommitSuggestionResult, formatCleanResult } from "./formatters.mts";
+import { parseIterateFlags } from "./iterate-flags.mts";
+import { emitIterateResult } from "./iterate-emitter.mts";
 
 const CLEAN_VARIANTS = new Set<string>(["pr", "branch", "current", "repo", "all"]);
 
@@ -124,48 +118,25 @@ export async function handleCommitSuggestion(args: string[]): Promise<void> {
 export async function handleIterate(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
   const runtime = detectAgentRuntime();
-
-  const readyDelayStr = getFlag(extra, "--ready-delay");
-  const readyDelaySuffix = validateDurationFlag(
-    "pr-shepherd",
-    "--ready-delay",
-    readyDelayStr,
-    hasFlag(extra, "--ready-delay"),
-  );
-  if (readyDelaySuffix === null) return;
   const cfg = loadConfig();
-  const readyDelaySeconds =
-    parseDurationToMinutes(readyDelaySuffix ?? "", cfg.watch.readyDelayMinutes) * 60;
-  const noAutoMarkReady = hasFlag(extra, "--no-auto-mark-ready");
-  const noAutoCancelActionable = hasFlag(extra, "--no-auto-cancel-actionable");
-  const stallTimeoutStr = getFlag(extra, "--stall-timeout");
-  const stallTimeoutSeconds = stallTimeoutStr
-    ? parseDurationToMinutes(stallTimeoutStr, cfg.iterate.stallTimeoutMinutes) * 60
-    : cfg.iterate.stallTimeoutMinutes * 60;
+
+  const flags = parseIterateFlags(extra, cfg);
+  if (flags.readyDelaySuffix === null) return;
 
   const result = await runIterate({
     ...globalOpts,
     prNumber,
-    readyDelaySeconds,
-    stallTimeoutSeconds,
-    noAutoMarkReady,
-    noAutoCancelActionable,
+    readyDelaySeconds: flags.readyDelaySeconds,
+    stallTimeoutSeconds: flags.stallTimeoutSeconds,
+    noAutoMarkReady: flags.noAutoMarkReady,
+    noAutoCancelActionable: flags.noAutoCancelActionable,
   });
 
-  const projectionOpts = {
+  emitIterateResult(result, {
+    format: globalOpts.format,
+    verbose: globalOpts.verbose ?? false,
     runtime,
-    readyDelaySuffix,
+    readyDelaySuffix: flags.readyDelaySuffix ?? undefined,
     runner: cfg.cli?.runner,
-  };
-  if (globalOpts.format === "json") {
-    const output = globalOpts.verbose
-      ? projectIterateVerbose(result, projectionOpts)
-      : projectIterateLean(result, projectionOpts);
-    process.stdout.write(`${JSON.stringify(output)}\n`);
-  } else {
-    const text = formatIterateResult(result, { verbose: globalOpts.verbose, ...projectionOpts });
-    process.stdout.write(`${text}\n`);
-  }
-
-  process.exitCode = iterateActionToExitCode(result.action);
+  });
 }

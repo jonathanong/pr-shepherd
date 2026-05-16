@@ -8,6 +8,7 @@ pr-shepherd [PR] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--
 pr-shepherd resolve [PR] [--fetch | --resolve-thread-ids … | --minimize-comment-ids … | --dismiss-review-ids … | --message "…" | --require-sha <sha>]
 pr-shepherd commit-suggestion [PR] --thread-id <id> --message "…"
 pr-shepherd iterate [PR] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]  # legacy alias for pr-shepherd [PR]
+pr-shepherd poll [PR] [--interval 30s] [--timeout 5m] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]
 pr-shepherd log-file
 pr-shepherd clean <pr|branch|current|repo|all> [value] [--dry-run] [--format text|json]
 ```
@@ -259,6 +260,33 @@ See [actions.md](actions.md) for all five actions and their complete output shap
 Both `--format=text` (default Markdown) and `--format=json` carry equivalent information — every field exposed in JSON has a corresponding Markdown representation, and vice versa.
 
 Exit codes: `0` wait/mark_ready · `1` fix_code · `2` cancel · `3` escalate
+
+### pr-shepherd poll [PR]
+
+Loops `pr-shepherd [PR]` every `--interval` seconds until the action is non-WAIT or `--timeout` elapses. Useful for agents that cannot reliably schedule their own follow-up ticks.
+
+| Flag                    | Default | Description                                                                 |
+| ----------------------- | ------- | --------------------------------------------------------------------------- |
+| `--interval <duration>` | `30s`   | Sleep between ticks. Accepts `30s`, `2m`, `1h`, or bare integers (seconds). |
+| `--timeout <duration>`  | `5m`    | Maximum wall-clock wait. Returns the last WAIT result on timeout.           |
+
+All `pr-shepherd [PR]` flags (`--ready-delay`, `--stall-timeout`, `--no-auto-mark-ready`, `--no-auto-cancel-actionable`, `--verbose`, `--format`) are forwarded to each tick.
+
+Stdout is the final tick's output only; per-tick WAIT progress is written to stderr (TTY-gated; always on when `--verbose` is set).
+
+Exit codes: `0` wait/mark_ready · `1` fix_code · `2` cancel · `3` escalate
+
+**Notes:**
+
+- A long poll session is equivalent to N separately-scheduled ticks, including stall-guard behavior. The stall guard may escalate before `--timeout` fires if CI is stuck.
+- `mark_ready` exits the loop — the CLI already mutated state. Re-invoke if you want to continue.
+
+```sh
+<runner> pr-shepherd poll 42                        # poll PR #42 every 30s for up to 5m
+<runner> pr-shepherd poll 42 --interval 1m          # check every minute
+<runner> pr-shepherd poll 42 --timeout 15m          # wait up to 15 minutes
+<runner> pr-shepherd poll --format=json             # infer PR, emit JSON on final tick
+```
 
 ### pr-shepherd log-file
 

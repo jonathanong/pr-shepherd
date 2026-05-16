@@ -4,7 +4,13 @@
 
 ## Overview
 
-pr-shepherd iterates a PR to completion via the active goal loops of Claude Code and Codex. There is no recurring cron or fixed-interval `/loop` scheduler. Each non-terminal action is a single tick. Claude schedules exactly one next session-only iteration per non-terminal tick; Codex sleeps inline for a fresh 30s-4m delay and reruns the iterate command. Do not wrap this in `while true`, fixed-interval sleep loops, or other polling loops.
+pr-shepherd iterates a PR to completion via the active goal loops of Claude Code and Codex. Three iteration strategies are valid:
+
+- **Scheduled wakeup + one tick** (Claude default) — schedule a single session-only follow-up task after a fresh 30s–4m delay, then end the turn.
+- **Inline sleep + rerun** (Codex default) — sleep inline for a fresh 30s–4m delay, then rerun the iterate command.
+- **Blocking poll** — run `<runner> pr-shepherd poll <PR>` to loop internally until a non-WAIT action appears (bounded by `--timeout`, default 5m).
+
+Each non-terminal action is a single tick (or a bounded poll session). Do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`.
 
 Both runtimes use the same `pr-shepherd` skill. Claude Code users invoke it with `/goal /pr-shepherd:pr-shepherd`; Codex users invoke it with `/goal $pr-shepherd`.
 
@@ -27,7 +33,12 @@ Both runtimes use the same `pr-shepherd` skill. Claude Code users invoke it with
    The output begins with `# PR #N [ACTION]` and ends with a numbered `## Instructions` block. The skill follows those instructions exactly.
 
 3. **Non-terminal actions** (`[WAIT]`, `[MARK_READY]`, `[FIX_CODE]`)
-   The `## Instructions` tell the active goal how to continue. Claude schedules one next session-only follow-up task and ends the turn. Codex sleeps inline for a fresh 30s-4m delay, then reruns `<runner> pr-shepherd <PR>`. Do this **once only**. Never execute `while true` or any equivalent polling loop.
+   The `## Instructions` tell the active goal how to continue. Pick one strategy:
+   - Claude: schedule one next session-only follow-up task and end the turn.
+   - Codex: sleep inline for a fresh 30s–4m delay, then rerun `<runner> pr-shepherd <PR>`.
+   - Either: run `<runner> pr-shepherd poll <PR>` to block until the action is non-WAIT.
+
+   Do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`.
 
 4. **Terminal actions**
    - `[CANCEL]` — PR is merged/closed, or the ready-delay has elapsed. Goal stops.
@@ -38,18 +49,20 @@ For the full decision tree see [iterate-flow.md](iterate-flow.md). For the merma
 ## Sequence diagram
 
 ```
-User                    Active Goal             shepherd iterate
+User                    Active Goal             shepherd iterate / poll
  |                          |                        |
  |-- /goal /pr-shepherd --> |                        |
  |                          |-- pr-shepherd <PR> --> |
+ |                          |    (or poll <PR>)       |
  |                          |                        |-- GraphQL fetch
  |                          |                        |-- classify
  |                          |                        |-- dispatch
  |                          |<-- [ACTION] + ## Instructions
  |                          |                        |
  |  [if non-terminal]       |                        |
- |                          |-- schedule next tick   |  (Claude)
- |                          |-- sleep + rerun inline |  (Codex)
+ |                          |-- schedule next tick   |  (Claude: one-tick)
+ |                          |-- sleep + rerun inline |  (Codex: one-tick)
+ |                          |-- poll loops + sleep   |  (poll mode: internal)
  |                          |-- pr-shepherd <PR> --> |
  |                          |                        |
  |  [if cancel/escalate]    |                        |
