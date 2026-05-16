@@ -114,17 +114,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const checks = toAgentChecks(failingChecks);
   const { changesRequestedReviews } = report;
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
-  const hasReviewRequestedCodeLikeChanges =
-    changesRequestedReviews.length > 0 &&
-    (actionableComments.length > 0 || resolutionOnlyThreads.length > 0);
-  const hasGuaranteedPush =
-    threads.length > 0 || checks.length > 0 || hasConflicts || hasReviewRequestedCodeLikeChanges;
-  const shouldPush = hasGuaranteedPush;
-  // Only cancel in-progress runs for paths that produce a new code commit. A
-  // conflict-only rebase push will supersede any in-progress run on its own.
-  const hasCodeLikePush =
-    threads.length > 0 || checks.length > 0 || hasReviewRequestedCodeLikeChanges;
-  const inProgressRunIds = hasCodeLikePush ? buildInProgressRunIds(report, cancelledSet) : [];
+  const inProgressRunIds = buildInProgressRunIds(report, cancelledSet);
   const commentMinimizeIds = report.comments.minimizeIds ?? actionableComments.map((c) => c.id);
   const allCommentIds = [...commentMinimizeIds, ...reviewSummaryIds];
   const resolveCommand = buildResolveCommand(
@@ -144,7 +134,17 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
         `${overlappingReviewIds.join(", ")}\n`,
     );
   }
-  if (baseLookup.isFallback && shouldPush) {
+  // Safety: if the base branch is unknown, escalate when a push is plausible — the agent
+  // would need the correct base to rebase safely. This is a conservative guard, not a
+  // prediction that the agent *will* push.
+  const pushIsPlausible =
+    threads.length > 0 ||
+    checks.length > 0 ||
+    hasConflicts ||
+    changesRequestedReviews.length > 0 ||
+    actionableComments.length > 0 ||
+    resolutionOnlyThreads.length > 0;
+  if (baseLookup.isFallback && pushIsPlausible) {
     const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: ["base-branch-unknown"],
       unresolvedThreads: [...threads, ...resolutionOnlyThreads.map(toAgentThread)],
@@ -180,7 +180,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     inProgressRunIds,
     resolutionOnlyThreads,
     cliRunner,
-    shouldPush,
   );
   return applyStallGuard(
     stallKey,

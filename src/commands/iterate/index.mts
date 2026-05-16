@@ -51,6 +51,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       state: report.mergeStatus.state,
       summary: buildSummary(report),
       baseBranch: report.baseBranch,
+      branchProtection: report.branchProtection,
       checks: buildRelevantChecks(report),
       action: "cancel",
       reason: report.mergeStatus.state === "MERGED" ? "merged" : "closed",
@@ -110,6 +111,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     remainingSeconds: readyState.remainingSeconds,
     summary: buildSummary(report),
     baseBranch: report.baseBranch,
+    branchProtection: report.branchProtection,
     checks: buildRelevantChecks(report),
   };
 

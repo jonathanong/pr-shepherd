@@ -1,20 +1,14 @@
 import type { AgentRuntime } from "../agent-runtime.mts";
-import {
-  FIX_INSTRUCTION_STOP_AFTER_PUSH,
-  FIX_INSTRUCTION_STOP_BEFORE_NEXT_TICK,
-} from "../commands/iterate/render.mts";
+import { FIX_INSTRUCTION_STOP } from "../commands/iterate/render.mts";
 import type { IterateResult } from "../types.mts";
 import { buildPrShepherdCommand, type CliRunner } from "./runner.mts";
 
 function buildRecheckInstruction(
-  runtime: AgentRuntime,
+  _runtime: AgentRuntime,
   rerunCommand: string,
   purpose: string,
 ): string {
-  if (runtime === "codex") {
-    return `Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun \`${rerunCommand}\` to ${purpose}.`;
-  }
-  return `Single-shot continuation: schedule one session-only follow-up task to run \`${rerunCommand}\` to ${purpose} once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.`;
+  return `Recheck: rerun \`${rerunCommand}\` to ${purpose} once after a fresh 30s–4m delay.`;
 }
 
 export function buildSimpleIterateInstructions(
@@ -49,11 +43,8 @@ export function adaptFixCodeInstructions(
 ): string[] {
   const rerunCommand = buildIterateCommand(pr, readyDelaySuffix, runner);
   return instructions.map((instruction) => {
-    if (instruction === FIX_INSTRUCTION_STOP_AFTER_PUSH) {
-      return `CI needs time to run on the new push. ${buildRecheckInstruction(runtime, rerunCommand, "recheck")}`;
-    }
-    if (instruction === FIX_INSTRUCTION_STOP_BEFORE_NEXT_TICK) {
-      return buildRecheckInstruction(runtime, rerunCommand, "recheck");
+    if (instruction === FIX_INSTRUCTION_STOP) {
+      return `${instruction} ${buildRecheckInstruction(runtime, rerunCommand, "recheck")}`;
     }
     return instruction;
   });

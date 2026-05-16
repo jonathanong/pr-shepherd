@@ -1,8 +1,12 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { randomBytes } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
 import { rm, writeFile, mkdir, readdir } from "node:fs/promises";
 import { join } from "node:path";
+
+function idToFilename(id: string): string {
+  return createHash("sha256").update(id, "utf8").digest("hex") + ".json";
+}
 import {
   hasSeen,
   markSeen,
@@ -40,14 +44,14 @@ describe("markSeen — fire and forget", () => {
   });
 
   it("cleans up temp file when rename fails (directory at destination)", async () => {
-    // Place a directory at the marker path so rename(tmp, path) throws EISDIR.
+    // Place a directory at the hash-based marker path so rename(tmp, path) throws EISDIR.
     const seenDir = join(
       testStateDir,
       `${testKey.owner}-${testKey.repo}`,
       String(testKey.pr),
       "seen",
     );
-    const markerPath = join(seenDir, `${testId}.json`);
+    const markerPath = join(seenDir, idToFilename(testId));
     await mkdir(markerPath, { recursive: true }); // directory where file would go
     await expect(markSeen(testKey, testId, "body")).resolves.toBeUndefined();
     // No .tmp files should remain in the seen dir.

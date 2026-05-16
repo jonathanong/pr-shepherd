@@ -50,89 +50,58 @@ afterEach(() => {
 });
 
 describe("main — iterate fix_code instruction rewriting", () => {
-  it("rewrites wait instruction to Codex sleep wording", async () => {
+  it("rewrites wait instruction with unified recheck wording", async () => {
     process.env.AGENT = "codex";
     mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
 
     await main(["node", "shepherd", "iterate", "42", "--ready-delay", "15m"]);
     const out = getStdout();
     expect(out).toContain(
-      "1. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42 --ready-delay 15m` to continue the active goal.",
+      "1. Recheck: rerun `npx pr-shepherd 42 --ready-delay 15m` to continue the active goal once after a fresh 30s–4m delay.",
     );
-    expect(out).not.toContain("Schedule one session-only");
   });
 
-  it("rewrites mark_ready instruction to Codex sleep wording", async () => {
+  it("rewrites mark_ready instruction with unified recheck wording", async () => {
     process.env.AGENT = "codex";
     mockRunIterate.mockResolvedValue(makeIterateResult("mark_ready"));
 
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain(
-      "1. The CLI already marked the PR ready for review. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.",
+      "1. The CLI already marked the PR ready for review. Recheck: rerun `npx pr-shepherd 42` to recheck once after a fresh 30s–4m delay.",
     );
-    expect(out).not.toContain("Schedule one session-only");
   });
 
-  it("text rewrites stop-after-push instruction to Codex sleep wording", async () => {
+  it("text rewrites stop instruction with unified recheck wording", async () => {
     process.env.AGENT = "codex";
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
     result.fix.instructions = [
-      'Commit changed files: `git add <files> && git commit -m "<descriptive message>"`',
-      "Stop this iteration — CI needs time to run on the new push before the next tick.",
+      "If you applied code edits: commit them with a descriptive message, then rebase onto `origin/main` per your repository's conventions before pushing.",
+      "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
     ];
     mockRunIterate.mockResolvedValue(result);
 
     await main(["node", "shepherd", "iterate", "42", "--ready-delay", "15m"]);
     const out = getStdout();
     expect(out).toContain(
-      "2. CI needs time to run on the new push. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42 --ready-delay 15m` to recheck.",
+      "2. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick. Recheck: rerun `npx pr-shepherd 42 --ready-delay 15m` to recheck once after a fresh 30s–4m delay.",
     );
-    expect(out).not.toContain("before the next tick");
   });
 
-  it("json rewrites stop-after-push instruction", async () => {
+  it("json rewrites stop instruction", async () => {
     process.env.AGENT = "codex";
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
     result.fix.instructions = [
-      "Stop this iteration — CI needs time to run on the new push before the next tick.",
+      "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
     ];
     mockRunIterate.mockResolvedValue(result);
 
     await main(["node", "shepherd", "iterate", "42", "--format=json", "--ready-delay", "2h"]);
     const parsed = JSON.parse(getStdout().trimEnd());
     expect(parsed.fix.instructions).toEqual([
-      "CI needs time to run on the new push. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42 --ready-delay 2h` to recheck.",
-    ]);
-  });
-
-  it("rewrites no-push final instruction to Codex sleep wording", async () => {
-    process.env.AGENT = "codex";
-    const result = makeIterateResult("fix_code");
-    if (result.action !== "fix_code") throw new Error("unreachable");
-    result.fix.instructions = ["Stop this iteration before the next tick."];
-    mockRunIterate.mockResolvedValue(result);
-
-    await main(["node", "shepherd", "iterate", "42", "--format=json"]);
-    const parsed = JSON.parse(getStdout().trimEnd());
-    expect(parsed.fix.instructions).toEqual([
-      "Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.",
-    ]);
-  });
-
-  it("rewrites mutation-without-push final instruction to Codex sleep wording", async () => {
-    process.env.AGENT = "codex";
-    const result = makeIterateResult("fix_code");
-    if (result.action !== "fix_code") throw new Error("unreachable");
-    result.fix.instructions = ["Stop this iteration before the next tick."];
-    mockRunIterate.mockResolvedValue(result);
-
-    await main(["node", "shepherd", "iterate", "42", "--format=json"]);
-    const parsed = JSON.parse(getStdout().trimEnd());
-    expect(parsed.fix.instructions).toEqual([
-      "Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.",
+      "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick. Recheck: rerun `npx pr-shepherd 42 --ready-delay 2h` to recheck once after a fresh 30s–4m delay.",
     ]);
   });
 });

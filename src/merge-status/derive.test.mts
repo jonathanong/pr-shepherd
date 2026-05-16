@@ -23,6 +23,7 @@ function makePr(overrides: Partial<BatchPrData>): BatchPrData {
     changesRequestedReviews: [],
     reviewSummaries: [],
     approvedReviews: [],
+    branchProtection: null,
     checks: [],
     ...overrides,
   };

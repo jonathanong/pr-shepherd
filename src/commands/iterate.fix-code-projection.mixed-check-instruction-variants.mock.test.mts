@@ -74,13 +74,13 @@ describe("runIterate — fix_code agent projection", () => {
     if (result.action === "fix_code") {
       expect(result.fix.checks).toHaveLength(3);
       const joined = result.fix.instructions.join("\n");
-      // All three instruction variants present:
-      expect(joined).toContain("with a run ID");
-      expect(joined).toContain("external status check");
-      expect(joined).toContain("(no runId)");
-      // And each appears exactly once:
-      expect(joined.match(/with a run ID/g)).toHaveLength(1);
-      expect(joined.match(/external status check/g)).toHaveLength(1);
+      // All three instruction variants present in the single collapsed instruction:
+      expect(joined).toContain("gh run view <runId> --log-failed"); // runId variant
+      expect(joined).toContain("`external` entries"); // external (URL, no runId) variant
+      expect(joined).toContain("(no runId)"); // bare (no runId, no URL) variant
+      // Single instruction — each key phrase appears exactly once:
+      expect(joined.match(/gh run view <runId> --log-failed/g)).toHaveLength(1);
+      expect(joined.match(/`external` entries/g)).toHaveLength(1);
       expect(joined.match(/\(no runId\)/g)).toHaveLength(1);
     }
   });

@@ -46,7 +46,13 @@ export function formatIterateResult(
 
   let summaryLine: string;
   if (verbose) {
-    summaryLine = `**summary** ${result.summary.passing} passing, ${result.summary.skipped} skipped, ${result.summary.filtered} filtered, ${result.summary.inProgress} inProgress · **remainingSeconds** ${result.remainingSeconds} · **blockingBotReviewInProgress** ${result.blockingBotReviewInProgress} · **isDraft** ${result.isDraft} · **shouldCancel** ${result.shouldCancel}`;
+    let verboseBranch = "";
+    if (result.mergeStatus === "BEHIND" && result.baseBranch) {
+      verboseBranch = ` · **branch** behind \`origin/${result.baseBranch}\``;
+    } else if (result.mergeStatus === "CONFLICTS" && result.baseBranch) {
+      verboseBranch = ` · **branch** conflicts with \`origin/${result.baseBranch}\``;
+    }
+    summaryLine = `**summary** ${result.summary.passing} passing, ${result.summary.skipped} skipped, ${result.summary.filtered} filtered, ${result.summary.inProgress} inProgress · **remainingSeconds** ${result.remainingSeconds} · **blockingBotReviewInProgress** ${result.blockingBotReviewInProgress} · **isDraft** ${result.isDraft} · **shouldCancel** ${result.shouldCancel}${verboseBranch}`;
   } else {
     const counts = [`${result.summary.passing} passing`];
     if (result.summary.skipped > 0) counts.push(`${result.summary.skipped} skipped`);
@@ -58,10 +64,38 @@ export function formatIterateResult(
     }
     if (result.blockingBotReviewInProgress) segs.push(`**blockingBotReviewInProgress**`);
     if (result.isDraft) segs.push(`**isDraft**`);
+    if (result.mergeStatus === "BEHIND" && result.baseBranch) {
+      segs.push(`**branch** behind \`origin/${result.baseBranch}\``);
+    } else if (result.mergeStatus === "CONFLICTS" && result.baseBranch) {
+      segs.push(`**branch** conflicts with \`origin/${result.baseBranch}\``);
+    }
     summaryLine = segs.join(" · ");
   }
 
-  const header = [heading, "", baseLine, summaryLine].join("\n");
+  const bp = result.branchProtection;
+  const requiredParts: string[] = [];
+  if (bp) {
+    if (bp.requiresApprovingReviews && bp.requiredApprovingReviewCount > 0) {
+      requiredParts.push(`approvals \`${bp.requiredApprovingReviewCount}\``);
+    }
+    if (bp.requiresConversationResolution) {
+      requiredParts.push("conversation-resolution required");
+    }
+    if (bp.requiresStatusChecks) {
+      if (bp.requiredStatusCheckContexts.length > 0) {
+        requiredParts.push(
+          `checks: ${bp.requiredStatusCheckContexts.map((c) => `\`${c}\``).join(", ")}`,
+        );
+      } else {
+        requiredParts.push("status checks required");
+      }
+    }
+  }
+  const requiredLine = requiredParts.length > 0 ? `**required** ${requiredParts.join(", ")}` : null;
+
+  const headerLines = [heading, "", baseLine, summaryLine];
+  if (requiredLine) headerLines.push(requiredLine);
+  const header = headerLines.join("\n");
 
   switch (result.action) {
     case "wait":
@@ -78,12 +112,15 @@ export function formatIterateResult(
         `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix, runner))}`,
       ]);
 
-    case "cancel":
+    case "cancel": {
+      const cancelHeaderLines = [`${heading} — ${result.reason}`, "", baseLine, summaryLine];
+      if (requiredLine) cancelHeaderLines.push(requiredLine);
       return joinSections([
-        [`${heading} — ${result.reason}`, "", baseLine, summaryLine].join("\n"),
+        cancelHeaderLines.join("\n"),
         adaptIterateLog(result.log, runtime),
         `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, runtime, readyDelaySuffix, runner))}`,
       ]);
+    }
 
     case "escalate":
       return joinSections([

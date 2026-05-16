@@ -1,7 +1,7 @@
 # PR #42 [FIX_CODE]
 
 **status** `FAILING` · **merge** `DIRTY` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 1 passing
+**summary** 1 passing · **branch** conflicts with `origin/main`
 
 ## Post-fix push
 
@@ -9,5 +9,5 @@
 
 ## Instructions
 
-1. Rebase with conflict resolution: run `git fetch origin && git rebase origin/main`. If the rebase halts with conflicts, edit the conflicted files to resolve them, `git add <files>`, then `git rebase --continue`. Repeat until the rebase completes, then `git push --force-with-lease`.
-2. CI needs time to run on the new push. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to recheck.
+1. The branch has merge conflicts — rebase onto `origin/main` per your repository's conventions to resolve them, then push.
+2. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick. Recheck: rerun `npx pr-shepherd 42` to recheck once after a fresh 30s–4m delay.

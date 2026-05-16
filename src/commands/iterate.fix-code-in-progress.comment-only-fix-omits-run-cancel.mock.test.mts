@@ -12,7 +12,7 @@ import { runIterate } from "./iterate/index.mts";
 registerHooks();
 
 describe("fix_code — in-progress run cancellation", () => {
-  it("inProgressRunIds is empty for comment-only fixes because no push is guaranteed", async () => {
+  it("inProgressRunIds is included for comment-only fixes so agent can decide whether to cancel", async () => {
     const inProgressCheck = {
       name: "ci",
       status: "IN_PROGRESS" as const,
@@ -61,9 +61,12 @@ describe("fix_code — in-progress run cancellation", () => {
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       expect(result.fix.actionableComments).toHaveLength(1);
-      expect(result.fix.inProgressRunIds).toHaveLength(0);
-      expect(result.fix.instructions.join("\n")).not.toMatch(/Cancel in-progress CI runs first/);
-      expect(result.fix.instructions.join("\n")).not.toMatch(/Rebase and push/);
+      // inProgressRunIds is always populated so the agent can decide whether to cancel
+      expect(result.fix.inProgressRunIds).toContain("run-in-comment-only");
+      // Instruction is conditional ("If you decide to push") rather than mandatory
+      expect(result.fix.instructions.join("\n")).toMatch(/If you decide to push new commits/);
+      // No prescriptive rebase commands
+      expect(result.fix.instructions.join("\n")).not.toMatch(/git fetch origin && git rebase/);
     }
   });
 
@@ -130,12 +133,10 @@ describe("fix_code — in-progress run cancellation", () => {
       expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
       expect(result.fix.resolveCommand.argv).toContain("PRR_review_change_request");
       const instructions = result.fix.instructions.join("\n");
-      expect(instructions).toMatch(/Cancel in-progress CI runs first/);
+      expect(instructions).toMatch(/If you decide to push new commits/);
+      expect(instructions).toMatch(/rebase onto.*per your repository's conventions/);
       expect(instructions).toContain(
-        "Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease`",
-      );
-      expect(instructions).toContain(
-        "Stop this iteration — CI needs time to run on the new push before the next tick.",
+        "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
       );
     }
   });

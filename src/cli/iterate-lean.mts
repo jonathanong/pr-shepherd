@@ -49,6 +49,7 @@ export function projectIterateLean(
         remainingSeconds: result.remainingSeconds,
       }),
     ...(result.baseBranch && { baseBranch: result.baseBranch }),
+    ...(result.branchProtection !== null && { branchProtection: result.branchProtection }),
   };
 
   switch (result.action) {

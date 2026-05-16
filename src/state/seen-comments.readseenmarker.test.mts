@@ -1,8 +1,12 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { randomBytes } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
 import { rm, writeFile, mkdir, readdir } from "node:fs/promises";
 import { join } from "node:path";
+
+function idToFilename(id: string): string {
+  return createHash("sha256").update(id, "utf8").digest("hex") + ".json";
+}
 import {
   hasSeen,
   markSeen,
@@ -46,7 +50,7 @@ describe("readSeenMarker", () => {
     const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr), "seen");
     await mkdir(dir, { recursive: true });
     await writeFile(
-      join(dir, `${testId}.json`),
+      join(dir, idToFilename(testId)),
       JSON.stringify({ seenAt: 1000, classification: "Acknowledged", extra: true }),
       "utf8",
     );
@@ -58,7 +62,7 @@ describe("readSeenMarker", () => {
   it("returns null on invalid JSON", async () => {
     const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr), "seen");
     await mkdir(dir, { recursive: true });
-    await writeFile(join(dir, `${testId}.json`), "not json", "utf8");
+    await writeFile(join(dir, idToFilename(testId)), "not json", "utf8");
     expect(await readSeenMarker(testKey, testId)).toBeNull();
   });
 });

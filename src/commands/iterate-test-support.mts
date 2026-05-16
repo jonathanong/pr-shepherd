@@ -110,6 +110,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
     firstLookSummaries: [],
     editedSummaries: [],
     approvedReviews: [],
+    branchProtection: null,
     ...overrides,
   };
 }

@@ -114,16 +114,22 @@ export function buildEscalateHumanMessage(
     lines.push("");
     for (const t of escalate.unresolvedThreads) {
       const loc = t.path ? `\`${t.path}:${t.line ?? "?"}\`` : "(no location)";
-      const firstLine = t.body.split("\n")[0] ?? "";
-      lines.push(`- thread \`${t.id}\` — ${loc} (@${t.author}): ${firstLine}`);
+      lines.push(`- thread \`${t.id}\` — ${loc} (@${t.author}):`);
+      lines.push("");
+      for (const bodyLine of t.body.split("\n")) lines.push(`  > ${bodyLine}`);
+      lines.push("");
     }
     for (const r of escalate.changesRequestedReviews) {
-      const firstLine = r.body.split("\n")[0] ?? "";
-      lines.push(`- review \`${r.id}\` (@${r.author}): ${firstLine}`);
+      lines.push(`- review \`${r.id}\` (@${r.author}):`);
+      lines.push("");
+      for (const bodyLine of r.body.split("\n")) lines.push(`  > ${bodyLine}`);
+      lines.push("");
     }
     for (const c of escalate.ambiguousComments) {
-      const firstLine = c.body.split("\n")[0] ?? "";
-      lines.push(`- comment \`${c.id}\` (@${c.author}): ${firstLine}`);
+      lines.push(`- comment \`${c.id}\` (@${c.author}):`);
+      lines.push("");
+      for (const bodyLine of c.body.split("\n")) lines.push(`  > ${bodyLine}`);
+      lines.push("");
     }
   }
 

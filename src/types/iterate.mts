@@ -11,6 +11,7 @@ import type {
   FirstLookComment,
 } from "./report.mts";
 import type {
+  BranchProtection,
   MergeStateStatus,
   Review,
   ReviewDecision,
@@ -73,6 +74,8 @@ export interface IterateResultBase {
   summary: IterateResultSummary;
   /** Validated base branch (e.g. "main") for this PR. */
   baseBranch: string;
+  /** Branch protection rule for the PR's base branch. Null when no rule exists or the base ref is unavailable. */
+  branchProtection: BranchProtection | null;
   /**
    * All CI checks that are relevant to PR readiness: triggered by a PR event
    * (pull_request / pull_request_target, or StatusContext with null event),
@@ -138,7 +141,7 @@ interface FixRebaseAndPush {
   resolveCommand: ResolveCommand;
   /** Ordered steps for the model to follow. */
   instructions: string[];
-  /** Run IDs of in-progress checks the agent should cancel before applying fixes. Empty when there are no in-progress GitHub Actions run IDs to cancel (e.g. all in-progress runs are external status checks or already cancelled), or when no push is expected this iteration. */
+  /** Run IDs of in-progress GitHub Actions checks. The agent should cancel these before pushing new commits; if it decides not to push (e.g. resolve-only), it may skip cancellation. Empty when all in-progress runs are external status checks or already cancelled. */
   inProgressRunIds: string[];
   /** First-look threads — previously hidden, surfaced for acknowledgment only. */
   firstLookThreads: FirstLookThread[];

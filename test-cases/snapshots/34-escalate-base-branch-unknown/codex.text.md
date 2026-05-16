@@ -11,7 +11,10 @@ Could not determine the PR's base branch (GraphQL batch returned an empty base b
 
 ## Items needing attention
 
-- thread `PRRT_base` — `src/main.ts:1` (@reviewer): Please fix the import order.
+- thread `PRRT_base` — `src/main.ts:1` (@reviewer):
+
+  > Please fix the import order.
+
 
 ---
 

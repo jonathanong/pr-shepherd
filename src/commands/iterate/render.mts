@@ -17,14 +17,13 @@ import {
 } from "../shepherd-journal.mts";
 import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
 
-export const FIX_INSTRUCTION_STOP_AFTER_PUSH =
-  "Stop this iteration — CI needs time to run on the new push before the next tick.";
-export const FIX_INSTRUCTION_STOP_BEFORE_NEXT_TICK = "Stop this iteration before the next tick.";
+export const FIX_INSTRUCTION_STOP =
+  "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.";
 
 /**
  * Render a resolve command as a shell snippet. Wraps `$DISMISS_MESSAGE`, `$HEAD_SHA`, and
- * whitespace-bearing argv entries for placeholder substitution. `$HEAD_SHA` is appended separately
- * when `requiresHeadSha` is set.
+ * whitespace-bearing argv entries for placeholder substitution. `$HEAD_SHA` is never in `argv` —
+ * `renderResolveCommand` appends `--require-sha "$HEAD_SHA"` when `requiresHeadSha` is set.
  */
 export function renderResolveCommand(rc: ResolveCommand): string {
   const parts = [...rc.argv];
@@ -51,22 +50,58 @@ export function buildFixInstructions(
   inProgressRunIds: string[] = [],
   resolutionOnlyThreads: ReviewThread[] = [],
   runner?: CliRunner,
-  needsPushInput?: boolean,
 ): string[] {
   const instructions: string[] = [];
-  const hasCodeWork = threads.length > 0 || checks.length > 0;
-  const needsPush = needsPushInput ?? (hasCodeWork || hasConflicts);
-  if (inProgressRunIds.length > 0) {
+
+  const hasNonConflictHints =
+    threads.length > 0 ||
+    checks.length > 0 ||
+    changesRequestedReviews.length > 0 ||
+    actionableComments.length > 0;
+
+  // Leading decision or mandatory instruction depending on what actionable items exist.
+  if (hasNonConflictHints) {
+    const actionableSections: string[] = [];
+    if (threads.length > 0) actionableSections.push("`## Review threads`");
+    if (actionableComments.length > 0) actionableSections.push("`## Actionable comments`");
+    if (checks.length > 0) actionableSections.push("`## Failing checks`");
+    if (changesRequestedReviews.length > 0)
+      actionableSections.push("`## Changes-requested reviews`");
+    const sectionRef =
+      actionableSections.length > 0 ? `under ${actionableSections.join(", ")}` : "above";
+    const resolveClause = resolveCommand.hasMutations ? ", then run the `resolve:` command" : "";
+    if (hasConflicts) {
+      // Conflicts make push mandatory regardless of whether code edits are needed.
+      instructions.push(
+        `The branch has merge conflicts that require rebase before merging. Apply any code edits for items ${sectionRef}, commit if edits were made, rebase onto \`origin/${baseBranch}\` per your repository's conventions, push${resolveClause}.`,
+      );
+    } else {
+      const skipClause = resolveCommand.hasMutations
+        ? "skip cancellation/commit/push and run the `resolve:` command"
+        : "no push is needed";
+      instructions.push(
+        `Decide for each item ${sectionRef} whether a code change is warranted. **If any code changes are needed:** cancel in-progress runs first, apply edits, commit, rebase, push${resolveClause}. **If no code changes are needed:** ${skipClause}.`,
+      );
+    }
+  } else if (hasConflicts) {
     instructions.push(
-      `Cancel in-progress CI runs first: for each ID under \`## In-progress runs\`, run \`gh run cancel <id>\` before applying code fixes. If \`gh\` reports a run is already completed, ignore it and continue with the next ID.`,
+      `The branch has merge conflicts — rebase onto \`origin/${baseBranch}\` per your repository's conventions to resolve them, then push.`,
     );
   }
+
+  if (inProgressRunIds.length > 0) {
+    instructions.push(
+      `If you decide to push new commits: cancel each in-progress run listed under \`## In-progress runs\` before applying code fixes (e.g. \`gh run cancel <id>\`). Runs may complete between the tick and your action; treat cancellation errors on already-finished runs as non-fatal. Skip this step if you are only resolving threads without pushing — the existing runs remain relevant.`,
+    );
+  }
+
   const hasSuggestions = threads.some((t) => t.suggestion);
   if (hasSuggestions) {
     instructions.push(
       buildCommitSuggestionInstruction(prNumber, "## Review threads", false, runner),
     );
   }
+
   if (threads.length > 0 || actionableComments.length > 0) {
     const suggestionFallback = hasSuggestions
       ? ` When applying a \`[suggestion]\` thread manually (e.g. after a failed \`commit-suggestion\` run), replace the exact line range shown in the heading (\`path:startLine-endLine\`) with the replacement shown in its \`Replaces lines …\` block verbatim — an empty replacement deletes those lines, a single blank line replaces the range with one blank line.`
@@ -75,47 +110,50 @@ export function buildFixInstructions(
       `Apply code fixes: read and edit each file referenced under \`## Review threads\` and \`## Actionable comments\` above.${suggestionFallback}`,
     );
   }
+
   if (resolutionOnlyThreads.length > 0) {
     instructions.push(
       `Resolve the threads under \`## Review threads to resolve\` with the \`resolve:\` command shown below. These threads are already outdated or minimized, so no code edit is required for them unless their body reveals separate work you choose to do.`,
     );
   }
+
   instructions.push(...buildFailingCheckInstructions(checks));
+
   if (changesRequestedReviews.length > 0) {
     instructions.push(
       `For each bullet under \`## Changes-requested reviews\` above: read the review body and apply the requested changes.`,
     );
   }
 
-  if (needsPush && (hasCodeWork || changesRequestedReviews.length > 0)) {
+  if (hasNonConflictHints) {
     instructions.push(
-      `Commit changed files: \`git add <files> && git commit -m "<descriptive message>"\``,
+      `If you applied code edits: commit them with a descriptive message, then rebase onto \`origin/${baseBranch}\` per your repository's conventions before pushing.`,
     );
   }
-  if (changesRequestedReviews.length > 0) {
-    instructions.push(
-      `Keep the PR title and description current: if the changes alter the PR's scope or intent, run \`gh pr edit ${prNumber} --title "<new title>" --body "<new body>"\` to reflect them. Skip if the existing title/body still accurately describe the PR.`,
-    );
-  }
-  if (!needsPush && resolveCommand.requiresHeadSha) {
-    instructions.push(
-      "Capture the current HEAD SHA before resolving with: `HEAD_SHA=$(git rev-parse HEAD)`.",
-    );
-  }
-  if (needsPush) {
-    const captureHint = resolveCommand.requiresHeadSha
-      ? ` — capture \`HEAD_SHA=$(git rev-parse HEAD)\``
-      : "";
-    if (hasConflicts) {
-      instructions.push(
-        `Rebase with conflict resolution: run \`git fetch origin && git rebase origin/${baseBranch}\`. If the rebase halts with conflicts, edit the conflicted files to resolve them, \`git add <files>\`, then \`git rebase --continue\`. Repeat until the rebase completes, then \`git push --force-with-lease\`${captureHint}.`,
-      );
-    } else {
-      instructions.push(
-        `Rebase and push: \`git fetch origin && git rebase origin/${baseBranch} && git push --force-with-lease\`${captureHint}`,
+
+  if (resolveCommand.hasMutations) {
+    const substituteParts: string[] = [];
+    if (resolveCommand.requiresHeadSha) {
+      substituteParts.push(
+        `\`$HEAD_SHA\` with the pushed commit SHA (or \`$(git rev-parse HEAD)\` if you did not push)`,
       );
     }
+    if (resolveCommand.requiresDismissMessage) {
+      substituteParts.push(
+        `\`$DISMISS_MESSAGE\` with a one-sentence description of what you changed`,
+      );
+    }
+    const substituteHint =
+      substituteParts.length > 0 ? `, substituting ${substituteParts.join(" and ")}` : "";
+    instructions.push(`Run the \`resolve:\` command shown above${substituteHint}.`);
   }
+
+  if (cancelledCount > 0) {
+    instructions.push(
+      `Do not re-run \`gh run cancel\` on the IDs listed under \`## Cancelled runs\` — those runs were already cancelled by the CLI before this turn.`,
+    );
+  }
+
   const firstLookTotal = firstLookThreads.length + firstLookComments.length;
   if (firstLookTotal > 0) {
     instructions.push(
@@ -134,24 +172,7 @@ export function buildFixInstructions(
       `Items under \`## Review summaries (edited since first look)\` and any first-look bullet tagged \`, edited\` were updated by their author after you previously acknowledged them. Read the updated body before deciding whether any matching \`## Review threads to resolve\` item should be resolved.`,
     );
   }
-  if (resolveCommand.hasMutations) {
-    const substituteParts: string[] = [];
-    if (resolveCommand.requiresHeadSha) {
-      const shaSource = needsPush ? "pushed commit SHA" : "current HEAD SHA";
-      substituteParts.push(`"$HEAD_SHA" with the ${shaSource}`);
-    }
-    if (resolveCommand.requiresDismissMessage) {
-      substituteParts.push(`$DISMISS_MESSAGE with a one-sentence description of what you changed`);
-    }
-    const substituteHint =
-      substituteParts.length > 0 ? `, substituting ${substituteParts.join(" and ")}` : "";
-    instructions.push(`Run the \`resolve:\` command shown above${substituteHint}.`);
-  }
-  if (needsPush && cancelledCount > 0) {
-    instructions.push(
-      `Do not re-run \`gh run cancel\` on the IDs listed under \`## Cancelled runs\` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.`,
-    );
-  }
+
   if (resolveCommand.hasMutations) {
     instructions.push(
       buildShepherdJournalInstruction(
@@ -160,11 +181,8 @@ export function buildFixInstructions(
       ),
     );
   }
-  if (needsPush) {
-    instructions.push(FIX_INSTRUCTION_STOP_AFTER_PUSH);
-  } else {
-    instructions.push(FIX_INSTRUCTION_STOP_BEFORE_NEXT_TICK);
-  }
+
+  instructions.push(FIX_INSTRUCTION_STOP);
 
   return instructions;
 }

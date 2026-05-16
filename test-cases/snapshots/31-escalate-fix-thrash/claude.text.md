@@ -11,7 +11,10 @@ Same thread(s) reached the automated attempt limit — treat this as a manual ha
 
 ## Items needing attention
 
-- thread `PRRT_thrash` — `src/auth.ts:88` (@reviewer): This authentication logic is too complex, please simplify.
+- thread `PRRT_thrash` — `src/auth.ts:88` (@reviewer):
+
+  > This authentication logic is too complex, please simplify.
+
 
 ## Fix attempts
 

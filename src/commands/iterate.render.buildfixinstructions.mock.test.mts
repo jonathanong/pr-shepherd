@@ -71,24 +71,24 @@ describe("buildFixInstructions", () => {
       0,
     );
 
-    expect(instructions.join("\n")).toContain(
+    const text = instructions.join("\n");
+    expect(text).toContain(
       "For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.",
     );
-    expect(instructions.join("\n")).toContain(
-      `Keep the PR title and description current: if the changes alter the PR's scope or intent, run \`gh pr edit 42 --title "<new title>" --body "<new body>"\` to reflect them. Skip if the existing title/body still accurately describe the PR.`,
+    // Conditional commit/rebase phrasing (agent decides if code edits are needed)
+    expect(text).toContain("If you applied code edits: commit them with a descriptive message");
+    // resolve substitution uses backtick-quoted $HEAD_SHA with fallback
+    expect(text).toContain("substituting `$HEAD_SHA` with the pushed commit SHA");
+    // New stop sentinel
+    expect(text).toContain(
+      "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
     );
-    expect(instructions.join("\n")).toContain(
-      'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the current HEAD SHA',
-    );
-    expect(instructions.join("\n")).toContain(
-      "Capture the current HEAD SHA before resolving with: `HEAD_SHA=$(git rev-parse HEAD)`.",
-    );
-    expect(instructions.join("\n")).not.toContain("Commit changed files:");
-    expect(instructions.join("\n")).not.toContain("Rebase and push:");
-    expect(instructions.join("\n")).toContain("Stop this iteration before the next tick.");
+    // Old prescriptive git commands gone
+    expect(text).not.toContain("Commit changed files:");
+    expect(text).not.toContain("Rebase and push:");
   });
 
-  it("uses pushed commit SHA substitution when review requests require a push", () => {
+  it("resolve substitution always includes fallback for unpushed case", () => {
     const instructions = buildFixInstructions(
       [],
       [],
@@ -111,24 +111,15 @@ describe("buildFixInstructions", () => {
       false,
       42,
       0,
-      [],
-      [],
-      [],
-      [],
-      [],
-      [],
-      undefined,
-      true,
     );
 
     const text = instructions.join("\n");
-    expect(text).toContain(
-      'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA',
-    );
-    expect(text).not.toContain('substituting "$HEAD_SHA" with the current HEAD SHA');
+    // Always includes "pushed commit SHA" with unpushed fallback
+    expect(text).toContain("substituting `$HEAD_SHA` with the pushed commit SHA");
+    expect(text).toContain("$(git rev-parse HEAD)");
   });
 
-  it("uses explicit needsPushInput override to force push-style guidance", () => {
+  it("conditional commit/rebase instruction present when changes-requested reviews exist", () => {
     const instructions = buildFixInstructions(
       [],
       [],
@@ -151,30 +142,24 @@ describe("buildFixInstructions", () => {
       false,
       42,
       0,
-      [],
-      [],
-      [],
-      [],
-      [],
-      [],
-      undefined,
-      true,
     );
 
     const text = instructions.join("\n");
+    // New conditional phrasing — no prescriptive git commands
+    expect(text).toContain("If you applied code edits: commit them with a descriptive message");
+    expect(text).toContain("rebase onto `origin/main` per your repository's conventions");
+    expect(text).toContain("substituting `$HEAD_SHA` with the pushed commit SHA");
+    // No prescriptive git command lines
+    expect(text).not.toContain("git add");
+    expect(text).not.toContain("git fetch origin");
+    expect(text).not.toContain("git push --force-with-lease");
+    // New stop sentinel
     expect(text).toContain(
-      'Commit changed files: `git add <files> && git commit -m "<descriptive message>"`',
+      "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
     );
-    expect(text).toContain(
-      "Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease`",
-    );
-    expect(text).toContain(
-      'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA',
-    );
-    expect(text).not.toContain("Stop this iteration before the next tick.");
   });
 
-  it("does not emit commit/push guidance when review changes are review-only but needsPush is forced off", () => {
+  it("agent-facing commit/rebase instruction always conditional regardless of review type", () => {
     const instructions = buildFixInstructions(
       [],
       [],
@@ -197,32 +182,22 @@ describe("buildFixInstructions", () => {
       false,
       42,
       0,
-      [],
-      [],
-      [],
-      [],
-      [],
-      [],
-      undefined,
-      false,
     );
 
     const text = instructions.join("\n");
     expect(text).toContain(
       "For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.",
     );
-    expect(text).toContain(
-      `Keep the PR title and description current: if the changes alter the PR's scope or intent, run \`gh pr edit 42 --title "<new title>" --body "<new body>"\` to reflect them. Skip if the existing title/body still accurately describe the PR.`,
-    );
-    expect(text).toContain(
-      'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the current HEAD SHA',
-    );
-    expect(text).toContain(
-      "Capture the current HEAD SHA before resolving with: `HEAD_SHA=$(git rev-parse HEAD)`.",
-    );
+    // Conditional phrasing — agent decides whether code edits are needed
+    expect(text).toContain("If you applied code edits: commit them with a descriptive message");
+    // No old prescriptive commands
     expect(text).not.toContain("Commit changed files:");
     expect(text).not.toContain("Rebase and push:");
-    expect(text).not.toContain("Stop this iteration — CI needs time to run on the new push");
-    expect(text).toContain("Stop this iteration before the next tick.");
+    expect(text).not.toContain("git add");
+    expect(text).not.toContain("git push --force-with-lease");
+    // New stop sentinel
+    expect(text).toContain(
+      "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
+    );
   });
 });

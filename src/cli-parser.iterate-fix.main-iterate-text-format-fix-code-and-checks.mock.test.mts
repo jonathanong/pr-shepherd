@@ -32,9 +32,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     // Fallback instruction always present for consistency with the invariant that
     // every iterate output ends with ## Instructions.
     expect(out).toContain("## Instructions");
-    expect(out).toContain(
-      "1. Single-shot continuation: schedule one session-only follow-up task to run `npx pr-shepherd 42` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.",
-    );
+    expect(out).toContain("Stop this iteration — if you pushed new commits");
   });
   it("fix_code (rich payload): sections appear in fixed order with backtick-quoted codes", async () => {
     const result: IterateResult = {

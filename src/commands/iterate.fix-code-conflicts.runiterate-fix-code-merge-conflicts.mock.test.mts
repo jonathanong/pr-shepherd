@@ -40,15 +40,15 @@ describe("runIterate — fix_code (merge conflicts)", () => {
     if (result.action === "fix_code") {
       expect(result.fix.threads).toHaveLength(0);
       expect(result.fix.checks).toHaveLength(0);
-      // CONFLICTS-only: no commit step (nothing to commit), but we still
-      // emit a rebase-with-conflict-resolution instruction and no resolve step.
+      // CONFLICTS-only: conditional commit/rebase instruction (agent decides),
+      // no prescriptive git commands, and no resolve step (nothing to resolve).
       const joined = result.fix.instructions.join("\n");
       expect(joined).not.toContain("git commit");
       expect(joined).not.toContain("gh pr edit");
-      expect(joined).toContain("Rebase with conflict resolution");
-      expect(joined).toContain("git rebase --continue");
-      expect(joined).toContain("git push --force-with-lease");
-      expect(joined).not.toContain("resolve:");
+      expect(joined).toContain("rebase onto `origin/main` per your repository's conventions");
+      expect(joined).not.toContain("git rebase --continue");
+      // No actual resolve step — no threads/reviews to resolve
+      expect(joined).not.toContain("Run the `resolve:` command shown above");
     }
   });
 
@@ -101,13 +101,14 @@ describe("runIterate — fix_code (merge conflicts)", () => {
     if (result.action === "fix_code") {
       expect(result.fix.threads).toHaveLength(1);
       expect(result.fix.threads[0]?.id).toBe("thread-1");
-      // Threads + CONFLICTS: commit step, rebase-with-conflict-resolution (not
-      // the clean `&& git push` one-liner), and resolve step all present.
+      // Threads + CONFLICTS: conditional commit/rebase instruction plus resolve step.
+      // No prescriptive git commands — agent decides based on conditional phrasing.
       const joined = result.fix.instructions.join("\n");
-      expect(joined).toContain("git commit");
-      expect(joined).toContain("gh pr edit");
-      expect(joined).toContain("Rebase with conflict resolution");
-      expect(joined).toContain("git rebase --continue");
+      expect(joined).not.toContain("git commit");
+      expect(joined).toContain("gh pr edit"); // shepherd journal
+      expect(joined).toContain("If you applied code edits: commit them with a descriptive message");
+      expect(joined).toContain("rebase onto `origin/main` per your repository's conventions");
+      expect(joined).not.toContain("git rebase --continue");
       expect(joined).not.toMatch(/rebase origin\/\w+ && git push/);
       expect(joined).toContain("resolve:");
     }

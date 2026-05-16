@@ -7,4 +7,4 @@ MARKED READY: PR #42 converted from draft to ready for review
 
 ## Instructions
 
-1. The CLI already marked the PR ready for review. Single-shot continuation: schedule one session-only follow-up task to run `npx pr-shepherd 42` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
+1. The CLI already marked the PR ready for review. Recheck: rerun `npx pr-shepherd 42` to recheck once after a fresh 30s–4m delay.
