@@ -39,5 +39,6 @@ export function buildTerminalReport(
     firstLookSummaries: [],
     editedSummaries: [],
     approvedReviews: [],
+    branchProtection: batchData.branchProtection,
   };
 }

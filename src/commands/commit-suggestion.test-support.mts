@@ -101,6 +101,7 @@ function makeBatch(
     changesRequestedReviews: [],
     reviewSummaries: [],
     approvedReviews: [],
+    branchProtection: null,
   };
 }
 

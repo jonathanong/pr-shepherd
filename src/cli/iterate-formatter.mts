@@ -58,10 +58,34 @@ export function formatIterateResult(
     }
     if (result.blockingBotReviewInProgress) segs.push(`**blockingBotReviewInProgress**`);
     if (result.isDraft) segs.push(`**isDraft**`);
+    if (result.mergeStatus === "BEHIND" && result.baseBranch) {
+      segs.push(`**branch** behind \`origin/${result.baseBranch}\``);
+    } else if (result.mergeStatus === "CONFLICTS" && result.baseBranch) {
+      segs.push(`**branch** conflicts with \`origin/${result.baseBranch}\``);
+    }
     summaryLine = segs.join(" · ");
   }
 
-  const header = [heading, "", baseLine, summaryLine].join("\n");
+  const bp = result.branchProtection;
+  const requiredParts: string[] = [];
+  if (bp) {
+    if (bp.requiresApprovingReviews && bp.requiredApprovingReviewCount > 0) {
+      requiredParts.push(`approvals \`${bp.requiredApprovingReviewCount}\``);
+    }
+    if (bp.requiresConversationResolution) {
+      requiredParts.push("conversation-resolution");
+    }
+    if (bp.requiresStatusChecks && bp.requiredStatusCheckContexts.length > 0) {
+      requiredParts.push(
+        `checks: ${bp.requiredStatusCheckContexts.map((c) => `\`${c}\``).join(", ")}`,
+      );
+    }
+  }
+  const requiredLine = requiredParts.length > 0 ? `**required** ${requiredParts.join(", ")}` : null;
+
+  const headerLines = [heading, "", baseLine, summaryLine];
+  if (requiredLine) headerLines.push(requiredLine);
+  const header = headerLines.join("\n");
 
   switch (result.action) {
     case "wait":

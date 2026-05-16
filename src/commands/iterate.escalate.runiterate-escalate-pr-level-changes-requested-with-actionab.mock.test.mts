@@ -83,12 +83,12 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
       expect(result.fix.resolveCommand.requiresHeadSha).toBe(true);
       expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
       expect(result.fix.resolveCommand.argv).toContain("review-1");
-      expect(result.fix.instructions.join("\n")).toContain("Commit changed files:");
+      expect(result.fix.instructions.join("\n")).toContain("If you applied code edits: commit");
       expect(result.fix.instructions.join("\n")).toContain(
-        'Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.',
+        "Run the `resolve:` command shown above",
       );
       expect(result.fix.instructions.join("\n")).toContain(
-        "Stop this iteration — CI needs time to run on the new push before the next tick.",
+        "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
       );
     }
   });

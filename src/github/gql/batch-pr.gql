@@ -24,6 +24,15 @@ query BatchPr(
         nameWithOwner
       }
       baseRefName
+      baseRef {
+        branchProtectionRule {
+          requiresApprovingReviews
+          requiredApprovingReviewCount
+          requiresConversationResolution
+          requiresStatusChecks
+          requiredStatusCheckContexts
+        }
+      }
       # Not paginated — capped at 50; PRs with more pending reviewers truncate silently.
       reviewRequests(last: 50) {
         nodes {

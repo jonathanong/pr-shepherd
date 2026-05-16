@@ -1,8 +1,5 @@
 import type { AgentRuntime } from "../agent-runtime.mts";
-import {
-  FIX_INSTRUCTION_STOP_AFTER_PUSH,
-  FIX_INSTRUCTION_STOP_BEFORE_NEXT_TICK,
-} from "../commands/iterate/render.mts";
+import { FIX_INSTRUCTION_STOP } from "../commands/iterate/render.mts";
 import type { IterateResult } from "../types.mts";
 import { buildPrShepherdCommand, type CliRunner } from "./runner.mts";
 
@@ -49,11 +46,8 @@ export function adaptFixCodeInstructions(
 ): string[] {
   const rerunCommand = buildIterateCommand(pr, readyDelaySuffix, runner);
   return instructions.map((instruction) => {
-    if (instruction === FIX_INSTRUCTION_STOP_AFTER_PUSH) {
-      return `CI needs time to run on the new push. ${buildRecheckInstruction(runtime, rerunCommand, "recheck")}`;
-    }
-    if (instruction === FIX_INSTRUCTION_STOP_BEFORE_NEXT_TICK) {
-      return buildRecheckInstruction(runtime, rerunCommand, "recheck");
+    if (instruction === FIX_INSTRUCTION_STOP) {
+      return `${instruction} ${buildRecheckInstruction(runtime, rerunCommand, "recheck")}`;
     }
     return instruction;
   });

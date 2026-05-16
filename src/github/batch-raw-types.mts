@@ -18,6 +18,9 @@ export interface RawPr {
   headRefName: string;
   headRepository: { nameWithOwner: string } | null;
   baseRefName: string;
+  baseRef: {
+    branchProtectionRule: RawBranchProtectionRule | null;
+  } | null;
   reviewRequests: {
     nodes: Array<{
       requestedReviewer: { login?: string; name?: string } | null;
@@ -108,6 +111,14 @@ export interface RawReviewSummary {
   isMinimized: boolean;
   author: RawAuthor | null;
   body: string;
+}
+
+export interface RawBranchProtectionRule {
+  requiresApprovingReviews: boolean;
+  requiredApprovingReviewCount: number;
+  requiresConversationResolution: boolean;
+  requiresStatusChecks: boolean;
+  requiredStatusCheckContexts: string[];
 }
 
 export type RawContextNode =

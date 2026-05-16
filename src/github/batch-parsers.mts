@@ -1,6 +1,7 @@
 import type {
   AuthorType,
   BatchPrData,
+  BranchProtection,
   CheckConclusion,
   CheckRun,
   CheckStatus,
@@ -127,6 +128,17 @@ export function parseRawPr(
     return [];
   });
 
+  const rawProtection = raw.baseRef?.branchProtectionRule ?? null;
+  const branchProtection: BranchProtection | null = rawProtection
+    ? {
+        requiresApprovingReviews: rawProtection.requiresApprovingReviews,
+        requiredApprovingReviewCount: rawProtection.requiredApprovingReviewCount,
+        requiresConversationResolution: rawProtection.requiresConversationResolution,
+        requiresStatusChecks: rawProtection.requiresStatusChecks,
+        requiredStatusCheckContexts: rawProtection.requiredStatusCheckContexts,
+      }
+    : null;
+
   return {
     nodeId: raw.id,
     number: raw.number,
@@ -147,6 +159,7 @@ export function parseRawPr(
     reviewSummaries,
     approvedReviews,
     checks,
+    branchProtection,
   };
 }
 

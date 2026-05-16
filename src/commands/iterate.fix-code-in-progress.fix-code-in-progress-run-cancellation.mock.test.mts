@@ -83,10 +83,11 @@ describe("fix_code — in-progress run cancellation", () => {
     if (result.action === "fix_code") {
       expect(result.fix.inProgressRunIds).toContain("run-in-1");
       expect(result.fix.inProgressRunIds).not.toContain("run-fail-1");
-      expect(result.fix.instructions[0]).toMatch(/Cancel in-progress CI runs first/);
+      // Instruction is conditional on whether agent decides to push
+      expect(result.fix.instructions.join("\n")).toMatch(/If you decide to push new commits/);
     }
   });
-  it("inProgressRunIds is empty when needsPush is false (summary-only dispatch)", async () => {
+  it("inProgressRunIds is populated for summary-only dispatch (agent decides whether to cancel)", async () => {
     const inProgressCheck = {
       name: "ci",
       status: "IN_PROGRESS" as const,
@@ -122,8 +123,9 @@ describe("fix_code — in-progress run cancellation", () => {
     const result = await runIterate(makeOpts());
 
     if (result.action === "fix_code") {
-      expect(result.fix.inProgressRunIds).toHaveLength(0);
-      expect(result.fix.instructions.join("\n")).not.toMatch(/Cancel in-progress CI runs first/);
+      // inProgressRunIds is always populated; the agent decides whether to cancel
+      expect(result.fix.inProgressRunIds).toContain("run-in-2");
+      expect(result.fix.instructions.join("\n")).toMatch(/If you decide to push new commits/);
     }
   });
 });

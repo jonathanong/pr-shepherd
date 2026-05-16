@@ -88,6 +88,7 @@ function makeBatch(threads: ReviewThread[]): BatchPrData {
     changesRequestedReviews: [],
     reviewSummaries: [],
     approvedReviews: [],
+    branchProtection: null,
   };
 }
 

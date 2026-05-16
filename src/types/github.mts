@@ -133,6 +133,19 @@ export interface Review {
 }
 
 // ---------------------------------------------------------------------------
+// Branch protection
+// ---------------------------------------------------------------------------
+
+export interface BranchProtection {
+  requiresApprovingReviews: boolean;
+  requiredApprovingReviewCount: number;
+  requiresConversationResolution: boolean;
+  requiresStatusChecks: boolean;
+  /** Required status check context names (e.g. "ci/build", "ci/test"). Empty when requiresStatusChecks is false. */
+  requiredStatusCheckContexts: string[];
+}
+
+// ---------------------------------------------------------------------------
 // Merge status
 // ---------------------------------------------------------------------------
 
@@ -182,4 +195,6 @@ export interface BatchPrData {
   /** APPROVED reviews that are not minimized — opt-in minimize target for the iterate loop. */
   approvedReviews: Review[];
   checks: CheckRun[];
+  /** Branch protection rule for the PR's base branch. Null when no rule exists or the base ref is unavailable. */
+  branchProtection: BranchProtection | null;
 }

@@ -138,7 +138,9 @@ describe("projectIterateLean", () => {
   it("projectIterateVerbose adapts fix_code instructions", () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
-    result.fix.instructions = ["Stop this iteration before the next tick."];
+    result.fix.instructions = [
+      "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
+    ];
     const verbose = projectIterateVerbose(result, { runtime: "codex" }) as typeof result;
     expect(verbose.fix.instructions[0]).toContain("rerun `npx pr-shepherd 42`");
   });

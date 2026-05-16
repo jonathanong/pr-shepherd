@@ -1,40 +1,41 @@
 import type { AgentCheck } from "../../types.mts";
 
 export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
-  const instructions: string[] = [];
-  const failedRunIdChecks = checks.filter(
+  if (checks.length === 0) return [];
+  const hasRunId = checks.some(
     (c) => c.runId && c.conclusion !== "CANCELLED" && c.conclusion !== "STARTUP_FAILURE",
   );
-  const cancelledRunIdChecks = checks.filter((c) => c.runId && c.conclusion === "CANCELLED");
-  const startupFailureRunIdChecks = checks.filter(
-    (c) => c.runId && c.conclusion === "STARTUP_FAILURE",
-  );
-  const externalChecks = checks.filter((c) => !c.runId && c.detailsUrl);
-  const bareChecks = checks.filter((c) => !c.runId && !c.detailsUrl);
-  if (failedRunIdChecks.length > 0) {
-    instructions.push(
-      `For each failing check under \`## Failing checks\` with a run ID and no \`[conclusion: CANCELLED]\` or \`[conclusion: STARTUP_FAILURE]\` tag: run \`gh run view <runId> --log-failed\` to fetch the failing job's log. If the log shows a transient infrastructure failure (network timeout, runner setup crash, OOM kill), run \`gh run rerun <runId> --failed\`. If the log shows a real test/build failure, apply a code fix.`,
+  const hasCancelled = checks.some((c) => c.runId && c.conclusion === "CANCELLED");
+  const hasStartupFailure = checks.some((c) => c.runId && c.conclusion === "STARTUP_FAILURE");
+  const hasExternal = checks.some((c) => !c.runId && c.detailsUrl);
+  const hasBare = checks.some((c) => !c.runId && !c.detailsUrl);
+
+  const parts: string[] = [];
+  if (hasRunId) {
+    parts.push(
+      "fetch the log with `gh run view <runId> --log-failed` and decide: rerun with `gh run rerun <runId> --failed` for transient infrastructure failures (network timeout, OOM kill, runner crash), or apply a code fix for real test/build failures",
     );
   }
-  if (cancelledRunIdChecks.length > 0) {
-    instructions.push(
-      `For each \`[conclusion: CANCELLED]\` bullet under \`## Failing checks\`: the run was cancelled outside Shepherd's control (manual cancel, newer push, concurrency-group eviction). Run \`gh run rerun <runId>\` only if the cancellation looks unintended; otherwise treat it as resolved by the superseding run. Do NOT confuse these with IDs under \`## Cancelled runs\` — those were cancelled by Shepherd itself.`,
+  if (hasCancelled) {
+    parts.push(
+      "for `[conclusion: CANCELLED]` entries: rerun with `gh run rerun <runId>` if the cancellation looks unintended (not superseded by a newer push or concurrency-group eviction); otherwise treat as resolved — do NOT confuse with IDs under `## Cancelled runs`",
     );
   }
-  if (startupFailureRunIdChecks.length > 0) {
-    instructions.push(
-      `For each \`[conclusion: STARTUP_FAILURE]\` bullet under \`## Failing checks\`: the workflow failed before jobs/logs were created. Run \`gh run view <runId>\` to inspect the run metadata, then run \`gh run rerun <runId>\` if the workflow should be attempted again.`,
+  if (hasStartupFailure) {
+    parts.push(
+      "for `[conclusion: STARTUP_FAILURE]` entries: inspect with `gh run view <runId>` and rerun with `gh run rerun <runId>` if the workflow should be retried",
     );
   }
-  if (externalChecks.length > 0) {
-    instructions.push(
-      `For each bullet in \`## Failing checks\` starting with \`external\` (external status check): open the linked URL in a browser to inspect the failure — log tails are not available for external checks.`,
+  if (hasExternal) {
+    parts.push("for `external` entries (no run ID, has URL): open the URL to inspect the failure");
+  }
+  if (hasBare) {
+    parts.push(
+      "for `(no runId)` entries: no log or URL is available — escalate to a human for manual investigation",
     );
   }
-  if (bareChecks.length > 0) {
-    instructions.push(
-      `For each bullet in \`## Failing checks\` starting with \`(no runId)\`: there is no run or details URL to inspect. Escalate these to a human — they require manual investigation outside the pr-shepherd flow.`,
-    );
-  }
-  return instructions;
+
+  return [
+    `For each failing check under \`## Failing checks\`: ${parts.join("; ")}.`,
+  ];
 }

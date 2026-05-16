@@ -193,5 +193,6 @@ export async function runCheck(
     firstLookSummaries,
     editedSummaries,
     approvedReviews: batchData.approvedReviews,
+    branchProtection: batchData.branchProtection,
   };
 }

@@ -15,6 +15,7 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
     remainingSeconds: 60,
     summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 1 },
     baseBranch: "main",
+    branchProtection: null,
     checks: [] as RelevantCheck[],
   };
   if (action === "wait") return { ...base, action: "wait", log: "WAIT: 0 passing, 1 in-progress" };
@@ -40,7 +41,9 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
           requiresDismissMessage: false,
           hasMutations: false,
         },
-        instructions: ["Stop this iteration before the next tick."],
+        instructions: [
+          "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
+        ],
         firstLookThreads: [],
         firstLookComments: [],
         inProgressRunIds: [],

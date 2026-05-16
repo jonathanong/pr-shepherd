@@ -102,6 +102,7 @@ function makeBatchData(overrides: Partial<BatchPrData> = {}): BatchPrData {
     changesRequestedReviews: [],
     reviewSummaries: [],
     approvedReviews: [],
+    branchProtection: null,
     checks: [makeCheck()],
     ...overrides,
   };

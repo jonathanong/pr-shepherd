@@ -82,6 +82,8 @@ export interface ShepherdReport {
   editedSummaries: Review[];
   /** APPROVED reviews not yet minimized — opt-in minimize target. */
   approvedReviews: Review[];
+  /** Branch protection rule for the PR's base branch. Null when no rule exists or the base ref is unavailable. */
+  branchProtection: import("./github.mts").BranchProtection | null;
 }
 
 export interface ResolveOptions {

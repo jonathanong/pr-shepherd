@@ -63,9 +63,9 @@ describe("runIterate — fix_code agent projection", () => {
       // GitHub Actions check with runId — agent fetches logs and decides rerun vs fix
       expect(instructionsJoined).toContain("gh run view <runId> --log-failed");
       expect(instructionsJoined).toContain("gh run rerun");
-      // External check with detailsUrl but no runId — open details URL
-      expect(instructionsJoined).toContain("external status check");
-      expect(instructionsJoined).toContain("open the linked URL");
+      // External check with detailsUrl but no runId — open URL
+      expect(instructionsJoined).toContain("`external` entries");
+      expect(instructionsJoined).toContain("open the URL to inspect the failure");
       // No bare-check bullets in this test, so the `(no runId)` instruction is omitted.
       expect(instructionsJoined).not.toContain("(no runId)");
     }

@@ -165,4 +165,10 @@ Everything else belongs in the CLI's Markdown `## Instructions` output, not in t
 
 Rule of thumb: if a skill contains a table, policy, or interpretation block whose inputs come from CLI output fields, that content belongs in the CLI's `## Instructions` section instead.
 
+However, the CLI's `## Instructions` output must not duplicate guidance the caller's runtime already provides deterministically. Specifically:
+
+- Do not prescribe `git` mechanics the caller's pre-push hooks / `CLAUDE.md` already enforce (lint, typecheck, format) or that the caller's conventions specify (rebase style, push flags). Surface raw state (branch behind base, conflicts) and emit a one-liner pointer instead.
+- The CLI does not classify what will require code edits — only the agent can decide. Do not gate instruction steps on heuristics like "threads are present, therefore a push is needed." Emit all relevant data sections and use inline `if`/`else` phrasing.
+- Phrase multi-branch logic as inline `if` conditions in the same instruction step, not as separate CLI-predicated sections.
+
 Skills must not link to files outside the `plugins/pr-shepherd/` directory (such as `docs/**` or `README.md`). Those files are not included in the published plugin and will be dead links for consumers. All information a skill consumer needs must come from the CLI output itself or be written inline in the skill.

@@ -103,9 +103,10 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     const result = await runResolveFetch(BASE_OPTS);
     const joined = result.instructions.join("\n");
     expect(joined).not.toContain("commit-suggestion");
-    expect(joined).toContain("git add");
+    // New conditional phrasing — no literal "git add" or "git push" commands
+    expect(joined).toContain("commit them with a descriptive message");
     expect(joined).toContain("rebase");
-    expect(joined).toContain("git push");
+    expect(joined).toContain("push");
   });
   it("instructions dismissNote includes CHANGES_REQUESTED guidance when reviews present", async () => {
     const review = {
