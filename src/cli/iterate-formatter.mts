@@ -73,7 +73,7 @@ export function formatIterateResult(
       requiredParts.push(`approvals \`${bp.requiredApprovingReviewCount}\``);
     }
     if (bp.requiresConversationResolution) {
-      requiredParts.push("conversation-resolution");
+      requiredParts.push("conversation-resolution required");
     }
     if (bp.requiresStatusChecks && bp.requiredStatusCheckContexts.length > 0) {
       requiredParts.push(

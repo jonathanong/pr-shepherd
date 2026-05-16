@@ -62,9 +62,17 @@ export function buildFixInstructions(
 
   // Leading if/else decision: agent decides whether code changes are warranted.
   if (hasAnyCodeHints) {
-    const cancelStep = inProgressRunIds.length > 0 ? " (step N — cancel runs)" : "";
+    const actionableSections: string[] = [];
+    if (threads.length > 0) actionableSections.push("`## Review threads`");
+    if (actionableComments.length > 0) actionableSections.push("`## Actionable comments`");
+    if (checks.length > 0) actionableSections.push("`## Failing checks`");
+    if (changesRequestedReviews.length > 0)
+      actionableSections.push("`## Changes-requested reviews`");
+    if (hasConflicts) actionableSections.push("the `**branch** conflicts`");
+    const sectionRef =
+      actionableSections.length > 0 ? `under ${actionableSections.join(", ")}` : "above";
     instructions.push(
-      `Decide for each item under \`## Review threads\` and \`## Actionable comments\` whether a code change is warranted. **If any code changes are needed:** cancel in-progress runs${cancelStep}, apply edits, commit, rebase if the header shows \`**branch**\` behind/conflicts, push, then run the \`resolve:\` command. **If no code changes are needed:** skip cancellation/commit/push and run only the \`resolve:\` command.`,
+      `Decide for each item ${sectionRef} whether a code change is warranted. **If any code changes are needed:** cancel in-progress runs first, apply edits, commit, rebase if the header shows \`**branch**\` behind/conflicts, push, then run the \`resolve:\` command. **If no code changes are needed:** skip cancellation/commit/push and run only the \`resolve:\` command.`,
     );
   }
 
