@@ -110,6 +110,43 @@ describe("main — iterate text format", () => {
     await main(["node", "shepherd", "iterate", "42", "--verbose"]);
     expect(getStdout()).not.toContain("reviewDecision");
   });
+  it("text lean: branch behind shown when mergeStatus=BEHIND", async () => {
+    const result = { ...makeIterateResult("wait"), mergeStatus: "BEHIND" as const };
+    mockRunIterate.mockResolvedValue(result);
+    await main(["node", "shepherd", "iterate", "42"]);
+    expect(getStdout()).toContain("**branch** behind `origin/main`");
+  });
+  it("text verbose: branch behind shown when mergeStatus=BEHIND", async () => {
+    const result = { ...makeIterateResult("wait"), mergeStatus: "BEHIND" as const };
+    mockRunIterate.mockResolvedValue(result);
+    await main(["node", "shepherd", "iterate", "42", "--verbose"]);
+    expect(getStdout()).toContain("**branch** behind `origin/main`");
+  });
+  it("text verbose: branch conflicts shown when mergeStatus=CONFLICTS", async () => {
+    const result = { ...makeIterateResult("wait"), mergeStatus: "CONFLICTS" as const };
+    mockRunIterate.mockResolvedValue(result);
+    await main(["node", "shepherd", "iterate", "42", "--verbose"]);
+    expect(getStdout()).toContain("**branch** conflicts with `origin/main`");
+  });
+  it("text: required line rendered when branchProtection has non-trivial fields", async () => {
+    const result = {
+      ...makeIterateResult("wait"),
+      branchProtection: {
+        requiresApprovingReviews: true,
+        requiredApprovingReviewCount: 1,
+        requiresConversationResolution: true,
+        requiresStatusChecks: true,
+        requiredStatusCheckContexts: ["ci/build"],
+      },
+    };
+    mockRunIterate.mockResolvedValue(result);
+    await main(["node", "shepherd", "iterate", "42"]);
+    const text = getStdout();
+    expect(text).toContain("**required**");
+    expect(text).toContain("approvals `1`");
+    expect(text).toContain("conversation-resolution required");
+    expect(text).toContain("checks: `ci/build`");
+  });
   it("json lean: reviewDecision included when mergeStatus=BLOCKED from HAS_HOOKS raw", async () => {
     const result = {
       ...makeIterateResult("wait"),
