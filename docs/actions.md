@@ -6,9 +6,7 @@ Each default `pr-shepherd` invocation returns exactly one iterate action. The le
 
 The default output format is Markdown — what you see when running `pr-shepherd <PR>` through the selected package runner, and what the iterate skill reads on each tick. `--format=json` emits the same information as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
 
-Instruction wording is runtime-specific. Claude-compatible output schedules exactly one next session-only iteration after a fresh delay between 30 seconds and 4 minutes, then ends the turn. Codex-compatible output sleeps inline for that delay, then reruns the configured pr-shepherd command. The action data and section structure are otherwise the same.
-
-Three iteration strategies are valid: (a) inline sleep + rerun (Codex default); (b) scheduled session-only follow-up (Claude default); (c) the blocking `pr-shepherd poll` command, which loops with `--interval`/`--timeout` until a non-WAIT action appears. Do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`.
+Three iteration strategies are valid: (a) inline sleep + rerun; (b) scheduled session-only follow-up; (c) the blocking `pr-shepherd poll` command, which loops with `--interval`/`--timeout` until a non-WAIT action appears. Do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`.
 
 Command examples use the default npm spelling (`npx pr-shepherd`). Repos can set `cli.runner` to `auto`, `npx`, `pnpm`, `yarn`, or `bun`; generated text and JSON argv then use the selected runner (for example `pnpm exec pr-shepherd`, `yarn run pr-shepherd`, or `bunx pr-shepherd`) everywhere a pr-shepherd follow-up command is emitted.
 
@@ -83,14 +81,14 @@ WAIT: 3 passing, 2 in-progress — 120s until auto-cancel
 
 ## Instructions
 
-1. Single-shot continuation: schedule one session-only follow-up task to run `npx pr-shepherd 42` to continue the active goal once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
+1. Recheck: rerun `npx pr-shepherd 42` to continue the active goal once after a fresh 30s–4m delay.
 ```
 
 When the current command includes a ready-delay override, the rerun command preserves it: `npx pr-shepherd 42 --ready-delay 15m`.
 
 The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, `blocked by pending reviews or required status checks`, `PR is a draft`, or `some checks are unstable`.
 
-**What the skill does:** Follow `## Instructions`. For the Claude-compatible output shown above, schedule exactly one next session-only iteration and end the turn; Codex-compatible output sleeps inline and reruns the same command. Alternatively, run `<runner> pr-shepherd poll <N>` to block until the action is non-WAIT (bounded by `--timeout`).
+**What the skill does:** Follow `## Instructions`. Alternatively, run `<runner> pr-shepherd poll <N>` to block until the action is non-WAIT (bounded by `--timeout`).
 
 ---
 
@@ -116,10 +114,10 @@ MARKED READY: PR #42 converted from draft to ready for review
 
 ## Instructions
 
-1. The CLI already marked the PR ready for review. Single-shot continuation: schedule one session-only follow-up task to run `npx pr-shepherd 42` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
+1. The CLI already marked the PR ready for review. Recheck: rerun `npx pr-shepherd 42` to recheck once after a fresh 30s–4m delay.
 ```
 
-**What the skill does:** Follow `## Instructions`. For the Claude-compatible output shown above, schedule exactly one next session-only iteration and end the turn; Codex-compatible output sleeps inline and reruns the same command. Do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`.
+**What the skill does:** Follow `## Instructions`. Do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`.
 
 ---
 

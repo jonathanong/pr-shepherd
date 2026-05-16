@@ -49,10 +49,10 @@ One-tick dispatcher for iterating a PR to completion.
    - Stop when the CLI emits `[ESCALATE]`, including `stall-timeout` for repeated unchanged CI failures.
    - **Do NOT merge the pull request** unless the human has explicitly requested or allowed it.
 
-7. **Non-terminal actions** (`[WAIT]`, `[MARK_READY]`, `[FIX_CODE]`) — follow the `## Instructions` in the output. Pick one iteration strategy; the CLI's instructions already nudge the runtime-appropriate default:
+7. **Non-terminal actions** (`[WAIT]`, `[MARK_READY]`, `[FIX_CODE]`) — follow the `## Instructions` in the output. Pick one iteration strategy:
    - **Blocking poll** — rerun as `<runner> pr-shepherd poll <N> [--interval <duration>] [--timeout <duration>]` (defaults: interval 30s, timeout 5m). Holds the agent turn until the action is non-WAIT or the timeout fires. Simplest when the agent cannot reliably schedule its own follow-up.
-   - **Scheduled wakeup + one tick** — schedule a single session-only follow-up task to rerun `<runner> pr-shepherd <N>` after a fresh 30s–4m delay, then end the turn. Recommended for Claude.
-   - **Inline sleep + rerun** — sleep inline for a fresh 30s–4m delay, then rerun. Recommended for Codex when scheduling is unavailable.
+   - **Scheduled wakeup + one tick** — schedule a single session-only follow-up task to rerun `<runner> pr-shepherd <N>` after a fresh 30s–4m delay, then end the turn.
+   - **Inline sleep + rerun** — sleep inline for a fresh 30s–4m delay, then rerun.
 
    **Never write a custom polling loop** (shell `while`/`until` loops, script files that loop over pr-shepherd output, etc.). Custom loops poll only for terminal states and silently skip `[FIX_CODE]` handling — actionable review threads, failing checks, and resolve commands get missed. Use `pr-shepherd poll` for WAIT-state waiting; it exits on any non-WAIT action so the caller handles `[FIX_CODE]` and other actionable outputs normally.
 

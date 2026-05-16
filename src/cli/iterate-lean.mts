@@ -1,5 +1,4 @@
 import type { IterateResult } from "../types.mts";
-import type { AgentRuntime } from "../agent-runtime.mts";
 import {
   adaptIterateLog,
   adaptFixCodeInstructions,
@@ -7,7 +6,6 @@ import {
 } from "./iterate-instructions.mts";
 import type { CliRunner } from "./runner.mts";
 interface IterateProjectionOptions {
-  runtime?: AgentRuntime;
   readyDelaySuffix?: string;
   runner?: CliRunner;
 }
@@ -21,11 +19,10 @@ export function projectIterateLean(
   result: IterateResult,
   opts?: IterateProjectionOptions,
 ): unknown {
-  const runtime = opts?.runtime ?? "claude";
   const readyDelaySuffix = opts?.readyDelaySuffix;
   const runner = opts?.runner;
   const simpleInstructions = (r: Exclude<IterateResult, { action: "fix_code" }>) =>
-    buildSimpleIterateInstructions(r, runtime, readyDelaySuffix, runner);
+    buildSimpleIterateInstructions(r, readyDelaySuffix, runner);
   const base: Record<string, unknown> = {
     action: result.action,
     pr: result.pr,
@@ -56,21 +53,21 @@ export function projectIterateLean(
     case "wait":
       return {
         ...base,
-        log: adaptIterateLog(result.log, runtime),
+        log: adaptIterateLog(result.log),
         instructions: simpleInstructions(result),
       };
     case "cancel":
       return {
         ...base,
         reason: result.reason,
-        log: adaptIterateLog(result.log, runtime),
+        log: adaptIterateLog(result.log),
         instructions: simpleInstructions(result),
       };
     case "mark_ready":
       // drop markedReady — always true, redundant with action discriminator
       return {
         ...base,
-        log: adaptIterateLog(result.log, runtime),
+        log: adaptIterateLog(result.log),
         instructions: simpleInstructions(result),
       };
     case "fix_code":
@@ -116,7 +113,6 @@ export function projectIterateLean(
             instructions: adaptFixCodeInstructions(
               result.fix.instructions,
               result.pr,
-              runtime,
               readyDelaySuffix,
               runner,
             ),
@@ -153,7 +149,6 @@ export function projectIterateVerbose(
   result: IterateResult,
   opts?: IterateProjectionOptions,
 ): unknown {
-  const runtime = opts?.runtime ?? "claude";
   const readyDelaySuffix = opts?.readyDelaySuffix;
   const runner = opts?.runner;
   if (result.action === "fix_code") {
@@ -164,7 +159,6 @@ export function projectIterateVerbose(
         instructions: adaptFixCodeInstructions(
           result.fix.instructions,
           result.pr,
-          runtime,
           readyDelaySuffix,
           runner,
         ),
@@ -172,12 +166,10 @@ export function projectIterateVerbose(
     };
   }
   const log =
-    "log" in result && typeof result.log === "string"
-      ? { log: adaptIterateLog(result.log, runtime) }
-      : {};
+    "log" in result && typeof result.log === "string" ? { log: adaptIterateLog(result.log) } : {};
   return {
     ...result,
     ...log,
-    instructions: buildSimpleIterateInstructions(result, runtime, readyDelaySuffix, runner),
+    instructions: buildSimpleIterateInstructions(result, readyDelaySuffix, runner),
   };
 }

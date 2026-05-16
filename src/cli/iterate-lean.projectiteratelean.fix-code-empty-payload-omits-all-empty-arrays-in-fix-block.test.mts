@@ -141,13 +141,11 @@ describe("projectIterateLean", () => {
     result.fix.instructions = [
       "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
     ];
-    const verbose = projectIterateVerbose(result, { runtime: "codex" }) as typeof result;
+    const verbose = projectIterateVerbose(result, {}) as typeof result;
     expect(verbose.fix.instructions[0]).toContain("rerun `npx pr-shepherd 42`");
   });
   it("projectIterateVerbose adapts non-fix logs and adds instructions", () => {
-    const verbose = projectIterateVerbose(makeIterateResult("wait"), {
-      runtime: "codex",
-    }) as Record<string, unknown>;
+    const verbose = projectIterateVerbose(makeIterateResult("wait"), {}) as Record<string, unknown>;
     expect(verbose.log).toContain("WAIT");
     expect(verbose.instructions).toBeDefined();
   });
