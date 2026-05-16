@@ -73,7 +73,7 @@ export function buildFixInstructions(
     if (hasConflicts) {
       // Conflicts make push mandatory regardless of whether code edits are needed.
       instructions.push(
-        `The branch has merge conflicts that require rebase before merging. Cancel in-progress runs first, apply any code edits for items ${sectionRef}, commit if edits were made, rebase onto \`origin/${baseBranch}\` per your repository's conventions, push${resolveClause}.`,
+        `The branch has merge conflicts that require rebase before merging. Apply any code edits for items ${sectionRef}, commit if edits were made, rebase onto \`origin/${baseBranch}\` per your repository's conventions, push${resolveClause}.`,
       );
     } else {
       const skipClause = resolveCommand.hasMutations
@@ -150,7 +150,7 @@ export function buildFixInstructions(
 
   if (cancelledCount > 0) {
     instructions.push(
-      `Do not re-run \`gh run cancel\` on the IDs listed under \`## Cancelled runs\` — the CLI cancelled those runs before your push, and your push has already triggered new runs with different IDs.`,
+      `Do not re-run \`gh run cancel\` on the IDs listed under \`## Cancelled runs\` — those runs were already cancelled by the CLI before this turn.`,
     );
   }
 

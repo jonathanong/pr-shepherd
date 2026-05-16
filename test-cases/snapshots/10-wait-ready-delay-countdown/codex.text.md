@@ -7,4 +7,4 @@ WAIT: 1 passing, 0 in-progress
 
 ## Instructions
 
-1. Pick a fresh sleep/timeout between 30 seconds and 4 minutes, wait that long, then rerun `npx pr-shepherd 42` to continue the active goal.
+1. Recheck: rerun `npx pr-shepherd 42` to continue the active goal once after a fresh 30s–4m delay.
