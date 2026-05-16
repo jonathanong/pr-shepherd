@@ -77,7 +77,7 @@ export function buildFixInstructions(
       );
     } else {
       const skipClause = resolveCommand.hasMutations
-        ? "skip cancellation/commit/push and run only the `resolve:` command"
+        ? "skip cancellation/commit/push and run the `resolve:` command"
         : "no push is needed";
       instructions.push(
         `Decide for each item ${sectionRef} whether a code change is warranted. **If any code changes are needed:** cancel in-progress runs first, apply edits, commit, rebase, push${resolveClause}. **If no code changes are needed:** ${skipClause}.`,
