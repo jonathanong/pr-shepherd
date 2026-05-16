@@ -80,7 +80,7 @@ export function buildFixInstructions(
         ? "skip cancellation/commit/push and run only the `resolve:` command"
         : "no push is needed";
       instructions.push(
-        `Decide for each item ${sectionRef} whether a code change is warranted. **If any code changes are needed:** cancel in-progress runs first, apply edits, commit, push${resolveClause}. **If no code changes are needed:** ${skipClause}.`,
+        `Decide for each item ${sectionRef} whether a code change is warranted. **If any code changes are needed:** cancel in-progress runs first, apply edits, commit, rebase, push${resolveClause}. **If no code changes are needed:** ${skipClause}.`,
       );
     }
   } else if (hasConflicts) {
@@ -91,7 +91,7 @@ export function buildFixInstructions(
 
   if (inProgressRunIds.length > 0) {
     instructions.push(
-      `If you decide to push new commits: cancel each in-progress run listed under \`## In-progress runs\` before applying code fixes (e.g. \`gh run cancel <id>\`). Skip this step if you are only resolving threads without pushing — the existing runs remain relevant.`,
+      `If you decide to push new commits: cancel each in-progress run listed under \`## In-progress runs\` before applying code fixes (e.g. \`gh run cancel <id>\`). Runs may complete between the tick and your action; treat cancellation errors on already-finished runs as non-fatal. Skip this step if you are only resolving threads without pushing — the existing runs remain relevant.`,
     );
   }
 
