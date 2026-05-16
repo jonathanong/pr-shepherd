@@ -1,25 +1,22 @@
-# PR #42 [ESCALATE]
+# PR #42 [FIX_CODE]
 
 **status** `UNRESOLVED_COMMENTS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 1 passing
 
-⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required
+## Changes-requested reviews
 
-**Triggers:** `pr-level-changes-requested`
+- `reviewId=PRR_prlevel` (@architect · User)
 
-Reviewer requested changes but left no inline comments — read the review and act manually.
+## Post-fix push
 
-## Items needing attention
-
-- review `PRR_prlevel` (@architect):
-
-  > The overall architecture needs to be reconsidered before merging.
-
-
----
-
-After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-shepherd 42` to resume.
+- base: `main`
+- resolve: `npx pr-shepherd resolve 42 --dismiss-review-ids PRR_prlevel --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
 
 ## Instructions
 
-1. Stop — the PR needs human direction before iterating can resume. This is a manual handoff; do not continue automated fix attempts.
+1. Decide for each item under `## Changes-requested reviews` whether a code change is warranted. **If any code changes are needed:** cancel in-progress runs first, apply edits, commit, rebase, push, then run the `resolve:` command. **If no code changes are needed:** skip cancellation/commit/push and run the `resolve:` command.
+2. For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.
+3. If you applied code edits: commit them with a descriptive message, then rebase onto `origin/main` per your repository's conventions before pushing.
+4. Run the `resolve:` command shown above, substituting `$HEAD_SHA` with the pushed commit SHA (or `$(git rev-parse HEAD)` if you did not push) and `$DISMISS_MESSAGE` with a one-sentence description of what you changed.
+5. For any large decisions or rejections you made this iteration, add or update a `## Shepherd Journal` section in the PR description (`gh pr edit 42 --body …`) summarizing each decision. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. If this section already exists, append your entries under it instead of creating a duplicate heading.
+6. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick. Recheck: rerun `npx pr-shepherd 42` to recheck once after a fresh 30s–4m delay.

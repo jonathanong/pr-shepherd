@@ -121,12 +121,7 @@ describe("escalate message helpers", () => {
           createdAtUnix: 0,
         },
       ],
-      [],
-      [],
-      [],
-      [],
       {},
-      false,
     );
 
     expect(triggers).toEqual([]);

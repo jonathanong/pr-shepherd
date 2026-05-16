@@ -87,7 +87,7 @@ describe("fix_code — in-progress run cancellation", () => {
       expect(result.fix.instructions.join("\n")).toMatch(/If you decide to push new commits/);
     }
   });
-  it("inProgressRunIds is populated for summary-only dispatch (agent decides whether to cancel)", async () => {
+  it("inProgressRunIds is empty for summary-only dispatch (no push possible, leave CI running)", async () => {
     const inProgressCheck = {
       name: "ci",
       status: "IN_PROGRESS" as const,
@@ -122,10 +122,73 @@ describe("fix_code — in-progress run cancellation", () => {
 
     const result = await runIterate(makeOpts());
 
+    expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
-      // inProgressRunIds is always populated; the agent decides whether to cancel
-      expect(result.fix.inProgressRunIds).toContain("run-in-2");
-      expect(result.fix.instructions.join("\n")).toMatch(/If you decide to push new commits/);
+      // Summary-only: no push possible, so in-progress runs are left alone
+      expect(result.fix.inProgressRunIds).toHaveLength(0);
+      // No cancel instruction emitted
+      expect(result.fix.instructions.join("\n")).not.toMatch(/If you decide to push new commits/);
+    }
+  });
+  it("inProgressRunIds is empty for resolution-only-thread dispatch (no push needed)", async () => {
+    const inProgressCheck = {
+      name: "ci",
+      status: "IN_PROGRESS" as const,
+      conclusion: null,
+      detailsUrl: "https://github.com/owner/repo/actions/runs/run-in-3",
+      event: "pull_request" as const,
+      runId: "run-in-3",
+      category: "in_progress" as const,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        checks: {
+          passing: [],
+          failing: [],
+          inProgress: [inProgressCheck],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+        threads: {
+          actionable: [],
+          resolutionOnly: [
+            {
+              id: "PRRT_outdated",
+              isResolved: false,
+              isOutdated: true,
+              isMinimized: false,
+              path: "src/a.ts",
+              line: null,
+              startLine: null,
+              author: "reviewer",
+              authorType: "Unknown" as const,
+              body: "Already addressed",
+              url: "",
+              createdAtUnix: 0,
+            },
+          ],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      // Resolution-only: just close the thread, no push needed
+      expect(result.fix.inProgressRunIds).toHaveLength(0);
+      expect(result.fix.instructions.join("\n")).not.toMatch(/If you decide to push new commits/);
     }
   });
 });

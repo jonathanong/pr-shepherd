@@ -25,8 +25,7 @@ export type EscalateTrigger =
   | "fix-thrash"
   | "base-branch-unknown"
   | "stall-timeout"
-  | "thread-missing-location"
-  | "pr-level-changes-requested";
+  | "thread-missing-location";
 
 export interface EscalateDetails {
   triggers: EscalateTrigger[];

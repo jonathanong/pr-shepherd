@@ -13,34 +13,26 @@ import { runIterate } from "./iterate/index.mts";
 registerIterateHooks();
 
 // ---------------------------------------------------------------------------
-// Escalate
+// CHANGES_REQUESTED reviews without inline threads → fix_code (not escalate)
 // ---------------------------------------------------------------------------
 
-const THREAD = {
-  id: "thread-1",
+const RESOLUTION_ONLY_THREAD = {
+  id: "thread-resolution-only",
   isResolved: false,
-  isOutdated: false,
+  isOutdated: true,
   isMinimized: false,
   path: "src/foo.mts",
-  line: 10,
+  line: null,
   startLine: null,
   author: "reviewer",
   authorType: "Unknown" as const,
-  body: "Fix this",
+  body: "Already addressed on an old diff",
   url: "",
   createdAtUnix: NOW - 3600,
 };
 
-const RESOLUTION_ONLY_THREAD = {
-  ...THREAD,
-  id: "thread-resolution-only",
-  isOutdated: true,
-  line: null,
-  body: "Already addressed on an old diff",
-};
-
-describe("runIterate — escalate (pr-level-changes-requested)", () => {
-  it("escalates when changesRequestedReviews with no inline threads or CI failures", async () => {
+describe("runIterate — CHANGES_REQUESTED review with no inline threads routes to fix_code", () => {
+  it("emits fix_code with --dismiss-review-ids when changesRequestedReviews exist and no inline threads or CI failures", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
@@ -65,10 +57,12 @@ describe("runIterate — escalate (pr-level-changes-requested)", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("escalate");
-    if (result.action === "escalate") {
-      expect(result.escalate.triggers).toContain("pr-level-changes-requested");
-      expect(result.escalate.changesRequestedReviews).toHaveLength(1);
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.changesRequestedReviews).toHaveLength(1);
+      expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
+      expect(result.fix.resolveCommand.argv).toContain("review-1");
+      expect(result.fix.resolveCommand.requiresDismissMessage).toBe(true);
     }
   });
 

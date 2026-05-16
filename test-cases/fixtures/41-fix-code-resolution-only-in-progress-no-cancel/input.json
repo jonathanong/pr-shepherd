@@ -1,0 +1,36 @@
+{
+  "description": "Resolution-only thread with an in-progress CI check. Demonstrates fix for #224: in-progress runs are NOT listed because resolution-only threads require no push, so cancelling CI would be pointless churn.",
+  "batchData": {
+    "reviewThreads": [
+      {
+        "id": "PRRT_outdated",
+        "isResolved": false,
+        "isOutdated": true,
+        "isMinimized": false,
+        "path": "src/helpers.ts",
+        "line": 12,
+        "startLine": null,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "This was outdated by the latest push.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r10",
+        "createdAtUnix": 1715700000
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/888",
+        "runId": "888"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

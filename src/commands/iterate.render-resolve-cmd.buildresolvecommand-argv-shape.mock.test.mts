@@ -183,15 +183,15 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     expect(result.fix.resolveCommand.droppedDismissReviewIds).toEqual(["PRR_DUP"]);
   });
 
-  it("keeps pr-level review requests in escalate when no inline/actionable work exists", async () => {
-    const review = makeReview("PRR_ONLY", "reviewer", "Please update the API contract wording.");
+  it("routes pr-level review requests to fix_code (with --dismiss-review-ids) when no inline work exists", async () => {
+    // A CHANGES_REQUESTED review has its own distinct ID — it is not also in reviewSummaries.
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        reviewSummaries: [review],
         changesRequestedReviews: [
           {
-            ...review,
+            id: "PRR_CHANGES",
+            author: "reviewer",
             authorType: "Unknown" as const,
             body: "Please update the API contract wording.",
           },
@@ -205,10 +205,12 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     });
 
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("escalate");
-    if (result.action === "escalate") {
-      expect(result.escalate.triggers).toContain("pr-level-changes-requested");
-      expect(result.escalate.changesRequestedReviews).toHaveLength(1);
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
+      expect(result.fix.resolveCommand.argv).toContain("PRR_CHANGES");
+      expect(result.fix.resolveCommand.requiresDismissMessage).toBe(true);
+      expect(result.fix.changesRequestedReviews).toHaveLength(1);
     }
   });
 });
