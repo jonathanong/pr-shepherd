@@ -23,10 +23,12 @@ function writeTickProgress(
   }
 }
 
+const MAX_TIMER_MS = 2 ** 31 - 1;
+
 export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> {
   const { intervalSeconds, timeoutSeconds, ...iterateOpts } = opts;
-  const intervalMs = intervalSeconds * 1000;
-  const timeoutMs = timeoutSeconds * 1000;
+  const intervalMs = Math.min(intervalSeconds * 1000, MAX_TIMER_MS);
+  const timeoutMs = Math.min(timeoutSeconds * 1000, MAX_TIMER_MS);
   const start = Date.now();
   let tick = 0;
   let lastResult: IterateResult | undefined;
