@@ -27,7 +27,7 @@ export const USAGE = {
 
   "commit-suggestion":
     "Usage: pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG\n" +
-    "                                          [--description DESC] [--dry-run] [--format text|json]",
+    "                                          [--description DESC] [--format text|json]",
 
   iterate:
     "Usage: pr-shepherd iterate [PR] [--format text|json] [--ready-delay Nm]\n" +

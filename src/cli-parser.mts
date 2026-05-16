@@ -8,9 +8,8 @@
  *                  [--no-auto-cancel-actionable]
  *   pr-shepherd resolve [PR] [--fetch] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]
  *                            [--dismiss-review-ids Q] [--message MSG] [--require-sha SHA]
- *   pr-shepherd commit-suggestion [PR] --thread-id ID [--message MSG] [--description DESC]
- *                                      [--dry-run] [--format text|json]
- *   (--message is required unless --dry-run is set)
+ *   pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [--description DESC]
+ *                                      [--format text|json]
  *   pr-shepherd iterate [PR] [--format text|json] [--ready-delay Nm]
  *                              [--stall-timeout <duration>] [--no-auto-mark-ready]
  *                              [--no-auto-cancel-actionable]
@@ -54,6 +53,12 @@ export async function main(argv: string[]): Promise<void> {
   // log-file must run before the stdout tee and log init to avoid recursion.
   if (subcommand === "log-file") {
     await handleLogFile(args.slice(1));
+    return;
+  }
+
+  // Short-circuit help for the default-iterate path before any I/O.
+  if (isDefaultIterateInvocation(subcommand) && (args.includes("--help") || args.includes("-h"))) {
+    process.stdout.write(`${USAGE.iterate}\n`);
     return;
   }
 
