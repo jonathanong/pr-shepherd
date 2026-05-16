@@ -45,4 +45,11 @@ One-tick dispatcher for iterating a PR to completion.
 5. **Stop conditions:**
    - Stop when the CLI emits `[CANCEL]` (ready-delay completed, or PR merged/closed).
    - Stop when the CLI emits `[ESCALATE]`, including `stall-timeout` for repeated unchanged CI failures.
-   - All other actions (`[WAIT]`, `[MARK_READY]`, `[FIX_CODE]`) are non-terminal: follow the `## Instructions`. For Claude, schedule exactly one next session-only iteration and end the turn; do not sleep inline and do not create a recurring cron or polling loop (`while true`, repeated polling, etc.).
+
+6. **Non-terminal actions** (`[WAIT]`, `[MARK_READY]`, `[FIX_CODE]`) — follow the `## Instructions` in the output. Pick one iteration strategy; the CLI's instructions already nudge the runtime-appropriate default:
+   - **Blocking poll** — rerun as `<runner> pr-shepherd poll <N>` (default interval 30s, timeout 5m). Holds the agent turn until the action is non-WAIT or the timeout fires. Simplest when the agent cannot reliably schedule its own follow-up.
+   - **Scheduled wakeup + one tick** — schedule a single session-only follow-up task to rerun `<runner> pr-shepherd <N>` after a fresh 30s–4m delay, then end the turn. Recommended for Claude.
+   - **Inline sleep + rerun** — sleep inline for a fresh 30s–4m delay, then rerun. Recommended for Codex when scheduling is unavailable.
+   - **Manual hand-off** — print the output and stop; the user re-invokes when ready.
+
+   Do not combine strategies (e.g., poll AND schedule a wakeup). Do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`.

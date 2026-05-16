@@ -57,7 +57,7 @@ function writeDefaultUsageError(arg: string): void {
   process.stderr.write(`Unknown subcommand: ${arg}\n`);
   process.stderr.write(
     "Usage: pr-shepherd [PR] [options]\n" +
-      "       pr-shepherd <resolve|commit-suggestion|iterate|log-file> [options]\n" +
+      "       pr-shepherd <resolve|commit-suggestion|iterate|poll|log-file|clean> [options]\n" +
       "       pr-shepherd --version | -v\n",
   );
   process.exitCode = 1;

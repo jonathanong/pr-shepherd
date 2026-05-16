@@ -14,6 +14,9 @@
  *   pr-shepherd iterate [PR] [--format text|json] [--ready-delay Nm]
  *                              [--stall-timeout <duration>] [--no-auto-mark-ready]
  *                              [--no-auto-cancel-actionable]
+ *   pr-shepherd poll [PR] [--interval 30s] [--timeout 5m] [--format text|json] [--ready-delay Nm]
+ *                         [--stall-timeout <duration>] [--no-auto-mark-ready]
+ *                         [--no-auto-cancel-actionable]
  *   pr-shepherd clean <pr|branch|current|repo|all> [value] [--dry-run] [--format text|json]
  */
 
@@ -25,6 +28,7 @@ import { parseCommonArgs, getFlag, hasFlag, parseList } from "./cli/args.mts";
 import { isDefaultIterateInvocation, validateDefaultIterateArgs } from "./cli/default-iterate.mts";
 import { formatFetchResult, formatMutateResult } from "./cli/formatters.mts";
 import { handleClean, handleCommitSuggestion, handleIterate } from "./cli/handlers.mts";
+import { handlePoll } from "./cli/poll-handler.mts";
 import { setupLog } from "./log/setup.mts";
 
 // ---------------------------------------------------------------------------
@@ -66,13 +70,16 @@ export async function main(argv: string[]): Promise<void> {
     case "iterate":
       await handleIterate(args.slice(1));
       break;
+    case "poll":
+      await handlePoll(args.slice(1));
+      break;
     case "clean":
       await handleClean(args.slice(1));
       break;
     default:
       process.stderr.write(`Unknown subcommand: ${subcommand ?? "(none)"}\n`);
       process.stderr.write(
-        "Usage: pr-shepherd <resolve|commit-suggestion|iterate|log-file|clean> [options]\n" +
+        "Usage: pr-shepherd <resolve|commit-suggestion|iterate|poll|log-file|clean> [options]\n" +
           "       pr-shepherd --version | -v\n",
       );
       process.exitCode = 1;

@@ -18,6 +18,8 @@ const FLAGS_WITH_VALUES = new Set([
   "--resolve-thread-ids",
   "--minimize-comment-ids",
   "--dismiss-review-ids",
+  "--interval",
+  "--timeout",
 ]);
 
 // Boolean flags that do NOT consume the next argument. Any --flag not in this

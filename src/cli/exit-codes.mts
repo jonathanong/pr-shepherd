@@ -10,6 +10,16 @@ export function parseDurationToMinutes(s: string, defaultMinutes?: number): numb
   return n;
 }
 
+export function parseDurationToSeconds(s: string, defaultSeconds: number): number {
+  const m = /^(\d+)(s|sec|seconds?|m|min|minutes?|h|hours?)?$/.exec(s.trim());
+  if (!m) return defaultSeconds;
+  const n = parseInt(m[1]!, 10);
+  const unit = m[2] ?? "s";
+  if (unit.startsWith("h")) return n * 3600;
+  if (unit.startsWith("m")) return n * 60;
+  return n;
+}
+
 export function statusToExitCode(status: string): number {
   switch (status) {
     case "MERGED":
