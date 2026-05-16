@@ -141,7 +141,7 @@ export interface BranchProtection {
   requiredApprovingReviewCount: number;
   requiresConversationResolution: boolean;
   requiresStatusChecks: boolean;
-  /** Required status check context names (e.g. "ci/build", "ci/test"). Empty when requiresStatusChecks is false. */
+  /** Required status check context names (e.g. "ci/build", "ci/test"). Empty when requiresStatusChecks is false, or when requiresStatusChecks is true but GitHub returns no explicit contexts. */
   requiredStatusCheckContexts: string[];
 }
 
