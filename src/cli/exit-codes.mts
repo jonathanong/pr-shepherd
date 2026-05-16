@@ -14,6 +14,7 @@ export function parseDurationToSeconds(s: string, defaultSeconds: number): numbe
   const m = /^(\d+)(s|sec|seconds?|m|min|minutes?|h|hours?)?$/.exec(s.trim());
   if (!m) return defaultSeconds;
   const n = parseInt(m[1]!, 10);
+  if (!Number.isFinite(n)) return defaultSeconds;
   const unit = m[2] ?? "s";
   if (unit.startsWith("h")) return n * 3600;
   if (unit.startsWith("m")) return n * 60;

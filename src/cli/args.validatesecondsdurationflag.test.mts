@@ -112,4 +112,9 @@ describe("parseDurationToSeconds", () => {
   it("treats bare integer with no unit as seconds (not minutes)", () => {
     expect(parseDurationToSeconds("60", 0)).toBe(60);
   });
+
+  it("returns default when integer overflows to Infinity", () => {
+    const huge = "9".repeat(400);
+    expect(parseDurationToSeconds(huge, 30)).toBe(30);
+  });
 });
