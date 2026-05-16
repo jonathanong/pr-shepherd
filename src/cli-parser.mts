@@ -57,7 +57,7 @@ export async function main(argv: string[]): Promise<void> {
   }
 
   // Short-circuit help for the default-iterate path before any I/O.
-  if (isDefaultIterateInvocation(subcommand) && (args.includes("--help") || args.includes("-h"))) {
+  if (isDefaultIterateInvocation(subcommand) && (hasFlag(args, "--help") || hasFlag(args, "-h"))) {
     process.stdout.write(`${USAGE.iterate}\n`);
     return;
   }

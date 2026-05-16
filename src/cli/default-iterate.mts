@@ -1,4 +1,4 @@
-import { parsePrNumber } from "./args.mts";
+import { parsePrNumber, hasFlag } from "./args.mts";
 import { USAGE } from "./help.mts";
 
 const DEFAULT_ITERATE_FLAGS_WITH_VALUES = new Set(["--format", "--ready-delay", "--stall-timeout"]);
@@ -19,7 +19,7 @@ export function isDefaultIterateInvocation(subcommand: string | undefined): bool
 }
 
 export function validateDefaultIterateArgs(args: string[]): boolean {
-  if (args.includes("--help") || args.includes("-h")) {
+  if (hasFlag(args, "--help") || hasFlag(args, "-h")) {
     process.stdout.write(`${USAGE.iterate}\n`);
     return false;
   }
