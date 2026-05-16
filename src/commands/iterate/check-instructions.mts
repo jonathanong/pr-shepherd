@@ -35,7 +35,5 @@ export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
     );
   }
 
-  return [
-    `For each failing check under \`## Failing checks\`: ${parts.join("; ")}.`,
-  ];
+  return [`For each failing check under \`## Failing checks\`: ${parts.join("; ")}.`];
 }

@@ -79,7 +79,7 @@ describe("main — iterate fix_code instruction rewriting", () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
     result.fix.instructions = [
-      'If you applied code edits: commit them with a descriptive message, then rebase onto `origin/main` per your repository\'s conventions before pushing.',
+      "If you applied code edits: commit them with a descriptive message, then rebase onto `origin/main` per your repository's conventions before pushing.",
       "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
     ];
     mockRunIterate.mockResolvedValue(result);

@@ -47,6 +47,7 @@ One-tick dispatcher for iterating a PR to completion.
 6. **Stop conditions (terminal states):**
    - Stop when the CLI emits `[CANCEL]` (ready-delay completed, or PR merged/closed).
    - Stop when the CLI emits `[ESCALATE]`, including `stall-timeout` for repeated unchanged CI failures.
+   - **Do NOT merge the pull request** unless the human has explicitly requested or allowed it.
 
 7. **Non-terminal actions** (`[WAIT]`, `[MARK_READY]`, `[FIX_CODE]`) — follow the `## Instructions` in the output. Pick one iteration strategy; the CLI's instructions already nudge the runtime-appropriate default:
    - **Blocking poll** — rerun as `<runner> pr-shepherd poll <N> [--interval <duration>] [--timeout <duration>]` (defaults: interval 30s, timeout 5m). Holds the agent turn until the action is non-WAIT or the timeout fires. Simplest when the agent cannot reliably schedule its own follow-up.

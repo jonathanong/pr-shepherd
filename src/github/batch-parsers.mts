@@ -166,4 +166,3 @@ export function parseRawPr(
     branchProtection,
   };
 }
-
