@@ -70,6 +70,24 @@ describe("loadSeenMap", () => {
     const idLower = "PRRT_kwDOSGizTs6ChG7f";
     await markSeen(testKey, idUpper, "upper body");
     await markSeen(testKey, idLower, "lower body");
+
+    // Verify the on-disk filenames are SHA-256 hashes (64 hex chars), not raw
+    // IDs. This catches the regression on case-sensitive filesystems too: if
+    // markSeen used raw IDs, the two files would exist on Linux but share a
+    // name on macOS; the SHA-256 path produces two distinct 64-hex filenames
+    // regardless of OS.
+    const seenDir = join(
+      testStateDir,
+      `${testKey.owner}-${testKey.repo}`,
+      String(testKey.pr),
+      "seen",
+    );
+    const files = (await readdir(seenDir)).filter((f) => f.endsWith(".json"));
+    expect(files).toHaveLength(2);
+    const hexRe = /^[0-9a-f]{64}\.json$/;
+    expect(files.every((f) => hexRe.test(f))).toBe(true);
+    expect(files[0]).not.toBe(files[1]);
+
     const map = await loadSeenMap(testKey);
     expect(map.has(idUpper)).toBe(true);
     expect(map.has(idLower)).toBe(true);
