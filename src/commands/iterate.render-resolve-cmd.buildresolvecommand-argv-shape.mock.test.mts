@@ -184,14 +184,14 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
   });
 
   it("routes pr-level review requests to fix_code (with --dismiss-review-ids) when no inline work exists", async () => {
-    const review = makeReview("PRR_ONLY", "reviewer", "Please update the API contract wording.");
+    // A CHANGES_REQUESTED review has its own distinct ID — it is not also in reviewSummaries.
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
-        reviewSummaries: [review],
         changesRequestedReviews: [
           {
-            ...review,
+            id: "PRR_CHANGES",
+            author: "reviewer",
             authorType: "Unknown" as const,
             body: "Please update the API contract wording.",
           },
@@ -207,10 +207,9 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
-      // PRR_ONLY is in both reviewSummaries and changesRequestedReviews — the overlap
-      // dedup drops it from --dismiss-review-ids into --minimize-comment-ids.
-      expect(result.fix.resolveCommand.argv).toContain("--minimize-comment-ids");
-      expect(result.fix.resolveCommand.argv).toContain("PRR_ONLY");
+      expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
+      expect(result.fix.resolveCommand.argv).toContain("PRR_CHANGES");
+      expect(result.fix.resolveCommand.requiresDismissMessage).toBe(true);
       expect(result.fix.changesRequestedReviews).toHaveLength(1);
     }
   });

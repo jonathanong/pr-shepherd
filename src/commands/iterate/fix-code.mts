@@ -137,7 +137,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   }
   // Safety: if the base branch is unknown, escalate when a push is plausible — the agent
   // would need the correct base to rebase safely. This is a conservative guard, not a
-  // prediction that the agent *will* push.
+  // prediction that the agent *will* push. Intentionally broader than `pushLikely` above:
+  // resolution-only threads also need a known base in case the agent does push.
   const pushIsPlausible =
     threads.length > 0 ||
     checks.length > 0 ||
