@@ -122,6 +122,7 @@ describe("fix_code — in-progress run cancellation", () => {
 
     const result = await runIterate(makeOpts());
 
+    expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       // Summary-only: no push possible, so in-progress runs are left alone
       expect(result.fix.inProgressRunIds).toHaveLength(0);
