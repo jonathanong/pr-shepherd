@@ -24,7 +24,7 @@ Poll dispatcher for iterating a PR to completion.
    - Prefer `package.json` `packageManager`: `pnpm@...` → `pnpm exec`, `yarn@...` → `yarn run`, `bun@...` → `bunx`, `npm@...` → `npx`.
    - If `packageManager` is absent, use lockfiles: `pnpm-lock.yaml` → `pnpm exec`, `yarn.lock` → `yarn run`, `bun.lock` / `bun.lockb` → `bunx`, `package-lock.json` or no signal → `npx`.
 
-3. **Run `pr-shepherd poll`, nothing else:**
+3. **Run `pr-shepherd poll`:**
 
    If the package is missing in the target repository, first check `gh pr view <N> --json state --jq .state`. If it prints `MERGED` or `CLOSED`, report `PR #N is already merged/closed. Nothing to do.` and stop. Otherwise, tell the user to install pr-shepherd with the matching dev-dependency command: `pnpm add -D pr-shepherd`, `yarn add -D pr-shepherd`, `bun add -d pr-shepherd`, or `npm install --save-dev pr-shepherd`.
 
