@@ -126,6 +126,23 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
 
     expect(result.actionableComments).toEqual([]);
   });
+  it("re-surfaces edited visible comments excluded by minimizeComments policy", async () => {
+    mockLoadConfig.mockReturnValueOnce({
+      iterate: { minimizeComments: "none" },
+      resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 }, fetchReviewSummaries: true },
+      actions: { autoResolveOutdated: true, autoMarkReady: true, commitSuggestions: true },
+    } as ReturnType<typeof loadConfig>);
+    const comment = makeComment({ id: "c-human", authorType: "User", body: "new note" });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ comments: [comment] }) });
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([["c-human", { seenAt: 1000, bodyHash: hashBody("old note") }]]),
+    );
+
+    const result = await runResolveFetch(BASE_OPTS);
+
+    expect(result.actionableComments).toMatchObject([{ id: "c-human", edited: true }]);
+    expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "c-human", "new note");
+  });
   it("actionableThreads excludes threads whose top comment is minimized", async () => {
     const visible = makeThread({ id: "t-visible", isMinimized: false });
     const minimized = makeThread({ id: "t-minimized", isMinimized: true });

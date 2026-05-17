@@ -123,7 +123,7 @@ describe("runCheck — first-look items", () => {
 
     const report = await runCheck(BASE_OPTS);
 
-    expect(report.comments.actionable.map((c) => c.id)).toEqual(["c-human"]);
+    expect(report.comments.actionable).toMatchObject([{ id: "c-human", edited: true }]);
     expect(report.comments.minimizeIds).toEqual([]);
     expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "c-human", "new text");
   });

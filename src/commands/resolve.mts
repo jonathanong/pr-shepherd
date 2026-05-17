@@ -10,11 +10,11 @@ import { loadSeenMap, markSeen, classifyItem } from "../state/seen-comments.mts"
 import type {
   GlobalOptions,
   ReviewThread,
-  PrComment,
   Review,
   SuggestionBlock,
   FirstLookThread,
   FirstLookComment,
+  ActionableComment,
 } from "../types.mts";
 
 export { runResolveMutate } from "./resolve-mutate.mts";
@@ -31,7 +31,7 @@ export interface FetchResult {
   resolutionOnlyThreads: ReviewThread[];
   /** First-look threads — outdated/resolved/minimized, surfaced for agent acknowledgment on first encounter only. */
   firstLookThreads: FirstLookThread[];
-  actionableComments: PrComment[];
+  actionableComments: ActionableComment[];
   /** First-look comments — minimized, surfaced for agent acknowledgment on first encounter only. */
   firstLookComments: FirstLookComment[];
   changesRequestedReviews: Review[];

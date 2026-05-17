@@ -165,11 +165,12 @@ export function buildFixInstructions(
   }
   const editedTotal =
     editedSummaries.length +
+    actionableComments.filter((c) => c.edited).length +
     firstLookThreads.filter((t) => t.edited).length +
     firstLookComments.filter((c) => c.edited).length;
   if (editedTotal > 0) {
     instructions.push(
-      `Items under \`## Review summaries (edited since first look)\` and any first-look bullet tagged \`, edited\` were updated by their author after you previously acknowledged them. Read the updated body before deciding whether any matching \`## Review threads to resolve\` item should be resolved.`,
+      `Items marked \`[edited since first look]\`, items under \`## Review summaries (edited since first look)\`, and any first-look bullet tagged \`, edited\` were updated by their author after you previously acknowledged them. Read the updated body before deciding whether any matching \`## Review threads to resolve\` item should be resolved.`,
     );
   }
 

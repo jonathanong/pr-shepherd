@@ -36,13 +36,14 @@ export function toAgentThread(t: ReviewThread): AgentThread {
   };
 }
 
-export function toAgentComment(c: PrComment): AgentComment {
+export function toAgentComment(c: PrComment & { edited?: boolean }): AgentComment {
   return {
     id: c.id,
     author: c.author,
     ...(c.authorType !== undefined && { authorType: c.authorType }),
     body: c.body,
     url: c.url,
+    ...(c.edited === true && { edited: true }),
   };
 }
 

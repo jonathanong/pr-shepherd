@@ -1,12 +1,12 @@
 import { shouldMinimizeAuthor } from "./minimize-policy.mts";
 import { classifyItem, type SeenMarker } from "../state/seen-comments.mts";
 import type { MinimizeCommentsPolicy } from "../config/load.mts";
-import type { PrComment } from "../types.mts";
+import type { ActionableComment, PrComment } from "../types.mts";
 
 export interface VisibleCommentClassification {
-  actionable: PrComment[];
+  actionable: ActionableComment[];
   minimizeIds: string[];
-  toMarkSeen: PrComment[];
+  toMarkSeen: ActionableComment[];
 }
 
 export function classifyVisibleComments(
@@ -14,9 +14,9 @@ export function classifyVisibleComments(
   seenMap: Map<string, SeenMarker>,
   minimizeComments: MinimizeCommentsPolicy | undefined,
 ): VisibleCommentClassification {
-  const actionable: PrComment[] = [];
+  const actionable: ActionableComment[] = [];
   const minimizeIds: string[] = [];
-  const toMarkSeen: PrComment[] = [];
+  const toMarkSeen: ActionableComment[] = [];
   for (const c of comments.filter((comment) => !comment.isMinimized)) {
     if (shouldMinimizeAuthor(c.authorType, minimizeComments)) {
       actionable.push(c);
@@ -25,8 +25,9 @@ export function classifyVisibleComments(
     }
     const cls = classifyItem(c.id, c.body, seenMap);
     if (cls === "unchanged") continue;
-    actionable.push(c);
-    toMarkSeen.push(c);
+    const comment = cls === "edited" ? { ...c, edited: true as const } : c;
+    actionable.push(comment);
+    toMarkSeen.push(comment);
   }
   return { actionable, minimizeIds, toMarkSeen };
 }

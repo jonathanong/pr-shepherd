@@ -9,6 +9,7 @@ import {
   renderReviewBullet,
   renderThreadResolutionStatusTag,
   buildFirstLookBullets,
+  renderEditedCommentTag,
 } from "./list-formatters.mts";
 import { joinSections } from "../util/markdown.mts";
 import type { FetchResult } from "../commands/resolve.mts";
@@ -30,9 +31,7 @@ export function formatFetchResult(result: FetchResult): string {
   if (firstLookTotal > 0) headingParts.push(`${firstLookTotal} first-look`);
   const headingSuffix = headingParts.length > 0 ? headingParts.join(", ") : "0 actionable";
 
-  const sections: string[] = [];
-
-  sections.push(`# PR #${result.prNumber} — Resolve fetch (${headingSuffix})`);
+  const sections: string[] = [`# PR #${result.prNumber} — Resolve fetch (${headingSuffix})`];
 
   if (result.actionableThreads.length > 0) {
     sections.push(
@@ -57,7 +56,11 @@ export function formatFetchResult(result: FetchResult): string {
 
   if (result.actionableComments.length > 0) {
     sections.push(`## Actionable PR Comments (${result.actionableComments.length})`);
-    sections.push(result.actionableComments.map((c) => renderCommentBullet(c)).join("\n"));
+    sections.push(
+      result.actionableComments
+        .map((c) => renderCommentBullet(c, { statusTag: renderEditedCommentTag(c) }))
+        .join("\n"),
+    );
   }
 
   if (result.changesRequestedReviews.length > 0) {
