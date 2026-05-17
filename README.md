@@ -22,10 +22,10 @@ Example Workflow:
 
 The CLI emits unified recheck instructions. Generated commands use `cli.runner` from `.pr-shepherdrc.yml`: `auto` (default), `npx`, `pnpm`, `yarn`, or `bun`.
 
-At a high level, the skill invokes `pr-shepherd <PR>` through the selected package runner, which provides actionable feedback directly to the agent:
+At a high level, the skill invokes `pr-shepherd poll <PR>` through the selected package runner, which provides actionable feedback directly to the agent:
 
 ```
-> npx pr-shepherd 123
+> npx pr-shepherd poll 123
 
 # PR #123 [FIX_CODE]
 
@@ -61,7 +61,7 @@ _(schematic — actual steps depend on PR state)_
 4. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`.
 5. Run the `resolve:` command above, substituting `"$HEAD_SHA"`.
 6. Add or update a `## Shepherd Journal` section in the PR description for any large decisions made, appending under the existing heading if it already exists.
-7. CI needs time to run on the new push. Schedule one session-only follow-up task to run `npx pr-shepherd 123` to recheck once after a fresh delay between 30 seconds and 4 minutes, then end this turn. Do not sleep or rerun inline.
+7. CI needs time to run on the new push. Run `npx pr-shepherd poll 123` again to continue until Shepherd returns `[CANCEL]` or `[ESCALATE]`.
 ```
 
 On every iteration, a command is returned to instruct the agent exactly what to do. No guessing, no thinking, as few agentic turns as possible:
@@ -97,7 +97,7 @@ Some other workflow improvements:
 
 Recommendations:
 
-- Run `pr-shepherd` on all your PRs before you go to sleep so that you wake up to reviewable PRs. Keep an active goal cycling the reusable command until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures).
+- Run `pr-shepherd` on all your PRs before you go to sleep so that you wake up to reviewable PRs. Keep an active goal cycling `pr-shepherd poll` until Shepherd emits `[CANCEL]` for ready-delay completion or merged/closed, or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures).
 - Instruct your agents to write comments in a single review (comment, changes requested, or approved). This allows the review's comments/threads to be minimized or resolved together, keeping your pull request history clean. If you write inline comments outside of a review, each comment would still show up in the pull request history and take up space.
 - Avoid sticky comments as they will continue to be hidden. Instead, just make a new comment, especially on reviews. If you really want sticky comments, instruct your agent to unhide/unminimize them when updating them.
 - Avoid having automation edit comments, reviews, or threads in place because updated items get minimized. Instead, always make a new review, comment, thread, etc.
@@ -114,7 +114,7 @@ Recommendations:
 
 ### Iterate a PR to completion
 
-One-tick dispatcher — checks CI and review comments, fixes issues, and marks the PR ready for review when clean. Each non-terminal tick emits an `## Instructions` section telling the agent how to run the next tick; the loop continues until `[CANCEL]` or `[ESCALATE]`.
+Poll dispatcher — checks CI and review comments, fixes issues, and marks the PR ready for review when clean. Each non-terminal tick emits an `## Instructions` section; the skill follows it, then invokes `pr-shepherd poll` again until `[CANCEL]` or `[ESCALATE]`.
 
 Claude Code (via `pr-shepherd` skill):
 
@@ -127,8 +127,8 @@ Claude Code (via `pr-shepherd` skill):
 Codex or direct CLI:
 
 ```sh
-npx pr-shepherd 42
-npx pr-shepherd 42 --ready-delay 15m
+npx pr-shepherd poll 42
+npx pr-shepherd poll 42 --ready-delay 15m
 npx pr-shepherd iterate 42               # legacy-compatible spelling
 ```
 
@@ -219,12 +219,12 @@ The plugin only installs the skill; it does not install the CLI into target repo
 Iterate a PR from Codex with the target repository's package runner:
 
 ```bash
-<runner> pr-shepherd iterate 42
+<runner> pr-shepherd poll 42
 ```
 
-For example, a repo like `~/filaments` that declares `packageManager: "pnpm@..."` and has `pnpm-lock.yaml` should use `pnpm exec pr-shepherd iterate 42`. For Bun repos (with `bun.lock` or `bun.lockb`), use `bunx pr-shepherd iterate 42`. For npm repos, use `npx pr-shepherd iterate 42`.
+For example, a repo like `~/filaments` that declares `packageManager: "pnpm@..."` and has `pnpm-lock.yaml` should use `pnpm exec pr-shepherd poll 42`. For Bun repos (with `bun.lock` or `bun.lockb`), use `bunx pr-shepherd poll 42`. For npm repos, use `npx pr-shepherd poll 42`.
 
-Or ask Codex to use the `pr-shepherd` skill, for example: `run pr-shepherd until this PR is ready`. Follow the output's `## Instructions`. Continue until Shepherd emits `[CANCEL]` or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). `pr-shepherd iterate 42` remains supported for existing workflows.
+Or ask Codex to use the `pr-shepherd` skill, for example: `run pr-shepherd until this PR is ready`. Follow the output's `## Instructions`. Continue invoking `pr-shepherd poll` until Shepherd emits `[CANCEL]` or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). `pr-shepherd iterate 42` remains supported for existing workflows.
 
 ### As a global CLI
 

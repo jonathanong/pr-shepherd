@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-One skill is shipped for both Claude Code and Codex: `pr-shepherd`. It is a thin one-tick dispatcher — it runs `<runner> pr-shepherd <PR>` and follows the `## Instructions` embedded in the output. All policy, state transitions, and per-action guidance live in the CLI output, not in the skill.
+One skill is shipped for both Claude Code and Codex: `pr-shepherd`. It is a thin poll dispatcher — it runs `<runner> pr-shepherd poll <PR>` and follows the `## Instructions` embedded in the output. All policy, state transitions, and per-action guidance live in the CLI output, not in the skill.
 
 ## Claude Code
 
@@ -21,13 +21,7 @@ Use the skill inside a `/goal`:
 /goal /pr-shepherd:pr-shepherd 42 --ready-delay 15m
 ```
 
-The goal loop handles recurrence. Each tick the skill runs one iterate cycle and prints the output. For non-terminal actions, follow the CLI's `## Instructions`. Pick one iteration strategy:
-
-- **Scheduled wakeup** — schedule exactly one next session-only iteration after a fresh 30s–4m delay, then end the turn.
-- **Blocking poll** — run `<runner> pr-shepherd poll <N>` to loop internally until a non-WAIT action appears (bounded by `--timeout`, default 5m).
-- **Inline sleep** — sleep inline for a fresh 30s–4m delay, then rerun.
-
-Do not combine strategies and do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`. `[CANCEL]` and `[ESCALATE]` stop the goal regardless of strategy.
+The goal loop handles recurrence. The skill invokes `<runner> pr-shepherd poll <N>` and prints the output. For non-terminal actions, follow the CLI's `## Instructions`, then invoke `<runner> pr-shepherd poll <N>` again. `[CANCEL]` and `[ESCALATE]` stop the goal.
 
 ## Codex
 
@@ -68,7 +62,7 @@ Use the skill inside a `/goal`:
 /goal $pr-shepherd 42
 ```
 
-Codex runs the same skill — one tick per goal iteration. Alternatively, Codex can run `<runner> pr-shepherd poll <N>` to block until a non-WAIT action appears.
+Codex runs the same skill: invoke `<runner> pr-shepherd poll <N>`, follow the output, and continue until `[CANCEL]` or `[ESCALATE]`.
 
 ## Resolve without iterating
 

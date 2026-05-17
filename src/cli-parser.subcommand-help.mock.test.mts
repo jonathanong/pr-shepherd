@@ -55,18 +55,35 @@ const SUBCOMMANDS = [
   "log-file",
 ] as const;
 
+const HELP_EXPECTATIONS: Record<(typeof SUBCOMMANDS)[number], string[]> = {
+  resolve: ["Modes:", "--resolve-thread-ids", "--require-sha", "Exit code:"],
+  "commit-suggestion": ["Preconditions:", "--thread-id", "--description", "Exit codes:"],
+  iterate: ["Actions:", "FIX_CODE", "--stall-timeout", "Exit codes:"],
+  poll: ["Poll flags:", "--interval", "--timeout", "Forwarded iterate flags:"],
+  clean: ["Variants:", "pr [number]", "branch [name]", "--dry-run"],
+  "log-file": ["Environment:", "PR_SHEPHERD_LOG_DISABLED", "PR_SHEPHERD_STATE_DIR"],
+};
+
 for (const sub of SUBCOMMANDS) {
   describe(`${sub} --help / -h`, () => {
     it(`prints usage for '${sub} --help' and exits 0`, async () => {
       await main(["node", "shepherd", sub, "--help"]);
-      expect(getStdout()).toContain("Usage:");
+      const out = getStdout();
+      expect(out).toContain("Usage:");
+      for (const expected of HELP_EXPECTATIONS[sub]) {
+        expect(out).toContain(expected);
+      }
       expect(process.exitCode).toBeUndefined();
       expect(stderrSpy).not.toHaveBeenCalled();
     });
 
     it(`prints usage for '${sub} -h' and exits 0`, async () => {
       await main(["node", "shepherd", sub, "-h"]);
-      expect(getStdout()).toContain("Usage:");
+      const out = getStdout();
+      expect(out).toContain("Usage:");
+      for (const expected of HELP_EXPECTATIONS[sub]) {
+        expect(out).toContain(expected);
+      }
       expect(process.exitCode).toBeUndefined();
       expect(stderrSpy).not.toHaveBeenCalled();
     });
@@ -84,6 +101,8 @@ describe("default iterate path (pr 123 --help)", () => {
   it("prints iterate usage to stdout and exits 0 for '123 --help'", async () => {
     await main(["node", "shepherd", "123", "--help"]);
     expect(getStdout()).toContain("Usage:");
+    expect(getStdout()).toContain("Actions:");
+    expect(getStdout()).toContain("pr-shepherd iterate");
     expect(process.exitCode).toBeUndefined();
     expect(stderrSpy).not.toHaveBeenCalled();
     expect(mockRunIterate).not.toHaveBeenCalled();
@@ -92,6 +111,8 @@ describe("default iterate path (pr 123 --help)", () => {
   it("prints iterate usage to stdout and exits 0 for '123 -h'", async () => {
     await main(["node", "shepherd", "123", "-h"]);
     expect(getStdout()).toContain("Usage:");
+    expect(getStdout()).toContain("Actions:");
+    expect(getStdout()).toContain("pr-shepherd iterate");
     expect(process.exitCode).toBeUndefined();
     expect(stderrSpy).not.toHaveBeenCalled();
     expect(mockRunIterate).not.toHaveBeenCalled();
