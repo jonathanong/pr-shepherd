@@ -49,9 +49,11 @@ Clean variants:
   all                  Remove all pr-shepherd state.
 
 Exit codes for iterate and poll:
-  0  wait or mark_ready
-  1  fix_code, or a command/validation error
-  2  cancel
-  3  escalate
+  0  WAIT or MARK_READY
+  1  FIX_CODE, or a command/validation error
+  2  CANCEL
+  3  ESCALATE
+
+Durations accept seconds, minutes, or hours: 30s, 2m, 1h, or bare seconds.
 
 Run 'pr-shepherd <command> --help' for command-specific details.`;

@@ -57,8 +57,8 @@ Run one iterate tick for a pull request. This is an alias for 'pr-shepherd [PR]'
 The output contains one action and an action-specific ## Instructions section.
 
 Usage:
-  pr-shepherd [PR] [--format text|json] [--verbose] [iterate-flags]
-  pr-shepherd iterate [PR] [--format text|json] [--verbose] [iterate-flags]
+  pr-shepherd [PR] [iterate-flags]
+  pr-shepherd iterate [PR] [iterate-flags]
 
 Iterate flags:
   --ready-delay <duration>       Settle window before a clean PR cancels. Example: 15m.
@@ -89,8 +89,7 @@ Poll exits as soon as iterate returns MARK_READY, FIX_CODE, CANCEL, or ESCALATE,
 returns the last WAIT result.
 
 Usage:
-  pr-shepherd poll [PR] [--interval 30s] [--timeout 5m] [--format text|json]
-                         [--verbose] [iterate-flags]
+  pr-shepherd poll [PR] [poll-flags] [iterate-flags]
 
 Poll flags:
   --interval <duration>          Sleep between WAIT ticks. Default: 30s.
