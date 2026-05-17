@@ -8,7 +8,7 @@ import type {
   FirstLookComment,
   ReviewThread,
 } from "../../types.mts";
-import { renderShellCommand, type CliRunner } from "../../cli/runner.mts";
+import { renderShellCommand } from "../../cli/runner.mts";
 import { buildFailingCheckInstructions } from "./check-instructions.mts";
 import {
   SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE,
@@ -49,7 +49,6 @@ export function buildFixInstructions(
   editedSummaries: Review[] = [],
   inProgressRunIds: string[] = [],
   resolutionOnlyThreads: ReviewThread[] = [],
-  runner?: CliRunner,
 ): string[] {
   const instructions: string[] = [];
 
@@ -97,9 +96,7 @@ export function buildFixInstructions(
 
   const hasSuggestions = threads.some((t) => t.suggestion);
   if (hasSuggestions) {
-    instructions.push(
-      buildCommitSuggestionInstruction(prNumber, "## Review threads", false, runner),
-    );
+    instructions.push(buildCommitSuggestionInstruction(prNumber, "## Review threads", false));
   }
 
   if (threads.length > 0 || actionableComments.length > 0) {

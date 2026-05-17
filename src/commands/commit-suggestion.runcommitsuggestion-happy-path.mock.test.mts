@@ -79,18 +79,6 @@ describe("runCommitSuggestion — happy path", () => {
     expect(joined).toContain("git push");
   });
 
-  it("postActionInstructions use configured package runner", async () => {
-    mockLoadConfig.mockReturnValue({ cli: { runner: "pnpm" } });
-    const result = await runCommitSuggestion({
-      ...GLOBAL_OPTS,
-      threadId: "PRRT_x",
-      message: "fix",
-    });
-    expect(result.postActionInstructions.join("\n")).toContain(
-      "pnpm exec pr-shepherd resolve 42 --resolve-thread-ids PRRT_x",
-    );
-  });
-
   it("multi-line range: uses startLine from thread", async () => {
     mockFetchBatch.mockResolvedValue({
       data: makeBatch([

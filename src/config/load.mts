@@ -3,17 +3,12 @@ import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { parse } from "yaml";
 import builtins from "../config.json" with { type: "json" };
-import { parseCliRunner } from "../cli/runner.mts";
 
 const MINIMIZE_COMMENTS_POLICIES = ["all", "bots", "users", "none"] as const;
 
 export type MinimizeCommentsPolicy = (typeof MINIMIZE_COMMENTS_POLICIES)[number];
 
 export interface PrShepherdConfig {
-  cli?: {
-    /** Command runner used in generated prompts. `auto` detects pnpm/yarn/npm/bun from package metadata. */
-    runner: "auto" | "npx" | "pnpm" | "yarn" | "bun";
-  };
   iterate: {
     fixAttemptsPerThread: number;
     stallTimeoutMinutes: number;
@@ -128,14 +123,6 @@ export function loadConfig(): PrShepherdConfig {
       defaults as unknown as Record<string, unknown>,
       parsed,
     ) as unknown as PrShepherdConfig;
-    // Validate cli and watch at load time so misconfigurations are caught once
-    // with the rc file path in context, rather than during instruction rendering.
-    if (config.cli === null || Array.isArray(config.cli) || typeof config.cli !== "object") {
-      throw new Error(
-        `Invalid config: cli must be a plain object, got ${JSON.stringify(config.cli)}`,
-      );
-    }
-    config.cli.runner = parseCliRunner(config.cli.runner);
     config.iterate.minimizeComments = parseMinimizeCommentsPolicy(config.iterate.minimizeComments);
     configCache.set(cwd, config);
     return config;

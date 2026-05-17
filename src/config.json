@@ -1,7 +1,4 @@
 {
-  "cli": {
-    "runner": "auto"
-  },
   "iterate": {
     "fixAttemptsPerThread": 3,
     "stallTimeoutMinutes": 30,

@@ -4,11 +4,11 @@
 
 Each default `pr-shepherd` invocation returns exactly one iterate action. The legacy `pr-shepherd iterate` spelling is still supported. See [docs/iterate-flow.md](iterate-flow.md) for the decision order.
 
-The default output format is Markdown — what you see when running `pr-shepherd <PR>` through the selected package runner, and what the iterate skill reads on each tick. `--format=json` emits the same information as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
+The default output format is Markdown — what you see when running `pr-shepherd <PR>` directly, and what `pr-shepherd poll <PR>` returns to the iterate skill. `--format=json` emits the same information as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
 
-Three iteration strategies are valid: (a) inline sleep + rerun; (b) scheduled session-only follow-up; (c) the blocking `pr-shepherd poll` command, which loops with `--interval`/`--timeout` until a non-WAIT action appears. Do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`.
+The shipped skill invokes `pr-shepherd poll`, which loops with `--interval`/`--timeout` while the PR remains in `[WAIT]` and returns whenever an actionable or terminal state appears. Do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`.
 
-Command examples use the default npm spelling (`npx pr-shepherd`). Repos can set `cli.runner` to `auto`, `npx`, `pnpm`, `yarn`, or `bun`; generated text and JSON argv then use the selected runner (for example `pnpm exec pr-shepherd`, `yarn run pr-shepherd`, or `bunx pr-shepherd`) everywhere a pr-shepherd follow-up command is emitted.
+Command examples call `pr-shepherd` directly everywhere a follow-up command is emitted.
 
 Pass `--verbose` to get more debug state. In JSON mode, the output starts from the full `IterateResult` shape (all fields, including `baseBranch`, `checks`, `shouldCancel`) and then applies the same instruction projection as lean JSON: non-`fix_code` actions get a top-level `instructions` array, and `fix.instructions` may be rewritten. In Markdown mode, `--verbose` restores the full header summary line (all four counts, `remainingSeconds`, `blockingBotReviewInProgress`, `isDraft`, `shouldCancel` always shown) — but Markdown is structurally different from JSON and does not guarantee field-for-field parity (array fields like `baseBranch` or `checks` are not added to Markdown for actions that do not normally render them). Lean mode is the default because most fields are `false`/`0`/`[]` on a typical healthy tick and add context noise without value.
 
@@ -81,14 +81,14 @@ WAIT: 3 passing, 2 in-progress — 120s until auto-cancel
 
 ## Instructions
 
-1. Recheck: rerun `npx pr-shepherd 42` to continue the active goal once after a fresh 30s–4m delay.
+1. Recheck: rerun `pr-shepherd 42` to continue the active goal once after a fresh 30s–4m delay.
 ```
 
-When the current command includes a ready-delay override, the rerun command preserves it: `npx pr-shepherd 42 --ready-delay 15m`.
+When the current command includes a ready-delay override, the rerun command preserves it: `pr-shepherd 42 --ready-delay 15m`.
 
 The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, `blocked by pending reviews or required status checks`, `PR is a draft`, or `some checks are unstable`.
 
-**What the skill does:** Follow `## Instructions`. Alternatively, run `<runner> pr-shepherd poll <N>` to block until the action is non-WAIT (bounded by `--timeout`).
+**What the skill does:** Follow `## Instructions`, then run `pr-shepherd poll <N>` again unless the action is terminal.
 
 ---
 
@@ -114,10 +114,10 @@ MARKED READY: PR #42 converted from draft to ready for review
 
 ## Instructions
 
-1. The CLI already marked the PR ready for review. Recheck: rerun `npx pr-shepherd 42` to recheck once after a fresh 30s–4m delay.
+1. The CLI already marked the PR ready for review. Recheck: rerun `pr-shepherd 42` to recheck once after a fresh 30s–4m delay.
 ```
 
-**What the skill does:** Follow `## Instructions`. Do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`.
+**What the skill does:** Follow `## Instructions`, then run `pr-shepherd poll <N>` again unless the action is terminal.
 
 ---
 
@@ -214,7 +214,7 @@ Actionable work exists — whether it requires code edits or only resolution is 
 ## Post-fix push
 
 - base: `main`
-- resolve: `npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
+- resolve: `pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
 
 ## Instructions
 
@@ -238,7 +238,7 @@ When one or more threads carry a `[suggestion]` marker, the `## Instructions` se
 
 1. Decide for each item under `## Review threads` and `## Actionable comments` whether a code change is warranted. …
 2. If you decide to push new commits: cancel each in-progress run …
-3. For each thread marked `[suggestion]` under `## Review threads`: run `npx pr-shepherd commit-suggestion 42 --thread-id <id> --message "<one-sentence headline>" --format=json` to retrieve the patch and suggested commit. The CLI does not mutate the working tree — apply the patch yourself, then stage the listed file and run the suggested `git commit`. Include the thread ID in `--resolve-thread-ids` in the resolve command below. If the patch fails to apply, fall through to the manual-edit step. Do not retry the same command.
+3. For each thread marked `[suggestion]` under `## Review threads`: run `pr-shepherd commit-suggestion 42 --thread-id <id> --message "<one-sentence headline>" --format=json` to retrieve the patch and suggested commit. The CLI does not mutate the working tree — apply the patch yourself, then stage the listed file and run the suggested `git commit`. Include the thread ID in `--resolve-thread-ids` in the resolve command below. If the patch fails to apply, fall through to the manual-edit step. Do not retry the same command.
 4. Apply code fixes: read and edit each file referenced under `## Review threads` and `## Actionable comments` above. When applying a `[suggestion]` thread manually (e.g. when a patch fails to apply), replace the exact line range shown in the heading (`path:startLine-endLine`) with the replacement shown in its `Replaces lines …` block verbatim.
 5. [remaining steps — resolution-only, failing checks, reviews, commit/rebase, resolve, cancelled-runs guard, journal, stop — renumber starting here]
 ```
@@ -273,7 +273,7 @@ The `commit-suggestion` step is absent when no thread has a `[suggestion]` marke
     - ``- resolve: `<argv>` `` — fully-quoted resolve command. `$DISMISS_MESSAGE` and `$HEAD_SHA` are always quoted so substituting a multi-word sentence keeps it as one argument. `--require-sha "$HEAD_SHA"` is appended when the underlying resolve command can mutate state against a moving HEAD — specifically, when `--resolve-thread-ids` contains actionable thread IDs (threads from `## Review threads` that required code edits), when failing checks are being addressed, or when `--dismiss-review-ids` is present. `--resolve-thread-ids` populated only with resolution-only thread IDs (threads from `## Review threads to resolve` that needed no code edits) does not trigger `--require-sha`.
 15. `## Instructions` — numbered list to execute in order. The final instruction always refers back to the `resolve:` bullet rather than duplicating the command — that single source of truth is what the skill executes.
 
-The JSON payload exposes the same data under `fix.{threads, resolutionOnlyThreads, actionableComments, reviewSummaryIds, firstLookSummaries, editedSummaries, surfacedApprovals, checks, changesRequestedReviews, resolveCommand, instructions, firstLookThreads, firstLookComments, inProgressRunIds}` plus top-level `baseBranch`, `branchProtection` (on `IterateResultBase`, not under `fix`; omitted in lean JSON when `null`, always present in verbose JSON), and `cancelled`. Comment/review/thread objects include `authorType` when GitHub returned an author classification (`User`, `Bot`, or `Unknown`). `fix.actionableComments[]` includes `edited: true` when a non-auto-minimized PR comment body changed after Shepherd previously surfaced it. `fix.inProgressRunIds` contains the GitHub Actions run IDs the agent should cancel before pushing (mirrors `## In-progress runs` in the Markdown output); populated only when there is plausible-push work (actionable threads, failing checks, `CHANGES_REQUESTED` reviews, actionable PR comments, or merge conflicts) AND at least one in-progress check has a non-null run ID not already cancelled by the CLI. Resolution-only and summary-only iterations set this to an empty array. External status checks and already-cancelled runs are excluded. In lean JSON mode this field is omitted when empty. `branchProtection` is `null` when no branch protection rule applies; otherwise it is `{ requiresApprovingReviews, requiredApprovingReviewCount, requiresConversationResolution, requiresStatusChecks, requiredStatusCheckContexts }` — the raw values from GitHub's `branchProtectionRule`. `resolutionOnlyThreads` contains unresolved outdated/minimized review threads routed to `--resolve-thread-ids` without causing a push or `--require-sha`. `reviewSummaryIds` contains the review IDs routed to `--minimize-comment-ids`: COMMENTED summaries that pass `iterate.minimizeComments`, and APPROVED reviews only when approval minimization is enabled and they also pass the author policy. `droppedDismissReviewIds` is included only when `resolveCommand` had to remove `changesRequestedReviews` that overlapped `--minimize-comment-ids` so they are not retried as dismiss attempts. `firstLookSummaries` carries the full `Review` objects for bodies seen this iteration for the first time. `editedSummaries` carries the full `Review` objects for summaries whose body changed since last seen — these IDs are **not** in `reviewSummaryIds`. `resolveCommand.argv` starts with the configured runner argv (`["npx", "pr-shepherd", …]`, `["pnpm", "exec", "pr-shepherd", …]`, `["yarn", "run", "pr-shepherd", …]`, or `["bunx", "pr-shepherd", …]`). In lean JSON mode, `fix.*` arrays that are empty are omitted; `cancelled` is omitted when empty. Pass `--verbose` to include all fields. `firstLookThreads` and `firstLookComments` are informational unless the same thread appears in `resolutionOnlyThreads`.
+The JSON payload exposes the same data under `fix.{threads, resolutionOnlyThreads, actionableComments, reviewSummaryIds, firstLookSummaries, editedSummaries, surfacedApprovals, checks, changesRequestedReviews, resolveCommand, instructions, firstLookThreads, firstLookComments, inProgressRunIds}` plus top-level `baseBranch`, `branchProtection` (on `IterateResultBase`, not under `fix`; omitted in lean JSON when `null`, always present in verbose JSON), and `cancelled`. Comment/review/thread objects include `authorType` when GitHub returned an author classification (`User`, `Bot`, or `Unknown`). `fix.actionableComments[]` includes `edited: true` when a non-auto-minimized PR comment body changed after Shepherd previously surfaced it. `fix.inProgressRunIds` contains the GitHub Actions run IDs the agent should cancel before pushing (mirrors `## In-progress runs` in the Markdown output); populated only when there is plausible-push work (actionable threads, failing checks, `CHANGES_REQUESTED` reviews, actionable PR comments, or merge conflicts) AND at least one in-progress check has a non-null run ID not already cancelled by the CLI. Resolution-only and summary-only iterations set this to an empty array. External status checks and already-cancelled runs are excluded. In lean JSON mode this field is omitted when empty. `branchProtection` is `null` when no branch protection rule applies; otherwise it is `{ requiresApprovingReviews, requiredApprovingReviewCount, requiresConversationResolution, requiresStatusChecks, requiredStatusCheckContexts }` — the raw values from GitHub's `branchProtectionRule`. `resolutionOnlyThreads` contains unresolved outdated/minimized review threads routed to `--resolve-thread-ids` without causing a push or `--require-sha`. `reviewSummaryIds` contains the review IDs routed to `--minimize-comment-ids`: COMMENTED summaries that pass `iterate.minimizeComments`, and APPROVED reviews only when approval minimization is enabled and they also pass the author policy. `droppedDismissReviewIds` is included only when `resolveCommand` had to remove `changesRequestedReviews` that overlapped `--minimize-comment-ids` so they are not retried as dismiss attempts. `firstLookSummaries` carries the full `Review` objects for bodies seen this iteration for the first time. `editedSummaries` carries the full `Review` objects for summaries whose body changed since last seen — these IDs are **not** in `reviewSummaryIds`. `resolveCommand.argv` starts with `["pr-shepherd", …]`. In lean JSON mode, `fix.*` arrays that are empty are omitted; `cancelled` is omitted when empty. Pass `--verbose` to include all fields. `firstLookThreads` and `firstLookComments` are informational unless the same thread appears in `resolutionOnlyThreads`.
 
 **Resolve command rules (same in Markdown and JSON):**
 
@@ -291,7 +291,7 @@ When at least one thread has a `[suggestion]` marker, the agent sees these two i
 
 **Step 1 — structured path (preferred):**
 
-> For each thread marked `` `[suggestion]` `` under `` `## Review threads` ``: run `` `npx pr-shepherd commit-suggestion 42 --thread-id <id> --message "<one-sentence headline>" --format=json` `` to retrieve the patch and suggested commit. The CLI does not mutate the working tree — apply the patch yourself (run `git apply` with the diff shown, or edit the file directly using the line range), then stage the listed file and run the suggested `git commit` from the `## Instructions` section. Include the thread ID in `--resolve-thread-ids` in the resolve command below (the thread is not auto-resolved). If the patch fails to apply, fall through to the manual-edit step. Do not retry the same command.
+> For each thread marked `` `[suggestion]` `` under `` `## Review threads` ``: run `` `pr-shepherd commit-suggestion 42 --thread-id <id> --message "<one-sentence headline>" --format=json` `` to retrieve the patch and suggested commit. The CLI does not mutate the working tree — apply the patch yourself (run `git apply` with the diff shown, or edit the file directly using the line range), then stage the listed file and run the suggested `git commit` from the `## Instructions` section. Include the thread ID in `--resolve-thread-ids` in the resolve command below (the thread is not auto-resolved). If the patch fails to apply, fall through to the manual-edit step. Do not retry the same command.
 
 `commit-suggestion` builds a unified diff from the `Replaces lines …` block and emits the suggested commit message and body (with a `Co-authored-by: <reviewer>` trailer) in a `## Suggested commit message` section, plus numbered `## Instructions` telling the agent exactly what to run. It handles one thread at a time; for multi-suggestion PRs invoke it in sequence, then push all commits together.
 
@@ -321,7 +321,7 @@ const remainingSeconds = computeRemaining();
 ```
 ````
 
-Structured path: run `npx pr-shepherd commit-suggestion 42 --thread-id PRRT_kwDOSGizTs58XB1L --message "rename x to remainingSeconds" --format=json`, then follow the `## Instructions` in the output (apply patch → `git add` → `git commit` → include ID in `pr-shepherd resolve`). Manual fallback: open `src/foo.ts` and replace line 42 with `const remainingSeconds = computeRemaining();`.
+Structured path: run `pr-shepherd commit-suggestion 42 --thread-id PRRT_kwDOSGizTs58XB1L --message "rename x to remainingSeconds" --format=json`, then follow the `## Instructions` in the output (apply patch → `git add` → `git commit` → include ID in `pr-shepherd resolve`). Manual fallback: open `src/foo.ts` and replace line 42 with `const remainingSeconds = computeRemaining();`.
 
 **Multi-line suggestion.** When the thread spans a range, the heading shows `path:startLine-endLine` (e.g. `src/foo.ts:40-42`). The `Replaces lines 40–42:` block contains the replacement spliced in for that entire range. An empty block means "delete those lines"; a block containing a single blank line means "replace with one blank line".
 
@@ -341,7 +341,7 @@ const result = computeAll();
 ```
 ````
 
-Structured path: run `npx pr-shepherd commit-suggestion 42 --thread-id PRRT_kwDOSGizTs58XB2M --message "collapse three assignments" --format=json`, then follow the `## Instructions` in the output. Manual fallback: replace lines 40–42 in `src/foo.ts` with `const result = computeAll();`.
+Structured path: run `pr-shepherd commit-suggestion 42 --thread-id PRRT_kwDOSGizTs58XB2M --message "collapse three assignments" --format=json`, then follow the `## Instructions` in the output. Manual fallback: replace lines 40–42 in `src/foo.ts` with `const result = computeAll();`.
 
 **Multiple suggestions (two or more threads).** Invoke `commit-suggestion` once per thread in sequence. Each invocation returns a patch + commit instructions; the agent applies each patch and commits before moving to the next. Include all thread IDs in `--resolve-thread-ids` — the CLI no longer auto-resolves threads. Push all commits together after all threads are handled.
 
@@ -376,12 +376,12 @@ return value ?? defaultValue;
 The `resolve:` command at the bottom of `## Post-fix push` includes both IDs:
 
 ```
-- resolve: `npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L,PRRT_kwDOSGizTs58XC2M --require-sha "$HEAD_SHA" --message "$DISMISS_MESSAGE"`
+- resolve: `pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L,PRRT_kwDOSGizTs58XC2M --require-sha "$HEAD_SHA" --message "$DISMISS_MESSAGE"`
 ```
 
 Both IDs stay in `--resolve-thread-ids` — `commit-suggestion` no longer resolves threads automatically. If a patch failed to apply and was handled manually instead, the ID still belongs in `--resolve-thread-ids`.
 
-**What the skill does:** Follow `## Instructions` in order. The instructions are self-contained and action-specific — no dispatch table needed. See `## Instructions` in the output for the exact steps. This output is designed for a single re-entry tick; do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`.
+**What the skill does:** Follow `## Instructions` in order. The instructions are self-contained and action-specific — no dispatch table needed. See `## Instructions` in the output for the exact steps. After handling the action, run `pr-shepherd poll <N>` again unless the action is terminal.
 
 ---
 

@@ -36,7 +36,7 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
         checks: [],
         changesRequestedReviews: [],
         resolveCommand: {
-          argv: ["npx", "pr-shepherd", "resolve", "42"],
+          argv: ["pr-shepherd", "resolve", "42"],
           requiresHeadSha: true,
           requiresDismissMessage: false,
           hasMutations: false,

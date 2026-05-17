@@ -7,4 +7,4 @@ MARKED READY: PR #42 converted from draft to ready for review
 
 ## Instructions
 
-1. The CLI already marked the PR ready for review. Recheck: rerun `npx pr-shepherd 42` to recheck once after a fresh 30s–4m delay.
+1. The CLI already marked the PR ready for review. Recheck: rerun `pr-shepherd 42` to recheck once after a fresh 30s–4m delay.

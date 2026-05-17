@@ -10,11 +10,11 @@
 ## Post-fix push
 
 - base: `main`
-- resolve: `npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_minimized`
+- resolve: `pr-shepherd resolve 42 --resolve-thread-ids PRRT_minimized`
 
 ## Instructions
 
 1. Resolve the threads under `## Review threads to resolve` with the `resolve:` command shown below. These threads are already outdated or minimized, so no code edit is required for them unless their body reveals separate work you choose to do.
 2. Run the `resolve:` command shown above.
 3. For any large decisions or rejections you made this iteration, add or update a `## Shepherd Journal` section in the PR description (`gh pr edit 42 --body …`) summarizing each decision. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. If this section already exists, append your entries under it instead of creating a duplicate heading.
-4. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick. Recheck: rerun `npx pr-shepherd 42` to recheck once after a fresh 30s–4m delay.
+4. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick. Recheck: rerun `pr-shepherd 42` to recheck once after a fresh 30s–4m delay.

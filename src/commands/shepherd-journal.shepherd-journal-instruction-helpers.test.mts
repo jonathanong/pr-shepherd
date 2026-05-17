@@ -43,7 +43,7 @@ describe("shepherd journal instruction helpers", () => {
       url: "https://github.com/org/repo/pull/42#thread",
     };
     const resolveCommand: ResolveCommand = {
-      argv: ["npx", "pr-shepherd", "resolve", "42"],
+      argv: ["pr-shepherd", "resolve", "42"],
       requiresHeadSha: false,
       requiresDismissMessage: false,
       hasMutations: true,
@@ -87,35 +87,31 @@ describe("shepherd journal instruction helpers", () => {
     expect(text).not.toContain("`## Shepherd Journal` entry");
   });
   it("buildFetchInstructions emits one append-aware Shepherd Journal step with actionable threads", () => {
-    const result = buildFetchInstructions(
-      42,
-      {
-        actionableThreads: [
-          {
-            id: "thread-1",
-            isMinimized: false,
-            isOutdated: false,
-            isResolved: false,
-            path: "src/foo.ts",
-            line: 10,
-            startLine: null,
-            author: "alice",
-            authorType: "Unknown" as const,
-            body: "please fix",
-            url: "https://github.com/org/repo/pull/42#thread",
-            createdAtUnix: 1_700_000_000,
-          },
-        ],
-        resolutionOnlyThreads: [],
-        firstLookThreads: [],
-        actionableComments: [],
-        firstLookComments: [],
-        changesRequestedReviews: [],
-        reviewSummaries: [],
-        commitSuggestionsEnabled: true,
-      } as unknown as Omit<FetchResult, "instructions">,
-      "auto",
-    );
+    const result = buildFetchInstructions(42, {
+      actionableThreads: [
+        {
+          id: "thread-1",
+          isMinimized: false,
+          isOutdated: false,
+          isResolved: false,
+          path: "src/foo.ts",
+          line: 10,
+          startLine: null,
+          author: "alice",
+          authorType: "Unknown" as const,
+          body: "please fix",
+          url: "https://github.com/org/repo/pull/42#thread",
+          createdAtUnix: 1_700_000_000,
+        },
+      ],
+      resolutionOnlyThreads: [],
+      firstLookThreads: [],
+      actionableComments: [],
+      firstLookComments: [],
+      changesRequestedReviews: [],
+      reviewSummaries: [],
+      commitSuggestionsEnabled: true,
+    } as unknown as Omit<FetchResult, "instructions">);
 
     const text = result.join("\n");
 
@@ -126,7 +122,7 @@ describe("shepherd journal instruction helpers", () => {
   });
   it("omits Shepherd Journal guidance when no mutations are required", () => {
     const resolveCommand: ResolveCommand = {
-      argv: ["npx", "pr-shepherd", "resolve", "42"],
+      argv: ["pr-shepherd", "resolve", "42"],
       requiresHeadSha: false,
       requiresDismissMessage: false,
       hasMutations: false,

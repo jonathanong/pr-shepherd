@@ -20,29 +20,24 @@ Poll dispatcher for iterating a PR to completion.
    - Otherwise, infer: `gh pr view --json number --jq .number`
    - If no PR found, report an error and stop.
 
-2. **Pick a package runner** from the target repository root:
-   - Choose the runner that resolves the repository's local `pr-shepherd` package, such as `npx`, `pnpm exec`, `yarn run`, or `bunx`.
-
-3. **Run `pr-shepherd poll`:**
-
-   If the package is missing in the target repository, first check `gh pr view <N> --json state --jq .state`. If it prints `MERGED` or `CLOSED`, report `PR #N is already merged/closed. Nothing to do.` and stop. Otherwise, tell the user to install `pr-shepherd` as a dev dependency with the repository's package manager.
+2. **Run `pr-shepherd poll`:**
 
    ```bash
-   <runner> pr-shepherd poll <N>
+   pr-shepherd poll <N>
    ```
 
-   Do not pass `$ARGUMENTS` through as extra flags. If you need to inspect supported options, run `<runner> pr-shepherd poll --help`.
+   Do not pass `$ARGUMENTS` through as extra flags. If you need to inspect supported options, run `pr-shepherd poll --help`.
 
-   Print the full output. Follow the `## Instructions` section exactly for the current action. When those instructions tell you to stop and recheck with `pr-shepherd <N>` after a delay, use `<runner> pr-shepherd poll <N>` as the next invocation instead; do not also run the one-shot command.
+   Print the full output. Follow the `## Instructions` section exactly for the current action. When those instructions tell you to stop and recheck with `pr-shepherd <N>` after a delay, use `pr-shepherd poll <N>` as the next invocation instead; do not also run the one-shot command.
 
-4. **Persistence:** Continuously call `<runner> pr-shepherd poll <N>` until the CLI returns `[CANCEL]` or `[ESCALATE]`, unless the human directs you to stop. Every other action is non-terminal:
-   - `[WAIT]`: call `<runner> pr-shepherd poll <N>` again.
-   - `[MARK_READY]`: call `<runner> pr-shepherd poll <N>` again.
-   - `[FIX_CODE]`: follow the output's `## Instructions`, then call `<runner> pr-shepherd poll <N>` again.
+3. **Persistence:** Continuously call `pr-shepherd poll <N>` until the CLI returns `[CANCEL]` or `[ESCALATE]`, unless the human directs you to stop. Every other action is non-terminal:
+   - `[WAIT]`: call `pr-shepherd poll <N>` again.
+   - `[MARK_READY]`: call `pr-shepherd poll <N>` again.
+   - `[FIX_CODE]`: follow the output's `## Instructions`, then call `pr-shepherd poll <N>` again.
 
    Treat a nonzero poll exit code as PR state only when the output contains a matching `# PR #N [ACTION]` heading. Exit code `1` can also mean a command or validation failure; if there is no `[FIX_CODE]` heading, surface the error and stop instead of looping.
 
-5. **Stop conditions (terminal states):**
+4. **Stop conditions (terminal states):**
    - Stop when the CLI emits `[CANCEL]` (ready-delay completed, or PR merged/closed).
    - Stop when the CLI emits `[ESCALATE]`, including `stall-timeout` for repeated unchanged CI failures.
    - **Do NOT merge the pull request** unless the human has explicitly requested or allowed it.

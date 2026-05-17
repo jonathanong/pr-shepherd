@@ -15,7 +15,7 @@ describe("buildFixInstructions", () => {
       [],
       "main",
       {
-        argv: ["npx", "pr-shepherd", "resolve", "42"],
+        argv: ["pr-shepherd", "resolve", "42"],
         requiresHeadSha: true,
         requiresDismissMessage: true,
         hasMutations: true,
@@ -61,7 +61,7 @@ describe("buildFixInstructions", () => {
       ],
       "main",
       {
-        argv: ["npx", "pr-shepherd", "resolve", "42"],
+        argv: ["pr-shepherd", "resolve", "42"],
         requiresHeadSha: true,
         requiresDismissMessage: true,
         hasMutations: true,
@@ -103,7 +103,7 @@ describe("buildFixInstructions", () => {
       ],
       "main",
       {
-        argv: ["npx", "pr-shepherd", "resolve", "42"],
+        argv: ["pr-shepherd", "resolve", "42"],
         requiresHeadSha: true,
         requiresDismissMessage: false,
         hasMutations: true,
@@ -134,7 +134,7 @@ describe("buildFixInstructions", () => {
       ],
       "main",
       {
-        argv: ["npx", "pr-shepherd", "resolve", "42"],
+        argv: ["pr-shepherd", "resolve", "42"],
         requiresHeadSha: true,
         requiresDismissMessage: true,
         hasMutations: true,
@@ -174,7 +174,7 @@ describe("buildFixInstructions", () => {
       ],
       "main",
       {
-        argv: ["npx", "pr-shepherd", "resolve", "42"],
+        argv: ["pr-shepherd", "resolve", "42"],
         requiresHeadSha: true,
         requiresDismissMessage: true,
         hasMutations: true,

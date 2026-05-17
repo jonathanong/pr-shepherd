@@ -7,9 +7,6 @@ pr-shepherd looks for a `.pr-shepherdrc.yml` file starting from the current work
 ## Example
 
 ```yaml
-cli:
-  runner: auto # auto-detect npm/pnpm/yarn/bun for generated commands
-
 iterate:
   fixAttemptsPerThread: 5 # raise before escalating to manual review
   stallTimeoutMinutes: 30 # escalate if state unchanged for this many minutes
@@ -46,7 +43,6 @@ actions:
 
 | Key                                  | Default                                   | Purpose                                                                                                           |
 | ------------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `cli.runner`                         | `"auto"`                                  | Package runner used in generated commands (`auto`, `npx`, `pnpm`, `yarn`, or `bun`)                               |
 | `iterate.fixAttemptsPerThread`       | `3`                                       | Max fix attempts per unresolved thread before `escalate`                                                          |
 | `iterate.stallTimeoutMinutes`        | `30`                                      | Minutes the loop may repeat the same action without progress before `escalate` with `stall-timeout`; `0` disables |
 | `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination).                            |
@@ -60,23 +56,6 @@ actions:
 | `actions.autoResolveOutdated`        | `true`                                    | Auto-resolve threads that point to code no longer in the PR diff                                                  |
 | `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR's CI goes clean                                                                 |
 | `actions.commitSuggestions`          | `true`                                    | Route `/pr-shepherd:resolve` through `commit-suggestion` (singular) for threads with a ` ```suggestion ` block    |
-
----
-
-## `cli`
-
-### `cli.runner` — default `"auto"`
-
-Controls how generated instructions invoke the CLI. `auto` inspects the nearest `package.json` and lockfiles from the current working directory:
-
-- `packageManager: "pnpm@…"` or `pnpm-lock.yaml` -> `pnpm exec pr-shepherd`
-- `packageManager: "yarn@…"` or `yarn.lock` -> `yarn run pr-shepherd`
-- `packageManager: "bun@…"`, `bun.lock`, or `bun.lockb` -> `bunx pr-shepherd`
-- `packageManager: "npm@…"`, `package-lock.json`, or no package-manager signal -> `npx pr-shepherd`
-
-Set `cli.runner` to `npx`, `pnpm`, `yarn`, or `bun` to force a specific command in monitor prompts, resolve commands, and commit-suggestion follow-ups.
-
----
 
 ## `iterate`
 

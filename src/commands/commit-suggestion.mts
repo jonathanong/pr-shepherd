@@ -7,7 +7,6 @@ import { fetchPrBatch } from "../github/batch.mts";
 import { parseSuggestion, isCommittableSuggestion } from "../suggestions/parse.mts";
 import { buildUnifiedDiff } from "../suggestions/patch.mts";
 import type { CommitSuggestionResult, GlobalOptions } from "../types.mts";
-import { loadConfig } from "../config/load.mts";
 import { buildPrShepherdCommand } from "../cli/runner.mts";
 
 const execFile = promisify(execFileCb);
@@ -122,10 +121,12 @@ export async function runCommitSuggestion(
     `-m ${sq(commitMessageArg)}`,
     ...commitBodyArg.split("\n\n").map((p) => `-m ${sq(p)}`),
   ].join(" ");
-  const resolveCommand = buildPrShepherdCommand(
-    ["resolve", String(prNumber), "--resolve-thread-ids", opts.threadId],
-    { runner: loadConfig().cli?.runner },
-  ).text;
+  const resolveCommand = buildPrShepherdCommand([
+    "resolve",
+    String(prNumber),
+    "--resolve-thread-ids",
+    opts.threadId,
+  ]).text;
 
   const postActionInstructions = [
     `Apply the patch to \`${filePath}\`: run \`git apply\` with the diff shown above, or edit the file directly using the line range (${range}).`,

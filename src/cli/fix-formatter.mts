@@ -10,18 +10,15 @@ import {
 } from "./list-formatters.mts";
 import { adaptFixCodeInstructions, numberInstructions } from "./iterate-instructions.mts";
 import type { IterateResultFixCode } from "../types.mts";
-import type { CliRunner } from "./runner.mts";
 
 export function formatFixCodeResult(
   header: string,
   result: IterateResultFixCode,
   opts?: {
     readyDelaySuffix?: string;
-    runner?: CliRunner;
   },
 ): string {
   const readyDelaySuffix = opts?.readyDelaySuffix;
-  const runner = opts?.runner;
   const sections: string[] = [header];
 
   if (result.fix.threads.length > 0) {
@@ -152,7 +149,7 @@ export function formatFixCodeResult(
   sections.push("## Instructions");
   sections.push(
     numberInstructions(
-      adaptFixCodeInstructions(result.fix.instructions, result.pr, readyDelaySuffix, runner),
+      adaptFixCodeInstructions(result.fix.instructions, result.pr, readyDelaySuffix),
     ),
   );
 
