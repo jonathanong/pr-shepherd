@@ -20,19 +20,18 @@ Poll dispatcher for iterating a PR to completion.
    - Otherwise, infer: `gh pr view --json number --jq .number`
    - If no PR found, report an error and stop.
 
-2. **Select the package runner** from the target repository root:
-   - Prefer `package.json` `packageManager`: `pnpm@...` → `pnpm exec`, `yarn@...` → `yarn run`, `bun@...` → `bunx`, `npm@...` → `npx`.
-   - If `packageManager` is absent, use lockfiles: `pnpm-lock.yaml` → `pnpm exec`, `yarn.lock` → `yarn run`, `bun.lock` / `bun.lockb` → `bunx`, `package-lock.json` or no signal → `npx`.
+2. **Pick a package runner** from the target repository root:
+   - Choose the runner that resolves the repository's local `pr-shepherd` package, such as `npx`, `pnpm exec`, `yarn run`, or `bunx`.
 
 3. **Run `pr-shepherd poll`:**
 
-   If the package is missing in the target repository, first check `gh pr view <N> --json state --jq .state`. If it prints `MERGED` or `CLOSED`, report `PR #N is already merged/closed. Nothing to do.` and stop. Otherwise, tell the user to install pr-shepherd with the matching dev-dependency command: `pnpm add -D pr-shepherd`, `yarn add -D pr-shepherd`, `bun add -d pr-shepherd`, or `npm install --save-dev pr-shepherd`.
+   If the package is missing in the target repository, first check `gh pr view <N> --json state --jq .state`. If it prints `MERGED` or `CLOSED`, report `PR #N is already merged/closed. Nothing to do.` and stop. Otherwise, tell the user to install `pr-shepherd` as a dev dependency with the repository's package manager.
 
    ```bash
    <runner> pr-shepherd poll <N>
    ```
 
-   Preserve any supported flags from `$ARGUMENTS` after the PR number or URL, such as `--ready-delay 15m`, `--interval 1m`, or `--timeout 15m`.
+   Do not pass `$ARGUMENTS` through as extra flags. If you need to inspect supported options, run `<runner> pr-shepherd poll --help`.
 
    Print the full output. Follow the `## Instructions` section exactly for the current action. When those instructions tell you to stop and recheck with `pr-shepherd <N>` after a delay, use `<runner> pr-shepherd poll <N>` as the next invocation instead; do not also run the one-shot command.
 
