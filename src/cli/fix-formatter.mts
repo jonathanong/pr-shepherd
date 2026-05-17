@@ -54,7 +54,8 @@ export function formatFixCodeResult(
     sections.push("## Actionable comments");
     for (const c of result.fix.actionableComments) {
       const heading = c.url ? `[commentId=${c.id}](${c.url})` : `\`commentId=${c.id}\``;
-      sections.push(`### ${heading} (${renderAuthor(c.author, c.authorType)})`);
+      const editedMarker = c.edited ? " [edited since first look]" : "";
+      sections.push(`### ${heading} (${renderAuthor(c.author, c.authorType)})${editedMarker}`);
       sections.push(blockquote(c.body));
     }
   }

@@ -74,6 +74,10 @@ export function renderCommentBullet(
   return `- \`commentId=${c.id}\`${link} (${renderAuthor(c.author, c.authorType)})${statusSuffix}: ${renderBodyPreview(c.body)}`;
 }
 
+export function renderEditedCommentTag(c: { edited?: boolean }): string | undefined {
+  return c.edited ? "[edited since first look]" : undefined;
+}
+
 export function renderReviewBullet(
   r: { id: string; author: string; authorType?: AuthorType; body?: string },
   opts: { includeBody?: boolean } = {},

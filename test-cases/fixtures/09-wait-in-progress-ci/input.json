@@ -1,5 +1,16 @@
 {
   "batchData": {
+    "comments": [
+      {
+        "id": "IC_seen_unchanged",
+        "author": "alice",
+        "authorType": "User",
+        "body": "Already handled note.",
+        "url": "https://github.com/owner/repo/pull/42#issuecomment-9",
+        "createdAtUnix": 1715700000,
+        "isMinimized": false
+      }
+    ],
     "checks": [
       {
         "name": "CI / build",
@@ -10,6 +21,17 @@
         "runId": "111"
       }
     ]
+  },
+  "seenMap": {
+    "IC_seen_unchanged": {
+      "seenAt": 1715000000,
+      "bodyHash": "52f0c7d34aca2ec0"
+    }
+  },
+  "config": {
+    "iterate": {
+      "minimizeComments": "none"
+    }
   },
   "readyDelayState": {
     "isReady": false,

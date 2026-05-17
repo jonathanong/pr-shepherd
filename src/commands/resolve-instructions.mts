@@ -61,11 +61,12 @@ export function buildFetchInstructions(
     );
   }
   const editedTotal =
+    actionableComments.filter((c) => c.edited).length +
     firstLookThreads.filter((t) => t.edited).length +
     firstLookComments.filter((c) => c.edited).length;
   if (editedTotal > 0) {
     instructions.push(
-      `First-look bullets tagged \`, edited\` were updated by their author after you previously acknowledged them. Read the updated body before deciding whether any matching \`## Review threads to resolve\` item should be resolved.`,
+      `Actionable comments marked \`[edited since first look]\` and first-look bullets tagged \`, edited\` were updated by their author after you previously acknowledged them. Read the updated body before deciding whether any matching \`## Review threads to resolve\` item should be resolved.`,
     );
   }
 

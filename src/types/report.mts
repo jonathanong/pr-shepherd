@@ -10,10 +10,7 @@ import type {
   SuggestionBlock,
 } from "./github.mts";
 
-// ---------------------------------------------------------------------------
 // First-look items (previously hidden — surfaced to agent on first encounter)
-// ---------------------------------------------------------------------------
-
 export interface FirstLookThread extends ReviewThread {
   firstLookStatus: "outdated" | "resolved" | "minimized";
   /** True when Shepherd auto-resolved this thread during the current run (outdated only). */
@@ -27,6 +24,8 @@ export interface FirstLookComment extends PrComment {
   /** True when the body was edited by the author after first acknowledgement. */
   edited?: boolean;
 }
+
+export type ActionableComment = PrComment & { edited?: boolean };
 
 export type ShepherdStatus =
   | "MERGED"
@@ -67,7 +66,7 @@ export interface ShepherdReport {
     firstLook: FirstLookThread[];
   };
   comments: {
-    actionable: PrComment[];
+    actionable: ActionableComment[];
     /** Visible PR comments that should be passed to `--minimize-comment-ids`. */
     minimizeIds?: string[];
     /** First-look items — minimized comments not yet seen by the agent. */
@@ -115,6 +114,7 @@ export interface AgentComment {
   authorType?: AuthorType;
   body: string;
   url: string;
+  edited?: boolean;
 }
 
 /**
@@ -168,10 +168,7 @@ export interface RelevantCheck {
   summary?: string;
 }
 
-// ---------------------------------------------------------------------------
 // commit-suggestion command (singular — produces a suggestion for the agent to apply)
-// ---------------------------------------------------------------------------
-
 export interface CommitSuggestionResult {
   pr: number;
   repo: string;

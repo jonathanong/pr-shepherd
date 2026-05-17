@@ -14,6 +14,17 @@
         "diffHunk": "@@ -3,6 +3,8 @@ function api() {"
       }
     ],
+    "comments": [
+      {
+        "id": "IC_user_policy",
+        "author": "alice",
+        "authorType": "User",
+        "body": "Please mention this in the changelog.",
+        "url": "https://github.com/owner/repo/pull/42#issuecomment-35",
+        "createdAtUnix": 1715700000,
+        "isMinimized": false
+      }
+    ],
     "reviewSummaries": [
       {
         "id": "PRR_bot1",
