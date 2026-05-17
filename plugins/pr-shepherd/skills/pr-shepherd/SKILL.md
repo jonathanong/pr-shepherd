@@ -26,7 +26,7 @@ Poll dispatcher for iterating a PR to completion.
 
 3. **Run `pr-shepherd poll`, nothing else:**
 
-   If the package is missing in the target repository, tell the user to install pr-shepherd with the matching dev-dependency command: `pnpm add -D pr-shepherd`, `yarn add -D pr-shepherd`, `bun add -d pr-shepherd`, or `npm install --save-dev pr-shepherd`.
+   If the package is missing in the target repository, first check `gh pr view <N> --json state --jq .state`. If it prints `MERGED` or `CLOSED`, report `PR #N is already merged/closed. Nothing to do.` and stop. Otherwise, tell the user to install pr-shepherd with the matching dev-dependency command: `pnpm add -D pr-shepherd`, `yarn add -D pr-shepherd`, `bun add -d pr-shepherd`, or `npm install --save-dev pr-shepherd`.
 
    ```bash
    <runner> pr-shepherd poll <N>
@@ -34,14 +34,14 @@ Poll dispatcher for iterating a PR to completion.
 
    Preserve any supported flags from `$ARGUMENTS` after the PR number or URL, such as `--ready-delay 15m`, `--interval 1m`, or `--timeout 15m`.
 
-   Print the full output. Follow the `## Instructions` section exactly.
+   Print the full output. Follow the `## Instructions` section exactly for the current action. When those instructions tell you to stop and recheck with `pr-shepherd <N>` after a delay, use `<runner> pr-shepherd poll <N>` as the next invocation instead; do not also run the one-shot command.
 
 4. **Persistence:** Continuously call `<runner> pr-shepherd poll <N>` until the CLI returns `[CANCEL]` or `[ESCALATE]`, unless the human directs you to stop. Every other action is non-terminal:
    - `[WAIT]`: call `<runner> pr-shepherd poll <N>` again.
    - `[MARK_READY]`: call `<runner> pr-shepherd poll <N>` again.
    - `[FIX_CODE]`: follow the output's `## Instructions`, then call `<runner> pr-shepherd poll <N>` again.
 
-   Treat nonzero poll exit codes as state, not command failure: `1` means `[FIX_CODE]`, `2` means `[CANCEL]`, and `3` means `[ESCALATE]`.
+   Treat a nonzero poll exit code as PR state only when the output contains a matching `# PR #N [ACTION]` heading. Exit code `1` can also mean a command or validation failure; if there is no `[FIX_CODE]` heading, surface the error and stop instead of looping.
 
 5. **Stop conditions (terminal states):**
    - Stop when the CLI emits `[CANCEL]` (ready-delay completed, or PR merged/closed).
