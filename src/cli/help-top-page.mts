@@ -1,0 +1,59 @@
+export const TOP_USAGE = `pr-shepherd
+
+Autonomous PR CI monitor and review-comment resolver for agentic coding tools.
+
+Usage:
+  pr-shepherd --version | -v
+  pr-shepherd --help | -h
+  pr-shepherd [PR] [flags]
+  pr-shepherd iterate [PR] [flags]
+  pr-shepherd poll [PR] [poll-flags] [iterate-flags]
+  pr-shepherd resolve [PR] [resolve-flags]
+  pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [flags]
+  pr-shepherd clean <pr|branch|current|repo|all> [value] [flags]
+  pr-shepherd log-file [--format text|json]
+
+Commands:
+  [PR]                 Run one iterate tick. This is the default command.
+  iterate              Alias for the default one-tick iterate command.
+  poll                 Re-run iterate while the action is WAIT, then print the final tick.
+  resolve              Fetch actionable review items, or resolve/minimize/dismiss IDs.
+  commit-suggestion    Convert one GitHub suggestion thread into a patch and commit instructions.
+  clean                Remove pr-shepherd state files.
+  log-file             Print the per-worktree debug log path.
+
+PR argument:
+  PR may be a number such as 42 or a GitHub pull request URL.
+  When omitted, pr-shepherd infers the current branch's pull request.
+
+Common flags:
+  --format text|json   Output Markdown text or JSON. Default: text.
+  --verbose            Include verbose iterate fields and poll progress.
+  --help, -h           Print help and exit before any GitHub, git, config, or log I/O.
+
+Iterate flags:
+  --ready-delay <duration>       Settle window before a clean PR cancels. Example: 15m.
+  --stall-timeout <duration>     Escalate repeated unchanged failures after this duration.
+  --no-auto-mark-ready           Do not convert draft PRs to ready for review.
+  --no-auto-cancel-actionable    Do not cancel in-progress runs before actionable fixes.
+
+Poll flags:
+  --interval <duration>          Sleep between WAIT ticks. Default: 30s.
+  --timeout <duration>           Maximum poll wall-clock wait. Default: 5m.
+
+Clean variants:
+  pr [number]          Remove state for one PR. Defaults to current branch PR.
+  branch [name]        Remove state for a branch's PR. Defaults to current branch.
+  current              Alias for branch against the current branch.
+  repo                 Remove all state for the current repository.
+  all                  Remove all pr-shepherd state.
+
+Exit codes for iterate and poll:
+  0  WAIT or MARK_READY
+  1  FIX_CODE, or a command/validation error
+  2  CANCEL
+  3  ESCALATE
+
+Durations accept seconds, minutes, or hours: 30s, 2m, 1h, or bare seconds.
+
+Run 'pr-shepherd <command> --help' for command-specific details.`;

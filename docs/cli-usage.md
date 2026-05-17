@@ -171,7 +171,7 @@ If a patch fails to apply (drift since the suggestion was written), apply the fi
 
 ### pr-shepherd [PR]
 
-One iterate tick: classifies current PR state and emits a single action. The skill calls this on each tick and follows the `## Instructions` section verbatim. `pr-shepherd iterate [PR]` remains supported as a legacy alias. See [iterate-flow.md](iterate-flow.md) for the decision tree and [actions.md](actions.md) for every action's full output shape.
+One iterate tick: classifies current PR state and emits a single action. `pr-shepherd iterate [PR]` remains supported as a legacy alias for direct CLI workflows; the shipped skill invokes `pr-shepherd poll [PR]` and follows each returned `## Instructions` section. See [iterate-flow.md](iterate-flow.md) for the decision tree and [actions.md](actions.md) for every action's full output shape.
 
 ```sh
 pr-shepherd 42
