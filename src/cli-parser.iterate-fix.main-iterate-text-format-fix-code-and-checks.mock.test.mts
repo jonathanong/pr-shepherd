@@ -84,7 +84,6 @@ describe("main — iterate text format (fix_code and checks)", () => {
       ],
       resolveCommand: {
         argv: [
-          "npx",
           "pr-shepherd",
           "resolve",
           "42",
@@ -142,7 +141,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     // Post-fix push section uses backticked base + resolve command with --require-sha appended.
     expect(out).toContain("- base: `main`");
     expect(out).toContain(
-      '- resolve: `npx pr-shepherd resolve 42 --dismiss-review-ids REV_1 --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`',
+      '- resolve: `pr-shepherd resolve 42 --dismiss-review-ids REV_1 --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`',
     );
     // Instructions are numbered.
     expect(out).toContain("1. step one");

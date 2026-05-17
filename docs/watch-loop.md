@@ -4,9 +4,9 @@
 
 ## Overview
 
-pr-shepherd iterates a PR to completion via the active goal loops of Claude Code and Codex. The skill always invokes `<runner> pr-shepherd poll <PR>`, which loops internally while the PR is in `[WAIT]` and returns whenever an actionable or terminal state appears.
+pr-shepherd iterates a PR to completion via the active goal loops of Claude Code and Codex. The skill always invokes `pr-shepherd poll <PR>`, which loops internally while the PR is in `[WAIT]` and returns whenever an actionable or terminal state appears.
 
-Each non-terminal action is followed by another `<runner> pr-shepherd poll <PR>` invocation. Do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`.
+Each non-terminal action is followed by another `pr-shepherd poll <PR>` invocation. Do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`.
 
 Both runtimes use the same `pr-shepherd` skill. Claude Code users invoke it with `/goal /pr-shepherd:pr-shepherd`; Codex users invoke it with `/goal $pr-shepherd`.
 
@@ -19,17 +19,17 @@ Both runtimes use the same `pr-shepherd` skill. Claude Code users invoke it with
    /goal $pr-shepherd <PR>              # Codex
    ```
 
-   The skill resolves the PR number, picks the package runner, and runs poll:
+   The skill resolves the PR number and runs poll:
 
    ```bash
-   <runner> pr-shepherd poll <PR>
+   pr-shepherd poll <PR>
    ```
 
 2. **CLI emits an action with `## Instructions`**
    The output begins with `# PR #N [ACTION]` and ends with a numbered `## Instructions` block. The skill follows those instructions exactly.
 
 3. **Non-terminal actions** (`[WAIT]`, `[MARK_READY]`, `[FIX_CODE]`)
-   The active goal follows the `## Instructions` and then invokes `<runner> pr-shepherd poll <PR>` again. `[FIX_CODE]` output must be handled before the next poll invocation.
+   The active goal follows the `## Instructions` and then invokes `pr-shepherd poll <PR>` again. `[FIX_CODE]` output must be handled before the next poll invocation.
 
 4. **Terminal actions**
    - `[CANCEL]` — PR is merged/closed, or the ready-delay has elapsed. Goal stops.

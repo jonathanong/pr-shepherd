@@ -1,5 +1,4 @@
 import type { FetchResult } from "./resolve.mts";
-import type { CliRunner } from "../cli/runner.mts";
 import { buildPrShepherdCommand } from "../cli/runner.mts";
 import {
   SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEMS,
@@ -15,7 +14,6 @@ import { buildCommitSuggestionInstruction } from "./commit-suggestion-instructio
 export function buildFetchInstructions(
   prNumber: number,
   result: Omit<FetchResult, "instructions">,
-  runner?: CliRunner,
 ): string[] {
   const {
     actionableThreads,
@@ -72,7 +70,7 @@ export function buildFetchInstructions(
 
   if (hasSuggestions) {
     instructions.push(
-      buildCommitSuggestionInstruction(prNumber, "## Actionable Review Threads", true, runner),
+      buildCommitSuggestionInstruction(prNumber, "## Actionable Review Threads", true),
     );
   }
 
@@ -101,11 +99,7 @@ export function buildFetchInstructions(
         ? ` Review-summary IDs (\`PRR_…\` from \`## Review summaries\`) go into \`--minimize-comment-ids\`.`
         : "";
 
-  const resolveCommand = `${
-    buildPrShepherdCommand(["resolve", String(prNumber)], {
-      runner,
-    }).text
-  } [--resolve-thread-ids <ids>] [--minimize-comment-ids <ids>] [--dismiss-review-ids <ids> --message "<reason>"]`;
+  const resolveCommand = `${buildPrShepherdCommand(["resolve", String(prNumber)]).text} [--resolve-thread-ids <ids>] [--minimize-comment-ids <ids>] [--dismiss-review-ids <ids> --message "<reason>"]`;
   instructions.push(
     `Run \`${resolveCommand}\` with only the non-empty flag subsets. Skip the command entirely if all three ID lists are empty.${requireShaHint}${dismissNote}`,
   );

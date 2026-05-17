@@ -147,7 +147,6 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       firstLookSummaries,
       editedSummaries,
       surfacedApprovals,
-      cliRunner: config.cli?.runner,
     });
   }
 

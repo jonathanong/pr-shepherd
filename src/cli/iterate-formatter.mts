@@ -1,7 +1,6 @@
 import type { IterateResult } from "../types.mts";
 import { formatFixCodeResult } from "./fix-formatter.mts";
 import { joinSections } from "../util/markdown.mts";
-import type { CliRunner } from "./runner.mts";
 import {
   adaptIterateLog,
   buildSimpleIterateInstructions,
@@ -27,12 +26,10 @@ export function formatIterateResult(
   opts?: {
     verbose?: boolean;
     readyDelaySuffix?: string;
-    runner?: CliRunner;
   },
 ): string {
   const verbose = opts?.verbose ?? false;
   const readyDelaySuffix = opts?.readyDelaySuffix;
-  const runner = opts?.runner;
 
   const heading = `# PR #${result.pr} [${result.action.toUpperCase()}]`;
   const reviewDecisionSeg =
@@ -99,14 +96,14 @@ export function formatIterateResult(
       return joinSections([
         header,
         adaptIterateLog(result.log),
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, readyDelaySuffix, runner))}`,
+        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, readyDelaySuffix))}`,
       ]);
 
     case "mark_ready":
       return joinSections([
         header,
         adaptIterateLog(result.log),
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, readyDelaySuffix, runner))}`,
+        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, readyDelaySuffix))}`,
       ]);
 
     case "cancel": {
@@ -115,7 +112,7 @@ export function formatIterateResult(
       return joinSections([
         cancelHeaderLines.join("\n"),
         adaptIterateLog(result.log),
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, readyDelaySuffix, runner))}`,
+        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, readyDelaySuffix))}`,
       ]);
     }
 
@@ -123,13 +120,12 @@ export function formatIterateResult(
       return joinSections([
         header,
         result.escalate.humanMessage,
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, readyDelaySuffix, runner))}`,
+        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, readyDelaySuffix))}`,
       ]);
 
     case "fix_code":
       return formatFixCodeResult(header, result, {
         readyDelaySuffix,
-        runner,
       });
   }
 }

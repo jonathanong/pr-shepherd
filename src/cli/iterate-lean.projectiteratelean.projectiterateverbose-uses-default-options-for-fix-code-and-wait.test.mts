@@ -16,7 +16,7 @@ describe("projectIterateLean", () => {
     const fixResult = makeIterateResult("fix_code");
     if (fixResult.action !== "fix_code") throw new Error("unreachable");
     expect((projectIterateVerbose(fixResult) as typeof fixResult).fix.instructions[0]).toContain(
-      "npx pr-shepherd 42",
+      "pr-shepherd 42",
     );
 
     const wait = projectIterateVerbose(makeIterateResult("wait")) as Record<string, unknown>;

@@ -16,7 +16,7 @@ describe("main — iterate text format", () => {
     expect(out).toContain("WAIT: 0 passing, 1 in-progress");
     expect(out).toContain("## Instructions");
     expect(out).toContain(
-      "1. Recheck: rerun `npx pr-shepherd 42` to continue the active goal once after a fresh 30s–4m delay.",
+      "1. Recheck: rerun `pr-shepherd 42` to continue the active goal once after a fresh 30s–4m delay.",
     );
   });
   it("mark_ready: heading includes [MARK_READY] tag and ## Instructions with end-iteration step", async () => {
@@ -27,7 +27,7 @@ describe("main — iterate text format", () => {
     expect(out).toContain("MARKED READY: PR 42");
     expect(out).toContain("## Instructions");
     expect(out).toContain(
-      "1. The CLI already marked the PR ready for review. Recheck: rerun `npx pr-shepherd 42` to recheck once after a fresh 30s–4m delay.",
+      "1. The CLI already marked the PR ready for review. Recheck: rerun `pr-shepherd 42` to recheck once after a fresh 30s–4m delay.",
     );
   });
   it("cancel: heading includes [CANCEL] tag with reason and ## Instructions with stop steps", async () => {
@@ -63,7 +63,7 @@ describe("main — iterate text format", () => {
       "WAIT: 6 passing, 1 in-progress — awaiting human review or branch protection",
     );
     expect(out).toContain(
-      "1. Recheck: rerun `npx pr-shepherd 42 --ready-delay 15m` to continue the active goal once after a fresh 30s–4m delay.",
+      "1. Recheck: rerun `pr-shepherd 42 --ready-delay 15m` to continue the active goal once after a fresh 30s–4m delay.",
     );
     expect(out).not.toContain("auto-cancel");
   });
@@ -72,7 +72,7 @@ describe("main — iterate text format", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain(
-      "1. The CLI already marked the PR ready for review. Recheck: rerun `npx pr-shepherd 42` to recheck once after a fresh 30s–4m delay.",
+      "1. The CLI already marked the PR ready for review. Recheck: rerun `pr-shepherd 42` to recheck once after a fresh 30s–4m delay.",
     );
   });
   it("cancel: instructions say active goal is complete", async () => {
@@ -106,7 +106,7 @@ describe("main — iterate text format", () => {
     expect(parsed.action).toBe("wait");
     expect(parsed.pr).toBe(42);
     expect(parsed.instructions).toEqual([
-      "Recheck: rerun `npx pr-shepherd 42` to continue the active goal once after a fresh 30s–4m delay.",
+      "Recheck: rerun `pr-shepherd 42` to continue the active goal once after a fresh 30s–4m delay.",
     ]);
   });
   it("cancel json: emits reason field so consumers can branch without parsing log", async () => {

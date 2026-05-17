@@ -17,7 +17,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
 
     result.fix.reviewSummaryIds = ["PRR_BOT", "PRR_AP"];
     result.fix.resolveCommand = {
-      argv: ["npx", "pr-shepherd", "resolve", "42", "--minimize-comment-ids", "PRR_BOT,PRR_AP"],
+      argv: ["pr-shepherd", "resolve", "42", "--minimize-comment-ids", "PRR_BOT,PRR_AP"],
       requiresHeadSha: false,
       requiresDismissMessage: false,
       hasMutations: true,
@@ -30,7 +30,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain("## Review IDs to minimize queue");
     expect(out).toContain("- `PRR_BOT`\n- `PRR_AP`");
     expect(out).toContain(
-      "- resolve: `npx pr-shepherd resolve 42 --minimize-comment-ids PRR_BOT,PRR_AP`",
+      "- resolve: `pr-shepherd resolve 42 --minimize-comment-ids PRR_BOT,PRR_AP`",
     );
     expect(out).not.toContain("## Approvals (surfaced");
   });
@@ -77,7 +77,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     ];
     result.fix.reviewSummaryIds = ["PRR_FL"];
     result.fix.resolveCommand = {
-      argv: ["npx", "pr-shepherd", "resolve", "42", "--minimize-comment-ids", "PRR_FL"],
+      argv: ["pr-shepherd", "resolve", "42", "--minimize-comment-ids", "PRR_FL"],
       requiresHeadSha: false,
       requiresDismissMessage: false,
       hasMutations: true,

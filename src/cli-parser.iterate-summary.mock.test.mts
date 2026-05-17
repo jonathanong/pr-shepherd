@@ -55,7 +55,7 @@ function makeFixCodeResult(): IterateResult & { action: "fix_code" } {
       checks: [],
       changesRequestedReviews: [],
       resolveCommand: {
-        argv: ["npx", "pr-shepherd", "resolve", "42"],
+        argv: ["pr-shepherd", "resolve", "42"],
         requiresHeadSha: true,
         requiresDismissMessage: false,
         hasMutations: false,
@@ -126,13 +126,13 @@ describe("main — iterate summary field rendering in ## Failing checks", () => 
         detailsUrl: null,
         conclusion: "FAILURE" as const,
         workflowName: "CI",
-        failedStep: "Run npm run lint",
+        failedStep: "Run lint",
       },
     ];
     mockRunIterate.mockResolvedValue(result);
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain("- `run-99` — `CI › lint / typecheck / test (22.x)`");
-    expect(out).toContain("  > Run npm run lint");
+    expect(out).toContain("  > Run lint");
   });
 });

@@ -131,6 +131,5 @@ export async function handleIterate(args: string[]): Promise<void> {
     format: globalOpts.format,
     verbose: globalOpts.verbose ?? false,
     readyDelaySuffix: flags.readyDelaySuffix ?? undefined,
-    runner: cfg.cli?.runner,
   });
 }

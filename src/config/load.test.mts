@@ -54,19 +54,6 @@ describe("loadConfig — no rc file", () => {
     expect(result.iterate.minimizeComments).toBe("all");
   });
 
-  it("defaults cli.runner to auto", async () => {
-    const loadConfig = await freshLoadConfig();
-    const result = loadConfig();
-    expect(result.cli?.runner).toBe("auto");
-  });
-
-  it("overrides cli.runner when set in rc file", async () => {
-    writeFileSync(join(tmpDir, RC), "cli:\n  runner: pnpm\n");
-    const loadConfig = await freshLoadConfig();
-    const result = loadConfig();
-    expect(result.cli?.runner).toBe("pnpm");
-  });
-
   it("overrides iterate.minimizeApprovals when set in rc file", async () => {
     writeFileSync(join(tmpDir, RC), "iterate:\n  minimizeApprovals: true\n");
     const loadConfig = await freshLoadConfig();
@@ -89,15 +76,6 @@ describe("loadConfig — no rc file", () => {
     expect(result.iterate.minimizeComments).toBe("all");
     const output = stderrSpy.mock.calls.map((c) => c[0]).join("");
     expect(output).toContain("iterate.minimizeComments");
-  });
-
-  it("rejects invalid cli config shapes and falls back to defaults", async () => {
-    writeFileSync(join(tmpDir, RC), "cli: null\n");
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    const loadConfig = await freshLoadConfig();
-    const result = loadConfig();
-    expect(result.cli?.runner).toBe("auto");
-    expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain("cli must be a plain object");
   });
 
   it("returns defaults for empty YAML (yaml.parse returns null)", async () => {

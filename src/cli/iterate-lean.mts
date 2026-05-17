@@ -4,10 +4,8 @@ import {
   adaptFixCodeInstructions,
   buildSimpleIterateInstructions,
 } from "./iterate-instructions.mts";
-import type { CliRunner } from "./runner.mts";
 interface IterateProjectionOptions {
   readyDelaySuffix?: string;
-  runner?: CliRunner;
 }
 
 /**
@@ -20,9 +18,8 @@ export function projectIterateLean(
   opts?: IterateProjectionOptions,
 ): unknown {
   const readyDelaySuffix = opts?.readyDelaySuffix;
-  const runner = opts?.runner;
   const simpleInstructions = (r: Exclude<IterateResult, { action: "fix_code" }>) =>
-    buildSimpleIterateInstructions(r, readyDelaySuffix, runner);
+    buildSimpleIterateInstructions(r, readyDelaySuffix);
   const base: Record<string, unknown> = {
     action: result.action,
     pr: result.pr,
@@ -114,7 +111,6 @@ export function projectIterateLean(
               result.fix.instructions,
               result.pr,
               readyDelaySuffix,
-              runner,
             ),
           }),
         },
@@ -150,7 +146,6 @@ export function projectIterateVerbose(
   opts?: IterateProjectionOptions,
 ): unknown {
   const readyDelaySuffix = opts?.readyDelaySuffix;
-  const runner = opts?.runner;
   if (result.action === "fix_code") {
     return {
       ...result,
@@ -160,7 +155,6 @@ export function projectIterateVerbose(
           result.fix.instructions,
           result.pr,
           readyDelaySuffix,
-          runner,
         ),
       },
     };
@@ -170,6 +164,6 @@ export function projectIterateVerbose(
   return {
     ...result,
     ...log,
-    instructions: buildSimpleIterateInstructions(result, readyDelaySuffix, runner),
+    instructions: buildSimpleIterateInstructions(result, readyDelaySuffix),
   };
 }

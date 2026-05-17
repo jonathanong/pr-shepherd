@@ -138,7 +138,7 @@ function setupHappyPath(): void {
 
 export function registerHooks(): void {
   beforeEach(() => {
-    mockLoadConfig.mockReturnValue({ cli: { runner: "auto" } });
+    mockLoadConfig.mockReturnValue({});
   });
 }
 

@@ -72,9 +72,7 @@ The module supports a focused automation loop for PR monitoring and deterministi
 
 ### Configuration and environment
 
-- Supports `.pr-shepherdrc.yml` with documented keys for CLI, iterate behavior, checks, merge status, resolve, and actions.
-- Supports runner selection via `cli.runner` (`auto`, `npx`, `pnpm`, `yarn`, `bun`) for generated follow-up commands.
-- Supports lock-based default runner inference in repo-local contexts.
+- Supports `.pr-shepherdrc.yml` with documented keys for iterate behavior, checks, merge status, resolve, and actions.
 - Supports auth discovery via `GH_TOKEN`, `GITHUB_TOKEN`, and `gh auth token` fallback, then `GITHUB_PERSONAL_ACCESS_TOKEN`.
 - Supports per-worktree/run state directory override via `PR_SHEPHERD_STATE_DIR`.
 - Supports log capture with `PR_SHEPHERD_LOG_DISABLED=1`.
@@ -88,7 +86,7 @@ The module supports a focused automation loop for PR monitoring and deterministi
 
 ## Features this module does not support
 
-- Does not run as a long-running daemon; it is a one-tick command that must be re-invoked for continued iteration.
+- Does not run as a long-running daemon; `poll` is a bounded command and must be re-invoked for continued iteration after actionable output.
 - Does not merge PRs or merge branches itself.
 - Does not continuously rebase branches outside required conflict-resolution scenarios.
 - Does not modify files or apply suggestion patches to the working tree automatically; it only emits what to run.

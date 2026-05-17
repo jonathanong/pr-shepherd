@@ -19,7 +19,6 @@ describe("renderResolveCommand", () => {
   it("leaves thread-IDs, flag names, and plain alphanumeric args unquoted", () => {
     const joined = renderResolveCommand({
       argv: [
-        "npx",
         "pr-shepherd",
         "resolve",
         "42",
@@ -34,14 +33,13 @@ describe("renderResolveCommand", () => {
     });
     expect(joined).not.toMatch(/"/);
     expect(joined).toBe(
-      "npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XpO6,PRRT_kwDOSGizTs58XpPD --minimize-comment-ids c-1,c-2",
+      "pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XpO6,PRRT_kwDOSGizTs58XpPD --minimize-comment-ids c-1,c-2",
     );
   });
 
   it('emits placeholders as exactly `"$PLACEHOLDER"` so callers replace the whole token', () => {
     const joined = renderResolveCommand({
       argv: [
-        "npx",
         "pr-shepherd",
         "resolve",
         "42",
@@ -63,13 +61,13 @@ describe("renderResolveCommand", () => {
 
   it("never emits an unquoted $HEAD_SHA (regardless of requiresHeadSha)", () => {
     const withSha = renderResolveCommand({
-      argv: ["npx", "pr-shepherd", "resolve", "42"],
+      argv: ["pr-shepherd", "resolve", "42"],
       requiresHeadSha: true,
       requiresDismissMessage: false,
       hasMutations: false,
     });
     const withoutSha = renderResolveCommand({
-      argv: ["npx", "pr-shepherd", "resolve", "42"],
+      argv: ["pr-shepherd", "resolve", "42"],
       requiresHeadSha: false,
       requiresDismissMessage: false,
       hasMutations: false,
@@ -85,7 +83,6 @@ describe("renderResolveCommand", () => {
     // the fence early and corrupt the rest of the line for downstream parsers.
     const rendered = renderResolveCommand({
       argv: [
-        "npx",
         "pr-shepherd",
         "resolve",
         "42",

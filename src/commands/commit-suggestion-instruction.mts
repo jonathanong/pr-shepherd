@@ -1,4 +1,4 @@
-import { buildPrShepherdCommand, type CliRunner } from "../cli/runner.mts";
+import { buildPrShepherdCommand } from "../cli/runner.mts";
 
 /**
  * Build the `commit-suggestion` instruction step for agent consumers.
@@ -11,20 +11,16 @@ export function buildCommitSuggestionInstruction(
   prNumber: number,
   sectionName: string,
   includeDriftHint: boolean,
-  runner?: CliRunner,
 ): string {
-  const command = buildPrShepherdCommand(
-    [
-      "commit-suggestion",
-      String(prNumber),
-      "--thread-id",
-      "<id>",
-      "--message",
-      "<one-sentence headline>",
-      "--format=json",
-    ],
-    { runner },
-  ).text;
+  const command = buildPrShepherdCommand([
+    "commit-suggestion",
+    String(prNumber),
+    "--thread-id",
+    "<id>",
+    "--message",
+    "<one-sentence headline>",
+    "--format=json",
+  ]).text;
   const driftHint = includeDriftHint
     ? " If the patch fails to apply (drift since the suggestion was written), fall through to the manual fix step."
     : " If the patch fails to apply, fall through to the manual-edit step.";

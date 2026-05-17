@@ -1,132 +1,15 @@
-import { readFileSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { homedir } from "node:os";
-
-export type CliRunner = "auto" | "npx" | "pnpm" | "yarn" | "bun";
-
 export interface PrShepherdCommand {
   argv: string[];
   text: string;
 }
 
-export function buildPrShepherdCommand(
-  args: string[],
-  opts: { runner: CliRunner | undefined; cwd?: string },
-): PrShepherdCommand {
-  const runner = resolveCliRunner(opts.runner, opts.cwd);
-  const argv = baseArgvForRunner(runner).concat(args);
+export function buildPrShepherdCommand(args: string[]): PrShepherdCommand {
+  const argv = ["pr-shepherd", ...args];
   return { argv, text: renderShellCommand(argv) };
-}
-
-export function resolveCliRunner(
-  runner: CliRunner | undefined,
-  cwd = process.cwd(),
-): Exclude<CliRunner, "auto"> {
-  const configured = parseCliRunner(runner);
-  return configured === "auto" ? detectPackageRunner(cwd) : configured;
-}
-
-const VALID_RUNNERS = ["auto", "npx", "pnpm", "yarn", "bun"] as const;
-const VALID_RUNNERS_LIST = VALID_RUNNERS.map((v) => `"${v}"`).join(", ");
-
-export function parseCliRunner(runner: unknown): CliRunner {
-  if (runner === undefined) return "auto";
-  if (typeof runner !== "string") {
-    throw new Error(
-      `Invalid config: cli.runner must be one of ${VALID_RUNNERS_LIST}, got ${JSON.stringify(runner)}`,
-    );
-  }
-  const value = runner.trim();
-  if ((VALID_RUNNERS as readonly string[]).includes(value)) return value as CliRunner;
-  throw new Error(
-    `Invalid config: cli.runner must be one of ${VALID_RUNNERS_LIST}, got ${JSON.stringify(runner)}`,
-  );
 }
 
 export function renderShellCommand(argv: string[]): string {
   return argv.map(renderShellArg).join(" ");
-}
-
-function baseArgvForRunner(runner: Exclude<CliRunner, "auto">): string[] {
-  switch (runner) {
-    case "npx":
-      return ["npx", "pr-shepherd"];
-    case "pnpm":
-      return ["pnpm", "exec", "pr-shepherd"];
-    case "yarn":
-      return ["yarn", "run", "pr-shepherd"];
-    case "bun":
-      return ["bunx", "pr-shepherd"];
-  }
-}
-
-const runnerCache = new Map<string, Exclude<CliRunner, "auto">>();
-
-export function __resetRunnerCache(): void {
-  runnerCache.clear();
-}
-
-function detectPackageRunner(startDir: string): Exclude<CliRunner, "auto"> {
-  const cached = runnerCache.get(startDir);
-  if (cached) return cached;
-
-  const home = homedir();
-  const repoRoot = findRepoRoot(startDir);
-  let current = startDir;
-  while (true) {
-    const atBoundary = current === repoRoot || current === home || current === dirname(current);
-    // Read signals for this directory unless it is home without being the repo root.
-    // This lets dotfiles repos (repoRoot === home) detect their own package manager
-    // while still preventing home's lockfiles from influencing unrelated projects.
-    if (!atBoundary || current === repoRoot) {
-      const packageManager = readPackageManager(current);
-      if (packageManager?.startsWith("pnpm@")) return cacheRunner(startDir, "pnpm");
-      if (packageManager?.startsWith("yarn@")) return cacheRunner(startDir, "yarn");
-      if (packageManager?.startsWith("npm@")) return cacheRunner(startDir, "npx");
-      if (packageManager?.startsWith("bun@")) return cacheRunner(startDir, "bun");
-
-      if (isFile(join(current, "pnpm-lock.yaml"))) return cacheRunner(startDir, "pnpm");
-      if (isFile(join(current, "yarn.lock"))) return cacheRunner(startDir, "yarn");
-      if (isFile(join(current, "bun.lock"))) return cacheRunner(startDir, "bun");
-      if (isFile(join(current, "bun.lockb"))) return cacheRunner(startDir, "bun");
-      if (isFile(join(current, "package-lock.json"))) return cacheRunner(startDir, "npx");
-    }
-
-    if (atBoundary) return cacheRunner(startDir, "npx");
-    current = dirname(current);
-  }
-}
-
-function cacheRunner(
-  startDir: string,
-  runner: Exclude<CliRunner, "auto">,
-): Exclude<CliRunner, "auto"> {
-  runnerCache.set(startDir, runner);
-  return runner;
-}
-
-function readPackageManager(packageDir: string): string | null {
-  try {
-    const parsed = JSON.parse(readFileSync(join(packageDir, "package.json"), "utf8")) as {
-      packageManager?: unknown;
-    };
-    return typeof parsed.packageManager === "string" ? parsed.packageManager.trim() : null;
-  } catch {
-    return null;
-  }
-}
-
-function findRepoRoot(startDir: string): string | null {
-  let current = startDir;
-  while (true) {
-    if (statSync(join(current, ".git"), { throwIfNoEntry: false })) return current;
-    if (current === dirname(current)) return null;
-    current = dirname(current);
-  }
-}
-
-function isFile(path: string): boolean {
-  return statSync(path, { throwIfNoEntry: false })?.isFile() === true;
 }
 
 function renderShellArg(arg: string): string {

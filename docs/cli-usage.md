@@ -53,10 +53,10 @@ pr-shepherd resolve 42 --fetch
 
 1. Classify every item listed above …
 2. Items in `## First-look items` are shown so you can acknowledge their current status before acting. If a first-look thread also appears under `## Review threads to resolve`, include its ID in `--resolve-thread-ids`; otherwise do not pass first-look-only IDs to mutation flags.
-3. For each thread marked `[suggestion]`: run `npx pr-shepherd commit-suggestion 42 --thread-id <id> --message "<message>" --format=json` (one thread at a time). On `applied: false`, fall through to step 4 for that thread.
+3. For each thread marked `[suggestion]`: run `pr-shepherd commit-suggestion 42 --thread-id <id> --message "<message>" --format=json` (one thread at a time). On `applied: false`, fall through to step 4 for that thread.
 4. For remaining threads (no suggestion, or commit-suggestion failed): read and edit the referenced files.
 5. Commit changed files and push: `git add <files> && git commit -m "<message>"`, then rebase and push.
-6. Run `npx pr-shepherd resolve 42 [--resolve-thread-ids <ids>] …` with the appropriate flags.
+6. Run `pr-shepherd resolve 42 [--resolve-thread-ids <ids>] …` with the appropriate flags.
 ```
 
 First-look items (threads / comments that are outdated, resolved, or minimized on GitHub) are surfaced on first fetch only; a per-item seen-marker file suppresses them on subsequent fetches. They carry a `[status: …]` tag: `outdated`, `outdated, auto-resolved`, `resolved`, or `minimized`. Unresolved outdated/minimized threads also appear under `## Review threads to resolve` and should be included in `--resolve-thread-ids`.
@@ -147,7 +147,7 @@ Co-authored-by: alice <alice@users.noreply.github.com>
 1. Apply the patch to `src/foo.ts`: run `git apply` with the diff shown above, or edit the file directly using the line range (line 42).
 2. Stage the file: `git add -- src/foo.ts`
 3. Commit: `git commit -m "rename x to remainingSeconds" -m "Co-authored-by: alice <alice@users.noreply.github.com>"`
-4. Resolve the thread on GitHub: `npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_abc`
+4. Resolve the thread on GitHub: `pr-shepherd resolve 42 --resolve-thread-ids PRRT_abc`
 5. Push when ready: `git push` (or `git push --force-with-lease` after rebasing).
 ````
 
@@ -157,11 +157,11 @@ Exit codes: `0` suggestion produced · `1` any precondition or lookup error.
 
 ```sh
 # Get suggestion for first thread, apply it, then commit
-npx pr-shepherd commit-suggestion 42 --thread-id PRRT_aaa --message "rename x to remainingSeconds"
+pr-shepherd commit-suggestion 42 --thread-id PRRT_aaa --message "rename x to remainingSeconds"
 # … follow the printed ## Instructions …
 
 # Get suggestion for second thread, apply it, then commit
-npx pr-shepherd commit-suggestion 42 --thread-id PRRT_bbb --message "simplify loop body"
+pr-shepherd commit-suggestion 42 --thread-id PRRT_bbb --message "simplify loop body"
 # … follow the printed ## Instructions …
 
 git push
@@ -201,10 +201,10 @@ WAIT: 3 passing, 0 in-progress — 540s until auto-cancel
 
 ## Instructions
 
-1. Recheck: rerun `npx pr-shepherd 42` to continue the active goal once after a fresh 30s–4m delay.
+1. Recheck: rerun `pr-shepherd 42` to continue the active goal once after a fresh 30s–4m delay.
 ```
 
-The `## Instructions` recheck command is the same regardless of calling agent. If `cli.runner` selects pnpm, Yarn, or Bun, that command is rendered as `pnpm exec pr-shepherd 42`, `yarn run pr-shepherd 42`, or `bunx pr-shepherd 42`; if the current command used `--ready-delay`, the rerun command includes the same flag.
+The `## Instructions` recheck command is the same regardless of calling agent. If the current command used `--ready-delay`, the rerun command includes the same flag.
 
 This is a one-shot loop contract: do not translate it into shell-level polling (`while true`, fixed-interval sleeps, etc.).
 
@@ -238,7 +238,7 @@ at Object.<anonymous> (src/commands/iterate.test.mts:58:22)
 ## Post-fix push
 
 - base: `main`
-- resolve: `npx pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
+- resolve: `pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
 
 ## Instructions
 
@@ -252,7 +252,7 @@ at Object.<anonymous> (src/commands/iterate.test.mts:58:22)
 5. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
 6. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
 7. For any large decisions made, add or update a `## Shepherd Journal` section in the PR description (`gh pr edit 42 --body …`), appending entries under the existing heading if present.
-8. CI needs time to run on the new push. Recheck: rerun `npx pr-shepherd 42 --ready-delay 15m` to recheck once after a fresh 30s–4m delay.
+8. CI needs time to run on the new push. Recheck: rerun `pr-shepherd 42 --ready-delay 15m` to recheck once after a fresh 30s–4m delay.
 ```
 
 See [actions.md](actions.md) for all five actions and their complete output shapes.
@@ -282,10 +282,10 @@ Exit codes: `0` wait/mark_ready · `1` fix_code · `2` cancel · `3` escalate
 - `mark_ready` exits the loop — the CLI already mutated state. Re-invoke if you want to continue.
 
 ```sh
-<runner> pr-shepherd poll 42                        # poll PR #42 every 30s for up to 5m
-<runner> pr-shepherd poll 42 --interval 1m          # check every minute
-<runner> pr-shepherd poll 42 --timeout 15m          # wait up to 15 minutes
-<runner> pr-shepherd poll --format=json             # infer PR, emit JSON on final tick
+pr-shepherd poll 42                        # poll PR #42 every 30s for up to 5m
+pr-shepherd poll 42 --interval 1m          # check every minute
+pr-shepherd poll 42 --timeout 15m          # wait up to 15 minutes
+pr-shepherd poll --format=json             # infer PR, emit JSON on final tick
 ```
 
 ### pr-shepherd log-file

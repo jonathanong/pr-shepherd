@@ -20,12 +20,12 @@ Example Workflow:
 
 `pr-shepherd` optimizes token management, rate limits, and agentic orchestration by moving **ALL** deterministic logic and prompts to code via a CLI tool, enshrining what would be a large skill or command prompt (of which the agent would inevitably make mistakes) into the code and returning a clear, actionable prompt.
 
-The CLI emits unified recheck instructions. Generated commands use `cli.runner` from `.pr-shepherdrc.yml`: `auto` (default), `npx`, `pnpm`, `yarn`, or `bun`.
+The CLI emits unified recheck instructions. Generated commands call `pr-shepherd` directly.
 
-At a high level, the skill invokes `pr-shepherd poll <PR>` through the selected package runner, which provides actionable feedback directly to the agent:
+At a high level, the skill invokes `pr-shepherd poll <PR>`, which provides actionable feedback directly to the agent:
 
-```
-> npx pr-shepherd poll 123
+```text
+> pr-shepherd poll 123
 
 # PR #123 [FIX_CODE]
 
@@ -44,12 +44,12 @@ At a high level, the skill invokes `pr-shepherd poll <PR>` through the selected 
 ## Failing checks
 
 - `24697658766` — `CI › lint / typecheck / test (22.x)`
-  > npx oxfmt
+  > oxfmt
 
 ## Post-fix push
 
 - base: `main`
-- resolve: `npx pr-shepherd resolve 123 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
+- resolve: `pr-shepherd resolve 123 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
 
 ## Instructions
 
@@ -61,13 +61,13 @@ _(schematic — actual steps depend on PR state)_
 4. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`.
 5. Run the `resolve:` command above, substituting `"$HEAD_SHA"`.
 6. Add or update a `## Shepherd Journal` section in the PR description for any large decisions made, appending under the existing heading if it already exists.
-7. CI needs time to run on the new push. Run `npx pr-shepherd poll 123` again to continue until Shepherd returns `[CANCEL]` or `[ESCALATE]`.
+7. CI needs time to run on the new push. Run `pr-shepherd poll 123` again to continue until Shepherd returns `[CANCEL]` or `[ESCALATE]`.
 ```
 
 On every iteration, a command is returned to instruct the agent exactly what to do. No guessing, no thinking, as few agentic turns as possible:
 
-```
-npx pr-shepherd resolve 123 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"
+```text
+pr-shepherd resolve 123 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"
 ```
 
 ## Workflow
@@ -127,9 +127,10 @@ Claude Code (via `pr-shepherd` skill):
 Codex or direct CLI:
 
 ```sh
-npx pr-shepherd poll 42
-npx pr-shepherd poll 42 --ready-delay 15m
-npx pr-shepherd iterate 42               # legacy-compatible spelling
+pr-shepherd 42
+pr-shepherd 42 --ready-delay 15m
+pr-shepherd poll 42
+pr-shepherd iterate 42               # legacy-compatible spelling
 ```
 
 ## Iterate decision loop
@@ -141,25 +142,16 @@ On each tick: fetch PR state in one GraphQL batch → classify CI, comments, and
 `pr-shepherd` accumulates state under `$PR_SHEPHERD_STATE_DIR` (seen markers, fix-attempt counters, stall fingerprints, etc.). To reset it:
 
 ```sh
-npx pr-shepherd clean current    # remove state for the current branch's PR
-npx pr-shepherd clean repo       # remove all state for this repo
-npx pr-shepherd clean all        # remove all pr-shepherd state
+pr-shepherd clean current    # remove state for the current branch's PR
+pr-shepherd clean repo       # remove all state for this repo
+pr-shepherd clean all        # remove all pr-shepherd state
 ```
 
 Add `--dry-run` to preview what would be removed. See [docs/cli-usage.md](docs/cli-usage.md) for the full `clean` reference.
 
 ## Install
 
-> **Note:** Skill and plugin install methods add the skill definitions only — they do not install the `pr-shepherd` CLI. The skills invoke `pr-shepherd` through the repo package runner, so you also need the CLI available. If you're using `pr-shepherd` as development tooling for your repo, install it as a dev dependency so the selected runner resolves it without prompting:
->
-> ```bash
-> pnpm add -D pr-shepherd      # pnpm repos
-> yarn add -D pr-shepherd      # yarn repos
-> bun add -d pr-shepherd       # bun repos
-> npm install --save-dev pr-shepherd
-> ```
->
-> A plain `npm install pr-shepherd` adds it to regular dependencies instead; use that only if you specifically want it under `dependencies`. Or install globally: `npm install -g pr-shepherd`.
+> **Note:** Skill and plugin install methods add the skill definitions only — they do not install the `pr-shepherd` CLI. Ensure `pr-shepherd` is available on `PATH` wherever the skill runs.
 
 ### Claude Code
 
@@ -170,15 +162,7 @@ claude /plugin marketplace add jonathanong/pr-shepherd
 claude /plugin install pr-shepherd
 ```
 
-This repo ships two `marketplace.json` files that serve different Claude install flows: the root `marketplace.json` resolves the plugin from the npm registry (used by the `claude /plugin marketplace add` command above); `.claude-plugin/marketplace.json` is the owner-level registry manifest that resolves the plugin from the local plugin directory (used when Claude Code installs from a local or git-based source). Both files are needed to support these two install paths.
-
-Alternatively, install the Claude skills individually via `npx skills`:
-
-```bash
-npx skills add jonathanong/pr-shepherd
-```
-
-Installs the `pr-shepherd` skill into your agent's skill directory (`.claude/skills/` for project scope, `~/.claude/skills/` with `-g` for global scope). Powered by [skills.sh](https://skills.sh).
+This repo ships two `marketplace.json` files that serve different Claude install flows: the root `marketplace.json` resolves the published plugin (used by the `claude /plugin marketplace add` command above); `.claude-plugin/marketplace.json` is the owner-level registry manifest that resolves the plugin from the local plugin directory (used when Claude Code installs from a local or git-based source). Both files are needed to support these two install paths.
 
 ### Codex
 
@@ -205,32 +189,15 @@ codex plugin marketplace add ~/.codex/plugin-sources/pr-shepherd
 
 After adding the marketplace, open the Codex plugin directory, choose the `jonathanong` marketplace, and install/enable `pr-shepherd`. The marketplace root must contain `.agents/plugins/marketplace.json` and `plugins/pr-shepherd/`.
 
-Install the CLI where Codex will run it:
+Install the CLI where Codex will run it so `pr-shepherd` is available on `PATH`. The plugin only installs the skill; it does not install the CLI into target repositories.
+
+Iterate a PR from Codex:
 
 ```bash
-pnpm add -D pr-shepherd      # pnpm repos
-yarn add -D pr-shepherd      # yarn repos
-bun add -d pr-shepherd       # bun repos
-npm install --save-dev pr-shepherd
+pr-shepherd iterate 42
 ```
 
-The plugin only installs the skill; it does not install the CLI into target repositories. To install the CLI globally instead, use `npm install -g pr-shepherd`.
-
-Iterate a PR from Codex with the target repository's package runner:
-
-```bash
-<runner> pr-shepherd poll 42
-```
-
-For example, a repo like `~/filaments` that declares `packageManager: "pnpm@..."` and has `pnpm-lock.yaml` should use `pnpm exec pr-shepherd poll 42`. For Bun repos (with `bun.lock` or `bun.lockb`), use `bunx pr-shepherd poll 42`. For npm repos, use `npx pr-shepherd poll 42`.
-
-Or ask Codex to use the `pr-shepherd` skill, for example: `run pr-shepherd until this PR is ready`. Follow the output's `## Instructions`. Continue invoking `pr-shepherd poll` until Shepherd emits `[CANCEL]` or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). `pr-shepherd iterate 42` remains supported for existing workflows.
-
-### As a global CLI
-
-```bash
-npm install -g pr-shepherd
-```
+Or ask Codex to use the `pr-shepherd` skill, for example: `run pr-shepherd until this PR is ready`. Follow the output's `## Instructions`. Continue until Shepherd emits `[CANCEL]` or `[ESCALATE]` (including `stall-timeout` for repeated unchanged CI failures). `pr-shepherd iterate 42` remains supported for existing workflows.
 
 ## Configuration
 

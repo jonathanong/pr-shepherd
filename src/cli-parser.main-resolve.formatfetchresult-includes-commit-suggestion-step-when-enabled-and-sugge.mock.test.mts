@@ -33,7 +33,7 @@ describe("main — resolve", () => {
       commitSuggestionsEnabled: true,
       instructions: [
         "Classify every item.",
-        "For each Actionable thread marked `[suggestion]`: run `npx pr-shepherd commit-suggestion 42 ...`",
+        "For each Actionable thread marked `[suggestion]`: run `pr-shepherd commit-suggestion 42 ...`",
         "Fix items.",
         "Commit and push.",
         "Resolve.",

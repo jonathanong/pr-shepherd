@@ -50,7 +50,7 @@ const SUGGESTION_RESULT = {
     "Apply the patch to `a.ts`: run `git apply` with the diff shown above.",
     "Stage the file: `git add -- a.ts`",
     'Commit: `git commit -m "apply fix" -m "Co-authored-by: alice <alice@users.noreply.github.com>"`',
-    "Resolve the thread on GitHub: `npx pr-shepherd resolve 42 --resolve-thread-ids t1`",
+    "Resolve the thread on GitHub: `pr-shepherd resolve 42 --resolve-thread-ids t1`",
     "Push when ready: `git push` (or `git push --force-with-lease` after rebasing).",
   ],
 };
