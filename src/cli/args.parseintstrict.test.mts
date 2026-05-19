@@ -14,7 +14,6 @@ import {
   iterateActionToExitCode,
 } from "./exit-codes.mts";
 import { validateDurationFlag } from "./duration-flag.mts";
-import { isDefaultPollInvocation, validateDefaultPollArgs } from "./default-poll.mts";
 import type { ShepherdAction } from "../types.mts";
 
 // ---------------------------------------------------------------------------
