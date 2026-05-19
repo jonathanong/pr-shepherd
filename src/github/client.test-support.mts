@@ -1,4 +1,4 @@
-import { vi, beforeEach } from "vitest";
+import { vi, beforeEach, afterEach } from "vitest";
 import { _resetTokenCache } from "./http.mts";
 
 export const mockFetch = vi.fn();
@@ -58,6 +58,12 @@ export function registerClientHooks(): void {
     mockFetch.mockReset();
     mockExecFile.mockReset();
     _resetTokenCache();
+    delete process.env["GITHUB_TOKEN"];
+    delete process.env["GITHUB_PERSONAL_ACCESS_TOKEN"];
     process.env["GH_TOKEN"] = "test-token";
+  });
+  afterEach(() => {
+    delete process.env["GH_TOKEN"];
+    _resetTokenCache();
   });
 }
