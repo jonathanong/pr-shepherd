@@ -175,7 +175,7 @@ Poll: loops iterate ticks until the action is non-WAIT or `--timeout` elapses. T
 
 ```sh
 pr-shepherd 42
-pr-shepherd 42 --interval 45 --timeout 4m    # custom cadence
+pr-shepherd 42 --interval 45s --timeout 4m    # custom cadence
 pr-shepherd 42 --ready-delay 15m             # override ready-delay for this run
 pr-shepherd iterate 42                       # single tick only
 ```

@@ -128,7 +128,7 @@ Codex or direct CLI:
 
 ```sh
 pr-shepherd 42
-pr-shepherd 42 --interval 45 --timeout 4m
+pr-shepherd 42 --interval 45s --timeout 4m
 pr-shepherd 42 --ready-delay 15m
 pr-shepherd iterate 42               # single tick
 ```

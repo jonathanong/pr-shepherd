@@ -23,17 +23,17 @@ Poll dispatcher for iterating a PR to completion.
 2. **Run `pr-shepherd`:**
 
    ```bash
-   pr-shepherd <N> --interval 45 --timeout 4m
+   pr-shepherd <N> --interval 45s --timeout 4m
    ```
 
    Do not pass `$ARGUMENTS` through as extra flags. If you need to inspect supported options, run `pr-shepherd --help`.
 
    Print the full output. Follow the `## Instructions` section exactly for the current action.
 
-3. **Persistence:** Continuously call `pr-shepherd <N> --interval 45 --timeout 4m` until the CLI returns `[CANCEL]` or `[ESCALATE]`, unless the human directs you to stop. Every other action is non-terminal:
-   - `[WAIT]`: call `pr-shepherd <N> --interval 45 --timeout 4m` again.
-   - `[MARK_READY]`: call `pr-shepherd <N> --interval 45 --timeout 4m` again.
-   - `[FIX_CODE]`: follow the output's `## Instructions`, then call `pr-shepherd <N> --interval 45 --timeout 4m` again.
+3. **Persistence:** Continuously call `pr-shepherd <N> --interval 45s --timeout 4m` until the CLI returns `[CANCEL]` or `[ESCALATE]`, unless the human directs you to stop. Every other action is non-terminal:
+   - `[WAIT]`: call `pr-shepherd <N> --interval 45s --timeout 4m` again.
+   - `[MARK_READY]`: call `pr-shepherd <N> --interval 45s --timeout 4m` again.
+   - `[FIX_CODE]`: follow the output's `## Instructions`, then call `pr-shepherd <N> --interval 45s --timeout 4m` again.
 
    Treat a nonzero poll exit code as PR state only when the output contains a matching `# PR #N [ACTION]` heading. Exit code `1` can also mean a command or validation failure; if there is no `[FIX_CODE]` heading, surface the error and stop instead of looping.
 
