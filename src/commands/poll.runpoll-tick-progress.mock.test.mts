@@ -9,106 +9,112 @@ import { runPoll } from "./poll.mts";
 
 registerPollHooks();
 
+type SpyCalls = { mock: { calls: unknown[][] } };
+
+function withStderrTTY(isTTY: boolean, fn: (spy: SpyCalls) => Promise<void>): () => Promise<void> {
+  return async () => {
+    const originalDescriptor = Object.getOwnPropertyDescriptor(process.stderr, "isTTY");
+    Object.defineProperty(process.stderr, "isTTY", { value: isTTY, configurable: true });
+    const spy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      await fn(spy as unknown as SpyCalls);
+    } finally {
+      spy.mockRestore();
+      if (originalDescriptor) {
+        Object.defineProperty(process.stderr, "isTTY", originalDescriptor);
+      } else {
+        delete (process.stderr as { isTTY?: boolean }).isTTY;
+      }
+    }
+  };
+}
+
 describe("runPoll — tick progress logging", () => {
-  it("writes a dot per WAIT tick to stderr (non-TTY, non-verbose)", async () => {
-    const originalIsTTY = process.stderr.isTTY;
-    Object.defineProperty(process.stderr, "isTTY", { value: false, configurable: true });
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  it(
+    "writes a dot per WAIT tick to stderr (non-TTY, non-verbose)",
+    withStderrTTY(false, async (stderrSpy) => {
+      mockRunIterate
+        .mockResolvedValueOnce(makeWaitResult())
+        .mockResolvedValueOnce(makeWaitResult())
+        .mockResolvedValue(makeCancelResult());
 
-    mockRunIterate
-      .mockResolvedValueOnce(makeWaitResult())
-      .mockResolvedValueOnce(makeWaitResult())
-      .mockResolvedValue(makeCancelResult());
+      const pollPromise = runPoll({
+        prNumber: 42,
+        format: "text",
+        intervalSeconds: 30,
+        timeoutSeconds: 300,
+      });
 
-    const pollPromise = runPoll({
-      prNumber: 42,
-      format: "text",
-      intervalSeconds: 30,
-      timeoutSeconds: 300,
-    });
+      await vi.advanceTimersByTimeAsync(60_000);
+      await pollPromise;
 
-    await vi.advanceTimersByTimeAsync(60_000);
-    await pollPromise;
+      const written = stderrSpy.mock.calls.map((args) => String(args[0])).join("");
+      expect(written).toContain("..");
+      expect(written).toContain("\n");
+      expect(written).not.toContain("[poll tick");
+    }),
+  );
 
-    const written = stderrSpy.mock.calls.map((args) => String(args[0])).join("");
-    expect(written).toContain("..");
-    expect(written).toContain("\n");
-    expect(written).not.toContain("[poll tick");
+  it(
+    "writes dots even when stderr is a TTY (non-verbose)",
+    withStderrTTY(true, async (stderrSpy) => {
+      mockRunIterate.mockResolvedValueOnce(makeWaitResult()).mockResolvedValue(makeCancelResult());
 
-    stderrSpy.mockRestore();
-    Object.defineProperty(process.stderr, "isTTY", { value: originalIsTTY, configurable: true });
-  });
+      const pollPromise = runPoll({
+        prNumber: 42,
+        format: "text",
+        intervalSeconds: 30,
+        timeoutSeconds: 300,
+      });
 
-  it("writes dots even when stderr is a TTY (non-verbose)", async () => {
-    const originalIsTTY = process.stderr.isTTY;
-    Object.defineProperty(process.stderr, "isTTY", { value: true, configurable: true });
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+      await vi.advanceTimersByTimeAsync(30_000);
+      await pollPromise;
 
-    mockRunIterate.mockResolvedValueOnce(makeWaitResult()).mockResolvedValue(makeCancelResult());
+      const written = stderrSpy.mock.calls.map((args) => String(args[0])).join("");
+      expect(written).toContain(".");
+      expect(written).not.toContain("[poll tick");
+    }),
+  );
 
-    const pollPromise = runPoll({
-      prNumber: 42,
-      format: "text",
-      intervalSeconds: 30,
-      timeoutSeconds: 300,
-    });
+  it(
+    "writes detailed per-tick line when verbose:true",
+    withStderrTTY(false, async (stderrSpy) => {
+      mockRunIterate.mockResolvedValueOnce(makeWaitResult()).mockResolvedValue(makeCancelResult());
 
-    await vi.advanceTimersByTimeAsync(30_000);
-    await pollPromise;
+      const pollPromise = runPoll({
+        prNumber: 42,
+        format: "text",
+        verbose: true,
+        intervalSeconds: 30,
+        timeoutSeconds: 300,
+      });
 
-    const written = stderrSpy.mock.calls.map((args) => String(args[0])).join("");
-    expect(written).toContain(".");
-    expect(written).not.toContain("[poll tick");
+      await vi.advanceTimersByTimeAsync(30_000);
+      await pollPromise;
 
-    stderrSpy.mockRestore();
-    Object.defineProperty(process.stderr, "isTTY", { value: originalIsTTY, configurable: true });
-  });
+      expect(stderrSpy.mock.calls.some((args) => String(args[0]).includes("[poll tick"))).toBe(
+        true,
+      );
+    }),
+  );
 
-  it("writes detailed per-tick line when verbose:true", async () => {
-    const originalIsTTY = process.stderr.isTTY;
-    Object.defineProperty(process.stderr, "isTTY", { value: false, configurable: true });
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  it(
+    "writes trailing newline after dots when loop exits",
+    withStderrTTY(false, async (stderrSpy) => {
+      mockRunIterate.mockResolvedValueOnce(makeWaitResult()).mockResolvedValue(makeCancelResult());
 
-    mockRunIterate.mockResolvedValueOnce(makeWaitResult()).mockResolvedValue(makeCancelResult());
+      const pollPromise = runPoll({
+        prNumber: 42,
+        format: "text",
+        intervalSeconds: 30,
+        timeoutSeconds: 300,
+      });
 
-    const pollPromise = runPoll({
-      prNumber: 42,
-      format: "text",
-      verbose: true,
-      intervalSeconds: 30,
-      timeoutSeconds: 300,
-    });
+      await vi.advanceTimersByTimeAsync(30_000);
+      await pollPromise;
 
-    await vi.advanceTimersByTimeAsync(30_000);
-    await pollPromise;
-
-    expect(stderrSpy.mock.calls.some((args) => String(args[0]).includes("[poll tick"))).toBe(true);
-
-    stderrSpy.mockRestore();
-    Object.defineProperty(process.stderr, "isTTY", { value: originalIsTTY, configurable: true });
-  });
-
-  it("writes trailing newline after dots when loop exits", async () => {
-    const originalIsTTY = process.stderr.isTTY;
-    Object.defineProperty(process.stderr, "isTTY", { value: false, configurable: true });
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-
-    mockRunIterate.mockResolvedValueOnce(makeWaitResult()).mockResolvedValue(makeCancelResult());
-
-    const pollPromise = runPoll({
-      prNumber: 42,
-      format: "text",
-      intervalSeconds: 30,
-      timeoutSeconds: 300,
-    });
-
-    await vi.advanceTimersByTimeAsync(30_000);
-    await pollPromise;
-
-    const lastWrite = String(stderrSpy.mock.calls[stderrSpy.mock.calls.length - 1]?.[0] ?? "");
-    expect(lastWrite).toBe("\n");
-
-    stderrSpy.mockRestore();
-    Object.defineProperty(process.stderr, "isTTY", { value: originalIsTTY, configurable: true });
-  });
+      const lastWrite = String(stderrSpy.mock.calls[stderrSpy.mock.calls.length - 1]?.[0] ?? "");
+      expect(lastWrite).toBe("\n");
+    }),
+  );
 });

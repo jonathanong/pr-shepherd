@@ -1,48 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-
-// ---------------------------------------------------------------------------
-// Stub fetch globally so http.mts uses our mock.
-// child_process is still used by client.mts for `git` calls, so mock those too.
-// ---------------------------------------------------------------------------
-
-const mockFetch = vi.fn();
-vi.stubGlobal("fetch", mockFetch);
-
-const { mockExecFile } = vi.hoisted(() => ({ mockExecFile: vi.fn() }));
-
-vi.mock("node:child_process", () => ({
-  execFile: (
-    cmd: string,
-    args: string[],
-    optsOrCb:
-      | Record<string, unknown>
-      | ((err: Error | null, result: { stdout: string; stderr: string }) => void),
-    maybeCb?: (err: Error | null, result: { stdout: string; stderr: string }) => void,
-  ) => {
-    const cb = typeof optsOrCb === "function" ? optsOrCb : maybeCb!;
-    mockExecFile(cmd, args)
-      .then((result: { stdout: string; stderr: string }) => cb(null, result))
-      .catch((err: Error) => cb(err, { stdout: "", stderr: "" }));
-  },
-}));
-
+import { describe, it, expect } from "vitest";
+import { mockExecFile, registerClientHooks } from "./client.test-support.mts";
 import { getRepoInfo } from "./client.mts";
-import { _resetTokenCache } from "./http.mts";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-beforeEach(() => {
-  mockFetch.mockReset();
-  mockExecFile.mockReset();
-  _resetTokenCache();
-  process.env["GH_TOKEN"] = "test-token";
-});
-
-// ---------------------------------------------------------------------------
-// graphql — argument building
-// ---------------------------------------------------------------------------
+registerClientHooks();
 
 describe("getRepoInfo — remote URL parsing", () => {
   it("parses git@github.com:owner/repo.git", async () => {
