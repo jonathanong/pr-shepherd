@@ -40,7 +40,7 @@ describe("default poll invocation helpers", () => {
     expect(isDefaultPollInvocation("https://github.com/o/r/pull/42")).toBe(true);
     expect(isDefaultPollInvocation("--format=json")).toBe(true);
     expect(isDefaultPollInvocation("--no-auto-mark-ready")).toBe(true);
-    expect(isDefaultPollInvocation("--interval=45")).toBe(true);
+    expect(isDefaultPollInvocation("--interval=45s")).toBe(true);
     expect(isDefaultPollInvocation("--timeout=4m")).toBe(true);
     expect(isDefaultPollInvocation("resolve")).toBe(false);
   });
