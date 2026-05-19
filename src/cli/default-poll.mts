@@ -1,4 +1,4 @@
-import { parsePrNumber } from "./args.mts";
+import { parsePrNumber, validateDefaultArgs } from "./args.mts";
 import { USAGE } from "./help.mts";
 
 const DEFAULT_POLL_FLAGS_WITH_VALUES = new Set([
@@ -23,35 +23,12 @@ export function isDefaultPollInvocation(subcommand: string | undefined): boolean
 }
 
 export function validateDefaultPollArgs(args: string[]): boolean {
-  let sawPr = false;
-
-  for (let i = 0; i < args.length; i += 1) {
-    const arg = args[i]!;
-
-    if (DEFAULT_POLL_FLAGS_WITH_VALUES.has(arg)) {
-      if (i + 1 >= args.length || args[i + 1]!.startsWith("--")) {
-        writeDefaultUsageError(arg);
-        return false;
-      }
-      i += 1;
-      continue;
-    }
-
-    const inlineFlag = arg.split("=", 1)[0]!;
-    if (DEFAULT_POLL_FLAGS_WITH_VALUES.has(inlineFlag)) continue;
-
-    if (DEFAULT_POLL_BOOLEAN_FLAGS.has(arg)) continue;
-
-    if (parsePrNumber(arg) !== null && !sawPr) {
-      sawPr = true;
-      continue;
-    }
-
-    writeDefaultUsageError(arg);
-    return false;
-  }
-
-  return true;
+  return validateDefaultArgs(
+    args,
+    DEFAULT_POLL_FLAGS_WITH_VALUES,
+    DEFAULT_POLL_BOOLEAN_FLAGS,
+    writeDefaultUsageError,
+  );
 }
 
 function isDefaultPollFlag(arg: string): boolean {
