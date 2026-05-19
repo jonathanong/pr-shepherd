@@ -1,27 +1,16 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { randomBytes, createHash } from "node:crypto";
-import { rm, writeFile, mkdir, readdir } from "node:fs/promises";
+import { describe, it, expect } from "vitest";
+import { mkdir, writeFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
-
-function idToFilename(id: string): string {
-  return createHash("sha256").update(id, "utf8").digest("hex") + ".json";
-}
+import {
+  idToFilename,
+  testKey,
+  testId,
+  testStateDir,
+  registerHooks,
+} from "./seen-comments.test-support.mts";
 import { markSeen } from "./seen-comments.mts";
 
-let testStateDir: string;
-
-const testKey = { owner: "test-owner", repo: "test-repo", pr: 123 };
-const testId = "PRRT_kwDOTest123";
-
-beforeEach(() => {
-  testStateDir = `${process.env["TMPDIR"] ?? "/tmp"}/shepherd-seen-test-${randomBytes(4).toString("hex")}`;
-  process.env["PR_SHEPHERD_STATE_DIR"] = testStateDir;
-});
-
-afterEach(async () => {
-  delete process.env["PR_SHEPHERD_STATE_DIR"];
-  await rm(testStateDir, { recursive: true, force: true });
-});
+registerHooks();
 
 describe("markSeen — fire and forget", () => {
   it("does not throw when the state dir is not writable", async () => {
