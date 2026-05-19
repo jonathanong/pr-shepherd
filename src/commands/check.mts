@@ -67,7 +67,8 @@ export async function runCheck(
   let autoResolveErrors: string[] = [];
   if (opts.autoResolve && outdated.length > 0) {
     const { resolved: resolvedIds, errors } = await autoResolveOutdated(outdated.map((t) => t.id));
-    autoResolved = outdated.filter((t) => resolvedIds.includes(t.id));
+    const resolvedIdsSet = new Set(resolvedIds); // ⚡ Bolt optimization: O(1) lookup
+    autoResolved = outdated.filter((t) => resolvedIdsSet.has(t.id));
     autoResolveErrors = errors;
   }
 
