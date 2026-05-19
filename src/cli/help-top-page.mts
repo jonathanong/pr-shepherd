@@ -5,8 +5,8 @@ Autonomous PR CI monitor and review-comment resolver for agentic coding tools.
 Usage:
   pr-shepherd --version | -v
   pr-shepherd --help | -h
-  pr-shepherd [PR] [flags]
-  pr-shepherd iterate [PR] [flags]
+  pr-shepherd [PR] [poll-flags] [iterate-flags]
+  pr-shepherd iterate [PR] [iterate-flags]
   pr-shepherd poll [PR] [poll-flags] [iterate-flags]
   pr-shepherd resolve [PR] [resolve-flags]
   pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [flags]
@@ -14,8 +14,8 @@ Usage:
   pr-shepherd log-file [--format text|json]
 
 Commands:
-  [PR]                 Run one iterate tick. This is the default command.
-  iterate              Alias for the default one-tick iterate command.
+  [PR]                 Poll until non-WAIT or timeout. This is the default command.
+  iterate              Run one iterate tick (single-tick alias).
   poll                 Re-run iterate while the action is WAIT, then print the final tick.
   resolve              Fetch actionable review items, or resolve/minimize/dismiss IDs.
   commit-suggestion    Convert one GitHub suggestion thread into a patch and commit instructions.
@@ -28,7 +28,7 @@ PR argument:
 
 Common flags:
   --format text|json   Output Markdown text or JSON. Default: text.
-  --verbose            Include verbose iterate fields and poll progress.
+  --verbose            Include verbose iterate fields and detailed poll-tick lines.
   --help, -h           Print help and exit before any GitHub, git, config, or log I/O.
 
 Iterate flags:

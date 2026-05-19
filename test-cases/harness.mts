@@ -327,7 +327,7 @@ async function runMain(args: string[]): Promise<{ out: string; exitCode: number 
 }
 
 export async function captureRun(fixture: Fixture): Promise<RunResult> {
-  const args = ["42", ...(fixture.args ?? [])];
+  const args = ["iterate", "42", ...(fixture.args ?? [])];
   const { out: textOut, exitCode } = await runMain(args);
   const { out: jsonOut } = await runMain([...args, "--format=json"]);
   return { textOut, jsonOut, exitCode };
@@ -338,7 +338,7 @@ export async function captureRun(fixture: Fixture): Promise<RunResult> {
  * firstSeenAt far in the past so applyStallGuard escalates.
  */
 export async function captureTwoTickStallRun(fixture: Fixture): Promise<RunResult> {
-  const args = ["42", ...(fixture.args ?? [])];
+  const args = ["iterate", "42", ...(fixture.args ?? [])];
 
   // Clear write history so we only inspect calls from this run's tick 1.
   mockWriteStallState.mockClear();

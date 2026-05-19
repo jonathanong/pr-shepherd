@@ -14,14 +14,14 @@ import {
   iterateActionToExitCode,
 } from "./exit-codes.mts";
 import { validateDurationFlag } from "./duration-flag.mts";
-import { isDefaultIterateInvocation, validateDefaultIterateArgs } from "./default-iterate.mts";
+import { isDefaultPollInvocation, validateDefaultPollArgs } from "./default-poll.mts";
 import type { ShepherdAction } from "../types.mts";
 
 // ---------------------------------------------------------------------------
 // parseIntStrict
 // ---------------------------------------------------------------------------
 
-describe("default iterate invocation helpers", () => {
+describe("default poll invocation helpers", () => {
   let stderrSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
@@ -35,36 +35,42 @@ describe("default iterate invocation helpers", () => {
   });
 
   it("recognizes omitted subcommand, PR numbers, PR URLs, and default flags", () => {
-    expect(isDefaultIterateInvocation(undefined)).toBe(true);
-    expect(isDefaultIterateInvocation("42")).toBe(true);
-    expect(isDefaultIterateInvocation("https://github.com/o/r/pull/42")).toBe(true);
-    expect(isDefaultIterateInvocation("--format=json")).toBe(true);
-    expect(isDefaultIterateInvocation("--no-auto-mark-ready")).toBe(true);
-    expect(isDefaultIterateInvocation("resolve")).toBe(false);
+    expect(isDefaultPollInvocation(undefined)).toBe(true);
+    expect(isDefaultPollInvocation("42")).toBe(true);
+    expect(isDefaultPollInvocation("https://github.com/o/r/pull/42")).toBe(true);
+    expect(isDefaultPollInvocation("--format=json")).toBe(true);
+    expect(isDefaultPollInvocation("--no-auto-mark-ready")).toBe(true);
+    expect(isDefaultPollInvocation("--interval=45")).toBe(true);
+    expect(isDefaultPollInvocation("--timeout=4m")).toBe(true);
+    expect(isDefaultPollInvocation("resolve")).toBe(false);
   });
 
-  it("accepts a single PR plus known default iterate flags", () => {
+  it("accepts a single PR plus known default poll flags", () => {
     expect(
-      validateDefaultIterateArgs([
+      validateDefaultPollArgs([
         "42",
         "--format",
         "json",
         "--ready-delay=5m",
         "--stall-timeout",
         "1h",
+        "--interval",
+        "45",
+        "--timeout",
+        "4m",
         "--verbose",
       ]),
     ).toBe(true);
   });
 
-  it("rejects missing values for default iterate value flags", () => {
-    expect(validateDefaultIterateArgs(["42", "--ready-delay"])).toBe(false);
+  it("rejects missing values for default poll value flags", () => {
+    expect(validateDefaultPollArgs(["42", "--ready-delay"])).toBe(false);
     expect(process.exitCode).toBe(1);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("Unknown subcommand"));
   });
 
   it("rejects duplicate PR-like positionals and unknown args", () => {
-    expect(validateDefaultIterateArgs(["42", "43"])).toBe(false);
-    expect(validateDefaultIterateArgs(["--unknown"])).toBe(false);
+    expect(validateDefaultPollArgs(["42", "43"])).toBe(false);
+    expect(validateDefaultPollArgs(["--unknown"])).toBe(false);
   });
 });

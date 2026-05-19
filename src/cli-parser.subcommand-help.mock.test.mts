@@ -97,22 +97,23 @@ for (const sub of SUBCOMMANDS) {
   });
 }
 
-describe("default iterate path (pr 123 --help)", () => {
-  it("prints iterate usage to stdout and exits 0 for '123 --help'", async () => {
+describe("default poll path (pr 123 --help)", () => {
+  it("prints poll usage to stdout and exits 0 for '123 --help'", async () => {
     await main(["node", "shepherd", "123", "--help"]);
     expect(getStdout()).toContain("Usage:");
-    expect(getStdout()).toContain("Actions:");
-    expect(getStdout()).toContain("pr-shepherd iterate");
+    expect(getStdout()).toContain("Poll flags:");
+    expect(getStdout()).toContain("--interval");
+    expect(getStdout()).toContain("--timeout");
     expect(process.exitCode).toBeUndefined();
     expect(stderrSpy).not.toHaveBeenCalled();
     expect(mockRunIterate).not.toHaveBeenCalled();
   });
 
-  it("prints iterate usage to stdout and exits 0 for '123 -h'", async () => {
+  it("prints poll usage to stdout and exits 0 for '123 -h'", async () => {
     await main(["node", "shepherd", "123", "-h"]);
     expect(getStdout()).toContain("Usage:");
-    expect(getStdout()).toContain("Actions:");
-    expect(getStdout()).toContain("pr-shepherd iterate");
+    expect(getStdout()).toContain("Poll flags:");
+    expect(getStdout()).toContain("--interval");
     expect(process.exitCode).toBeUndefined();
     expect(stderrSpy).not.toHaveBeenCalled();
     expect(mockRunIterate).not.toHaveBeenCalled();
