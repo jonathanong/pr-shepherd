@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   registerHooks,
   GLOBAL_OPTS,
@@ -10,7 +9,6 @@ import {
   mockFetchBatch,
   mockGetCurrentBranch,
   mockReadFile,
-  readFile,
 } from "./commit-suggestion.test-support.mts";
 import { runCommitSuggestion } from "./commit-suggestion.mts";
 

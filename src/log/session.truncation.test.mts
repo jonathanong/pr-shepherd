@@ -1,11 +1,4 @@
-// @ts-nocheck
 import { describe, it, expect, vi } from "vitest";
-import {
-  buildSessionHeader,
-  formatRequestEntry,
-  formatResponseEntry,
-  formatOutputEntry,
-} from "./session.mts";
 
 describe("truncation", () => {
   it("truncates when MAX_BODY env is set before module load", async () => {

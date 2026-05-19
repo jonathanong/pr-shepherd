@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { vi, beforeEach } from "vitest";
 
 vi.mock("../github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
@@ -77,6 +76,7 @@ function makeBatchData(overrides: Partial<BatchPrData> = {}): BatchPrData {
     reviewSummaries: [],
     approvedReviews: [],
     checks: [],
+    branchProtection: null,
     ...overrides,
   };
 }

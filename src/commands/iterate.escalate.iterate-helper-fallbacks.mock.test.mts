@@ -1,6 +1,5 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { registerIterateHooks, NOW, makeReport, mockExecFile } from "./iterate-test-support.mts";
+import { describe, it, expect } from "vitest";
+import { registerIterateHooks, makeReport, mockExecFile } from "./iterate-test-support.mts";
 import { buildRelevantChecks, buildWaitLog, getCurrentHeadSha } from "./iterate/helpers.mts";
 
 registerIterateHooks();
@@ -8,29 +7,6 @@ registerIterateHooks();
 // ---------------------------------------------------------------------------
 // Escalate
 // ---------------------------------------------------------------------------
-
-const THREAD = {
-  id: "thread-1",
-  isResolved: false,
-  isOutdated: false,
-  isMinimized: false,
-  path: "src/foo.mts",
-  line: 10,
-  startLine: null,
-  author: "reviewer",
-  authorType: "Unknown" as const,
-  body: "Fix this",
-  url: "",
-  createdAtUnix: NOW - 3600,
-};
-
-const RESOLUTION_ONLY_THREAD = {
-  ...THREAD,
-  id: "thread-resolution-only",
-  isOutdated: true,
-  line: null,
-  body: "Already addressed on an old diff",
-};
 
 describe("iterate helper fallbacks", () => {
   it("returns null when current HEAD cannot be read", async () => {
@@ -91,6 +67,7 @@ describe("iterate helper fallbacks", () => {
         remainingSeconds: 0,
         summary: { passing: 1, skipped: 0, filtered: 0, inProgress: 0 },
         baseBranch: "main",
+        branchProtection: null,
         checks: [],
       }),
     ).toContain("branch is behind base");
@@ -102,7 +79,7 @@ describe("iterate helper fallbacks", () => {
       repo: "owner/repo",
       status: "IN_PROGRESS" as const,
       state: "OPEN" as const,
-      mergeStateStatus: "DRAFT",
+      mergeStateStatus: "DRAFT" as const,
       reviewDecision: null,
       blockingBotReviewInProgress: false,
       isDraft: false,
@@ -110,6 +87,7 @@ describe("iterate helper fallbacks", () => {
       remainingSeconds: 0,
       summary: { passing: 1, skipped: 0, filtered: 0, inProgress: 0 },
       baseBranch: "main",
+      branchProtection: null,
       checks: [],
     };
 

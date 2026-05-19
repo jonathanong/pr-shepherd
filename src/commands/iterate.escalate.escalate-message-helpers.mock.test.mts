@@ -1,11 +1,5 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  registerIterateHooks,
-  NOW,
-  defaultConfig,
-  mockLoadConfig,
-} from "./iterate-test-support.mts";
+import { describe, it, expect } from "vitest";
+import { registerIterateHooks, defaultConfig, mockLoadConfig } from "./iterate-test-support.mts";
 import {
   buildEscalateHumanMessage,
   buildEscalateSuggestion,
@@ -17,29 +11,6 @@ registerIterateHooks();
 // ---------------------------------------------------------------------------
 // Escalate
 // ---------------------------------------------------------------------------
-
-const THREAD = {
-  id: "thread-1",
-  isResolved: false,
-  isOutdated: false,
-  isMinimized: false,
-  path: "src/foo.mts",
-  line: 10,
-  startLine: null,
-  author: "reviewer",
-  authorType: "Unknown" as const,
-  body: "Fix this",
-  url: "",
-  createdAtUnix: NOW - 3600,
-};
-
-const RESOLUTION_ONLY_THREAD = {
-  ...THREAD,
-  id: "thread-resolution-only",
-  isOutdated: true,
-  line: null,
-  body: "Already addressed on an old diff",
-};
 
 describe("escalate message helpers", () => {
   it("includes ambiguous comments and fallback suggestions", () => {

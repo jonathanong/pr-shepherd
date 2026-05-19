@@ -1,7 +1,6 @@
-// @ts-nocheck
 import { readFileSync } from "node:fs";
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("./commands/resolve.mts", () => ({
   runResolveFetch: vi.fn(),

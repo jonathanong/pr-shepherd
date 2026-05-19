@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect } from "vitest";
 import { classifyChecks, getCiVerdict } from "./classify.mts";
 import type { CheckRun } from "../types.mts";

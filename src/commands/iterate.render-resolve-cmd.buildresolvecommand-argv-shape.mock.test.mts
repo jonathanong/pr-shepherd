@@ -1,15 +1,11 @@
-// @ts-nocheck
 /* eslint-disable max-lines */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderResolveCommand } from "./iterate/render.mts";
+import { describe, it, expect } from "vitest";
 import {
   registerIterateHooks,
   NOW,
-  defaultConfig,
   makeOpts,
   makeReport,
   makeReview,
-  mockLoadConfig,
   mockRunCheck,
   mockUpdateReadyDelay,
 } from "./iterate-test-support.mts";

@@ -1,15 +1,24 @@
-// @ts-nocheck
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
+import type { PrShepherdConfig } from "../config/load.mts";
 import { parseIterateFlags } from "./iterate-flags.mts";
 
-function defaultConfig() {
+function defaultConfig(): PrShepherdConfig {
   return {
     watch: { readyDelayMinutes: 10 },
-    iterate: { stallTimeoutMinutes: 30 },
+    iterate: {
+      fixAttemptsPerThread: 3,
+      stallTimeoutMinutes: 30,
+      minimizeApprovals: false,
+      minimizeComments: "bots",
+    },
+    resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 }, fetchReviewSummaries: true },
+    checks: { ciTriggerEvents: ["pull_request"] },
+    mergeStatus: { blockingReviewerLogins: [] },
+    actions: { autoResolveOutdated: false, autoMarkReady: false, commitSuggestions: false },
   };
 }
 

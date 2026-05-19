@@ -1,11 +1,9 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   registerHooks,
   SUGGESTION_RESULT,
   getStdout,
   mockRunCommitSuggestion,
-  runCommitSuggestion,
   stderrSpy,
 } from "./cli-parser.commit-suggestion.test-support.mts";
 import { main } from "./cli-parser.mts";

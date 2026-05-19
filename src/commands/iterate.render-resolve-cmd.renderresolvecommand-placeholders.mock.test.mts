@@ -1,17 +1,6 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { renderResolveCommand } from "./iterate/render.mts";
-import {
-  registerIterateHooks,
-  NOW,
-  defaultConfig,
-  makeOpts,
-  makeReport,
-  mockLoadConfig,
-  mockRunCheck,
-  mockUpdateReadyDelay,
-} from "./iterate-test-support.mts";
-import { runIterate } from "./iterate/index.mts";
+import { registerIterateHooks } from "./iterate-test-support.mts";
 
 registerIterateHooks();
 

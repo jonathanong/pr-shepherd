@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect } from "vitest";
 import { paginateForward, paginateBackward, type Connection } from "./pagination.mts";
 

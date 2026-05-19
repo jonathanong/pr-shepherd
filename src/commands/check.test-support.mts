@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { vi, beforeEach } from "vitest";
 
 vi.mock("../github/batch.mts", () => ({ fetchPrBatch: vi.fn() }));
 vi.mock("../github/client.mts", () => ({

@@ -1,17 +1,8 @@
-// @ts-nocheck
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { randomBytes, createHash } from "node:crypto";
 import { rm, writeFile, mkdir, readdir } from "node:fs/promises";
 import { join } from "node:path";
-import {
-  hasSeen,
-  markSeen,
-  readSeenMarker,
-  loadSeenSet,
-  loadSeenMap,
-  classifyItem,
-  hashBody,
-} from "./seen-comments.mts";
+import { markSeen, loadSeenMap, hashBody } from "./seen-comments.mts";
 
 let testStateDir: string;
 

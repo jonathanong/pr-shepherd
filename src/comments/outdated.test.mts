@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect } from "vitest";
 import { getOutdatedThreads } from "./outdated.mts";
 import type { ReviewThread } from "../types.mts";

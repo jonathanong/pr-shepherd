@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { registerHooks, getStdout } from "./cli-parser.test-support.mts";
 import { readFileSync } from "node:fs";
 import { main } from "./cli-parser.mts";

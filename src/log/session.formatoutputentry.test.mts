@@ -1,11 +1,5 @@
-// @ts-nocheck
-import { describe, it, expect, vi } from "vitest";
-import {
-  buildSessionHeader,
-  formatRequestEntry,
-  formatResponseEntry,
-  formatOutputEntry,
-} from "./session.mts";
+import { describe, it, expect } from "vitest";
+import { formatOutputEntry } from "./session.mts";
 
 describe("formatOutputEntry", () => {
   it("wraps text output in a fenced block", () => {

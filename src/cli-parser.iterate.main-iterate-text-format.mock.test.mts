@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { registerHooks, getStdout, mockRunIterate } from "./cli-parser.iterate.test-support.mts";
 import { makeIterateResult } from "./cli-parser.iterate-fixtures.mts";
 import { main } from "./cli-parser.mts";

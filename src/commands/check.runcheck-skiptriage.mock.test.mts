@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   registerHooks,
   BASE_OPTS,
@@ -7,7 +6,6 @@ import {
   makeCheck,
   mockFetchPrBatch,
   mockTriageFailingChecks,
-  triageFailingChecks,
 } from "./check.test-support.mts";
 import { runCheck } from "./check.mts";
 

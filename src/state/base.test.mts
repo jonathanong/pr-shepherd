@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect, afterEach } from "vitest";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

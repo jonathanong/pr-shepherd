@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect, vi } from "vitest";
 
 const { mockExecFile } = vi.hoisted(() => ({ mockExecFile: vi.fn() }));

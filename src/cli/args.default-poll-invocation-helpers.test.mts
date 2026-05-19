@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { isDefaultPollInvocation, validateDefaultPollArgs } from "./default-poll.mts";
 

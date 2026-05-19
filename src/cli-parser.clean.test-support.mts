@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("./commands/clean.mts", () => ({

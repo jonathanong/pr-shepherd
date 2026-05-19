@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect } from "vitest";
 import { mockRunIterate, makeMarkReadyResult, registerPollHooks } from "./poll.test-support.mts";
 import { runPoll } from "./poll.mts";

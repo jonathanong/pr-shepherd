@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { vi, beforeEach } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Stub fetch and child_process globally before any imports.

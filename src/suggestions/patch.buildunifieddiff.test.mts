@@ -1,6 +1,5 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { registerHooks, buildUnifiedDiff } from "./patch.test-support.mts";
+import { describe, it, expect } from "vitest";
+import { buildUnifiedDiff } from "./patch.test-support.mts";
 
 describe("buildUnifiedDiff", () => {
   it("replaces a single line in the middle of a file", () => {

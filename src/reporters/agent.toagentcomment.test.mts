@@ -1,22 +1,6 @@
-// @ts-nocheck
 import { describe, it, expect } from "vitest";
-import { toAgentThread, toAgentComment, toAgentCheck, toAgentChecks } from "./agent.mts";
-import type { ReviewThread, PrComment, TriagedCheck } from "../types.mts";
-
-const thread: ReviewThread = {
-  id: "t-1",
-  isResolved: false,
-  isOutdated: false,
-  isMinimized: false,
-  path: "src/foo.mts",
-  line: 10,
-  startLine: null,
-  author: "alice",
-  authorType: "User",
-  body: "Please fix this method.",
-  url: "",
-  createdAtUnix: 1700000000,
-};
+import { toAgentComment } from "./agent.mts";
+import type { PrComment } from "../types.mts";
 
 const comment: PrComment = {
   id: "c-1",
@@ -27,18 +11,6 @@ const comment: PrComment = {
   url: "",
   createdAtUnix: 1700000001,
 };
-
-function makeCheck(runId: string | null, name = "typecheck"): TriagedCheck {
-  return {
-    name,
-    status: "COMPLETED",
-    conclusion: "FAILURE",
-    detailsUrl: `https://github.com/owner/repo/actions/runs/${runId}`,
-    event: "pull_request",
-    runId,
-    category: "failing",
-  };
-}
 
 describe("toAgentComment", () => {
   it("keeps id/author/body and drops isMinimized/createdAtUnix", () => {
