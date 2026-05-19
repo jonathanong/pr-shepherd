@@ -11,12 +11,16 @@ registerPollHooks();
 
 function withStderrTTY(isTTY: boolean, fn: () => Promise<void>): () => Promise<void> {
   return async () => {
-    const originalIsTTY = process.stderr.isTTY;
+    const originalDescriptor = Object.getOwnPropertyDescriptor(process.stderr, "isTTY");
     Object.defineProperty(process.stderr, "isTTY", { value: isTTY, configurable: true });
     try {
       await fn();
     } finally {
-      Object.defineProperty(process.stderr, "isTTY", { value: originalIsTTY, configurable: true });
+      if (originalDescriptor) {
+        Object.defineProperty(process.stderr, "isTTY", originalDescriptor);
+      } else {
+        delete (process.stderr as { isTTY?: boolean }).isTTY;
+      }
     }
   };
 }
