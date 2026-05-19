@@ -18,9 +18,7 @@ const DEFAULT_POLL_BOOLEAN_FLAGS = new Set([
 export function isDefaultPollInvocation(subcommand: string | undefined): boolean {
   if (subcommand === "--help" || subcommand === "-h") return false;
   return (
-    subcommand === undefined ||
-    parsePrNumber(subcommand) !== null ||
-    isDefaultPollFlag(subcommand)
+    subcommand === undefined || parsePrNumber(subcommand) !== null || isDefaultPollFlag(subcommand)
   );
 }
 

@@ -106,9 +106,7 @@ describe("runPoll — tick progress logging", () => {
     await vi.advanceTimersByTimeAsync(30_000);
     await pollPromise;
 
-    const lastWrite = String(
-      stderrSpy.mock.calls[stderrSpy.mock.calls.length - 1]?.[0] ?? "",
-    );
+    const lastWrite = String(stderrSpy.mock.calls[stderrSpy.mock.calls.length - 1]?.[0] ?? "");
     expect(lastWrite).toBe("\n");
 
     stderrSpy.mockRestore();
