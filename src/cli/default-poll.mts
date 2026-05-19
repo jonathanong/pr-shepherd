@@ -1,4 +1,5 @@
-import { parsePrNumber, validateDefaultArgs } from "./args.mts";
+import { parsePrNumber } from "./args.mts";
+import { validateDefaultArgs } from "./validate-default-args.mts";
 import { USAGE } from "./help.mts";
 
 const DEFAULT_POLL_FLAGS_WITH_VALUES = new Set([
