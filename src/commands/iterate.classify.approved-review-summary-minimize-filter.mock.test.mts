@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   registerIterateHooks,
   NOW,
@@ -21,9 +20,6 @@ registerIterateHooks();
 
 describe("runIterate — review summary auto-minimize", () => {
   const botSummary = makeReview("PRR_BOT", "copilot-pull-request-reviewer", "overview");
-  const genericBotSummary = makeReview("PRR_GEM", "gemini-code-assist", "overview");
-  const bracketBotSummary = makeReview("PRR_BRK", "github-actions[bot]", "overview");
-  const humanSummary = makeReview("PRR_HUMAN", "alice", "nice work");
 
   it("omits APPROVED reviews from minimize list by default (approvals: false)", async () => {
     mockRunCheck.mockResolvedValue(

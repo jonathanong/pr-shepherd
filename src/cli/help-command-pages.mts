@@ -53,11 +53,10 @@ Exit codes:
 
   iterate: `pr-shepherd iterate
 
-Run one iterate tick for a pull request. This is an alias for 'pr-shepherd [PR]'.
+Run one iterate tick for a pull request. The no-subcommand form polls; use this subcommand for a single tick.
 The output contains one action and an action-specific ## Instructions section.
 
 Usage:
-  pr-shepherd [PR] [iterate-flags]
   pr-shepherd iterate [PR] [iterate-flags]
 
 Iterate flags:
@@ -101,11 +100,11 @@ Forwarded iterate flags:
   --no-auto-mark-ready           Do not convert draft PRs to ready for review.
   --no-auto-cancel-actionable    Do not cancel in-progress runs before actionable fixes.
   --format text|json             Output Markdown text or JSON. Default: text.
-  --verbose                      Include verbose iterate fields and always print poll progress.
+  --verbose                      Include verbose iterate fields and detailed per-tick lines.
   --help, -h                     Print this help and exit before GitHub, git, config, or log I/O.
 
 Durations accept seconds, minutes, or hours: 30s, 2m, 1h, or bare seconds.
-WAIT progress is written to stderr when stderr is a TTY or --verbose is set.
+Each WAIT tick writes a single dot to stderr; --verbose emits the detailed per-tick line.
 
 Exit codes:
   0  WAIT timeout or MARK_READY

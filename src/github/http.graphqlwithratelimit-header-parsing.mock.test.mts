@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { registerHooks, gqlOk, mockFetch } from "./http.test-support.mts";
 import { GitHubRequestError, graphqlWithRateLimit } from "./http.mts";
 

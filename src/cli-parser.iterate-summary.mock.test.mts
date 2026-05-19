@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("./commands/check.mts", () => ({ runCheck: vi.fn() }));
@@ -42,6 +41,7 @@ function makeFixCodeResult(): IterateResult & { action: "fix_code" } {
     remainingSeconds: 60,
     summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 1 },
     baseBranch: "main",
+    branchProtection: null,
     checks: [],
     action: "fix_code",
     fix: {

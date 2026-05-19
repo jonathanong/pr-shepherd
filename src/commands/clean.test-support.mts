@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { vi, beforeEach, afterEach } from "vitest";
 import { join } from "node:path";
 import { mkdtemp, realpath, rm, mkdir, writeFile, stat } from "node:fs/promises";

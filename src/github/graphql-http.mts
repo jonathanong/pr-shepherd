@@ -15,6 +15,7 @@ const BASE_URL = "https://api.github.com";
 
 export interface GitHubGraphQlError {
   message: string;
+  path?: unknown;
 }
 
 export interface GraphQlResult<T = unknown> {

@@ -1,6 +1,3 @@
-// @ts-nocheck
-import { describe, expect, it } from "vitest";
-
 import type { ResolveCommand, AgentThread } from "../types.mts";
 import type { FetchResult } from "./resolve.mts";
 import {

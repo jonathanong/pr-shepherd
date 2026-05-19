@@ -1,21 +1,9 @@
-// @ts-nocheck
 import { describe, it, expect } from "vitest";
 import type { FirstLookThread, FirstLookComment } from "../types/report.mts";
 import { formatFetchResult } from "./formatters.mts";
 import { formatFixCodeResult } from "./fix-formatter.mts";
 import { makeIterateResult } from "../cli-parser.iterate-fixtures.mts";
 import type { IterateResult } from "../types.mts";
-import {
-  renderAuthor,
-  renderBodyPreview,
-  renderCommentBullet,
-  renderReviewBullet,
-  renderReviewListSection,
-  renderThreadBullet,
-  renderThreadResolutionStatusTag,
-} from "./list-formatters.mts";
-import { renderLineRange, renderSuggestionBlock } from "./suggestion-renderer.mts";
-import { safeFence } from "./fence.mts";
 
 // ---------------------------------------------------------------------------
 // Cross-call-site identity assertion (issue #127 acceptance criterion)

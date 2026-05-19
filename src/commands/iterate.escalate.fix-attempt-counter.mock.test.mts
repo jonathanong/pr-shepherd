@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   registerIterateHooks,
   NOW,
@@ -31,14 +30,6 @@ const THREAD = {
   body: "Fix this",
   url: "",
   createdAtUnix: NOW - 3600,
-};
-
-const RESOLUTION_ONLY_THREAD = {
-  ...THREAD,
-  id: "thread-resolution-only",
-  isOutdated: true,
-  line: null,
-  body: "Already addressed on an old diff",
 };
 
 describe("runIterate — escalate (fix-thrash)", () => {

@@ -4,10 +4,10 @@
 
 ```
 pr-shepherd -v|--version
-pr-shepherd [PR] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]
+pr-shepherd [PR] [--interval 30s] [--timeout 5m] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]
 pr-shepherd resolve [PR] [--fetch | --resolve-thread-ids … | --minimize-comment-ids … | --dismiss-review-ids … | --message "…" | --require-sha <sha>]
 pr-shepherd commit-suggestion [PR] --thread-id <id> --message "…"
-pr-shepherd iterate [PR] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]  # legacy alias for pr-shepherd [PR]
+pr-shepherd iterate [PR] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]  # single tick
 pr-shepherd poll [PR] [--interval 30s] [--timeout 5m] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]
 pr-shepherd log-file
 pr-shepherd clean <pr|branch|current|repo|all> [value] [--dry-run] [--format text|json]
@@ -171,12 +171,13 @@ If a patch fails to apply (drift since the suggestion was written), apply the fi
 
 ### pr-shepherd [PR]
 
-One iterate tick: classifies current PR state and emits a single action. `pr-shepherd iterate [PR]` remains supported as a legacy alias for direct CLI workflows; the shipped skill invokes `pr-shepherd poll [PR]` and follows each returned `## Instructions` section. See [iterate-flow.md](iterate-flow.md) for the decision tree and [actions.md](actions.md) for every action's full output shape.
+Poll: loops iterate ticks until the action is non-WAIT or `--timeout` elapses. This is the default command — `pr-shepherd 42` is equivalent to `pr-shepherd poll 42`. `pr-shepherd iterate [PR]` runs a single tick. See [iterate-flow.md](iterate-flow.md) for the decision tree and [actions.md](actions.md) for every action's full output shape.
 
 ```sh
 pr-shepherd 42
-pr-shepherd 42 --ready-delay 15m          # override ready-delay for this run
-pr-shepherd iterate 42                    # legacy alias
+pr-shepherd 42 --interval 45s --timeout 4m    # custom cadence
+pr-shepherd 42 --ready-delay 15m             # override ready-delay for this run
+pr-shepherd iterate 42                       # single tick only
 ```
 
 **Flags:**
@@ -206,7 +207,7 @@ WAIT: 3 passing, 0 in-progress — 540s until auto-cancel
 
 The `## Instructions` recheck command is the same regardless of calling agent. If the current command used `--ready-delay`, the rerun command includes the same flag.
 
-This is a one-shot loop contract: do not translate it into shell-level polling (`while true`, fixed-interval sleeps, etc.).
+The `pr-shepherd [PR]` default command polls, so callers get the loop automatically. Use `pr-shepherd iterate [PR]` for a single tick.
 
 Example for `[FIX_CODE]` (richest action):
 
@@ -272,7 +273,7 @@ Loops `pr-shepherd [PR]` every `--interval` seconds until the action is non-WAIT
 
 All `pr-shepherd [PR]` flags (`--ready-delay`, `--stall-timeout`, `--no-auto-mark-ready`, `--no-auto-cancel-actionable`, `--verbose`, `--format`) are forwarded to each tick.
 
-Stdout is the final tick's output only; per-tick WAIT progress is written to stderr (TTY-gated; always on when `--verbose` is set).
+Stdout is the final tick's output only; each WAIT tick writes a single dot to stderr. `--verbose` emits the detailed per-tick line instead.
 
 Exit codes: `0` wait/mark_ready · `1` fix_code · `2` cancel · `3` escalate
 

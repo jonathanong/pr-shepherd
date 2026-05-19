@@ -1,11 +1,5 @@
-// @ts-nocheck
-import { describe, it, expect, vi } from "vitest";
-import {
-  buildSessionHeader,
-  formatRequestEntry,
-  formatResponseEntry,
-  formatOutputEntry,
-} from "./session.mts";
+import { describe, it, expect } from "vitest";
+import { formatRequestEntry } from "./session.mts";
 
 describe("formatRequestEntry", () => {
   it("formats a GraphQL request with operation name and variables", () => {

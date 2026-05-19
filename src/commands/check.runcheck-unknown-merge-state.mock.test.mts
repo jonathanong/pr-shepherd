@@ -1,9 +1,7 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   registerHooks,
   BASE_OPTS,
-  getMergeableState,
   makeBatchData,
   mockFetchPrBatch,
   mockGetMergeableState,

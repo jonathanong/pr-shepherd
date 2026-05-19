@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { registerHooks, gqlOk, mockExecFile, mockFetch } from "./http.test-support.mts";
 import { graphql } from "./http.mts";
 

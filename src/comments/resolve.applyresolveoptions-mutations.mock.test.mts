@@ -1,6 +1,5 @@
-// @ts-nocheck
 /* eslint-disable max-lines */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { registerHooks, REPO, makeBulkResponse, mockGraphql } from "./resolve.test-support.mts";
 import { applyResolveOptions } from "./resolve.mts";
 

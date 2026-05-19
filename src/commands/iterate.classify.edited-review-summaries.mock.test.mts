@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   registerIterateHooks,
   makeOpts,
@@ -17,11 +16,6 @@ registerIterateHooks();
 // ---------------------------------------------------------------------------
 
 describe("runIterate — review summary auto-minimize", () => {
-  const botSummary = makeReview("PRR_BOT", "copilot-pull-request-reviewer", "overview");
-  const genericBotSummary = makeReview("PRR_GEM", "gemini-code-assist", "overview");
-  const bracketBotSummary = makeReview("PRR_BRK", "github-actions[bot]", "overview");
-  const humanSummary = makeReview("PRR_HUMAN", "alice", "nice work");
-
   it("editedSummaries are surfaced in fix_code but excluded from reviewSummaryIds (not re-minimized)", async () => {
     // A seen summary triggers fix_code (it needs minimizing); edited summary must NOT join the queue.
     const seenSummary = makeReview("PRR_SEEN", "copilot", "Old review.");

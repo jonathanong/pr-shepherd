@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect } from "vitest";
 import { deriveMergeStatus } from "./derive.mts";
 import type { BatchPrData } from "../types.mts";

@@ -1,7 +1,5 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
-  registerHooks,
   SHEPHERD_JOURNAL_APPEND_HINT,
   SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE,
   SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEMS,
@@ -72,7 +70,6 @@ describe("shepherd journal instruction helpers", () => {
       [],
       [],
       [],
-      undefined,
     );
 
     const text = instructions.join("\n");

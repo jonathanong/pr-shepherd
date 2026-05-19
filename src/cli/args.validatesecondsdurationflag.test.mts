@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { validateSecondsDurationFlag } from "./duration-flag.mts";
 import { parseDurationToSeconds } from "./exit-codes.mts";

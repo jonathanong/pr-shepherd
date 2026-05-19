@@ -1,11 +1,5 @@
-// @ts-nocheck
-import { describe, it, expect, vi } from "vitest";
-import {
-  buildSessionHeader,
-  formatRequestEntry,
-  formatResponseEntry,
-  formatOutputEntry,
-} from "./session.mts";
+import { describe, it, expect } from "vitest";
+import { buildSessionHeader } from "./session.mts";
 
 describe("buildSessionHeader", () => {
   it("includes the ISO timestamp and command args", () => {

@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { vi, beforeEach } from "vitest";
 
 vi.mock("./client.mts", () => ({
   graphql: vi.fn(),

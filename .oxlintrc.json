@@ -5,18 +5,5 @@
     "radix": "error",
     "max-lines": ["error", 200]
   },
-  "overrides": [
-    {
-      "files": [
-        "*.test.mts",
-        "*.test.*.mts",
-        "*.mock.test.mts",
-        "*.mock.test.*.mts",
-        "*.test-support.mts"
-      ],
-      "rules": {
-        "no-unused-vars": "off"
-      }
-    }
-  ]
+  "overrides": []
 }

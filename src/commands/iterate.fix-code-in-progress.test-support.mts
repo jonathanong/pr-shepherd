@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { vi, beforeEach, afterEach } from "vitest";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
@@ -62,6 +61,7 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
     repo: "owner/repo",
     status: "READY",
     baseBranch: "main",
+    branchProtection: null,
     mergeStatus: {
       status: "CLEAN",
       state: "OPEN" as const,

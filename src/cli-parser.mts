@@ -3,7 +3,7 @@
  *
  * Usage:
  *   pr-shepherd --version
- *   pr-shepherd [PR] [--format text|json] [--ready-delay Nm]
+ *   pr-shepherd [PR] [--interval 45s] [--timeout 4m] [--format text|json] [--ready-delay Nm]
  *                  [--stall-timeout <duration>] [--no-auto-mark-ready]
  *                  [--no-auto-cancel-actionable]
  *   pr-shepherd resolve [PR] [--fetch] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]
@@ -24,7 +24,7 @@ import { readFileSync } from "node:fs";
 import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
 import { runLogFile } from "./commands/log-file.mts";
 import { parseCommonArgs, getFlag, hasFlag, parseList } from "./cli/args.mts";
-import { isDefaultIterateInvocation, validateDefaultIterateArgs } from "./cli/default-iterate.mts";
+import { isDefaultPollInvocation, validateDefaultPollArgs } from "./cli/default-poll.mts";
 import { USAGE, maybePrintHelp } from "./cli/help.mts";
 import { formatFetchResult, formatMutateResult } from "./cli/formatters.mts";
 import { handleClean, handleCommitSuggestion, handleIterate } from "./cli/handlers.mts";
@@ -58,8 +58,8 @@ export async function main(argv: string[]): Promise<void> {
 
   // Short-circuit all --help/-h before any I/O or logging.
   if (hasFlag(args, "--help") || hasFlag(args, "-h")) {
-    if (isDefaultIterateInvocation(subcommand)) {
-      process.stdout.write(`${USAGE.iterate}\n`);
+    if (isDefaultPollInvocation(subcommand)) {
+      process.stdout.write(`${USAGE.poll}\n`);
     } else {
       const key =
         subcommand != null && (subcommand as string) in USAGE
@@ -73,9 +73,9 @@ export async function main(argv: string[]): Promise<void> {
   // Initialize the per-worktree log and install a stdout tee.
   await setupLog(argv);
 
-  if (isDefaultIterateInvocation(subcommand)) {
-    if (!validateDefaultIterateArgs(args)) return;
-    await handleIterate(args);
+  if (isDefaultPollInvocation(subcommand)) {
+    if (!validateDefaultPollArgs(args)) return;
+    await handlePoll(args);
     return;
   }
 

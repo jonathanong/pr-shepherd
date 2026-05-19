@@ -1,10 +1,5 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  registerHooks,
-  makeIterateResult,
-  projectIterateLean,
-} from "./iterate-lean.test-support.mts";
+import { describe, it, expect } from "vitest";
+import { makeIterateResult, projectIterateLean } from "./iterate-lean.test-support.mts";
 
 describe("projectIterateLean", () => {
   // ---------------------------------------------------------------------------

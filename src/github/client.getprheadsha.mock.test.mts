@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ---------------------------------------------------------------------------
@@ -27,14 +26,7 @@ vi.mock("node:child_process", () => ({
   },
 }));
 
-import {
-  graphql,
-  graphqlWithRateLimit,
-  getCurrentPrNumber,
-  getMergeableState,
-  getPrHeadSha,
-  getRepoInfo,
-} from "./client.mts";
+import { getPrHeadSha } from "./client.mts";
 import { _resetTokenCache } from "./http.mts";
 
 // ---------------------------------------------------------------------------
@@ -50,26 +42,6 @@ function gqlOk(data: unknown): Response {
     }),
     json: () => Promise.resolve({ data }),
     text: () => Promise.resolve(JSON.stringify({ data })),
-  } as unknown as Response;
-}
-
-function gqlErrors(errors: Array<{ message: string }>): Response {
-  return {
-    ok: true,
-    status: 200,
-    headers: new Headers({ "content-type": "application/json" }),
-    json: () => Promise.resolve({ data: null, errors }),
-    text: () => Promise.resolve(JSON.stringify({ data: null, errors })),
-  } as unknown as Response;
-}
-
-function restOk(data: unknown): Response {
-  return {
-    ok: true,
-    status: 200,
-    headers: new Headers({ "content-type": "application/json" }),
-    json: () => Promise.resolve(data),
-    text: () => Promise.resolve(JSON.stringify(data)),
   } as unknown as Response;
 }
 

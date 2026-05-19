@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { registerHooks, mockRunResolveFetch, stdoutSpy } from "./cli-parser.test-support.mts";
 import { main } from "./cli-parser.mts";
 

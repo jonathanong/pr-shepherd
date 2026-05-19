@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { vi } from "vitest";
 import { NOW, makeOpts } from "./iterate-test-support.mts";
 import { readStallState, writeStallState, type StallState } from "../state/iterate-stall.mts";
