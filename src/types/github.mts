@@ -1,5 +1,7 @@
 // GitHub primitives, check runs, review threads, and batch PR data types.
 
+import type { ReviewThreadComment } from "./review-thread.mts";
+
 // ---------------------------------------------------------------------------
 // GitHub primitives
 // ---------------------------------------------------------------------------
@@ -74,10 +76,6 @@ export interface TriagedCheck extends ClassifiedCheck {
   failedStep?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Review threads and comments
-// ---------------------------------------------------------------------------
-
 export interface ReviewThread {
   id: string;
   isResolved: boolean;
@@ -92,6 +90,7 @@ export interface ReviewThread {
   body: string;
   url: string;
   createdAtUnix: number;
+  comments?: ReviewThreadComment[];
 }
 
 /**

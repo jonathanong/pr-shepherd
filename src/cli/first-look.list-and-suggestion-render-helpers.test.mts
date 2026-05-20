@@ -63,6 +63,28 @@ describe("list and suggestion render helpers", () => {
       ),
     ).toContain("Replaces lines 1–2");
     expect(
+      renderThreadBullet(
+        {
+          id: "T3",
+          path: "src/a.ts",
+          startLine: 1,
+          line: 2,
+          author: "alice",
+          body: "body",
+          comments: [
+            {
+              id: "C-thread",
+              author: "alice",
+              body: "body",
+              url: "",
+            },
+          ],
+          suggestion: { startLine: 1, endLine: 2, lines: ["x"], author: "alice" },
+        },
+        { renderSuggestion: true },
+      ),
+    ).toContain("Replaces lines 1–2");
+    expect(
       renderCommentBullet(
         { id: "C1", url: "https://example.com/c", author: "bot", body: "comment" },
         { statusTag: "[status: minimized]" },

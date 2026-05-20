@@ -1,0 +1,60 @@
+{
+  "batchData": {
+    "reviewThreads": [
+      {
+        "id": "PRRT_resolved_reply",
+        "isResolved": true,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/thread-comments.ts",
+        "line": 36,
+        "startLine": null,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Original concern.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r200",
+        "createdAtUnix": 1715700000,
+        "comments": [
+          {
+            "id": "PRRC_resolved_1",
+            "isMinimized": false,
+            "author": "reviewer",
+            "authorType": "User",
+            "body": "Original concern.",
+            "url": "https://github.com/owner/repo/pull/42#discussion_r200",
+            "createdAtUnix": 1715700000
+          },
+          {
+            "id": "PRRC_resolved_2",
+            "isMinimized": false,
+            "author": "author",
+            "authorType": "User",
+            "body": "Acknowledged, fixed in latest push.",
+            "url": "https://github.com/owner/repo/pull/42#discussion_r201",
+            "createdAtUnix": 1715700100
+          },
+          {
+            "id": "PRRC_resolved_3",
+            "isMinimized": false,
+            "author": "reviewer",
+            "authorType": "User",
+            "body": "Thanks. One follow-up: please add the missing test-case too.",
+            "url": "https://github.com/owner/repo/pull/42#discussion_r202",
+            "createdAtUnix": 1715700200
+          }
+        ]
+      }
+    ]
+  },
+  "seenMap": {
+    "PRRT_resolved_reply": {
+      "seenAt": 1715700100,
+      "bodyHash": "826dbbc47a194fad"
+    }
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

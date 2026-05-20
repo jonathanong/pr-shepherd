@@ -67,8 +67,14 @@ query BatchPr(
           id
           isResolved
           isOutdated
-          # first: 1 — we want the reviewer's original comment, not the latest reply.
-          comments(first: 1) {
+          path
+          line
+          startLine
+          comments(first: 100) {
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
             nodes {
               id
               isMinimized

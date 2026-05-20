@@ -16,6 +16,7 @@ import {
   refreshUnknownMergeability,
 } from "./ready-mergeability.mts";
 import { loadSeenMap, markSeen, classifyItem } from "../state/seen-comments.mts";
+import { threadTranscriptBody } from "../threads/transcript.mts";
 import type {
   GlobalOptions,
   ShepherdReport,
@@ -89,7 +90,7 @@ export async function runCheck(
   const autoResolvedIds = new Set(autoResolved.map((t) => t.id));
   const firstLookThreads: FirstLookThread[] = [
     ...outdatedCandidates.flatMap((t) => {
-      const cls = classifyItem(t.id, t.body, seenMap);
+      const cls = classifyItem(t.id, threadTranscriptBody(t), seenMap);
       if (cls === "unchanged") return [];
       const base = {
         ...t,
@@ -99,13 +100,13 @@ export async function runCheck(
       return cls === "edited" ? [{ ...base, edited: true as const }] : [base];
     }),
     ...resolvedCandidates.flatMap((t) => {
-      const cls = classifyItem(t.id, t.body, seenMap);
+      const cls = classifyItem(t.id, threadTranscriptBody(t), seenMap);
       if (cls === "unchanged") return [];
       const base = { ...t, firstLookStatus: "resolved" as const };
       return cls === "edited" ? [{ ...base, edited: true as const }] : [base];
     }),
     ...minimizedThreadCandidates.flatMap((t) => {
-      const cls = classifyItem(t.id, t.body, seenMap);
+      const cls = classifyItem(t.id, threadTranscriptBody(t), seenMap);
       if (cls === "unchanged") return [];
       const base = { ...t, firstLookStatus: "minimized" as const };
       return cls === "edited" ? [{ ...base, edited: true as const }] : [base];
@@ -128,7 +129,7 @@ export async function runCheck(
   }
 
   await Promise.allSettled([
-    ...firstLookThreads.map((t) => markSeen(stateKey, t.id, t.body)),
+    ...firstLookThreads.map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
     ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
     ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
     ...[...firstLookSummaries, ...editedSummaries].map((r) => markSeen(stateKey, r.id, r.body)),

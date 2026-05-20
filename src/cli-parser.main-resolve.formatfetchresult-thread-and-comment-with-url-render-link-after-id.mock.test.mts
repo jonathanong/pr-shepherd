@@ -20,6 +20,26 @@ describe("main — resolve", () => {
           body: "nit",
           url: "https://github.com/owner/repo/pull/1#discussion_r1",
           createdAtUnix: 0,
+          comments: [
+            {
+              id: "PRRC_thread_1",
+              isMinimized: false,
+              author: "alice",
+              authorType: "Unknown" as const,
+              body: "long first body that must not be previewed\nwith another line",
+              url: "https://github.com/owner/repo/pull/1#discussion_r1",
+              createdAtUnix: 0,
+            },
+            {
+              id: "PRRC_thread_2",
+              isMinimized: false,
+              author: "carol",
+              authorType: "User" as const,
+              body: "reply in resolved conversation",
+              url: "https://github.com/owner/repo/pull/1#discussion_r2",
+              createdAtUnix: 0,
+            },
+          ],
         },
       ],
       resolutionOnlyThreads: [],
@@ -46,6 +66,14 @@ describe("main — resolve", () => {
     expect(out).toContain(
       "`threadId=PRT_linked` [↗](https://github.com/owner/repo/pull/1#discussion_r1)",
     );
+    expect(out).toContain(
+      "`commentId=PRRC_thread_1` [↗](https://github.com/owner/repo/pull/1#discussion_r1)",
+    );
+    expect(out).toContain("> long first body that must not be previewed\n    > with another line");
+    expect(out).toContain(
+      "`commentId=PRRC_thread_2` [↗](https://github.com/owner/repo/pull/1#discussion_r2)",
+    );
+    expect(out).toContain("> reply in resolved conversation");
     expect(out).toContain(
       "`commentId=IC_linked` [↗](https://github.com/owner/repo/pull/1#issuecomment-1)",
     );

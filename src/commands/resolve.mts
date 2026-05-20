@@ -7,6 +7,7 @@ import { classifyVisibleComments } from "../comments/visible-comments.mts";
 import { extractSuggestion } from "../suggestions/extract.mts";
 import { buildFetchInstructions } from "./resolve-instructions.mts";
 import { loadSeenMap, markSeen, classifyItem } from "../state/seen-comments.mts";
+import { threadTranscriptBody } from "../threads/transcript.mts";
 import type {
   GlobalOptions,
   ReviewThread,
@@ -71,21 +72,21 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   const unseenOutdated: typeof outdatedCandidates = [];
   const editedOutdated: typeof outdatedCandidates = [];
   for (const t of outdatedCandidates) {
-    const cls = classifyItem(t.id, t.body, seenMap);
+    const cls = classifyItem(t.id, threadTranscriptBody(t), seenMap);
     if (cls === "new") unseenOutdated.push(t);
     else if (cls === "edited") editedOutdated.push(t);
   }
   const unseenResolved: typeof resolvedCandidates = [];
   const editedResolved: typeof resolvedCandidates = [];
   for (const t of resolvedCandidates) {
-    const cls = classifyItem(t.id, t.body, seenMap);
+    const cls = classifyItem(t.id, threadTranscriptBody(t), seenMap);
     if (cls === "new") unseenResolved.push(t);
     else if (cls === "edited") editedResolved.push(t);
   }
   const unseenMinimizedThreads: typeof minimizedThreadCandidates = [];
   const editedMinimizedThreads: typeof minimizedThreadCandidates = [];
   for (const t of minimizedThreadCandidates) {
-    const cls = classifyItem(t.id, t.body, seenMap);
+    const cls = classifyItem(t.id, threadTranscriptBody(t), seenMap);
     if (cls === "new") unseenMinimizedThreads.push(t);
     else if (cls === "edited") editedMinimizedThreads.push(t);
   }
@@ -167,7 +168,7 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
 
   // Mark new and edited items as seen (best-effort — markSeen never throws).
   await Promise.allSettled([
-    ...firstLookThreads.map((t) => markSeen(stateKey, t.id, t.body)),
+    ...firstLookThreads.map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
     ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
     ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
   ]);

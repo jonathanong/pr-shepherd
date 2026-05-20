@@ -43,19 +43,29 @@ export function parseRawPr(
 
   const reviewThreads: ReviewThread[] = rawThreadPages.map((t) => {
     const comment = t.comments.nodes[0];
+    const comments = t.comments.nodes.map((c) => ({
+      id: c.id,
+      isMinimized: c.isMinimized,
+      author: c.author?.login ?? "unknown",
+      authorType: mapAuthorType(c.author?.__typename),
+      body: c.body,
+      url: c.url,
+      createdAtUnix: parseCreatedAt(c.createdAt),
+    }));
     return {
       id: t.id,
       isResolved: t.isResolved,
       isOutdated: t.isOutdated,
       isMinimized: comment?.isMinimized ?? false,
-      path: comment?.path ?? null,
-      line: comment?.line ?? null,
-      startLine: comment?.startLine ?? null,
+      path: t.path ?? comment?.path ?? null,
+      line: t.line ?? comment?.line ?? null,
+      startLine: t.startLine ?? comment?.startLine ?? null,
       author: comment?.author?.login ?? "unknown",
       authorType: mapAuthorType(comment?.author?.__typename),
       body: comment?.body ?? "",
       url: comment?.url ?? "",
       createdAtUnix: comment ? parseCreatedAt(comment.createdAt) : 0,
+      comments,
     };
   });
 

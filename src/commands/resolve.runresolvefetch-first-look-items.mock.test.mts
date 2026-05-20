@@ -12,6 +12,7 @@ import {
 } from "./resolve.test-support.mts";
 import { hashBody } from "../state/seen-comments.mts";
 import { runResolveFetch } from "./resolve.mts";
+import { threadTranscriptBody } from "../threads/transcript.mts";
 
 registerHooks();
 
@@ -69,6 +70,55 @@ describe("runResolveFetch — first-look items", () => {
       ["t-resolved", "resolved", true],
       ["t-minimized", "minimized", true],
     ]);
+  });
+
+  it("re-surfaces a resolved thread when a reply is added after first look", async () => {
+    const beforeReply = makeThread({
+      id: "t-resolved",
+      isResolved: true,
+      body: "original",
+      comments: [
+        {
+          id: "c-1",
+          isMinimized: false,
+          author: "alice",
+          authorType: "User",
+          body: "original",
+          url: "https://github.com/o/r/pull/1#discussion_r1",
+          createdAtUnix: 1,
+        },
+      ],
+    });
+    const afterReply = makeThread({
+      ...beforeReply,
+      comments: [
+        ...beforeReply.comments!,
+        {
+          id: "c-2",
+          isMinimized: false,
+          author: "bob",
+          authorType: "User",
+          body: "new reply",
+          url: "https://github.com/o/r/pull/1#discussion_r2",
+          createdAtUnix: 2,
+        },
+      ],
+    });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [afterReply] }) });
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([
+        ["t-resolved", { seenAt: 1000, bodyHash: hashBody(threadTranscriptBody(beforeReply)) }],
+      ]),
+    );
+
+    const result = await runResolveFetch(BASE_OPTS);
+
+    expect(result.firstLookThreads.map((t) => [t.id, t.edited])).toEqual([["t-resolved", true]]);
+    expect(mockMarkSeen).toHaveBeenCalledWith(
+      expect.any(Object),
+      "t-resolved",
+      threadTranscriptBody(afterReply),
+    );
   });
 
   it("suppresses already-seen items and calls markSeen for new ones", async () => {

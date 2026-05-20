@@ -72,23 +72,39 @@ export interface RawAuthor {
   login: string;
 }
 
+export interface RawThreadComment {
+  id: string;
+  isMinimized: boolean;
+  url: string;
+  author: RawAuthor | null;
+  body: string;
+  path: string | null;
+  line: number | null;
+  startLine: number | null;
+  createdAt: string;
+}
+
 export interface RawThread {
   id: string;
   isResolved: boolean;
   isOutdated: boolean;
+  path?: string | null;
+  line?: number | null;
+  startLine?: number | null;
   comments: {
-    nodes: Array<{
-      id: string;
-      isMinimized: boolean;
-      url: string;
-      author: RawAuthor | null;
-      body: string;
-      path: string | null;
-      line: number | null;
-      startLine: number | null;
-      createdAt: string;
-    }>;
+    pageInfo?: { hasNextPage: boolean; endCursor: string | null };
+    nodes: RawThreadComment[];
   };
+}
+
+export interface RawReviewThreadCommentsResponse {
+  node: {
+    __typename?: string;
+    comments: {
+      pageInfo: { hasNextPage: boolean; endCursor: string | null };
+      nodes: RawThreadComment[];
+    } | null;
+  } | null;
 }
 
 export interface RawComment {

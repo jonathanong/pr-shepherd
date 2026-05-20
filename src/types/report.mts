@@ -9,6 +9,7 @@ import type {
   CheckConclusion,
   SuggestionBlock,
 } from "./github.mts";
+import type { AgentThreadComment } from "./agent-thread.mts";
 
 // First-look items (previously hidden — surfaced to agent on first encounter)
 export interface FirstLookThread extends ReviewThread {
@@ -104,6 +105,7 @@ export interface AgentThread {
   authorType?: AuthorType;
   body: string;
   url: string;
+  comments?: AgentThreadComment[];
   suggestion?: SuggestionBlock; // present when body contains a ```suggestion fence
 }
 
