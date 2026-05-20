@@ -140,6 +140,7 @@ export interface RawBranchProtectionRule {
 export type RawContextNode =
   | {
       __typename: "CheckRun";
+      id: string;
       name: string;
       status: string;
       conclusion: string | null;

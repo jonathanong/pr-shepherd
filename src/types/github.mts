@@ -1,6 +1,7 @@
 // GitHub primitives, check runs, review threads, and batch PR data types.
 
 import type { ReviewThreadComment } from "./review-thread.mts";
+import type { CheckAnnotation } from "./check-annotations.mts";
 
 // ---------------------------------------------------------------------------
 // GitHub primitives
@@ -42,11 +43,9 @@ export type ReviewDecision = "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED
 
 export type AuthorType = "User" | "Bot" | "Unknown";
 
-// ---------------------------------------------------------------------------
-// Check runs
-// ---------------------------------------------------------------------------
-
 export interface CheckRun {
+  /** GitHub node ID for CheckRun contexts. Missing for StatusContext and synthetic checks. */
+  id?: string | null;
   name: string;
   status: CheckStatus;
   conclusion: CheckConclusion;
@@ -74,6 +73,8 @@ export interface TriagedCheck extends ClassifiedCheck {
   jobName?: string;
   /** Name of the first failed step in the matched job (e.g. `"Run tests"`). */
   failedStep?: string;
+  /** Inline annotations attached to this failing check run, surfaced once per PR. */
+  annotations?: CheckAnnotation[];
 }
 
 export interface ReviewThread {
@@ -133,10 +134,6 @@ export interface Review {
   body: string;
 }
 
-// ---------------------------------------------------------------------------
-// Branch protection
-// ---------------------------------------------------------------------------
-
 export interface BranchProtection {
   requiresApprovingReviews: boolean;
   requiredApprovingReviewCount: number;
@@ -145,10 +142,6 @@ export interface BranchProtection {
   /** Required status check context names (e.g. "ci/build", "ci/test"). Empty when requiresStatusChecks is false, or when requiresStatusChecks is true but GitHub returns no explicit contexts. */
   requiredStatusCheckContexts: string[];
 }
-
-// ---------------------------------------------------------------------------
-// Merge status
-// ---------------------------------------------------------------------------
 
 export type ShepherdMergeStatus =
   | "CLEAN"
@@ -168,10 +161,6 @@ export interface MergeStatusResult {
   blockingBotReviewInProgress: boolean;
   mergeStateStatus: MergeStateStatus;
 }
-
-// ---------------------------------------------------------------------------
-// Batch query response (the combined GraphQL shape)
-// ---------------------------------------------------------------------------
 
 export interface BatchPrData {
   nodeId: string;

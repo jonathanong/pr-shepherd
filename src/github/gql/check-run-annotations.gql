@@ -1,0 +1,32 @@
+query CheckRunAnnotations($id: ID!, $cursor: String) {
+  node(id: $id) {
+    __typename
+    ... on CheckRun {
+      annotations(first: 100, after: $cursor) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          fullDatabaseId
+          path
+          annotationLevel
+          title
+          message
+          rawDetails
+          blobUrl
+          location {
+            start {
+              line
+              column
+            }
+            end {
+              line
+              column
+            }
+          }
+        }
+      }
+    }
+  }
+}

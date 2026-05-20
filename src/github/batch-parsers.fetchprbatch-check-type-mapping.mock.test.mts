@@ -23,6 +23,7 @@ describe("fetchPrBatch — check type mapping", () => {
                   nodes: [
                     {
                       __typename: "CheckRun",
+                      id: "CR_123",
                       name: "tests",
                       status: "COMPLETED",
                       conclusion: "SUCCESS",
@@ -41,6 +42,7 @@ describe("fetchPrBatch — check type mapping", () => {
     const { data } = await fetchPrBatch(42, REPO);
     expect(data.checks).toHaveLength(1);
     expect(data.checks[0]!.name).toBe("tests");
+    expect(data.checks[0]!.id).toBe("CR_123");
     expect(data.checks[0]!.event).toBe("pull_request");
     expect(data.checks[0]!.runId).toBe("9999");
   });
