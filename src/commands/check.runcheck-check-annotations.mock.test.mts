@@ -99,4 +99,24 @@ describe("runCheck — check annotations", () => {
 
     expect(mockFetchCheckRunAnnotations).not.toHaveBeenCalled();
   });
+
+  it("keeps the failing check when annotation fetch fails", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        checks: [
+          makeCheck({
+            id: "CR_fail",
+            conclusion: "FAILURE",
+            category: "failing",
+          }),
+        ],
+      }),
+    });
+    mockFetchCheckRunAnnotations.mockRejectedValueOnce(new Error("secondary rate limit"));
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.checks.failing).toHaveLength(1);
+    expect(report.checks.failing[0]?.annotations).toBeUndefined();
+  });
 });

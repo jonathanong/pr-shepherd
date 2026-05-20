@@ -26,6 +26,23 @@ describe("## Check annotations — fix formatter rendering", () => {
             message: "Remove the assertion.",
             blobUrl: "https://github.example/blob",
           },
+          {
+            id: "check_annotation_56040842876",
+            path: "src/commands/poll.mts",
+            startLine: 19,
+            endLine: 21,
+            level: "WARNING",
+            message: "",
+            rawDetails: "Prefer separate methods.",
+          },
+          {
+            id: "check_annotation_no_location",
+            path: "src/unknown.mts",
+            startLine: null,
+            endLine: null,
+            level: "NOTICE",
+            message: "No location available.",
+          },
         ],
       },
     ];
@@ -41,5 +58,10 @@ describe("## Check annotations — fix formatter rendering", () => {
       "- `check_annotation_56040842845` [↗](https://github.example/blob) `src/cli/default-poll.mts:36` [WARNING] — This assertion is unnecessary",
     );
     expect(output).toContain("> Remove the assertion.");
+    expect(output).toContain(
+      "- `check_annotation_56040842876` `src/commands/poll.mts:19-21` [WARNING]",
+    );
+    expect(output).toContain("> Prefer separate methods.");
+    expect(output).toContain("- `check_annotation_no_location` `src/unknown.mts:?` [NOTICE]");
   });
 });

@@ -200,4 +200,44 @@ describe("buildFixInstructions", () => {
       "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
     );
   });
+
+  it("includes annotation sections in failing-check guidance", () => {
+    const instructions = buildFixInstructions(
+      [],
+      [],
+      [
+        {
+          name: "SonarCloud Code Analysis",
+          runId: null,
+          detailsUrl: "https://sonarcloud.io",
+          conclusion: "FAILURE",
+          annotations: [
+            {
+              id: "check_annotation_1",
+              path: "src/foo.mts",
+              startLine: 1,
+              endLine: 1,
+              level: "WARNING",
+              message: "Fix this.",
+            },
+          ],
+        },
+      ],
+      [],
+      "main",
+      {
+        argv: ["pr-shepherd", "resolve", "42"],
+        requiresHeadSha: false,
+        requiresDismissMessage: false,
+        hasMutations: false,
+      },
+      false,
+      42,
+      0,
+    );
+
+    const text = instructions.join("\n");
+    expect(text).toContain("`## Failing checks`, `## Check annotations`");
+    expect(text).toContain("For each item under `## Check annotations`");
+  });
 });
