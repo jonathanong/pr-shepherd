@@ -14,7 +14,7 @@ import { runCheck } from "./check.mts";
 registerHooks();
 
 describe("runCheck — check annotations", () => {
-  it("surfaces unseen annotations on failing checks and marks them seen", async () => {
+  it("surfaces unseen annotations on failing checks without marking them seen before output projection", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
         checks: [
@@ -47,10 +47,10 @@ describe("runCheck — check annotations", () => {
       expect.objectContaining({ id: "check_annotation_123" }),
     ]);
     expect(mockFetchCheckRunAnnotations).toHaveBeenCalledWith("CR_fail");
-    expect(mockMarkSeen).toHaveBeenCalledWith(
+    expect(mockMarkSeen).not.toHaveBeenCalledWith(
       expect.any(Object),
       "check_annotation_123",
-      expect.stringContaining("Remove the assertion."),
+      expect.anything(),
     );
   });
 

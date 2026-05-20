@@ -9,7 +9,7 @@ import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
 import { classifyVisibleComments } from "../comments/visible-comments.mts";
 import { computeStatus } from "./check-status.mts";
-import { annotationMarkerBody, attachUnseenCheckAnnotations } from "./check-annotations.mts";
+import { attachUnseenCheckAnnotations } from "./check-annotations.mts";
 import { buildTerminalReport } from "./check-terminal-report.mts";
 import {
   isBlockedByFilteredCheck,
@@ -62,11 +62,7 @@ export async function runCheck(
     failing.length > 0 && !opts.skipTriage ? await triageFailingChecks(failing, repo) : failing;
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
   const seenMap = await loadSeenMap(stateKey);
-  const { checks: triaged, annotationsToMarkSeen } = await attachUnseenCheckAnnotations(
-    triagedBase,
-    seenMap,
-    prNumber,
-  );
+  const triaged = await attachUnseenCheckAnnotations(triagedBase, seenMap, prNumber);
   const unresolvedThreads = batchData.reviewThreads.filter((t) => !t.isResolved);
   const outdated = getOutdatedThreads(unresolvedThreads);
   let autoResolved: typeof outdated = [];
@@ -134,7 +130,6 @@ export async function runCheck(
     ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
     ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
     ...[...firstLookSummaries, ...editedSummaries].map((r) => markSeen(stateKey, r.id, r.body)),
-    ...annotationsToMarkSeen.map((a) => markSeen(stateKey, a.id, annotationMarkerBody(a))),
   ]);
   const resolutionOnlyThreads = unresolvedThreads.filter(
     (t) => !autoResolvedIds.has(t.id) && (t.isOutdated || t.isMinimized),

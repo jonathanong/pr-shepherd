@@ -36,6 +36,9 @@ vi.mock("../state/iterate-stall.mts", () => ({
   readStallState: vi.fn().mockResolvedValue(null),
   writeStallState: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("../state/seen-comments.mts", () => ({
+  markSeen: vi.fn().mockResolvedValue(undefined),
+}));
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
@@ -45,6 +48,7 @@ import { runCheck } from "./check.mts";
 import { updateReadyDelay } from "./ready-delay.mts";
 import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
 import { readStallState, writeStallState } from "../state/iterate-stall.mts";
+import { markSeen } from "../state/seen-comments.mts";
 import type { ShepherdReport, IterateCommandOptions } from "../types.mts";
 
 const mockRunCheck = vi.mocked(runCheck);
@@ -53,6 +57,7 @@ const mockReadFixAttempts = vi.mocked(readFixAttempts);
 const mockWriteFixAttempts = vi.mocked(writeFixAttempts);
 const mockReadStallState = vi.mocked(readStallState);
 const mockWriteStallState = vi.mocked(writeStallState);
+const mockMarkSeen = vi.mocked(markSeen);
 
 function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
   return {
@@ -144,6 +149,7 @@ export {
   mockLoadConfig,
   mockReadFixAttempts,
   mockReadStallState,
+  mockMarkSeen,
   mockRunCheck,
   mockUpdateReadyDelay,
   mockWriteFixAttempts,
