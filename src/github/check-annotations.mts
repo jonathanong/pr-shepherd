@@ -79,17 +79,19 @@ function toCheckAnnotation(checkRunId: string, raw: RawCheckAnnotation): CheckAn
 }
 
 function fallbackId(checkRunId: string, raw: RawCheckAnnotation): string {
-  return createHash("sha256")
-    .update(
-      JSON.stringify({
-        checkRunId,
-        path: raw.path,
-        location: raw.location,
-        level: raw.annotationLevel,
-        title: raw.title,
-        message: raw.message,
-      }),
-    )
-    .digest("hex")
-    .slice(0, 24);
+  const start = raw.location?.start;
+  const end = raw.location?.end;
+  const parts = [
+    checkRunId,
+    raw.path,
+    raw.annotationLevel,
+    raw.title ?? "",
+    raw.message,
+    String(start?.line ?? ""),
+    String(start?.column ?? ""),
+    String(end?.line ?? ""),
+    String(end?.column ?? ""),
+  ];
+  const input = parts.map((part) => `${part.length}:${part}`).join("|");
+  return createHash("sha256").update(input).digest("hex").slice(0, 24);
 }

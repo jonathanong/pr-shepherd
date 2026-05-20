@@ -120,4 +120,16 @@ describe("fetchCheckRunAnnotations", () => {
       cursor: "cursor-1",
     });
   });
+
+  it("returns no annotations when the node is not a CheckRun", async () => {
+    mockGraphql.mockResolvedValue({
+      data: {
+        node: {
+          __typename: "StatusContext",
+        },
+      },
+    });
+
+    await expect(fetchCheckRunAnnotations("SC_123")).resolves.toEqual([]);
+  });
 });
