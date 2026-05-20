@@ -169,7 +169,6 @@ query BatchPr(
                     conclusion
                     detailsUrl
                     startedAt
-                    completedAt
                     title
                     summary
                     checkSuite {

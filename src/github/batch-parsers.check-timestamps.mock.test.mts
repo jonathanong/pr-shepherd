@@ -28,7 +28,6 @@ describe("fetchPrBatch — check timestamps", () => {
                       conclusion: null,
                       detailsUrl: "https://github.com/owner/repo/actions/runs/9999/jobs/1",
                       startedAt: null,
-                      completedAt: null,
                       title: null,
                       summary: null,
                       checkSuite: {

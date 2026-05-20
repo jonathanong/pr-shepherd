@@ -129,7 +129,6 @@ export type RawContextNode =
       conclusion: string | null;
       detailsUrl: string | null;
       startedAt?: string | null;
-      completedAt?: string | null;
       title: string | null;
       summary: string | null;
       checkSuite: {
