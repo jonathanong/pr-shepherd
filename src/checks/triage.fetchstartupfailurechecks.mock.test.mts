@@ -33,6 +33,7 @@ describe("fetchStartupFailureChecks", () => {
         name: "CI",
         status: "COMPLETED",
         conclusion: "STARTUP_FAILURE",
+        source: "startup_failure",
         detailsUrl: "https://github.com/owner/repo/actions/runs/25406234225",
         event: "pull_request",
         runId: "25406234225",

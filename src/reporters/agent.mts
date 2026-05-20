@@ -14,9 +14,11 @@ import type {
   ReviewThread,
   PrComment,
   TriagedCheck,
+  ClassifiedCheck,
   AgentThread,
   AgentComment,
   AgentCheck,
+  AgentStalledCheck,
 } from "../types.mts";
 
 export function toAgentThread(t: ReviewThread): AgentThread {
@@ -59,6 +61,22 @@ export function toAgentCheck(c: TriagedCheck): AgentCheck {
     ...(c.workflowName !== undefined && { workflowName: c.workflowName }),
     ...(c.jobName !== undefined && { jobName: c.jobName }),
     ...(c.failedStep !== undefined && { failedStep: c.failedStep }),
+    ...(c.summary !== undefined && { summary: c.summary }),
+  };
+}
+
+export function toAgentStalledCheck(c: ClassifiedCheck, nowSeconds: number): AgentStalledCheck {
+  const createdAtUnix = c.createdAtUnix ?? nowSeconds;
+  return {
+    name: c.name,
+    status: c.status,
+    source: c.source ?? "check_run",
+    runId: c.runId,
+    detailsUrl: c.detailsUrl || null,
+    ...(c.createdAtUnix !== undefined && { createdAtUnix: c.createdAtUnix }),
+    ...(c.startedAtUnix !== undefined && { startedAtUnix: c.startedAtUnix }),
+    ...(c.updatedAtUnix !== undefined && { updatedAtUnix: c.updatedAtUnix }),
+    ageSeconds: Math.max(0, nowSeconds - createdAtUnix),
     ...(c.summary !== undefined && { summary: c.summary }),
   };
 }

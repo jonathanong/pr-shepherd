@@ -27,11 +27,26 @@ export type EscalateTrigger =
   | "stall-timeout"
   | "thread-missing-location";
 
+export interface AgentStalledCheck {
+  name: string;
+  status: string;
+  source: "check_run" | "status_context" | "startup_failure";
+  runId: string | null;
+  detailsUrl: string | null;
+  createdAtUnix?: number;
+  startedAtUnix?: number;
+  updatedAtUnix?: number;
+  ageSeconds: number;
+  summary?: string;
+}
+
 export interface EscalateDetails {
   triggers: EscalateTrigger[];
   unresolvedThreads: AgentThread[];
   ambiguousComments: AgentComment[];
   changesRequestedReviews: Review[];
+  /** Pending/unstarted CI checks that exceeded the stall timeout. */
+  stalledChecks?: AgentStalledCheck[];
   /** Populated when fix-thrash triggered — threads that have been attempted too many times. */
   thrashHistory?: Array<{ threadId: string; attempts: number }>;
   /** One-line hint for the human on what to do. */

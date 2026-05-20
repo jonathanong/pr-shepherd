@@ -65,6 +65,8 @@ The fingerprint and a `firstSeenAt` timestamp are persisted to `$TMPDIR/pr-sheph
 
 In-progress check **names** are included so that a long-running CI pipeline where jobs complete one by one (moving from in-progress to passing) resets the timer as progress happens. Timing-only fields (`remainingSeconds`, `inProgress` count by itself) are excluded — only the set of check names changes the fingerprint, not how many are still running.
 
+Before the generic fingerprint check, `wait` results also inspect relevant in-progress CI checks for a start stall. Queued/requested/waiting check runs with no `startedAt`, and pending external status contexts with only `createdAt`, escalate with `stall-timeout` when their source creation timestamp is at least `stallTimeoutSeconds` old. Started `IN_PROGRESS` check runs are not treated as CI-start stalls.
+
 **Applies to:** `wait`, `fix_code`. Not applied to `cancel`, `mark_ready`, or `escalate` — these are either already terminal or one-shot.
 
 ---

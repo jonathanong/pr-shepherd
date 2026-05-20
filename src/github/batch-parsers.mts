@@ -97,19 +97,32 @@ export function parseRawPr(
       body: r.body,
     }));
 
-  const checks: CheckRun[] = rawCheckNodes.flatMap((node) => {
+  const checks = rawCheckNodes.flatMap<CheckRun>((node) => {
     if (node.__typename === "CheckRun") {
       const event = node.checkSuite?.workflowRun?.event ?? null;
       const runId = extractRunId(node.detailsUrl);
       const summary = extractCheckRunSummary(node.title, node.summary);
+      const rawCreatedAt = node.checkSuite
+        ? (node.checkSuite.workflowRun?.createdAt ?? node.checkSuite.createdAt)
+        : undefined;
+      const rawUpdatedAt = node.checkSuite
+        ? (node.checkSuite.workflowRun?.updatedAt ?? node.checkSuite.updatedAt)
+        : undefined;
+      const createdAtUnix = rawCreatedAt ? parseCreatedAt(rawCreatedAt) : undefined;
+      const startedAtUnix = node.startedAt ? parseCreatedAt(node.startedAt) : undefined;
+      const updatedAtUnix = rawUpdatedAt ? parseCreatedAt(rawUpdatedAt) : undefined;
       return [
         {
           name: node.name,
           status: node.status as CheckRun["status"],
           conclusion: node.conclusion as CheckRun["conclusion"],
+          source: "check_run",
           detailsUrl: node.detailsUrl ?? "",
           event,
           runId,
+          ...(createdAtUnix !== undefined && { createdAtUnix }),
+          ...(startedAtUnix !== undefined && { startedAtUnix }),
+          ...(updatedAtUnix !== undefined && { updatedAtUnix }),
           ...(summary !== undefined && { summary }),
         },
       ];
@@ -117,14 +130,17 @@ export function parseRawPr(
     if (node.__typename === "StatusContext") {
       const { status, conclusion } = mapStatusContextState(node.state);
       const summary = node.description?.trim() || undefined;
+      const createdAtUnix = node.createdAt ? parseCreatedAt(node.createdAt) : undefined;
       return [
         {
           name: node.context,
           status,
           conclusion,
+          source: "status_context",
           detailsUrl: node.targetUrl ?? "",
           event: null,
           runId: null,
+          ...(createdAtUnix !== undefined && { createdAtUnix }),
           ...(summary !== undefined && { summary }),
         },
       ];

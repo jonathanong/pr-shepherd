@@ -82,11 +82,25 @@ export function buildEscalateHumanMessage(
   const hasItems =
     escalate.unresolvedThreads.length > 0 ||
     escalate.changesRequestedReviews.length > 0 ||
-    escalate.ambiguousComments.length > 0;
+    escalate.ambiguousComments.length > 0 ||
+    (escalate.stalledChecks?.length ?? 0) > 0;
   if (hasItems) {
     lines.push("");
     lines.push("## Items needing attention");
     lines.push("");
+    for (const c of escalate.stalledChecks ?? []) {
+      const target = c.runId
+        ? `run \`${c.runId}\``
+        : c.detailsUrl
+          ? `external \`${c.detailsUrl}\``
+          : "no run ID";
+      const ageMinutes = Math.floor(c.ageSeconds / 60);
+      lines.push(
+        `- check \`${c.name}\` — ${c.status} ${c.source}, ${target}, waiting ${ageMinutes} minute${ageMinutes === 1 ? "" : "s"}`,
+      );
+      if (c.summary) lines.push(`  > ${c.summary}`);
+    }
+    if ((escalate.stalledChecks?.length ?? 0) > 0) lines.push("");
     for (const t of escalate.unresolvedThreads) {
       const loc = t.path ? `\`${t.path}:${t.line ?? "?"}\`` : "(no location)";
       lines.push(`- thread \`${t.id}\` — ${loc} (@${t.author}):`);
@@ -128,7 +142,7 @@ export function buildEscalateHumanMessage(
 
 export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: string): string {
   if (triggers.includes("stall-timeout")) {
-    const mins = detail ?? "30";
+    const mins = detail ?? "60";
     return `No progress detected for ${mins} minute${parseInt(mins, 10) === 1 ? "" : "s"} — state has not changed. This is a manual checkpoint: inspect the PR and apply a manual fix before resuming.`;
   }
   if (triggers.includes("base-branch-unknown")) {

@@ -11,7 +11,7 @@ function defaultConfig(): PrShepherdConfig {
     watch: { readyDelayMinutes: 10 },
     iterate: {
       fixAttemptsPerThread: 3,
-      stallTimeoutMinutes: 30,
+      stallTimeoutMinutes: 60,
       minimizeApprovals: false,
       minimizeComments: "bots",
     },
@@ -36,7 +36,7 @@ describe("parseIterateFlags", () => {
     const flags = parseIterateFlags([], defaultConfig());
     expect(flags.readyDelaySuffix).toBeUndefined();
     expect(flags.readyDelaySeconds).toBe(600); // 10m * 60
-    expect(flags.stallTimeoutSeconds).toBe(1800); // 30m * 60
+    expect(flags.stallTimeoutSeconds).toBe(3600); // 60m * 60
     expect(flags.noAutoMarkReady).toBe(false);
     expect(flags.noAutoCancelActionable).toBe(false);
   });

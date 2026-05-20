@@ -128,14 +128,21 @@ export type RawContextNode =
       status: string;
       conclusion: string | null;
       detailsUrl: string | null;
+      startedAt?: string | null;
+      completedAt?: string | null;
       title: string | null;
       summary: string | null;
-      checkSuite: { workflowRun: { event: string } | null } | null;
+      checkSuite: {
+        createdAt?: string;
+        updatedAt?: string;
+        workflowRun: { event: string; createdAt?: string; updatedAt?: string } | null;
+      } | null;
     }
   | {
       __typename: "StatusContext";
       context: string;
       state: string;
+      createdAt?: string;
       targetUrl: string | null;
       description: string | null;
     };

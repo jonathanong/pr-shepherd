@@ -116,6 +116,7 @@ function workflowRunToCheckRun(run: WorkflowRunsResponse["workflow_runs"][number
     name: run.name?.trim() || `workflow run ${run.id}`,
     status: "COMPLETED",
     conclusion: "STARTUP_FAILURE",
+    source: "startup_failure",
     detailsUrl: run.html_url,
     event: run.event,
     runId: String(run.id),

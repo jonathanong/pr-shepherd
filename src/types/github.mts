@@ -48,11 +48,13 @@ export interface CheckRun {
   name: string;
   status: CheckStatus;
   conclusion: CheckConclusion;
+  source?: "check_run" | "status_context" | "startup_failure";
   detailsUrl: string;
-  /** The workflow event that triggered this run (e.g. pull_request, push, schedule). */
   event: string | null;
-  /** GitHub Actions run ID extracted from detailsUrl. */
   runId: string | null;
+  createdAtUnix?: number;
+  startedAtUnix?: number;
+  updatedAtUnix?: number;
   /** One-line status text shown in the GitHub UI (CheckRun.title or first line of summary; StatusContext.description). */
   summary?: string;
 }
@@ -190,11 +192,8 @@ export interface BatchPrData {
   reviewThreads: ReviewThread[];
   comments: PrComment[];
   changesRequestedReviews: Review[];
-  /** COMMENTED reviews with a non-empty, non-minimized body — surfaced for agent-driven minimize. */
   reviewSummaries: Review[];
-  /** APPROVED reviews that are not minimized — opt-in minimize target for the iterate loop. */
   approvedReviews: Review[];
   checks: CheckRun[];
-  /** Branch protection rule for the PR's base branch. Null when no rule exists or the base ref is unavailable. */
   branchProtection: BranchProtection | null;
 }
