@@ -72,7 +72,7 @@ The counter resets automatically when a new commit is pushed (HEAD SHA change).
 
 Maximum number of minutes the monitor loop will repeat the same action without material progress before escalating with the `stall-timeout` trigger. "Material progress" means any change to: HEAD SHA, the set of failing check names, actionable thread/comment/review IDs, or the review-summary minimize bucket.
 
-The same timeout also applies to CI that has not started: relevant queued/requested/waiting check runs, or pending external status contexts, escalate when their source creation time is older than this threshold and no start timestamp exists.
+The same timeout also applies to CI that has not started: relevant queued/requested/waiting check runs, or pending external status contexts, escalate when their latest source activity time is older than this threshold and no start timestamp exists. For check runs, Shepherd uses `updatedAtUnix` when GitHub exposes it and falls back to `createdAtUnix`.
 
 The stall timer resets automatically whenever the fingerprint changes (new commit, resolved thread, different CI failure, etc.).
 

@@ -12,6 +12,7 @@ import type {
 } from "./report.mts";
 import type {
   BranchProtection,
+  CheckStatus,
   MergeStateStatus,
   Review,
   ReviewDecision,
@@ -29,7 +30,7 @@ export type EscalateTrigger =
 
 export interface AgentStalledCheck {
   name: string;
-  status: string;
+  status: CheckStatus;
   source: "check_run" | "status_context" | "startup_failure";
   runId: string | null;
   detailsUrl: string | null;
