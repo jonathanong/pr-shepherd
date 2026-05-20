@@ -67,6 +67,7 @@ export function toAgentCheck(c: TriagedCheck): AgentCheck {
 
 export function toAgentStalledCheck(c: ClassifiedCheck, nowSeconds: number): AgentStalledCheck {
   const createdAtUnix = c.createdAtUnix ?? nowSeconds;
+  const activityAtUnix = c.updatedAtUnix ?? createdAtUnix;
   return {
     name: c.name,
     status: c.status,
@@ -76,7 +77,7 @@ export function toAgentStalledCheck(c: ClassifiedCheck, nowSeconds: number): Age
     ...(c.createdAtUnix !== undefined && { createdAtUnix: c.createdAtUnix }),
     ...(c.startedAtUnix !== undefined && { startedAtUnix: c.startedAtUnix }),
     ...(c.updatedAtUnix !== undefined && { updatedAtUnix: c.updatedAtUnix }),
-    ageSeconds: Math.max(0, nowSeconds - createdAtUnix),
+    ageSeconds: Math.max(0, nowSeconds - activityAtUnix),
     ...(c.summary !== undefined && { summary: c.summary }),
   };
 }

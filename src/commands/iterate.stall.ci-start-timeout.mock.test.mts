@@ -115,6 +115,21 @@ describe("runIterate — CI start stall timeout", () => {
     expect(result.action).toBe("wait");
   });
 
+  it("uses updatedAtUnix as the CI-start stall age when present", async () => {
+    mockInProgressCheck(
+      checkRun({
+        createdAtUnix: NOW - STALL_TIMEOUT_S - 1,
+        updatedAtUnix: NOW - STALL_TIMEOUT_S + 1,
+      }),
+    );
+
+    const result = await runIterate(
+      makeOpts({ stallTimeoutSeconds: STALL_TIMEOUT_S, noAutoMarkReady: true }),
+    );
+
+    expect(result.action).toBe("wait");
+  });
+
   it("does not treat a started in-progress check run as a CI-start stall", async () => {
     mockInProgressCheck(
       checkRun({
