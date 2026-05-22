@@ -7,6 +7,8 @@ import {
   renderThreadResolutionStatusTag,
   renderAuthor,
   buildFirstLookBullets,
+  renderThreadConversation,
+  blockquote,
 } from "./list-formatters.mts";
 import { adaptFixCodeInstructions, numberInstructions } from "./iterate-instructions.mts";
 import type { IterateResultFixCode } from "../types.mts";
@@ -31,7 +33,7 @@ export function formatFixCodeResult(
       sections.push(
         `### ${heading} — ${loc} (${renderAuthor(t.author, t.authorType)})${suggestionMarker}`,
       );
-      sections.push(blockquote(t.body));
+      sections.push(renderThreadConversation(t));
       if (t.suggestion) {
         sections.push(renderSuggestionBlock(t.suggestion, ""));
       }
@@ -154,12 +156,4 @@ export function formatFixCodeResult(
   );
 
   return joinSections(sections);
-}
-
-function blockquote(body: string): string {
-  return body
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .map((line) => (line === "" ? ">" : `> ${line}`))
-    .join("\n");
 }

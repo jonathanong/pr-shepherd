@@ -22,6 +22,22 @@ describe("main — iterate text format (fix_code and checks)", () => {
         authorType: "Unknown" as const,
         body: "nit",
         url: "https://github.com/owner/repo/pull/1#discussion_r1",
+        comments: [
+          {
+            id: "PRRC_1",
+            author: "reviewer",
+            authorType: "Unknown" as const,
+            body: "first full body\nsecond line",
+            url: "https://github.com/owner/repo/pull/1#discussion_r1",
+          },
+          {
+            id: "PRRC_2",
+            author: "maintainer",
+            authorType: "User" as const,
+            body: "reply body",
+            url: "https://github.com/owner/repo/pull/1#discussion_r2",
+          },
+        ],
       },
     ];
     result.fix.actionableComments = [
@@ -40,6 +56,14 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain(
       "### [threadId=PRRT_linked](https://github.com/owner/repo/pull/1#discussion_r1) — `src/x.ts:5` (@reviewer · Unknown)",
     );
+    expect(out).toContain(
+      "#### [commentId=PRRC_1](https://github.com/owner/repo/pull/1#discussion_r1) (@reviewer · Unknown)",
+    );
+    expect(out).toContain("> first full body\n> second line");
+    expect(out).toContain(
+      "#### [commentId=PRRC_2](https://github.com/owner/repo/pull/1#discussion_r2) (@maintainer · User)",
+    );
+    expect(out).toContain("> reply body");
     expect(out).toContain(
       "### [commentId=PRRC_linked](https://github.com/owner/repo/pull/1#issuecomment-1) (@bob · Unknown)",
     );

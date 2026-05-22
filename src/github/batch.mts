@@ -1,5 +1,6 @@
 import { graphql, graphqlWithRateLimit, type RateLimitInfo, type RepoInfo } from "./client.mts";
 import { paginateForward, paginateBackward } from "./pagination.mts";
+import { hydrateThreadCommentPages } from "./thread-comments.mts";
 import { BATCH_PR_QUERY } from "./queries.mts";
 import { parseRawPr } from "./batch-parsers.mts";
 import type {
@@ -72,6 +73,7 @@ export async function fetchPrBatch(
     // extra contains pages before the first page.
     rawThreadPages = [...extra, ...rawThreadPages];
   }
+  rawThreadPages = await hydrateThreadCommentPages(rawThreadPages);
 
   // Paginate comments backward if the first page is incomplete.
   let rawCommentNodes = raw.comments.nodes;

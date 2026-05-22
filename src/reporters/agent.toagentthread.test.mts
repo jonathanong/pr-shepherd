@@ -76,4 +76,47 @@ describe("toAgentThread", () => {
     const result = toAgentThread({ ...thread, path: null, body });
     expect(result).not.toHaveProperty("suggestion");
   });
+
+  it("preserves full thread comments when present", () => {
+    const result = toAgentThread({
+      ...thread,
+      comments: [
+        {
+          id: "c-1",
+          isMinimized: false,
+          author: "alice",
+          authorType: "User",
+          body: "first",
+          url: "https://example.com/c1",
+          createdAtUnix: 1,
+        },
+        {
+          id: "c-2",
+          isMinimized: false,
+          author: "bob",
+          authorType: "Unknown",
+          body: "reply",
+          url: "https://example.com/c2",
+          createdAtUnix: 2,
+        },
+      ],
+    });
+
+    expect(result.comments).toEqual([
+      {
+        id: "c-1",
+        author: "alice",
+        authorType: "User",
+        body: "first",
+        url: "https://example.com/c1",
+      },
+      {
+        id: "c-2",
+        author: "bob",
+        authorType: "Unknown",
+        body: "reply",
+        url: "https://example.com/c2",
+      },
+    ]);
+  });
 });

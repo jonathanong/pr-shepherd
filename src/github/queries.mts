@@ -16,6 +16,9 @@ const gql = (name: string): string =>
 /** The primary batch query that fetches CI + comments + merge status in one round-trip. */
 export const BATCH_PR_QUERY = gql("batch-pr.gql");
 
+/** Fetches additional comments for a single review thread when its nested connection paginates. */
+export const REVIEW_THREAD_COMMENTS_QUERY = gql("review-thread-comments.gql");
+
 /** Returns the current head commit SHA for a PR. Used by waitForSha polling. */
 export const GET_PR_HEAD_SHA_QUERY = gql("get-pr-head-sha.gql");
 

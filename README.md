@@ -34,7 +34,9 @@ At a high level, the skill invokes `pr-shepherd <PR>` (which polls by default), 
 
 ## Review threads
 
-### `PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate/index.mts:42` (@alice)
+### `threadId=PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate/index.mts:42` (@alice)
+
+#### `commentId=PRRC_kwDOSGizTs58XB1M` (@alice)
 
 > The variable name is misleading.
 >

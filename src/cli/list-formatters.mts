@@ -1,6 +1,7 @@
 import type { AuthorType, SuggestionBlock } from "../types.mts";
 import type { FirstLookThread, FirstLookComment } from "../types/report.mts";
 import { renderLineRange, renderSuggestionBlock } from "./suggestion-renderer.mts";
+import { threadComments } from "../threads/transcript.mts";
 
 const BODY_PREVIEW_MAX = 100;
 
@@ -44,6 +45,13 @@ interface ThreadBulletInput {
   author: string;
   authorType?: AuthorType;
   body: string;
+  comments?: Array<{
+    id: string;
+    author: string;
+    authorType?: AuthorType;
+    body: string;
+    url: string;
+  }>;
   suggestion?: SuggestionBlock;
 }
 
@@ -57,12 +65,63 @@ export function renderThreadBullet(
     : "`(no location)`";
   const suggestionMarker = t.suggestion ? " [suggestion]" : "";
   const statusSuffix = opts.statusTag ? ` ${opts.statusTag}` : "";
-  const bodySuffix = opts.noBody ? "" : `: ${renderBodyPreview(t.body)}`;
-  const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (${renderAuthor(t.author, t.authorType)})${suggestionMarker}${statusSuffix}${bodySuffix}`;
-  if (t.suggestion && opts.renderSuggestion) {
-    return `${bulletLine}\n${renderSuggestionBlock(t.suggestion)}`;
+  const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (${renderAuthor(t.author, t.authorType)})${suggestionMarker}${statusSuffix}`;
+  if (!opts.noBody && (!t.comments || t.comments.length === 0)) {
+    const legacyLine = `${bulletLine}: ${renderBodyPreview(t.body)}`;
+    return t.suggestion && opts.renderSuggestion
+      ? `${legacyLine}\n${renderSuggestionBlock(t.suggestion)}`
+      : legacyLine;
   }
-  return bulletLine;
+  const parts = [bulletLine];
+  if (!opts.noBody) {
+    parts.push(renderThreadCommentBullets(t));
+  }
+  if (t.suggestion && opts.renderSuggestion) {
+    parts.push(renderSuggestionBlock(t.suggestion));
+  }
+  return parts.join("\n");
+}
+
+export function renderThreadConversation(t: ThreadBulletInput): string {
+  if (!t.comments || t.comments.length === 0) return blockquote(t.body);
+  return threadComments(t)
+    .map((c) => {
+      const heading = c.id
+        ? c.url
+          ? `#### [commentId=${c.id}](${c.url}) (${renderAuthor(c.author, c.authorType)})`
+          : `#### \`commentId=${c.id}\` (${renderAuthor(c.author, c.authorType)})`
+        : `#### (${renderAuthor(c.author, c.authorType)})`;
+      return `${heading}\n\n${blockquote(c.body)}`;
+    })
+    .join("\n\n");
+}
+
+export function blockquote(body: string): string {
+  return body
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => (line === "" ? ">" : `> ${line}`))
+    .join("\n");
+}
+
+function renderThreadCommentBullets(t: ThreadBulletInput): string {
+  return threadComments(t)
+    .map((c) => {
+      const link = c.url ? ` [↗](${c.url})` : "";
+      const id = c.id ? `\`commentId=${c.id}\`` : "comment";
+      return [
+        `  - ${id}${link} (${renderAuthor(c.author, c.authorType)})`,
+        indentBlockquote(c.body, "    "),
+      ].join("\n");
+    })
+    .join("\n");
+}
+
+function indentBlockquote(body: string, indent: string): string {
+  return blockquote(body)
+    .split("\n")
+    .map((line) => `${indent}${line}`)
+    .join("\n");
 }
 
 export function renderCommentBullet(
