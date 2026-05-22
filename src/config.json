@@ -1,7 +1,7 @@
 {
   "iterate": {
     "fixAttemptsPerThread": 3,
-    "stallTimeoutMinutes": 30,
+    "stallTimeoutMinutes": 60,
     "minimizeApprovals": false,
     "minimizeComments": "all"
   },

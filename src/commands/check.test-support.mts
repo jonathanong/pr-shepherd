@@ -47,7 +47,7 @@ function defaultConfig() {
   return {
     iterate: {
       fixAttemptsPerThread: 3,
-      stallTimeoutMinutes: 30,
+      stallTimeoutMinutes: 60,
       minimizeApprovals: false,
       minimizeComments: "all" as "all" | "bots" | "users" | "none",
     },

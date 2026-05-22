@@ -168,17 +168,23 @@ query BatchPr(
                     status
                     conclusion
                     detailsUrl
+                    startedAt
                     title
                     summary
                     checkSuite {
+                      createdAt
+                      updatedAt
                       workflowRun {
                         event
+                        createdAt
+                        updatedAt
                       }
                     }
                   }
                   ... on StatusContext {
                     context
                     state
+                    createdAt
                     targetUrl
                     description
                   }

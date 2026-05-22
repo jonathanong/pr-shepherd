@@ -39,5 +39,5 @@ Poll dispatcher for iterating a PR to completion.
 
 4. **Stop conditions (terminal states):**
    - Stop when the CLI emits `[CANCEL]` (ready-delay completed, or PR merged/closed).
-   - Stop when the CLI emits `[ESCALATE]`, including `stall-timeout` for repeated unchanged CI failures.
+   - Stop when the CLI emits `[ESCALATE]`, including `stall-timeout` for repeated unchanged CI failures or CI that never starts.
    - **Do NOT merge the pull request** unless the human has explicitly requested or allowed it.
