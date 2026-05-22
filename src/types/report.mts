@@ -193,7 +193,6 @@ export interface CommitSuggestionResult {
   /** Numbered steps the agent must execute to apply, commit, resolve, and push. */
   postActionInstructions: string[];
 }
-
 export interface GlobalOptions {
   prNumber?: number;
   format: "text" | "json";
