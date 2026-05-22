@@ -1,9 +1,11 @@
 import { createHash } from "node:crypto";
 
 import { graphql } from "./client.mts";
-import { paginateForward } from "./pagination.mts";
 import { CHECK_RUN_ANNOTATIONS_QUERY } from "./queries.mts";
 import type { CheckAnnotation } from "../types.mts";
+
+const ANNOTATIONS_PER_PAGE = 100;
+const MAX_ANNOTATION_PAGES = 10;
 
 interface RawCheckRunAnnotationsResponse {
   node: {
@@ -30,14 +32,20 @@ interface RawCheckAnnotation {
 }
 
 export async function fetchCheckRunAnnotations(checkRunId: string): Promise<CheckAnnotation[]> {
-  const first = await fetchAnnotationPage(checkRunId, null);
-  const nodes = [...first.nodes];
-  if (first.pageInfo.hasNextPage && first.pageInfo.endCursor) {
-    const extra = await paginateForward<RawCheckAnnotation>(
-      (cursor) => fetchAnnotationPage(checkRunId, cursor),
-      first.pageInfo.endCursor,
-    );
-    nodes.push(...extra);
+  let cursor: string | null = null;
+  const nodes: RawCheckAnnotation[] = [];
+  for (let page = 1; page <= MAX_ANNOTATION_PAGES; page++) {
+    // eslint-disable-next-line no-await-in-loop
+    const result = await fetchAnnotationPage(checkRunId, cursor);
+    nodes.push(...result.nodes);
+    if (!result.pageInfo.hasNextPage || !result.pageInfo.endCursor) break;
+    if (page === MAX_ANNOTATION_PAGES) {
+      process.stderr.write(
+        `pr-shepherd: annotation pagination cap (${MAX_ANNOTATION_PAGES * ANNOTATIONS_PER_PAGE} annotations) reached for check run ${checkRunId} — annotation output may be incomplete\n`,
+      );
+      break;
+    }
+    cursor = result.pageInfo.endCursor;
   }
   return nodes.map((node) => toCheckAnnotation(checkRunId, node));
 }
@@ -87,6 +95,8 @@ function fallbackId(checkRunId: string, raw: RawCheckAnnotation): string {
     raw.annotationLevel,
     raw.title ?? "",
     raw.message,
+    raw.rawDetails ?? "",
+    raw.blobUrl ?? "",
     String(start?.line ?? ""),
     String(start?.column ?? ""),
     String(end?.line ?? ""),
