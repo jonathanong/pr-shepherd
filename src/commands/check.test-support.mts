@@ -10,6 +10,9 @@ vi.mock("../checks/triage.mts", () => ({
   triageFailingChecks: vi.fn((checks: unknown[]) => Promise.resolve(checks)),
   fetchStartupFailureChecks: vi.fn().mockResolvedValue([]),
 }));
+vi.mock("../github/check-annotations.mts", () => ({
+  fetchCheckRunAnnotations: vi.fn().mockResolvedValue([]),
+}));
 vi.mock("../comments/resolve.mts", () => ({
   autoResolveOutdated: vi.fn().mockResolvedValue({ resolved: [], errors: [] }),
 }));
@@ -28,6 +31,7 @@ import { runCheck } from "./check.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { getCurrentPrNumber, getMergeableState } from "../github/client.mts";
 import { fetchStartupFailureChecks, triageFailingChecks } from "../checks/triage.mts";
+import { fetchCheckRunAnnotations } from "../github/check-annotations.mts";
 import { loadSeenMap, markSeen, hashBody } from "../state/seen-comments.mts";
 import { autoResolveOutdated } from "../comments/resolve.mts";
 import type { BatchPrData, ClassifiedCheck, ReviewThread, PrComment } from "../types.mts";
@@ -37,6 +41,7 @@ const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockGetMergeableState = vi.mocked(getMergeableState);
 const mockTriageFailingChecks = vi.mocked(triageFailingChecks);
 const mockFetchStartupFailureChecks = vi.mocked(fetchStartupFailureChecks);
+const mockFetchCheckRunAnnotations = vi.mocked(fetchCheckRunAnnotations);
 const mockLoadSeenMap = vi.mocked(loadSeenMap);
 const mockMarkSeen = vi.mocked(markSeen);
 const mockAutoResolveOutdated = vi.mocked(autoResolveOutdated);
@@ -70,6 +75,7 @@ function defaultConfig() {
 
 function makeCheck(overrides: Partial<ClassifiedCheck> = {}): ClassifiedCheck {
   return {
+    id: null,
     name: "tests",
     status: "COMPLETED",
     conclusion: "SUCCESS",
@@ -147,6 +153,7 @@ export function registerHooks(): void {
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData() });
     mockGetMergeableState.mockResolvedValue({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" });
     mockFetchStartupFailureChecks.mockResolvedValue([]);
+    mockFetchCheckRunAnnotations.mockResolvedValue([]);
   });
 }
 
@@ -156,6 +163,7 @@ export {
   defaultConfig,
   fetchPrBatch,
   fetchStartupFailureChecks,
+  fetchCheckRunAnnotations,
   getCurrentPrNumber,
   getMergeableState,
   hashBody,
@@ -168,6 +176,7 @@ export {
   mockAutoResolveOutdated,
   mockFetchPrBatch,
   mockFetchStartupFailureChecks,
+  mockFetchCheckRunAnnotations,
   mockGetCurrentPrNumber,
   mockGetMergeableState,
   mockLoadConfig,

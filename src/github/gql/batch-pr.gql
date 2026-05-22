@@ -170,6 +170,7 @@ query BatchPr(
                 nodes {
                   __typename
                   ... on CheckRun {
+                    id
                     name
                     status
                     conclusion

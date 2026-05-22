@@ -11,7 +11,7 @@ import {
   blockquote,
 } from "./list-formatters.mts";
 import { adaptFixCodeInstructions, numberInstructions } from "./iterate-instructions.mts";
-import type { IterateResultFixCode } from "../types.mts";
+import type { CheckAnnotation, IterateResultFixCode } from "../types.mts";
 
 export function formatFixCodeResult(
   header: string,
@@ -78,6 +78,22 @@ export function formatFixCodeResult(
       return lines.join("\n");
     });
     sections.push(bullets.join("\n\n"));
+  }
+
+  const checksWithAnnotations = result.fix.checks.filter((ch) => (ch.annotations?.length ?? 0) > 0);
+  if (checksWithAnnotations.length > 0) {
+    sections.push("## Check annotations");
+    for (const ch of checksWithAnnotations) {
+      const workflowPrefix = ch.workflowName ? `${ch.workflowName} › ` : "";
+      const jobLabel = ch.jobName ? ch.jobName : ch.name;
+      const locator = ch.runId
+        ? `\`${ch.runId}\``
+        : ch.detailsUrl
+          ? `external \`${ch.detailsUrl}\``
+          : "(no runId)";
+      sections.push(`### ${locator} — \`${workflowPrefix}${jobLabel}\``);
+      sections.push(ch.annotations!.map(renderCheckAnnotation).join("\n\n"));
+    }
   }
 
   if (result.fix.changesRequestedReviews.length > 0) {
@@ -156,4 +172,23 @@ export function formatFixCodeResult(
   );
 
   return joinSections(sections);
+}
+
+function renderCheckAnnotation(a: CheckAnnotation): string {
+  const loc = `${a.path}:${renderAnnotationRange(a)}`;
+  const link = a.blobUrl ? ` [↗](${a.blobUrl})` : "";
+  const title = a.title ? ` — ${a.title}` : "";
+  const lines = [`- \`${a.id}\`${link} \`${loc}\` [${a.level}]${title}`];
+  if (a.message.trim() !== "") lines.push(blockquote(a.message));
+  if (a.rawDetails !== undefined && a.rawDetails.trim() !== "")
+    lines.push(blockquote(a.rawDetails));
+  return lines.join("\n");
+}
+
+function renderAnnotationRange(a: CheckAnnotation): string {
+  if (a.startLine === null && a.endLine === null) return "?";
+  const start = a.startLine ?? a.endLine;
+  const end = a.endLine ?? a.startLine;
+  if (start === end) return String(start);
+  return `${start}-${end}`;
 }

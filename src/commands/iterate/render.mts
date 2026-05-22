@@ -64,6 +64,9 @@ export function buildFixInstructions(
     if (threads.length > 0) actionableSections.push("`## Review threads`");
     if (actionableComments.length > 0) actionableSections.push("`## Actionable comments`");
     if (checks.length > 0) actionableSections.push("`## Failing checks`");
+    if (checks.some((c) => (c.annotations?.length ?? 0) > 0)) {
+      actionableSections.push("`## Check annotations`");
+    }
     if (changesRequestedReviews.length > 0)
       actionableSections.push("`## Changes-requested reviews`");
     const sectionRef =
@@ -115,6 +118,12 @@ export function buildFixInstructions(
   }
 
   instructions.push(...buildFailingCheckInstructions(checks));
+
+  if (checks.some((c) => (c.annotations?.length ?? 0) > 0)) {
+    instructions.push(
+      `For each item under \`## Check annotations\`: inspect the referenced file range and decide whether the annotation requires a code change. These annotations are surfaced once per PR and do not need any resolve/minimize mutation.`,
+    );
+  }
 
   if (changesRequestedReviews.length > 0) {
     instructions.push(

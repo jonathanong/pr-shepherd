@@ -59,6 +59,7 @@ export function buildRelevantChecks(report: ShepherdReport): RelevantCheck[] {
         ...(c.jobName !== undefined && { jobName: c.jobName }),
         ...(c.failedStep !== undefined && { failedStep: c.failedStep }),
         ...(c.summary !== undefined && { summary: c.summary }),
+        ...(c.annotations !== undefined && { annotations: c.annotations }),
       },
     ];
   });

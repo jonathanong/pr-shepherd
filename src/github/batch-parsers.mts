@@ -123,6 +123,7 @@ export function parseRawPr(
       const updatedAtUnix = rawUpdatedAt ? parseCreatedAt(rawUpdatedAt) : undefined;
       return [
         {
+          id: node.id,
           name: node.name,
           status: node.status as CheckRun["status"],
           conclusion: node.conclusion as CheckRun["conclusion"],

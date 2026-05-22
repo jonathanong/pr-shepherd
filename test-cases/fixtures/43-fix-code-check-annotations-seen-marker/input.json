@@ -1,0 +1,51 @@
+{
+  "batchData": {
+    "checks": [
+      {
+        "id": "CR_annotations_seen",
+        "name": "Code Quality",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://checks.example/code-quality",
+        "runId": null
+      }
+    ]
+  },
+  "triagedChecks": [
+    {
+      "id": "CR_annotations_seen",
+      "name": "Code Quality",
+      "status": "COMPLETED",
+      "conclusion": "FAILURE",
+      "event": "pull_request",
+      "detailsUrl": "https://checks.example/code-quality",
+      "runId": null,
+      "category": "failing",
+      "summary": "1 annotation"
+    }
+  ],
+  "checkAnnotationsByCheckId": {
+    "CR_annotations_seen": [
+      {
+        "id": "check_annotation_seen",
+        "path": "src/commands/check.mts",
+        "startLine": 136,
+        "endLine": 136,
+        "level": "FAILURE",
+        "message": "This annotation was already surfaced."
+      }
+    ]
+  },
+  "seenMap": {
+    "check_annotation_seen": {
+      "seenAt": 1715799900,
+      "bodyHash": "0123456789abcdef"
+    }
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

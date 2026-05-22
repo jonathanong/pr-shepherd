@@ -9,6 +9,7 @@ import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
 import { classifyVisibleComments } from "../comments/visible-comments.mts";
 import { computeStatus } from "./check-status.mts";
+import { attachUnseenCheckAnnotations } from "./check-annotations.mts";
 import { buildTerminalReport } from "./check-terminal-report.mts";
 import {
   isBlockedByFilteredCheck,
@@ -33,7 +34,6 @@ export async function runCheck(
   if (prNumber === null) {
     throw new Error("No open PR found for current branch. Pass a PR number explicitly.");
   }
-
   const config = loadConfig();
   const paginateApprovedReviews = config.iterate.minimizeApprovals;
   const result = await fetchPrBatch(prNumber, repo, { paginateApprovedReviews });
@@ -45,7 +45,6 @@ export async function runCheck(
   if (mergeStatus.state === "MERGED" || mergeStatus.state === "CLOSED") {
     return buildTerminalReport(prNumber, repo, batchData, mergeStatus, mergeStatus.state);
   }
-
   const startupFailureChecks = await fetchStartupFailureChecks(
     repo,
     batchData.headRefOid,
@@ -59,9 +58,11 @@ export async function runCheck(
   const inProgress = classifiedChecks.filter((c) => c.category === "in_progress");
   const skipped = classifiedChecks.filter((c) => c.category === "skipped");
   const filtered = classifiedChecks.filter((c) => c.category === "filtered");
-  const triaged =
+  const triagedBase =
     failing.length > 0 && !opts.skipTriage ? await triageFailingChecks(failing, repo) : failing;
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
+  const seenMap = await loadSeenMap(stateKey);
+  const triaged = await attachUnseenCheckAnnotations(triagedBase, seenMap, prNumber);
   const unresolvedThreads = batchData.reviewThreads.filter((t) => !t.isResolved);
   const outdated = getOutdatedThreads(unresolvedThreads);
   let autoResolved: typeof outdated = [];
@@ -72,7 +73,6 @@ export async function runCheck(
     autoResolved = outdated.filter((t) => resolvedIdsSet.has(t.id));
     autoResolveErrors = errors;
   }
-
   const activeThreads = unresolvedThreads.filter((t) => !t.isOutdated && !t.isMinimized);
   const outdatedCandidates = batchData.reviewThreads.filter((t) => t.isOutdated);
   const resolvedCandidates = batchData.reviewThreads.filter((t) => t.isResolved && !t.isOutdated);
@@ -80,8 +80,6 @@ export async function runCheck(
     (t) => t.isMinimized && !t.isResolved && !t.isOutdated,
   );
   const minimizedCommentCandidates = batchData.comments.filter((c) => c.isMinimized);
-
-  const seenMap = await loadSeenMap(stateKey);
   const visibleCommentClassification = classifyVisibleComments(
     batchData.comments,
     seenMap,
@@ -127,7 +125,6 @@ export async function runCheck(
     else if (cls === "edited") editedSummaries.push(r);
     else seenSummaries.push(r);
   }
-
   await Promise.allSettled([
     ...firstLookThreads.map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
     ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
@@ -137,7 +134,6 @@ export async function runCheck(
   const resolutionOnlyThreads = unresolvedThreads.filter(
     (t) => !autoResolvedIds.has(t.id) && (t.isOutdated || t.isMinimized),
   );
-
   let status = computeStatus(
     verdict,
     activeThreads.length + resolutionOnlyThreads.length,
@@ -159,9 +155,7 @@ export async function runCheck(
     mergeStatus = refreshed.mergeStatus;
     status = refreshed.status;
   }
-
   const blockedByFilteredCheck = isBlockedByFilteredCheck(mergeStatus, verdict);
-
   return {
     pr: prNumber,
     nodeId: batchData.nodeId,

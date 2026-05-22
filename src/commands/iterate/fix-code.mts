@@ -1,6 +1,7 @@
 /* eslint-disable max-lines */
 import { readFixAttempts, writeFixAttempts } from "../../state/fix-attempts.mts";
 import { toAgentThread, toAgentComment, toAgentChecks } from "../../reporters/agent.mts";
+import { markSeen } from "../../state/seen-comments.mts";
 import {
   checkEscalateTriggers,
   validateBaseBranch,
@@ -11,6 +12,7 @@ import { buildResolveCommand } from "./classify.mts";
 import { buildFixInstructions } from "./render.mts";
 import { applyStallGuard } from "./stall.mts";
 import { tryCancelRun, buildInProgressRunIds } from "./helpers.mts";
+import { annotationMarkerBody } from "../check-annotations.mts";
 import type {
   EscalateDetails,
   IterateCommandOptions,
@@ -178,35 +180,44 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     inProgressRunIds,
     resolutionOnlyThreads,
   );
-  return applyStallGuard(
+  const prospectiveResult = {
+    ...base,
+    baseBranch: baseLookup.branch,
+    action: "fix_code" as const,
+    fix: {
+      threads,
+      resolutionOnlyThreads,
+      actionableComments,
+      reviewSummaryIds,
+      firstLookSummaries,
+      editedSummaries,
+      surfacedApprovals,
+      checks,
+      changesRequestedReviews,
+      resolveCommand,
+      instructions,
+      firstLookThreads,
+      firstLookComments,
+      inProgressRunIds,
+    },
+    cancelled,
+  } as IterateResult;
+  const result = await applyStallGuard(
     stallKey,
     stallTimeoutSeconds,
     headSha,
     base,
     prNumber,
-    {
-      ...base,
-      baseBranch: baseLookup.branch,
-      action: "fix_code" as const,
-      fix: {
-        threads,
-        resolutionOnlyThreads,
-        actionableComments,
-        reviewSummaryIds,
-        firstLookSummaries,
-        editedSummaries,
-        surfacedApprovals,
-        checks,
-        changesRequestedReviews,
-        resolveCommand,
-        instructions,
-        firstLookThreads,
-        firstLookComments,
-        inProgressRunIds,
-      },
-      cancelled,
-    } as IterateResult,
+    prospectiveResult,
     report,
     reviewSummaryIds,
   );
+  if (result.action === "fix_code") {
+    await Promise.allSettled(
+      result.fix.checks.flatMap((ch) =>
+        (ch.annotations ?? []).map((a) => markSeen(stallKey, a.id, annotationMarkerBody(a))),
+      ),
+    );
+  }
+  return result;
 }

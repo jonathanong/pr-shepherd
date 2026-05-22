@@ -1,0 +1,59 @@
+{
+  "batchData": {
+    "checks": [
+      {
+        "id": "CR_annotations",
+        "name": "Code Quality",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://checks.example/code-quality",
+        "runId": null
+      }
+    ]
+  },
+  "triagedChecks": [
+    {
+      "id": "CR_annotations",
+      "name": "Code Quality",
+      "status": "COMPLETED",
+      "conclusion": "FAILURE",
+      "event": "pull_request",
+      "detailsUrl": "https://checks.example/code-quality",
+      "runId": null,
+      "category": "failing",
+      "summary": "2 annotations"
+    }
+  ],
+  "checkAnnotationsByCheckId": {
+    "CR_annotations": [
+      {
+        "id": "check_annotation_1001",
+        "path": "src/commands/check.mts",
+        "startLine": 136,
+        "endLine": 136,
+        "startColumn": null,
+        "endColumn": null,
+        "level": "FAILURE",
+        "title": "Missing seen-marker boundary",
+        "message": "Only mark annotations seen after they are rendered.",
+        "rawDetails": "The marker should be written from the final fix-code checks payload.",
+        "blobUrl": "https://github.com/owner/repo/blob/abc123/src/commands/check.mts#L136"
+      },
+      {
+        "id": "check_annotation_1002",
+        "path": "src/commands/iterate/fix-code.mts",
+        "startLine": 197,
+        "endLine": 204,
+        "level": "WARNING",
+        "message": "Verify annotations survive lean projection.",
+        "blobUrl": "https://github.com/owner/repo/blob/abc123/src/commands/iterate/fix-code.mts#L197-L204"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

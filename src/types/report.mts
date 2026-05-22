@@ -10,8 +10,8 @@ import type {
   SuggestionBlock,
 } from "./github.mts";
 import type { AgentThreadComment } from "./agent-thread.mts";
+import type { CheckAnnotation } from "./check-annotations.mts";
 
-// First-look items (previously hidden — surfaced to agent on first encounter)
 export interface FirstLookThread extends ReviewThread {
   firstLookStatus: "outdated" | "resolved" | "minimized";
   /** True when Shepherd auto-resolved this thread during the current run (outdated only). */
@@ -146,6 +146,8 @@ export interface AgentCheck {
   failedStep?: string;
   /** One-line status text shown in the GitHub UI (e.g. "67.68% of diff hit (target 85.00%)"). */
   summary?: string;
+  /** Marker-gated inline annotations from this failing check. */
+  annotations?: CheckAnnotation[];
 }
 
 /**
@@ -168,9 +170,10 @@ export interface RelevantCheck {
   failedStep?: string;
   /** One-line status text shown in the GitHub UI (e.g. "67.68% of diff hit (target 85.00%)"). */
   summary?: string;
+  /** Marker-gated inline annotations from this check. */
+  annotations?: CheckAnnotation[];
 }
 
-// commit-suggestion command (singular — produces a suggestion for the agent to apply)
 export interface CommitSuggestionResult {
   pr: number;
   repo: string;
@@ -190,8 +193,6 @@ export interface CommitSuggestionResult {
   /** Numbered steps the agent must execute to apply, commit, resolve, and push. */
   postActionInstructions: string[];
 }
-
-// CLI options
 export interface GlobalOptions {
   prNumber?: number;
   format: "text" | "json";
