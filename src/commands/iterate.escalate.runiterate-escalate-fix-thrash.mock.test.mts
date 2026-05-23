@@ -18,6 +18,26 @@ registerIterateHooks();
 
 const THREAD = makeThread();
 
+function mockUnresolvedThreadReport(): void {
+  mockRunCheck.mockResolvedValue(
+    makeReport({
+      status: "UNRESOLVED_COMMENTS",
+      threads: {
+        actionable: [THREAD],
+        resolutionOnly: [],
+        autoResolved: [],
+        autoResolveErrors: [],
+        firstLook: [],
+      },
+    }),
+  );
+  mockUpdateReadyDelay.mockResolvedValue({
+    isReady: false,
+    shouldCancel: false,
+    remainingSeconds: 600,
+  });
+}
+
 describe("runIterate — escalate (fix-thrash)", () => {
   it("escalates when a thread has been attempted >= fixAttemptsPerThread times", async () => {
     mockReadFixAttempts.mockResolvedValue({
@@ -25,23 +45,7 @@ describe("runIterate — escalate (fix-thrash)", () => {
       threadAttempts: { "thread-1": 3 },
       threadBodyHashes: { "thread-1": "unused-on-same-sha" },
     });
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "UNRESOLVED_COMMENTS",
-        threads: {
-          actionable: [THREAD],
-          resolutionOnly: [],
-          autoResolved: [],
-          autoResolveErrors: [],
-          firstLook: [],
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
+    mockUnresolvedThreadReport();
 
     const result = await runIterate(makeOpts());
 
@@ -58,23 +62,7 @@ describe("runIterate — escalate (fix-thrash)", () => {
       headSha: "old-sha",
       threadAttempts: { "thread-1": 3 },
     });
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "UNRESOLVED_COMMENTS",
-        threads: {
-          actionable: [THREAD],
-          resolutionOnly: [],
-          autoResolved: [],
-          autoResolveErrors: [],
-          firstLook: [],
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
+    mockUnresolvedThreadReport();
 
     const result = await runIterate(makeOpts());
 
@@ -82,23 +70,7 @@ describe("runIterate — escalate (fix-thrash)", () => {
   });
   it("does NOT escalate when attempt count is below threshold (attempt=2)", async () => {
     mockReadFixAttempts.mockResolvedValue({ headSha: "abc123", threadAttempts: { "thread-1": 2 } });
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "UNRESOLVED_COMMENTS",
-        threads: {
-          actionable: [THREAD],
-          resolutionOnly: [],
-          autoResolved: [],
-          autoResolveErrors: [],
-          firstLook: [],
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
+    mockUnresolvedThreadReport();
 
     const result = await runIterate(makeOpts());
 
@@ -110,23 +82,7 @@ describe("runIterate — escalate (fix-thrash)", () => {
       headSha: "old-sha",
       threadAttempts: { "thread-1": 1 },
     });
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "UNRESOLVED_COMMENTS",
-        threads: {
-          actionable: [THREAD],
-          resolutionOnly: [],
-          autoResolved: [],
-          autoResolveErrors: [],
-          firstLook: [],
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
+    mockUnresolvedThreadReport();
 
     const result = await runIterate(makeOpts());
 
