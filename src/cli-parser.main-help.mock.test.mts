@@ -18,6 +18,7 @@ describe("main — top-level help", () => {
     expect(out).toContain("pr-shepherd poll");
     expect(out).toContain("pr-shepherd resolve");
     expect(out).toContain("pr-shepherd commit-suggestion");
+    expect(out).toContain("pr-shepherd mark-files-as-viewed");
     expect(out).toContain("pr-shepherd clean <pr|branch|current|repo|all>");
     expect(out).toContain("pr-shepherd log-file");
     expect(out).toContain("pr [number]");

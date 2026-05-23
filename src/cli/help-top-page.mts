@@ -10,6 +10,7 @@ Usage:
   pr-shepherd poll [PR] [poll-flags] [iterate-flags]
   pr-shepherd resolve [PR] [resolve-flags]
   pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [flags]
+  pr-shepherd mark-files-as-viewed [PR] [files...] [--tests] [--match REGEX]
   pr-shepherd clean <pr|branch|current|repo|all> [value] [flags]
   pr-shepherd log-file [--format text|json]
 
@@ -19,6 +20,7 @@ Commands:
   poll                 Re-run iterate while the action is WAIT, then print the final tick.
   resolve              Fetch actionable review items, or resolve/minimize/dismiss IDs.
   commit-suggestion    Convert one GitHub suggestion thread into a patch and commit instructions.
+  mark-files-as-viewed Mark PR changed files as viewed in GitHub.
   clean                Remove pr-shepherd state files.
   log-file             Print the per-worktree debug log path.
 

@@ -7,6 +7,7 @@ pr-shepherd -v|--version
 pr-shepherd [PR] [--interval 30s] [--timeout 5m] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]
 pr-shepherd resolve [PR] [--fetch | --resolve-thread-ids … | --minimize-comment-ids … | --dismiss-review-ids … | --message "…" | --require-sha <sha>]
 pr-shepherd commit-suggestion [PR] --thread-id <id> --message "…"
+pr-shepherd mark-files-as-viewed [PR] [files...] [--tests] [--match REGEX]
 pr-shepherd iterate [PR] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]  # single tick
 pr-shepherd poll [PR] [--interval 30s] [--timeout 5m] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]
 pr-shepherd log-file
@@ -168,6 +169,20 @@ git push
 ```
 
 If a patch fails to apply (drift since the suggestion was written), apply the fix manually using the line range shown in the output.
+
+### pr-shepherd mark-files-as-viewed [PR] [files...]
+
+Marks changed files as viewed in GitHub's PR diff using GraphQL. Exact path arguments must match files in the PR changed-file list. Selectors expand against the same GitHub PR diff, not local uncommitted changes.
+
+```sh
+pr-shepherd mark-files-as-viewed 42 src/a.ts src/b.test.ts
+pr-shepherd mark-files-as-viewed 42 --tests
+pr-shepherd mark-files-as-viewed 42 --match '^docs/' --match '\\.md$'
+```
+
+`--tests` selects common test file paths such as `tests/`, `__tests__/`, `spec/`, `*.test.ts`, `*.spec.tsx`, `_test.rs`, and `tests.rs`. `--match <regex>` is a repeatable, case-insensitive JavaScript regex over changed-file paths.
+
+Mutation batches are sent in groups of 10. If GitHub returns a primary or secondary rate-limit response, Shepherd stops and reports both completed files and pending files. JSON output exposes the same data as text output: matched paths, marked paths, already-viewed paths, missing exact paths, unmatched selectors, errors, rate-limit details, and pending unmarked paths.
 
 ### pr-shepherd [PR]
 

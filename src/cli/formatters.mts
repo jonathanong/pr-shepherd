@@ -1,6 +1,7 @@
 export { formatIterateResult } from "./iterate-formatter.mts";
 export { projectIterateLean, projectIterateVerbose } from "./iterate-lean.mts";
 export { formatCleanResult } from "./clean-formatter.mts";
+export { formatMarkFilesAsViewedResult } from "./mark-files-as-viewed-formatter.mts";
 
 import { safeFence } from "./fence.mts";
 import {
@@ -126,12 +127,7 @@ export function formatCommitSuggestionResult(result: CommitSuggestionResult): st
     lines.push(fence);
   }
 
-  lines.push("");
-  lines.push("## Suggested commit message");
-  lines.push("");
-  lines.push(result.commitMessage);
-  lines.push("");
-  lines.push(result.commitBody);
+  lines.push("", "## Suggested commit message", "", result.commitMessage, "", result.commitBody);
 
   if (result.postActionInstructions.length > 0) {
     lines.push("");

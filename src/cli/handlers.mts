@@ -1,12 +1,18 @@
 import { runCommitSuggestion } from "../commands/commit-suggestion.mts";
+import { runMarkFilesAsViewed } from "../commands/mark-files-as-viewed.mts";
 import { runIterate } from "../commands/iterate/index.mts";
 import { runClean, type CleanVariant } from "../commands/clean.mts";
 import { loadConfig } from "../config/load.mts";
 import { parseCommonArgs, getFlag } from "./args.mts";
 import { USAGE } from "./help.mts";
-import { formatCommitSuggestionResult, formatCleanResult } from "./formatters.mts";
+import {
+  formatCommitSuggestionResult,
+  formatCleanResult,
+  formatMarkFilesAsViewedResult,
+} from "./formatters.mts";
 import { parseIterateFlags } from "./iterate-flags.mts";
 import { emitIterateResult } from "./iterate-emitter.mts";
+import { parseMarkFilesAsViewedArgs } from "./mark-files-as-viewed-flags.mts";
 
 const CLEAN_VARIANTS = new Set<string>(["pr", "branch", "current", "repo", "all"]);
 
@@ -132,4 +138,28 @@ export async function handleIterate(args: string[]): Promise<void> {
     verbose: globalOpts.verbose ?? false,
     readyDelaySuffix: flags.readyDelaySuffix ?? undefined,
   });
+}
+
+export async function handleMarkFilesAsViewed(args: string[]): Promise<void> {
+  const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
+  const parsed = parseMarkFilesAsViewedArgs(extra);
+  if (!parsed.ok) {
+    process.stderr.write(`pr-shepherd: mark-files-as-viewed: ${parsed.error}\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const result = await runMarkFilesAsViewed({
+    ...globalOpts,
+    prNumber,
+    files: parsed.files,
+    tests: parsed.tests,
+    matchPatterns: parsed.matchPatterns,
+  });
+
+  process.stdout.write(
+    globalOpts.format === "json"
+      ? `${JSON.stringify(result, null, 2)}\n`
+      : `${formatMarkFilesAsViewedResult(result)}\n`,
+  );
 }

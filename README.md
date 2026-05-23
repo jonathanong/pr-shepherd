@@ -135,6 +135,17 @@ pr-shepherd 42 --ready-delay 15m
 pr-shepherd iterate 42               # single tick
 ```
 
+### Mark files as viewed
+
+Hide already-reviewed files in GitHub's PR diff:
+
+```sh
+pr-shepherd mark-files-as-viewed 42 --tests
+pr-shepherd mark-files-as-viewed 42 src/a.ts --match '^docs/'
+```
+
+The shipped `mark-files-as-viewed` skill maps a standalone `tests` argument to `--tests`, so `/pr-shepherd:mark-files-as-viewed 42 tests` marks changed test files as viewed.
+
 ## Iterate decision loop
 
 On each tick: fetch PR state in one GraphQL batch → classify CI, comments, and merge status → take one action (`fix_code`, `mark_ready`, `cancel`, `escalate`, or `wait`). See [docs/iterate-flow.md](docs/iterate-flow.md) for the decision table and [docs/flow.md](docs/flow.md) for the end-to-end flow diagram.
@@ -168,7 +179,7 @@ This repo ships two `marketplace.json` files that serve different Claude install
 
 ### Codex
 
-Codex uses the repo-shipped Codex plugin rather than the Claude plugin or `/pr-shepherd:*` slash commands. The plugin provides one `pr-shepherd` skill for iterating a PR to completion.
+Codex uses the repo-shipped Codex plugin rather than the Claude plugin or `/pr-shepherd:*` slash commands. The plugin provides skills for iterating a PR to completion and marking PR files as viewed.
 
 Install the Codex plugin marketplace from GitHub:
 

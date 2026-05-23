@@ -10,6 +10,7 @@ vi.mock("./commands/resolve.mts", () => ({
   runResolveMutate: vi.fn(),
 }));
 vi.mock("./commands/commit-suggestion.mts", () => ({ runCommitSuggestion: vi.fn() }));
+vi.mock("./commands/mark-files-as-viewed.mts", () => ({ runMarkFilesAsViewed: vi.fn() }));
 vi.mock("./commands/clean.mts", () => ({ runClean: vi.fn() }));
 vi.mock("./commands/log-file.mts", () => ({ runLogFile: vi.fn() }));
 vi.mock("./github/client.mts", () => ({
@@ -48,6 +49,7 @@ afterEach(() => {
 const SUBCOMMANDS = [
   "resolve",
   "commit-suggestion",
+  "mark-files-as-viewed",
   "iterate",
   "poll",
   "clean",
@@ -57,6 +59,7 @@ const SUBCOMMANDS = [
 const HELP_EXPECTATIONS: Record<(typeof SUBCOMMANDS)[number], string[]> = {
   resolve: ["Modes:", "--resolve-thread-ids", "--require-sha", "Exit code:"],
   "commit-suggestion": ["Preconditions:", "--thread-id", "--description", "Exit codes:"],
+  "mark-files-as-viewed": ["Selectors:", "--tests", "--match", "Exit code:"],
   iterate: ["Actions:", "FIX_CODE", "--stall-timeout", "Exit codes:"],
   poll: ["Poll flags:", "--interval", "--timeout", "Forwarded iterate flags:"],
   clean: ["Variants:", "pr [number]", "branch [name]", "--dry-run"],

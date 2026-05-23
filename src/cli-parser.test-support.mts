@@ -12,6 +12,9 @@ vi.mock("./commands/log-file.mts", () => ({
 vi.mock("./commands/commit-suggestion.mts", () => ({
   runCommitSuggestion: vi.fn(),
 }));
+vi.mock("./commands/mark-files-as-viewed.mts", () => ({
+  runMarkFilesAsViewed: vi.fn(),
+}));
 vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./commands/iterate/index.mts")>();
   return { ...actual, runIterate: vi.fn() };
@@ -19,10 +22,12 @@ vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
 import { main } from "./cli-parser.mts";
 import { runLogFile } from "./commands/log-file.mts";
 import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
+import { runMarkFilesAsViewed } from "./commands/mark-files-as-viewed.mts";
 
 const mockRunResolveFetch = vi.mocked(runResolveFetch);
 const mockRunResolveMutate = vi.mocked(runResolveMutate);
 const mockRunLogFile = vi.mocked(runLogFile);
+const mockRunMarkFilesAsViewed = vi.mocked(runMarkFilesAsViewed);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let stdoutSpy: any;
@@ -50,6 +55,7 @@ export {
   getStdout,
   main,
   mockRunLogFile,
+  mockRunMarkFilesAsViewed,
   mockRunResolveFetch,
   mockRunResolveMutate,
   readFileSync,

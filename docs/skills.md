@@ -2,7 +2,10 @@
 
 [← README](../README.md)
 
-One skill is shipped for both Claude Code and Codex: `pr-shepherd`. It is a thin poll dispatcher — it runs `pr-shepherd poll <PR>` and follows the `## Instructions` embedded in the output. All policy, state transitions, and per-action guidance live in the CLI output, not in the skill.
+Two skills are shipped for both Claude Code and Codex:
+
+- `pr-shepherd` is a thin poll dispatcher — it runs `pr-shepherd poll <PR>` and follows the `## Instructions` embedded in the output. All policy, state transitions, and per-action guidance live in the CLI output, not in the skill.
+- `mark-files-as-viewed` marks PR changed files as viewed in GitHub by invoking `pr-shepherd mark-files-as-viewed`.
 
 ## Claude Code
 
@@ -19,6 +22,7 @@ Use the skill inside a `/goal`:
 /goal /pr-shepherd:pr-shepherd        # infer PR from current branch
 /goal /pr-shepherd:pr-shepherd 42
 /goal /pr-shepherd:pr-shepherd 42 --ready-delay 15m
+/pr-shepherd:mark-files-as-viewed 42 tests
 ```
 
 The goal loop handles recurrence. The skill invokes `pr-shepherd poll <N>` and prints the output. For non-terminal actions, follow the CLI's `## Instructions`, then invoke `pr-shepherd poll <N>` again. `[CANCEL]` and `[ESCALATE]` stop the goal.
@@ -53,6 +57,7 @@ Use the skill inside a `/goal`:
 ```
 /goal $pr-shepherd        # infer PR from current branch
 /goal $pr-shepherd 42
+$mark-files-as-viewed 42 tests
 ```
 
 Codex runs the same skill: invoke `pr-shepherd poll <N>`, follow the output, and continue until `[CANCEL]` or `[ESCALATE]`.
@@ -66,3 +71,14 @@ pr-shepherd resolve <N> --fetch
 ```
 
 Follow the `## Instructions` in the output. The `fix_code` action emits the exact `resolve` command to run after pushing fixes — so a full `pr-shepherd` iterate tick also covers resolve.
+
+## Mark files as viewed
+
+To hide already-reviewed files in GitHub's PR diff:
+
+```bash
+pr-shepherd mark-files-as-viewed <N> --tests
+pr-shepherd mark-files-as-viewed <N> src/a.ts --match '^docs/'
+```
+
+The `mark-files-as-viewed` skill treats a standalone `tests` argument as `--tests`; exact file paths and explicit `--match <regex>` selectors are passed through.
