@@ -126,7 +126,6 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     expect(result.fix.resolveCommand.argv).toContain("PRR_DUP");
     expect(result.fix.resolveCommand.argv).not.toContain("--dismiss-review-ids");
     expect(result.fix.resolveCommand.requiresDismissMessage).toBe(true);
-    expect(result.fix.resolveCommand.droppedDismissReviewIds).toBeUndefined();
   });
 
   it("routes pr-level review requests to fix_code without generated dismissals", async () => {

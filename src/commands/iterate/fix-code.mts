@@ -148,14 +148,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     checks,
     prNumber,
   );
-  const overlappingReviewIds = resolveCommand.droppedDismissReviewIds ?? [];
-  if (overlappingReviewIds.length > 0) {
-    process.stderr.write(
-      `pr-shepherd: resolve command overlap: ${overlappingReviewIds.length} ` +
-        `review IDs were also in minimize/comment IDs and were dropped from --dismiss-review-ids: ` +
-        `${overlappingReviewIds.join(", ")}\n`,
-    );
-  }
   // Safety: if the base branch is unknown, escalate when a push is plausible — the agent
   // would need the correct base to rebase safely. This is a conservative guard, not a
   // prediction that the agent *will* push. Intentionally broader than `pushLikely` above:
