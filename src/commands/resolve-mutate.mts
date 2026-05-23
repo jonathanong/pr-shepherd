@@ -23,6 +23,10 @@ export async function runResolveMutate(
   );
   const resolveThreadIds = (opts.resolveThreadIds ?? []).filter((id) => !humanThreadIds.has(id));
   const skippedHumanResolves = (opts.resolveThreadIds ?? []).filter((id) => humanThreadIds.has(id));
+  const replyThreadIds = opts.replyThreadIds?.filter((id) => humanThreadIds.has(id));
+  const skippedNonHumanReplies = (opts.replyThreadIds ?? []).filter(
+    (id) => !humanThreadIds.has(id),
+  );
   const minimizeCommentIds = (opts.minimizeCommentIds ?? []).filter(
     (id) => !humanCommentIds.has(id) && !humanReviewIds.has(id),
   );
@@ -36,7 +40,7 @@ export async function runResolveMutate(
 
   const result = await applyResolveOptions(prNumber, repo, {
     resolveThreadIds,
-    replyThreadIds: opts.replyThreadIds,
+    replyThreadIds,
     minimizeCommentIds,
     dismissReviewIds,
     dismissMessage: opts.dismissMessage,
@@ -45,5 +49,6 @@ export async function runResolveMutate(
   if (skippedHumanResolves.length > 0) result.skippedHumanResolves = skippedHumanResolves;
   if (skippedHumanMinimizes.length > 0) result.skippedHumanMinimizes = skippedHumanMinimizes;
   if (skippedHumanDismissals.length > 0) result.skippedHumanDismissals = skippedHumanDismissals;
+  if (skippedNonHumanReplies.length > 0) result.skippedNonHumanReplies = skippedNonHumanReplies;
   return result;
 }

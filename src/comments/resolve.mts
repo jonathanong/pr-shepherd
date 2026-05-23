@@ -20,6 +20,7 @@ export interface ResolveResult {
   skippedHumanResolves?: string[];
   skippedHumanMinimizes?: string[];
   skippedHumanDismissals?: string[];
+  skippedNonHumanReplies?: string[];
   rateLimit?: ResolveRateLimitStop;
   unrepliedThreads?: string[];
   unresolvedThreads?: string[];

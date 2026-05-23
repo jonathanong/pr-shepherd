@@ -99,4 +99,63 @@ describe("runResolveMutate — forwards options", () => {
     expect(result.skippedHumanMinimizes).toEqual(["c-human"]);
     expect(result.skippedHumanDismissals).toEqual(["r-human"]);
   });
+
+  it("only replies to fetched human thread IDs", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        reviewThreads: [
+          {
+            id: "t-human",
+            isResolved: false,
+            isOutdated: false,
+            isMinimized: false,
+            path: "src/foo.ts",
+            line: 1,
+            startLine: null,
+            author: "alice",
+            authorType: "User",
+            body: "fix",
+            url: "",
+            createdAtUnix: 0,
+          },
+          {
+            id: "t-bot",
+            isResolved: false,
+            isOutdated: false,
+            isMinimized: false,
+            path: "src/foo.ts",
+            line: 2,
+            startLine: null,
+            author: "copilot-pull-request-reviewer",
+            authorType: "Bot",
+            body: "bot note",
+            url: "",
+            createdAtUnix: 0,
+          },
+        ],
+      }),
+    });
+    mockApplyResolveOptions.mockResolvedValue({
+      repliedThreads: [],
+      resolvedThreads: [],
+      minimizedComments: [],
+      dismissedReviews: [],
+      errors: [],
+    });
+
+    const result = await runResolveMutate({
+      ...BASE_OPTS,
+      replyThreadIds: ["t-human", "t-bot", "t-typo"],
+      dismissMessage: "done",
+    });
+
+    expect(mockApplyResolveOptions).toHaveBeenCalledWith(
+      42,
+      { owner: "owner", name: "repo" },
+      expect.objectContaining({
+        replyThreadIds: ["t-human"],
+      }),
+    );
+    expect(result.skippedNonHumanReplies).toEqual(["t-bot", "t-typo"]);
+  });
 });

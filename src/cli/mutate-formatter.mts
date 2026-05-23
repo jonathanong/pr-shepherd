@@ -36,6 +36,7 @@ export function formatMutateResult(result: ResolveResult): string {
   pushIds(lines, "Skipped human thread resolves", result.skippedHumanResolves);
   pushIds(lines, "Skipped human minimizes", result.skippedHumanMinimizes);
   pushIds(lines, "Skipped human review dismissals", result.skippedHumanDismissals);
+  pushIds(lines, "Skipped non-human/unknown thread replies", result.skippedNonHumanReplies);
   const rateLimit = formatRateLimit(result);
   if (rateLimit) lines.push(rateLimit);
   pushIds(lines, "Not replied due to rate limit", result.unrepliedThreads);

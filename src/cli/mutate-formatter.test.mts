@@ -29,6 +29,7 @@ describe("formatMutateResult", () => {
         skippedHumanResolves: ["thread-3"],
         skippedHumanMinimizes: ["comment-2"],
         skippedHumanDismissals: ["review-3"],
+        skippedNonHumanReplies: ["thread-4"],
       }),
     );
 
@@ -40,6 +41,7 @@ describe("formatMutateResult", () => {
     expect(output).toContain("Skipped human thread resolves (1): thread-3");
     expect(output).toContain("Skipped human minimizes (1): comment-2");
     expect(output).toContain("Skipped human review dismissals (1): review-3");
+    expect(output).toContain("Skipped non-human/unknown thread replies (1): thread-4");
   });
 
   it("renders rate limit details, pending ids, and non-rate-limit errors", () => {
