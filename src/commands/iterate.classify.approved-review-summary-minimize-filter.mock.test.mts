@@ -81,6 +81,32 @@ describe("runIterate — review summary auto-minimize", () => {
     if (result.action !== "fix_code") return;
 
     expect(result.fix.reviewSummaryIds).toEqual(["PRR_AP_BOT"]);
+    expect(result.fix.surfacedApprovals.map((r) => r.id)).toEqual(["PRR_AP_USER"]);
+  });
+  it("surfaces non-human APPROVED reviews when approval minimization is enabled but policy excludes them", async () => {
+    const cfg = defaultConfig();
+    cfg.iterate.minimizeApprovals = true;
+    cfg.iterate.minimizeComments = "none";
+    mockLoadConfig.mockReturnValue(cfg);
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        approvedReviews: [
+          { id: "PRR_AP_BOT", author: "app", authorType: "Bot", body: "" },
+          { id: "PRR_AP_UNKNOWN", author: "integration", authorType: "Unknown", body: "" },
+        ],
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+    if (result.action !== "fix_code") return;
+
+    expect(result.fix.reviewSummaryIds).toEqual([]);
+    expect(result.fix.surfacedApprovals.map((r) => r.id)).toEqual(["PRR_AP_BOT", "PRR_AP_UNKNOWN"]);
   });
   it("summary-only PR triggers fix_code (not wait) so the summary can be minimized", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary] }));

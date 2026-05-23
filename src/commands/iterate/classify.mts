@@ -42,7 +42,7 @@ export function classifyReviewSummaries(
     const surfacedApprovals: Review[] = [];
     for (const r of approvals) {
       if (shouldMinimizeAuthor(r.authorType, minimizeComments, r.author)) minimizeIds.push(r.id);
-      else if (isHumanAuthor(r)) surfacedApprovals.push(r);
+      else surfacedApprovals.push(r);
     }
     return {
       minimizeIds,

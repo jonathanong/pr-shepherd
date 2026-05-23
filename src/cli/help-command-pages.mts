@@ -5,7 +5,7 @@ Fetch actionable review items or apply GitHub review-state mutations after fixes
 
 Usage:
   pr-shepherd resolve [PR] [--fetch] [--format text|json]
-  pr-shepherd resolve [PR] --reply-thread-ids A,B [--message MSG]
+  pr-shepherd resolve [PR] --reply-thread-ids A,B --message MSG
   pr-shepherd resolve [PR] --resolve-thread-ids A,B [--minimize-comment-ids X,Y]
                             [--dismiss-review-ids Q] [--message MSG]
                             [--require-sha SHA] [--format text|json]
