@@ -31,6 +31,9 @@
     "headSha": "oldhash123",
     "threadAttempts": {
       "PRRT_thrash": 2
+    },
+    "threadBodyHashes": {
+      "PRRT_thrash": "aa97f5d40ebed9f1"
     }
   },
   "readyDelayState": {

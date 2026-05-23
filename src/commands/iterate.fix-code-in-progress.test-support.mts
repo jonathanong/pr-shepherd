@@ -36,9 +36,13 @@ vi.mock("../state/iterate-stall.mts", () => ({
   readStallState: vi.fn().mockResolvedValue(null),
   writeStallState: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("../state/seen-comments.mts", () => ({
-  markSeen: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock("../state/seen-comments.mts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../state/seen-comments.mts")>();
+  return {
+    ...actual,
+    markSeen: vi.fn().mockResolvedValue(undefined),
+  };
+});
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));

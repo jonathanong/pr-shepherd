@@ -24,14 +24,14 @@ const RESOLUTION_ONLY_THREAD = {
   line: null,
   startLine: null,
   author: "reviewer",
-  authorType: "Unknown" as const,
+  authorType: "User" as const,
   body: "Already addressed on an old diff",
   url: "",
   createdAtUnix: NOW - 3600,
 };
 
 describe("runIterate — CHANGES_REQUESTED review with no inline threads routes to fix_code", () => {
-  it("emits fix_code with --dismiss-review-ids when changesRequestedReviews exist and no inline threads or CI failures", async () => {
+  it("emits fix_code without generated dismissals when changesRequestedReviews exist and no inline threads or CI failures", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
@@ -59,9 +59,9 @@ describe("runIterate — CHANGES_REQUESTED review with no inline threads routes 
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       expect(result.fix.changesRequestedReviews).toHaveLength(1);
-      expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
-      expect(result.fix.resolveCommand.argv).toContain("review-1");
-      expect(result.fix.resolveCommand.requiresDismissMessage).toBe(true);
+      expect(result.fix.resolveCommand.argv).not.toContain("--dismiss-review-ids");
+      expect(result.fix.resolveCommand.argv).not.toContain("review-1");
+      expect(result.fix.resolveCommand.requiresDismissMessage).toBe(false);
     }
   });
 
@@ -92,6 +92,7 @@ describe("runIterate — CHANGES_REQUESTED review with no inline threads routes 
 
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
+      expect(result.fix.resolveCommand.argv).toContain("--reply-thread-ids");
       expect(result.fix.resolveCommand.argv).toContain("thread-resolution-only");
     }
   });

@@ -2,6 +2,7 @@ export { formatIterateResult } from "./iterate-formatter.mts";
 export { projectIterateLean, projectIterateVerbose } from "./iterate-lean.mts";
 export { formatCleanResult } from "./clean-formatter.mts";
 export { formatMarkFilesAsViewedResult } from "./mark-files-as-viewed-formatter.mts";
+export { formatMutateResult } from "./mutate-formatter.mts";
 
 import { safeFence } from "./fence.mts";
 import {
@@ -15,7 +16,6 @@ import {
 import { joinSections } from "../util/markdown.mts";
 import type { FetchResult } from "../commands/resolve.mts";
 import type { CommitSuggestionResult } from "../types.mts";
-import type { ResolveResult } from "../comments/resolve.mts";
 
 export function formatFetchResult(result: FetchResult): string {
   const activeTotal =
@@ -137,60 +137,5 @@ export function formatCommitSuggestionResult(result: CommitSuggestionResult): st
       lines.push(`${i + 1}. ${inst}`);
     });
   }
-  return lines.join("\n");
-}
-
-export function formatMutateResult(result: ResolveResult): string {
-  const lines: string[] = [];
-  if (result.resolvedThreads.length)
-    lines.push(
-      `Resolved threads (${result.resolvedThreads.length}): ${result.resolvedThreads.join(", ")}`,
-    );
-  if (result.minimizedComments.length)
-    lines.push(
-      `Minimized comments (${result.minimizedComments.length}): ${result.minimizedComments.join(", ")}`,
-    );
-  if (result.dismissedReviews.length)
-    lines.push(
-      `Dismissed reviews (${result.dismissedReviews.length}): ${result.dismissedReviews.join(", ")}`,
-    );
-  if (result.skippedDismissals?.length)
-    lines.push(
-      `Skipped dismissals (${result.skippedDismissals.length}): ${result.skippedDismissals.join(", ")}`,
-    );
-  if (result.rateLimit) {
-    const details = [
-      result.rateLimit.retryAfterSeconds !== undefined
-        ? `retry after ${result.rateLimit.retryAfterSeconds}s`
-        : null,
-      result.rateLimit.remaining !== undefined && result.rateLimit.limit !== undefined
-        ? `remaining ${result.rateLimit.remaining}/${result.rateLimit.limit}`
-        : null,
-      result.rateLimit.resetAt !== undefined
-        ? `reset at ${new Date(result.rateLimit.resetAt * 1000).toISOString()}`
-        : null,
-    ]
-      .filter(Boolean)
-      .join(", ");
-    lines.push(
-      `Stopped: GitHub rate limit hit — ${result.rateLimit.message}${details ? ` (${details})` : ""}`,
-    );
-  }
-  if (result.unresolvedThreads?.length)
-    lines.push(
-      `Not resolved due to rate limit (${result.unresolvedThreads.length}): ${result.unresolvedThreads.join(", ")}`,
-    );
-  if (result.unminimizedComments?.length)
-    lines.push(
-      `Not minimized due to rate limit (${result.unminimizedComments.length}): ${result.unminimizedComments.join(", ")}`,
-    );
-  if (result.undismissedReviews?.length)
-    lines.push(
-      `Not dismissed due to rate limit (${result.undismissedReviews.length}): ${result.undismissedReviews.join(", ")}`,
-    );
-  const errors = result.rateLimit
-    ? result.errors.filter((e) => !e.startsWith("rate limit:"))
-    : result.errors;
-  if (errors.length) lines.push(`Errors:\n  ${errors.join("\n  ")}`);
   return lines.join("\n");
 }

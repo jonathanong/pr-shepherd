@@ -18,7 +18,7 @@ export function classifyVisibleComments(
   const minimizeIds: string[] = [];
   const toMarkSeen: ActionableComment[] = [];
   for (const c of comments.filter((comment) => !comment.isMinimized)) {
-    if (shouldMinimizeAuthor(c.authorType, minimizeComments)) {
+    if (shouldMinimizeAuthor(c.authorType, minimizeComments, c.author)) {
       actionable.push(c);
       minimizeIds.push(c.id);
       continue;

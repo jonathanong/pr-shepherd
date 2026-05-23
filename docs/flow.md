@@ -4,7 +4,7 @@
 flowchart TD
   U(["pr-shepherd skill"]) --> ITER[pr-shepherd<br/>iterate PR]
 
-  ITER --> S1[1. runCheck autoResolve:true<br/>batch GraphQL<br/>classify + deriveMergeStatus + autoResolveOutdated]
+  ITER --> S1[1. runCheck<br/>batch GraphQL<br/>classify + deriveMergeStatus]
 
   S1 --> S15{1.5 state != OPEN?}
   S15 -->|yes| A_CAN([action: cancel])

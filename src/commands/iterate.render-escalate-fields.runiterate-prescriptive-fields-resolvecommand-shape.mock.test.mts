@@ -22,7 +22,7 @@ const THREAD = {
   line: 10,
   startLine: null,
   author: "reviewer",
-  authorType: "Unknown" as const,
+  authorType: "User" as const,
   body: "Fix this",
   url: "",
   createdAtUnix: NOW - 3600,
@@ -35,7 +35,7 @@ describe("runIterate — prescriptive fields: resolveCommand shape", () => {
       id: "c-1",
       isMinimized: false,
       author: "reviewer",
-      authorType: "Unknown" as const,
+      authorType: "Bot" as const,
       body: "Fix the types here",
       url: "",
       createdAtUnix: NOW,
@@ -72,16 +72,16 @@ describe("runIterate — prescriptive fields: resolveCommand shape", () => {
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       const { resolveCommand } = result.fix;
-      expect(resolveCommand.argv).toContain("--resolve-thread-ids");
+      expect(resolveCommand.argv).toContain("--reply-thread-ids");
       expect(resolveCommand.argv.join(" ")).toContain("thread-1");
       expect(resolveCommand.argv).toContain("--minimize-comment-ids");
       expect(resolveCommand.argv.join(" ")).toContain("c-1");
       expect(resolveCommand.requiresHeadSha).toBe(true);
-      expect(resolveCommand.requiresDismissMessage).toBe(false);
+      expect(resolveCommand.requiresDismissMessage).toBe(true);
     }
   });
 
-  it("resolveCommand includes dismiss-review-ids and $DISMISS_MESSAGE when changesRequested", async () => {
+  it("resolveCommand does not include dismiss-review-ids when changesRequested", async () => {
     const review = {
       id: "r-1",
       author: "reviewer",
@@ -121,8 +121,8 @@ describe("runIterate — prescriptive fields: resolveCommand shape", () => {
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       const { resolveCommand } = result.fix;
-      expect(resolveCommand.argv).toContain("--dismiss-review-ids");
-      expect(resolveCommand.argv.join(" ")).toContain("r-1");
+      expect(resolveCommand.argv).not.toContain("--dismiss-review-ids");
+      expect(resolveCommand.argv.join(" ")).not.toContain("r-1");
       expect(resolveCommand.argv).toContain("$DISMISS_MESSAGE");
       expect(resolveCommand.requiresDismissMessage).toBe(true);
     }

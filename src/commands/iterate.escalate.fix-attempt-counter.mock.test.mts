@@ -10,6 +10,7 @@ import {
   mockWriteFixAttempts,
 } from "./iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
+import { hashBody } from "../state/seen-comments.mts";
 
 registerIterateHooks();
 
@@ -33,11 +34,12 @@ const THREAD = {
 };
 
 describe("runIterate — escalate (fix-thrash)", () => {
-  it("increments attempt count and calls writeFixAttempts on fix_code dispatch", async () => {
+  it("increments attempt count for unchanged thread body and writes body hash", async () => {
     // Use a different stored SHA so isNewSha=true and the increment fires.
     mockReadFixAttempts.mockResolvedValue({
       headSha: "old-sha",
       threadAttempts: { "thread-1": 1 },
+      threadBodyHashes: { "thread-1": hashBody("Fix this") },
     });
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -63,5 +65,68 @@ describe("runIterate — escalate (fix-thrash)", () => {
     expect(mockWriteFixAttempts).toHaveBeenCalledOnce();
     const [, written] = mockWriteFixAttempts.mock.calls[0]!;
     expect(written.threadAttempts["thread-1"]).toBe(2);
+    expect(written.threadBodyHashes?.["thread-1"]).toBe(hashBody("Fix this"));
+  });
+  it("resets attempt count when the thread body changes", async () => {
+    mockReadFixAttempts.mockResolvedValue({
+      headSha: "old-sha",
+      threadAttempts: { "thread-1": 2 },
+      threadBodyHashes: { "thread-1": hashBody("old body") },
+    });
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: {
+          actionable: [{ ...THREAD, body: "new body" }],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    const [, written] = mockWriteFixAttempts.mock.calls[0]!;
+    expect(written.threadAttempts["thread-1"]).toBe(1);
+    expect(written.threadBodyHashes?.["thread-1"]).toBe(hashBody("new body"));
+  });
+  it("resets attempt count when the thread body changes on the same HEAD", async () => {
+    mockReadFixAttempts.mockResolvedValue({
+      headSha: "abc123",
+      threadAttempts: { "thread-1": 2 },
+      threadBodyHashes: { "thread-1": hashBody("old body") },
+    });
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: {
+          actionable: [{ ...THREAD, body: "new body" }],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    const [, written] = mockWriteFixAttempts.mock.calls[0]!;
+    expect(written.threadAttempts["thread-1"]).toBe(1);
+    expect(written.threadBodyHashes?.["thread-1"]).toBe(hashBody("new body"));
   });
 });

@@ -23,6 +23,8 @@ export interface FixAttemptsState {
   headSha: string;
   /** Map from thread ID → number of fix_code dispatches that included this thread. */
   threadAttempts: Record<string, number>;
+  /** Map from thread ID → body hash used for the associated attempt count. */
+  threadBodyHashes?: Record<string, string>;
 }
 
 interface StateKey {

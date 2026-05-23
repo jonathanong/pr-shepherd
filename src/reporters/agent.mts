@@ -34,6 +34,7 @@ export function toAgentThread(t: ReviewThread): AgentThread {
     ...(t.authorType !== undefined && { authorType: t.authorType }),
     body: t.body,
     url: t.url,
+    ...(t.edited === true && { edited: true }),
     ...(t.comments !== undefined && {
       comments: t.comments.map((c) => ({
         id: c.id,

@@ -1,0 +1,63 @@
+{
+  "batchData": {
+    "reviewThreads": [
+      {
+        "id": "PRRT_human",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/human.ts",
+        "line": 12,
+        "startLine": null,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Please tighten this branch.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r45_human",
+        "createdAtUnix": 1715700000
+      },
+      {
+        "id": "PRRT_bot",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/bot.ts",
+        "line": 20,
+        "startLine": null,
+        "author": "copilot-pull-request-reviewer",
+        "authorType": "Bot",
+        "body": "Bot-requested cleanup.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r45_bot",
+        "createdAtUnix": 1715700000
+      },
+      {
+        "id": "PRRT_bracket_bot",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/bracket-bot.ts",
+        "line": 30,
+        "startLine": null,
+        "author": "github-actions[bot]",
+        "authorType": "User",
+        "body": "Bracket bot cleanup.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r45_bracket_bot",
+        "createdAtUnix": 1715700000
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

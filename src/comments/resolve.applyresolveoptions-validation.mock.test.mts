@@ -11,9 +11,16 @@ describe("applyResolveOptions — validation", () => {
     );
   });
 
+  it("throws when replying without --message", async () => {
+    await expect(applyResolveOptions(1, REPO, { replyThreadIds: ["t-1"] })).rejects.toThrow(
+      "--message is required",
+    );
+  });
+
   it("does nothing when no mutation IDs are provided", async () => {
     const result = await applyResolveOptions(1, REPO, {});
     expect(result).toEqual({
+      repliedThreads: [],
       resolvedThreads: [],
       minimizedComments: [],
       dismissedReviews: [],

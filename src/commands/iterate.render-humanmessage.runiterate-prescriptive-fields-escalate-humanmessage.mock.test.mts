@@ -10,6 +10,7 @@ import {
   mockUpdateReadyDelay,
 } from "./iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
+import { hashBody } from "../state/seen-comments.mts";
 
 registerIterateHooks();
 
@@ -31,7 +32,11 @@ const THREAD = {
 
 describe("runIterate — prescriptive fields: escalate humanMessage", () => {
   it("escalate.humanMessage contains triggers, suggestion, and thread details", async () => {
-    mockReadFixAttempts.mockResolvedValue({ headSha: "abc123", threadAttempts: { "thread-1": 3 } });
+    mockReadFixAttempts.mockResolvedValue({
+      headSha: "abc123",
+      threadAttempts: { "thread-1": 3 },
+      threadBodyHashes: { "thread-1": hashBody(THREAD.body) },
+    });
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",

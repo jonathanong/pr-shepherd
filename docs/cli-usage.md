@@ -5,7 +5,7 @@
 ```
 pr-shepherd -v|--version
 pr-shepherd [PR] [--interval 30s] [--timeout 5m] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]
-pr-shepherd resolve [PR] [--fetch | --resolve-thread-ids … | --minimize-comment-ids … | --dismiss-review-ids … | --message "…" | --require-sha <sha>]
+pr-shepherd resolve [PR] [--fetch | --reply-thread-ids … | --resolve-thread-ids … | --minimize-comment-ids … | --dismiss-review-ids … | --message "…" | --require-sha <sha>]
 pr-shepherd commit-suggestion [PR] --thread-id <id> --message "…"
 pr-shepherd mark-files-as-viewed [PR] [files...] [--tests] [--match REGEX]
 pr-shepherd iterate [PR] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]  # single tick
@@ -25,12 +25,12 @@ All subcommands accept:
 
 ### pr-shepherd resolve [PR]
 
-Two modes: **fetch** (default) auto-resolves outdated threads and returns actionable items; **mutate** resolves/minimizes/dismisses specific IDs after you push fixes.
+Two modes: **fetch** (default) returns actionable items and first-look items; **mutate** replies/resolves/minimizes/dismisses specific IDs after you push fixes. Human-authored threads are replied to, not resolved.
 
 **Fetch mode:**
 
 ```sh
-pr-shepherd resolve           # fetch + auto-resolve outdated threads
+pr-shepherd resolve           # fetch review items
 pr-shepherd resolve 42 --fetch
 ```
 
@@ -44,7 +44,7 @@ pr-shepherd resolve 42 --fetch
 
 ## First-look items (1) — acknowledge status before acting
 
-- `threadId=RT_kwDOghi` `src/old.ts:9` (@bob) [status: outdated, auto-resolved]: This variable name is confusing
+- `threadId=RT_kwDOghi` `src/old.ts:9` (@bob) [status: outdated]: This variable name is confusing
 
 ## Summary
 
@@ -53,14 +53,14 @@ pr-shepherd resolve 42 --fetch
 ## Instructions
 
 1. Classify every item listed above …
-2. Items in `## First-look items` are shown so you can acknowledge their current status before acting. If a first-look thread also appears under `## Review threads to resolve`, include its ID in `--resolve-thread-ids`; otherwise do not pass first-look-only IDs to mutation flags.
+2. Items in `## First-look items` are shown so you can acknowledge their current status before acting. If a first-look human thread also appears under `## Review threads to resolve`, include its ID in `--reply-thread-ids`; otherwise do not pass first-look-only IDs to mutation flags.
 3. For each thread marked `[suggestion]`: run `pr-shepherd commit-suggestion 42 --thread-id <id> --message "<message>" --format=json` (one thread at a time). On `applied: false`, fall through to step 4 for that thread.
 4. For remaining threads (no suggestion, or commit-suggestion failed): read and edit the referenced files.
 5. Commit changed files and push: `git add <files> && git commit -m "<message>"`, then rebase and push.
-6. Run `pr-shepherd resolve 42 [--resolve-thread-ids <ids>] …` with the appropriate flags.
+6. Run `pr-shepherd resolve 42 [--reply-thread-ids <ids>] …` with the appropriate flags.
 ```
 
-First-look items (threads / comments that are outdated, resolved, or minimized on GitHub) are surfaced on first fetch only; a per-item seen-marker file suppresses them on subsequent fetches. They carry a `[status: …]` tag: `outdated`, `outdated, auto-resolved`, `resolved`, or `minimized`. Unresolved outdated/minimized threads also appear under `## Review threads to resolve` and should be included in `--resolve-thread-ids`.
+First-look items (threads / comments that are outdated, resolved, or minimized on GitHub) are surfaced on first fetch only; a per-item seen-marker file suppresses them on subsequent fetches. They carry a `[status: …]` tag: `outdated`, `resolved`, or `minimized`. Unresolved human outdated/minimized threads also appear under `## Review threads to resolve` and should be included in `--reply-thread-ids`.
 
 The `[suggestion]` marker appears on threads whose body contains a ` ```suggestion ` fenced block and `actions.commitSuggestions` is enabled. See the [`commit-suggestion` section](#pr-shepherd-commit-suggestion-pr---thread-id-id---message) below for how to apply them.
 
@@ -68,7 +68,7 @@ The `[suggestion]` marker appears on threads whose body contains a ` ```suggesti
 
 ```sh
 pr-shepherd resolve 42 \
-  --resolve-thread-ids RT_kwDOabc,RT_kwDOdef \
+  --reply-thread-ids RT_kwDOabc,RT_kwDOdef \
   --minimize-comment-ids IC_kwDOxyz \
   --dismiss-review-ids PRR_kwDO123 \
   --message "Switched query to parameterized form in src/db.ts" \
@@ -76,7 +76,7 @@ pr-shepherd resolve 42 \
 ```
 
 ```
-Resolved threads (2): RT_kwDOabc, RT_kwDOdef
+Replied to threads (2): RT_kwDOabc, RT_kwDOdef
 Minimized comments (1): IC_kwDOxyz
 Dismissed reviews (1): PRR_kwDO123
 ```
@@ -92,7 +92,7 @@ Not minimized due to rate limit (5): IC_36, IC_37, IC_38, IC_39, IC_40
 ```
 
 Retry a later run with the pending IDs only. JSON output exposes the same data in
-`rateLimit`, `unresolvedThreads`, `unminimizedComments`, `undismissedReviews`, and
+`rateLimit`, `unrepliedThreads`, `unresolvedThreads`, `unminimizedComments`, `undismissedReviews`, and
 `skippedDismissals`.
 
 **Flags:**
@@ -100,13 +100,14 @@ Retry a later run with the pending IDs only. JSON output exposes the same data i
 | Flag                     | Description                                                    |
 | ------------------------ | -------------------------------------------------------------- |
 | `--fetch`                | Fetch mode (default when no mutation flags are given)          |
-| `--resolve-thread-ids`   | Comma-separated thread IDs to mark resolved                    |
-| `--minimize-comment-ids` | Comma-separated comment or review-summary IDs to minimize      |
-| `--dismiss-review-ids`   | Comma-separated `CHANGES_REQUESTED` review IDs to dismiss      |
-| `--message`              | Dismiss message (required when `--dismiss-review-ids` is set)  |
+| `--reply-thread-ids`     | Comma-separated human thread IDs to reply to                   |
+| `--resolve-thread-ids`   | Comma-separated non-human/manual thread IDs to mark resolved   |
+| `--minimize-comment-ids` | Comma-separated non-human comment or review-summary IDs        |
+| `--dismiss-review-ids`   | Comma-separated non-human `CHANGES_REQUESTED` review IDs       |
+| `--message`              | Reply/dismiss message (required for replies or dismissals)     |
 | `--require-sha`          | Poll GitHub until the PR head matches this SHA before mutating |
 
-`--require-sha` polls `GET /repos/{owner}/{repo}/pulls/{pr}` for `headRefOid` until it matches, then issues the mutations — ensures reviewers see the fix before threads are closed. Exit code: always `0`. `--message` must describe the specific fix; it is shown to the reviewer on GitHub.
+`--require-sha` polls `GET /repos/{owner}/{repo}/pulls/{pr}` for `headRefOid` until it matches, then issues the mutations — ensures reviewers see the fix before replies or other mutations land. Exit code: always `0`. `--message` must describe the specific fix; it is shown to the reviewer on GitHub.
 
 ### pr-shepherd commit-suggestion [PR] --thread-id <id> --message "…"
 
@@ -148,7 +149,7 @@ Co-authored-by: alice <alice@users.noreply.github.com>
 1. Apply the patch to `src/foo.ts`: run `git apply` with the diff shown above, or edit the file directly using the line range (line 42).
 2. Stage the file: `git add -- src/foo.ts`
 3. Commit: `git commit -m "rename x to remainingSeconds" -m "Co-authored-by: alice <alice@users.noreply.github.com>"`
-4. Resolve the thread on GitHub: `pr-shepherd resolve 42 --resolve-thread-ids PRRT_abc`
+4. Reply to the thread on GitHub: `pr-shepherd resolve 42 --reply-thread-ids PRRT_abc --message "Applied the suggestion."`
 5. Push when ready: `git push` (or `git push --force-with-lease` after rebasing).
 ````
 
@@ -254,7 +255,7 @@ at Object.<anonymous> (src/commands/iterate.test.mts:58:22)
 ## Post-fix push
 
 - base: `main`
-- resolve: `pr-shepherd resolve 42 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
+- resolve: `pr-shepherd resolve 42 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
 
 ## Instructions
 

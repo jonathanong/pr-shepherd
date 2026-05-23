@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   registerIterateHooks,
-  NOW,
   defaultConfig,
   makeOpts,
   makeReport,
@@ -10,6 +9,7 @@ import {
   mockRunCheck,
   mockUpdateReadyDelay,
 } from "./iterate-test-support.mts";
+import { makeThread } from "./iterate-thread-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
 
 registerIterateHooks();
@@ -17,6 +17,13 @@ registerIterateHooks();
 // ---------------------------------------------------------------------------
 // Review summary minimize — issue #70
 // ---------------------------------------------------------------------------
+
+function configureApprovalMinimization(minimizeComments: "all" | "bots" | "users" | "none"): void {
+  const cfg = defaultConfig();
+  cfg.iterate.minimizeApprovals = true;
+  cfg.iterate.minimizeComments = minimizeComments;
+  mockLoadConfig.mockReturnValue(cfg);
+}
 
 describe("runIterate — review summary auto-minimize", () => {
   const botSummary = makeReview("PRR_BOT", "copilot-pull-request-reviewer", "overview");
@@ -59,10 +66,7 @@ describe("runIterate — review summary auto-minimize", () => {
     expect(result.fix.reviewSummaryIds).toEqual(["PRR_AP"]);
   });
   it("filters APPROVED reviews through minimizeComments when approval minimization is enabled", async () => {
-    const cfg = defaultConfig();
-    cfg.iterate.minimizeApprovals = true;
-    cfg.iterate.minimizeComments = "bots";
-    mockLoadConfig.mockReturnValue(cfg);
+    configureApprovalMinimization("bots");
     mockRunCheck.mockResolvedValue(
       makeReport({
         approvedReviews: [
@@ -71,16 +75,29 @@ describe("runIterate — review summary auto-minimize", () => {
         ],
       }),
     );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
 
     const result = await runIterate(makeOpts());
     if (result.action !== "fix_code") return;
 
     expect(result.fix.reviewSummaryIds).toEqual(["PRR_AP_BOT"]);
+    expect(result.fix.surfacedApprovals.map((r) => r.id)).toEqual(["PRR_AP_USER"]);
+  });
+  it("surfaces non-human APPROVED reviews when approval minimization is enabled but policy excludes them", async () => {
+    configureApprovalMinimization("none");
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        approvedReviews: [
+          { id: "PRR_AP_BOT", author: "app", authorType: "Bot", body: "" },
+          { id: "PRR_AP_UNKNOWN", author: "integration", authorType: "Unknown", body: "" },
+        ],
+      }),
+    );
+
+    const result = await runIterate(makeOpts());
+    if (result.action !== "fix_code") return;
+
+    expect(result.fix.reviewSummaryIds).toEqual([]);
+    expect(result.fix.surfacedApprovals.map((r) => r.id)).toEqual(["PRR_AP_BOT", "PRR_AP_UNKNOWN"]);
   });
   it("summary-only PR triggers fix_code (not wait) so the summary can be minimized", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary] }));
@@ -93,20 +110,10 @@ describe("runIterate — review summary auto-minimize", () => {
     expect(result.action).toBe("fix_code");
   });
   it("includes reviewSummaryIds in fix_code result when both a thread and a bot summary are present", async () => {
-    const t1 = {
+    const t1 = makeThread({
       id: "PRRT_x",
-      isResolved: false,
-      isOutdated: false,
-      isMinimized: false,
-      path: "src/foo.mts",
-      line: 10,
-      startLine: null,
-      author: "reviewer",
-      authorType: "Unknown" as const,
       body: "Use a const here.\n\n```suggestion\nconst foo = 1;\n```",
-      url: "",
-      createdAtUnix: NOW - 3600,
-    };
+    });
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",

@@ -4,15 +4,17 @@ import { shouldMinimizeAuthor } from "./minimize-policy.mts";
 
 describe("shouldMinimizeAuthor", () => {
   it.each([
-    [undefined, "Unknown", true],
-    ["all", "User", true],
-    ["bots", "Bot", true],
-    ["bots", "User", false],
-    ["users", "User", true],
-    ["users", "Bot", false],
-    ["none", "Bot", false],
-  ] as const)("policy %s author %s -> %s", (policy, authorType, expected) => {
-    expect(shouldMinimizeAuthor(authorType, policy)).toBe(expected);
+    [undefined, "Unknown", "unknown", true],
+    ["all", "User", "alice", false],
+    ["all", "Unknown", "app", true],
+    ["bots", "Bot", "app", true],
+    ["bots", "User", "alice", false],
+    ["users", "User", "alice", false],
+    ["users", "Bot", "app", false],
+    ["none", "Bot", "app", false],
+    ["all", "Bot", "github-actions[bot]", true],
+  ] as const)("policy %s author %s/%s -> %s", (policy, authorType, author, expected) => {
+    expect(shouldMinimizeAuthor(authorType, policy, author)).toBe(expected);
   });
 
   it("throws for invalid runtime policies", () => {

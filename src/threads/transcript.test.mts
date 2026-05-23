@@ -30,4 +30,18 @@ describe("thread transcript helpers", () => {
 
     expect(threadTranscriptBody(thread)).toBe("legacy body");
   });
+
+  it("hashes transcript bodies without GitHub comment IDs", () => {
+    const thread = {
+      body: "top body",
+      comments: [
+        { id: "comment-1", author: "alice", body: "top body", url: "" },
+        { id: "comment-2", author: "bob", body: "reply body", url: "" },
+      ],
+    } as ReviewThread;
+
+    expect(threadTranscriptBody(thread, ["agent reply"])).toBe(
+      ["top body", "reply body", "agent reply"].join("\n\n--- thread comment ---\n\n"),
+    );
+  });
 });

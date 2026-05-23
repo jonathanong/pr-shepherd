@@ -84,7 +84,7 @@ describe("runCheck — BLOCKED + clean (hand off to humans)", () => {
     expect(report.threads.resolutionOnly.map((t) => t.id)).toEqual(["t-outdated"]);
   });
 
-  it("does not keep auto-resolved outdated threads in resolutionOnly", async () => {
+  it("keeps outdated threads in resolutionOnly even when autoResolve is requested", async () => {
     const outdated = makeThread({ id: "t-auto", isOutdated: true });
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
@@ -97,9 +97,10 @@ describe("runCheck — BLOCKED + clean (hand off to humans)", () => {
 
     const report = await runCheck({ ...BASE_OPTS, autoResolve: true });
 
-    expect(report.status).toBe("READY");
-    expect(report.threads.resolutionOnly).toHaveLength(0);
-    expect(report.threads.firstLook[0]?.autoResolved).toBe(true);
+    expect(report.status).toBe("PENDING");
+    expect(mockAutoResolveOutdated).not.toHaveBeenCalled();
+    expect(report.threads.resolutionOnly.map((t) => t.id)).toEqual(["t-auto"]);
+    expect(report.threads.firstLook[0]?.autoResolved).toBeUndefined();
   });
 
   it("returns PENDING when copilot review is also in progress", async () => {

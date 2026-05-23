@@ -5,6 +5,7 @@ Fetch actionable review items or apply GitHub review-state mutations after fixes
 
 Usage:
   pr-shepherd resolve [PR] [--fetch] [--format text|json]
+  pr-shepherd resolve [PR] --reply-thread-ids A,B --message MSG
   pr-shepherd resolve [PR] --resolve-thread-ids A,B [--minimize-comment-ids X,Y]
                             [--dismiss-review-ids Q] [--message MSG]
                             [--require-sha SHA] [--format text|json]
@@ -13,14 +14,18 @@ Modes:
   fetch                Default when no mutation IDs are provided. Fetches review threads,
                        comments, first-look items, and instructions.
   mutate               Runs when any mutation ID flag is present. Resolves threads,
-                       minimizes comments/review summaries, and dismisses reviews.
+                       replies to human threads, resolves non-human/manual thread IDs,
+                       minimizes non-human comments/review summaries, and dismisses non-human reviews.
 
 Flags:
   --fetch                         Force fetch mode.
   --resolve-thread-ids <ids>      Comma-separated review thread IDs to resolve.
+                                  Human-authored thread IDs are skipped; use --reply-thread-ids.
+  --reply-thread-ids <ids>        Comma-separated human review thread IDs to reply to.
   --minimize-comment-ids <ids>    Comma-separated issue/review comment IDs to minimize.
   --dismiss-review-ids <ids>      Comma-separated CHANGES_REQUESTED review IDs to dismiss.
-  --message <text>                Dismiss message. Required with --dismiss-review-ids.
+  --message <text>                Reply/dismiss message. Required with --reply-thread-ids
+                                  or --dismiss-review-ids.
   --require-sha <sha>             Wait until GitHub reports this PR head SHA before mutating.
   --format text|json              Output format. Default: text.
   --help, -h                      Print this help and exit before GitHub I/O.

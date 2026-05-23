@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   registerHooks,
   BASE_OPTS,
@@ -11,8 +11,8 @@ import { runResolveFetch } from "./resolve.mts";
 
 registerHooks();
 
-describe("runResolveFetch — auto-resolves outdated threads", () => {
-  it("calls autoResolveOutdated with outdated+unresolved thread IDs", async () => {
+describe("runResolveFetch — outdated threads", () => {
+  it("does not auto-resolve outdated threads", async () => {
     const outdated = makeThread({ id: "outdated-1", isOutdated: true, isResolved: false });
     const resolved = makeThread({ id: "resolved-1", isOutdated: true, isResolved: true });
     const active = makeThread({ id: "active-1", isOutdated: false });
@@ -22,21 +22,17 @@ describe("runResolveFetch — auto-resolves outdated threads", () => {
     mockAutoResolveOutdated.mockResolvedValue({ resolved: ["outdated-1"], errors: [] });
 
     await runResolveFetch(BASE_OPTS);
-    expect(mockAutoResolveOutdated).toHaveBeenCalledWith(["outdated-1"]);
+    expect(mockAutoResolveOutdated).not.toHaveBeenCalled();
   });
-  it("logs to stderr and continues when autoResolveOutdated returns errors", async () => {
+  it("continues without logging auto-resolve errors", async () => {
     const outdated = makeThread({ id: "outdated-1", isOutdated: true, isResolved: false });
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [outdated] }) });
     mockAutoResolveOutdated.mockResolvedValue({ resolved: [], errors: ["rate limit hit"] });
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
 
     const result = await runResolveFetch(BASE_OPTS);
 
-    expect(stderrSpy).toHaveBeenCalledWith(
-      expect.stringContaining("auto-resolve outdated threads failed"),
-    );
+    expect(mockAutoResolveOutdated).not.toHaveBeenCalled();
     expect(result).toBeDefined();
-    stderrSpy.mockRestore();
   });
   it("activeThreads excludes outdated threads", async () => {
     const outdated = makeThread({ id: "t-outdated", isOutdated: true });

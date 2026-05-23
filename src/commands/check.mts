@@ -3,8 +3,6 @@ import { getRepoInfo, getCurrentPrNumber } from "../github/client.mts";
 import { classifyChecks, getCiVerdict } from "../checks/classify.mts";
 import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
 import { fetchStartupFailureChecks, triageFailingChecks } from "../checks/triage.mts";
-import { getOutdatedThreads } from "../comments/outdated.mts";
-import { autoResolveOutdated } from "../comments/resolve.mts";
 import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
 import { classifyVisibleComments } from "../comments/visible-comments.mts";
@@ -18,11 +16,12 @@ import {
 } from "./ready-mergeability.mts";
 import { loadSeenMap, markSeen, classifyItem } from "../state/seen-comments.mts";
 import { threadTranscriptBody } from "../threads/transcript.mts";
+import { classifyThreadVisibility } from "../comments/thread-visibility.mts";
+import { classifyReviewsForDisplay } from "../comments/review-visibility.mts";
 import type {
   GlobalOptions,
   ShepherdReport,
   ClassifiedCheck,
-  FirstLookThread,
   FirstLookComment,
 } from "../types.mts";
 
@@ -63,53 +62,13 @@ export async function runCheck(
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
   const seenMap = await loadSeenMap(stateKey);
   const triaged = await attachUnseenCheckAnnotations(triagedBase, seenMap, prNumber);
-  const unresolvedThreads = batchData.reviewThreads.filter((t) => !t.isResolved);
-  const outdated = getOutdatedThreads(unresolvedThreads);
-  let autoResolved: typeof outdated = [];
-  let autoResolveErrors: string[] = [];
-  if (opts.autoResolve && outdated.length > 0) {
-    const { resolved: resolvedIds, errors } = await autoResolveOutdated(outdated.map((t) => t.id));
-    const resolvedIdsSet = new Set(resolvedIds); // ⚡ Bolt optimization: O(1) lookup
-    autoResolved = outdated.filter((t) => resolvedIdsSet.has(t.id));
-    autoResolveErrors = errors;
-  }
-  const activeThreads = unresolvedThreads.filter((t) => !t.isOutdated && !t.isMinimized);
-  const outdatedCandidates = batchData.reviewThreads.filter((t) => t.isOutdated);
-  const resolvedCandidates = batchData.reviewThreads.filter((t) => t.isResolved && !t.isOutdated);
-  const minimizedThreadCandidates = batchData.reviewThreads.filter(
-    (t) => t.isMinimized && !t.isResolved && !t.isOutdated,
-  );
   const minimizedCommentCandidates = batchData.comments.filter((c) => c.isMinimized);
   const visibleCommentClassification = classifyVisibleComments(
     batchData.comments,
     seenMap,
     config.iterate.minimizeComments,
   );
-  const autoResolvedIds = new Set(autoResolved.map((t) => t.id));
-  const firstLookThreads: FirstLookThread[] = [
-    ...outdatedCandidates.flatMap((t) => {
-      const cls = classifyItem(t.id, threadTranscriptBody(t), seenMap);
-      if (cls === "unchanged") return [];
-      const base = {
-        ...t,
-        firstLookStatus: "outdated" as const,
-        autoResolved: autoResolvedIds.has(t.id),
-      };
-      return cls === "edited" ? [{ ...base, edited: true as const }] : [base];
-    }),
-    ...resolvedCandidates.flatMap((t) => {
-      const cls = classifyItem(t.id, threadTranscriptBody(t), seenMap);
-      if (cls === "unchanged") return [];
-      const base = { ...t, firstLookStatus: "resolved" as const };
-      return cls === "edited" ? [{ ...base, edited: true as const }] : [base];
-    }),
-    ...minimizedThreadCandidates.flatMap((t) => {
-      const cls = classifyItem(t.id, threadTranscriptBody(t), seenMap);
-      if (cls === "unchanged") return [];
-      const base = { ...t, firstLookStatus: "minimized" as const };
-      return cls === "edited" ? [{ ...base, edited: true as const }] : [base];
-    }),
-  ];
+  const threadVisibility = classifyThreadVisibility(batchData.reviewThreads, seenMap);
   const firstLookComments: FirstLookComment[] = minimizedCommentCandidates.flatMap((c) => {
     const cls = classifyItem(c.id, c.body, seenMap);
     if (cls === "unchanged") return [];
@@ -125,21 +84,28 @@ export async function runCheck(
     else if (cls === "edited") editedSummaries.push(r);
     else seenSummaries.push(r);
   }
+  const changesRequestedReviewVisibility = classifyReviewsForDisplay(
+    batchData.changesRequestedReviews,
+    seenMap,
+  );
+  const approvedReviewVisibility = classifyReviewsForDisplay(batchData.approvedReviews, seenMap);
   await Promise.allSettled([
-    ...firstLookThreads.map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
     ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
+    ...threadVisibility.toMarkSeen.map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
     ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
     ...[...firstLookSummaries, ...editedSummaries].map((r) => markSeen(stateKey, r.id, r.body)),
+    ...changesRequestedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
+    ...approvedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
   ]);
-  const resolutionOnlyThreads = unresolvedThreads.filter(
-    (t) => !autoResolvedIds.has(t.id) && (t.isOutdated || t.isMinimized),
-  );
+  const changesRequestedReviews = changesRequestedReviewVisibility.visible;
+  const changesRequestedReviewCount = batchData.changesRequestedReviews.length;
+  const approvedReviews = approvedReviewVisibility.visible;
   let status = computeStatus(
     verdict,
-    activeThreads.length + resolutionOnlyThreads.length,
+    threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
     visibleCommentClassification.actionable.length,
     mergeStatus,
-    batchData.changesRequestedReviews.length,
+    changesRequestedReviewCount,
   );
 
   if (status === "READY" && !didRefreshMergeability) {
@@ -148,7 +114,7 @@ export async function runCheck(
       repo,
       batchData,
       verdict,
-      activeThreads.length + resolutionOnlyThreads.length,
+      threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
       visibleCommentClassification.actionable.length,
     );
     batchData = refreshed.batchData;
@@ -173,22 +139,22 @@ export async function runCheck(
       blockedByFilteredCheck,
     },
     threads: {
-      actionable: activeThreads,
-      resolutionOnly: resolutionOnlyThreads,
-      autoResolved,
-      autoResolveErrors,
-      firstLook: firstLookThreads,
+      actionable: threadVisibility.activeThreads,
+      resolutionOnly: threadVisibility.resolutionOnlyThreads,
+      autoResolved: [],
+      autoResolveErrors: [],
+      firstLook: threadVisibility.firstLookThreads,
     },
     comments: {
       actionable: visibleCommentClassification.actionable,
       minimizeIds: visibleCommentClassification.minimizeIds,
       firstLook: firstLookComments,
     },
-    changesRequestedReviews: batchData.changesRequestedReviews,
+    changesRequestedReviews,
     reviewSummaries: seenSummaries,
     firstLookSummaries,
     editedSummaries,
-    approvedReviews: batchData.approvedReviews,
+    approvedReviews,
     branchProtection: batchData.branchProtection,
   };
 }

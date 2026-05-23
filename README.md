@@ -51,7 +51,7 @@ At a high level, the skill invokes `pr-shepherd <PR>` (which polls by default), 
 ## Post-fix push
 
 - base: `main`
-- resolve: `pr-shepherd resolve 123 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
+- resolve: `pr-shepherd resolve 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
 
 ## Instructions
 
@@ -69,7 +69,7 @@ _(schematic — actual steps depend on PR state)_
 On every iteration, a command is returned to instruct the agent exactly what to do. No guessing, no thinking, as few agentic turns as possible:
 
 ```text
-pr-shepherd resolve 123 --resolve-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --dismiss-review-ids PRR_kwDOSGizTs58XB1R --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"
+pr-shepherd resolve 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8,IC_kwDOSGizTs7_ajT9 --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"
 ```
 
 ## Workflow
@@ -79,13 +79,13 @@ This system makes opinionated decisions, which may or may not work for your team
 - The following PR branch protection rules are expected:
   - There are required status checks
   - All inline comments are resolved
-- **ALL** comments/threads/reviews will be hidden by default except for PR approvals. The only option here is to hide PR approvals as well.
+- Non-human comments and review summaries may be hidden by default. Human-authored comments, threads, and reviews are never minimized or auto-resolved; reviews are marker-gated and re-surface only when edited.
   - The primary reason is to optimize tokens by avoiding re-fetching comments and re-adding them to the agent's context.
   - This also ties hand-in-hand with requiring all inline comments to be resolved.
   - We also want to avoid storing state as comments can be unresolved/minimized/hidden.
 - `pr-shepherd` keeps the PR title and description up to date, including a journal of decisions with links to comments/threads/reviews (that would be hidden at this point).
   - This may break your workflow if your PR titles and descriptions are restricted to a specific format.
-- `pr-shepherd` does **NOT** reply to inline comments when resolving them. Doing so would require agentic loops and more tokens. Instead, it updates the PR title & description once per loop with only the relevant information.
+- `pr-shepherd` replies to human-authored inline threads with the supplied resolve message, but does not mark those human threads resolved. Bot/non-human inline threads are resolved by the generated resolve command.
 - Branches are currently kept up-to-date with `git push --force-with-lease`. Please make a PR for making `merge <default branch>` an option.
 - Branches are currently only rebased when 1) pushing a commit on a branch that is out of date or 2) there are merge conflicts. It does not continuously rebase the branch (use a merge queue for that).
 - To optimize AI code reviewer tokens, create your pull requests initially as drafts and instruct your AI code reviewers to only code review PRs that are ready for review. `pr-shepherd` will automatically mark PRs as ready for review when all CI passes (can be disabled). If you have no intention of marking your PR as ready for review, then don't run `pr-shepherd`.

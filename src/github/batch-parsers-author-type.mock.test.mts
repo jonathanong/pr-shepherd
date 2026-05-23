@@ -160,4 +160,28 @@ describe("fetchPrBatch — author type mapping", () => {
     expect(data.comments[0]!.authorType).toBe("Unknown");
     expect(data.reviewSummaries[0]!.authorType).toBe("Unknown");
   });
+
+  it("treats [bot] logins as Bot even when GitHub typename is not Bot", async () => {
+    const pr = makeRawPr({
+      comments: {
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: [
+          {
+            id: "c-bot",
+            isMinimized: false,
+            author: { __typename: "User", login: "github-actions[bot]" },
+            body: "comment",
+            url: "",
+            createdAt: "2024-01-01T00:00:00Z",
+          },
+        ],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+
+    const { data } = await fetchPrBatch(42, REPO);
+
+    expect(data.comments).toHaveLength(1);
+    expect(data.comments[0]?.authorType).toBe("Bot");
+  });
 });

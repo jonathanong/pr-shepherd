@@ -1,14 +1,15 @@
 import { describe, it, expect } from "vitest";
 import {
   registerIterateHooks,
-  NOW,
   makeOpts,
   makeReport,
   mockReadFixAttempts,
   mockRunCheck,
   mockUpdateReadyDelay,
 } from "./iterate-test-support.mts";
+import { makeThread } from "./iterate-thread-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
+import { hashBody } from "../state/seen-comments.mts";
 
 registerIterateHooks();
 
@@ -16,41 +17,36 @@ registerIterateHooks();
 // Escalate
 // ---------------------------------------------------------------------------
 
-const THREAD = {
-  id: "thread-1",
-  isResolved: false,
-  isOutdated: false,
-  isMinimized: false,
-  path: "src/foo.mts",
-  line: 10,
-  startLine: null,
-  author: "reviewer",
-  authorType: "Unknown" as const,
-  body: "Fix this",
-  url: "",
-  createdAtUnix: NOW - 3600,
-};
+const THREAD = makeThread();
+
+function mockUnresolvedThreadReport(): void {
+  mockRunCheck.mockResolvedValue(
+    makeReport({
+      status: "UNRESOLVED_COMMENTS",
+      threads: {
+        actionable: [THREAD],
+        resolutionOnly: [],
+        autoResolved: [],
+        autoResolveErrors: [],
+        firstLook: [],
+      },
+    }),
+  );
+  mockUpdateReadyDelay.mockResolvedValue({
+    isReady: false,
+    shouldCancel: false,
+    remainingSeconds: 600,
+  });
+}
 
 describe("runIterate — escalate (fix-thrash)", () => {
   it("escalates when a thread has been attempted >= fixAttemptsPerThread times", async () => {
-    mockReadFixAttempts.mockResolvedValue({ headSha: "abc123", threadAttempts: { "thread-1": 3 } });
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "UNRESOLVED_COMMENTS",
-        threads: {
-          actionable: [THREAD],
-          resolutionOnly: [],
-          autoResolved: [],
-          autoResolveErrors: [],
-          firstLook: [],
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
+    mockReadFixAttempts.mockResolvedValue({
+      headSha: "abc123",
+      threadAttempts: { "thread-1": 3 },
+      threadBodyHashes: { "thread-1": hashBody(THREAD.body) },
     });
+    mockUnresolvedThreadReport();
 
     const result = await runIterate(makeOpts());
 
@@ -62,25 +58,20 @@ describe("runIterate — escalate (fix-thrash)", () => {
       expect(result.escalate.thrashHistory?.[0]?.attempts).toBe(3);
     }
   });
+  it("does NOT escalate immediately when legacy attempt state has no body hash and HEAD changed", async () => {
+    mockReadFixAttempts.mockResolvedValue({
+      headSha: "old-sha",
+      threadAttempts: { "thread-1": 3 },
+    });
+    mockUnresolvedThreadReport();
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+  });
   it("does NOT escalate when attempt count is below threshold (attempt=2)", async () => {
     mockReadFixAttempts.mockResolvedValue({ headSha: "abc123", threadAttempts: { "thread-1": 2 } });
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "UNRESOLVED_COMMENTS",
-        threads: {
-          actionable: [THREAD],
-          resolutionOnly: [],
-          autoResolved: [],
-          autoResolveErrors: [],
-          firstLook: [],
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
+    mockUnresolvedThreadReport();
 
     const result = await runIterate(makeOpts());
 
@@ -92,23 +83,7 @@ describe("runIterate — escalate (fix-thrash)", () => {
       headSha: "old-sha",
       threadAttempts: { "thread-1": 1 },
     });
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "UNRESOLVED_COMMENTS",
-        threads: {
-          actionable: [THREAD],
-          resolutionOnly: [],
-          autoResolved: [],
-          autoResolveErrors: [],
-          firstLook: [],
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
+    mockUnresolvedThreadReport();
 
     const result = await runIterate(makeOpts());
 

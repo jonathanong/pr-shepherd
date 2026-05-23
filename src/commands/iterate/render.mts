@@ -113,7 +113,7 @@ export function buildFixInstructions(
 
   if (resolutionOnlyThreads.length > 0) {
     instructions.push(
-      `Resolve the threads under \`## Review threads to resolve\` with the \`resolve:\` command shown below. These threads are already outdated or minimized, so no code edit is required for them unless their body reveals separate work you choose to do.`,
+      `Review the threads under \`## Review threads to resolve\`. Human-authored threads are replied to by the \`resolve:\` command shown below; Shepherd does not resolve them. Bot/non-human threads are included in \`--resolve-thread-ids\`.`,
     );
   }
 
@@ -146,7 +146,7 @@ export function buildFixInstructions(
     }
     if (resolveCommand.requiresDismissMessage) {
       substituteParts.push(
-        `\`$DISMISS_MESSAGE\` with a one-sentence description of what you changed`,
+        `\`$DISMISS_MESSAGE\` with a one-sentence reply/description of what you changed`,
       );
     }
     const substituteHint =
@@ -180,7 +180,7 @@ export function buildFixInstructions(
     );
   }
 
-  if (resolveCommand.hasMutations) {
+  if (resolveCommand.hasMutations || hasNonConflictHints || firstLookTotal > 0) {
     instructions.push(
       buildShepherdJournalInstruction(
         prNumber,

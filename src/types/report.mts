@@ -14,7 +14,6 @@ import type { CheckAnnotation } from "./check-annotations.mts";
 
 export interface FirstLookThread extends ReviewThread {
   firstLookStatus: "outdated" | "resolved" | "minimized";
-  /** True when Shepherd auto-resolved this thread during the current run (outdated only). */
   autoResolved?: boolean;
   /** True when the body was edited by the author after first acknowledgement. */
   edited?: boolean;
@@ -88,6 +87,7 @@ export interface ShepherdReport {
 
 export interface ResolveOptions {
   resolveThreadIds?: string[];
+  replyThreadIds?: string[];
   minimizeCommentIds?: string[];
   dismissReviewIds?: string[];
   dismissMessage?: string;
@@ -107,6 +107,7 @@ export interface AgentThread {
   url: string;
   comments?: AgentThreadComment[];
   suggestion?: SuggestionBlock; // present when body contains a ```suggestion fence
+  edited?: boolean;
 }
 
 /** Comment shape emitted to the iterate agent — stripped of always-false flags. */
@@ -120,10 +121,9 @@ export interface AgentComment {
 }
 
 /**
- * Check shape emitted to the iterate agent under `fix_code`.
- * For cancelled checks, agents should rely on `name`/`runId`/`detailsUrl`/`conclusion`
- * to decide whether to rerun without log inspection; optional metadata such as
- * `workflowName`, `jobName`, `failedStep`, and `summary` may still be present when available.
+ * Check shape emitted to the iterate agent under `fix_code`. Cancelled checks
+ * should be handled from `name`/`runId`/`detailsUrl`/`conclusion`; optional
+ * workflow/job/step metadata may still be present when available.
  *
  * TODO(C1): Collapse AgentCheck into RelevantCheck — the only difference is that
  * AgentCheck allows a null conclusion while RelevantCheck excludes null. Once

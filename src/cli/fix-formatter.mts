@@ -30,8 +30,9 @@ export function formatFixCodeResult(
       const loc = t.path ? `\`${t.path}:${lineLabel}\`` : "(no location)";
       const heading = t.url ? `[threadId=${t.id}](${t.url})` : `\`threadId=${t.id}\``;
       const suggestionMarker = t.suggestion ? " [suggestion]" : "";
+      const editedMarker = t.edited ? " [edited since first look]" : "";
       sections.push(
-        `### ${heading} — ${loc} (${renderAuthor(t.author, t.authorType)})${suggestionMarker}`,
+        `### ${heading} — ${loc} (${renderAuthor(t.author, t.authorType)})${suggestionMarker}${editedMarker}`,
       );
       sections.push(renderThreadConversation(t));
       if (t.suggestion) {

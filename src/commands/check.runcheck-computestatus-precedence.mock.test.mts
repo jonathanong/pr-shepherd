@@ -1,14 +1,20 @@
 import { describe, it, expect } from "vitest";
+import { createHash } from "node:crypto";
 import {
   registerHooks,
   BASE_OPTS,
   makeBatchData,
   makeCheck,
+  mockLoadSeenMap,
   mockFetchPrBatch,
 } from "./check.test-support.mts";
 import { runCheck } from "./check.mts";
 
 registerHooks();
+
+function hashBody(body: string): string {
+  return createHash("sha256").update(body, "utf8").digest("hex").slice(0, 16);
+}
 
 describe("runCheck — computeStatus precedence", () => {
   it("returns FAILING when mergeStateStatus=DIRTY (CONFLICTS)", async () => {
@@ -41,5 +47,23 @@ describe("runCheck — computeStatus precedence", () => {
   it("returns READY when CI passed and merge is clean", async () => {
     const report = await runCheck(BASE_OPTS);
     expect(report.status).toBe("READY");
+  });
+
+  it("keeps status unresolved when an unchanged CHANGES_REQUESTED review is marker-suppressed", async () => {
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([["r-human", { seenAt: 1000, bodyHash: hashBody("changes requested") }]]),
+    );
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        changesRequestedReviews: [
+          { id: "r-human", author: "alice", authorType: "User", body: "changes requested" },
+        ],
+      }),
+    });
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.status).toBe("UNRESOLVED_COMMENTS");
+    expect(report.changesRequestedReviews).toEqual([]);
   });
 });

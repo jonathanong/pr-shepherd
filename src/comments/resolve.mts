@@ -11,12 +11,18 @@ import { setPendingOps, type ResolveMutationOp } from "./pending-ops.mts";
 import { waitForSha } from "./sha-poll.mts";
 
 export interface ResolveResult {
+  repliedThreads: string[];
   resolvedThreads: string[];
   minimizedComments: string[];
   dismissedReviews: string[];
   errors: string[];
   skippedDismissals?: string[];
+  skippedHumanResolves?: string[];
+  skippedHumanMinimizes?: string[];
+  skippedHumanDismissals?: string[];
+  skippedNonHumanReplies?: string[];
   rateLimit?: ResolveRateLimitStop;
+  unrepliedThreads?: string[];
   unresolvedThreads?: string[];
   unminimizedComments?: string[];
   undismissedReviews?: string[];
@@ -56,6 +62,7 @@ export async function applyResolveOptions(
   opts: ResolveOptions,
 ): Promise<ResolveResult> {
   const resolveThreadIds = dedupeIds(opts.resolveThreadIds ?? []);
+  const replyThreadIds = dedupeIds(opts.replyThreadIds ?? []);
   const minimizeCommentIds = opts.minimizeCommentIds ?? [];
   const dismissReviewIds = dedupeIds(opts.dismissReviewIds ?? []);
   const minimizeCommentIdSet = new Set(minimizeCommentIds);
@@ -63,6 +70,7 @@ export async function applyResolveOptions(
   const overlappingDismissIds = dismissReviewIds.filter((id) => minimizeCommentIdSet.has(id));
 
   const result: ResolveResult = {
+    repliedThreads: [],
     resolvedThreads: [],
     minimizedComments: [],
     dismissedReviews: [],
@@ -76,8 +84,8 @@ export async function applyResolveOptions(
     }
   }
 
-  if (filteredDismissReviewIds.length > 0 && !opts.dismissMessage) {
-    throw new Error("--message is required when dismissing reviews");
+  if ((filteredDismissReviewIds.length > 0 || replyThreadIds.length > 0) && !opts.dismissMessage) {
+    throw new Error("--message is required when replying to threads or dismissing reviews");
   }
 
   if (opts.requireSha) {
@@ -87,6 +95,7 @@ export async function applyResolveOptions(
   }
 
   await bulkApply(
+    replyThreadIds,
     resolveThreadIds,
     minimizeCommentIds,
     filteredDismissReviewIds,
@@ -101,12 +110,13 @@ export async function autoResolveOutdated(
   threadIds: string[],
 ): Promise<{ resolved: string[]; errors: string[] }> {
   const result: ResolveResult = {
+    repliedThreads: [],
     resolvedThreads: [],
     minimizedComments: [],
     dismissedReviews: [],
     errors: [],
   };
-  await bulkApply(threadIds, [], [], "", result);
+  await bulkApply([], threadIds, [], [], "", result);
   return { resolved: result.resolvedThreads, errors: result.errors };
 }
 
@@ -114,12 +124,19 @@ export async function autoResolveOutdated(
 const BULK_CHUNK_SIZE = 10;
 
 function buildBulkMutation(
+  replyIds: string[],
   resolveIds: string[],
   minimizeIds: string[],
   dismissIds: string[],
   dismissMessage: string,
 ): string {
   const ops: string[] = [];
+
+  for (let i = 0; i < replyIds.length; i++) {
+    ops.push(
+      `  p${i}: addPullRequestReviewThreadReply(input: { pullRequestReviewThreadId: ${JSON.stringify(replyIds[i])}, body: ${JSON.stringify(dismissMessage)} }) { comment { id } }`,
+    );
+  }
 
   for (let i = 0; i < resolveIds.length; i++) {
     ops.push(
@@ -143,6 +160,7 @@ function buildBulkMutation(
 }
 
 async function bulkApply(
+  replyIds: string[],
   resolveIds: string[],
   minimizeIds: string[],
   dismissIds: string[],
@@ -150,6 +168,7 @@ async function bulkApply(
   result: ResolveResult,
 ): Promise<void> {
   const allOps: ResolveMutationOp[] = [
+    ...replyIds.map((id) => ({ kind: "p" as const, id })),
     ...resolveIds.map((id) => ({ kind: "r" as const, id })),
     ...minimizeIds.map((id) => ({ kind: "m" as const, id })),
     ...dismissIds.map((id) => ({ kind: "d" as const, id })),
@@ -160,6 +179,7 @@ async function bulkApply(
     // eslint-disable-next-line no-await-in-loop
     const stopped = await bulkApplyChunk(
       chunk.filter((o) => o.kind === "r").map((o) => o.id),
+      chunk.filter((o) => o.kind === "p").map((o) => o.id),
       chunk.filter((o) => o.kind === "m").map((o) => o.id),
       chunk.filter((o) => o.kind === "d").map((o) => o.id),
       dismissMessage,
@@ -175,15 +195,14 @@ async function bulkApply(
 
 async function bulkApplyChunk(
   resolveIds: string[],
+  replyIds: string[],
   minimizeIds: string[],
   dismissIds: string[],
   dismissMessage: string,
   result: ResolveResult,
   hasPendingAfter: boolean,
 ): Promise<boolean> {
-  if (resolveIds.length === 0 && minimizeIds.length === 0 && dismissIds.length === 0) return false;
-
-  const doc = buildBulkMutation(resolveIds, minimizeIds, dismissIds, dismissMessage);
+  const doc = buildBulkMutation(replyIds, resolveIds, minimizeIds, dismissIds, dismissMessage);
 
   let data: Record<string, unknown> = {};
   let graphQlErrors: GraphQlErrorLike[] = [];
@@ -208,10 +227,20 @@ async function bulkApplyChunk(
       result.rateLimit = stop;
       return true;
     }
+    for (const id of replyIds) result.errors.push(`${id}: ${msg}`);
     for (const id of resolveIds) result.errors.push(`${id}: ${msg}`);
     for (const id of minimizeIds) result.errors.push(`${id}: ${msg}`);
     for (const id of dismissIds) result.errors.push(`${id}: ${msg}`);
     return false;
+  }
+
+  for (let i = 0; i < replyIds.length; i++) {
+    const id = replyIds[i];
+    if (id === undefined) continue;
+    const p = data[`p${i}`] as { comment?: { id?: string } } | null | undefined;
+    if (p?.comment?.id) result.repliedThreads.push(id);
+    else if (!suppressCurrentChunkErrors)
+      result.errors.push(`${id}: reply returned null or comment not created`);
   }
 
   for (let i = 0; i < resolveIds.length; i++) {

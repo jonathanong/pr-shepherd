@@ -61,7 +61,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       line: 10,
       startLine: null,
       author: "reviewer",
-      authorType: "Unknown" as const,
+      authorType: "User" as const,
       body: "Fix this",
       url: "",
       createdAtUnix: 1700000000,
