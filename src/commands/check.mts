@@ -17,24 +17,13 @@ import {
 import { loadSeenMap, markSeen, classifyItem } from "../state/seen-comments.mts";
 import { threadTranscriptBody } from "../threads/transcript.mts";
 import { classifyThreadVisibility } from "../comments/thread-visibility.mts";
+import { classifyReviewsForDisplay } from "../comments/review-visibility.mts";
 import type {
   GlobalOptions,
   ShepherdReport,
   ClassifiedCheck,
   FirstLookComment,
-  Review,
 } from "../types.mts";
-
-function classifyReviewsForDisplay(
-  reviews: Review[],
-  seenMap: Awaited<ReturnType<typeof loadSeenMap>>,
-): Review[] {
-  return reviews.flatMap((r) => {
-    const cls = classifyItem(r.id, r.body, seenMap);
-    if (cls === "unchanged") return [];
-    return cls === "edited" ? [{ ...r, edited: true }] : [r];
-  });
-}
 
 export async function runCheck(
   opts: GlobalOptions & { autoResolve?: boolean; skipTriage?: boolean },
@@ -95,19 +84,21 @@ export async function runCheck(
     else if (cls === "edited") editedSummaries.push(r);
     else seenSummaries.push(r);
   }
-  const changesRequestedReviews = classifyReviewsForDisplay(
+  const changesRequestedReviewVisibility = classifyReviewsForDisplay(
     batchData.changesRequestedReviews,
     seenMap,
   );
-  const approvedReviews = classifyReviewsForDisplay(batchData.approvedReviews, seenMap);
+  const approvedReviewVisibility = classifyReviewsForDisplay(batchData.approvedReviews, seenMap);
   await Promise.allSettled([
     ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
     ...threadVisibility.toMarkSeen.map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
     ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
     ...[...firstLookSummaries, ...editedSummaries].map((r) => markSeen(stateKey, r.id, r.body)),
-    ...changesRequestedReviews.map((r) => markSeen(stateKey, r.id, r.body)),
-    ...approvedReviews.map((r) => markSeen(stateKey, r.id, r.body)),
+    ...changesRequestedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
+    ...approvedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
   ]);
+  const changesRequestedReviews = changesRequestedReviewVisibility.visible;
+  const approvedReviews = approvedReviewVisibility.visible;
   let status = computeStatus(
     verdict,
     threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,

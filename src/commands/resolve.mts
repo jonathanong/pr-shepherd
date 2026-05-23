@@ -7,6 +7,7 @@ import { buildFetchInstructions } from "./resolve-instructions.mts";
 import { loadSeenMap, markSeen, classifyItem } from "../state/seen-comments.mts";
 import { threadTranscriptBody } from "../threads/transcript.mts";
 import { classifyThreadVisibility } from "../comments/thread-visibility.mts";
+import { classifyReviewsForDisplay } from "../comments/review-visibility.mts";
 import type {
   GlobalOptions,
   ReviewThread,
@@ -75,6 +76,13 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
     seenMap,
     cfg.iterate?.minimizeComments,
   );
+  const changesRequestedReviewVisibility = classifyReviewsForDisplay(
+    data.changesRequestedReviews,
+    seenMap,
+  );
+  const reviewSummaryVisibility = cfg.resolve.fetchReviewSummaries
+    ? classifyReviewsForDisplay(data.reviewSummaries, seenMap)
+    : { visible: [], toMarkSeen: [] };
 
   const actionableThreads: FetchThread[] = threadVisibility.activeThreads.map(
     ({ isResolved: _r, isOutdated: _o, ...rest }) => {
@@ -99,6 +107,8 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
     ...threadVisibility.toMarkSeen.map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
     ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
     ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
+    ...changesRequestedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
+    ...reviewSummaryVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
   ]);
 
   const result: Omit<FetchResult, "instructions"> = {
@@ -108,8 +118,8 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
     firstLookThreads: threadVisibility.firstLookThreads,
     actionableComments: visibleCommentClassification.actionable,
     firstLookComments,
-    changesRequestedReviews: data.changesRequestedReviews,
-    reviewSummaries: cfg.resolve.fetchReviewSummaries ? data.reviewSummaries : [],
+    changesRequestedReviews: changesRequestedReviewVisibility.visible,
+    reviewSummaries: reviewSummaryVisibility.visible,
     commitSuggestionsEnabled: cfg.actions.commitSuggestions,
   };
 
