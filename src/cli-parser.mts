@@ -10,6 +10,8 @@
  *                            [--dismiss-review-ids Q] [--message MSG] [--require-sha SHA]
  *   pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [--description DESC]
  *                                      [--format text|json]
+ *   pr-shepherd mark-files-as-viewed [PR] [files...] [--tests] [--match REGEX]
+ *                                           [--format text|json]
  *   pr-shepherd iterate [PR] [--format text|json] [--ready-delay Nm]
  *                              [--stall-timeout <duration>] [--no-auto-mark-ready]
  *                              [--no-auto-cancel-actionable]
@@ -27,7 +29,12 @@ import { parseCommonArgs, getFlag, hasFlag, parseList } from "./cli/args.mts";
 import { isDefaultPollInvocation, validateDefaultPollArgs } from "./cli/default-poll.mts";
 import { USAGE, maybePrintHelp } from "./cli/help.mts";
 import { formatFetchResult, formatMutateResult } from "./cli/formatters.mts";
-import { handleClean, handleCommitSuggestion, handleIterate } from "./cli/handlers.mts";
+import {
+  handleClean,
+  handleCommitSuggestion,
+  handleIterate,
+  handleMarkFilesAsViewed,
+} from "./cli/handlers.mts";
 import { handlePoll } from "./cli/poll-handler.mts";
 import { setupLog } from "./log/setup.mts";
 
@@ -85,6 +92,9 @@ export async function main(argv: string[]): Promise<void> {
       break;
     case "commit-suggestion":
       await handleCommitSuggestion(args.slice(1));
+      break;
+    case "mark-files-as-viewed":
+      await handleMarkFilesAsViewed(args.slice(1));
       break;
     case "iterate":
       await handleIterate(args.slice(1));

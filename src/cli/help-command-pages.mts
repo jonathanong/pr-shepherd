@@ -51,6 +51,27 @@ Exit codes:
   0  suggestion patch and instructions produced
   1  validation, lookup, precondition, or suggestion parsing failure`,
 
+  "mark-files-as-viewed": `pr-shepherd mark-files-as-viewed
+
+Mark changed files as viewed in the GitHub pull request diff.
+
+Usage:
+  pr-shepherd mark-files-as-viewed [PR] [files...] [--tests] [--match REGEX]
+                                      [--format text|json]
+
+Selectors:
+  files...          Exact changed-file paths from the PR diff.
+  --tests           Select changed test files.
+  --match <regex>   Select changed files whose paths match a case-insensitive JavaScript regex.
+                    May be repeated.
+
+Flags:
+  --format text|json  Output format. Default: text.
+  --help, -h          Print this help and exit before GitHub I/O.
+
+PR may be a number or GitHub pull request URL. When omitted, the current branch PR is inferred.
+Exit code: 0 on success; 1 on validation or lookup failure.`,
+
   iterate: `pr-shepherd iterate
 
 Run one iterate tick for a pull request. The no-subcommand form polls; use this subcommand for a single tick.

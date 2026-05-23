@@ -21,6 +21,12 @@ describe("parseCommonArgs — PR number detection", () => {
     expect(prNumber).toBe(42);
   });
 
+  it("does not make subcommand-only --tests a global boolean flag", () => {
+    const { prNumber, extra } = parseCommonArgs(["--tests", "123", "--fetch"]);
+    expect(prNumber).toBeUndefined();
+    expect(extra).toEqual(["--tests", "123", "--fetch"]);
+  });
+
   it("does not skip past argv when a known value flag is missing its value", () => {
     const { prNumber, extra } = parseCommonArgs(["--message"]);
     expect(prNumber).toBeUndefined();

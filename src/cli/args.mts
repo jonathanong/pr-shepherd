@@ -20,6 +20,7 @@ const FLAGS_WITH_VALUES = new Set([
   "--dismiss-review-ids",
   "--interval",
   "--timeout",
+  "--match",
 ]);
 
 // Boolean flags that do NOT consume the next argument. Any --flag not in this
