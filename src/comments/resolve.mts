@@ -242,10 +242,12 @@ async function bulkApplyChunk(
   }
 
   for (let i = 0; i < replyIds.length; i++) {
+    const id = replyIds[i];
+    if (id === undefined) continue;
     const p = data[`p${i}`] as { comment?: { id?: string } } | null | undefined;
-    if (p?.comment?.id) result.repliedThreads.push(replyIds[i]!);
+    if (p?.comment?.id) result.repliedThreads.push(id);
     else if (!suppressCurrentChunkErrors)
-      result.errors.push(`${replyIds[i]}: reply returned null or comment not created`);
+      result.errors.push(`${id}: reply returned null or comment not created`);
   }
 
   for (let i = 0; i < resolveIds.length; i++) {

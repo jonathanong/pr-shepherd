@@ -5,21 +5,25 @@ function pushIds(lines: string[], label: string, ids: string[] | undefined): voi
 }
 
 function formatRateLimit(result: ResolveResult): string | null {
-  if (!result.rateLimit) return null;
-  const details = [
-    result.rateLimit.retryAfterSeconds !== undefined
-      ? `retry after ${result.rateLimit.retryAfterSeconds}s`
-      : null,
-    result.rateLimit.remaining !== undefined && result.rateLimit.limit !== undefined
-      ? `remaining ${result.rateLimit.remaining}/${result.rateLimit.limit}`
-      : null,
-    result.rateLimit.resetAt !== undefined
-      ? `reset at ${new Date(result.rateLimit.resetAt * 1000).toISOString()}`
-      : null,
-  ]
-    .filter(Boolean)
-    .join(", ");
-  return `Stopped: GitHub rate limit hit — ${result.rateLimit.message}${details ? ` (${details})` : ""}`;
+  const rateLimit = result.rateLimit;
+  if (rateLimit) {
+    const details = [
+      typeof rateLimit.retryAfterSeconds === "number"
+        ? `retry after ${rateLimit.retryAfterSeconds}s`
+        : null,
+      typeof rateLimit.remaining === "number" && typeof rateLimit.limit === "number"
+        ? `remaining ${rateLimit.remaining}/${rateLimit.limit}`
+        : null,
+      typeof rateLimit.resetAt === "number"
+        ? `reset at ${new Date(rateLimit.resetAt * 1000).toISOString()}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(", ");
+    const detailSuffix = details ? ` (${details})` : "";
+    return `Stopped: GitHub rate limit hit — ${rateLimit.message}${detailSuffix}`;
+  }
+  return null;
 }
 
 export function formatMutateResult(result: ResolveResult): string {

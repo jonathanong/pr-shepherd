@@ -181,6 +181,7 @@ describe("fetchPrBatch — author type mapping", () => {
 
     const { data } = await fetchPrBatch(42, REPO);
 
-    expect(data.comments[0]!.authorType).toBe("Bot");
+    expect(data.comments).toHaveLength(1);
+    expect(data.comments[0]?.authorType).toBe("Bot");
   });
 });
