@@ -77,10 +77,17 @@ All tunable constants live in `src/config.json`. Edit there — do not hardcode 
 
 ```json
 {
-  "cache": { "ttlSeconds": 300 },
-  "iterate": { "fixAttemptsPerThread": 3 },
+  "iterate": {
+    "fixAttemptsPerThread": 3,
+    "stallTimeoutMinutes": 60,
+    "minimizeApprovals": false,
+    "minimizeComments": "all"
+  },
   "watch": { "readyDelayMinutes": 10 },
-  "resolve": { "shaPoll": { "maxAttempts": 10, "intervalMs": 2000 } }
+  "resolve": {
+    "shaPoll": { "maxAttempts": 10, "intervalMs": 2000 },
+    "fetchReviewSummaries": true
+  }
 }
 ```
 

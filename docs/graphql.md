@@ -45,7 +45,7 @@ The generic paginator is in `github/pagination.mts`. It accepts a `direction` pa
 
 **When:** `--require-sha` flag is set on `resolve`.
 
-**Why:** Shepherd needs to verify GitHub has received a push before resolving threads. This polls `headRefOid` until it matches the expected SHA.
+**Why:** Shepherd needs to verify GitHub has received a push before resolving threads. This GraphQL query polls `headRefOid` until it matches the expected SHA.
 
 ### Startup-failure Actions runs
 

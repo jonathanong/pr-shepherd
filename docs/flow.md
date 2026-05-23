@@ -15,7 +15,7 @@ flowchart TD
   S3 -->|yes| S3X[gh run cancel failing runIds]
   S3X --> A_FIX([action: fix_code<br/>+ fix payload with failedStep/conclusion])
   S3 -->|no| S4{4. READY + CLEAN<br/>+ isDraft<br/>+ !copilot?}
-  S4 -->|yes| S4X[gh pr ready PR]
+  S4 -->|yes| S4X[markPullRequestReadyForReview<br/>GraphQL mutation]
   S4X --> A_MR([action: mark_ready])
   S4 -->|no| A_W([action: wait])
 
@@ -25,7 +25,7 @@ flowchart TD
   A_W --> DEC
 
   DEC -->|cancel/escalate| STOP["stop"]
-  DEC -->|fix_code| FIX[gh run view --log-failed →<br/>rerun or edit+commit →<br/>fetch + rebase + push →<br/>pr-shepherd resolve --require-sha HEAD]
+  DEC -->|fix_code| FIX[inspect CI as needed →<br/>rerun or edit+commit →<br/>rebase/push by repo convention →<br/>pr-shepherd resolve]
   FIX --> SLEEP[Schedule or sleep 30s-4m,<br/>then rerun]
   DEC -->|other| SLEEP
   SLEEP --> ITER

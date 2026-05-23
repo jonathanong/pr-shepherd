@@ -53,7 +53,7 @@ State module: `src/state/seen-comments.mts`.
 
 ## `--require-sha` polling
 
-When `shepherd resolve --require-sha <SHA>` is used, shepherd polls `GET /repos/{owner}/{repo}/pulls/{pr}` for `headRefOid` until it matches `expectedSha`, then issues the resolve/minimize/dismiss mutations.
+When `shepherd resolve --require-sha <SHA>` is used, shepherd polls the GraphQL `get-pr-head-sha.gql` query for `headRefOid` until it matches `expectedSha`, then issues the resolve/minimize/dismiss mutations.
 
 **Why:** Without this guard, shepherd might auto-merge before the reviewer sees the fix. The polling ensures GitHub has received the push and updated the PR head before any mutations fire.
 
@@ -61,13 +61,14 @@ When `shepherd resolve --require-sha <SHA>` is used, shepherd polls `GET /repos/
 
 ## Mutation types
 
-All mutations live in `comments/resolve.mts`:
+Mutations are built in `comments/resolve.mts` and sent through GraphQL in batches:
 
-| Mutation         | GraphQL file                      | What it does                                                                        |
+| Mutation         | GraphQL mutation                  | What it does                                                                        |
 | ---------------- | --------------------------------- | ----------------------------------------------------------------------------------- |
-| Resolve thread   | `github/gql/resolve-thread.gql`   | Marks a review thread resolved                                                      |
-| Minimize comment | `github/gql/minimize-comment.gql` | Hides a PR comment or review summary (`PullRequestReview` implements `Minimizable`) |
-| Dismiss review   | `github/gql/dismiss-review.gql`   | Dismisses a CHANGES_REQUESTED review with a message                                 |
+| Reply to thread  | `addPullRequestReviewThreadReply` | Replies to a human-authored review thread                                           |
+| Resolve thread   | `resolveReviewThread`             | Marks a review thread resolved                                                      |
+| Minimize comment | `minimizeComment`                 | Hides a PR comment or review summary (`PullRequestReview` implements `Minimizable`) |
+| Dismiss review   | `dismissPullRequestReview`        | Dismisses a CHANGES_REQUESTED review with a message                                 |
 
 Review summary IDs (`PRR_…` from `reviewSummaries`) go through `--minimize-comment-ids`, not `--dismiss-review-ids`. The `dismiss` path is reserved for CHANGES_REQUESTED reviews.
 

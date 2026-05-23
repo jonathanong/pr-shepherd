@@ -2,9 +2,9 @@
 
 [← README](../README.md)
 
-Each default `pr-shepherd` invocation returns exactly one iterate action. The legacy `pr-shepherd iterate` spelling is still supported. See [docs/iterate-flow.md](iterate-flow.md) for the decision order.
+Each `pr-shepherd iterate` invocation returns exactly one action. The default `pr-shepherd <PR>` command runs the poll dispatcher and prints the final iterate action. See [docs/iterate-flow.md](iterate-flow.md) for the decision order.
 
-The default output format is Markdown — what you see when running `pr-shepherd <PR>` directly, and what `pr-shepherd poll <PR>` returns to the iterate skill. `--format=json` emits the same information as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
+The default output format is Markdown — what `pr-shepherd poll <PR>` returns to the iterate skill and what direct CLI users see. `--format=json` emits the same action data as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
 
 The shipped skill invokes `pr-shepherd poll`, which loops with `--interval`/`--timeout` while the PR remains in `[WAIT]` and returns whenever an actionable or terminal state appears. Do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`.
 
