@@ -98,13 +98,14 @@ export async function runCheck(
     ...approvedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
   ]);
   const changesRequestedReviews = changesRequestedReviewVisibility.visible;
+  const changesRequestedReviewCount = batchData.changesRequestedReviews.length;
   const approvedReviews = approvedReviewVisibility.visible;
   let status = computeStatus(
     verdict,
     threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
     visibleCommentClassification.actionable.length,
     mergeStatus,
-    changesRequestedReviews.length,
+    changesRequestedReviewCount,
   );
 
   if (status === "READY" && !didRefreshMergeability) {

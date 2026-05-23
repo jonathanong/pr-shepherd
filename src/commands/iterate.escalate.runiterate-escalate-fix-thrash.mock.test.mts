@@ -9,6 +9,7 @@ import {
 } from "./iterate-test-support.mts";
 import { makeThread } from "./iterate-thread-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
+import { hashBody } from "../state/seen-comments.mts";
 
 registerIterateHooks();
 
@@ -43,7 +44,7 @@ describe("runIterate — escalate (fix-thrash)", () => {
     mockReadFixAttempts.mockResolvedValue({
       headSha: "abc123",
       threadAttempts: { "thread-1": 3 },
-      threadBodyHashes: { "thread-1": "unused-on-same-sha" },
+      threadBodyHashes: { "thread-1": hashBody(THREAD.body) },
     });
     mockUnresolvedThreadReport();
 

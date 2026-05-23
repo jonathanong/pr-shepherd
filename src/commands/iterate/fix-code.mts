@@ -51,11 +51,12 @@ function nextFixAttempts(
   const threadBodyHashes: Record<string, string> = stored?.threadBodyHashes
     ? { ...stored.threadBodyHashes }
     : {};
-  if (stored?.headSha === headSha) return { threadAttempts, threadBodyHashes };
   for (const t of threads) {
     const bodyHash = hashBody(threadTranscriptBody(t));
-    threadAttempts[t.id] =
-      threadBodyHashes[t.id] === bodyHash ? (threadAttempts[t.id] ?? 0) + 1 : 1;
+    const previousHash = threadBodyHashes[t.id];
+    if (stored?.headSha === headSha && (previousHash === undefined || previousHash === bodyHash))
+      continue;
+    threadAttempts[t.id] = previousHash === bodyHash ? (threadAttempts[t.id] ?? 0) + 1 : 1;
     threadBodyHashes[t.id] = bodyHash;
   }
   return { threadAttempts, threadBodyHashes };
