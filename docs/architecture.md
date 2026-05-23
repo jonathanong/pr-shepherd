@@ -106,12 +106,13 @@ Dependencies flow in one direction only:
 commands → github
 commands → checks → github
 commands → comments → github
+commands → state
 commands → merge-status
 commands → reporters
 comments → state
 ```
 
-- `commands` may import from `github`, `checks`, `comments`, `merge-status`, and `reporters`.
+- `commands` may import from `github`, `checks`, `comments`, `state`, `merge-status`, and `reporters`.
 - `checks` and `comments` may import from `github` for their domain-specific GitHub reads/mutations.
 - `github` must not import from `commands`, `checks`, or `comments`.
 - `merge-status` and `reporters` are leaf-ish domain modules — they do not import from `commands` or `github`.
