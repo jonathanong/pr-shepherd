@@ -14,7 +14,6 @@ import type { CheckAnnotation } from "./check-annotations.mts";
 
 export interface FirstLookThread extends ReviewThread {
   firstLookStatus: "outdated" | "resolved" | "minimized";
-  /** True when Shepherd auto-resolved this thread during the current run (outdated only). */
   autoResolved?: boolean;
   /** True when the body was edited by the author after first acknowledgement. */
   edited?: boolean;
@@ -88,6 +87,7 @@ export interface ShepherdReport {
 
 export interface ResolveOptions {
   resolveThreadIds?: string[];
+  replyThreadIds?: string[];
   minimizeCommentIds?: string[];
   dismissReviewIds?: string[];
   dismissMessage?: string;

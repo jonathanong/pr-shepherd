@@ -1,19 +1,10 @@
-# PR #42 [FIX_CODE]
+# PR #42 [WAIT]
 
 **status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 1 passing · **remainingSeconds** 600
 
-## Review IDs to minimize queue
-
-- `PRR_seen`
-
-## Post-fix push
-
-- base: `main`
-- resolve: `pr-shepherd resolve 42 --minimize-comment-ids PRR_seen`
+WAIT: 1 passing, 0 in-progress
 
 ## Instructions
 
-1. Run the `resolve:` command shown above.
-2. For any large decisions or rejections you made this iteration, add or update a `## Shepherd Journal` section in the PR description (`gh pr edit 42 --body …`) summarizing each decision. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. If this section already exists, append your entries under it instead of creating a duplicate heading.
-3. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick. Recheck: rerun `pr-shepherd 42` to recheck once after a fresh 30s–4m delay.
+1. Recheck: rerun `pr-shepherd 42` to continue the active goal once after a fresh 30s–4m delay.

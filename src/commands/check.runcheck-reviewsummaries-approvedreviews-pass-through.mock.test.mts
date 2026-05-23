@@ -84,6 +84,60 @@ describe("runCheck — reviewSummaries + approvedReviews pass-through", () => {
     expect(mockMarkSeen).toHaveBeenCalledWith(expect.anything(), "PRR_SUM", "new overview");
   });
 
+  it("suppresses unchanged changes-requested reviews after the marker is written", async () => {
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([["PRR_CR", { seenAt: 1000, bodyHash: hashBody("please revise") }]]),
+    );
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        changesRequestedReviews: [
+          {
+            id: "PRR_CR",
+            author: "alice",
+            authorType: "User" as const,
+            body: "please revise",
+          },
+        ],
+      }),
+    });
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.changesRequestedReviews).toEqual([]);
+    expect(mockMarkSeen).not.toHaveBeenCalledWith(expect.anything(), "PRR_CR", expect.anything());
+  });
+
+  it("re-surfaces edited changes-requested reviews and updates the marker", async () => {
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([["PRR_CR", { seenAt: 1000, bodyHash: hashBody("old request") }]]),
+    );
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        changesRequestedReviews: [
+          {
+            id: "PRR_CR",
+            author: "alice",
+            authorType: "User" as const,
+            body: "new request",
+          },
+        ],
+      }),
+    });
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.changesRequestedReviews).toEqual([
+      {
+        id: "PRR_CR",
+        author: "alice",
+        authorType: "User" as const,
+        body: "new request",
+        edited: true,
+      },
+    ]);
+    expect(mockMarkSeen).toHaveBeenCalledWith(expect.anything(), "PRR_CR", "new request");
+  });
+
   it("defaults to empty arrays when batch has none", async () => {
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData() });
     const report = await runCheck(BASE_OPTS);

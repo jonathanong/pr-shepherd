@@ -27,13 +27,14 @@ describe("runResolveFetch — first-look items", () => {
     expect(result.firstLookThreads[0]?.firstLookStatus).toBe(status);
   });
 
-  it("marks auto-resolved outdated thread with autoResolved: true", async () => {
+  it("does not auto-resolve outdated threads during fetch", async () => {
     const outdated = makeThread({ id: "t-auto", isOutdated: true });
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [outdated] }) });
     mockAutoResolveOutdated.mockResolvedValue({ resolved: ["t-auto"], errors: [] });
     const result = await runResolveFetch(BASE_OPTS);
-    expect(result.firstLookThreads[0]?.autoResolved).toBe(true);
-    expect(result.resolutionOnlyThreads).toHaveLength(0);
+    expect(mockAutoResolveOutdated).not.toHaveBeenCalled();
+    expect(result.firstLookThreads[0]?.autoResolved).toBeUndefined();
+    expect(result.resolutionOnlyThreads.map((t) => t.id)).toEqual(["t-auto"]);
   });
 
   it("surfaces unseen minimized comment in firstLookComments", async () => {

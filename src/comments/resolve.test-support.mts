@@ -23,6 +23,7 @@ function makeBulkResponse(doc: unknown): { data: Record<string, unknown> } {
   const data: Record<string, unknown> = {};
   for (const [, alias] of str.matchAll(/^\s+([a-z]\d+):/gm)) {
     if (alias!.startsWith("r")) data[alias!] = { thread: { isResolved: true } };
+    else if (alias!.startsWith("p")) data[alias!] = { comment: { id: `${alias}-comment` } };
     else if (alias!.startsWith("m")) data[alias!] = { minimizedComment: { isMinimized: true } };
     else if (alias!.startsWith("d")) data[alias!] = { pullRequestReview: { state: "DISMISSED" } };
     else data[alias!] = {};

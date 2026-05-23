@@ -122,6 +122,8 @@ export interface ResolveCommand {
   requiresHeadSha: boolean;
   /** Whether the model must substitute $DISMISS_MESSAGE with a specific description of the fix. */
   requiresDismissMessage: boolean;
+  /** Thread IDs that should receive a reply instead of a resolve mutation. */
+  replyThreadIds?: string[];
   /** Review IDs that were supplied in `changesRequestedReviews` but dropped because they were already
    * present in `--minimize-comment-ids`. These IDs were not passed to `--dismiss-review-ids`. */
   droppedDismissReviewIds?: string[];

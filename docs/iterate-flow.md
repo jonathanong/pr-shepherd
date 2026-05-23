@@ -8,9 +8,9 @@
 
 ### 1. Sweep
 
-**What:** `runCheck({ autoResolve: true })` fires one GraphQL batch query (CI checks + review threads + PR comments + merge state). If the PR is already merged or closed, it returns a terminal report immediately; otherwise it auto-resolves any threads GitHub has marked `isOutdated`.
+**What:** `runCheck({ autoResolve: true })` fires one GraphQL batch query (CI checks + review threads + PR comments + merge state). If the PR is already merged or closed, it returns a terminal report immediately; otherwise it surfaces outdated threads without resolving them.
 
-**Why:** Auto-resolving outdated threads here means the main agent doesn't have to manually call `resolve` after every push.
+**Why:** Human-authored threads must remain visible and unresolved; Shepherd replies to human threads later through the printed resolve command.
 
 ---
 

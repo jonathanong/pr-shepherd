@@ -46,14 +46,14 @@ actions:
 | `iterate.fixAttemptsPerThread`       | `3`                                       | Max fix attempts per unresolved thread before `escalate`                                                                                                    |
 | `iterate.stallTimeoutMinutes`        | `60`                                      | Minutes the loop may repeat the same action without progress, or CI may stay pending without starting, before `escalate` with `stall-timeout`; `0` disables |
 | `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination).                                                                      |
-| `iterate.minimizeComments`           | `"all"`                                   | Which GitHub author classes to minimize for PR comments and review summaries: `all`, `bots`, `users`, or `none`                                             |
+| `iterate.minimizeComments`           | `"all"`                                   | Which non-human GitHub author classes to minimize for PR comments and review summaries: `all`, `bots`, `users`, or `none`; humans are never minimized       |
 | `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                                                                                   |
 | `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                                                            |
 | `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                                                                                  |
 | `resolve.fetchReviewSummaries`       | `true`                                    | Surface `COMMENTED` review summaries in `resolve --fetch` output                                                                                            |
 | `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos)                                                                            |
 | `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                                                                      |
-| `actions.autoResolveOutdated`        | `true`                                    | Auto-resolve threads that point to code no longer in the PR diff                                                                                            |
+| `actions.autoResolveOutdated`        | `true`                                    | Deprecated compatibility setting; outdated threads are surfaced but not auto-resolved                                                                       |
 | `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR's CI goes clean                                                                                                           |
 | `actions.commitSuggestions`          | `true`                                    | Route `/pr-shepherd:resolve` through `commit-suggestion` (singular) for threads with a ` ```suggestion ` block                                              |
 
@@ -86,7 +86,7 @@ Override per-invocation with `--stall-timeout <duration>` (e.g. `--stall-timeout
 
 **Breaking change from `iterate.minimizeReviewSummaries.{bots, humans, approvals}`** — the old nested keys are no longer recognized.
 
-All `COMMENTED` review summaries (bot and human alike) are always minimized by the `iterate` loop. Review summary IDs ride along inside the existing resolve command — no code change needed to minimize them. Rendered under `## Review IDs to minimize queue` in the iterate markdown output.
+Non-human `COMMENTED` review summaries can be minimized by the `iterate` loop. Human-authored summaries are surfaced through seen markers and are never minimized. Review summary IDs ride along inside the existing resolve command — no code change needed to minimize them. Rendered under `## Review IDs to minimize queue` in the iterate markdown output.
 `iterate.minimizeComments` controls which authors are eligible for that minimization.
 
 Opt in to also minimize `APPROVED`-state reviews (`pr approve` clicks with or without a body). Off by default because approvals are an affirmative signal you usually want to keep visible. Flip to `true` for long-running PRs where stale approvals pile up. When enabled, `iterate.minimizeComments` still filters which approval authors are minimized.
@@ -97,11 +97,11 @@ When `false` (default), approval reviews are surfaced under `## Approvals (surfa
 
 ### `iterate.minimizeComments` — default `"all"`
 
-Controls which GitHub-classified author types are passed to `--minimize-comment-ids` for minimizable PR comments, `COMMENTED` review summaries, and approval reviews when `iterate.minimizeApprovals` is enabled.
+Controls which non-human GitHub-classified author types are passed to `--minimize-comment-ids` for minimizable PR comments, `COMMENTED` review summaries, and approval reviews when `iterate.minimizeApprovals` is enabled. A human author is `authorType: User` with no `[bot]` in the login; human-authored items are never minimized.
 
-- `"all"` preserves the historical behavior: minimize User, Bot, and Unknown authors.
+- `"all"` minimizes Bot and Unknown authors.
 - `"bots"` minimizes only GitHub `Bot` authors.
-- `"users"` minimizes only GitHub `User` authors.
+- `"users"` is retained for compatibility but does not minimize human authors.
 - `"none"` surfaces minimizable comments/reviews but does not auto-minimize them.
 
 Items excluded by this policy still go through seen markers: Shepherd surfaces them the first time it sees them, writes a body hash marker, suppresses unchanged repeats on later ticks, and re-surfaces them if the author edits the body in place.
@@ -171,7 +171,7 @@ These flags control whether shepherd automatically performs each class of mutati
 
 ### `actions.autoResolveOutdated` — default `true`
 
-When `true`, shepherd automatically resolves threads that GitHub has marked `isOutdated` at the start of each tick. The agent still sees them on first encounter (tagged `[status: outdated, auto-resolved]` in the `## First-look items` section) so reviewer intent is acknowledged before the thread disappears. Disable if your team uses outdated threads as a deliberate signal (e.g. "fix this when you rebase") — with this flag off, outdated threads still surface as `[status: outdated]` first-look items but are not auto-resolved.
+Deprecated. Shepherd no longer auto-resolves outdated threads. Outdated threads are surfaced as `[status: outdated]`, marker-gated, and human-authored threads are replied to through `--reply-thread-ids` when the resolve command runs.
 
 ### `actions.autoMarkReady` — default `true`
 

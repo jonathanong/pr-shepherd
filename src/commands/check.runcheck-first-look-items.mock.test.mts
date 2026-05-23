@@ -26,15 +26,17 @@ describe("runCheck — first-look items", () => {
     expect(report.threads.firstLook).toHaveLength(1);
     expect(report.threads.firstLook[0]?.id).toBe("t-outdated");
     expect(report.threads.firstLook[0]?.firstLookStatus).toBe("outdated");
-    expect(report.threads.firstLook[0]?.autoResolved).toBe(false);
+    expect(report.threads.firstLook[0]?.autoResolved).toBeUndefined();
   });
-  it("marks auto-resolved outdated thread with autoResolved: true", async () => {
+  it("does not auto-resolve outdated threads during check", async () => {
     const outdated = makeThread({ id: "t-auto", isOutdated: true });
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [outdated] }) });
     mockLoadSeenMap.mockResolvedValue(new Map());
     mockAutoResolveOutdated.mockResolvedValue({ resolved: ["t-auto"], errors: [] });
     const report = await runCheck({ ...BASE_OPTS, autoResolve: true });
-    expect(report.threads.firstLook[0]?.autoResolved).toBe(true);
+    expect(mockAutoResolveOutdated).not.toHaveBeenCalled();
+    expect(report.threads.firstLook[0]?.autoResolved).toBeUndefined();
+    expect(report.threads.resolutionOnly.map((t) => t.id)).toEqual(["t-auto"]);
   });
   it("surfaces unseen resolved thread in threads.firstLook", async () => {
     const resolved = makeThread({ id: "t-resolved", isResolved: true });

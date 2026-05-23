@@ -4,6 +4,7 @@ import type { ResolveResult } from "./resolve.mts";
 
 function makeResult(overrides: Partial<ResolveResult> = {}): ResolveResult {
   return {
+    repliedThreads: [],
     resolvedThreads: [],
     minimizedComments: [],
     dismissedReviews: [],
@@ -16,11 +17,14 @@ describe("setPendingOps", () => {
   it("records unresolved, unminimized, and undismissed IDs not already completed", () => {
     const result = makeResult({
       resolvedThreads: ["t-done"],
+      repliedThreads: ["p-done"],
       minimizedComments: ["c-done"],
       dismissedReviews: ["r-done"],
     });
     const ops: ResolveMutationOp[] = [
       { kind: "r", id: "t-done" },
+      { kind: "p", id: "p-done" },
+      { kind: "p", id: "p-pending" },
       { kind: "r", id: "t-pending" },
       { kind: "m", id: "c-done" },
       { kind: "m", id: "c-pending" },
@@ -30,6 +34,7 @@ describe("setPendingOps", () => {
 
     setPendingOps(result, ops);
 
+    expect(result.unrepliedThreads).toEqual(["p-pending"]);
     expect(result.unresolvedThreads).toEqual(["t-pending"]);
     expect(result.unminimizedComments).toEqual(["c-pending"]);
     expect(result.undismissedReviews).toEqual(["r-pending"]);
@@ -38,16 +43,19 @@ describe("setPendingOps", () => {
   it("omits pending arrays when all IDs already completed", () => {
     const result = makeResult({
       resolvedThreads: ["t-done"],
+      repliedThreads: ["p-done"],
       minimizedComments: ["c-done"],
       dismissedReviews: ["r-done"],
     });
 
     setPendingOps(result, [
+      { kind: "p", id: "p-done" },
       { kind: "r", id: "t-done" },
       { kind: "m", id: "c-done" },
       { kind: "d", id: "r-done" },
     ]);
 
+    expect(result.unrepliedThreads).toBeUndefined();
     expect(result.unresolvedThreads).toBeUndefined();
     expect(result.unminimizedComments).toBeUndefined();
     expect(result.undismissedReviews).toBeUndefined();

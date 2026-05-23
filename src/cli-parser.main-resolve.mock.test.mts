@@ -92,6 +92,7 @@ describe("main — resolve", () => {
   });
   it("calls runResolveMutate when --resolve-thread-ids is given", async () => {
     mockRunResolveMutate.mockResolvedValue({
+      repliedThreads: [],
       resolvedThreads: ["t-1"],
       minimizedComments: [],
       dismissedReviews: [],
@@ -102,6 +103,7 @@ describe("main — resolve", () => {
   });
   it("formatMutateResult renders rate-limit stop and pending IDs", async () => {
     mockRunResolveMutate.mockResolvedValue({
+      repliedThreads: [],
       resolvedThreads: [],
       minimizedComments: ["c-1", "c-2"],
       dismissedReviews: [],
@@ -128,6 +130,7 @@ describe("main — resolve", () => {
   });
   it("formatMutateResult renders rate-limit stop without optional limit details", async () => {
     mockRunResolveMutate.mockResolvedValue({
+      repliedThreads: [],
       resolvedThreads: [],
       minimizedComments: [],
       dismissedReviews: [],

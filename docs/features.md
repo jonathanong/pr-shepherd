@@ -9,7 +9,7 @@ The module supports a focused automation loop for PR monitoring and deterministi
 - Supports default invocation `pr-shepherd [PR]` for one iterate tick.
 - Supports explicit `pr-shepherd iterate [PR]` as the legacy alias spelling.
 - Supports `pr-shepherd resolve [PR]` fetch mode (via `--fetch` or when no mutation flags are passed).
-- Supports `pr-shepherd resolve [PR]` mutate mode with `--resolve-thread-ids`, `--minimize-comment-ids`, `--dismiss-review-ids`.
+- Supports `pr-shepherd resolve [PR]` mutate mode with `--reply-thread-ids`, `--resolve-thread-ids`, `--minimize-comment-ids`, `--dismiss-review-ids`.
 - Supports `pr-shepherd commit-suggestion [PR] --thread-id <id> --message "<one-sentence headline>"` (or `--description`) for suggestion-thread patch generation.
 - Supports `pr-shepherd mark-files-as-viewed [PR] [files...] [--tests] [--match REGEX]` for marking PR changed files as viewed in GitHub.
 - Supports `pr-shepherd log-file` to print the per-worktree debug log path.
@@ -50,7 +50,7 @@ The module supports a focused automation loop for PR monitoring and deterministi
 - Fetches and surfaces top-level PR comments.
 - Fetches and surfaces `COMMENTED` review summaries.
 - Fetches and surfaces `APPROVED` reviews.
-- Supports auto-resolve of outdated review threads (configurable).
+- Surfaces outdated review threads without auto-resolving them.
 - Supports first-look tracking for outdated/resolved/minimized items with edit-aware resurface behavior.
 - Supports review-summary minimization through the same comment minimization pipeline.
 - Supports resolving comment threads after fixes using the generated resolve command.
@@ -59,8 +59,9 @@ The module supports a focused automation loop for PR monitoring and deterministi
 
 ### Mutation behavior
 
-- Supports resolving review threads by ID (`--resolve-thread-ids`).
-- Supports minimizing minimizable objects by ID (`--minimize-comment-ids`), including review summaries/review IDs.
+- Supports replying to human review threads by ID (`--reply-thread-ids`).
+- Supports resolving non-human/manual review thread IDs (`--resolve-thread-ids`).
+- Supports minimizing non-human minimizable objects by ID (`--minimize-comment-ids`), including review summaries/review IDs.
 - Supports dismissing `CHANGES_REQUESTED` reviews with a message (`--dismiss-review-ids` + `--message`).
 - Supports batching mutation IDs in groups of 10.
 - Supports explicit `--require-sha <sha>` polling before mutating so close/reopen actions follow the pushed commit.
@@ -93,7 +94,7 @@ The module supports a focused automation loop for PR monitoring and deterministi
 - Does not continuously rebase branches outside required conflict-resolution scenarios.
 - Does not modify files or apply suggestion patches to the working tree automatically; it only emits what to run.
 - Does not guarantee CI rerun-versus-code-fix decisions; it surfaces failures and delegates action choice to the caller.
-- Does not auto-reply to inline comments when resolving threads.
+- Replies to human-authored inline threads instead of resolving or minimizing them.
 - Does not auto-classify every surfaced thread/comment as `actionable` vs `informational`; it exposes raw structured triage data.
 - Does not automatically apply edits for threads without line/locatable references.
 - Does not minimize already-hidden/sticky comment content beyond existing CLI mutation paths.

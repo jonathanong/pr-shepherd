@@ -132,6 +132,7 @@ export interface Review {
   author: string;
   authorType: AuthorType;
   body: string;
+  edited?: boolean;
 }
 
 export interface BranchProtection {

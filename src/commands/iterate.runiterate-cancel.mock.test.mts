@@ -32,8 +32,8 @@ describe("runIterate — cancel", () => {
         reviewSummaries: [
           {
             id: "review-1",
-            author: "reviewer",
-            authorType: "User",
+            author: "reviewer-bot",
+            authorType: "Bot",
             body: "Looks good overall.",
           },
         ],

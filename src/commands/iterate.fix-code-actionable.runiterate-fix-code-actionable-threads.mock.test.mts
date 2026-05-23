@@ -13,7 +13,7 @@ import { runIterate } from "./iterate/index.mts";
 registerIterateHooks();
 
 describe("runIterate — fix_code (actionable threads)", () => {
-  it("routes resolution-only threads to resolve without requiring a push SHA", async () => {
+  it("routes human resolution-only threads to reply without requiring a push SHA", async () => {
     const outdated = {
       id: "thread-outdated",
       isResolved: false,
@@ -23,7 +23,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
       line: null,
       startLine: null,
       author: "reviewer",
-      authorType: "Unknown" as const,
+      authorType: "User" as const,
       body: "old location",
       url: "",
       createdAtUnix: NOW - 3600,
@@ -52,9 +52,10 @@ describe("runIterate — fix_code (actionable threads)", () => {
     if (result.action === "fix_code") {
       expect(result.fix.threads).toHaveLength(0);
       expect(result.fix.resolutionOnlyThreads.map((t) => t.id)).toEqual(["thread-outdated"]);
-      expect(result.fix.resolveCommand.argv).toContain("--resolve-thread-ids");
+      expect(result.fix.resolveCommand.argv).toContain("--reply-thread-ids");
       expect(result.fix.resolveCommand.argv).toContain("thread-outdated");
       expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
+      expect(result.fix.resolveCommand.requiresDismissMessage).toBe(true);
       expect(result.fix.instructions.join("\n")).not.toContain("Rebase and push");
     }
   });
@@ -120,7 +121,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
     }
   });
 
-  it("logs overlap warning when dismiss IDs overlap minimize/comment IDs", async () => {
+  it("does not warn about review/minimize overlap when review dismissals are not generated", async () => {
     const writeSpy = vi.spyOn(process.stderr, "write").mockReturnValue(true);
     try {
       const thread = {
@@ -172,7 +173,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
         messages.some((message) =>
           message.includes("pr-shepherd: resolve command overlap: 1 review IDs"),
         ),
-      ).toBe(true);
+      ).toBe(false);
     } finally {
       writeSpy.mockRestore();
     }

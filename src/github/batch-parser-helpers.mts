@@ -1,8 +1,11 @@
 import type { AuthorType, CheckConclusion, CheckStatus } from "../types.mts";
+import { normalizeAuthorType } from "../comments/authors.mts";
 
-export function mapAuthorType(typeName: string | undefined | null): AuthorType {
-  if (typeName === "User" || typeName === "Bot") return typeName;
-  return "Unknown";
+export function mapAuthorType(
+  typeName: string | undefined | null,
+  login?: string | undefined | null,
+): AuthorType {
+  return normalizeAuthorType(typeName, login);
 }
 
 export function parseCreatedAt(iso: string): number {

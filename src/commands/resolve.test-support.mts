@@ -115,8 +115,10 @@ function makeComment(overrides: Partial<PrComment> = {}): PrComment {
 export function registerHooks(): void {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData() });
     mockAutoResolveOutdated.mockResolvedValue({ resolved: [], errors: [] });
     mockApplyResolveOptions.mockResolvedValue({
+      repliedThreads: [],
       resolvedThreads: [],
       minimizedComments: [],
       dismissedReviews: [],

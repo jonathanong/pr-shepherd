@@ -7,7 +7,8 @@
  *                  [--stall-timeout <duration>] [--no-auto-mark-ready]
  *                  [--no-auto-cancel-actionable]
  *   pr-shepherd resolve [PR] [--fetch] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]
- *                            [--dismiss-review-ids Q] [--message MSG] [--require-sha SHA]
+ *                            [--reply-thread-ids A,B] [--dismiss-review-ids Q]
+ *                            [--message MSG] [--require-sha SHA]
  *   pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [--description DESC]
  *                                      [--format text|json]
  *   pr-shepherd mark-files-as-viewed [PR] [files...] [--tests] [--match REGEX]
@@ -145,6 +146,7 @@ async function handleResolve(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
 
   const resolveThreadIds = parseList(getFlag(extra, "--resolve-thread-ids"));
+  const replyThreadIds = parseList(getFlag(extra, "--reply-thread-ids"));
   const minimizeCommentIds = parseList(getFlag(extra, "--minimize-comment-ids"));
   const dismissReviewIds = parseList(getFlag(extra, "--dismiss-review-ids"));
   const dismissMessage = getFlag(extra, "--message") ?? undefined;
@@ -152,6 +154,7 @@ async function handleResolve(args: string[]): Promise<void> {
   const fetchMode =
     hasFlag(extra, "--fetch") ||
     (resolveThreadIds.length === 0 &&
+      replyThreadIds.length === 0 &&
       minimizeCommentIds.length === 0 &&
       dismissReviewIds.length === 0);
 
@@ -167,6 +170,7 @@ async function handleResolve(args: string[]): Promise<void> {
       ...globalOpts,
       prNumber,
       resolveThreadIds,
+      replyThreadIds,
       minimizeCommentIds,
       dismissReviewIds,
       dismissMessage,

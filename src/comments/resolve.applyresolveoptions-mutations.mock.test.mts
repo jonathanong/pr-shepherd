@@ -6,6 +6,19 @@ import { applyResolveOptions } from "./resolve.mts";
 registerHooks();
 
 describe("applyResolveOptions — mutations", () => {
+  it("replies to threads with the provided message", async () => {
+    const result = await applyResolveOptions(1, REPO, {
+      replyThreadIds: ["t-1"],
+      dismissMessage: "Addressed in the latest commit.",
+    });
+    expect(result.repliedThreads).toEqual(["t-1"]);
+    expect(result.errors).toHaveLength(0);
+    const doc = mockGraphql.mock.calls[0]?.[0] as string;
+    expect(doc).toContain("addPullRequestReviewThreadReply");
+    expect(doc).toContain('pullRequestReviewThreadId: "t-1"');
+    expect(doc).toContain("Addressed in the latest commit.");
+    expect(doc).not.toContain("resolveReviewThread");
+  });
   it("resolves threads and populates resolvedThreads", async () => {
     const result = await applyResolveOptions(1, REPO, { resolveThreadIds: ["t-1", "t-2"] });
     expect(result.resolvedThreads).toEqual(["t-1", "t-2"]);

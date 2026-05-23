@@ -47,7 +47,7 @@ export function parseRawPr(
       id: c.id,
       isMinimized: c.isMinimized,
       author: c.author?.login ?? "unknown",
-      authorType: mapAuthorType(c.author?.__typename),
+      authorType: mapAuthorType(c.author?.__typename, c.author?.login),
       body: c.body,
       url: c.url,
       createdAtUnix: parseCreatedAt(c.createdAt),
@@ -61,7 +61,7 @@ export function parseRawPr(
       line: t.line ?? comment?.line ?? null,
       startLine: t.startLine ?? comment?.startLine ?? null,
       author: comment?.author?.login ?? "unknown",
-      authorType: mapAuthorType(comment?.author?.__typename),
+      authorType: mapAuthorType(comment?.author?.__typename, comment?.author?.login),
       body: comment?.body ?? "",
       url: comment?.url ?? "",
       createdAtUnix: comment ? parseCreatedAt(comment.createdAt) : 0,
@@ -73,7 +73,7 @@ export function parseRawPr(
     id: c.id,
     isMinimized: c.isMinimized,
     author: c.author?.login ?? "unknown",
-    authorType: mapAuthorType(c.author?.__typename),
+    authorType: mapAuthorType(c.author?.__typename, c.author?.login),
     body: c.body,
     url: c.url,
     createdAtUnix: parseCreatedAt(c.createdAt),
@@ -82,7 +82,7 @@ export function parseRawPr(
   const changesRequestedReviews: Review[] = rawReviewNodes.map((r) => ({
     id: r.id,
     author: r.author?.login ?? "unknown",
-    authorType: mapAuthorType(r.author?.__typename),
+    authorType: mapAuthorType(r.author?.__typename, r.author?.login),
     body: r.body,
   }));
 
@@ -91,7 +91,7 @@ export function parseRawPr(
     .map((r) => ({
       id: r.id,
       author: r.author?.login ?? "unknown",
-      authorType: mapAuthorType(r.author?.__typename),
+      authorType: mapAuthorType(r.author?.__typename, r.author?.login),
       body: r.body,
     }));
 
@@ -103,7 +103,7 @@ export function parseRawPr(
     .map((r) => ({
       id: r.id,
       author: r.author?.login ?? "unknown",
-      authorType: mapAuthorType(r.author?.__typename),
+      authorType: mapAuthorType(r.author?.__typename, r.author?.login),
       body: r.body,
     }));
 

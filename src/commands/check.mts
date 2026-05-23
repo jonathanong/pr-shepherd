@@ -3,8 +3,6 @@ import { getRepoInfo, getCurrentPrNumber } from "../github/client.mts";
 import { classifyChecks, getCiVerdict } from "../checks/classify.mts";
 import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
 import { fetchStartupFailureChecks, triageFailingChecks } from "../checks/triage.mts";
-import { getOutdatedThreads } from "../comments/outdated.mts";
-import { autoResolveOutdated } from "../comments/resolve.mts";
 import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
 import { classifyVisibleComments } from "../comments/visible-comments.mts";
@@ -24,7 +22,19 @@ import type {
   ClassifiedCheck,
   FirstLookThread,
   FirstLookComment,
+  Review,
 } from "../types.mts";
+
+function classifyReviewsForDisplay(
+  reviews: Review[],
+  seenMap: Awaited<ReturnType<typeof loadSeenMap>>,
+): Review[] {
+  return reviews.flatMap((r) => {
+    const cls = classifyItem(r.id, r.body, seenMap);
+    if (cls === "unchanged") return [];
+    return cls === "edited" ? [{ ...r, edited: true }] : [r];
+  });
+}
 
 export async function runCheck(
   opts: GlobalOptions & { autoResolve?: boolean; skipTriage?: boolean },
@@ -64,15 +74,6 @@ export async function runCheck(
   const seenMap = await loadSeenMap(stateKey);
   const triaged = await attachUnseenCheckAnnotations(triagedBase, seenMap, prNumber);
   const unresolvedThreads = batchData.reviewThreads.filter((t) => !t.isResolved);
-  const outdated = getOutdatedThreads(unresolvedThreads);
-  let autoResolved: typeof outdated = [];
-  let autoResolveErrors: string[] = [];
-  if (opts.autoResolve && outdated.length > 0) {
-    const { resolved: resolvedIds, errors } = await autoResolveOutdated(outdated.map((t) => t.id));
-    const resolvedIdsSet = new Set(resolvedIds); // ⚡ Bolt optimization: O(1) lookup
-    autoResolved = outdated.filter((t) => resolvedIdsSet.has(t.id));
-    autoResolveErrors = errors;
-  }
   const activeThreads = unresolvedThreads.filter((t) => !t.isOutdated && !t.isMinimized);
   const outdatedCandidates = batchData.reviewThreads.filter((t) => t.isOutdated);
   const resolvedCandidates = batchData.reviewThreads.filter((t) => t.isResolved && !t.isOutdated);
@@ -85,7 +86,6 @@ export async function runCheck(
     seenMap,
     config.iterate.minimizeComments,
   );
-  const autoResolvedIds = new Set(autoResolved.map((t) => t.id));
   const firstLookThreads: FirstLookThread[] = [
     ...outdatedCandidates.flatMap((t) => {
       const cls = classifyItem(t.id, threadTranscriptBody(t), seenMap);
@@ -93,7 +93,6 @@ export async function runCheck(
       const base = {
         ...t,
         firstLookStatus: "outdated" as const,
-        autoResolved: autoResolvedIds.has(t.id),
       };
       return cls === "edited" ? [{ ...base, edited: true as const }] : [base];
     }),
@@ -125,21 +124,26 @@ export async function runCheck(
     else if (cls === "edited") editedSummaries.push(r);
     else seenSummaries.push(r);
   }
+  const changesRequestedReviews = classifyReviewsForDisplay(
+    batchData.changesRequestedReviews,
+    seenMap,
+  );
+  const approvedReviews = classifyReviewsForDisplay(batchData.approvedReviews, seenMap);
   await Promise.allSettled([
     ...firstLookThreads.map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
     ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
     ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
     ...[...firstLookSummaries, ...editedSummaries].map((r) => markSeen(stateKey, r.id, r.body)),
+    ...changesRequestedReviews.map((r) => markSeen(stateKey, r.id, r.body)),
+    ...approvedReviews.map((r) => markSeen(stateKey, r.id, r.body)),
   ]);
-  const resolutionOnlyThreads = unresolvedThreads.filter(
-    (t) => !autoResolvedIds.has(t.id) && (t.isOutdated || t.isMinimized),
-  );
+  const resolutionOnlyThreads = unresolvedThreads.filter((t) => t.isOutdated || t.isMinimized);
   let status = computeStatus(
     verdict,
     activeThreads.length + resolutionOnlyThreads.length,
     visibleCommentClassification.actionable.length,
     mergeStatus,
-    batchData.changesRequestedReviews.length,
+    changesRequestedReviews.length,
   );
 
   if (status === "READY" && !didRefreshMergeability) {
@@ -175,8 +179,8 @@ export async function runCheck(
     threads: {
       actionable: activeThreads,
       resolutionOnly: resolutionOnlyThreads,
-      autoResolved,
-      autoResolveErrors,
+      autoResolved: [],
+      autoResolveErrors: [],
       firstLook: firstLookThreads,
     },
     comments: {
@@ -184,11 +188,11 @@ export async function runCheck(
       minimizeIds: visibleCommentClassification.minimizeIds,
       firstLook: firstLookComments,
     },
-    changesRequestedReviews: batchData.changesRequestedReviews,
+    changesRequestedReviews,
     reviewSummaries: seenSummaries,
     firstLookSummaries,
     editedSummaries,
-    approvedReviews: batchData.approvedReviews,
+    approvedReviews,
     branchProtection: batchData.branchProtection,
   };
 }

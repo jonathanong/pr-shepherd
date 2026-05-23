@@ -14,6 +14,7 @@ describe("main — resolve", () => {
   it("formatMutateResult renders dismissed reviews, unresolved, unminimized, and undismissed IDs", async () => {
     mockRunResolveMutate.mockResolvedValue({
       resolvedThreads: [],
+      repliedThreads: [],
       minimizedComments: [],
       dismissedReviews: ["r-1"],
       errors: [],
@@ -42,6 +43,7 @@ describe("main — resolve", () => {
   it("formatMutateResult renders skipped dismissals", async () => {
     mockRunResolveMutate.mockResolvedValue({
       resolvedThreads: [],
+      repliedThreads: [],
       minimizedComments: [],
       dismissedReviews: ["r-1"],
       errors: [],
@@ -66,6 +68,7 @@ describe("main — resolve", () => {
   it("formatMutateResult renders non-rate-limit errors", async () => {
     mockRunResolveMutate.mockResolvedValue({
       resolvedThreads: [],
+      repliedThreads: [],
       minimizedComments: [],
       dismissedReviews: [],
       errors: ["t-1: nope"],
@@ -78,6 +81,7 @@ describe("main — resolve", () => {
   it("resolve mutate --format=json includes rate-limit stop and pending IDs", async () => {
     mockRunResolveMutate.mockResolvedValue({
       resolvedThreads: ["t-1"],
+      repliedThreads: [],
       minimizedComments: [],
       dismissedReviews: [],
       errors: ["rate limit: secondary rate limit"],

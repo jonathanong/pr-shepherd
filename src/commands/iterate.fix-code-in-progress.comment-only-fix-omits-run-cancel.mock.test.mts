@@ -128,9 +128,9 @@ describe("fix_code — in-progress run cancellation", () => {
       expect(result.fix.actionableComments).toHaveLength(1);
       expect(result.fix.changesRequestedReviews).toHaveLength(1);
       expect(result.fix.inProgressRunIds).toContain("run-in-review-only");
-      expect(result.fix.resolveCommand.requiresHeadSha).toBe(true);
-      expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
-      expect(result.fix.resolveCommand.argv).toContain("PRR_review_change_request");
+      expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
+      expect(result.fix.resolveCommand.argv).not.toContain("--dismiss-review-ids");
+      expect(result.fix.resolveCommand.argv).not.toContain("PRR_review_change_request");
       const instructions = result.fix.instructions.join("\n");
       expect(instructions).toMatch(/If you decide to push new commits/);
       expect(instructions).toMatch(/rebase onto.*per your repository's conventions/);

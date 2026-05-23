@@ -1,7 +1,5 @@
 import { getRepoInfo, getCurrentPrNumber } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
-import { getOutdatedThreads } from "../comments/outdated.mts";
-import { autoResolveOutdated } from "../comments/resolve.mts";
 import { loadConfig } from "../config/load.mts";
 import { classifyVisibleComments } from "../comments/visible-comments.mts";
 import { extractSuggestion } from "../suggestions/extract.mts";
@@ -98,22 +96,8 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
     else if (cls === "edited") editedMinimizedComments.push(c);
   }
 
-  const outdated = getOutdatedThreads(unresolvedThreads);
-  const autoResolvedIds = new Set<string>();
-  if (outdated.length > 0) {
-    const { resolved: resolvedIds, errors } = await autoResolveOutdated(outdated.map((t) => t.id));
-    for (const id of resolvedIds) autoResolvedIds.add(id);
-    if (errors.length > 0) {
-      process.stderr.write(
-        `pr-shepherd: auto-resolve outdated threads failed (continuing): ${errors.join(", ")}\n`,
-      );
-    }
-  }
-
   const activeThreads = unresolvedThreads.filter((t) => !t.isOutdated && !t.isMinimized);
-  const resolutionOnlyThreads = unresolvedThreads.filter(
-    (t) => !autoResolvedIds.has(t.id) && (t.isOutdated || t.isMinimized),
-  );
+  const resolutionOnlyThreads = unresolvedThreads.filter((t) => t.isOutdated || t.isMinimized);
 
   const cfg = loadConfig();
   const visibleCommentClassification = classifyVisibleComments(
@@ -135,12 +119,10 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
     ...unseenOutdated.map((t) => ({
       ...t,
       firstLookStatus: "outdated" as const,
-      autoResolved: autoResolvedIds.has(t.id),
     })),
     ...editedOutdated.map((t) => ({
       ...t,
       firstLookStatus: "outdated" as const,
-      autoResolved: autoResolvedIds.has(t.id),
       edited: true as const,
     })),
     ...unseenResolved.map((t) => ({ ...t, firstLookStatus: "resolved" as const })),
