@@ -35,6 +35,13 @@ describe("runResolveMutate — forwards options", () => {
         requireSha: "sha-abc",
       }),
     );
+    expect(mockFetchPrBatch).toHaveBeenCalledWith(
+      42,
+      { owner: "owner", name: "repo" },
+      {
+        paginateApprovedReviews: true,
+      },
+    );
   });
 
   it("skips human resolve, minimize, and dismiss IDs before mutating", async () => {

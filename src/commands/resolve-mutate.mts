@@ -13,7 +13,7 @@ export async function runResolveMutate(
   if (prNumber === null) {
     throw new Error("No open PR found for current branch. Pass a PR number explicitly.");
   }
-  const { data } = await fetchPrBatch(prNumber, repo);
+  const { data } = await fetchPrBatch(prNumber, repo, { paginateApprovedReviews: true });
   const humanThreadIds = new Set(data.reviewThreads.filter(isHumanAuthor).map((t) => t.id));
   const humanCommentIds = new Set(data.comments.filter(isHumanAuthor).map((c) => c.id));
   const humanReviewIds = new Set(

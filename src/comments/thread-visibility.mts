@@ -67,8 +67,13 @@ export function classifyThreadVisibility(
     }),
   ];
 
+  const seenMarkerIds = new Set<string>();
   const toMarkSeen = [...activeThreads, ...resolutionOnlyThreads, ...firstLookThreads].filter(
-    (thread, index, all) => all.findIndex((t) => t.id === thread.id) === index,
+    (thread) => {
+      if (seenMarkerIds.has(thread.id)) return false;
+      seenMarkerIds.add(thread.id);
+      return true;
+    },
   );
 
   return { activeThreads, resolutionOnlyThreads, firstLookThreads, toMarkSeen };
