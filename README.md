@@ -8,7 +8,7 @@ The goal is to help an agent carry a planned change to a human-reviewable PR: pa
 
 `pr-shepherd` moves deterministic PR orchestration into a CLI. The CLI fetches GitHub state, emits raw-enough context, and prints a numbered `## Instructions` section for the calling agent to follow. The agent still decides whether a comment or CI failure requires a code change.
 
-The shipped skills call `pr-shepherd poll <PR>`. Direct CLI users can run `pr-shepherd <PR>`, which is the same poll dispatcher. Use `pr-shepherd iterate <PR>` for one single tick.
+The shipped skills invoke the default poll dispatcher (`pr-shepherd <PR>`, equivalent to `pr-shepherd poll <PR>`). Use `pr-shepherd iterate <PR>` for one single tick.
 
 Each tick returns exactly one action:
 
@@ -74,7 +74,6 @@ Claude Code:
 ```text
 /goal /pr-shepherd:pr-shepherd        # infer PR from current branch
 /goal /pr-shepherd:pr-shepherd 42
-/goal /pr-shepherd:pr-shepherd 42 --ready-delay 15m
 ```
 
 Codex:

@@ -4,9 +4,9 @@
 
 Each `pr-shepherd iterate` invocation returns exactly one action. The default `pr-shepherd <PR>` command runs the poll dispatcher and prints the final iterate action. See [docs/iterate-flow.md](iterate-flow.md) for the decision order.
 
-The default output format is Markdown — what `pr-shepherd poll <PR>` returns to the iterate skill and what direct CLI users see. `--format=json` emits the same action data as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
+The default output format is Markdown — what the skill receives from the default poll dispatcher and what direct CLI users see. `--format=json` emits the same action data as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
 
-The shipped skill invokes `pr-shepherd poll`, which loops with `--interval`/`--timeout` while the PR remains in `[WAIT]` and returns whenever an actionable or terminal state appears. Do not run `while true` or unbounded polling loops outside of `pr-shepherd poll`.
+The shipped skill invokes the default command with `--interval`/`--timeout`, which is equivalent to `pr-shepherd poll` while the PR remains in `[WAIT]` and returns whenever an actionable or terminal state appears. Do not run `while true` or unbounded polling loops outside of the poll dispatcher.
 
 Command examples call `pr-shepherd` directly everywhere a follow-up command is emitted.
 
@@ -88,7 +88,7 @@ When the current command includes a ready-delay override, the rerun command pres
 
 The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, `blocked by pending reviews or required status checks`, `PR is a draft`, or `some checks are unstable`.
 
-**What the skill does:** Follow `## Instructions`, then run `pr-shepherd poll <N>` again unless the action is terminal.
+**What the skill does:** Follow `## Instructions`, then run the default poll dispatcher again unless the action is terminal.
 
 ---
 
@@ -117,7 +117,7 @@ MARKED READY: PR #42 converted from draft to ready for review
 1. The CLI already marked the PR ready for review. Recheck: rerun `pr-shepherd 42` to recheck once after a fresh 30s–4m delay.
 ```
 
-**What the skill does:** Follow `## Instructions`, then run `pr-shepherd poll <N>` again unless the action is terminal.
+**What the skill does:** Follow `## Instructions`, then run the default poll dispatcher again unless the action is terminal.
 
 ---
 
@@ -396,7 +396,7 @@ The `resolve:` command at the bottom of `## Post-fix push` includes both IDs:
 
 Both IDs stay in `--reply-thread-ids` — `commit-suggestion` does not resolve threads automatically. If a patch failed to apply and was handled manually instead, the ID still belongs in `--reply-thread-ids`.
 
-**What the skill does:** Follow `## Instructions` in order. The instructions are self-contained and action-specific — no dispatch table needed. See `## Instructions` in the output for the exact steps. After handling the action, run `pr-shepherd poll <N>` again unless the action is terminal.
+**What the skill does:** Follow `## Instructions` in order. The instructions are self-contained and action-specific — no dispatch table needed. See `## Instructions` in the output for the exact steps. After handling the action, run the default poll dispatcher again unless the action is terminal.
 
 ---
 
