@@ -1,7 +1,11 @@
 /* eslint-disable max-lines */
-import { readFixAttempts, writeFixAttempts } from "../../state/fix-attempts.mts";
+import {
+  readFixAttempts,
+  writeFixAttempts,
+  type FixAttemptsState,
+} from "../../state/fix-attempts.mts";
 import { toAgentThread, toAgentComment, toAgentChecks } from "../../reporters/agent.mts";
-import { markSeen } from "../../state/seen-comments.mts";
+import { hashBody, markSeen } from "../../state/seen-comments.mts";
 import {
   checkEscalateTriggers,
   validateBaseBranch,
@@ -13,7 +17,6 @@ import { buildFixInstructions } from "./render.mts";
 import { applyStallGuard } from "./stall.mts";
 import { tryCancelRun, buildInProgressRunIds } from "./helpers.mts";
 import { annotationMarkerBody } from "../check-annotations.mts";
-import { hashBody } from "../../state/seen-comments.mts";
 import { threadTranscriptBody } from "../../threads/transcript.mts";
 import type {
   EscalateDetails,
@@ -38,6 +41,26 @@ interface HandleFixCodeContext {
   editedSummaries: Review[];
   surfacedApprovals: Review[];
 }
+
+function nextFixAttempts(
+  stored: FixAttemptsState | null,
+  headSha: string,
+  threads: ShepherdReport["threads"]["actionable"],
+): Pick<FixAttemptsState, "threadAttempts" | "threadBodyHashes"> {
+  const threadAttempts: Record<string, number> = stored ? { ...stored.threadAttempts } : {};
+  const threadBodyHashes: Record<string, string> = stored?.threadBodyHashes
+    ? { ...stored.threadBodyHashes }
+    : {};
+  if (stored?.headSha === headSha) return { threadAttempts, threadBodyHashes };
+  for (const t of threads) {
+    const bodyHash = hashBody(threadTranscriptBody(t));
+    threadAttempts[t.id] =
+      threadBodyHashes[t.id] === bodyHash ? (threadAttempts[t.id] ?? 0) + 1 : 1;
+    threadBodyHashes[t.id] = bodyHash;
+  }
+  return { threadAttempts, threadBodyHashes };
+}
+
 export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateResult> {
   const {
     base,
@@ -56,22 +79,13 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   } = ctx;
   const failingChecks = report.checks.failing;
   const stored = await readFixAttempts({ owner: repoOwner, repo: repoName, pr: prNumber });
-  const isNewSha = stored?.headSha !== headSha;
-  const currentAttempts: Record<string, number> = stored ? { ...stored.threadAttempts } : {};
-  const currentBodyHashes: Record<string, string> = stored?.threadBodyHashes
-    ? { ...stored.threadBodyHashes }
-    : {};
-  if (isNewSha) {
-    for (const t of report.threads.actionable) {
-      const bodyHash = hashBody(threadTranscriptBody(t));
-      if (currentBodyHashes[t.id] === bodyHash)
-        currentAttempts[t.id] = (currentAttempts[t.id] ?? 0) + 1;
-      else currentAttempts[t.id] = 1;
-      currentBodyHashes[t.id] = bodyHash;
-    }
-  }
+  const { threadAttempts, threadBodyHashes } = nextFixAttempts(
+    stored,
+    headSha,
+    report.threads.actionable,
+  );
 
-  const escalateTriggers = checkEscalateTriggers(report.threads.actionable, currentAttempts);
+  const escalateTriggers = checkEscalateTriggers(report.threads.actionable, threadAttempts);
   if (escalateTriggers.triggers.length > 0) {
     const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: escalateTriggers.triggers,
@@ -94,7 +108,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   }
   await writeFixAttempts(
     { owner: repoOwner, repo: repoName, pr: prNumber },
-    { headSha, threadAttempts: currentAttempts, threadBodyHashes: currentBodyHashes },
+    { headSha, threadAttempts, threadBodyHashes },
   );
   let cancelled: string[] = [];
   if (!opts.noAutoCancelActionable) {
