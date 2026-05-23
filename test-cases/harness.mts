@@ -133,7 +133,11 @@ export interface Fixture {
   /** Override stallTimeoutMinutes in config (in minutes). Defaults to 30. */
   stallTimeoutMinutes?: number;
   /** Return value of readFixAttempts(). */
-  fixAttempts?: { headSha: string; threadAttempts: Record<string, number> };
+  fixAttempts?: {
+    headSha: string;
+    threadAttempts: Record<string, number>;
+    threadBodyHashes?: Record<string, string>;
+  };
   /** If true, REST cancel calls return HTTP 409. */
   cancelRunsFail?: boolean;
   /** Extra CLI args appended after "42". */

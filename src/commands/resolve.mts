@@ -6,6 +6,7 @@ import { extractSuggestion } from "../suggestions/extract.mts";
 import { buildFetchInstructions } from "./resolve-instructions.mts";
 import { loadSeenMap, markSeen, classifyItem } from "../state/seen-comments.mts";
 import { threadTranscriptBody } from "../threads/transcript.mts";
+import { classifyThreadVisibility } from "../comments/thread-visibility.mts";
 import type {
   GlobalOptions,
   ReviewThread,
@@ -56,38 +57,10 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
 
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
 
-  const unresolvedThreads = data.reviewThreads.filter((t) => !t.isResolved);
-
-  const outdatedCandidates = data.reviewThreads.filter((t) => t.isOutdated);
-  const resolvedCandidates = data.reviewThreads.filter((t) => t.isResolved && !t.isOutdated);
-  const minimizedThreadCandidates = data.reviewThreads.filter(
-    (t) => t.isMinimized && !t.isResolved && !t.isOutdated,
-  );
   const minimizedCommentCandidates = data.comments.filter((c) => c.isMinimized);
 
   const seenMap = await loadSeenMap(stateKey);
-
-  const unseenOutdated: typeof outdatedCandidates = [];
-  const editedOutdated: typeof outdatedCandidates = [];
-  for (const t of outdatedCandidates) {
-    const cls = classifyItem(t.id, threadTranscriptBody(t), seenMap);
-    if (cls === "new") unseenOutdated.push(t);
-    else if (cls === "edited") editedOutdated.push(t);
-  }
-  const unseenResolved: typeof resolvedCandidates = [];
-  const editedResolved: typeof resolvedCandidates = [];
-  for (const t of resolvedCandidates) {
-    const cls = classifyItem(t.id, threadTranscriptBody(t), seenMap);
-    if (cls === "new") unseenResolved.push(t);
-    else if (cls === "edited") editedResolved.push(t);
-  }
-  const unseenMinimizedThreads: typeof minimizedThreadCandidates = [];
-  const editedMinimizedThreads: typeof minimizedThreadCandidates = [];
-  for (const t of minimizedThreadCandidates) {
-    const cls = classifyItem(t.id, threadTranscriptBody(t), seenMap);
-    if (cls === "new") unseenMinimizedThreads.push(t);
-    else if (cls === "edited") editedMinimizedThreads.push(t);
-  }
+  const threadVisibility = classifyThreadVisibility(data.reviewThreads, seenMap);
   const unseenMinimizedComments: typeof minimizedCommentCandidates = [];
   const editedMinimizedComments: typeof minimizedCommentCandidates = [];
   for (const c of minimizedCommentCandidates) {
@@ -96,9 +69,6 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
     else if (cls === "edited") editedMinimizedComments.push(c);
   }
 
-  const activeThreads = unresolvedThreads.filter((t) => !t.isOutdated && !t.isMinimized);
-  const resolutionOnlyThreads = unresolvedThreads.filter((t) => t.isOutdated || t.isMinimized);
-
   const cfg = loadConfig();
   const visibleCommentClassification = classifyVisibleComments(
     data.comments,
@@ -106,7 +76,7 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
     cfg.iterate?.minimizeComments,
   );
 
-  const actionableThreads: FetchThread[] = activeThreads.map(
+  const actionableThreads: FetchThread[] = threadVisibility.activeThreads.map(
     ({ isResolved: _r, isOutdated: _o, ...rest }) => {
       const thread: FetchThread = rest;
       const suggestion = extractSuggestion(rest);
@@ -114,30 +84,6 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
       return thread;
     },
   );
-
-  const firstLookThreads: FirstLookThread[] = [
-    ...unseenOutdated.map((t) => ({
-      ...t,
-      firstLookStatus: "outdated" as const,
-    })),
-    ...editedOutdated.map((t) => ({
-      ...t,
-      firstLookStatus: "outdated" as const,
-      edited: true as const,
-    })),
-    ...unseenResolved.map((t) => ({ ...t, firstLookStatus: "resolved" as const })),
-    ...editedResolved.map((t) => ({
-      ...t,
-      firstLookStatus: "resolved" as const,
-      edited: true as const,
-    })),
-    ...unseenMinimizedThreads.map((t) => ({ ...t, firstLookStatus: "minimized" as const })),
-    ...editedMinimizedThreads.map((t) => ({
-      ...t,
-      firstLookStatus: "minimized" as const,
-      edited: true as const,
-    })),
-  ];
 
   const firstLookComments: FirstLookComment[] = [
     ...unseenMinimizedComments.map((c) => ({ ...c, firstLookStatus: "minimized" as const })),
@@ -150,7 +96,7 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
 
   // Mark new and edited items as seen (best-effort — markSeen never throws).
   await Promise.allSettled([
-    ...firstLookThreads.map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
+    ...threadVisibility.toMarkSeen.map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
     ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
     ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
   ]);
@@ -158,8 +104,8 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   const result: Omit<FetchResult, "instructions"> = {
     prNumber,
     actionableThreads,
-    resolutionOnlyThreads,
-    firstLookThreads,
+    resolutionOnlyThreads: threadVisibility.resolutionOnlyThreads,
+    firstLookThreads: threadVisibility.firstLookThreads,
     actionableComments: visibleCommentClassification.actionable,
     firstLookComments,
     changesRequestedReviews: data.changesRequestedReviews,

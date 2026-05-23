@@ -28,6 +28,43 @@ describe("runCheck — first-look items", () => {
     expect(report.threads.firstLook[0]?.firstLookStatus).toBe("outdated");
     expect(report.threads.firstLook[0]?.autoResolved).toBeUndefined();
   });
+  it("surfaces unseen active thread in threads.actionable and marks it seen", async () => {
+    const active = makeThread({ id: "t-active", body: "active feedback" });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [active] }) });
+    mockLoadSeenMap.mockResolvedValue(new Map());
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.threads.actionable.map((t) => t.id)).toEqual(["t-active"]);
+    expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "t-active", "active feedback");
+  });
+  it("suppresses already-seen active thread with unchanged body", async () => {
+    const active = makeThread({ id: "t-active", body: "active feedback" });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [active] }) });
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([["t-active", { seenAt: 1000, bodyHash: hashBody("active feedback") }]]),
+    );
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.threads.actionable).toEqual([]);
+  });
+  it("re-surfaces edited active thread and updates the marker", async () => {
+    const active = makeThread({ id: "t-active", body: "updated active feedback" });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [active] }) });
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([["t-active", { seenAt: 1000, bodyHash: hashBody("old active feedback") }]]),
+    );
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.threads.actionable).toMatchObject([{ id: "t-active", edited: true }]);
+    expect(mockMarkSeen).toHaveBeenCalledWith(
+      expect.any(Object),
+      "t-active",
+      "updated active feedback",
+    );
+  });
   it("does not auto-resolve outdated threads during check", async () => {
     const outdated = makeThread({ id: "t-auto", isOutdated: true });
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [outdated] }) });

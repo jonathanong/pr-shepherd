@@ -53,19 +53,26 @@ interface ThreadBulletInput {
     url: string;
   }>;
   suggestion?: SuggestionBlock;
+  edited?: boolean;
 }
 
 export function renderThreadBullet(
   t: ThreadBulletInput,
-  opts: { statusTag?: string; renderSuggestion?: boolean; noBody?: boolean } = {},
+  opts: {
+    statusTag?: string;
+    renderSuggestion?: boolean;
+    noBody?: boolean;
+    suppressEditedMarker?: boolean;
+  } = {},
 ): string {
   const link = t.url ? ` [↗](${t.url})` : "";
   const loc = t.path
     ? `\`${t.path}:${renderLineRange(t.startLine ?? undefined, t.line ?? null)}\``
     : "`(no location)`";
   const suggestionMarker = t.suggestion ? " [suggestion]" : "";
+  const editedMarker = t.edited && !opts.suppressEditedMarker ? " [edited since first look]" : "";
   const statusSuffix = opts.statusTag ? ` ${opts.statusTag}` : "";
-  const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (${renderAuthor(t.author, t.authorType)})${suggestionMarker}${statusSuffix}`;
+  const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (${renderAuthor(t.author, t.authorType)})${suggestionMarker}${editedMarker}${statusSuffix}`;
   if (!opts.noBody && (!t.comments || t.comments.length === 0)) {
     const legacyLine = `${bulletLine}: ${renderBodyPreview(t.body)}`;
     return t.suggestion && opts.renderSuggestion
@@ -170,6 +177,7 @@ export function buildFirstLookBullets(
       renderThreadBullet(t, {
         statusTag: renderFirstLookStatusTag(t),
         noBody: resolutionOnlyIds.has(t.id),
+        suppressEditedMarker: true,
       }),
     );
   }

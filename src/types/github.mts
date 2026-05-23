@@ -92,6 +92,8 @@ export interface ReviewThread {
   url: string;
   createdAtUnix: number;
   comments?: ReviewThreadComment[];
+  /** True when Shepherd re-surfaced this thread because its body changed after first look. */
+  edited?: boolean;
 }
 
 /**

@@ -13,6 +13,8 @@ import { buildFixInstructions } from "./render.mts";
 import { applyStallGuard } from "./stall.mts";
 import { tryCancelRun, buildInProgressRunIds } from "./helpers.mts";
 import { annotationMarkerBody } from "../check-annotations.mts";
+import { hashBody } from "../../state/seen-comments.mts";
+import { threadTranscriptBody } from "../../threads/transcript.mts";
 import type {
   EscalateDetails,
   IterateCommandOptions,
@@ -56,9 +58,16 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const stored = await readFixAttempts({ owner: repoOwner, repo: repoName, pr: prNumber });
   const isNewSha = stored?.headSha !== headSha;
   const currentAttempts: Record<string, number> = stored ? { ...stored.threadAttempts } : {};
+  const currentBodyHashes: Record<string, string> = stored?.threadBodyHashes
+    ? { ...stored.threadBodyHashes }
+    : {};
   if (isNewSha) {
     for (const t of report.threads.actionable) {
-      currentAttempts[t.id] = (currentAttempts[t.id] ?? 0) + 1;
+      const bodyHash = hashBody(threadTranscriptBody(t));
+      if (currentBodyHashes[t.id] === bodyHash)
+        currentAttempts[t.id] = (currentAttempts[t.id] ?? 0) + 1;
+      else currentAttempts[t.id] = 1;
+      currentBodyHashes[t.id] = bodyHash;
     }
   }
 
@@ -85,7 +94,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   }
   await writeFixAttempts(
     { owner: repoOwner, repo: repoName, pr: prNumber },
-    { headSha, threadAttempts: currentAttempts },
+    { headSha, threadAttempts: currentAttempts, threadBodyHashes: currentBodyHashes },
   );
   let cancelled: string[] = [];
   if (!opts.noAutoCancelActionable) {

@@ -33,7 +33,11 @@ const THREAD = {
 
 describe("runIterate — escalate (fix-thrash)", () => {
   it("escalates when a thread has been attempted >= fixAttemptsPerThread times", async () => {
-    mockReadFixAttempts.mockResolvedValue({ headSha: "abc123", threadAttempts: { "thread-1": 3 } });
+    mockReadFixAttempts.mockResolvedValue({
+      headSha: "abc123",
+      threadAttempts: { "thread-1": 3 },
+      threadBodyHashes: { "thread-1": "unused-on-same-sha" },
+    });
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
@@ -61,6 +65,33 @@ describe("runIterate — escalate (fix-thrash)", () => {
       expect(result.escalate.thrashHistory?.[0]?.threadId).toBe("thread-1");
       expect(result.escalate.thrashHistory?.[0]?.attempts).toBe(3);
     }
+  });
+  it("does NOT escalate immediately when legacy attempt state has no body hash and HEAD changed", async () => {
+    mockReadFixAttempts.mockResolvedValue({
+      headSha: "old-sha",
+      threadAttempts: { "thread-1": 3 },
+    });
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: {
+          actionable: [THREAD],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
   });
   it("does NOT escalate when attempt count is below threshold (attempt=2)", async () => {
     mockReadFixAttempts.mockResolvedValue({ headSha: "abc123", threadAttempts: { "thread-1": 2 } });

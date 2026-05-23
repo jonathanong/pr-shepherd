@@ -43,7 +43,7 @@ actions:
 
 | Key                                  | Default                                   | Purpose                                                                                                                                                     |
 | ------------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `iterate.fixAttemptsPerThread`       | `3`                                       | Max fix attempts per unresolved thread before `escalate`                                                                                                    |
+| `iterate.fixAttemptsPerThread`       | `3`                                       | Max fix attempts per surfaced unresolved thread body before `escalate`                                                                                      |
 | `iterate.stallTimeoutMinutes`        | `60`                                      | Minutes the loop may repeat the same action without progress, or CI may stay pending without starting, before `escalate` with `stall-timeout`; `0` disables |
 | `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination).                                                                      |
 | `iterate.minimizeComments`           | `"all"`                                   | Which non-human GitHub author classes to minimize for PR comments and review summaries: `all`, `bots`, `users`, or `none`; humans are never minimized       |
@@ -61,9 +61,9 @@ actions:
 
 ### `iterate.fixAttemptsPerThread` — default `3`
 
-Maximum number of times shepherd dispatches the `fix_code` action for the same review thread without it being resolved. Once a thread hits this count, shepherd escalates to the `escalate` action instead of retrying.
+Maximum number of times shepherd dispatches the `fix_code` action for the same surfaced review thread body without it being resolved or changed. Once a thread body hits this count, shepherd escalates to the `escalate` action instead of retrying.
 
-The counter resets automatically when a new commit is pushed (HEAD SHA change).
+The counter is keyed by the thread transcript hash. If the author edits or replies in the thread, the hash changes and the per-thread counter resets. Threads suppressed by seen markers do not increment this counter.
 
 - **Raise** for complex threads that may require multiple fix-push-review cycles.
 - **Lower** if you want to escalate to human review sooner.

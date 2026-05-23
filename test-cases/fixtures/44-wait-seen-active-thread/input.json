@@ -2,17 +2,17 @@
   "batchData": {
     "reviewThreads": [
       {
-        "id": "PRRT_thrash",
+        "id": "PRRT_seen_active",
         "isResolved": false,
         "isOutdated": false,
         "isMinimized": false,
         "path": "src/auth.ts",
-        "line": 88,
+        "line": 42,
         "startLine": null,
-        "author": "reviewer",
-        "authorType": "User",
-        "body": "This authentication logic is too complex, please simplify.",
-        "url": "https://github.com/owner/repo/pull/42#discussion_r10",
+        "author": "gemini-code-assist",
+        "authorType": "Bot",
+        "body": "Previously seen bot feedback.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r44",
         "createdAtUnix": 1715700000
       }
     ],
@@ -27,13 +27,10 @@
       }
     ]
   },
-  "fixAttempts": {
-    "headSha": "oldhash123",
-    "threadAttempts": {
-      "PRRT_thrash": 2
-    },
-    "threadBodyHashes": {
-      "PRRT_thrash": "aa97f5d40ebed9f1"
+  "seenMap": {
+    "PRRT_seen_active": {
+      "seenAt": 1715700000,
+      "bodyHash": "429c3afa322b7b2b"
     }
   },
   "readyDelayState": {
