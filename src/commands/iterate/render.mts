@@ -113,7 +113,7 @@ export function buildFixInstructions(
 
   if (resolutionOnlyThreads.length > 0) {
     instructions.push(
-      `Review the threads under \`## Review threads to resolve\`. Human-authored threads are replied to by the \`resolve:\` command shown below; Shepherd does not resolve them. Non-human threads are shown for context and are not auto-resolved.`,
+      `Review the threads under \`## Review threads to resolve\`. Human-authored threads are replied to by the \`resolve:\` command shown below; Shepherd does not resolve them. Bot/non-human threads are included in \`--resolve-thread-ids\`.`,
     );
   }
 

@@ -18,7 +18,7 @@
 
 ## Instructions
 
-1. Review the threads under `## Review threads to resolve`. Human-authored threads are replied to by the `resolve:` command shown below; Shepherd does not resolve them. Non-human threads are shown for context and are not auto-resolved.
+1. Review the threads under `## Review threads to resolve`. Human-authored threads are replied to by the `resolve:` command shown below; Shepherd does not resolve them. Bot/non-human threads are included in `--resolve-thread-ids`.
 2. Run the `resolve:` command shown above, substituting `$DISMISS_MESSAGE` with a one-sentence reply/description of what you changed.
 3. Items in `## First-look items` are shown so you can acknowledge their current status before acting. If a first-look thread also appears under `## Review threads to resolve`, its ID is already included in the `resolve:` command; otherwise do not pass first-look-only IDs to mutation flags.
 4. Items marked `[edited since first look]`, items under `## Review summaries (edited since first look)`, and any first-look bullet tagged `, edited` were updated by their author after you previously acknowledged them. Read the updated body before deciding whether any matching `## Review threads to resolve` item should be resolved.

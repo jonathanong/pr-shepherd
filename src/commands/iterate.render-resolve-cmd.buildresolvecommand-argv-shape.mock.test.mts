@@ -187,4 +187,64 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     expect(result.fix.resolveCommand.argv).not.toContain("PRR_HUMAN");
     expect(result.fix.changesRequestedReviews).toHaveLength(1);
   });
+
+  it("resolves bot threads while replying to human threads", async () => {
+    const humanThread = {
+      id: "thread-human",
+      isResolved: false,
+      isOutdated: false,
+      isMinimized: false,
+      path: "src/human.mts",
+      line: 10,
+      startLine: null,
+      author: "reviewer",
+      authorType: "User" as const,
+      body: "fix this",
+      url: "",
+      createdAtUnix: NOW - 3600,
+    };
+    const botThread = {
+      ...humanThread,
+      id: "thread-bot",
+      path: "src/bot.mts",
+      author: "copilot-pull-request-reviewer",
+      authorType: "Bot" as const,
+    };
+    const bracketBotThread = {
+      ...humanThread,
+      id: "thread-bracket-bot",
+      path: "src/bracket-bot.mts",
+      author: "github-actions[bot]",
+      authorType: "User" as const,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: {
+          actionable: [humanThread, botThread, bracketBotThread],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+
+    const argv = result.fix.resolveCommand.argv;
+    expect(argv).toContain("--reply-thread-ids");
+    expect(argv).toContain("thread-human");
+    expect(argv).toContain("--resolve-thread-ids");
+    expect(argv).toContain("thread-bot,thread-bracket-bot");
+    expect(result.fix.resolveCommand.requiresDismissMessage).toBe(true);
+    expect(result.fix.resolveCommand.hasMutations).toBe(true);
+  });
 });

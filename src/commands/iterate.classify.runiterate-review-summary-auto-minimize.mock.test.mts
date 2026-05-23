@@ -21,7 +21,10 @@ describe("runIterate — review summary auto-minimize", () => {
   const botSummary = makeReview("PRR_BOT", "copilot-pull-request-reviewer", "overview");
   const genericBotSummary = makeReview("PRR_GEM", "gemini-code-assist", "overview");
   const bracketBotSummary = makeReview("PRR_BRK", "github-actions[bot]", "overview");
-  const humanSummary = makeReview("PRR_HUMAN", "alice", "nice work");
+  const humanSummary = {
+    ...makeReview("PRR_HUMAN", "alice", "nice work"),
+    authorType: "User" as const,
+  };
 
   it("emits fix_code with reviewSummaryIds when only a bot summary exists", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary] }));
@@ -66,7 +69,7 @@ describe("runIterate — review summary auto-minimize", () => {
 
     expect(result.fix.reviewSummaryIds).toEqual(["PRR_GEM"]);
   });
-  it("always minimizes human summaries regardless of author type", async () => {
+  it("does not minimize GitHub-classified human summaries", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [humanSummary] }));
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: false,
@@ -74,12 +77,10 @@ describe("runIterate — review summary auto-minimize", () => {
       remainingSeconds: 600,
     });
     const result = await runIterate(makeOpts());
-    if (result.action !== "fix_code") return;
 
-    expect(result.fix.reviewSummaryIds).toEqual(["PRR_HUMAN"]);
-    expect(result.fix.surfacedApprovals).toEqual([]);
+    expect(result.action).toBe("wait");
   });
-  it("minimizes both bot and human summaries unconditionally", async () => {
+  it("minimizes bot summaries but not GitHub-classified human summaries", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary, humanSummary] }));
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: false,
@@ -89,7 +90,7 @@ describe("runIterate — review summary auto-minimize", () => {
     const result = await runIterate(makeOpts());
     if (result.action !== "fix_code") return;
 
-    expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT", "PRR_HUMAN"]);
+    expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
     expect(result.fix.surfacedApprovals).toEqual([]);
   });
   it("minimizes only GitHub-classified bot summaries when minimizeComments=bots", async () => {

@@ -69,20 +69,24 @@ export function buildResolveCommand(
 ): ResolveCommand {
   const argv = buildPrShepherdCommand(["resolve", String(prNumber)]).argv;
 
-  const replyThreadIds = dedupeIds(
-    [...threads, ...resolutionOnlyThreads].filter(isHumanAuthor).map((t) => t.id),
-  );
+  const allThreads = [...threads, ...resolutionOnlyThreads];
+  const replyThreadIds = dedupeIds(allThreads.filter(isHumanAuthor).map((t) => t.id));
+  const resolveThreadIds = dedupeIds(allThreads.filter((t) => !isHumanAuthor(t)).map((t) => t.id));
   if (replyThreadIds.length > 0) {
     argv.push("--reply-thread-ids", replyThreadIds.join(","));
     argv.push("--message", "$DISMISS_MESSAGE");
   }
+  if (resolveThreadIds.length > 0) {
+    argv.push("--resolve-thread-ids", resolveThreadIds.join(","));
+  }
   if (allCommentIds.length > 0) {
     argv.push("--minimize-comment-ids", allCommentIds.join(","));
   }
-  // hasMutations = we appended at least one reply or minimize mutation. Returned explicitly
+  // hasMutations = we appended at least one reply, resolve, or minimize mutation. Returned explicitly
   // (rather than derived from argv.length) so callers don't couple to the
   // base-argv shape.
-  const hasMutations = replyThreadIds.length > 0 || allCommentIds.length > 0;
+  const hasMutations =
+    replyThreadIds.length > 0 || resolveThreadIds.length > 0 || allCommentIds.length > 0;
   // `requiresHeadSha` is only added when this resolve command includes a
   // mutation that can race with a moving HEAD: replying after actionable
   // thread fixes or addressing failing checks.
@@ -93,6 +97,7 @@ export function buildResolveCommand(
     requiresHeadSha,
     requiresDismissMessage: replyThreadIds.length > 0,
     ...(replyThreadIds.length > 0 ? { replyThreadIds } : undefined),
+    ...(resolveThreadIds.length > 0 ? { resolveThreadIds } : undefined),
     hasMutations,
   };
 }

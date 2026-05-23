@@ -124,6 +124,8 @@ export interface ResolveCommand {
   requiresDismissMessage: boolean;
   /** Thread IDs that should receive a reply instead of a resolve mutation. */
   replyThreadIds?: string[];
+  /** Thread IDs that should be resolved on GitHub. Human-authored IDs must not appear here. */
+  resolveThreadIds?: string[];
   /** True when any mutation flag was appended (threads/comments/reviews). False for a bare runner-specific `pr-shepherd resolve <PR>` with nothing to do. Callers use this to gate emitting a "run the resolve command" instruction — coupling to argv length would break silently if the base argv ever grew a global flag. */
   hasMutations: boolean;
 }

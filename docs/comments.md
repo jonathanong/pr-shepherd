@@ -10,7 +10,7 @@
 | PR comment     | Top-level comment on the PR (not attached to a file)    | `pullRequest.comments`                         |
 | Review summary | PR-level body of a COMMENTED review (e.g. bot overview) | `pullRequest.reviews(states: COMMENTED)` (new) |
 
-Shepherd surfaces review threads and PR comments in the `report.threads` and `report.comments` fields respectively. Review threads include the original top comment fields (`body`, `author`, `url`) plus a `comments[]` transcript containing every fetched comment/reply in the thread; text output renders that transcript without previews so agents do not need a second GitHub fetch to recover context. Review summaries are also surfaced on `ShepherdReport` — as `reviewSummaries` (COMMENTED reviews) and `approvedReviews` (APPROVED-state reviews). COMMENTED review summaries and visible PR comments are minimized by the `iterate` / monitor loop via `--minimize-comment-ids` only when their GitHub `authorType` matches [`iterate.minimizeComments`](configuration.md#iterateminimizecomments). [`iterate.minimizeApprovals`](configuration.md#iterateminimizeapprovals) controls whether `APPROVED`-state reviews are also considered for minimization (default off — approvals stay visible); it does not gate whether those fields are present on `ShepherdReport`. The manual `/pr-shepherd:resolve` skill reads summaries from `resolve --fetch`'s `reviewSummaries` array, which is separately gated by `resolve.fetchReviewSummaries`.
+Shepherd surfaces review threads and PR comments in the `report.threads` and `report.comments` fields respectively. Review threads include the original top comment fields (`body`, `author`, `url`) plus a `comments[]` transcript containing every fetched comment/reply in the thread; text output renders that transcript without previews so agents do not need a second GitHub fetch to recover context. Review summaries are also surfaced on `ShepherdReport` — as `reviewSummaries` (COMMENTED reviews) and `approvedReviews` (APPROVED-state reviews). COMMENTED review summaries and visible PR comments are minimized by the `iterate` / monitor loop via `--minimize-comment-ids` only when their GitHub `authorType` matches [`iterate.minimizeComments`](configuration.md#iterateminimizecomments); human-authored items are never minimized. [`iterate.minimizeApprovals`](configuration.md#iterateminimizeapprovals) controls whether `APPROVED`-state reviews are also considered for minimization (default off — approvals stay visible); it does not gate whether those fields are present on `ShepherdReport`. The manual `/pr-shepherd:resolve` skill reads summaries from `resolve --fetch`'s `reviewSummaries` array, which is separately gated by `resolve.fetchReviewSummaries`.
 
 ## `isOutdated` flag
 
@@ -20,7 +20,7 @@ Shepherd no longer auto-resolves outdated threads during the sweep step.
 
 ## Outdated-thread path
 
-Outdated threads are fetched from `batch.mts`, surfaced under `report.threads.resolutionOnly`, and marker-gated like other first-look items. Human-authored outdated threads are replied to by the generated resolve command; Shepherd does not mark them resolved.
+Outdated threads are fetched from `batch.mts`, surfaced under `report.threads.resolutionOnly`, and marker-gated like other first-look items. Human-authored outdated threads are replied to by the generated resolve command; Shepherd does not mark them resolved. Bot/non-human outdated threads are routed to `--resolve-thread-ids`.
 
 The legacy `actions.autoResolveOutdated` setting is retained for config compatibility but no longer causes a resolve mutation.
 
@@ -29,7 +29,7 @@ The legacy `actions.autoResolveOutdated` setting is retained for config compatib
 Shepherd does **not** classify threads as "actionable" vs "informational" — that's the LLM's job. Shepherd surfaces:
 
 - All active (non-outdated, unresolved, non-minimized) threads in `report.threads.actionable`
-- Unresolved outdated or minimized threads in `report.threads.resolutionOnly`; human-authored threads receive a reply, and non-human threads are shown for context unless the caller explicitly chooses a manual resolve.
+- Unresolved outdated or minimized threads in `report.threads.resolutionOnly`; human-authored threads receive a reply, and bot/non-human threads are routed to `--resolve-thread-ids`.
 - Visible (non-minimized) PR comments in `report.comments.actionable`. Comments excluded by `iterate.minimizeComments` are marker-gated, so unchanged seen comments are suppressed on later ticks instead of being sent to the agent forever.
 
 The loop prompt reads these and decides what to fix.
