@@ -2,178 +2,117 @@
 
 [← README](../README.md)
 
-```
-pr-shepherd -v|--version
-pr-shepherd [PR] [--interval 30s] [--timeout 5m] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]
-pr-shepherd resolve [PR] [--fetch | --reply-thread-ids … | --resolve-thread-ids … | --minimize-comment-ids … | --dismiss-review-ids … | --message "…" | --require-sha <sha>]
-pr-shepherd commit-suggestion [PR] --thread-id <id> --message "…"
-pr-shepherd mark-files-as-viewed [PR] [files...] [--tests] [--match REGEX]
-pr-shepherd iterate [PR] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]  # single tick
-pr-shepherd poll [PR] [--interval 30s] [--timeout 5m] [--verbose] [--ready-delay Nm] [--stall-timeout <duration>] [--no-auto-mark-ready] [--no-auto-cancel-actionable]
-pr-shepherd log-file
-pr-shepherd clean <pr|branch|current|repo|all> [value] [--dry-run] [--format text|json]
-```
-
-## Common flags
-
-All subcommands accept:
-
-| Flag                  | Default | Description                                                                                       |
-| --------------------- | ------- | ------------------------------------------------------------------------------------------------- |
-| `--format text\|json` | `text`  | Output format                                                                                     |
-| `--verbose`           | false   | (`iterate` only) emit full `IterateResult` JSON / show all base/summary fields in Markdown output |
-
-### pr-shepherd resolve [PR]
-
-Two modes: **fetch** (default) returns actionable items and first-look items; **mutate** replies/resolves/minimizes/dismisses specific IDs after you push fixes. Human-authored threads are replied to, not resolved.
-
-**Fetch mode:**
-
-```sh
-pr-shepherd resolve           # fetch review items
-pr-shepherd resolve 42 --fetch
-```
-
-```markdown
-# PR #42 — Resolve fetch (2 actionable, 1 first-look)
-
-## Actionable Review Threads (2) [commit-suggestions: enabled]
-
-- `threadId=RT_kwDOabc` `src/api.ts:47` (@reviewer): Please add error handling here
-- `threadId=RT_kwDOdef` `src/utils.ts:12` (@alice) [suggestion]: Replace manual loop with Array.from
-
-## First-look items (1) — acknowledge status before acting
-
-- `threadId=RT_kwDOghi` `src/old.ts:9` (@bob) [status: outdated]: This variable name is confusing
-
-## Summary
-
-2 actionable, 1 first-look
-
-## Instructions
-
-1. Classify every item listed above …
-2. Items in `## First-look items` are shown so you can acknowledge their current status before acting. If a first-look human thread also appears under `## Review threads to resolve`, include its ID in `--reply-thread-ids`; otherwise do not pass first-look-only IDs to mutation flags.
-3. For each thread marked `[suggestion]`: run `pr-shepherd commit-suggestion 42 --thread-id <id> --message "<message>" --format=json` (one thread at a time). On `applied: false`, fall through to step 4 for that thread.
-4. For remaining threads (no suggestion, or commit-suggestion failed): read and edit the referenced files.
-5. Commit changed files and push: `git add <files> && git commit -m "<message>"`, then rebase and push.
-6. Run `pr-shepherd resolve 42 [--reply-thread-ids <ids>] …` with the appropriate flags.
-```
-
-First-look items (threads / comments that are outdated, resolved, or minimized on GitHub) are surfaced on first fetch only; a per-item seen-marker file suppresses them on subsequent fetches. They carry a `[status: …]` tag: `outdated`, `resolved`, or `minimized`. Unresolved human outdated/minimized threads also appear under `## Review threads to resolve` and should be included in `--reply-thread-ids`.
-
-The `[suggestion]` marker appears on threads whose body contains a ` ```suggestion ` fenced block and `actions.commitSuggestions` is enabled. See the [`commit-suggestion` section](#pr-shepherd-commit-suggestion-pr---thread-id-id---message) below for how to apply them.
-
-**Mutate mode** (after pushing fixes):
-
-```sh
-pr-shepherd resolve 42 \
-  --reply-thread-ids RT_kwDOabc,RT_kwDOdef \
-  --minimize-comment-ids IC_kwDOxyz \
-  --dismiss-review-ids PRR_kwDO123 \
-  --message "Switched query to parameterized form in src/db.ts" \
-  --require-sha $(git rev-parse HEAD)
-```
-
-```
-Replied to threads (2): RT_kwDOabc, RT_kwDOdef
-Minimized comments (1): IC_kwDOxyz
-Dismissed reviews (1): PRR_kwDO123
-```
-
-Mutation batches are sent in groups of 10. If GitHub returns a primary or secondary
-rate-limit response, Shepherd stops immediately and reports both completed IDs and
-the IDs still pending:
+Run any command with `--help` or `-h` for the built-in usage text. Help exits before GitHub, git, config, cleanup, or log I/O.
 
 ```text
-Minimized comments (35): IC_1, IC_2, …
-Stopped: GitHub rate limit hit — API rate limit exceeded (retry after 60s, remaining 0/5000, reset at 2023-11-14T22:13:20.000Z)
-Not minimized due to rate limit (5): IC_36, IC_37, IC_38, IC_39, IC_40
+pr-shepherd --version | -v
+pr-shepherd --help | -h
+pr-shepherd [PR] [poll-flags] [iterate-flags]
+pr-shepherd iterate [PR] [iterate-flags]
+pr-shepherd poll [PR] [poll-flags] [iterate-flags]
+pr-shepherd resolve [PR] [resolve-flags]
+pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [--description DESC]
+pr-shepherd mark-files-as-viewed [PR] [files...] [--tests] [--match REGEX]
+pr-shepherd clean <pr|branch|current|repo|all> [value] [--dry-run] [--format text|json]
+pr-shepherd log-file [--format text|json]
 ```
 
-Retry a later run with the pending IDs only. JSON output exposes the same data in
-`rateLimit`, `unrepliedThreads`, `unresolvedThreads`, `unminimizedComments`, `undismissedReviews`, and
-`skippedDismissals`.
+`PR` may be a number or GitHub pull request URL. When omitted, Shepherd infers the current branch's open PR.
 
-**Flags:**
+## Poll And Iterate
 
-| Flag                     | Description                                                    |
-| ------------------------ | -------------------------------------------------------------- |
-| `--fetch`                | Fetch mode (default when no mutation flags are given)          |
-| `--reply-thread-ids`     | Comma-separated human thread IDs to reply to                   |
-| `--resolve-thread-ids`   | Comma-separated non-human/manual thread IDs to mark resolved   |
-| `--minimize-comment-ids` | Comma-separated non-human comment or review-summary IDs        |
-| `--dismiss-review-ids`   | Comma-separated non-human `CHANGES_REQUESTED` review IDs       |
-| `--message`              | Reply/dismiss message (required for replies or dismissals)     |
-| `--require-sha`          | Poll GitHub until the PR head matches this SHA before mutating |
+`pr-shepherd [PR]` is the default poll dispatcher and is equivalent to `pr-shepherd poll [PR]`. It runs iterate ticks while the action is `WAIT`, then prints the final tick when the action becomes `MARK_READY`, `FIX_CODE`, `CANCEL`, or `ESCALATE`, or when `--timeout` returns the last `WAIT`.
 
-`--require-sha` polls `GET /repos/{owner}/{repo}/pulls/{pr}` for `headRefOid` until it matches, then issues the mutations — ensures reviewers see the fix before replies or other mutations land. Exit code: always `0`. `--message` must describe the specific fix; it is shown to the reviewer on GitHub.
+`pr-shepherd iterate [PR]` runs one tick and prints one action. See [actions.md](actions.md) for the full output contract.
 
-### pr-shepherd commit-suggestion [PR] --thread-id <id> --message "…"
+```sh
+pr-shepherd 42
+pr-shepherd 42 --interval 45s --timeout 4m
+pr-shepherd 42 --ready-delay 15m
+pr-shepherd iterate 42
+pr-shepherd poll 42 --format=json
+```
 
-Generates a suggestion for a single reviewer ` ```suggestion ` fenced block. Builds a unified diff from the suggestion, produces the suggested commit message and body (with a `Co-authored-by: <reviewer>` trailer), and emits numbered instructions for the caller to apply the patch, stage, commit, resolve the thread on GitHub, and push. The CLI does not mutate the working tree or git history — the calling agent executes the instructions.
+### Iterate Flags
+
+| Flag                          | Default                       | Description                                                      |
+| ----------------------------- | ----------------------------- | ---------------------------------------------------------------- |
+| `--ready-delay <duration>`    | `watch.readyDelayMinutes`     | Settle window before a clean handoff cancels. Example: `15m`.    |
+| `--stall-timeout <duration>`  | `iterate.stallTimeoutMinutes` | Escalate repeated unchanged state or unstarted CI; `0` disables. |
+| `--no-auto-mark-ready`        | false                         | Do not convert draft PRs to ready for review.                    |
+| `--no-auto-cancel-actionable` | false                         | Do not cancel in-progress runs before actionable fixes.          |
+| `--format text\|json`         | `text`                        | Output Markdown text or JSON.                                    |
+| `--verbose`                   | false                         | Include verbose iterate fields; poll also prints detailed ticks. |
+
+### Poll Flags
+
+| Flag                    | Default | Description                                                        |
+| ----------------------- | ------- | ------------------------------------------------------------------ |
+| `--interval <duration>` | `30s`   | Sleep between `WAIT` ticks.                                        |
+| `--timeout <duration>`  | `5m`    | Maximum wall-clock wait before returning the latest `WAIT` result. |
+
+Durations accept seconds, minutes, hours, or bare seconds: `30s`, `2m`, `1h`, `45`.
+
+Exit codes for iterate and poll: `0` `WAIT`/`MARK_READY`, `1` `FIX_CODE` or command error, `2` `CANCEL`, `3` `ESCALATE`.
+
+## Resolve
+
+`resolve` has two modes:
+
+- **Fetch** (`--fetch`, or no mutation IDs): print actionable review items, first-look items, review summaries when enabled, and a numbered `## Instructions` section.
+- **Mutate** (any mutation ID flag): reply to human threads, resolve non-human/manual thread IDs, minimize comments/review summaries, and dismiss non-human `CHANGES_REQUESTED` reviews.
+
+```sh
+pr-shepherd resolve 42 --fetch
+pr-shepherd resolve 42 \
+  --reply-thread-ids PRRT_human \
+  --resolve-thread-ids PRRT_bot \
+  --minimize-comment-ids IC_bot,PRR_summary \
+  --dismiss-review-ids PRR_changes_requested \
+  --message "Switched query construction to parameterized SQL." \
+  --require-sha "$(git rev-parse HEAD)"
+```
+
+| Flag                     | Description                                                          |
+| ------------------------ | -------------------------------------------------------------------- |
+| `--fetch`                | Force fetch mode.                                                    |
+| `--reply-thread-ids`     | Comma-separated human review thread IDs to reply to.                 |
+| `--resolve-thread-ids`   | Comma-separated non-human/manual review thread IDs to mark resolved. |
+| `--minimize-comment-ids` | Comma-separated issue comment or review IDs to minimize.             |
+| `--dismiss-review-ids`   | Comma-separated `CHANGES_REQUESTED` review IDs to dismiss.           |
+| `--message`              | Required with replies or dismissals; must describe the specific fix. |
+| `--require-sha`          | Poll GraphQL `headRefOid` until GitHub reports this PR head SHA.     |
+| `--format text\|json`    | Output format.                                                       |
+
+Mutation batches are sent in chunks of 10. On a primary or secondary GitHub rate-limit response, Shepherd stops and reports completed IDs plus pending IDs to retry later.
+
+Fetch-mode first-look items are surfaced once even if outdated, resolved, or minimized. Edited item bodies re-surface through the seen-marker gate. Review-summary IDs (`PRR_…`) go to `--minimize-comment-ids`, never `--dismiss-review-ids`.
+
+## Commit Suggestion
+
+`commit-suggestion` turns one review thread containing exactly one GitHub ` ```suggestion ` block into a patch, commit metadata, and numbered instructions. It does not edit files or mutate git history.
 
 ```sh
 pr-shepherd commit-suggestion 42 \
   --thread-id PRRT_abc \
-  --message "trim trailing whitespace per reviewer" \
-  --description "Optional longer body text."
+  --message "rename value for clarity" \
+  --description "Optional longer body."
 ```
 
-Requires that the current branch matches the PR head ref and that the local HEAD SHA matches the PR head SHA. Precondition or lookup failures (wrong branch, thread not found, already resolved, outdated, no suggestion block, nested fencing) are hard errors that exit `1` with a specific reason string.
+Preconditions:
 
-Gated by `actions.commitSuggestions` (default `true`) — `/pr-shepherd:resolve` calls this automatically for threads that `resolve --fetch` annotates with `[suggestion]`.
+- Current branch matches the PR head branch.
+- Local `HEAD` matches the PR head SHA.
+- Target file is clean.
+- Thread is active, locatable, unresolved, not outdated, and not minimized.
 
-**Example output:**
+The output includes a unified diff, a suggested commit subject/body with reviewer attribution, files to stage, and post-action instructions. Invoke once per suggestion thread.
 
-````
-Suggestion from @alice for PR #42 — thread PRRT_abc:
-  src/foo.ts (line 42)
+Exit codes: `0` suggestion produced, `1` validation/lookup/precondition/parsing failure.
 
-```diff
---- a/src/foo.ts
-+++ b/src/foo.ts
-@@ -42 +42 @@
--const x = computeRemaining();
-+const remainingSeconds = computeRemaining();
-```
+## Mark Files As Viewed
 
-## Suggested commit message
-
-rename x to remainingSeconds
-
-Co-authored-by: alice <alice@users.noreply.github.com>
-
-## Instructions
-
-1. Apply the patch to `src/foo.ts`: run `git apply` with the diff shown above, or edit the file directly using the line range (line 42).
-2. Stage the file: `git add -- src/foo.ts`
-3. Commit: `git commit -m "rename x to remainingSeconds" -m "Co-authored-by: alice <alice@users.noreply.github.com>"`
-4. Reply to the thread on GitHub: `pr-shepherd resolve 42 --reply-thread-ids PRRT_abc --message "Applied the suggestion."`
-5. Push when ready: `git push` (or `git push --force-with-lease` after rebasing).
-````
-
-Exit codes: `0` suggestion produced · `1` any precondition or lookup error.
-
-**Applying multiple suggestions.** Invoke once per thread — the command handles one suggestion at a time. For a PR with multiple suggestion threads, apply each in sequence and commit each separately (or amend as appropriate), then push all commits together:
-
-```sh
-# Get suggestion for first thread, apply it, then commit
-pr-shepherd commit-suggestion 42 --thread-id PRRT_aaa --message "rename x to remainingSeconds"
-# … follow the printed ## Instructions …
-
-# Get suggestion for second thread, apply it, then commit
-pr-shepherd commit-suggestion 42 --thread-id PRRT_bbb --message "simplify loop body"
-# … follow the printed ## Instructions …
-
-git push
-```
-
-If a patch fails to apply (drift since the suggestion was written), apply the fix manually using the line range shown in the output.
-
-### pr-shepherd mark-files-as-viewed [PR] [files...]
-
-Marks changed files as viewed in GitHub's PR diff using GraphQL. Exact path arguments must match files in the PR changed-file list. Selectors expand against the same GitHub PR diff, not local uncommitted changes.
+Marks changed files as viewed in the GitHub PR diff using GraphQL.
 
 ```sh
 pr-shepherd mark-files-as-viewed 42 src/a.ts src/b.test.ts
@@ -181,181 +120,47 @@ pr-shepherd mark-files-as-viewed 42 --tests
 pr-shepherd mark-files-as-viewed 42 --match '^docs/' --match '\\.md$'
 ```
 
-`--tests` selects common test file paths such as `tests/`, `__tests__/`, `spec/`, `*.test.ts`, `*.spec.tsx`, `_test.rs`, and `tests.rs`. `--match <regex>` is a repeatable, case-insensitive JavaScript regex over changed-file paths.
+Selectors expand against GitHub's changed-file list:
 
-Mutation batches are sent in groups of 10. If GitHub returns a primary or secondary rate-limit response, Shepherd stops and reports both completed files and pending files. JSON output exposes the same data as text output: matched paths, marked paths, already-viewed paths, missing exact paths, unmatched selectors, errors, rate-limit details, and pending unmarked paths.
+- Exact path arguments must match changed-file paths.
+- `--tests` selects common test paths and suffixes.
+- `--match <regex>` is repeatable and case-insensitive.
 
-### pr-shepherd [PR]
+Mutation batches are sent in groups of 10 and stop on GitHub rate limits with completed and pending file lists.
 
-Poll: loops iterate ticks until the action is non-WAIT or `--timeout` elapses. This is the default command — `pr-shepherd 42` is equivalent to `pr-shepherd poll 42`. `pr-shepherd iterate [PR]` runs a single tick. See [iterate-flow.md](iterate-flow.md) for the decision tree and [actions.md](actions.md) for every action's full output shape.
+## Log File
 
-```sh
-pr-shepherd 42
-pr-shepherd 42 --interval 45s --timeout 4m    # custom cadence
-pr-shepherd 42 --ready-delay 15m             # override ready-delay for this run
-pr-shepherd iterate 42                       # single tick only
-```
-
-**Flags:**
-
-| Flag                          | Default                                 | Description                                                                                          |
-| ----------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `--verbose`                   | false                                   | Full JSON output (all fields); restores full summary line in Markdown. See [actions.md](actions.md). |
-| `--ready-delay Nm`            | `watch.readyDelayMinutes` in config     | Settle window before the loop cancels after READY                                                    |
-| `--stall-timeout <duration>`  | `iterate.stallTimeoutMinutes` in config | Override the stall-detection window (e.g. `--stall-timeout 1h`)                                      |
-| `--no-auto-mark-ready`        | false                                   | Skip converting draft → ready-for-review                                                             |
-| `--no-auto-cancel-actionable` | false                                   | Skip cancelling actionable failing runs                                                              |
-
-**Default (Markdown) output.** Every action emits an H1 heading, a bolded base-fields line, a bolded summary line, then an action-specific body. Zero counts (`skipped`, `filtered`, `inProgress`) are omitted in lean mode; `blockingBotReviewInProgress` and `isDraft` are only shown when `true`; `shouldCancel` is never shown. Example for `[WAIT]`:
-
-```markdown
-# PR #42 [WAIT]
-
-**status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 3 passing · **remainingSeconds** 540
-
-WAIT: 3 passing, 0 in-progress — 540s until auto-cancel
-
-## Instructions
-
-1. Recheck: rerun `pr-shepherd 42` to continue the active goal once after a fresh 30s–4m delay.
-```
-
-The `## Instructions` recheck command is the same regardless of calling agent. If the current command used `--ready-delay`, the rerun command includes the same flag.
-
-The `pr-shepherd [PR]` default command polls, so callers get the loop automatically. Use `pr-shepherd iterate [PR]` for a single tick.
-
-Example for `[FIX_CODE]` (richest action):
-
-```markdown
-# PR #42 [FIX_CODE]
-
-**status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 3 passing
-
-## Review threads
-
-### `threadId=PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate/index.mts:42` (@alice)
-
-> The variable name is misleading.
->
-> Consider renaming `x` to `remainingSeconds`.
-
-## Failing checks
-
-- `24697658766` — `CI › lint / typecheck / test (22.x)`
-  > Run tests
-```
-
-Error: expected 'foo' to equal 'bar'
-at Object.<anonymous> (src/commands/iterate.test.mts:58:22)
-
-```
-
-## Post-fix push
-
-- base: `main`
-- resolve: `pr-shepherd resolve 42 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
-
-## Instructions
-
-1. Apply code fixes: read and edit each file referenced under `## Review threads` and `## Actionable comments` above.
-2. For each failing check under `## Failing checks` with a run ID, examine the log tail in the fenced block to decide what to do:
-   - If the log tail shows a transient runner or infrastructure failure (network timeout, runner setup crash, OOM kill), run `gh run rerun <runId> --failed` and stop this iteration — CI will re-run automatically.
-   - If the log tail shows a real test or build failure, apply a code fix.
-   - If the fenced log block is absent, run `gh run view <runId> --log-failed` first to fetch it, then choose between rerun and fix above.
-3. Commit changed files: `git add <files> && git commit -m "<descriptive message>"`
-4. Keep the PR title and description current: if the changes alter the PR's scope or intent, run `gh pr edit 42 --title "<new title>" --body "<new body>"` to reflect them. Skip if the existing title/body still accurately describe the PR.
-5. Rebase and push: `git fetch origin && git rebase origin/main && git push --force-with-lease` — capture `HEAD_SHA=$(git rev-parse HEAD)`
-6. Run the `resolve:` command shown above, substituting "$HEAD_SHA" with the pushed commit SHA and $DISMISS_MESSAGE with a one-sentence description of what you changed.
-7. For any large decisions made, add or update a `## Shepherd Journal` section in the PR description (`gh pr edit 42 --body …`), appending entries under the existing heading if present.
-8. CI needs time to run on the new push. Recheck: rerun `pr-shepherd 42 --ready-delay 15m` to recheck once after a fresh 30s–4m delay.
-```
-
-See [actions.md](actions.md) for all five actions and their complete output shapes.
-
-Both `--format=text` (default Markdown) and `--format=json` carry equivalent information — every field exposed in JSON has a corresponding Markdown representation, and vice versa.
-
-Exit codes: `0` wait/mark_ready · `1` fix_code · `2` cancel · `3` escalate
-
-### pr-shepherd poll [PR]
-
-Loops `pr-shepherd [PR]` every `--interval` seconds until the action is non-WAIT or `--timeout` elapses. Useful for agents that cannot reliably schedule their own follow-up ticks.
-
-| Flag                    | Default | Description                                                                 |
-| ----------------------- | ------- | --------------------------------------------------------------------------- |
-| `--interval <duration>` | `30s`   | Sleep between ticks. Accepts `30s`, `2m`, `1h`, or bare integers (seconds). |
-| `--timeout <duration>`  | `5m`    | Maximum wall-clock wait. Returns the last WAIT result on timeout.           |
-
-All `pr-shepherd [PR]` flags (`--ready-delay`, `--stall-timeout`, `--no-auto-mark-ready`, `--no-auto-cancel-actionable`, `--verbose`, `--format`) are forwarded to each tick.
-
-Stdout is the final tick's output only; each WAIT tick writes a single dot to stderr. `--verbose` emits the detailed per-tick line instead.
-
-Exit codes: `0` wait/mark_ready · `1` fix_code · `2` cancel · `3` escalate
-
-**Notes:**
-
-- A long poll session is equivalent to N separately-scheduled ticks, including stall-guard behavior. The stall guard may escalate before `--timeout` fires if CI is stuck.
-- `mark_ready` exits the loop — the CLI already mutated state. Re-invoke if you want to continue.
+Prints the per-worktree append-only debug log path. The first non-help command that initializes logging creates the file.
 
 ```sh
-pr-shepherd poll 42                        # poll PR #42 every 30s for up to 5m
-pr-shepherd poll 42 --interval 1m          # check every minute
-pr-shepherd poll 42 --timeout 15m          # wait up to 15 minutes
-pr-shepherd poll --format=json             # infer PR, emit JSON on final tick
+pr-shepherd log-file
+pr-shepherd log-file --format=json
 ```
 
-### pr-shepherd log-file
+Logs include session headers, GraphQL request/response bodies, REST JSON request/response bodies, REST text metadata, and full CLI stdout. Auth headers are never logged.
 
-Prints the path of the per-worktree append-only debug log for the current repository. The file is created on the first invocation of any other subcommand.
+Set `PR_SHEPHERD_LOG_DISABLED=1` to disable logging. `PR_SHEPHERD_STATE_DIR` overrides the base state/log directory.
+
+## Clean
+
+Removes local Shepherd state from `$PR_SHEPHERD_STATE_DIR` (default `$TMPDIR/pr-shepherd-state`).
 
 ```sh
-pr-shepherd log-file             # prints path
-pr-shepherd log-file --format=json  # {"path":"…"}
+pr-shepherd clean current
+pr-shepherd clean pr 42
+pr-shepherd clean branch feature/foo
+pr-shepherd clean repo
+pr-shepherd clean all
+pr-shepherd clean current --dry-run
+pr-shepherd clean repo --format=json
 ```
 
-```
-/var/folders/…/pr-shepherd-state/owner-repo/worktrees/my-branch-3f4a9b21.md
-```
+| Variant         | What it removes                                                 |
+| --------------- | --------------------------------------------------------------- |
+| `pr [number]`   | One PR's state; defaults to current branch PR.                  |
+| `branch [name]` | Resolves a branch to its open PR, then removes that PR's state. |
+| `current`       | Alias for `branch` against the current branch.                  |
+| `repo`          | All state for the current repository, including worktree logs.  |
+| `all`           | All `pr-shepherd` state under the base directory.               |
 
-The log captures, for each CLI invocation:
-
-- A session header (ISO-8601 timestamp · pid · version · full argv)
-- Every GraphQL request and response (query, variables, response body)
-- Every REST JSON request and response (method, path, body, status)
-- Every `restText` request/response — metadata only (status · content-length), body never logged
-- Full stdout output (text or JSON) emitted by the subcommand
-
-All entries carry an ISO-8601 millisecond timestamp. HTTP response entries also show elapsed milliseconds. Auth headers are never written to the log.
-
-**Disable logging:** set `PR_SHEPHERD_LOG_DISABLED=1`. Logging is also automatically disabled when `CI=true` or when the first write fails.
-
-**Override base directory:** set `PR_SHEPHERD_STATE_DIR` (same env var as the loop-state directory). The log lives at `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/worktrees/<basename>-<sha8>.md`.
-
-Exit code: `0` on success · `1` if not in a git repo or repo identity cannot be resolved.
-
-### pr-shepherd clean \<variant\> [value]
-
-Removes pr-shepherd state files. State lives under `$PR_SHEPHERD_STATE_DIR` (default `$TMPDIR/pr-shepherd-state`) and includes per-PR seen markers, fix-attempt counters, stall fingerprints, and ready-delay timers.
-
-| Variant         | What it removes                                                                                                   |
-| --------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `pr [number]`   | State for a specific PR: `<base>/<owner>-<repo>/<pr>/`. Defaults to the current branch's open PR.                 |
-| `branch [name]` | Resolves the branch to its open PR, then removes that PR's state. Defaults to the current branch.                 |
-| `current`       | Alias for `branch` against the current branch.                                                                    |
-| `repo`          | All state for the current repository: `<base>/<owner>-<repo>/` (includes all PRs and the worktree debug-log dir). |
-| `all`           | All pr-shepherd state: `<base>/`.                                                                                 |
-
-```sh
-pr-shepherd clean current              # remove state for the current branch's PR
-pr-shepherd clean pr 42                # remove state for PR #42
-pr-shepherd clean branch feature/foo   # remove state for the PR on branch feature/foo
-pr-shepherd clean repo                 # remove all state for this repo
-pr-shepherd clean all                  # remove all pr-shepherd state
-pr-shepherd clean current --dry-run    # preview what would be removed
-pr-shepherd clean repo --format=json   # machine-readable output
-```
-
-`--dry-run` lists the paths that would be deleted without touching the filesystem. A nonexistent target is not an error — the command exits `0` and reports nothing to clean.
-
-Exit codes: `0` on success · `1` on error (invalid variant, no PR found, not in a git repo).
+`--dry-run` previews paths without deleting them. A nonexistent target exits `0` and reports nothing to clean.

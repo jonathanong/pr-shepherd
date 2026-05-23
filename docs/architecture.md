@@ -15,7 +15,7 @@ shepherd/
 ├── index.mts              # bin entrypoint — thin shim that imports cli-parser
 ├── cli-parser.mts         # argv dispatch; subcommand routing
 ├── types.mts              # barrel re-exporting types/github.mts, types/iterate.mts, types/report.mts
-├── config.json            # default config values (TTL, concurrency, intervals, etc.)
+├── config.json            # default config values
 │
 ├── cli/                   # formatting and argument helpers
 │   ├── args.mts           # low-level argv parsing helpers (getFlag, hasFlag, parseCommonArgs, …)
@@ -27,9 +27,11 @@ shepherd/
 │   └── fix-formatter.mts  # Markdown formatter for fix_code variant
 │
 ├── commands/              # one file (or dir) per subcommand
+│   ├── check-annotations.mts  # fetches inline annotations for failing CheckRuns
 │   ├── check.mts          # read-only snapshot (GraphQL fetch → classify → report); internal helper
 │   ├── check-status.mts   # derives ShepherdStatus from a report
-│   ├── commit-suggestion.mts  # applies a reviewer ```suggestion block as a commit
+│   ├── clean.mts          # removes local state files
+│   ├── commit-suggestion.mts  # emits patch and commit instructions for one suggestion
 │   ├── iterate/           # iterate subcommand (default invocation)
 │   │   ├── index.mts      # main runIterate orchestrator
 │   │   ├── classify.mts   # classifyReviewSummaries
@@ -38,6 +40,9 @@ shepherd/
 │   │   ├── helpers.mts    # shared small utilities
 │   │   ├── render.mts     # renderResolveCommand
 │   │   └── stall.mts      # stall-timeout guard
+│   ├── log-file.mts       # prints the per-worktree debug log path
+│   ├── mark-files-as-viewed.mts  # marks changed PR files viewed in GitHub
+│   ├── poll.mts           # repeats iterate while action is WAIT
 │   ├── ready-delay.mts    # ready-delay state machine (ready-since.txt marker)
 │   ├── resolve.mts        # fetch + mutate modes (resolve threads, minimize comments, dismiss reviews)
 │   └── resolve-instructions.mts  # builds fetch-instructions Markdown
@@ -55,9 +60,11 @@ shepherd/
 │   ├── pagination.mts     # generic GraphQL paginator (cursor-based, forward + backward)
 │   └── gql/               # *.gql files — one per query/mutation
 │       ├── batch-pr.gql   # main batch query
-│       ├── resolve-thread.gql
-│       ├── minimize-comment.gql
-│       └── dismiss-review.gql
+│       ├── check-run-annotations.gql
+│       ├── get-pr-head-sha.gql
+│       ├── mark-pr-ready.gql
+│       ├── pr-number-by-branch.gql
+│       └── review-thread-comments.gql
 │
 ├── state/
 │   ├── fix-attempts.mts   # per-thread fix-attempt counter (JSON file in state dir)
@@ -96,16 +103,19 @@ shepherd/
 Dependencies flow in one direction only:
 
 ```
-commands → github → cache
-commands → checks
-commands → comments
+commands → github
+commands → checks → github
+commands → comments → github
+commands → state
 commands → merge-status
 commands → reporters
+comments → state
 ```
 
-- `commands` may import from `github`, `cache`, `checks`, `comments`, `merge-status`, and `reporters`.
-- `github` may import from `cache` but not from `commands`.
-- `checks`, `comments`, `merge-status`, and `reporters` are leaf nodes — they do not import from `commands` or `github`.
+- `commands` may import from `github`, `checks`, `comments`, `state`, `merge-status`, and `reporters`.
+- `checks` and `comments` may import from `github` for their domain-specific GitHub reads/mutations.
+- `github` must not import from `commands`, `checks`, or `comments`.
+- `merge-status` and `reporters` are leaf-ish domain modules — they do not import from `commands` or `github`.
 - `types/` is shared by all — the files there have no imports from `commands` or `github`. Keep them lean.
 
 Never import upward (e.g., `github` importing from `commands`) — that creates circular dependencies and breaks the single-responsibility model.

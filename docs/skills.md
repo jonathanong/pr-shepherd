@@ -4,7 +4,7 @@
 
 Two skills are shipped for both Claude Code and Codex:
 
-- `pr-shepherd` is a thin poll dispatcher — it runs `pr-shepherd poll <PR>` and follows the `## Instructions` embedded in the output. All policy, state transitions, and per-action guidance live in the CLI output, not in the skill.
+- `pr-shepherd` is a thin poll dispatcher — it runs the default `pr-shepherd <PR>` command with a bounded interval/timeout and follows the `## Instructions` embedded in the output. All policy, state transitions, and per-action guidance live in the CLI output, not in the skill.
 - `mark-files-as-viewed` marks PR changed files as viewed in GitHub by invoking `pr-shepherd mark-files-as-viewed`.
 
 ## Claude Code
@@ -21,11 +21,10 @@ Use the skill inside a `/goal`:
 ```
 /goal /pr-shepherd:pr-shepherd        # infer PR from current branch
 /goal /pr-shepherd:pr-shepherd 42
-/goal /pr-shepherd:pr-shepherd 42 --ready-delay 15m
 /pr-shepherd:mark-files-as-viewed 42 tests
 ```
 
-The goal loop handles recurrence. The skill invokes `pr-shepherd poll <N>` and prints the output. For non-terminal actions, follow the CLI's `## Instructions`, then invoke `pr-shepherd poll <N>` again. `[CANCEL]` and `[ESCALATE]` stop the goal.
+The goal loop handles recurrence. The skill invokes the default poll dispatcher and prints the output. For non-terminal actions, follow the CLI's `## Instructions`, then invoke the skill again. `[CANCEL]` and `[ESCALATE]` stop the goal.
 
 ## Codex
 
@@ -60,7 +59,7 @@ Use the skill inside a `/goal`:
 $mark-files-as-viewed 42 tests
 ```
 
-Codex runs the same skill: invoke `pr-shepherd poll <N>`, follow the output, and continue until `[CANCEL]` or `[ESCALATE]`.
+Codex runs the same skill: invoke the default poll dispatcher, follow the output, and continue until `[CANCEL]` or `[ESCALATE]`.
 
 ## Resolve without iterating
 

@@ -83,7 +83,7 @@ Before the generic fingerprint check, `wait` results also inspect relevant in-pr
 
 All failing checks — including timeout, cancelled, startup-failure, and flaky failures — route here. The `fix` payload carries `conclusion` for each failing check; `workflowName`, `jobName`, and `failedStep` are populated only when triage runs (that is, not for cancelled or startup-failure checks). The agent runs `gh run view <runId> --log-failed` to fetch the full log when needed and decides whether to rerun (transient failure) or apply a code fix (real failure). Cancelled checks carry a `[conclusion: CANCELLED]` tag — the agent reruns with `gh run rerun <runId>` (no `--failed`) if the cancellation looks unintended. Startup failures carry a `[conclusion: STARTUP_FAILURE]` tag — the agent inspects metadata with `gh run view <runId>` and reruns with `gh run rerun <runId>` if the workflow should be attempted again.
 
-CONFLICTS is included here because the `fix_code` handler already runs `git fetch origin && git rebase origin/<BASE_BRANCH> && git push --force-with-lease`, so merge conflicts and review comments are resolved together in a single push rather than across two separate ticks.
+CONFLICTS is included here because the `fix_code` instructions tell the caller to rebase onto `origin/<BASE_BRANCH>` according to repository conventions, so merge conflicts and review comments can be resolved together in a single push rather than across two separate ticks.
 
 **Side-effects:** cancels stale CI runs (`gh run cancel <runId>`) for all failing checks.
 
@@ -95,7 +95,7 @@ CONFLICTS is included here because the `fix_code` handler already runs `git fetc
 
 **Check:** `report.status === 'READY'` AND `mergeStateStatus` is `CLEAN` (or `DRAFT` when `isDraft`) AND `!blockingBotReviewInProgress` AND `isDraft` AND `!shouldCancel`.
 
-**Side-effects:** `gh pr ready <PR>`
+**Side-effects:** calls GitHub's `markPullRequestReadyForReview` GraphQL mutation.
 
 **Emits:** `action: 'mark_ready'`
 

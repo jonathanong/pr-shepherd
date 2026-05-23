@@ -6,8 +6,8 @@ The module supports a focused automation loop for PR monitoring and deterministi
 
 ### CLI commands and invocation
 
-- Supports default invocation `pr-shepherd [PR]` for one iterate tick.
-- Supports explicit `pr-shepherd iterate [PR]` as the legacy alias spelling.
+- Supports default invocation `pr-shepherd [PR]` as the poll dispatcher.
+- Supports explicit `pr-shepherd iterate [PR]` for one single tick.
 - Supports `pr-shepherd resolve [PR]` fetch mode (via `--fetch` or when no mutation flags are passed).
 - Supports `pr-shepherd resolve [PR]` mutate mode with `--reply-thread-ids`, `--resolve-thread-ids`, `--minimize-comment-ids`, `--dismiss-review-ids`.
 - Supports `pr-shepherd commit-suggestion [PR] --thread-id <id> --message "<one-sentence headline>"` (or `--description`) for suggestion-thread patch generation.
@@ -64,7 +64,7 @@ The module supports a focused automation loop for PR monitoring and deterministi
 - Supports minimizing non-human minimizable objects by ID (`--minimize-comment-ids`), including review summaries/review IDs.
 - Supports dismissing `CHANGES_REQUESTED` reviews with a message (`--dismiss-review-ids` + `--message`).
 - Supports batching mutation IDs in groups of 10.
-- Supports explicit `--require-sha <sha>` polling before mutating so close/reopen actions follow the pushed commit.
+- Supports explicit `--require-sha <sha>` polling before mutating so replies/resolves/minimizes/dismissals follow the pushed commit.
 
 ### Suggestion-thread workflow
 
@@ -103,7 +103,7 @@ The module supports a focused automation loop for PR monitoring and deterministi
 
 ## References
 
-- Command surface and argument parsing: [src/cli-parser.mts](src/cli-parser.mts)
+- Command surface and argument parsing: `src/cli-parser.mts`
 - CLI usage reference: [docs/cli-usage.md](docs/cli-usage.md)
 - Action model and flow: [docs/actions.md](docs/actions.md), [docs/iterate-flow.md](docs/iterate-flow.md)
 - Configuration options: [docs/configuration.md](docs/configuration.md)

@@ -54,7 +54,7 @@ actions:
 | `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos)                                                                            |
 | `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                                                                      |
 | `actions.autoResolveOutdated`        | `true`                                    | Deprecated compatibility setting; outdated threads are surfaced before human-authored threads are replied to and bot/non-human threads are resolved         |
-| `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR's CI goes clean                                                                                                           |
+| `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR reaches a clean handoff state                                                                                             |
 | `actions.commitSuggestions`          | `true`                                    | Route `/pr-shepherd:resolve` through `commit-suggestion` (singular) for threads with a ` ```suggestion ` block                                              |
 
 ## `iterate`
@@ -175,7 +175,7 @@ Deprecated. Shepherd no longer auto-resolves outdated threads. Outdated threads 
 
 ### `actions.autoMarkReady` — default `true`
 
-When `true`, shepherd converts a draft PR to ready-for-review once all checks pass and the ready-delay has elapsed.
+When `true`, shepherd converts a draft PR to ready-for-review once all checks pass, no Shepherd-visible work remains, no configured blocking review is in progress, and the ready-delay has not yet elapsed. After the ready-delay elapses, the loop emits `cancel` instead.
 
 Disable if your team uses the draft state as a deliberate gate that requires a human to promote.
 
