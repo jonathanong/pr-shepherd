@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   registerIterateHooks,
-  NOW,
   defaultConfig,
   makeOpts,
   makeReport,
@@ -10,6 +9,7 @@ import {
   mockRunCheck,
   mockUpdateReadyDelay,
 } from "./iterate-test-support.mts";
+import { makeThread } from "./iterate-thread-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
 
 registerIterateHooks();
@@ -119,20 +119,10 @@ describe("runIterate — review summary auto-minimize", () => {
     expect(result.action).toBe("fix_code");
   });
   it("includes reviewSummaryIds in fix_code result when both a thread and a bot summary are present", async () => {
-    const t1 = {
+    const t1 = makeThread({
       id: "PRRT_x",
-      isResolved: false,
-      isOutdated: false,
-      isMinimized: false,
-      path: "src/foo.mts",
-      line: 10,
-      startLine: null,
-      author: "reviewer",
-      authorType: "Unknown" as const,
       body: "Use a const here.\n\n```suggestion\nconst foo = 1;\n```",
-      url: "",
-      createdAtUnix: NOW - 3600,
-    };
+    });
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",

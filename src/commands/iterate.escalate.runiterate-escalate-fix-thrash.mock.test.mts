@@ -1,13 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
   registerIterateHooks,
-  NOW,
   makeOpts,
   makeReport,
   mockReadFixAttempts,
   mockRunCheck,
   mockUpdateReadyDelay,
 } from "./iterate-test-support.mts";
+import { makeThread } from "./iterate-thread-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
 
 registerIterateHooks();
@@ -16,20 +16,7 @@ registerIterateHooks();
 // Escalate
 // ---------------------------------------------------------------------------
 
-const THREAD = {
-  id: "thread-1",
-  isResolved: false,
-  isOutdated: false,
-  isMinimized: false,
-  path: "src/foo.mts",
-  line: 10,
-  startLine: null,
-  author: "reviewer",
-  authorType: "Unknown" as const,
-  body: "Fix this",
-  url: "",
-  createdAtUnix: NOW - 3600,
-};
+const THREAD = makeThread();
 
 describe("runIterate — escalate (fix-thrash)", () => {
   it("escalates when a thread has been attempted >= fixAttemptsPerThread times", async () => {
