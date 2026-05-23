@@ -36,9 +36,12 @@ export function threadComments(thread: {
   ];
 }
 
-export function threadTranscriptBody(thread: ReviewThread): string {
-  if (!thread.comments || thread.comments.length === 0) return thread.body;
-  return threadComments(thread)
-    .map((c) => `${c.id}\n${c.body}`)
-    .join("\n\n--- thread comment ---\n\n");
+const THREAD_COMMENT_SEPARATOR = "\n\n--- thread comment ---\n\n";
+
+export function threadTranscriptBody(thread: ReviewThread, appendedBodies: string[] = []): string {
+  const bodies =
+    thread.comments && thread.comments.length > 0
+      ? threadComments(thread).map((c) => c.body)
+      : [thread.body];
+  return [...bodies, ...appendedBodies].join(THREAD_COMMENT_SEPARATOR);
 }

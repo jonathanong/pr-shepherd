@@ -7,6 +7,7 @@ import {
   makeThread,
   mockApplyResolveOptions,
   mockFetchPrBatch,
+  mockMarkSeen,
 } from "./resolve.test-support.mts";
 import { runResolveMutate } from "./resolve.mts";
 
@@ -121,5 +122,49 @@ describe("runResolveMutate — forwards options", () => {
       }),
     );
     expect(result.skippedNonHumanReplies).toEqual(["t-bot", "t-typo"]);
+  });
+
+  it("updates the seen marker after successfully replying to a human thread", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        reviewThreads: [
+          makeThread({
+            id: "t-human",
+            authorType: "User",
+            body: "top body",
+            comments: [
+              {
+                id: "c-1",
+                isMinimized: false,
+                author: "alice",
+                authorType: "User",
+                body: "top body",
+                url: "",
+                createdAtUnix: 1,
+              },
+            ],
+          }),
+        ],
+      }),
+    });
+    mockApplyResolveOptions.mockResolvedValue({
+      repliedThreads: ["t-human"],
+      resolvedThreads: [],
+      minimizedComments: [],
+      dismissedReviews: [],
+      errors: [],
+    });
+
+    await runResolveMutate({
+      ...BASE_OPTS,
+      replyThreadIds: ["t-human"],
+      dismissMessage: "done",
+    });
+
+    expect(mockMarkSeen).toHaveBeenCalledWith(
+      { owner: "owner", repo: "repo", pr: 42 },
+      "t-human",
+      "top body\n\n--- thread comment ---\n\ndone",
+    );
   });
 });
