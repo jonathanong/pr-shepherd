@@ -202,14 +202,6 @@ async function bulkApplyChunk(
   result: ResolveResult,
   hasPendingAfter: boolean,
 ): Promise<boolean> {
-  if (
-    replyIds.length === 0 &&
-    resolveIds.length === 0 &&
-    minimizeIds.length === 0 &&
-    dismissIds.length === 0
-  )
-    return false;
-
   const doc = buildBulkMutation(replyIds, resolveIds, minimizeIds, dismissIds, dismissMessage);
 
   let data: Record<string, unknown> = {};

@@ -19,6 +19,17 @@ describe("applyResolveOptions — mutations", () => {
     expect(doc).toContain("Addressed in the latest commit.");
     expect(doc).not.toContain("resolveReviewThread");
   });
+  it("reports reply mutations that return null", async () => {
+    mockGraphql.mockResolvedValueOnce({ data: { p0: null } });
+
+    const result = await applyResolveOptions(1, REPO, {
+      replyThreadIds: ["t-1"],
+      dismissMessage: "Addressed in the latest commit.",
+    });
+
+    expect(result.repliedThreads).toEqual([]);
+    expect(result.errors).toEqual(["t-1: reply returned null or comment not created"]);
+  });
   it("resolves threads and populates resolvedThreads", async () => {
     const result = await applyResolveOptions(1, REPO, { resolveThreadIds: ["t-1", "t-2"] });
     expect(result.resolvedThreads).toEqual(["t-1", "t-2"]);

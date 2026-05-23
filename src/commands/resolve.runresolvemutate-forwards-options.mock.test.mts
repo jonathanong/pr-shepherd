@@ -3,6 +3,8 @@ import {
   registerHooks,
   BASE_OPTS,
   makeBatchData,
+  makeComment,
+  makeThread,
   mockApplyResolveOptions,
   mockFetchPrBatch,
 } from "./resolve.test-support.mts";
@@ -38,33 +40,8 @@ describe("runResolveMutate — forwards options", () => {
   it("skips human resolve, minimize, and dismiss IDs before mutating", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
-        reviewThreads: [
-          {
-            id: "t-human",
-            isResolved: false,
-            isOutdated: false,
-            isMinimized: false,
-            path: "src/foo.ts",
-            line: 1,
-            startLine: null,
-            author: "alice",
-            authorType: "User",
-            body: "fix",
-            url: "",
-            createdAtUnix: 0,
-          },
-        ],
-        comments: [
-          {
-            id: "c-human",
-            isMinimized: false,
-            author: "alice",
-            authorType: "User",
-            body: "note",
-            url: "",
-            createdAtUnix: 0,
-          },
-        ],
+        reviewThreads: [makeThread({ id: "t-human", authorType: "User" })],
+        comments: [makeComment({ id: "c-human", author: "alice", authorType: "User" })],
         changesRequestedReviews: [
           { id: "r-human", author: "alice", authorType: "User", body: "changes" },
         ],
@@ -104,34 +81,14 @@ describe("runResolveMutate — forwards options", () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
         reviewThreads: [
-          {
-            id: "t-human",
-            isResolved: false,
-            isOutdated: false,
-            isMinimized: false,
-            path: "src/foo.ts",
-            line: 1,
-            startLine: null,
-            author: "alice",
-            authorType: "User",
-            body: "fix",
-            url: "",
-            createdAtUnix: 0,
-          },
-          {
+          makeThread({ id: "t-human", authorType: "User" }),
+          makeThread({
             id: "t-bot",
-            isResolved: false,
-            isOutdated: false,
-            isMinimized: false,
-            path: "src/foo.ts",
             line: 2,
-            startLine: null,
             author: "copilot-pull-request-reviewer",
             authorType: "Bot",
             body: "bot note",
-            url: "",
-            createdAtUnix: 0,
-          },
+          }),
         ],
       }),
     });
