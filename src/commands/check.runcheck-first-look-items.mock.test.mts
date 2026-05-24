@@ -174,6 +174,7 @@ describe("runCheck — first-look items", () => {
 
     const report = await runCheck(BASE_OPTS);
     expect(report.threads.firstLook).toHaveLength(0);
+    expect(report.threads.resolutionOnly.map((t) => t.id)).toEqual(["t-outdated"]);
   });
   it("suppresses already-seen items (legacy marker without hash)", async () => {
     const outdated = makeThread({ id: "t-outdated", isOutdated: true });

@@ -8,6 +8,7 @@ import { loadSeenMap, markSeen, classifyItem } from "../state/seen-comments.mts"
 import { threadTranscriptBody } from "../threads/transcript.mts";
 import { classifyThreadVisibility } from "../comments/thread-visibility.mts";
 import { classifyReviewsForDisplay } from "../comments/review-visibility.mts";
+import { markReviewInlineThreadMarkers } from "../comments/review-thread-markers.mts";
 import { normalizeBotUsernames } from "../comments/authors.mts";
 import type {
   GlobalOptions,
@@ -113,6 +114,7 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
     ...changesRequestedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
     ...reviewSummaryVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
   ]);
+  await markReviewInlineThreadMarkers(stateKey, data.reviewThreads);
 
   const result: Omit<FetchResult, "instructions"> = {
     prNumber,

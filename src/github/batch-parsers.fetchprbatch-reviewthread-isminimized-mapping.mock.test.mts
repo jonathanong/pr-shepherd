@@ -67,4 +67,37 @@ describe("fetchPrBatch — reviewThread isMinimized mapping", () => {
     const { data } = await fetchPrBatch(42, REPO);
     expect(data.reviewThreads[0]!.isMinimized).toBe(false);
   });
+
+  it("maps the top comment pull request review id onto the review thread", async () => {
+    const pr = makeRawPr({
+      reviewThreads: {
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: [
+          {
+            id: "t-review",
+            isResolved: false,
+            isOutdated: false,
+            comments: {
+              nodes: [
+                {
+                  id: "t-review-c",
+                  isMinimized: false,
+                  pullRequestReview: { id: "PRR_PARENT" },
+                  author: { login: "copilot" },
+                  body: "body",
+                  path: "foo.ts",
+                  line: 1,
+                  createdAt: "2024-01-01T00:00:00Z",
+                },
+              ],
+            },
+          },
+        ],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.reviewThreads[0]!.reviewId).toBe("PRR_PARENT");
+    expect(data.reviewThreads[0]!.comments?.[0]?.reviewId).toBe("PRR_PARENT");
+  });
 });

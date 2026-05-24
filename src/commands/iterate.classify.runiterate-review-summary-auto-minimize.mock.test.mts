@@ -45,6 +45,49 @@ describe("runIterate — review summary auto-minimize", () => {
     expect(result.fix.resolveCommand.argv).toContain("PRR_BOT");
     expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
   });
+  it("does not minimize a bot summary while a child thread is unresolved", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        reviewSummaries: [botSummary],
+        threads: {
+          actionable: [],
+          resolutionOnly: [
+            {
+              id: "thread-child",
+              reviewId: "PRR_BOT",
+              isResolved: false,
+              isOutdated: true,
+              isMinimized: false,
+              path: "src/foo.mts",
+              line: 10,
+              startLine: null,
+              author: "copilot-pull-request-reviewer",
+              authorType: "Bot" as const,
+              body: "outdated child",
+              url: "",
+              createdAtUnix: 0,
+            },
+          ],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.reviewSummaryIds).toEqual([]);
+    expect(result.fix.resolveCommand.argv).not.toContain("PRR_BOT");
+    expect(result.fix.resolveCommand.resolveThreadIds).toEqual(["thread-child"]);
+  });
   it("classifies the `*[bot]` login suffix as a bot", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [bracketBotSummary] }));
     mockUpdateReadyDelay.mockResolvedValue({

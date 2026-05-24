@@ -86,6 +86,8 @@ export interface ReviewThread {
   line: number | null;
   /** Start of the comment's line range. Null for single-line comments (use `line` for both). */
   startLine: number | null;
+  /** PullRequestReview ID that created the top comment, when GitHub exposes it. */
+  reviewId?: string;
   author: string;
   authorType: AuthorType;
   body: string;

@@ -8,7 +8,7 @@ import {
   testStateDir,
   registerHooks,
 } from "../../test-helpers/state/seen-comments.test-support.mts";
-import { markSeen, readSeenMarker } from "./seen-comments.mts";
+import { markReviewInlineThreads, markSeen, readSeenMarker } from "./seen-comments.mts";
 
 registerHooks();
 
@@ -24,6 +24,18 @@ describe("readSeenMarker", () => {
     expect(marker).not.toBeNull();
     expect(typeof marker!.seenAt).toBe("number");
     expect(marker!.seenAt).toBeGreaterThanOrEqual(before);
+  });
+
+  it("stores review inline-thread ids without replacing body metadata", async () => {
+    await markSeen(testKey, "PRR_PARENT", "review body");
+    const before = await readSeenMarker(testKey, "PRR_PARENT");
+
+    await markReviewInlineThreads(testKey, "PRR_PARENT", ["thread-b", "thread-a", "thread-a"]);
+
+    const marker = await readSeenMarker(testKey, "PRR_PARENT");
+    expect(marker?.seenAt).toBe(before?.seenAt);
+    expect(marker?.bodyHash).toBe(before?.bodyHash);
+    expect(marker?.inlineThreadIds).toEqual(["thread-a", "thread-b"]);
   });
 
   it("tolerates unknown keys — open schema", async () => {

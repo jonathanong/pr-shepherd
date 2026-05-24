@@ -77,6 +77,7 @@ export interface RawThreadComment {
   isMinimized: boolean;
   url: string;
   author: RawAuthor | null;
+  pullRequestReview?: { id: string } | null;
   body: string;
   path: string | null;
   line: number | null;

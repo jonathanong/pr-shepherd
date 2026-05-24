@@ -55,6 +55,16 @@ describe("classifyThreadVisibility", () => {
     expect(result.activeThreads.map((t) => t.id)).toEqual(["bot"]);
   });
 
+  it("keeps unchanged outdated threads in resolutionOnly while suppressing first-look display", () => {
+    const outdated = makeThread({ id: "outdated", isOutdated: true, body: "already seen" });
+    const seenMap = new Map([["outdated", { seenAt: 1000, bodyHash: hashBody("already seen") }]]);
+
+    const result = classifyThreadVisibility([outdated], seenMap);
+
+    expect(result.firstLookThreads).toEqual([]);
+    expect(result.resolutionOnlyThreads.map((t) => t.id)).toEqual(["outdated"]);
+  });
+
   it("keeps returning configured reviewer bot threads reported as User", () => {
     const bot = makeThread({
       id: "configured-bot",

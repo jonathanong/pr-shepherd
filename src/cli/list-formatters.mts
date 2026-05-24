@@ -38,6 +38,7 @@ export function renderThreadResolutionStatusTag(t: {
 
 interface ThreadBulletInput {
   id: string;
+  reviewId?: string;
   url?: string;
   path?: string | null;
   startLine?: number | null;
@@ -71,8 +72,9 @@ export function renderThreadBullet(
     : "`(no location)`";
   const suggestionMarker = t.suggestion ? " [suggestion]" : "";
   const editedMarker = t.edited && !opts.suppressEditedMarker ? " [edited since first look]" : "";
+  const reviewMarker = t.reviewId ? ` [reviewId=${t.reviewId}]` : "";
   const statusSuffix = opts.statusTag ? ` ${opts.statusTag}` : "";
-  const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (${renderAuthor(t.author, t.authorType)})${suggestionMarker}${editedMarker}${statusSuffix}`;
+  const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (${renderAuthor(t.author, t.authorType)})${reviewMarker}${suggestionMarker}${editedMarker}${statusSuffix}`;
   if (!opts.noBody && (!t.comments || t.comments.length === 0)) {
     const legacyLine = `${bulletLine}: ${renderBodyPreview(t.body)}`;
     return t.suggestion && opts.renderSuggestion

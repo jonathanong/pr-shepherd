@@ -76,6 +76,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     config.iterate.minimizeApprovals,
     config.iterate.minimizeComments,
     botUsernames,
+    [...report.threads.actionable, ...report.threads.resolutionOnly],
   );
   const hasActionableWork =
     report.threads.actionable.length > 0 ||

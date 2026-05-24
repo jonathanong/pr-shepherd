@@ -95,9 +95,9 @@ export interface ResolveOptions {
   requireSha?: string;
 }
 
-/** Thread shape emitted to the iterate agent — stripped of always-false flags. */
 export interface AgentThread {
   id: string;
+  reviewId?: string;
   path: string | null;
   line: number | null;
   startLine?: number; // multi-line range only; omitted when equal to line

@@ -12,6 +12,7 @@ vi.mock("../../src/state/seen-comments.mts", async (importOriginal) => {
     loadSeenMap: vi.fn().mockResolvedValue(new Map()),
     markSeen: vi.fn().mockResolvedValue(undefined),
     markReplySeen: vi.fn().mockResolvedValue(undefined),
+    markReviewInlineThreads: vi.fn().mockResolvedValue(undefined),
   };
 });
 
@@ -44,7 +45,13 @@ import { getCurrentPrNumber } from "../../src/github/client.mts";
 import { fetchPrBatch } from "../../src/github/batch.mts";
 import { autoResolveOutdated, applyResolveOptions } from "../../src/comments/resolve.mts";
 import { loadConfig } from "../../src/config/load.mts";
-import { loadSeenMap, markSeen, markReplySeen, hashBody } from "../../src/state/seen-comments.mts";
+import {
+  loadSeenMap,
+  markSeen,
+  markReplySeen,
+  markReviewInlineThreads,
+  hashBody,
+} from "../../src/state/seen-comments.mts";
 import type { BatchPrData, ReviewThread, PrComment } from "../../src/types.mts";
 
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
@@ -55,6 +62,7 @@ const mockLoadConfig = vi.mocked(loadConfig);
 const mockLoadSeenMap = vi.mocked(loadSeenMap);
 const mockMarkSeen = vi.mocked(markSeen);
 const mockMarkReplySeen = vi.mocked(markReplySeen);
+const mockMarkReviewInlineThreads = vi.mocked(markReviewInlineThreads);
 
 const BASE_OPTS = { format: "text" as const };
 
@@ -144,6 +152,7 @@ export {
   makeThread,
   markSeen,
   markReplySeen,
+  markReviewInlineThreads,
   mockApplyResolveOptions,
   mockAutoResolveOutdated,
   mockFetchPrBatch,
@@ -152,6 +161,7 @@ export {
   mockLoadSeenMap,
   mockMarkSeen,
   mockMarkReplySeen,
+  mockMarkReviewInlineThreads,
   runResolveFetch,
   runResolveMutate,
 };

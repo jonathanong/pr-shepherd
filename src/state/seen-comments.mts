@@ -53,6 +53,7 @@ export function classifyItem(
     return "unchanged";
   }
   if (typeof m.bodyHash === "string" && m.bodyHash !== currentHash) return "edited";
+  if (m.bodyHash === undefined && Array.isArray(m.inlineThreadIds)) return "new";
   return "unchanged";
 }
 
@@ -126,6 +127,16 @@ export async function markSeen(key: StateKey, id: string, body: string): Promise
   await writeSeenMarker(key, id, { bodyHash: hashBody(body) });
 }
 
+export async function markReviewInlineThreads(
+  key: StateKey,
+  reviewId: string,
+  inlineThreadIds: readonly string[],
+): Promise<void> {
+  await writeSeenMarker(key, reviewId, {
+    inlineThreadIds: [...new Set(inlineThreadIds)].sort((a, b) => a.localeCompare(b)),
+  });
+}
+
 /**
  * Write a marker after Shepherd successfully replies to a review thread.
  *
@@ -162,8 +173,8 @@ async function writeSeenMarker(
     } catch {
       // no existing marker — will create below
     }
-    const unchanged = Object.entries(markerFields).every(
-      ([field, value]) => existing?.[field] === value,
+    const unchanged = Object.entries(markerFields).every(([field, value]) =>
+      markerFieldEqual(existing?.[field], value),
     );
     if (existing !== null && unchanged) return;
     const seenAt = existing?.seenAt ?? Date.now();
@@ -171,7 +182,7 @@ async function writeSeenMarker(
     // Store `id` in the payload so loadSeenMap can key by the original ID
     // rather than the filename, guarding against case-insensitive filesystems
     // (e.g. macOS APFS) where IDs differing only in case would collide.
-    await writeFile(tmp, JSON.stringify({ seenAt, ...markerFields, id }), "utf8");
+    await writeFile(tmp, JSON.stringify({ ...existing, seenAt, ...markerFields, id }), "utf8");
     await rename(tmp, path);
     tmp = undefined;
   } catch {
@@ -185,6 +196,14 @@ async function writeSeenMarker(
       }
     }
   }
+}
+
+function markerFieldEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (Array.isArray(left) && Array.isArray(right)) {
+    return left.length === right.length && left.every((value, index) => value === right[index]);
+  }
+  return false;
 }
 
 /** Read the full marker for inspection (returns null on miss or error). */

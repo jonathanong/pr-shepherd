@@ -59,7 +59,7 @@ See [docs/actions.md](docs/actions.md) for the complete output contract.
 This system is opinionated and works best with PRs that use required status checks and conversation resolution.
 
 - Human-authored threads are replied to, not resolved or minimized by Shepherd.
-- Detected bots and configured `botUsernames` review threads are returned until resolved; bot/non-human threads, PR comments, and review summaries can be resolved or minimized when eligible.
+- Detected bots and configured `botUsernames` review threads are returned until resolved; bot/non-human threads, PR comments, and review summaries can be resolved or minimized when eligible. Review summaries are not minimized while known inline child threads from that review remain unresolved.
 - Agents must not reply to their own latest thread reply; generated instructions call this out before `--reply-thread-ids` mutations.
 - Every review thread/comment/review summary is surfaced at least once, even if already outdated, resolved, or minimized; edited items re-surface through seen markers.
 - Draft PRs can be marked ready automatically when clean; disable with `actions.autoMarkReady: false` or `--no-auto-mark-ready`.
