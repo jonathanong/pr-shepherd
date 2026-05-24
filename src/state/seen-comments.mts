@@ -203,9 +203,6 @@ function markerFieldEqual(left: unknown, right: unknown): boolean {
   if (Array.isArray(left) && Array.isArray(right)) {
     return left.length === right.length && left.every((value, index) => value === right[index]);
   }
-  if (left !== null && right !== null && typeof left === "object" && typeof right === "object") {
-    return JSON.stringify(left) === JSON.stringify(right);
-  }
   return false;
 }
 
