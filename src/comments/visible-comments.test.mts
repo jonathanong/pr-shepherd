@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { classifyVisibleComments } from "./visible-comments.mts";
 import { hashBody } from "../state/seen-comments.mts";
 import type { PrComment } from "../types.mts";
+import { normalizeBotUsernames } from "./authors.mts";
 
 function makeComment(overrides: Partial<PrComment> = {}): PrComment {
   return {
@@ -21,6 +22,25 @@ describe("classifyVisibleComments", () => {
     const comment = makeComment({ id: "c-bot", authorType: "Bot" });
 
     const result = classifyVisibleComments([comment], new Map(), "bots");
+
+    expect(result.actionable).toEqual([comment]);
+    expect(result.minimizeIds).toEqual(["c-bot"]);
+    expect(result.toMarkSeen).toEqual([]);
+  });
+
+  it("queues configured bot comments without marking them seen", () => {
+    const comment = makeComment({
+      id: "c-bot",
+      author: "CodeRabbitAI",
+      authorType: "User",
+    });
+
+    const result = classifyVisibleComments(
+      [comment],
+      new Map(),
+      "bots",
+      normalizeBotUsernames(["coderabbitai"]),
+    );
 
     expect(result.actionable).toEqual([comment]);
     expect(result.minimizeIds).toEqual(["c-bot"]);

@@ -99,9 +99,14 @@ export function buildFetchInstructions(
         ? ` Review-summary IDs (\`PRR_…\` from \`## Review summaries\`) go into \`--minimize-comment-ids\`.`
         : "";
 
-  const resolveCommand = `${buildPrShepherdCommand(["resolve", String(prNumber)]).text} [--resolve-thread-ids <ids>] [--minimize-comment-ids <ids>] [--dismiss-review-ids <ids> --message "<reason>"]`;
+  const resolveCommand = `${buildPrShepherdCommand(["resolve", String(prNumber)]).text} [--reply-thread-ids <ids>] [--resolve-thread-ids <ids>] [--minimize-comment-ids <ids>] [--dismiss-review-ids <ids>] [--message "<reason>"]`;
+  if (actionableThreads.length > 0 || resolutionOnlyThreads.length > 0) {
+    instructions.push(
+      `Do not reply to your own thread comments. If the latest visible comment in a thread is your own prior Shepherd reply, leave that thread out of \`--reply-thread-ids\`.`,
+    );
+  }
   instructions.push(
-    `Run \`${resolveCommand}\` with only the non-empty flag subsets. Skip the command entirely if all three ID lists are empty.${requireShaHint}${dismissNote}`,
+    `Run \`${resolveCommand}\` with only the non-empty flag subsets. Skip the command entirely if all ID lists are empty.${requireShaHint}${dismissNote}`,
   );
 
   instructions.push(

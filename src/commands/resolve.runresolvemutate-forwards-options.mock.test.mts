@@ -7,7 +7,7 @@ import {
   makeThread,
   mockApplyResolveOptions,
   mockFetchPrBatch,
-  mockMarkSeen,
+  mockMarkReplySeen,
 } from "./resolve.test-support.mts";
 import { runResolveMutate } from "./resolve.mts";
 
@@ -161,10 +161,12 @@ describe("runResolveMutate — forwards options", () => {
       dismissMessage: "done",
     });
 
-    expect(mockMarkSeen).toHaveBeenCalledWith(
+    expect(mockMarkReplySeen).toHaveBeenCalledWith(
       { owner: "owner", repo: "repo", pr: 42 },
       "t-human",
+      "top body",
       "top body\n\n--- thread comment ---\n\ndone",
+      "done",
     );
   });
 });

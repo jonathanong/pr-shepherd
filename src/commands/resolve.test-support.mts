@@ -11,6 +11,7 @@ vi.mock("../state/seen-comments.mts", async (importOriginal) => {
     ...actual,
     loadSeenMap: vi.fn().mockResolvedValue(new Map()),
     markSeen: vi.fn().mockResolvedValue(undefined),
+    markReplySeen: vi.fn().mockResolvedValue(undefined),
   };
 });
 
@@ -25,6 +26,7 @@ vi.mock("../comments/resolve.mts", () => ({
 
 vi.mock("../config/load.mts", () => ({
   loadConfig: vi.fn().mockReturnValue({
+    botUsernames: ["coderabbitai"],
     resolve: {
       shaPoll: { intervalMs: 2000, maxAttempts: 10 },
       fetchReviewSummaries: true,
@@ -42,7 +44,7 @@ import { getCurrentPrNumber } from "../github/client.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { autoResolveOutdated, applyResolveOptions } from "../comments/resolve.mts";
 import { loadConfig } from "../config/load.mts";
-import { loadSeenMap, markSeen, hashBody } from "../state/seen-comments.mts";
+import { loadSeenMap, markSeen, markReplySeen, hashBody } from "../state/seen-comments.mts";
 import type { BatchPrData, ReviewThread, PrComment } from "../types.mts";
 
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
@@ -52,6 +54,7 @@ const mockApplyResolveOptions = vi.mocked(applyResolveOptions);
 const mockLoadConfig = vi.mocked(loadConfig);
 const mockLoadSeenMap = vi.mocked(loadSeenMap);
 const mockMarkSeen = vi.mocked(markSeen);
+const mockMarkReplySeen = vi.mocked(markReplySeen);
 
 const BASE_OPTS = { format: "text" as const };
 
@@ -140,6 +143,7 @@ export {
   makeComment,
   makeThread,
   markSeen,
+  markReplySeen,
   mockApplyResolveOptions,
   mockAutoResolveOutdated,
   mockFetchPrBatch,
@@ -147,6 +151,7 @@ export {
   mockLoadConfig,
   mockLoadSeenMap,
   mockMarkSeen,
+  mockMarkReplySeen,
   runResolveFetch,
   runResolveMutate,
 };

@@ -39,6 +39,8 @@ describe("loadConfig — no rc file", () => {
     expect(result.resolve.shaPoll.maxAttempts).toBe(10);
     expect(result.iterate.fixAttemptsPerThread).toBe(3);
     expect(result.checks.ciTriggerEvents).toEqual(["pull_request", "pull_request_target"]);
+    expect(result.botUsernames).toContain("coderabbitai");
+    expect(result.botUsernames).toContain("greptile-apps");
   });
 
   it("defaults iterate.minimizeApprovals to false", async () => {
@@ -65,6 +67,23 @@ describe("loadConfig — no rc file", () => {
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
     expect(result.iterate.minimizeComments).toBe("bots");
+  });
+
+  it("overrides top-level botUsernames when set in rc file", async () => {
+    writeFileSync(join(tmpDir, RC), "botUsernames:\n  - custom-reviewer\n");
+    const loadConfig = await freshLoadConfig();
+    const result = loadConfig();
+    expect(result.botUsernames).toEqual(["custom-reviewer"]);
+  });
+
+  it("rejects invalid botUsernames values and falls back to defaults", async () => {
+    writeFileSync(join(tmpDir, RC), "botUsernames: custom-reviewer\n");
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const loadConfig = await freshLoadConfig();
+    const result = loadConfig();
+    expect(result.botUsernames).toContain("coderabbitai");
+    const output = stderrSpy.mock.calls.map((c) => c[0]).join("");
+    expect(output).toContain("botUsernames");
   });
 
   it("rejects invalid iterate.minimizeComments values and falls back to defaults", async () => {

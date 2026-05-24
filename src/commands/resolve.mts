@@ -8,6 +8,7 @@ import { loadSeenMap, markSeen, classifyItem } from "../state/seen-comments.mts"
 import { threadTranscriptBody } from "../threads/transcript.mts";
 import { classifyThreadVisibility } from "../comments/thread-visibility.mts";
 import { classifyReviewsForDisplay } from "../comments/review-visibility.mts";
+import { normalizeBotUsernames } from "../comments/authors.mts";
 import type {
   GlobalOptions,
   ReviewThread,
@@ -61,7 +62,9 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   const minimizedCommentCandidates = data.comments.filter((c) => c.isMinimized);
 
   const seenMap = await loadSeenMap(stateKey);
-  const threadVisibility = classifyThreadVisibility(data.reviewThreads, seenMap);
+  const cfg = loadConfig();
+  const botUsernames = normalizeBotUsernames(cfg.botUsernames);
+  const threadVisibility = classifyThreadVisibility(data.reviewThreads, seenMap, botUsernames);
   const unseenMinimizedComments: typeof minimizedCommentCandidates = [];
   const editedMinimizedComments: typeof minimizedCommentCandidates = [];
   for (const c of minimizedCommentCandidates) {
@@ -70,11 +73,11 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
     else if (cls === "edited") editedMinimizedComments.push(c);
   }
 
-  const cfg = loadConfig();
   const visibleCommentClassification = classifyVisibleComments(
     data.comments,
     seenMap,
     cfg.iterate?.minimizeComments,
+    botUsernames,
   );
   const changesRequestedReviewVisibility = classifyReviewsForDisplay(
     data.changesRequestedReviews,

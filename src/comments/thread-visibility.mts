@@ -1,5 +1,6 @@
 import { classifyItem, type SeenMarker } from "../state/seen-comments.mts";
 import { threadTranscriptBody } from "../threads/transcript.mts";
+import { isConfiguredBotAuthor, type NormalizedBotUsernames } from "./authors.mts";
 import type { FirstLookThread, ReviewThread } from "../types.mts";
 
 export interface ThreadVisibility {
@@ -35,11 +36,13 @@ function classifyFirstLookThread(
 export function classifyThreadVisibility(
   threads: ReviewThread[],
   seenMap: Map<string, SeenMarker>,
+  botUsernames: NormalizedBotUsernames = new Set(),
 ): ThreadVisibility {
   const unresolvedThreads = threads.filter((t) => !t.isResolved);
   const activeThreads = unresolvedThreads
     .filter((t) => !t.isOutdated && !t.isMinimized)
     .flatMap((t) => {
+      if (isConfiguredBotAuthor(t, botUsernames)) return [t];
       const visible = classifyVisibleThread(t, seenMap);
       return visible ? [visible] : [];
     });

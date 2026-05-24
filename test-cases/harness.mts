@@ -172,6 +172,7 @@ const DEFAULT_BATCH = {
 
 export function defaultConfig() {
   return {
+    botUsernames: ["coderabbitai"],
     iterate: {
       fixAttemptsPerThread: 3,
       stallTimeoutMinutes: 30,

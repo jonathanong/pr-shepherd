@@ -1,8 +1,13 @@
 import { getRepoInfo, getCurrentPrNumber } from "../github/client.mts";
 import { applyResolveOptions } from "../comments/resolve.mts";
 import { fetchPrBatch } from "../github/batch.mts";
-import { isHumanAuthor } from "../comments/authors.mts";
-import { markSeen } from "../state/seen-comments.mts";
+import { loadConfig } from "../config/load.mts";
+import {
+  isConfiguredBotAuthor,
+  isHumanAuthor,
+  normalizeBotUsernames,
+} from "../comments/authors.mts";
+import { markReplySeen } from "../state/seen-comments.mts";
 import { threadTranscriptBody } from "../threads/transcript.mts";
 import type { ResolveOptions } from "../types.mts";
 import type { ResolveCommandOptions } from "./resolve.mts";
@@ -16,12 +21,22 @@ export async function runResolveMutate(
     throw new Error("No open PR found for current branch. Pass a PR number explicitly.");
   }
   const { data } = await fetchPrBatch(prNumber, repo, { paginateApprovedReviews: true });
+  const config = loadConfig();
+  const botUsernames = normalizeBotUsernames(config.botUsernames);
   const threadById = new Map(data.reviewThreads.map((t) => [t.id, t]));
-  const humanThreadIds = new Set(data.reviewThreads.filter(isHumanAuthor).map((t) => t.id));
-  const humanCommentIds = new Set(data.comments.filter(isHumanAuthor).map((c) => c.id));
+  const humanThreadIds = new Set(
+    data.reviewThreads
+      .filter((t) => isHumanAuthor(t) && !isConfiguredBotAuthor(t, botUsernames))
+      .map((t) => t.id),
+  );
+  const humanCommentIds = new Set(
+    data.comments
+      .filter((c) => isHumanAuthor(c) && !isConfiguredBotAuthor(c, botUsernames))
+      .map((c) => c.id),
+  );
   const humanReviewIds = new Set(
     [...data.reviewSummaries, ...data.approvedReviews, ...data.changesRequestedReviews]
-      .filter(isHumanAuthor)
+      .filter((r) => isHumanAuthor(r) && !isConfiguredBotAuthor(r, botUsernames))
       .map((r) => r.id),
   );
   const resolveThreadIds = (opts.resolveThreadIds ?? []).filter((id) => !humanThreadIds.has(id));
@@ -58,10 +73,13 @@ export async function runResolveMutate(
       result.repliedThreads.map((id) => {
         const thread = threadById.get(id);
         if (!thread) return Promise.resolve();
-        return markSeen(
+        const previousBody = threadTranscriptBody(thread);
+        return markReplySeen(
           { owner: repo.owner, repo: repo.name, pr: prNumber },
           id,
+          previousBody,
           threadTranscriptBody(thread, [opts.dismissMessage!]),
+          opts.dismissMessage!,
         );
       }),
     );

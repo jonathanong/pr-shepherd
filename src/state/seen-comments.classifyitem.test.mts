@@ -31,6 +31,20 @@ describe("classifyItem", () => {
     expect(classifyItem("id1", "new body", map)).toBe("edited");
   });
 
+  it("returns 'unchanged' for a stale pre-reply body marker", () => {
+    const map = new Map([
+      [
+        "id1",
+        {
+          seenAt: 1000,
+          bodyHash: hashBody("body\n\n--- thread comment ---\n\nreply"),
+          previousBodyHash: hashBody("body"),
+        },
+      ],
+    ]);
+    expect(classifyItem("id1", "body", map)).toBe("unchanged");
+  });
+
   it("returns 'unchanged' for legacy marker without bodyHash", () => {
     const map = new Map([["id1", { seenAt: 1000 }]]);
     expect(classifyItem("id1", "any body", map)).toBe("unchanged");

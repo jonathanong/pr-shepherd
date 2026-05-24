@@ -59,7 +59,8 @@ See [docs/actions.md](docs/actions.md) for the complete output contract.
 This system is opinionated and works best with PRs that use required status checks and conversation resolution.
 
 - Human-authored threads are replied to, not resolved or minimized by Shepherd.
-- Bot/non-human threads, PR comments, and review summaries can be resolved or minimized when eligible.
+- Detected bots and configured `botUsernames` review threads are returned until resolved; bot/non-human threads, PR comments, and review summaries can be resolved or minimized when eligible.
+- Agents must not reply to their own latest thread reply; generated instructions call this out before `--reply-thread-ids` mutations.
 - Every review thread/comment/review summary is surfaced at least once, even if already outdated, resolved, or minimized; edited items re-surface through seen markers.
 - Draft PRs can be marked ready automatically when clean; disable with `actions.autoMarkReady: false` or `--no-auto-mark-ready`.
 - The CLI never performs git mutations. It emits instructions; the caller commits, rebases, pushes, and handles repository hooks.

@@ -18,6 +18,7 @@ import { loadSeenMap, markSeen, classifyItem } from "../state/seen-comments.mts"
 import { threadTranscriptBody } from "../threads/transcript.mts";
 import { classifyThreadVisibility } from "../comments/thread-visibility.mts";
 import { classifyReviewsForDisplay } from "../comments/review-visibility.mts";
+import { normalizeBotUsernames } from "../comments/authors.mts";
 import type {
   GlobalOptions,
   ShepherdReport,
@@ -61,14 +62,16 @@ export async function runCheck(
     failing.length > 0 && !opts.skipTriage ? await triageFailingChecks(failing, repo) : failing;
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
   const seenMap = await loadSeenMap(stateKey);
+  const botUsernames = normalizeBotUsernames(config.botUsernames);
   const triaged = await attachUnseenCheckAnnotations(triagedBase, seenMap, prNumber);
   const minimizedCommentCandidates = batchData.comments.filter((c) => c.isMinimized);
   const visibleCommentClassification = classifyVisibleComments(
     batchData.comments,
     seenMap,
     config.iterate.minimizeComments,
+    botUsernames,
   );
-  const threadVisibility = classifyThreadVisibility(batchData.reviewThreads, seenMap);
+  const threadVisibility = classifyThreadVisibility(batchData.reviewThreads, seenMap, botUsernames);
   const firstLookComments: FirstLookComment[] = minimizedCommentCandidates.flatMap((c) => {
     const cls = classifyItem(c.id, c.body, seenMap);
     if (cls === "unchanged") return [];

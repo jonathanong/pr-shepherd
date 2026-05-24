@@ -26,6 +26,7 @@ import type {
   Review,
   ShepherdReport,
 } from "../../types.mts";
+import type { NormalizedBotUsernames } from "../../comments/authors.mts";
 interface HandleFixCodeContext {
   base: IterateResultBase;
   report: ShepherdReport;
@@ -40,6 +41,7 @@ interface HandleFixCodeContext {
   firstLookSummaries: Review[];
   editedSummaries: Review[];
   surfacedApprovals: Review[];
+  botUsernames: NormalizedBotUsernames;
 }
 
 function nextFixAttempts(
@@ -77,6 +79,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     firstLookSummaries,
     editedSummaries,
     surfacedApprovals,
+    botUsernames,
   } = ctx;
   const failingChecks = report.checks.failing;
   const stored = await readFixAttempts({ owner: repoOwner, repo: repoName, pr: prNumber });
@@ -148,6 +151,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     changesRequestedReviews,
     checks,
     prNumber,
+    botUsernames,
   );
   // Safety: if the base branch is unknown, escalate when a push is plausible — the agent
   // would need the correct base to rebase safely. This is a conservative guard, not a

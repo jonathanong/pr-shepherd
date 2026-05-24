@@ -9,6 +9,8 @@ const MINIMIZE_COMMENTS_POLICIES = ["all", "bots", "users", "none"] as const;
 export type MinimizeCommentsPolicy = (typeof MINIMIZE_COMMENTS_POLICIES)[number];
 
 export interface PrShepherdConfig {
+  /** GitHub logins that should be treated as bots even when GitHub reports User/Unknown. */
+  botUsernames: string[];
   iterate: {
     fixAttemptsPerThread: number;
     stallTimeoutMinutes: number;
@@ -102,6 +104,13 @@ function parseMinimizeCommentsPolicy(value: unknown): MinimizeCommentsPolicy {
   );
 }
 
+function parseBotUsernames(value: unknown): string[] {
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
+    throw new Error(`Invalid config: botUsernames must be an array of strings`);
+  }
+  return value;
+}
+
 const defaults = builtins as PrShepherdConfig;
 
 const configCache = new Map<string, PrShepherdConfig>();
@@ -123,6 +132,7 @@ export function loadConfig(): PrShepherdConfig {
       defaults as unknown as Record<string, unknown>,
       parsed,
     ) as unknown as PrShepherdConfig;
+    config.botUsernames = parseBotUsernames(config.botUsernames);
     config.iterate.minimizeComments = parseMinimizeCommentsPolicy(config.iterate.minimizeComments);
     configCache.set(cwd, config);
     return config;

@@ -7,6 +7,11 @@ pr-shepherd looks for a `.pr-shepherdrc.yml` file starting from the current work
 ## Example
 
 ```yaml
+botUsernames:
+  - chatgpt-connector
+  - claude
+  - coderabbitai
+
 iterate:
   fixAttemptsPerThread: 5 # raise before escalating to manual review
   stallTimeoutMinutes: 60 # escalate if state unchanged or CI has not started for this many minutes
@@ -43,6 +48,7 @@ actions:
 
 | Key                                  | Default                                   | Purpose                                                                                                                                                     |
 | ------------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `botUsernames`                       | Known code-review bot logins              | GitHub logins treated as bots for repeat unresolved-thread visibility even when GitHub reports them as `User` or `Unknown`                                  |
 | `iterate.fixAttemptsPerThread`       | `3`                                       | Max fix attempts per surfaced unresolved thread body before `escalate`                                                                                      |
 | `iterate.stallTimeoutMinutes`        | `60`                                      | Minutes the loop may repeat the same action without progress, or CI may stay pending without starting, before `escalate` with `stall-timeout`; `0` disables |
 | `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination).                                                                      |
@@ -56,6 +62,14 @@ actions:
 | `actions.autoResolveOutdated`        | `true`                                    | Deprecated compatibility setting; outdated threads are surfaced before human-authored threads are replied to and bot/non-human threads are resolved         |
 | `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR reaches a clean handoff state                                                                                             |
 | `actions.commitSuggestions`          | `true`                                    | Route `/pr-shepherd:resolve` through `commit-suggestion` (singular) for threads with a ` ```suggestion ` block                                              |
+
+## `botUsernames`
+
+Top-level list of GitHub logins that Shepherd treats as bot authors in addition to GitHub-detected bots (`authorType: Bot`) and logins containing `[bot]`.
+
+Configured bot threads are returned on every tick until resolved, even if their transcript is unchanged and already seen. Configured bot comments and reviews also follow bot minimization/routing policy when eligible. Human-authored active threads remain marker-gated so Shepherd does not repeatedly return unresolved human comments it cannot resolve automatically.
+
+Matching is case-insensitive and treats a trailing `[bot]` suffix as equivalent to the bare login.
 
 ## `iterate`
 
