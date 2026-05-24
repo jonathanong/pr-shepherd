@@ -31,17 +31,22 @@ export function classifyReviewSummaries(
   minimizeApprovals: boolean,
   minimizeComments: MinimizeCommentsPolicy | undefined = "all",
   botUsernames: NormalizedBotUsernames = new Set(),
+  unresolvedThreads: ReviewThread[] = [],
 ): {
   minimizeIds: string[];
   firstLookSummaries: Review[];
   editedSummaries: Review[];
   surfacedApprovals: Review[];
 } {
+  const blockedReviewIds = new Set(
+    unresolvedThreads.flatMap((t) => (t.reviewId !== undefined ? [t.reviewId] : [])),
+  );
   // First-look and seen summaries go into the minimize mutation; edited summaries do NOT —
   // they are already minimized server-side (body changed after minimize was applied).
   // First-look bodies are rendered so the agent sees them before the minimize happens.
   const minimizeIds = [...summaries.firstLook, ...summaries.seen]
     .filter((r) => shouldMinimizeAuthor(r.authorType, minimizeComments, r.author, botUsernames))
+    .filter((r) => !blockedReviewIds.has(r.id))
     .map((r) => r.id);
   if (minimizeApprovals) {
     const surfacedApprovals: Review[] = [];

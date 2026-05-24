@@ -29,10 +29,11 @@ export function formatFixCodeResult(
       const lineLabel = renderLineRange(t.startLine, t.line);
       const loc = t.path ? `\`${t.path}:${lineLabel}\`` : "(no location)";
       const heading = t.url ? `[threadId=${t.id}](${t.url})` : `\`threadId=${t.id}\``;
+      const reviewMarker = t.reviewId ? ` [reviewId=${t.reviewId}]` : "";
       const suggestionMarker = t.suggestion ? " [suggestion]" : "";
       const editedMarker = t.edited ? " [edited since first look]" : "";
       sections.push(
-        `### ${heading} — ${loc} (${renderAuthor(t.author, t.authorType)})${suggestionMarker}${editedMarker}`,
+        `### ${heading} — ${loc} (${renderAuthor(t.author, t.authorType)})${reviewMarker}${suggestionMarker}${editedMarker}`,
       );
       sections.push(renderThreadConversation(t));
       if (t.suggestion) {

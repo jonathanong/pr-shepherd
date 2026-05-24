@@ -126,6 +126,16 @@ export async function markSeen(key: StateKey, id: string, body: string): Promise
   await writeSeenMarker(key, id, { bodyHash: hashBody(body) });
 }
 
+export async function markReviewInlineThreads(
+  key: StateKey,
+  reviewId: string,
+  inlineThreadIds: readonly string[],
+): Promise<void> {
+  await writeSeenMarker(key, reviewId, {
+    inlineThreadIds: [...new Set(inlineThreadIds)].sort(),
+  });
+}
+
 /**
  * Write a marker after Shepherd successfully replies to a review thread.
  *
@@ -171,7 +181,7 @@ async function writeSeenMarker(
     // Store `id` in the payload so loadSeenMap can key by the original ID
     // rather than the filename, guarding against case-insensitive filesystems
     // (e.g. macOS APFS) where IDs differing only in case would collide.
-    await writeFile(tmp, JSON.stringify({ seenAt, ...markerFields, id }), "utf8");
+    await writeFile(tmp, JSON.stringify({ ...existing, seenAt, ...markerFields, id }), "utf8");
     await rename(tmp, path);
     tmp = undefined;
   } catch {

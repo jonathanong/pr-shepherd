@@ -22,6 +22,7 @@ vi.mock("../../src/state/seen-comments.mts", async (importOriginal) => {
     ...actual,
     loadSeenMap: vi.fn().mockResolvedValue(new Map()),
     markSeen: vi.fn().mockResolvedValue(undefined),
+    markReviewInlineThreads: vi.fn().mockResolvedValue(undefined),
   };
 });
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
@@ -32,7 +33,12 @@ import { fetchPrBatch } from "../../src/github/batch.mts";
 import { getCurrentPrNumber, getMergeableState } from "../../src/github/client.mts";
 import { fetchStartupFailureChecks, triageFailingChecks } from "../../src/checks/triage.mts";
 import { fetchCheckRunAnnotations } from "../../src/github/check-annotations.mts";
-import { loadSeenMap, markSeen, hashBody } from "../../src/state/seen-comments.mts";
+import {
+  loadSeenMap,
+  markSeen,
+  markReviewInlineThreads,
+  hashBody,
+} from "../../src/state/seen-comments.mts";
 import { autoResolveOutdated } from "../../src/comments/resolve.mts";
 import type { BatchPrData, ClassifiedCheck, ReviewThread, PrComment } from "../../src/types.mts";
 
@@ -44,6 +50,7 @@ const mockFetchStartupFailureChecks = vi.mocked(fetchStartupFailureChecks);
 const mockFetchCheckRunAnnotations = vi.mocked(fetchCheckRunAnnotations);
 const mockLoadSeenMap = vi.mocked(loadSeenMap);
 const mockMarkSeen = vi.mocked(markSeen);
+const mockMarkReviewInlineThreads = vi.mocked(markReviewInlineThreads);
 const mockAutoResolveOutdated = vi.mocked(autoResolveOutdated);
 
 const BASE_OPTS = { format: "text" as const };
@@ -174,6 +181,7 @@ export {
   makeComment,
   makeThread,
   markSeen,
+  markReviewInlineThreads,
   mockAutoResolveOutdated,
   mockFetchPrBatch,
   mockFetchStartupFailureChecks,
@@ -183,6 +191,7 @@ export {
   mockLoadConfig,
   mockLoadSeenMap,
   mockMarkSeen,
+  mockMarkReviewInlineThreads,
   mockTriageFailingChecks,
   runCheck,
   triageFailingChecks,

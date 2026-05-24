@@ -46,6 +46,7 @@ export function parseRawPr(
     const comments = t.comments.nodes.map((c) => ({
       id: c.id,
       isMinimized: c.isMinimized,
+      ...(c.pullRequestReview?.id ? { reviewId: c.pullRequestReview.id } : undefined),
       author: c.author?.login ?? "unknown",
       authorType: mapAuthorType(c.author?.__typename, c.author?.login),
       body: c.body,
@@ -60,6 +61,7 @@ export function parseRawPr(
       path: t.path ?? comment?.path ?? null,
       line: t.line ?? comment?.line ?? null,
       startLine: t.startLine ?? comment?.startLine ?? null,
+      ...(comment?.pullRequestReview?.id ? { reviewId: comment.pullRequestReview.id } : undefined),
       author: comment?.author?.login ?? "unknown",
       authorType: mapAuthorType(comment?.author?.__typename, comment?.author?.login),
       body: comment?.body ?? "",

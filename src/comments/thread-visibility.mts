@@ -48,10 +48,7 @@ export function classifyThreadVisibility(
     });
   const resolutionOnlyThreads = unresolvedThreads
     .filter((t) => t.isOutdated || t.isMinimized)
-    .flatMap((t) => {
-      const visible = classifyVisibleThread(t, seenMap);
-      return visible ? [visible] : [];
-    });
+    .map((t) => classifyVisibleThread(t, seenMap) ?? t);
   const firstLookThreads: FirstLookThread[] = [
     ...threads.flatMap((t) => {
       if (!t.isOutdated) return [];

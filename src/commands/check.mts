@@ -18,6 +18,7 @@ import { loadSeenMap, markSeen, classifyItem } from "../state/seen-comments.mts"
 import { threadTranscriptBody } from "../threads/transcript.mts";
 import { classifyThreadVisibility } from "../comments/thread-visibility.mts";
 import { classifyReviewsForDisplay } from "../comments/review-visibility.mts";
+import { markReviewInlineThreadMarkers } from "../comments/review-thread-markers.mts";
 import { normalizeBotUsernames } from "../comments/authors.mts";
 import type {
   GlobalOptions,
@@ -99,6 +100,7 @@ export async function runCheck(
     ...[...firstLookSummaries, ...editedSummaries].map((r) => markSeen(stateKey, r.id, r.body)),
     ...changesRequestedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
     ...approvedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
+    markReviewInlineThreadMarkers(stateKey, batchData.reviewThreads),
   ]);
   const changesRequestedReviews = changesRequestedReviewVisibility.visible;
   const changesRequestedReviewCount = batchData.changesRequestedReviews.length;

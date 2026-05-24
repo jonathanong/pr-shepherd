@@ -25,6 +25,7 @@ export function toAgentThread(t: ReviewThread): AgentThread {
   const suggestion = extractSuggestion(t) ?? undefined;
   return {
     id: t.id,
+    ...(t.reviewId !== undefined && { reviewId: t.reviewId }),
     path: t.path,
     line: t.line,
     ...(t.line !== null &&

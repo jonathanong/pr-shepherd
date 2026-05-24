@@ -83,6 +83,9 @@ query BatchPr(
                 __typename
                 login
               }
+              pullRequestReview {
+                id
+              }
               body
               path
               line
