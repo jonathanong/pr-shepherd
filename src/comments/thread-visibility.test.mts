@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { classifyThreadVisibility } from "./thread-visibility.mts";
 import { hashBody } from "../state/seen-comments.mts";
+import { normalizeBotUsernames } from "./authors.mts";
 import type { ReviewThread } from "../types.mts";
 
 function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
@@ -36,7 +37,11 @@ describe("classifyThreadVisibility", () => {
     const human = makeThread({ id: "human", authorType: "User", body: "already handled" });
     const seenMap = new Map([["human", { seenAt: 1000, bodyHash: hashBody("already handled") }]]);
 
-    const result = classifyThreadVisibility([human], seenMap, ["coderabbitai"]);
+    const result = classifyThreadVisibility(
+      [human],
+      seenMap,
+      normalizeBotUsernames(["coderabbitai"]),
+    );
 
     expect(result.activeThreads).toEqual([]);
   });
@@ -61,7 +66,11 @@ describe("classifyThreadVisibility", () => {
       ["configured-bot", { seenAt: 1000, bodyHash: hashBody("still unresolved") }],
     ]);
 
-    const result = classifyThreadVisibility([bot], seenMap, ["coderabbitai"]);
+    const result = classifyThreadVisibility(
+      [bot],
+      seenMap,
+      normalizeBotUsernames(["coderabbitai"]),
+    );
 
     expect(result.activeThreads.map((t) => t.id)).toEqual(["configured-bot"]);
   });

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { classifyVisibleComments } from "./visible-comments.mts";
 import { hashBody } from "../state/seen-comments.mts";
 import type { PrComment } from "../types.mts";
+import { normalizeBotUsernames } from "./authors.mts";
 
 function makeComment(overrides: Partial<PrComment> = {}): PrComment {
   return {
@@ -34,7 +35,12 @@ describe("classifyVisibleComments", () => {
       authorType: "User",
     });
 
-    const result = classifyVisibleComments([comment], new Map(), "bots", ["coderabbitai"]);
+    const result = classifyVisibleComments(
+      [comment],
+      new Map(),
+      "bots",
+      normalizeBotUsernames(["coderabbitai"]),
+    );
 
     expect(result.actionable).toEqual([comment]);
     expect(result.minimizeIds).toEqual(["c-bot"]);

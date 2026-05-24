@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isConfiguredBotAuthor } from "./authors.mts";
+import { isConfiguredBotAuthor, normalizeBotUsernames } from "./authors.mts";
 
 describe("isConfiguredBotAuthor", () => {
   it.each([
@@ -11,6 +11,6 @@ describe("isConfiguredBotAuthor", () => {
     [{ author: "alice", authorType: "User" as const }, ["coderabbitai"], false],
     [{ author: "unknown-app", authorType: "Unknown" as const }, ["coderabbitai"], false],
   ])("%o with %j -> %s", (author, botUsernames, expected) => {
-    expect(isConfiguredBotAuthor(author, botUsernames)).toBe(expected);
+    expect(isConfiguredBotAuthor(author, normalizeBotUsernames(botUsernames))).toBe(expected);
   });
 });

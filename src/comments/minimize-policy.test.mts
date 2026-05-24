@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { shouldMinimizeAuthor } from "./minimize-policy.mts";
+import { normalizeBotUsernames } from "./authors.mts";
 
 describe("shouldMinimizeAuthor", () => {
   it.each([
@@ -24,8 +25,9 @@ describe("shouldMinimizeAuthor", () => {
   });
 
   it("treats configured bot usernames as bots for minimization", () => {
-    expect(shouldMinimizeAuthor("User", "bots", "CodeRabbitAI", ["coderabbitai"])).toBe(true);
-    expect(shouldMinimizeAuthor("User", "all", "CodeRabbitAI", ["coderabbitai"])).toBe(true);
-    expect(shouldMinimizeAuthor("User", "none", "CodeRabbitAI", ["coderabbitai"])).toBe(false);
+    const botUsernames = normalizeBotUsernames(["coderabbitai"]);
+    expect(shouldMinimizeAuthor("User", "bots", "CodeRabbitAI", botUsernames)).toBe(true);
+    expect(shouldMinimizeAuthor("User", "all", "CodeRabbitAI", botUsernames)).toBe(true);
+    expect(shouldMinimizeAuthor("User", "none", "CodeRabbitAI", botUsernames)).toBe(false);
   });
 });

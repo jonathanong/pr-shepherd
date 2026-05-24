@@ -26,6 +26,7 @@ import type {
   Review,
   ShepherdReport,
 } from "../../types.mts";
+import type { NormalizedBotUsernames } from "../../comments/authors.mts";
 interface HandleFixCodeContext {
   base: IterateResultBase;
   report: ShepherdReport;
@@ -40,7 +41,7 @@ interface HandleFixCodeContext {
   firstLookSummaries: Review[];
   editedSummaries: Review[];
   surfacedApprovals: Review[];
-  botUsernames: readonly string[];
+  botUsernames: NormalizedBotUsernames;
 }
 
 function nextFixAttempts(

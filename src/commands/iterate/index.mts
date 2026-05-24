@@ -9,10 +9,12 @@ import { classifyReviewSummaries } from "./classify.mts";
 import { applyStallGuard } from "./stall.mts";
 import { clearStallState } from "../../state/iterate-stall.mts";
 import { handleFixCode } from "./fix-code.mts";
+import { normalizeBotUsernames } from "../../comments/authors.mts";
 import type { IterateCommandOptions, IterateResult, IterateResultBase } from "../../types.mts";
 
 export async function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
   const config = loadConfig();
+  const botUsernames = normalizeBotUsernames(config.botUsernames);
   const readyDelaySeconds = opts.readyDelaySeconds ?? config.watch.readyDelayMinutes * 60;
   const stallTimeoutSeconds = opts.stallTimeoutSeconds ?? config.iterate.stallTimeoutMinutes * 60;
 
@@ -73,7 +75,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     report.approvedReviews,
     config.iterate.minimizeApprovals,
     config.iterate.minimizeComments,
-    config.botUsernames,
+    botUsernames,
   );
   const hasActionableWork =
     report.threads.actionable.length > 0 ||
@@ -148,7 +150,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       firstLookSummaries,
       editedSummaries,
       surfacedApprovals,
-      botUsernames: config.botUsernames,
+      botUsernames,
     });
   }
 

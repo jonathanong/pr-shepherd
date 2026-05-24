@@ -7,7 +7,11 @@ import type {
 } from "../../types.mts";
 import { buildPrShepherdCommand } from "../../cli/runner.mts";
 import { shouldMinimizeAuthor } from "../../comments/minimize-policy.mts";
-import { isConfiguredBotAuthor, isHumanAuthor } from "../../comments/authors.mts";
+import {
+  isConfiguredBotAuthor,
+  isHumanAuthor,
+  type NormalizedBotUsernames,
+} from "../../comments/authors.mts";
 import type { MinimizeCommentsPolicy } from "../../config/load.mts";
 
 function dedupeIds(ids: string[]): string[] {
@@ -26,7 +30,7 @@ export function classifyReviewSummaries(
   approvals: Review[],
   minimizeApprovals: boolean,
   minimizeComments: MinimizeCommentsPolicy | undefined = "all",
-  botUsernames: readonly string[] = [],
+  botUsernames: NormalizedBotUsernames = new Set(),
 ): {
   minimizeIds: string[];
   firstLookSummaries: Review[];
@@ -68,7 +72,7 @@ export function buildResolveCommand(
   _reviews: Review[],
   checks: AgentCheck[],
   prNumber: number,
-  botUsernames: readonly string[] = [],
+  botUsernames: NormalizedBotUsernames = new Set(),
 ): ResolveCommand {
   const argv = buildPrShepherdCommand(["resolve", String(prNumber)]).argv;
 

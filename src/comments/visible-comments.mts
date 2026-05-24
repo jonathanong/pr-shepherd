@@ -2,6 +2,7 @@ import { shouldMinimizeAuthor } from "./minimize-policy.mts";
 import { classifyItem, type SeenMarker } from "../state/seen-comments.mts";
 import type { MinimizeCommentsPolicy } from "../config/load.mts";
 import type { ActionableComment, PrComment } from "../types.mts";
+import type { NormalizedBotUsernames } from "./authors.mts";
 
 export interface VisibleCommentClassification {
   actionable: ActionableComment[];
@@ -13,7 +14,7 @@ export function classifyVisibleComments(
   comments: PrComment[],
   seenMap: Map<string, SeenMarker>,
   minimizeComments: MinimizeCommentsPolicy | undefined,
-  botUsernames: readonly string[] = [],
+  botUsernames: NormalizedBotUsernames = new Set(),
 ): VisibleCommentClassification {
   const actionable: ActionableComment[] = [];
   const minimizeIds: string[] = [];
