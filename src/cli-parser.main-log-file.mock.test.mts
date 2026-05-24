@@ -3,7 +3,6 @@ import {
   registerHooks,
   getStdout,
   mockRunLogFile,
-  mockRunResolveFetch,
   stderrSpy,
 } from "../test-helpers/cli-parser.test-support.mts";
 import { main } from "./cli-parser.mts";
@@ -15,7 +14,6 @@ describe("main — log-file", () => {
     mockRunLogFile.mockResolvedValue({ path: "/tmp/shepherd.md" });
     await main(["node", "shepherd", "log-file"]);
     expect(getStdout()).toBe("/tmp/shepherd.md\n");
-    expect(mockRunResolveFetch).not.toHaveBeenCalled();
   });
 
   it("prints the log path as JSON for --format=json", async () => {

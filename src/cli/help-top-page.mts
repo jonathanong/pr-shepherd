@@ -18,7 +18,7 @@ Commands:
   [PR]                 Poll until non-WAIT or timeout. This is the default command.
   iterate              Run one iterate tick (single-tick alias).
   poll                 Re-run iterate while the action is WAIT, then print the final tick.
-  resolve              Fetch actionable review items, or resolve/minimize/dismiss IDs.
+  resolve              Apply review-state mutations (requires at least one action flag).
   commit-suggestion    Convert one GitHub suggestion thread into a patch and commit instructions.
   mark-files-as-viewed Mark PR changed files as viewed in GitHub.
   clean                Remove pr-shepherd state files.

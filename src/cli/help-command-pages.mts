@@ -1,24 +1,15 @@
 export const COMMAND_USAGE = {
   resolve: `pr-shepherd resolve
 
-Fetch actionable review items or apply GitHub review-state mutations after fixes.
+Apply GitHub review-state mutations after fixes.
 
 Usage:
-  pr-shepherd resolve [PR] [--fetch] [--format text|json]
   pr-shepherd resolve [PR] --reply-thread-ids A,B --message MSG
   pr-shepherd resolve [PR] --resolve-thread-ids A,B [--minimize-comment-ids X,Y]
                             [--dismiss-review-ids Q] [--message MSG]
                             [--require-sha SHA] [--format text|json]
 
-Modes:
-  fetch                Default when no mutation IDs are provided. Fetches review threads,
-                       comments, first-look items, and instructions.
-  mutate               Runs when any mutation ID flag is present. Resolves threads,
-                       replies to human threads, resolves non-human/manual thread IDs,
-                       minimizes non-human comments/review summaries, and dismisses non-human reviews.
-
 Flags:
-  --fetch                         Force fetch mode.
   --resolve-thread-ids <ids>      Comma-separated review thread IDs to resolve.
                                   Human-authored thread IDs are skipped; use --reply-thread-ids.
   --reply-thread-ids <ids>        Comma-separated human review thread IDs to reply to.
@@ -29,6 +20,9 @@ Flags:
   --require-sha <sha>             Wait until GitHub reports this PR head SHA before mutating.
   --format text|json              Output format. Default: text.
   --help, -h                      Print this help and exit before GitHub I/O.
+
+At least one non-empty action flag is required:
+  --reply-thread-ids, --resolve-thread-ids, --minimize-comment-ids, or --dismiss-review-ids.
 
 PR may be a number or GitHub pull request URL. When omitted, the current branch PR is inferred.
 Exit code: 0 on success; 1 on validation, lookup, or mutation failure.`,

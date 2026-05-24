@@ -129,7 +129,6 @@ export function registerHooks(): void {
       resolve: {
         concurrency: 4,
         shaPoll: { intervalMs: 2000, maxAttempts: 10 },
-        fetchReviewSummaries: true,
       },
       checks: { ciTriggerEvents: ["pull_request"] },
       mergeStatus: { blockingReviewerLogins: [] },

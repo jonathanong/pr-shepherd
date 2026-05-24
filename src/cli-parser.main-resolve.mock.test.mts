@@ -2,94 +2,30 @@ import { describe, it, expect } from "vitest";
 import {
   registerHooks,
   getStdout,
-  mockRunResolveFetch,
   mockRunResolveMutate,
-  stdoutSpy,
+  stderrSpy,
 } from "../test-helpers/cli-parser.test-support.mts";
 import { main } from "./cli-parser.mts";
 
 registerHooks();
 
 describe("main — resolve", () => {
-  it("calls runResolveFetch when no mutation flags are given (fetch mode)", async () => {
-    mockRunResolveFetch.mockResolvedValue({
-      prNumber: 42,
-      actionableThreads: [],
-      resolutionOnlyThreads: [],
-      actionableComments: [],
-      firstLookThreads: [],
-      firstLookComments: [],
-      changesRequestedReviews: [],
-      reviewSummaries: [],
-      commitSuggestionsEnabled: true,
-      instructions: ["No actionable items — end this invocation."],
-    });
-    await main(["node", "shepherd", "resolve", "42"]);
-    expect(mockRunResolveFetch).toHaveBeenCalledTimes(1);
+  async function expectResolveError(args: string[], message: string): Promise<void> {
+    await main(["node", "shepherd", "resolve", "42", ...args]);
     expect(mockRunResolveMutate).not.toHaveBeenCalled();
-  });
-  it("formatFetchResult renders reviewSummaries section and includes them in total", async () => {
-    mockRunResolveFetch.mockResolvedValue({
-      prNumber: 42,
-      actionableThreads: [],
-      resolutionOnlyThreads: [],
-      actionableComments: [],
-      firstLookThreads: [],
-      firstLookComments: [],
-      changesRequestedReviews: [],
-      reviewSummaries: [
-        {
-          id: "PRR_1",
-          author: "copilot",
-          authorType: "Unknown" as const,
-          body: "## PR overview\nsome detail",
-        },
-      ],
-      commitSuggestionsEnabled: true,
-      instructions: ["Classify every item."],
-    });
-    await main(["node", "shepherd", "resolve", "42"]);
-    const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
-    expect(out).toContain("## Review summaries (1)");
-    expect(out).toContain("`reviewId=PRR_1` (@copilot · Unknown): ## PR overview");
-    expect(out).toContain("1 actionable");
-  });
-  it("formatFetchResult renders resolution-only review threads", async () => {
-    mockRunResolveFetch.mockResolvedValue({
-      prNumber: 42,
-      actionableThreads: [],
-      resolutionOnlyThreads: [
-        {
-          id: "PRT_old",
-          isResolved: false,
-          isOutdated: true,
-          isMinimized: false,
-          path: "src/old.ts",
-          line: null,
-          startLine: null,
-          author: "alice",
-          authorType: "Unknown" as const,
-          body: "old comment",
-          url: "",
-          createdAtUnix: 0,
-        },
-      ],
-      actionableComments: [],
-      firstLookThreads: [],
-      firstLookComments: [],
-      changesRequestedReviews: [],
-      reviewSummaries: [],
-      commitSuggestionsEnabled: true,
-      instructions: ["Resolve each thread."],
-    });
+    expect(process.exitCode).toBe(1);
+    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining(message));
+  }
 
-    await main(["node", "shepherd", "resolve", "42"]);
-
-    const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
-    expect(out).toContain("## Review threads to resolve (1)");
-    expect(out).toContain("`threadId=PRT_old`");
-    expect(out).toContain("[status: outdated]");
+  it.each([
+    ["no action flags", [], "an action flag is required"],
+    ["--fetch", ["--fetch"], "--fetch has been removed"],
+    ["only --message", ["--message", "Done"], "an action flag is required"],
+    ["empty action ID list", ["--resolve-thread-ids", ""], "an action flag is required"],
+  ])("errors for %s", async (_label, args, message) => {
+    await expectResolveError(args, message);
   });
+
   it("calls runResolveMutate when --resolve-thread-ids is given", async () => {
     mockRunResolveMutate.mockResolvedValue({
       repliedThreads: [],

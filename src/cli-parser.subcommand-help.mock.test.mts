@@ -6,7 +6,6 @@ vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
 });
 vi.mock("./commands/check.mts", () => ({ runCheck: vi.fn() }));
 vi.mock("./commands/resolve.mts", () => ({
-  runResolveFetch: vi.fn(),
   runResolveMutate: vi.fn(),
 }));
 vi.mock("./commands/commit-suggestion.mts", () => ({ runCommitSuggestion: vi.fn() }));
@@ -19,11 +18,9 @@ vi.mock("./github/client.mts", () => ({
 
 import { main } from "./cli-parser.mts";
 import { runIterate } from "./commands/iterate/index.mts";
-import { runResolveFetch } from "./commands/resolve.mts";
 import { runCommitSuggestion } from "./commands/commit-suggestion.mts";
 
 const mockRunIterate = vi.mocked(runIterate);
-const mockRunResolveFetch = vi.mocked(runResolveFetch);
 const mockRunCommitSuggestion = vi.mocked(runCommitSuggestion);
 
 let stdoutSpy: ReturnType<typeof vi.spyOn>;
@@ -57,7 +54,7 @@ const SUBCOMMANDS = [
 ] as const;
 
 const HELP_EXPECTATIONS: Record<(typeof SUBCOMMANDS)[number], string[]> = {
-  resolve: ["Modes:", "--resolve-thread-ids", "--require-sha", "Exit code:"],
+  resolve: ["action flag is required", "--resolve-thread-ids", "--require-sha", "Exit code:"],
   "commit-suggestion": ["Preconditions:", "--thread-id", "--description", "Exit codes:"],
   "mark-files-as-viewed": ["Selectors:", "--tests", "--match", "Exit code:"],
   iterate: ["Actions:", "FIX_CODE", "--stall-timeout", "Exit codes:"],
@@ -93,7 +90,6 @@ for (const sub of SUBCOMMANDS) {
     it(`does not perform real work for '${sub} --help'`, async () => {
       await main(["node", "shepherd", sub, "--help"]);
       expect(mockRunIterate).not.toHaveBeenCalled();
-      expect(mockRunResolveFetch).not.toHaveBeenCalled();
       expect(mockRunCommitSuggestion).not.toHaveBeenCalled();
     });
   });

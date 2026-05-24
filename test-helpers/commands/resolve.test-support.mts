@@ -30,7 +30,6 @@ vi.mock("../../src/config/load.mts", () => ({
     botUsernames: ["coderabbitai"],
     resolve: {
       shaPoll: { intervalMs: 2000, maxAttempts: 10 },
-      fetchReviewSummaries: true,
     },
     actions: {
       autoResolveOutdated: true,
@@ -40,7 +39,7 @@ vi.mock("../../src/config/load.mts", () => ({
   }),
 }));
 
-import { runResolveFetch, runResolveMutate } from "../../src/commands/resolve.mts";
+import { runResolveMutate } from "../../src/commands/resolve.mts";
 import { getCurrentPrNumber } from "../../src/github/client.mts";
 import { fetchPrBatch } from "../../src/github/batch.mts";
 import { autoResolveOutdated, applyResolveOptions } from "../../src/comments/resolve.mts";
@@ -162,7 +161,6 @@ export {
   mockMarkSeen,
   mockMarkReplySeen,
   mockMarkReviewInlineThreads,
-  runResolveFetch,
   runResolveMutate,
 };
 export type { BatchPrData, PrComment, ReviewThread };

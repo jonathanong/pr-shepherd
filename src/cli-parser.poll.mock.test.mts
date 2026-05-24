@@ -6,7 +6,6 @@ vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
 });
 vi.mock("./commands/check.mts", () => ({ runCheck: vi.fn() }));
 vi.mock("./commands/resolve.mts", () => ({
-  runResolveFetch: vi.fn(),
   runResolveMutate: vi.fn(),
 }));
 vi.mock("./commands/commit-suggestion.mts", () => ({ runCommitSuggestion: vi.fn() }));

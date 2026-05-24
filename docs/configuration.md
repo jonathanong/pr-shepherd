@@ -56,7 +56,6 @@ actions:
 | `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                                                                                   |
 | `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                                                            |
 | `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                                                                                  |
-| `resolve.fetchReviewSummaries`       | `true`                                    | Surface `COMMENTED` review summaries in `resolve --fetch` output                                                                                            |
 | `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos)                                                                            |
 | `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                                                                      |
 | `actions.autoResolveOutdated`        | `true`                                    | Deprecated compatibility setting; outdated threads are surfaced before human-authored threads are replied to and bot/non-human threads are resolved         |
@@ -134,14 +133,6 @@ The ready-delay countdown resets if the PR drops out of READY state at any tick.
 
 ## `resolve`
 
-### `resolve.fetchReviewSummaries` — default `true`
-
-When `true`, `pr-shepherd resolve --fetch` includes COMMENTED review summaries (PR-level overview bodies, like those produced by `copilot-pull-request-reviewer` and `gemini-code-assist`) in the `reviewSummaries` array returned to the agent. The agent classifies each one through the normal triage flow and minimizes it via `--minimize-comment-ids` as appropriate.
-
-Set to `false` to opt out entirely — the agent will not see or act on review summaries for this repository.
-
-Note: the GraphQL batch query always fetches review summaries regardless of this flag; only their exposure to the agent is gated. This keeps the shared batch query simple.
-
 ### `resolve.shaPoll`
 
 Controls the push-safety polling used when `--require-sha <SHA>` is passed to `pr-shepherd resolve`.
@@ -195,9 +186,9 @@ Disable if your team uses the draft state as a deliberate gate that requires a h
 
 ### `actions.commitSuggestions` — default `true`
 
-When `true`, the `/pr-shepherd:resolve` skill prefers applying reviewer-authored ` ```suggestion ` blocks via [`pr-shepherd commit-suggestion`](cli-usage.md#pr-shepherd-commit-suggestion-pr---thread-id-id---message) (singular, one per thread) — creating a local commit per suggestion that co-credits the reviewer — rather than having the agent re-type the fix. Each `actionableThread` returned by `resolve --fetch` is annotated with a parsed `suggestion` field, and the fetch payload exposes `commitSuggestionsEnabled` mirroring this flag.
+When `true`, `fix_code` instructions prefer applying reviewer-authored ` ```suggestion ` blocks via [`pr-shepherd commit-suggestion`](cli-usage.md#pr-shepherd-commit-suggestion-pr---thread-id-id---message) (singular, one per thread) — creating a local commit per suggestion that co-credits the reviewer — rather than having the agent re-type the fix. Each actionable thread with a parsed suggestion is annotated in the iterate payload.
 
-Disable if you want the agent to read and re-implement every suggestion (e.g. because your team prefers all commits to come from a single author, or because you want an extra human-ish review pass over every change). Flipping this to `false` still surfaces `suggestion` blocks in the fetch payload so the agent has the reviewer's exact proposal available as context; the skill just falls through to its manual-edit path.
+Disable if you want the agent to read and re-implement every suggestion (e.g. because your team prefers all commits to come from a single author, or because you want an extra human-ish review pass over every change). Flipping this to `false` still surfaces `suggestion` blocks in the iterate payload so the agent has the reviewer's exact proposal available as context; the skill just falls through to its manual-edit path.
 
 ---
 

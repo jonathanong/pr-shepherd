@@ -29,7 +29,6 @@ const FLAGS_WITH_VALUES = new Set([
 // for PR-number detection — so removed flags don't silently cause their
 // numeric value to be misidentified as the PR number.
 const BOOLEAN_FLAGS = new Set([
-  "--fetch",
   "--no-auto-mark-ready",
   "--no-auto-cancel-actionable",
   "--dry-run",

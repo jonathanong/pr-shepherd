@@ -2,9 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   registerHooks,
   getStdout,
-  mockRunResolveFetch,
   mockRunResolveMutate,
-  stdoutSpy,
 } from "../test-helpers/cli-parser.test-support.mts";
 import { main } from "./cli-parser.mts";
 
@@ -105,57 +103,5 @@ describe("main — resolve", () => {
     };
     expect(parsed.rateLimit.message).toBe("secondary rate limit");
     expect(parsed.unresolvedThreads).toEqual(["t-2"]);
-  });
-  it("formatFetchResult emits H1 heading, Markdown sections, and ## Instructions", async () => {
-    mockRunResolveFetch.mockResolvedValue({
-      prNumber: 42,
-      actionableThreads: [
-        {
-          id: "PRT_1",
-          path: "src/foo.ts",
-          line: 10,
-          startLine: null,
-          isMinimized: false,
-          author: "alice",
-          authorType: "Unknown" as const,
-          body: "Consider renaming this",
-          url: "",
-          createdAtUnix: 0,
-        },
-      ],
-      resolutionOnlyThreads: [],
-      actionableComments: [
-        {
-          id: "IC_1",
-          author: "bob",
-          authorType: "Unknown" as const,
-          body: "Typo here",
-          isMinimized: false,
-          url: "",
-          createdAtUnix: 0,
-        },
-      ],
-      firstLookThreads: [],
-      firstLookComments: [],
-      changesRequestedReviews: [],
-      reviewSummaries: [],
-      commitSuggestionsEnabled: false,
-      instructions: ["Classify every item.", "Fix items.", "Resolve verified items.", "Report."],
-    });
-    await main(["node", "shepherd", "resolve", "42"]);
-    const out = stdoutSpy.mock.calls.map((c: string[]) => c[0]).join("");
-
-    expect(out).toContain("# PR #42 — Resolve fetch");
-    expect(out).toContain("## Actionable Review Threads");
-    expect(out).toContain("## Actionable PR Comments");
-    expect(out).toContain("## Instructions");
-
-    // Instructions must be last H2
-    const instrIdx = out.indexOf("## Instructions");
-    expect(instrIdx).toBeGreaterThan(out.indexOf("## Actionable PR Comments"));
-
-    // Numbered steps rendered
-    expect(out).toContain("1. Classify every item.");
-    expect(out).toContain("2. Fix items.");
   });
 });

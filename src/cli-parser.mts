@@ -6,7 +6,7 @@
  *   pr-shepherd [PR] [--interval 45s] [--timeout 4m] [--format text|json] [--ready-delay Nm]
  *                  [--stall-timeout <duration>] [--no-auto-mark-ready]
  *                  [--no-auto-cancel-actionable]
- *   pr-shepherd resolve [PR] [--fetch] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]
+ *   pr-shepherd resolve [PR] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]
  *                            [--reply-thread-ids A,B] [--dismiss-review-ids Q]
  *                            [--message MSG] [--require-sha SHA]
  *   pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [--description DESC]
@@ -24,12 +24,12 @@
 
 import { readFileSync } from "node:fs";
 
-import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
+import { runResolveMutate } from "./commands/resolve.mts";
 import { runLogFile } from "./commands/log-file.mts";
 import { parseCommonArgs, getFlag, hasFlag, parseList } from "./cli/args.mts";
 import { isDefaultPollInvocation, validateDefaultPollArgs } from "./cli/default-poll.mts";
 import { USAGE, maybePrintHelp } from "./cli/help.mts";
-import { formatFetchResult, formatMutateResult } from "./cli/formatters.mts";
+import { formatMutateResult } from "./cli/formatters.mts";
 import {
   handleClean,
   handleCommitSuggestion,
@@ -151,35 +151,41 @@ async function handleResolve(args: string[]): Promise<void> {
   const dismissReviewIds = parseList(getFlag(extra, "--dismiss-review-ids"));
   const dismissMessage = getFlag(extra, "--message") ?? undefined;
   const requireSha = getFlag(extra, "--require-sha") ?? undefined;
-  const fetchMode =
-    hasFlag(extra, "--fetch") ||
-    (resolveThreadIds.length === 0 &&
-      replyThreadIds.length === 0 &&
-      minimizeCommentIds.length === 0 &&
-      dismissReviewIds.length === 0);
 
-  if (fetchMode) {
-    const result = await runResolveFetch({ ...globalOpts, prNumber });
-    process.stdout.write(
-      globalOpts.format === "json"
-        ? `${JSON.stringify(result, null, 2)}\n`
-        : `${formatFetchResult(result)}\n`,
+  if (hasFlag(extra, "--fetch")) {
+    process.stderr.write(
+      "pr-shepherd: resolve: --fetch has been removed; run pr-shepherd iterate or poll to fetch the next action.\n",
     );
-  } else {
-    const result = await runResolveMutate({
-      ...globalOpts,
-      prNumber,
-      resolveThreadIds,
-      replyThreadIds,
-      minimizeCommentIds,
-      dismissReviewIds,
-      dismissMessage,
-      requireSha,
-    });
-    process.stdout.write(
-      globalOpts.format === "json"
-        ? `${JSON.stringify(result, null, 2)}\n`
-        : `${formatMutateResult(result)}\n`,
-    );
+    process.exitCode = 1;
+    return;
   }
+
+  const hasAction =
+    resolveThreadIds.length > 0 ||
+    replyThreadIds.length > 0 ||
+    minimizeCommentIds.length > 0 ||
+    dismissReviewIds.length > 0;
+  if (!hasAction) {
+    process.stderr.write(
+      "pr-shepherd: resolve: an action flag is required (--reply-thread-ids, --resolve-thread-ids, --minimize-comment-ids, or --dismiss-review-ids).\n",
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  const result = await runResolveMutate({
+    ...globalOpts,
+    prNumber,
+    resolveThreadIds,
+    replyThreadIds,
+    minimizeCommentIds,
+    dismissReviewIds,
+    dismissMessage,
+    requireSha,
+  });
+  process.stdout.write(
+    globalOpts.format === "json"
+      ? `${JSON.stringify(result, null, 2)}\n`
+      : `${formatMutateResult(result)}\n`,
+  );
 }

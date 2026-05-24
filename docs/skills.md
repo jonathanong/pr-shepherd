@@ -61,15 +61,15 @@ $mark-files-as-viewed 42 tests
 
 Codex runs the same skill: invoke the default poll dispatcher, follow the output, and continue until `[CANCEL]` or `[ESCALATE]`.
 
-## Resolve without iterating
+## Resolve after iterating
 
-To fix review comments without starting a full iterate loop, run `pr-shepherd resolve` directly:
+Use `pr-shepherd iterate <N>` or `pr-shepherd <N>` to fetch review state and the next action. The `fix_code` action emits the exact `resolve` command to run after pushing fixes.
+
+`pr-shepherd resolve` itself is mutation-only and requires at least one action flag:
 
 ```bash
-pr-shepherd resolve <N> --fetch
+pr-shepherd resolve <N> --reply-thread-ids PRRT_abc --message "Renamed the variable for clarity."
 ```
-
-Follow the `## Instructions` in the output. The `fix_code` action emits the exact `resolve` command to run after pushing fixes — so a full `pr-shepherd` iterate tick also covers resolve.
 
 ## Mark files as viewed
 

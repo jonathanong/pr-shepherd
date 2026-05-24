@@ -2,7 +2,6 @@ import { vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("../src/commands/check.mts", () => ({ runCheck: vi.fn() }));
 vi.mock("../src/commands/resolve.mts", () => ({
-  runResolveFetch: vi.fn(),
   runResolveMutate: vi.fn(),
 }));
 vi.mock("../src/commands/commit-suggestion.mts", () => ({

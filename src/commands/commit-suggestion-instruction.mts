@@ -2,9 +2,9 @@ import { buildPrShepherdCommand } from "../cli/runner.mts";
 
 /**
  * Build the `commit-suggestion` instruction step for agent consumers.
- * Shared between `fix_code` (iterate) and `resolve --fetch` paths.
- * @param sectionName - The markdown section heading where suggestion threads appear
- *   (e.g. `"## Review threads"` for iterate, `"## Actionable Review Threads"` for resolve).
+ * Currently emitted by iterate `fix_code` for suggestion review threads.
+ * @param sectionName - The markdown section heading where suggestion threads appear,
+ *   e.g. `"## Review threads"`.
  * @param includeDriftHint - Whether to add the trailing note about drift on failed apply.
  */
 export function buildCommitSuggestionInstruction(

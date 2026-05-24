@@ -85,8 +85,7 @@ All tunable constants live in `src/config.json`. Edit there — do not hardcode 
   },
   "watch": { "readyDelayMinutes": 10 },
   "resolve": {
-    "shaPoll": { "maxAttempts": 10, "intervalMs": 2000 },
-    "fetchReviewSummaries": true
+    "shaPoll": { "maxAttempts": 10, "intervalMs": 2000 }
   }
 }
 ```

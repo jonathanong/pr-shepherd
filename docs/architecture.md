@@ -44,8 +44,7 @@ shepherd/
 │   ├── mark-files-as-viewed.mts  # marks changed PR files viewed in GitHub
 │   ├── poll.mts           # repeats iterate while action is WAIT
 │   ├── ready-delay.mts    # ready-delay state machine (ready-since.txt marker)
-│   ├── resolve.mts        # fetch + mutate modes (resolve threads, minimize comments, dismiss reviews)
-│   └── resolve-instructions.mts  # builds fetch-instructions Markdown
+│   ├── resolve.mts        # resolve mutations (threads, comments, reviews)
 │
 ├── config/
 │   └── load.mts           # RC file loader with deepMerge

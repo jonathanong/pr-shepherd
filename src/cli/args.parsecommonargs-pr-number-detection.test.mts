@@ -22,9 +22,9 @@ describe("parseCommonArgs — PR number detection", () => {
   });
 
   it("does not make subcommand-only --tests a global boolean flag", () => {
-    const { prNumber, extra } = parseCommonArgs(["--tests", "123", "--fetch"]);
+    const { prNumber, extra } = parseCommonArgs(["--tests", "123", "--dry-run"]);
     expect(prNumber).toBeUndefined();
-    expect(extra).toEqual(["--tests", "123", "--fetch"]);
+    expect(extra).toEqual(["--tests", "123", "--dry-run"]);
   });
 
   it("does not skip past argv when a known value flag is missing its value", () => {
@@ -39,9 +39,9 @@ describe("parseCommonArgs — PR number detection", () => {
   });
 
   it("sets verbose when --verbose is present and strips it from extra", () => {
-    const { global: g, extra } = parseCommonArgs(["--verbose", "42", "--fetch"]);
+    const { global: g, extra } = parseCommonArgs(["--verbose", "42", "--dry-run"]);
     expect(g.verbose).toBe(true);
-    expect(extra).toEqual(["--fetch"]);
+    expect(extra).toEqual(["--dry-run"]);
   });
 
   it("skips known value flags in --flag=value form during PR detection", () => {

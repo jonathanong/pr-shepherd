@@ -8,8 +8,7 @@ The module supports a focused automation loop for PR monitoring and deterministi
 
 - Supports default invocation `pr-shepherd [PR]` as the poll dispatcher.
 - Supports explicit `pr-shepherd iterate [PR]` for one single tick.
-- Supports `pr-shepherd resolve [PR]` fetch mode (via `--fetch` or when no mutation flags are passed).
-- Supports `pr-shepherd resolve [PR]` mutate mode with `--reply-thread-ids`, `--resolve-thread-ids`, `--minimize-comment-ids`, `--dismiss-review-ids`.
+- Supports `pr-shepherd resolve [PR]` mutation actions with `--reply-thread-ids`, `--resolve-thread-ids`, `--minimize-comment-ids`, `--dismiss-review-ids`.
 - Supports `pr-shepherd commit-suggestion [PR] --thread-id <id> --message "<one-sentence headline>"` (or `--description`) for suggestion-thread patch generation.
 - Supports `pr-shepherd mark-files-as-viewed [PR] [files...] [--tests] [--match REGEX]` for marking PR changed files as viewed in GitHub.
 - Supports `pr-shepherd log-file` to print the per-worktree debug log path.
