@@ -5,7 +5,7 @@ import {
   getStdout,
   mockRunIterate,
 } from "./cli-parser.iterate.test-support.mts";
-import { makeIterateResult } from "./cli-parser.iterate-fixtures.mts";
+import { makeIterateResult } from "./cli-parser.iterate-fixtures.test-support.mts";
 import { main } from "./cli-parser.mts";
 
 registerHooks();

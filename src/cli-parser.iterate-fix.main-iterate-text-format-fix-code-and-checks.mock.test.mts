@@ -4,7 +4,7 @@ import {
   getStdout,
   mockRunIterate,
 } from "./cli-parser.iterate-fix.test-support.mts";
-import { makeIterateResult } from "./cli-parser.iterate-fixtures.mts";
+import { makeIterateResult } from "./cli-parser.iterate-fixtures.test-support.mts";
 import { main } from "./cli-parser.mts";
 import type { IterateResult } from "./cli-parser.iterate-fix.test-support.mts";
 

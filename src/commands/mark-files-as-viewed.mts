@@ -22,7 +22,7 @@ export interface MarkFilesAsViewedOptions extends GlobalOptions {
   matchPatterns?: string[];
 }
 
-export interface ChangedFile {
+interface ChangedFile {
   path: string;
   viewerViewedState?: string | null;
 }

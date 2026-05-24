@@ -19,7 +19,7 @@ vi.mock("./github/client.mts", () => ({
 import { main } from "./cli-parser.mts";
 import { runIterate } from "./commands/iterate/index.mts";
 import type { IterateResult } from "./types.mts";
-import { makeIterateResult } from "./cli-parser.iterate-fixtures.mts";
+import { makeIterateResult } from "./cli-parser.iterate-fixtures.test-support.mts";
 
 const mockRunIterate = vi.mocked(runIterate);
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { makeIterateResult } from "../cli-parser.iterate-fixtures.mts";
+import { makeIterateResult } from "../cli-parser.iterate-fixtures.test-support.mts";
 import { projectIterateLean } from "./iterate-lean.mts";
 import type { IterateResult } from "../types.mts";
 

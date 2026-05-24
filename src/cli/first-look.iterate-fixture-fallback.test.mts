@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { makeIterateResult } from "../cli-parser.iterate-fixtures.mts";
+import { makeIterateResult } from "../cli-parser.iterate-fixtures.test-support.mts";
 
 // ---------------------------------------------------------------------------
 // Cross-call-site identity assertion (issue #127 acceptance criterion)

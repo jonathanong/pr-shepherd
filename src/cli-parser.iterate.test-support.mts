@@ -17,7 +17,7 @@ import { main } from "./cli-parser.mts";
 import { runIterate } from "./commands/iterate/index.mts";
 import { formatIterateResult } from "./cli/iterate-formatter.mts";
 import type { CancelReason, IterateResult } from "./types.mts";
-import { makeIterateResult } from "./cli-parser.iterate-fixtures.mts";
+import { makeIterateResult } from "./cli-parser.iterate-fixtures.test-support.mts";
 
 const mockRunIterate = vi.mocked(runIterate);
 

@@ -15,7 +15,7 @@ export function renderBodyPreview(body: string): string {
   return firstLine.slice(0, BODY_PREVIEW_MAX);
 }
 
-export function renderFirstLookStatusTag(t: {
+function renderFirstLookStatusTag(t: {
   autoResolved?: boolean;
   firstLookStatus: string;
   edited?: boolean;

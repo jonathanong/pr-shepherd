@@ -1,6 +1,6 @@
 import type { AuthorType } from "../types.mts";
 
-export function isBotLogin(login: string | undefined | null): boolean {
+function isBotLogin(login: string | undefined | null): boolean {
   return (login ?? "").toLowerCase().includes("[bot]");
 }
 

@@ -21,7 +21,7 @@ import type {
 
 export { runResolveMutate } from "./resolve-mutate.mts";
 
-export type FetchThread = Omit<ReviewThread, "isResolved" | "isOutdated"> & {
+type FetchThread = Omit<ReviewThread, "isResolved" | "isOutdated"> & {
   /** Present when the comment body contains a parseable ```suggestion block. */
   suggestion?: SuggestionBlock;
 };

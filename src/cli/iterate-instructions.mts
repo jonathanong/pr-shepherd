@@ -45,7 +45,7 @@ export function adaptIterateLog(log: string): string {
   return log.replace(/\s+—\s+\d+s until auto-cancel/g, "");
 }
 
-export function buildIterateCommand(pr: number, readyDelaySuffix?: string): string {
+function buildIterateCommand(pr: number, readyDelaySuffix?: string): string {
   const suffix = readyDelaySuffix?.trim();
   return buildPrShepherdCommand([String(pr), ...(suffix ? ["--ready-delay", suffix] : [])]).text;
 }

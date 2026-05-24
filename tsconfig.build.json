@@ -7,5 +7,13 @@
     "declaration": false,
     "sourceMap": false
   },
-  "exclude": ["node_modules", "bin", "src/**/*.test.mts", "src/**/*.mock.test.mts", "src/**/*.fixtures.mts"]
+  "exclude": [
+    "node_modules",
+    "bin",
+    "src/**/*.test.mts",
+    "src/**/*.mock.test.mts",
+    "src/**/*.test-support.mts",
+    "src/**/*-test-support.mts",
+    "src/**/*.fixtures.mts"
+  ]
 }
