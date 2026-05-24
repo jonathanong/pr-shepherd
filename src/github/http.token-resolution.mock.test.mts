@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { registerHooks, gqlOk, mockExecFile, mockFetch } from "./http.test-support.mts";
+import {
+  registerHooks,
+  gqlOk,
+  mockExecFile,
+  mockFetch,
+} from "../../test-helpers/github/http.test-support.mts";
 import { graphql } from "./http.mts";
 
 registerHooks();

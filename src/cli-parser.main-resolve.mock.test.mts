@@ -5,7 +5,7 @@ import {
   mockRunResolveFetch,
   mockRunResolveMutate,
   stdoutSpy,
-} from "./cli-parser.test-support.mts";
+} from "../test-helpers/cli-parser.test-support.mts";
 import { main } from "./cli-parser.mts";
 
 registerHooks();

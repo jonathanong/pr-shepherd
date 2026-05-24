@@ -17,12 +17,12 @@ import type { BatchPrData } from "../types.mts";
 // Public API
 // ---------------------------------------------------------------------------
 
-export interface BatchResult {
+interface BatchResult {
   data: BatchPrData;
   rateLimit?: RateLimitInfo;
 }
 
-export interface FetchPrBatchOptions {
+interface FetchPrBatchOptions {
   /**
    * When false (default), the first-page approvedReviews are returned but
    * backward pagination is skipped. Iterate's approvals-minimize flow sets this

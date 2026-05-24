@@ -3,7 +3,7 @@ import { threadTranscriptBody } from "../threads/transcript.mts";
 import { isConfiguredBotAuthor, type NormalizedBotUsernames } from "./authors.mts";
 import type { FirstLookThread, ReviewThread } from "../types.mts";
 
-export interface ThreadVisibility {
+interface ThreadVisibility {
   activeThreads: ReviewThread[];
   resolutionOnlyThreads: ReviewThread[];
   firstLookThreads: FirstLookThread[];

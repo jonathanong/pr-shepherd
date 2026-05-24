@@ -9,7 +9,7 @@ import {
   mockFetchBatch,
   mockGetCurrentBranch,
   mockReadFile,
-} from "./commit-suggestion.test-support.mts";
+} from "../../test-helpers/commands/commit-suggestion.test-support.mts";
 import { runCommitSuggestion } from "./commit-suggestion.mts";
 
 registerHooks();

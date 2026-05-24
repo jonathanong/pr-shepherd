@@ -5,5 +5,15 @@
     "radix": "error",
     "max-lines": ["error", 200]
   },
-  "overrides": []
+  "overrides": [
+    {
+      "files": [
+        "test-helpers/commands/iterate-test-support.mts",
+        "test-helpers/test-cases/harness.mts"
+      ],
+      "rules": {
+        "max-lines": "off"
+      }
+    }
+  ]
 }

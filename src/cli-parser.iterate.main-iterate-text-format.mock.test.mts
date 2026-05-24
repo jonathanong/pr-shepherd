@@ -1,8 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { registerHooks, getStdout, mockRunIterate } from "./cli-parser.iterate.test-support.mts";
-import { makeIterateResult } from "./cli-parser.iterate-fixtures.mts";
+import {
+  registerHooks,
+  getStdout,
+  mockRunIterate,
+} from "../test-helpers/cli-parser.iterate.test-support.mts";
+import { makeIterateResult } from "../fixtures/cli-parser.iterate-fixtures.mts";
 import { main } from "./cli-parser.mts";
-import type { CancelReason, IterateResult } from "./cli-parser.iterate.test-support.mts";
+import type {
+  CancelReason,
+  IterateResult,
+} from "../test-helpers/cli-parser.iterate.test-support.mts";
 
 registerHooks();
 

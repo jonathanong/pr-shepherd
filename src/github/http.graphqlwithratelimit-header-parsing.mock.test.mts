@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { registerHooks, gqlOk, mockFetch } from "./http.test-support.mts";
+import { registerHooks, gqlOk, mockFetch } from "../../test-helpers/github/http.test-support.mts";
 import { GitHubRequestError, graphqlWithRateLimit } from "./http.mts";
 
 registerHooks();

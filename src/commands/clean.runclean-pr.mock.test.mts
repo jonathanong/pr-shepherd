@@ -6,7 +6,7 @@ import {
   mockGetCurrentPrNumber,
   pathExists,
   seedPrDir,
-} from "./clean.test-support.mts";
+} from "../../test-helpers/commands/clean.test-support.mts";
 import { runClean } from "./clean.mts";
 
 registerHooks();

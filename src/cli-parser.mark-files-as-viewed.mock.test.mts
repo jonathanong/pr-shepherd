@@ -4,7 +4,7 @@ import {
   getStdout,
   mockRunMarkFilesAsViewed,
   stderrSpy,
-} from "./cli-parser.test-support.mts";
+} from "../test-helpers/cli-parser.test-support.mts";
 import { main } from "./cli-parser.mts";
 
 registerHooks();

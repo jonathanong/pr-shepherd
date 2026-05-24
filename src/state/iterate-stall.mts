@@ -18,7 +18,7 @@ import { resolveStateBase } from "./base.mts";
 // Types
 // ---------------------------------------------------------------------------
 
-export interface StallState {
+interface StallState {
   /** Canonicalized JSON fingerprint of the material iterate inputs. */
   fingerprint: string;
   /** Unix timestamp (seconds) when this fingerprint was first seen. */

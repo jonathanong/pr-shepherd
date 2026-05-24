@@ -13,12 +13,12 @@ import {
 
 const BASE_URL = "https://api.github.com";
 
-export interface GitHubGraphQlError {
+interface GitHubGraphQlError {
   message: string;
   path?: unknown;
 }
 
-export interface GraphQlResult<T = unknown> {
+interface GraphQlResult<T = unknown> {
   data: T;
   rateLimit?: RateLimitInfo;
   retryAfterSeconds?: number;

@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { mockFetch, gqlOk, registerClientHooks } from "./client.test-support.mts";
+import {
+  mockFetch,
+  gqlOk,
+  registerClientHooks,
+} from "../../test-helpers/github/client.test-support.mts";
 import { graphql } from "./client.mts";
 
 registerClientHooks();

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://unpkg.com/knip/schema.json",
+  "entry": [
+    "src/index.mts!",
+    "scripts/build.mjs",
+    "scripts/install-husky.mjs",
+    "scripts/strip-lcov-branches.mjs",
+    ".github/scripts/sync-plugin-version.mjs"
+  ],
+  "project": [
+    "src/**/*.mts!",
+    "!src/**/*.{test,mock.test}.mts!",
+    "test-helpers/**/*.mts",
+    "!test-helpers/**/*.mts!",
+    "fixtures/**/*.mts",
+    "!fixtures/**/*.mts!",
+    "test-cases/**/*.mts",
+    "!test-cases/**/*.mts!",
+    "scripts/**/*.mjs",
+    ".github/scripts/**/*.mjs"
+  ],
+  "ignoreDependencies": ["husky"],
+  "ignoreIssues": {
+    "test-helpers/**/*.mts": ["exports", "types"],
+    "test-cases/**/*.mts": ["exports", "types"],
+    "src/cli/args.mts": ["exports"],
+    "src/cli/exit-codes.mts": ["exports"],
+    "src/cli/list-formatters.mts": ["exports"],
+    "src/commands/shepherd-journal.mts": ["exports"],
+    "src/comments/resolve.mts": ["exports"],
+    "src/config/load.mts": ["exports"],
+    "src/github/http-auth.mts": ["exports"],
+    "src/github/http.mts": ["exports"],
+    "src/github/rest-http.mts": ["exports"],
+    "src/log/log-file.mts": ["exports"],
+    "src/reporters/agent.mts": ["exports"],
+    "src/state/seen-comments.mts": ["exports"],
+    "src/types/iterate.mts": ["types"],
+    "src/util/worktree.mts": ["exports"]
+  }
+}

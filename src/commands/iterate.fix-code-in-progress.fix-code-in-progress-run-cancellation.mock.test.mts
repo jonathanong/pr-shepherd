@@ -6,7 +6,7 @@ import {
   mockFetch,
   mockRunCheck,
   mockUpdateReadyDelay,
-} from "./iterate.fix-code-in-progress.test-support.mts";
+} from "../../test-helpers/commands/iterate.fix-code-in-progress.test-support.mts";
 import { runIterate } from "./iterate/index.mts";
 
 registerHooks();

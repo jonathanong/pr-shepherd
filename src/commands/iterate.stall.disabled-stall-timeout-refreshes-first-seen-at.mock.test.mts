@@ -3,15 +3,15 @@ import {
   mockReadStallState,
   mockWriteStallState,
   makeOpts30mStall,
-} from "./iterate-stall.test-support.mts";
-import type { StallState } from "./iterate-stall.test-support.mts";
+} from "../../test-helpers/commands/iterate-stall.test-support.mts";
+import type { StallState } from "../../test-helpers/commands/iterate-stall.test-support.mts";
 import {
   registerIterateHooks,
   NOW,
   makeOpts,
   makeReport,
   mockRunCheck,
-} from "./iterate-test-support.mts";
+} from "../../test-helpers/commands/iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
 
 registerIterateHooks();

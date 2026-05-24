@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { registerHooks, makeCheck, mergeStartupFailureChecks } from "./triage.test-support.mts";
+import {
+  registerHooks,
+  makeCheck,
+  mergeStartupFailureChecks,
+} from "../../test-helpers/checks/triage.test-support.mts";
 
 registerHooks();
 

@@ -15,14 +15,14 @@ import {
 } from "../comments/rate-limit.mts";
 import type { GlobalOptions } from "../types.mts";
 
-export interface MarkFilesAsViewedOptions extends GlobalOptions {
+interface MarkFilesAsViewedOptions extends GlobalOptions {
   prNumber?: number;
   files: string[];
   tests?: boolean;
   matchPatterns?: string[];
 }
 
-export interface ChangedFile {
+interface ChangedFile {
   path: string;
   viewerViewedState?: string | null;
 }

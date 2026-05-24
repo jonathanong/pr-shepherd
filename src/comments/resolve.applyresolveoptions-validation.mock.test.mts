@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { registerHooks, REPO, mockGraphql } from "./resolve.test-support.mts";
+import {
+  registerHooks,
+  REPO,
+  mockGraphql,
+} from "../../test-helpers/comments/resolve.test-support.mts";
 import { applyResolveOptions } from "./resolve.mts";
 
 registerHooks();

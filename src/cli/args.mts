@@ -51,7 +51,7 @@ export function parseIntStrict(value: string, flag: string): number {
 // Common arg parsing
 // ---------------------------------------------------------------------------
 
-export interface ParsedArgs {
+interface ParsedArgs {
   prNumber: number | undefined;
   global: GlobalOptions;
   extra: string[];

@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
-import { registerHooks, REPO, mockGetPrHeadSha } from "./resolve.test-support.mts";
+import {
+  registerHooks,
+  REPO,
+  mockGetPrHeadSha,
+} from "../../test-helpers/comments/resolve.test-support.mts";
 import { applyResolveOptions } from "./resolve.mts";
 
 registerHooks();

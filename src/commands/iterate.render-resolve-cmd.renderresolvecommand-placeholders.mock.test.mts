@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { renderResolveCommand } from "./iterate/render.mts";
-import { registerIterateHooks } from "./iterate-test-support.mts";
+import { registerIterateHooks } from "../../test-helpers/commands/iterate-test-support.mts";
 
 registerIterateHooks();
 

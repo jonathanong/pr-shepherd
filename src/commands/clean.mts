@@ -11,7 +11,7 @@ import { SAFE_SEGMENT } from "../util/path-segment.mts";
 
 export type CleanVariant = "pr" | "branch" | "current" | "repo" | "all";
 
-export interface CleanOptions {
+interface CleanOptions {
   variant: CleanVariant;
   /** PR number string (for "pr") or branch name (for "branch"). Defaults to current. */
   value?: string;

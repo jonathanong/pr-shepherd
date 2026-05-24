@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildUnifiedDiff } from "./patch.test-support.mts";
+import { buildUnifiedDiff } from "../../test-helpers/suggestions/patch.test-support.mts";
 
 describe("buildUnifiedDiff", () => {
   it("replaces a single line in the middle of a file", () => {

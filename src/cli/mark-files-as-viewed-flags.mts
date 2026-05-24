@@ -1,6 +1,6 @@
 import { hasFlag } from "./args.mts";
 
-export type ParseMarkFilesAsViewedResult =
+type ParseMarkFilesAsViewedResult =
   | { ok: true; files: string[]; tests: boolean; matchPatterns: string[] }
   | { ok: false; error: string };
 

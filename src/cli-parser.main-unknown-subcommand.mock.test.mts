@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { registerHooks, stderrSpy } from "./cli-parser.test-support.mts";
+import { registerHooks, stderrSpy } from "../test-helpers/cli-parser.test-support.mts";
 import { main } from "./cli-parser.mts";
 
 registerHooks();

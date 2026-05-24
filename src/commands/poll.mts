@@ -1,7 +1,7 @@
 import { runIterate } from "./iterate/index.mts";
 import type { IterateCommandOptions, IterateResult } from "../types.mts";
 
-export interface PollCommandOptions extends IterateCommandOptions {
+interface PollCommandOptions extends IterateCommandOptions {
   intervalSeconds: number;
   timeoutSeconds: number;
 }

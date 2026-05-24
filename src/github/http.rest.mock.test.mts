@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { registerHooks, jsonOk, mockFetch } from "./http.test-support.mts";
+import { registerHooks, jsonOk, mockFetch } from "../../test-helpers/github/http.test-support.mts";
 import { rest } from "./http.mts";
 
 registerHooks();

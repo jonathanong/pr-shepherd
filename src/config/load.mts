@@ -8,7 +8,7 @@ const MINIMIZE_COMMENTS_POLICIES = ["all", "bots", "users", "none"] as const;
 
 export type MinimizeCommentsPolicy = (typeof MINIMIZE_COMMENTS_POLICIES)[number];
 
-export interface PrShepherdConfig {
+interface PrShepherdConfig {
   /** GitHub logins that should be treated as bots even when GitHub reports User/Unknown. */
   botUsernames: string[];
   iterate: {

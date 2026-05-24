@@ -67,7 +67,7 @@ export interface RawPr {
   };
 }
 
-export interface RawAuthor {
+interface RawAuthor {
   __typename?: string;
   login: string;
 }
@@ -129,7 +129,7 @@ export interface RawReviewSummary {
   body: string;
 }
 
-export interface RawBranchProtectionRule {
+interface RawBranchProtectionRule {
   requiresApprovingReviews: boolean;
   requiredApprovingReviewCount: number;
   requiresConversationResolution: boolean;

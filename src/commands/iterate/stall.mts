@@ -9,7 +9,7 @@ import type {
   ShepherdReport,
 } from "../../types.mts";
 
-export function computeStallFingerprint(
+function computeStallFingerprint(
   action: string,
   headSha: string,
   base: IterateResultBase,

@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { registerHooks, getStdout, mockRunResolveFetch } from "./cli-parser.test-support.mts";
+import {
+  registerHooks,
+  getStdout,
+  mockRunResolveFetch,
+} from "../test-helpers/cli-parser.test-support.mts";
 import { main } from "./cli-parser.mts";
 
 registerHooks();

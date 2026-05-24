@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildUnifiedDiff } from "./patch.test-support.mts";
+import { buildUnifiedDiff } from "../../test-helpers/suggestions/patch.test-support.mts";
 
 describe("buildUnifiedDiff", () => {
   it("emits no-newline marker for context lines before the hunk when last line is in before-context", () => {

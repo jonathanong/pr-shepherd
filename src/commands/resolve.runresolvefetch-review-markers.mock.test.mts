@@ -6,7 +6,7 @@ import {
   mockFetchPrBatch,
   mockLoadSeenMap,
   mockMarkSeen,
-} from "./resolve.test-support.mts";
+} from "../../test-helpers/commands/resolve.test-support.mts";
 import { hashBody } from "../state/seen-comments.mts";
 import { runResolveFetch } from "./resolve.mts";
 

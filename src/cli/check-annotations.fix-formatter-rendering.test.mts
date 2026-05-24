@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { formatIterateResult } from "./iterate-formatter.mts";
-import { makeIterateResult } from "../cli-parser.iterate-fixtures.mts";
+import { makeIterateResult } from "../../fixtures/cli-parser.iterate-fixtures.mts";
 import type { IterateResult } from "../types.mts";
 
 describe("## Check annotations — fix formatter rendering", () => {

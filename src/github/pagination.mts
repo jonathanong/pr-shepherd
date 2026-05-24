@@ -10,7 +10,7 @@
  *   - Backward (`before` + `last`) — used by reviewThreads (default GitHub order).
  */
 
-export interface PageInfo {
+interface PageInfo {
   hasNextPage?: boolean;
   hasPreviousPage?: boolean;
   endCursor?: string | null;
