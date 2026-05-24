@@ -8,7 +8,7 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
     state: "OPEN" as const,
     mergeStateStatus: "BLOCKED" as const,
     mergeStatus: "BLOCKED" as const,
-    reviewDecision: null as null,
+    reviewDecision: null,
     blockingBotReviewInProgress: false,
     isDraft: false,
     shouldCancel: false,
