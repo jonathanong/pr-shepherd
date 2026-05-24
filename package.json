@@ -28,8 +28,8 @@
     "@types/node": "^25.6.0",
     "@vitest/coverage-v8": "^4.1.4",
     "husky": "^9.1.7",
-    "knip": "^5.88.1",
-    "oxfmt": "^0.48.0",
+    "knip": "^6.14.1",
+    "oxfmt": "^0.50.0",
     "oxlint": "^1.60.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
