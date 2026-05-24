@@ -113,8 +113,8 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
     ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
     ...changesRequestedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
     ...reviewSummaryVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
-    markReviewInlineThreadMarkers(stateKey, data.reviewThreads),
   ]);
+  await markReviewInlineThreadMarkers(stateKey, data.reviewThreads);
 
   const result: Omit<FetchResult, "instructions"> = {
     prNumber,

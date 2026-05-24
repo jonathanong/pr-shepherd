@@ -53,6 +53,7 @@ export function classifyItem(
     return "unchanged";
   }
   if (typeof m.bodyHash === "string" && m.bodyHash !== currentHash) return "edited";
+  if (m.bodyHash === undefined && Array.isArray(m.inlineThreadIds)) return "new";
   return "unchanged";
 }
 
@@ -132,7 +133,7 @@ export async function markReviewInlineThreads(
   inlineThreadIds: readonly string[],
 ): Promise<void> {
   await writeSeenMarker(key, reviewId, {
-    inlineThreadIds: [...new Set(inlineThreadIds)].sort(),
+    inlineThreadIds: [...new Set(inlineThreadIds)].sort((a, b) => a.localeCompare(b)),
   });
 }
 
@@ -172,8 +173,8 @@ async function writeSeenMarker(
     } catch {
       // no existing marker — will create below
     }
-    const unchanged = Object.entries(markerFields).every(
-      ([field, value]) => existing?.[field] === value,
+    const unchanged = Object.entries(markerFields).every(([field, value]) =>
+      markerFieldEqual(existing?.[field], value),
     );
     if (existing !== null && unchanged) return;
     const seenAt = existing?.seenAt ?? Date.now();
@@ -195,6 +196,17 @@ async function writeSeenMarker(
       }
     }
   }
+}
+
+function markerFieldEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (Array.isArray(left) && Array.isArray(right)) {
+    return left.length === right.length && left.every((value, index) => value === right[index]);
+  }
+  if (left !== null && right !== null && typeof left === "object" && typeof right === "object") {
+    return JSON.stringify(left) === JSON.stringify(right);
+  }
+  return false;
 }
 
 /** Read the full marker for inspection (returns null on miss or error). */

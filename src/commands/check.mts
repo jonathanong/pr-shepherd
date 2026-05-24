@@ -100,8 +100,8 @@ export async function runCheck(
     ...[...firstLookSummaries, ...editedSummaries].map((r) => markSeen(stateKey, r.id, r.body)),
     ...changesRequestedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
     ...approvedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
-    markReviewInlineThreadMarkers(stateKey, batchData.reviewThreads),
   ]);
+  await markReviewInlineThreadMarkers(stateKey, batchData.reviewThreads);
   const changesRequestedReviews = changesRequestedReviewVisibility.visible;
   const changesRequestedReviewCount = batchData.changesRequestedReviews.length;
   const approvedReviews = approvedReviewVisibility.visible;

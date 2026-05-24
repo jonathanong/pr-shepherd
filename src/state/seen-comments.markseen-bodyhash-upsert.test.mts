@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { randomBytes } from "node:crypto";
 import { rm } from "node:fs/promises";
-import { markReplySeen, markSeen, readSeenMarker, hashBody } from "./seen-comments.mts";
+import {
+  markReplySeen,
+  markReviewInlineThreads,
+  markSeen,
+  readSeenMarker,
+  hashBody,
+} from "./seen-comments.mts";
 
 let testStateDir: string;
 
@@ -61,5 +67,15 @@ describe("markSeen — bodyHash upsert", () => {
     );
     expect(marker?.previousBodyHash).toBe(hashBody("reviewer body"));
     expect(marker?.replyBodyHash).toBe(hashBody("shepherd reply"));
+  });
+
+  it("does not rewrite stable array marker fields", async () => {
+    await markReviewInlineThreads(testKey, "PRR_PARENT", ["thread-b", "thread-a", "thread-a"]);
+    const first = await readSeenMarker(testKey, "PRR_PARENT");
+
+    await markReviewInlineThreads(testKey, "PRR_PARENT", ["thread-a", "thread-b"]);
+    const second = await readSeenMarker(testKey, "PRR_PARENT");
+
+    expect(second).toEqual(first);
   });
 });

@@ -7,9 +7,7 @@ interface StateKey {
   pr: number;
 }
 
-export function groupInlineThreadIdsByReview(
-  threads: readonly ReviewThread[],
-): Map<string, string[]> {
+function groupInlineThreadIdsByReview(threads: readonly ReviewThread[]): Map<string, string[]> {
   const byReview = new Map<string, Set<string>>();
   for (const thread of threads) {
     if (thread.reviewId === undefined) continue;
@@ -17,7 +15,12 @@ export function groupInlineThreadIdsByReview(
     ids.add(thread.id);
     byReview.set(thread.reviewId, ids);
   }
-  return new Map([...byReview.entries()].map(([reviewId, ids]) => [reviewId, [...ids].sort()]));
+  return new Map(
+    [...byReview.entries()].map(([reviewId, ids]) => [
+      reviewId,
+      [...ids].sort((a, b) => a.localeCompare(b)),
+    ]),
+  );
 }
 
 export async function markReviewInlineThreadMarkers(

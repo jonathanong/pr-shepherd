@@ -49,4 +49,9 @@ describe("classifyItem", () => {
     const map = new Map([["id1", { seenAt: 1000 }]]);
     expect(classifyItem("id1", "any body", map)).toBe("unchanged");
   });
+
+  it("returns 'new' for review markers that only store inline thread ids", () => {
+    const map = new Map([["PRR_1", { seenAt: 1000, inlineThreadIds: ["PRRT_1"] }]]);
+    expect(classifyItem("PRR_1", "review summary", map)).toBe("new");
+  });
 });
