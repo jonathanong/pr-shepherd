@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { registerHooks, mockGraphql } from "./resolve.test-support.mts";
+import { registerHooks, mockGraphql } from "../../test-helpers/comments/resolve.test-support.mts";
 import { autoResolveOutdated } from "./resolve.mts";
 
 registerHooks();

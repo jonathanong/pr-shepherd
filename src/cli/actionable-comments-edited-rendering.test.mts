@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatFetchResult } from "./formatters.mts";
 import { formatFixCodeResult } from "./fix-formatter.mts";
-import { makeIterateResult } from "../cli-parser.iterate-fixtures.test-support.mts";
+import { makeIterateResult } from "../../fixtures/cli-parser.iterate-fixtures.mts";
 import type { FetchResult } from "../commands/resolve.mts";
 
 describe("edited actionable comment rendering", () => {

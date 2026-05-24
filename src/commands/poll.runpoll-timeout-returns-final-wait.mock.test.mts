@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
-import { mockRunIterate, makeWaitResult, registerPollHooks } from "./poll.test-support.mts";
+import {
+  mockRunIterate,
+  makeWaitResult,
+  registerPollHooks,
+} from "../../test-helpers/commands/poll.test-support.mts";
 import { runPoll } from "./poll.mts";
 
 registerPollHooks();

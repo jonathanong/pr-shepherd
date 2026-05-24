@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { STALL_TIMEOUT_S } from "./iterate-stall.test-support.mts";
+import { STALL_TIMEOUT_S } from "../../test-helpers/commands/iterate-stall.test-support.mts";
 import {
   NOW,
   makeOpts,
@@ -7,7 +7,7 @@ import {
   mockReadStallState,
   mockRunCheck,
   registerIterateHooks,
-} from "./iterate-test-support.mts";
+} from "../../test-helpers/commands/iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
 import { formatIterateResult } from "../cli/iterate-formatter.mts";
 import { projectIterateLean } from "../cli/iterate-lean.mts";

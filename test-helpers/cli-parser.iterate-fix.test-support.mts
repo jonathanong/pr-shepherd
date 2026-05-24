@@ -1,23 +1,25 @@
 import { vi, beforeEach, afterEach } from "vitest";
 
-vi.mock("./commands/check.mts", () => ({ runCheck: vi.fn() }));
-vi.mock("./commands/resolve.mts", () => ({
+vi.mock("../src/commands/check.mts", () => ({ runCheck: vi.fn() }));
+vi.mock("../src/commands/resolve.mts", () => ({
   runResolveFetch: vi.fn(),
   runResolveMutate: vi.fn(),
 }));
-vi.mock("./commands/commit-suggestion.mts", () => ({
+vi.mock("../src/commands/commit-suggestion.mts", () => ({
   runCommitSuggestion: vi.fn(),
 }));
-vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./commands/iterate/index.mts")>();
+vi.mock("../src/commands/iterate/index.mts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/commands/iterate/index.mts")>();
   return { ...actual, runIterate: vi.fn() };
 });
+vi.mock("../src/github/client.mts", () => ({
+  getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
+}));
 
-import { main } from "./cli-parser.mts";
-import { runIterate } from "./commands/iterate/index.mts";
-import { formatIterateResult } from "./cli/iterate-formatter.mts";
-import type { CancelReason, IterateResult } from "./types.mts";
-import { makeIterateResult } from "./cli-parser.iterate-fixtures.test-support.mts";
+import { main } from "../src/cli-parser.mts";
+import { runIterate } from "../src/commands/iterate/index.mts";
+import type { IterateResult } from "../src/types.mts";
+import { makeIterateResult } from "../fixtures/cli-parser.iterate-fixtures.mts";
 
 const mockRunIterate = vi.mocked(runIterate);
 
@@ -29,12 +31,8 @@ function getStdout(): string {
   return stdoutSpy.mock.calls.map((c: unknown[]) => c[0]).join("");
 }
 
-function getStderr(): string {
-  return stderrSpy.mock.calls.map((c: unknown[]) => c[0]).join("");
-}
-
 // ---------------------------------------------------------------------------
-// iterate dispatch
+// formatIterateResult — fix_code actions and ## Checks section
 // ---------------------------------------------------------------------------
 
 export function registerHooks(): void {
@@ -51,15 +49,5 @@ export function registerHooks(): void {
   });
 }
 
-export {
-  formatIterateResult,
-  getStderr,
-  getStdout,
-  main,
-  makeIterateResult,
-  mockRunIterate,
-  runIterate,
-  stderrSpy,
-  stdoutSpy,
-};
-export type { CancelReason, IterateResult };
+export { getStdout, main, makeIterateResult, mockRunIterate, runIterate, stderrSpy, stdoutSpy };
+export type { IterateResult };

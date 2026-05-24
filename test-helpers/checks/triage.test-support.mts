@@ -7,9 +7,9 @@ import { vi, beforeEach } from "vitest";
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
-import { fetchStartupFailureChecks, triageFailingChecks } from "./triage.mts";
-import { mergeStartupFailureChecks } from "./startup-failures.mts";
-import type { ClassifiedCheck } from "../types.mts";
+import { fetchStartupFailureChecks, triageFailingChecks } from "../../src/checks/triage.mts";
+import { mergeStartupFailureChecks } from "../../src/checks/startup-failures.mts";
+import type { ClassifiedCheck } from "../../src/types.mts";
 
 const REPO = { owner: "owner", name: "repo" };
 

@@ -4,7 +4,7 @@ import {
   makeWaitResult,
   makeCancelResult,
   registerPollHooks,
-} from "./poll.test-support.mts";
+} from "../../test-helpers/commands/poll.test-support.mts";
 import { runPoll } from "./poll.mts";
 
 registerPollHooks();

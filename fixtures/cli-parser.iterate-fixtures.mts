@@ -1,4 +1,4 @@
-import type { IterateResult, RelevantCheck } from "./types.mts";
+import type { IterateResult, RelevantCheck } from "../src/types.mts";
 
 export function makeIterateResult(action: IterateResult["action"] = "wait"): IterateResult {
   const base = {

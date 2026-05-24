@@ -6,7 +6,7 @@ function isBotLogin(login: string | undefined | null): boolean {
 
 export type NormalizedBotUsernames = ReadonlySet<string>;
 
-export function normalizeBotUsername(login: string | undefined | null): string {
+function normalizeBotUsername(login: string | undefined | null): string {
   return (login ?? "")
     .trim()
     .toLowerCase()

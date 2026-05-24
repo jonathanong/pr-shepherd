@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { registerIterateHooks, defaultConfig, mockLoadConfig } from "./iterate-test-support.mts";
+import {
+  registerIterateHooks,
+  defaultConfig,
+  mockLoadConfig,
+} from "../../test-helpers/commands/iterate-test-support.mts";
 import {
   buildEscalateHumanMessage,
   buildEscalateSuggestion,

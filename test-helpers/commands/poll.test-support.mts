@@ -1,9 +1,9 @@
 import { vi, beforeEach, afterEach } from "vitest";
-import type { IterateResult } from "../types.mts";
+import type { IterateResult } from "../../src/types.mts";
 
-vi.mock("./iterate/index.mts", () => ({ runIterate: vi.fn() }));
+vi.mock("../../src/commands/iterate/index.mts", () => ({ runIterate: vi.fn() }));
 
-import { runIterate } from "./iterate/index.mts";
+import { runIterate } from "../../src/commands/iterate/index.mts";
 
 const mockRunIterate = vi.mocked(runIterate);
 

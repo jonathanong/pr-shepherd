@@ -1,7 +1,7 @@
 import type { EscalateDetails, EscalateTrigger, ReviewThread } from "../../types.mts";
 import { loadConfig } from "../../config/load.mts";
 
-export interface EscalateCheck {
+interface EscalateCheck {
   triggers: EscalateTrigger[];
   thrashHistory?: EscalateDetails["thrashHistory"];
 }
@@ -34,7 +34,7 @@ export function checkEscalateTriggers(
   };
 }
 
-export interface BaseBranchLookup {
+interface BaseBranchLookup {
   branch: string;
   /** True when we could not confirm the branch name from GitHub. Callers must
    * escalate rather than emitting a rebase against a potentially-wrong base. */

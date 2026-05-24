@@ -23,21 +23,21 @@ vi.mock("node:child_process", () => ({
   },
 }));
 
-vi.mock("./check.mts", () => ({ runCheck: vi.fn() }));
-vi.mock("./ready-delay.mts", () => ({ updateReadyDelay: vi.fn() }));
-vi.mock("../github/client.mts", () => ({
+vi.mock("../../src/commands/check.mts", () => ({ runCheck: vi.fn() }));
+vi.mock("../../src/commands/ready-delay.mts", () => ({ updateReadyDelay: vi.fn() }));
+vi.mock("../../src/github/client.mts", () => ({
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
 }));
-vi.mock("../state/fix-attempts.mts", () => ({
+vi.mock("../../src/state/fix-attempts.mts", () => ({
   readFixAttempts: vi.fn().mockResolvedValue(null),
   writeFixAttempts: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("../state/iterate-stall.mts", () => ({
+vi.mock("../../src/state/iterate-stall.mts", () => ({
   readStallState: vi.fn().mockResolvedValue(null),
   writeStallState: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("../state/seen-comments.mts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../state/seen-comments.mts")>();
+vi.mock("../../src/state/seen-comments.mts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../src/state/seen-comments.mts")>();
   return {
     ...actual,
     markSeen: vi.fn().mockResolvedValue(undefined),
@@ -45,15 +45,15 @@ vi.mock("../state/seen-comments.mts", async (importOriginal) => {
 });
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
-vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
+vi.mock("../../src/config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
-import { runIterate } from "./iterate/index.mts";
-import { runCheck } from "./check.mts";
-import { updateReadyDelay } from "./ready-delay.mts";
-import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
-import { readStallState, writeStallState } from "../state/iterate-stall.mts";
-import { markSeen } from "../state/seen-comments.mts";
-import type { ShepherdReport, IterateCommandOptions } from "../types.mts";
+import { runIterate } from "../../src/commands/iterate/index.mts";
+import { runCheck } from "../../src/commands/check.mts";
+import { updateReadyDelay } from "../../src/commands/ready-delay.mts";
+import { readFixAttempts, writeFixAttempts } from "../../src/state/fix-attempts.mts";
+import { readStallState, writeStallState } from "../../src/state/iterate-stall.mts";
+import { markSeen } from "../../src/state/seen-comments.mts";
+import type { ShepherdReport, IterateCommandOptions } from "../../src/types.mts";
 
 const mockRunCheck = vi.mocked(runCheck);
 const mockUpdateReadyDelay = vi.mocked(updateReadyDelay);

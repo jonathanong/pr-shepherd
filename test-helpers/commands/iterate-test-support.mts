@@ -22,34 +22,44 @@ vi.mock("node:child_process", () => ({
   },
 }));
 
-vi.mock("./check.mts", () => ({ runCheck: vi.fn() }));
-vi.mock("./ready-delay.mts", () => ({ updateReadyDelay: vi.fn() }));
-vi.mock("../github/client.mts", () => ({ getCurrentPrNumber: vi.fn().mockResolvedValue(42) }));
-vi.mock("../state/fix-attempts.mts", () => ({
+vi.mock("../../src/commands/check.mts", () => ({ runCheck: vi.fn() }));
+vi.mock("../../src/commands/ready-delay.mts", () => ({ updateReadyDelay: vi.fn() }));
+vi.mock("../../src/github/client.mts", () => ({
+  getCurrentPrNumber: vi.fn().mockResolvedValue(42),
+}));
+vi.mock("../../src/state/fix-attempts.mts", () => ({
   readFixAttempts: vi.fn().mockResolvedValue(null),
   writeFixAttempts: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("../state/iterate-stall.mts", () => ({
+vi.mock("../../src/state/iterate-stall.mts", () => ({
   readStallState: vi.fn().mockResolvedValue(null),
   writeStallState: vi.fn().mockResolvedValue(undefined),
   clearStallState: vi.fn().mockResolvedValue(undefined),
 }));
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
-vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
+vi.mock("../../src/config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
-import { runCheck } from "./check.mts";
-import { updateReadyDelay } from "./ready-delay.mts";
-import { getCurrentPrNumber } from "../github/client.mts";
-import { readFixAttempts, writeFixAttempts } from "../state/fix-attempts.mts";
-import { clearStallState, readStallState, writeStallState } from "../state/iterate-stall.mts";
+import { runCheck } from "../../src/commands/check.mts";
+import { updateReadyDelay } from "../../src/commands/ready-delay.mts";
+import { getCurrentPrNumber } from "../../src/github/client.mts";
+import { readFixAttempts, writeFixAttempts } from "../../src/state/fix-attempts.mts";
+import {
+  clearStallState,
+  readStallState,
+  writeStallState,
+} from "../../src/state/iterate-stall.mts";
 import {
   buildEscalateHumanMessage,
   buildEscalateSuggestion,
   checkEscalateTriggers,
-} from "./iterate/escalate.mts";
-import { buildRelevantChecks, buildWaitLog, getCurrentHeadSha } from "./iterate/helpers.mts";
-import type { IterateCommandOptions, Review, ShepherdReport } from "../types.mts";
+} from "../../src/commands/iterate/escalate.mts";
+import {
+  buildRelevantChecks,
+  buildWaitLog,
+  getCurrentHeadSha,
+} from "../../src/commands/iterate/helpers.mts";
+import type { IterateCommandOptions, Review, ShepherdReport } from "../../src/types.mts";
 
 const mockRunCheck = vi.mocked(runCheck);
 const mockUpdateReadyDelay = vi.mocked(updateReadyDelay);

@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { mockExecFile, registerClientHooks } from "./client.test-support.mts";
+import {
+  mockExecFile,
+  registerClientHooks,
+} from "../../test-helpers/github/client.test-support.mts";
 import { getRepoInfo } from "./client.mts";
 
 registerClientHooks();

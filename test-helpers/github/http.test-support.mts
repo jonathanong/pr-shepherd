@@ -32,7 +32,7 @@ import {
   rest,
   restText,
   _resetTokenCache,
-} from "./http.mts";
+} from "../../src/github/http.mts";
 
 // ---------------------------------------------------------------------------
 // Helpers

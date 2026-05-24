@@ -5,7 +5,7 @@ import {
   makeRawPr,
   makeResponse,
   mockGraphqlWithRateLimit,
-} from "./batch-parsers.test-support.mts";
+} from "../../test-helpers/github/batch-parsers.test-support.mts";
 import { fetchPrBatch } from "./batch.mts";
 
 registerHooks();

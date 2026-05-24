@@ -9,7 +9,7 @@
  * button (this one included) must parse + commit themselves.
  */
 
-export interface ParsedSuggestion {
+interface ParsedSuggestion {
   /**
    * Replacement lines to splice in. Empty array means "delete these lines".
    * `[""]` means "replace with a single blank line". Array length equals the

@@ -1,6 +1,11 @@
 /* eslint-disable max-lines */
 import { describe, it, expect } from "vitest";
-import { registerHooks, REPO, makeBulkResponse, mockGraphql } from "./resolve.test-support.mts";
+import {
+  registerHooks,
+  REPO,
+  makeBulkResponse,
+  mockGraphql,
+} from "../../test-helpers/comments/resolve.test-support.mts";
 import { applyResolveOptions } from "./resolve.mts";
 
 registerHooks();

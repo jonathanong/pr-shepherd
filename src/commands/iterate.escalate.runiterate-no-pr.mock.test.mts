@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { registerIterateHooks, mockGetCurrentPrNumber } from "./iterate-test-support.mts";
+import {
+  registerIterateHooks,
+  mockGetCurrentPrNumber,
+} from "../../test-helpers/commands/iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
 
 registerIterateHooks();

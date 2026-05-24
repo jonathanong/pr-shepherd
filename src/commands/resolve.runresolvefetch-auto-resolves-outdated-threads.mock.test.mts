@@ -6,7 +6,7 @@ import {
   makeThread,
   mockAutoResolveOutdated,
   mockFetchPrBatch,
-} from "./resolve.test-support.mts";
+} from "../../test-helpers/commands/resolve.test-support.mts";
 import { runResolveFetch } from "./resolve.mts";
 
 registerHooks();

@@ -1,12 +1,12 @@
 import { vi, beforeEach } from "vitest";
 
-vi.mock("./client.mts", () => ({
+vi.mock("../../src/github/client.mts", () => ({
   graphql: vi.fn(),
   graphqlWithRateLimit: vi.fn(),
 }));
 
-import { fetchPrBatch } from "./batch.mts";
-import { graphql, graphqlWithRateLimit } from "./client.mts";
+import { fetchPrBatch } from "../../src/github/batch.mts";
+import { graphql, graphqlWithRateLimit } from "../../src/github/client.mts";
 
 const mockGraphql = vi.mocked(graphql);
 const mockGraphqlWithRateLimit = vi.mocked(graphqlWithRateLimit);
@@ -62,7 +62,7 @@ function makeResponse(pr: ReturnType<typeof makeRawPr> | null = makeRawPr()) {
 }
 
 // ---------------------------------------------------------------------------
-// reviewSummaries — COMMENTED reviews surfaced for agent-driven minimize
+// PR not found
 // ---------------------------------------------------------------------------
 
 export function registerHooks(): void {

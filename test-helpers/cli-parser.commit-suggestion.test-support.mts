@@ -1,23 +1,23 @@
 import { vi, beforeEach, afterEach } from "vitest";
 
-vi.mock("./commands/check.mts", () => ({ runCheck: vi.fn() }));
-vi.mock("./commands/resolve.mts", () => ({
+vi.mock("../src/commands/check.mts", () => ({ runCheck: vi.fn() }));
+vi.mock("../src/commands/resolve.mts", () => ({
   runResolveFetch: vi.fn(),
   runResolveMutate: vi.fn(),
 }));
-vi.mock("./commands/commit-suggestion.mts", () => ({
+vi.mock("../src/commands/commit-suggestion.mts", () => ({
   runCommitSuggestion: vi.fn(),
 }));
-vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./commands/iterate/index.mts")>();
+vi.mock("../src/commands/iterate/index.mts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/commands/iterate/index.mts")>();
   return { ...actual, runIterate: vi.fn() };
 });
-vi.mock("./github/client.mts", () => ({
+vi.mock("../src/github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
 }));
 
-import { main } from "./cli-parser.mts";
-import { runCommitSuggestion } from "./commands/commit-suggestion.mts";
+import { main } from "../src/cli-parser.mts";
+import { runCommitSuggestion } from "../src/commands/commit-suggestion.mts";
 
 const mockRunCommitSuggestion = vi.mocked(runCommitSuggestion);
 

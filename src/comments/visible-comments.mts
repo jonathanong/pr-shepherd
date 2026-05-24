@@ -4,7 +4,7 @@ import type { MinimizeCommentsPolicy } from "../config/load.mts";
 import type { ActionableComment, PrComment } from "../types.mts";
 import type { NormalizedBotUsernames } from "./authors.mts";
 
-export interface VisibleCommentClassification {
+interface VisibleCommentClassification {
   actionable: ActionableComment[];
   minimizeIds: string[];
   toMarkSeen: ActionableComment[];

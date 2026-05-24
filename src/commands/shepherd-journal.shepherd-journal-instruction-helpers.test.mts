@@ -10,8 +10,12 @@ import {
   buildFixInstructions,
   buildShepherdJournalInstruction,
   countMentions,
-} from "./shepherd-journal.test-support.mts";
-import type { AgentThread, FetchResult, ResolveCommand } from "./shepherd-journal.test-support.mts";
+} from "../../test-helpers/commands/shepherd-journal.test-support.mts";
+import type {
+  AgentThread,
+  FetchResult,
+  ResolveCommand,
+} from "../../test-helpers/commands/shepherd-journal.test-support.mts";
 
 describe("shepherd journal instruction helpers", () => {
   it("buildShepherdJournalInstruction uses an append-to-existing-section hint", () => {

@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { mkdtemp, realpath, rm, mkdir, writeFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 
-vi.mock("../github/client.mts", () => ({
+vi.mock("../../src/github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "acme", name: "widgets" }),
   getCurrentBranch: vi.fn().mockResolvedValue("feature/test"),
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
@@ -15,7 +15,7 @@ import {
   getCurrentBranch,
   getCurrentPrNumber,
   getPrNumberForBranch,
-} from "../github/client.mts";
+} from "../../src/github/client.mts";
 
 export const mockGetRepoInfo = vi.mocked(getRepoInfo);
 export const mockGetCurrentBranch = vi.mocked(getCurrentBranch);

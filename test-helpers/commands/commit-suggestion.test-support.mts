@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { vi, beforeEach } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks
@@ -28,25 +28,35 @@ vi.mock("node:fs/promises", () => ({
   readFile: vi.fn(),
 }));
 
-vi.mock("../github/client.mts", () => ({
+vi.mock("../../src/github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
   getCurrentPrNumber: vi.fn().mockResolvedValue(42 as number | null),
   getCurrentBranch: vi.fn().mockResolvedValue("feature/foo"),
 }));
 
-vi.mock("../github/batch.mts", () => ({
+vi.mock("../../src/github/batch.mts", () => ({
   fetchPrBatch: vi.fn(),
 }));
 
-import { runCommitSuggestion } from "./commit-suggestion.mts";
-import { getCurrentBranch } from "../github/client.mts";
-import { fetchPrBatch } from "../github/batch.mts";
+const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
+vi.mock("../../src/config/load.mts", () => ({
+  loadConfig: mockLoadConfig,
+}));
+
+import { runCommitSuggestion } from "../../src/commands/commit-suggestion.mts";
+import { getCurrentBranch, getCurrentPrNumber } from "../../src/github/client.mts";
+import { fetchPrBatch } from "../../src/github/batch.mts";
 import { readFile } from "node:fs/promises";
-import type { ReviewThread, BatchPrData } from "../types.mts";
+import type { ReviewThread, BatchPrData } from "../../src/types.mts";
 
 const mockGetCurrentBranch = vi.mocked(getCurrentBranch);
+const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockFetchBatch = vi.mocked(fetchPrBatch);
 const mockReadFile = vi.mocked(readFile);
+
+// ---------------------------------------------------------------------------
+// Fixtures
+// ---------------------------------------------------------------------------
 
 function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
   return {
@@ -66,7 +76,10 @@ function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
   };
 }
 
-function makeBatch(threads: ReviewThread[]): BatchPrData {
+function makeBatch(
+  threads: ReviewThread[],
+  headRepoWithOwner: string | null = "owner/repo",
+): BatchPrData {
   return {
     nodeId: "PR_kgDOAAA",
     number: 42,
@@ -77,7 +90,7 @@ function makeBatch(threads: ReviewThread[]): BatchPrData {
     reviewDecision: "APPROVED",
     headRefOid: "headsha",
     headRefName: "feature/foo",
-    headRepoWithOwner: "owner/repo",
+    headRepoWithOwner,
     baseRefName: "main",
     reviewRequests: [],
     latestReviews: [],
@@ -106,23 +119,45 @@ function makeGitSuccess(stdout = ""): Promise<{ stdout: string; stderr: string }
   return Promise.resolve({ stdout, stderr: "" });
 }
 
+function setupHappyPath(): void {
+  mockFetchBatch.mockResolvedValue({ data: makeBatch([makeThread()]) });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (mockReadFile as any).mockResolvedValue(FILE_CONTENT);
+
+  mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+    if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
+    if (cmd === "git" && args[0] === "status") return makeGitSuccess(""); // file is clean
+    throw new Error(`Unexpected execFile call: ${cmd} ${args.join(" ")}`);
+  });
+}
+
 // ---------------------------------------------------------------------------
-// Output shape and instruction content
+// Validation
 // ---------------------------------------------------------------------------
+
+export function registerHooks(): void {
+  beforeEach(() => {
+    mockLoadConfig.mockReturnValue({});
+  });
+}
 
 export {
   FILE_CONTENT,
   GLOBAL_OPTS,
   fetchPrBatch,
   getCurrentBranch,
+  getCurrentPrNumber,
   makeBatch,
   makeGitSuccess,
   makeThread,
   mockExecFile,
   mockFetchBatch,
   mockGetCurrentBranch,
+  mockGetCurrentPrNumber,
+  mockLoadConfig,
   mockReadFile,
   readFile,
   runCommitSuggestion,
+  setupHappyPath,
 };
 export type { BatchPrData, ReviewThread };

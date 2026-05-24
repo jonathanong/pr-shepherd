@@ -7,7 +7,7 @@ import {
   testId,
   testStateDir,
   registerHooks,
-} from "./seen-comments.test-support.mts";
+} from "../../test-helpers/state/seen-comments.test-support.mts";
 import { markSeen, readSeenMarker } from "./seen-comments.mts";
 
 registerHooks();

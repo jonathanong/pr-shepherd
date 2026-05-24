@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { registerHooks, BASE_OPTS, mockGetCurrentPrNumber } from "./check.test-support.mts";
+import {
+  registerHooks,
+  BASE_OPTS,
+  mockGetCurrentPrNumber,
+} from "../../test-helpers/commands/check.test-support.mts";
 import { runCheck } from "./check.mts";
 
 registerHooks();

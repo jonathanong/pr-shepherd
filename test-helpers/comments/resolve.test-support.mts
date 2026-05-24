@@ -4,13 +4,13 @@ import { vi, beforeEach } from "vitest";
 // Mock github/client.mts before any imports.
 // ---------------------------------------------------------------------------
 
-vi.mock("../github/client.mts", () => ({
+vi.mock("../../src/github/client.mts", () => ({
   graphqlWithRateLimit: vi.fn(),
   getPrHeadSha: vi.fn(),
 }));
 
-import { applyResolveOptions, autoResolveOutdated } from "./resolve.mts";
-import { graphqlWithRateLimit, getPrHeadSha } from "../github/client.mts";
+import { applyResolveOptions, autoResolveOutdated } from "../../src/comments/resolve.mts";
+import { graphqlWithRateLimit, getPrHeadSha } from "../../src/github/client.mts";
 
 const mockGraphql = vi.mocked(graphqlWithRateLimit);
 const mockGetPrHeadSha = vi.mocked(getPrHeadSha);

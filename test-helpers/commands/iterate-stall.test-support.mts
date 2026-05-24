@@ -1,7 +1,9 @@
 import { vi } from "vitest";
 import { NOW, makeOpts } from "./iterate-test-support.mts";
-import { readStallState, writeStallState, type StallState } from "../state/iterate-stall.mts";
-import type { IterateCommandOptions } from "../types.mts";
+import { readStallState, writeStallState } from "../../src/state/iterate-stall.mts";
+import type { IterateCommandOptions } from "../../src/types.mts";
+
+type StallState = NonNullable<Awaited<ReturnType<typeof readStallState>>>;
 
 const mockReadStallState = vi.mocked(readStallState);
 const mockWriteStallState = vi.mocked(writeStallState);

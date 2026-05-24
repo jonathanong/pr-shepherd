@@ -8,7 +8,7 @@ import {
   mockFetchPrBatch,
   mockLoadSeenMap,
   mockMarkSeen,
-} from "./check.test-support.mts";
+} from "../../test-helpers/commands/check.test-support.mts";
 import { runCheck } from "./check.mts";
 
 registerHooks();

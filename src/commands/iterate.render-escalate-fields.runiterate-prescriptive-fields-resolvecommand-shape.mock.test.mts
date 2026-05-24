@@ -7,7 +7,7 @@ import {
   mockExecFile,
   mockRunCheck,
   mockUpdateReadyDelay,
-} from "./iterate-test-support.mts";
+} from "../../test-helpers/commands/iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
 
 registerIterateHooks();

@@ -4,7 +4,7 @@ import {
   mockRunClean,
   getStdout,
   getStderr,
-} from "./cli-parser.clean.test-support.mts";
+} from "../test-helpers/cli-parser.clean.test-support.mts";
 import { main } from "./cli-parser.mts";
 
 registerHooks();

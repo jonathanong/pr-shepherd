@@ -1,5 +1,5 @@
 import { vi, beforeEach, afterEach } from "vitest";
-import { _resetTokenCache } from "./http.mts";
+import { _resetTokenCache } from "../../src/github/http.mts";
 
 export const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);

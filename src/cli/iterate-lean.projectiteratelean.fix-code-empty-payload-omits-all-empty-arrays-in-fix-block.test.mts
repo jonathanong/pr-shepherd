@@ -3,7 +3,7 @@ import {
   makeIterateResult,
   projectIterateLean,
   projectIterateVerbose,
-} from "./iterate-lean.test-support.mts";
+} from "../../test-helpers/cli/iterate-lean.test-support.mts";
 
 describe("projectIterateLean", () => {
   // ---------------------------------------------------------------------------

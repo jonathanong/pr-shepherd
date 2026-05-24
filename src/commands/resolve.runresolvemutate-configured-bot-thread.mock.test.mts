@@ -8,7 +8,7 @@ import {
   mockApplyResolveOptions,
   mockFetchPrBatch,
   mockLoadConfig,
-} from "./resolve.test-support.mts";
+} from "../../test-helpers/commands/resolve.test-support.mts";
 import { runResolveMutate } from "./resolve.mts";
 
 registerHooks();

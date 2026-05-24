@@ -1,23 +1,23 @@
 import { vi, beforeEach } from "vitest";
 
-vi.mock("../github/batch.mts", () => ({ fetchPrBatch: vi.fn() }));
-vi.mock("../github/client.mts", () => ({
+vi.mock("../../src/github/batch.mts", () => ({ fetchPrBatch: vi.fn() }));
+vi.mock("../../src/github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
   getMergeableState: vi.fn(),
 }));
-vi.mock("../checks/triage.mts", () => ({
+vi.mock("../../src/checks/triage.mts", () => ({
   triageFailingChecks: vi.fn((checks: unknown[]) => Promise.resolve(checks)),
   fetchStartupFailureChecks: vi.fn().mockResolvedValue([]),
 }));
-vi.mock("../github/check-annotations.mts", () => ({
+vi.mock("../../src/github/check-annotations.mts", () => ({
   fetchCheckRunAnnotations: vi.fn().mockResolvedValue([]),
 }));
-vi.mock("../comments/resolve.mts", () => ({
+vi.mock("../../src/comments/resolve.mts", () => ({
   autoResolveOutdated: vi.fn().mockResolvedValue({ resolved: [], errors: [] }),
 }));
-vi.mock("../state/seen-comments.mts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../state/seen-comments.mts")>();
+vi.mock("../../src/state/seen-comments.mts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../src/state/seen-comments.mts")>();
   return {
     ...actual,
     loadSeenMap: vi.fn().mockResolvedValue(new Map()),
@@ -25,16 +25,16 @@ vi.mock("../state/seen-comments.mts", async (importOriginal) => {
   };
 });
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
-vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
+vi.mock("../../src/config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
-import { runCheck } from "./check.mts";
-import { fetchPrBatch } from "../github/batch.mts";
-import { getCurrentPrNumber, getMergeableState } from "../github/client.mts";
-import { fetchStartupFailureChecks, triageFailingChecks } from "../checks/triage.mts";
-import { fetchCheckRunAnnotations } from "../github/check-annotations.mts";
-import { loadSeenMap, markSeen, hashBody } from "../state/seen-comments.mts";
-import { autoResolveOutdated } from "../comments/resolve.mts";
-import type { BatchPrData, ClassifiedCheck, ReviewThread, PrComment } from "../types.mts";
+import { runCheck } from "../../src/commands/check.mts";
+import { fetchPrBatch } from "../../src/github/batch.mts";
+import { getCurrentPrNumber, getMergeableState } from "../../src/github/client.mts";
+import { fetchStartupFailureChecks, triageFailingChecks } from "../../src/checks/triage.mts";
+import { fetchCheckRunAnnotations } from "../../src/github/check-annotations.mts";
+import { loadSeenMap, markSeen, hashBody } from "../../src/state/seen-comments.mts";
+import { autoResolveOutdated } from "../../src/comments/resolve.mts";
+import type { BatchPrData, ClassifiedCheck, ReviewThread, PrComment } from "../../src/types.mts";
 
 const mockFetchPrBatch = vi.mocked(fetchPrBatch);
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);

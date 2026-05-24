@@ -3,8 +3,8 @@ import {
   registerHooks,
   getStdout,
   mockRunIterate,
-} from "./cli-parser.iterate-fix.test-support.mts";
-import { makeIterateResult } from "./cli-parser.iterate-fixtures.test-support.mts";
+} from "../test-helpers/cli-parser.iterate-fix.test-support.mts";
+import { makeIterateResult } from "../fixtures/cli-parser.iterate-fixtures.mts";
 import { main } from "./cli-parser.mts";
 
 registerHooks();

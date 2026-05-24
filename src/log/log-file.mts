@@ -30,7 +30,7 @@ export function nextEntry(): number {
   return ++_entryCounter;
 }
 
-export interface RepoKey {
+interface RepoKey {
   owner: string;
   repo: string;
 }

@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { makeIterateResult, projectIterateLean } from "./iterate-lean.test-support.mts";
+import {
+  makeIterateResult,
+  projectIterateLean,
+} from "../../test-helpers/cli/iterate-lean.test-support.mts";
 
 describe("projectIterateLean", () => {
   // ---------------------------------------------------------------------------

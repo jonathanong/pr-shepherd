@@ -5,7 +5,7 @@ import {
   getStdout,
   mockRunCommitSuggestion,
   stderrSpy,
-} from "./cli-parser.commit-suggestion.test-support.mts";
+} from "../test-helpers/cli-parser.commit-suggestion.test-support.mts";
 import { main } from "./cli-parser.mts";
 
 registerHooks();

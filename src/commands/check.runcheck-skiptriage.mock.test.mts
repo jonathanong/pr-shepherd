@@ -6,7 +6,7 @@ import {
   makeCheck,
   mockFetchPrBatch,
   mockTriageFailingChecks,
-} from "./check.test-support.mts";
+} from "../../test-helpers/commands/check.test-support.mts";
 import { runCheck } from "./check.mts";
 
 registerHooks();

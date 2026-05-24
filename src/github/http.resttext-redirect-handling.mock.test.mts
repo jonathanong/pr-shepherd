@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { registerHooks, mockFetch } from "./http.test-support.mts";
+import { registerHooks, mockFetch } from "../../test-helpers/github/http.test-support.mts";
 import { restText } from "./http.mts";
 
 registerHooks();

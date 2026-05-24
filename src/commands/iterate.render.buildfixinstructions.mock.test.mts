@@ -1,7 +1,7 @@
 /* eslint-disable max-lines */
 
 import { describe, it, expect } from "vitest";
-import { registerIterateHooks } from "./iterate-test-support.mts";
+import { registerIterateHooks } from "../../test-helpers/commands/iterate-test-support.mts";
 import { buildFixInstructions } from "./iterate/render.mts";
 
 registerIterateHooks();

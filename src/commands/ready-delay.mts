@@ -15,7 +15,7 @@ import { resolveStateBase } from "../state/base.mts";
 // Ready-delay state machine
 // ---------------------------------------------------------------------------
 
-export interface ReadyDelayState {
+interface ReadyDelayState {
   isReady: boolean;
   /**
    * When true, the loop should cancel itself — the PR has been READY for

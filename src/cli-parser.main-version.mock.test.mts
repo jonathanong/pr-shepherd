@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { registerHooks, getStdout } from "./cli-parser.test-support.mts";
+import { registerHooks, getStdout } from "../test-helpers/cli-parser.test-support.mts";
 import { readFileSync } from "node:fs";
 import { main } from "./cli-parser.mts";
 

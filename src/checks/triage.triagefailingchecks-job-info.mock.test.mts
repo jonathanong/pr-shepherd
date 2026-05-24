@@ -6,7 +6,7 @@ import {
   makeJobsResponse,
   mockFetch,
   triageFailingChecks,
-} from "./triage.test-support.mts";
+} from "../../test-helpers/checks/triage.test-support.mts";
 
 registerHooks();
 

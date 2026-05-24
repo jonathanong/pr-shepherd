@@ -6,7 +6,7 @@ import {
   makeResponse,
   mockGraphql,
   mockGraphqlWithRateLimit,
-} from "./batch.test-support.mts";
+} from "../../test-helpers/github/batch.test-support.mts";
 import { fetchPrBatch } from "./batch.mts";
 
 registerHooks();

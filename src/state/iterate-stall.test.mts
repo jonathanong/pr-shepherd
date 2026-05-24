@@ -2,12 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { randomBytes } from "node:crypto";
 import { rm, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import {
-  readStallState,
-  writeStallState,
-  clearStallState,
-  type StallState,
-} from "./iterate-stall.mts";
+import { readStallState, writeStallState, clearStallState } from "./iterate-stall.mts";
+
+type StallState = NonNullable<Awaited<ReturnType<typeof readStallState>>>;
 
 let testStateDir: string;
 

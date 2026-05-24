@@ -1,7 +1,7 @@
 import { getRepoInfo } from "../github/client.mts";
 import { resolveLogPath } from "../log/log-file.mts";
 
-export interface LogFileResult {
+interface LogFileResult {
   path: string;
 }
 

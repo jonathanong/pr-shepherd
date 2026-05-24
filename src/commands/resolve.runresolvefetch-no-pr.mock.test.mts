@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { registerHooks, BASE_OPTS, mockGetCurrentPrNumber } from "./resolve.test-support.mts";
+import {
+  registerHooks,
+  BASE_OPTS,
+  mockGetCurrentPrNumber,
+} from "../../test-helpers/commands/resolve.test-support.mts";
 import { runResolveFetch } from "./resolve.mts";
 
 registerHooks();

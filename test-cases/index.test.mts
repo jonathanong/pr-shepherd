@@ -1,4 +1,3 @@
-
 import { describe, it, expect } from "vitest";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,11 +9,11 @@ import {
   applyFixture,
   captureRun,
   captureTwoTickStallRun,
-} from "./harness.mts";
+} from "../test-helpers/test-cases/harness.mts";
 
 registerHarnessBefore();
 
-const __dir = fileURLToPath(new URL(".", import.meta.url));
+const fixturesDir = fileURLToPath(new URL("./", import.meta.url));
 
 for (const name of listFixtureNames()) {
   describe(name, () => {
@@ -28,10 +27,10 @@ for (const name of listFixtureNames()) {
       expect(result.jsonOut, "json output must not be empty").toBeTruthy();
 
       await expect(result.textOut).toMatchFileSnapshot(
-        join(__dir, "snapshots", name, "output.text.md"),
+        join(fixturesDir, "snapshots", name, "output.text.md"),
       );
       await expect(result.jsonOut).toMatchFileSnapshot(
-        join(__dir, "snapshots", name, "output.json"),
+        join(fixturesDir, "snapshots", name, "output.json"),
       );
     });
   });

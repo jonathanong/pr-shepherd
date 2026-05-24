@@ -2,7 +2,7 @@ import type { IterateResult } from "../types.mts";
 import { iterateActionToExitCode } from "./exit-codes.mts";
 import { formatIterateResult, projectIterateLean, projectIterateVerbose } from "./formatters.mts";
 
-export interface EmitIterateResultOpts {
+interface EmitIterateResultOpts {
   format: "text" | "json";
   verbose: boolean;
   readyDelaySuffix?: string;

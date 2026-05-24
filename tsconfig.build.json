@@ -12,8 +12,7 @@
     "bin",
     "src/**/*.test.mts",
     "src/**/*.mock.test.mts",
-    "src/**/*.test-support.mts",
-    "src/**/*-test-support.mts",
-    "src/**/*.fixtures.mts"
+    "test-helpers",
+    "fixtures"
   ]
 }

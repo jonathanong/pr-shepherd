@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { mockFetch, mockExecFile, gqlOk, registerClientHooks } from "./client.test-support.mts";
+import {
+  mockFetch,
+  mockExecFile,
+  gqlOk,
+  registerClientHooks,
+} from "../../test-helpers/github/client.test-support.mts";
 import { getCurrentPrNumber, getPrNumberForBranch } from "./client.mts";
 
 registerClientHooks();

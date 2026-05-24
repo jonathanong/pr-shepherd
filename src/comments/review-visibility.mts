@@ -1,7 +1,7 @@
 import { classifyItem, type SeenMarker } from "../state/seen-comments.mts";
 import type { Review } from "../types.mts";
 
-export interface ReviewVisibility {
+interface ReviewVisibility {
   visible: Review[];
   toMarkSeen: Review[];
 }

@@ -4,9 +4,14 @@ import {
   mockWriteStallState,
   STALL_TIMEOUT_S,
   makeOpts30mStall,
-} from "./iterate-stall.test-support.mts";
-import type { StallState } from "./iterate-stall.test-support.mts";
-import { registerIterateHooks, NOW, makeReport, mockRunCheck } from "./iterate-test-support.mts";
+} from "../../test-helpers/commands/iterate-stall.test-support.mts";
+import type { StallState } from "../../test-helpers/commands/iterate-stall.test-support.mts";
+import {
+  registerIterateHooks,
+  NOW,
+  makeReport,
+  mockRunCheck,
+} from "../../test-helpers/commands/iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
 
 registerIterateHooks();

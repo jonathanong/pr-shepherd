@@ -3,8 +3,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
-import type { PrShepherdConfig } from "../config/load.mts";
+import type { loadConfig } from "../config/load.mts";
 import { parseIterateFlags } from "./iterate-flags.mts";
+
+type PrShepherdConfig = ReturnType<typeof loadConfig>;
 
 function defaultConfig(): PrShepherdConfig {
   return {

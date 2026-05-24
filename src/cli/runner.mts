@@ -1,4 +1,4 @@
-export interface PrShepherdCommand {
+interface PrShepherdCommand {
   argv: string[];
   text: string;
 }

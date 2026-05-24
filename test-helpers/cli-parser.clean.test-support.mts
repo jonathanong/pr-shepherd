@@ -1,25 +1,25 @@
 import { vi, beforeEach, afterEach } from "vitest";
 
-vi.mock("./commands/clean.mts", () => ({
+vi.mock("../src/commands/clean.mts", () => ({
   runClean: vi.fn(),
 }));
-vi.mock("./commands/resolve.mts", () => ({
+vi.mock("../src/commands/resolve.mts", () => ({
   runResolveFetch: vi.fn(),
   runResolveMutate: vi.fn(),
 }));
-vi.mock("./commands/log-file.mts", () => ({
+vi.mock("../src/commands/log-file.mts", () => ({
   runLogFile: vi.fn(),
 }));
-vi.mock("./commands/commit-suggestion.mts", () => ({
+vi.mock("../src/commands/commit-suggestion.mts", () => ({
   runCommitSuggestion: vi.fn(),
 }));
-vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./commands/iterate/index.mts")>();
+vi.mock("../src/commands/iterate/index.mts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/commands/iterate/index.mts")>();
   return { ...actual, runIterate: vi.fn() };
 });
 
-import { main } from "./cli-parser.mts";
-import { runClean } from "./commands/clean.mts";
+import { main } from "../src/cli-parser.mts";
+import { runClean } from "../src/commands/clean.mts";
 
 export const mockRunClean = vi.mocked(runClean);
 

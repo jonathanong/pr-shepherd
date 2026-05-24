@@ -8,8 +8,8 @@ import {
   mockLoadConfig,
   mockRunCheck,
   mockUpdateReadyDelay,
-} from "./iterate-test-support.mts";
-import { makeThread } from "./iterate-thread-test-support.mts";
+} from "../../test-helpers/commands/iterate-test-support.mts";
+import { makeThread } from "../../test-helpers/commands/iterate-thread-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
 
 registerIterateHooks();

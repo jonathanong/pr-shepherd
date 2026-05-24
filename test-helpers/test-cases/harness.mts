@@ -23,7 +23,7 @@ vi.stubGlobal("fetch", mockFetch);
 // ---------------------------------------------------------------------------
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
-vi.mock("../src/config/load.mts", () => ({ loadConfig: mockLoadConfig }));
+vi.mock("../../src/config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
 const { mockExecFile } = vi.hoisted(() => ({ mockExecFile: vi.fn() }));
 vi.mock("node:child_process", () => ({
@@ -35,24 +35,24 @@ vi.mock("node:child_process", () => ({
   },
 }));
 
-vi.mock("../src/github/batch.mts", () => ({ fetchPrBatch: vi.fn() }));
-vi.mock("../src/github/client.mts", () => ({
+vi.mock("../../src/github/batch.mts", () => ({ fetchPrBatch: vi.fn() }));
+vi.mock("../../src/github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
   getMergeableState: vi.fn(),
 }));
-vi.mock("../src/checks/triage.mts", () => ({
+vi.mock("../../src/checks/triage.mts", () => ({
   triageFailingChecks: vi.fn((checks) => Promise.resolve(checks)),
   fetchStartupFailureChecks: vi.fn().mockResolvedValue([]),
 }));
-vi.mock("../src/github/check-annotations.mts", () => ({
+vi.mock("../../src/github/check-annotations.mts", () => ({
   fetchCheckRunAnnotations: vi.fn().mockResolvedValue([]),
 }));
-vi.mock("../src/comments/resolve.mts", () => ({
+vi.mock("../../src/comments/resolve.mts", () => ({
   autoResolveOutdated: vi.fn().mockResolvedValue({ resolved: [], errors: [] }),
   applyResolveOptions: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("../src/state/seen-comments.mts", async (importOriginal) => {
+vi.mock("../../src/state/seen-comments.mts", async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
@@ -60,13 +60,13 @@ vi.mock("../src/state/seen-comments.mts", async (importOriginal) => {
     markSeen: vi.fn().mockResolvedValue(undefined),
   };
 });
-vi.mock("../src/commands/ready-delay.mts", () => ({ updateReadyDelay: vi.fn() }));
-vi.mock("../src/state/iterate-stall.mts", () => ({
+vi.mock("../../src/commands/ready-delay.mts", () => ({ updateReadyDelay: vi.fn() }));
+vi.mock("../../src/state/iterate-stall.mts", () => ({
   readStallState: vi.fn().mockResolvedValue(null),
   writeStallState: vi.fn().mockResolvedValue(undefined),
   clearStallState: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("../src/state/fix-attempts.mts", () => ({
+vi.mock("../../src/state/fix-attempts.mts", () => ({
   readFixAttempts: vi.fn().mockResolvedValue(null),
   writeFixAttempts: vi.fn().mockResolvedValue(undefined),
 }));
@@ -75,16 +75,20 @@ vi.mock("../src/state/fix-attempts.mts", () => ({
 // Imports (after mocks)
 // ---------------------------------------------------------------------------
 
-import { main } from "../src/cli-parser.mts";
-import { fetchPrBatch } from "../src/github/batch.mts";
-import { getMergeableState } from "../src/github/client.mts";
-import { triageFailingChecks, fetchStartupFailureChecks } from "../src/checks/triage.mts";
-import { fetchCheckRunAnnotations } from "../src/github/check-annotations.mts";
-import { autoResolveOutdated } from "../src/comments/resolve.mts";
-import { loadSeenMap, markSeen } from "../src/state/seen-comments.mts";
-import { updateReadyDelay } from "../src/commands/ready-delay.mts";
-import { readStallState, writeStallState, clearStallState } from "../src/state/iterate-stall.mts";
-import { readFixAttempts, writeFixAttempts } from "../src/state/fix-attempts.mts";
+import { main } from "../../src/cli-parser.mts";
+import { fetchPrBatch } from "../../src/github/batch.mts";
+import { getMergeableState } from "../../src/github/client.mts";
+import { triageFailingChecks, fetchStartupFailureChecks } from "../../src/checks/triage.mts";
+import { fetchCheckRunAnnotations } from "../../src/github/check-annotations.mts";
+import { autoResolveOutdated } from "../../src/comments/resolve.mts";
+import { loadSeenMap, markSeen } from "../../src/state/seen-comments.mts";
+import { updateReadyDelay } from "../../src/commands/ready-delay.mts";
+import {
+  readStallState,
+  writeStallState,
+  clearStallState,
+} from "../../src/state/iterate-stall.mts";
+import { readFixAttempts, writeFixAttempts } from "../../src/state/fix-attempts.mts";
 
 const mockFetchPrBatch = vi.mocked(fetchPrBatch);
 const mockGetMergeableState = vi.mocked(getMergeableState);
@@ -198,15 +202,15 @@ export const NOW = 1_715_800_000;
 // Fixture loading
 // ---------------------------------------------------------------------------
 
-const __dir = fileURLToPath(new URL(".", import.meta.url));
+const fixturesDir = fileURLToPath(new URL("../../test-cases/", import.meta.url));
 
 export function loadFixture(name: string): Fixture {
-  const path = join(__dir, "fixtures", name, "input.json");
+  const path = join(fixturesDir, "fixtures", name, "input.json");
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
 export function listFixtureNames(): string[] {
-  return readdirSync(join(__dir, "fixtures"))
+  return readdirSync(join(fixturesDir, "fixtures"))
     .filter((d) => !d.startsWith("."))
     .sort();
 }
@@ -215,7 +219,10 @@ export function listFixtureNames(): string[] {
 // Apply fixture mocks
 // ---------------------------------------------------------------------------
 
-function deepMerge(base: Record<string, unknown>, overlay: Record<string, unknown>): Record<string, unknown> {
+function deepMerge(
+  base: Record<string, unknown>,
+  overlay: Record<string, unknown>,
+): Record<string, unknown> {
   const result = { ...base };
   for (const [k, v] of Object.entries(overlay)) {
     if (
@@ -246,10 +253,15 @@ export function applyFixture(fixture: Fixture): void {
   const cfg = Object.keys(overlayCfg).length > 0 ? deepMerge(baseCfg, overlayCfg) : baseCfg;
   mockLoadConfig.mockReturnValue(cfg);
 
-  const batchData = fixture.batchData ? { ...DEFAULT_BATCH, ...fixture.batchData } : { ...DEFAULT_BATCH };
+  const batchData = fixture.batchData
+    ? { ...DEFAULT_BATCH, ...fixture.batchData }
+    : { ...DEFAULT_BATCH };
   mockFetchPrBatch.mockResolvedValue({ data: batchData });
 
-  const mergeableFallback = fixture.mergeableFallback ?? { mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" };
+  const mergeableFallback = fixture.mergeableFallback ?? {
+    mergeable: "MERGEABLE",
+    mergeStateStatus: "CLEAN",
+  };
   mockGetMergeableState.mockResolvedValue(mergeableFallback);
 
   if (fixture.triagedChecks !== undefined) {

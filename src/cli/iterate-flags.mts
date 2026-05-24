@@ -3,7 +3,7 @@ import { getFlag, hasFlag } from "./args.mts";
 import { parseDurationToMinutes } from "./exit-codes.mts";
 import { validateDurationFlag } from "./duration-flag.mts";
 
-export interface IterateFlags {
+interface IterateFlags {
   readyDelaySuffix: string | undefined | null;
   readyDelaySeconds: number;
   stallTimeoutSeconds: number;

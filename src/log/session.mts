@@ -16,7 +16,7 @@ export function buildSessionHeader(argv: string[]): { markdown: string } {
   return { markdown };
 }
 
-export interface HttpRequestEntry {
+interface HttpRequestEntry {
   n: number;
   kind: "GraphQL" | "REST" | "restText";
   method: string;
@@ -24,7 +24,7 @@ export interface HttpRequestEntry {
   body?: unknown;
 }
 
-export interface HttpResponseEntry {
+interface HttpResponseEntry {
   n: number;
   kind: "GraphQL" | "REST" | "restText";
   method: string;

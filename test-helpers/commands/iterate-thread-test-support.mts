@@ -1,4 +1,4 @@
-import type { ReviewThread } from "../types.mts";
+import type { ReviewThread } from "../../src/types.mts";
 import { NOW } from "./iterate-test-support.mts";
 
 export function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {

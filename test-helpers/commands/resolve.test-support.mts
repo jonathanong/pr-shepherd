@@ -1,12 +1,12 @@
 import { vi, beforeEach } from "vitest";
 
-vi.mock("../github/client.mts", () => ({
+vi.mock("../../src/github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
 }));
 
-vi.mock("../state/seen-comments.mts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../state/seen-comments.mts")>();
+vi.mock("../../src/state/seen-comments.mts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../src/state/seen-comments.mts")>();
   return {
     ...actual,
     loadSeenMap: vi.fn().mockResolvedValue(new Map()),
@@ -15,16 +15,16 @@ vi.mock("../state/seen-comments.mts", async (importOriginal) => {
   };
 });
 
-vi.mock("../github/batch.mts", () => ({
+vi.mock("../../src/github/batch.mts", () => ({
   fetchPrBatch: vi.fn(),
 }));
 
-vi.mock("../comments/resolve.mts", () => ({
+vi.mock("../../src/comments/resolve.mts", () => ({
   autoResolveOutdated: vi.fn(),
   applyResolveOptions: vi.fn(),
 }));
 
-vi.mock("../config/load.mts", () => ({
+vi.mock("../../src/config/load.mts", () => ({
   loadConfig: vi.fn().mockReturnValue({
     botUsernames: ["coderabbitai"],
     resolve: {
@@ -39,13 +39,13 @@ vi.mock("../config/load.mts", () => ({
   }),
 }));
 
-import { runResolveFetch, runResolveMutate } from "./resolve.mts";
-import { getCurrentPrNumber } from "../github/client.mts";
-import { fetchPrBatch } from "../github/batch.mts";
-import { autoResolveOutdated, applyResolveOptions } from "../comments/resolve.mts";
-import { loadConfig } from "../config/load.mts";
-import { loadSeenMap, markSeen, markReplySeen, hashBody } from "../state/seen-comments.mts";
-import type { BatchPrData, ReviewThread, PrComment } from "../types.mts";
+import { runResolveFetch, runResolveMutate } from "../../src/commands/resolve.mts";
+import { getCurrentPrNumber } from "../../src/github/client.mts";
+import { fetchPrBatch } from "../../src/github/batch.mts";
+import { autoResolveOutdated, applyResolveOptions } from "../../src/comments/resolve.mts";
+import { loadConfig } from "../../src/config/load.mts";
+import { loadSeenMap, markSeen, markReplySeen, hashBody } from "../../src/state/seen-comments.mts";
+import type { BatchPrData, ReviewThread, PrComment } from "../../src/types.mts";
 
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockFetchPrBatch = vi.mocked(fetchPrBatch);

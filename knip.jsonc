@@ -1,22 +1,27 @@
 {
   "$schema": "https://unpkg.com/knip/schema.json",
-  "entry": ["src/index.mts!"],
+  "entry": [
+    "src/index.mts!",
+    "scripts/build.mjs",
+    "scripts/install-husky.mjs",
+    "scripts/strip-lcov-branches.mjs",
+    ".github/scripts/sync-plugin-version.mjs"
+  ],
   "project": [
     "src/**/*.mts!",
     "!src/**/*.{test,mock.test}.mts!",
-    "!src/**/*.test-support.mts!",
-    "!src/**/*-test-support.mts!",
-    "!src/**/*.fixtures.mts!",
+    "test-helpers/**/*.mts",
+    "!test-helpers/**/*.mts!",
+    "fixtures/**/*.mts",
+    "!fixtures/**/*.mts!",
+    "test-cases/**/*.mts",
+    "!test-cases/**/*.mts!",
     "scripts/**/*.mjs",
-    ".github/scripts/**/*.mjs",
-    "test-cases/**/*.mts"
+    ".github/scripts/**/*.mjs"
   ],
   "ignoreDependencies": ["husky"],
   "ignoreIssues": {
-    "src/**/*.test.mts": ["exports", "types"],
-    "src/**/*.mock.test.mts": ["exports", "types"],
-    "src/**/*.test-support.mts": ["exports", "types"],
-    "src/**/*-test-support.mts": ["exports", "types"],
+    "test-helpers/**/*.mts": ["exports", "types"],
     "test-cases/**/*.mts": ["exports", "types"],
     "src/cli/args.mts": ["exports"],
     "src/cli/exit-codes.mts": ["exports"],

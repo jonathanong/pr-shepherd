@@ -2,27 +2,27 @@ import { readFileSync } from "node:fs";
 
 import { vi, beforeEach, afterEach } from "vitest";
 
-vi.mock("./commands/resolve.mts", () => ({
+vi.mock("../src/commands/resolve.mts", () => ({
   runResolveFetch: vi.fn(),
   runResolveMutate: vi.fn(),
 }));
-vi.mock("./commands/log-file.mts", () => ({
+vi.mock("../src/commands/log-file.mts", () => ({
   runLogFile: vi.fn(),
 }));
-vi.mock("./commands/commit-suggestion.mts", () => ({
+vi.mock("../src/commands/commit-suggestion.mts", () => ({
   runCommitSuggestion: vi.fn(),
 }));
-vi.mock("./commands/mark-files-as-viewed.mts", () => ({
+vi.mock("../src/commands/mark-files-as-viewed.mts", () => ({
   runMarkFilesAsViewed: vi.fn(),
 }));
-vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./commands/iterate/index.mts")>();
+vi.mock("../src/commands/iterate/index.mts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/commands/iterate/index.mts")>();
   return { ...actual, runIterate: vi.fn() };
 });
-import { main } from "./cli-parser.mts";
-import { runLogFile } from "./commands/log-file.mts";
-import { runResolveFetch, runResolveMutate } from "./commands/resolve.mts";
-import { runMarkFilesAsViewed } from "./commands/mark-files-as-viewed.mts";
+import { main } from "../src/cli-parser.mts";
+import { runLogFile } from "../src/commands/log-file.mts";
+import { runResolveFetch, runResolveMutate } from "../src/commands/resolve.mts";
+import { runMarkFilesAsViewed } from "../src/commands/mark-files-as-viewed.mts";
 
 const mockRunResolveFetch = vi.mocked(runResolveFetch);
 const mockRunResolveMutate = vi.mocked(runResolveMutate);

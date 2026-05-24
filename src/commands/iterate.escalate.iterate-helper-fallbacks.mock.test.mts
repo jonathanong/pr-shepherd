@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { registerIterateHooks, makeReport, mockExecFile } from "./iterate-test-support.mts";
+import {
+  registerIterateHooks,
+  makeReport,
+  mockExecFile,
+} from "../../test-helpers/commands/iterate-test-support.mts";
 import { buildRelevantChecks, buildWaitLog, getCurrentHeadSha } from "./iterate/helpers.mts";
 
 registerIterateHooks();

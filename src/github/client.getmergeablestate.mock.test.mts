@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { mockFetch, restOk, registerClientHooks } from "./client.test-support.mts";
+import {
+  mockFetch,
+  restOk,
+  registerClientHooks,
+} from "../../test-helpers/github/client.test-support.mts";
 import { getMergeableState } from "./client.mts";
 
 registerClientHooks();

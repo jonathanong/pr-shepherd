@@ -11,7 +11,7 @@ import { buildPrShepherdCommand } from "../cli/runner.mts";
 
 const execFile = promisify(execFileCb);
 
-export interface CommitSuggestionOptions extends GlobalOptions {
+interface CommitSuggestionOptions extends GlobalOptions {
   threadId: string;
   message: string;
   description?: string;
