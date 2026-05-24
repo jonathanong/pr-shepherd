@@ -138,6 +138,11 @@ export function buildFixInstructions(
   }
 
   if (resolveCommand.hasMutations) {
+    if ((resolveCommand.replyThreadIds?.length ?? 0) > 0) {
+      instructions.push(
+        `Before running the \`resolve:\` command, remove any thread from \`--reply-thread-ids\` if the latest visible comment in that thread is your own prior Shepherd reply. Do not reply to your own comments.`,
+      );
+    }
     const substituteParts: string[] = [];
     if (resolveCommand.requiresHeadSha) {
       substituteParts.push(

@@ -3,9 +3,11 @@ import { describe, it, expect } from "vitest";
 import {
   registerIterateHooks,
   NOW,
+  defaultConfig,
   makeOpts,
   makeReport,
   makeReview,
+  mockLoadConfig,
   mockRunCheck,
   mockUpdateReadyDelay,
 } from "./iterate-test-support.mts";
@@ -189,6 +191,7 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
   });
 
   it("resolves bot threads while replying to human threads", async () => {
+    mockLoadConfig.mockReturnValue({ ...defaultConfig(), botUsernames: ["coderabbitai"] });
     const humanThread = {
       id: "thread-human",
       isResolved: false,
@@ -217,11 +220,18 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
       author: "github-actions[bot]",
       authorType: "User" as const,
     };
+    const configuredBotThread = {
+      ...humanThread,
+      id: "thread-configured-bot",
+      path: "src/configured-bot.mts",
+      author: "CodeRabbitAI",
+      authorType: "User" as const,
+    };
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
         threads: {
-          actionable: [humanThread, botThread, bracketBotThread],
+          actionable: [humanThread, botThread, bracketBotThread, configuredBotThread],
           resolutionOnly: [],
           autoResolved: [],
           autoResolveErrors: [],
@@ -243,7 +253,7 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     expect(argv).toContain("--reply-thread-ids");
     expect(argv).toContain("thread-human");
     expect(argv).toContain("--resolve-thread-ids");
-    expect(argv).toContain("thread-bot,thread-bracket-bot");
+    expect(argv).toContain("thread-bot,thread-bracket-bot,thread-configured-bot");
     expect(result.fix.resolveCommand.requiresDismissMessage).toBe(true);
     expect(result.fix.resolveCommand.hasMutations).toBe(true);
   });

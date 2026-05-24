@@ -13,12 +13,13 @@ export function classifyVisibleComments(
   comments: PrComment[],
   seenMap: Map<string, SeenMarker>,
   minimizeComments: MinimizeCommentsPolicy | undefined,
+  botUsernames: readonly string[] = [],
 ): VisibleCommentClassification {
   const actionable: ActionableComment[] = [];
   const minimizeIds: string[] = [];
   const toMarkSeen: ActionableComment[] = [];
   for (const c of comments.filter((comment) => !comment.isMinimized)) {
-    if (shouldMinimizeAuthor(c.authorType, minimizeComments, c.author)) {
+    if (shouldMinimizeAuthor(c.authorType, minimizeComments, c.author, botUsernames)) {
       actionable.push(c);
       minimizeIds.push(c.id);
       continue;

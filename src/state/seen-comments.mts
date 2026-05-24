@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { readFile, writeFile, rename, unlink, mkdir, access, readdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
@@ -47,7 +48,11 @@ export function classifyItem(
 ): "new" | "edited" | "unchanged" {
   const m = map.get(id);
   if (!m) return "new";
-  if (typeof m.bodyHash === "string" && m.bodyHash !== hashBody(body)) return "edited";
+  const currentHash = hashBody(body);
+  if (typeof m.previousBodyHash === "string" && m.previousBodyHash === currentHash) {
+    return "unchanged";
+  }
+  if (typeof m.bodyHash === "string" && m.bodyHash !== currentHash) return "edited";
   return "unchanged";
 }
 
@@ -118,11 +123,38 @@ export async function hasSeen(key: StateKey, id: string): Promise<boolean> {
  * All errors are silently swallowed — the marker is best-effort.
  */
 export async function markSeen(key: StateKey, id: string, body: string): Promise<void> {
+  await writeSeenMarker(key, id, { bodyHash: hashBody(body) });
+}
+
+/**
+ * Write a marker after Shepherd successfully replies to a review thread.
+ *
+ * `previousBody` suppresses stale GitHub fetches that have not yet included the new reply.
+ * `body` suppresses the expected final transcript once GitHub includes Shepherd's reply.
+ */
+export async function markReplySeen(
+  key: StateKey,
+  id: string,
+  previousBody: string,
+  body: string,
+  replyBody: string,
+): Promise<void> {
+  await writeSeenMarker(key, id, {
+    bodyHash: hashBody(body),
+    previousBodyHash: hashBody(previousBody),
+    replyBodyHash: hashBody(replyBody),
+  });
+}
+
+async function writeSeenMarker(
+  key: StateKey,
+  id: string,
+  markerFields: Record<string, unknown>,
+): Promise<void> {
   let tmp: string | undefined;
   try {
     const path = resolvePath(key, id);
     await mkdir(dirname(path), { recursive: true });
-    const newHash = hashBody(body);
     let existing: SeenMarker | null = null;
     try {
       const raw = await readFile(path, "utf8");
@@ -130,13 +162,16 @@ export async function markSeen(key: StateKey, id: string, body: string): Promise
     } catch {
       // no existing marker — will create below
     }
-    if (existing !== null && existing.bodyHash === newHash) return;
+    const unchanged = Object.entries(markerFields).every(
+      ([field, value]) => existing?.[field] === value,
+    );
+    if (existing !== null && unchanged) return;
     const seenAt = existing?.seenAt ?? Date.now();
     tmp = `${path}.${randomUUID()}.tmp`;
     // Store `id` in the payload so loadSeenMap can key by the original ID
     // rather than the filename, guarding against case-insensitive filesystems
     // (e.g. macOS APFS) where IDs differing only in case would collide.
-    await writeFile(tmp, JSON.stringify({ seenAt, bodyHash: newHash, id }), "utf8");
+    await writeFile(tmp, JSON.stringify({ seenAt, ...markerFields, id }), "utf8");
     await rename(tmp, path);
     tmp = undefined;
   } catch {

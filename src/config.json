@@ -1,4 +1,18 @@
 {
+  "botUsernames": [
+    "chatgpt-connector",
+    "openai-codex",
+    "codex",
+    "claude",
+    "copilot-pull-request-reviewer",
+    "gemini-code-assist",
+    "coderabbitai",
+    "greptile-apps",
+    "qodo-merge-pro",
+    "deepsource-io",
+    "sonarqubecloud",
+    "what-the-diff"
+  ],
   "iterate": {
     "fixAttemptsPerThread": 3,
     "stallTimeoutMinutes": 60,

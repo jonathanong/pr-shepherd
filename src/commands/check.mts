@@ -67,8 +67,13 @@ export async function runCheck(
     batchData.comments,
     seenMap,
     config.iterate.minimizeComments,
+    config.botUsernames,
   );
-  const threadVisibility = classifyThreadVisibility(batchData.reviewThreads, seenMap);
+  const threadVisibility = classifyThreadVisibility(
+    batchData.reviewThreads,
+    seenMap,
+    config.botUsernames,
+  );
   const firstLookComments: FirstLookComment[] = minimizedCommentCandidates.flatMap((c) => {
     const cls = classifyItem(c.id, c.body, seenMap);
     if (cls === "unchanged") return [];

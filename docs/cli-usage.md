@@ -84,6 +84,8 @@ pr-shepherd resolve 42 \
 | `--require-sha`          | Poll GraphQL `headRefOid` until GitHub reports this PR head SHA.     |
 | `--format text\|json`    | Output format.                                                       |
 
+Before running a reply mutation, agents must remove any thread from `--reply-thread-ids` when the latest visible thread comment is their own prior Shepherd reply.
+
 Mutation batches are sent in chunks of 10. On a primary or secondary GitHub rate-limit response, Shepherd stops and reports completed IDs plus pending IDs to retry later.
 
 Fetch-mode first-look items are surfaced once even if outdated, resolved, or minimized. Edited item bodies re-surface through the seen-marker gate. Review-summary IDs (`PRR_…`) go to `--minimize-comment-ids`, never `--dismiss-review-ids`.

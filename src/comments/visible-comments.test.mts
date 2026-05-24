@@ -27,6 +27,20 @@ describe("classifyVisibleComments", () => {
     expect(result.toMarkSeen).toEqual([]);
   });
 
+  it("queues configured bot comments without marking them seen", () => {
+    const comment = makeComment({
+      id: "c-bot",
+      author: "CodeRabbitAI",
+      authorType: "User",
+    });
+
+    const result = classifyVisibleComments([comment], new Map(), "bots", ["coderabbitai"]);
+
+    expect(result.actionable).toEqual([comment]);
+    expect(result.minimizeIds).toEqual(["c-bot"]);
+    expect(result.toMarkSeen).toEqual([]);
+  });
+
   it("returns new non-auto-minimized comments and marks them seen", () => {
     const comment = makeComment({ id: "c-human", authorType: "User" });
 

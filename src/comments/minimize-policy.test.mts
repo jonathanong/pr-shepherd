@@ -22,4 +22,10 @@ describe("shouldMinimizeAuthor", () => {
       "Invalid minimizeComments policy: bot",
     );
   });
+
+  it("treats configured bot usernames as bots for minimization", () => {
+    expect(shouldMinimizeAuthor("User", "bots", "CodeRabbitAI", ["coderabbitai"])).toBe(true);
+    expect(shouldMinimizeAuthor("User", "all", "CodeRabbitAI", ["coderabbitai"])).toBe(true);
+    expect(shouldMinimizeAuthor("User", "none", "CodeRabbitAI", ["coderabbitai"])).toBe(false);
+  });
 });

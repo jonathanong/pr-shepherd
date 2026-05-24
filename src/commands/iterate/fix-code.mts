@@ -40,6 +40,7 @@ interface HandleFixCodeContext {
   firstLookSummaries: Review[];
   editedSummaries: Review[];
   surfacedApprovals: Review[];
+  botUsernames: readonly string[];
 }
 
 function nextFixAttempts(
@@ -77,6 +78,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     firstLookSummaries,
     editedSummaries,
     surfacedApprovals,
+    botUsernames,
   } = ctx;
   const failingChecks = report.checks.failing;
   const stored = await readFixAttempts({ owner: repoOwner, repo: repoName, pr: prNumber });
@@ -148,6 +150,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     changesRequestedReviews,
     checks,
     prNumber,
+    botUsernames,
   );
   // Safety: if the base branch is unknown, escalate when a push is plausible — the agent
   // would need the correct base to rebase safely. This is a conservative guard, not a

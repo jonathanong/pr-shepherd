@@ -8,6 +8,7 @@ import { parseIterateFlags } from "./iterate-flags.mts";
 
 function defaultConfig(): PrShepherdConfig {
   return {
+    botUsernames: [],
     watch: { readyDelayMinutes: 10 },
     iterate: {
       fixAttemptsPerThread: 3,

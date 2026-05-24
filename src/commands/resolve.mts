@@ -61,7 +61,8 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
   const minimizedCommentCandidates = data.comments.filter((c) => c.isMinimized);
 
   const seenMap = await loadSeenMap(stateKey);
-  const threadVisibility = classifyThreadVisibility(data.reviewThreads, seenMap);
+  const cfg = loadConfig();
+  const threadVisibility = classifyThreadVisibility(data.reviewThreads, seenMap, cfg.botUsernames);
   const unseenMinimizedComments: typeof minimizedCommentCandidates = [];
   const editedMinimizedComments: typeof minimizedCommentCandidates = [];
   for (const c of minimizedCommentCandidates) {
@@ -70,11 +71,11 @@ export async function runResolveFetch(opts: ResolveCommandOptions): Promise<Fetc
     else if (cls === "edited") editedMinimizedComments.push(c);
   }
 
-  const cfg = loadConfig();
   const visibleCommentClassification = classifyVisibleComments(
     data.comments,
     seenMap,
     cfg.iterate?.minimizeComments,
+    cfg.botUsernames,
   );
   const changesRequestedReviewVisibility = classifyReviewsForDisplay(
     data.changesRequestedReviews,

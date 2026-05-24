@@ -73,6 +73,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     report.approvedReviews,
     config.iterate.minimizeApprovals,
     config.iterate.minimizeComments,
+    config.botUsernames,
   );
   const hasActionableWork =
     report.threads.actionable.length > 0 ||
@@ -147,6 +148,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       firstLookSummaries,
       editedSummaries,
       surfacedApprovals,
+      botUsernames: config.botUsernames,
     });
   }
 

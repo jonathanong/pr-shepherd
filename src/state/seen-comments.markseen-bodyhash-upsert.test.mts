@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { randomBytes } from "node:crypto";
 import { rm } from "node:fs/promises";
-import { markSeen, readSeenMarker, hashBody } from "./seen-comments.mts";
+import { markReplySeen, markSeen, readSeenMarker, hashBody } from "./seen-comments.mts";
 
 let testStateDir: string;
 
@@ -44,5 +44,22 @@ describe("markSeen — bodyHash upsert", () => {
     const second = await readSeenMarker(testKey, testId);
     // seenAt stays the same (no write happened)
     expect(second!.seenAt).toBe(first!.seenAt);
+  });
+
+  it("writes previous and reply hashes for thread replies", async () => {
+    await markReplySeen(
+      testKey,
+      testId,
+      "reviewer body",
+      "reviewer body\n\n--- thread comment ---\n\nshepherd reply",
+      "shepherd reply",
+    );
+
+    const marker = await readSeenMarker(testKey, testId);
+    expect(marker?.bodyHash).toBe(
+      hashBody("reviewer body\n\n--- thread comment ---\n\nshepherd reply"),
+    );
+    expect(marker?.previousBodyHash).toBe(hashBody("reviewer body"));
+    expect(marker?.replyBodyHash).toBe(hashBody("shepherd reply"));
   });
 });

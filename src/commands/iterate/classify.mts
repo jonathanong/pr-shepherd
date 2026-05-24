@@ -7,7 +7,7 @@ import type {
 } from "../../types.mts";
 import { buildPrShepherdCommand } from "../../cli/runner.mts";
 import { shouldMinimizeAuthor } from "../../comments/minimize-policy.mts";
-import { isHumanAuthor } from "../../comments/authors.mts";
+import { isConfiguredBotAuthor, isHumanAuthor } from "../../comments/authors.mts";
 import type { MinimizeCommentsPolicy } from "../../config/load.mts";
 
 function dedupeIds(ids: string[]): string[] {
@@ -26,6 +26,7 @@ export function classifyReviewSummaries(
   approvals: Review[],
   minimizeApprovals: boolean,
   minimizeComments: MinimizeCommentsPolicy | undefined = "all",
+  botUsernames: readonly string[] = [],
 ): {
   minimizeIds: string[];
   firstLookSummaries: Review[];
@@ -36,12 +37,13 @@ export function classifyReviewSummaries(
   // they are already minimized server-side (body changed after minimize was applied).
   // First-look bodies are rendered so the agent sees them before the minimize happens.
   const minimizeIds = [...summaries.firstLook, ...summaries.seen]
-    .filter((r) => shouldMinimizeAuthor(r.authorType, minimizeComments, r.author))
+    .filter((r) => shouldMinimizeAuthor(r.authorType, minimizeComments, r.author, botUsernames))
     .map((r) => r.id);
   if (minimizeApprovals) {
     const surfacedApprovals: Review[] = [];
     for (const r of approvals) {
-      if (shouldMinimizeAuthor(r.authorType, minimizeComments, r.author)) minimizeIds.push(r.id);
+      if (shouldMinimizeAuthor(r.authorType, minimizeComments, r.author, botUsernames))
+        minimizeIds.push(r.id);
       else surfacedApprovals.push(r);
     }
     return {
@@ -66,12 +68,21 @@ export function buildResolveCommand(
   _reviews: Review[],
   checks: AgentCheck[],
   prNumber: number,
+  botUsernames: readonly string[] = [],
 ): ResolveCommand {
   const argv = buildPrShepherdCommand(["resolve", String(prNumber)]).argv;
 
   const allThreads = [...threads, ...resolutionOnlyThreads];
-  const replyThreadIds = dedupeIds(allThreads.filter(isHumanAuthor).map((t) => t.id));
-  const resolveThreadIds = dedupeIds(allThreads.filter((t) => !isHumanAuthor(t)).map((t) => t.id));
+  const replyThreadIds = dedupeIds(
+    allThreads
+      .filter((t) => isHumanAuthor(t) && !isConfiguredBotAuthor(t, botUsernames))
+      .map((t) => t.id),
+  );
+  const resolveThreadIds = dedupeIds(
+    allThreads
+      .filter((t) => !isHumanAuthor(t) || isConfiguredBotAuthor(t, botUsernames))
+      .map((t) => t.id),
+  );
   if (replyThreadIds.length > 0) {
     argv.push("--reply-thread-ids", replyThreadIds.join(","));
     argv.push("--message", "$DISMISS_MESSAGE");
