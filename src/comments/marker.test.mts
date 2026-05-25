@@ -8,8 +8,8 @@ describe("hasPrShepherdMarker", () => {
     expect(hasPrShepherdMarker(`${MARKER}\nsome reply`)).toBe(true);
   });
 
-  it("returns true when marker appears at the end", () => {
-    expect(hasPrShepherdMarker(`some text\n${MARKER}`)).toBe(true);
+  it("returns false when marker appears mid-body (not at start)", () => {
+    expect(hasPrShepherdMarker(`some text\n${MARKER}`)).toBe(false);
   });
 
   it("returns false when body has no marker", () => {
