@@ -3,6 +3,7 @@ import {
   renderAuthor,
   renderBodyPreview,
   renderCommentBullet,
+  renderEditedCommentTag,
   renderReviewBullet,
   renderReviewListSection,
   renderThreadBullet,
@@ -90,6 +91,8 @@ describe("list and suggestion render helpers", () => {
         { statusTag: "[status: minimized]" },
       ),
     ).toContain("[↗](https://example.com/c)");
+    expect(renderEditedCommentTag({ edited: true })).toBe("[edited since first look]");
+    expect(renderEditedCommentTag({})).toBeUndefined();
     expect(
       renderReviewBullet({ id: "R1", author: "reviewer", body: "" }, { includeBody: true }),
     ).not.toContain(": ");

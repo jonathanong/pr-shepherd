@@ -57,13 +57,9 @@ Exit codes for iterate and poll: `0` `WAIT`/`MARK_READY`, `1` `FIX_CODE` or comm
 
 ## Resolve
 
-`resolve` has two modes:
-
-- **Fetch** (`--fetch`, or no mutation IDs): print actionable review items, first-look items, review summaries when enabled, and a numbered `## Instructions` section.
-- **Mutate** (any mutation ID flag): reply to human threads, resolve non-human/manual thread IDs, minimize comments/review summaries, and dismiss non-human `CHANGES_REQUESTED` reviews.
+`resolve` applies explicit GitHub review-state mutations after an iterate/fix step. At least one non-empty action flag is required; use `pr-shepherd iterate` or `pr-shepherd poll` to fetch the next PR action and printed instructions.
 
 ```sh
-pr-shepherd resolve 42 --fetch
 pr-shepherd resolve 42 \
   --reply-thread-ids PRRT_human \
   --resolve-thread-ids PRRT_bot \
@@ -75,7 +71,6 @@ pr-shepherd resolve 42 \
 
 | Flag                     | Description                                                          |
 | ------------------------ | -------------------------------------------------------------------- |
-| `--fetch`                | Force fetch mode.                                                    |
 | `--reply-thread-ids`     | Comma-separated human review thread IDs to reply to.                 |
 | `--resolve-thread-ids`   | Comma-separated non-human/manual review thread IDs to mark resolved. |
 | `--minimize-comment-ids` | Comma-separated issue comment or review IDs to minimize.             |
@@ -88,7 +83,7 @@ Before running a reply mutation, agents must remove any thread from `--reply-thr
 
 Mutation batches are sent in chunks of 10. On a primary or secondary GitHub rate-limit response, Shepherd stops and reports completed IDs plus pending IDs to retry later.
 
-Fetch-mode first-look items are surfaced once even if outdated, resolved, or minimized. Edited item bodies re-surface through the seen-marker gate. Review-summary IDs (`PRR_…`) go to `--minimize-comment-ids`, never `--dismiss-review-ids`.
+Review-summary IDs (`PRR_…`) go to `--minimize-comment-ids`, never `--dismiss-review-ids`.
 
 ## Commit Suggestion
 

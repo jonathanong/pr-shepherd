@@ -18,7 +18,7 @@ function defaultConfig(): PrShepherdConfig {
       minimizeApprovals: false,
       minimizeComments: "bots",
     },
-    resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 }, fetchReviewSummaries: true },
+    resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 } },
     checks: { ciTriggerEvents: ["pull_request"] },
     mergeStatus: { blockingReviewerLogins: [] },
     actions: { autoResolveOutdated: false, autoMarkReady: false, commitSuggestions: false },

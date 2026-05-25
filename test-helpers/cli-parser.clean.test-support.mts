@@ -4,7 +4,6 @@ vi.mock("../src/commands/clean.mts", () => ({
   runClean: vi.fn(),
 }));
 vi.mock("../src/commands/resolve.mts", () => ({
-  runResolveFetch: vi.fn(),
   runResolveMutate: vi.fn(),
 }));
 vi.mock("../src/commands/log-file.mts", () => ({

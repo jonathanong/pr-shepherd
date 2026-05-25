@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import { vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("../src/commands/resolve.mts", () => ({
-  runResolveFetch: vi.fn(),
   runResolveMutate: vi.fn(),
 }));
 vi.mock("../src/commands/log-file.mts", () => ({
@@ -21,10 +20,9 @@ vi.mock("../src/commands/iterate/index.mts", async (importOriginal) => {
 });
 import { main } from "../src/cli-parser.mts";
 import { runLogFile } from "../src/commands/log-file.mts";
-import { runResolveFetch, runResolveMutate } from "../src/commands/resolve.mts";
+import { runResolveMutate } from "../src/commands/resolve.mts";
 import { runMarkFilesAsViewed } from "../src/commands/mark-files-as-viewed.mts";
 
-const mockRunResolveFetch = vi.mocked(runResolveFetch);
 const mockRunResolveMutate = vi.mocked(runResolveMutate);
 const mockRunLogFile = vi.mocked(runLogFile);
 const mockRunMarkFilesAsViewed = vi.mocked(runMarkFilesAsViewed);
@@ -56,11 +54,9 @@ export {
   main,
   mockRunLogFile,
   mockRunMarkFilesAsViewed,
-  mockRunResolveFetch,
   mockRunResolveMutate,
   readFileSync,
   runLogFile,
-  runResolveFetch,
   runResolveMutate,
   stderrSpy,
   stdoutSpy,

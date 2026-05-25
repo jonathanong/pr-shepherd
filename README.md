@@ -97,9 +97,10 @@ pr-shepherd poll 42                    # explicit poll command
 ### Resolve Review Items
 
 ```sh
-pr-shepherd resolve 42 --fetch
 pr-shepherd resolve 42 --reply-thread-ids PRRT_abc --message "Renamed the variable for clarity." --require-sha "$(git rev-parse HEAD)"
 ```
+
+Use `pr-shepherd iterate 42` or `pr-shepherd 42` to fetch the next PR action. `resolve` requires at least one action flag and only applies explicit review-state mutations.
 
 ### Apply One Suggestion Thread
 
