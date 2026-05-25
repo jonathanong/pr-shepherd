@@ -23,7 +23,7 @@ export function classifyVisibleComments(
     if (shouldMinimizeAuthor(c.authorType, minimizeComments, c.author, botUsernames)) {
       actionable.push(c);
       minimizeIds.push(c.id);
-      toMarkSeen.push(c);
+      toMarkSeen.push(c); // prevents re-surfacing as first-look after GitHub marks it minimized
       continue;
     }
     const cls = classifyItem(c.id, c.body, seenMap);
