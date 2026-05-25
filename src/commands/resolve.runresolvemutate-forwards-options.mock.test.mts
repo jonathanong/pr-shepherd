@@ -10,6 +10,7 @@ import {
   mockMarkReplySeen,
 } from "../../test-helpers/commands/resolve.test-support.mts";
 import { runResolveMutate } from "./resolve.mts";
+import { addPrShepherdMarker } from "../comments/marker.mts";
 
 registerHooks();
 
@@ -165,8 +166,8 @@ describe("runResolveMutate — forwards options", () => {
       { owner: "owner", repo: "repo", pr: 42 },
       "t-human",
       "top body",
-      "top body\n\n--- thread comment ---\n\ndone",
-      "done",
+      `top body\n\n--- thread comment ---\n\n${addPrShepherdMarker("done")}`,
+      addPrShepherdMarker("done"),
     );
   });
 });

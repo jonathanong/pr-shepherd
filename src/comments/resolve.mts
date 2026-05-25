@@ -1,6 +1,7 @@
 /* eslint-disable max-lines */
 import { graphqlWithRateLimit, type RepoInfo } from "../github/client.mts";
 import type { ResolveOptions } from "../types.mts";
+import { addPrShepherdMarker } from "./marker.mts";
 import {
   isRateLimitMessage,
   rateLimitFromError,
@@ -131,10 +132,11 @@ function buildBulkMutation(
   dismissMessage: string,
 ): string {
   const ops: string[] = [];
+  const replyBody = addPrShepherdMarker(dismissMessage);
 
   for (let i = 0; i < replyIds.length; i++) {
     ops.push(
-      `  p${i}: addPullRequestReviewThreadReply(input: { pullRequestReviewThreadId: ${JSON.stringify(replyIds[i])}, body: ${JSON.stringify(dismissMessage)} }) { comment { id } }`,
+      `  p${i}: addPullRequestReviewThreadReply(input: { pullRequestReviewThreadId: ${JSON.stringify(replyIds[i])}, body: ${JSON.stringify(replyBody)} }) { comment { id } }`,
     );
   }
 

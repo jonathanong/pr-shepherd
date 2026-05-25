@@ -9,6 +9,7 @@ import {
 } from "../comments/authors.mts";
 import { markReplySeen } from "../state/seen-comments.mts";
 import { threadTranscriptBody } from "../threads/transcript.mts";
+import { addPrShepherdMarker } from "../comments/marker.mts";
 import type { ResolveOptions } from "../types.mts";
 import type { ResolveCommandOptions } from "./resolve.mts";
 
@@ -69,6 +70,7 @@ export async function runResolveMutate(
   if (skippedHumanDismissals.length > 0) result.skippedHumanDismissals = skippedHumanDismissals;
   if (skippedNonHumanReplies.length > 0) result.skippedNonHumanReplies = skippedNonHumanReplies;
   if (opts.dismissMessage) {
+    const markedMessage = addPrShepherdMarker(opts.dismissMessage);
     await Promise.all(
       result.repliedThreads.map((id) => {
         const thread = threadById.get(id);
@@ -78,8 +80,8 @@ export async function runResolveMutate(
           { owner: repo.owner, repo: repo.name, pr: prNumber },
           id,
           previousBody,
-          threadTranscriptBody(thread, [opts.dismissMessage!]),
-          opts.dismissMessage!,
+          threadTranscriptBody(thread, [markedMessage]),
+          markedMessage,
         );
       }),
     );
