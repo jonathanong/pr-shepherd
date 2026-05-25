@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { PR_SHEPHERD_MARKER, hasPrShepherdMarker, addPrShepherdMarker } from "./marker.mts";
+import { hasPrShepherdMarker, addPrShepherdMarker } from "./marker.mts";
+
+const MARKER = "<!-- pr-shepherd -->";
 
 describe("hasPrShepherdMarker", () => {
   it("returns true when body contains the marker", () => {
-    expect(hasPrShepherdMarker(`${PR_SHEPHERD_MARKER}\nsome reply`)).toBe(true);
+    expect(hasPrShepherdMarker(`${MARKER}\nsome reply`)).toBe(true);
   });
 
   it("returns true when marker appears at the end", () => {
-    expect(hasPrShepherdMarker(`some text\n${PR_SHEPHERD_MARKER}`)).toBe(true);
+    expect(hasPrShepherdMarker(`some text\n${MARKER}`)).toBe(true);
   });
 
   it("returns false when body has no marker", () => {
@@ -21,7 +23,7 @@ describe("hasPrShepherdMarker", () => {
 
 describe("addPrShepherdMarker", () => {
   it("prepends the marker followed by a newline", () => {
-    expect(addPrShepherdMarker("my reply")).toBe(`${PR_SHEPHERD_MARKER}\nmy reply`);
+    expect(addPrShepherdMarker("my reply")).toBe(`${MARKER}\nmy reply`);
   });
 
   it("resulting body contains the marker", () => {
