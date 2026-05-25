@@ -7,6 +7,7 @@ import {
   mockGraphql,
 } from "../../test-helpers/comments/resolve.test-support.mts";
 import { applyResolveOptions } from "./resolve.mts";
+import { addPrShepherdMarker } from "./marker.mts";
 
 registerHooks();
 
@@ -158,6 +159,24 @@ describe("applyResolveOptions — mutations", () => {
       "PRR_1: dismiss returned null",
       "Not dismissed: PRR_2 is a COMMENTED review. Use --minimize-comment-ids instead; --dismiss-review-ids is only for CHANGES_REQUESTED reviews.",
     ]);
+  });
+  it("prepends pr-shepherd marker to thread reply bodies", async () => {
+    await applyResolveOptions(1, REPO, {
+      replyThreadIds: ["t-1"],
+      dismissMessage: "Addressed in the latest commit.",
+    });
+    const doc = mockGraphql.mock.calls[0]?.[0] as string;
+    const markedBody = addPrShepherdMarker("Addressed in the latest commit.");
+    expect(doc).toContain(JSON.stringify(markedBody));
+  });
+  it("does not prepend pr-shepherd marker to dismiss review bodies", async () => {
+    await applyResolveOptions(1, REPO, {
+      dismissReviewIds: ["r-1"],
+      dismissMessage: "Addressed in the latest commit.",
+    });
+    const doc = mockGraphql.mock.calls[0]?.[0] as string;
+    expect(doc).toContain("dismissPullRequestReview");
+    expect(doc).not.toContain("<!-- pr-shepherd -->");
   });
   it("treats malformed commented-dismiss path entries as overlapping aliases for single dismiss attempts", async () => {
     mockGraphql.mockResolvedValueOnce({

@@ -132,9 +132,9 @@ function buildBulkMutation(
   dismissMessage: string,
 ): string {
   const ops: string[] = [];
+  const replyBody = addPrShepherdMarker(dismissMessage);
 
   for (let i = 0; i < replyIds.length; i++) {
-    const replyBody = addPrShepherdMarker(dismissMessage);
     ops.push(
       `  p${i}: addPullRequestReviewThreadReply(input: { pullRequestReviewThreadId: ${JSON.stringify(replyIds[i])}, body: ${JSON.stringify(replyBody)} }) { comment { id } }`,
     );
