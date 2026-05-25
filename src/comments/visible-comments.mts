@@ -23,6 +23,7 @@ export function classifyVisibleComments(
     if (shouldMinimizeAuthor(c.authorType, minimizeComments, c.author, botUsernames)) {
       actionable.push(c);
       minimizeIds.push(c.id);
+      toMarkSeen.push(c);
       continue;
     }
     const cls = classifyItem(c.id, c.body, seenMap);
