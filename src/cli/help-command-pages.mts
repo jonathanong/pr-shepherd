@@ -19,7 +19,7 @@ Flags:
   --message <text>                Reply/dismiss message. Required with --reply-thread-ids
                                   or --dismiss-review-ids.
   --require-sha <sha>             Wait until GitHub reports this PR head SHA before mutating.
-                                  Must be a full 40-character hex SHA. Use $(git rev-parse HEAD).
+                                  Must be a full 40-character lowercase hex SHA. Use $(git rev-parse HEAD).
   --format text|json              Output format. Default: text.
   --help, -h                      Print this help and exit before GitHub I/O.
 
