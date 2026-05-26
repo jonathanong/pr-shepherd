@@ -106,6 +106,9 @@ export function projectIterateLean(
             changesRequestedReviews: result.fix.changesRequestedReviews,
           }),
           resolveCommand: result.fix.resolveCommand,
+          ...(result.fix.resolveOnlyCommand && {
+            resolveOnlyCommand: result.fix.resolveOnlyCommand,
+          }),
           ...(result.fix.instructions.length > 0 && {
             instructions: adaptFixCodeInstructions(
               result.fix.instructions,

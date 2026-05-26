@@ -1,3 +1,14 @@
+export function rejectPrrcMinimizeIds(ids: string[]): string[] {
+  const prrcIds = ids.filter((id) => id.startsWith("PRRC_"));
+  if (prrcIds.length > 0) {
+    process.stderr.write(
+      `pr-shepherd: resolve: --minimize-comment-ids contains thread comment IDs (PRRC_*): ${prrcIds.join(", ")}. Thread comments cannot be minimized individually — resolve the parent thread using --resolve-thread-ids with the PRRT_* thread ID instead.\n`,
+    );
+    process.exitCode = 1;
+  }
+  return prrcIds;
+}
+
 export function warnPrrcThreadIds(ids: string[]): string[] {
   const prrcIds = ids.filter((id) => id.startsWith("PRRC_"));
   if (prrcIds.length > 0) {

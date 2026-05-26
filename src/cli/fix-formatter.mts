@@ -161,6 +161,8 @@ export function formatFixCodeResult(
 
   sections.push("## Post-fix push");
   const postFixLines = [`- base: \`${result.baseBranch}\``];
+  if (result.fix.resolveOnlyCommand?.hasMutations)
+    postFixLines.push(`- resolve-only: \`${renderResolveCommand(result.fix.resolveOnlyCommand)}\``);
   if (result.fix.resolveCommand.hasMutations) {
     postFixLines.push(`- resolve: \`${renderResolveCommand(result.fix.resolveCommand)}\``);
   }

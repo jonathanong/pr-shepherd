@@ -5,14 +5,14 @@
 
 ## Review threads
 
-### [threadId=PRRT_seen_active](https://github.com/owner/repo/pull/42#discussion_r44) — `src/auth.ts:42` (@gemini-code-assist · Bot)
+### [threadId=PRRT_bot_only](https://github.com/owner/repo/pull/42#discussion_r46_bot) — `src/bot.ts:10` (@copilot-pull-request-reviewer · Bot)
 
-> Previously seen bot feedback.
+> Bot-only thread — no human threads exist.
 
 ## Post-fix push
 
 - base: `main`
-- resolve: `pr-shepherd resolve 42 --resolve-thread-ids PRRT_seen_active`
+- resolve: `pr-shepherd resolve 42 --resolve-thread-ids PRRT_bot_only`
 
 ## Instructions
 
