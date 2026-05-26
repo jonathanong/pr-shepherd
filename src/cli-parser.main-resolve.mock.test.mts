@@ -22,11 +22,7 @@ describe("main — resolve", () => {
     ["--fetch", ["--fetch"], "--fetch has been removed"],
     ["only --message", ["--message", "Done"], "an action flag is required"],
     ["empty action ID list", ["--resolve-thread-ids", ""], "an action flag is required"],
-    [
-      "short SHA",
-      ["--resolve-thread-ids", "PRRT_1", "--require-sha", "abc1234"],
-      "40-character",
-    ],
+    ["short SHA", ["--resolve-thread-ids", "PRRT_1", "--require-sha", "abc1234"], "40-character"],
   ])("errors for %s", async (_label, args, message) => {
     await expectResolveError(args, message);
   });
