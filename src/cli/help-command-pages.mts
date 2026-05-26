@@ -10,14 +10,16 @@ Usage:
                             [--require-sha SHA] [--format text|json]
 
 Flags:
-  --resolve-thread-ids <ids>      Comma-separated review thread IDs to resolve.
+  --resolve-thread-ids <ids>      Comma-separated review thread IDs (PRRT_*) to resolve.
                                   Human-authored thread IDs are skipped; use --reply-thread-ids.
+                                  Note: comment IDs (PRRC_*) from gh api are not thread IDs and will fail.
   --reply-thread-ids <ids>        Comma-separated human review thread IDs to reply to.
   --minimize-comment-ids <ids>    Comma-separated issue/review comment IDs to minimize.
   --dismiss-review-ids <ids>      Comma-separated CHANGES_REQUESTED review IDs to dismiss.
   --message <text>                Reply/dismiss message. Required with --reply-thread-ids
                                   or --dismiss-review-ids.
   --require-sha <sha>             Wait until GitHub reports this PR head SHA before mutating.
+                                  Must be a full 40-character lowercase hex SHA. Use $(git rev-parse HEAD).
   --format text|json              Output format. Default: text.
   --help, -h                      Print this help and exit before GitHub I/O.
 

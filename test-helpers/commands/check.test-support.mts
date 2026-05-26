@@ -161,6 +161,7 @@ export function registerHooks(): void {
     mockGetMergeableState.mockResolvedValue({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" });
     mockFetchStartupFailureChecks.mockResolvedValue([]);
     mockFetchCheckRunAnnotations.mockResolvedValue([]);
+    mockLoadSeenMap.mockResolvedValue(new Map());
   });
 }
 

@@ -18,17 +18,17 @@ function makeComment(overrides: Partial<PrComment> = {}): PrComment {
 }
 
 describe("classifyVisibleComments", () => {
-  it("queues auto-minimized comments without marking them seen", () => {
+  it("queues auto-minimized comments and marks them seen", () => {
     const comment = makeComment({ id: "c-bot", authorType: "Bot" });
 
     const result = classifyVisibleComments([comment], new Map(), "bots");
 
     expect(result.actionable).toEqual([comment]);
     expect(result.minimizeIds).toEqual(["c-bot"]);
-    expect(result.toMarkSeen).toEqual([]);
+    expect(result.toMarkSeen).toEqual([comment]);
   });
 
-  it("queues configured bot comments without marking them seen", () => {
+  it("queues configured bot comments and marks them seen", () => {
     const comment = makeComment({
       id: "c-bot",
       author: "CodeRabbitAI",
@@ -44,7 +44,7 @@ describe("classifyVisibleComments", () => {
 
     expect(result.actionable).toEqual([comment]);
     expect(result.minimizeIds).toEqual(["c-bot"]);
-    expect(result.toMarkSeen).toEqual([]);
+    expect(result.toMarkSeen).toEqual([comment]);
   });
 
   it("returns new non-auto-minimized comments and marks them seen", () => {

@@ -22,8 +22,45 @@ describe("main — resolve", () => {
     ["--fetch", ["--fetch"], "--fetch has been removed"],
     ["only --message", ["--message", "Done"], "an action flag is required"],
     ["empty action ID list", ["--resolve-thread-ids", ""], "an action flag is required"],
+    ["short SHA", ["--resolve-thread-ids", "PRRT_1", "--require-sha", "abc1234"], "40-character"],
   ])("errors for %s", async (_label, args, message) => {
     await expectResolveError(args, message);
+  });
+
+  it("warns on PRRC_ thread IDs but still calls runResolveMutate", async () => {
+    mockRunResolveMutate.mockResolvedValue({
+      repliedThreads: [],
+      resolvedThreads: ["PRRC_1"],
+      minimizedComments: [],
+      dismissedReviews: [],
+      errors: [],
+    });
+    await main(["node", "shepherd", "resolve", "42", "--resolve-thread-ids", "PRRC_1"]);
+    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("comment IDs (PRRC_*)"));
+    expect(mockRunResolveMutate).toHaveBeenCalledTimes(1);
+  });
+
+  it("accepts a valid 40-char SHA without warnings", async () => {
+    mockRunResolveMutate.mockResolvedValue({
+      repliedThreads: [],
+      resolvedThreads: ["PRRT_1"],
+      minimizedComments: [],
+      dismissedReviews: [],
+      errors: [],
+    });
+    const sha = "a".repeat(40);
+    await main([
+      "node",
+      "shepherd",
+      "resolve",
+      "42",
+      "--resolve-thread-ids",
+      "PRRT_1",
+      "--require-sha",
+      sha,
+    ]);
+    expect(mockRunResolveMutate).toHaveBeenCalledTimes(1);
+    expect(stderrSpy).not.toHaveBeenCalled();
   });
 
   it("calls runResolveMutate when --resolve-thread-ids is given", async () => {
