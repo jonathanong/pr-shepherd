@@ -1,0 +1,35 @@
+{
+  "batchData": {
+    "reviewThreads": [
+      {
+        "id": "PRRT_bot_only",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/bot.ts",
+        "line": 10,
+        "startLine": null,
+        "author": "copilot-pull-request-reviewer",
+        "authorType": "Bot",
+        "body": "Bot-only thread — no human threads exist.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r46_bot",
+        "createdAtUnix": 1715700000
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

@@ -49,6 +49,7 @@ export function buildFixInstructions(
   editedSummaries: Review[] = [],
   inProgressRunIds: string[] = [],
   resolutionOnlyThreads: ReviewThread[] = [],
+  resolveOnlyCommand?: ResolveCommand,
 ): string[] {
   const instructions: string[] = [];
 
@@ -98,9 +99,8 @@ export function buildFixInstructions(
   }
 
   const hasSuggestions = threads.some((t) => t.suggestion);
-  if (hasSuggestions) {
+  if (hasSuggestions)
     instructions.push(buildCommitSuggestionInstruction(prNumber, "## Review threads", false));
-  }
 
   if (threads.length > 0 || actionableComments.length > 0) {
     const suggestionFallback = hasSuggestions
@@ -131,11 +131,13 @@ export function buildFixInstructions(
     );
   }
 
-  if (hasNonConflictHints) {
+  if (hasNonConflictHints)
     instructions.push(
       `If you applied code edits: commit them with a descriptive message, then rebase onto \`origin/${baseBranch}\` per your repository's conventions before pushing.`,
     );
-  }
+
+  if (resolveOnlyCommand?.hasMutations)
+    instructions.push(`Run the \`resolve-only:\` command shown above — no substitutions needed.`);
 
   if (resolveCommand.hasMutations) {
     if ((resolveCommand.replyThreadIds?.length ?? 0) > 0) {
@@ -171,9 +173,7 @@ export function buildFixInstructions(
       `Items in \`## First-look items\` are shown so you can acknowledge their current status before acting. If a first-look thread also appears under \`## Review threads to resolve\`, its ID is already included in the \`resolve:\` command; otherwise do not pass first-look-only IDs to mutation flags.`,
     );
   }
-  if (firstLookSummaries.length > 0) {
-    instructions.push(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
-  }
+  if (firstLookSummaries.length > 0) instructions.push(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
   const editedTotal =
     editedSummaries.length +
     actionableComments.filter((c) => c.edited).length +

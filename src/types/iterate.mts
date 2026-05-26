@@ -155,6 +155,8 @@ interface FixRebaseAndPush {
   changesRequestedReviews: Review[];
   /** Pre-built resolve command. Run after committing and pushing. */
   resolveCommand: ResolveCommand;
+  /** When present, run this command first (no SHA substitution needed) to resolve bot threads and minimize comments, independent of any push. */
+  resolveOnlyCommand?: ResolveCommand;
   /** Ordered steps for the model to follow. */
   instructions: string[];
   /** Run IDs of in-progress GitHub Actions checks. The agent should cancel these before pushing new commits; if it decides not to push (e.g. resolve-only), it may skip cancellation. Empty when all in-progress runs are external status checks or already cancelled. */

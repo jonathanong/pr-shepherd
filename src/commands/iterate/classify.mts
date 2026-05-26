@@ -78,9 +78,7 @@ export function buildResolveCommand(
   checks: AgentCheck[],
   prNumber: number,
   botUsernames: NormalizedBotUsernames = new Set(),
-): ResolveCommand {
-  const argv = buildPrShepherdCommand(["resolve", String(prNumber)]).argv;
-
+): { resolveCommand: ResolveCommand; resolveOnlyCommand?: ResolveCommand } {
   const allThreads = [...threads, ...resolutionOnlyThreads];
   const replyThreadIds = dedupeIds(
     allThreads
@@ -92,6 +90,46 @@ export function buildResolveCommand(
       .filter((t) => !isHumanAuthor(t) || isConfiguredBotAuthor(t, botUsernames))
       .map((t) => t.id),
   );
+
+  const hasReply = replyThreadIds.length > 0;
+  const hasResolveOrMinimize = resolveThreadIds.length > 0 || allCommentIds.length > 0;
+
+  if (hasReply && hasResolveOrMinimize) {
+    // Split: reply command needs SHA; resolve/minimize command does not.
+    const resolveArgv = buildPrShepherdCommand(["resolve", String(prNumber)]).argv;
+    resolveArgv.push("--reply-thread-ids", replyThreadIds.join(","));
+    resolveArgv.push("--message", "$DISMISS_MESSAGE");
+    // `requiresHeadSha` is only true when actionable thread fixes or failing
+    // checks are being addressed — mutations that can race with a moving HEAD.
+    const requiresHeadSha = threads.length > 0 || checks.length > 0;
+    const resolveCommand: ResolveCommand = {
+      argv: resolveArgv,
+      requiresHeadSha,
+      requiresDismissMessage: true,
+      replyThreadIds,
+      hasMutations: true,
+    };
+
+    const resolveOnlyArgv = buildPrShepherdCommand(["resolve", String(prNumber)]).argv;
+    if (resolveThreadIds.length > 0) {
+      resolveOnlyArgv.push("--resolve-thread-ids", resolveThreadIds.join(","));
+    }
+    if (allCommentIds.length > 0) {
+      resolveOnlyArgv.push("--minimize-comment-ids", allCommentIds.join(","));
+    }
+    const resolveOnlyCommand: ResolveCommand = {
+      argv: resolveOnlyArgv,
+      requiresHeadSha: false,
+      requiresDismissMessage: false,
+      ...(resolveThreadIds.length > 0 ? { resolveThreadIds } : undefined),
+      hasMutations: true,
+    };
+
+    return { resolveCommand, resolveOnlyCommand };
+  }
+
+  // Single command: either reply-only or resolve/minimize-only (no split needed).
+  const argv = buildPrShepherdCommand(["resolve", String(prNumber)]).argv;
   if (replyThreadIds.length > 0) {
     argv.push("--reply-thread-ids", replyThreadIds.join(","));
     argv.push("--message", "$DISMISS_MESSAGE");
@@ -102,17 +140,11 @@ export function buildResolveCommand(
   if (allCommentIds.length > 0) {
     argv.push("--minimize-comment-ids", allCommentIds.join(","));
   }
-  // hasMutations = we appended at least one reply, resolve, or minimize mutation. Returned explicitly
-  // (rather than derived from argv.length) so callers don't couple to the
-  // base-argv shape.
-  const hasMutations =
-    replyThreadIds.length > 0 || resolveThreadIds.length > 0 || allCommentIds.length > 0;
-  // `requiresHeadSha` is only added when this resolve command includes a
-  // mutation that can race with a moving HEAD: replying after actionable
-  // thread fixes or addressing failing checks.
-  const hasCodeMutations = hasMutations && (threads.length > 0 || checks.length > 0);
-  const requiresHeadSha = hasCodeMutations;
-  return {
+  const hasMutations = hasReply || hasResolveOrMinimize;
+  // SHA is only required when replying after actionable fixes or failing checks.
+  // Resolve/minimize-only mutations never need SHA.
+  const requiresHeadSha = hasReply && (threads.length > 0 || checks.length > 0);
+  const resolveCommand: ResolveCommand = {
     argv,
     requiresHeadSha,
     requiresDismissMessage: replyThreadIds.length > 0,
@@ -120,4 +152,6 @@ export function buildResolveCommand(
     ...(resolveThreadIds.length > 0 ? { resolveThreadIds } : undefined),
     hasMutations,
   };
+
+  return { resolveCommand };
 }

@@ -71,11 +71,13 @@ describe("runIterate — prescriptive fields: resolveCommand shape", () => {
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
-      const { resolveCommand } = result.fix;
+      const { resolveCommand, resolveOnlyCommand } = result.fix;
       expect(resolveCommand.argv).toContain("--reply-thread-ids");
       expect(resolveCommand.argv.join(" ")).toContain("thread-1");
-      expect(resolveCommand.argv).toContain("--minimize-comment-ids");
-      expect(resolveCommand.argv.join(" ")).toContain("c-1");
+      // minimize IDs split to resolveOnlyCommand when reply also present
+      expect(resolveCommand.argv).not.toContain("--minimize-comment-ids");
+      expect(resolveOnlyCommand?.argv).toContain("--minimize-comment-ids");
+      expect(resolveOnlyCommand?.argv.join(" ")).toContain("c-1");
       expect(resolveCommand.requiresHeadSha).toBe(true);
       expect(resolveCommand.requiresDismissMessage).toBe(true);
     }

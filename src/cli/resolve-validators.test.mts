@@ -1,5 +1,48 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { warnPrrcThreadIds, validateRequireSha } from "./resolve-validators.mts";
+import {
+  warnPrrcThreadIds,
+  validateRequireSha,
+  rejectPrrcMinimizeIds,
+} from "./resolve-validators.mts";
+
+describe("rejectPrrcMinimizeIds", () => {
+  let stderrSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    process.exitCode = undefined;
+    stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  });
+  afterEach(() => {
+    process.exitCode = undefined;
+    stderrSpy.mockRestore();
+  });
+
+  it("returns empty and does not error for an empty list", () => {
+    expect(rejectPrrcMinimizeIds([])).toEqual([]);
+    expect(stderrSpy).not.toHaveBeenCalled();
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  it("returns empty and does not error for non-PRRC_ IDs", () => {
+    expect(rejectPrrcMinimizeIds(["IC_abc", "PRR_def"])).toEqual([]);
+    expect(stderrSpy).not.toHaveBeenCalled();
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  it("rejects PRRC_ IDs, sets exitCode 1, and writes to stderr", () => {
+    const result = rejectPrrcMinimizeIds(["IC_ok", "PRRC_bad1", "PRRC_bad2"]);
+    expect(result).toEqual(["PRRC_bad1", "PRRC_bad2"]);
+    expect(process.exitCode).toBe(1);
+    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("PRRC_bad1, PRRC_bad2"));
+    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("PRRC_*"));
+    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("PRRT_*"));
+  });
+
+  it("rejects when all IDs are PRRC_", () => {
+    expect(rejectPrrcMinimizeIds(["PRRC_1"])).toEqual(["PRRC_1"]);
+    expect(process.exitCode).toBe(1);
+    expect(stderrSpy).toHaveBeenCalled();
+  });
+});
 
 describe("warnPrrcThreadIds", () => {
   let stderrSpy: ReturnType<typeof vi.spyOn>;

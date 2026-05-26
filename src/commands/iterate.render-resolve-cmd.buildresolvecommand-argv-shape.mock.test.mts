@@ -124,8 +124,10 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
         result.fix.resolveCommand.argv.indexOf("--reply-thread-ids") + 1
       ];
     expect(replyThreadArg).toBe("thread-1,res-thread-1");
-    expect(result.fix.resolveCommand.argv).toContain("--minimize-comment-ids");
-    expect(result.fix.resolveCommand.argv).toContain("PRR_DUP");
+    // minimize IDs split to resolveOnlyCommand — not in the reply command
+    expect(result.fix.resolveCommand.argv).not.toContain("--minimize-comment-ids");
+    expect(result.fix.resolveOnlyCommand?.argv).toContain("--minimize-comment-ids");
+    expect(result.fix.resolveOnlyCommand?.argv).toContain("PRR_DUP");
     expect(result.fix.resolveCommand.argv).not.toContain("--dismiss-review-ids");
     expect(result.fix.resolveCommand.requiresDismissMessage).toBe(true);
   });
@@ -252,8 +254,12 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     const argv = result.fix.resolveCommand.argv;
     expect(argv).toContain("--reply-thread-ids");
     expect(argv).toContain("thread-human");
-    expect(argv).toContain("--resolve-thread-ids");
-    expect(argv).toContain("thread-bot,thread-bracket-bot,thread-configured-bot");
+    // bot resolve IDs split to resolveOnlyCommand — not in the reply command
+    expect(argv).not.toContain("--resolve-thread-ids");
+    expect(result.fix.resolveOnlyCommand?.argv).toContain("--resolve-thread-ids");
+    expect(result.fix.resolveOnlyCommand?.argv).toContain(
+      "thread-bot,thread-bracket-bot,thread-configured-bot",
+    );
     expect(result.fix.resolveCommand.requiresDismissMessage).toBe(true);
     expect(result.fix.resolveCommand.hasMutations).toBe(true);
   });

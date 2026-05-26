@@ -144,7 +144,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const inProgressRunIds = pushLikely ? buildInProgressRunIds(report, cancelledSet) : [];
   const commentMinimizeIds = report.comments.minimizeIds ?? actionableComments.map((c) => c.id);
   const allCommentIds = [...commentMinimizeIds, ...reviewSummaryIds];
-  const resolveCommand = buildResolveCommand(
+  const { resolveCommand, resolveOnlyCommand } = buildResolveCommand(
     threads,
     resolutionOnlyThreads,
     allCommentIds,
@@ -199,6 +199,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     editedSummaries,
     inProgressRunIds,
     resolutionOnlyThreads,
+    resolveOnlyCommand,
   );
   const prospectiveResult = {
     ...base,
@@ -215,6 +216,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       checks,
       changesRequestedReviews,
       resolveCommand,
+      ...(resolveOnlyCommand !== undefined ? { resolveOnlyCommand } : undefined),
       instructions,
       firstLookThreads,
       firstLookComments,

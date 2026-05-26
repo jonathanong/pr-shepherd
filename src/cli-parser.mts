@@ -37,7 +37,11 @@ import {
   handleMarkFilesAsViewed,
 } from "./cli/handlers.mts";
 import { handlePoll } from "./cli/poll-handler.mts";
-import { warnPrrcThreadIds, validateRequireSha } from "./cli/resolve-validators.mts";
+import {
+  warnPrrcThreadIds,
+  validateRequireSha,
+  rejectPrrcMinimizeIds,
+} from "./cli/resolve-validators.mts";
 import { setupLog } from "./log/setup.mts";
 
 // ---------------------------------------------------------------------------
@@ -155,6 +159,7 @@ async function handleResolve(args: string[]): Promise<void> {
 
   warnPrrcThreadIds(resolveThreadIds);
   if (!validateRequireSha(requireSha)) return;
+  if (rejectPrrcMinimizeIds(minimizeCommentIds).length > 0) return;
 
   if (hasFlag(extra, "--fetch")) {
     process.stderr.write(
