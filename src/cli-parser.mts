@@ -37,6 +37,7 @@ import {
   handleMarkFilesAsViewed,
 } from "./cli/handlers.mts";
 import { handlePoll } from "./cli/poll-handler.mts";
+import { warnPrrcThreadIds, validateRequireSha } from "./cli/resolve-validators.mts";
 import { setupLog } from "./log/setup.mts";
 
 // ---------------------------------------------------------------------------
@@ -151,6 +152,9 @@ async function handleResolve(args: string[]): Promise<void> {
   const dismissReviewIds = parseList(getFlag(extra, "--dismiss-review-ids"));
   const dismissMessage = getFlag(extra, "--message") ?? undefined;
   const requireSha = getFlag(extra, "--require-sha") ?? undefined;
+
+  warnPrrcThreadIds(resolveThreadIds);
+  if (!validateRequireSha(requireSha)) return;
 
   if (hasFlag(extra, "--fetch")) {
     process.stderr.write(
