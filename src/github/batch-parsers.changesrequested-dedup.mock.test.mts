@@ -102,4 +102,58 @@ describe("fetchPrBatch — changesRequestedReviews dedup via latestReviews", () 
     expect(data.changesRequestedReviews).toHaveLength(1);
     expect(data.changesRequestedReviews[0].id).toBe("PRR_CR_NULL");
   });
+
+  it("keeps a CR review when the same author's latest review is PENDING", async () => {
+    const data = await fetchWithConfig({
+      latestReviews: {
+        nodes: [{ author: { __typename: "Bot", login: "copilot[bot]" }, state: "PENDING" }],
+      },
+      changesRequestedReviews: {
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: [
+          {
+            id: "PRR_CR_PEND",
+            author: { __typename: "Bot", login: "copilot[bot]" },
+            body: "issues",
+          },
+        ],
+      },
+    });
+    expect(data.changesRequestedReviews).toHaveLength(1);
+    expect(data.changesRequestedReviews[0].id).toBe("PRR_CR_PEND");
+  });
+
+  it("keeps a CR review when the same author's latest review is COMMENTED", async () => {
+    const data = await fetchWithConfig({
+      latestReviews: {
+        nodes: [{ author: { __typename: "User", login: "alice" }, state: "COMMENTED" }],
+      },
+      changesRequestedReviews: {
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: [
+          {
+            id: "PRR_CR_CMT",
+            author: { __typename: "User", login: "alice" },
+            body: "still unresolved",
+          },
+        ],
+      },
+    });
+    expect(data.changesRequestedReviews).toHaveLength(1);
+    expect(data.changesRequestedReviews[0].id).toBe("PRR_CR_CMT");
+  });
+
+  it("keeps a CR review when the author does not appear in latestReviews", async () => {
+    const data = await fetchWithConfig({
+      latestReviews: { nodes: [] },
+      changesRequestedReviews: {
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: [
+          { id: "PRR_CR_ONLY", author: { __typename: "User", login: "bob" }, body: "unaddressed" },
+        ],
+      },
+    });
+    expect(data.changesRequestedReviews).toHaveLength(1);
+    expect(data.changesRequestedReviews[0].id).toBe("PRR_CR_ONLY");
+  });
 });
