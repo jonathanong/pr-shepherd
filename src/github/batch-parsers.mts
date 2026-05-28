@@ -20,6 +20,7 @@ import {
   extractRunId,
   extractCheckRunSummary,
   mapStatusContextState,
+  latestApprovedLogins,
 } from "./batch-parser-helpers.mts";
 
 export function parseRawPr(
@@ -40,7 +41,7 @@ export function parseRawPr(
     login: n.author?.login ?? "unknown",
     state: n.state,
   }));
-
+  const crDone = latestApprovedLogins(latestReviews);
   const reviewThreads: ReviewThread[] = rawThreadPages.map((t) => {
     const comment = t.comments.nodes[0];
     const comments = t.comments.nodes.map((c) => ({
@@ -81,12 +82,14 @@ export function parseRawPr(
     createdAtUnix: parseCreatedAt(c.createdAt),
   }));
 
-  const changesRequestedReviews: Review[] = rawReviewNodes.map((r) => ({
-    id: r.id,
-    author: r.author?.login ?? "unknown",
-    authorType: mapAuthorType(r.author?.__typename, r.author?.login),
-    body: r.body,
-  }));
+  const changesRequestedReviews: Review[] = rawReviewNodes
+    .filter((r) => !crDone.has(r.author?.login ?? "unknown"))
+    .map((r) => ({
+      id: r.id,
+      author: r.author?.login ?? "unknown",
+      authorType: mapAuthorType(r.author?.__typename, r.author?.login),
+      body: r.body,
+    }));
 
   const reviewSummaries: Review[] = rawReviewSummaryNodes
     .filter((r) => !r.isMinimized && r.body.trim() !== "")

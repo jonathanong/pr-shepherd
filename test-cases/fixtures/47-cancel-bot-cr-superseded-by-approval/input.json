@@ -1,0 +1,21 @@
+{
+  "batchData": {
+    "latestReviews": [{ "login": "coderabbitai[bot]", "state": "APPROVED" }],
+    "changesRequestedReviews": [],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": true,
+    "shouldCancel": true,
+    "remainingSeconds": 0
+  }
+}
