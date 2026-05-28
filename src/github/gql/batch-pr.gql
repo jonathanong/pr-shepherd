@@ -49,6 +49,9 @@ query BatchPr(
           }
         }
       }
+      # Not paginated — capped at 100 distinct reviewers; PRs with more are not plausible
+      # in practice. Used to derive which CHANGES_REQUESTED rows are superseded by a later
+      # APPROVED/DISMISSED review from the same author.
       latestReviews(last: 100) {
         nodes {
           author {
