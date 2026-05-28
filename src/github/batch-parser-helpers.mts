@@ -34,7 +34,9 @@ export function extractCheckRunSummary(
 
 export function latestApprovedLogins(latest: Array<{ login: string; state: string }>): Set<string> {
   return new Set(
-    latest.filter((r) => r.state === "APPROVED" || r.state === "DISMISSED").map((r) => r.login),
+    latest
+      .filter((r) => r.login !== "unknown" && (r.state === "APPROVED" || r.state === "DISMISSED"))
+      .map((r) => r.login),
   );
 }
 
