@@ -131,9 +131,22 @@ describe("runPoll — tick progress logging", () => {
         .mockResolvedValueOnce(
           makeWaitResult({
             activity: {
-              commitCount: 1,
+              commitCount: 2,
+              reviewRoundCount: 1,
+              latestCommitCommittedAtUnix: 1_700_000_030,
+              reviewItemsSinceLatestCommit: [],
+            },
+            inProgressChecks: [
+              { name: "CI", status: "IN_PROGRESS", runId: "123", detailsUrl: null },
+            ],
+          }),
+        )
+        .mockResolvedValueOnce(
+          makeWaitResult({
+            activity: {
+              commitCount: 2,
               reviewRoundCount: 2,
-              latestCommitCommittedAtUnix: 1_700_000_000,
+              latestCommitCommittedAtUnix: 1_700_000_030,
               reviewItemsSinceLatestCommit: [],
             },
             inProgressChecks: [
@@ -152,13 +165,14 @@ describe("runPoll — tick progress logging", () => {
         quietStatus: true,
       });
 
-      await vi.advanceTimersByTimeAsync(90_000);
+      await vi.advanceTimersByTimeAsync(120_000);
       await pollPromise;
 
       const written = stderrSpy.mock.calls.map((args) => String(args[0])).join("");
-      expect(written.match(/\[poll tick/g)).toHaveLength(2);
+      expect(written.match(/\[poll tick/g)).toHaveLength(3);
       expect(written).toContain("active: CI (IN_PROGRESS)");
       expect(written).toContain("lint (QUEUED)");
+      expect(written).toContain("2 commits");
       expect(written).toContain("2 review rounds");
       expect(written).not.toContain(".");
     }),

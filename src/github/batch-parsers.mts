@@ -18,6 +18,16 @@ import {
 import { buildPrActivitySummary } from "./activity.mts";
 import { parseBranchProtection } from "./branch-protection.mts";
 
+function parseReviewNode(r: RawReview | RawReviewSummary): Review {
+  return {
+    id: r.id,
+    author: r.author?.login ?? "unknown",
+    authorType: mapAuthorType(r.author?.__typename, r.author?.login),
+    body: r.body,
+    createdAtUnix: r.createdAt ? parseCreatedAt(r.createdAt) : 0,
+  };
+}
+
 export function parseRawPr(
   raw: RawPr,
   rawThreadPages: RawThread[],
@@ -77,38 +87,21 @@ export function parseRawPr(
     createdAtUnix: c.createdAt ? parseCreatedAt(c.createdAt) : 0,
   }));
 
-  const changesRequestedReviews: Review[] = rawReviewNodes
-    .filter((r) => !crDone.has(r.author?.login ?? "unknown"))
-    .map((r) => ({
-      id: r.id,
-      author: r.author?.login ?? "unknown",
-      authorType: mapAuthorType(r.author?.__typename, r.author?.login),
-      body: r.body,
-      createdAtUnix: r.createdAt ? parseCreatedAt(r.createdAt) : 0,
-    }));
+  const allChangesRequestedReviews: Review[] = rawReviewNodes.map((r) => parseReviewNode(r));
+  const changesRequestedReviews: Review[] = allChangesRequestedReviews.filter(
+    (r) => !crDone.has(r.author),
+  );
 
   const reviewSummaries: Review[] = rawReviewSummaryNodes
     .filter((r) => !r.isMinimized && r.body.trim() !== "")
-    .map((r) => ({
-      id: r.id,
-      author: r.author?.login ?? "unknown",
-      authorType: mapAuthorType(r.author?.__typename, r.author?.login),
-      body: r.body,
-      createdAtUnix: r.createdAt ? parseCreatedAt(r.createdAt) : 0,
-    }));
+    .map((r) => parseReviewNode(r));
 
   // APPROVED reviews often have empty bodies (clicking "Approve" without a comment), so
   // we keep them — only the isMinimized filter applies. Monitor/iterate uses these IDs
   // when the user opts in to minimizing approvals.
   const approvedReviews: Review[] = rawApprovedReviewNodes
     .filter((r) => !r.isMinimized)
-    .map((r) => ({
-      id: r.id,
-      author: r.author?.login ?? "unknown",
-      authorType: mapAuthorType(r.author?.__typename, r.author?.login),
-      body: r.body,
-      createdAtUnix: r.createdAt ? parseCreatedAt(r.createdAt) : 0,
-    }));
+    .map((r) => parseReviewNode(r));
 
   const checks = rawCheckNodes.flatMap<CheckRun>((node) => {
     if (node.__typename === "CheckRun") {
@@ -188,7 +181,7 @@ export function parseRawPr(
       comments,
       reviewThreads,
       reviewSummaries,
-      changesRequestedReviews,
+      allChangesRequestedReviews,
       approvedReviews,
     ),
   };

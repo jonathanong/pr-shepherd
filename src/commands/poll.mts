@@ -39,6 +39,8 @@ function waitSignature(result: IterateResult): string {
     reviewDecision: result.reviewDecision,
     state: result.state,
     active: (result.inProgressChecks ?? []).map((c) => [c.name, c.status, c.runId]),
+    commitCount: activity.commitCount,
+    latestCommitCommittedAtUnix: activity.latestCommitCommittedAtUnix,
     reviewRoundCount: activity.reviewRoundCount,
     reviewItemsSinceLatestCommit: activity.reviewItemsSinceLatestCommit.length,
   });
@@ -53,12 +55,14 @@ function writeQuietStatus(
   const activeChecks = result.inProgressChecks ?? [];
   const activeCheckText = activeChecks.map((c) => `${c.name} (${c.status})`).join(", ");
   const active = activeChecks.length > 0 ? ` · active: ${activeCheckText}` : "";
+  const commitCount = result.activity?.commitCount ?? 0;
   const reviewItems = result.activity?.reviewItemsSinceLatestCommit.length ?? 0;
   const reviewRounds = result.activity?.reviewRoundCount ?? 0;
+  const commitSeg = commitCount > 0 ? ` · ${commitCount} commits` : "";
   const reviewRoundSeg = reviewRounds > 0 ? ` · ${reviewRounds} review rounds` : "";
   const reviewSeg = reviewItems > 0 ? ` · ${reviewItems} review items since latest commit` : "";
   process.stderr.write(
-    `[poll tick ${tick} / +${elapsedSeconds}s] WAIT ${result.status}/${result.mergeStateStatus}/${result.reviewDecision ?? "NO_REVIEW_DECISION"}${active}${reviewRoundSeg}${reviewSeg} — sleeping ${sleepSeconds}s\n`,
+    `[poll tick ${tick} / +${elapsedSeconds}s] WAIT ${result.status}/${result.mergeStateStatus}/${result.reviewDecision ?? "NO_REVIEW_DECISION"}${active}${commitSeg}${reviewRoundSeg}${reviewSeg} — sleeping ${sleepSeconds}s\n`,
   );
 }
 

@@ -96,6 +96,17 @@ describe("fetchPrBatch — PR activity", () => {
                 body: "please change",
                 createdAt: "2024-01-01T00:04:00Z",
               },
+              {
+                id: "PRR_CR_DONE",
+                author: { __typename: "User", login: "former-reviewer" },
+                body: "old change request body",
+                createdAt: "2024-01-01T00:05:00Z",
+              },
+            ],
+          },
+          latestReviews: {
+            nodes: [
+              { author: { __typename: "User", login: "former-reviewer" }, state: "APPROVED" },
             ],
           },
           approvedReviews: {
@@ -106,14 +117,14 @@ describe("fetchPrBatch — PR activity", () => {
                 isMinimized: false,
                 author: { __typename: "User", login: "reviewer" },
                 body: "",
-                createdAt: "2024-01-01T00:05:00Z",
+                createdAt: "2024-01-01T00:06:00Z",
               },
               {
                 id: "PRR_AP",
                 isMinimized: false,
                 author: { __typename: "User", login: "reviewer" },
                 body: "approved with note",
-                createdAt: "2024-01-01T00:06:00Z",
+                createdAt: "2024-01-01T00:07:00Z",
               },
             ],
           },
@@ -141,7 +152,9 @@ describe("fetchPrBatch — PR activity", () => {
       "PRRC_1",
       "PRR_1",
       "PRR_CR",
+      "PRR_CR_DONE",
       "PRR_AP",
     ]);
+    expect(data.changesRequestedReviews.map((r) => r.id)).toEqual(["PRR_CR"]);
   });
 });
