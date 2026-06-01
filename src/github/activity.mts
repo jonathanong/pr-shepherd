@@ -8,6 +8,24 @@ import type {
 import type { RawPr } from "./batch-raw-types.mts";
 import { parseCreatedAt } from "./batch-parser-helpers.mts";
 
+function reviewActivityItems(
+  reviews: Review[],
+  latestCommitCommittedAtUnix: number,
+  kind: ReviewActivityItem["kind"],
+): ReviewActivityItem[] {
+  return reviews
+    .filter((r) => (r.createdAtUnix ?? 0) > latestCommitCommittedAtUnix)
+    .filter((r) => r.body.trim() !== "")
+    .map((r) => ({
+      kind,
+      id: r.id,
+      author: r.author,
+      authorType: r.authorType,
+      body: r.body,
+      createdAtUnix: r.createdAtUnix ?? 0,
+    }));
+}
+
 export function buildPrActivitySummary(
   raw: RawPr,
   comments: PrComment[],
@@ -50,38 +68,13 @@ export function buildPrActivitySummary(
                 line: t.line,
               })),
           ),
-          ...reviewSummaries
-            .filter((r) => (r.createdAtUnix ?? 0) > latestCommitCommittedAtUnix)
-            .map((r) => ({
-              kind: "review-summary" as const,
-              id: r.id,
-              author: r.author,
-              authorType: r.authorType,
-              body: r.body,
-              createdAtUnix: r.createdAtUnix ?? 0,
-            })),
-          ...changesRequestedReviews
-            .filter((r) => (r.createdAtUnix ?? 0) > latestCommitCommittedAtUnix)
-            .filter((r) => r.body.trim() !== "")
-            .map((r) => ({
-              kind: "changes-requested-review" as const,
-              id: r.id,
-              author: r.author,
-              authorType: r.authorType,
-              body: r.body,
-              createdAtUnix: r.createdAtUnix ?? 0,
-            })),
-          ...approvedReviews
-            .filter((r) => (r.createdAtUnix ?? 0) > latestCommitCommittedAtUnix)
-            .filter((r) => r.body.trim() !== "")
-            .map((r) => ({
-              kind: "approved-review" as const,
-              id: r.id,
-              author: r.author,
-              authorType: r.authorType,
-              body: r.body,
-              createdAtUnix: r.createdAtUnix ?? 0,
-            })),
+          ...reviewActivityItems(reviewSummaries, latestCommitCommittedAtUnix, "review-summary"),
+          ...reviewActivityItems(
+            changesRequestedReviews,
+            latestCommitCommittedAtUnix,
+            "changes-requested-review",
+          ),
+          ...reviewActivityItems(approvedReviews, latestCommitCommittedAtUnix, "approved-review"),
         ].sort((a, b) => a.createdAtUnix - b.createdAtUnix);
 
   return {
