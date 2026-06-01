@@ -42,6 +42,7 @@ Iterate flags:
 Poll flags:
   --interval <duration>          Sleep between WAIT ticks. Default: 30s.
   --timeout <duration>           Maximum poll wall-clock wait. Default: 5m.
+  --quiet-status                 During WAIT polling, print only changed status snapshots.
 
 Clean variants:
   pr [number]          Remove state for one PR. Defaults to current branch PR.

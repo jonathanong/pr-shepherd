@@ -1,11 +1,4 @@
-import type {
-  BatchPrData,
-  BranchProtection,
-  CheckRun,
-  PrComment,
-  Review,
-  ReviewThread,
-} from "../types.mts";
+import type { BatchPrData, CheckRun, PrComment, Review, ReviewThread } from "../types.mts";
 import type {
   RawPr,
   RawThread,
@@ -22,6 +15,8 @@ import {
   mapStatusContextState,
   latestApprovedLogins,
 } from "./batch-parser-helpers.mts";
+import { buildPrActivitySummary } from "./activity.mts";
+import { parseBranchProtection } from "./branch-protection.mts";
 
 export function parseRawPr(
   raw: RawPr,
@@ -52,7 +47,7 @@ export function parseRawPr(
       authorType: mapAuthorType(c.author?.__typename, c.author?.login),
       body: c.body,
       url: c.url,
-      createdAtUnix: parseCreatedAt(c.createdAt),
+      createdAtUnix: c.createdAt ? parseCreatedAt(c.createdAt) : 0,
     }));
     return {
       id: t.id,
@@ -67,7 +62,7 @@ export function parseRawPr(
       authorType: mapAuthorType(comment?.author?.__typename, comment?.author?.login),
       body: comment?.body ?? "",
       url: comment?.url ?? "",
-      createdAtUnix: comment ? parseCreatedAt(comment.createdAt) : 0,
+      createdAtUnix: comment?.createdAt ? parseCreatedAt(comment.createdAt) : 0,
       comments,
     };
   });
@@ -79,7 +74,7 @@ export function parseRawPr(
     authorType: mapAuthorType(c.author?.__typename, c.author?.login),
     body: c.body,
     url: c.url,
-    createdAtUnix: parseCreatedAt(c.createdAt),
+    createdAtUnix: c.createdAt ? parseCreatedAt(c.createdAt) : 0,
   }));
 
   const changesRequestedReviews: Review[] = rawReviewNodes
@@ -89,6 +84,7 @@ export function parseRawPr(
       author: r.author?.login ?? "unknown",
       authorType: mapAuthorType(r.author?.__typename, r.author?.login),
       body: r.body,
+      createdAtUnix: r.createdAt ? parseCreatedAt(r.createdAt) : 0,
     }));
 
   const reviewSummaries: Review[] = rawReviewSummaryNodes
@@ -98,6 +94,7 @@ export function parseRawPr(
       author: r.author?.login ?? "unknown",
       authorType: mapAuthorType(r.author?.__typename, r.author?.login),
       body: r.body,
+      createdAtUnix: r.createdAt ? parseCreatedAt(r.createdAt) : 0,
     }));
 
   // APPROVED reviews often have empty bodies (clicking "Approve" without a comment), so
@@ -110,6 +107,7 @@ export function parseRawPr(
       author: r.author?.login ?? "unknown",
       authorType: mapAuthorType(r.author?.__typename, r.author?.login),
       body: r.body,
+      createdAtUnix: r.createdAt ? parseCreatedAt(r.createdAt) : 0,
     }));
 
   const checks = rawCheckNodes.flatMap<CheckRun>((node) => {
@@ -164,17 +162,6 @@ export function parseRawPr(
     return [];
   });
 
-  const rawProtection = raw.baseRef?.branchProtectionRule ?? null;
-  const branchProtection: BranchProtection | null = rawProtection
-    ? {
-        requiresApprovingReviews: rawProtection.requiresApprovingReviews,
-        requiredApprovingReviewCount: rawProtection.requiredApprovingReviewCount,
-        requiresConversationResolution: rawProtection.requiresConversationResolution,
-        requiresStatusChecks: rawProtection.requiresStatusChecks,
-        requiredStatusCheckContexts: rawProtection.requiredStatusCheckContexts ?? [],
-      }
-    : null;
-
   return {
     nodeId: raw.id,
     number: raw.number,
@@ -195,6 +182,7 @@ export function parseRawPr(
     reviewSummaries,
     approvedReviews,
     checks,
-    branchProtection,
+    branchProtection: parseBranchProtection(raw),
+    activity: buildPrActivitySummary(raw, comments, reviewThreads, reviewSummaries),
   };
 }

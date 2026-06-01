@@ -2,6 +2,7 @@
 
 **status** `FAILING` · **merge** `DIRTY` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 0 passing, 1 inProgress · **branch** conflicts with `origin/main`
+**activity** 0 commits · 0 review rounds · active: `CI / tests`
 
 ## In-progress runs
 

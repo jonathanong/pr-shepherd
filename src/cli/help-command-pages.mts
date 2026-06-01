@@ -115,6 +115,7 @@ Usage:
 Poll flags:
   --interval <duration>          Sleep between WAIT ticks. Default: 30s.
   --timeout <duration>           Maximum wall-clock wait. Default: 5m.
+  --quiet-status                 During WAIT polling, print only changed status snapshots.
 
 Forwarded iterate flags:
   --ready-delay <duration>       Settle window before a clean PR cancels. Example: 15m.

@@ -48,14 +48,19 @@ export interface RawPr {
     pageInfo: { hasPreviousPage: boolean; startCursor: string | null };
     nodes: RawReviewSummary[];
   };
+  allReviews?: {
+    totalCount: number;
+  };
   approvedReviews: {
     pageInfo: { hasPreviousPage: boolean; startCursor: string | null };
     nodes: RawReviewSummary[];
   };
   commits: {
+    totalCount?: number;
     nodes: Array<{
       commit: {
         oid: string;
+        committedDate?: string;
         statusCheckRollup: {
           contexts: {
             pageInfo: { hasNextPage: boolean; endCursor: string | null };
@@ -82,7 +87,7 @@ export interface RawThreadComment {
   path: string | null;
   line: number | null;
   startLine: number | null;
-  createdAt: string;
+  createdAt?: string;
 }
 
 export interface RawThread {
@@ -114,13 +119,14 @@ export interface RawComment {
   url: string;
   author: RawAuthor | null;
   body: string;
-  createdAt: string;
+  createdAt?: string;
 }
 
 export interface RawReview {
   id: string;
   author: RawAuthor | null;
   body: string;
+  createdAt?: string;
 }
 
 export interface RawReviewSummary {
@@ -128,6 +134,7 @@ export interface RawReviewSummary {
   isMinimized: boolean;
   author: RawAuthor | null;
   body: string;
+  createdAt?: string;
 }
 
 interface RawBranchProtectionRule {

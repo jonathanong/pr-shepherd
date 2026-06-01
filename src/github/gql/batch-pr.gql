@@ -131,6 +131,7 @@ query BatchPr(
             login
           }
           body
+          createdAt
         }
       }
       reviewSummaries: reviews(states: COMMENTED, last: 50, before: $reviewSummariesCursor) {
@@ -146,7 +147,11 @@ query BatchPr(
             login
           }
           body
+          createdAt
         }
+      }
+      allReviews: reviews(last: 1) {
+        totalCount
       }
       approvedReviews: reviews(states: APPROVED, last: 50, before: $approvedReviewsCursor) {
         pageInfo {
@@ -161,12 +166,15 @@ query BatchPr(
             login
           }
           body
+          createdAt
         }
       }
       commits(last: 1) {
+        totalCount
         nodes {
           commit {
             oid
+            committedDate
             statusCheckRollup {
               contexts(first: 100, after: $checksCursor) {
                 pageInfo {

@@ -2,6 +2,7 @@
 
 **status** `IN_PROGRESS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 0 passing, 2 inProgress
+**activity** 0 commits · 0 review rounds · active: `CI / queued`, `External Preview`
 
 ⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required
 

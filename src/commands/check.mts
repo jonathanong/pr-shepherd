@@ -161,5 +161,6 @@ export async function runCheck(
     editedSummaries,
     approvedReviews,
     branchProtection: batchData.branchProtection,
+    activity: batchData.activity,
   };
 }

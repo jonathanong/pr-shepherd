@@ -20,6 +20,16 @@ export function projectIterateLean(
   const readyDelaySuffix = opts?.readyDelaySuffix;
   const simpleInstructions = (r: Exclude<IterateResult, { action: "fix_code" }>) =>
     buildSimpleIterateInstructions(r, readyDelaySuffix);
+  const activity = result.activity ?? {
+    commitCount: 0,
+    reviewRoundCount: 0,
+    latestCommitCommittedAtUnix: null,
+    reviewItemsSinceLatestCommit: [],
+  };
+  const hasActivity =
+    activity.commitCount > 0 ||
+    activity.reviewRoundCount > 0 ||
+    activity.reviewItemsSinceLatestCommit.length > 0;
   const base: Record<string, unknown> = {
     action: result.action,
     pr: result.pr,
@@ -37,13 +47,27 @@ export function projectIterateLean(
       ...(result.summary.filtered > 0 && { filtered: result.summary.filtered }),
       ...(result.summary.inProgress > 0 && { inProgress: result.summary.inProgress }),
     },
-    // remainingSeconds: only when the ready-delay timer is actively counting down
     ...(result.status === "READY" &&
       result.remainingSeconds > 0 && {
         remainingSeconds: result.remainingSeconds,
       }),
     ...(result.baseBranch && { baseBranch: result.baseBranch }),
     ...(result.branchProtection !== null && { branchProtection: result.branchProtection }),
+    ...(hasActivity && {
+      activity: {
+        commitCount: activity.commitCount,
+        reviewRoundCount: activity.reviewRoundCount,
+        ...(activity.latestCommitCommittedAtUnix !== null && {
+          latestCommitCommittedAtUnix: activity.latestCommitCommittedAtUnix,
+        }),
+        ...(activity.reviewItemsSinceLatestCommit.length > 0 && {
+          reviewItemsSinceLatestCommit: activity.reviewItemsSinceLatestCommit,
+        }),
+      },
+    }),
+    ...((result.inProgressChecks?.length ?? 0) > 0 && {
+      inProgressChecks: result.inProgressChecks,
+    }),
   };
 
   switch (result.action) {

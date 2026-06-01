@@ -36,7 +36,11 @@ function makeRawPr(overrides: Record<string, unknown> = {}) {
     },
     reviewSummaries: { pageInfo: { hasPreviousPage: false, startCursor: null }, nodes: [] },
     approvedReviews: { pageInfo: { hasPreviousPage: false, startCursor: null }, nodes: [] },
-    commits: { nodes: [{ commit: { statusCheckRollup: null } }] },
+    allReviews: { totalCount: 0 },
+    commits: {
+      totalCount: 1,
+      nodes: [{ commit: { committedDate: "2024-01-01T00:00:00Z", statusCheckRollup: null } }],
+    },
     ...overrides,
   };
 }
@@ -48,9 +52,11 @@ function makeResponse(pr: ReturnType<typeof makeRawPr> | null = makeRawPr()) {
 function makeContextPr(node: Record<string, unknown>) {
   return makeRawPr({
     commits: {
+      totalCount: 1,
       nodes: [
         {
           commit: {
+            committedDate: "2024-01-01T00:00:00Z",
             statusCheckRollup: {
               contexts: { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [node] },
             },

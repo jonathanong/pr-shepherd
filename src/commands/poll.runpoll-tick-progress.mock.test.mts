@@ -99,6 +99,53 @@ describe("runPoll — tick progress logging", () => {
   );
 
   it(
+    "quiet status writes only changed WAIT snapshots with active checks",
+    withStderrTTY(false, async (stderrSpy) => {
+      mockRunIterate
+        .mockResolvedValueOnce(
+          makeWaitResult({
+            inProgressChecks: [
+              { name: "CI", status: "IN_PROGRESS", runId: "123", detailsUrl: null },
+            ],
+          }),
+        )
+        .mockResolvedValueOnce(
+          makeWaitResult({
+            inProgressChecks: [
+              { name: "CI", status: "IN_PROGRESS", runId: "123", detailsUrl: null },
+            ],
+          }),
+        )
+        .mockResolvedValueOnce(
+          makeWaitResult({
+            inProgressChecks: [
+              { name: "CI", status: "IN_PROGRESS", runId: "123", detailsUrl: null },
+              { name: "lint", status: "QUEUED", runId: "456", detailsUrl: null },
+            ],
+          }),
+        )
+        .mockResolvedValue(makeCancelResult());
+
+      const pollPromise = runPoll({
+        prNumber: 42,
+        format: "text",
+        intervalSeconds: 30,
+        timeoutSeconds: 300,
+        quietStatus: true,
+      });
+
+      await vi.advanceTimersByTimeAsync(90_000);
+      await pollPromise;
+
+      const written = stderrSpy.mock.calls.map((args) => String(args[0])).join("");
+      expect(written.match(/\[poll tick/g)).toHaveLength(2);
+      expect(written).toContain("active: CI (IN_PROGRESS)");
+      expect(written).toContain("lint (QUEUED)");
+      expect(written).not.toContain(".");
+    }),
+  );
+
+  it(
     "writes trailing newline after dots when loop exits",
     withStderrTTY(false, async (stderrSpy) => {
       mockRunIterate.mockResolvedValueOnce(makeWaitResult()).mockResolvedValue(makeCancelResult());

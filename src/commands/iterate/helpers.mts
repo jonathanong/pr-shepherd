@@ -2,7 +2,12 @@ import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 import { rest } from "../../github/http.mts";
 import type { ShepherdReport } from "../../types.mts";
-import type { IterateResultSummary, RelevantCheck, IterateResultBase } from "../../types.mts";
+import type {
+  ActiveCheck,
+  IterateResultSummary,
+  RelevantCheck,
+  IterateResultBase,
+} from "../../types.mts";
 
 const execFile = promisify(execFileCb);
 
@@ -66,6 +71,16 @@ export function buildRelevantChecks(report: ShepherdReport): RelevantCheck[] {
   return [...passing, ...failing];
 }
 
+export function buildActiveChecks(report: ShepherdReport): ActiveCheck[] {
+  return report.checks.inProgress.map((c) => ({
+    name: c.name,
+    status: c.status,
+    runId: c.runId,
+    detailsUrl: c.detailsUrl || null,
+    ...(c.summary !== undefined && { summary: c.summary }),
+  }));
+}
+
 // Best-effort: cancelling a completed run is a no-op, not an error.
 export async function tryCancelRun(
   runId: string,
@@ -97,6 +112,15 @@ export async function getCurrentHeadSha(): Promise<string | null> {
 export function buildWaitLog(base: IterateResultBase): string {
   const { summary, remainingSeconds } = base;
   const parts: string[] = [`WAIT: ${summary.passing} passing, ${summary.inProgress} in-progress`];
+
+  if ((base.inProgressChecks?.length ?? 0) > 0) {
+    parts.push(
+      `active checks: ${base
+        .inProgressChecks!.slice(0, 5)
+        .map((c) => c.name)
+        .join(", ")}`,
+    );
+  }
 
   switch (base.mergeStatus) {
     case "BLOCKED":

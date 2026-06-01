@@ -6,7 +6,7 @@ Each `pr-shepherd iterate` invocation returns exactly one action. The default `p
 
 The default output format is Markdown — what the skill receives from the default poll dispatcher and what direct CLI users see. `--format=json` emits the same action data as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
 
-The shipped skill invokes the default command with `--interval`/`--timeout`, which is equivalent to `pr-shepherd poll` while the PR remains in `[WAIT]` and returns whenever an actionable or terminal state appears. Do not run `while true` or unbounded polling loops outside of the poll dispatcher.
+The shipped skill invokes the default command with `--interval`/`--timeout`, which is equivalent to `pr-shepherd poll` while the PR remains in `[WAIT]` and returns whenever an actionable or terminal state appears. Add `--quiet-status` when a long wait should print only changed WAIT status snapshots instead of one dot per unchanged tick. Do not run `while true` or unbounded polling loops outside of the poll dispatcher.
 
 Command examples call `pr-shepherd` directly everywhere a follow-up command is emitted.
 
@@ -20,6 +20,7 @@ Pass `--verbose` to get more debug state. In JSON mode, the output starts from t
 **status** `<…>` · **merge** `<…>` · **state** `<…>` · **repo** `<…>`
 **summary** <N> passing[, <N> skipped][, <N> filtered][, <N> inProgress][· **remainingSeconds** <N>][· **blockingBotReviewInProgress**][· **isDraft**][· **branch** behind `origin/<base>` | · **branch** conflicts with `origin/<base>`]
 [**required** [approvals `<N>`][, conversation-resolution required][, checks: `<ctx>`, …]]
+[**activity** <N> commits · <N> review rounds[ · <N> review items since latest commit][ · active: `<check>`, …]]
 
 <action-specific body>
 
