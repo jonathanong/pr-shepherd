@@ -7,43 +7,10 @@ vi.mock("./client.mts", () => ({
 
 import { fetchPrBatch } from "./batch.mts";
 import { graphql, graphqlWithRateLimit } from "./client.mts";
+import { REPO, makeRawPr, makeResponse } from "../../test-helpers/github/batch-fixtures.mts";
 
 const mockGraphql = vi.mocked(graphql);
 const mockGraphqlWithRateLimit = vi.mocked(graphqlWithRateLimit);
-
-const REPO = { owner: "owner", name: "repo" };
-
-function makeRawPr(overrides: Record<string, unknown>) {
-  return {
-    id: "PR_kgDOAAA",
-    number: 42,
-    state: "OPEN",
-    isDraft: false,
-    mergeable: "MERGEABLE",
-    mergeStateStatus: "CLEAN",
-    reviewDecision: "APPROVED",
-    headRefOid: "abc123",
-    headRefName: "feature",
-    headRepository: { nameWithOwner: "owner/repo" },
-    baseRefName: "main",
-    reviewRequests: { nodes: [] },
-    latestReviews: { nodes: [] },
-    reviewThreads: { pageInfo: { hasPreviousPage: false, startCursor: null }, nodes: [] },
-    comments: { pageInfo: { hasPreviousPage: false, startCursor: null }, nodes: [] },
-    changesRequestedReviews: {
-      pageInfo: { hasPreviousPage: false, startCursor: null },
-      nodes: [],
-    },
-    reviewSummaries: { pageInfo: { hasPreviousPage: false, startCursor: null }, nodes: [] },
-    approvedReviews: { pageInfo: { hasPreviousPage: false, startCursor: null }, nodes: [] },
-    allReviews: { totalCount: 0 },
-    ...overrides,
-  };
-}
-
-function makeResponse(pr: ReturnType<typeof makeRawPr> | null = makeRawPr({})) {
-  return { data: { repository: { pullRequest: pr } } };
-}
 
 beforeEach(() => {
   vi.clearAllMocks();
