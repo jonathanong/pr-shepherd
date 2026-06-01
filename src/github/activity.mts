@@ -1,4 +1,10 @@
-import type { PrActivitySummary, PrComment, Review, ReviewThread } from "../types.mts";
+import type {
+  PrActivitySummary,
+  PrComment,
+  Review,
+  ReviewActivityItem,
+  ReviewThread,
+} from "../types.mts";
 import type { RawPr } from "./batch-raw-types.mts";
 import { parseCreatedAt } from "./batch-parser-helpers.mts";
 
@@ -7,11 +13,13 @@ export function buildPrActivitySummary(
   comments: PrComment[],
   reviewThreads: ReviewThread[],
   reviewSummaries: Review[],
+  changesRequestedReviews: Review[],
+  approvedReviews: Review[],
 ): PrActivitySummary {
   const latestCommitCommittedAtUnix = raw.commits.nodes[0]?.commit.committedDate
     ? parseCreatedAt(raw.commits.nodes[0].commit.committedDate)
     : null;
-  const reviewItemsSinceLatestCommit =
+  const reviewItemsSinceLatestCommit: ReviewActivityItem[] =
     latestCommitCommittedAtUnix === null
       ? []
       : [
@@ -46,6 +54,28 @@ export function buildPrActivitySummary(
             .filter((r) => (r.createdAtUnix ?? 0) > latestCommitCommittedAtUnix)
             .map((r) => ({
               kind: "review-summary" as const,
+              id: r.id,
+              author: r.author,
+              authorType: r.authorType,
+              body: r.body,
+              createdAtUnix: r.createdAtUnix ?? 0,
+            })),
+          ...changesRequestedReviews
+            .filter((r) => (r.createdAtUnix ?? 0) > latestCommitCommittedAtUnix)
+            .filter((r) => r.body.trim() !== "")
+            .map((r) => ({
+              kind: "changes-requested-review" as const,
+              id: r.id,
+              author: r.author,
+              authorType: r.authorType,
+              body: r.body,
+              createdAtUnix: r.createdAtUnix ?? 0,
+            })),
+          ...approvedReviews
+            .filter((r) => (r.createdAtUnix ?? 0) > latestCommitCommittedAtUnix)
+            .filter((r) => r.body.trim() !== "")
+            .map((r) => ({
+              kind: "approved-review" as const,
               id: r.id,
               author: r.author,
               authorType: r.authorType,

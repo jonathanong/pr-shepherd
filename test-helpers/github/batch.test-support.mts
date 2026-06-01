@@ -6,12 +6,13 @@ vi.mock("../../src/github/client.mts", () => ({
   graphqlWithRateLimit: vi.fn(),
 }));
 
-import { fetchPrBatch } from "../../src/github/batch.mts";
+import { fetchPrBatch as importedFetchPrBatch } from "../../src/github/batch.mts";
 import { graphql, graphqlWithRateLimit } from "../../src/github/client.mts";
 import { makeResponse } from "./batch-fixtures.mts";
 
 const mockGraphql = vi.mocked(graphql);
 const mockGraphqlWithRateLimit = vi.mocked(graphqlWithRateLimit);
+const fetchPrBatch = importedFetchPrBatch;
 
 // ---------------------------------------------------------------------------
 // reviewSummaries — COMMENTED reviews surfaced for agent-driven minimize

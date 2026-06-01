@@ -127,7 +127,7 @@ Forwarded iterate flags:
   --help, -h                     Print this help and exit before GitHub, git, config, or log I/O.
 
 Durations accept seconds, minutes, or hours: 30s, 2m, 1h, or bare seconds.
-Each WAIT tick writes a single dot to stderr; --verbose emits the detailed per-tick line.
+Each WAIT tick writes a single dot to stderr by default; --quiet-status prints only changed WAIT snapshots, and --verbose emits detailed per-tick lines.
 
 Exit codes:
   0  WAIT timeout or MARK_READY

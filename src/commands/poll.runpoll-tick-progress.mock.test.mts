@@ -104,6 +104,12 @@ describe("runPoll — tick progress logging", () => {
       mockRunIterate
         .mockResolvedValueOnce(
           makeWaitResult({
+            activity: {
+              commitCount: 1,
+              reviewRoundCount: 1,
+              latestCommitCommittedAtUnix: 1_700_000_000,
+              reviewItemsSinceLatestCommit: [],
+            },
             inProgressChecks: [
               { name: "CI", status: "IN_PROGRESS", runId: "123", detailsUrl: null },
             ],
@@ -111,6 +117,12 @@ describe("runPoll — tick progress logging", () => {
         )
         .mockResolvedValueOnce(
           makeWaitResult({
+            activity: {
+              commitCount: 1,
+              reviewRoundCount: 1,
+              latestCommitCommittedAtUnix: 1_700_000_000,
+              reviewItemsSinceLatestCommit: [],
+            },
             inProgressChecks: [
               { name: "CI", status: "IN_PROGRESS", runId: "123", detailsUrl: null },
             ],
@@ -118,6 +130,12 @@ describe("runPoll — tick progress logging", () => {
         )
         .mockResolvedValueOnce(
           makeWaitResult({
+            activity: {
+              commitCount: 1,
+              reviewRoundCount: 2,
+              latestCommitCommittedAtUnix: 1_700_000_000,
+              reviewItemsSinceLatestCommit: [],
+            },
             inProgressChecks: [
               { name: "CI", status: "IN_PROGRESS", runId: "123", detailsUrl: null },
               { name: "lint", status: "QUEUED", runId: "456", detailsUrl: null },
@@ -141,6 +159,7 @@ describe("runPoll — tick progress logging", () => {
       expect(written.match(/\[poll tick/g)).toHaveLength(2);
       expect(written).toContain("active: CI (IN_PROGRESS)");
       expect(written).toContain("lint (QUEUED)");
+      expect(written).toContain("2 review rounds");
       expect(written).not.toContain(".");
     }),
   );

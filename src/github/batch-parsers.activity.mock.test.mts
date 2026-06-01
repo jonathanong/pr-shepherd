@@ -87,6 +87,36 @@ describe("fetchPrBatch — PR activity", () => {
               },
             ],
           },
+          changesRequestedReviews: {
+            pageInfo: { hasPreviousPage: false, startCursor: null },
+            nodes: [
+              {
+                id: "PRR_CR",
+                author: { __typename: "User", login: "reviewer" },
+                body: "please change",
+                createdAt: "2024-01-01T00:04:00Z",
+              },
+            ],
+          },
+          approvedReviews: {
+            pageInfo: { hasPreviousPage: false, startCursor: null },
+            nodes: [
+              {
+                id: "PRR_AP_EMPTY",
+                isMinimized: false,
+                author: { __typename: "User", login: "reviewer" },
+                body: "",
+                createdAt: "2024-01-01T00:05:00Z",
+              },
+              {
+                id: "PRR_AP",
+                isMinimized: false,
+                author: { __typename: "User", login: "reviewer" },
+                body: "approved with note",
+                createdAt: "2024-01-01T00:06:00Z",
+              },
+            ],
+          },
           commits: {
             totalCount: 3,
             nodes: [
@@ -110,6 +140,8 @@ describe("fetchPrBatch — PR activity", () => {
       "IC_new",
       "PRRC_1",
       "PRR_1",
+      "PRR_CR",
+      "PRR_AP",
     ]);
   });
 });

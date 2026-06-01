@@ -1,8 +1,13 @@
 import type { AuthorType, CheckStatus } from "./github.mts";
 
-type ReviewActivityKind = "pr-comment" | "review-thread-comment" | "review-summary";
+type ReviewActivityKind =
+  | "pr-comment"
+  | "review-thread-comment"
+  | "review-summary"
+  | "approved-review"
+  | "changes-requested-review";
 
-interface ReviewActivityItem {
+export interface ReviewActivityItem {
   kind: ReviewActivityKind;
   id: string;
   author: string;

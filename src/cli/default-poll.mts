@@ -14,6 +14,7 @@ const DEFAULT_POLL_BOOLEAN_FLAGS = new Set([
   "--verbose",
   "--no-auto-mark-ready",
   "--no-auto-cancel-actionable",
+  "--quiet-status",
 ]);
 
 export function isDefaultPollInvocation(subcommand: string | undefined): boolean {

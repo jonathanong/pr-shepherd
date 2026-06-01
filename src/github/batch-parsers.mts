@@ -183,6 +183,13 @@ export function parseRawPr(
     approvedReviews,
     checks,
     branchProtection: parseBranchProtection(raw),
-    activity: buildPrActivitySummary(raw, comments, reviewThreads, reviewSummaries),
+    activity: buildPrActivitySummary(
+      raw,
+      comments,
+      reviewThreads,
+      reviewSummaries,
+      changesRequestedReviews,
+      approvedReviews,
+    ),
   };
 }
