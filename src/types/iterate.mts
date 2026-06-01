@@ -1,5 +1,3 @@
-// Iterate command types.
-
 import type {
   AgentThread,
   AgentComment,
@@ -10,6 +8,7 @@ import type {
   FirstLookThread,
   FirstLookComment,
 } from "./report.mts";
+import type { ActiveCheck, PrActivitySummary } from "./activity.mts";
 import type {
   BranchProtection,
   CheckStatus,
@@ -50,9 +49,7 @@ export interface EscalateDetails {
   stalledChecks?: AgentStalledCheck[];
   /** Populated when fix-thrash triggered — threads that have been attempted too many times. */
   thrashHistory?: Array<{ threadId: string; attempts: number }>;
-  /** One-line hint for the human on what to do. */
   suggestion: string;
-  /** Full human-readable block ready to print: headline, triggers, suggestions, thread list. */
   humanMessage: string;
 }
 
@@ -100,6 +97,8 @@ export interface IterateResultBase {
    * `workflowName`, `jobName`, `failedStep`, and `summary`.
    */
   checks: RelevantCheck[];
+  inProgressChecks?: ActiveCheck[];
+  activity?: PrActivitySummary;
 }
 
 interface IterateResultWait extends IterateResultBase {

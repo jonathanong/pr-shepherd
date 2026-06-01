@@ -2,6 +2,7 @@
 
 **status** `IN_PROGRESS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 0 passing, 1 inProgress
+**activity** 0 commits · 0 review rounds · active: `CI / tests`
 
 ## Changes-requested reviews
 

@@ -40,5 +40,6 @@ export function buildTerminalReport(
     editedSummaries: [],
     approvedReviews: [],
     branchProtection: batchData.branchProtection,
+    activity: batchData.activity,
   };
 }

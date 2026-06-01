@@ -2,6 +2,7 @@
 
 import type { ReviewThreadComment } from "./review-thread.mts";
 import type { CheckAnnotation } from "./check-annotations.mts";
+import type { PrActivitySummary } from "./activity.mts";
 
 // ---------------------------------------------------------------------------
 // GitHub primitives
@@ -92,7 +93,7 @@ export interface ReviewThread {
   authorType: AuthorType;
   body: string;
   url: string;
-  createdAtUnix: number;
+  createdAtUnix?: number;
   comments?: ReviewThreadComment[];
   /** True when Shepherd re-surfaced this thread because its body changed after first look. */
   edited?: boolean;
@@ -136,6 +137,7 @@ export interface Review {
   author: string;
   authorType: AuthorType;
   body: string;
+  createdAtUnix?: number;
   edited?: boolean;
 }
 
@@ -189,4 +191,5 @@ export interface BatchPrData {
   approvedReviews: Review[];
   checks: CheckRun[];
   branchProtection: BranchProtection | null;
+  activity?: PrActivitySummary;
 }

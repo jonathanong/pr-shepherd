@@ -11,17 +11,16 @@ import type {
 } from "./github.mts";
 import type { AgentThreadComment } from "./agent-thread.mts";
 import type { CheckAnnotation } from "./check-annotations.mts";
+import type { PrActivitySummary } from "./activity.mts";
 
 export interface FirstLookThread extends ReviewThread {
   firstLookStatus: "outdated" | "resolved" | "minimized";
   autoResolved?: boolean;
-  /** True when the body was edited by the author after first acknowledgement. */
   edited?: boolean;
 }
 
 export interface FirstLookComment extends PrComment {
   firstLookStatus: "minimized";
-  /** True when the body was edited by the author after first acknowledgement. */
   edited?: boolean;
 }
 
@@ -83,6 +82,7 @@ export interface ShepherdReport {
   approvedReviews: Review[];
   /** Branch protection rule for the PR's base branch. Null when no rule exists or the base ref is unavailable. */
   branchProtection: import("./github.mts").BranchProtection | null;
+  activity?: PrActivitySummary;
 }
 
 export interface ResolveOptions {

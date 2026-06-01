@@ -1,11 +1,4 @@
-import type {
-  BatchPrData,
-  BranchProtection,
-  CheckRun,
-  PrComment,
-  Review,
-  ReviewThread,
-} from "../types.mts";
+import type { BatchPrData, CheckRun, PrComment, Review, ReviewThread } from "../types.mts";
 import type {
   RawPr,
   RawThread,
@@ -22,6 +15,18 @@ import {
   mapStatusContextState,
   latestApprovedLogins,
 } from "./batch-parser-helpers.mts";
+import { buildPrActivitySummary } from "./activity.mts";
+import { parseBranchProtection } from "./branch-protection.mts";
+
+function parseReviewNode(r: RawReview | RawReviewSummary): Review {
+  return {
+    id: r.id,
+    author: r.author?.login ?? "unknown",
+    authorType: mapAuthorType(r.author?.__typename, r.author?.login),
+    body: r.body,
+    createdAtUnix: r.createdAt ? parseCreatedAt(r.createdAt) : 0,
+  };
+}
 
 export function parseRawPr(
   raw: RawPr,
@@ -52,7 +57,7 @@ export function parseRawPr(
       authorType: mapAuthorType(c.author?.__typename, c.author?.login),
       body: c.body,
       url: c.url,
-      createdAtUnix: parseCreatedAt(c.createdAt),
+      createdAtUnix: c.createdAt ? parseCreatedAt(c.createdAt) : 0,
     }));
     return {
       id: t.id,
@@ -67,7 +72,7 @@ export function parseRawPr(
       authorType: mapAuthorType(comment?.author?.__typename, comment?.author?.login),
       body: comment?.body ?? "",
       url: comment?.url ?? "",
-      createdAtUnix: comment ? parseCreatedAt(comment.createdAt) : 0,
+      createdAtUnix: comment?.createdAt ? parseCreatedAt(comment.createdAt) : 0,
       comments,
     };
   });
@@ -79,38 +84,24 @@ export function parseRawPr(
     authorType: mapAuthorType(c.author?.__typename, c.author?.login),
     body: c.body,
     url: c.url,
-    createdAtUnix: parseCreatedAt(c.createdAt),
+    createdAtUnix: c.createdAt ? parseCreatedAt(c.createdAt) : 0,
   }));
 
-  const changesRequestedReviews: Review[] = rawReviewNodes
-    .filter((r) => !crDone.has(r.author?.login ?? "unknown"))
-    .map((r) => ({
-      id: r.id,
-      author: r.author?.login ?? "unknown",
-      authorType: mapAuthorType(r.author?.__typename, r.author?.login),
-      body: r.body,
-    }));
+  const allChangesRequestedReviews: Review[] = rawReviewNodes.map((r) => parseReviewNode(r));
+  const changesRequestedReviews: Review[] = allChangesRequestedReviews.filter(
+    (r) => !crDone.has(r.author),
+  );
 
   const reviewSummaries: Review[] = rawReviewSummaryNodes
     .filter((r) => !r.isMinimized && r.body.trim() !== "")
-    .map((r) => ({
-      id: r.id,
-      author: r.author?.login ?? "unknown",
-      authorType: mapAuthorType(r.author?.__typename, r.author?.login),
-      body: r.body,
-    }));
+    .map((r) => parseReviewNode(r));
 
   // APPROVED reviews often have empty bodies (clicking "Approve" without a comment), so
   // we keep them — only the isMinimized filter applies. Monitor/iterate uses these IDs
   // when the user opts in to minimizing approvals.
   const approvedReviews: Review[] = rawApprovedReviewNodes
     .filter((r) => !r.isMinimized)
-    .map((r) => ({
-      id: r.id,
-      author: r.author?.login ?? "unknown",
-      authorType: mapAuthorType(r.author?.__typename, r.author?.login),
-      body: r.body,
-    }));
+    .map((r) => parseReviewNode(r));
 
   const checks = rawCheckNodes.flatMap<CheckRun>((node) => {
     if (node.__typename === "CheckRun") {
@@ -164,17 +155,6 @@ export function parseRawPr(
     return [];
   });
 
-  const rawProtection = raw.baseRef?.branchProtectionRule ?? null;
-  const branchProtection: BranchProtection | null = rawProtection
-    ? {
-        requiresApprovingReviews: rawProtection.requiresApprovingReviews,
-        requiredApprovingReviewCount: rawProtection.requiredApprovingReviewCount,
-        requiresConversationResolution: rawProtection.requiresConversationResolution,
-        requiresStatusChecks: rawProtection.requiresStatusChecks,
-        requiredStatusCheckContexts: rawProtection.requiredStatusCheckContexts ?? [],
-      }
-    : null;
-
   return {
     nodeId: raw.id,
     number: raw.number,
@@ -195,6 +175,14 @@ export function parseRawPr(
     reviewSummaries,
     approvedReviews,
     checks,
-    branchProtection,
+    branchProtection: parseBranchProtection(raw),
+    activity: buildPrActivitySummary(
+      raw,
+      comments,
+      reviewThreads,
+      reviewSummaries,
+      allChangesRequestedReviews,
+      approvedReviews,
+    ),
   };
 }

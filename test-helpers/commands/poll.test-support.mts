@@ -23,7 +23,15 @@ function makeWaitResult(overrides: Partial<IterateResult> = {}): IterateResult {
     remainingSeconds: 0,
     summary: { passing: 2, failing: 0, inProgress: 1, skipped: 0, filtered: 0 },
     baseBranch: "main",
+    branchProtection: null,
     checks: [],
+    inProgressChecks: [],
+    activity: {
+      commitCount: 1,
+      reviewRoundCount: 0,
+      latestCommitCommittedAtUnix: 1_700_000_000,
+      reviewItemsSinceLatestCommit: [],
+    },
     log: "WAIT: 2 passing, 1 in-progress",
     ...overrides,
   } as unknown as IterateResult;
@@ -45,7 +53,15 @@ function makeCancelResult(): IterateResult {
     remainingSeconds: 0,
     summary: { passing: 3, failing: 0, inProgress: 0, skipped: 0, filtered: 0 },
     baseBranch: "main",
+    branchProtection: null,
     checks: [],
+    inProgressChecks: [],
+    activity: {
+      commitCount: 1,
+      reviewRoundCount: 0,
+      latestCommitCommittedAtUnix: 1_700_000_000,
+      reviewItemsSinceLatestCommit: [],
+    },
     reason: "merged",
     log: "CANCEL: PR #42 is merged — stopping",
   } as unknown as IterateResult;
@@ -67,7 +83,15 @@ function makeMarkReadyResult(): IterateResult {
     remainingSeconds: 0,
     summary: { passing: 3, failing: 0, inProgress: 0, skipped: 0, filtered: 0 },
     baseBranch: "main",
+    branchProtection: null,
     checks: [],
+    inProgressChecks: [],
+    activity: {
+      commitCount: 1,
+      reviewRoundCount: 0,
+      latestCommitCommittedAtUnix: 1_700_000_000,
+      reviewItemsSinceLatestCommit: [],
+    },
     markedReady: true,
     log: "MARKED READY: PR #42 converted from draft to ready for review",
   } as unknown as IterateResult;

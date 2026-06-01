@@ -48,6 +48,7 @@ export async function handlePoll(args: string[]): Promise<void> {
     noAutoCancelActionable: flags.noAutoCancelActionable,
     intervalSeconds,
     timeoutSeconds,
+    quietStatus: hasFlag(extra, "--quiet-status"),
   });
 
   emitIterateResult(result, {

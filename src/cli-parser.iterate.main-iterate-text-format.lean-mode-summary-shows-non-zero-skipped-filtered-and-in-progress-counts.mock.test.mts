@@ -46,6 +46,39 @@ describe("main — iterate text format", () => {
   it("formatIterateResult uses default options when called directly", () => {
     expect(formatIterateResult(makeIterateResult("wait"))).toContain("# PR #42 [WAIT]");
   });
+  it("lean mode: activity line shows review rounds, recent review items, and active checks", async () => {
+    const result = {
+      ...makeIterateResult("wait"),
+      inProgressChecks: [
+        { name: "CI", status: "IN_PROGRESS" as const, runId: "123", detailsUrl: null },
+      ],
+      activity: {
+        commitCount: 3,
+        reviewRoundCount: 2,
+        latestCommitCommittedAtUnix: 1_700_000_000,
+        reviewItemsSinceLatestCommit: [
+          {
+            kind: "review-thread-comment" as const,
+            id: "PRRC_1",
+            author: "reviewer",
+            authorType: "User" as const,
+            body: "Please adjust this.",
+            url: "https://example.test/comment",
+            createdAtUnix: 1_700_000_100,
+            threadId: "PRRT_1",
+            path: "src/index.ts",
+            line: 12,
+          },
+        ],
+      },
+    };
+    mockRunIterate.mockResolvedValue(result);
+    await main(["node", "shepherd", "iterate", "42"]);
+    const text = getStdout();
+    expect(text).toContain("**activity** 3 commits · 2 review rounds");
+    expect(text).toContain("1 review items since latest commit");
+    expect(text).toContain("active: `CI`");
+  });
   it("format parity (verbose): text output surfaces every scalar base field that JSON carries", async () => {
     const result = makeIterateResult("wait");
     mockRunIterate.mockResolvedValue(result);
@@ -69,6 +102,7 @@ describe("main — iterate text format", () => {
     expect(parsed.remainingSeconds).toBeUndefined();
     // checks omitted for wait action
     expect(parsed.checks).toBeUndefined();
+    expect(parsed.activity.commitCount).toBe(1);
   });
   it("json lean: summary omits zero counts", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("wait")); // skipped/filtered = 0

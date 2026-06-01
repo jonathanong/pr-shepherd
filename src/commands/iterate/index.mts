@@ -4,7 +4,13 @@ import { getCurrentPrNumber } from "../../github/client.mts";
 import { graphql } from "../../github/http.mts";
 import { MARK_PR_READY_MUTATION } from "../../github/queries.mts";
 import { loadConfig } from "../../config/load.mts";
-import { getCurrentHeadSha, buildSummary, buildRelevantChecks, buildWaitLog } from "./helpers.mts";
+import {
+  getCurrentHeadSha,
+  buildSummary,
+  buildRelevantChecks,
+  buildActiveChecks,
+  buildWaitLog,
+} from "./helpers.mts";
 import { classifyReviewSummaries } from "./classify.mts";
 import { applyStallGuard } from "./stall.mts";
 import { clearStallState } from "../../state/iterate-stall.mts";
@@ -55,6 +61,8 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       baseBranch: report.baseBranch,
       branchProtection: report.branchProtection,
       checks: buildRelevantChecks(report),
+      inProgressChecks: buildActiveChecks(report),
+      activity: report.activity,
       action: "cancel",
       reason: report.mergeStatus.state === "MERGED" ? "merged" : "closed",
       log: `CANCEL: PR #${report.pr} is ${state} — stopping`,
@@ -117,6 +125,8 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     baseBranch: report.baseBranch,
     branchProtection: report.branchProtection,
     checks: buildRelevantChecks(report),
+    inProgressChecks: buildActiveChecks(report),
+    activity: report.activity,
   };
 
   if (readyState.shouldCancel) {

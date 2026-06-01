@@ -7,6 +7,37 @@ import {
   numberInstructions,
 } from "./iterate-instructions.mts";
 
+function formatActivityLine(result: IterateResult): string | null {
+  const activity = result.activity ?? {
+    commitCount: 0,
+    reviewRoundCount: 0,
+    latestCommitCommittedAtUnix: null,
+    reviewItemsSinceLatestCommit: [],
+  };
+  const hasActiveChecks = (result.inProgressChecks?.length ?? 0) > 0;
+  if (
+    activity.commitCount === 0 &&
+    activity.reviewRoundCount === 0 &&
+    activity.reviewItemsSinceLatestCommit.length === 0 &&
+    !hasActiveChecks
+  ) {
+    return null;
+  }
+  const parts = [`${activity.commitCount} commits`, `${activity.reviewRoundCount} review rounds`];
+  if (activity.reviewItemsSinceLatestCommit.length > 0) {
+    parts.push(`${activity.reviewItemsSinceLatestCommit.length} review items since latest commit`);
+  }
+  if (hasActiveChecks) {
+    parts.push(
+      `active: ${result
+        .inProgressChecks!.slice(0, 5)
+        .map((c) => `\`${c.name}\``)
+        .join(", ")}`,
+    );
+  }
+  return `**activity** ${parts.join(" · ")}`;
+}
+
 /**
  * Format an IterateResult as human-readable Markdown.
  *
@@ -89,6 +120,8 @@ export function formatIterateResult(
 
   const headerLines = [heading, "", baseLine, summaryLine];
   if (requiredLine) headerLines.push(requiredLine);
+  const activityLine = formatActivityLine(result);
+  if (activityLine) headerLines.push(activityLine);
   const header = headerLines.join("\n");
 
   switch (result.action) {
@@ -109,6 +142,7 @@ export function formatIterateResult(
     case "cancel": {
       const cancelHeaderLines = [`${heading} — ${result.reason}`, "", baseLine, summaryLine];
       if (requiredLine) cancelHeaderLines.push(requiredLine);
+      if (activityLine) cancelHeaderLines.push(activityLine);
       return joinSections([
         cancelHeaderLines.join("\n"),
         adaptIterateLog(result.log),

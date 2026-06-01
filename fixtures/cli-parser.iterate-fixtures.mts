@@ -17,6 +17,13 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
     baseBranch: "main",
     branchProtection: null,
     checks: [] as RelevantCheck[],
+    inProgressChecks: [],
+    activity: {
+      commitCount: 1,
+      reviewRoundCount: 0,
+      latestCommitCommittedAtUnix: 1_700_000_000,
+      reviewItemsSinceLatestCommit: [],
+    },
   };
   if (action === "wait") return { ...base, action: "wait", log: "WAIT: 0 passing, 1 in-progress" };
   if (action === "mark_ready")
