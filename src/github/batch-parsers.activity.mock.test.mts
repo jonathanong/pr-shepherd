@@ -13,7 +13,7 @@ const mockGraphqlWithRateLimit = vi.mocked(graphqlWithRateLimit);
 
 const REPO = { owner: "owner", name: "repo" };
 
-function makeRawPr(overrides: Record<string, unknown> = {}) {
+function makeRawPr(overrides: Record<string, unknown>) {
   return {
     id: "PR_kgDOAAA",
     number: 42,
@@ -37,15 +37,11 @@ function makeRawPr(overrides: Record<string, unknown> = {}) {
     reviewSummaries: { pageInfo: { hasPreviousPage: false, startCursor: null }, nodes: [] },
     approvedReviews: { pageInfo: { hasPreviousPage: false, startCursor: null }, nodes: [] },
     allReviews: { totalCount: 0 },
-    commits: {
-      totalCount: 1,
-      nodes: [{ commit: { committedDate: "2024-01-01T00:00:00Z", statusCheckRollup: null } }],
-    },
     ...overrides,
   };
 }
 
-function makeResponse(pr: ReturnType<typeof makeRawPr> | null = makeRawPr()) {
+function makeResponse(pr: ReturnType<typeof makeRawPr> | null = makeRawPr({})) {
   return { data: { repository: { pullRequest: pr } } };
 }
 
@@ -112,6 +108,18 @@ describe("fetchPrBatch — PR activity", () => {
               },
             ],
           },
+          reviewSummaries: {
+            pageInfo: { hasPreviousPage: false, startCursor: null },
+            nodes: [
+              {
+                id: "PRR_1",
+                isMinimized: false,
+                author: { __typename: "Bot", login: "review-bot" },
+                body: "summary note",
+                createdAt: "2024-01-01T00:03:00Z",
+              },
+            ],
+          },
           commits: {
             totalCount: 3,
             nodes: [
@@ -134,6 +142,7 @@ describe("fetchPrBatch — PR activity", () => {
     expect(data.activity!.reviewItemsSinceLatestCommit.map((item) => item.id)).toEqual([
       "IC_new",
       "PRRC_1",
+      "PRR_1",
     ]);
   });
 });

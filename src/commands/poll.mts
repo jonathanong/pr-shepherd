@@ -46,10 +46,8 @@ function writeQuietStatus(
   result: IterateResult,
 ): void {
   const activeChecks = result.inProgressChecks ?? [];
-  const active =
-    activeChecks.length > 0
-      ? ` · active: ${activeChecks.map((c) => `${c.name} (${c.status})`).join(", ")}`
-      : "";
+  const activeCheckText = activeChecks.map((c) => `${c.name} (${c.status})`).join(", ");
+  const active = activeChecks.length > 0 ? ` · active: ${activeCheckText}` : "";
   const reviewItems = result.activity?.reviewItemsSinceLatestCommit.length ?? 0;
   const reviewSeg = reviewItems > 0 ? ` · ${reviewItems} review items since latest commit` : "";
   process.stderr.write(
