@@ -34,6 +34,7 @@
     "src/github/rest-http.mts": ["exports"],
     "src/log/log-file.mts": ["exports"],
     "src/reporters/agent.mts": ["exports"],
+    "src/classify/loader.mts": ["exports"],
     "src/state/seen-comments.mts": ["exports"],
     "src/types/iterate.mts": ["types"],
     "src/util/worktree.mts": ["exports"]

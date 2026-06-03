@@ -63,6 +63,8 @@ export interface ShepherdReport {
     autoResolveErrors: string[];
     /** First-look items — outdated/resolved/minimized threads not yet seen by the agent. */
     firstLook: FirstLookThread[];
+    /** Thread IDs matched by user classification rules with autoResolve:true — routed to resolveThreadIds. */
+    ruleAutoResolveIds?: string[];
   };
   comments: {
     actionable: ActionableComment[];
@@ -80,6 +82,8 @@ export interface ShepherdReport {
   editedSummaries: Review[];
   /** APPROVED reviews not yet minimized — opt-in minimize target. */
   approvedReviews: Review[];
+  /** COMMENTED review summary IDs matched by user rules with autoResolve:true — minimized without surfacing to agent. */
+  ruleAutoResolveReviewSummaryIds?: string[];
   /** Branch protection rule for the PR's base branch. Null when no rule exists or the base ref is unavailable. */
   branchProtection: import("./github.mts").BranchProtection | null;
   activity?: PrActivitySummary;
@@ -120,17 +124,9 @@ export interface AgentComment {
   edited?: boolean;
 }
 
-/**
- * Check shape emitted to the iterate agent under `fix_code`. Cancelled checks
+/** Check shape emitted to the iterate agent under `fix_code`. Cancelled checks
  * should be handled from `name`/`runId`/`detailsUrl`/`conclusion`; optional
- * workflow/job/step metadata may still be present when available.
- *
- * TODO(C1): Collapse AgentCheck into RelevantCheck — the only difference is that
- * AgentCheck allows a null conclusion while RelevantCheck excludes null. Once
- * toAgentCheck in reporters/agent.mts is confirmed to never receive a null conclusion
- * (i.e., all upstream TriagedCheck sources guard against it), remove AgentCheck and
- * replace all usages with RelevantCheck.
- */
+ * workflow/job/step metadata may still be present when available. */
 export interface AgentCheck {
   name: string;
   runId: string | null;

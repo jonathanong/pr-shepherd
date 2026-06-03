@@ -455,6 +455,32 @@ The block after the base-fields line (separated by a blank line) is `escalate.hu
 
 ---
 
+## Classification rules
+
+Drop `.ts`, `.mts`, `.mjs`, or `.js` files under `.pr-shepherd/classification/` to suppress bot-noise items and/or queue them for automatic resolution, without any agent involvement.
+
+Each file must have a default export matching:
+
+```ts
+import type { ClassifyRule } from "pr-shepherd/classify";
+export default function rule(item: ClassifyItem): ClassifyAction | null {}
+```
+
+The `ClassifyItem` union covers four kinds: `"review-thread"`, `"pr-comment"`, `"review-summary"`, and `"changes-requested"`. Each item carries `id`, `author`, `authorType`, `body`, and (for threads) `path`.
+
+`ClassifyAction` has two optional boolean flags:
+
+- `suppress: true` — hides the item from agent output; the seen marker is still written so the item does not re-surface as first-look on the next tick.
+- `autoResolve: true` — routes the item's ID into the resolve/minimize mutation: threads go to `--resolve-thread-ids`, PR comments and review summaries go to `--minimize-comment-ids`. Not supported for `"changes-requested"` items (dismissing a review requires an explicit message).
+
+Rules from multiple files combine permissively: `suppress` and `autoResolve` are OR'd across all matching rules for a given item.
+
+Files starting with `_` or `.` are ignored. The loader walks up from `cwd` looking for `.pr-shepherd/classification/`, stopping at the home directory — the same discovery logic as `.pr-shepherdrc.yml`. TypeScript rule files (`.ts` / `.mts`) are loaded via `tsx`; no separate transpilation step is needed.
+
+Example rules for common bot-noise patterns are in [`examples/classification/`](../examples/classification/).
+
+---
+
 ## Archived / no longer emitted
 
 ### `rerun_ci`
