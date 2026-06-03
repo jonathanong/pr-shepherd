@@ -12,6 +12,7 @@ vi.mock("./commands/commit-suggestion.mts", () => ({ runCommitSuggestion: vi.fn(
 vi.mock("./commands/mark-files-as-viewed.mts", () => ({ runMarkFilesAsViewed: vi.fn() }));
 vi.mock("./commands/clean.mts", () => ({ runClean: vi.fn() }));
 vi.mock("./commands/log-file.mts", () => ({ runLogFile: vi.fn() }));
+vi.mock("./commands/journal/index.mts", () => ({ runJournal: vi.fn() }));
 vi.mock("./github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
 }));
@@ -50,6 +51,7 @@ const SUBCOMMANDS = [
   "iterate",
   "poll",
   "clean",
+  "journal",
   "log-file",
 ] as const;
 
@@ -60,6 +62,7 @@ const HELP_EXPECTATIONS: Record<(typeof SUBCOMMANDS)[number], string[]> = {
   iterate: ["Actions:", "FIX_CODE", "--stall-timeout", "Exit codes:"],
   poll: ["Poll flags:", "--interval", "--timeout", "Forwarded iterate flags:"],
   clean: ["Variants:", "pr [number]", "branch [name]", "--dry-run"],
+  journal: ["Shepherd Journal", "--dry-run", "Exit code:"],
   "log-file": ["Environment:", "PR_SHEPHERD_LOG_DISABLED", "PR_SHEPHERD_STATE_DIR"],
 };
 

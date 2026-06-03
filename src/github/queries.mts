@@ -30,3 +30,9 @@ export const PR_NUMBER_BY_BRANCH_QUERY = gql("pr-number-by-branch.gql");
 
 /** Convert a draft PR to ready for review. */
 export const MARK_PR_READY_MUTATION = gql("mark-pr-ready.gql");
+
+/** Fetch the PR body and node ID. */
+export const GET_PR_BODY_QUERY = gql("get-pr-body.gql");
+
+/** Update the PR body. */
+export const UPDATE_PR_BODY_MUTATION = gql("update-pr-body.gql");

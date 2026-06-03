@@ -161,6 +161,25 @@ Flags:
 
 Exit code: 0 on success; 1 on validation or cleanup failure.`,
 
+  journal: `pr-shepherd journal
+
+Append a list item to the ## Shepherd Journal section of a PR body.
+Creates the section at the end if absent. Idempotent — duplicate items are skipped.
+
+Usage:
+  pr-shepherd journal [PR] <item> [--dry-run] [--format text|json]
+
+  PR     PR number or GitHub pull request URL. Defaults to current branch PR.
+  item   Markdown list item: must start with "- " followed by non-whitespace text.
+         Example: '- Rejected suggestion: kept existing pattern for consistency.'
+
+Flags:
+  --dry-run            Preview the new PR body without writing it to GitHub.
+  --format text|json   Output format. Default: text.
+  --help, -h           Print this help and exit before any GitHub I/O.
+
+Exit code: 0 on success (including no-change no-op); 1 on validation, lookup, or mutation failure.`,
+
   "log-file": `pr-shepherd log-file
 
 Print the per-worktree append-only debug log path for the current repository.

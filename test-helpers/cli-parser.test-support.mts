@@ -14,6 +14,9 @@ vi.mock("../src/commands/commit-suggestion.mts", () => ({
 vi.mock("../src/commands/mark-files-as-viewed.mts", () => ({
   runMarkFilesAsViewed: vi.fn(),
 }));
+vi.mock("../src/commands/journal/index.mts", () => ({
+  runJournal: vi.fn(),
+}));
 vi.mock("../src/commands/iterate/index.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../src/commands/iterate/index.mts")>();
   return { ...actual, runIterate: vi.fn() };

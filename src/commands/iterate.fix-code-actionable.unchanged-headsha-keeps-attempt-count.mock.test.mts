@@ -96,9 +96,8 @@ describe("runIterate — fix_code (actionable threads)", () => {
       const journalMentions = joined.match(/## Shepherd Journal/g)?.length ?? 0;
       expect(joined).toContain("Shepherd Journal");
       expect(journalMentions).toBe(1);
-      expect(joined).toContain(
-        "If this section already exists, append your entries under it instead of creating a duplicate heading.",
-      );
+      expect(joined).toContain("pr-shepherd journal");
+      expect(joined).toContain("idempotent");
     }
   });
 });

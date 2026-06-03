@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import {
-  SHEPHERD_JOURNAL_APPEND_HINT,
   SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE,
   SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEMS,
   SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
@@ -60,7 +59,8 @@ describe("shepherd journal instruction helpers", () => {
     const text = instructions.join("\n");
     expect(text).toContain(SHEPHERD_JOURNAL_SECTION);
     expect(text).toContain(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
-    expect(text).toContain(SHEPHERD_JOURNAL_APPEND_HINT);
+    expect(text).toContain("pr-shepherd journal 42");
+    expect(text).toContain("idempotent");
     expect(text).toContain(
       SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
     );

@@ -1,26 +1,4 @@
-/**
- * CLI argument parsing and subcommand dispatch for pr-shepherd.
- *
- * Usage:
- *   pr-shepherd --version
- *   pr-shepherd [PR] [--interval 45s] [--timeout 4m] [--format text|json] [--ready-delay Nm]
- *                  [--stall-timeout <duration>] [--no-auto-mark-ready]
- *                  [--no-auto-cancel-actionable]
- *   pr-shepherd resolve [PR] [--resolve-thread-ids A,B] [--minimize-comment-ids X,Y]
- *                            [--reply-thread-ids A,B] [--dismiss-review-ids Q]
- *                            [--message MSG] [--require-sha SHA]
- *   pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [--description DESC]
- *                                      [--format text|json]
- *   pr-shepherd mark-files-as-viewed [PR] [files...] [--tests] [--match REGEX]
- *                                           [--format text|json]
- *   pr-shepherd iterate [PR] [--format text|json] [--ready-delay Nm]
- *                              [--stall-timeout <duration>] [--no-auto-mark-ready]
- *                              [--no-auto-cancel-actionable]
- *   pr-shepherd poll [PR] [--interval 30s] [--timeout 5m] [--format text|json] [--ready-delay Nm]
- *                         [--stall-timeout <duration>] [--no-auto-mark-ready]
- *                         [--no-auto-cancel-actionable]
- *   pr-shepherd clean <pr|branch|current|repo|all> [value] [--dry-run] [--format text|json]
- */
+/** CLI argument parsing and subcommand dispatch for pr-shepherd. See --help for usage. */
 
 import { readFileSync } from "node:fs";
 
@@ -36,6 +14,7 @@ import {
   handleIterate,
   handleMarkFilesAsViewed,
 } from "./cli/handlers.mts";
+import { handleJournal } from "./cli/journal-handler.mts";
 import { handlePoll } from "./cli/poll-handler.mts";
 import {
   warnPrrcThreadIds,
@@ -110,6 +89,9 @@ export async function main(argv: string[]): Promise<void> {
       break;
     case "clean":
       await handleClean(args.slice(1));
+      break;
+    case "journal":
+      await handleJournal(args.slice(1));
       break;
     default:
       process.stderr.write(`Unknown subcommand: ${subcommand ?? "(none)"}\n`);

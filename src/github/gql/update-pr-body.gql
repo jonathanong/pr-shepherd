@@ -1,0 +1,7 @@
+mutation UpdatePrBody($pullRequestId: ID!, $body: String!) {
+  updatePullRequest(input: { pullRequestId: $pullRequestId, body: $body }) {
+    pullRequest {
+      id
+    }
+  }
+}

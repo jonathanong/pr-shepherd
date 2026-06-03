@@ -11,6 +11,7 @@ Usage:
   pr-shepherd resolve [PR] [resolve-flags]
   pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [flags]
   pr-shepherd mark-files-as-viewed [PR] [files...] [--tests] [--match REGEX]
+  pr-shepherd journal [PR] <item> [--dry-run] [--format text|json]
   pr-shepherd clean <pr|branch|current|repo|all> [value] [flags]
   pr-shepherd log-file [--format text|json]
 
@@ -21,6 +22,7 @@ Commands:
   resolve              Apply review-state mutations (requires at least one action flag).
   commit-suggestion    Convert one GitHub suggestion thread into a patch and commit instructions.
   mark-files-as-viewed Mark PR changed files as viewed in GitHub.
+  journal              Append a list item to the ## Shepherd Journal section of a PR body.
   clean                Remove pr-shepherd state files.
   log-file             Print the per-worktree debug log path.
 
