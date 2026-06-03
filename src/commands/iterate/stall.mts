@@ -22,9 +22,11 @@ function computeStallFingerprint(
   ].sort();
   const threads = report.threads.actionable.map((t) => t.id).sort();
   const resolutionOnlyThreads = report.threads.resolutionOnly.map((t) => t.id).sort();
+  const ruleAutoResolveThreads = (report.threads.ruleAutoResolveIds ?? []).sort();
   const comments = report.comments.actionable.map((c) => c.id).sort();
   const reviews = report.changesRequestedReviews.map((r) => r.id).sort();
   const summaries = [...reviewSummaryIds].sort();
+  const ruleAutoResolveSummaries = (report.ruleAutoResolveReviewSummaryIds ?? []).sort();
   return JSON.stringify({
     action,
     headSha,
@@ -35,9 +37,11 @@ function computeStallFingerprint(
     checks,
     threads,
     resolutionOnlyThreads,
+    ruleAutoResolveThreads,
     comments,
     reviews,
     summaries,
+    ruleAutoResolveSummaries,
   });
 }
 
