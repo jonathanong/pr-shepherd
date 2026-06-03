@@ -168,6 +168,8 @@ After adding the marketplace, install/enable the `pr-shepherd` plugin from Codex
 Create `.pr-shepherdrc.yml` in your project root or an ancestor directory.
 
 ```yaml
+ignoreChecks:
+  - "Kilo Code Review"
 iterate:
   fixAttemptsPerThread: 5
   stallTimeoutMinutes: 60

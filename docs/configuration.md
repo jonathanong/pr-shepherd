@@ -12,6 +12,10 @@ botUsernames:
   - claude
   - coderabbitai
 
+ignoreChecks:
+  - "Kilo Code Review"
+  - "Kilo*"
+
 iterate:
   fixAttemptsPerThread: 5 # raise before escalating to manual review
   stallTimeoutMinutes: 60 # escalate if state unchanged or CI has not started for this many minutes
@@ -49,6 +53,7 @@ actions:
 | Key                                  | Default                                   | Purpose                                                                                                                                                     |
 | ------------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `botUsernames`                       | Known code-review bot logins              | GitHub logins treated as bots for repeat unresolved-thread visibility even when GitHub reports them as `User` or `Unknown`                                  |
+| `ignoreChecks`                       | `[]`                                      | Case-insensitive glob patterns for check/status context names Shepherd should ignore completely                                                             |
 | `iterate.fixAttemptsPerThread`       | `3`                                       | Max fix attempts per surfaced unresolved thread body before `escalate`                                                                                      |
 | `iterate.stallTimeoutMinutes`        | `60`                                      | Minutes the loop may repeat the same action without progress, or CI may stay pending without starting, before `escalate` with `stall-timeout`; `0` disables |
 | `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination).                                                                      |
@@ -69,6 +74,20 @@ Top-level list of GitHub logins that Shepherd treats as bot authors in addition 
 Configured bot threads are returned on every tick until resolved, even if their transcript is unchanged and already seen. Configured bot comments and reviews also follow bot minimization/routing policy when eligible. Human-authored active threads remain marker-gated so Shepherd does not repeatedly return unresolved human comments it cannot resolve automatically.
 
 Matching is case-insensitive and treats a trailing `[bot]` suffix as equivalent to the bare login.
+
+## `ignoreChecks`
+
+Top-level list of case-insensitive glob patterns for GitHub check/status context names Shepherd should ignore completely. Ignored checks are removed before CI classification, so they do not affect readiness, summaries, triage, stall detection, JSON output, or text output.
+
+Use exact names for one context, or glob patterns when a service emits multiple related contexts:
+
+```yaml
+ignoreChecks:
+  - "Kilo Code Review"
+  - "Preview Deploy *"
+```
+
+The pattern is matched against Shepherd's normalized check name (`CheckRun.name` or `StatusContext.context`), not the workflow display name.
 
 ## `iterate`
 

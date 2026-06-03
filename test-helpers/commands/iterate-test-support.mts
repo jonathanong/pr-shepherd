@@ -135,6 +135,8 @@ function makeReview(id: string, author: string, body: string): Review {
 
 function defaultConfig() {
   return {
+    botUsernames: ["coderabbitai"],
+    ignoreChecks: [],
     iterate: {
       fixAttemptsPerThread: 3,
       stallTimeoutMinutes: 60,

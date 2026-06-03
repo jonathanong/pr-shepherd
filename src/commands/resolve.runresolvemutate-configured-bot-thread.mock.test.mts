@@ -17,6 +17,7 @@ describe("runResolveMutate — configured bot threads", () => {
   it("treats configured bot thread authors as non-human for mutations", async () => {
     mockLoadConfig.mockReturnValue({
       botUsernames: ["coderabbitai"],
+      ignoreChecks: [],
       resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 } },
       actions: { autoResolveOutdated: true, autoMarkReady: true, commitSuggestions: true },
       iterate: {

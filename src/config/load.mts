@@ -11,6 +11,8 @@ export type MinimizeCommentsPolicy = (typeof MINIMIZE_COMMENTS_POLICIES)[number]
 interface PrShepherdConfig {
   /** GitHub logins that should be treated as bots even when GitHub reports User/Unknown. */
   botUsernames: string[];
+  /** Case-insensitive glob patterns for check/status context names Shepherd should ignore. */
+  ignoreChecks: string[];
   iterate: {
     fixAttemptsPerThread: number;
     stallTimeoutMinutes: number;
@@ -109,6 +111,13 @@ function parseBotUsernames(value: unknown): string[] {
   return value;
 }
 
+function parseIgnoreChecks(value: unknown): string[] {
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
+    throw new Error(`Invalid config: ignoreChecks must be an array of strings`);
+  }
+  return value;
+}
+
 const defaults = builtins as PrShepherdConfig;
 
 const configCache = new Map<string, PrShepherdConfig>();
@@ -131,6 +140,7 @@ export function loadConfig(): PrShepherdConfig {
       parsed,
     ) as unknown as PrShepherdConfig;
     config.botUsernames = parseBotUsernames(config.botUsernames);
+    config.ignoreChecks = parseIgnoreChecks(config.ignoreChecks);
     config.iterate.minimizeComments = parseMinimizeCommentsPolicy(config.iterate.minimizeComments);
     configCache.set(cwd, config);
     return config;

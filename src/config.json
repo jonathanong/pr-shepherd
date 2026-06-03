@@ -13,6 +13,7 @@
     "sonarqubecloud",
     "what-the-diff"
   ],
+  "ignoreChecks": [],
   "iterate": {
     "fixAttemptsPerThread": 3,
     "stallTimeoutMinutes": 60,
