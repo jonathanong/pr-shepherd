@@ -1,12 +1,9 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
+vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
+
 import { classifyChecks, getCiVerdict } from "./classify.mts";
-import { _resetConfigCache } from "../config/load.mts";
-import {
-  makeTempConfigDir,
-  removeTempConfigDir,
-  stringListYaml,
-  writeRcFile,
-} from "../../test-helpers/config/temp-rc.test-support.mts";
 import type { CheckRun } from "../types.mts";
 
 function makeCheck(overrides: Partial<CheckRun>): CheckRun {
@@ -21,26 +18,17 @@ function makeCheck(overrides: Partial<CheckRun>): CheckRun {
   };
 }
 
-const originalCwd = process.cwd();
-let tempCwd: string | null = null;
-
-function withIgnoreChecks(patterns: string[]): void {
-  tempCwd = makeTempConfigDir("shepherd-ignore-checks-test-");
-  writeRcFile(tempCwd, stringListYaml("ignoreChecks", patterns));
-  process.chdir(tempCwd);
-  _resetConfigCache();
+function config(ignoreChecks: string[] = []) {
+  return { ignoreChecks, checks: { ciTriggerEvents: ["pull_request", "pull_request_target"] } };
 }
 
-afterEach(() => {
-  process.chdir(originalCwd);
-  _resetConfigCache();
-  removeTempConfigDir(tempCwd);
-  tempCwd = null;
+beforeEach(() => {
+  mockLoadConfig.mockReturnValue(config());
 });
 
 describe("classifyChecks — ignoreChecks", () => {
   it("drops an exact ignored check name before classification", () => {
-    withIgnoreChecks(["Kilo Code Review"]);
+    mockLoadConfig.mockReturnValue(config(["Kilo Code Review"]));
     const classified = classifyChecks([
       makeCheck({ name: "Kilo Code Review", conclusion: "FAILURE" }),
       makeCheck({ name: "tests", conclusion: "SUCCESS" }),
@@ -49,7 +37,7 @@ describe("classifyChecks — ignoreChecks", () => {
   });
 
   it("matches ignoreChecks as case-insensitive globs", () => {
-    withIgnoreChecks(["kilo*"]);
+    mockLoadConfig.mockReturnValue(config(["kilo*"]));
     const classified = classifyChecks([
       makeCheck({ name: "Kilo Code Review", conclusion: "FAILURE" }),
       makeCheck({ name: "tests", conclusion: "SUCCESS" }),
@@ -58,7 +46,7 @@ describe("classifyChecks — ignoreChecks", () => {
   });
 
   it("keeps ignored checks out of the verdict", () => {
-    withIgnoreChecks(["Kilo*"]);
+    mockLoadConfig.mockReturnValue(config(["Kilo*"]));
     const classified = classifyChecks([
       makeCheck({ name: "Kilo Code Review", conclusion: "FAILURE" }),
       makeCheck({ name: "tests", conclusion: "SUCCESS" }),
