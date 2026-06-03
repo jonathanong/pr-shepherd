@@ -28,10 +28,6 @@ async function freshLoadConfig() {
   return mod.loadConfig;
 }
 
-// ---------------------------------------------------------------------------
-// No rc file / empty rc
-// ---------------------------------------------------------------------------
-
 describe("loadConfig — no rc file", () => {
   it("returns built-in defaults when no rc file exists in the tree", async () => {
     const loadConfig = await freshLoadConfig();
@@ -41,6 +37,7 @@ describe("loadConfig — no rc file", () => {
     expect(result.checks.ciTriggerEvents).toEqual(["pull_request", "pull_request_target"]);
     expect(result.botUsernames).toContain("coderabbitai");
     expect(result.botUsernames).toContain("greptile-apps");
+    expect(result.ignoreChecks).toEqual([]);
   });
 
   it("defaults iterate.minimizeApprovals to false", async () => {
@@ -76,6 +73,12 @@ describe("loadConfig — no rc file", () => {
     expect(result.botUsernames).toEqual(["custom-reviewer"]);
   });
 
+  it("overrides top-level ignoreChecks when set in rc file", async () => {
+    writeFileSync(join(tmpDir, RC), 'ignoreChecks:\n  - "Kilo Code Review"\n  - "Kilo*"\n');
+    const loadConfig = await freshLoadConfig();
+    expect(loadConfig().ignoreChecks).toEqual(["Kilo Code Review", "Kilo*"]);
+  });
+
   it("rejects invalid botUsernames values and falls back to defaults", async () => {
     writeFileSync(join(tmpDir, RC), "botUsernames: custom-reviewer\n");
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
@@ -84,6 +87,15 @@ describe("loadConfig — no rc file", () => {
     expect(result.botUsernames).toContain("coderabbitai");
     const output = stderrSpy.mock.calls.map((c) => c[0]).join("");
     expect(output).toContain("botUsernames");
+  });
+
+  it("rejects invalid ignoreChecks values and falls back to defaults", async () => {
+    writeFileSync(join(tmpDir, RC), "ignoreChecks:\n  - Kilo Code Review\n  - false\n");
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const loadConfig = await freshLoadConfig();
+    expect(loadConfig().ignoreChecks).toEqual([]);
+    const output = stderrSpy.mock.calls.map((c) => c[0]).join("");
+    expect(output).toContain("ignoreChecks");
   });
 
   it("rejects invalid iterate.minimizeComments values and falls back to defaults", async () => {
@@ -104,10 +116,6 @@ describe("loadConfig — no rc file", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// deepMerge — partial overrides preserve nested defaults
-// ---------------------------------------------------------------------------
-
 describe("loadConfig — deep merge", () => {
   it("overrides a single leaf while keeping sibling defaults", async () => {
     writeFileSync(join(tmpDir, RC), "resolve:\n  shaPoll:\n    maxAttempts: 20\n");
@@ -126,10 +134,6 @@ describe("loadConfig — deep merge", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Malformed YAML
-// ---------------------------------------------------------------------------
-
 describe("loadConfig — malformed YAML", () => {
   it("returns defaults and writes a 'failed to parse' stderr warning", async () => {
     writeFileSync(join(tmpDir, RC), ":\ninvalid: [\n");
@@ -142,10 +146,6 @@ describe("loadConfig — malformed YAML", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// findRcFile directory walk
-// ---------------------------------------------------------------------------
-
 describe("loadConfig — findRcFile", () => {
   it("finds rc file in a parent directory when cwd is a nested subdir", async () => {
     writeFileSync(join(tmpDir, RC), "iterate:\n  fixAttemptsPerThread: 50\n");
@@ -157,10 +157,6 @@ describe("loadConfig — findRcFile", () => {
     expect(result.iterate.fixAttemptsPerThread).toBe(50);
   });
 });
-
-// ---------------------------------------------------------------------------
-// Caching
-// ---------------------------------------------------------------------------
 
 describe("loadConfig — caching", () => {
   it("returns the same object reference on repeated calls (no re-parse)", async () => {

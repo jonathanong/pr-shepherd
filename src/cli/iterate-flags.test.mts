@@ -11,6 +11,7 @@ type PrShepherdConfig = ReturnType<typeof loadConfig>;
 function defaultConfig(): PrShepherdConfig {
   return {
     botUsernames: [],
+    ignoreChecks: [],
     watch: { readyDelayMinutes: 10 },
     iterate: {
       fixAttemptsPerThread: 3,

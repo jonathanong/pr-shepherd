@@ -58,6 +58,7 @@ const BASE_OPTS = { format: "text" as const };
 function defaultConfig() {
   return {
     botUsernames: ["coderabbitai"],
+    ignoreChecks: [],
     iterate: {
       fixAttemptsPerThread: 3,
       stallTimeoutMinutes: 60,

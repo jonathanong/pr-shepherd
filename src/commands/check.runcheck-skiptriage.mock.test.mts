@@ -5,7 +5,9 @@ import {
   makeBatchData,
   makeCheck,
   mockFetchPrBatch,
+  mockLoadConfig,
   mockTriageFailingChecks,
+  defaultConfig,
 } from "../../test-helpers/commands/check.test-support.mts";
 import { runCheck } from "./check.mts";
 
@@ -28,5 +30,18 @@ describe("runCheck — skipTriage", () => {
     });
     await runCheck(BASE_OPTS);
     expect(mockTriageFailingChecks).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not triage checks matched by ignoreChecks", async () => {
+    mockLoadConfig.mockReturnValue({ ...defaultConfig(), ignoreChecks: ["kilo*"] });
+    const ignoredCheck = makeCheck({ name: "Kilo Code Review", conclusion: "FAILURE" });
+    const passingCheck = makeCheck({ name: "tests", conclusion: "SUCCESS" });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ checks: [ignoredCheck, passingCheck] }),
+    });
+    const report = await runCheck(BASE_OPTS);
+    expect(report.checks.failing).toEqual([]);
+    expect(report.checks.passing.map((c) => c.name)).toEqual(["tests"]);
+    expect(mockTriageFailingChecks).not.toHaveBeenCalled();
   });
 });

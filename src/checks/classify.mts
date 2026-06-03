@@ -11,6 +11,7 @@
 
 import type { CheckRun, ClassifiedCheck } from "../types.mts";
 import { loadConfig } from "../config/load.mts";
+import picomatch from "picomatch";
 
 /**
  * Classify a list of raw check runs into shepherd categories.
@@ -19,8 +20,15 @@ import { loadConfig } from "../config/load.mts";
  * @returns Classified checks. "filtered" items were excluded from the tally.
  */
 export function classifyChecks(checks: CheckRun[]): ClassifiedCheck[] {
-  const relevantEvents = new Set(loadConfig().checks.ciTriggerEvents);
-  return checks.map((c) => classify(c, relevantEvents));
+  const config = loadConfig();
+  const relevantEvents = new Set(config.checks.ciTriggerEvents);
+  const isIgnored = buildIgnoreMatcher(config.ignoreChecks ?? []);
+  return checks.filter((c) => !isIgnored(c.name)).map((c) => classify(c, relevantEvents));
+}
+
+function buildIgnoreMatcher(patterns: string[]): (name: string) => boolean {
+  if (patterns.length === 0) return () => false;
+  return picomatch(patterns, { nocase: true });
 }
 
 function classify(check: CheckRun, relevantEvents: Set<string>): ClassifiedCheck {
