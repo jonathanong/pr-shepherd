@@ -32,6 +32,7 @@ export function classifyReviewSummaries(
   minimizeComments: MinimizeCommentsPolicy | undefined = "all",
   botUsernames: NormalizedBotUsernames = new Set(),
   unresolvedThreads: ReviewThread[] = [],
+  ruleAutoResolveIds: string[] = [],
 ): {
   minimizeIds: string[];
   firstLookSummaries: Review[];
@@ -48,6 +49,10 @@ export function classifyReviewSummaries(
     .filter((r) => shouldMinimizeAuthor(r.authorType, minimizeComments, r.author, botUsernames))
     .filter((r) => !blockedReviewIds.has(r.id))
     .map((r) => r.id);
+  // Rule-matched summaries are already suppressed from agent output; bypass normal policy gates.
+  for (const id of ruleAutoResolveIds) {
+    if (!minimizeIds.includes(id)) minimizeIds.push(id);
+  }
   if (minimizeApprovals) {
     const surfacedApprovals: Review[] = [];
     for (const r of approvals) {
@@ -78,6 +83,7 @@ export function buildResolveCommand(
   checks: AgentCheck[],
   prNumber: number,
   botUsernames: NormalizedBotUsernames = new Set(),
+  ruleAutoResolveThreadIds: string[] = [],
 ): { resolveCommand: ResolveCommand; resolveOnlyCommand?: ResolveCommand } {
   const allThreads = [...threads, ...resolutionOnlyThreads];
   const replyThreadIds = dedupeIds(
@@ -85,11 +91,13 @@ export function buildResolveCommand(
       .filter((t) => isHumanAuthor(t) && !isConfiguredBotAuthor(t, botUsernames))
       .map((t) => t.id),
   );
-  const resolveThreadIds = dedupeIds(
-    allThreads
+  // Rule-matched threads bypass the author check (human-author guard still applies in resolve-mutate).
+  const resolveThreadIds = dedupeIds([
+    ...allThreads
       .filter((t) => !isHumanAuthor(t) || isConfiguredBotAuthor(t, botUsernames))
       .map((t) => t.id),
-  );
+    ...ruleAutoResolveThreadIds,
+  ]);
 
   const hasReply = replyThreadIds.length > 0;
   const hasResolveOrMinimize = resolveThreadIds.length > 0 || allCommentIds.length > 0;

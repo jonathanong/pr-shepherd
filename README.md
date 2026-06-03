@@ -190,6 +190,26 @@ Environment variables:
 
 See [docs/configuration.md](docs/configuration.md) for the full reference.
 
+### Classification rules
+
+Drop `.ts` / `.mts` / `.mjs` / `.js` files under `.pr-shepherd/classification/` to suppress and/or auto-resolve specific bot comments — useful for silencing repetitive noise like rate-limit notices from `gemini-code-assist` or "Reviews paused" from `coderabbitai`.
+
+```ts
+// .pr-shepherd/classification/gemini-quota.mts
+import type { ClassifyRule } from "pr-shepherd/classify";
+
+const rule: ClassifyRule = (item) => {
+  if (item.author !== "gemini-code-assist") return null;
+  if (!/You have reached your daily quota limit/i.test(item.body)) return null;
+  return { suppress: true, autoResolve: true };
+};
+export default rule;
+```
+
+`suppress: true` hides the item from agent output. `autoResolve: true` queues it for the minimize/resolve mutation. Both can apply together.
+
+Ready-to-use examples for common patterns are in [`examples/classification/`](examples/classification/).
+
 ## Requirements
 
 - Node.js >= 22.0.0

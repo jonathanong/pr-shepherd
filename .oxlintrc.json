@@ -9,7 +9,9 @@
     {
       "files": [
         "test-helpers/commands/iterate-test-support.mts",
-        "test-helpers/test-cases/harness.mts"
+        "test-helpers/test-cases/harness.mts",
+        "src/commands/check.mts",
+        "src/classify/apply.test.mts"
       ],
       "rules": {
         "max-lines": "off"

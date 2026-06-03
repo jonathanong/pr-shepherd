@@ -10,6 +10,7 @@
   },
   "files": [
     "bin/**",
+    "src/classify/types.mts",
     "plugins/**",
     "plugins/**/.codex-plugin/**",
     ".claude-plugin/**",
@@ -22,7 +23,14 @@
     "node": ">=22.0.0"
   },
   "dependencies": {
+    "tsx": "^4.22.4",
     "yaml": "^2.7.0"
+  },
+  "exports": {
+    "./classify": {
+      "types": "./src/classify/types.mts",
+      "default": "./bin/classify/types.mjs"
+    }
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

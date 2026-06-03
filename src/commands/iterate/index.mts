@@ -85,11 +85,13 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     config.iterate.minimizeComments,
     botUsernames,
     [...report.threads.actionable, ...report.threads.resolutionOnly],
+    report.ruleAutoResolveReviewSummaryIds,
   );
   const hasActionableWork =
     report.threads.actionable.length > 0 ||
     report.threads.resolutionOnly.length > 0 ||
     report.threads.firstLook.length > 0 ||
+    (report.threads.ruleAutoResolveIds?.length ?? 0) > 0 ||
     report.comments.actionable.length > 0 ||
     (report.comments.minimizeIds?.length ?? 0) > 0 ||
     report.comments.firstLook.length > 0 ||
@@ -162,6 +164,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       editedSummaries,
       surfacedApprovals,
       botUsernames,
+      ruleAutoResolveThreadIds: report.threads.ruleAutoResolveIds,
     });
   }
 

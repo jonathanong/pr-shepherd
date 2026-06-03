@@ -20,6 +20,8 @@ import { classifyThreadVisibility } from "../comments/thread-visibility.mts";
 import { classifyReviewsForDisplay } from "../comments/review-visibility.mts";
 import { markReviewInlineThreadMarkers } from "../comments/review-thread-markers.mts";
 import { normalizeBotUsernames } from "../comments/authors.mts";
+import { discoverRuleFiles, loadRules } from "../classify/loader.mts";
+import { buildClassifyIndex, partitionBatch } from "../classify/apply.mts";
 import type {
   GlobalOptions,
   ShepherdReport,
@@ -64,15 +66,24 @@ export async function runCheck(
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
   const seenMap = await loadSeenMap(stateKey);
   const botUsernames = normalizeBotUsernames(config.botUsernames);
+  const ruleSet = await loadRules(discoverRuleFiles(process.cwd()));
+  const classifyIndex = buildClassifyIndex(ruleSet, batchData);
+  const partition = partitionBatch(classifyIndex, batchData);
   const triaged = await attachUnseenCheckAnnotations(triagedBase, seenMap, prNumber);
-  const minimizedCommentCandidates = batchData.comments.filter((c) => c.isMinimized);
+  const minimizedCommentCandidates = batchData.comments.filter(
+    (c) => c.isMinimized && !partition.suppressedCommentIds.has(c.id),
+  );
   const visibleCommentClassification = classifyVisibleComments(
-    batchData.comments,
+    batchData.comments.filter((c) => !partition.suppressedCommentIds.has(c.id)),
     seenMap,
     config.iterate.minimizeComments,
     botUsernames,
   );
-  const threadVisibility = classifyThreadVisibility(batchData.reviewThreads, seenMap, botUsernames);
+  const threadVisibility = classifyThreadVisibility(
+    batchData.reviewThreads.filter((t) => !partition.suppressedThreadIds.has(t.id)),
+    seenMap,
+    botUsernames,
+  );
   const firstLookComments: FirstLookComment[] = minimizedCommentCandidates.flatMap((c) => {
     const cls = classifyItem(c.id, c.body, seenMap);
     if (cls === "unchanged") return [];
@@ -82,14 +93,19 @@ export async function runCheck(
   const firstLookSummaries: typeof batchData.reviewSummaries = [];
   const editedSummaries: typeof batchData.reviewSummaries = [];
   const seenSummaries: typeof batchData.reviewSummaries = [];
-  for (const r of batchData.reviewSummaries) {
+  const unseenReviewSummaries = batchData.reviewSummaries.filter(
+    (r) => !partition.suppressedReviewSummaryIds.has(r.id),
+  );
+  for (const r of unseenReviewSummaries) {
     const cls = classifyItem(r.id, r.body, seenMap);
     if (cls === "new") firstLookSummaries.push(r);
     else if (cls === "edited") editedSummaries.push(r);
     else seenSummaries.push(r);
   }
   const changesRequestedReviewVisibility = classifyReviewsForDisplay(
-    batchData.changesRequestedReviews,
+    batchData.changesRequestedReviews.filter(
+      (r) => !partition.suppressedChangesRequestedIds.has(r.id),
+    ),
     seenMap,
   );
   const approvedReviewVisibility = classifyReviewsForDisplay(batchData.approvedReviews, seenMap);
@@ -100,10 +116,24 @@ export async function runCheck(
     ...[...firstLookSummaries, ...editedSummaries].map((r) => markSeen(stateKey, r.id, r.body)),
     ...changesRequestedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
     ...approvedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
+    ...batchData.comments
+      .filter((c) => partition.suppressedCommentIds.has(c.id))
+      .map((c) => markSeen(stateKey, c.id, c.body)),
+    ...batchData.reviewThreads
+      .filter((t) => partition.suppressedThreadIds.has(t.id))
+      .map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
+    ...batchData.reviewSummaries
+      .filter((r) => partition.suppressedReviewSummaryIds.has(r.id))
+      .map((r) => markSeen(stateKey, r.id, r.body)),
+    ...batchData.changesRequestedReviews
+      .filter((r) => partition.suppressedChangesRequestedIds.has(r.id))
+      .map((r) => markSeen(stateKey, r.id, r.body)),
   ]);
   await markReviewInlineThreadMarkers(stateKey, batchData.reviewThreads);
   const changesRequestedReviews = changesRequestedReviewVisibility.visible;
-  const changesRequestedReviewCount = batchData.changesRequestedReviews.length;
+  const changesRequestedReviewCount = batchData.changesRequestedReviews.filter(
+    (r) => !partition.suppressedChangesRequestedIds.has(r.id),
+  ).length;
   const approvedReviews = approvedReviewVisibility.visible;
   let status = computeStatus(
     verdict,
@@ -121,6 +151,7 @@ export async function runCheck(
       verdict,
       threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
       visibleCommentClassification.actionable.length,
+      changesRequestedReviewCount,
     );
     batchData = refreshed.batchData;
     mergeStatus = refreshed.mergeStatus;
@@ -149,10 +180,16 @@ export async function runCheck(
       autoResolved: [],
       autoResolveErrors: [],
       firstLook: threadVisibility.firstLookThreads,
+      ...(partition.ruleAutoResolveThreadIds.length > 0
+        ? { ruleAutoResolveIds: partition.ruleAutoResolveThreadIds }
+        : undefined),
     },
     comments: {
       actionable: visibleCommentClassification.actionable,
-      minimizeIds: visibleCommentClassification.minimizeIds,
+      minimizeIds: [
+        ...visibleCommentClassification.minimizeIds,
+        ...partition.ruleAutoResolveCommentIds,
+      ],
       firstLook: firstLookComments,
     },
     changesRequestedReviews,
@@ -160,6 +197,9 @@ export async function runCheck(
     firstLookSummaries,
     editedSummaries,
     approvedReviews,
+    ...(partition.ruleAutoResolveReviewSummaryIds.length > 0
+      ? { ruleAutoResolveReviewSummaryIds: partition.ruleAutoResolveReviewSummaryIds }
+      : undefined),
     branchProtection: batchData.branchProtection,
     activity: batchData.activity,
   };

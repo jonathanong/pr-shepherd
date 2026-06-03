@@ -32,6 +32,7 @@ export async function refreshReadyMergeability(
   verdict: CiVerdict,
   unresolvedThreads: number,
   unresolvedComments: number,
+  changesRequestedCount: number,
 ): Promise<ReadyMergeabilityRefresh> {
   const refreshedBatchData = await readMergeability(prNumber, repo, batchData);
   const mergeStatus = deriveMergeStatus(refreshedBatchData);
@@ -40,7 +41,7 @@ export async function refreshReadyMergeability(
     unresolvedThreads,
     unresolvedComments,
     mergeStatus,
-    refreshedBatchData.changesRequestedReviews.length,
+    changesRequestedCount,
   );
   return { batchData: refreshedBatchData, mergeStatus, status };
 }
