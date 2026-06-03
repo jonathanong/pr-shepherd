@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockGetRepoInfo, mockGetPullRequestBody, mockUpdatePullRequestBody, mockGetCurrentPrNumber } =
-  vi.hoisted(() => ({
-    mockGetRepoInfo: vi.fn(),
-    mockGetPullRequestBody: vi.fn(),
-    mockUpdatePullRequestBody: vi.fn(),
-    mockGetCurrentPrNumber: vi.fn(),
-  }));
+const {
+  mockGetRepoInfo,
+  mockGetPullRequestBody,
+  mockUpdatePullRequestBody,
+  mockGetCurrentPrNumber,
+} = vi.hoisted(() => ({
+  mockGetRepoInfo: vi.fn(),
+  mockGetPullRequestBody: vi.fn(),
+  mockUpdatePullRequestBody: vi.fn(),
+  mockGetCurrentPrNumber: vi.fn(),
+}));
 
 vi.mock("../github/client.mts", () => ({
   getRepoInfo: mockGetRepoInfo,

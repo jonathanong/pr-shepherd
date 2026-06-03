@@ -31,7 +31,9 @@ export async function runJournal(opts: RunJournalOptions): Promise<JournalResult
 
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
   if (!prNumber) {
-    throw new Error("PR number is required: no PR number provided and none found for current branch");
+    throw new Error(
+      "PR number is required: no PR number provided and none found for current branch",
+    );
   }
 
   const { nodeId, body } = await getPullRequestBody(prNumber, owner, name);
