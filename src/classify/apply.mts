@@ -124,7 +124,7 @@ export function partitionBatch(index: ClassifyIndex, batch: BatchPrData): BatchP
     batch.changesRequestedReviews.filter((r) => suppressedIds.has(r.id)).map((r) => r.id),
   );
   const ruleAutoResolveCommentIds = batch.comments
-    .filter((c) => autoResolveIds.has(c.id))
+    .filter((c) => !c.isMinimized && autoResolveIds.has(c.id))
     .map((c) => c.id);
   const ruleAutoResolveThreadIds = batch.reviewThreads
     .filter((t) => !t.isResolved && !t.isOutdated && autoResolveIds.has(t.id))
