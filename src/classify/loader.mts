@@ -47,7 +47,7 @@ const ruleCache = new Map<string, LoadedRule[]>();
 
 export async function loadRules(files: string[]): Promise<LoadedRule[]> {
   if (files.length === 0) return [];
-  const cacheKey = [...files].sort().join("\0");
+  const cacheKey = [...files].sort((a, b) => a.localeCompare(b)).join("\0");
   const cached = ruleCache.get(cacheKey);
   if (cached !== undefined) return cached;
   const hasTs = files.some((f) => f.endsWith(".ts") || f.endsWith(".mts"));

@@ -129,6 +129,16 @@ describe("loadRules", () => {
     expect(first).toBe(second);
   });
 
+  it("produces stable cache key regardless of input order", async () => {
+    const fileA = join(classificationDir, "rule-b.mjs");
+    const fileB = join(classificationDir, "rule-a.mjs");
+    writeFileSync(fileA, "export default () => null;");
+    writeFileSync(fileB, "export default () => null;");
+    const r1 = await loadRules([fileA, fileB]);
+    const r2 = await loadRules([fileB, fileA]); // same sorted key — cache hit
+    expect(r1).toBe(r2);
+  });
+
   it("loads .mts files (tsx path)", async () => {
     const file = join(classificationDir, "typed-rule.mts");
     writeFileSync(

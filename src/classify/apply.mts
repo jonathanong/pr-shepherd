@@ -82,29 +82,29 @@ function changesRequestedToItem(r: Review): ClassifyItem {
   };
 }
 
+function addToIndex(
+  id: string,
+  { suppress, autoResolve }: ClassifyAction,
+  suppressedIds: Set<string>,
+  autoResolveIds: Set<string>,
+): void {
+  if (suppress) suppressedIds.add(id);
+  if (autoResolve) autoResolveIds.add(id);
+}
+
 export function buildClassifyIndex(rules: LoadedRule[], batch: BatchPrData): ClassifyIndex {
   if (rules.length === 0) return { suppressedIds: new Set(), autoResolveIds: new Set() };
   const suppressedIds = new Set<string>();
   const autoResolveIds = new Set<string>();
-  for (const t of batch.reviewThreads) {
-    const { suppress, autoResolve } = applyRules(rules, threadToItem(t));
-    if (suppress) suppressedIds.add(t.id);
-    if (autoResolve) autoResolveIds.add(t.id);
-  }
-  for (const c of batch.comments) {
-    const { suppress, autoResolve } = applyRules(rules, commentToItem(c));
-    if (suppress) suppressedIds.add(c.id);
-    if (autoResolve) autoResolveIds.add(c.id);
-  }
-  for (const r of batch.reviewSummaries) {
-    const { suppress, autoResolve } = applyRules(rules, reviewSummaryToItem(r));
-    if (suppress) suppressedIds.add(r.id);
-    if (autoResolve) autoResolveIds.add(r.id);
-  }
+  for (const t of batch.reviewThreads)
+    addToIndex(t.id, applyRules(rules, threadToItem(t)), suppressedIds, autoResolveIds);
+  for (const c of batch.comments)
+    addToIndex(c.id, applyRules(rules, commentToItem(c)), suppressedIds, autoResolveIds);
+  for (const r of batch.reviewSummaries)
+    addToIndex(r.id, applyRules(rules, reviewSummaryToItem(r)), suppressedIds, autoResolveIds);
+  // autoResolve for changes-requested requires a dismiss message; not supported
   for (const r of batch.changesRequestedReviews) {
-    const { suppress } = applyRules(rules, changesRequestedToItem(r));
-    if (suppress) suppressedIds.add(r.id);
-    // autoResolve for changes-requested requires a dismiss message; not supported here
+    if (applyRules(rules, changesRequestedToItem(r)).suppress) suppressedIds.add(r.id);
   }
   return { suppressedIds, autoResolveIds };
 }
