@@ -3,6 +3,7 @@ import {
   registerHooks,
   BASE_OPTS,
   makeBatchData,
+  makeComment,
   mockFetchPrBatch,
 } from "../../test-helpers/commands/check.test-support.mts";
 import { runCheck } from "./check.mts";
@@ -80,6 +81,24 @@ describe("runCheck — classification rules", () => {
     const report = await runCheck(BASE_OPTS);
     expect(report.reviewSummaries.map((r) => r.id)).not.toContain("rev-bot");
     expect(report.ruleAutoResolveReviewSummaryIds).toContain("rev-bot");
+  });
+
+  it("suppresses matching pr-comments and marks them seen", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        comments: [
+          makeComment({
+            id: "c-bot",
+            author: "bot-reviewer",
+            authorType: "Bot" as const,
+            body: "Bot noise comment",
+            isMinimized: false,
+          }),
+        ],
+      }),
+    });
+    const report = await runCheck(BASE_OPTS);
+    expect(report.comments.actionable.map((c) => c.id)).not.toContain("c-bot");
   });
 
   it("suppressed changes-requested review does not count as blocking", async () => {
