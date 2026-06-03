@@ -44,6 +44,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       const joined = result.fix.instructions.join("\n");
       expect(joined).not.toContain("git commit");
       expect(joined).not.toContain("gh pr edit");
+      expect(joined).not.toContain("pr-shepherd journal");
       expect(joined).toContain("rebase onto `origin/main` per your repository's conventions");
       expect(joined).not.toContain("git rebase --continue");
       // No actual resolve step — no threads/reviews to resolve
@@ -104,7 +105,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       // No prescriptive git commands — agent decides based on conditional phrasing.
       const joined = result.fix.instructions.join("\n");
       expect(joined).not.toContain("git commit");
-      expect(joined).toContain("gh pr edit"); // shepherd journal
+      expect(joined).toContain("pr-shepherd journal"); // shepherd journal
       expect(joined).toContain("If you applied code edits: commit them with a descriptive message");
       expect(joined).toContain("rebase onto `origin/main` per your repository's conventions");
       expect(joined).not.toContain("git rebase --continue");

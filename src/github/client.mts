@@ -9,7 +9,12 @@
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 import { graphql as httpGraphql, rest } from "./http.mts";
-import { PR_NUMBER_BY_BRANCH_QUERY, GET_PR_HEAD_SHA_QUERY } from "./queries.mts";
+import {
+  PR_NUMBER_BY_BRANCH_QUERY,
+  GET_PR_HEAD_SHA_QUERY,
+  GET_PR_BODY_QUERY,
+  UPDATE_PR_BODY_MUTATION,
+} from "./queries.mts";
 import type { MergeableState, MergeStateStatus } from "../types.mts";
 
 export type { RateLimitInfo } from "./http.mts";
@@ -87,6 +92,30 @@ export async function getPrHeadSha(pr: number, owner: string, name: string): Pro
     throw new Error(`Could not resolve head SHA for ${owner}/${name} PR #${pr}: ${detail}`);
   }
   return sha;
+}
+
+/** Fetches the node ID and body text for a PR. GitHub returns null body for empty bodies — coerced to "". */
+export async function getPullRequestBody(
+  pr: number,
+  owner: string,
+  name: string,
+): Promise<{ nodeId: string; body: string }> {
+  const result = await httpGraphql<{
+    repository: { pullRequest: { id: string; body: string | null } | null } | null;
+  }>(GET_PR_BODY_QUERY, { owner, repo: name, pr });
+  const pullRequest = result.data.repository?.pullRequest;
+  if (!pullRequest) {
+    const detail = !result.data.repository
+      ? "repository not found or access denied"
+      : "PR not found or access denied";
+    throw new Error(`Could not fetch body for ${owner}/${name} PR #${pr}: ${detail}`);
+  }
+  return { nodeId: pullRequest.id, body: pullRequest.body ?? "" };
+}
+
+/** Overwrites the PR body. */
+export async function updatePullRequestBody(pullRequestId: string, body: string): Promise<void> {
+  await httpGraphql(UPDATE_PR_BODY_MUTATION, { pullRequestId, body });
 }
 
 /**

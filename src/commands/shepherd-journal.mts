@@ -12,9 +12,9 @@ export function buildShepherdJournalInstruction(
   itemReferenceGuidance: string,
 ): string {
   return [
-    `For any large decisions or rejections you made this iteration, add or update a \`${SHEPHERD_JOURNAL_SECTION}\` section in the PR description (\`gh pr edit ${prNumber} --body …\`) summarizing each decision.`,
+    `For any large decisions or rejections you made this iteration, run \`npx pr-shepherd journal ${prNumber} '- <decision>'\` to append an entry to the \`${SHEPHERD_JOURNAL_SECTION}\` section.`,
     itemReferenceGuidance,
-    SHEPHERD_JOURNAL_APPEND_HINT,
+    `The command is idempotent — re-running with the same text is a no-op.`,
   ].join(" ");
 }
 
