@@ -3,11 +3,6 @@ import { parsePrNumber } from "./args.mts";
 import { USAGE } from "./help.mts";
 
 export async function handleJournal(args: string[]): Promise<void> {
-  if (args.includes("--help") || args.includes("-h")) {
-    process.stdout.write(`${USAGE.journal}\n`);
-    return;
-  }
-
   for (const a of args) {
     if (!a.startsWith("--")) continue;
     if (a === "--dry-run" || a === "--format" || a.startsWith("--format=")) continue;

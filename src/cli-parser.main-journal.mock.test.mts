@@ -77,6 +77,19 @@ describe("main — journal text output", () => {
     expect(getStdout()).toContain("Dry run");
     expect(getStdout()).toContain("## Shepherd Journal");
   });
+
+  it("prints dry-run message without preview when previewBody is absent", async () => {
+    mockRunJournal.mockResolvedValue({ ...HAPPY_RESULT, dryRun: true });
+    await main(["node", "shepherd", "journal", "42", "- Decision.", "--dry-run"]);
+    expect(getStdout()).toContain("Dry run");
+  });
+
+  it("passes undefined prNumber when no PR is given", async () => {
+    await main(["node", "shepherd", "journal", "- Decision."]);
+    expect(mockRunJournal).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: undefined, rawItem: "- Decision." }),
+    );
+  });
 });
 
 describe("main — journal JSON output", () => {
