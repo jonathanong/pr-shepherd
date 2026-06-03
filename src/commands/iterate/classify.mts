@@ -93,7 +93,9 @@ export function buildResolveCommand(
   );
   // Rule-matched threads bypass the author check (human-author guard still applies in resolve-mutate).
   const resolveThreadIds = dedupeIds([
-    ...allThreads.filter((t) => !isHumanAuthor(t) || isConfiguredBotAuthor(t, botUsernames)).map((t) => t.id),
+    ...allThreads
+      .filter((t) => !isHumanAuthor(t) || isConfiguredBotAuthor(t, botUsernames))
+      .map((t) => t.id),
     ...ruleAutoResolveThreadIds,
   ]);
 

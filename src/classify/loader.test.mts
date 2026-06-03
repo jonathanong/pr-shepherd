@@ -78,12 +78,33 @@ describe("loadRules", () => {
 
   it("loads a valid .mjs rule and returns it", async () => {
     const file = join(classificationDir, "suppress-bot.mjs");
-    writeFileSync(file, 'export default (item) => item.author === "bot" ? { suppress: true } : null;');
+    writeFileSync(
+      file,
+      'export default (item) => item.author === "bot" ? { suppress: true } : null;',
+    );
     const rules = await loadRules([file]);
     expect(rules).toHaveLength(1);
     expect(rules[0]!.name).toBe("suppress-bot");
-    expect(rules[0]!.rule({ kind: "pr-comment", id: "c1", author: "bot", authorType: "Bot", body: "hi", url: "" })).toEqual({ suppress: true });
-    expect(rules[0]!.rule({ kind: "pr-comment", id: "c2", author: "human", authorType: "User", body: "hi", url: "" })).toBeNull();
+    expect(
+      rules[0]!.rule({
+        kind: "pr-comment",
+        id: "c1",
+        author: "bot",
+        authorType: "Bot",
+        body: "hi",
+        url: "",
+      }),
+    ).toEqual({ suppress: true });
+    expect(
+      rules[0]!.rule({
+        kind: "pr-comment",
+        id: "c2",
+        author: "human",
+        authorType: "User",
+        body: "hi",
+        url: "",
+      }),
+    ).toBeNull();
   });
 
   it("skips a file whose default export is not a function and writes to stderr", async () => {
@@ -110,7 +131,10 @@ describe("loadRules", () => {
 
   it("loads .mts files (tsx path)", async () => {
     const file = join(classificationDir, "typed-rule.mts");
-    writeFileSync(file, "export default (item: { author: string }) => item.author === 'bot' ? { suppress: true } : null;");
+    writeFileSync(
+      file,
+      "export default (item: { author: string }) => item.author === 'bot' ? { suppress: true } : null;",
+    );
     const rules = await loadRules([file]);
     expect(rules).toHaveLength(1);
     expect(rules[0]!.name).toBe("typed-rule");
@@ -119,9 +143,9 @@ describe("loadRules", () => {
   it("does not re-register tsx when already registered", async () => {
     const file = join(classificationDir, "typed-rule.mts");
     writeFileSync(file, "export default () => null;");
-    await loadRules([file]);  // sets tsxRegistered = true
-    _resetRuleCache();        // clears cache but NOT tsxRegistered
-    const rules = await loadRules([file]);  // hits early return in ensureTsxRegistered
+    await loadRules([file]); // sets tsxRegistered = true
+    _resetRuleCache(); // clears cache but NOT tsxRegistered
+    const rules = await loadRules([file]); // hits early return in ensureTsxRegistered
     expect(rules).toHaveLength(1);
   });
 

@@ -36,19 +36,46 @@ function applyRules(rules: LoadedRule[], item: ClassifyItem): ClassifyAction {
 }
 
 function threadToItem(t: ReviewThread): ClassifyItem {
-  return { kind: "review-thread", id: t.id, author: t.author, authorType: t.authorType, body: t.body, url: t.url, path: t.path };
+  return {
+    kind: "review-thread",
+    id: t.id,
+    author: t.author,
+    authorType: t.authorType,
+    body: t.body,
+    url: t.url,
+    path: t.path,
+  };
 }
 
 function commentToItem(c: PrComment): ClassifyItem {
-  return { kind: "pr-comment", id: c.id, author: c.author, authorType: c.authorType, body: c.body, url: c.url };
+  return {
+    kind: "pr-comment",
+    id: c.id,
+    author: c.author,
+    authorType: c.authorType,
+    body: c.body,
+    url: c.url,
+  };
 }
 
 function reviewSummaryToItem(r: Review): ClassifyItem {
-  return { kind: "review-summary", id: r.id, author: r.author, authorType: r.authorType, body: r.body };
+  return {
+    kind: "review-summary",
+    id: r.id,
+    author: r.author,
+    authorType: r.authorType,
+    body: r.body,
+  };
 }
 
 function changesRequestedToItem(r: Review): ClassifyItem {
-  return { kind: "changes-requested", id: r.id, author: r.author, authorType: r.authorType, body: r.body };
+  return {
+    kind: "changes-requested",
+    id: r.id,
+    author: r.author,
+    authorType: r.authorType,
+    body: r.body,
+  };
 }
 
 export function buildClassifyIndex(rules: LoadedRule[], batch: BatchPrData): ClassifyIndex {
@@ -80,12 +107,34 @@ export function buildClassifyIndex(rules: LoadedRule[], batch: BatchPrData): Cla
 
 export function partitionBatch(index: ClassifyIndex, batch: BatchPrData): BatchPartition {
   const { suppressedIds, autoResolveIds } = index;
-  const suppressedCommentIds = new Set(batch.comments.filter((c) => suppressedIds.has(c.id)).map((c) => c.id));
-  const suppressedThreadIds = new Set(batch.reviewThreads.filter((t) => suppressedIds.has(t.id)).map((t) => t.id));
-  const suppressedReviewSummaryIds = new Set(batch.reviewSummaries.filter((r) => suppressedIds.has(r.id)).map((r) => r.id));
-  const suppressedChangesRequestedIds = new Set(batch.changesRequestedReviews.filter((r) => suppressedIds.has(r.id)).map((r) => r.id));
-  const ruleAutoResolveCommentIds = batch.comments.filter((c) => suppressedIds.has(c.id) && autoResolveIds.has(c.id)).map((c) => c.id);
-  const ruleAutoResolveThreadIds = batch.reviewThreads.filter((t) => suppressedIds.has(t.id) && autoResolveIds.has(t.id)).map((t) => t.id);
-  const ruleAutoResolveReviewSummaryIds = batch.reviewSummaries.filter((r) => suppressedIds.has(r.id) && autoResolveIds.has(r.id)).map((r) => r.id);
-  return { suppressedCommentIds, suppressedThreadIds, suppressedReviewSummaryIds, suppressedChangesRequestedIds, ruleAutoResolveCommentIds, ruleAutoResolveThreadIds, ruleAutoResolveReviewSummaryIds };
+  const suppressedCommentIds = new Set(
+    batch.comments.filter((c) => suppressedIds.has(c.id)).map((c) => c.id),
+  );
+  const suppressedThreadIds = new Set(
+    batch.reviewThreads.filter((t) => suppressedIds.has(t.id)).map((t) => t.id),
+  );
+  const suppressedReviewSummaryIds = new Set(
+    batch.reviewSummaries.filter((r) => suppressedIds.has(r.id)).map((r) => r.id),
+  );
+  const suppressedChangesRequestedIds = new Set(
+    batch.changesRequestedReviews.filter((r) => suppressedIds.has(r.id)).map((r) => r.id),
+  );
+  const ruleAutoResolveCommentIds = batch.comments
+    .filter((c) => suppressedIds.has(c.id) && autoResolveIds.has(c.id))
+    .map((c) => c.id);
+  const ruleAutoResolveThreadIds = batch.reviewThreads
+    .filter((t) => suppressedIds.has(t.id) && autoResolveIds.has(t.id))
+    .map((t) => t.id);
+  const ruleAutoResolveReviewSummaryIds = batch.reviewSummaries
+    .filter((r) => suppressedIds.has(r.id) && autoResolveIds.has(r.id))
+    .map((r) => r.id);
+  return {
+    suppressedCommentIds,
+    suppressedThreadIds,
+    suppressedReviewSummaryIds,
+    suppressedChangesRequestedIds,
+    ruleAutoResolveCommentIds,
+    ruleAutoResolveThreadIds,
+    ruleAutoResolveReviewSummaryIds,
+  };
 }

@@ -93,7 +93,9 @@ export async function runCheck(
   const firstLookSummaries: typeof batchData.reviewSummaries = [];
   const editedSummaries: typeof batchData.reviewSummaries = [];
   const seenSummaries: typeof batchData.reviewSummaries = [];
-  const unseenReviewSummaries = batchData.reviewSummaries.filter((r) => !partition.suppressedReviewSummaryIds.has(r.id));
+  const unseenReviewSummaries = batchData.reviewSummaries.filter(
+    (r) => !partition.suppressedReviewSummaryIds.has(r.id),
+  );
   for (const r of unseenReviewSummaries) {
     const cls = classifyItem(r.id, r.body, seenMap);
     if (cls === "new") firstLookSummaries.push(r);
@@ -101,7 +103,9 @@ export async function runCheck(
     else seenSummaries.push(r);
   }
   const changesRequestedReviewVisibility = classifyReviewsForDisplay(
-    batchData.changesRequestedReviews.filter((r) => !partition.suppressedChangesRequestedIds.has(r.id)),
+    batchData.changesRequestedReviews.filter(
+      (r) => !partition.suppressedChangesRequestedIds.has(r.id),
+    ),
     seenMap,
   );
   const approvedReviewVisibility = classifyReviewsForDisplay(batchData.approvedReviews, seenMap);
@@ -112,10 +116,18 @@ export async function runCheck(
     ...[...firstLookSummaries, ...editedSummaries].map((r) => markSeen(stateKey, r.id, r.body)),
     ...changesRequestedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
     ...approvedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
-    ...batchData.comments.filter((c) => partition.suppressedCommentIds.has(c.id)).map((c) => markSeen(stateKey, c.id, c.body)),
-    ...batchData.reviewThreads.filter((t) => partition.suppressedThreadIds.has(t.id)).map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
-    ...batchData.reviewSummaries.filter((r) => partition.suppressedReviewSummaryIds.has(r.id)).map((r) => markSeen(stateKey, r.id, r.body)),
-    ...batchData.changesRequestedReviews.filter((r) => partition.suppressedChangesRequestedIds.has(r.id)).map((r) => markSeen(stateKey, r.id, r.body)),
+    ...batchData.comments
+      .filter((c) => partition.suppressedCommentIds.has(c.id))
+      .map((c) => markSeen(stateKey, c.id, c.body)),
+    ...batchData.reviewThreads
+      .filter((t) => partition.suppressedThreadIds.has(t.id))
+      .map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
+    ...batchData.reviewSummaries
+      .filter((r) => partition.suppressedReviewSummaryIds.has(r.id))
+      .map((r) => markSeen(stateKey, r.id, r.body)),
+    ...batchData.changesRequestedReviews
+      .filter((r) => partition.suppressedChangesRequestedIds.has(r.id))
+      .map((r) => markSeen(stateKey, r.id, r.body)),
   ]);
   await markReviewInlineThreadMarkers(stateKey, batchData.reviewThreads);
   const changesRequestedReviews = changesRequestedReviewVisibility.visible;
@@ -165,11 +177,16 @@ export async function runCheck(
       autoResolved: [],
       autoResolveErrors: [],
       firstLook: threadVisibility.firstLookThreads,
-      ...(partition.ruleAutoResolveThreadIds.length > 0 ? { ruleAutoResolveIds: partition.ruleAutoResolveThreadIds } : undefined),
+      ...(partition.ruleAutoResolveThreadIds.length > 0
+        ? { ruleAutoResolveIds: partition.ruleAutoResolveThreadIds }
+        : undefined),
     },
     comments: {
       actionable: visibleCommentClassification.actionable,
-      minimizeIds: [...visibleCommentClassification.minimizeIds, ...partition.ruleAutoResolveCommentIds],
+      minimizeIds: [
+        ...visibleCommentClassification.minimizeIds,
+        ...partition.ruleAutoResolveCommentIds,
+      ],
       firstLook: firstLookComments,
     },
     changesRequestedReviews,
@@ -177,7 +194,9 @@ export async function runCheck(
     firstLookSummaries,
     editedSummaries,
     approvedReviews,
-    ...(partition.ruleAutoResolveReviewSummaryIds.length > 0 ? { ruleAutoResolveReviewSummaryIds: partition.ruleAutoResolveReviewSummaryIds } : undefined),
+    ...(partition.ruleAutoResolveReviewSummaryIds.length > 0
+      ? { ruleAutoResolveReviewSummaryIds: partition.ruleAutoResolveReviewSummaryIds }
+      : undefined),
     branchProtection: batchData.branchProtection,
     activity: batchData.activity,
   };
