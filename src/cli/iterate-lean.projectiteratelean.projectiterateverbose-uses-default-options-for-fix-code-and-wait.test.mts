@@ -13,9 +13,13 @@ describe("projectIterateLean", () => {
   it("projectIterateVerbose uses default options for fix_code and wait", () => {
     const fixResult = makeIterateResult("fix_code");
     if (fixResult.action !== "fix_code") throw new Error("unreachable");
-    expect((projectIterateVerbose(fixResult) as typeof fixResult).fix.instructions[0]).toContain(
-      "pr-shepherd 42",
-    );
+    // With no opts, instructions pass through unchanged (no rerun command appended) and
+    // no readyDelayOverride is surfaced.
+    const verboseFix = projectIterateVerbose(fixResult) as typeof fixResult & {
+      readyDelayOverride?: string;
+    };
+    expect(verboseFix.fix.instructions).toEqual(fixResult.fix.instructions);
+    expect(verboseFix.readyDelayOverride).toBeUndefined();
 
     const wait = projectIterateVerbose(makeIterateResult("wait")) as Record<string, unknown>;
     expect(wait.instructions).toBeDefined();

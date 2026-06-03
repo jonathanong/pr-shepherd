@@ -1,0 +1,26 @@
+{
+  "batchData": {
+    "mergeable": "CONFLICTING",
+    "mergeStateStatus": "DIRTY",
+    "reviewThreads": [
+      {
+        "id": "PRRT_conflict_thread",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/merge.ts",
+        "line": 8,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Rename this helper before merging.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r49",
+        "createdAtUnix": 1715700000
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

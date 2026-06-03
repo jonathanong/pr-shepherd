@@ -21,9 +21,7 @@ describe("main — iterate text format", () => {
     expect(out).toMatch(/^# PR #42 \[WAIT\]\n/);
     expect(out).toContain("WAIT: 0 passing, 1 in-progress");
     expect(out).toContain("## Instructions");
-    expect(out).toContain(
-      "1. Recheck: rerun `pr-shepherd 42` to continue the active goal once after a fresh 30s–4m delay.",
-    );
+    expect(out).toContain("1. No action this tick — the poll loop reruns automatically.");
   });
   it("mark_ready: heading includes [MARK_READY] tag and ## Instructions with end-iteration step", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("mark_ready"));
@@ -33,7 +31,7 @@ describe("main — iterate text format", () => {
     expect(out).toContain("MARKED READY: PR 42");
     expect(out).toContain("## Instructions");
     expect(out).toContain(
-      "1. The CLI already marked the PR ready for review. Recheck: rerun `pr-shepherd 42` to recheck once after a fresh 30s–4m delay.",
+      "1. The CLI already marked the PR ready for review. No further action this tick — the poll loop reruns automatically.",
     );
   });
   it("cancel: heading includes [CANCEL] tag with reason and ## Instructions with stop steps", async () => {
@@ -57,7 +55,7 @@ describe("main — iterate text format", () => {
       "1. Stop — the PR needs human direction before iterating can resume. This is a manual handoff; do not continue automated fix attempts.",
     );
   });
-  it("wait: instructions include rerun command", async () => {
+  it("wait: surfaces --ready-delay override as a header field, not a rerun command", async () => {
     const result = makeIterateResult("wait");
     if (result.action !== "wait") throw new Error("unreachable");
     result.log =
@@ -68,17 +66,18 @@ describe("main — iterate text format", () => {
     expect(out).toContain(
       "WAIT: 6 passing, 1 in-progress — awaiting human review or branch protection",
     );
-    expect(out).toContain(
-      "1. Recheck: rerun `pr-shepherd 42 --ready-delay 15m` to continue the active goal once after a fresh 30s–4m delay.",
-    );
+    // The override is surfaced once on the summary line; the instruction stays a plain no-op.
+    expect(out).toContain("**ready-delay** `15m` (override)");
+    expect(out).toContain("1. No action this tick — the poll loop reruns automatically.");
+    expect(out).not.toContain("Recheck");
     expect(out).not.toContain("auto-cancel");
   });
-  it("mark_ready: instructions include rerun command", async () => {
+  it("mark_ready: instructions are a plain no-op acknowledgement", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("mark_ready"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain(
-      "1. The CLI already marked the PR ready for review. Recheck: rerun `pr-shepherd 42` to recheck once after a fresh 30s–4m delay.",
+      "1. The CLI already marked the PR ready for review. No further action this tick — the poll loop reruns automatically.",
     );
   });
   it("cancel: instructions say active goal is complete", async () => {
@@ -112,7 +111,7 @@ describe("main — iterate text format", () => {
     expect(parsed.action).toBe("wait");
     expect(parsed.pr).toBe(42);
     expect(parsed.instructions).toEqual([
-      "Recheck: rerun `pr-shepherd 42` to continue the active goal once after a fresh 30s–4m delay.",
+      "No action this tick — the poll loop reruns automatically.",
     ]);
   });
   it("cancel json: emits reason field so consumers can branch without parsing log", async () => {

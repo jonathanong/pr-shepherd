@@ -1,0 +1,67 @@
+{
+  "batchData": {
+    "reviewThreads": [
+      {
+        "id": "PRRT_multi",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/index.ts",
+        "line": 30,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Extract this into a helper.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r54",
+        "createdAtUnix": 1715700000
+      }
+    ],
+    "comments": [
+      {
+        "id": "IC_multi",
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Mention the new flag in the README.",
+        "url": "https://github.com/owner/repo/pull/42#issuecomment-54",
+        "createdAtUnix": 1715700000,
+        "isMinimized": false
+      }
+    ],
+    "changesRequestedReviews": [
+      {
+        "id": "PRR_multi_cr",
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Blocking until the failing test and the inline notes are addressed."
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/5401",
+        "runId": "5401"
+      }
+    ]
+  },
+  "triagedChecks": [
+    {
+      "name": "CI / tests",
+      "status": "COMPLETED",
+      "conclusion": "FAILURE",
+      "event": "pull_request",
+      "detailsUrl": "https://github.com/owner/repo/actions/runs/5401",
+      "runId": "5401",
+      "category": "failing",
+      "workflowName": "CI",
+      "jobName": "tests",
+      "failedStep": "Run tests"
+    }
+  ],
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

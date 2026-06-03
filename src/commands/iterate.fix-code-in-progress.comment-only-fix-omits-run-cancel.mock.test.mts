@@ -133,7 +133,11 @@ describe("fix_code — in-progress run cancellation", () => {
       expect(result.fix.resolveCommand.argv).not.toContain("PRR_review_change_request");
       const instructions = result.fix.instructions.join("\n");
       expect(instructions).toMatch(/If you decide to push new commits/);
-      expect(instructions).toMatch(/rebase onto.*per your repository's conventions/);
+      // Commit/push guidance lives in the leading decision line; CLI no longer prescribes rebase
+      expect(instructions).toContain(
+        "**If any code changes are needed:** apply edits, commit, push",
+      );
+      expect(instructions).not.toMatch(/rebase onto/);
       expect(instructions).toContain(
         "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
       );

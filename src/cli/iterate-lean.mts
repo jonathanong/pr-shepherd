@@ -1,9 +1,5 @@
 import type { IterateResult } from "../types.mts";
-import {
-  adaptIterateLog,
-  adaptFixCodeInstructions,
-  buildSimpleIterateInstructions,
-} from "./iterate-instructions.mts";
+import { adaptIterateLog, buildSimpleIterateInstructions } from "./iterate-instructions.mts";
 interface IterateProjectionOptions {
   readyDelaySuffix?: string;
 }
@@ -19,7 +15,7 @@ export function projectIterateLean(
 ): unknown {
   const readyDelaySuffix = opts?.readyDelaySuffix;
   const simpleInstructions = (r: Exclude<IterateResult, { action: "fix_code" }>) =>
-    buildSimpleIterateInstructions(r, readyDelaySuffix);
+    buildSimpleIterateInstructions(r);
   const activity = result.activity ?? {
     commitCount: 0,
     reviewRoundCount: 0,
@@ -37,6 +33,7 @@ export function projectIterateLean(
     status: result.status,
     state: result.state,
     mergeStateStatus: result.mergeStateStatus,
+    ...(readyDelaySuffix && { readyDelayOverride: readyDelaySuffix }),
     ...(result.mergeStatus === "BLOCKED" &&
       result.reviewDecision !== null && { reviewDecision: result.reviewDecision }),
     ...(result.blockingBotReviewInProgress && { blockingBotReviewInProgress: true }),
@@ -134,11 +131,7 @@ export function projectIterateLean(
             resolveOnlyCommand: result.fix.resolveOnlyCommand,
           }),
           ...(result.fix.instructions.length > 0 && {
-            instructions: adaptFixCodeInstructions(
-              result.fix.instructions,
-              result.pr,
-              readyDelaySuffix,
-            ),
+            instructions: result.fix.instructions,
           }),
         },
       };
@@ -177,17 +170,11 @@ export function projectIterateVerbose(
   opts?: IterateProjectionOptions,
 ): unknown {
   const readyDelaySuffix = opts?.readyDelaySuffix;
+  const readyDelayOverride = readyDelaySuffix ? { readyDelayOverride: readyDelaySuffix } : {};
   if (result.action === "fix_code") {
     return {
       ...result,
-      fix: {
-        ...result.fix,
-        instructions: adaptFixCodeInstructions(
-          result.fix.instructions,
-          result.pr,
-          readyDelaySuffix,
-        ),
-      },
+      ...readyDelayOverride,
     };
   }
   const log =
@@ -195,6 +182,7 @@ export function projectIterateVerbose(
   return {
     ...result,
     ...log,
-    instructions: buildSimpleIterateInstructions(result, readyDelaySuffix),
+    ...readyDelayOverride,
+    instructions: buildSimpleIterateInstructions(result),
   };
 }

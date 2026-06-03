@@ -133,14 +133,23 @@ describe("projectIterateLean", () => {
     expect((fix.changesRequestedReviews as unknown[]).length).toBe(1);
     expect((lean.cancelled as unknown[]).length).toBe(1);
   });
-  it("projectIterateVerbose adapts fix_code instructions", () => {
+  it("projectIterateVerbose passes fix_code instructions through unchanged (no recheck appended)", () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
     result.fix.instructions = [
       "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
     ];
     const verbose = projectIterateVerbose(result, {}) as typeof result;
-    expect(verbose.fix.instructions[0]).toContain("rerun `pr-shepherd 42`");
+    expect(verbose.fix.instructions).toEqual(result.fix.instructions);
+    expect(verbose.fix.instructions[0]).not.toContain("rerun");
+  });
+  it("projectIterateVerbose surfaces a --ready-delay override as readyDelayOverride", () => {
+    const result = makeIterateResult("fix_code");
+    const verbose = projectIterateVerbose(result, { readyDelaySuffix: "15m" }) as Record<
+      string,
+      unknown
+    >;
+    expect(verbose.readyDelayOverride).toBe("15m");
   });
   it("projectIterateVerbose adapts non-fix logs and adds instructions", () => {
     const verbose = projectIterateVerbose(makeIterateResult("wait"), {}) as Record<string, unknown>;

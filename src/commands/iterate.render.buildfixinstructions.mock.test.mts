@@ -75,8 +75,11 @@ describe("buildFixInstructions", () => {
     expect(text).toContain(
       "For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.",
     );
-    // Conditional commit/rebase phrasing (agent decides if code edits are needed)
-    expect(text).toContain("If you applied code edits: commit them with a descriptive message");
+    // Conditional commit/push phrasing lives in the leading decision line (agent decides if
+    // code edits are needed); there is no longer a separate prescriptive commit/rebase step.
+    expect(text).toContain("**If any code changes are needed:** apply edits, commit, push");
+    // CLI no longer prescribes rebase mechanics — that is the caller's convention.
+    expect(text).not.toContain("rebase onto");
     // resolve substitution uses backtick-quoted $HEAD_SHA with fallback
     expect(text).toContain("substituting `$HEAD_SHA` with the pushed commit SHA");
     // New stop sentinel
@@ -145,9 +148,11 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    // New conditional phrasing — no prescriptive git commands
-    expect(text).toContain("If you applied code edits: commit them with a descriptive message");
-    expect(text).toContain("rebase onto `origin/main` per your repository's conventions");
+    // New conditional phrasing in the decision line — no prescriptive git commands
+    expect(text).toContain("**If any code changes are needed:** apply edits, commit, push");
+    // CLI no longer prescribes rebase mechanics or names origin/main
+    expect(text).not.toContain("rebase onto");
+    expect(text).not.toContain("origin/main");
     expect(text).toContain("substituting `$HEAD_SHA` with the pushed commit SHA");
     // No prescriptive git command lines
     expect(text).not.toContain("git add");
@@ -188,8 +193,8 @@ describe("buildFixInstructions", () => {
     expect(text).toContain(
       "For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.",
     );
-    // Conditional phrasing — agent decides whether code edits are needed
-    expect(text).toContain("If you applied code edits: commit them with a descriptive message");
+    // Conditional phrasing in the decision line — agent decides whether code edits are needed
+    expect(text).toContain("**If any code changes are needed:** apply edits, commit, push");
     // No old prescriptive commands
     expect(text).not.toContain("Commit changed files:");
     expect(text).not.toContain("Rebase and push:");

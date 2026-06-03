@@ -1,0 +1,27 @@
+{
+  "batchData": {
+    "mergeable": "CONFLICTING",
+    "mergeStateStatus": "DIRTY",
+    "reviewThreads": [
+      {
+        "id": "PRRT_suggest_conflict",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/config.ts",
+        "line": 12,
+        "startLine": 12,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Use a named constant:\n```suggestion\nconst DEFAULT_TIMEOUT_MS = 5000;\n```",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r51",
+        "createdAtUnix": 1715700000
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

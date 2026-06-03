@@ -1,0 +1,19 @@
+{
+  "batchData": {
+    "mergeable": "CONFLICTING",
+    "mergeStateStatus": "DIRTY",
+    "changesRequestedReviews": [
+      {
+        "id": "PRR_cr_conflict",
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Please rebase and address the threading concerns raised in review."
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}
