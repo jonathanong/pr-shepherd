@@ -34,14 +34,14 @@ function collectRuleFiles(dir: string): string[] {
     .sort();
 }
 
-let tsxRegistered = false;
+let tsxAttempted = false;
 
 async function ensureTsxRegistered(): Promise<void> {
-  if (tsxRegistered) return;
+  if (tsxAttempted) return;
+  tsxAttempted = true;
   try {
     const { register } = await import("tsx/esm/api");
     register();
-    tsxRegistered = true;
     /* c8 ignore start */
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

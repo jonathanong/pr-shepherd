@@ -1,15 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockGetRepoInfo, mockGetPullRequestBody, mockUpdatePullRequestBody } = vi.hoisted(() => ({
-  mockGetRepoInfo: vi.fn(),
-  mockGetPullRequestBody: vi.fn(),
-  mockUpdatePullRequestBody: vi.fn(),
-}));
+const { mockGetRepoInfo, mockGetPullRequestBody, mockUpdatePullRequestBody, mockGetCurrentPrNumber } =
+  vi.hoisted(() => ({
+    mockGetRepoInfo: vi.fn(),
+    mockGetPullRequestBody: vi.fn(),
+    mockUpdatePullRequestBody: vi.fn(),
+    mockGetCurrentPrNumber: vi.fn(),
+  }));
 
 vi.mock("../github/client.mts", () => ({
   getRepoInfo: mockGetRepoInfo,
   getPullRequestBody: mockGetPullRequestBody,
   updatePullRequestBody: mockUpdatePullRequestBody,
+  getCurrentPrNumber: mockGetCurrentPrNumber,
 }));
 
 import { runJournal } from "./journal/index.mts";
@@ -17,6 +20,7 @@ import { runJournal } from "./journal/index.mts";
 beforeEach(() => {
   vi.clearAllMocks();
   mockGetRepoInfo.mockResolvedValue({ owner: "owner", name: "repo" });
+  mockGetCurrentPrNumber.mockResolvedValue(null);
   mockGetPullRequestBody.mockResolvedValue({
     nodeId: "PR_node123",
     body: "## Summary\n\nSome content.",
@@ -108,11 +112,19 @@ describe("runJournal — validation errors", () => {
   });
 });
 
-describe("runJournal — missing PR number", () => {
-  it("throws when prNumber is undefined", async () => {
+describe("runJournal — PR number discovery", () => {
+  it("throws when prNumber is undefined and no current branch PR", async () => {
+    mockGetCurrentPrNumber.mockResolvedValue(null);
     await expect(
       runJournal({ prNumber: undefined, rawItem: "- Entry.", dryRun: false }),
     ).rejects.toThrow("PR number is required");
     expect(mockGetPullRequestBody).not.toHaveBeenCalled();
+  });
+
+  it("resolves prNumber from current branch when not provided", async () => {
+    mockGetCurrentPrNumber.mockResolvedValue(99);
+    const result = await runJournal({ prNumber: undefined, rawItem: "- Entry.", dryRun: false });
+    expect(result.prNumber).toBe(99);
+    expect(mockGetPullRequestBody).toHaveBeenCalledWith(99, "owner", "repo");
   });
 });

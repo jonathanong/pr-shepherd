@@ -150,11 +150,11 @@ describe("loadRules", () => {
     expect(rules[0]!.name).toBe("typed-rule");
   });
 
-  it("does not re-register tsx when already registered", async () => {
+  it("does not re-register tsx when already attempted", async () => {
     const file = join(classificationDir, "typed-rule.mts");
     writeFileSync(file, "export default () => null;");
-    await loadRules([file]); // sets tsxRegistered = true
-    _resetRuleCache(); // clears cache but NOT tsxRegistered
+    await loadRules([file]); // sets tsxAttempted = true
+    _resetRuleCache(); // clears cache but NOT tsxAttempted
     const rules = await loadRules([file]); // hits early return in ensureTsxRegistered
     expect(rules).toHaveLength(1);
   });

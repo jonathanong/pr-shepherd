@@ -1,4 +1,9 @@
-import { getRepoInfo, getPullRequestBody, updatePullRequestBody } from "../../github/client.mts";
+import {
+  getRepoInfo,
+  getPullRequestBody,
+  updatePullRequestBody,
+  getCurrentPrNumber,
+} from "../../github/client.mts";
 import { validateJournalItem, appendJournalItem } from "./transform.mts";
 
 export interface RunJournalOptions {
@@ -24,9 +29,9 @@ export async function runJournal(opts: RunJournalOptions): Promise<JournalResult
 
   const { owner, name } = await getRepoInfo();
 
-  let prNumber = opts.prNumber;
+  const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
   if (!prNumber) {
-    throw new Error("PR number is required");
+    throw new Error("PR number is required: no PR number provided and none found for current branch");
   }
 
   const { nodeId, body } = await getPullRequestBody(prNumber, owner, name);
