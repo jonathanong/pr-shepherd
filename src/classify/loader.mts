@@ -38,16 +38,16 @@ let tsxRegistered = false;
 
 async function ensureTsxRegistered(): Promise<void> {
   if (tsxRegistered) return;
-  tsxRegistered = true;
   const { register } = await import("tsx/esm/api");
   register();
+  tsxRegistered = true;
 }
 
 const ruleCache = new Map<string, LoadedRule[]>();
 
 export async function loadRules(files: string[]): Promise<LoadedRule[]> {
   if (files.length === 0) return [];
-  const cacheKey = files.join("\0");
+  const cacheKey = [...files].sort().join("\0");
   const cached = ruleCache.get(cacheKey);
   if (cached !== undefined) return cached;
   const hasTs = files.some((f) => f.endsWith(".ts") || f.endsWith(".mts"));

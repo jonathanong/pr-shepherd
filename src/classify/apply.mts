@@ -21,11 +21,15 @@ export interface BatchPartition {
 function applyRules(rules: LoadedRule[], item: ClassifyItem): ClassifyAction {
   let autoResolve = false;
   let suppress = false;
-  for (const { rule } of rules) {
+  for (const { rule, name } of rules) {
     let action: ClassifyAction | null | undefined;
     try {
       action = rule(item);
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(
+        `pr-shepherd: classification rule ${name}: threw during evaluation: ${msg} — skipped\n`,
+      );
       continue;
     }
     if (!action) continue;

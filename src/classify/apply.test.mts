@@ -152,6 +152,15 @@ describe("buildClassifyIndex", () => {
     expect(idx.suppressedIds).toContain("c1");
   });
 
+  it("logs rule name and non-Error exception message to stderr", () => {
+    const throwing = makeRule("bad", () => {
+      // eslint-disable-next-line @typescript-eslint/no-throw-literal
+      throw "string error";
+    });
+    const idx = buildClassifyIndex([throwing], makeBatch({ comments: [makeComment("c1")] }));
+    expect(idx.suppressedIds.size).toBe(0);
+  });
+
   it("ORs results across multiple rules", () => {
     const suppressOnly = makeRule("s", (item) => (item.id === "c1" ? { suppress: true } : null));
     const resolveOnly = makeRule("r", (item) => (item.id === "c1" ? { autoResolve: true } : null));
