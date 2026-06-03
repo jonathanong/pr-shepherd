@@ -1,0 +1,41 @@
+{
+  "batchData": {
+    "changesRequestedReviews": [
+      {
+        "id": "PRR_cr_with_check",
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "The failing test points at a real bug — please fix the off-by-one in the loop."
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/4801",
+        "runId": "4801"
+      }
+    ]
+  },
+  "triagedChecks": [
+    {
+      "name": "CI / tests",
+      "status": "COMPLETED",
+      "conclusion": "FAILURE",
+      "event": "pull_request",
+      "detailsUrl": "https://github.com/owner/repo/actions/runs/4801",
+      "runId": "4801",
+      "category": "failing",
+      "workflowName": "CI",
+      "jobName": "tests",
+      "failedStep": "Run tests"
+    }
+  ],
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "batchData": {
+    "reviewThreads": [
+      {
+        "id": "PRRT_with_annotations",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/util/parse.ts",
+        "line": 18,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Same edge case the analyzer flagged — please handle empty input.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r55",
+        "createdAtUnix": 1715700000
+      }
+    ],
+    "checks": [
+      {
+        "id": "CR_quality_55",
+        "name": "Code Quality",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://checks.example/code-quality",
+        "runId": null
+      }
+    ]
+  },
+  "triagedChecks": [
+    {
+      "id": "CR_quality_55",
+      "name": "Code Quality",
+      "status": "COMPLETED",
+      "conclusion": "FAILURE",
+      "event": "pull_request",
+      "detailsUrl": "https://checks.example/code-quality",
+      "runId": null,
+      "category": "failing",
+      "summary": "1 annotation"
+    }
+  ],
+  "checkAnnotationsByCheckId": {
+    "CR_quality_55": [
+      {
+        "id": "check_annotation_5501",
+        "path": "src/util/parse.ts",
+        "startLine": 18,
+        "endLine": 18,
+        "level": "FAILURE",
+        "title": "Unhandled edge case",
+        "message": "Empty input is not handled before indexing.",
+        "blobUrl": "https://github.com/owner/repo/blob/abc123/src/util/parse.ts#L18"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

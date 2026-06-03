@@ -1,0 +1,55 @@
+{
+  "batchData": {
+    "reviewSummaries": [
+      {
+        "id": "PRR_summary_with_annotations",
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Static analysis flagged a couple of spots — see the inline annotations."
+      }
+    ],
+    "checks": [
+      {
+        "id": "CR_quality_annotations",
+        "name": "Code Quality",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://checks.example/code-quality",
+        "runId": null
+      }
+    ]
+  },
+  "triagedChecks": [
+    {
+      "id": "CR_quality_annotations",
+      "name": "Code Quality",
+      "status": "COMPLETED",
+      "conclusion": "FAILURE",
+      "event": "pull_request",
+      "detailsUrl": "https://checks.example/code-quality",
+      "runId": null,
+      "category": "failing",
+      "summary": "1 annotation"
+    }
+  ],
+  "checkAnnotationsByCheckId": {
+    "CR_quality_annotations": [
+      {
+        "id": "check_annotation_5301",
+        "path": "src/util/parse.ts",
+        "startLine": 18,
+        "endLine": 18,
+        "level": "WARNING",
+        "title": "Unhandled edge case",
+        "message": "Empty input is not handled before indexing.",
+        "blobUrl": "https://github.com/owner/repo/blob/abc123/src/util/parse.ts#L18"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

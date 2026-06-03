@@ -1,0 +1,48 @@
+{
+  "batchData": {
+    "reviewThreads": [
+      {
+        "id": "PRRT_with_check",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/handler.ts",
+        "line": 22,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Guard against the null case here.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r46",
+        "createdAtUnix": 1715700000
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests (ubuntu)",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/4601",
+        "runId": "4601"
+      }
+    ]
+  },
+  "triagedChecks": [
+    {
+      "name": "CI / tests (ubuntu)",
+      "status": "COMPLETED",
+      "conclusion": "FAILURE",
+      "event": "pull_request",
+      "detailsUrl": "https://github.com/owner/repo/actions/runs/4601",
+      "runId": "4601",
+      "category": "failing",
+      "workflowName": "CI",
+      "jobName": "tests (ubuntu)",
+      "failedStep": "Run tests"
+    }
+  ],
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

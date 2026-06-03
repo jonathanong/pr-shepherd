@@ -59,7 +59,9 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
       expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
       expect(result.fix.resolveCommand.argv).not.toContain("--dismiss-review-ids");
       expect(result.fix.resolveCommand.argv).not.toContain("review-1");
-      expect(result.fix.instructions.join("\n")).toContain("If you applied code edits: commit");
+      expect(result.fix.instructions.join("\n")).toContain(
+        "**If any code changes are needed:** apply edits, commit, push",
+      );
       expect(result.fix.instructions.join("\n")).toContain(
         "Run the `resolve:` command shown above",
       );

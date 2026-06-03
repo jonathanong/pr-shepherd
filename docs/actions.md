@@ -82,10 +82,10 @@ WAIT: 3 passing, 2 in-progress — 120s until auto-cancel
 
 ## Instructions
 
-1. Recheck: rerun `pr-shepherd 42` to continue the active goal once after a fresh 30s–4m delay.
+1. No action this tick — the poll loop reruns automatically.
 ```
 
-When the current command includes a ready-delay override, the rerun command preserves it: `pr-shepherd 42 --ready-delay 15m`.
+The poll already bounds each wait via `--interval`/`--timeout`, so the CLI no longer tells the agent to sleep before rerunning. When the current command includes a ready-delay override (`--ready-delay 15m`), it is surfaced as a header field on the summary line rather than embedded in a rerun command — e.g. `**summary** 3 passing, 2 inProgress · **ready-delay** `15m` (override)`. JSON output carries the same value as a `readyDelayOverride` field.
 
 The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, `blocked by pending reviews or required status checks`, `PR is a draft`, or `some checks are unstable`.
 
@@ -115,7 +115,7 @@ MARKED READY: PR #42 converted from draft to ready for review
 
 ## Instructions
 
-1. The CLI already marked the PR ready for review. Recheck: rerun `pr-shepherd 42` to recheck once after a fresh 30s–4m delay.
+1. The CLI already marked the PR ready for review. No further action this tick — the poll loop reruns automatically.
 ```
 
 **What the skill does:** Follow `## Instructions`, then run the default poll dispatcher again unless the action is terminal.
@@ -221,18 +221,18 @@ Actionable work exists — whether it requires code edits or only resolution is 
 
 ## Instructions
 
-1. Decide for each item under `## Review threads` and `## Actionable comments` whether a code change is warranted. **If any code changes are needed:** cancel in-progress runs, apply edits, commit, rebase if the header shows `**branch**` behind/conflicts, push, then run the `resolve:` command. **If no code changes are needed:** skip cancellation/commit/push and run the `resolve:` command.
+1. Decide for each item under `## Review threads`, `## Actionable comments`, `## Failing checks`, `## Changes-requested reviews` whether a code change is warranted. **If any code changes are needed:** apply edits, commit, push, then run the `resolve:` command. **If no code changes are needed:** skip the commit/push and run the `resolve:` command.
 2. If you decide to push new commits: cancel each in-progress run listed under `## In-progress runs` before applying code fixes (e.g. `gh run cancel <id>`). Skip this step if you are only resolving threads without pushing — the existing runs remain relevant.
 3. Apply code fixes: read and edit each file referenced under `## Review threads` and `## Actionable comments` above.
-4. Resolve the threads under `## Review threads to resolve` with the `resolve:` command shown below. These threads are already outdated or minimized, so no code edit is required for them unless their body reveals separate work you choose to do.
-5. For each failing check under `## Failing checks`: fetch the log with `gh run view <runId> --log-failed` and decide: rerun with `gh run rerun <runId> --failed` for transient infrastructure failures (network timeout, OOM kill, runner crash), or apply a code fix for real test/build failures; for `[conclusion: CANCELLED]` entries: rerun with `gh run rerun <runId>` if the cancellation looks unintended (not superseded by a newer push or concurrency-group eviction), otherwise treat as resolved — do NOT confuse with IDs under `## Cancelled runs`; for `[conclusion: STARTUP_FAILURE]` entries: inspect with `gh run view <runId>` and rerun with `gh run rerun <runId>` if the workflow should be retried; for `external` entries (no run ID, has URL): open the URL to inspect the failure; for `(no runId)` entries: no log or URL is available — escalate to a human.
-6. For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.
-7. If you applied code edits: commit them with a descriptive message, then rebase onto `origin/main` per your repository's conventions before pushing.
-8. Run the `resolve:` command shown above, substituting `$HEAD_SHA` with the pushed commit SHA (or `$(git rev-parse HEAD)` if you did not push) and `$DISMISS_MESSAGE` with a one-sentence description of what you changed.
-9. Do not re-run `gh run cancel` on the IDs listed under `## Cancelled runs` — those runs were already cancelled by the CLI before this turn.
-10. For any large decisions or rejections you made this iteration, run `pr-shepherd journal 42 '- <decision>'` to append an entry to the `## Shepherd Journal` section. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. The command is idempotent — re-running with the same text is a no-op.
-11. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
+4. For each failing check under `## Failing checks`: fetch the log with `gh run view <runId> --log-failed` and decide: rerun with `gh run rerun <runId> --failed` for transient infrastructure failures (network timeout, OOM kill, runner crash), or apply a code fix for real test/build failures; for `[conclusion: CANCELLED]` entries: rerun with `gh run rerun <runId>` if the cancellation looks unintended (not superseded by a newer push or concurrency-group eviction), otherwise treat as resolved — do NOT confuse with IDs under `## Cancelled runs`; for `[conclusion: STARTUP_FAILURE]` entries: inspect with `gh run view <runId>` and rerun with `gh run rerun <runId>` if the workflow should be retried; for `external` entries (no run ID, has URL): open the URL to inspect the failure; for `(no runId)` entries: no log or URL is available — escalate to a human.
+5. For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.
+6. Run the `resolve:` command shown above, substituting `$HEAD_SHA` with the pushed commit SHA (or `$(git rev-parse HEAD)` if you did not push) and `$DISMISS_MESSAGE` with a one-sentence description of what you changed.
+7. Do not re-run `gh run cancel` on the IDs listed under `## Cancelled runs` — those runs were already cancelled by the CLI before this turn.
+8. For any large decisions or rejections you made this iteration, run `pr-shepherd journal 42 '- <decision>'` to append an entry to the `## Shepherd Journal` section. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. The command is idempotent — re-running with the same text is a no-op.
+9. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
 ```
+
+The branch-behind/conflict mechanics that step 1 previously spelled out are intentionally omitted: the CLI surfaces the raw `**branch**` state on the summary line and leaves rebase/commit/push conventions to the caller (see the "Keep skills and loop prompts minimal" rule in `CLAUDE.md`). There is no longer a separate "commit, then rebase onto `origin/main`" step, and no per-tick "recheck after a delay" line — the poll loop's `--interval`/`--timeout` already bounds each wait.
 
 When one or more threads carry a `[suggestion]` marker, the `## Instructions` section inserts a `commit-suggestion` step before "Apply code fixes" and gains a manual-fallback clause on that step:
 

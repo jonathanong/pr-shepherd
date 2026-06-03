@@ -97,6 +97,13 @@ export function formatIterateResult(
     summaryLine = segs.join(" · ");
   }
 
+  // Surface an explicit `--ready-delay` override (set only when the user passed the flag)
+  // so the active settle window stays visible on every tick. Replaces the rerun command
+  // that previously carried the suffix in the (now removed) recheck instruction.
+  if (readyDelaySuffix) {
+    summaryLine += ` · **ready-delay** \`${readyDelaySuffix}\` (override)`;
+  }
+
   const bp = result.branchProtection;
   const requiredParts: string[] = [];
   if (bp) {
@@ -129,14 +136,14 @@ export function formatIterateResult(
       return joinSections([
         header,
         adaptIterateLog(result.log),
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, readyDelaySuffix))}`,
+        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
       ]);
 
     case "mark_ready":
       return joinSections([
         header,
         adaptIterateLog(result.log),
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, readyDelaySuffix))}`,
+        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
       ]);
 
     case "cancel": {
@@ -146,7 +153,7 @@ export function formatIterateResult(
       return joinSections([
         cancelHeaderLines.join("\n"),
         adaptIterateLog(result.log),
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, readyDelaySuffix))}`,
+        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
       ]);
     }
 
@@ -154,12 +161,10 @@ export function formatIterateResult(
       return joinSections([
         header,
         result.escalate.humanMessage,
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result, readyDelaySuffix))}`,
+        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
       ]);
 
     case "fix_code":
-      return formatFixCodeResult(header, result, {
-        readyDelaySuffix,
-      });
+      return formatFixCodeResult(header, result);
   }
 }

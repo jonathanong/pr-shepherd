@@ -18,4 +18,4 @@
 2. Before running the `resolve:` command, remove any thread from `--reply-thread-ids` if the latest visible comment in that thread is your own prior Shepherd reply. Do not reply to your own comments.
 3. Run the `resolve:` command shown above, substituting `$DISMISS_MESSAGE` with a one-sentence reply/description of what you changed.
 4. For any large decisions or rejections you made this iteration, run `pr-shepherd journal 42 '- <decision>'` to append an entry to the `## Shepherd Journal` section. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. The command is idempotent — re-running with the same text is a no-op.
-5. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick. Recheck: rerun `pr-shepherd 42` to recheck once after a fresh 30s–4m delay.
+5. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.

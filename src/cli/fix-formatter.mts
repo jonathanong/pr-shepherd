@@ -10,17 +10,10 @@ import {
   renderThreadConversation,
   blockquote,
 } from "./list-formatters.mts";
-import { adaptFixCodeInstructions, numberInstructions } from "./iterate-instructions.mts";
+import { numberInstructions } from "./iterate-instructions.mts";
 import type { CheckAnnotation, IterateResultFixCode } from "../types.mts";
 
-export function formatFixCodeResult(
-  header: string,
-  result: IterateResultFixCode,
-  opts?: {
-    readyDelaySuffix?: string;
-  },
-): string {
-  const readyDelaySuffix = opts?.readyDelaySuffix;
+export function formatFixCodeResult(header: string, result: IterateResultFixCode): string {
   const sections: string[] = [header];
 
   if (result.fix.threads.length > 0) {
@@ -169,11 +162,7 @@ export function formatFixCodeResult(
   sections.push(postFixLines.join("\n"));
 
   sections.push("## Instructions");
-  sections.push(
-    numberInstructions(
-      adaptFixCodeInstructions(result.fix.instructions, result.pr, readyDelaySuffix),
-    ),
-  );
+  sections.push(numberInstructions(result.fix.instructions));
 
   return joinSections(sections);
 }

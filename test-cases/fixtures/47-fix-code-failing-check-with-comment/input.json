@@ -1,0 +1,44 @@
+{
+  "batchData": {
+    "comments": [
+      {
+        "id": "IC_with_check",
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Please also update the changelog for this change.",
+        "url": "https://github.com/owner/repo/pull/42#issuecomment-47",
+        "createdAtUnix": 1715700000,
+        "isMinimized": false
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / lint",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/4701",
+        "runId": "4701"
+      }
+    ]
+  },
+  "triagedChecks": [
+    {
+      "name": "CI / lint",
+      "status": "COMPLETED",
+      "conclusion": "FAILURE",
+      "event": "pull_request",
+      "detailsUrl": "https://github.com/owner/repo/actions/runs/4701",
+      "runId": "4701",
+      "category": "failing",
+      "workflowName": "CI",
+      "jobName": "lint",
+      "failedStep": "Run oxlint"
+    }
+  ],
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

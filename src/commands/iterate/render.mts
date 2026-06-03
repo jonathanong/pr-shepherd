@@ -17,7 +17,9 @@ import {
 } from "../shepherd-journal.mts";
 import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
 
-export const FIX_INSTRUCTION_STOP =
+// Module-private: the final "stop" step appended to every fix_code instruction list. No longer
+// re-exported now that the recheck/delay suffix that consumed it (in iterate-instructions) is gone.
+const FIX_INSTRUCTION_STOP =
   "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.";
 
 /**
@@ -38,7 +40,7 @@ export function buildFixInstructions(
   actionableComments: AgentComment[],
   checks: AgentCheck[],
   changesRequestedReviews: Review[],
-  baseBranch: string,
+  _baseBranch: string, // retained for call-site stability; rebase mechanics now defer to the caller
   resolveCommand: ResolveCommand,
   hasConflicts: boolean,
   prNumber: number,
@@ -76,19 +78,19 @@ export function buildFixInstructions(
     if (hasConflicts) {
       // Conflicts make push mandatory regardless of whether code edits are needed.
       instructions.push(
-        `The branch has merge conflicts that require rebase before merging. Apply any code edits for items ${sectionRef}, commit if edits were made, rebase onto \`origin/${baseBranch}\` per your repository's conventions, push${resolveClause}.`,
+        `The branch has merge conflicts that must be resolved before merging (see \`**branch**\` above). Apply any code edits for items ${sectionRef}, then commit and push${resolveClause}.`,
       );
     } else {
       const skipClause = resolveCommand.hasMutations
-        ? "skip cancellation/commit/push and run the `resolve:` command"
+        ? "skip the commit/push and run the `resolve:` command"
         : "no push is needed";
       instructions.push(
-        `Decide for each item ${sectionRef} whether a code change is warranted. **If any code changes are needed:** cancel in-progress runs first, apply edits, commit, rebase, push${resolveClause}. **If no code changes are needed:** ${skipClause}.`,
+        `Decide for each item ${sectionRef} whether a code change is warranted. **If any code changes are needed:** apply edits, commit, push${resolveClause}. **If no code changes are needed:** ${skipClause}.`,
       );
     }
   } else if (hasConflicts) {
     instructions.push(
-      `The branch has merge conflicts — rebase onto \`origin/${baseBranch}\` per your repository's conventions to resolve them, then push.`,
+      `The branch has merge conflicts that must be resolved before merging (see \`**branch**\` above). Resolve them and push.`,
     );
   }
 
@@ -103,11 +105,14 @@ export function buildFixInstructions(
     instructions.push(buildCommitSuggestionInstruction(prNumber, "## Review threads", false));
 
   if (threads.length > 0 || actionableComments.length > 0) {
+    const fixSections: string[] = [];
+    if (threads.length > 0) fixSections.push("`## Review threads`");
+    if (actionableComments.length > 0) fixSections.push("`## Actionable comments`");
     const suggestionFallback = hasSuggestions
       ? ` When applying a \`[suggestion]\` thread manually (e.g. after a failed \`commit-suggestion\` run), replace the exact line range shown in the heading (\`path:startLine-endLine\`) with the replacement shown in its \`Replaces lines …\` block verbatim — an empty replacement deletes those lines, a single blank line replaces the range with one blank line.`
       : "";
     instructions.push(
-      `Apply code fixes: read and edit each file referenced under \`## Review threads\` and \`## Actionable comments\` above.${suggestionFallback}`,
+      `Apply code fixes: read and edit each file referenced under ${fixSections.join(" and ")} above.${suggestionFallback}`,
     );
   }
 
@@ -130,11 +135,6 @@ export function buildFixInstructions(
       `For each bullet under \`## Changes-requested reviews\` above: read the review body and apply the requested changes.`,
     );
   }
-
-  if (hasNonConflictHints)
-    instructions.push(
-      `If you applied code edits: commit them with a descriptive message, then rebase onto \`origin/${baseBranch}\` per your repository's conventions before pushing.`,
-    );
 
   if (resolveOnlyCommand?.hasMutations)
     instructions.push(`Run the \`resolve-only:\` command shown above — no substitutions needed.`);

@@ -1,0 +1,25 @@
+{
+  "batchData": {
+    "mergeable": "CONFLICTING",
+    "mergeStateStatus": "DIRTY",
+    "reviewSummaries": [
+      {
+        "id": "PRR_edit_conflict",
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Re-reviewed after the rebase: the conflict resolution looks mostly right, one nit left."
+      }
+    ]
+  },
+  "seenMap": {
+    "PRR_edit_conflict": {
+      "seenAt": 1715700000,
+      "bodyHash": "aaaaaaaaaaaaaaaa"
+    }
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}
