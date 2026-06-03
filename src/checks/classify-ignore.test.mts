@@ -1,9 +1,12 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { classifyChecks, getCiVerdict } from "./classify.mts";
 import { _resetConfigCache } from "../config/load.mts";
+import {
+  makeTempConfigDir,
+  removeTempConfigDir,
+  stringListYaml,
+  writeRcFile,
+} from "../../test-helpers/config/temp-rc.test-support.mts";
 import type { CheckRun } from "../types.mts";
 
 function makeCheck(overrides: Partial<CheckRun>): CheckRun {
@@ -22,11 +25,8 @@ const originalCwd = process.cwd();
 let tempCwd: string | null = null;
 
 function withIgnoreChecks(patterns: string[]): void {
-  tempCwd = mkdtempSync(join(tmpdir(), "shepherd-ignore-checks-test-"));
-  writeFileSync(
-    join(tempCwd, ".pr-shepherdrc.yml"),
-    `ignoreChecks:\n${patterns.map((p) => `  - ${JSON.stringify(p)}`).join("\n")}\n`,
-  );
+  tempCwd = makeTempConfigDir("shepherd-ignore-checks-test-");
+  writeRcFile(tempCwd, stringListYaml("ignoreChecks", patterns));
   process.chdir(tempCwd);
   _resetConfigCache();
 }
@@ -34,7 +34,7 @@ function withIgnoreChecks(patterns: string[]): void {
 afterEach(() => {
   process.chdir(originalCwd);
   _resetConfigCache();
-  if (tempCwd !== null) rmSync(tempCwd, { recursive: true, force: true });
+  removeTempConfigDir(tempCwd);
   tempCwd = null;
 });
 
