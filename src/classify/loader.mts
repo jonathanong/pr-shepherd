@@ -38,9 +38,18 @@ let tsxRegistered = false;
 
 async function ensureTsxRegistered(): Promise<void> {
   if (tsxRegistered) return;
-  const { register } = await import("tsx/esm/api");
-  register();
-  tsxRegistered = true;
+  try {
+    const { register } = await import("tsx/esm/api");
+    register();
+    tsxRegistered = true;
+    /* c8 ignore start */
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(
+      `pr-shepherd: failed to register tsx — .ts/.mts classification rules will not load: ${msg}\n`,
+    );
+  }
+  /* c8 ignore stop */
 }
 
 const ruleCache = new Map<string, LoadedRule[]>();

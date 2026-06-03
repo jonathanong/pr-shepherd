@@ -226,4 +226,36 @@ describe("partitionBatch", () => {
     expect(p.ruleAutoResolveReviewSummaryIds).not.toContain("r1");
     expect(p.ruleAutoResolveReviewSummaryIds).toHaveLength(0);
   });
+
+  it("autoResolve without suppress queues comment and review summary for auto-resolve", () => {
+    const resolveOnly = makeRule("r", (item) =>
+      item.kind === "pr-comment" || item.kind === "review-summary" ? { autoResolve: true } : null,
+    );
+    const batch = makeBatch({
+      comments: [makeComment("c1")],
+      reviewSummaries: [makeReview("r1")],
+    });
+    const idx = buildClassifyIndex([resolveOnly], batch);
+    const p = partitionBatch(idx, batch);
+    expect(p.suppressedCommentIds).not.toContain("c1");
+    expect(p.suppressedReviewSummaryIds).not.toContain("r1");
+    expect(p.ruleAutoResolveCommentIds).toContain("c1");
+    expect(p.ruleAutoResolveReviewSummaryIds).toContain("r1");
+  });
+
+  it("skips already-resolved and outdated threads in ruleAutoResolveThreadIds", () => {
+    const rule = makeRule("r", () => ({ autoResolve: true }));
+    const batch = makeBatch({
+      reviewThreads: [
+        makeThread("t-open"),
+        { ...makeThread("t-resolved"), isResolved: true },
+        { ...makeThread("t-outdated"), isOutdated: true },
+      ],
+    });
+    const idx = buildClassifyIndex([rule], batch);
+    const p = partitionBatch(idx, batch);
+    expect(p.ruleAutoResolveThreadIds).toContain("t-open");
+    expect(p.ruleAutoResolveThreadIds).not.toContain("t-resolved");
+    expect(p.ruleAutoResolveThreadIds).not.toContain("t-outdated");
+  });
 });

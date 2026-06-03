@@ -131,7 +131,9 @@ export async function runCheck(
   ]);
   await markReviewInlineThreadMarkers(stateKey, batchData.reviewThreads);
   const changesRequestedReviews = changesRequestedReviewVisibility.visible;
-  const changesRequestedReviewCount = batchData.changesRequestedReviews.length;
+  const changesRequestedReviewCount = batchData.changesRequestedReviews.filter(
+    (r) => !partition.suppressedChangesRequestedIds.has(r.id),
+  ).length;
   const approvedReviews = approvedReviewVisibility.visible;
   let status = computeStatus(
     verdict,
@@ -149,6 +151,7 @@ export async function runCheck(
       verdict,
       threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
       visibleCommentClassification.actionable.length,
+      changesRequestedReviewCount,
     );
     batchData = refreshed.batchData;
     mergeStatus = refreshed.mergeStatus;

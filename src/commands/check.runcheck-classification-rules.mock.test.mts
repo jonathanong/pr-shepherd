@@ -81,4 +81,22 @@ describe("runCheck — classification rules", () => {
     expect(report.reviewSummaries.map((r) => r.id)).not.toContain("rev-bot");
     expect(report.ruleAutoResolveReviewSummaryIds).toContain("rev-bot");
   });
+
+  it("suppressed changes-requested review does not count as blocking", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        changesRequestedReviews: [
+          {
+            id: "cr-bot",
+            author: "bot-reviewer",
+            authorType: "Bot" as const,
+            body: "Bot changes requested",
+          },
+        ],
+      }),
+    });
+    const report = await runCheck(BASE_OPTS);
+    expect(report.changesRequestedReviews).toHaveLength(0);
+    expect(report.status).toBe("READY");
+  });
 });

@@ -96,6 +96,7 @@ describe("refreshReadyMergeability", () => {
       },
       0,
       0,
+      0,
     );
 
     expect(refreshed.batchData.mergeable).toBe("MERGEABLE");

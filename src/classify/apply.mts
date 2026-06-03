@@ -124,13 +124,13 @@ export function partitionBatch(index: ClassifyIndex, batch: BatchPrData): BatchP
     batch.changesRequestedReviews.filter((r) => suppressedIds.has(r.id)).map((r) => r.id),
   );
   const ruleAutoResolveCommentIds = batch.comments
-    .filter((c) => suppressedIds.has(c.id) && autoResolveIds.has(c.id))
+    .filter((c) => autoResolveIds.has(c.id))
     .map((c) => c.id);
   const ruleAutoResolveThreadIds = batch.reviewThreads
-    .filter((t) => suppressedIds.has(t.id) && autoResolveIds.has(t.id))
+    .filter((t) => !t.isResolved && !t.isOutdated && autoResolveIds.has(t.id))
     .map((t) => t.id);
   const ruleAutoResolveReviewSummaryIds = batch.reviewSummaries
-    .filter((r) => suppressedIds.has(r.id) && autoResolveIds.has(r.id))
+    .filter((r) => autoResolveIds.has(r.id))
     .map((r) => r.id);
   return {
     suppressedCommentIds,
