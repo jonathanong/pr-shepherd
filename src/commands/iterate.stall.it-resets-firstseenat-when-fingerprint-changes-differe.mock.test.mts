@@ -21,6 +21,47 @@ registerIterateHooks();
 // ---------------------------------------------------------------------------
 
 describe("runIterate — stall-timeout guard", () => {
+  it("resets firstSeenAt when ruleAutoResolveIds change", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        threads: {
+          actionable: [],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+          ruleAutoResolveIds: ["thread-2", "thread-1"],
+        },
+        ruleAutoResolveReviewSummaryIds: ["summary-2", "summary-1"],
+      }),
+    );
+    mockReadStallState.mockResolvedValue(null);
+    await runIterate(makeOpts30mStall());
+    const fp1 = (mockWriteStallState.mock.calls[0]![1] as StallState).fingerprint;
+
+    mockWriteStallState.mockClear();
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        threads: {
+          actionable: [],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+          ruleAutoResolveIds: ["thread-1", "thread-3"],
+        },
+      }),
+    );
+    mockReadStallState.mockResolvedValue({ fingerprint: fp1, firstSeenAt: NOW - STALL_TIMEOUT_S });
+
+    const result = await runIterate(makeOpts30mStall());
+
+    expect(result.action).not.toBe("escalate");
+    const written = mockWriteStallState.mock.calls[0]![1] as StallState;
+    expect(written.firstSeenAt).toBe(NOW);
+    expect(written.fingerprint).not.toBe(fp1);
+  });
+
   it("resets firstSeenAt when fingerprint changes (different failing checks)", async () => {
     // First call: passing report.
     mockRunCheck.mockResolvedValue(makeReport());
