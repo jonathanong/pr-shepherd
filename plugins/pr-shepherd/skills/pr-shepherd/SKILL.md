@@ -27,6 +27,7 @@ Poll dispatcher for iterating a PR to completion.
    ```
 
    Do not pass `$ARGUMENTS` through as extra flags. If you need to inspect supported options, run `pr-shepherd --help`.
+   Do not wrap this command in shell delays such as `sleep`, `sleep && pr-shepherd`, or an external wait loop; the poll dispatcher owns waiting through `--interval` and `--timeout`.
 
    Print the full output. Follow the `## Instructions` section exactly for the current action.
 
@@ -34,6 +35,8 @@ Poll dispatcher for iterating a PR to completion.
    - `[WAIT]`: call `pr-shepherd <N> --interval 45s --timeout 4m` again.
    - `[MARK_READY]`: call `pr-shepherd <N> --interval 45s --timeout 4m` again.
    - `[FIX_CODE]`: follow the output's `## Instructions`, then call `pr-shepherd <N> --interval 45s --timeout 4m` again.
+
+   If the CLI instructions mention rechecking after a fresh delay, satisfy that by invoking `pr-shepherd <N> --interval 45s --timeout 4m` directly. Do not run a separate `sleep`; repeated invocations should be bounded poll-dispatcher calls, not shell-managed waiting.
 
    Treat a nonzero poll exit code as PR state only when the output contains a matching `# PR #N [ACTION]` heading. Exit code `1` can also mean a command or validation failure; if there is no `[FIX_CODE]` heading, surface the error and stop instead of looping.
 
