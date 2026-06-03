@@ -258,4 +258,15 @@ describe("partitionBatch", () => {
     expect(p.ruleAutoResolveThreadIds).not.toContain("t-resolved");
     expect(p.ruleAutoResolveThreadIds).not.toContain("t-outdated");
   });
+
+  it("skips already-minimized comments in ruleAutoResolveCommentIds", () => {
+    const rule = makeRule("r", () => ({ autoResolve: true }));
+    const batch = makeBatch({
+      comments: [makeComment("c-open"), { ...makeComment("c-min"), isMinimized: true }],
+    });
+    const idx = buildClassifyIndex([rule], batch);
+    const p = partitionBatch(idx, batch);
+    expect(p.ruleAutoResolveCommentIds).toContain("c-open");
+    expect(p.ruleAutoResolveCommentIds).not.toContain("c-min");
+  });
 });
