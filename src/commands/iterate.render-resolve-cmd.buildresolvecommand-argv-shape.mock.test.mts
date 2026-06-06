@@ -59,7 +59,7 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     }
   });
 
-  it("dedupes thread IDs and does not generate review dismissals for overlap cases", async () => {
+  it("dedupes thread IDs and includes bot CR review in --dismiss-review-ids", async () => {
     const thread = {
       id: "thread-1",
       isResolved: false,
@@ -128,11 +128,13 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     expect(result.fix.resolveCommand.argv).not.toContain("--minimize-comment-ids");
     expect(result.fix.resolveOnlyCommand?.argv).toContain("--minimize-comment-ids");
     expect(result.fix.resolveOnlyCommand?.argv).toContain("PRR_DUP");
-    expect(result.fix.resolveCommand.argv).not.toContain("--dismiss-review-ids");
+    // Bot CR review is dismissed in the reply command (same command that has --message).
+    expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
+    expect(result.fix.resolveCommand.argv).toContain("PRR_DUP");
     expect(result.fix.resolveCommand.requiresDismissMessage).toBe(true);
   });
 
-  it("routes pr-level review requests to fix_code without generated dismissals", async () => {
+  it("routes pr-level bot CR reviews to fix_code with --dismiss-review-ids", async () => {
     // A CHANGES_REQUESTED review has its own distinct ID — it is not also in reviewSummaries.
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -156,9 +158,10 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
-      expect(result.fix.resolveCommand.argv).not.toContain("--dismiss-review-ids");
-      expect(result.fix.resolveCommand.argv).not.toContain("PRR_CHANGES");
-      expect(result.fix.resolveCommand.requiresDismissMessage).toBe(false);
+      // Non-human (Unknown) CR reviews are auto-dismissed after the agent pushes a fix.
+      expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
+      expect(result.fix.resolveCommand.argv).toContain("PRR_CHANGES");
+      expect(result.fix.resolveCommand.requiresDismissMessage).toBe(true);
       expect(result.fix.changesRequestedReviews).toHaveLength(1);
     }
   });

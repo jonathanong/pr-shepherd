@@ -132,7 +132,7 @@ export function buildFixInstructions(
 
   if (changesRequestedReviews.length > 0) {
     instructions.push(
-      `For each bullet under \`## Changes-requested reviews\` above: read the review body and apply the requested changes.`,
+      `For each bullet under \`## Changes-requested reviews\` above: read the review body and apply the requested changes.${(resolveCommand.dismissReviewIds?.length ?? 0) > 0 ? " Bot-authored CR reviews listed in `--dismiss-review-ids` will be dismissed by the `resolve:` command after your push." : ""}`,
     );
   }
 

@@ -1,5 +1,5 @@
 {
-  "description": "CHANGES_REQUESTED review with no inline threads and an in-progress CI check. Demonstrates fix for #223: routes to fix_code (not escalate) with --dismiss-review-ids. Also shows in-progress runs are listed because changesRequestedReviews is code-shaped work.",
+  "description": "Human CHANGES_REQUESTED review (authorType User) with no inline threads and an in-progress CI check. Routes to fix_code (not escalate). Human CR reviews are surfaced but not auto-dismissed — the reviewer must re-review or dismiss themselves. In-progress runs are listed because changesRequestedReviews is code-shaped work.",
   "batchData": {
     "changesRequestedReviews": [
       {

@@ -79,7 +79,7 @@ export function buildResolveCommand(
   threads: AgentThread[],
   resolutionOnlyThreads: ReviewThread[],
   allCommentIds: string[],
-  _reviews: Review[],
+  reviews: Review[],
   checks: AgentCheck[],
   prNumber: number,
   botUsernames: NormalizedBotUsernames = new Set(),
@@ -98,23 +98,40 @@ export function buildResolveCommand(
       .map((t) => t.id),
     ...ruleAutoResolveThreadIds,
   ]);
+  // Bot/non-human CHANGES_REQUESTED reviews are auto-dismissed after the agent pushes a fix.
+  // Human reviews are left for the reviewer to re-review or dismiss themselves.
+  const dismissReviewIds = dedupeIds(
+    reviews
+      .filter((r) => !isHumanAuthor(r) || isConfiguredBotAuthor(r, botUsernames))
+      .map((r) => r.id),
+  );
 
   const hasReply = replyThreadIds.length > 0;
+  const hasDismiss = dismissReviewIds.length > 0;
+  // Mutations that require --message: replies (to human threads) and dismissals (of bot CR reviews).
+  const hasMessageMutations = hasReply || hasDismiss;
   const hasResolveOrMinimize = resolveThreadIds.length > 0 || allCommentIds.length > 0;
 
-  if (hasReply && hasResolveOrMinimize) {
-    // Split: reply command needs SHA; resolve/minimize command does not.
+  if (hasMessageMutations && hasResolveOrMinimize) {
+    // Split: message-bearing mutations (replies + dismissals) ride in resolveArgv;
+    // resolve/minimize mutations go in resolveOnlyArgv so they can run without SHA or message.
     const resolveArgv = buildPrShepherdCommand(["resolve", String(prNumber)]).argv;
-    resolveArgv.push("--reply-thread-ids", replyThreadIds.join(","));
+    if (replyThreadIds.length > 0) {
+      resolveArgv.push("--reply-thread-ids", replyThreadIds.join(","));
+    }
     resolveArgv.push("--message", "$DISMISS_MESSAGE");
-    // `requiresHeadSha` is only true when actionable thread fixes or failing
-    // checks are being addressed — mutations that can race with a moving HEAD.
-    const requiresHeadSha = threads.length > 0 || checks.length > 0;
+    if (hasDismiss) {
+      resolveArgv.push("--dismiss-review-ids", dismissReviewIds.join(","));
+    }
+    // SHA is required when actionable thread fixes or failing checks are being addressed,
+    // or when bot CR reviews are being dismissed (post-push SHA gate).
+    const requiresHeadSha = threads.length > 0 || checks.length > 0 || hasDismiss;
     const resolveCommand: ResolveCommand = {
       argv: resolveArgv,
       requiresHeadSha,
       requiresDismissMessage: true,
-      replyThreadIds,
+      ...(replyThreadIds.length > 0 ? { replyThreadIds } : undefined),
+      ...(hasDismiss ? { dismissReviewIds } : undefined),
       hasMutations: true,
     };
 
@@ -136,7 +153,7 @@ export function buildResolveCommand(
     return { resolveCommand, resolveOnlyCommand };
   }
 
-  // Single command: either reply-only or resolve/minimize-only (no split needed).
+  // Single command: all mutations combined (or only one category present).
   const argv = buildPrShepherdCommand(["resolve", String(prNumber)]).argv;
   if (replyThreadIds.length > 0) {
     argv.push("--reply-thread-ids", replyThreadIds.join(","));
@@ -148,16 +165,22 @@ export function buildResolveCommand(
   if (allCommentIds.length > 0) {
     argv.push("--minimize-comment-ids", allCommentIds.join(","));
   }
-  const hasMutations = hasReply || hasResolveOrMinimize;
-  // SHA is only required when replying after actionable fixes or failing checks.
-  // Resolve/minimize-only mutations never need SHA.
-  const requiresHeadSha = hasReply && (threads.length > 0 || checks.length > 0);
+  if (hasDismiss) {
+    // Add --message when dismissing without a reply (replies already added it above).
+    if (!hasReply) argv.push("--message", "$DISMISS_MESSAGE");
+    argv.push("--dismiss-review-ids", dismissReviewIds.join(","));
+  }
+  const hasMutations = hasMessageMutations || hasResolveOrMinimize;
+  // SHA is required when replying after actionable fixes/checks, or whenever dismissing
+  // (dismissal is a post-push operation that must race-check against a moving HEAD).
+  const requiresHeadSha = hasDismiss || (hasReply && (threads.length > 0 || checks.length > 0));
   const resolveCommand: ResolveCommand = {
     argv,
     requiresHeadSha,
-    requiresDismissMessage: replyThreadIds.length > 0,
+    requiresDismissMessage: hasMessageMutations,
     ...(replyThreadIds.length > 0 ? { replyThreadIds } : undefined),
     ...(resolveThreadIds.length > 0 ? { resolveThreadIds } : undefined),
+    ...(hasDismiss ? { dismissReviewIds } : undefined),
     hasMutations,
   };
 
