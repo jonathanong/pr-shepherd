@@ -20,6 +20,7 @@ const passingVerdict: CiVerdict = {
   allPassed: true,
   hasChecks: true,
   filteredNames: [],
+  ignoredNames: [],
 };
 
 describe("computeStatus", () => {
@@ -45,5 +46,51 @@ describe("computeStatus", () => {
     expect(computeStatus(passingVerdict, 0, 0, { ...cleanMerge, status: "DRAFT" }, 0)).toBe(
       "READY",
     );
+  });
+
+  it("returns READY for UNSTABLE when all non-ignored checks pass and no review work remains", () => {
+    expect(computeStatus(passingVerdict, 0, 0, { ...cleanMerge, status: "UNSTABLE" }, 0)).toBe(
+      "READY",
+    );
+  });
+
+  it("returns READY for UNSTABLE when only ignored checks exist (hasChecks false, ignoredNames present)", () => {
+    const onlyIgnoredVerdict: CiVerdict = {
+      ...passingVerdict,
+      hasChecks: false,
+      ignoredNames: ["Kilo Code Review"],
+    };
+    expect(computeStatus(onlyIgnoredVerdict, 0, 0, { ...cleanMerge, status: "UNSTABLE" }, 0)).toBe(
+      "READY",
+    );
+  });
+
+  it("returns PENDING for BLOCKED when only ignored checks exist (safeguard: required checks may not have started)", () => {
+    const onlyIgnoredVerdict: CiVerdict = {
+      ...passingVerdict,
+      hasChecks: false,
+      ignoredNames: ["Kilo Code Review"],
+    };
+    expect(computeStatus(onlyIgnoredVerdict, 0, 0, { ...cleanMerge, status: "BLOCKED" }, 0)).toBe(
+      "PENDING",
+    );
+  });
+
+  it("returns PENDING for UNSTABLE when review work remains", () => {
+    expect(computeStatus(passingVerdict, 1, 0, { ...cleanMerge, status: "UNSTABLE" }, 0)).toBe(
+      "PENDING",
+    );
+  });
+
+  it("returns IN_PROGRESS for UNSTABLE when a non-ignored check is in-progress", () => {
+    expect(
+      computeStatus(
+        { ...passingVerdict, allPassed: false, anyInProgress: true },
+        0,
+        0,
+        { ...cleanMerge, status: "UNSTABLE" },
+        0,
+      ),
+    ).toBe("IN_PROGRESS");
   });
 });

@@ -26,6 +26,7 @@ function mockInProgressCheck(check: ClassifiedCheck): void {
         filtered: [],
         filteredNames: [],
         blockedByFilteredCheck: false,
+
         inProgress: [check],
       },
     }),

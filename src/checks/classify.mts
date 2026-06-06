@@ -23,7 +23,9 @@ export function classifyChecks(checks: CheckRun[]): ClassifiedCheck[] {
   const config = loadConfig();
   const relevantEvents = new Set(config.checks.ciTriggerEvents);
   const isIgnored = buildIgnoreMatcher(config.ignoreChecks ?? []);
-  return checks.filter((c) => !isIgnored(c.name)).map((c) => classify(c, relevantEvents));
+  return checks.map((c) =>
+    isIgnored(c.name) ? { ...c, category: "ignored" as const } : classify(c, relevantEvents),
+  );
 }
 
 function buildIgnoreMatcher(patterns: string[]): (name: string) => boolean {
@@ -64,9 +66,9 @@ function classify(check: CheckRun, relevantEvents: Set<string>): ClassifiedCheck
 // ---------------------------------------------------------------------------
 
 export interface CiVerdict {
-  /** True when all relevant (non-filtered, non-skipped) checks passed. */
+  /** True when all relevant (non-filtered, non-skipped, non-ignored) checks passed. */
   allPassed: boolean;
-  /** True when at least one relevant (non-filtered, non-skipped) check exists. */
+  /** True when at least one relevant (non-filtered, non-skipped, non-ignored) check exists. */
   hasChecks: boolean;
   /** True when at least one check is still running/queued. */
   anyInProgress: boolean;
@@ -74,11 +76,15 @@ export interface CiVerdict {
   anyFailing: boolean;
   /** Names of checks that were filtered out (triggered by non-PR events). */
   filteredNames: string[];
+  /** Names of checks suppressed by the user's ignoreChecks config. */
+  ignoredNames: string[];
 }
 
 /** Compute a high-level CI verdict from a list of classified checks. */
 export function getCiVerdict(classified: ClassifiedCheck[]): CiVerdict {
-  const relevant = classified.filter((c) => c.category !== "filtered" && c.category !== "skipped");
+  const relevant = classified.filter(
+    (c) => c.category !== "filtered" && c.category !== "skipped" && c.category !== "ignored",
+  );
   const anyInProgress = relevant.some((c) => c.category === "in_progress");
   const anyFailing = relevant.some((c) => c.category === "failing");
   // When there are no relevant checks (e.g. docs-only PR where all checks are filtered/skipped),
@@ -86,6 +92,9 @@ export function getCiVerdict(classified: ClassifiedCheck[]): CiVerdict {
   const allPassed = !anyInProgress && !anyFailing;
   const hasChecks = relevant.length > 0;
   const filteredNames = classified.filter((c) => c.category === "filtered").map((c) => c.name);
+  const ignoredNames = Array.from(
+    new Set(classified.filter((c) => c.category === "ignored").map((c) => c.name)),
+  );
 
-  return { allPassed, hasChecks, anyInProgress, anyFailing, filteredNames };
+  return { allPassed, hasChecks, anyInProgress, anyFailing, filteredNames, ignoredNames };
 }

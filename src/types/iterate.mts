@@ -98,6 +98,7 @@ export interface IterateResultBase {
    */
   checks: RelevantCheck[];
   inProgressChecks?: ActiveCheck[];
+  ignoredNames?: string[]; // Suppressed by ignoreChecks config; omitted when empty.
   activity?: PrActivitySummary;
 }
 

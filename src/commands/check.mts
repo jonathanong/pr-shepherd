@@ -173,6 +173,7 @@ export async function runCheck(
       filtered,
       filteredNames: verdict.filteredNames,
       blockedByFilteredCheck,
+      ...(verdict.ignoredNames.length > 0 && { ignoredNames: verdict.ignoredNames }),
     },
     threads: {
       actionable: threadVisibility.activeThreads,

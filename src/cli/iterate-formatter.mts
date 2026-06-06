@@ -127,6 +127,10 @@ export function formatIterateResult(
 
   const headerLines = [heading, "", baseLine, summaryLine];
   if (requiredLine) headerLines.push(requiredLine);
+  if (result.ignoredNames && result.ignoredNames.length > 0) {
+    const names = result.ignoredNames.map((n) => "`" + n + "`").join(", ");
+    headerLines.push(`**ignored** ${names}`);
+  }
   const activityLine = formatActivityLine(result);
   if (activityLine) headerLines.push(activityLine);
   const header = headerLines.join("\n");
@@ -149,6 +153,10 @@ export function formatIterateResult(
     case "cancel": {
       const cancelHeaderLines = [`${heading} — ${result.reason}`, "", baseLine, summaryLine];
       if (requiredLine) cancelHeaderLines.push(requiredLine);
+      if (result.ignoredNames && result.ignoredNames.length > 0) {
+        const ignoredStr = result.ignoredNames.map((n) => "`" + n + "`").join(", ");
+        cancelHeaderLines.push(`**ignored** ${ignoredStr}`);
+      }
       if (activityLine) cancelHeaderLines.push(activityLine);
       return joinSections([
         cancelHeaderLines.join("\n"),

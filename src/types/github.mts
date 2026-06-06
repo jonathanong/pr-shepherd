@@ -61,7 +61,7 @@ export interface CheckRun {
   summary?: string;
 }
 
-type CheckCategory = "passed" | "failing" | "in_progress" | "skipped" | "filtered";
+type CheckCategory = "passed" | "failing" | "in_progress" | "skipped" | "filtered" | "ignored";
 
 export interface ClassifiedCheck extends CheckRun {
   category: CheckCategory;

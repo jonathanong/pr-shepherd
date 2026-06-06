@@ -65,6 +65,9 @@ export function projectIterateLean(
     ...((result.inProgressChecks?.length ?? 0) > 0 && {
       inProgressChecks: result.inProgressChecks,
     }),
+    ...((result.ignoredNames?.length ?? 0) > 0 && {
+      ignoredNames: result.ignoredNames,
+    }),
   };
 
   switch (result.action) {

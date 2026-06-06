@@ -19,14 +19,20 @@ export function computeStatus(
   // is BLOCKED (review pending, insufficient approvals, branch-protection rule, etc.).
   // Requires hasChecks so that a PR with zero relevant checks (CI never started, or all
   // filtered/skipped) doesn't prematurely trigger READY before any check has reported.
+  // Exception: UNSTABLE with ignored checks — UNSTABLE means only non-required checks are
+  // pending/failing, and if those are all ignored the handoff is safe even with no other checks.
+  // BLOCKED is excluded from the ignoredNames extension: BLOCKED can mean required checks haven't
+  // started, and handing off prematurely there risks a broken merge attempt.
   // blockingBotReviewInProgress is still excluded — a bot review is shepherd's problem, not a hand-off.
+  const hasRelevantPassingChecks =
+    verdict.hasChecks || (mergeStatus.status === "UNSTABLE" && verdict.ignoredNames.length > 0);
   if (
     verdict.allPassed &&
-    verdict.hasChecks &&
+    hasRelevantPassingChecks &&
     unresolvedThreads === 0 &&
     unresolvedComments === 0 &&
     changesRequestedReviews === 0 &&
-    mergeStatus.status === "BLOCKED" &&
+    (mergeStatus.status === "BLOCKED" || mergeStatus.status === "UNSTABLE") &&
     !mergeStatus.blockingBotReviewInProgress
   ) {
     return "READY";

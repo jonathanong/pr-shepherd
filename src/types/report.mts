@@ -54,6 +54,8 @@ export interface ShepherdReport {
     filtered: ClassifiedCheck[];
     filteredNames: string[];
     blockedByFilteredCheck: boolean;
+    /** Names of checks suppressed by the user's ignoreChecks config. Omitted when empty. */
+    ignoredNames?: string[];
   };
   threads: {
     actionable: ReviewThread[];
