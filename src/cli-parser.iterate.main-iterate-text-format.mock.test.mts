@@ -121,6 +121,12 @@ describe("main — iterate text format", () => {
     expect(parsed.action).toBe("cancel");
     expect(parsed.reason).toBe("ready-delay-elapsed");
   });
+  it("cancel text: ignoredNames appear in header when present", async () => {
+    const base = makeIterateResult("cancel") as Extract<IterateResult, { action: "cancel" }>;
+    mockRunIterate.mockResolvedValue({ ...base, ignoredNames: ["Kilo Code Review"] });
+    await main(["node", "shepherd", "iterate", "42"]);
+    expect(getStdout()).toContain("**ignored** `Kilo Code Review`");
+  });
   it("cancel text: each CancelReason value appears in the heading", async () => {
     const reasons: CancelReason[] = ["merged", "closed", "ready-delay-elapsed"];
     for (const reason of reasons) {
