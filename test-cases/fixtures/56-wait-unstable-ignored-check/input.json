@@ -27,5 +27,9 @@
     "isReady": false,
     "shouldCancel": false,
     "remainingSeconds": 600
+  },
+  "mergeableFallback": {
+    "mergeable": "MERGEABLE",
+    "mergeStateStatus": "UNSTABLE"
   }
 }
