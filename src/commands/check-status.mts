@@ -25,8 +25,7 @@ export function computeStatus(
   // started, and handing off prematurely there risks a broken merge attempt.
   // blockingBotReviewInProgress is still excluded — a bot review is shepherd's problem, not a hand-off.
   const hasRelevantPassingChecks =
-    verdict.hasChecks ||
-    (mergeStatus.status === "UNSTABLE" && verdict.ignoredNames.length > 0);
+    verdict.hasChecks || (mergeStatus.status === "UNSTABLE" && verdict.ignoredNames.length > 0);
   if (
     verdict.allPassed &&
     hasRelevantPassingChecks &&
