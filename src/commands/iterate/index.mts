@@ -62,7 +62,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       branchProtection: report.branchProtection,
       checks: buildRelevantChecks(report),
       inProgressChecks: buildActiveChecks(report),
-      ...(report.checks.ignoredNames.length > 0 && { ignoredNames: report.checks.ignoredNames }),
+      ...(report.checks.ignoredNames?.length ? { ignoredNames: report.checks.ignoredNames } : {}),
       activity: report.activity,
       action: "cancel",
       reason: report.mergeStatus.state === "MERGED" ? "merged" : "closed",
@@ -129,7 +129,9 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     branchProtection: report.branchProtection,
     checks: buildRelevantChecks(report),
     inProgressChecks: buildActiveChecks(report),
-    ...(report.checks.ignoredNames.length > 0 && { ignoredNames: report.checks.ignoredNames }),
+    ...((report.checks.ignoredNames?.length ?? 0) > 0 && {
+      ignoredNames: report.checks.ignoredNames,
+    }),
     activity: report.activity,
   };
 

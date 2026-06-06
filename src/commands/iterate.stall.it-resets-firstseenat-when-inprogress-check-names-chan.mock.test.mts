@@ -41,7 +41,7 @@ describe("runIterate — stall-timeout guard", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-          ignoredNames: [],
+
         },
       }),
     );

@@ -52,7 +52,7 @@ describe("iterate helper fallbacks", () => {
         filtered: [],
         filteredNames: [],
         blockedByFilteredCheck: false,
-        ignoredNames: [],
+
       },
     });
 

@@ -53,7 +53,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-          ignoredNames: [],
+
         },
         comments: {
           actionable: [actionableComment],

@@ -114,7 +114,7 @@ describe("runIterate — prescriptive fields: log strings", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-          ignoredNames: [],
+
         },
       }),
     );

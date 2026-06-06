@@ -22,7 +22,6 @@ export function buildTerminalReport(
       filtered: [],
       filteredNames: [],
       blockedByFilteredCheck: false,
-      ignoredNames: [],
     },
     threads: {
       actionable: [],

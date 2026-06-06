@@ -106,7 +106,6 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       filtered: [],
       filteredNames: [],
       blockedByFilteredCheck: false,
-      ignoredNames: [],
     },
     threads: {
       actionable: [],

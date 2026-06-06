@@ -41,7 +41,7 @@ describe("runIterate — timeout/cancelled failures route to fix_code", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-          ignoredNames: [],
+
         },
       }),
     );
@@ -94,7 +94,7 @@ describe("runIterate — timeout/cancelled failures route to fix_code", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-          ignoredNames: [],
+
         },
       }),
     );

@@ -45,7 +45,7 @@ describe("runIterate — fix_code agent projection", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-          ignoredNames: [],
+
         },
       }),
     );
@@ -91,7 +91,7 @@ describe("runIterate — fix_code agent projection", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-          ignoredNames: [],
+
         },
       }),
     );
