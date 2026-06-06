@@ -67,6 +67,31 @@ function writeQuietStatus(
 }
 
 const MAX_TIMER_MS = 2 ** 31 - 1;
+const TIMER_DRIFT_TOLERANCE_MS = 500;
+
+function writeWaitProgress(opts: {
+  tick: number;
+  elapsedMs: number;
+  sleepMs: number;
+  result: IterateResult;
+  quietStatus: boolean;
+  verbose: boolean;
+  lastWaitSignature: string | null;
+}): string | null {
+  const elapsedSeconds = Math.round(opts.elapsedMs / 1000);
+  const sleepSeconds = Math.round(opts.sleepMs / 1000);
+
+  if (!opts.quietStatus) {
+    writeTickProgress(opts.tick, elapsedSeconds, sleepSeconds, opts.verbose);
+    return opts.lastWaitSignature;
+  }
+
+  const signature = waitSignature(opts.result);
+  if (signature !== opts.lastWaitSignature) {
+    writeQuietStatus(opts.tick, elapsedSeconds, sleepSeconds, opts.result);
+  }
+  return signature;
+}
 
 export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> {
   const { intervalSeconds, timeoutSeconds, ...iterateOpts } = opts;
@@ -88,29 +113,19 @@ export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> 
     const elapsedMs = Date.now() - start;
     const remainingMs = timeoutMs - elapsedMs;
     if (remainingMs <= 0) break;
-    if (remainingMs < intervalMs) break;
+    if (remainingMs + TIMER_DRIFT_TOLERANCE_MS < intervalMs) break;
 
     const nextSleepMs = intervalMs;
-    if (quietStatus) {
-      const signature = waitSignature(lastResult);
-      if (signature !== lastWaitSignature) {
-        writeQuietStatus(
-          tick,
-          Math.round(elapsedMs / 1000),
-          Math.round(nextSleepMs / 1000),
-          lastResult,
-        );
-      }
-      lastWaitSignature = signature;
-    } else {
-      writeTickProgress(
-        tick,
-        Math.round(elapsedMs / 1000),
-        Math.round(nextSleepMs / 1000),
-        verbose,
-      );
-      if (!verbose) dotsPrinted = true;
-    }
+    lastWaitSignature = writeWaitProgress({
+      tick,
+      elapsedMs,
+      sleepMs: nextSleepMs,
+      result: lastResult,
+      quietStatus,
+      verbose,
+      lastWaitSignature,
+    });
+    if (!quietStatus && !verbose) dotsPrinted = true;
     await sleep(nextSleepMs);
   }
 

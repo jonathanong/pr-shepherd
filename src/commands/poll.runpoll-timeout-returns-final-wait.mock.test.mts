@@ -47,4 +47,23 @@ describe("runPoll — timeout returns final wait", () => {
     expect(result.action).toBe("wait");
     expect(mockRunIterate).toHaveBeenCalledTimes(3);
   });
+
+  it("does not skip a final wait tick because of small timer drift", async () => {
+    mockRunIterate.mockResolvedValue(makeWaitResult());
+
+    const pollPromise = runPoll({
+      prNumber: 42,
+      format: "text",
+      intervalSeconds: 30,
+      timeoutSeconds: 60,
+    });
+
+    await vi.advanceTimersByTimeAsync(30_250);
+    await vi.advanceTimersByTimeAsync(30_000);
+
+    const result = await pollPromise;
+
+    expect(result.action).toBe("wait");
+    expect(mockRunIterate).toHaveBeenCalledTimes(3);
+  });
 });
