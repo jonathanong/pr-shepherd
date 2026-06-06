@@ -41,7 +41,6 @@ describe("runIterate — cancelled + BEHIND", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-
         },
       }),
     );

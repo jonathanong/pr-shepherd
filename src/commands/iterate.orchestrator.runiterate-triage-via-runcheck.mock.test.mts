@@ -42,7 +42,6 @@ describe("runIterate — triage via runCheck", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-
         },
       }),
     );
@@ -84,7 +83,6 @@ describe("runIterate — triage via runCheck", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-
         },
       }),
     );
@@ -120,7 +118,6 @@ describe("runIterate — triage via runCheck", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-
         },
       }),
     );

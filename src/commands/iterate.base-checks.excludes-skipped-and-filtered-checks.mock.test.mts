@@ -44,7 +44,6 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
           filtered: [filteredCheck],
           filteredNames: ["windows-only"],
           blockedByFilteredCheck: false,
-
         },
       }),
     );
@@ -82,7 +81,6 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-
         },
       }),
     );

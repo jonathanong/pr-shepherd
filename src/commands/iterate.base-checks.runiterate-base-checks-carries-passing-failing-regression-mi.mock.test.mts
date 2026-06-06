@@ -46,7 +46,6 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-
         },
       }),
     );
@@ -99,7 +98,6 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-
         },
       }),
     );

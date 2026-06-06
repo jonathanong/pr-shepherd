@@ -64,7 +64,6 @@ describe("fix_code — check annotation seen markers", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-
         },
       }),
     );

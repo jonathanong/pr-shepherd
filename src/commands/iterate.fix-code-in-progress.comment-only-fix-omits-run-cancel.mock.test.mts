@@ -32,7 +32,6 @@ describe("fix_code — in-progress run cancellation", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-
         },
         comments: {
           actionable: [
@@ -91,7 +90,6 @@ describe("fix_code — in-progress run cancellation", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-
         },
         comments: {
           actionable: [

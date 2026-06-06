@@ -158,7 +158,6 @@ describe("runIterate — CI start stall timeout", () => {
           filtered: [checkRun({ event: "push" })],
           filteredNames: ["tests"],
           blockedByFilteredCheck: false,
-
         },
       }),
     );

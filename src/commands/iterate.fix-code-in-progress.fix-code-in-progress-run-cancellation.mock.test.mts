@@ -65,7 +65,6 @@ describe("fix_code — in-progress run cancellation", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-
         },
       }),
     );
@@ -108,7 +107,6 @@ describe("fix_code — in-progress run cancellation", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-
         },
         reviewSummaries: [
           { id: "PRR_BOT", author: "bot", authorType: "Unknown" as const, body: "looks good" },
@@ -152,7 +150,6 @@ describe("fix_code — in-progress run cancellation", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-
         },
         threads: {
           actionable: [],
