@@ -22,7 +22,7 @@ export function computeStatus(
   // blockingBotReviewInProgress is still excluded — a bot review is shepherd's problem, not a hand-off.
   if (
     verdict.allPassed &&
-    verdict.hasChecks &&
+    (verdict.hasChecks || verdict.ignoredNames.length > 0) &&
     unresolvedThreads === 0 &&
     unresolvedComments === 0 &&
     changesRequestedReviews === 0 &&

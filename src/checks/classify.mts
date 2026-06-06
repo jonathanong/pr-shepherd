@@ -92,7 +92,9 @@ export function getCiVerdict(classified: ClassifiedCheck[]): CiVerdict {
   const allPassed = !anyInProgress && !anyFailing;
   const hasChecks = relevant.length > 0;
   const filteredNames = classified.filter((c) => c.category === "filtered").map((c) => c.name);
-  const ignoredNames = classified.filter((c) => c.category === "ignored").map((c) => c.name);
+  const ignoredNames = Array.from(
+    new Set(classified.filter((c) => c.category === "ignored").map((c) => c.name)),
+  );
 
   return { allPassed, hasChecks, anyInProgress, anyFailing, filteredNames, ignoredNames };
 }
