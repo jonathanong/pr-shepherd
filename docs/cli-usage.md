@@ -27,7 +27,7 @@ pr-shepherd log-file [--format text|json]
 
 ```sh
 pr-shepherd 42
-pr-shepherd 42 --interval 60s --timeout 4.5m
+pr-shepherd 42 --interval 60s --timeout 270s
 pr-shepherd 42 --ready-delay 15m
 pr-shepherd iterate 42
 pr-shepherd poll 42 --format=json
@@ -51,7 +51,7 @@ pr-shepherd poll 42 --format=json
 | `--interval <duration>` | `60s`   | Sleep between `WAIT` ticks.                                        |
 | `--timeout <duration>`  | `4.5m`  | Maximum wall-clock wait before returning the latest `WAIT` result. |
 
-Durations accept seconds, minutes, hours, or bare seconds: `30s`, `4.5m`, `1h`, `45`.
+Durations accept seconds, minutes, hours, or bare seconds: `30s`, `270s`, `4.5m`, `1h`, `45`.
 
 Exit codes for iterate and poll: `0` `WAIT`/`MARK_READY`, `1` `FIX_CODE` or command error, `2` `CANCEL`, `3` `ESCALATE`.
 

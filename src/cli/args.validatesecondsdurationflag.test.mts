@@ -65,13 +65,7 @@ describe("validateSecondsDurationFlag", () => {
 
   it("accepts Nm suffix", () => {
     expect(validateSecondsDurationFlag("cmd", "--interval", "5m", true)).toBe("5m");
-  });
-
-  it("accepts fractional durations with units", () => {
     expect(validateSecondsDurationFlag("cmd", "--timeout", "4.5m", true)).toBe("4.5m");
-  });
-
-  it("accepts .0 fractional durations with units", () => {
     expect(validateSecondsDurationFlag("cmd", "--timeout", "4.0m", true)).toBe("4.0m");
   });
 
@@ -103,13 +97,7 @@ describe("parseDurationToSeconds", () => {
 
   it("parses Nm suffix as minutes", () => {
     expect(parseDurationToSeconds("5m", 60)).toBe(300);
-  });
-
-  it("parses fractional minutes as seconds", () => {
     expect(parseDurationToSeconds("4.5m", 60)).toBe(270);
-  });
-
-  it("parses .0 fractional minutes as seconds", () => {
     expect(parseDurationToSeconds("4.0m", 60)).toBe(240);
   });
 
