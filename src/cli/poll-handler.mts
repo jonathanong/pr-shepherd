@@ -6,8 +6,8 @@ import { validateSecondsDurationFlag } from "./duration-flag.mts";
 import { parseIterateFlags } from "./iterate-flags.mts";
 import { emitIterateResult } from "./iterate-emitter.mts";
 
-const DEFAULT_POLL_INTERVAL_SECONDS = 30;
-const DEFAULT_POLL_TIMEOUT_SECONDS = 300;
+const DEFAULT_POLL_INTERVAL_SECONDS = 60;
+const DEFAULT_POLL_TIMEOUT_SECONDS = 270;
 
 export async function handlePoll(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);

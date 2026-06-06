@@ -1,3 +1,5 @@
+import { parseSecondsDurationParts } from "./exit-codes.mts";
+
 export function validateSecondsDurationFlag(
   command: string,
   flag: string,
@@ -18,9 +20,9 @@ export function validateSecondsDurationFlag(
     process.exitCode = 1;
     return null;
   }
-  if (!/^[1-9]\d*(?:s|sec|seconds?|m|min|minutes?|h|hours?)?$/.test(trimmed)) {
+  if (!parseSecondsDurationParts(trimmed)) {
     process.stderr.write(
-      `${command}: invalid ${flag}: ${value}. Expected a duration like 30s, 5m, 1h, or bare seconds (e.g. 30).\n`,
+      `${command}: invalid ${flag}: ${value}. Expected a duration like 30s, 4.5m, 1h, or bare seconds (e.g. 30).\n`,
     );
     process.exitCode = 1;
     return null;

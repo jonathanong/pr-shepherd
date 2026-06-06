@@ -49,6 +49,11 @@ describe("validateSecondsDurationFlag", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  it("rejects bare fractional seconds", () => {
+    expect(validateSecondsDurationFlag("cmd", "--timeout", "4.5", true)).toBeNull();
+    expect(process.exitCode).toBe(1);
+  });
+
   it("accepts bare integer (seconds)", () => {
     expect(validateSecondsDurationFlag("cmd", "--interval", "30", true)).toBe("30");
     expect(stderrSpy).not.toHaveBeenCalled();
@@ -60,6 +65,8 @@ describe("validateSecondsDurationFlag", () => {
 
   it("accepts Nm suffix", () => {
     expect(validateSecondsDurationFlag("cmd", "--interval", "5m", true)).toBe("5m");
+    expect(validateSecondsDurationFlag("cmd", "--timeout", "4.5m", true)).toBe("4.5m");
+    expect(validateSecondsDurationFlag("cmd", "--timeout", "4.0m", true)).toBe("4.0m");
   });
 
   it("accepts Nh suffix", () => {
@@ -90,6 +97,8 @@ describe("parseDurationToSeconds", () => {
 
   it("parses Nm suffix as minutes", () => {
     expect(parseDurationToSeconds("5m", 60)).toBe(300);
+    expect(parseDurationToSeconds("4.5m", 60)).toBe(270);
+    expect(parseDurationToSeconds("4.0m", 60)).toBe(240);
   });
 
   it("parses Nmin suffix as minutes", () => {
@@ -110,6 +119,10 @@ describe("parseDurationToSeconds", () => {
 
   it("treats bare integer with no unit as seconds (not minutes)", () => {
     expect(parseDurationToSeconds("60", 0)).toBe(60);
+  });
+
+  it("returns default for bare fractional seconds", () => {
+    expect(parseDurationToSeconds("4.5", 30)).toBe(30);
   });
 
   it("returns default when integer overflows to Infinity", () => {
