@@ -26,6 +26,7 @@ function mockInProgressCheck(check: ClassifiedCheck): void {
         filtered: [],
         filteredNames: [],
         blockedByFilteredCheck: false,
+          ignoredNames: [],
         inProgress: [check],
       },
     }),
@@ -157,6 +158,7 @@ describe("runIterate — CI start stall timeout", () => {
           filtered: [checkRun({ event: "push" })],
           filteredNames: ["tests"],
           blockedByFilteredCheck: false,
+          ignoredNames: [],
         },
       }),
     );

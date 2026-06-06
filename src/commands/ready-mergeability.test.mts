@@ -93,6 +93,7 @@ describe("refreshReadyMergeability", () => {
         anyInProgress: false,
         hasChecks: true,
         filteredNames: [],
+        ignoredNames: [],
       },
       0,
       0,
@@ -124,6 +125,7 @@ describe("isBlockedByFilteredCheck", () => {
         anyInProgress: false,
         hasChecks: true,
         filteredNames: ["ci / push"],
+        ignoredNames: [],
       }),
     ).toBe(true);
     expect(
@@ -133,6 +135,7 @@ describe("isBlockedByFilteredCheck", () => {
         anyInProgress: false,
         hasChecks: true,
         filteredNames: ["ci / push"],
+        ignoredNames: [],
       }),
     ).toBe(false);
     expect(
@@ -142,6 +145,7 @@ describe("isBlockedByFilteredCheck", () => {
         anyInProgress: true,
         hasChecks: true,
         filteredNames: ["ci / push"],
+        ignoredNames: [],
       }),
     ).toBe(false);
     expect(
@@ -153,6 +157,7 @@ describe("isBlockedByFilteredCheck", () => {
           anyInProgress: false,
           hasChecks: true,
           filteredNames: ["ci / push"],
+        ignoredNames: [],
         },
       ),
     ).toBe(false);

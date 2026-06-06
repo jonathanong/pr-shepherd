@@ -38,6 +38,7 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
+          ignoredNames: [],
         },
       }),
     );

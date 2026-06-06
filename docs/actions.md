@@ -20,6 +20,7 @@ Pass `--verbose` to get more debug state. In JSON mode, the output starts from t
 **status** `<…>` · **merge** `<…>` · **state** `<…>` · **repo** `<…>`
 **summary** <N> passing[, <N> skipped][, <N> filtered][, <N> inProgress][· **remainingSeconds** <N>][· **blockingBotReviewInProgress**][· **isDraft**][· **branch** behind `origin/<base>` | · **branch** conflicts with `origin/<base>`]
 [**required** [approvals `<N>`][, conversation-resolution required][, checks: `<ctx>`, …]]
+[**ignored** `<check-name>`, …]
 [**activity** <N> commits · <N> review rounds[ · <N> review items since latest commit][ · active: `<check>`, …]]
 
 <action-specific body>
@@ -35,6 +36,8 @@ Lean-mode rules for the summary line:
 - `remainingSeconds` is shown only when the ready-delay timer is actively counting down (`status === "READY"` and `remainingSeconds > 0`).
 - `blockingBotReviewInProgress` and `isDraft` are shown only when `true`.
 - `shouldCancel` is never shown (it is fully implied by `action === "cancel"`).
+
+**`ignored` line:** Emitted (in both Markdown and JSON as `ignoredNames`) only when at least one check matched the user's `ignoreChecks` config. Lists the suppressed check names. When present, these checks do not contribute to CI verdict, `inProgress` count, or stall detection. If GitHub's `mergeStateStatus` is `UNSTABLE` and all non-ignored checks pass, the PR is treated as `READY` (same handoff behaviour as `BLOCKED` with passing CI) — the ignored check's pending/failing state does not drive stall-timeout escalation.
 
 The `**branch**` segment is appended to the `**summary**` line on any action when `mergeStatus` is `"BEHIND"` or `"CONFLICTS"`. It surfaces the raw branch state so the agent can decide whether to rebase without further tool calls.
 
@@ -77,6 +80,7 @@ Nothing actionable to do; all CI is passing or in-progress.
 
 **status** `IN_PROGRESS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 3 passing, 2 inProgress
+[**ignored** `<check-name>`, …]
 
 WAIT: 3 passing, 2 in-progress — 120s until auto-cancel
 

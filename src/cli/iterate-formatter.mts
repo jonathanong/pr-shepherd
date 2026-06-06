@@ -127,6 +127,9 @@ export function formatIterateResult(
 
   const headerLines = [heading, "", baseLine, summaryLine];
   if (requiredLine) headerLines.push(requiredLine);
+  if (result.ignoredNames && result.ignoredNames.length > 0) {
+    headerLines.push(`**ignored** ${result.ignoredNames.map((n) => `\`${n}\``).join(", ")}`);
+  }
   const activityLine = formatActivityLine(result);
   if (activityLine) headerLines.push(activityLine);
   const header = headerLines.join("\n");

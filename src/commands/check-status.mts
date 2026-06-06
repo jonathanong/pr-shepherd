@@ -26,7 +26,7 @@ export function computeStatus(
     unresolvedThreads === 0 &&
     unresolvedComments === 0 &&
     changesRequestedReviews === 0 &&
-    mergeStatus.status === "BLOCKED" &&
+    (mergeStatus.status === "BLOCKED" || mergeStatus.status === "UNSTABLE") &&
     !mergeStatus.blockingBotReviewInProgress
   ) {
     return "READY";

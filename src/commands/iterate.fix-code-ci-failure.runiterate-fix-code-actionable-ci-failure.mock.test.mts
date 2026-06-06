@@ -37,6 +37,7 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
+          ignoredNames: [],
         },
       }),
     );
@@ -79,6 +80,7 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
+          ignoredNames: [],
         },
       }),
     );

@@ -1,0 +1,31 @@
+{
+  "batchData": {
+    "mergeStateStatus": "UNSTABLE",
+    "checks": [
+      {
+        "name": "CI / build",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      },
+      {
+        "name": "Kilo Code Review",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/999",
+        "runId": "999"
+      }
+    ]
+  },
+  "config": {
+    "ignoreChecks": ["Kilo Code Review"]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}
