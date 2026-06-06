@@ -83,7 +83,7 @@ describe("runIterate — prescriptive fields: resolveCommand shape", () => {
     }
   });
 
-  it("resolveCommand does not include dismiss-review-ids when changesRequested", async () => {
+  it("resolveCommand includes --dismiss-review-ids for non-human CR reviews when changesRequested", async () => {
     const review = {
       id: "r-1",
       author: "reviewer",
@@ -123,8 +123,9 @@ describe("runIterate — prescriptive fields: resolveCommand shape", () => {
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       const { resolveCommand } = result.fix;
-      expect(resolveCommand.argv).not.toContain("--dismiss-review-ids");
-      expect(resolveCommand.argv.join(" ")).not.toContain("r-1");
+      // Non-human (Unknown) CR reviews are auto-dismissed in the same command as replies.
+      expect(resolveCommand.argv).toContain("--dismiss-review-ids");
+      expect(resolveCommand.argv.join(" ")).toContain("r-1");
       expect(resolveCommand.argv).toContain("$DISMISS_MESSAGE");
       expect(resolveCommand.requiresDismissMessage).toBe(true);
     }

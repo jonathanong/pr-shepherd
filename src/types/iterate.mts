@@ -126,6 +126,8 @@ export interface ResolveCommand {
   replyThreadIds?: string[];
   /** Thread IDs that should be resolved on GitHub. Human-authored IDs must not appear here. */
   resolveThreadIds?: string[];
+  /** Bot/non-human CHANGES_REQUESTED review IDs to dismiss. Human-authored IDs must not appear here. */
+  dismissReviewIds?: string[];
   /** True when any mutation flag was appended (threads/comments/reviews). False for a bare runner-specific `pr-shepherd resolve <PR>` with nothing to do. Callers use this to gate emitting a "run the resolve command" instruction — coupling to argv length would break silently if the base argv ever grew a global flag. */
   hasMutations: boolean;
 }
@@ -144,10 +146,7 @@ interface FixRebaseAndPush {
   reviewSummaryIds: string[];
   /** COMMENTED review summaries surfaced to the agent for the first time this iteration — body shown inline. */
   firstLookSummaries: Review[];
-  /**
-   * COMMENTED review summaries whose body changed since the agent first saw them.
-   * Body shown inline; IDs are NOT included in `reviewSummaryIds` / `--minimize-comment-ids`.
-   */
+  /** COMMENTED review summaries whose body changed since the agent first saw them. Body shown inline; IDs not in `reviewSummaryIds`. */
   editedSummaries: Review[];
   /** APPROVED-state reviews surfaced for visibility (when `iterate.minimizeApprovals` is false). */
   surfacedApprovals: Review[];

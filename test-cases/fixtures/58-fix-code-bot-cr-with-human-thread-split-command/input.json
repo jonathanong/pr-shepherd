@@ -1,0 +1,45 @@
+{
+  "description": "Bot CHANGES_REQUESTED review plus a human review thread. The bot CR review is dismissed in the resolve command (with --dismiss-review-ids); the human thread reply is in the same command. No resolve-only split needed because there are no bot-thread resolve or minimize mutations.",
+  "batchData": {
+    "mergeStateStatus": "BLOCKED",
+    "reviewDecision": "CHANGES_REQUESTED",
+    "changesRequestedReviews": [
+      {
+        "id": "PRR_bot_cr_2",
+        "author": "claude",
+        "authorType": "Bot",
+        "body": "## Blockers\n\n1. **Unchecked error.** `src/handler.mts:55` ignores the return value of `writeFile`. Add error handling."
+      }
+    ],
+    "reviewThreads": [
+      {
+        "id": "PRRT_human_1",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/handler.mts",
+        "line": 55,
+        "startLine": null,
+        "author": "alice",
+        "authorType": "User",
+        "body": "Can you also add a retry here?",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r1",
+        "comments": [
+          {
+            "id": "IC_human_1",
+            "author": "alice",
+            "authorType": "User",
+            "body": "Can you also add a retry here?",
+            "url": "https://github.com/owner/repo/pull/42#discussion_r1",
+            "createdAtUnix": 1715796400
+          }
+        ]
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

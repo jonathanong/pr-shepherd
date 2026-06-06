@@ -1,0 +1,20 @@
+{
+  "description": "Bot CHANGES_REQUESTED review (authorType Bot) with no inline threads. The review is automatically dismissed in the resolve command after the agent pushes a fix. Human CR reviews are not auto-dismissed.",
+  "batchData": {
+    "mergeStateStatus": "BLOCKED",
+    "reviewDecision": "CHANGES_REQUESTED",
+    "changesRequestedReviews": [
+      {
+        "id": "PRR_bot_cr",
+        "author": "claude",
+        "authorType": "Bot",
+        "body": "## Summary\n\nHere are some blockers I found:\n\n1. **Missing input validation.** The `processPayment` function at `src/payments.mts:42` does not validate the amount field before passing it to the charge API.\n2. **Race condition.** `src/queue.mts:88` reads and writes the job counter without a lock."
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

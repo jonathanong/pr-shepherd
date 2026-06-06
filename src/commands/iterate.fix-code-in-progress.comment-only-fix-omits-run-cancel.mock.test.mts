@@ -128,9 +128,13 @@ describe("fix_code — in-progress run cancellation", () => {
       expect(result.fix.actionableComments).toHaveLength(1);
       expect(result.fix.changesRequestedReviews).toHaveLength(1);
       expect(result.fix.inProgressRunIds).toContain("run-in-review-only");
-      expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
-      expect(result.fix.resolveCommand.argv).not.toContain("--dismiss-review-ids");
-      expect(result.fix.resolveCommand.argv).not.toContain("PRR_review_change_request");
+      // Non-human CR review is auto-dismissed (in resolveCommand); SHA-gated as a post-push mutation.
+      // Minimize of the actionable comment splits to resolveOnlyCommand.
+      expect(result.fix.resolveCommand.requiresHeadSha).toBe(true);
+      expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
+      expect(result.fix.resolveCommand.argv).toContain("PRR_review_change_request");
+      expect(result.fix.resolveOnlyCommand?.argv).toContain("--minimize-comment-ids");
+      expect(result.fix.resolveOnlyCommand?.argv).toContain("IC_comment_only_with_review");
       const instructions = result.fix.instructions.join("\n");
       expect(instructions).toMatch(/If you decide to push new commits/);
       // Commit/push guidance lives in the leading decision line; CLI no longer prescribes rebase
