@@ -60,9 +60,9 @@ describe("computeStatus", () => {
       hasChecks: false,
       ignoredNames: ["Kilo Code Review"],
     };
-    expect(
-      computeStatus(onlyIgnoredVerdict, 0, 0, { ...cleanMerge, status: "UNSTABLE" }, 0),
-    ).toBe("READY");
+    expect(computeStatus(onlyIgnoredVerdict, 0, 0, { ...cleanMerge, status: "UNSTABLE" }, 0)).toBe(
+      "READY",
+    );
   });
 
   it("returns PENDING for BLOCKED when only ignored checks exist (safeguard: required checks may not have started)", () => {
@@ -71,9 +71,9 @@ describe("computeStatus", () => {
       hasChecks: false,
       ignoredNames: ["Kilo Code Review"],
     };
-    expect(
-      computeStatus(onlyIgnoredVerdict, 0, 0, { ...cleanMerge, status: "BLOCKED" }, 0),
-    ).toBe("PENDING");
+    expect(computeStatus(onlyIgnoredVerdict, 0, 0, { ...cleanMerge, status: "BLOCKED" }, 0)).toBe(
+      "PENDING",
+    );
   });
 
   it("returns PENDING for UNSTABLE when review work remains", () => {
