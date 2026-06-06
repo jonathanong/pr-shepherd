@@ -113,8 +113,8 @@ Usage:
   pr-shepherd poll [PR] [poll-flags] [iterate-flags]
 
 Poll flags:
-  --interval <duration>          Sleep between WAIT ticks. Default: 30s.
-  --timeout <duration>           Maximum wall-clock wait. Default: 5m.
+  --interval <duration>          Sleep between WAIT ticks. Default: 60s.
+  --timeout <duration>           Maximum wall-clock wait. Default: 4.5m.
   --quiet-status                 During WAIT polling, print only changed status snapshots.
 
 Forwarded iterate flags:
@@ -126,7 +126,7 @@ Forwarded iterate flags:
   --verbose                      Include verbose iterate fields and detailed per-tick lines.
   --help, -h                     Print this help and exit before GitHub, git, config, or log I/O.
 
-Durations accept seconds, minutes, or hours: 30s, 2m, 1h, or bare seconds.
+Durations accept seconds, minutes, or hours: 30s, 4.5m, 1h, or bare seconds.
 Each WAIT tick writes a single dot to stderr by default; --quiet-status prints only changed WAIT snapshots, and --verbose emits detailed per-tick lines.
 
 Exit codes:

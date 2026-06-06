@@ -22,7 +22,7 @@ Both runtimes use the same `pr-shepherd` skill. Claude Code users invoke it with
    The skill resolves the PR number and runs the default poll dispatcher:
 
    ```bash
-   pr-shepherd <PR> --interval 45s --timeout 4m
+   pr-shepherd <PR> --interval 60s --timeout 4.5m
    ```
 
 2. **CLI emits an action with `## Instructions`**
@@ -66,6 +66,6 @@ User                    Active Goal             shepherd iterate / poll
 
 ## Notes
 
-- Poll uses `--interval` and `--timeout` for WAIT-state rechecks. Defaults are 30 seconds and 5 minutes.
+- Poll uses `--interval` and `--timeout` for WAIT-state rechecks. Defaults are 60 seconds and 4.5 minutes.
 - Code changes (`fix_code`, rebase) are handled inline by the active goal — no subagent is spawned.
 - The ready-delay (default 10 minutes) is read from `watch.readyDelayMinutes` in `.pr-shepherdrc.yml`. See [ready-delay.md](ready-delay.md) and [configuration.md](configuration.md).

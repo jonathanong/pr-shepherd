@@ -21,8 +21,8 @@ describe("default poll invocation helpers", () => {
     expect(isDefaultPollInvocation("--format=json")).toBe(true);
     expect(isDefaultPollInvocation("--no-auto-mark-ready")).toBe(true);
     expect(isDefaultPollInvocation("--quiet-status")).toBe(true);
-    expect(isDefaultPollInvocation("--interval=45s")).toBe(true);
-    expect(isDefaultPollInvocation("--timeout=4m")).toBe(true);
+    expect(isDefaultPollInvocation("--interval=60s")).toBe(true);
+    expect(isDefaultPollInvocation("--timeout=4.5m")).toBe(true);
     expect(isDefaultPollInvocation("resolve")).toBe(false);
   });
 
@@ -36,9 +36,9 @@ describe("default poll invocation helpers", () => {
         "--stall-timeout",
         "1h",
         "--interval",
-        "45",
+        "60",
         "--timeout",
-        "4m",
+        "4.5m",
         "--verbose",
         "--quiet-status",
       ]),

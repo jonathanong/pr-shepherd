@@ -42,8 +42,8 @@ Iterate flags:
   --no-auto-cancel-actionable    Do not cancel in-progress runs before actionable fixes.
 
 Poll flags:
-  --interval <duration>          Sleep between WAIT ticks. Default: 30s.
-  --timeout <duration>           Maximum poll wall-clock wait. Default: 5m.
+  --interval <duration>          Sleep between WAIT ticks. Default: 60s.
+  --timeout <duration>           Maximum poll wall-clock wait. Default: 4.5m.
   --quiet-status                 During WAIT polling, print only changed status snapshots.
 
 Clean variants:
@@ -59,6 +59,6 @@ Exit codes for iterate and poll:
   2  CANCEL
   3  ESCALATE
 
-Durations accept seconds, minutes, or hours: 30s, 2m, 1h, or bare seconds.
+Durations accept seconds, minutes, or hours: 30s, 4.5m, 1h, or bare seconds.
 
 Run 'pr-shepherd <command> --help' for command-specific details.`;

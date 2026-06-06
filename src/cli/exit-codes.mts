@@ -11,9 +11,10 @@ export function parseDurationToMinutes(s: string, defaultMinutes?: number): numb
 }
 
 export function parseDurationToSeconds(s: string, defaultSeconds: number): number {
-  const m = /^(\d+)(s|sec|seconds?|m|min|minutes?|h|hours?)?$/.exec(s.trim());
+  const m = /^(\d+|\d+\.\d+)(s|sec|seconds?|m|min|minutes?|h|hours?)?$/.exec(s.trim());
   if (!m) return defaultSeconds;
-  const n = parseInt(m[1]!, 10);
+  if (m[1]!.includes(".") && !m[2]) return defaultSeconds;
+  const n = Number(m[1]!);
   if (!Number.isFinite(n)) return defaultSeconds;
   const unit = m[2] ?? "s";
   if (unit.startsWith("h")) return n * 3600;

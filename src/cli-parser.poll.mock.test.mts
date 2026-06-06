@@ -59,17 +59,8 @@ describe("main — poll subcommand", () => {
       .mockResolvedValueOnce(makeIterateResult("wait"))
       .mockResolvedValue(makeIterateResult("cancel"));
 
-    const promise = main([
-      "node",
-      "shepherd",
-      "poll",
-      "42",
-      "--interval",
-      "30s",
-      "--timeout",
-      "300s",
-    ]);
-    await vi.advanceTimersByTimeAsync(30_000);
+    const promise = main(["node", "shepherd", "poll", "42"]);
+    await vi.advanceTimersByTimeAsync(60_000);
     await promise;
 
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
@@ -80,7 +71,7 @@ describe("main — poll subcommand", () => {
   it("accepts --interval and --timeout as minute durations", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
 
-    await main(["node", "shepherd", "poll", "42", "--interval", "1m", "--timeout", "5m"]);
+    await main(["node", "shepherd", "poll", "42", "--interval", "1m", "--timeout", "4.5m"]);
 
     expect(mockRunIterate).toHaveBeenCalledTimes(1);
   });

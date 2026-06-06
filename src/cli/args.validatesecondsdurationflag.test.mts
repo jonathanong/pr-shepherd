@@ -49,6 +49,11 @@ describe("validateSecondsDurationFlag", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  it("rejects bare fractional seconds", () => {
+    expect(validateSecondsDurationFlag("cmd", "--timeout", "4.5", true)).toBeNull();
+    expect(process.exitCode).toBe(1);
+  });
+
   it("accepts bare integer (seconds)", () => {
     expect(validateSecondsDurationFlag("cmd", "--interval", "30", true)).toBe("30");
     expect(stderrSpy).not.toHaveBeenCalled();
@@ -60,6 +65,10 @@ describe("validateSecondsDurationFlag", () => {
 
   it("accepts Nm suffix", () => {
     expect(validateSecondsDurationFlag("cmd", "--interval", "5m", true)).toBe("5m");
+  });
+
+  it("accepts fractional durations with units", () => {
+    expect(validateSecondsDurationFlag("cmd", "--timeout", "4.5m", true)).toBe("4.5m");
   });
 
   it("accepts Nh suffix", () => {
@@ -92,6 +101,10 @@ describe("parseDurationToSeconds", () => {
     expect(parseDurationToSeconds("5m", 60)).toBe(300);
   });
 
+  it("parses fractional minutes as seconds", () => {
+    expect(parseDurationToSeconds("4.5m", 60)).toBe(270);
+  });
+
   it("parses Nmin suffix as minutes", () => {
     expect(parseDurationToSeconds("2min", 60)).toBe(120);
   });
@@ -110,6 +123,10 @@ describe("parseDurationToSeconds", () => {
 
   it("treats bare integer with no unit as seconds (not minutes)", () => {
     expect(parseDurationToSeconds("60", 0)).toBe(60);
+  });
+
+  it("returns default for bare fractional seconds", () => {
+    expect(parseDurationToSeconds("4.5", 30)).toBe(30);
   });
 
   it("returns default when integer overflows to Infinity", () => {

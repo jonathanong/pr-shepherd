@@ -88,8 +88,9 @@ export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> 
     const elapsedMs = Date.now() - start;
     const remainingMs = timeoutMs - elapsedMs;
     if (remainingMs <= 0) break;
+    if (remainingMs < intervalMs) break;
 
-    const nextSleepMs = Math.min(intervalMs, remainingMs);
+    const nextSleepMs = intervalMs;
     if (quietStatus) {
       const signature = waitSignature(lastResult);
       if (signature !== lastWaitSignature) {

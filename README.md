@@ -88,7 +88,7 @@ Direct CLI:
 
 ```sh
 pr-shepherd 42                         # poll until non-WAIT or timeout
-pr-shepherd 42 --interval 45s --timeout 4m
+pr-shepherd 42 --interval 60s --timeout 4.5m
 pr-shepherd 42 --quiet-status          # print only changed WAIT status snapshots
 pr-shepherd 42 --ready-delay 15m
 pr-shepherd iterate 42                 # single tick
