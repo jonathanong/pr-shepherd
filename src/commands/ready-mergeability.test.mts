@@ -157,7 +157,7 @@ describe("isBlockedByFilteredCheck", () => {
           anyInProgress: false,
           hasChecks: true,
           filteredNames: ["ci / push"],
-        ignoredNames: [],
+          ignoredNames: [],
         },
       ),
     ).toBe(false);

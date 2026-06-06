@@ -49,15 +49,15 @@ describe("computeStatus", () => {
   });
 
   it("returns READY for UNSTABLE when all non-ignored checks pass and no review work remains", () => {
-    expect(
-      computeStatus(passingVerdict, 0, 0, { ...cleanMerge, status: "UNSTABLE" }, 0),
-    ).toBe("READY");
+    expect(computeStatus(passingVerdict, 0, 0, { ...cleanMerge, status: "UNSTABLE" }, 0)).toBe(
+      "READY",
+    );
   });
 
   it("returns PENDING for UNSTABLE when review work remains", () => {
-    expect(
-      computeStatus(passingVerdict, 1, 0, { ...cleanMerge, status: "UNSTABLE" }, 0),
-    ).toBe("PENDING");
+    expect(computeStatus(passingVerdict, 1, 0, { ...cleanMerge, status: "UNSTABLE" }, 0)).toBe(
+      "PENDING",
+    );
   });
 
   it("returns IN_PROGRESS for UNSTABLE when a non-ignored check is in-progress", () => {
