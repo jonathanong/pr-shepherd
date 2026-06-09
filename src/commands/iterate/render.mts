@@ -17,21 +17,13 @@ import {
 } from "../shepherd-journal.mts";
 import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
 
-// Module-private: the final "stop" step appended to every fix_code instruction list. No longer
-// re-exported now that the recheck/delay suffix that consumed it (in iterate-instructions) is gone.
 const FIX_INSTRUCTION_STOP =
   "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.";
 
-/**
- * Render a resolve command as a shell snippet. Wraps `$DISMISS_MESSAGE`, `$HEAD_SHA`, and
- * whitespace-bearing argv entries for placeholder substitution. `$HEAD_SHA` is never in `argv` —
- * `renderResolveCommand` appends `--require-sha "$HEAD_SHA"` when `requiresHeadSha` is set.
- */
+/** Render a resolve command as a shell snippet. Appends `--require-sha "$HEAD_SHA"` when set. */
 export function renderResolveCommand(rc: ResolveCommand): string {
   const parts = [...rc.argv];
-  if (rc.requiresHeadSha) {
-    parts.push("--require-sha", "$HEAD_SHA");
-  }
+  if (rc.requiresHeadSha) parts.push("--require-sha", "$HEAD_SHA");
   return renderShellCommand(parts);
 }
 
@@ -131,9 +123,16 @@ export function buildFixInstructions(
   }
 
   if (changesRequestedReviews.length > 0) {
+    const staleClause = changesRequestedReviews.some((r) => r.staleBotCr)
+      ? " Bullets tagged `[pending dismissal — already surfaced]` are bot CR reviews you saw on a previous tick; the CLI hides re-surfaced bodies to keep output lean — re-read the prior tick if you need the body."
+      : "";
     instructions.push(
-      `For each bullet under \`## Changes-requested reviews\` above: read the review body and apply the requested changes.${(resolveCommand.dismissReviewIds?.length ?? 0) > 0 ? " Bot/non-human CR reviews listed in `--dismiss-review-ids` will be dismissed by the `resolve:` command after your push." : ""}`,
+      `For each bullet under \`## Changes-requested reviews\` above: read the review body and apply the requested changes.${staleClause}`,
     );
+    if ((resolveCommand.dismissReviewIds?.length ?? 0) > 0)
+      instructions.push(
+        `Pass every ID listed in \`--dismiss-review-ids\` to the \`resolve:\` command verbatim — these are bot/non-human CR reviews that the agent (not the author) must dismiss. Dropping an ID leaves the PR in \`CHANGES_REQUESTED\` state; the next tick re-surfaces it as \`[pending dismissal]\` and an unattended bot CR escalates after \`iterate.stallTimeoutMinutes\`.`,
+      );
   }
 
   if (resolveOnlyCommand?.hasMutations)

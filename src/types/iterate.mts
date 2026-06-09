@@ -25,7 +25,8 @@ export type EscalateTrigger =
   | "fix-thrash"
   | "base-branch-unknown"
   | "stall-timeout"
-  | "thread-missing-location";
+  | "thread-missing-location"
+  | "bot-cr-not-dismissed";
 
 export interface AgentStalledCheck {
   name: string;

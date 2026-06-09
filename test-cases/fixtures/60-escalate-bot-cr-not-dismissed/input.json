@@ -1,0 +1,34 @@
+{
+  "description": "Bot CHANGES_REQUESTED review surfaced more than stallTimeoutMinutes ago (firstSeenAt is 1900 seconds before NOW, threshold is 1800s = 30 min). The agent never dismissed it. Iterate escalates with bot-cr-not-dismissed trigger.",
+  "batchData": {
+    "mergeStateStatus": "BLOCKED",
+    "reviewDecision": "CHANGES_REQUESTED",
+    "changesRequestedReviews": [
+      {
+        "id": "PRR_bot_overdue",
+        "author": "claude",
+        "authorType": "Bot",
+        "body": "## Summary\n\nHere are some blockers I found:\n\n1. **Missing input validation.** The `processPayment` function at `src/payments.mts:42` does not validate the amount field before passing it to the charge API.\n2. **Race condition.** `src/queue.mts:88` reads and writes the job counter without a lock."
+      }
+    ]
+  },
+  "seenMap": {
+    "PRR_bot_overdue": {
+      "seenAt": 1715798100,
+      "bodyHash": "c9f6707b09399420"
+    }
+  },
+  "botCrSeen": {
+    "reviews": {
+      "PRR_bot_overdue": {
+        "firstSeenAt": 1715798100,
+        "bodyHash": "c9f6707b09399420"
+      }
+    }
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}
