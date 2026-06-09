@@ -4,6 +4,11 @@ import {
   writeFixAttempts,
   type FixAttemptsState,
 } from "../../state/fix-attempts.mts";
+import {
+  readBotCrSeenState,
+  writeBotCrSeenState,
+  updateBotCrSeenState,
+} from "../../state/bot-cr-seen.mts";
 import { toAgentThread, toAgentComment, toAgentChecks } from "../../reporters/agent.mts";
 import { hashBody, markSeen } from "../../state/seen-comments.mts";
 import {
@@ -18,6 +23,7 @@ import { applyStallGuard } from "./stall.mts";
 import { tryCancelRun, buildInProgressRunIds } from "./helpers.mts";
 import { annotationMarkerBody } from "../check-annotations.mts";
 import { threadTranscriptBody } from "../../threads/transcript.mts";
+import { isHumanAuthor, isConfiguredBotAuthor } from "../../comments/authors.mts";
 import type {
   EscalateDetails,
   IterateCommandOptions,
@@ -90,6 +96,41 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     headSha,
     report.threads.actionable,
   );
+
+  const botCrReviews = report.changesRequestedReviews.filter(
+    (r) => !isHumanAuthor(r) || isConfiguredBotAuthor(r, botUsernames),
+  );
+  const botCrStateKey = { owner: repoOwner, repo: repoName, pr: prNumber };
+  const previousBotCrState = await readBotCrSeenState(botCrStateKey);
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const { next: nextBotCrState, staleIds: staleBotCrIds } = updateBotCrSeenState(
+    previousBotCrState,
+    botCrReviews,
+    nowSeconds,
+    stallTimeoutSeconds,
+  );
+  await writeBotCrSeenState(botCrStateKey, nextBotCrState);
+  if (staleBotCrIds.length > 0) {
+    const staleSet = new Set(staleBotCrIds);
+    const staleReviews = botCrReviews.filter((r) => staleSet.has(r.id));
+    const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
+      triggers: ["bot-cr-not-dismissed"],
+      unresolvedThreads: [...report.threads.actionable, ...report.threads.resolutionOnly].map(
+        toAgentThread,
+      ),
+      ambiguousComments: report.comments.actionable.map(toAgentComment),
+      changesRequestedReviews: staleReviews,
+      suggestion: buildEscalateSuggestion(["bot-cr-not-dismissed"], staleBotCrIds.join(", ")),
+    };
+    return {
+      ...base,
+      action: "escalate",
+      escalate: {
+        ...escalateBase,
+        humanMessage: buildEscalateHumanMessage(escalateBase, prNumber),
+      },
+    };
+  }
 
   const escalateTriggers = checkEscalateTriggers(report.threads.actionable, threadAttempts);
   if (escalateTriggers.triggers.length > 0) {

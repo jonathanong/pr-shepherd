@@ -17,7 +17,10 @@ import {
 import { loadSeenMap, markSeen, classifyItem } from "../state/seen-comments.mts";
 import { threadTranscriptBody } from "../threads/transcript.mts";
 import { classifyThreadVisibility } from "../comments/thread-visibility.mts";
-import { classifyReviewsForDisplay } from "../comments/review-visibility.mts";
+import {
+  classifyReviewsForDisplay,
+  classifyChangesRequestedReviewsForDisplay,
+} from "../comments/review-visibility.mts";
 import { markReviewInlineThreadMarkers } from "../comments/review-thread-markers.mts";
 import { normalizeBotUsernames } from "../comments/authors.mts";
 import { discoverRuleFiles, loadRules } from "../classify/loader.mts";
@@ -102,11 +105,12 @@ export async function runCheck(
     else if (cls === "edited") editedSummaries.push(r);
     else seenSummaries.push(r);
   }
-  const changesRequestedReviewVisibility = classifyReviewsForDisplay(
+  const changesRequestedReviewVisibility = classifyChangesRequestedReviewsForDisplay(
     batchData.changesRequestedReviews.filter(
       (r) => !partition.suppressedChangesRequestedIds.has(r.id),
     ),
     seenMap,
+    botUsernames,
   );
   const approvedReviewVisibility = classifyReviewsForDisplay(batchData.approvedReviews, seenMap);
   await Promise.allSettled([

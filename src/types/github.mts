@@ -139,6 +139,8 @@ export interface Review {
   body: string;
   createdAtUnix?: number;
   edited?: boolean;
+  /** True for bot CR re-surfaced after first look (body unchanged). Terse render. */
+  staleBotCr?: boolean;
 }
 
 export interface BranchProtection {

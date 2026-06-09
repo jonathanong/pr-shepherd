@@ -147,9 +147,18 @@ export function renderEditedCommentTag(c: { edited?: boolean }): string | undefi
 }
 
 export function renderReviewBullet(
-  r: { id: string; author: string; authorType?: AuthorType; body?: string },
+  r: {
+    id: string;
+    author: string;
+    authorType?: AuthorType;
+    body?: string;
+    staleBotCr?: boolean;
+  },
   opts: { includeBody?: boolean } = {},
 ): string {
+  if (r.staleBotCr) {
+    return `- \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType)}) [pending dismissal — already surfaced; include in \`--dismiss-review-ids\`]`;
+  }
   const bodySuffix =
     opts.includeBody && r.body != null && r.body !== "" ? `: ${renderBodyPreview(r.body)}` : "";
   return `- \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType)})${bodySuffix}`;

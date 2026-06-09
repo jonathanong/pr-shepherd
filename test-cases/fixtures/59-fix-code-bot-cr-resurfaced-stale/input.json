@@ -1,0 +1,34 @@
+{
+  "description": "Bot CHANGES_REQUESTED review surfaced on a previous tick (seen-marker present, body unchanged) but not yet dismissed. The agent dropped --dismiss-review-ids from the prior resolve call. On this tick the bot CR re-surfaces as a terse [pending dismissal] line and the ID stays in --dismiss-review-ids so the agent can recover. firstSeenAt is recent (60 seconds ago) — below the stallTimeoutMinutes threshold — so it does not escalate yet.",
+  "batchData": {
+    "mergeStateStatus": "BLOCKED",
+    "reviewDecision": "CHANGES_REQUESTED",
+    "changesRequestedReviews": [
+      {
+        "id": "PRR_bot_stale",
+        "author": "claude",
+        "authorType": "Bot",
+        "body": "## Summary\n\nHere are some blockers I found:\n\n1. **Missing input validation.** The `processPayment` function at `src/payments.mts:42` does not validate the amount field before passing it to the charge API.\n2. **Race condition.** `src/queue.mts:88` reads and writes the job counter without a lock."
+      }
+    ]
+  },
+  "seenMap": {
+    "PRR_bot_stale": {
+      "seenAt": 1715799000,
+      "bodyHash": "c9f6707b09399420"
+    }
+  },
+  "botCrSeen": {
+    "reviews": {
+      "PRR_bot_stale": {
+        "firstSeenAt": 1715799940,
+        "bodyHash": "c9f6707b09399420"
+      }
+    }
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}
