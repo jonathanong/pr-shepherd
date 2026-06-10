@@ -27,7 +27,7 @@ pr-shepherd log-file [--format text|json]
 
 ```sh
 pr-shepherd 42
-pr-shepherd 42 --interval 60s --timeout 270s
+pr-shepherd 42 --interval 60s --timeout 4.5m
 pr-shepherd 42 --interval 60s --timeout 4.5m --quiet-status
 pr-shepherd 42 --ready-delay 15m
 pr-shepherd iterate 42
