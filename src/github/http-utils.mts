@@ -1,3 +1,24 @@
+const TRANSPORT_ERROR_CODES = new Set([
+  "ECONNRESET",
+  "ETIMEDOUT",
+  "ECONNREFUSED",
+  "EAI_AGAIN",
+  "UND_ERR_CONNECT_TIMEOUT",
+  "UND_ERR_SOCKET",
+]);
+
+export function isTransportError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const code = (err as NodeJS.ErrnoException).code;
+  if (code && TRANSPORT_ERROR_CODES.has(code)) return true;
+  const cause = (err as { cause?: unknown }).cause;
+  if (cause instanceof Error) {
+    const causeCode = (cause as NodeJS.ErrnoException).code;
+    if (causeCode && TRANSPORT_ERROR_CODES.has(causeCode)) return true;
+  }
+  return false;
+}
+
 export interface RateLimitInfo {
   remaining: number;
   limit: number;

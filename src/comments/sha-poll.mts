@@ -1,5 +1,6 @@
 import { getPrHeadSha, type RepoInfo } from "../github/client.mts";
 import { loadConfig } from "../config/load.mts";
+import { sleep } from "../util/sleep.mts";
 
 export async function waitForSha(pr: number, repo: RepoInfo, expectedSha: string): Promise<void> {
   const { intervalMs: SHA_POLL_INTERVAL_MS, maxAttempts: SHA_POLL_MAX_ATTEMPTS } =
@@ -24,8 +25,4 @@ export async function waitForSha(pr: number, repo: RepoInfo, expectedSha: string
       ((SHA_POLL_MAX_ATTEMPTS - 1) * SHA_POLL_INTERVAL_MS) / 1000
     }s. Push may still be in transit — retry shortly.`,
   );
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }

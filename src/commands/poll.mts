@@ -1,14 +1,11 @@
 import { runIterate } from "./iterate/index.mts";
 import type { IterateCommandOptions, IterateResult } from "../types.mts";
+import { sleep } from "../util/sleep.mts";
 
 interface PollCommandOptions extends IterateCommandOptions {
   intervalSeconds: number;
   timeoutSeconds: number;
   quietStatus?: boolean;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function writeTickProgress(
