@@ -1,4 +1,4 @@
-import type { AuthorType, CheckConclusion, CheckStatus } from "../types.mts";
+import type { AuthorType, CheckConclusion, CheckStatus, Review, ReviewThread } from "../types.mts";
 import { normalizeAuthorType } from "../comments/authors.mts";
 
 export function mapAuthorType(
@@ -38,6 +38,22 @@ export function latestApprovedLogins(latest: Array<{ login: string; state: strin
       .filter((r) => r.login !== "unknown" && (r.state === "APPROVED" || r.state === "DISMISSED"))
       .map((r) => r.login),
   );
+}
+
+/**
+ * A CR review is stale when its commit.oid differs from the PR head AND every
+ * associated review thread is resolved or outdated. Reviews with no associated
+ * threads are treated conservatively (not marked stale).
+ */
+export function isReviewStale(
+  review: Review,
+  headRefOid: string,
+  reviewThreads: ReviewThread[],
+): boolean {
+  if (!review.commitOid || review.commitOid === headRefOid) return false;
+  const associated = reviewThreads.filter((t) => t.reviewId === review.id);
+  if (associated.length === 0) return false;
+  return associated.every((t) => t.isResolved || t.isOutdated);
 }
 
 export function mapStatusContextState(state: string): {

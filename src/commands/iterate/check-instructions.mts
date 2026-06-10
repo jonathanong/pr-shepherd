@@ -1,4 +1,16 @@
 import type { AgentCheck } from "../../types.mts";
+import type { Review } from "../../types.mts";
+
+/** Build the stale-CR clause appended to the `## Changes-requested reviews` instruction. */
+export function buildCrStaleClause(reviews: Review[]): string {
+  const bot = reviews.some((r) => r.staleBotCr)
+    ? " `[pending dismissal — already surfaced]` bullets are bot CRs from a prior tick."
+    : "";
+  const human = reviews.some((r) => r.staleReview && !r.staleBotCr)
+    ? " `[stale]` bullets are human CRs on an old commit; ask reviewer to re-review."
+    : "";
+  return bot + human;
+}
 
 export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   if (checks.length === 0) return [];

@@ -127,6 +127,7 @@ export interface RawReview {
   author: RawAuthor | null;
   body: string;
   createdAt?: string;
+  commit?: { oid: string };
 }
 
 export interface RawReviewSummary {
