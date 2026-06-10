@@ -110,13 +110,7 @@ export interface SuggestionBlock {
   startLine: number;
   /** 1-indexed inclusive end line. */
   endLine: number;
-  /**
-   * Replacement lines verbatim — the exact text that would be spliced in for
-   * lines [startLine..endLine]. Lossless: empty array means "delete these
-   * lines", `[""]` means "replace with a single blank line", and a trailing
-   * `""` means "replacement keeps a trailing blank line". To display as a
-   * single string, callers should `lines.join("\n")` themselves.
-   */
+  /** Replacement lines verbatim. Empty array = delete; `[""]` = single blank line. Join with `"\n"` to display as a string. */
   lines: readonly string[];
   /** Reviewer login, surfaced so callers can co-credit them in commits. */
   author: string;
@@ -141,6 +135,10 @@ export interface Review {
   edited?: boolean;
   /** True for bot CR re-surfaced after first look (body unchanged). Terse render. */
   staleBotCr?: boolean;
+  /** Commit OID the review was made against, when available from GraphQL. */
+  commitOid?: string;
+  /** True when commitOid !== headRefOid AND all associated threads are resolved/outdated. Distinct from `staleBotCr` (time-based). Reviews with no threads are not marked stale. */
+  staleReview?: boolean;
 }
 
 export interface BranchProtection {

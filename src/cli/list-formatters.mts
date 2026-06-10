@@ -153,15 +153,22 @@ export function renderReviewBullet(
     authorType?: AuthorType;
     body?: string;
     staleBotCr?: boolean;
+    staleReview?: boolean;
   },
   opts: { includeBody?: boolean } = {},
 ): string {
-  if (r.staleBotCr) {
-    return `- \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType)}) [pending dismissal — already surfaced; include in \`--dismiss-review-ids\`]`;
-  }
+  const base = `- \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType)})`;
+  const staleTag = r.staleReview
+    ? " [stale — review is on an old commit, all threads resolved]"
+    : "";
+  if (r.staleBotCr)
+    return `${base}${staleTag} [pending dismissal — already surfaced; include in \`--dismiss-review-ids\`]`;
+  const humanStaleTag = r.staleReview
+    ? " [stale — review is on an old commit, all threads resolved; ask reviewer to re-review or dismiss]"
+    : "";
   const bodySuffix =
     opts.includeBody && r.body != null && r.body !== "" ? `: ${renderBodyPreview(r.body)}` : "";
-  return `- \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType)})${bodySuffix}`;
+  return `${base}${humanStaleTag}${bodySuffix}`;
 }
 
 export function renderReviewListSection(

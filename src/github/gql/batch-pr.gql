@@ -132,6 +132,9 @@ query BatchPr(
           }
           body
           createdAt
+          commit {
+            oid
+          }
         }
       }
       reviewSummaries: reviews(states: COMMENTED, last: 50, before: $reviewSummariesCursor) {

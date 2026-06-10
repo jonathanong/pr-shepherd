@@ -9,7 +9,7 @@ import type {
   ReviewThread,
 } from "../../types.mts";
 import { renderShellCommand } from "../../cli/runner.mts";
-import { buildFailingCheckInstructions } from "./check-instructions.mts";
+import { buildFailingCheckInstructions, buildCrStaleClause } from "./check-instructions.mts";
 import {
   SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE,
   SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
@@ -123,9 +123,7 @@ export function buildFixInstructions(
   }
 
   if (changesRequestedReviews.length > 0) {
-    const staleClause = changesRequestedReviews.some((r) => r.staleBotCr)
-      ? " Bullets tagged `[pending dismissal — already surfaced]` are bot CR reviews you saw on a previous tick; the CLI hides re-surfaced bodies to keep output lean — re-read the prior tick if you need the body."
-      : "";
+    const staleClause = buildCrStaleClause(changesRequestedReviews);
     instructions.push(
       `For each bullet under \`## Changes-requested reviews\` above: read the review body and apply the requested changes.${staleClause}`,
     );

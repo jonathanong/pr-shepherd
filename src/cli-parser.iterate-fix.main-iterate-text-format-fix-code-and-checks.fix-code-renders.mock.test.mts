@@ -130,4 +130,84 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain("(no review body)");
     expect(out).not.toContain("\n>\n");
   });
+
+  it("fix_code: stale bot CR renders [stale] tag before [pending dismissal] tag", async () => {
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code") throw new Error("unreachable");
+
+    result.fix.changesRequestedReviews = [
+      {
+        id: "PRR_BOT_STALE",
+        author: "coderabbitai[bot]",
+        authorType: "Bot" as const,
+        body: "old review",
+        staleBotCr: true,
+        staleReview: true,
+      },
+    ];
+    result.fix.resolveCommand = {
+      argv: [
+        "pr-shepherd",
+        "resolve",
+        "42",
+        "--dismiss-review-ids",
+        "PRR_BOT_STALE",
+        "--message",
+        "$DISMISS_MESSAGE",
+      ],
+      requiresHeadSha: true,
+      requiresDismissMessage: true,
+      dismissReviewIds: ["PRR_BOT_STALE"],
+      hasMutations: true,
+    };
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+
+    expect(out).toContain("## Changes-requested reviews");
+    expect(out).toContain("[stale — review is on an old commit, all threads resolved]");
+    expect(out).toContain(
+      "[pending dismissal — already surfaced; include in `--dismiss-review-ids`]",
+    );
+    expect(out).toContain("--dismiss-review-ids PRR_BOT_STALE");
+  });
+
+  it("fix_code: stale human CR renders [stale] guidance tag, not in dismiss list", async () => {
+    const result = makeIterateResult("fix_code");
+    if (result.action !== "fix_code") throw new Error("unreachable");
+
+    result.fix.changesRequestedReviews = [
+      {
+        id: "PRR_HUMAN_STALE",
+        author: "alice",
+        authorType: "User" as const,
+        body: "old review body",
+        staleReview: true,
+      },
+    ];
+    result.fix.resolveCommand = {
+      argv: ["pr-shepherd", "resolve", "42"],
+      requiresHeadSha: false,
+      requiresDismissMessage: false,
+      hasMutations: false,
+    };
+    // Supply instructions that include the human-stale guidance
+    result.fix.instructions = [
+      "Decide for each item under `## Changes-requested reviews` whether a code change is warranted.",
+      "For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes. `[stale]` bullets are human CRs on an old commit; ask reviewer to re-review.",
+      "Stop this iteration.",
+    ];
+    mockRunIterate.mockResolvedValue(result);
+
+    await main(["node", "shepherd", "iterate", "42"]);
+    const out = getStdout();
+
+    expect(out).toContain("## Changes-requested reviews");
+    expect(out).toContain(
+      "[stale — review is on an old commit, all threads resolved; ask reviewer to re-review or dismiss]",
+    );
+    expect(out).not.toContain("--dismiss-review-ids");
+    expect(out).toContain("`[stale]` bullets are human CRs on an old commit");
+  });
 });

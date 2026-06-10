@@ -11,7 +11,10 @@
         "test-helpers/commands/iterate-test-support.mts",
         "test-helpers/test-cases/harness.mts",
         "src/commands/check.mts",
-        "src/classify/apply.test.mts"
+        "src/classify/apply.test.mts",
+        "src/cli/list-formatters.mts",
+        "src/cli-parser.iterate-fix.main-iterate-text-format-fix-code-and-checks.fix-code-renders.mock.test.mts",
+        "src/github/batch-parsers.stale-cr-detection.mock.test.mts"
       ],
       "rules": {
         "max-lines": "off"

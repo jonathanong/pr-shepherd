@@ -14,18 +14,23 @@ import {
   extractCheckRunSummary,
   mapStatusContextState,
   latestApprovedLogins,
+  isReviewStale,
 } from "./batch-parser-helpers.mts";
 import { buildPrActivitySummary } from "./activity.mts";
 import { parseBranchProtection } from "./branch-protection.mts";
 
 function parseReviewNode(r: RawReview | RawReviewSummary): Review {
-  return {
+  const base: Review = {
     id: r.id,
     author: r.author?.login ?? "unknown",
     authorType: mapAuthorType(r.author?.__typename, r.author?.login),
     body: r.body,
     createdAtUnix: r.createdAt ? parseCreatedAt(r.createdAt) : 0,
   };
+  if ("commit" in r && r.commit?.oid) {
+    base.commitOid = r.commit.oid;
+  }
+  return base;
 }
 
 export function parseRawPr(
@@ -87,7 +92,13 @@ export function parseRawPr(
     createdAtUnix: c.createdAt ? parseCreatedAt(c.createdAt) : 0,
   }));
 
-  const allChangesRequestedReviews: Review[] = rawReviewNodes.map((r) => parseReviewNode(r));
+  const allChangesRequestedReviews: Review[] = rawReviewNodes.map((r) => {
+    const review = parseReviewNode(r);
+    if (isReviewStale(review, raw.headRefOid, reviewThreads)) {
+      review.staleReview = true;
+    }
+    return review;
+  });
   const changesRequestedReviews: Review[] = allChangesRequestedReviews.filter(
     (r) => !crDone.has(r.author),
   );
