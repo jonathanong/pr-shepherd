@@ -22,7 +22,7 @@ Both runtimes use the same `pr-shepherd` skill. Claude Code users invoke it with
    The skill resolves the PR number and runs the default poll dispatcher:
 
    ```bash
-   pr-shepherd <PR> --interval 60s --timeout 4.5m
+   pr-shepherd <PR> --interval 60s --timeout 4.5m --quiet-status
    ```
 
 2. **CLI emits an action with `## Instructions`**
