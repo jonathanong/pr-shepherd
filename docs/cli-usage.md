@@ -51,7 +51,7 @@ pr-shepherd poll 42 --format=json
 | ----------------------- | ------- | ------------------------------------------------------------------ |
 | `--interval <duration>` | `60s`   | Sleep between `WAIT` ticks.                                        |
 | `--timeout <duration>`  | `4.5m`  | Maximum wall-clock wait before returning the latest `WAIT` result. |
-| `--quiet-status`        | false   | Print only changed WAIT snapshots instead of one dot per tick.     |
+| `--quiet-status`        | `false` | Print only changed WAIT snapshots instead of one dot per tick.     |
 
 Durations accept seconds, minutes, hours, or bare seconds: `30s`, `270s`, `4.5m`, `1h`, `45`.
 
