@@ -6,7 +6,7 @@ Each `pr-shepherd iterate` invocation returns exactly one action. The default `p
 
 The default output format is Markdown — what the skill receives from the default poll dispatcher and what direct CLI users see. `--format=json` emits the same action data as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
 
-The shipped skill invokes the default command with `--interval`/`--timeout`, which is equivalent to `pr-shepherd poll` while the PR remains in `[WAIT]` and returns whenever an actionable or terminal state appears. Add `--quiet-status` when a long wait should print only changed WAIT status snapshots instead of one dot per unchanged tick. Do not run `while true` or unbounded polling loops outside of the poll dispatcher.
+The shipped skill invokes the default command with `--interval`/`--timeout`/`--quiet-status` (e.g. `pr-shepherd <PR> --interval 60s --timeout 4.5m --quiet-status`), which is equivalent to `pr-shepherd poll` while the PR remains in `[WAIT]` and returns whenever an actionable or terminal state appears. `--quiet-status` is included by default so agents only see changed WAIT snapshots during long waits rather than one dot per unchanged tick. Do not run `while true` or unbounded polling loops outside of the poll dispatcher.
 
 Command examples call `pr-shepherd` directly everywhere a follow-up command is emitted.
 
