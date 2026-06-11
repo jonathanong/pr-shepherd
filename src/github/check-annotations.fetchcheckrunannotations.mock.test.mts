@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./client.mts", () => ({ graphql: vi.fn() }));
@@ -94,6 +95,24 @@ describe("fetchCheckRunAnnotations", () => {
       expect.stringMatching(/^check_annotation_[0-9a-f]{24}$/),
     ]);
     expect(result[0]?.id).not.toBe(result[1]?.id);
+  });
+
+  it("bounds annotation message and raw details text", async () => {
+    mockPage([
+      rawAnnotation({
+        message: `${"a".repeat(4_200)} fromJSON`,
+        rawDetails: `${"b".repeat(4_200)} runs-on`,
+      }),
+    ]);
+
+    const [result] = await fetchCheckRunAnnotations("CR_123");
+
+    expect(result!.message).toHaveLength(4_000);
+    expect(result!.message.endsWith("[truncated]")).toBe(true);
+    expect(result!.message).not.toContain("fromJSON");
+    expect(result!.rawDetails).toHaveLength(4_000);
+    expect(result!.rawDetails!.endsWith("[truncated]")).toBe(true);
+    expect(result!.rawDetails).not.toContain("runs-on");
   });
 
   it("paginates annotations and hashes fallback IDs", async () => {

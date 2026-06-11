@@ -55,6 +55,7 @@ For each failing check, triage fetches additional context from the GitHub Action
 - **`jobName`** — the name of the matched job (falls back to the check name when not available).
 - **`failedStep`** — the first step whose conclusion is not `success`, `skipped`, or `neutral` (e.g. a step with `failure` or `timed_out` conclusion).
 - **`logExcerpt`** — a bounded raw excerpt from the matched failed job log, fetched from `GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs`. Shepherd prefers lines around errors and falls back to the final non-empty lines. The fetch is best-effort; missing or inaccessible logs leave the field omitted.
+- **`annotations`** — marker-gated inline annotations from failing `CheckRun` checks. Annotation `message` and `rawDetails` fields are capped independently before text and JSON output.
 
 Checks with `conclusion === "CANCELLED"` or `conclusion === "STARTUP_FAILURE"` short-circuit triage entirely — no jobs/logs API call is made, and `workflowName`/`jobName`/`failedStep`/`logExcerpt` are not populated. Cancelled output carries a `[conclusion: CANCELLED]` tag. Startup-failure output carries a `[conclusion: STARTUP_FAILURE]` tag and may include the workflow run display title as `summary`. The agent reads any included `logExcerpt` first and runs `gh run view <runId> --log-failed` when it needs the full log for ordinary non-cancelled failures; startup failures use `gh run view <runId>` because failed job logs may not exist.
 

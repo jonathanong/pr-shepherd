@@ -6,6 +6,8 @@ import type { CheckAnnotation } from "../types.mts";
 
 const ANNOTATIONS_PER_PAGE = 100;
 const MAX_ANNOTATION_PAGES = 10;
+const ANNOTATION_TEXT_MAX_CHARS = 4_000;
+const TRUNCATED_SUFFIX = "\n[truncated]";
 
 interface RawCheckRunAnnotationsResponse {
   node: {
@@ -80,10 +82,15 @@ function toCheckAnnotation(checkRunId: string, raw: RawCheckAnnotation): CheckAn
     }),
     level: raw.annotationLevel,
     ...(title !== undefined && { title }),
-    message: raw.message,
-    ...(rawDetails !== undefined && { rawDetails }),
+    message: truncateAnnotationText(raw.message),
+    ...(rawDetails !== undefined && { rawDetails: truncateAnnotationText(rawDetails) }),
     ...(blobUrl !== undefined && { blobUrl }),
   };
+}
+
+function truncateAnnotationText(text: string): string {
+  if (text.length <= ANNOTATION_TEXT_MAX_CHARS) return text;
+  return `${text.slice(0, ANNOTATION_TEXT_MAX_CHARS - TRUNCATED_SUFFIX.length).trimEnd()}${TRUNCATED_SUFFIX}`;
 }
 
 function fallbackId(checkRunId: string, raw: RawCheckAnnotation): string {
