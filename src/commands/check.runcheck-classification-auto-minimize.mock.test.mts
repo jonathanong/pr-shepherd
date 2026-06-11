@@ -15,13 +15,9 @@ vi.mock("../classify/loader.mts", () => ({
   discoverRuleFiles: vi.fn().mockReturnValue(["fake-rule.mjs"]),
   loadRules: vi.fn().mockResolvedValue([
     {
-      name: "test-rule",
-      file: "fake-rule.mjs",
-      rule: (item: ClassifyItem) => {
-        if (item.author === "bot-reviewer") return { suppress: true, autoResolve: true };
-        if (item.author === "auto-resolver") return { autoResolve: true };
-        return null;
-      },
+      name: "auto-minimize-rule",
+      file: "auto-minimize-rule.mjs",
+      rule: classifyNoiseForAutoMinimizeTests,
     },
   ]),
 }));
@@ -146,4 +142,15 @@ function botThread() {
     url: "",
     createdAtUnix: 0,
   };
+}
+
+function classifyNoiseForAutoMinimizeTests(item: ClassifyItem) {
+  switch (item.author) {
+    case "bot-reviewer":
+      return { suppress: true, autoResolve: true };
+    case "auto-resolver":
+      return { autoResolve: true };
+    default:
+      return null;
+  }
 }
