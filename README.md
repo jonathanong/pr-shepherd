@@ -210,11 +210,13 @@ export default rule;
 
 `suppress: true` hides the item from agent output. `autoResolve: true` queues it for the minimize/resolve mutation. Both can apply together.
 
+TypeScript rules are loaded by the runtime's native TypeScript support; keep them to erasable syntax such as type annotations and `import type`. Runtime TypeScript features that need transpilation, such as enums, namespaces, parameter properties, and decorators, are not supported. Use `.mts` for portable ESM rules across Node, Bun, and Deno.
+
 Ready-to-use examples for common patterns are in [`examples/classification/`](examples/classification/).
 
 ## Requirements
 
-- Node.js >= 22.0.0
+- Node.js >= 22.18.0, Bun, or Deno
 - A GitHub token or authenticated `gh` CLI; private repositories require `repo` scope.
 - `git`
 
