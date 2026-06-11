@@ -31,6 +31,7 @@ function makeCheck(overrides: Partial<ClassifiedCheck> = {}): ClassifiedCheck {
 }
 
 type JobStub = {
+  id?: number;
   name: string;
   workflow_name?: string;
   conclusion: string;
@@ -53,6 +54,15 @@ function makeErrorResponse(status: number): Response {
     status,
     headers: new Headers(),
     text: () => Promise.resolve("error"),
+  } as unknown as Response;
+}
+
+function makeTextResponse(text: string): Response {
+  return {
+    ok: true,
+    status: 200,
+    headers: new Headers({ "content-type": "text/plain" }),
+    text: () => Promise.resolve(text),
   } as unknown as Response;
 }
 
@@ -83,6 +93,7 @@ export {
   makeCheck,
   makeErrorResponse,
   makeJobsResponse,
+  makeTextResponse,
   makeWorkflowRunsResponse,
   mergeStartupFailureChecks,
   mockFetch,

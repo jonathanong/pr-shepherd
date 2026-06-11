@@ -38,6 +38,7 @@ The module supports a focused automation loop for PR monitoring and deterministi
 - Fetches and classifies checks from GitHub check runs and workflow runs.
 - Supports configurable PR-related trigger filtering via `checks.ciTriggerEvents`.
 - Supports triage for action failures (`FAILURE`, `TIMED_OUT`, etc.), `CANCELLED`, and `STARTUP_FAILURE`.
+- Supports bounded raw log excerpts from matched failed GitHub Actions jobs.
 - Supports surfacing inline annotations from failing GitHub check runs once per PR.
 - Supports supplemental REST fetch for startup-failure workflow runs tied to the PR head SHA.
 - Supports external status checks surfaced via details URL when a run ID is unavailable.

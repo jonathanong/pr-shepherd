@@ -5,12 +5,17 @@
 
 ## Failing checks
 
-- `1234567890` — `CI › tests (ubuntu)` [conclusion: FAILURE]
-  > Run tests
+- `27325033780` — `CI › tests` [conclusion: FAILURE]
+  > All checks passed
+  > One or more required jobs failed or were cancelled
+  > ##[error]Process completed with exit code 1.
+  > Job results (non-success):
+  > test-playwright: failure
+  > test-playwright-credentialed: failure
 
 ## Cancelled runs
 
-- `1234567890`
+- `27325033780`
 
 ## Post-fix push
 

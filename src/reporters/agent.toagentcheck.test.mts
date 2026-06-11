@@ -48,25 +48,27 @@ describe("toAgentCheck", () => {
     expect(result.detailsUrl).toBe("https://github.com/owner/repo/actions/runs/null");
   });
 
-  it("includes workflowName, jobName, failedStep, summary when present; omits when absent", () => {
+  it("includes workflowName, jobName, failedStep, summary, logExcerpt when present; omits when absent", () => {
     const check: TriagedCheck = {
       ...makeCheck("run-1"),
       workflowName: "CI",
       jobName: "tests",
       failedStep: "Run tests",
       summary: "2 tests failed",
+      logExcerpt: '"test-playwright": {"result": "failure"}',
     };
     const result = toAgentCheck(check);
     expect(result.workflowName).toBe("CI");
     expect(result.jobName).toBe("tests");
     expect(result.failedStep).toBe("Run tests");
     expect(result.summary).toBe("2 tests failed");
+    expect(result.logExcerpt).toBe('"test-playwright": {"result": "failure"}');
 
     const bare = toAgentCheck(makeCheck("run-2"));
     expect(bare).not.toHaveProperty("workflowName");
     expect(bare).not.toHaveProperty("jobName");
     expect(bare).not.toHaveProperty("failedStep");
     expect(bare).not.toHaveProperty("summary");
-    expect(bare).not.toHaveProperty("logTail");
+    expect(bare).not.toHaveProperty("logExcerpt");
   });
 });

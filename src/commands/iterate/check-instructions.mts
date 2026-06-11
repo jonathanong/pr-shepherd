@@ -25,7 +25,7 @@ export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   const parts: string[] = [];
   if (hasRunId) {
     parts.push(
-      "fetch the log with `gh run view <runId> --log-failed` and decide: rerun with `gh run rerun <runId> --failed` for transient infrastructure failures (network timeout, OOM kill, runner crash), or apply a code fix for real test/build failures",
+      "read any included log excerpt first; fetch the full log with `gh run view <runId> --log-failed` when the excerpt is insufficient; decide whether to rerun with `gh run rerun <runId> --failed` for transient infrastructure failures (network timeout, OOM kill, runner crash), or apply a code fix for real test/build failures; if GitHub omits workflow-evaluation details from API/log output, open the run URL in the GitHub UI",
     );
   }
   if (hasCancelled) {

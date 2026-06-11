@@ -16,7 +16,7 @@ A single GraphQL query fetches everything shepherd needs per PR:
 
 This single round-trip replaces the 6–12 API calls the former multi-agent design needed.
 
-Startup-failure workflow runs are the one check-read supplement outside the batch query: GitHub can omit workflow runs that fail before job/check contexts exist from `statusCheckRollup`, so Shepherd queries the Actions REST runs endpoint by PR head SHA, keeps only runs associated with the current PR, and merges `startup_failure` runs into the check list before classification.
+Startup-failure workflow runs and failed-job log excerpts are check-read supplements outside the batch query. GitHub can omit workflow runs that fail before job/check contexts exist from `statusCheckRollup`, so Shepherd queries the Actions REST runs endpoint by PR head SHA, keeps only runs associated with the current PR, and merges `startup_failure` runs into the check list before classification. For ordinary failing Actions jobs, Shepherd also fetches a bounded raw log excerpt from the matched job after classification/triage.
 
 ## Pagination strategy
 
@@ -52,6 +52,12 @@ The generic paginator is in `github/pagination.mts`. It accepts a `direction` pa
 **When:** Every check sweep, using the PR `headRefOid`.
 
 **Why:** GraphQL `statusCheckRollup` may not include workflow runs that failed during startup before any jobs were created. Shepherd uses `GET /repos/{owner}/{repo}/actions/runs?head_sha=<sha>&status=startup_failure`, filters the repository-wide result to the current PR's `pull_requests` association, and reports matching runs with the raw run ID, event, URL, workflow name, and display title. This supplement is best-effort: if the Actions runs request fails, Shepherd logs a warning and continues with the GraphQL check data.
+
+### Failed job log excerpts
+
+**When:** A failing, non-cancelled, non-startup-failure GitHub Actions check has a matched job from the Actions jobs API.
+
+**Why:** Some useful failure context, such as aggregate `needs` job results, is only present in job logs and not in GraphQL check-run fields or check annotations. Shepherd fetches `GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs` and includes a bounded raw excerpt in the failing-check output. This supplement is best-effort: if the log request fails or the log is empty, the field is omitted.
 
 ## Rate limiting
 

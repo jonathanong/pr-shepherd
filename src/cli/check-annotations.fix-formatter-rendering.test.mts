@@ -5,6 +5,31 @@ import { makeIterateResult } from "../../fixtures/cli-parser.iterate-fixtures.mt
 import type { IterateResult } from "../types.mts";
 
 describe("## Check annotations — fix formatter rendering", () => {
+  it("renders failing check log excerpts as indented blockquotes", () => {
+    const result: IterateResult = { ...makeIterateResult("fix_code") };
+    if (result.action !== "fix_code") throw new Error("expected fix_code fixture");
+    result.fix.checks = [
+      {
+        name: "tests",
+        runId: "27325033780",
+        detailsUrl: "https://github.com/owner/repo/actions/runs/27325033780/job/80724572207",
+        conclusion: "FAILURE",
+        workflowName: "CI",
+        jobName: "tests",
+        failedStep: "All checks passed",
+        logExcerpt:
+          '"test-playwright": {"result": "failure"}\n"test-playwright-credentialed": {"result": "failure"}',
+      },
+    ];
+
+    const output = formatIterateResult(result);
+
+    expect(output).toContain("- `27325033780` — `CI › tests` [conclusion: FAILURE]");
+    expect(output).toContain("  > All checks passed");
+    expect(output).toContain('  > "test-playwright": {"result": "failure"}');
+    expect(output).toContain('  > "test-playwright-credentialed": {"result": "failure"}');
+  });
+
   it("renders check annotations after failing checks", () => {
     const result: IterateResult = { ...makeIterateResult("fix_code") };
     if (result.action !== "fix_code") throw new Error("expected fix_code fixture");
@@ -63,5 +88,37 @@ describe("## Check annotations — fix formatter rendering", () => {
     );
     expect(output).toContain("> Prefer separate methods.");
     expect(output).toContain("- `check_annotation_no_location` `src/unknown.mts:?` [NOTICE]");
+  });
+
+  it("renders workflow-evaluation errors from check annotations", () => {
+    const result: IterateResult = { ...makeIterateResult("fix_code") };
+    if (result.action !== "fix_code") throw new Error("expected fix_code fixture");
+    result.fix.checks = [
+      {
+        name: "CI",
+        runId: "27325033780",
+        detailsUrl: "https://github.com/jonathanong/filaments/actions/runs/27325033780",
+        conclusion: "FAILURE",
+        annotations: [
+          {
+            id: "check_annotation_runs_on",
+            path: ".github/workflows/tests-playwright.yml",
+            startLine: 102,
+            endLine: 102,
+            level: "FAILURE",
+            message:
+              "Error when evaluating 'runs-on' for job 'playwright-tests'. jonathanong/filaments/.github/workflows/tests-playwright.yml@cbb22abcb1ea579788192b0cb18b9aae9c9b7d1f (Line: 102, Col: 14): Error from function 'fromJSON': Unexpected symbol: 'ubicloud'. Located at line 1 position 1 within JSON.",
+          },
+        ],
+      },
+    ];
+
+    const output = formatIterateResult(result);
+
+    expect(output).toContain("## Check annotations");
+    expect(output).toContain("`.github/workflows/tests-playwright.yml:102` [FAILURE]");
+    expect(output).toContain("Error when evaluating 'runs-on' for job 'playwright-tests'");
+    expect(output).toContain("Error from function 'fromJSON'");
+    expect(output).toContain("Unexpected symbol: 'ubicloud'");
   });
 });

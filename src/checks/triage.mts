@@ -1,8 +1,14 @@
-import { rest } from "../github/http.mts";
+/* eslint-disable max-lines */
+import { rest, restText } from "../github/http.mts";
 import type { CheckRun, ClassifiedCheck, TriagedCheck } from "../types.mts";
 import type { RepoInfo } from "../github/client.mts";
 
 const STARTUP_FAILURE_STATUS = "startup_failure";
+const LOG_EXCERPT_CONTEXT_LINES = 16;
+const LOG_EXCERPT_TAIL_LINES = 28;
+const LOG_EXCERPT_MAX_CHARS = 4_000;
+const TRUNCATED_SUFFIX = "\n[truncated]";
+const ANSI_SGR_RE = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
 
 export function triageFailingChecks(
   failingChecks: ClassifiedCheck[],
@@ -26,11 +32,13 @@ async function triageCheck(
   }
   const jobs = await fetchJobs(check.runId, repo, jobsCache);
   const jobInfo = jobs ? pickJobInfo(jobs, check.name) : undefined;
+  const logExcerpt = jobInfo?.jobId ? await fetchJobLogExcerpt(jobInfo.jobId, repo) : undefined;
   return {
     ...check,
     ...(jobInfo?.workflowName !== undefined && { workflowName: jobInfo.workflowName }),
     ...(jobInfo?.jobName !== undefined && { jobName: jobInfo.jobName }),
     ...(jobInfo?.failedStep !== undefined && { failedStep: jobInfo.failedStep }),
+    ...(logExcerpt !== undefined && { logExcerpt }),
   };
 }
 
@@ -81,6 +89,7 @@ async function fetchStartupFailureChecksUncached(
 
 interface JobsResponse {
   jobs: Array<{
+    id?: number;
     name: string;
     workflow_name?: string;
     conclusion: string | null;
@@ -105,6 +114,7 @@ interface WorkflowRunsResponse {
 }
 
 interface JobInfo {
+  jobId?: number;
   workflowName?: string;
   jobName?: string;
   failedStep?: string;
@@ -193,8 +203,125 @@ function pickJobInfo(jobs: JobsResponse["jobs"], checkName: string): JobInfo | u
       s.conclusion !== "neutral",
   )?.name;
   return {
+    ...(job.id !== undefined && { jobId: job.id }),
     workflowName: job.workflow_name,
     jobName: job.name,
     failedStep,
   };
+}
+
+async function fetchJobLogExcerpt(jobId: number, repo: RepoInfo): Promise<string | undefined> {
+  const { owner, name } = repo;
+  try {
+    return buildLogExcerpt(await restText(`/repos/${owner}/${name}/actions/jobs/${jobId}/logs`));
+  } catch {
+    return undefined;
+  }
+}
+
+function buildLogExcerpt(raw: string): string | undefined {
+  const lines = raw
+    .split(/\r?\n/)
+    .map(cleanLogLine)
+    .filter((line) => line.trim() !== "");
+  if (lines.length === 0) return undefined;
+
+  const aggregateExcerpt = buildAggregateJobResultsExcerpt(lines);
+  if (aggregateExcerpt !== undefined) return aggregateExcerpt;
+
+  const errorIndex = findLogExcerptAnchor(lines);
+  if (errorIndex === -1) return truncateLogExcerpt(lines.slice(-LOG_EXCERPT_TAIL_LINES).join("\n"));
+  const start = Math.max(0, errorIndex - LOG_EXCERPT_CONTEXT_LINES);
+  const excerpt = lines.slice(
+    start,
+    Math.min(lines.length, errorIndex + LOG_EXCERPT_CONTEXT_LINES + 1),
+  );
+  return truncateAnchoredExcerpt(excerpt, errorIndex - start);
+}
+
+function findLogExcerptAnchor(lines: string[]): number {
+  const explicitError = lines.findIndex((line) => line.includes("##[error]"));
+  if (explicitError !== -1) return explicitError;
+  return lines.findIndex((line) => /\b(error|failed|cancelled)\b/i.test(line));
+}
+
+function buildAggregateJobResultsExcerpt(lines: string[]): string | undefined {
+  const jobResults = extractJobResults(lines);
+  if (jobResults === undefined) return undefined;
+  const failed = Object.entries(jobResults)
+    .map(([name, value]) => ({ name, result: extractJobResult(value) }))
+    .filter(
+      (entry) => entry.result !== undefined && !["success", "skipped"].includes(entry.result),
+    );
+  if (failed.length === 0) return undefined;
+
+  const output = [
+    ...lines.filter((line) => /required jobs failed|exit code \d+/i.test(line)),
+    "Job results (non-success):",
+    ...failed.map((entry) => `${entry.name}: ${entry.result}`),
+  ];
+  return truncateLogExcerpt(output.join("\n"));
+}
+
+function extractJobResults(lines: string[]): Record<string, unknown> | undefined {
+  const startIndex = lines.findIndex((line) => line.includes("Job results:"));
+  if (startIndex === -1) return undefined;
+  const block = collectJsonBlock(lines, startIndex);
+  if (block === undefined) return undefined;
+  try {
+    const parsed = JSON.parse(block) as unknown;
+    return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function collectJsonBlock(lines: string[], startIndex: number): string | undefined {
+  const startLine = lines[startIndex] ?? "";
+  const objectStart = startLine.indexOf("{");
+  if (objectStart === -1) return undefined;
+  const collected = [startLine.slice(objectStart)];
+  let depth = braceDepth(collected[0]);
+  for (let i = startIndex + 1; i < lines.length && depth > 0; i++) {
+    const line = lines[i] ?? "";
+    collected.push(line);
+    depth += braceDepth(line);
+  }
+  return depth === 0 ? collected.join("\n") : undefined;
+}
+
+function braceDepth(line: string): number {
+  return [...line].reduce((depth, ch) => {
+    if (ch === "{") return depth + 1;
+    if (ch === "}") return depth - 1;
+    return depth;
+  }, 0);
+}
+
+function extractJobResult(value: unknown): string | undefined {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const result = (value as { result?: unknown }).result;
+  return typeof result === "string" ? result : undefined;
+}
+
+function truncateLogExcerpt(text: string): string {
+  if (text.length <= LOG_EXCERPT_MAX_CHARS) return text;
+  return `${text.slice(0, LOG_EXCERPT_MAX_CHARS - TRUNCATED_SUFFIX.length).trimEnd()}${TRUNCATED_SUFFIX}`;
+}
+
+function truncateAnchoredExcerpt(lines: string[], anchorIndex: number): string {
+  const text = lines.join("\n");
+  if (text.length <= LOG_EXCERPT_MAX_CHARS) return text;
+  return truncateLogExcerpt(`${TRUNCATED_SUFFIX.trim()}\n${lines.slice(anchorIndex).join("\n")}`);
+}
+
+function cleanLogLine(line: string): string {
+  return line
+    .replace(/^\uFEFF/, "")
+    .replace(ANSI_SGR_RE, "")
+    .replace(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z\s*/, "")
+    .replace(/##\[(?:group|endgroup)\]/g, "")
+    .trimEnd();
 }
