@@ -50,6 +50,8 @@ vi.mock("../../src/github/check-annotations.mts", () => ({
 }));
 vi.mock("../../src/comments/resolve.mts", () => ({
   autoResolveOutdated: vi.fn().mockResolvedValue({ resolved: [], errors: [] }),
+  autoResolveThreads: vi.fn().mockResolvedValue({ resolved: [], errors: [] }),
+  autoMinimizeComments: vi.fn().mockResolvedValue({ minimized: [], errors: [] }),
   applyResolveOptions: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../src/state/seen-comments.mts", async (importOriginal) => {
