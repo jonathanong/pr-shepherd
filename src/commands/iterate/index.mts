@@ -33,6 +33,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   const report = await runCheck({
     ...optsWithPr,
     autoResolve: config.actions.autoResolveOutdated,
+    autoMinimizeSuppressed: config.actions.autoMinimizeSuppressed,
   });
 
   const [repoOwner, repoName] = report.repo.split("/");

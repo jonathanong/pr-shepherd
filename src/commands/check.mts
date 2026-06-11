@@ -21,6 +21,7 @@ import {
   classifyReviewsForDisplay,
   classifyChangesRequestedReviewsForDisplay,
 } from "../comments/review-visibility.mts";
+import { autoMinimizeComments, autoResolveThreads } from "../comments/resolve.mts";
 import { markReviewInlineThreadMarkers } from "../comments/review-thread-markers.mts";
 import { normalizeBotUsernames } from "../comments/authors.mts";
 import { discoverRuleFiles, loadRules } from "../classify/loader.mts";
@@ -33,7 +34,11 @@ import type {
 } from "../types.mts";
 
 export async function runCheck(
-  opts: GlobalOptions & { autoResolve?: boolean; skipTriage?: boolean },
+  opts: GlobalOptions & {
+    autoResolve?: boolean;
+    autoMinimizeSuppressed?: boolean;
+    skipTriage?: boolean;
+  },
 ): Promise<ShepherdReport> {
   const repo = await getRepoInfo();
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
@@ -134,6 +139,43 @@ export async function runCheck(
       .map((r) => markSeen(stateKey, r.id, r.body)),
   ]);
   await markReviewInlineThreadMarkers(stateKey, batchData.reviewThreads);
+  const suppressedRuleAutoResolveCommentIds = partition.ruleAutoResolveCommentIds.filter((id) =>
+    partition.suppressedCommentIds.has(id),
+  );
+  const suppressedRuleAutoResolveReviewSummaryIds =
+    partition.ruleAutoResolveReviewSummaryIds.filter((id) =>
+      partition.suppressedReviewSummaryIds.has(id),
+    );
+  const suppressedRuleAutoResolveThreadIds = partition.ruleAutoResolveThreadIds.filter((id) =>
+    partition.suppressedThreadIds.has(id),
+  );
+  const selfMinimizedIds = new Set<string>();
+  const selfResolvedThreadIds = new Set<string>();
+  if (opts.autoMinimizeSuppressed) {
+    const minimizeSuppressedIds = [
+      ...suppressedRuleAutoResolveCommentIds,
+      ...suppressedRuleAutoResolveReviewSummaryIds,
+    ];
+    const [minimized, resolved] = await Promise.all([
+      minimizeSuppressedIds.length > 0
+        ? autoMinimizeComments(minimizeSuppressedIds)
+        : Promise.resolve({ minimized: [], errors: [] }),
+      suppressedRuleAutoResolveThreadIds.length > 0
+        ? autoResolveThreads(suppressedRuleAutoResolveThreadIds)
+        : Promise.resolve({ resolved: [], errors: [] }),
+    ]);
+    for (const id of minimized.minimized) selfMinimizedIds.add(id);
+    for (const id of resolved.resolved) selfResolvedThreadIds.add(id);
+  }
+  const ruleAutoResolveThreadIds = partition.ruleAutoResolveThreadIds.filter(
+    (id) => !selfResolvedThreadIds.has(id),
+  );
+  const ruleAutoResolveCommentIds = partition.ruleAutoResolveCommentIds.filter(
+    (id) => !selfMinimizedIds.has(id),
+  );
+  const ruleAutoResolveReviewSummaryIds = partition.ruleAutoResolveReviewSummaryIds.filter(
+    (id) => !selfMinimizedIds.has(id),
+  );
   const changesRequestedReviews = changesRequestedReviewVisibility.visible;
   const changesRequestedReviewCount = batchData.changesRequestedReviews.filter(
     (r) => !partition.suppressedChangesRequestedIds.has(r.id),
@@ -185,16 +227,13 @@ export async function runCheck(
       autoResolved: [],
       autoResolveErrors: [],
       firstLook: threadVisibility.firstLookThreads,
-      ...(partition.ruleAutoResolveThreadIds.length > 0
-        ? { ruleAutoResolveIds: partition.ruleAutoResolveThreadIds }
+      ...(ruleAutoResolveThreadIds.length > 0
+        ? { ruleAutoResolveIds: ruleAutoResolveThreadIds }
         : undefined),
     },
     comments: {
       actionable: visibleCommentClassification.actionable,
-      minimizeIds: [
-        ...visibleCommentClassification.minimizeIds,
-        ...partition.ruleAutoResolveCommentIds,
-      ],
+      minimizeIds: [...visibleCommentClassification.minimizeIds, ...ruleAutoResolveCommentIds],
       firstLook: firstLookComments,
     },
     changesRequestedReviews,
@@ -202,8 +241,8 @@ export async function runCheck(
     firstLookSummaries,
     editedSummaries,
     approvedReviews,
-    ...(partition.ruleAutoResolveReviewSummaryIds.length > 0
-      ? { ruleAutoResolveReviewSummaryIds: partition.ruleAutoResolveReviewSummaryIds }
+    ...(ruleAutoResolveReviewSummaryIds.length > 0
+      ? { ruleAutoResolveReviewSummaryIds }
       : undefined),
     branchProtection: batchData.branchProtection,
     activity: batchData.activity,

@@ -42,6 +42,7 @@ mergeStatus:
 
 actions:
   autoResolveOutdated: true
+  autoMinimizeSuppressed: true
   autoMarkReady: true
   commitSuggestions: true
 ```
@@ -64,6 +65,7 @@ actions:
 | `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos)                                                                            |
 | `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                                                                      |
 | `actions.autoResolveOutdated`        | `true`                                    | Deprecated compatibility setting; outdated threads are surfaced before human-authored threads are replied to and bot/non-human threads are resolved         |
+| `actions.autoMinimizeSuppressed`     | `true`                                    | Silently resolve/minimize classification-rule matches with both `suppress: true` and `autoResolve: true` before emitting `fix_code`                         |
 | `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR reaches a clean handoff state                                                                                             |
 | `actions.commitSuggestions`          | `true`                                    | Route `/pr-shepherd:resolve` through `commit-suggestion` (singular) for threads with a ` ```suggestion ` block                                              |
 
@@ -191,11 +193,17 @@ Add other review bots (e.g. `sonar`, `codeclimate`, `reviewdog`) if they submit 
 
 ## `actions`
 
-These flags control whether shepherd automatically performs each class of mutation during an `iterate` tick. The corresponding `--no-auto-*` CLI flags provide per-invocation overrides.
+These flags control whether shepherd automatically performs each class of mutation during an `iterate` tick. Some actions also have `--no-auto-*` CLI flags for per-invocation overrides.
 
 ### `actions.autoResolveOutdated` — default `true`
 
 Deprecated. Shepherd no longer auto-resolves outdated threads. Outdated threads are surfaced as `[status: outdated]`, marker-gated, and human-authored threads are replied to through `--reply-thread-ids` when the resolve command runs.
+
+### `actions.autoMinimizeSuppressed` — default `true`
+
+When `true`, Shepherd silently applies the resolve/minimize mutation for classification-rule matches that set both `suppress: true` and `autoResolve: true`, then removes successful IDs from the agent-facing queues before `iterate` decides whether to emit `fix_code`.
+
+This applies only to explicit classification-rule auto-resolve matches. Ordinary `iterate.minimizeComments` policy queues and `autoResolve: true` rules without `suppress: true` still flow through the generated resolve command.
 
 ### `actions.autoMarkReady` — default `true`
 

@@ -476,7 +476,7 @@ The `ClassifyItem` union covers four kinds: `"review-thread"`, `"pr-comment"`, `
 `ClassifyAction` has two optional boolean flags:
 
 - `suppress: true` — hides the item from agent output; the seen marker is still written so the item does not re-surface as first-look on the next tick.
-- `autoResolve: true` — routes the item's ID into the resolve/minimize mutation: threads go to `--resolve-thread-ids`, PR comments and review summaries go to `--minimize-comment-ids`. Not supported for `"changes-requested"` items (dismissing a review requires an explicit message).
+- `autoResolve: true` — routes the item's ID into the resolve/minimize mutation: threads go to `--resolve-thread-ids`, PR comments and review summaries go to `--minimize-comment-ids`. When combined with `suppress: true`, Shepherd performs the mutation silently by default via `actions.autoMinimizeSuppressed` and only falls back to the generated resolve command if the mutation fails. Not supported for `"changes-requested"` items (dismissing a review requires an explicit message).
 
 Rules from multiple files combine permissively: `suppress` and `autoResolve` are OR'd across all matching rules for a given item.
 

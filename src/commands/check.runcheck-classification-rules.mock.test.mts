@@ -15,8 +15,11 @@ vi.mock("../classify/loader.mts", () => ({
     {
       name: "test-rule",
       file: "fake-rule.mjs",
-      rule: (item: ClassifyItem) =>
-        item.author === "bot-reviewer" ? { suppress: true, autoResolve: true } : null,
+      rule: (item: ClassifyItem) => {
+        if (item.author === "bot-reviewer") return { suppress: true, autoResolve: true };
+        if (item.author === "auto-resolver") return { autoResolve: true };
+        return null;
+      },
     },
   ]),
 }));

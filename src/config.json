@@ -37,6 +37,7 @@
   },
   "actions": {
     "autoResolveOutdated": true,
+    "autoMinimizeSuppressed": true,
     "autoMarkReady": true,
     "commitSuggestions": true
   }

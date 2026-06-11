@@ -207,7 +207,12 @@ export function defaultConfig() {
     },
     checks: { ciTriggerEvents: ["pull_request", "pull_request_target"] },
     mergeStatus: { blockingReviewerLogins: ["copilot"] },
-    actions: { autoResolveOutdated: true, autoMarkReady: true, commitSuggestions: true },
+    actions: {
+      autoResolveOutdated: true,
+      autoMinimizeSuppressed: true,
+      autoMarkReady: true,
+      commitSuggestions: true,
+    },
   };
 }
 

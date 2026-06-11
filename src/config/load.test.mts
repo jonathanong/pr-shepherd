@@ -52,6 +52,12 @@ describe("loadConfig — no rc file", () => {
     expect(result.iterate.minimizeComments).toBe("all");
   });
 
+  it("defaults actions.autoMinimizeSuppressed to true", async () => {
+    const loadConfig = await freshLoadConfig();
+    const result = loadConfig();
+    expect(result.actions.autoMinimizeSuppressed).toBe(true);
+  });
+
   it("overrides iterate.minimizeApprovals when set in rc file", async () => {
     writeFileSync(join(tmpDir, RC), "iterate:\n  minimizeApprovals: true\n");
     const loadConfig = await freshLoadConfig();
@@ -64,6 +70,13 @@ describe("loadConfig — no rc file", () => {
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
     expect(result.iterate.minimizeComments).toBe("bots");
+  });
+
+  it("overrides actions.autoMinimizeSuppressed when set in rc file", async () => {
+    writeFileSync(join(tmpDir, RC), "actions:\n  autoMinimizeSuppressed: false\n");
+    const loadConfig = await freshLoadConfig();
+    const result = loadConfig();
+    expect(result.actions.autoMinimizeSuppressed).toBe(false);
   });
 
   it("overrides top-level botUsernames when set in rc file", async () => {

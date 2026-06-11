@@ -110,6 +110,13 @@ export async function applyResolveOptions(
 export async function autoResolveOutdated(
   threadIds: string[],
 ): Promise<{ resolved: string[]; errors: string[] }> {
+  return autoResolveThreads(threadIds);
+}
+
+export async function autoResolveThreads(
+  threadIds: string[],
+): Promise<{ resolved: string[]; errors: string[] }> {
+  if (threadIds.length === 0) return { resolved: [], errors: [] };
   const result: ResolveResult = {
     repliedThreads: [],
     resolvedThreads: [],
@@ -119,6 +126,21 @@ export async function autoResolveOutdated(
   };
   await bulkApply([], threadIds, [], [], "", result);
   return { resolved: result.resolvedThreads, errors: result.errors };
+}
+
+export async function autoMinimizeComments(
+  minimizeIds: string[],
+): Promise<{ minimized: string[]; errors: string[] }> {
+  if (minimizeIds.length === 0) return { minimized: [], errors: [] };
+  const result: ResolveResult = {
+    repliedThreads: [],
+    resolvedThreads: [],
+    minimizedComments: [],
+    dismissedReviews: [],
+    errors: [],
+  };
+  await bulkApply([], [], minimizeIds, [], "", result);
+  return { minimized: result.minimizedComments, errors: result.errors };
 }
 
 // Keep mutation batches small so rate-limit stops leave a precise pending list.
