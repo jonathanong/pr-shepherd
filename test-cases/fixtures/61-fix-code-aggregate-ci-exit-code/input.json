@@ -1,0 +1,36 @@
+{
+  "batchData": {
+    "checks": [
+      {
+        "id": "CR_tests",
+        "name": "tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/27325033780/job/80724572207",
+        "runId": "27325033780"
+      }
+    ]
+  },
+  "triagedChecks": [
+    {
+      "id": "CR_tests",
+      "name": "tests",
+      "status": "COMPLETED",
+      "conclusion": "FAILURE",
+      "event": "pull_request",
+      "detailsUrl": "https://github.com/owner/repo/actions/runs/27325033780/job/80724572207",
+      "runId": "27325033780",
+      "category": "failing",
+      "workflowName": "CI",
+      "jobName": "tests",
+      "failedStep": "All checks passed",
+      "logExcerpt": "One or more required jobs failed or were cancelled\n##[error]Process completed with exit code 1.\nJob results (non-success):\ntest-playwright: failure\ntest-playwright-credentialed: failure"
+    }
+  ],
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}
