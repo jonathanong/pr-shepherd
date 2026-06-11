@@ -25,7 +25,7 @@ import { autoMinimizeComments, autoResolveThreads } from "../comments/resolve.mt
 import { markReviewInlineThreadMarkers } from "../comments/review-thread-markers.mts";
 import { normalizeBotUsernames } from "../comments/authors.mts";
 import { discoverRuleFiles, loadRules } from "../classify/loader.mts";
-import { buildClassifyIndex, partitionBatch } from "../classify/apply.mts";
+import { buildClassifyIndex, partitionBatch, type BatchPartition } from "../classify/apply.mts";
 import type {
   GlobalOptions,
   ShepherdReport,
@@ -139,43 +139,11 @@ export async function runCheck(
       .map((r) => markSeen(stateKey, r.id, r.body)),
   ]);
   await markReviewInlineThreadMarkers(stateKey, batchData.reviewThreads);
-  const suppressedRuleAutoResolveCommentIds = partition.ruleAutoResolveCommentIds.filter((id) =>
-    partition.suppressedCommentIds.has(id),
-  );
-  const suppressedRuleAutoResolveReviewSummaryIds =
-    partition.ruleAutoResolveReviewSummaryIds.filter((id) =>
-      partition.suppressedReviewSummaryIds.has(id),
-    );
-  const suppressedRuleAutoResolveThreadIds = partition.ruleAutoResolveThreadIds.filter((id) =>
-    partition.suppressedThreadIds.has(id),
-  );
-  const selfMinimizedIds = new Set<string>();
-  const selfResolvedThreadIds = new Set<string>();
-  if (opts.autoMinimizeSuppressed) {
-    const minimizeSuppressedIds = [
-      ...suppressedRuleAutoResolveCommentIds,
-      ...suppressedRuleAutoResolveReviewSummaryIds,
-    ];
-    const [minimized, resolved] = await Promise.all([
-      minimizeSuppressedIds.length > 0
-        ? autoMinimizeComments(minimizeSuppressedIds)
-        : Promise.resolve({ minimized: [], errors: [] }),
-      suppressedRuleAutoResolveThreadIds.length > 0
-        ? autoResolveThreads(suppressedRuleAutoResolveThreadIds)
-        : Promise.resolve({ resolved: [], errors: [] }),
-    ]);
-    for (const id of minimized.minimized) selfMinimizedIds.add(id);
-    for (const id of resolved.resolved) selfResolvedThreadIds.add(id);
-  }
-  const ruleAutoResolveThreadIds = partition.ruleAutoResolveThreadIds.filter(
-    (id) => !selfResolvedThreadIds.has(id),
-  );
-  const ruleAutoResolveCommentIds = partition.ruleAutoResolveCommentIds.filter(
-    (id) => !selfMinimizedIds.has(id),
-  );
-  const ruleAutoResolveReviewSummaryIds = partition.ruleAutoResolveReviewSummaryIds.filter(
-    (id) => !selfMinimizedIds.has(id),
-  );
+  const {
+    threadIds: ruleAutoResolveThreadIds,
+    commentIds: ruleAutoResolveCommentIds,
+    reviewSummaryIds: ruleAutoResolveReviewSummaryIds,
+  } = await remainingRuleAutoResolveIds(partition, opts.autoMinimizeSuppressed);
   const changesRequestedReviews = changesRequestedReviewVisibility.visible;
   const changesRequestedReviewCount = batchData.changesRequestedReviews.filter(
     (r) => !partition.suppressedChangesRequestedIds.has(r.id),
@@ -246,5 +214,55 @@ export async function runCheck(
       : undefined),
     branchProtection: batchData.branchProtection,
     activity: batchData.activity,
+  };
+}
+
+interface RuleAutoResolveIds {
+  threadIds: string[];
+  commentIds: string[];
+  reviewSummaryIds: string[];
+}
+
+async function remainingRuleAutoResolveIds(
+  partition: BatchPartition,
+  autoMinimizeSuppressed = false,
+): Promise<RuleAutoResolveIds> {
+  const consumedIds = autoMinimizeSuppressed
+    ? await selfApplySuppressedRuleAutoResolve(partition)
+    : { minimized: new Set<string>(), resolvedThreads: new Set<string>() };
+  return {
+    threadIds: partition.ruleAutoResolveThreadIds.filter(
+      (id) => !consumedIds.resolvedThreads.has(id),
+    ),
+    commentIds: partition.ruleAutoResolveCommentIds.filter((id) => !consumedIds.minimized.has(id)),
+    reviewSummaryIds: partition.ruleAutoResolveReviewSummaryIds.filter(
+      (id) => !consumedIds.minimized.has(id),
+    ),
+  };
+}
+
+async function selfApplySuppressedRuleAutoResolve(
+  partition: BatchPartition,
+): Promise<{ minimized: Set<string>; resolvedThreads: Set<string> }> {
+  const minimizeIds = [
+    ...partition.ruleAutoResolveCommentIds.filter((id) => partition.suppressedCommentIds.has(id)),
+    ...partition.ruleAutoResolveReviewSummaryIds.filter((id) =>
+      partition.suppressedReviewSummaryIds.has(id),
+    ),
+  ];
+  const threadIds = partition.ruleAutoResolveThreadIds.filter((id) =>
+    partition.suppressedThreadIds.has(id),
+  );
+  const [minimized, resolved] = await Promise.all([
+    minimizeIds.length > 0
+      ? autoMinimizeComments(minimizeIds)
+      : Promise.resolve({ minimized: [], errors: [] }),
+    threadIds.length > 0
+      ? autoResolveThreads(threadIds)
+      : Promise.resolve({ resolved: [], errors: [] }),
+  ]);
+  return {
+    minimized: new Set(minimized.minimized),
+    resolvedThreads: new Set(resolved.resolved),
   };
 }
