@@ -33,6 +33,7 @@ vi.mock("../../src/config/load.mts", () => ({
     },
     actions: {
       autoResolveOutdated: true,
+      autoMinimizeSuppressed: true,
       autoMarkReady: true,
       commitSuggestions: true,
     },

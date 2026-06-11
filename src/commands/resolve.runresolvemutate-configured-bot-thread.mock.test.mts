@@ -19,7 +19,12 @@ describe("runResolveMutate — configured bot threads", () => {
       botUsernames: ["coderabbitai"],
       ignoreChecks: [],
       resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 } },
-      actions: { autoResolveOutdated: true, autoMarkReady: true, commitSuggestions: true },
+      actions: {
+        autoResolveOutdated: true,
+        autoMinimizeSuppressed: true,
+        autoMarkReady: true,
+        commitSuggestions: true,
+      },
       iterate: {
         fixAttemptsPerThread: 3,
         stallTimeoutMinutes: 60,

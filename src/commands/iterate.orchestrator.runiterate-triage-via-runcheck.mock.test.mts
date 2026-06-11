@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
   registerIterateHooks,
+  defaultConfig,
   makeOpts,
   makeReport,
+  mockLoadConfig,
   mockRunCheck,
   mockUpdateReadyDelay,
 } from "../../test-helpers/commands/iterate-test-support.mts";
@@ -11,6 +13,19 @@ import { runIterate } from "./iterate/index.mts";
 registerIterateHooks();
 
 describe("runIterate — triage via runCheck", () => {
+  it("passes autoMinimizeSuppressed config into runCheck", async () => {
+    const cfg = defaultConfig();
+    cfg.actions.autoMinimizeSuppressed = false;
+    mockLoadConfig.mockReturnValue(cfg);
+    mockRunCheck.mockResolvedValue(makeReport());
+
+    await runIterate(makeOpts());
+
+    expect(mockRunCheck).toHaveBeenCalledWith(
+      expect.objectContaining({ autoMinimizeSuppressed: false }),
+    );
+  });
+
   it("returns action: cancel when PR is MERGED even with failing checks", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({

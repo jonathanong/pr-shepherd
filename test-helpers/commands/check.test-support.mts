@@ -15,6 +15,8 @@ vi.mock("../../src/github/check-annotations.mts", () => ({
 }));
 vi.mock("../../src/comments/resolve.mts", () => ({
   autoResolveOutdated: vi.fn().mockResolvedValue({ resolved: [], errors: [] }),
+  autoResolveThreads: vi.fn().mockResolvedValue({ resolved: [], errors: [] }),
+  autoMinimizeComments: vi.fn().mockResolvedValue({ minimized: [], errors: [] }),
 }));
 vi.mock("../../src/state/seen-comments.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../src/state/seen-comments.mts")>();
@@ -28,18 +30,17 @@ vi.mock("../../src/state/seen-comments.mts", async (importOriginal) => {
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../../src/config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
-import { runCheck } from "../../src/commands/check.mts";
+import "../../src/commands/check.mts";
 import { fetchPrBatch } from "../../src/github/batch.mts";
 import { getCurrentPrNumber, getMergeableState } from "../../src/github/client.mts";
 import { fetchStartupFailureChecks, triageFailingChecks } from "../../src/checks/triage.mts";
 import { fetchCheckRunAnnotations } from "../../src/github/check-annotations.mts";
+import { loadSeenMap, markSeen, markReviewInlineThreads } from "../../src/state/seen-comments.mts";
 import {
-  loadSeenMap,
-  markSeen,
-  markReviewInlineThreads,
-  hashBody,
-} from "../../src/state/seen-comments.mts";
-import { autoResolveOutdated } from "../../src/comments/resolve.mts";
+  autoResolveOutdated,
+  autoResolveThreads,
+  autoMinimizeComments,
+} from "../../src/comments/resolve.mts";
 import type { BatchPrData, ClassifiedCheck, ReviewThread, PrComment } from "../../src/types.mts";
 
 const mockFetchPrBatch = vi.mocked(fetchPrBatch);
@@ -52,6 +53,8 @@ const mockLoadSeenMap = vi.mocked(loadSeenMap);
 const mockMarkSeen = vi.mocked(markSeen);
 const mockMarkReviewInlineThreads = vi.mocked(markReviewInlineThreads);
 const mockAutoResolveOutdated = vi.mocked(autoResolveOutdated);
+const mockAutoResolveThreads = vi.mocked(autoResolveThreads);
+const mockAutoMinimizeComments = vi.mocked(autoMinimizeComments);
 
 const BASE_OPTS = { format: "text" as const };
 
@@ -66,15 +69,12 @@ function defaultConfig() {
       minimizeComments: "all" as "all" | "bots" | "users" | "none",
     },
     watch: { readyDelayMinutes: 10 },
-    resolve: {
-      shaPoll: { intervalMs: 2000, maxAttempts: 10 },
-    },
-    checks: {
-      ciTriggerEvents: ["pull_request", "pull_request_target"],
-    },
+    resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 } },
+    checks: { ciTriggerEvents: ["pull_request", "pull_request_target"] },
     mergeStatus: { blockingReviewerLogins: ["copilot"] },
     actions: {
       autoResolveOutdated: true,
+      autoMinimizeSuppressed: true,
       autoMarkReady: true,
       commitSuggestions: true,
     },
@@ -152,8 +152,6 @@ function makeComment(overrides: Partial<PrComment> = {}): PrComment {
   };
 }
 
-// No PR found
-
 export function registerHooks(): void {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -168,22 +166,14 @@ export function registerHooks(): void {
 
 export {
   BASE_OPTS,
-  autoResolveOutdated,
   defaultConfig,
-  fetchPrBatch,
-  fetchStartupFailureChecks,
-  fetchCheckRunAnnotations,
-  getCurrentPrNumber,
-  getMergeableState,
-  hashBody,
-  loadSeenMap,
   makeBatchData,
   makeCheck,
   makeComment,
   makeThread,
-  markSeen,
-  markReviewInlineThreads,
   mockAutoResolveOutdated,
+  mockAutoResolveThreads,
+  mockAutoMinimizeComments,
   mockFetchPrBatch,
   mockFetchStartupFailureChecks,
   mockFetchCheckRunAnnotations,
@@ -194,7 +184,5 @@ export {
   mockMarkSeen,
   mockMarkReviewInlineThreads,
   mockTriageFailingChecks,
-  runCheck,
-  triageFailingChecks,
 };
 export type { BatchPrData, ClassifiedCheck, PrComment, ReviewThread };

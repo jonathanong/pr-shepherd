@@ -45,6 +45,7 @@ interface PrShepherdConfig {
   };
   actions: {
     autoResolveOutdated: boolean;
+    autoMinimizeSuppressed: boolean;
     autoMarkReady: boolean;
     /** When true, the resolve skill prefers applying reviewer suggestion blocks as a commit over manual edits. */
     commitSuggestions: boolean;
