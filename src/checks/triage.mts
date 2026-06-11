@@ -1,8 +1,13 @@
-import { rest } from "../github/http.mts";
+/* eslint-disable max-lines */
+import { rest, restText } from "../github/http.mts";
 import type { CheckRun, ClassifiedCheck, TriagedCheck } from "../types.mts";
 import type { RepoInfo } from "../github/client.mts";
 
 const STARTUP_FAILURE_STATUS = "startup_failure";
+const LOG_EXCERPT_CONTEXT_LINES = 16;
+const LOG_EXCERPT_TAIL_LINES = 28;
+const LOG_EXCERPT_MAX_CHARS = 4_000;
+const ANSI_SGR_RE = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
 
 export function triageFailingChecks(
   failingChecks: ClassifiedCheck[],
@@ -26,11 +31,13 @@ async function triageCheck(
   }
   const jobs = await fetchJobs(check.runId, repo, jobsCache);
   const jobInfo = jobs ? pickJobInfo(jobs, check.name) : undefined;
+  const logExcerpt = jobInfo?.jobId ? await fetchJobLogExcerpt(jobInfo.jobId, repo) : undefined;
   return {
     ...check,
     ...(jobInfo?.workflowName !== undefined && { workflowName: jobInfo.workflowName }),
     ...(jobInfo?.jobName !== undefined && { jobName: jobInfo.jobName }),
     ...(jobInfo?.failedStep !== undefined && { failedStep: jobInfo.failedStep }),
+    ...(logExcerpt !== undefined && { logExcerpt }),
   };
 }
 
@@ -81,6 +88,7 @@ async function fetchStartupFailureChecksUncached(
 
 interface JobsResponse {
   jobs: Array<{
+    id?: number;
     name: string;
     workflow_name?: string;
     conclusion: string | null;
@@ -105,6 +113,7 @@ interface WorkflowRunsResponse {
 }
 
 interface JobInfo {
+  jobId?: number;
   workflowName?: string;
   jobName?: string;
   failedStep?: string;
@@ -193,8 +202,54 @@ function pickJobInfo(jobs: JobsResponse["jobs"], checkName: string): JobInfo | u
       s.conclusion !== "neutral",
   )?.name;
   return {
+    ...(job.id !== undefined && { jobId: job.id }),
     workflowName: job.workflow_name,
     jobName: job.name,
     failedStep,
   };
+}
+
+async function fetchJobLogExcerpt(jobId: number, repo: RepoInfo): Promise<string | undefined> {
+  const { owner, name } = repo;
+  try {
+    return buildLogExcerpt(await restText(`/repos/${owner}/${name}/actions/jobs/${jobId}/logs`));
+  } catch {
+    return undefined;
+  }
+}
+
+function buildLogExcerpt(raw: string): string | undefined {
+  const lines = raw
+    .split(/\r?\n/)
+    .map(cleanLogLine)
+    .filter((line) => line.trim() !== "");
+  if (lines.length === 0) return undefined;
+
+  const errorIndex = findLogExcerptAnchor(lines);
+  const excerpt =
+    errorIndex === -1
+      ? lines.slice(-LOG_EXCERPT_TAIL_LINES)
+      : lines.slice(
+          Math.max(0, errorIndex - LOG_EXCERPT_CONTEXT_LINES),
+          Math.min(lines.length, errorIndex + LOG_EXCERPT_CONTEXT_LINES + 1),
+        );
+  const text = excerpt.join("\n");
+  return text.length <= LOG_EXCERPT_MAX_CHARS
+    ? text
+    : `${text.slice(text.length - LOG_EXCERPT_MAX_CHARS).trimStart()}`;
+}
+
+function findLogExcerptAnchor(lines: string[]): number {
+  const explicitError = lines.findIndex((line) => line.includes("##[error]"));
+  if (explicitError !== -1) return explicitError;
+  return lines.findIndex((line) => /\b(error|failed|cancelled)\b/i.test(line));
+}
+
+function cleanLogLine(line: string): string {
+  return line
+    .replace(/^\uFEFF/, "")
+    .replace(ANSI_SGR_RE, "")
+    .replace(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z\s*/, "")
+    .replace(/##\[(?:group|endgroup)\]/g, "")
+    .trimEnd();
 }

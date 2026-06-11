@@ -5,6 +5,31 @@ import { makeIterateResult } from "../../fixtures/cli-parser.iterate-fixtures.mt
 import type { IterateResult } from "../types.mts";
 
 describe("## Check annotations — fix formatter rendering", () => {
+  it("renders failing check log excerpts as indented blockquotes", () => {
+    const result: IterateResult = { ...makeIterateResult("fix_code") };
+    if (result.action !== "fix_code") throw new Error("expected fix_code fixture");
+    result.fix.checks = [
+      {
+        name: "tests",
+        runId: "27325033780",
+        detailsUrl: "https://github.com/owner/repo/actions/runs/27325033780/job/80724572207",
+        conclusion: "FAILURE",
+        workflowName: "CI",
+        jobName: "tests",
+        failedStep: "All checks passed",
+        logExcerpt:
+          '"test-playwright": {"result": "failure"}\n"test-playwright-credentialed": {"result": "failure"}',
+      },
+    ];
+
+    const output = formatIterateResult(result);
+
+    expect(output).toContain("- `27325033780` — `CI › tests` [conclusion: FAILURE]");
+    expect(output).toContain("  > All checks passed");
+    expect(output).toContain('  > "test-playwright": {"result": "failure"}');
+    expect(output).toContain('  > "test-playwright-credentialed": {"result": "failure"}');
+  });
+
   it("renders check annotations after failing checks", () => {
     const result: IterateResult = { ...makeIterateResult("fix_code") };
     if (result.action !== "fix_code") throw new Error("expected fix_code fixture");

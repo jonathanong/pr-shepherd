@@ -96,4 +96,53 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
     expect(result.checks).toHaveLength(1);
     expect(result.checks[0]!.detailsUrl).toBeNull();
   });
+
+  it("failing check logExcerpt is preserved in base.checks", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        checks: {
+          passing: [],
+          failing: [
+            {
+              name: "tests",
+              status: "COMPLETED" as const,
+              conclusion: "FAILURE" as const,
+              detailsUrl: "https://github.com/owner/repo/actions/runs/99/job/1",
+              event: "pull_request",
+              runId: "99",
+              category: "failing" as const,
+              workflowName: "CI",
+              jobName: "tests",
+              failedStep: "All checks passed",
+              logExcerpt: '"test-playwright": {"result": "failure"}',
+            },
+          ],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 300,
+    });
+
+    const result = await runIterate(makeOpts({ noAutoCancelActionable: true }));
+
+    expect(result.checks).toEqual([
+      expect.objectContaining({
+        name: "tests",
+        logExcerpt: '"test-playwright": {"result": "failure"}',
+      }),
+    ]);
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.checks[0]?.logExcerpt).toBe('"test-playwright": {"result": "failure"}');
+    }
+  });
 });

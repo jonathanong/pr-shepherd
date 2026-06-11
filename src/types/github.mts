@@ -74,6 +74,8 @@ export interface TriagedCheck extends ClassifiedCheck {
   jobName?: string;
   /** Name of the first failed step in the matched job (e.g. `"Run tests"`). */
   failedStep?: string;
+  /** Bounded raw excerpt from the matched failed job log, when GitHub exposes one. */
+  logExcerpt?: string;
   /** Inline annotations attached to this failing check run, surfaced once per PR. */
   annotations?: CheckAnnotation[];
 }

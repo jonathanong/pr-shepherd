@@ -69,6 +69,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
       if (ch.conclusion !== "CANCELLED") {
         if (ch.failedStep) lines.push(`  > ${ch.failedStep}`);
         if (ch.summary) lines.push(`  > ${ch.summary}`);
+        if (ch.logExcerpt) lines.push(indentBlockquote(ch.logExcerpt, "  "));
       }
       return lines.join("\n");
     });
@@ -176,6 +177,13 @@ function renderCheckAnnotation(a: CheckAnnotation): string {
   if (a.rawDetails !== undefined && a.rawDetails.trim() !== "")
     lines.push(blockquote(a.rawDetails));
   return lines.join("\n");
+}
+
+function indentBlockquote(body: string, indent: string): string {
+  return blockquote(body)
+    .split("\n")
+    .map((line) => `${indent}${line}`)
+    .join("\n");
 }
 
 function renderAnnotationRange(a: CheckAnnotation): string {

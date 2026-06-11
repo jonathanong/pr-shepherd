@@ -144,6 +144,7 @@ export interface AgentCheck {
   failedStep?: string;
   /** One-line status text shown in the GitHub UI (e.g. "67.68% of diff hit (target 85.00%)"). */
   summary?: string;
+  logExcerpt?: string;
   /** Marker-gated inline annotations from this failing check. */
   annotations?: CheckAnnotation[];
 }
@@ -168,6 +169,7 @@ export interface RelevantCheck {
   failedStep?: string;
   /** One-line status text shown in the GitHub UI (e.g. "67.68% of diff hit (target 85.00%)"). */
   summary?: string;
+  logExcerpt?: string;
   /** Marker-gated inline annotations from this check. */
   annotations?: CheckAnnotation[];
 }
