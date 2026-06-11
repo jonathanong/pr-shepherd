@@ -1,4 +1,4 @@
-import { cpSync, chmodSync, mkdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
+import { cpSync, chmodSync, mkdirSync, rmSync, symlinkSync, unlinkSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 
 // 1. rm -rf bin
@@ -17,13 +17,10 @@ cpSync('src/config.json', 'bin/config.json')
 mkdirSync('bin/github', { recursive: true })
 cpSync('src/github/gql', 'bin/github/gql', { recursive: true })
 
-// 5. Write bin/pr-shepherd entry point
-writeFileSync('bin/pr-shepherd', '#!/usr/bin/env node\nimport("./index.mjs")\n')
+// 5. Set executable bit on the compiled CLI entry point
+chmodSync('bin/index.mjs', 0o755)
 
-// 6. Set executable bit
-chmodSync('bin/pr-shepherd', 0o755)
-
-// 7. Self-link into node_modules/.bin so `npx pr-shepherd` resolves to this build
+// 6. Self-link into node_modules/.bin so `npx pr-shepherd` resolves to this build
 try { unlinkSync('node_modules/.bin/pr-shepherd') } catch {}
 mkdirSync('node_modules/.bin', { recursive: true })
-symlinkSync('../../bin/pr-shepherd', 'node_modules/.bin/pr-shepherd')
+symlinkSync('../../bin/index.mjs', 'node_modules/.bin/pr-shepherd')

@@ -6,7 +6,7 @@
   "author": "Jonathan Ong",
   "type": "module",
   "bin": {
-    "pr-shepherd": "bin/pr-shepherd"
+    "pr-shepherd": "bin/index.mjs"
   },
   "files": [
     "bin/**",
@@ -20,11 +20,10 @@
     "LICENSE"
   ],
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=22.18.0"
   },
   "dependencies": {
     "picomatch": "^4.0.4",
-    "tsx": "^4.22.4",
     "yaml": "^2.7.0"
   },
   "exports": {

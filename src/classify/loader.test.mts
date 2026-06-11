@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -139,7 +140,7 @@ describe("loadRules", () => {
     expect(r1).toBe(r2);
   });
 
-  it("loads .mts files (tsx path)", async () => {
+  it("loads .mts files with erasable TypeScript syntax", async () => {
     const file = join(classificationDir, "typed-rule.mts");
     writeFileSync(
       file,
@@ -150,13 +151,22 @@ describe("loadRules", () => {
     expect(rules[0]!.name).toBe("typed-rule");
   });
 
-  it("does not re-register tsx when already attempted", async () => {
-    const file = join(classificationDir, "typed-rule.mts");
-    writeFileSync(file, "export default () => null;");
-    await loadRules([file]); // sets tsxAttempted = true
-    _resetRuleCache(); // clears cache but NOT tsxAttempted
-    const rules = await loadRules([file]); // hits early return in ensureTsxRegistered
-    expect(rules).toHaveLength(1);
+  it("skips .mts files that use unsupported runtime TypeScript syntax", async () => {
+    const file = join(classificationDir, "enum-rule.mts");
+    writeFileSync(file, "enum Status { Bot = 'bot' }\nexport default () => Status.Bot;");
+    const loaderUrl = new URL("./loader.mts", import.meta.url).href;
+    const output = execFileSync(
+      process.execPath,
+      [
+        "--input-type=module",
+        "--eval",
+        `const { loadRules } = await import(${JSON.stringify(loaderUrl)});
+const rules = await loadRules([${JSON.stringify(file)}]);
+console.log(rules.length);`,
+      ],
+      { encoding: "utf8" },
+    );
+    expect(output.trim()).toBe("0");
   });
 
   it("handles non-Error exceptions during load", async () => {

@@ -34,24 +34,6 @@ function collectRuleFiles(dir: string): string[] {
     .sort();
 }
 
-let tsxAttempted = false;
-
-async function ensureTsxRegistered(): Promise<void> {
-  if (tsxAttempted) return;
-  tsxAttempted = true;
-  try {
-    const { register } = await import("tsx/esm/api");
-    register();
-    /* c8 ignore start */
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    process.stderr.write(
-      `pr-shepherd: failed to register tsx — .ts/.mts classification rules will not load: ${msg}\n`,
-    );
-  }
-  /* c8 ignore stop */
-}
-
 const ruleCache = new Map<string, LoadedRule[]>();
 
 export async function loadRules(files: string[]): Promise<LoadedRule[]> {
@@ -59,8 +41,6 @@ export async function loadRules(files: string[]): Promise<LoadedRule[]> {
   const cacheKey = [...files].sort((a, b) => a.localeCompare(b)).join("\0");
   const cached = ruleCache.get(cacheKey);
   if (cached !== undefined) return cached;
-  const hasTs = files.some((f) => f.endsWith(".ts") || f.endsWith(".mts"));
-  if (hasTs) await ensureTsxRegistered();
   const rules: LoadedRule[] = [];
   for (const file of files) {
     try {
