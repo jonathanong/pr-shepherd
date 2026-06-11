@@ -84,4 +84,30 @@ describe("triageFailingChecks — logExcerpt", () => {
     );
     expect(result).not.toHaveProperty("logExcerpt");
   });
+
+  it("anchors log excerpts on generic failure lines when explicit error markers are absent", async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        makeJobsResponse([
+          {
+            id: 80724572207,
+            name: "tests",
+            conclusion: "failure",
+            steps: [{ name: "All checks passed", number: 8, conclusion: "failure" }],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        makeTextResponse(`setup line
+useful context before failure
+One or more required jobs failed or were cancelled
+cleanup after failure`),
+      );
+
+    const [result] = await triageFailingChecks([makeCheck({ name: "tests" })], REPO);
+
+    expect(result!.logExcerpt).toContain("useful context before failure");
+    expect(result!.logExcerpt).toContain("One or more required jobs failed or were cancelled");
+    expect(result!.logExcerpt).toContain("cleanup after failure");
+  });
 });
