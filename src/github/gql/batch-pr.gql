@@ -192,6 +192,7 @@ query BatchPr(
                     status
                     conclusion
                     detailsUrl
+                    completedAt
                     startedAt
                     title
                     summary

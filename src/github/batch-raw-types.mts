@@ -154,6 +154,7 @@ export type RawContextNode =
       status: string;
       conclusion: string | null;
       detailsUrl: string | null;
+      completedAt?: string | null;
       startedAt?: string | null;
       title: string | null;
       summary: string | null;

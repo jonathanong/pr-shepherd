@@ -28,6 +28,7 @@ describe("fetchPrBatch — check timestamps", () => {
                       conclusion: null,
                       detailsUrl: "https://github.com/owner/repo/actions/runs/9999/jobs/1",
                       startedAt: null,
+                      completedAt: "2026-05-20T01:04:00Z",
                       title: null,
                       summary: null,
                       checkSuite: {
@@ -55,6 +56,7 @@ describe("fetchPrBatch — check timestamps", () => {
     expect(data.checks[0]).toMatchObject({
       source: "check_run",
       createdAtUnix: 1_779_238_740,
+      completedAtUnix: 1_779_239_040,
       updatedAtUnix: 1_779_239_160,
     });
     expect(data.checks[0]).not.toHaveProperty("startedAtUnix");
