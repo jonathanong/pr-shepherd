@@ -11,15 +11,7 @@ import type {
 
 const execFile = promisify(execFileCb);
 
-export function buildInProgressRunIds(report: ShepherdReport, cancelledSet: Set<string>): string[] {
-  return [
-    ...new Set(
-      report.checks.inProgress
-        .map((c) => c.runId)
-        .filter((id): id is string => id !== null && !cancelledSet.has(id)),
-    ),
-  ];
-}
+export { buildAutoCancelRunIds, buildInProgressRunIds } from "./reruns.mts";
 
 export function buildSummary(report: ShepherdReport): IterateResultSummary {
   return {
@@ -30,12 +22,7 @@ export function buildSummary(report: ShepherdReport): IterateResultSummary {
   };
 }
 
-/**
- * Build the full list of CI checks relevant to PR readiness: triggered by a PR
- * event (or StatusContext with null event), completed, and not skipped/neutral.
- * Includes both passing and failing. Failing entries carry workflowName, jobName,
- * failedStep, and summary.
- */
+/** Build completed, non-skipped checks relevant to PR readiness. */
 export function buildRelevantChecks(report: ShepherdReport): RelevantCheck[] {
   const excluded = new Set([null, "SKIPPED", "NEUTRAL"]);
   const passing: RelevantCheck[] = report.checks.passing.flatMap((c) => {

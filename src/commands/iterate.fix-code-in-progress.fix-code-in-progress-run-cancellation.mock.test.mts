@@ -3,9 +3,9 @@ import {
   registerHooks,
   makeOpts,
   makeReport,
-  mockFetch,
   mockRunCheck,
   mockUpdateReadyDelay,
+  mockActionableFixCodeTick,
 } from "../../test-helpers/commands/iterate.fix-code-in-progress.test-support.mts";
 import { runIterate } from "./iterate/index.mts";
 
@@ -68,13 +68,8 @@ describe("fix_code — in-progress run cancellation", () => {
         },
       }),
     );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
     // Stub cancel REST call so the CLI "cancels" run-fail-1.
-    mockFetch.mockResolvedValue({ ok: true, status: 202, json: async () => ({}) });
+    mockActionableFixCodeTick();
 
     const result = await runIterate(makeOpts());
 

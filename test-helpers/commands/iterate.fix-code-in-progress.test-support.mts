@@ -115,6 +115,15 @@ function makeOpts(overrides: Partial<IterateCommandOptions> = {}): IterateComman
   };
 }
 
+function mockActionableFixCodeTick(): void {
+  mockUpdateReadyDelay.mockResolvedValue({
+    isReady: false,
+    shouldCancel: false,
+    remainingSeconds: 600,
+  });
+  mockFetch.mockResolvedValue({ ok: true, status: 202, json: async () => ({}) });
+}
+
 export function registerHooks(): void {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -160,6 +169,7 @@ export {
   mockMarkSeen,
   mockRunCheck,
   mockUpdateReadyDelay,
+  mockActionableFixCodeTick,
   mockWriteFixAttempts,
   mockWriteStallState,
   readFixAttempts,

@@ -119,14 +119,11 @@ export function parseRawPr(
       const event = node.checkSuite?.workflowRun?.event ?? null;
       const runId = extractRunId(node.detailsUrl);
       const summary = extractCheckRunSummary(node.title, node.summary);
-      const rawCreatedAt = node.checkSuite
-        ? (node.checkSuite.workflowRun?.createdAt ?? node.checkSuite.createdAt)
-        : undefined;
-      const rawUpdatedAt = node.checkSuite
-        ? (node.checkSuite.workflowRun?.updatedAt ?? node.checkSuite.updatedAt)
-        : undefined;
+      const rawCreatedAt = node.checkSuite?.workflowRun?.createdAt ?? node.checkSuite?.createdAt;
+      const rawUpdatedAt = node.checkSuite?.workflowRun?.updatedAt ?? node.checkSuite?.updatedAt;
       const createdAtUnix = rawCreatedAt ? parseCreatedAt(rawCreatedAt) : undefined;
       const startedAtUnix = node.startedAt ? parseCreatedAt(node.startedAt) : undefined;
+      const completedAtUnix = node.completedAt ? parseCreatedAt(node.completedAt) : undefined;
       const updatedAtUnix = rawUpdatedAt ? parseCreatedAt(rawUpdatedAt) : undefined;
       return [
         {
@@ -140,6 +137,7 @@ export function parseRawPr(
           runId,
           ...(createdAtUnix !== undefined && { createdAtUnix }),
           ...(startedAtUnix !== undefined && { startedAtUnix }),
+          ...(completedAtUnix !== undefined && { completedAtUnix }),
           ...(updatedAtUnix !== undefined && { updatedAtUnix }),
           ...(summary !== undefined && { summary }),
         },

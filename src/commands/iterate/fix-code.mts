@@ -20,7 +20,7 @@ import {
 import { buildResolveCommand } from "./classify.mts";
 import { buildFixInstructions } from "./render.mts";
 import { applyStallGuard } from "./stall.mts";
-import { tryCancelRun, buildInProgressRunIds } from "./helpers.mts";
+import { tryCancelRun, buildAutoCancelRunIds, buildInProgressRunIds } from "./helpers.mts";
 import { annotationMarkerBody } from "../check-annotations.mts";
 import { threadTranscriptBody } from "../../threads/transcript.mts";
 import { isHumanAuthor, isConfiguredBotAuthor } from "../../comments/authors.mts";
@@ -159,12 +159,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   );
   let cancelled: string[] = [];
   if (!opts.noAutoCancelActionable) {
-    const uniqueRunIds = [
-      ...new Set(failingChecks.map((c) => c.runId).filter((id): id is string => id !== null)),
-    ];
-    const results = await Promise.all(
-      uniqueRunIds.map((id) => tryCancelRun(id, repoOwner, repoName)),
-    );
+    const runIds = buildAutoCancelRunIds(report);
+    const results = await Promise.all(runIds.map((id) => tryCancelRun(id, repoOwner, repoName)));
     cancelled = results.filter((id): id is string => id !== null);
   }
   const cancelledSet = new Set(cancelled);
@@ -184,7 +180,11 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     hasConflicts ||
     changesRequestedReviews.length > 0 ||
     actionableComments.length > 0;
-  const inProgressRunIds = pushLikely ? buildInProgressRunIds(report, cancelledSet) : [];
+  const inProgressRunIds = pushLikely
+    ? buildInProgressRunIds(report, cancelledSet, {
+        suppressProtectedFreshReruns: false,
+      })
+    : [];
   const commentMinimizeIds = report.comments.minimizeIds ?? actionableComments.map((c) => c.id);
   const allCommentIds = [...commentMinimizeIds, ...reviewSummaryIds];
   const { resolveCommand, resolveOnlyCommand } = buildResolveCommand(

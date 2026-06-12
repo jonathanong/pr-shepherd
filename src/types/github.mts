@@ -56,6 +56,7 @@ export interface CheckRun {
   runId: string | null;
   createdAtUnix?: number;
   startedAtUnix?: number;
+  completedAtUnix?: number;
   updatedAtUnix?: number;
   /** One-line status text shown in the GitHub UI (CheckRun.title or first line of summary; StatusContext.description). */
   summary?: string;
