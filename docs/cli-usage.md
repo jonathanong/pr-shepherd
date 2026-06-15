@@ -45,6 +45,8 @@ pr-shepherd poll 42 --format=json
 | `--format text\|json`         | `text`                        | Output Markdown text or JSON.                                    |
 | `--verbose`                   | false                         | Include verbose iterate fields; poll also prints detailed ticks. |
 
+Use `actions.neverCancelRuns` in `.pr-shepherdrc.yml` for workflow/check names whose Actions workflow runs should never be cancelled, while keeping normal auto-cancel behavior for everything else.
+
 ### Poll Flags
 
 | Flag                    | Default | Description                                                        |

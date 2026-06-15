@@ -3,7 +3,9 @@ import {
   registerIterateHooks,
   makeOpts,
   makeReport,
+  defaultConfig,
   mockFetch,
+  mockLoadConfig,
   mockRunCheck,
   mockUpdateReadyDelay,
 } from "../../test-helpers/commands/iterate-test-support.mts";
@@ -111,5 +113,52 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
       expect(result.fix.checks).toHaveLength(2);
       expect(result.cancelled).toEqual(["run-101"]);
     }
+  });
+  it("does not cancel a failing run protected by workflow name", async () => {
+    const cfg = defaultConfig();
+    cfg.actions.neverCancelRuns = ["Final Code Review"];
+    mockLoadConfig.mockReturnValue(cfg);
+    const protectedCheck = {
+      ...makeActionableCheck("run-final-review", "DeepSeek Code Review"),
+      workflowName: "Final Code Review",
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        checks: {
+          passing: [],
+          failing: [protectedCheck],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.cancelled).toEqual([]);
+      expect(result.fix.protectedRuns).toEqual([
+        {
+          runId: "run-final-review",
+          matchedPattern: "Final Code Review",
+          workflowName: "Final Code Review",
+          checkNames: ["DeepSeek Code Review"],
+        },
+      ]);
+    }
+    const cancelCalls = (mockFetch.mock.calls as Array<[string, RequestInit]>).filter(([url]) =>
+      url.includes("/cancel"),
+    );
+    expect(cancelCalls).toHaveLength(0);
   });
 });

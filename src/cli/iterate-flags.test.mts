@@ -27,6 +27,7 @@ function defaultConfig(): PrShepherdConfig {
       autoMinimizeSuppressed: false,
       autoMarkReady: false,
       commitSuggestions: false,
+      neverCancelRuns: [],
     },
   };
 }

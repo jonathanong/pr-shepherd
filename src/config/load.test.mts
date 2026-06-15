@@ -1,32 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, writeFileSync, rmSync, mkdirSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
-const RC = ".pr-shepherdrc.yml";
-let tmpDir: string;
-let origCwd: string;
-
-beforeEach(() => {
-  origCwd = process.cwd();
-  tmpDir = mkdtempSync(join(tmpdir(), "shepherd-load-test-"));
-  vi.stubEnv("HOME", tmpDir);
-  vi.stubEnv("USERPROFILE", tmpDir);
-  vi.resetModules();
-  process.chdir(tmpDir);
-});
-
-afterEach(() => {
-  process.chdir(origCwd);
-  vi.unstubAllEnvs();
-  vi.restoreAllMocks();
-  if (tmpDir) rmSync(tmpDir, { recursive: true, force: true });
-});
-
-async function freshLoadConfig() {
-  const mod = await import("./load.mts");
-  return mod.loadConfig;
-}
+import { describe, it, expect, vi } from "vitest";
+import { mkdirSync } from "node:fs";
+import {
+  freshLoadConfig,
+  removeRc,
+  tmpPath,
+  writeRc,
+} from "../../test-helpers/config/load-test-support.mts";
 
 describe("loadConfig — no rc file", () => {
   it("returns built-in defaults when no rc file exists in the tree", async () => {
@@ -58,42 +37,53 @@ describe("loadConfig — no rc file", () => {
     expect(result.actions.autoMinimizeSuppressed).toBe(true);
   });
 
+  it("defaults actions.neverCancelRuns to empty", async () => {
+    const loadConfig = await freshLoadConfig();
+    expect(loadConfig().actions.neverCancelRuns).toEqual([]);
+  });
+
   it("overrides iterate.minimizeApprovals when set in rc file", async () => {
-    writeFileSync(join(tmpDir, RC), "iterate:\n  minimizeApprovals: true\n");
+    writeRc("iterate:\n  minimizeApprovals: true\n");
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
     expect(result.iterate.minimizeApprovals).toBe(true);
   });
 
   it("overrides iterate.minimizeComments when set in rc file", async () => {
-    writeFileSync(join(tmpDir, RC), "iterate:\n  minimizeComments: bots\n");
+    writeRc("iterate:\n  minimizeComments: bots\n");
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
     expect(result.iterate.minimizeComments).toBe("bots");
   });
 
   it("overrides actions.autoMinimizeSuppressed when set in rc file", async () => {
-    writeFileSync(join(tmpDir, RC), "actions:\n  autoMinimizeSuppressed: false\n");
+    writeRc("actions:\n  autoMinimizeSuppressed: false\n");
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
     expect(result.actions.autoMinimizeSuppressed).toBe(false);
   });
 
+  it("overrides actions.neverCancelRuns when set in rc file", async () => {
+    writeRc('actions:\n  neverCancelRuns:\n    - "Final Code Review"\n');
+    const loadConfig = await freshLoadConfig();
+    expect(loadConfig().actions.neverCancelRuns).toEqual(["Final Code Review"]);
+  });
+
   it("overrides top-level botUsernames when set in rc file", async () => {
-    writeFileSync(join(tmpDir, RC), "botUsernames:\n  - custom-reviewer\n");
+    writeRc("botUsernames:\n  - custom-reviewer\n");
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
     expect(result.botUsernames).toEqual(["custom-reviewer"]);
   });
 
   it("overrides top-level ignoreChecks when set in rc file", async () => {
-    writeFileSync(join(tmpDir, RC), 'ignoreChecks:\n  - "Kilo Code Review"\n  - "Kilo*"\n');
+    writeRc('ignoreChecks:\n  - "Kilo Code Review"\n  - "Kilo*"\n');
     const loadConfig = await freshLoadConfig();
     expect(loadConfig().ignoreChecks).toEqual(["Kilo Code Review", "Kilo*"]);
   });
 
   it("rejects invalid botUsernames values and falls back to defaults", async () => {
-    writeFileSync(join(tmpDir, RC), "botUsernames: custom-reviewer\n");
+    writeRc("botUsernames: custom-reviewer\n");
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
@@ -103,7 +93,7 @@ describe("loadConfig — no rc file", () => {
   });
 
   it("rejects invalid ignoreChecks values and falls back to defaults", async () => {
-    writeFileSync(join(tmpDir, RC), "ignoreChecks:\n  - Kilo Code Review\n  - false\n");
+    writeRc("ignoreChecks:\n  - Kilo Code Review\n  - false\n");
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     const loadConfig = await freshLoadConfig();
     expect(loadConfig().ignoreChecks).toEqual([]);
@@ -111,8 +101,17 @@ describe("loadConfig — no rc file", () => {
     expect(output).toContain("ignoreChecks");
   });
 
+  it("rejects invalid actions.neverCancelRuns values and falls back to defaults", async () => {
+    writeRc("actions:\n  neverCancelRuns:\n    - Final Code Review\n    - false\n");
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const loadConfig = await freshLoadConfig();
+    expect(loadConfig().actions.neverCancelRuns).toEqual([]);
+    const output = stderrSpy.mock.calls.map((c) => c[0]).join("");
+    expect(output).toContain("actions.neverCancelRuns");
+  });
+
   it("rejects invalid iterate.minimizeComments values and falls back to defaults", async () => {
-    writeFileSync(join(tmpDir, RC), "iterate:\n  minimizeComments: sometimes\n");
+    writeRc("iterate:\n  minimizeComments: sometimes\n");
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
@@ -122,7 +121,7 @@ describe("loadConfig — no rc file", () => {
   });
 
   it("returns defaults for empty YAML (yaml.parse returns null)", async () => {
-    writeFileSync(join(tmpDir, RC), "");
+    writeRc("");
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
     expect(result.resolve.shaPoll.maxAttempts).toBe(10);
@@ -131,7 +130,7 @@ describe("loadConfig — no rc file", () => {
 
 describe("loadConfig — deep merge", () => {
   it("overrides a single leaf while keeping sibling defaults", async () => {
-    writeFileSync(join(tmpDir, RC), "resolve:\n  shaPoll:\n    maxAttempts: 20\n");
+    writeRc("resolve:\n  shaPoll:\n    maxAttempts: 20\n");
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
     expect(result.resolve.shaPoll.maxAttempts).toBe(20);
@@ -140,7 +139,7 @@ describe("loadConfig — deep merge", () => {
   });
 
   it("replaces arrays outright rather than concatenating", async () => {
-    writeFileSync(join(tmpDir, RC), "checks:\n  ciTriggerEvents:\n    - push\n");
+    writeRc("checks:\n  ciTriggerEvents:\n    - push\n");
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
     expect(result.checks.ciTriggerEvents).toEqual(["push"]);
@@ -149,7 +148,7 @@ describe("loadConfig — deep merge", () => {
 
 describe("loadConfig — malformed YAML", () => {
   it("returns defaults and writes a 'failed to parse' stderr warning", async () => {
-    writeFileSync(join(tmpDir, RC), ":\ninvalid: [\n");
+    writeRc(":\ninvalid: [\n");
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();
@@ -161,8 +160,8 @@ describe("loadConfig — malformed YAML", () => {
 
 describe("loadConfig — findRcFile", () => {
   it("finds rc file in a parent directory when cwd is a nested subdir", async () => {
-    writeFileSync(join(tmpDir, RC), "iterate:\n  fixAttemptsPerThread: 50\n");
-    const sub = join(tmpDir, "nested", "deep");
+    writeRc("iterate:\n  fixAttemptsPerThread: 50\n");
+    const sub = tmpPath("nested", "deep");
     mkdirSync(sub, { recursive: true });
     process.chdir(sub);
     const loadConfig = await freshLoadConfig();
@@ -173,23 +172,23 @@ describe("loadConfig — findRcFile", () => {
 
 describe("loadConfig — caching", () => {
   it("returns the same object reference on repeated calls (no re-parse)", async () => {
-    writeFileSync(join(tmpDir, RC), "iterate:\n  fixAttemptsPerThread: 60\n");
+    writeRc("iterate:\n  fixAttemptsPerThread: 60\n");
     const loadConfig = await freshLoadConfig();
     const first = loadConfig();
     // Delete the file to prove the second call does not re-read disk
-    rmSync(join(tmpDir, RC));
+    removeRc();
     const second = loadConfig();
     expect(second).toBe(first);
   });
 
   it("_resetConfigCache allows fresh load after cache is cleared", async () => {
-    writeFileSync(join(tmpDir, RC), "iterate:\n  fixAttemptsPerThread: 7\n");
+    writeRc("iterate:\n  fixAttemptsPerThread: 7\n");
     const mod = await import("./load.mts");
     const first = mod.loadConfig();
     expect(first.iterate.fixAttemptsPerThread).toBe(7);
 
     // Update the file then reset the cache so the next call re-reads disk
-    writeFileSync(join(tmpDir, RC), "iterate:\n  fixAttemptsPerThread: 11\n");
+    writeRc("iterate:\n  fixAttemptsPerThread: 11\n");
     mod._resetConfigCache();
     const second = mod.loadConfig();
     expect(second.iterate.fixAttemptsPerThread).toBe(11);

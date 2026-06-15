@@ -11,7 +11,11 @@ import type {
 
 const execFile = promisify(execFileCb);
 
-export { buildAutoCancelRunIds, buildInProgressRunIds } from "./reruns.mts";
+export {
+  buildAutoCancelRunIdsWithOptions,
+  buildInProgressRunIds,
+  buildRunProtection,
+} from "./reruns.mts";
 
 export function buildSummary(report: ShepherdReport): IterateResultSummary {
   return {
@@ -34,6 +38,7 @@ export function buildRelevantChecks(report: ShepherdReport): RelevantCheck[] {
         conclusion,
         runId: c.runId,
         detailsUrl: c.detailsUrl || null,
+        ...(c.workflowName !== undefined && { workflowName: c.workflowName }),
         summary: c.summary,
       },
     ];
@@ -65,6 +70,7 @@ export function buildActiveChecks(report: ShepherdReport): ActiveCheck[] {
     status: c.status,
     runId: c.runId,
     detailsUrl: c.detailsUrl || null,
+    ...(c.workflowName !== undefined && { workflowName: c.workflowName }),
     ...(c.summary !== undefined && { summary: c.summary }),
   }));
 }

@@ -11,7 +11,7 @@ import { fetchPrBatch } from "./batch.mts";
 registerHooks();
 
 describe("fetchPrBatch — check type mapping", () => {
-  it("maps CheckRun nodes with event and runId", async () => {
+  it("maps CheckRun nodes with event, runId, and workflowName", async () => {
     const pr = makeRawPr({
       commits: {
         nodes: [
@@ -28,7 +28,12 @@ describe("fetchPrBatch — check type mapping", () => {
                       status: "COMPLETED",
                       conclusion: "SUCCESS",
                       detailsUrl: "https://github.com/owner/repo/actions/runs/9999/jobs/1",
-                      checkSuite: { workflowRun: { event: "pull_request" } },
+                      checkSuite: {
+                        workflowRun: {
+                          event: "pull_request",
+                          workflow: { name: "Final Code Review" },
+                        },
+                      },
                     },
                   ],
                 },
@@ -41,10 +46,13 @@ describe("fetchPrBatch — check type mapping", () => {
     mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
     const { data } = await fetchPrBatch(42, REPO);
     expect(data.checks).toHaveLength(1);
-    expect(data.checks[0]!.name).toBe("tests");
-    expect(data.checks[0]!.id).toBe("CR_123");
-    expect(data.checks[0]!.event).toBe("pull_request");
-    expect(data.checks[0]!.runId).toBe("9999");
+    expect(data.checks[0]).toMatchObject({
+      name: "tests",
+      id: "CR_123",
+      event: "pull_request",
+      runId: "9999",
+      workflowName: "Final Code Review",
+    });
   });
   it("maps StatusContext SUCCESS → COMPLETED/SUCCESS", async () => {
     const pr = makeRawPr({

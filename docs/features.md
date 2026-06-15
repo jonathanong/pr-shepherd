@@ -43,6 +43,7 @@ The module supports a focused automation loop for PR monitoring and deterministi
 - Supports supplemental REST fetch for startup-failure workflow runs tied to the PR head SHA.
 - Supports external status checks surfaced via details URL when a run ID is unavailable.
 - Supports cancelling stale failing in-progress runs before code fixes are attempted.
+- Supports protecting selected workflow runs from cancellation with `actions.neverCancelRuns`.
 
 ### Review, comments, and summaries
 

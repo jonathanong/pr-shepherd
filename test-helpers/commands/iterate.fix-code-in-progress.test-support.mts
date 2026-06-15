@@ -146,6 +146,7 @@ export function registerHooks(): void {
         autoMinimizeSuppressed: false,
         autoMarkReady: false,
         commitSuggestions: false,
+        neverCancelRuns: [],
       },
     });
     mockReadFixAttempts.mockResolvedValue(null);

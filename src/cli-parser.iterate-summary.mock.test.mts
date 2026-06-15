@@ -63,6 +63,7 @@ function makeFixCodeResult(): IterateResult & { action: "fix_code" } {
       firstLookThreads: [],
       firstLookComments: [],
       inProgressRunIds: [],
+      protectedRuns: [],
     },
     cancelled: [],
   };

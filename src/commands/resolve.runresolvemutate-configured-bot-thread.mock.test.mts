@@ -24,6 +24,7 @@ describe("runResolveMutate — configured bot threads", () => {
         autoMinimizeSuppressed: true,
         autoMarkReady: true,
         commitSuggestions: true,
+        neverCancelRuns: [],
       },
       iterate: {
         fixAttemptsPerThread: 3,

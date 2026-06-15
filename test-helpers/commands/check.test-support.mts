@@ -77,6 +77,7 @@ function defaultConfig() {
       autoMinimizeSuppressed: true,
       autoMarkReady: true,
       commitSuggestions: true,
+      neverCancelRuns: [],
     },
   };
 }

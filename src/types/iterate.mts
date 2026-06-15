@@ -18,6 +18,7 @@ import type {
   ReviewThread,
   ShepherdMergeStatus,
 } from "./github.mts";
+import type { ProtectedRun } from "./protected-run.mts";
 
 export type ShepherdAction = "wait" | "fix_code" | "mark_ready" | "cancel" | "escalate";
 
@@ -72,11 +73,6 @@ export interface IterateResultBase {
    * (not raw mergeStateStatus) when gating on "is this PR merge-blocked?":
    * it collapses BLOCKED+HAS_HOOKS into "BLOCKED" and accounts for
    * blockingBotReviewInProgress and isDraft overrides.
-   *
-   * TODO(C2): Consider removing this field in favour of always using `mergeStateStatus`
-   * (the raw GitHub value). `mergeStateStatus` is more useful for agents since it
-   * distinguishes BLOCKED from HAS_HOOKS. Blocked by the large surface area of tests
-   * and formatters that currently branch on `mergeStatus`.
    */
   mergeStatus: ShepherdMergeStatus;
   reviewDecision: ReviewDecision;
@@ -161,6 +157,8 @@ interface FixRebaseAndPush {
   instructions: string[];
   /** Run IDs of in-progress GitHub Actions checks. The agent should cancel these before pushing new commits; if it decides not to push (e.g. resolve-only), it may skip cancellation. Empty when all in-progress runs are external status checks or already cancelled. */
   inProgressRunIds: string[];
+  /** Workflow runs deliberately excluded from cancellation by actions.neverCancelRuns. */
+  protectedRuns: ProtectedRun[];
   /** First-look threads — previously hidden, surfaced for acknowledgment only. */
   firstLookThreads: FirstLookThread[];
   /** First-look comments — previously hidden, surfaced for acknowledgment only. */
@@ -195,6 +193,8 @@ export interface IterateCommandOptions extends GlobalOptions {
   readyDelaySeconds?: number;
   noAutoMarkReady?: boolean;
   noAutoCancelActionable?: boolean;
-  /** Override the stall-timeout threshold (seconds). Defaults to config.iterate.stallTimeoutMinutes * 60. */
+  /** Override stall timeout seconds. Defaults to config.iterate.stallTimeoutMinutes * 60. */
   stallTimeoutSeconds?: number;
+  /** Case-insensitive workflow/check glob patterns Shepherd must not cancel. */
+  neverCancelRuns?: string[];
 }

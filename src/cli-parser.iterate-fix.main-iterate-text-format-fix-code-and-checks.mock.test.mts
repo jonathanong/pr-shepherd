@@ -99,6 +99,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
       firstLookThreads: [],
       firstLookComments: [],
       inProgressRunIds: [],
+      protectedRuns: [],
     };
     result.cancelled = ["run-99"];
     mockRunIterate.mockResolvedValue(result);

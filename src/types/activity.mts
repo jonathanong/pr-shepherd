@@ -32,5 +32,6 @@ export interface ActiveCheck {
   status: CheckStatus;
   runId: string | null;
   detailsUrl: string | null;
+  workflowName?: string;
   summary?: string;
 }
