@@ -36,6 +36,7 @@ vi.mock("../../src/config/load.mts", () => ({
       autoMinimizeSuppressed: true,
       autoMarkReady: true,
       commitSuggestions: true,
+      neverCancelRuns: [],
     },
   }),
 }));

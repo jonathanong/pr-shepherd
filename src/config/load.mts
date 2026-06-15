@@ -49,6 +49,8 @@ interface PrShepherdConfig {
     autoMarkReady: boolean;
     /** When true, the resolve skill prefers applying reviewer suggestion blocks as a commit over manual edits. */
     commitSuggestions: boolean;
+    /** Case-insensitive glob patterns for workflow/check names Shepherd must not cancel. */
+    neverCancelRuns: string[];
   };
 }
 
@@ -119,6 +121,13 @@ function parseIgnoreChecks(value: unknown): string[] {
   return value;
 }
 
+function parseNeverCancelRuns(value: unknown): string[] {
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
+    throw new Error(`Invalid config: actions.neverCancelRuns must be an array of strings`);
+  }
+  return value;
+}
+
 const defaults = builtins as PrShepherdConfig;
 
 const configCache = new Map<string, PrShepherdConfig>();
@@ -142,6 +151,7 @@ export function loadConfig(): PrShepherdConfig {
     ) as unknown as PrShepherdConfig;
     config.botUsernames = parseBotUsernames(config.botUsernames);
     config.ignoreChecks = parseIgnoreChecks(config.ignoreChecks);
+    config.actions.neverCancelRuns = parseNeverCancelRuns(config.actions.neverCancelRuns);
     config.iterate.minimizeComments = parseMinimizeCommentsPolicy(config.iterate.minimizeComments);
     configCache.set(cwd, config);
     return config;

@@ -45,6 +45,8 @@ actions:
   autoMinimizeSuppressed: true
   autoMarkReady: true
   commitSuggestions: true
+  neverCancelRuns:
+    - "Final Code Review"
 ```
 
 ---
@@ -68,6 +70,7 @@ actions:
 | `actions.autoMinimizeSuppressed`     | `true`                                    | Silently resolve/minimize classification-rule matches with both `suppress: true` and `autoResolve: true` before emitting `fix_code`                         |
 | `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR reaches a clean handoff state                                                                                             |
 | `actions.commitSuggestions`          | `true`                                    | Route `/pr-shepherd:resolve` through `commit-suggestion` (singular) for threads with a ` ```suggestion ` block                                              |
+| `actions.neverCancelRuns`            | `[]`                                      | Case-insensitive glob patterns for workflow/check names whose GitHub Actions workflow runs Shepherd must never cancel                                       |
 
 ## `botUsernames`
 
@@ -216,6 +219,20 @@ Disable if your team uses the draft state as a deliberate gate that requires a h
 When `true`, `fix_code` instructions prefer applying reviewer-authored ` ```suggestion ` blocks via [`pr-shepherd commit-suggestion`](cli-usage.md#pr-shepherd-commit-suggestion-pr---thread-id-id---message) (singular, one per thread) — creating a local commit per suggestion that co-credits the reviewer — rather than having the agent re-type the fix. Each actionable thread with a parsed suggestion is annotated in the iterate payload.
 
 Disable if you want the agent to read and re-implement every suggestion (e.g. because your team prefers all commits to come from a single author, or because you want an extra human-ish review pass over every change). Flipping this to `false` still surfaces `suggestion` blocks in the iterate payload so the agent has the reviewer's exact proposal available as context; the skill just falls through to its manual-edit path.
+
+### `actions.neverCancelRuns` — default `[]`
+
+Case-insensitive glob patterns for GitHub Actions workflow/check names that Shepherd must not cancel. Cancellation is workflow-run scoped in GitHub, so a match on any check/job in a run protects the entire run ID from automatic cancellation and from `## In-progress runs` prompts.
+
+Use this for workflows where sibling jobs should be allowed to finish even after one job fails:
+
+```yaml
+actions:
+  neverCancelRuns:
+    - "Final Code Review"
+```
+
+Protected runs still count as failing or in-progress checks. Shepherd surfaces them under `## Protected runs` in text output and `fix.protectedRuns` in JSON so the agent knows they were deliberately left running.
 
 ---
 

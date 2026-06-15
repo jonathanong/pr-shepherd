@@ -203,6 +203,9 @@ query BatchPr(
                         event
                         createdAt
                         updatedAt
+                        workflow {
+                          name
+                        }
                       }
                     }
                   }

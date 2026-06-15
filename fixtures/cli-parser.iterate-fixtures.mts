@@ -54,6 +54,7 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
         firstLookThreads: [],
         firstLookComments: [],
         inProgressRunIds: [],
+        protectedRuns: [],
       },
       cancelled: [],
     };

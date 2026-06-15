@@ -11,7 +11,8 @@ import {
   blockquote,
 } from "./list-formatters.mts";
 import { numberInstructions } from "./iterate-instructions.mts";
-import type { CheckAnnotation, IterateResultFixCode } from "../types.mts";
+import { renderCheckAnnotation, renderProtectedRun } from "./fix-formatter-extra.mts";
+import type { IterateResultFixCode } from "../types.mts";
 
 export function formatFixCodeResult(header: string, result: IterateResultFixCode): string {
   const sections: string[] = [header];
@@ -148,6 +149,10 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     sections.push(result.fix.inProgressRunIds.map((id) => `- \`${id}\``).join("\n"));
   }
 
+  if (result.fix.protectedRuns.length > 0) {
+    sections.push("## Protected runs", result.fix.protectedRuns.map(renderProtectedRun).join("\n"));
+  }
+
   if (result.cancelled.length > 0) {
     sections.push("## Cancelled runs");
     sections.push(result.cancelled.map((id) => `- \`${id}\``).join("\n"));
@@ -168,28 +173,9 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
   return joinSections(sections);
 }
 
-function renderCheckAnnotation(a: CheckAnnotation): string {
-  const loc = `${a.path}:${renderAnnotationRange(a)}`;
-  const link = a.blobUrl ? ` [↗](${a.blobUrl})` : "";
-  const title = a.title ? ` — ${a.title}` : "";
-  const lines = [`- \`${a.id}\`${link} \`${loc}\` [${a.level}]${title}`];
-  if (a.message.trim() !== "") lines.push(blockquote(a.message));
-  if (a.rawDetails !== undefined && a.rawDetails.trim() !== "")
-    lines.push(blockquote(a.rawDetails));
-  return lines.join("\n");
-}
-
 function indentBlockquote(body: string, indent: string): string {
   return blockquote(body)
     .split("\n")
     .map((line) => `${indent}${line}`)
     .join("\n");
-}
-
-function renderAnnotationRange(a: CheckAnnotation): string {
-  if (a.startLine === null && a.endLine === null) return "?";
-  const start = a.startLine ?? a.endLine;
-  const end = a.endLine ?? a.startLine;
-  if (start === end) return String(start);
-  return `${start}-${end}`;
 }

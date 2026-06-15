@@ -117,6 +117,7 @@ export function parseRawPr(
   const checks = rawCheckNodes.flatMap<CheckRun>((node) => {
     if (node.__typename === "CheckRun") {
       const event = node.checkSuite?.workflowRun?.event ?? null;
+      const workflowName = node.checkSuite?.workflowRun?.workflow?.name?.trim() || undefined;
       const runId = extractRunId(node.detailsUrl);
       const summary = extractCheckRunSummary(node.title, node.summary);
       const rawCreatedAt = node.checkSuite?.workflowRun?.createdAt ?? node.checkSuite?.createdAt;
@@ -135,6 +136,7 @@ export function parseRawPr(
           detailsUrl: node.detailsUrl ?? "",
           event,
           runId,
+          ...(workflowName !== undefined && { workflowName }),
           ...(createdAtUnix !== undefined && { createdAtUnix }),
           ...(startedAtUnix !== undefined && { startedAtUnix }),
           ...(completedAtUnix !== undefined && { completedAtUnix }),

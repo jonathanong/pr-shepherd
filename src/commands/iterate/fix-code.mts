@@ -20,7 +20,12 @@ import {
 import { buildResolveCommand } from "./classify.mts";
 import { buildFixInstructions } from "./render.mts";
 import { applyStallGuard } from "./stall.mts";
-import { tryCancelRun, buildAutoCancelRunIds, buildInProgressRunIds } from "./helpers.mts";
+import {
+  tryCancelRun,
+  buildAutoCancelRunIdsWithOptions,
+  buildInProgressRunIds,
+  buildRunProtection,
+} from "./helpers.mts";
 import { annotationMarkerBody } from "../check-annotations.mts";
 import { threadTranscriptBody } from "../../threads/transcript.mts";
 import { isHumanAuthor, isConfiguredBotAuthor } from "../../comments/authors.mts";
@@ -90,6 +95,10 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     ruleAutoResolveThreadIds,
   } = ctx;
   const failingChecks = report.checks.failing;
+  const { protectedRunIds, protectedRuns } = buildRunProtection(
+    [...failingChecks, ...report.checks.inProgress],
+    opts.neverCancelRuns,
+  );
   const stored = await readFixAttempts({ owner: repoOwner, repo: repoName, pr: prNumber });
   const { threadAttempts, threadBodyHashes } = nextFixAttempts(
     stored,
@@ -159,7 +168,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   );
   let cancelled: string[] = [];
   if (!opts.noAutoCancelActionable) {
-    const runIds = buildAutoCancelRunIds(report);
+    const runIds = buildAutoCancelRunIdsWithOptions(report, { protectedRunIds });
     const results = await Promise.all(runIds.map((id) => tryCancelRun(id, repoOwner, repoName)));
     cancelled = results.filter((id): id is string => id !== null);
   }
@@ -183,6 +192,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const inProgressRunIds = pushLikely
     ? buildInProgressRunIds(report, cancelledSet, {
         suppressProtectedFreshReruns: false,
+        protectedRunIds,
       })
     : [];
   const commentMinimizeIds = report.comments.minimizeIds ?? actionableComments.map((c) => c.id);
@@ -265,6 +275,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       firstLookThreads,
       firstLookComments,
       inProgressRunIds,
+      protectedRuns,
     },
     cancelled,
   } as IterateResult;

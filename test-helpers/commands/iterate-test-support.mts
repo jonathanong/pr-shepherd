@@ -155,6 +155,7 @@ function defaultConfig() {
       autoMinimizeSuppressed: true,
       autoMarkReady: true,
       commitSuggestions: true,
+      neverCancelRuns: [] as string[],
     },
   };
 }

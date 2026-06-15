@@ -24,6 +24,7 @@ describe("projectIterateLean", () => {
     expect(fix.firstLookComments).toBeUndefined();
     expect(fix.checks).toBeUndefined();
     expect(fix.changesRequestedReviews).toBeUndefined();
+    expect(fix.protectedRuns).toBeUndefined();
     // fixture has one default instruction ("End this iteration."), so it is present
     expect((fix.instructions as unknown[]).length).toBe(1);
     // resolveCommand always present
@@ -115,6 +116,14 @@ describe("projectIterateLean", () => {
     ];
     result.cancelled = ["run-1"];
     result.fix.inProgressRunIds = ["run-2"];
+    result.fix.protectedRuns = [
+      {
+        runId: "run-final-review",
+        matchedPattern: "Final Code Review",
+        workflowName: "Final Code Review",
+        checkNames: ["DeepSeek Code Review"],
+      },
+    ];
 
     const lean = projectIterateLean(result) as Record<string, unknown>;
     const fix = lean.fix as Record<string, unknown>;
@@ -130,6 +139,7 @@ describe("projectIterateLean", () => {
     expect((fix.firstLookThreads as unknown[]).length).toBe(1);
     expect((fix.firstLookComments as unknown[]).length).toBe(1);
     expect((fix.inProgressRunIds as unknown[]).length).toBe(1);
+    expect((fix.protectedRuns as unknown[]).length).toBe(1);
     expect((fix.changesRequestedReviews as unknown[]).length).toBe(1);
     expect((lean.cancelled as unknown[]).length).toBe(1);
   });

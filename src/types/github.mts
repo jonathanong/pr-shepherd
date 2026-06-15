@@ -60,6 +60,8 @@ export interface CheckRun {
   updatedAtUnix?: number;
   /** One-line status text shown in the GitHub UI (CheckRun.title or first line of summary; StatusContext.description). */
   summary?: string;
+  /** Workflow display name for GitHub Actions check runs, when GraphQL exposes it. */
+  workflowName?: string;
 }
 
 type CheckCategory = "passed" | "failing" | "in_progress" | "skipped" | "filtered" | "ignored";

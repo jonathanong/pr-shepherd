@@ -25,13 +25,13 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   const stallTimeoutSeconds = opts.stallTimeoutSeconds ?? config.iterate.stallTimeoutMinutes * 60;
 
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
-  if (prNumber === null) {
+  if (prNumber === null)
     throw new Error("No open PR found for current branch. Pass a PR number explicitly.");
-  }
-  const optsWithPr = { ...opts, prNumber };
+  const neverCancelRuns = opts.neverCancelRuns ?? config.actions.neverCancelRuns;
 
   const report = await runCheck({
-    ...optsWithPr,
+    ...opts,
+    prNumber,
     autoResolve: config.actions.autoResolveOutdated,
     autoMinimizeSuppressed: config.actions.autoMinimizeSuppressed,
   });
@@ -155,7 +155,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     return handleFixCode({
       base,
       report,
-      opts,
+      opts: { ...opts, prNumber, neverCancelRuns },
       headSha,
       stallKey,
       prNumber,

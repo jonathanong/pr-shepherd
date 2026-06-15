@@ -125,6 +125,9 @@ export function projectIterateLean(
           ...(result.fix.inProgressRunIds.length > 0 && {
             inProgressRunIds: result.fix.inProgressRunIds,
           }),
+          ...(result.fix.protectedRuns.length > 0 && {
+            protectedRuns: result.fix.protectedRuns,
+          }),
           ...(result.fix.checks.length > 0 && { checks: result.fix.checks }),
           ...(result.fix.changesRequestedReviews.length > 0 && {
             changesRequestedReviews: result.fix.changesRequestedReviews,

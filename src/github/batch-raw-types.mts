@@ -161,7 +161,12 @@ export type RawContextNode =
       checkSuite: {
         createdAt?: string;
         updatedAt?: string;
-        workflowRun: { event: string; createdAt?: string; updatedAt?: string } | null;
+        workflowRun: {
+          event: string;
+          createdAt?: string;
+          updatedAt?: string;
+          workflow?: { name: string } | null;
+        } | null;
       } | null;
     }
   | {
