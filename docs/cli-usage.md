@@ -107,7 +107,7 @@ Preconditions:
 - Target file is clean.
 - Thread is active, locatable, unresolved, not outdated, and not minimized.
 
-The output includes a unified diff, a suggested commit subject/body with reviewer attribution, files to stage, and post-action instructions. Invoke once per suggestion thread.
+The output includes a unified diff, a suggested commit subject/body with reviewer attribution, files to stage, and post-action instructions. Invoke once per suggestion thread. If a reviewer's suggestion box contains more lines than the highlighted range, the emitted diff trims leading/trailing lines that merely duplicate adjacent file context, so the patch applies cleanly without duplicating lines.
 
 Exit codes: `0` suggestion produced, `1` validation/lookup/precondition/parsing failure.
 
