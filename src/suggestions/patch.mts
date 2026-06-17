@@ -32,7 +32,7 @@ function trimReplacementToContext(
   let L = 0;
   leading: for (let l = maxL; l >= 1; l--) {
     for (let i = 0; i < l; i++) {
-      if (replacementLines[i] !== norm(fileLines[startLine - 1 - l + i]!)) continue leading;
+      if (norm(replacementLines[i]!) !== norm(fileLines[startLine - 1 - l + i]!)) continue leading;
     }
     L = l;
     break;
@@ -45,7 +45,8 @@ function trimReplacementToContext(
   let T = 0;
   trailing: for (let t = maxT; t >= 1; t--) {
     for (let j = 0; j < t; j++) {
-      if (remainder[remainder.length - t + j] !== norm(fileLines[endLine + j]!)) continue trailing;
+      if (norm(remainder[remainder.length - t + j]!) !== norm(fileLines[endLine + j]!))
+        continue trailing;
     }
     T = t;
     break;

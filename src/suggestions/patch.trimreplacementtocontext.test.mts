@@ -119,6 +119,23 @@ describe("trimReplacementToContext (via buildUnifiedDiff)", () => {
     expect(lines).toEqual(["-c\r", "+C\r"]);
   });
 
+  it("normalises \\r on both sides: replacement lines that carry \\r still match CRLF file lines", () => {
+    // Both the file lines and the replacement lines carry \r.
+    // norm() must be applied to both sides so the trim still fires.
+    const content = "a\r\nb\r\nc\r\nd\r\n";
+    const lines = changedLines(
+      buildUnifiedDiff({
+        path: "f.ts",
+        originalContent: content,
+        startLine: 3,
+        endLine: 3,
+        replacementLines: ["b\r", "C"],
+      }),
+    );
+    // "b\r" duplicates fileLines[1]="b\r" — should be trimmed, not added.
+    expect(lines).toEqual(["-c\r", "+C\r"]);
+  });
+
   it("trims leading duplicates longer than the 3-line context window", () => {
     // 8 lines before the removed range; 4 are duplicated in the replacement.
     const content = ["p", "q", "r", "s", "t", "u", "v", "w", "X", "z"].join("\n") + "\n";
