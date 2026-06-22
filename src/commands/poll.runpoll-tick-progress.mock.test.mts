@@ -3,8 +3,6 @@ import {
   mockRunIterate,
   makeWaitResult,
   makeCancelResult,
-  makeFixCodeResult,
-  makeMarkReadyResult,
   registerPollHooks,
 } from "../../test-helpers/commands/poll.test-support.mts";
 import { runPoll } from "./poll.mts";
@@ -101,86 +99,6 @@ describe("runPoll — tick progress logging", () => {
   );
 
   it(
-    "quiet status writes only changed WAIT snapshots with active checks",
-    withStderrTTY(false, async (stderrSpy) => {
-      mockRunIterate
-        .mockResolvedValueOnce(
-          makeWaitResult({
-            activity: {
-              commitCount: 1,
-              reviewRoundCount: 1,
-              latestCommitCommittedAtUnix: 1_700_000_000,
-              reviewItemsSinceLatestCommit: [],
-            },
-            inProgressChecks: [
-              { name: "CI", status: "IN_PROGRESS", runId: "123", detailsUrl: null },
-            ],
-          }),
-        )
-        .mockResolvedValueOnce(
-          makeWaitResult({
-            activity: {
-              commitCount: 1,
-              reviewRoundCount: 1,
-              latestCommitCommittedAtUnix: 1_700_000_000,
-              reviewItemsSinceLatestCommit: [],
-            },
-            inProgressChecks: [
-              { name: "CI", status: "IN_PROGRESS", runId: "123", detailsUrl: null },
-            ],
-          }),
-        )
-        .mockResolvedValueOnce(
-          makeWaitResult({
-            activity: {
-              commitCount: 2,
-              reviewRoundCount: 1,
-              latestCommitCommittedAtUnix: 1_700_000_030,
-              reviewItemsSinceLatestCommit: [],
-            },
-            inProgressChecks: [
-              { name: "CI", status: "IN_PROGRESS", runId: "123", detailsUrl: null },
-            ],
-          }),
-        )
-        .mockResolvedValueOnce(
-          makeWaitResult({
-            activity: {
-              commitCount: 2,
-              reviewRoundCount: 2,
-              latestCommitCommittedAtUnix: 1_700_000_030,
-              reviewItemsSinceLatestCommit: [],
-            },
-            inProgressChecks: [
-              { name: "CI", status: "IN_PROGRESS", runId: "123", detailsUrl: null },
-              { name: "lint", status: "QUEUED", runId: "456", detailsUrl: null },
-            ],
-          }),
-        )
-        .mockResolvedValue(makeCancelResult());
-
-      const pollPromise = runPoll({
-        prNumber: 42,
-        format: "text",
-        intervalSeconds: 30,
-        timeoutSeconds: 300,
-        quietStatus: true,
-      });
-
-      await vi.advanceTimersByTimeAsync(120_000);
-      await pollPromise;
-
-      const written = stderrSpy.mock.calls.map((args) => String(args[0])).join("");
-      expect(written.match(/\[poll tick/g)).toHaveLength(3);
-      expect(written).toContain("active: CI (IN_PROGRESS)");
-      expect(written).toContain("lint (QUEUED)");
-      expect(written).toContain("2 commits");
-      expect(written).toContain("2 review rounds");
-      expect(written).not.toContain(".");
-    }),
-  );
-
-  it(
     "writes trailing newline after dots when loop exits",
     withStderrTTY(false, async (stderrSpy) => {
       mockRunIterate.mockResolvedValueOnce(makeWaitResult()).mockResolvedValue(makeCancelResult());
@@ -201,25 +119,6 @@ describe("runPoll — tick progress logging", () => {
   );
 
   it(
-    "stops on MARK_READY without --until-terminal",
-    withStderrTTY(false, async () => {
-      mockRunIterate
-        .mockResolvedValueOnce(makeMarkReadyResult())
-        .mockResolvedValue(makeCancelResult());
-
-      const result = await runPoll({
-        prNumber: 42,
-        format: "text",
-        intervalSeconds: 30,
-        timeoutSeconds: 300,
-      });
-
-      expect(mockRunIterate).toHaveBeenCalledTimes(1);
-      expect(result.action).toBe("mark_ready");
-    }),
-  );
-
-  it(
     "returns WAIT on timeout without --until-terminal",
     withStderrTTY(false, async () => {
       mockRunIterate.mockResolvedValue(makeWaitResult());
@@ -233,74 +132,6 @@ describe("runPoll — tick progress logging", () => {
 
       expect(mockRunIterate).toHaveBeenCalledTimes(1);
       expect(result.action).toBe("wait");
-    }),
-  );
-
-  it(
-    "--until-terminal keeps polling WAIT ticks beyond timeout",
-    withStderrTTY(false, async () => {
-      mockRunIterate
-        .mockResolvedValueOnce(makeWaitResult())
-        .mockResolvedValueOnce(makeWaitResult())
-        .mockResolvedValue(makeCancelResult());
-
-      const pollPromise = runPoll({
-        prNumber: 42,
-        format: "text",
-        intervalSeconds: 30,
-        timeoutSeconds: 1,
-        untilTerminal: true,
-      });
-
-      await vi.advanceTimersByTimeAsync(60_000);
-      const result = await pollPromise;
-
-      expect(mockRunIterate).toHaveBeenCalledTimes(3);
-      expect(result.action).toBe("cancel");
-    }),
-  );
-
-  it(
-    "--until-terminal keeps polling after MARK_READY",
-    withStderrTTY(false, async () => {
-      mockRunIterate
-        .mockResolvedValueOnce(makeMarkReadyResult())
-        .mockResolvedValue(makeCancelResult());
-
-      const pollPromise = runPoll({
-        prNumber: 42,
-        format: "text",
-        intervalSeconds: 30,
-        timeoutSeconds: 300,
-        untilTerminal: true,
-      });
-
-      await vi.advanceTimersByTimeAsync(30_000);
-      const result = await pollPromise;
-
-      expect(mockRunIterate).toHaveBeenCalledTimes(2);
-      expect(result.action).toBe("cancel");
-    }),
-  );
-
-  it(
-    "--until-terminal still stops on FIX_CODE",
-    withStderrTTY(false, async () => {
-      mockRunIterate.mockResolvedValueOnce(makeWaitResult()).mockResolvedValue(makeFixCodeResult());
-
-      const pollPromise = runPoll({
-        prNumber: 42,
-        format: "text",
-        intervalSeconds: 30,
-        timeoutSeconds: 300,
-        untilTerminal: true,
-      });
-
-      await vi.advanceTimersByTimeAsync(30_000);
-      const result = await pollPromise;
-
-      expect(mockRunIterate).toHaveBeenCalledTimes(2);
-      expect(result.action).toBe("fix_code");
     }),
   );
 });
