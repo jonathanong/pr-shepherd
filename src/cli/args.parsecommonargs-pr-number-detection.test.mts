@@ -44,6 +44,12 @@ describe("parseCommonArgs — PR number detection", () => {
     expect(extra).toEqual(["--dry-run"]);
   });
 
+  it("treats --until-terminal as a boolean flag during PR detection", () => {
+    const { prNumber, extra } = parseCommonArgs(["--until-terminal", "42"]);
+    expect(prNumber).toBe(42);
+    expect(extra).toEqual(["--until-terminal"]);
+  });
+
   it("skips known value flags in --flag=value form during PR detection", () => {
     const { prNumber, extra } = parseCommonArgs(["--thread-id=123", "42"]);
     expect(prNumber).toBe(42);

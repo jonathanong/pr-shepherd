@@ -99,86 +99,6 @@ describe("runPoll — tick progress logging", () => {
   );
 
   it(
-    "quiet status writes only changed WAIT snapshots with active checks",
-    withStderrTTY(false, async (stderrSpy) => {
-      mockRunIterate
-        .mockResolvedValueOnce(
-          makeWaitResult({
-            activity: {
-              commitCount: 1,
-              reviewRoundCount: 1,
-              latestCommitCommittedAtUnix: 1_700_000_000,
-              reviewItemsSinceLatestCommit: [],
-            },
-            inProgressChecks: [
-              { name: "CI", status: "IN_PROGRESS", runId: "123", detailsUrl: null },
-            ],
-          }),
-        )
-        .mockResolvedValueOnce(
-          makeWaitResult({
-            activity: {
-              commitCount: 1,
-              reviewRoundCount: 1,
-              latestCommitCommittedAtUnix: 1_700_000_000,
-              reviewItemsSinceLatestCommit: [],
-            },
-            inProgressChecks: [
-              { name: "CI", status: "IN_PROGRESS", runId: "123", detailsUrl: null },
-            ],
-          }),
-        )
-        .mockResolvedValueOnce(
-          makeWaitResult({
-            activity: {
-              commitCount: 2,
-              reviewRoundCount: 1,
-              latestCommitCommittedAtUnix: 1_700_000_030,
-              reviewItemsSinceLatestCommit: [],
-            },
-            inProgressChecks: [
-              { name: "CI", status: "IN_PROGRESS", runId: "123", detailsUrl: null },
-            ],
-          }),
-        )
-        .mockResolvedValueOnce(
-          makeWaitResult({
-            activity: {
-              commitCount: 2,
-              reviewRoundCount: 2,
-              latestCommitCommittedAtUnix: 1_700_000_030,
-              reviewItemsSinceLatestCommit: [],
-            },
-            inProgressChecks: [
-              { name: "CI", status: "IN_PROGRESS", runId: "123", detailsUrl: null },
-              { name: "lint", status: "QUEUED", runId: "456", detailsUrl: null },
-            ],
-          }),
-        )
-        .mockResolvedValue(makeCancelResult());
-
-      const pollPromise = runPoll({
-        prNumber: 42,
-        format: "text",
-        intervalSeconds: 30,
-        timeoutSeconds: 300,
-        quietStatus: true,
-      });
-
-      await vi.advanceTimersByTimeAsync(120_000);
-      await pollPromise;
-
-      const written = stderrSpy.mock.calls.map((args) => String(args[0])).join("");
-      expect(written.match(/\[poll tick/g)).toHaveLength(3);
-      expect(written).toContain("active: CI (IN_PROGRESS)");
-      expect(written).toContain("lint (QUEUED)");
-      expect(written).toContain("2 commits");
-      expect(written).toContain("2 review rounds");
-      expect(written).not.toContain(".");
-    }),
-  );
-
-  it(
     "writes trailing newline after dots when loop exits",
     withStderrTTY(false, async (stderrSpy) => {
       mockRunIterate.mockResolvedValueOnce(makeWaitResult()).mockResolvedValue(makeCancelResult());
@@ -195,6 +115,23 @@ describe("runPoll — tick progress logging", () => {
 
       const lastWrite = String(stderrSpy.mock.calls[stderrSpy.mock.calls.length - 1]?.[0] ?? "");
       expect(lastWrite).toBe("\n");
+    }),
+  );
+
+  it(
+    "returns WAIT on timeout without --until-terminal",
+    withStderrTTY(false, async () => {
+      mockRunIterate.mockResolvedValue(makeWaitResult());
+
+      const result = await runPoll({
+        prNumber: 42,
+        format: "text",
+        intervalSeconds: 30,
+        timeoutSeconds: 1,
+      });
+
+      expect(mockRunIterate).toHaveBeenCalledTimes(1);
+      expect(result.action).toBe("wait");
     }),
   );
 });

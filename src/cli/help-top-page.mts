@@ -45,6 +45,7 @@ Poll flags:
   --interval <duration>          Delay between WAIT ticks. Default: 60s.
   --timeout <duration>           Poll wall-clock cap. Default: 4.5m.
   --quiet-status                 During WAIT polling, print only changed status snapshots.
+  --until-terminal               Continue through WAIT/MARK_READY until FIX_CODE/CANCEL/ESCALATE.
 
 Clean variants:
   pr [number]          Remove state for one PR. Defaults to current branch PR.

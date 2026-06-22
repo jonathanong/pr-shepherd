@@ -1,3 +1,5 @@
+import { LOG_FILE_USAGE } from "./help-log-file-page.mts";
+
 export const COMMAND_USAGE = {
   resolve: `pr-shepherd resolve
 
@@ -107,7 +109,7 @@ Exit codes:
 
 Run iterate repeatedly while the action is WAIT. Print only the final tick to stdout.
 Poll exits as soon as iterate returns MARK_READY, FIX_CODE, CANCEL, or ESCALATE, or when timeout
-returns the last WAIT result.
+returns the last WAIT result. With --until-terminal, poll also continues through MARK_READY.
 
 Usage:
   pr-shepherd poll [PR] [poll-flags] [iterate-flags]
@@ -116,6 +118,7 @@ Poll flags:
   --interval <duration>          Sleep between WAIT ticks. Default: 60s.
   --timeout <duration>           Maximum wall-clock wait. Default: 4.5m.
   --quiet-status                 During WAIT polling, print only changed status snapshots.
+  --until-terminal               Continue through WAIT/MARK_READY until FIX_CODE/CANCEL/ESCALATE.
 
 Forwarded iterate flags:
   --ready-delay <duration>       Settle window before a clean PR cancels. Example: 15m.
@@ -128,6 +131,7 @@ Forwarded iterate flags:
 
 Durations accept seconds, minutes, or hours: 30s, 4.5m, 1h, or bare seconds.
 Each WAIT tick writes a single dot to stderr by default; --quiet-status prints only changed WAIT snapshots, and --verbose emits detailed per-tick lines.
+With --until-terminal, --timeout is ignored for WAIT ticks and polling continues until FIX_CODE, CANCEL, or ESCALATE.
 
 Exit codes:
   0  WAIT timeout or MARK_READY
@@ -180,21 +184,5 @@ Flags:
 
 Exit code: 0 on success (including no-change no-op); 1 on validation, lookup, or mutation failure.`,
 
-  "log-file": `pr-shepherd log-file
-
-Print the per-worktree append-only debug log path for the current repository.
-The log is created by the first non-help pr-shepherd command that initializes logging.
-
-Usage:
-  pr-shepherd log-file [--format text|json]
-
-Flags:
-  --format text|json   Print a raw path or {"path": "..."} JSON. Default: text.
-  --help, -h           Print this help and exit before logging setup.
-
-Environment:
-  PR_SHEPHERD_LOG_DISABLED=1 disables logging.
-  PR_SHEPHERD_STATE_DIR overrides the base state directory.
-
-Exit code: 0 on success; 1 if repository identity cannot be resolved.`,
+  "log-file": LOG_FILE_USAGE,
 } as const;

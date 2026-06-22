@@ -29,6 +29,7 @@ pr-shepherd log-file [--format text|json]
 pr-shepherd 42
 pr-shepherd 42 --interval 60s --timeout 4.5m
 pr-shepherd 42 --interval 60s --timeout 4.5m --quiet-status
+pr-shepherd 42 --until-terminal --quiet-status
 pr-shepherd 42 --ready-delay 15m
 pr-shepherd iterate 42
 pr-shepherd poll 42 --format=json
@@ -49,13 +50,16 @@ Use `actions.neverCancelRuns` in `.pr-shepherdrc.yml` for workflow/check names w
 
 ### Poll Flags
 
-| Flag                    | Default | Description                                                        |
-| ----------------------- | ------- | ------------------------------------------------------------------ |
-| `--interval <duration>` | `60s`   | Sleep between `WAIT` ticks.                                        |
-| `--timeout <duration>`  | `4.5m`  | Maximum wall-clock wait before returning the latest `WAIT` result. |
-| `--quiet-status`        | `false` | Print only changed WAIT snapshots instead of one dot per tick.     |
+| Flag                    | Default | Description                                                                         |
+| ----------------------- | ------- | ----------------------------------------------------------------------------------- |
+| `--interval <duration>` | `60s`   | Sleep between `WAIT` ticks.                                                         |
+| `--timeout <duration>`  | `4.5m`  | Maximum wall-clock wait before returning the latest `WAIT` result.                  |
+| `--quiet-status`        | `false` | Print only changed WAIT snapshots instead of one dot per tick.                      |
+| `--until-terminal`      | `false` | Continue through `WAIT` and `MARK_READY` until `FIX_CODE`, `CANCEL`, or `ESCALATE`. |
 
 Durations accept seconds, minutes, hours, or bare seconds: `30s`, `270s`, `4.5m`, `1h`, `45`.
+
+With `--until-terminal`, `--timeout` is ignored for `WAIT` ticks so the poll can stay attached until work or terminal state appears.
 
 Exit codes for iterate and poll: `0` `WAIT`/`MARK_READY`, `1` `FIX_CODE` or command error, `2` `CANCEL`, `3` `ESCALATE`.
 

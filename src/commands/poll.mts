@@ -6,6 +6,7 @@ interface PollCommandOptions extends IterateCommandOptions {
   intervalSeconds: number;
   timeoutSeconds: number;
   quietStatus?: boolean;
+  untilTerminal?: boolean;
 }
 
 function writeTickProgress(
@@ -91,38 +92,51 @@ function writeWaitProgress(opts: {
 }
 
 export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> {
-  const { intervalSeconds, timeoutSeconds, ...iterateOpts } = opts;
+  const {
+    intervalSeconds,
+    timeoutSeconds,
+    quietStatus: quietStatusOpt,
+    untilTerminal: untilTerminalOpt,
+    ...iterateOpts
+  } = opts;
   const intervalMs = Math.min(intervalSeconds * 1000, MAX_TIMER_MS);
   const timeoutMs = Math.min(timeoutSeconds * 1000, MAX_TIMER_MS);
   const start = Date.now();
   let tick = 0;
   let lastResult: IterateResult | undefined;
   const verbose = opts.verbose === true;
-  const quietStatus = opts.quietStatus === true;
+  const quietStatus = quietStatusOpt === true;
+  const untilTerminal = untilTerminalOpt === true;
   let dotsPrinted = false;
   let lastWaitSignature: string | null = null;
 
   while (true) {
     tick += 1;
     lastResult = await runIterate(iterateOpts);
-    if (lastResult.action !== "wait") break;
+    if (lastResult.action !== "wait" && !(untilTerminal && lastResult.action === "mark_ready")) {
+      break;
+    }
 
     const elapsedMs = Date.now() - start;
-    const remainingMs = timeoutMs - elapsedMs;
-    if (remainingMs <= 0) break;
-    if (remainingMs + TIMER_DRIFT_TOLERANCE_MS < intervalMs) break;
+    if (!untilTerminal) {
+      const remainingMs = timeoutMs - elapsedMs;
+      if (remainingMs <= 0) break;
+      if (remainingMs + TIMER_DRIFT_TOLERANCE_MS < intervalMs) break;
+    }
 
     const nextSleepMs = intervalMs;
-    lastWaitSignature = writeWaitProgress({
-      tick,
-      elapsedMs,
-      sleepMs: nextSleepMs,
-      result: lastResult,
-      quietStatus,
-      verbose,
-      lastWaitSignature,
-    });
-    if (!quietStatus && !verbose) dotsPrinted = true;
+    if (lastResult.action === "wait") {
+      lastWaitSignature = writeWaitProgress({
+        tick,
+        elapsedMs,
+        sleepMs: nextSleepMs,
+        result: lastResult,
+        quietStatus,
+        verbose,
+        lastWaitSignature,
+      });
+      if (!quietStatus && !verbose) dotsPrinted = true;
+    }
     await sleep(nextSleepMs);
   }
 

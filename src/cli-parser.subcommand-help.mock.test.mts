@@ -60,7 +60,7 @@ const HELP_EXPECTATIONS: Record<(typeof SUBCOMMANDS)[number], string[]> = {
   "commit-suggestion": ["Preconditions:", "--thread-id", "--description", "Exit codes:"],
   "mark-files-as-viewed": ["Selectors:", "--tests", "--match", "Exit code:"],
   iterate: ["Actions:", "FIX_CODE", "--stall-timeout", "Exit codes:"],
-  poll: ["Poll flags:", "--interval", "--timeout", "Forwarded iterate flags:"],
+  poll: ["Poll flags:", "--interval", "--timeout", "--until-terminal", "Forwarded iterate flags:"],
   clean: ["Variants:", "pr [number]", "branch [name]", "--dry-run"],
   journal: ["Shepherd Journal", "--dry-run", "Exit code:"],
   "log-file": ["Environment:", "PR_SHEPHERD_LOG_DISABLED", "PR_SHEPHERD_STATE_DIR"],
@@ -105,6 +105,7 @@ describe("default poll path (pr 123 --help)", () => {
     expect(getStdout()).toContain("Poll flags:");
     expect(getStdout()).toContain("--interval");
     expect(getStdout()).toContain("--timeout");
+    expect(getStdout()).toContain("--until-terminal");
     expect(process.exitCode).toBeUndefined();
     expect(stderrSpy).not.toHaveBeenCalled();
     expect(mockRunIterate).not.toHaveBeenCalled();
