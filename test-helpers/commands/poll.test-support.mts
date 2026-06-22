@@ -97,6 +97,57 @@ function makeMarkReadyResult(): IterateResult {
   } as unknown as IterateResult;
 }
 
+function makeFixCodeResult(): IterateResult {
+  return {
+    action: "fix_code",
+    pr: 42,
+    repo: "owner/repo",
+    status: "UNRESOLVED_COMMENTS",
+    state: "OPEN",
+    mergeStateStatus: "BLOCKED",
+    mergeStatus: "BLOCKED",
+    reviewDecision: "CHANGES_REQUESTED",
+    blockingBotReviewInProgress: false,
+    isDraft: false,
+    shouldCancel: false,
+    remainingSeconds: 0,
+    summary: { passing: 2, failing: 1, inProgress: 0, skipped: 0, filtered: 0 },
+    baseBranch: "main",
+    branchProtection: null,
+    checks: [],
+    inProgressChecks: [],
+    activity: {
+      commitCount: 1,
+      reviewRoundCount: 1,
+      latestCommitCommittedAtUnix: 1_700_000_000,
+      reviewItemsSinceLatestCommit: [],
+    },
+    fix: {
+      threads: [],
+      resolutionOnlyThreads: [],
+      actionableComments: [],
+      reviewSummaryIds: [],
+      firstLookSummaries: [],
+      editedSummaries: [],
+      surfacedApprovals: [],
+      checks: [],
+      changesRequestedReviews: [],
+      resolveCommand: {
+        argv: ["pr-shepherd", "resolve", "42"],
+        requiresHeadSha: true,
+        requiresDismissMessage: false,
+        hasMutations: false,
+      },
+      instructions: ["Stop this iteration."],
+      inProgressRunIds: [],
+      protectedRuns: [],
+      firstLookThreads: [],
+      firstLookComments: [],
+    },
+    cancelled: [],
+  } as unknown as IterateResult;
+}
+
 function registerPollHooks(): void {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -107,4 +158,11 @@ function registerPollHooks(): void {
   });
 }
 
-export { mockRunIterate, makeWaitResult, makeCancelResult, makeMarkReadyResult, registerPollHooks };
+export {
+  mockRunIterate,
+  makeWaitResult,
+  makeCancelResult,
+  makeMarkReadyResult,
+  makeFixCodeResult,
+  registerPollHooks,
+};

@@ -16,9 +16,9 @@ Poll dispatcher for iterating a PR to completion.
 
 1. **Resolve the PR number** (`$N`): use the number or URL in `$ARGUMENTS`; otherwise infer it with `gh pr view --json number --jq .number`. If none is found, report an error and stop.
 
-2. **Define the poll command once:** `pr-shepherd $N --interval 60s --timeout 4.5m --quiet-status`. Do not forward `$ARGUMENTS` as extra flags. Run `pr-shepherd --help` to inspect supported options.
+2. **Define the poll command once:** `pr-shepherd $N --interval 60s --until-terminal --quiet-status`. Do not forward `$ARGUMENTS` as extra flags. Run `pr-shepherd --help` to inspect supported options.
 
-3. **Loop:** Run the poll, print its full output, and follow its `## Instructions` section exactly. Then run the poll again. Repeat until the CLI emits `[CANCEL]` or `[ESCALATE]`, unless the human directs you to stop. Every other action (`[WAIT]`, `[MARK_READY]`, `[FIX_CODE]`) is non-terminal: do its instructions, then poll again. The poll already bounds each wait via `--interval`/`--timeout`; do not add manual `sleep`s between ticks.
+3. **Loop:** Run the poll, print its full output, and follow its `## Instructions` section exactly. Then run the poll again. Repeat until the CLI emits `[CANCEL]` or `[ESCALATE]`, unless the human directs you to stop. `[FIX_CODE]` is non-terminal: do its instructions, then poll again. The poll already waits between ticks via `--interval`; do not add manual `sleep`s between ticks.
 
 4. **Nonzero exit codes:** Treat a nonzero poll exit as PR state only when the output contains a matching `# PR #$N [ACTION]` heading. Exit `1` can also mean a command or validation failure; if there is no `[ACTION]` heading, surface the error and stop instead of looping.
 

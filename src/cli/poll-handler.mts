@@ -49,6 +49,7 @@ export async function handlePoll(args: string[]): Promise<void> {
     intervalSeconds,
     timeoutSeconds,
     quietStatus: hasFlag(extra, "--quiet-status"),
+    untilTerminal: hasFlag(extra, "--until-terminal"),
   });
 
   emitIterateResult(result, {

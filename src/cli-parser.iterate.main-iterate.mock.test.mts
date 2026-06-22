@@ -60,6 +60,19 @@ describe("main — default (poll)", () => {
     expect(process.exitCode).toBe(2);
   });
 
+  it("accepts --until-terminal on the default path", async () => {
+    mockRunIterate
+      .mockResolvedValueOnce(makeIterateResult("mark_ready"))
+      .mockResolvedValue(makeIterateResult("cancel"));
+
+    const promise = main(["node", "shepherd", "42", "--until-terminal"]);
+    await vi.advanceTimersByTimeAsync(60_000);
+    await promise;
+
+    expect(mockRunIterate).toHaveBeenCalledTimes(2);
+    expect(process.exitCode).toBe(2);
+  });
+
   it("loops on wait then stops on cancel — exits 2", async () => {
     mockRunIterate
       .mockResolvedValueOnce(makeIterateResult("wait"))

@@ -95,6 +95,20 @@ describe("main — poll subcommand", () => {
     expect(mockRunIterate).toHaveBeenCalledTimes(1);
   });
 
+  it("accepts --until-terminal and keeps polling after mark_ready", async () => {
+    mockRunIterate
+      .mockResolvedValueOnce(makeIterateResult("mark_ready"))
+      .mockResolvedValue(makeIterateResult("cancel"));
+
+    const promise = main(["node", "shepherd", "poll", "42", "--until-terminal"]);
+    await vi.advanceTimersByTimeAsync(60_000);
+    await promise;
+
+    expect(mockRunIterate).toHaveBeenCalledTimes(2);
+    expect(getStdout()).toContain("[CANCEL]");
+    expect(process.exitCode).toBe(2);
+  });
+
   it("rejects an invalid --interval value", async () => {
     await main(["node", "shepherd", "poll", "42", "--interval", "bad"]);
 

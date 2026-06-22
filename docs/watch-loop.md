@@ -4,7 +4,7 @@
 
 ## Overview
 
-pr-shepherd iterates a PR to completion via the active goal loops of Claude Code and Codex. The skill invokes the default `pr-shepherd <PR>` command with a bounded interval/timeout. That default command is the poll dispatcher: it loops internally while the PR is in `[WAIT]` and returns whenever an actionable or terminal state appears.
+pr-shepherd iterates a PR to completion via the active goal loops of Claude Code and Codex. The skill invokes the default `pr-shepherd <PR>` command with `--until-terminal`. That default command is the poll dispatcher: with `--until-terminal`, it loops internally through `[WAIT]` and auto-handled `[MARK_READY]`, then returns when work or terminal state appears.
 
 Each non-terminal action is followed by another default poll-dispatcher invocation. Do not run `while true` or unbounded polling loops outside of Shepherd's poll dispatcher.
 
@@ -22,7 +22,7 @@ Both runtimes use the same `pr-shepherd` skill. Claude Code users invoke it with
    The skill resolves the PR number and runs the default poll dispatcher:
 
    ```bash
-   pr-shepherd <PR> --interval 60s --timeout 4.5m --quiet-status
+   pr-shepherd <PR> --interval 60s --until-terminal --quiet-status
    ```
 
 2. **CLI emits an action with `## Instructions`**
@@ -66,6 +66,6 @@ User                    Active Goal             shepherd iterate / poll
 
 ## Notes
 
-- Poll uses `--interval` and `--timeout` for WAIT-state rechecks. Defaults are 60 seconds and 4.5 minutes.
+- Poll uses `--interval` for WAIT-state rechecks. Without `--until-terminal`, `--timeout` caps WAIT polling; with `--until-terminal`, polling continues until `FIX_CODE`, `CANCEL`, or `ESCALATE`.
 - Code changes (`fix_code`, rebase) are handled inline by the active goal — no subagent is spawned.
 - The ready-delay (default 10 minutes) is read from `watch.readyDelayMinutes` in `.pr-shepherdrc.yml`. See [ready-delay.md](ready-delay.md) and [configuration.md](configuration.md).

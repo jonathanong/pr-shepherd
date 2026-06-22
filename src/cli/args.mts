@@ -32,6 +32,7 @@ const BOOLEAN_FLAGS = new Set([
   "--no-auto-mark-ready",
   "--no-auto-cancel-actionable",
   "--quiet-status",
+  "--until-terminal",
   "--dry-run",
   "--verbose",
 ]);
