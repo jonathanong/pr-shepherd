@@ -44,4 +44,25 @@ describe("runCheck — skipTriage", () => {
     expect(report.checks.passing.map((c) => c.name)).toEqual(["tests"]);
     expect(mockTriageFailingChecks).not.toHaveBeenCalled();
   });
+
+  it("treats UNSTABLE with only ignored failures as ready without actionable failing checks", async () => {
+    mockLoadConfig.mockReturnValue({
+      ...defaultConfig(),
+      ignoreChecks: ["Final Code Review / Claude Code Review"],
+    });
+    const ignoredCheck = makeCheck({
+      name: "Final Code Review / Claude Code Review",
+      conclusion: "FAILURE",
+    });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ mergeStateStatus: "UNSTABLE", checks: [ignoredCheck] }),
+    });
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.status).toBe("READY");
+    expect(report.checks.failing).toEqual([]);
+    expect(report.checks.ignoredNames).toEqual(["Final Code Review / Claude Code Review"]);
+    expect(mockTriageFailingChecks).not.toHaveBeenCalled();
+  });
 });

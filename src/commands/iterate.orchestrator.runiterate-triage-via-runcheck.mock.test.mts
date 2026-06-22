@@ -151,4 +151,42 @@ describe("runIterate — triage via runCheck", () => {
       expect(result.fix.checks[0]?.runId).toBe("run-3");
     }
   });
+
+  it("does not return fix_code when ignored checks are the only unstable signal", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        mergeStatus: {
+          status: "UNSTABLE",
+          state: "OPEN",
+          isDraft: false,
+          mergeable: "MERGEABLE",
+          reviewDecision: "APPROVED",
+          blockingBotReviewInProgress: false,
+          mergeStateStatus: "UNSTABLE",
+        },
+        checks: {
+          passing: [],
+          failing: [],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+          ignoredNames: ["Final Code Review / Claude Code Review"],
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
+
+    expect(result.action).toBe("wait");
+    expect(result.ignoredNames).toEqual(["Final Code Review / Claude Code Review"]);
+    expect(result.checks).toEqual([]);
+  });
 });
