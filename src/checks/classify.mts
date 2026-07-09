@@ -37,9 +37,9 @@ function buildMatcher(patterns: string[]): (name: string) => boolean {
 }
 
 function isProtectedCheck(check: CheckRun, isProtected: (name: string) => boolean): boolean {
-  if (check.runId === null) return false;
+  if (check.runId == null) return false;
   return [check.workflowName, check.name]
-    .filter((name): name is string => name !== undefined && name.trim() !== "")
+    .filter((name): name is string => typeof name === "string" && name.trim() !== "")
     .some((name) => isProtected(name));
 }
 

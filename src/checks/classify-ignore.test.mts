@@ -78,4 +78,22 @@ describe("classifyChecks — ignoreChecks", () => {
     ]);
     expect(classified[0]?.category).toBe("ignored");
   });
+
+  it("handles null workflow metadata while checking protected matches", () => {
+    mockLoadConfig.mockReturnValue({
+      ...config(["Claude Code Review"]),
+      actions: { neverCancelRuns: ["Final Code Review"] },
+    });
+    const classified = classifyChecks([
+      {
+        ...baseCheck,
+        name: "Claude Code Review",
+        status: "IN_PROGRESS",
+        conclusion: null,
+        runId: "run-final-review",
+        workflowName: null as unknown as string,
+      },
+    ]);
+    expect(classified[0]?.category).toBe("ignored");
+  });
 });
