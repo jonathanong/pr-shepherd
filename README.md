@@ -184,6 +184,8 @@ checks:
 actions:
   autoMinimizeSuppressed: true
   autoMarkReady: false
+  neverCancelRuns:
+    - "Final Code Review"
 ```
 
 Environment variables:

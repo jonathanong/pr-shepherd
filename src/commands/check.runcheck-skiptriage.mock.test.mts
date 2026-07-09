@@ -45,6 +45,34 @@ describe("runCheck — skipTriage", () => {
     expect(mockTriageFailingChecks).not.toHaveBeenCalled();
   });
 
+  it("keeps protected workflow checks visible even when the raw job name is ignored", async () => {
+    mockLoadConfig.mockReturnValue({
+      ...defaultConfig(),
+      ignoreChecks: ["Claude Code Review"],
+      actions: {
+        ...defaultConfig().actions,
+        neverCancelRuns: ["Final Code Review"],
+      },
+    });
+    const protectedCheck = makeCheck({
+      name: "Claude Code Review",
+      workflowName: "Final Code Review",
+      status: "IN_PROGRESS",
+      conclusion: null,
+      runId: "run-final-review",
+    });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ checks: [protectedCheck] }),
+    });
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.status).toBe("IN_PROGRESS");
+    expect(report.checks.inProgress.map((c) => c.name)).toEqual(["Claude Code Review"]);
+    expect(report.checks.ignoredNames).toBeUndefined();
+    expect(mockTriageFailingChecks).not.toHaveBeenCalled();
+  });
+
   it("treats UNSTABLE with only ignored failures as ready without actionable failing checks", async () => {
     mockLoadConfig.mockReturnValue({
       ...defaultConfig(),

@@ -22,15 +22,25 @@ import picomatch from "picomatch";
 export function classifyChecks(checks: CheckRun[]): ClassifiedCheck[] {
   const config = loadConfig();
   const relevantEvents = new Set(config.checks.ciTriggerEvents);
-  const isIgnored = buildIgnoreMatcher(config.ignoreChecks ?? []);
+  const isIgnored = buildMatcher(config.ignoreChecks ?? []);
+  const isProtected = buildMatcher(config.actions.neverCancelRuns ?? []);
   return checks.map((c) =>
-    isIgnored(c.name) ? { ...c, category: "ignored" as const } : classify(c, relevantEvents),
+    isIgnored(c.name) && !isProtectedCheck(c, isProtected)
+      ? { ...c, category: "ignored" as const }
+      : classify(c, relevantEvents),
   );
 }
 
-function buildIgnoreMatcher(patterns: string[]): (name: string) => boolean {
+function buildMatcher(patterns: string[]): (name: string) => boolean {
   if (patterns.length === 0) return () => false;
   return picomatch(patterns, { nocase: true });
+}
+
+function isProtectedCheck(check: CheckRun, isProtected: (name: string) => boolean): boolean {
+  if (check.runId === null) return false;
+  return [check.workflowName, check.name]
+    .filter((name): name is string => name !== undefined && name.trim() !== "")
+    .some((name) => isProtected(name));
 }
 
 function classify(check: CheckRun, relevantEvents: Set<string>): ClassifiedCheck {

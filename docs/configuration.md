@@ -84,6 +84,8 @@ Matching is case-insensitive and treats a trailing `[bot]` suffix as equivalent 
 
 Top-level list of case-insensitive glob patterns for GitHub check/status context names Shepherd should ignore completely. Ignored checks are removed before CI classification, so they do not affect readiness, summaries, triage, stall detection, JSON output, or text output.
 
+For GitHub Actions check runs, `actions.neverCancelRuns` takes precedence over `ignoreChecks` when it matches the workflow name or raw check name for the same run. Use this when a protected long-running workflow has child job names that would otherwise match `ignoreChecks`.
+
 Use exact names for one context, or glob patterns when a service emits multiple related contexts:
 
 ```yaml
@@ -233,6 +235,8 @@ actions:
 ```
 
 Protected runs still count as failing or in-progress checks. Shepherd surfaces them under `## Protected runs` in text output and `fix.protectedRuns` in JSON so the agent knows they were deliberately left running.
+
+Protection also takes precedence over `ignoreChecks` for GitHub Actions check runs from the same workflow/run: a protected check is kept visible and can block ready-delay even if its raw job name matches `ignoreChecks`.
 
 ---
 
