@@ -64,6 +64,33 @@ describe("classifyChecks — ignoreChecks", () => {
     expect(verdict.ignoredNames).toEqual([]);
   });
 
+  it("does not ignore a GitHub Actions check in the same run as a protected sibling check", () => {
+    mockLoadConfig.mockReturnValue({
+      ...config(["Claude Code Review"]),
+      actions: { neverCancelRuns: ["Select final review"] },
+    });
+    const classified = classifyChecks([
+      {
+        ...baseCheck,
+        name: "Select final review",
+        runId: "run-final-review",
+        workflowName: "Final Code Review",
+      },
+      {
+        ...baseCheck,
+        name: "Claude Code Review",
+        status: "IN_PROGRESS",
+        conclusion: null,
+        runId: "run-final-review",
+        workflowName: "Final Code Review",
+      },
+    ]);
+    expect(classified.find((c) => c.name === "Claude Code Review")?.category).toBe("in_progress");
+    const verdict = getCiVerdict(classified);
+    expect(verdict.anyInProgress).toBe(true);
+    expect(verdict.ignoredNames).toEqual([]);
+  });
+
   it("still ignores the same raw check name when no protected workflow matches", () => {
     mockLoadConfig.mockReturnValue(config(["Claude Code Review"]));
     const classified = classifyChecks([

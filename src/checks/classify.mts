@@ -24,8 +24,9 @@ export function classifyChecks(checks: CheckRun[]): ClassifiedCheck[] {
   const relevantEvents = new Set(config.checks.ciTriggerEvents);
   const isIgnored = buildMatcher(config.ignoreChecks ?? []);
   const isProtected = buildMatcher(config.actions.neverCancelRuns ?? []);
+  const protectedRunIds = buildProtectedRunIds(checks, isProtected);
   return checks.map((c) =>
-    isIgnored(c.name) && !isProtectedCheck(c, isProtected)
+    isIgnored(c.name) && !isProtectedCheck(c, protectedRunIds)
       ? { ...c, category: "ignored" as const }
       : classify(c, relevantEvents),
   );
@@ -36,8 +37,25 @@ function buildMatcher(patterns: string[]): (name: string) => boolean {
   return picomatch(patterns, { nocase: true });
 }
 
-function isProtectedCheck(check: CheckRun, isProtected: (name: string) => boolean): boolean {
-  if (check.runId == null) return false;
+function buildProtectedRunIds(
+  checks: CheckRun[],
+  isProtected: (name: string) => boolean,
+): Set<string> {
+  const protectedRunIds = new Set<string>();
+  for (const check of checks) {
+    if (check.runId == null) continue;
+    if (protectedRunIds.has(check.runId) || checkMatchesProtection(check, isProtected)) {
+      protectedRunIds.add(check.runId);
+    }
+  }
+  return protectedRunIds;
+}
+
+function isProtectedCheck(check: CheckRun, protectedRunIds: Set<string>): boolean {
+  return check.runId != null && protectedRunIds.has(check.runId);
+}
+
+function checkMatchesProtection(check: CheckRun, isProtected: (name: string) => boolean): boolean {
   return [check.workflowName, check.name]
     .filter((name): name is string => typeof name === "string" && name.trim() !== "")
     .some((name) => isProtected(name));
