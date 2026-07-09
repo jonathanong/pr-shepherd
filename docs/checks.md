@@ -26,7 +26,14 @@ Each check run is assigned a `CheckCategory`:
 | `failing`       | `status === 'COMPLETED'` and `conclusion` in `{FAILURE, TIMED_OUT, CANCELLED, STARTUP_FAILURE, ACTION_REQUIRED}` |
 | `in_progress`   | `status` in `{IN_PROGRESS, QUEUED, WAITING, PENDING, REQUESTED}`                                                 |
 | `skipped`       | `conclusion` in `{SKIPPED, NEUTRAL}` — reported but do not block readiness                                       |
+| `ignored`       | Matches `ignoreChecks`, unless the same Actions run is protected by `actions.neverCancelRuns`                    |
 | `filtered`      | Triggered by a non-PR event (see event filter below)                                                             |
+
+### Ignore/protection precedence
+
+`ignoreChecks` matches the raw check name (`CheckRun.name` or `StatusContext.context`) and removes matching checks from the CI verdict. For GitHub Actions check runs, `actions.neverCancelRuns` takes precedence when it matches the workflow name or check name for that run. This lets long-running protected workflows remain visible and continue blocking readiness even when one of their raw job names also appears in `ignoreChecks`.
+
+`actions.neverCancelRuns` does not bypass the event filter. A protected workflow triggered by `workflow_dispatch`, `push`, or another non-PR event still needs that event listed in `checks.ciTriggerEvents` if it should count toward readiness.
 
 ### Event filter
 

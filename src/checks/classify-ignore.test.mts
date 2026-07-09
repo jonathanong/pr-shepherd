@@ -16,7 +16,11 @@ const baseCheck: CheckRun = {
 };
 
 function config(ignoreChecks: string[] = []) {
-  return { ignoreChecks, checks: { ciTriggerEvents: ["pull_request", "pull_request_target"] } };
+  return {
+    ignoreChecks,
+    checks: { ciTriggerEvents: ["pull_request", "pull_request_target"] },
+    actions: { neverCancelRuns: [] },
+  };
 }
 
 beforeEach(() => {
@@ -37,5 +41,86 @@ describe("classifyChecks — ignoreChecks", () => {
     expect(verdict.anyFailing).toBe(false);
     expect(verdict.anyInProgress).toBe(false);
     expect(verdict.ignoredNames).toEqual(["Kilo Code Review"]);
+  });
+
+  it("does not ignore a GitHub Actions check protected by workflow name", () => {
+    mockLoadConfig.mockReturnValue({
+      ...config(["Claude Code Review"]),
+      actions: { neverCancelRuns: ["Final Code Review"] },
+    });
+    const classified = classifyChecks([
+      {
+        ...baseCheck,
+        name: "Claude Code Review",
+        status: "IN_PROGRESS",
+        conclusion: null,
+        runId: "run-final-review",
+        workflowName: "Final Code Review",
+      },
+    ]);
+    expect(classified[0]?.category).toBe("in_progress");
+    const verdict = getCiVerdict(classified);
+    expect(verdict.anyInProgress).toBe(true);
+    expect(verdict.ignoredNames).toEqual([]);
+  });
+
+  it("does not ignore a GitHub Actions check in the same run as a protected sibling check", () => {
+    mockLoadConfig.mockReturnValue({
+      ...config(["Claude Code Review"]),
+      actions: { neverCancelRuns: ["Select final review"] },
+    });
+    const classified = classifyChecks([
+      {
+        ...baseCheck,
+        name: "Select final review",
+        runId: "run-final-review",
+        workflowName: "Final Code Review",
+      },
+      {
+        ...baseCheck,
+        name: "Claude Code Review",
+        status: "IN_PROGRESS",
+        conclusion: null,
+        runId: "run-final-review",
+        workflowName: "Final Code Review",
+      },
+    ]);
+    expect(classified.find((c) => c.name === "Claude Code Review")?.category).toBe("in_progress");
+    const verdict = getCiVerdict(classified);
+    expect(verdict.anyInProgress).toBe(true);
+    expect(verdict.ignoredNames).toEqual([]);
+  });
+
+  it("still ignores the same raw check name when no protected workflow matches", () => {
+    mockLoadConfig.mockReturnValue(config(["Claude Code Review"]));
+    const classified = classifyChecks([
+      {
+        ...baseCheck,
+        name: "Claude Code Review",
+        status: "IN_PROGRESS",
+        conclusion: null,
+        runId: "run-final-review",
+        workflowName: "Final Code Review",
+      },
+    ]);
+    expect(classified[0]?.category).toBe("ignored");
+  });
+
+  it("handles null workflow metadata while checking protected matches", () => {
+    mockLoadConfig.mockReturnValue({
+      ...config(["Claude Code Review"]),
+      actions: { neverCancelRuns: ["Final Code Review"] },
+    });
+    const classified = classifyChecks([
+      {
+        ...baseCheck,
+        name: "Claude Code Review",
+        status: "IN_PROGRESS",
+        conclusion: null,
+        runId: "run-final-review",
+        workflowName: null as unknown as string,
+      },
+    ]);
+    expect(classified[0]?.category).toBe("ignored");
   });
 });
