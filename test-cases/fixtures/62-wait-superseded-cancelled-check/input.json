@@ -1,0 +1,31 @@
+{
+  "batchData": {
+    "checks": [
+      {
+        "name": "CI / build",
+        "status": "COMPLETED",
+        "conclusion": "CANCELLED",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100",
+        "workflowId": "1",
+        "workflowName": "CI"
+      },
+      {
+        "name": "CI / tests",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/200",
+        "runId": "200",
+        "workflowId": "1",
+        "workflowName": "CI"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

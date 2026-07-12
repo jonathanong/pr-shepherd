@@ -10,6 +10,8 @@ import {
   buildRelevantChecks,
   buildActiveChecks,
   buildWaitLog,
+  buildSuppressedCheckFields,
+  buildTerminalCancelResult,
 } from "./helpers.mts";
 import { classifyReviewSummaries } from "./classify.mts";
 import { applyStallGuard } from "./stall.mts";
@@ -43,32 +45,9 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   const stallKey = { owner: repoOwner, repo: repoName, pr: prNumber };
 
   if (report.mergeStatus.state !== "OPEN") {
-    const state = report.mergeStatus.state.toLowerCase();
     await updateReadyDelay(report.pr, false, readyDelaySeconds, repoOwner, repoName);
     await clearStallState(stallKey);
-    return {
-      pr: report.pr,
-      repo: report.repo,
-      status: report.status,
-      mergeStateStatus: report.mergeStatus.mergeStateStatus,
-      mergeStatus: report.mergeStatus.status,
-      reviewDecision: report.mergeStatus.reviewDecision,
-      blockingBotReviewInProgress: report.mergeStatus.blockingBotReviewInProgress,
-      isDraft: report.mergeStatus.isDraft,
-      shouldCancel: true,
-      remainingSeconds: 0,
-      state: report.mergeStatus.state,
-      summary: buildSummary(report),
-      baseBranch: report.baseBranch,
-      branchProtection: report.branchProtection,
-      checks: buildRelevantChecks(report),
-      inProgressChecks: buildActiveChecks(report),
-      ...(report.checks.ignoredNames?.length ? { ignoredNames: report.checks.ignoredNames } : {}),
-      activity: report.activity,
-      action: "cancel",
-      reason: report.mergeStatus.state === "MERGED" ? "merged" : "closed",
-      log: `CANCEL: PR #${report.pr} is ${state} — stopping`,
-    };
+    return buildTerminalCancelResult(report);
   }
 
   const {
@@ -130,7 +109,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     branchProtection: report.branchProtection,
     checks: buildRelevantChecks(report),
     inProgressChecks: buildActiveChecks(report),
-    ...(report.checks.ignoredNames?.length ? { ignoredNames: report.checks.ignoredNames } : {}),
+    ...buildSuppressedCheckFields(report),
     activity: report.activity,
   };
 

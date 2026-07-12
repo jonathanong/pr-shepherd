@@ -60,6 +60,7 @@ export interface IterateResultSummary {
   skipped: number;
   filtered: number;
   inProgress: number;
+  superseded: number;
 }
 
 export interface IterateResultBase {
@@ -68,12 +69,9 @@ export interface IterateResultBase {
   status: ShepherdStatus;
   state: "OPEN" | "CLOSED" | "MERGED" | "UNKNOWN";
   mergeStateStatus: MergeStateStatus;
-  /**
-   * Shepherd-derived merge classification (from deriveMergeStatus). Use this
-   * (not raw mergeStateStatus) when gating on "is this PR merge-blocked?":
-   * it collapses BLOCKED+HAS_HOOKS into "BLOCKED" and accounts for
-   * blockingBotReviewInProgress and isDraft overrides.
-   */
+  // Shepherd-derived merge classification (from deriveMergeStatus). Use this (not raw
+  // mergeStateStatus) to gate on "is this PR merge-blocked?": collapses BLOCKED+HAS_HOOKS
+  // into "BLOCKED" and accounts for blockingBotReviewInProgress/isDraft overrides.
   mergeStatus: ShepherdMergeStatus;
   reviewDecision: ReviewDecision;
   blockingBotReviewInProgress: boolean;
@@ -96,6 +94,7 @@ export interface IterateResultBase {
   checks: RelevantCheck[];
   inProgressChecks?: ActiveCheck[];
   ignoredNames?: string[]; // Suppressed by ignoreChecks config; omitted when empty.
+  supersededNames?: string[]; // CANCELLED, superseded by a newer same-workflow run; omitted when empty.
   activity?: PrActivitySummary;
 }
 

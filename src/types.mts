@@ -1,6 +1,7 @@
 /** Shared type definitions for the shepherd CLI. */
 
 export * from "./types/github.mts";
+export * from "./types/check-classification.mts";
 export * from "./types/activity.mts";
 export * from "./types/review-thread.mts";
 export * from "./types/agent-thread.mts";

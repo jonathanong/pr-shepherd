@@ -165,7 +165,7 @@ export type RawContextNode =
           event: string;
           createdAt?: string;
           updatedAt?: string;
-          workflow?: { name: string } | null;
+          workflow?: { name: string; databaseId?: number | null } | null;
         } | null;
       } | null;
     }

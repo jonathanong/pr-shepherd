@@ -10,11 +10,10 @@ import type {
 import {
   mapAuthorType,
   parseCreatedAt,
-  extractRunId,
-  extractCheckRunSummary,
   mapStatusContextState,
   latestApprovedLogins,
   isReviewStale,
+  mapCheckRunNode,
 } from "./batch-parser-helpers.mts";
 import { buildPrActivitySummary } from "./activity.mts";
 import { parseBranchProtection } from "./branch-protection.mts";
@@ -116,34 +115,7 @@ export function parseRawPr(
 
   const checks = rawCheckNodes.flatMap<CheckRun>((node) => {
     if (node.__typename === "CheckRun") {
-      const event = node.checkSuite?.workflowRun?.event ?? null;
-      const workflowName = node.checkSuite?.workflowRun?.workflow?.name?.trim() || undefined;
-      const runId = extractRunId(node.detailsUrl);
-      const summary = extractCheckRunSummary(node.title, node.summary);
-      const rawCreatedAt = node.checkSuite?.workflowRun?.createdAt ?? node.checkSuite?.createdAt;
-      const rawUpdatedAt = node.checkSuite?.workflowRun?.updatedAt ?? node.checkSuite?.updatedAt;
-      const createdAtUnix = rawCreatedAt ? parseCreatedAt(rawCreatedAt) : undefined;
-      const startedAtUnix = node.startedAt ? parseCreatedAt(node.startedAt) : undefined;
-      const completedAtUnix = node.completedAt ? parseCreatedAt(node.completedAt) : undefined;
-      const updatedAtUnix = rawUpdatedAt ? parseCreatedAt(rawUpdatedAt) : undefined;
-      return [
-        {
-          id: node.id,
-          name: node.name,
-          status: node.status as CheckRun["status"],
-          conclusion: node.conclusion as CheckRun["conclusion"],
-          source: "check_run",
-          detailsUrl: node.detailsUrl ?? "",
-          event,
-          runId,
-          ...(workflowName !== undefined && { workflowName }),
-          ...(createdAtUnix !== undefined && { createdAtUnix }),
-          ...(startedAtUnix !== undefined && { startedAtUnix }),
-          ...(completedAtUnix !== undefined && { completedAtUnix }),
-          ...(updatedAtUnix !== undefined && { updatedAtUnix }),
-          ...(summary !== undefined && { summary }),
-        },
-      ];
+      return [mapCheckRunNode(node)];
     }
     if (node.__typename === "StatusContext") {
       const { status, conclusion } = mapStatusContextState(node.state);

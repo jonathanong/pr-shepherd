@@ -7,10 +7,16 @@
  *      to PR readiness.
  *   2. Drop checks with `conclusion == SKIPPED` or `conclusion == NEUTRAL` from the
  *      pass/fail tally. Report them as "skipped" for transparency but don't block on them.
+ *   3. Reclassify `CANCELLED` checks as "superseded" (non-blocking) when a newer run of
+ *      the same workflow exists on the same commit — this is GitHub's concurrency-group
+ *      eviction behavior, not a real failure. GitHub branch protection itself resolves
+ *      required status checks by latest-run-per-name and merges past these; mirroring
+ *      that here keeps shepherd's verdict aligned with what GitHub will actually allow.
  */
 
 import type { CheckRun, ClassifiedCheck } from "../types.mts";
 import { loadConfig } from "../config/load.mts";
+import { buildSupersededIndices } from "./superseded.mts";
 import picomatch from "picomatch";
 
 /**
@@ -25,11 +31,19 @@ export function classifyChecks(checks: CheckRun[]): ClassifiedCheck[] {
   const isIgnored = buildMatcher(config.ignoreChecks ?? []);
   const isProtected = buildMatcher(config.actions.neverCancelRuns ?? []);
   const protectedRunIds = buildProtectedRunIds(checks, isProtected);
-  return checks.map((c) =>
-    isIgnored(c.name) && !isProtectedCheck(c, protectedRunIds)
-      ? { ...c, category: "ignored" as const }
-      : classify(c, relevantEvents),
-  );
+  const supersededIndices = buildSupersededIndices(checks);
+  return checks.map((c, index) => {
+    if (isIgnored(c.name) && !isProtectedCheck(c, protectedRunIds)) {
+      return { ...c, category: "ignored" as const };
+    }
+    const classified = classify(c, relevantEvents);
+    // Only ever override a "failing" verdict (i.e. conclusion === CANCELLED, guaranteed by
+    // buildSupersededIndices below) — never touch filtered/skipped/passed classifications.
+    if (classified.category === "failing" && supersededIndices.has(index)) {
+      return { ...classified, category: "superseded" as const };
+    }
+    return classified;
+  });
 }
 
 function buildMatcher(patterns: string[]): (name: string) => boolean {
@@ -106,12 +120,18 @@ export interface CiVerdict {
   filteredNames: string[];
   /** Names of checks suppressed by the user's ignoreChecks config. */
   ignoredNames: string[];
+  /** Names of CANCELLED checks superseded by a newer run of the same workflow (concurrency-group eviction). */
+  supersededNames: string[];
 }
 
 /** Compute a high-level CI verdict from a list of classified checks. */
 export function getCiVerdict(classified: ClassifiedCheck[]): CiVerdict {
   const relevant = classified.filter(
-    (c) => c.category !== "filtered" && c.category !== "skipped" && c.category !== "ignored",
+    (c) =>
+      c.category !== "filtered" &&
+      c.category !== "skipped" &&
+      c.category !== "ignored" &&
+      c.category !== "superseded",
   );
   const anyInProgress = relevant.some((c) => c.category === "in_progress");
   const anyFailing = relevant.some((c) => c.category === "failing");
@@ -123,6 +143,17 @@ export function getCiVerdict(classified: ClassifiedCheck[]): CiVerdict {
   const ignoredNames = Array.from(
     new Set(classified.filter((c) => c.category === "ignored").map((c) => c.name)),
   );
+  const supersededNames = Array.from(
+    new Set(classified.filter((c) => c.category === "superseded").map((c) => c.name)),
+  );
 
-  return { allPassed, hasChecks, anyInProgress, anyFailing, filteredNames, ignoredNames };
+  return {
+    allPassed,
+    hasChecks,
+    anyInProgress,
+    anyFailing,
+    filteredNames,
+    ignoredNames,
+    supersededNames,
+  };
 }

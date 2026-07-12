@@ -90,6 +90,13 @@ describe("classifyChecks — conclusion mapping", () => {
     expect(c!.category).toBe("failing");
   });
 
+  it("classifies CANCELLED as failing when it has a workflow identity but no newer run exists", () => {
+    const [c] = classifyChecks([
+      makeCheck({ conclusion: "CANCELLED", workflowId: "999", runId: "100" }),
+    ]);
+    expect(c!.category).toBe("failing");
+  });
+
   it("classifies ACTION_REQUIRED as failing", () => {
     const [c] = classifyChecks([makeCheck({ conclusion: "ACTION_REQUIRED" })]);
     expect(c!.category).toBe("failing");
@@ -114,6 +121,8 @@ describe("classifyChecks — conclusion mapping", () => {
 // ---------------------------------------------------------------------------
 // getCiVerdict
 // ---------------------------------------------------------------------------
+// Concurrency-superseded CANCELLED classification and supersededNames verdict
+// tests live in classify-superseded.test.mts.
 
 describe("getCiVerdict", () => {
   it("returns allPassed true when all relevant checks passed", () => {

@@ -3,6 +3,7 @@ import { promisify } from "node:util";
 import { rest } from "../../github/http.mts";
 import type {
   ActiveCheck,
+  IterateResult,
   IterateResultBase,
   IterateResultSummary,
   RelevantCheck,
@@ -23,6 +24,47 @@ export function buildSummary(report: ShepherdReport): IterateResultSummary {
     skipped: report.checks.skipped.length,
     filtered: report.checks.filtered.length,
     inProgress: report.checks.inProgress.length,
+    superseded: report.checks.supersededNames?.length ?? 0,
+  };
+}
+
+/** Non-blocking check-name lists (ignored/superseded), omitted from the result when empty. */
+export function buildSuppressedCheckFields(
+  report: ShepherdReport,
+): Pick<IterateResultBase, "ignoredNames" | "supersededNames"> {
+  return {
+    ...(report.checks.ignoredNames?.length ? { ignoredNames: report.checks.ignoredNames } : {}),
+    ...(report.checks.supersededNames?.length
+      ? { supersededNames: report.checks.supersededNames }
+      : {}),
+  };
+}
+
+/** Build the `cancel` result for a merged/closed PR — caller has already updated ready-delay/stall state. */
+export function buildTerminalCancelResult(report: ShepherdReport): IterateResult {
+  const state = report.mergeStatus.state;
+  return {
+    pr: report.pr,
+    repo: report.repo,
+    status: report.status,
+    mergeStateStatus: report.mergeStatus.mergeStateStatus,
+    mergeStatus: report.mergeStatus.status,
+    reviewDecision: report.mergeStatus.reviewDecision,
+    blockingBotReviewInProgress: report.mergeStatus.blockingBotReviewInProgress,
+    isDraft: report.mergeStatus.isDraft,
+    shouldCancel: true,
+    remainingSeconds: 0,
+    state,
+    summary: buildSummary(report),
+    baseBranch: report.baseBranch,
+    branchProtection: report.branchProtection,
+    checks: buildRelevantChecks(report),
+    inProgressChecks: buildActiveChecks(report),
+    ...buildSuppressedCheckFields(report),
+    activity: report.activity,
+    action: "cancel",
+    reason: state === "MERGED" ? "merged" : "closed",
+    log: `CANCEL: PR #${report.pr} is ${state.toLowerCase()} — stopping`,
   };
 }
 
