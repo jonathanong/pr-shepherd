@@ -6,6 +6,11 @@
 
 import type { CheckRun } from "../types.mts";
 
+/** Grouping key for a check's workflow: numeric `workflowId`, falling back to `workflowName`. */
+function workflowKeyOf(check: CheckRun): string | undefined {
+  return check.workflowId ?? check.workflowName;
+}
+
 /**
  * Grouping key is `workflowId ?? workflowName` — the numeric GitHub Actions workflow database
  * ID when available, falling back to the display name. Checks with neither a workflow identity
@@ -24,7 +29,7 @@ export function buildSupersededIndices(checks: CheckRun[]): Set<number> {
   const runIdByIndex = new Map<number, number>();
   const maxRunIdByWorkflow = new Map<string, number>();
   checks.forEach((check, index) => {
-    const workflowKey = check.workflowId ?? check.workflowName;
+    const workflowKey = workflowKeyOf(check);
     if (workflowKey === undefined || check.runId === null) return;
     const runIdNum = Number(check.runId);
     if (!Number.isFinite(runIdNum)) return;
@@ -40,11 +45,13 @@ export function buildSupersededIndices(checks: CheckRun[]): Set<number> {
     if (check.conclusion !== "CANCELLED") return;
     const runIdNum = runIdByIndex.get(index);
     if (runIdNum === undefined) return;
-    // runIdByIndex is only ever populated alongside a maxRunIdByWorkflow entry for the same
-    // workflow key (see the loop above), so a hit here guarantees a map entry — at minimum
-    // this check's own runIdNum.
-    const workflowKey = check.workflowId ?? check.workflowName;
-    const maxRunId = maxRunIdByWorkflow.get(workflowKey!)!;
+    // workflowKeyOf(check) is guaranteed defined here, with a corresponding entry in
+    // maxRunIdByWorkflow: runIdByIndex is only ever populated in the loop above alongside a
+    // maxRunIdByWorkflow entry for that same workflow key (at minimum, this check's own
+    // runIdNum) — the two maps are always updated together for a given index. A defensive
+    // undefined-check here would therefore guard a branch no input can ever exercise, which
+    // would silently fail this repo's 100%-coverage requirement instead of catching a real bug.
+    const maxRunId = maxRunIdByWorkflow.get(workflowKeyOf(check)!)!;
     if (maxRunId > runIdNum) {
       superseded.add(index);
     }
