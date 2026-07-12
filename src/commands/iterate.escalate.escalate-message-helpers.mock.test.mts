@@ -8,6 +8,7 @@ import {
   buildEscalateHumanMessage,
   buildEscalateSuggestion,
   checkEscalateTriggers,
+  formatDurationApprox,
 } from "./iterate/escalate.mts";
 
 registerIterateHooks();
@@ -73,8 +74,20 @@ describe("escalate message helpers", () => {
     expect(message).toContain("(no location)");
     expect(message).toContain("review `r1`");
     expect(message).toContain("attempted 3 times");
-    expect(buildEscalateSuggestion(["stall-timeout"], "1")).toContain("1 minute —");
+    expect(buildEscalateSuggestion(["stall-timeout"], "1 minute")).toContain("1 minute —");
+    expect(buildEscalateSuggestion(["stall-timeout"])).toContain("60 minutes —");
     expect(buildEscalateSuggestion(["base-branch-unknown"])).toContain("base branch");
+  });
+
+  it("formats sub-minute durations as seconds and everything else as whole minutes", () => {
+    expect(formatDurationApprox(0)).toBe("0 seconds");
+    expect(formatDurationApprox(1)).toBe("1 second");
+    expect(formatDurationApprox(8)).toBe("8 seconds");
+    expect(formatDurationApprox(59)).toBe("59 seconds");
+    expect(formatDurationApprox(60)).toBe("1 minute");
+    expect(formatDurationApprox(125)).toBe("2 minutes");
+    expect(formatDurationApprox(3600)).toBe("60 minutes");
+    expect(formatDurationApprox(9960)).toBe("166 minutes");
   });
 
   it("uses zero attempts for missing thread attempt records", () => {

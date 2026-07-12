@@ -14,7 +14,7 @@ export async function handlePoll(args: string[]): Promise<void> {
   const cfg = loadConfig();
 
   const flags = parseIterateFlags(extra, cfg);
-  if (flags.readyDelaySuffix === null) return;
+  if (flags.readyDelaySuffix === null || flags.stallTimeoutSuffix === null) return;
 
   const intervalStr = getFlag(extra, "--interval");
   const intervalSuffix = validateSecondsDurationFlag(

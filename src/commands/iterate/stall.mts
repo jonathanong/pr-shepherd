@@ -1,6 +1,10 @@
 import { readStallState, writeStallState } from "../../state/iterate-stall.mts";
 import { toAgentThread, toAgentComment, toAgentStalledCheck } from "../../reporters/agent.mts";
-import { buildEscalateSuggestion, buildEscalateHumanMessage } from "./escalate.mts";
+import {
+  buildEscalateSuggestion,
+  buildEscalateHumanMessage,
+  formatDurationApprox,
+} from "./escalate.mts";
 import type {
   ClassifiedCheck,
   EscalateDetails,
@@ -65,14 +69,16 @@ export async function applyStallGuard(
     action: prospectiveResult.action,
   });
   if (stalledChecks.length > 0) {
-    const stalledMinutes = Math.floor(Math.max(...stalledChecks.map((c) => c.ageSeconds)) / 60);
+    const stalledDuration = formatDurationApprox(
+      Math.max(...stalledChecks.map((c) => c.ageSeconds)),
+    );
     const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: ["stall-timeout"],
       unresolvedThreads: [],
       ambiguousComments: [],
       changesRequestedReviews: [],
       stalledChecks,
-      suggestion: buildEscalateSuggestion(["stall-timeout"], String(stalledMinutes)),
+      suggestion: buildEscalateSuggestion(["stall-timeout"], stalledDuration),
     };
     return {
       ...base,
@@ -103,7 +109,7 @@ export async function applyStallGuard(
       // Stall detection disabled: refresh so re-enabling starts a fresh timer.
       await writeStallState(stallKey, { fingerprint, firstSeenAt: nowSeconds });
     } else if (ageSeconds >= stallTimeoutSeconds) {
-      const stalledMinutes = Math.floor(ageSeconds / 60);
+      const stalledDuration = formatDurationApprox(ageSeconds);
       const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
         triggers: ["stall-timeout"],
         unresolvedThreads: [...report.threads.actionable, ...report.threads.resolutionOnly].map(
@@ -111,7 +117,7 @@ export async function applyStallGuard(
         ),
         ambiguousComments: report.comments.actionable.map(toAgentComment),
         changesRequestedReviews: report.changesRequestedReviews,
-        suggestion: buildEscalateSuggestion(["stall-timeout"], String(stalledMinutes)),
+        suggestion: buildEscalateSuggestion(["stall-timeout"], stalledDuration),
       };
       return {
         ...base,

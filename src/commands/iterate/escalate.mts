@@ -49,6 +49,19 @@ interface BaseBranchLookup {
  * shell commands by `buildFixInstructions`, so we reject anything outside
  * `[A-Za-z0-9._/-]` to prevent shell injection.
  */
+/**
+ * Render a seconds count as an approximate human duration: "8 seconds" below one minute,
+ * otherwise whole minutes ("166 minutes", "60 minutes") — matching the precision the
+ * generic stall timer has always reported, just adding a seconds tier for sub-minute ages
+ * instead of always flooring to "0 minutes".
+ */
+export function formatDurationApprox(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  if (s < 60) return `${s} second${s === 1 ? "" : "s"}`;
+  const mins = Math.floor(s / 60);
+  return `${mins} minute${mins === 1 ? "" : "s"}`;
+}
+
 export function validateBaseBranch(raw: string): BaseBranchLookup {
   const trimmed = raw.trim();
   if (trimmed === "") {
@@ -94,9 +107,8 @@ export function buildEscalateHumanMessage(
         : c.detailsUrl
           ? `external \`${c.detailsUrl}\``
           : "no run ID";
-      const ageMinutes = Math.floor(c.ageSeconds / 60);
       lines.push(
-        `- check \`${c.name}\` — ${c.status} ${c.source}, ${target}, waiting ${ageMinutes} minute${ageMinutes === 1 ? "" : "s"}`,
+        `- check \`${c.name}\` — ${c.status} ${c.source}, ${target}, waiting ${formatDurationApprox(c.ageSeconds)}`,
       );
       if (c.summary) lines.push(`  > ${c.summary}`);
     }
@@ -142,8 +154,8 @@ export function buildEscalateHumanMessage(
 
 export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: string): string {
   if (triggers.includes("stall-timeout")) {
-    const mins = detail ?? "60";
-    return `No progress detected for ${mins} minute${parseInt(mins, 10) === 1 ? "" : "s"} — state has not changed. This is a manual checkpoint: inspect the PR and apply a manual fix before resuming.`;
+    const duration = detail ?? "60 minutes";
+    return `No progress detected for ${duration} — state has not changed. This is a manual checkpoint: inspect the PR and apply a manual fix before resuming.`;
   }
   if (triggers.includes("base-branch-unknown")) {
     const reason = detail ? ` (${detail})` : "";
