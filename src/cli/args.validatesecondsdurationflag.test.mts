@@ -76,6 +76,42 @@ describe("validateSecondsDurationFlag", () => {
   it("returns trimmed value", () => {
     expect(validateSecondsDurationFlag("cmd", "--interval", " 30s ", true)).toBe("30s");
   });
+
+  it("accepts a bare number under defaultUnit: minutes", () => {
+    expect(
+      validateSecondsDurationFlag("cmd", "--stall-timeout", "20", true, { defaultUnit: "m" }),
+    ).toBe("20");
+  });
+
+  it("accepts an explicit s suffix even under defaultUnit: minutes", () => {
+    expect(
+      validateSecondsDurationFlag("cmd", "--stall-timeout", "60s", true, { defaultUnit: "m" }),
+    ).toBe("60s");
+  });
+
+  it("rejects zero by default even with defaultUnit set", () => {
+    expect(
+      validateSecondsDurationFlag("cmd", "--stall-timeout", "0", true, { defaultUnit: "m" }),
+    ).toBeNull();
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("accepts zero when allowZero is set", () => {
+    expect(
+      validateSecondsDurationFlag("cmd", "--stall-timeout", "0", true, {
+        defaultUnit: "m",
+        allowZero: true,
+      }),
+    ).toBe("0");
+    expect(stderrSpy).not.toHaveBeenCalled();
+  });
+
+  it("uses a minutes-flavored error message and example under defaultUnit: minutes", () => {
+    expect(
+      validateSecondsDurationFlag("cmd", "--stall-timeout", "bad", true, { defaultUnit: "m" }),
+    ).toBeNull();
+    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("(minutes)"));
+  });
 });
 
 describe("parseDurationToSeconds", () => {
@@ -128,5 +164,22 @@ describe("parseDurationToSeconds", () => {
   it("returns default when integer overflows to Infinity", () => {
     const huge = "9".repeat(400);
     expect(parseDurationToSeconds(huge, 30)).toBe(30);
+  });
+
+  it("treats a bare number as minutes under defaultUnit: minutes", () => {
+    expect(parseDurationToSeconds("20", 0, { defaultUnit: "m" })).toBe(1200);
+  });
+
+  it("still honors an explicit s suffix under defaultUnit: minutes", () => {
+    expect(parseDurationToSeconds("60s", 0, { defaultUnit: "m" })).toBe(60);
+  });
+
+  it("returns default for zero unless allowZero is set", () => {
+    expect(parseDurationToSeconds("0", 42, { defaultUnit: "m" })).toBe(42);
+    expect(parseDurationToSeconds("0", 42, { defaultUnit: "m", allowZero: true })).toBe(0);
+  });
+
+  it("returns default for a well-formed number with an unrecognized unit", () => {
+    expect(parseDurationToSeconds("10xyz", 30)).toBe(30);
   });
 });

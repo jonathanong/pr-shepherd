@@ -115,7 +115,7 @@ The same timeout also applies to CI that has not started: relevant queued/reques
 
 The stall timer resets automatically whenever the fingerprint changes (new commit, resolved thread, different CI failure, etc.).
 
-Override per-invocation with `--stall-timeout <duration>` (e.g. `--stall-timeout 1h`, `--stall-timeout 0` to disable).
+Override per-invocation with `--stall-timeout <duration>` (e.g. `--stall-timeout 1h`, `--stall-timeout 90s`, `--stall-timeout 0` to disable). A bare number is minutes; an explicit `s`/`m`/`h` suffix always works.
 
 - **Raise** for workflows where CI can legitimately take longer than 60 minutes without any state change.
 - **Lower** if you want faster escalation when a PR gets stuck.

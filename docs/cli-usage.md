@@ -37,14 +37,14 @@ pr-shepherd poll 42 --format=json
 
 ### Iterate Flags
 
-| Flag                          | Default                       | Description                                                      |
-| ----------------------------- | ----------------------------- | ---------------------------------------------------------------- |
-| `--ready-delay <duration>`    | `watch.readyDelayMinutes`     | Settle window before a clean handoff cancels. Example: `15m`.    |
-| `--stall-timeout <duration>`  | `iterate.stallTimeoutMinutes` | Escalate repeated unchanged state or unstarted CI; `0` disables. |
-| `--no-auto-mark-ready`        | false                         | Do not convert draft PRs to ready for review.                    |
-| `--no-auto-cancel-actionable` | false                         | Do not cancel in-progress runs before actionable fixes.          |
-| `--format text\|json`         | `text`                        | Output Markdown text or JSON.                                    |
-| `--verbose`                   | false                         | Include verbose iterate fields; poll also prints detailed ticks. |
+| Flag                          | Default                       | Description                                                                                                     |
+| ----------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `--ready-delay <duration>`    | `watch.readyDelayMinutes`     | Settle window before a clean handoff cancels. Bare number = minutes. Example: `15m` or `900s`.                  |
+| `--stall-timeout <duration>`  | `iterate.stallTimeoutMinutes` | Escalate repeated unchanged state or unstarted CI. Bare number = minutes; `0` disables. Example: `1h` or `60s`. |
+| `--no-auto-mark-ready`        | false                         | Do not convert draft PRs to ready for review.                                                                   |
+| `--no-auto-cancel-actionable` | false                         | Do not cancel in-progress runs before actionable fixes.                                                         |
+| `--format text\|json`         | `text`                        | Output Markdown text or JSON.                                                                                   |
+| `--verbose`                   | false                         | Include verbose iterate fields; poll also prints detailed ticks.                                                |
 
 Use `actions.neverCancelRuns` in `.pr-shepherdrc.yml` for workflow/check names whose Actions workflow runs should never be cancelled, while keeping normal auto-cancel behavior for everything else.
 
@@ -57,7 +57,9 @@ Use `actions.neverCancelRuns` in `.pr-shepherdrc.yml` for workflow/check names w
 | `--quiet-status`        | `false` | Print only changed WAIT snapshots instead of one dot per tick.                      |
 | `--until-terminal`      | `false` | Continue through `WAIT` and `MARK_READY` until `FIX_CODE`, `CANCEL`, or `ESCALATE`. |
 
-Durations accept seconds, minutes, hours, or bare seconds: `30s`, `270s`, `4.5m`, `1h`, `45`.
+Durations accept `s`/`m`/`h` suffixes and decimals: `30s`, `4.5m`, `1h`. A bare number uses each flag's
+default unit — seconds for `--interval`/`--timeout` (e.g. `45`), minutes for `--ready-delay`/`--stall-timeout`
+(e.g. `15`) — but an explicit unit always works everywhere (e.g. `--stall-timeout 60s`).
 
 With `--until-terminal`, `--timeout` is ignored for `WAIT` ticks so the poll can stay attached until work or terminal state appears.
 

@@ -84,13 +84,15 @@ Usage:
   pr-shepherd iterate [PR] [iterate-flags]
 
 Iterate flags:
-  --ready-delay <duration>       Settle window before a clean PR cancels. Example: 15m.
-  --stall-timeout <duration>     Escalate repeated unchanged failures after this duration.
+  --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Example: 15m.
+  --stall-timeout <duration>     Escalate repeated unchanged failures after this duration. Bare number = minutes. 0 disables.
   --no-auto-mark-ready           Do not convert draft PRs to ready for review.
   --no-auto-cancel-actionable    Do not cancel in-progress runs before actionable fixes.
   --format text|json             Output Markdown text or JSON. Default: text.
   --verbose                      Include verbose iterate fields.
   --help, -h                     Print this help and exit before GitHub, git, config, or log I/O.
+
+Durations accept s/m/h suffixes and decimals: 30s, 4.5m, 1h. A bare number is minutes.
 
 Actions:
   WAIT        No immediate code action; recheck later or use pr-shepherd poll.
@@ -115,21 +117,22 @@ Usage:
   pr-shepherd poll [PR] [poll-flags] [iterate-flags]
 
 Poll flags:
-  --interval <duration>          Sleep between WAIT ticks. Default: 60s.
-  --timeout <duration>           Maximum wall-clock wait. Default: 4.5m.
+  --interval <duration>          Sleep between WAIT ticks. Bare number = seconds. Default: 60s.
+  --timeout <duration>           Maximum wall-clock wait. Bare number = seconds. Default: 4.5m.
   --quiet-status                 During WAIT polling, print only changed status snapshots.
   --until-terminal               Continue through WAIT/MARK_READY until FIX_CODE/CANCEL/ESCALATE.
 
 Forwarded iterate flags:
-  --ready-delay <duration>       Settle window before a clean PR cancels. Example: 15m.
-  --stall-timeout <duration>     Escalate repeated unchanged failures after this duration.
+  --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Example: 15m.
+  --stall-timeout <duration>     Escalate repeated unchanged failures after this duration. Bare number = minutes. 0 disables.
   --no-auto-mark-ready           Do not convert draft PRs to ready for review.
   --no-auto-cancel-actionable    Do not cancel in-progress runs before actionable fixes.
   --format text|json             Output Markdown text or JSON. Default: text.
   --verbose                      Include verbose iterate fields and detailed per-tick lines.
   --help, -h                     Print this help and exit before GitHub, git, config, or log I/O.
 
-Durations accept seconds, minutes, or hours: 30s, 4.5m, 1h, or bare seconds.
+Durations accept s/m/h suffixes and decimals: 30s, 4.5m, 1h. A bare number uses each flag's default
+unit (seconds for --interval/--timeout, minutes for --ready-delay/--stall-timeout).
 Each WAIT tick writes a single dot to stderr by default; --quiet-status prints only changed WAIT snapshots, and --verbose emits detailed per-tick lines.
 With --until-terminal, --timeout is ignored for WAIT ticks and polling continues until FIX_CODE, CANCEL, or ESCALATE.
 

@@ -1,3 +1,4 @@
+import type { DurationParseOptions } from "./exit-codes.mts";
 import { parseSecondsDurationParts } from "./exit-codes.mts";
 
 export function validateSecondsDurationFlag(
@@ -5,10 +6,13 @@ export function validateSecondsDurationFlag(
   flag: string,
   value: string | null,
   presentAsSeparateArg: boolean,
+  opts: DurationParseOptions = {},
 ): string | undefined | null {
+  const bareUnit = opts.defaultUnit === "m" ? "minutes" : "seconds";
+  const example = opts.defaultUnit === "m" ? "15m" : "30s";
   if (value === null) {
     if (presentAsSeparateArg) {
-      process.stderr.write(`${command}: ${flag} requires a value (e.g. ${flag} 30s)\n`);
+      process.stderr.write(`${command}: ${flag} requires a value (e.g. ${flag} ${example})\n`);
       process.exitCode = 1;
       return null;
     }
@@ -16,43 +20,13 @@ export function validateSecondsDurationFlag(
   }
   const trimmed = value.trim();
   if (trimmed.startsWith("--")) {
-    process.stderr.write(`${command}: ${flag} requires a value (e.g. ${flag} 30s)\n`);
+    process.stderr.write(`${command}: ${flag} requires a value (e.g. ${flag} ${example})\n`);
     process.exitCode = 1;
     return null;
   }
-  if (!parseSecondsDurationParts(trimmed)) {
+  if (!parseSecondsDurationParts(trimmed, opts)) {
     process.stderr.write(
-      `${command}: invalid ${flag}: ${value}. Expected a duration like 30s, 4.5m, 1h, or bare seconds (e.g. 30).\n`,
-    );
-    process.exitCode = 1;
-    return null;
-  }
-  return trimmed;
-}
-
-export function validateDurationFlag(
-  command: string,
-  flag: string,
-  value: string | null,
-  presentAsSeparateArg: boolean,
-): string | undefined | null {
-  if (value === null) {
-    if (presentAsSeparateArg) {
-      process.stderr.write(`${command}: ${flag} requires a value (e.g. ${flag} 15m)\n`);
-      process.exitCode = 1;
-      return null;
-    }
-    return undefined;
-  }
-  const trimmed = value.trim();
-  if (trimmed.startsWith("--")) {
-    process.stderr.write(`${command}: ${flag} requires a value (e.g. ${flag} 15m)\n`);
-    process.exitCode = 1;
-    return null;
-  }
-  if (!/^\d+(?:m|min|minutes?|h|hours?)?$/.test(trimmed)) {
-    process.stderr.write(
-      `${command}: invalid ${flag}: ${value}. Expected a duration like 5m, 2h, 10m, or 1h.\n`,
+      `${command}: invalid ${flag}: ${value}. Expected a duration like 30s, 4.5m, 1h, or a bare number (${bareUnit}).\n`,
     );
     process.exitCode = 1;
     return null;
