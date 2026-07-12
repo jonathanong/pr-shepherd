@@ -57,9 +57,10 @@ Use `actions.neverCancelRuns` in `.pr-shepherdrc.yml` for workflow/check names w
 | `--quiet-status`        | `false` | Print only changed WAIT snapshots instead of one dot per tick.                      |
 | `--until-terminal`      | `false` | Continue through `WAIT` and `MARK_READY` until `FIX_CODE`, `CANCEL`, or `ESCALATE`. |
 
-Durations accept `s`/`m`/`h` suffixes and decimals: `30s`, `4.5m`, `1h`. A bare number uses each flag's
-default unit — seconds for `--interval`/`--timeout` (e.g. `45`), minutes for `--ready-delay`/`--stall-timeout`
-(e.g. `15`) — but an explicit unit always works everywhere (e.g. `--stall-timeout 60s`).
+Durations accept `s`/`m`/`h` suffixes: `30s`, `4.5m`, `1h`. A bare number uses each flag's default unit
+— seconds for `--interval`/`--timeout` (e.g. `45`), minutes for `--ready-delay`/`--stall-timeout`
+(e.g. `15`) — but an explicit unit always works everywhere (e.g. `--stall-timeout 60s`). Decimals
+(`4.5m`) are allowed only with an explicit unit; a bare decimal like `4.5` is rejected.
 
 With `--until-terminal`, `--timeout` is ignored for `WAIT` ticks so the poll can stay attached until work or terminal state appears.
 

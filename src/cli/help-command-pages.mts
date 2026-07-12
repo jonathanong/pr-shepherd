@@ -92,7 +92,7 @@ Iterate flags:
   --verbose                      Include verbose iterate fields.
   --help, -h                     Print this help and exit before GitHub, git, config, or log I/O.
 
-Durations accept s/m/h suffixes and decimals: 30s, 4.5m, 1h. A bare number is minutes.
+Durations accept s/m/h suffixes: 30s, 4.5m, 1h. A bare number is minutes; decimals are allowed only with an explicit unit (4.5m).
 
 Actions:
   WAIT        No immediate code action; recheck later or use pr-shepherd poll.
@@ -131,8 +131,9 @@ Forwarded iterate flags:
   --verbose                      Include verbose iterate fields and detailed per-tick lines.
   --help, -h                     Print this help and exit before GitHub, git, config, or log I/O.
 
-Durations accept s/m/h suffixes and decimals: 30s, 4.5m, 1h. A bare number uses each flag's default
-unit (seconds for --interval/--timeout, minutes for --ready-delay/--stall-timeout).
+Durations accept s/m/h suffixes: 30s, 4.5m, 1h. A bare number uses each flag's default unit (seconds
+for --interval/--timeout, minutes for --ready-delay/--stall-timeout); decimals are allowed only with
+an explicit unit (4.5m).
 Each WAIT tick writes a single dot to stderr by default; --quiet-status prints only changed WAIT snapshots, and --verbose emits detailed per-tick lines.
 With --until-terminal, --timeout is ignored for WAIT ticks and polling continues until FIX_CODE, CANCEL, or ESCALATE.
 
