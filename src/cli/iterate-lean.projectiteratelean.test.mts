@@ -73,7 +73,7 @@ describe("projectIterateLean", () => {
   it("includes non-zero skipped and filtered counts", () => {
     const result = {
       ...makeIterateResult("wait"),
-      summary: { passing: 2, skipped: 1, filtered: 3, inProgress: 0 },
+      summary: { passing: 2, skipped: 1, filtered: 3, inProgress: 0, superseded: 0 },
     };
     const lean = projectIterateLean(result) as Record<string, unknown>;
     const summary = lean.summary as Record<string, unknown>;

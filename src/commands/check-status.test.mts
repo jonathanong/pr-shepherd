@@ -21,6 +21,7 @@ const passingVerdict: CiVerdict = {
   hasChecks: true,
   filteredNames: [],
   ignoredNames: [],
+  supersededNames: [],
 };
 
 describe("computeStatus", () => {

@@ -6,6 +6,8 @@
 
 CI check runs flow through three stages: supplement → classify → triage.
 
+**Note on cancelled workflows:** when a workflow's concurrency group evicts an in-flight run (a second push, or a second trigger of the same push, cancels the earlier run on the same commit), GitHub leaves behind `CANCELLED` check runs from the evicted run. See "Concurrency-superseded CANCELLED checks" below — these are reclassified as `superseded`, not `failing`.
+
 ### Stage 0: Supplement startup failures (`checks/triage.mts`)
 
 GitHub can complete a workflow run with `conclusion === "startup_failure"` before it creates any job or check-run context. Those runs may be absent from GraphQL `statusCheckRollup`, so Shepherd supplements the GraphQL check list with a REST Actions run query for the PR head SHA:
@@ -20,14 +22,15 @@ GitHub can complete a workflow run with `conclusion === "startup_failure"` befor
 
 Each check run is assigned a `CheckCategory`:
 
-| `CheckCategory` | Condition                                                                                                        |
-| --------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `passed`        | `status === 'COMPLETED'` and `conclusion === 'SUCCESS'`                                                          |
-| `failing`       | `status === 'COMPLETED'` and `conclusion` in `{FAILURE, TIMED_OUT, CANCELLED, STARTUP_FAILURE, ACTION_REQUIRED}` |
-| `in_progress`   | `status` in `{IN_PROGRESS, QUEUED, WAITING, PENDING, REQUESTED}`                                                 |
-| `skipped`       | `conclusion` in `{SKIPPED, NEUTRAL}` — reported but do not block readiness                                       |
-| `ignored`       | Matches `ignoreChecks`, unless the same Actions run is protected by `actions.neverCancelRuns`                    |
-| `filtered`      | Triggered by a non-PR event (see event filter below)                                                             |
+| `CheckCategory` | Condition                                                                                                                                                          |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `passed`        | `status === 'COMPLETED'` and `conclusion === 'SUCCESS'`                                                                                                            |
+| `failing`       | `status === 'COMPLETED'` and `conclusion` in `{FAILURE, TIMED_OUT, CANCELLED, STARTUP_FAILURE, ACTION_REQUIRED}`, and not reclassified as `superseded` (see below) |
+| `superseded`    | `conclusion === 'CANCELLED'` and a newer run of the same GitHub Actions workflow exists on the same commit (concurrency-group eviction) — see below                |
+| `in_progress`   | `status` in `{IN_PROGRESS, QUEUED, WAITING, PENDING, REQUESTED}`                                                                                                   |
+| `skipped`       | `conclusion` in `{SKIPPED, NEUTRAL}` — reported but do not block readiness                                                                                         |
+| `ignored`       | Matches `ignoreChecks`, unless the same Actions run is protected by `actions.neverCancelRuns`                                                                      |
+| `filtered`      | Triggered by a non-PR event (see event filter below)                                                                                                               |
 
 ### Ignore/protection precedence
 
@@ -41,6 +44,23 @@ Only checks triggered by events in `checks.ciTriggerEvents` (default: `pull_requ
 
 Filtered checks appear in `report.checks.filtered` and `report.checks.filteredNames` but do not block the READY verdict. The `blockedByFilteredCheck` flag is set when the merge state is BLOCKED and the only failing checks are filtered ones — this surfaces as a hint in the reporter output.
 
+### Concurrency-superseded CANCELLED checks
+
+GitHub Actions concurrency groups cancel an in-flight workflow run when a newer run of the same workflow starts on the same commit — most commonly when a push fires the workflow twice in quick succession, or a second push lands before the first run finishes. The evicted run's check runs complete with `conclusion === "CANCELLED"`, but GitHub branch protection resolves required status checks by **latest run per name** and merges past them once the newer run's checks pass. Treating every `CANCELLED` check as `failing` would make shepherd block on PRs GitHub itself considers mergeable.
+
+Shepherd groups check runs by workflow — keyed on the Actions workflow's numeric `databaseId` (`workflowId`), falling back to the workflow display name (`workflowName`) when the ID is unavailable — and tracks the highest numeric `runId` seen per workflow. A check is reclassified from `failing` to `superseded` only when **both**:
+
+- its own `conclusion` is `CANCELLED`, and
+- some other check sharing its workflow key has a strictly greater `runId`.
+
+This is deliberately narrow:
+
+- Only `CANCELLED` is ever reclassified. A real `FAILURE`/`TIMED_OUT`/`STARTUP_FAILURE` on an older run is never masked, even if a newer run exists (the newer run may not re-emit that check at all, e.g. under path filtering).
+- The **newest** run for a workflow is never superseded, even if it is itself cancelled (no newer run exists to supersede it) — that case stays `failing` so the agent can decide whether to rerun.
+- Checks with no workflow identity (`workflowId` and `workflowName` both absent) or no numeric `runId` — external `StatusContext` checks, and `STARTUP_FAILURE` synthetics from the Stage 0 supplement — never participate; they can neither be marked superseded nor count as evidence of a newer run.
+
+`superseded` checks are excluded from `getCiVerdict`'s `relevant` tally (same as `filtered`/`skipped`/`ignored`) and from `report.checks.failing` — they are never triaged (no jobs/logs API call) and never appear under `## Failing checks`. They are surfaced only as a `supersededNames` list for transparency.
+
 ### Empty-check set
 
 When all checks are filtered or skipped (e.g., docs-only PRs that only trigger push checks), `getCiVerdict` returns `allPassed: true`. This prevents shepherd from blocking READY on PRs that have no relevant CI.
@@ -49,10 +69,12 @@ When all checks are filtered or skipped (e.g., docs-only PRs that only trigger p
 
 Returns:
 
-- `anyFailing` — true if any non-filtered check is in the `failing` category
-- `anyInProgress` — true if any non-filtered check is in the `in_progress` category
-- `allPassed` — true if no failing and no in-progress non-filtered checks
+- `anyFailing` — true if any non-filtered, non-superseded check is in the `failing` category
+- `anyInProgress` — true if any non-filtered, non-superseded check is in the `in_progress` category
+- `allPassed` — true if no failing and no in-progress relevant checks
 - `filteredNames` — names of filtered checks
+- `ignoredNames` — names of checks suppressed by `ignoreChecks`
+- `supersededNames` — names of `CANCELLED` checks reclassified as `superseded`
 
 ## Stage 2: Triage (`checks/triage.mts`)
 
@@ -79,6 +101,8 @@ Checks with `conclusion === "CANCELLED"` or `conclusion === "STARTUP_FAILURE"` s
 | `filtered`               | Checks excluded by event filter                                                                                               |
 | `filteredNames`          | Names of filtered checks (for reporter display)                                                                               |
 | `blockedByFilteredCheck` | True when BLOCKED state is caused by a filtered check                                                                         |
+| `ignoredNames`           | Names of checks suppressed by `ignoreChecks`; omitted when empty                                                              |
+| `supersededNames`        | Names of `CANCELLED` checks reclassified as `superseded`; omitted when empty                                                  |
 
 Pending CI checks also carry raw timing when GitHub exposes it:
 

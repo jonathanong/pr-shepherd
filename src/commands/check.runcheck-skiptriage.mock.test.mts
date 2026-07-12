@@ -73,6 +73,31 @@ describe("runCheck — skipTriage", () => {
     expect(mockTriageFailingChecks).not.toHaveBeenCalled();
   });
 
+  it("does not triage a CANCELLED check superseded by a newer run of the same workflow", async () => {
+    const supersededCheck = makeCheck({
+      name: "build",
+      conclusion: "CANCELLED",
+      workflowId: "1",
+      runId: "100",
+    });
+    const passingCheck = makeCheck({
+      name: "tests",
+      conclusion: "SUCCESS",
+      workflowId: "1",
+      runId: "200",
+    });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ checks: [supersededCheck, passingCheck] }),
+    });
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.checks.failing).toEqual([]);
+    expect(report.checks.passing.map((c) => c.name)).toEqual(["tests"]);
+    expect(report.checks.supersededNames).toEqual(["build"]);
+    expect(mockTriageFailingChecks).not.toHaveBeenCalled();
+  });
+
   it("treats UNSTABLE with only ignored failures as ready without actionable failing checks", async () => {
     mockLoadConfig.mockReturnValue({
       ...defaultConfig(),

@@ -205,6 +205,7 @@ query BatchPr(
                         updatedAt
                         workflow {
                           name
+                          databaseId
                         }
                       }
                     }

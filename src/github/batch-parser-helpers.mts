@@ -1,4 +1,12 @@
-import type { AuthorType, CheckConclusion, CheckStatus, Review, ReviewThread } from "../types.mts";
+import type {
+  AuthorType,
+  CheckConclusion,
+  CheckRun,
+  CheckStatus,
+  Review,
+  ReviewThread,
+} from "../types.mts";
+import type { RawContextNode } from "./batch-raw-types.mts";
 import { normalizeAuthorType } from "../comments/authors.mts";
 
 export function mapAuthorType(
@@ -13,13 +21,52 @@ export function parseCreatedAt(iso: string): number {
   return Number.isFinite(ms) ? Math.floor(ms / 1000) : 0;
 }
 
-export function extractRunId(url: string | undefined | null): string | null {
+function extractRunId(url: string | undefined | null): string | null {
   if (!url) return null;
   const m = /\/runs\/(\d+)/.exec(url);
   return m ? (m[1] ?? null) : null;
 }
 
-export function extractCheckRunSummary(
+/** Stringify a GraphQL Workflow.databaseId, when present, for use as a check-grouping key. */
+function resolveWorkflowId(databaseId: number | null | undefined): string | undefined {
+  return databaseId !== null && databaseId !== undefined ? String(databaseId) : undefined;
+}
+
+/** Map a GraphQL CheckRun context node to a CheckRun. */
+export function mapCheckRunNode(
+  node: Extract<RawContextNode, { __typename: "CheckRun" }>,
+): CheckRun {
+  const event = node.checkSuite?.workflowRun?.event ?? null;
+  const workflowName = node.checkSuite?.workflowRun?.workflow?.name?.trim() || undefined;
+  const workflowId = resolveWorkflowId(node.checkSuite?.workflowRun?.workflow?.databaseId);
+  const runId = extractRunId(node.detailsUrl);
+  const summary = extractCheckRunSummary(node.title, node.summary);
+  const rawCreatedAt = node.checkSuite?.workflowRun?.createdAt ?? node.checkSuite?.createdAt;
+  const rawUpdatedAt = node.checkSuite?.workflowRun?.updatedAt ?? node.checkSuite?.updatedAt;
+  const createdAtUnix = rawCreatedAt ? parseCreatedAt(rawCreatedAt) : undefined;
+  const startedAtUnix = node.startedAt ? parseCreatedAt(node.startedAt) : undefined;
+  const completedAtUnix = node.completedAt ? parseCreatedAt(node.completedAt) : undefined;
+  const updatedAtUnix = rawUpdatedAt ? parseCreatedAt(rawUpdatedAt) : undefined;
+  return {
+    id: node.id,
+    name: node.name,
+    status: node.status as CheckRun["status"],
+    conclusion: node.conclusion as CheckRun["conclusion"],
+    source: "check_run",
+    detailsUrl: node.detailsUrl ?? "",
+    event,
+    runId,
+    ...(workflowName !== undefined && { workflowName }),
+    ...(workflowId !== undefined && { workflowId }),
+    ...(createdAtUnix !== undefined && { createdAtUnix }),
+    ...(startedAtUnix !== undefined && { startedAtUnix }),
+    ...(completedAtUnix !== undefined && { completedAtUnix }),
+    ...(updatedAtUnix !== undefined && { updatedAtUnix }),
+    ...(summary !== undefined && { summary }),
+  };
+}
+
+function extractCheckRunSummary(
   title: string | null | undefined,
   summary: string | null | undefined,
 ): string | undefined {

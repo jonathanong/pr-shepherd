@@ -127,6 +127,12 @@ describe("main — iterate text format", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     expect(getStdout()).toContain("**ignored** `Kilo Code Review`");
   });
+  it("cancel text: supersededNames appear in header when present", async () => {
+    const base = makeIterateResult("cancel") as Extract<IterateResult, { action: "cancel" }>;
+    mockRunIterate.mockResolvedValue({ ...base, supersededNames: ["CI / build"] });
+    await main(["node", "shepherd", "iterate", "42"]);
+    expect(getStdout()).toContain("**superseded** `CI / build`");
+  });
   it("cancel text: each CancelReason value appears in the heading", async () => {
     const reasons: CancelReason[] = ["merged", "closed", "ready-delay-elapsed"];
     for (const reason of reasons) {

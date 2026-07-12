@@ -43,6 +43,7 @@ export function projectIterateLean(
       ...(result.summary.skipped > 0 && { skipped: result.summary.skipped }),
       ...(result.summary.filtered > 0 && { filtered: result.summary.filtered }),
       ...(result.summary.inProgress > 0 && { inProgress: result.summary.inProgress }),
+      ...(result.summary.superseded > 0 && { superseded: result.summary.superseded }),
     },
     ...(result.status === "READY" &&
       result.remainingSeconds > 0 && {
@@ -67,6 +68,9 @@ export function projectIterateLean(
     }),
     ...((result.ignoredNames?.length ?? 0) > 0 && {
       ignoredNames: result.ignoredNames,
+    }),
+    ...((result.supersededNames?.length ?? 0) > 0 && {
+      supersededNames: result.supersededNames,
     }),
   };
 

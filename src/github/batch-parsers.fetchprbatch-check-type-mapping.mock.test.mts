@@ -11,7 +11,7 @@ import { fetchPrBatch } from "./batch.mts";
 registerHooks();
 
 describe("fetchPrBatch — check type mapping", () => {
-  it("maps CheckRun nodes with event, runId, and workflowName", async () => {
+  it("maps CheckRun nodes with event, runId, workflowName, and workflowId", async () => {
     const pr = makeRawPr({
       commits: {
         nodes: [
@@ -31,7 +31,7 @@ describe("fetchPrBatch — check type mapping", () => {
                       checkSuite: {
                         workflowRun: {
                           event: "pull_request",
-                          workflow: { name: "Final Code Review" },
+                          workflow: { name: "Final Code Review", databaseId: 4242 },
                         },
                       },
                     },
@@ -52,6 +52,7 @@ describe("fetchPrBatch — check type mapping", () => {
       event: "pull_request",
       runId: "9999",
       workflowName: "Final Code Review",
+      workflowId: "4242",
     });
   });
   it("maps StatusContext SUCCESS → COMPLETED/SUCCESS", async () => {

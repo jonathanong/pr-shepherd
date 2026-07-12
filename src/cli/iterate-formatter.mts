@@ -77,12 +77,13 @@ export function formatIterateResult(
     } else if (result.mergeStatus === "CONFLICTS" && result.baseBranch) {
       verboseBranch = ` · **branch** conflicts with \`origin/${result.baseBranch}\``;
     }
-    summaryLine = `**summary** ${result.summary.passing} passing, ${result.summary.skipped} skipped, ${result.summary.filtered} filtered, ${result.summary.inProgress} inProgress · **remainingSeconds** ${result.remainingSeconds} · **blockingBotReviewInProgress** ${result.blockingBotReviewInProgress} · **isDraft** ${result.isDraft} · **shouldCancel** ${result.shouldCancel}${verboseBranch}`;
+    summaryLine = `**summary** ${result.summary.passing} passing, ${result.summary.skipped} skipped, ${result.summary.filtered} filtered, ${result.summary.inProgress} inProgress, ${result.summary.superseded} superseded · **remainingSeconds** ${result.remainingSeconds} · **blockingBotReviewInProgress** ${result.blockingBotReviewInProgress} · **isDraft** ${result.isDraft} · **shouldCancel** ${result.shouldCancel}${verboseBranch}`;
   } else {
     const counts = [`${result.summary.passing} passing`];
     if (result.summary.skipped > 0) counts.push(`${result.summary.skipped} skipped`);
     if (result.summary.filtered > 0) counts.push(`${result.summary.filtered} filtered`);
     if (result.summary.inProgress > 0) counts.push(`${result.summary.inProgress} inProgress`);
+    if (result.summary.superseded > 0) counts.push(`${result.summary.superseded} superseded`);
     const segs = [`**summary** ${counts.join(", ")}`];
     if (result.status === "READY" && result.remainingSeconds > 0) {
       segs.push(`**remainingSeconds** ${result.remainingSeconds}`);
@@ -131,6 +132,10 @@ export function formatIterateResult(
     const names = result.ignoredNames.map((n) => "`" + n + "`").join(", ");
     headerLines.push(`**ignored** ${names}`);
   }
+  if (result.supersededNames && result.supersededNames.length > 0) {
+    const names = result.supersededNames.map((n) => "`" + n + "`").join(", ");
+    headerLines.push(`**superseded** ${names}`);
+  }
   const activityLine = formatActivityLine(result);
   if (activityLine) headerLines.push(activityLine);
   const header = headerLines.join("\n");
@@ -156,6 +161,10 @@ export function formatIterateResult(
       if (result.ignoredNames && result.ignoredNames.length > 0) {
         const ignoredStr = result.ignoredNames.map((n) => "`" + n + "`").join(", ");
         cancelHeaderLines.push(`**ignored** ${ignoredStr}`);
+      }
+      if (result.supersededNames && result.supersededNames.length > 0) {
+        const supersededStr = result.supersededNames.map((n) => "`" + n + "`").join(", ");
+        cancelHeaderLines.push(`**superseded** ${supersededStr}`);
       }
       if (activityLine) cancelHeaderLines.push(activityLine);
       return joinSections([

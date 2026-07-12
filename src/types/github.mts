@@ -1,7 +1,8 @@
 // GitHub primitives, check runs, review threads, and batch PR data types.
+// Check classification types (CheckCategory/ClassifiedCheck/TriagedCheck) live in
+// check-classification.mts to stay under the file-length cap.
 
 import type { ReviewThreadComment } from "./review-thread.mts";
-import type { CheckAnnotation } from "./check-annotations.mts";
 import type { PrActivitySummary } from "./activity.mts";
 
 // ---------------------------------------------------------------------------
@@ -62,25 +63,7 @@ export interface CheckRun {
   summary?: string;
   /** Workflow display name for GitHub Actions check runs, when GraphQL exposes it. */
   workflowName?: string;
-}
-
-type CheckCategory = "passed" | "failing" | "in_progress" | "skipped" | "filtered" | "ignored";
-
-export interface ClassifiedCheck extends CheckRun {
-  category: CheckCategory;
-}
-
-export interface TriagedCheck extends ClassifiedCheck {
-  /** Workflow display name (e.g. `"CI"`). Populated when available from the jobs API; may be `undefined` on fetch failure or when no matching job is found. */
-  workflowName?: string;
-  /** Name of the matched job (e.g. `"tests (ubuntu)"`). Distinct from the check name for matrix builds. */
-  jobName?: string;
-  /** Name of the first failed step in the matched job (e.g. `"Run tests"`). */
-  failedStep?: string;
-  /** Bounded raw excerpt from the matched failed job log, when GitHub exposes one. */
-  logExcerpt?: string;
-  /** Inline annotations attached to this failing check run, surfaced once per PR. */
-  annotations?: CheckAnnotation[];
+  workflowId?: string; // Stable workflow database ID (stringified); groups runs across concurrency evictions.
 }
 
 export interface ReviewThread {

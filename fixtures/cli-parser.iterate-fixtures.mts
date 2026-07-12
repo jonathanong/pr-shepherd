@@ -13,7 +13,7 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
     isDraft: false,
     shouldCancel: false,
     remainingSeconds: 60,
-    summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 1 },
+    summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 1, superseded: 0 },
     baseBranch: "main",
     branchProtection: null,
     checks: [] as RelevantCheck[],

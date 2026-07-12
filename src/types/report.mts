@@ -1,7 +1,5 @@
 import type {
-  ClassifiedCheck,
   AuthorType,
-  TriagedCheck,
   ReviewThread,
   PrComment,
   Review,
@@ -9,6 +7,7 @@ import type {
   CheckConclusion,
   SuggestionBlock,
 } from "./github.mts";
+import type { ClassifiedCheck, TriagedCheck } from "./check-classification.mts";
 import type { AgentThreadComment } from "./agent-thread.mts";
 import type { CheckAnnotation } from "./check-annotations.mts";
 import type { PrActivitySummary } from "./activity.mts";
@@ -54,8 +53,8 @@ export interface ShepherdReport {
     filtered: ClassifiedCheck[];
     filteredNames: string[];
     blockedByFilteredCheck: boolean;
-    /** Names of checks suppressed by the user's ignoreChecks config. Omitted when empty. */
-    ignoredNames?: string[];
+    ignoredNames?: string[]; // Suppressed by ignoreChecks config; omitted when empty.
+    supersededNames?: string[]; // CANCELLED, superseded by a newer same-workflow run; omitted when empty.
   };
   threads: {
     actionable: ReviewThread[];

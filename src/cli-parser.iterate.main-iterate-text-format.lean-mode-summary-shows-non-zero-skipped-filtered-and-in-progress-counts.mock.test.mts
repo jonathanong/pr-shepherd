@@ -14,7 +14,7 @@ describe("main — iterate text format", () => {
   it("lean mode: summary shows non-zero skipped, filtered, and in-progress counts", async () => {
     const result = {
       ...makeIterateResult("wait"),
-      summary: { passing: 2, skipped: 1, filtered: 1, inProgress: 3 },
+      summary: { passing: 2, skipped: 1, filtered: 1, inProgress: 3, superseded: 0 },
     };
     mockRunIterate.mockResolvedValue(result);
     await main(["node", "shepherd", "iterate", "42"]);
