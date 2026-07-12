@@ -30,7 +30,7 @@ export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   }
   if (hasCancelled) {
     parts.push(
-      "for `[conclusion: CANCELLED]` entries: these are not concurrency-superseded (superseded CANCELLED checks are excluded from this section and reported under `**superseded**` instead) — rerun with `gh run rerun <runId>` if the cancellation looks unintended, otherwise treat as resolved — do NOT confuse with IDs under `## Cancelled runs`",
+      "for `[conclusion: CANCELLED]` entries: these are not concurrency-superseded (superseded CANCELLED checks are excluded from this section and reported under `**superseded**` instead) — rerun with `gh run rerun <runId>` unless you are already pushing new commits this tick for other reasons, in which case the fresh run naturally supersedes it; do not silently treat a required CANCELLED check as resolved — do NOT confuse with IDs under `## Cancelled runs`",
     );
   }
   if (hasStartupFailure) {
