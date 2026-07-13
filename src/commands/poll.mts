@@ -109,10 +109,17 @@ export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> 
   const untilTerminal = untilTerminalOpt === true;
   let dotsPrinted = false;
   let lastWaitSignature: string | null = null;
+  // When prNumber is omitted, iterateOpts.prNumber starts undefined and each tick would otherwise
+  // re-infer the PR from the current branch. That inference query only matches OPEN PRs, so once
+  // the monitored PR merges it returns nothing and runIterate throws instead of reporting the
+  // terminal CANCEL/merged result. Pin the PR resolved by the first tick so later ticks target it
+  // directly and never re-run branch discovery.
+  let prNumber = opts.prNumber;
 
   while (true) {
     tick += 1;
-    lastResult = await runIterate(iterateOpts);
+    lastResult = await runIterate({ ...iterateOpts, prNumber });
+    prNumber ??= lastResult.pr;
     if (lastResult.action !== "wait" && !(untilTerminal && lastResult.action === "mark_ready")) {
       break;
     }
