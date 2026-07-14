@@ -16,6 +16,8 @@ registerIterateHooks();
 
 // ---------------------------------------------------------------------------
 // Review summary minimize — issue #70, issue #313
+// (first-look-specific cases live in
+//  iterate.classify.runiterate-review-summary-first-look-minimize.mock.test.mts)
 // ---------------------------------------------------------------------------
 
 describe("runIterate — review summary auto-minimize", () => {
@@ -155,27 +157,6 @@ describe("runIterate — review summary auto-minimize", () => {
     expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BOT"]);
     expect(result.action).toBe("wait");
   });
-  it("surfaces first-look summaries without minimization when minimizeComments=none", async () => {
-    const cfg = defaultConfig();
-    cfg.iterate.minimizeComments = "none";
-    mockLoadConfig.mockReturnValue(cfg);
-    const summary = { id: "PRR_FL", author: "alice", authorType: "User" as const, body: "FYI" };
-    mockRunCheck.mockResolvedValue(makeReport({ firstLookSummaries: [summary] }));
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
-
-    const result = await runIterate(makeOpts());
-
-    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.firstLookSummaries).toEqual([summary]);
-    expect(result.fix.reviewSummaryIds).toEqual([]);
-    expect(result.fix.resolveCommand.hasMutations).toBe(false);
-  });
   it("does not duplicate a rule-auto-resolve ID that already self-minimized as a seen summary", async () => {
     // botSummary is both an already-seen summary (self-minimize eligible) and
     // rule-matched (ruleAutoResolveReviewSummaryIds) — the two sets must stay
@@ -196,23 +177,5 @@ describe("runIterate — review summary auto-minimize", () => {
 
     expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BOT"]);
     expect(result.action).toBe("wait");
-  });
-  it("surfaces a first-look bot summary body under fix_code and includes it in the resolve command", async () => {
-    mockRunCheck.mockResolvedValue(makeReport({ firstLookSummaries: [botSummary] }));
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
-
-    const result = await runIterate(makeOpts());
-
-    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.firstLookSummaries).toEqual([botSummary]);
-    expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
-    expect(result.fix.resolveCommand.argv).toContain("--minimize-comment-ids");
-    expect(result.fix.resolveCommand.argv).toContain("PRR_BOT");
   });
 });
