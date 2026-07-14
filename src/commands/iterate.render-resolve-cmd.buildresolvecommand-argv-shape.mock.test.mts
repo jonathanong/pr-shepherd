@@ -98,7 +98,7 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
           autoResolveErrors: [],
           firstLook: [],
         },
-        reviewSummaries: [makeReview("PRR_DUP", "copilot", "bot summary")],
+        firstLookSummaries: [makeReview("PRR_DUP", "copilot", "bot summary")],
         changesRequestedReviews: [
           {
             id: "PRR_DUP",

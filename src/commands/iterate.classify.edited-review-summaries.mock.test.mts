@@ -4,6 +4,7 @@ import {
   makeOpts,
   makeReport,
   makeReview,
+  mockAutoMinimizeComments,
   mockRunCheck,
   mockUpdateReadyDelay,
 } from "../../test-helpers/commands/iterate-test-support.mts";
@@ -16,8 +17,10 @@ registerIterateHooks();
 // ---------------------------------------------------------------------------
 
 describe("runIterate — review summary auto-minimize", () => {
-  it("editedSummaries are surfaced in fix_code but excluded from reviewSummaryIds (not re-minimized)", async () => {
-    // A seen summary triggers fix_code (it needs minimizing); edited summary must NOT join the queue.
+  it("editedSummaries are surfaced in fix_code (triggered by the edit); the seen summary self-minimizes instead of joining the queue", async () => {
+    // The edited summary triggers fix_code on its own; the seen summary has no new
+    // content to surface, so the CLI self-minimizes it in-process (issue #313)
+    // rather than routing it through the agent-facing resolve command.
     const seenSummary = makeReview("PRR_SEEN", "copilot", "Old review.");
     const editedSummary = makeReview("PRR_ED", "copilot", "Updated.");
     mockRunCheck.mockResolvedValue(
@@ -31,12 +34,12 @@ describe("runIterate — review summary auto-minimize", () => {
 
     const result = await runIterate(makeOpts());
 
+    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_SEEN"]);
     expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") return;
 
     expect(result.fix.editedSummaries).toEqual([editedSummary]);
-    expect(result.fix.reviewSummaryIds).toContain("PRR_SEEN");
-    expect(result.fix.reviewSummaryIds).not.toContain("PRR_ED");
+    expect(result.fix.reviewSummaryIds).toEqual([]);
     expect(result.fix.instructions.join("\n")).toContain("edited since first look");
   });
   it("surfaces body in firstLookSummaries when summary comes from report.firstLookSummaries", async () => {

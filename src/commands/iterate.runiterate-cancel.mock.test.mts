@@ -29,7 +29,7 @@ describe("runIterate — cancel", () => {
   it("does not cancel from a stale ready-delay marker when READY has fix_code work", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
-        reviewSummaries: [
+        firstLookSummaries: [
           {
             id: "review-1",
             author: "reviewer-bot",

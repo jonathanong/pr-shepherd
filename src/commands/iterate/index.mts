@@ -18,6 +18,7 @@ import { applyStallGuard } from "./stall.mts";
 import { clearStallState } from "../../state/iterate-stall.mts";
 import { handleFixCode } from "./fix-code.mts";
 import { normalizeBotUsernames } from "../../comments/authors.mts";
+import { autoMinimizeComments } from "../../comments/resolve.mts";
 import type { IterateCommandOptions, IterateResult, IterateResultBase } from "../../types.mts";
 
 export async function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
@@ -52,6 +53,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
 
   const {
     minimizeIds: reviewSummaryIds,
+    selfMinimizeIds,
     firstLookSummaries,
     editedSummaries,
     surfacedApprovals,
@@ -68,6 +70,11 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     [...report.threads.actionable, ...report.threads.resolutionOnly],
     report.ruleAutoResolveReviewSummaryIds,
   );
+  // Already-seen review summaries have no new content to surface — minimize them
+  // in-process so they never register as agent-facing actionable work (#313).
+  if (selfMinimizeIds.length > 0) {
+    await autoMinimizeComments(selfMinimizeIds);
+  }
   const hasActionableWork =
     report.threads.actionable.length > 0 ||
     report.threads.resolutionOnly.length > 0 ||

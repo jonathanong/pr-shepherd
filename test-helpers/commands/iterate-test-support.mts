@@ -36,6 +36,10 @@ vi.mock("../../src/state/iterate-stall.mts", () => ({
   writeStallState: vi.fn().mockResolvedValue(undefined),
   clearStallState: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("../../src/comments/resolve.mts", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  autoMinimizeComments: vi.fn().mockResolvedValue({ minimized: [], errors: [] }),
+}));
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../../src/config/load.mts", () => ({ loadConfig: mockLoadConfig }));
@@ -43,6 +47,7 @@ vi.mock("../../src/config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 import { runCheck } from "../../src/commands/check.mts";
 import { updateReadyDelay } from "../../src/commands/ready-delay.mts";
 import { getCurrentPrNumber } from "../../src/github/client.mts";
+import { autoMinimizeComments } from "../../src/comments/resolve.mts";
 import { readFixAttempts, writeFixAttempts } from "../../src/state/fix-attempts.mts";
 import {
   clearStallState,
@@ -64,6 +69,7 @@ import type { IterateCommandOptions, Review, ShepherdReport } from "../../src/ty
 const mockRunCheck = vi.mocked(runCheck);
 const mockUpdateReadyDelay = vi.mocked(updateReadyDelay);
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
+const mockAutoMinimizeComments = vi.mocked(autoMinimizeComments);
 const mockReadFixAttempts = vi.mocked(readFixAttempts);
 const mockWriteFixAttempts = vi.mocked(writeFixAttempts);
 const mockReadStallState = vi.mocked(readStallState);
@@ -202,6 +208,7 @@ export {
   makeOpts,
   makeReport,
   makeReview,
+  mockAutoMinimizeComments,
   mockExecFile,
   mockFetch,
   mockGetCurrentPrNumber,

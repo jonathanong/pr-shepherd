@@ -5,6 +5,7 @@ import {
   makeOpts,
   makeReport,
   makeReview,
+  mockAutoMinimizeComments,
   mockLoadConfig,
   mockRunCheck,
   mockUpdateReadyDelay,
@@ -99,7 +100,7 @@ describe("runIterate — review summary auto-minimize", () => {
     expect(result.fix.reviewSummaryIds).toEqual([]);
     expect(result.fix.surfacedApprovals.map((r) => r.id)).toEqual(["PRR_AP_BOT", "PRR_AP_UNKNOWN"]);
   });
-  it("summary-only PR triggers fix_code (not wait) so the summary can be minimized", async () => {
+  it("summary-only PR self-minimizes in-process and does not route to fix_code (issue #313)", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary] }));
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: false,
@@ -107,9 +108,10 @@ describe("runIterate — review summary auto-minimize", () => {
       remainingSeconds: 600,
     });
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
+    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BOT"]);
+    expect(result.action).toBe("wait");
   });
-  it("includes reviewSummaryIds in fix_code result when both a thread and a bot summary are present", async () => {
+  it("self-minimizes a bot summary in-process and excludes it from reviewSummaryIds when a thread is also present", async () => {
     const t1 = makeThread({
       id: "PRRT_x",
       body: "Use a const here.\n\n```suggestion\nconst foo = 1;\n```",
@@ -135,9 +137,10 @@ describe("runIterate — review summary auto-minimize", () => {
 
     const result = await runIterate(makeOpts());
 
+    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BOT"]);
     expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") return;
 
-    expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
+    expect(result.fix.reviewSummaryIds).toEqual([]);
   });
 });

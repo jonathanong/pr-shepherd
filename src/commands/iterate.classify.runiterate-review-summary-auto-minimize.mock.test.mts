@@ -5,6 +5,7 @@ import {
   makeOpts,
   makeReport,
   makeReview,
+  mockAutoMinimizeComments,
   mockLoadConfig,
   mockRunCheck,
   mockUpdateReadyDelay,
@@ -14,7 +15,7 @@ import { runIterate } from "./iterate/index.mts";
 registerIterateHooks();
 
 // ---------------------------------------------------------------------------
-// Review summary minimize — issue #70
+// Review summary minimize — issue #70, issue #313
 // ---------------------------------------------------------------------------
 
 describe("runIterate — review summary auto-minimize", () => {
@@ -26,7 +27,7 @@ describe("runIterate — review summary auto-minimize", () => {
     authorType: "User" as const,
   };
 
-  it("emits fix_code with reviewSummaryIds when only a bot summary exists", async () => {
+  it("self-minimizes an already-seen bot summary in-process and does not route to fix_code", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary] }));
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: false,
@@ -36,14 +37,8 @@ describe("runIterate — review summary auto-minimize", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-
-    expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
-    expect(result.fix.surfacedApprovals).toEqual([]);
-    expect(result.fix.resolveCommand.argv).toContain("--minimize-comment-ids");
-    expect(result.fix.resolveCommand.argv).toContain("PRR_BOT");
-    expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
+    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BOT"]);
+    expect(result.action).toBe("wait");
   });
   it("does not minimize a bot summary while a child thread is unresolved", async () => {
     mockRunCheck.mockResolvedValue(
@@ -82,6 +77,7 @@ describe("runIterate — review summary auto-minimize", () => {
 
     const result = await runIterate(makeOpts());
 
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
     expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") return;
     expect(result.fix.reviewSummaryIds).toEqual([]);
@@ -96,9 +92,9 @@ describe("runIterate — review summary auto-minimize", () => {
       remainingSeconds: 600,
     });
     const result = await runIterate(makeOpts());
-    if (result.action !== "fix_code") return;
 
-    expect(result.fix.reviewSummaryIds).toEqual(["PRR_BRK"]);
+    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BRK"]);
+    expect(result.action).toBe("wait");
   });
   it("classifies known bot logins (gemini-code-assist) as bots", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [genericBotSummary] }));
@@ -108,9 +104,9 @@ describe("runIterate — review summary auto-minimize", () => {
       remainingSeconds: 600,
     });
     const result = await runIterate(makeOpts());
-    if (result.action !== "fix_code") return;
 
-    expect(result.fix.reviewSummaryIds).toEqual(["PRR_GEM"]);
+    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_GEM"]);
+    expect(result.action).toBe("wait");
   });
   it("does not minimize GitHub-classified human summaries", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [humanSummary] }));
@@ -121,6 +117,7 @@ describe("runIterate — review summary auto-minimize", () => {
     });
     const result = await runIterate(makeOpts());
 
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
     expect(result.action).toBe("wait");
   });
   it("minimizes bot summaries but not GitHub-classified human summaries", async () => {
@@ -131,10 +128,9 @@ describe("runIterate — review summary auto-minimize", () => {
       remainingSeconds: 600,
     });
     const result = await runIterate(makeOpts());
-    if (result.action !== "fix_code") return;
 
-    expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
-    expect(result.fix.surfacedApprovals).toEqual([]);
+    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BOT"]);
+    expect(result.action).toBe("wait");
   });
   it("minimizes only GitHub-classified bot summaries when minimizeComments=bots", async () => {
     const cfg = defaultConfig();
@@ -156,11 +152,8 @@ describe("runIterate — review summary auto-minimize", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
-    expect(result.fix.resolveCommand.argv).toContain("PRR_BOT");
-    expect(result.fix.resolveCommand.argv).not.toContain("PRR_HUMAN");
+    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BOT"]);
+    expect(result.action).toBe("wait");
   });
   it("surfaces first-look summaries without minimization when minimizeComments=none", async () => {
     const cfg = defaultConfig();
@@ -176,10 +169,50 @@ describe("runIterate — review summary auto-minimize", () => {
 
     const result = await runIterate(makeOpts());
 
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
     expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") return;
     expect(result.fix.firstLookSummaries).toEqual([summary]);
     expect(result.fix.reviewSummaryIds).toEqual([]);
     expect(result.fix.resolveCommand.hasMutations).toBe(false);
+  });
+  it("does not duplicate a rule-auto-resolve ID that already self-minimized as a seen summary", async () => {
+    // botSummary is both an already-seen summary (self-minimize eligible) and
+    // rule-matched (ruleAutoResolveReviewSummaryIds) — the two sets must stay
+    // disjoint: it should self-minimize once, not also ride in --minimize-comment-ids.
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        reviewSummaries: [botSummary],
+        ruleAutoResolveReviewSummaryIds: ["PRR_BOT"],
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BOT"]);
+    expect(result.action).toBe("wait");
+  });
+  it("surfaces a first-look bot summary body under fix_code and includes it in the resolve command", async () => {
+    mockRunCheck.mockResolvedValue(makeReport({ firstLookSummaries: [botSummary] }));
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.firstLookSummaries).toEqual([botSummary]);
+    expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
+    expect(result.fix.resolveCommand.argv).toContain("--minimize-comment-ids");
+    expect(result.fix.resolveCommand.argv).toContain("PRR_BOT");
   });
 });
