@@ -35,6 +35,7 @@ export function classifyReviewSummaries(
   ruleAutoResolveIds: string[] = [],
 ): {
   minimizeIds: string[];
+  selfMinimizeIds: string[];
   firstLookSummaries: Review[];
   editedSummaries: Review[];
   surfacedApprovals: Review[];
@@ -42,16 +43,22 @@ export function classifyReviewSummaries(
   const blockedReviewIds = new Set(
     unresolvedThreads.flatMap((t) => (t.reviewId !== undefined ? [t.reviewId] : [])),
   );
-  // First-look and seen summaries go into the minimize mutation; edited summaries do NOT —
-  // they are already minimized server-side (body changed after minimize was applied).
-  // First-look bodies are rendered so the agent sees them before the minimize happens.
-  const minimizeIds = [...summaries.firstLook, ...summaries.seen]
-    .filter((r) => shouldMinimizeAuthor(r.authorType, minimizeComments, r.author, botUsernames))
-    .filter((r) => !blockedReviewIds.has(r.id))
-    .map((r) => r.id);
-  // Rule-matched summaries are already suppressed from agent output; bypass normal policy gates.
+  const eligible = (r: Review): boolean =>
+    shouldMinimizeAuthor(r.authorType, minimizeComments, r.author, botUsernames) &&
+    !blockedReviewIds.has(r.id);
+  // First-look summaries still need one tick to surface their body to the agent,
+  // so their minimize IDs ride in the agent-facing resolve command. Seen summaries
+  // (already surfaced in a prior tick) have no new content to show — the CLI
+  // self-minimizes them in-process (selfMinimizeIds) instead of routing a
+  // cosmetic-only mutation through fix_code (issue #313). Edited summaries are
+  // excluded entirely: they are already minimized server-side (body changed after
+  // minimize was applied).
+  const minimizeIds = summaries.firstLook.filter(eligible).map((r) => r.id);
+  const selfMinimizeIds = summaries.seen.filter(eligible).map((r) => r.id);
+  // Rule-matched summaries are already suppressed from agent output; bypass normal
+  // policy gates. Keep the two sets disjoint.
   for (const id of ruleAutoResolveIds) {
-    if (!minimizeIds.includes(id)) minimizeIds.push(id);
+    if (!minimizeIds.includes(id) && !selfMinimizeIds.includes(id)) minimizeIds.push(id);
   }
   if (minimizeApprovals) {
     const surfacedApprovals: Review[] = [];
@@ -62,6 +69,7 @@ export function classifyReviewSummaries(
     }
     return {
       minimizeIds,
+      selfMinimizeIds,
       firstLookSummaries: summaries.firstLook,
       editedSummaries: summaries.edited,
       surfacedApprovals,
@@ -69,6 +77,7 @@ export function classifyReviewSummaries(
   }
   return {
     minimizeIds,
+    selfMinimizeIds,
     firstLookSummaries: summaries.firstLook,
     editedSummaries: summaries.edited,
     surfacedApprovals: approvals,

@@ -103,7 +103,7 @@ describe("fix_code — in-progress run cancellation", () => {
           filteredNames: [],
           blockedByFilteredCheck: false,
         },
-        reviewSummaries: [
+        firstLookSummaries: [
           { id: "PRR_BOT", author: "bot", authorType: "Unknown" as const, body: "looks good" },
         ],
       }),
