@@ -38,7 +38,13 @@ vi.mock("../../src/state/iterate-stall.mts", () => ({
 }));
 vi.mock("../../src/comments/resolve.mts", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
-  autoMinimizeComments: vi.fn().mockResolvedValue({ minimized: [], errors: [] }),
+  // Default: echo the requested IDs back as successfully minimized, so tests
+  // that don't care about the self-minimize outcome see the common-case
+  // success path. Tests exercising the failure fallback override with
+  // mockResolvedValueOnce({ minimized: [], errors: [...] }).
+  autoMinimizeComments: vi
+    .fn()
+    .mockImplementation((ids: string[]) => Promise.resolve({ minimized: ids, errors: [] })),
 }));
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));

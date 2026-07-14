@@ -51,29 +51,32 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     return buildTerminalCancelResult(report);
   }
 
-  const {
-    minimizeIds: reviewSummaryIds,
-    selfMinimizeIds,
-    firstLookSummaries,
-    editedSummaries,
-    surfacedApprovals,
-  } = classifyReviewSummaries(
-    {
-      firstLook: report.firstLookSummaries,
-      seen: report.reviewSummaries,
-      edited: report.editedSummaries,
-    },
-    report.approvedReviews,
-    config.iterate.minimizeApprovals,
-    config.iterate.minimizeComments,
-    botUsernames,
-    [...report.threads.actionable, ...report.threads.resolutionOnly],
-    report.ruleAutoResolveReviewSummaryIds,
-  );
+  const { minimizeIds, selfMinimizeIds, firstLookSummaries, editedSummaries, surfacedApprovals } =
+    classifyReviewSummaries(
+      {
+        firstLook: report.firstLookSummaries,
+        seen: report.reviewSummaries,
+        edited: report.editedSummaries,
+      },
+      report.approvedReviews,
+      config.iterate.minimizeApprovals,
+      config.iterate.minimizeComments,
+      botUsernames,
+      [...report.threads.actionable, ...report.threads.resolutionOnly],
+      report.ruleAutoResolveReviewSummaryIds,
+    );
   // Already-seen review summaries have no new content to surface — minimize them
   // in-process so they never register as agent-facing actionable work (#313).
+  // GitHub can still return a null/error/rate-limit result per ID without
+  // throwing (autoMinimizeComments reports this via `errors`, not a rejection);
+  // any ID it did not confirm minimized falls back into the agent-facing set so
+  // the resolve command remains a working fallback instead of silently dropping it.
+  let reviewSummaryIds = minimizeIds;
   if (selfMinimizeIds.length > 0) {
-    await autoMinimizeComments(selfMinimizeIds);
+    const { minimized } = await autoMinimizeComments(selfMinimizeIds);
+    const minimizedIds = new Set(minimized);
+    const unminimized = selfMinimizeIds.filter((id) => !minimizedIds.has(id));
+    if (unminimized.length > 0) reviewSummaryIds = [...reviewSummaryIds, ...unminimized];
   }
   const hasActionableWork =
     report.threads.actionable.length > 0 ||
