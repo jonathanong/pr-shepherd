@@ -1,5 +1,4 @@
-import type { AgentCheck, ResolveCommand } from "../../types.mts";
-import type { Review } from "../../types.mts";
+import type { AgentCheck, ResolveCommand, Review } from "../../types.mts";
 
 /** Build the stale-CR clause appended to the `## Changes-requested reviews` instruction. */
 export function buildCrStaleClause(reviews: Review[]): string {
