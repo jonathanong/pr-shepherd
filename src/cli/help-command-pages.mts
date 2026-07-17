@@ -176,12 +176,18 @@ Creates the section at the end if absent. Idempotent — duplicate items are ski
 
 Usage:
   pr-shepherd journal [PR] <item> [--dry-run] [--format text|json]
+  pr-shepherd journal [PR] --file <path> [--dry-run] [--format text|json]
+  pr-shepherd journal [PR] --file - [--dry-run] [--format text|json]
 
   PR     PR number or GitHub pull request URL. Defaults to current branch PR.
   item   Markdown list item: must start with "- " followed by non-whitespace text.
          Example: '- Rejected suggestion: kept existing pattern for consistency.'
+         Provide it as a positional argument, or via --file to avoid shell-escaping
+         backticks and multi-line Markdown. Exactly one of the two is required.
 
 Flags:
+  --file <path>        Read the entry from a file instead of a positional argument.
+                        Pass --file - to read from stdin.
   --dry-run            Preview the new PR body without writing it to GitHub.
   --format text|json   Output format. Default: text.
   --help, -h           Print this help and exit before any GitHub I/O.
