@@ -36,8 +36,8 @@
 ## Instructions
 
 1. Decide for each item under `## Review threads`, `## Actionable comments`, `## Failing checks`, `## Changes-requested reviews` whether a code change is warranted. **If any code changes are needed:** apply edits, commit, push, then run the `resolve:` command. **If no code changes are needed:** skip the commit/push and run the `resolve:` command.
-2. Apply code fixes: read and edit each file referenced under `## Review threads` and `## Actionable comments` above.
-3. For each failing check under `## Failing checks`: read any included log excerpt first; fetch the full log with `gh run view <runId> --log-failed` when the excerpt is insufficient; decide whether to rerun with `gh run rerun <runId> --failed` for transient infrastructure failures (network timeout, OOM kill, runner crash), or apply a code fix for real test/build failures; if GitHub omits workflow-evaluation details from API/log output, open the run URL in the GitHub UI.
+2. Apply code fixes: read and edit each file referenced above.
+3. For each failing check under `## Failing checks`: read any included log excerpt first; fetch the full log with `gh run view <runId> --log-failed` if insufficient; rerun with `gh run rerun <runId> --failed` for transient infra failures, or apply a code fix for real test/build failures; if API/log output lacks detail, open the run URL in the GitHub UI.
 4. For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.
 5. Before running the `resolve:` command, remove any thread from `--reply-thread-ids` if the latest visible comment in that thread is your own prior Shepherd reply. Do not reply to your own comments.
 6. Run the `resolve:` command shown above, substituting `$HEAD_SHA` with the pushed commit SHA (or `$(git rev-parse HEAD)` if you did not push) and `$DISMISS_MESSAGE` with a one-sentence reply/description of what you changed.

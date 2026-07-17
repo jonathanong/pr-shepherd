@@ -97,14 +97,11 @@ export function buildFixInstructions(
     instructions.push(buildCommitSuggestionInstruction(prNumber, "## Review threads", false));
 
   if (threads.length > 0 || actionableComments.length > 0) {
-    const fixSections: string[] = [];
-    if (threads.length > 0) fixSections.push("`## Review threads`");
-    if (actionableComments.length > 0) fixSections.push("`## Actionable comments`");
     const suggestionFallback = hasSuggestions
       ? ` When applying a \`[suggestion]\` thread manually (e.g. after a failed \`commit-suggestion\` run), replace the exact line range shown in the heading (\`path:startLine-endLine\`) with the replacement shown in its \`Replaces lines …\` block verbatim — an empty replacement deletes those lines, a single blank line replaces the range with one blank line.`
       : "";
     instructions.push(
-      `Apply code fixes: read and edit each file referenced under ${fixSections.join(" and ")} above.${suggestionFallback}`,
+      `Apply code fixes: read and edit each file referenced above.${suggestionFallback}`,
     );
   }
 
