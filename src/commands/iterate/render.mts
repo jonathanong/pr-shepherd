@@ -9,7 +9,12 @@ import type {
   ReviewThread,
 } from "../../types.mts";
 import { renderShellCommand } from "../../cli/runner.mts";
-import { buildFailingCheckInstructions, buildCrStaleClause } from "./check-instructions.mts";
+import {
+  buildFailingCheckInstructions,
+  buildCrStaleClause,
+  buildBehindBaseHintInstruction,
+  buildResolveCommandInstruction,
+} from "./check-instructions.mts";
 import {
   SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE,
   SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
@@ -32,7 +37,7 @@ export function buildFixInstructions(
   actionableComments: AgentComment[],
   checks: AgentCheck[],
   changesRequestedReviews: Review[],
-  _baseBranch: string, // retained for call-site stability; rebase mechanics now defer to the caller
+  baseBranch: string,
   resolveCommand: ResolveCommand,
   hasConflicts: boolean,
   prNumber: number,
@@ -44,6 +49,8 @@ export function buildFixInstructions(
   inProgressRunIds: string[] = [],
   resolutionOnlyThreads: ReviewThread[] = [],
   resolveOnlyCommand?: ResolveCommand,
+  behindBaseHint = "", // iterate.behindBaseHint — see buildBehindBaseHintInstruction
+  isBehind = false,
 ): string[] {
   const instructions: string[] = [];
 
@@ -85,6 +92,8 @@ export function buildFixInstructions(
       `The branch has merge conflicts that must be resolved before merging (see \`**branch**\` above). Resolve them and push.`,
     );
   }
+
+  instructions.push(...buildBehindBaseHintInstruction(baseBranch, behindBaseHint, isBehind));
 
   if (inProgressRunIds.length > 0) {
     instructions.push(
@@ -136,27 +145,7 @@ export function buildFixInstructions(
   if (resolveOnlyCommand?.hasMutations)
     instructions.push(`Run the \`resolve-only:\` command shown above — no substitutions needed.`);
 
-  if (resolveCommand.hasMutations) {
-    if ((resolveCommand.replyThreadIds?.length ?? 0) > 0) {
-      instructions.push(
-        `Before running the \`resolve:\` command, remove any thread from \`--reply-thread-ids\` if the latest visible comment in that thread is your own prior Shepherd reply. Do not reply to your own comments.`,
-      );
-    }
-    const substituteParts: string[] = [];
-    if (resolveCommand.requiresHeadSha) {
-      substituteParts.push(
-        `\`$HEAD_SHA\` with the pushed commit SHA (or \`$(git rev-parse HEAD)\` if you did not push)`,
-      );
-    }
-    if (resolveCommand.requiresDismissMessage) {
-      substituteParts.push(
-        `\`$DISMISS_MESSAGE\` with a one-sentence reply/description of what you changed`,
-      );
-    }
-    const substituteHint =
-      substituteParts.length > 0 ? `, substituting ${substituteParts.join(" and ")}` : "";
-    instructions.push(`Run the \`resolve:\` command shown above${substituteHint}.`);
-  }
+  instructions.push(...buildResolveCommandInstruction(resolveCommand));
 
   if (cancelledCount > 0) {
     instructions.push(

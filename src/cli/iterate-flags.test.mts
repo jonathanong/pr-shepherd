@@ -18,6 +18,7 @@ function defaultConfig(): PrShepherdConfig {
       stallTimeoutMinutes: 60,
       minimizeApprovals: false,
       minimizeComments: "bots",
+      behindBaseHint: "",
     },
     resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 } },
     checks: { ciTriggerEvents: ["pull_request"] },

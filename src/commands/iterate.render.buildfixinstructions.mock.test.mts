@@ -245,4 +245,121 @@ describe("buildFixInstructions", () => {
     expect(text).toContain("`## Failing checks`, `## Check annotations`");
     expect(text).toContain("For each item under `## Check annotations`");
   });
+
+  it("renders the configured behind-base hint when the branch is behind", () => {
+    const instructions = buildFixInstructions(
+      [],
+      [],
+      [],
+      [],
+      "main",
+      {
+        argv: ["pr-shepherd", "resolve", "42"],
+        requiresHeadSha: false,
+        requiresDismissMessage: false,
+        hasMutations: false,
+      },
+      false,
+      42,
+      0,
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      undefined,
+      "rebase --force-with-lease",
+      true,
+    );
+
+    const text = instructions.join("\n");
+    expect(text).toContain(
+      "The branch is behind `origin/main` — rebase --force-with-lease before pushing.",
+    );
+  });
+
+  it("omits the behind-base hint when no hint is configured (default)", () => {
+    const instructions = buildFixInstructions(
+      [],
+      [],
+      [],
+      [],
+      "main",
+      {
+        argv: ["pr-shepherd", "resolve", "42"],
+        requiresHeadSha: false,
+        requiresDismissMessage: false,
+        hasMutations: false,
+      },
+      false,
+      42,
+      0,
+    );
+
+    const text = instructions.join("\n");
+    expect(text).not.toContain("behind");
+  });
+
+  it("omits the behind-base hint when the branch is behind but no hint is configured", () => {
+    const instructions = buildFixInstructions(
+      [],
+      [],
+      [],
+      [],
+      "main",
+      {
+        argv: ["pr-shepherd", "resolve", "42"],
+        requiresHeadSha: false,
+        requiresDismissMessage: false,
+        hasMutations: false,
+      },
+      false,
+      42,
+      0,
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      undefined,
+      "",
+      true,
+    );
+
+    const text = instructions.join("\n");
+    expect(text).not.toContain("behind");
+  });
+
+  it("omits the behind-base hint when the branch is not behind, even if configured", () => {
+    const instructions = buildFixInstructions(
+      [],
+      [],
+      [],
+      [],
+      "main",
+      {
+        argv: ["pr-shepherd", "resolve", "42"],
+        requiresHeadSha: false,
+        requiresDismissMessage: false,
+        hasMutations: false,
+      },
+      false,
+      42,
+      0,
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      undefined,
+      "rebase --force-with-lease",
+      false,
+    );
+
+    const text = instructions.join("\n");
+    expect(text).not.toContain("behind");
+  });
 });

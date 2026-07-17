@@ -31,6 +31,7 @@ describe("runResolveMutate — configured bot threads", () => {
         stallTimeoutMinutes: 60,
         minimizeApprovals: false,
         minimizeComments: "all",
+        behindBaseHint: "",
       },
       watch: { readyDelayMinutes: 10 },
       checks: { ciTriggerEvents: ["pull_request", "pull_request_target"] },
