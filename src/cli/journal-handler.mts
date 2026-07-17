@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { runJournal } from "../commands/journal/index.mts";
 import { getFlag, parsePrNumber } from "./args.mts";
 import { USAGE } from "./help.mts";
@@ -33,7 +33,7 @@ export async function handleJournal(args: string[]): Promise<void> {
     return;
   }
 
-  if (!rawItem) {
+  if (rawItem === undefined) {
     process.stderr.write(`${USAGE.journal}\n`);
     process.exitCode = 1;
     return;
@@ -60,7 +60,7 @@ export async function handleJournal(args: string[]): Promise<void> {
 /** Reads the journal entry from a file, or from stdin when `filePath` is `-`. */
 async function readItemSource(filePath: string): Promise<string> {
   if (filePath === "-") return readStdin();
-  return readFileSync(filePath, "utf8");
+  return readFile(filePath, "utf8");
 }
 
 async function readStdin(): Promise<string> {

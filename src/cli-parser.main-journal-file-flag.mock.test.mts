@@ -65,6 +65,19 @@ describe("main — journal --file", () => {
     expect(process.exitCode).toBeUndefined();
   });
 
+  it("passes an empty file's content to runJournal instead of printing usage", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "pr-shepherd-journal-"));
+    const filePath = join(dir, "empty.md");
+    writeFileSync(filePath, "");
+    try {
+      await main(["node", "shepherd", "journal", "42", "--file", filePath]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+    expect(mockRunJournal).toHaveBeenCalledWith(expect.objectContaining({ rawItem: "" }));
+    expect(stderrSpy).not.toHaveBeenCalledWith(expect.stringContaining("Usage:"));
+  });
+
   it("accepts the --file=path form", async () => {
     const dir = mkdtempSync(join(tmpdir(), "pr-shepherd-journal-"));
     const filePath = join(dir, "entry.md");
