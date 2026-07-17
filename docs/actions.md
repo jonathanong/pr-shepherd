@@ -261,6 +261,8 @@ When one or more threads carry a `[suggestion]` marker, the `## Instructions` se
 
 The `commit-suggestion` step is absent when no thread has a `[suggestion]` marker; the manual-fallback clause on "Apply code fixes" is absent in the same case.
 
+The "Apply code fixes" step reads "each file referenced above" only when `## Review threads` is present — thread headings carry a `path:line` location. `## Actionable comments` items carry no such location, so when only actionable comments trigger this step (no threads), the wording is "read and edit the relevant files" instead.
+
 **Section order:**
 
 1. Heading + base fields (always present).

@@ -97,12 +97,13 @@ export function buildFixInstructions(
     instructions.push(buildCommitSuggestionInstruction(prNumber, "## Review threads", false));
 
   if (threads.length > 0 || actionableComments.length > 0) {
+    // Actionable comments carry no file/line location (unlike threads), so "referenced above"
+    // is only accurate when threads are present.
+    const filesRef = threads.length > 0 ? "each file referenced above" : "the relevant files";
     const suggestionFallback = hasSuggestions
       ? ` When applying a \`[suggestion]\` thread manually (e.g. after a failed \`commit-suggestion\` run), replace the exact line range shown in the heading (\`path:startLine-endLine\`) with the replacement shown in its \`Replaces lines …\` block verbatim — an empty replacement deletes those lines, a single blank line replaces the range with one blank line.`
       : "";
-    instructions.push(
-      `Apply code fixes: read and edit each file referenced above.${suggestionFallback}`,
-    );
+    instructions.push(`Apply code fixes: read and edit ${filesRef}.${suggestionFallback}`);
   }
 
   if (resolutionOnlyThreads.length > 0) {
