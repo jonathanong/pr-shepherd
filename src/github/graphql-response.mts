@@ -11,20 +11,6 @@ export function parseGraphQlPayload<T>(
     throw malformedGraphQlResponse("expected a JSON object", status, rateLimit, retryAfterSeconds);
   }
   const record = parsed as Record<string, unknown>;
-  if (!("data" in record)) {
-    throw malformedGraphQlResponse("missing data field", status, rateLimit, retryAfterSeconds);
-  }
-  if (
-    record["data"] !== null &&
-    (typeof record["data"] !== "object" || Array.isArray(record["data"]))
-  ) {
-    throw malformedGraphQlResponse(
-      "data field is not an object or null",
-      status,
-      rateLimit,
-      retryAfterSeconds,
-    );
-  }
   let errors: GitHubGraphQlError[] | undefined;
   if (record["errors"] !== undefined) {
     if (
@@ -44,6 +30,21 @@ export function parseGraphQlPayload<T>(
       );
     }
     errors = record["errors"] as GitHubGraphQlError[];
+  }
+  if (!("data" in record)) {
+    if (errors?.length) return { data: null, errors };
+    throw malformedGraphQlResponse("missing data field", status, rateLimit, retryAfterSeconds);
+  }
+  if (
+    record["data"] !== null &&
+    (typeof record["data"] !== "object" || Array.isArray(record["data"]))
+  ) {
+    throw malformedGraphQlResponse(
+      "data field is not an object or null",
+      status,
+      rateLimit,
+      retryAfterSeconds,
+    );
   }
   return { data: (record["data"] as T | null) ?? null, errors };
 }

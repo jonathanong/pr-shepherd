@@ -27,6 +27,25 @@ describe("graphql — error handling", () => {
     await expect(graphql("{ q }")).rejects.toThrow(/bad field/);
   });
 
+  it("preserves GraphQL errors when a request-error response omits data", async () => {
+    process.env["GH_TOKEN"] = "tok";
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: () =>
+        Promise.resolve({
+          errors: [{ message: "Variable $id has an invalid value", path: ["query", "node"] }],
+        }),
+    });
+
+    await expect(graphql("{ q }")).rejects.toMatchObject({
+      name: "GitHubRequestError",
+      message: expect.stringContaining("Variable $id has an invalid value (path: query.node)"),
+      graphqlErrors: [expect.objectContaining({ message: "Variable $id has an invalid value" })],
+    });
+  });
+
   it("throws on a GraphQL null data payload without errors", async () => {
     process.env["GH_TOKEN"] = "tok";
     mockFetch.mockResolvedValue({
