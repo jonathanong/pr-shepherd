@@ -69,26 +69,24 @@ export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   const parts: string[] = [];
   if (hasRunId) {
     parts.push(
-      "read any included log excerpt first; fetch the full log with `gh run view <runId> --log-failed` when the excerpt is insufficient; decide whether to rerun with `gh run rerun <runId> --failed` for transient infrastructure failures (network timeout, OOM kill, runner crash), or apply a code fix for real test/build failures; if GitHub omits workflow-evaluation details from API/log output, open the run URL in the GitHub UI",
+      "read any included log excerpt first; fetch the full log with `gh run view <runId> --log-failed` if insufficient; rerun with `gh run rerun <runId> --failed` for transient infra failures, or apply a code fix for real test/build failures; if API/log output lacks detail, open the run URL in the GitHub UI",
     );
   }
   if (hasCancelled) {
     parts.push(
-      "for `[conclusion: CANCELLED]` entries: these are not concurrency-superseded (superseded CANCELLED checks are excluded from this section and reported under `**superseded**` instead) — rerun with `gh run rerun <runId>` unless you are already pushing new commits this tick for other reasons, in which case the fresh run naturally supersedes it; do not silently treat a required CANCELLED check as resolved — do NOT confuse with IDs under `## Cancelled runs`",
+      "for `[conclusion: CANCELLED]` entries (not concurrency-superseded — see `**superseded**`): rerun with `gh run rerun <runId>` unless already pushing new commits this tick, in which case the fresh run supersedes it; don't treat as resolved — distinct from `## Cancelled runs`",
     );
   }
   if (hasStartupFailure) {
     parts.push(
-      "for `[conclusion: STARTUP_FAILURE]` entries: inspect with `gh run view <runId>` and rerun with `gh run rerun <runId>` if the workflow should be retried",
+      "for `[conclusion: STARTUP_FAILURE]` entries: inspect with `gh run view <runId>`, rerun with `gh run rerun <runId>` if warranted",
     );
   }
   if (hasExternal) {
-    parts.push("for `external` entries (no run ID, has URL): open the URL to inspect the failure");
+    parts.push("for `external` entries: open the URL to inspect the failure");
   }
   if (hasBare) {
-    parts.push(
-      "for `(no runId)` entries: no log or URL is available — escalate to a human for manual investigation",
-    );
+    parts.push("for `(no runId)` entries: no log or URL available — escalate to a human");
   }
 
   return [`For each failing check under \`## Failing checks\`: ${parts.join("; ")}.`];
