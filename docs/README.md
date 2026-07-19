@@ -2,20 +2,21 @@
 
 Quick entry point. For a command overview see [`../README.md`](../README.md).
 
-| Document                             | What it covers                                                  |
-| ------------------------------------ | --------------------------------------------------------------- |
-| [cli-usage.md](cli-usage.md)         | CLI command reference and flags                                 |
-| [skills.md](skills.md)               | Claude Code and Codex skill usage                               |
-| [configuration.md](configuration.md) | `.pr-shepherdrc.yml` reference                                  |
-| [flow.md](flow.md)                   | End-to-end mermaid flow diagram                                 |
-| [architecture.md](architecture.md)   | Module map, dependency rules, where to put new code             |
-| [iterate-flow.md](iterate-flow.md)   | Full 8-step dispatch walkthrough inside `iterate`               |
-| [actions.md](actions.md)             | Every action: trigger, side-effects, prescriptive output fields |
-| [watch-loop.md](watch-loop.md)       | How the pr-shepherd skill and `iterate` interact                |
-| [ready-delay.md](ready-delay.md)     | Loop-state files: ready-since, fix-attempts, iterate-stall      |
-| [graphql.md](graphql.md)             | Batch query, pagination strategy, REST fallbacks                |
-| [checks.md](checks.md)               | Classify → triage → `failedStep`, `jobName`, event filtering    |
-| [comments.md](comments.md)           | Threads vs comments, outdated detection, push-before-resolve    |
-| [merge-status.md](merge-status.md)   | `deriveMergeStatus` rules, edge cases                           |
-| [extending.md](extending.md)         | Recipes: add an action, classifier, mutation                    |
-| [debugging.md](debugging.md)         | Failure modes, how to replay an iteration                       |
+| Document                               | What it covers                                                  |
+| -------------------------------------- | --------------------------------------------------------------- |
+| [authentication.md](authentication.md) | PAT resolution, required fine-grained access, classic scopes    |
+| [cli-usage.md](cli-usage.md)           | CLI command reference and flags                                 |
+| [skills.md](skills.md)                 | Claude Code and Codex skill usage                               |
+| [configuration.md](configuration.md)   | `.pr-shepherdrc.yml` reference                                  |
+| [flow.md](flow.md)                     | End-to-end mermaid flow diagram                                 |
+| [architecture.md](architecture.md)     | Module map, dependency rules, where to put new code             |
+| [iterate-flow.md](iterate-flow.md)     | Full 8-step dispatch walkthrough inside `iterate`               |
+| [actions.md](actions.md)               | Every action: trigger, side-effects, prescriptive output fields |
+| [watch-loop.md](watch-loop.md)         | How the pr-shepherd skill and `iterate` interact                |
+| [ready-delay.md](ready-delay.md)       | Loop-state files: ready-since, fix-attempts, iterate-stall      |
+| [graphql.md](graphql.md)               | Batch query, pagination strategy, REST fallbacks                |
+| [checks.md](checks.md)                 | Classify → triage → `failedStep`, `jobName`, event filtering    |
+| [comments.md](comments.md)             | Threads vs comments, outdated detection, push-before-resolve    |
+| [merge-status.md](merge-status.md)     | `deriveMergeStatus` rules, edge cases                           |
+| [extending.md](extending.md)           | Recipes: add an action, classifier, mutation                    |
+| [debugging.md](debugging.md)           | Failure modes, how to replay an iteration                       |

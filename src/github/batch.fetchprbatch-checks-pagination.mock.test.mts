@@ -12,6 +12,31 @@ import { fetchPrBatch } from "./batch.mts";
 registerHooks();
 
 describe("fetchPrBatch — checks pagination", () => {
+  it("rejects a null check context before parsing __typename", async () => {
+    const pr = makeRawPr({
+      commits: {
+        nodes: [
+          {
+            commit: {
+              statusCheckRollup: {
+                contexts: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [null],
+                },
+              },
+            },
+          },
+        ],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+
+    await expect(fetchPrBatch(42, REPO)).rejects.toMatchObject({
+      name: "GitHubRequestError",
+      message: expect.stringContaining("null check context"),
+    });
+  });
+
   it("paginates forward when hasNextPage is true", async () => {
     const makeCheckNode = (name: string) => ({
       __typename: "CheckRun",

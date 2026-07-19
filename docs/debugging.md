@@ -6,6 +6,18 @@
 
 ---
 
+### "Resource not accessible by personal access token"
+
+**Symptom:** Shepherd exits with a `403` or GraphQL error instead of returning an iterate action. The message may include the GraphQL field path that GitHub denied.
+
+**Cause:** The token does not include the target repository, lacks a required fine-grained permission, needs organization approval or SSO authorization, or belongs to a user whose repository role cannot perform the operation.
+
+**Fix:** Compare the token with [the required PAT access](authentication.md). In particular, check `Actions: Read and write` for default cancellation/rerun behavior and `Commit statuses: Read` for third-party status contexts. Fine-grained PATs do not have a separate Checks permission, and the Workflows permission is unrelated to workflow-run access.
+
+Shepherd intentionally does not turn this failure into `wait` or `retry`: incomplete GraphQL read data is not safe input for a PR state transition. Run `pr-shepherd log-file` to locate the request log after correcting access.
+
+---
+
 ### "Loop stuck in WAIT after merge"
 
 **Symptom:** PR was merged but shepherd keeps emitting `action: wait`.

@@ -36,7 +36,7 @@ describe("graphqlWithRateLimit — header parsing", () => {
           errors: [{ message: "You have exceeded a secondary rate limit" }],
         }),
     });
-    const result = await graphqlWithRateLimit("{ q }");
+    const result = await graphqlWithRateLimit("{ q }", {}, { allowPartialData: true });
     expect(result.retryAfterSeconds).toBe(30);
     expect(result.errors).toEqual([{ message: "You have exceeded a secondary rate limit" }]);
   });

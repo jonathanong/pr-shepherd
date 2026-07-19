@@ -24,6 +24,7 @@ describe("applyResolveOptions — mutations", () => {
     expect(doc).toContain('pullRequestReviewThreadId: "t-1"');
     expect(doc).toContain("Addressed in the latest commit.");
     expect(doc).not.toContain("resolveReviewThread");
+    expect(mockGraphql).toHaveBeenCalledWith(expect.any(String), {}, { allowPartialData: true });
   });
   it("reports reply mutations that return null", async () => {
     mockGraphql.mockResolvedValueOnce({ data: { p0: null } });

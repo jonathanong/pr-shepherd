@@ -14,4 +14,13 @@ describe("fetchPrBatch — PR not found", () => {
     mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(null));
     await expect(fetchPrBatch(99, REPO)).rejects.toThrow("PR #99 not found");
   });
+
+  it("throws a typed access error when repository is null", async () => {
+    mockGraphqlWithRateLimit.mockResolvedValue({ data: { repository: null } });
+    await expect(fetchPrBatch(99, REPO)).rejects.toMatchObject({
+      name: "GitHubRequestError",
+      status: 200,
+      message: expect.stringContaining("repository owner/repo"),
+    });
+  });
 });

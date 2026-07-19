@@ -39,6 +39,11 @@ describe("runMarkFilesAsViewed", () => {
     expect(result.missingPaths).toEqual(["src/missing.ts"]);
     expect(mockGraphqlWithRateLimit).toHaveBeenCalledTimes(1);
     expect(mockGraphqlWithRateLimit.mock.calls[0]?.[0]).toContain("markFileAsViewed");
+    expect(mockGraphqlWithRateLimit).toHaveBeenCalledWith(
+      expect.any(String),
+      { pullRequestId: "PR_1" },
+      { allowPartialData: true },
+    );
   });
 
   it("selects tests and skips already viewed files", async () => {

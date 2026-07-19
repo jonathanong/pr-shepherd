@@ -18,6 +18,12 @@ This single round-trip replaces the 6–12 API calls the former multi-agent desi
 
 Startup-failure workflow runs and failed-job log excerpts are check-read supplements outside the batch query. GitHub can omit workflow runs that fail before job/check contexts exist from `statusCheckRollup`, so Shepherd queries the Actions REST runs endpoint by PR head SHA, keeps only runs associated with the current PR, and merges `startup_failure` runs into the check list before classification. For ordinary failing Actions jobs, Shepherd also fetches a bounded raw log excerpt from the matched job after classification/triage.
 
+## Response integrity
+
+GraphQL reads are strict. A response with any GraphQL `errors`, null `data`, invalid JSON, a malformed payload, or a null check-context node throws a `GitHubRequestError`. Error messages retain GraphQL paths when GitHub supplies them. This prevents an incomplete PR, review, or CI snapshot from driving an iterate action; `iterate` and `poll` fail immediately and exit non-zero.
+
+Only mutation batches that can preserve independent per-alias successes opt in to partial data. The resolve and mark-files-as-viewed mutation paths report successful aliases and return failed aliases for retry. New read paths must not enable partial data.
+
 ## Pagination strategy
 
 Shepherd uses cursor-based GraphQL pagination. The direction depends on the data type:
