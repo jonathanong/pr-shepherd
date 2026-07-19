@@ -260,9 +260,11 @@ async function bulkMarkFilesAsViewedChunk(
   let suppressCurrentChunkErrors = false;
   let rateLimitStop: ResolveRateLimitStop | undefined;
   try {
-    const resp = await graphqlWithRateLimit<Record<string, unknown>>(buildBulkMutation(paths), {
-      pullRequestId,
-    });
+    const resp = await graphqlWithRateLimit<Record<string, unknown>>(
+      buildBulkMutation(paths),
+      { pullRequestId },
+      { allowPartialData: true },
+    );
     data = resp.data;
     graphQlErrors = (resp.errors ?? []) as GraphQlErrorLike[];
     const messages = graphQlErrors.map((e) => e.message);

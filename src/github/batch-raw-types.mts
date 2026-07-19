@@ -3,7 +3,7 @@
 export interface RawBatchResponse {
   repository: {
     pullRequest: RawPr | null;
-  };
+  } | null;
 }
 
 export interface RawPr {
@@ -64,7 +64,7 @@ export interface RawPr {
         statusCheckRollup: {
           contexts: {
             pageInfo: { hasNextPage: boolean; endCursor: string | null };
-            nodes: RawContextNode[];
+            nodes: Array<RawContextNode | null>;
           };
         } | null;
       };

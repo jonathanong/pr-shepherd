@@ -3,6 +3,7 @@ import { paginateForward, paginateBackward } from "./pagination.mts";
 import { hydrateThreadCommentPages } from "./thread-comments.mts";
 import { BATCH_PR_QUERY } from "./queries.mts";
 import { parseRawPr } from "./batch-parsers.mts";
+import { requireContextNodes, requireRawPr } from "./batch-response.mts";
 import type {
   RawBatchResponse,
   RawThread,
@@ -49,10 +50,7 @@ export async function fetchPrBatch(
     pr,
   });
 
-  const raw = result.data.repository.pullRequest;
-  if (!raw) {
-    throw new Error(`PR #${pr} not found`);
-  }
+  const raw = requireRawPr(result.data, pr, repo);
 
   // Paginate reviewThreads backward if the first page is incomplete.
   let rawThreadPages = raw.reviewThreads.nodes;
@@ -66,8 +64,7 @@ export async function fetchPrBatch(
         pr,
         ...(cursor ? { threadsCursor: cursor } : {}),
       });
-      const pr2 = res.data.repository.pullRequest;
-      if (!pr2) throw new Error(`PR #${pr} not found`);
+      const pr2 = requireRawPr(res.data, pr, repo);
       return pr2.reviewThreads;
     }, raw.reviewThreads.pageInfo.startCursor);
     // extra contains pages before the first page.
@@ -85,8 +82,7 @@ export async function fetchPrBatch(
         pr,
         ...(cursor ? { commentsCursor: cursor } : {}),
       });
-      const pr2 = res.data.repository.pullRequest;
-      if (!pr2) throw new Error(`PR #${pr} not found`);
+      const pr2 = requireRawPr(res.data, pr, repo);
       return pr2.comments;
     }, raw.comments.pageInfo.startCursor);
     rawCommentNodes = [...extra, ...rawCommentNodes];
@@ -105,8 +101,7 @@ export async function fetchPrBatch(
         pr,
         ...(cursor ? { changesRequestedCursor: cursor } : {}),
       });
-      const pr2 = res.data.repository.pullRequest;
-      if (!pr2) throw new Error(`PR #${pr} not found`);
+      const pr2 = requireRawPr(res.data, pr, repo);
       return pr2.changesRequestedReviews;
     }, raw.changesRequestedReviews.pageInfo.startCursor);
     rawReviewNodes = [...extra, ...rawReviewNodes];
@@ -122,8 +117,7 @@ export async function fetchPrBatch(
         pr,
         ...(cursor ? { reviewSummariesCursor: cursor } : {}),
       });
-      const pr2 = res.data.repository.pullRequest;
-      if (!pr2) throw new Error(`PR #${pr} not found`);
+      const pr2 = requireRawPr(res.data, pr, repo);
       return pr2.reviewSummaries;
     }, raw.reviewSummaries.pageInfo.startCursor);
     rawReviewSummaryNodes = [...extra, ...rawReviewSummaryNodes];
@@ -144,15 +138,16 @@ export async function fetchPrBatch(
         pr,
         ...(cursor ? { approvedReviewsCursor: cursor } : {}),
       });
-      const pr2 = res.data.repository.pullRequest;
-      if (!pr2) throw new Error(`PR #${pr} not found`);
+      const pr2 = requireRawPr(res.data, pr, repo);
       return pr2.approvedReviews;
     }, raw.approvedReviews.pageInfo.startCursor);
     rawApprovedReviewNodes = [...extra, ...rawApprovedReviewNodes];
   }
 
   // Paginate check contexts forward if the first page is incomplete.
-  let rawCheckNodes = raw.commits.nodes[0]?.commit.statusCheckRollup?.contexts.nodes ?? [];
+  let rawCheckNodes = requireContextNodes(
+    raw.commits.nodes[0]?.commit.statusCheckRollup?.contexts.nodes ?? [],
+  );
   const checksPageInfo = raw.commits.nodes[0]?.commit.statusCheckRollup?.contexts.pageInfo;
   const firstOid = raw.commits.nodes[0]?.commit.oid;
   if (checksPageInfo?.hasNextPage && checksPageInfo.endCursor) {
@@ -166,7 +161,7 @@ export async function fetchPrBatch(
         pr,
         ...(cursor ? { checksCursor: cursor } : {}),
       });
-      const pr2 = res.data.repository.pullRequest;
+      const pr2 = requireRawPr(res.data, pr, repo);
       if (!pr2?.commits.nodes[0]?.commit.statusCheckRollup) {
         throw new Error(
           `Check-context pagination interrupted: statusCheckRollup disappeared on page ${pageCount + 2} (possible force-push race). Retry after the push stabilizes.`,
@@ -180,7 +175,8 @@ export async function fetchPrBatch(
       }
       pageCount++;
       const ctxs = pr2.commits.nodes[0]?.commit.statusCheckRollup?.contexts;
-      return ctxs ?? { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [] };
+      if (!ctxs) return { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [] };
+      return { ...ctxs, nodes: requireContextNodes(ctxs.nodes) };
     }, checksPageInfo.endCursor);
     rawCheckNodes = [...rawCheckNodes, ...extra];
   }

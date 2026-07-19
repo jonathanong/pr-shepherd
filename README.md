@@ -190,7 +190,7 @@ actions:
 
 Environment variables:
 
-- `GH_TOKEN` / `GITHUB_TOKEN` / `GITHUB_PERSONAL_ACCESS_TOKEN` for auth; `gh auth token` is used as a fallback.
+- `GH_TOKEN` / `GITHUB_TOKEN` / `GITHUB_PERSONAL_ACCESS_TOKEN` for auth; `gh auth token` is used as a fallback. See [GitHub authentication and token access](docs/authentication.md) for required PAT permissions.
 - `PR_SHEPHERD_STATE_DIR` to override state and log location.
 - `PR_SHEPHERD_LOG_DISABLED=1` to disable per-worktree debug logging.
 
@@ -221,7 +221,7 @@ Ready-to-use examples for common patterns are in [`examples/classification/`](ex
 ## Requirements
 
 - Node.js >= 22.18.0, Bun, or Deno
-- A GitHub token or authenticated `gh` CLI; private repositories require `repo` scope.
+- A GitHub token or authenticated `gh` CLI with the [required repository access](docs/authentication.md). A classic PAT needs the `repo` scope for complete operation.
 - `git`
 
 ## Docs

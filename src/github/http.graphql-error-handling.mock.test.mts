@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { registerHooks, gqlOk, mockFetch } from "../../test-helpers/github/http.test-support.mts";
 import { graphql } from "./http.mts";
 
@@ -27,6 +27,25 @@ describe("graphql — error handling", () => {
     await expect(graphql("{ q }")).rejects.toThrow(/bad field/);
   });
 
+  it("preserves GraphQL errors when a request-error response omits data", async () => {
+    process.env["GH_TOKEN"] = "tok";
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: () =>
+        Promise.resolve({
+          errors: [{ message: "Variable $id has an invalid value", path: ["query", "node"] }],
+        }),
+    });
+
+    await expect(graphql("{ q }")).rejects.toMatchObject({
+      name: "GitHubRequestError",
+      message: expect.stringContaining("Variable $id has an invalid value (path: query.node)"),
+      graphqlErrors: [expect.objectContaining({ message: "Variable $id has an invalid value" })],
+    });
+  });
+
   it("throws on a GraphQL null data payload without errors", async () => {
     process.env["GH_TOKEN"] = "tok";
     mockFetch.mockResolvedValue({
@@ -38,9 +57,8 @@ describe("graphql — error handling", () => {
     await expect(graphql("{ q }")).rejects.toThrow(/GitHub GraphQL error \(no data\)/);
   });
 
-  it("succeeds and logs to stderr when data is present but errors[] is non-empty", async () => {
+  it("throws a typed error with the GraphQL path when partial data includes errors", async () => {
     process.env["GH_TOKEN"] = "tok";
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
@@ -48,13 +66,59 @@ describe("graphql — error handling", () => {
       json: () =>
         Promise.resolve({
           data: { node: { id: "PR_1" } },
-          errors: [{ message: "partial failure" }],
+          errors: [
+            {
+              message: "Resource not accessible by personal access token",
+              path: ["repository", "pullRequest", "commits", 0, "commit", "statusCheckRollup"],
+            },
+          ],
         }),
     });
-    const result = await graphql("{ q }");
-    expect(result.data).toEqual({ node: { id: "PR_1" } });
-    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("non-fatal errors"));
-    stderrSpy.mockRestore();
+    await expect(graphql("{ q }")).rejects.toMatchObject({
+      name: "GitHubRequestError",
+      status: 200,
+      message: expect.stringContaining(
+        "path: repository.pullRequest.commits.0.commit.statusCheckRollup",
+      ),
+      graphqlErrors: [
+        expect.objectContaining({ message: "Resource not accessible by personal access token" }),
+      ],
+    });
+  });
+
+  it("throws a typed error when a successful response is not valid JSON", async () => {
+    process.env["GH_TOKEN"] = "tok";
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: () => Promise.reject(new SyntaxError("Unexpected token")),
+    });
+    await expect(graphql("{ q }")).rejects.toMatchObject({
+      name: "GitHubRequestError",
+      status: 200,
+      message: expect.stringContaining("was not valid JSON"),
+    });
+  });
+
+  it.each([
+    [null, "expected a JSON object"],
+    [{ errors: [] }, "missing data field"],
+    [{ data: "unexpected" }, "data field is not an object or null"],
+    [{ data: {}, errors: [{ path: ["node"] }] }, "errors field is not an array"],
+  ])("throws a typed error for malformed payload %#", async (payload, message) => {
+    process.env["GH_TOKEN"] = "tok";
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: () => Promise.resolve(payload),
+    });
+    await expect(graphql("{ q }")).rejects.toMatchObject({
+      name: "GitHubRequestError",
+      status: 200,
+      message: expect.stringContaining(message),
+    });
   });
 
   it("redacts bearer tokens from error response bodies", async () => {

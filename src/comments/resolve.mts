@@ -233,7 +233,13 @@ async function bulkApplyChunk(
   let rateLimitStop: ResolveRateLimitStop | undefined;
   let suppressCurrentChunkErrors = false;
   try {
-    const resp = await graphqlWithRateLimit<Record<string, unknown>>(doc, {});
+    const resp = await graphqlWithRateLimit<Record<string, unknown>>(
+      doc,
+      {},
+      {
+        allowPartialData: true,
+      },
+    );
     data = resp.data;
     graphQlErrors = (resp.errors ?? []) as GraphQlErrorLike[];
     const graphQlErrorMessages = graphQlErrors.map((e) => e.message);
