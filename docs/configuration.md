@@ -21,6 +21,7 @@ iterate:
   stallTimeoutMinutes: 60 # escalate if state unchanged or CI has not started for this many minutes
   minimizeApprovals: false # set true to also minimize APPROVED-state reviews
   minimizeComments: all # all | bots | users | none
+  behindBaseHint: "rebase --force-with-lease" # one-liner shown on the fix_code push step when behind base
 
 watch:
   readyDelayMinutes: 10 # settle window after PR first becomes READY
@@ -61,6 +62,7 @@ actions:
 | `iterate.stallTimeoutMinutes`        | `60`                                      | Minutes the loop may repeat the same action without progress, or CI may stay pending without starting, before `escalate` with `stall-timeout`; `0` disables |
 | `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination).                                                                      |
 | `iterate.minimizeComments`           | `"all"`                                   | Which non-human GitHub author classes to minimize for PR comments and review summaries: `all`, `bots`, `users`, or `none`; humans are never minimized       |
+| `iterate.behindBaseHint`             | `""`                                      | One-liner shown on the `fix_code` push step when the branch is behind its base; empty omits the hint entirely                                               |
 | `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                                                                                   |
 | `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                                                            |
 | `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                                                                                  |
@@ -144,6 +146,12 @@ Controls which non-human GitHub-classified author types are passed to `--minimiz
 - `"none"` surfaces minimizable comments/reviews but does not auto-minimize them.
 
 Items excluded by this policy still go through seen markers: Shepherd surfaces them the first time it sees them, writes a body hash marker, suppresses unchanged repeats on later ticks, and re-surfaces them if the author edits the body in place.
+
+### `iterate.behindBaseHint` — default `""`
+
+One-liner appended to the `fix_code` push instruction when the branch is behind its base (`mergeStatus: "BEHIND"`) — e.g. `"rebase --force-with-lease"`, `"merge the main branch"`, or `"see .agents/skills/agent-workflow/git-and-prs.md"`. Shepherd never decides the convention itself (see [`docs/actions.md`](actions.md) on why rebase/merge mechanics are intentionally left to the caller) — it only echoes back whatever pointer you configure here.
+
+Empty (default) omits the hint entirely, matching prior behavior.
 
 ---
 

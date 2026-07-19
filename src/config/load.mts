@@ -27,6 +27,12 @@ interface PrShepherdConfig {
      * markers so they do not repeat forever.
      */
     minimizeComments: MinimizeCommentsPolicy;
+    /**
+     * One-liner hint appended to the `fix_code` push instruction when the branch is behind its
+     * base — e.g. "rebase --force-with-lease" or "see .agents/skills/git-and-prs.md". Empty
+     * (default) omits the hint entirely; the CLI never prescribes rebase/merge mechanics itself.
+     */
+    behindBaseHint: string;
   };
   watch: {
     readyDelayMinutes: number;

@@ -29,6 +29,7 @@ import {
 import { annotationMarkerBody } from "../check-annotations.mts";
 import { threadTranscriptBody } from "../../threads/transcript.mts";
 import { isHumanAuthor, isConfiguredBotAuthor } from "../../comments/authors.mts";
+import { loadConfig } from "../../config/load.mts";
 import type {
   EscalateDetails,
   IterateCommandOptions,
@@ -180,6 +181,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const checks = toAgentChecks(failingChecks);
   const { changesRequestedReviews } = report;
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
+  const isBehind = report.mergeStatus.status === "BEHIND";
+  const { behindBaseHint } = loadConfig().iterate;
   // Only surface in-progress runs when a push is plausible — resolution-only and
   // summary-only iterations have no path to a push, so listing runs would prompt
   // unnecessary cancellation.
@@ -254,6 +257,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     inProgressRunIds,
     resolutionOnlyThreads,
     resolveOnlyCommand,
+    behindBaseHint,
+    isBehind,
   );
   const prospectiveResult = {
     ...base,

@@ -18,7 +18,8 @@
     "fixAttemptsPerThread": 3,
     "stallTimeoutMinutes": 60,
     "minimizeApprovals": false,
-    "minimizeComments": "all"
+    "minimizeComments": "all",
+    "behindBaseHint": ""
   },
   "watch": {
     "readyDelayMinutes": 10
