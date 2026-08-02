@@ -228,6 +228,11 @@ Ready-to-use examples for common patterns are in [`examples/classification/`](ex
 
 Full reference: [docs/README.md](docs/README.md).
 
-## License
+## Harness Ecosystem
 
-[MIT](LICENSE)
+This is part of the following harness ecosystem:
+
+- [auto-harness](https://github.com/jonathanong/auto-harness) - non-interactive agent CLI orchestration across sandboxes
+- [agent-blackboard](https://github.com/jonathanong/agent-blackboard) - session-scoped telemetry for autonomous agents
+- [pr-shepherd](https://github.com/jonathanong/pr-shepherd) - autonomous pull request shepherd
+- [no-mistakes](https://github.com/jonathanong/no-mistakes) - deterministic AST-based codebase intelligence, test selection, and linting for agents
