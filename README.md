@@ -54,6 +54,25 @@ Example shape:
 
 See [docs/actions.md](docs/actions.md) for the complete output contract.
 
+## Why PR Shepherd?
+
+PR Shepherd handles what would take an agent tens or more tool calls in a single invocation.
+With a polling interval of 1 minute, you're looking at 1 tool call per minute for reading, then 1 tool call for resolving comments (versus many tool calls for reading the current state plus many tool calls for resolving comments).
+The polling interval is also a batching process, allowing the agent to work on multiple issues instead of a stream (e.g. AI review comments, then CI failures).
+
+Some highlights:
+
+1. Batched GraphQL calls for both reading (comments + CI + PR state) and writing (resolving and replying to comments), allowing 10+ concurrent sessions on a single GitHub account without hitting GitHub rate limits.
+2. Handles hard-to-discover CI failures, such as an invalid GitHub Actions YAML file, which is not returned in GraphQL.
+3. Creates a patch file for the agent to apply easily, which is not supported by the GitHub GraphQL API.
+4. Returns a summary of the relevant state (e.g. all CI checks, which ones failed, and the step they failed on) to avoid additional MCP calls. For example, if `oxlint` failed, the agent does not need to look up the logs - it just needs to run `oxlint` locally.
+5. Handles all the type of GitHub comments/threads/replies and states.
+6. Configurable, e.g. automatically ignore rate limit comments or certain CI checks.
+7. Instructs the agent to cancel CI when a fix is in progress, lowering CI bills.
+8. Returns whether the branch is out of date with the main branch, ensuring every push is at the tip of the default branch.
+
+For a full list of features, see [docs/features.md](docs/features.md).
+
 ## Workflow Assumptions
 
 This system is opinionated and works best with PRs that use required status checks and conversation resolution.
