@@ -4,7 +4,7 @@
 
 ## The rule
 
-```
+```text
 $? == 0          shepherd finished and the PR is in a good terminal state
 $? in 10..19     shepherd ran fine; the code reports non-terminal PR state
 $? >= 64         shepherd itself failed (BSD sysexits.h)
@@ -95,10 +95,12 @@ throttling or briefly unavailable); `77` means fix the token or its scopes;
 retried (there's no PR to act on, or the target thread isn't eligible).
 
 **GitHub 403 is ambiguous on its own** — GitHub's secondary rate limit also
-returns 403, with a `Retry-After` header. `errorToExitCode` checks for a retry
-signal (`Retry-After`, `429`, `5xx`, or an exhausted rate limit) _before_
-falling back to the blanket 401/403 → `77` rule, so a throttled 403 correctly
-resolves to `75`, not `77`.
+returns 403, with a `Retry-After` header. `GitHubRequestError` classifies
+itself at construction time (via `classifyStatus`, not `errorToExitCode` —
+`errorToExitCode` only reads back whatever code the error already carries)
+and checks for a retry signal (`Retry-After`, `429`, `5xx`, or an exhausted
+rate limit) _before_ falling back to the blanket 401/403 → `77` rule, so a
+throttled 403 correctly resolves to `75`, not `77`.
 
 **GraphQL permission failures often arrive at HTTP 200, not 401/403.** A
 fine-grained PAT missing a scope for one field (e.g. `statusCheckRollup`)

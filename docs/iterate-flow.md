@@ -116,13 +116,13 @@ Exit codes: `0`/`10`–`14` is `IterateResult` PR state; see
 codes (64–78) emitted when a step fails outright rather than reaching a step
 below.
 
-| Step    | Condition                                               | Action       | Exit code |
-| ------- | ------------------------------------------------------- | ------------ | --------- |
-| 1.5     | `state === 'MERGED'`                                    | `cancel`     | 0         |
-| 1.5     | `state === 'CLOSED'`                                    | `cancel`     | 14        |
-| 2 cont. | `shouldCancel` (ready-delay elapsed)                    | `cancel`     | 0         |
-| 2.5     | Same fingerprint for ≥ `stallTimeoutMinutes` (any step) | `escalate`   | 13        |
-| 3       | Actionable threads/comments/any failing CI or CONFLICTS | `fix_code`   | 12        |
-| 3 esc.  | Same thread hit `fixAttemptsPerThread` times            | `escalate`   | 13        |
-| 4       | READY + CLEAN + isDraft                                 | `mark_ready` | 11        |
-| 5       | Fallthrough                                             | `wait`       | 10        |
+| Step    | Condition                                                           | Action       | Exit code |
+| ------- | ------------------------------------------------------------------- | ------------ | --------- |
+| 1.5     | `state === 'MERGED'`                                                | `cancel`     | 0         |
+| 1.5     | `state === 'CLOSED'`                                                | `cancel`     | 14        |
+| 2 cont. | `shouldCancel` (ready-delay elapsed)                                | `cancel`     | 0         |
+| 2.5     | Same fingerprint for ≥ `stallTimeoutMinutes` (`wait` or `fix_code`) | `escalate`   | 13        |
+| 3       | Actionable threads/comments/any failing CI or CONFLICTS             | `fix_code`   | 12        |
+| 3 esc.  | Same thread hit `fixAttemptsPerThread` times                        | `escalate`   | 13        |
+| 4       | READY + CLEAN + isDraft                                             | `mark_ready` | 11        |
+| 5       | Fallthrough                                                         | `wait`       | 10        |
