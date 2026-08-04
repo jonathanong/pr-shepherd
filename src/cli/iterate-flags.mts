@@ -1,6 +1,6 @@
 import type { loadConfig } from "../config/load.mts";
 import { getFlag, hasFlag } from "./args.mts";
-import { parseDurationToSeconds } from "./exit-codes.mts";
+import { parseDurationToSeconds } from "./duration.mts";
 import { validateSecondsDurationFlag } from "./duration-flag.mts";
 
 // --ready-delay and --stall-timeout are minute-family flags: a bare number means minutes, and 0 is a

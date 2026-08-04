@@ -1,10 +1,12 @@
+import { EXIT } from "../exit-codes.mts";
+
 export function rejectPrrcMinimizeIds(ids: string[]): string[] {
   const prrcIds = ids.filter((id) => id.startsWith("PRRC_"));
   if (prrcIds.length > 0) {
     process.stderr.write(
       `pr-shepherd: resolve: --minimize-comment-ids contains thread comment IDs (PRRC_*): ${prrcIds.join(", ")}. Thread comments cannot be minimized individually — resolve the parent thread using --resolve-thread-ids with the PRRT_* thread ID instead.\n`,
     );
-    process.exitCode = 1;
+    process.exitCode = EXIT.DATAERR;
   }
   return prrcIds;
 }
@@ -25,6 +27,6 @@ export function validateRequireSha(sha: string | undefined): boolean {
   process.stderr.write(
     `pr-shepherd: resolve: --require-sha must be a full 40-character lowercase hex SHA, got "${sha}". Short SHAs will never match GitHub's headRefOid. Use $(git rev-parse HEAD) to get the full SHA.\n`,
   );
-  process.exitCode = 1;
+  process.exitCode = EXIT.DATAERR;
   return false;
 }

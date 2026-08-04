@@ -16,6 +16,7 @@ vi.mock("./github/client.mts", () => ({
 }));
 
 import { main } from "./cli-parser.mts";
+import { EXIT } from "./exit-codes.mts";
 
 const HAPPY_RESULT = {
   prNumber: 42,
@@ -128,23 +129,23 @@ describe("main — journal --help", () => {
 });
 
 describe("main — journal error handling", () => {
-  it("rejects unknown flags and sets exitCode=1", async () => {
+  it("rejects unknown flags and sets exitCode=EX_USAGE", async () => {
     await main(["node", "shepherd", "journal", "42", "- Decision.", "--unknown-flag"]);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("unknown flag"));
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
   });
 
-  it("sets exitCode=1 and writes error when runJournal throws", async () => {
+  it("sets exitCode=EX_SOFTWARE and writes error when runJournal throws", async () => {
     mockRunJournal.mockRejectedValue(new Error('must start with "- <text>"'));
     await main(["node", "shepherd", "journal", "42", "Not a list item."]);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("journal:"));
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.SOFTWARE);
   });
 
-  it("prints usage and sets exitCode=1 when item is missing", async () => {
+  it("prints usage and sets exitCode=EX_USAGE when item is missing", async () => {
     await main(["node", "shepherd", "journal", "42"]);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("Usage:"));
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunJournal).not.toHaveBeenCalled();
   });
 });

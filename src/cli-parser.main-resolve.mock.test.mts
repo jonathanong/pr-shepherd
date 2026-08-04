@@ -6,25 +6,40 @@ import {
   stderrSpy,
 } from "../test-helpers/cli-parser.test-support.mts";
 import { main } from "./cli-parser.mts";
+import { EXIT } from "./exit-codes.mts";
 
 registerHooks();
 
 describe("main — resolve", () => {
-  async function expectResolveError(args: string[], message: string): Promise<void> {
+  async function expectResolveError(
+    args: string[],
+    message: string,
+    exitCode: number,
+  ): Promise<void> {
     await main(["node", "shepherd", "resolve", "42", ...args]);
     expect(mockRunResolveMutate).not.toHaveBeenCalled();
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(exitCode);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining(message));
   }
 
   it.each([
-    ["no action flags", [], "an action flag is required"],
-    ["--fetch", ["--fetch"], "--fetch has been removed"],
-    ["only --message", ["--message", "Done"], "an action flag is required"],
-    ["empty action ID list", ["--resolve-thread-ids", ""], "an action flag is required"],
-    ["short SHA", ["--resolve-thread-ids", "PRRT_1", "--require-sha", "abc1234"], "40-character"],
-  ])("errors for %s", async (_label, args, message) => {
-    await expectResolveError(args, message);
+    ["no action flags", [], "an action flag is required", EXIT.USAGE],
+    ["--fetch", ["--fetch"], "--fetch has been removed", EXIT.USAGE],
+    ["only --message", ["--message", "Done"], "an action flag is required", EXIT.USAGE],
+    [
+      "empty action ID list",
+      ["--resolve-thread-ids", ""],
+      "an action flag is required",
+      EXIT.USAGE,
+    ],
+    [
+      "short SHA",
+      ["--resolve-thread-ids", "PRRT_1", "--require-sha", "abc1234"],
+      "40-character",
+      EXIT.DATAERR,
+    ],
+  ])("errors for %s", async (_label, args, message, exitCode) => {
+    await expectResolveError(args as string[], message as string, exitCode as number);
   });
 
   it("warns on PRRC_ thread IDs but still calls runResolveMutate", async () => {

@@ -64,7 +64,7 @@ Durations accept `s`/`m`/`h` suffixes: `30s`, `4.5m`, `1h`. A bare number uses e
 
 With `--until-terminal`, `--timeout` is ignored for `WAIT` ticks so the poll can stay attached until work or terminal state appears.
 
-Exit codes for iterate and poll: `0` `WAIT`/`MARK_READY`, `1` `FIX_CODE` or command error, `2` `CANCEL`, `3` `ESCALATE`.
+Exit codes for iterate and poll: `0` `CANCEL` (merged or ready-delay elapsed), `10` `WAIT`, `11` `MARK_READY`, `12` `FIX_CODE`, `13` `ESCALATE`, `14` `CANCEL` (closed without merging). A command, validation, or GitHub failure exits with a `sysexits.h` code (64–78) instead — see [exit-codes.md](exit-codes.md) for the full table and rationale. This range is uniform across every subcommand, not just iterate/poll.
 
 ## Resolve
 
@@ -116,7 +116,7 @@ Preconditions:
 
 The output includes a unified diff, a suggested commit subject/body with reviewer attribution, files to stage, and post-action instructions. Invoke once per suggestion thread. If a reviewer's suggestion box contains more lines than the highlighted range, the emitted diff trims leading/trailing lines that merely duplicate adjacent file context, so the patch applies cleanly without duplicating lines.
 
-Exit codes: `0` suggestion produced, `1` validation/lookup/precondition/parsing failure.
+Exit codes: `0` suggestion produced; otherwise a `sysexits.h` code — see [exit-codes.md](exit-codes.md).
 
 ## Mark Files As Viewed
 

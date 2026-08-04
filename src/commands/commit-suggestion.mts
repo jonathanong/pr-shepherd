@@ -6,6 +6,7 @@ import { getRepoInfo, getCurrentPrNumber, getCurrentBranch } from "../github/cli
 import { fetchPrBatch } from "../github/batch.mts";
 import { parseSuggestion, isCommittableSuggestion } from "../suggestions/parse.mts";
 import { buildUnifiedDiff } from "../suggestions/patch.mts";
+import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type { CommitSuggestionResult, GlobalOptions } from "../types.mts";
 import { buildPrShepherdCommand } from "../cli/runner.mts";
 
@@ -21,16 +22,19 @@ export async function runCommitSuggestion(
   opts: CommitSuggestionOptions,
 ): Promise<CommitSuggestionResult> {
   if (!opts.threadId) {
-    throw new Error("--thread-id is required");
+    throw new ShepherdError("--thread-id is required", EXIT.USAGE);
   }
   if (!opts.message || opts.message.trim() === "") {
-    throw new Error("--message is required and must be non-empty");
+    throw new ShepherdError("--message is required and must be non-empty", EXIT.USAGE);
   }
 
   const repo = await getRepoInfo();
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
   if (prNumber === null) {
-    throw new Error("No open PR found for current branch. Pass a PR number explicitly.");
+    throw new ShepherdError(
+      "No open PR found for current branch. Pass a PR number explicitly.",
+      EXIT.UNAVAILABLE,
+    );
   }
 
   const currentBranch = await getCurrentBranch();
@@ -39,35 +43,43 @@ export async function runCommitSuggestion(
 
   const { data } = await fetchPrBatch(prNumber, repo);
   if (!data.headRepoWithOwner) {
-    throw new Error(`PR #${prNumber} head repository is unavailable (fork may have been deleted).`);
+    throw new ShepherdError(
+      `PR #${prNumber} head repository is unavailable (fork may have been deleted).`,
+      EXIT.UNAVAILABLE,
+    );
   }
   if (currentBranch !== data.headRefName) {
-    throw new Error(
+    throw new ShepherdError(
       `Current branch "${currentBranch}" does not match PR head branch "${data.headRefName}". ` +
         `Check out "${data.headRefName}" before applying suggestions.`,
+      EXIT.UNAVAILABLE,
     );
   }
   if (localHeadSha !== data.headRefOid) {
-    throw new Error(
+    throw new ShepherdError(
       `Local HEAD ${localHeadSha} does not match PR head ${data.headRefOid}. ` +
         `Pull/rebase "${data.headRefName}" to the latest PR head and try again.`,
+      EXIT.UNAVAILABLE,
     );
   }
   const thread = data.reviewThreads.find((t) => t.id === opts.threadId);
   if (!thread) {
-    throw new Error(`Thread ${opts.threadId} not found on PR #${prNumber}.`);
+    throw new ShepherdError(
+      `Thread ${opts.threadId} not found on PR #${prNumber}.`,
+      EXIT.UNAVAILABLE,
+    );
   }
   if (thread.isResolved) {
-    throw new Error(`Thread ${opts.threadId} is already resolved.`);
+    throw new ShepherdError(`Thread ${opts.threadId} is already resolved.`, EXIT.UNAVAILABLE);
   }
   if (thread.isOutdated) {
-    throw new Error(`Thread ${opts.threadId} is outdated.`);
+    throw new ShepherdError(`Thread ${opts.threadId} is outdated.`, EXIT.UNAVAILABLE);
   }
   if (thread.isMinimized) {
-    throw new Error(`Thread ${opts.threadId} is minimized.`);
+    throw new ShepherdError(`Thread ${opts.threadId} is minimized.`, EXIT.UNAVAILABLE);
   }
   if (!thread.path || thread.line === null) {
-    throw new Error(`Thread ${opts.threadId} has no file/line anchor.`);
+    throw new ShepherdError(`Thread ${opts.threadId} has no file/line anchor.`, EXIT.UNAVAILABLE);
   }
 
   // Validate the target file is clean before generating the patch, so the emitted
@@ -79,19 +91,24 @@ export async function runCommitSuggestion(
     thread.path,
   ]);
   if (fileStatus.trim() !== "") {
-    throw new Error(
+    throw new ShepherdError(
       `${thread.path} has uncommitted changes. Commit or stash them before running commit-suggestion.`,
+      EXIT.UNAVAILABLE,
     );
   }
 
   const parsed = parseSuggestion(thread.body);
   if (!parsed) {
-    throw new Error(`Thread ${opts.threadId} has no suggestion block in the comment body.`);
+    throw new ShepherdError(
+      `Thread ${opts.threadId} has no suggestion block in the comment body.`,
+      EXIT.UNAVAILABLE,
+    );
   }
   if (!isCommittableSuggestion(parsed)) {
-    throw new Error(
+    throw new ShepherdError(
       `Thread ${opts.threadId}'s suggestion body contains nested suggestion fencing or unbalanced ` +
         `3+ backtick fences — refusing to apply (could silently truncate).`,
+      EXIT.UNAVAILABLE,
     );
   }
 

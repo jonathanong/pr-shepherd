@@ -4,6 +4,7 @@ import {
   validateRequireSha,
   rejectPrrcMinimizeIds,
 } from "./resolve-validators.mts";
+import { EXIT } from "../exit-codes.mts";
 
 describe("rejectPrrcMinimizeIds", () => {
   let stderrSpy: ReturnType<typeof vi.spyOn>;
@@ -31,7 +32,7 @@ describe("rejectPrrcMinimizeIds", () => {
   it("rejects PRRC_ IDs, sets exitCode 1, and writes to stderr", () => {
     const result = rejectPrrcMinimizeIds(["IC_ok", "PRRC_bad1", "PRRC_bad2"]);
     expect(result).toEqual(["PRRC_bad1", "PRRC_bad2"]);
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.DATAERR);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("PRRC_bad1, PRRC_bad2"));
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("PRRC_*"));
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("PRRT_*"));
@@ -39,7 +40,7 @@ describe("rejectPrrcMinimizeIds", () => {
 
   it("rejects when all IDs are PRRC_", () => {
     expect(rejectPrrcMinimizeIds(["PRRC_1"])).toEqual(["PRRC_1"]);
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.DATAERR);
     expect(stderrSpy).toHaveBeenCalled();
   });
 });
@@ -101,29 +102,29 @@ describe("validateRequireSha", () => {
 
   it("rejects a 7-char short SHA", () => {
     expect(validateRequireSha("abc1234")).toBe(false);
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.DATAERR);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("40-character"));
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("abc1234"));
   });
 
   it("rejects a 40-char uppercase hex string", () => {
     expect(validateRequireSha("A".repeat(40))).toBe(false);
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.DATAERR);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("40-character"));
   });
 
   it("rejects a 40-char string with non-hex characters", () => {
     expect(validateRequireSha("g".repeat(40))).toBe(false);
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.DATAERR);
   });
 
   it("rejects a 39-char string", () => {
     expect(validateRequireSha("a".repeat(39))).toBe(false);
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.DATAERR);
   });
 
   it("rejects an empty string", () => {
     expect(validateRequireSha("")).toBe(false);
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.DATAERR);
   });
 });

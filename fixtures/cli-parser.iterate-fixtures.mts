@@ -1,6 +1,9 @@
-import type { IterateResult, RelevantCheck } from "../src/types.mts";
+import type { CancelReason, IterateResult, RelevantCheck } from "../src/types.mts";
 
-export function makeIterateResult(action: IterateResult["action"] = "wait"): IterateResult {
+export function makeIterateResult(
+  action: IterateResult["action"] = "wait",
+  cancelReason: CancelReason = "ready-delay-elapsed",
+): IterateResult {
   const base = {
     pr: 42,
     repo: "owner/repo",
@@ -63,7 +66,7 @@ export function makeIterateResult(action: IterateResult["action"] = "wait"): Ite
     return {
       ...base,
       action: "cancel",
-      reason: "ready-delay-elapsed" as const,
+      reason: cancelReason,
       log: "CANCEL: PR #42 — stopping",
     };
   if (action === "escalate") {

@@ -16,6 +16,7 @@ vi.mock("./github/client.mts", () => ({
 import { main } from "./cli-parser.mts";
 import { runIterate } from "./commands/iterate/index.mts";
 import { makeIterateResult } from "../fixtures/cli-parser.iterate-fixtures.mts";
+import { EXIT } from "./exit-codes.mts";
 
 const mockRunIterate = vi.mocked(runIterate);
 
@@ -51,7 +52,7 @@ describe("main — poll subcommand", () => {
 
     expect(mockRunIterate).toHaveBeenCalledTimes(1);
     expect(getStdout()).toContain("[CANCEL]");
-    expect(process.exitCode).toBe(2);
+    expect(process.exitCode).toBe(EXIT.OK);
   });
 
   it("routes 'poll' with wait then cancel — uses fake timers for sleep", async () => {
@@ -65,7 +66,7 @@ describe("main — poll subcommand", () => {
 
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
     expect(getStdout()).toContain("[CANCEL]");
-    expect(process.exitCode).toBe(2);
+    expect(process.exitCode).toBe(EXIT.OK);
   });
 
   it("accepts --interval and --timeout as minute durations", async () => {
@@ -106,13 +107,13 @@ describe("main — poll subcommand", () => {
 
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
     expect(getStdout()).toContain("[CANCEL]");
-    expect(process.exitCode).toBe(2);
+    expect(process.exitCode).toBe(EXIT.OK);
   });
 
   it("rejects an invalid --interval value", async () => {
     await main(["node", "shepherd", "poll", "42", "--interval", "bad"]);
 
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("invalid --interval"));
     expect(mockRunIterate).not.toHaveBeenCalled();
   });
@@ -120,7 +121,7 @@ describe("main — poll subcommand", () => {
   it("rejects an invalid --timeout value", async () => {
     await main(["node", "shepherd", "poll", "42", "--timeout", "xyz"]);
 
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("invalid --timeout"));
     expect(mockRunIterate).not.toHaveBeenCalled();
   });

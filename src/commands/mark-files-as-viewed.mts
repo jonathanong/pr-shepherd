@@ -13,6 +13,7 @@ import {
   rateLimitFromGraphQlResult,
   type ResolveRateLimitStop,
 } from "../comments/rate-limit.mts";
+import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type { GlobalOptions } from "../types.mts";
 
 interface MarkFilesAsViewedOptions extends GlobalOptions {
@@ -88,7 +89,12 @@ export async function runMarkFilesAsViewed(
 ): Promise<MarkFilesAsViewedResult> {
   const repo = await getRepoInfo();
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
-  if (!prNumber) throw new Error("No PR number provided and no current branch PR found");
+  if (!prNumber) {
+    throw new ShepherdError(
+      "No PR number provided and no current branch PR found",
+      EXIT.UNAVAILABLE,
+    );
+  }
 
   const matchPatterns = opts.matchPatterns ?? [];
   const matchRegexes = matchPatterns.map((pattern) => compilePattern(pattern));
@@ -129,7 +135,7 @@ async function fetchPullRequestFiles(
     pr,
   });
   const raw = first.data.repository?.pullRequest;
-  if (!raw) throw new Error(`PR #${pr} not found`);
+  if (!raw) throw new ShepherdError(`PR #${pr} not found`, EXIT.UNAVAILABLE);
 
   let files = raw.files.nodes;
   if (raw.files.pageInfo.hasNextPage && raw.files.pageInfo.endCursor) {
@@ -141,7 +147,7 @@ async function fetchPullRequestFiles(
         ...(cursor ? { filesCursor: cursor } : {}),
       });
       const pr2 = res.data.repository?.pullRequest;
-      if (!pr2) throw new Error(`PR #${pr} not found`);
+      if (!pr2) throw new ShepherdError(`PR #${pr} not found`, EXIT.UNAVAILABLE);
       return pr2.files;
     }, raw.files.pageInfo.endCursor);
     files = [...files, ...extra];
@@ -155,7 +161,7 @@ function compilePattern(pattern: string): RegExp {
     return new RegExp(pattern, "i");
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    throw new Error(`Invalid --match regex ${JSON.stringify(pattern)}: ${msg}`);
+    throw new ShepherdError(`Invalid --match regex ${JSON.stringify(pattern)}: ${msg}`, EXIT.USAGE);
   }
 }
 

@@ -74,7 +74,7 @@ Nothing actionable to do; all CI is passing or in-progress.
 
 **CLI side-effects:** None.
 
-**Exit code:** 0
+**Exit code:** 10. Not an error and not a terminal state — see [exit-codes.md](exit-codes.md) for why `wait` is nonzero, including when `poll --timeout` gives up mid-wait.
 
 **Markdown output:**
 
@@ -108,7 +108,7 @@ Converts a draft PR to ready for review.
 
 **CLI side-effects:** Calls the `markPullRequestReadyForReview` GraphQL mutation before returning.
 
-**Exit code:** 0
+**Exit code:** 11
 
 **Markdown output:**
 
@@ -137,7 +137,7 @@ Stops the iterate loop — no further iterations needed.
 
 **CLI side-effects:** Deletes any stale `ready-since.txt` marker when the PR is merged/closed or when ready-delay elapses.
 
-**Exit code:** 2
+**Exit code:** 0 for `reason: "merged"` or `reason: "ready-delay-elapsed"` — these are shepherd's two "finished cleanly" outcomes. 14 for `reason: "closed"` (closed without merging). See [exit-codes.md](exit-codes.md).
 
 **`reason` field:** The result carries a structured `reason` discriminator — `"merged"`, `"closed"`, or `"ready-delay-elapsed"` — as a first-class field in both JSON and Markdown output. JSON consumers should branch on `reason` rather than parsing `log`.
 
@@ -174,7 +174,7 @@ Eligible **already-seen** `COMMENTED` review summaries (surfaced in a prior iter
 
 **CLI side-effects:** Issues a `POST /repos/{owner}/{repo}/actions/runs/{runId}/cancel` REST call for each unique run ID of failing CI checks (best-effort; already-completed runs return 409 and are silently ignored). **Important:** this cancellation runs on the pre-push run IDs recorded in the sweep — do not re-cancel these IDs after you push, because the push replaces them with fresh runs whose IDs differ. Independently of the action returned, iterate also issues an in-process `minimizeComment` GraphQL mutation for each eligible already-seen review summary described above — this runs before the action is decided, so it applies on `wait`/`mark_ready`/`cancel` ticks too, not only on `fix_code` ticks.
 
-**Exit code:** 1
+**Exit code:** 12
 
 **Markdown output:**
 
@@ -437,7 +437,7 @@ Ambiguous state that requires human judgement — iteration stops and surfaces d
 
 **CLI side-effects:** None.
 
-**Exit code:** 3
+**Exit code:** 13
 
 **Markdown output:**
 

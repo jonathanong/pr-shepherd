@@ -1,7 +1,7 @@
 import { runPoll } from "../commands/poll.mts";
 import { loadConfig } from "../config/load.mts";
 import { parseCommonArgs, getFlag, hasFlag } from "./args.mts";
-import { parseDurationToSeconds } from "./exit-codes.mts";
+import { parseDurationToSeconds } from "./duration.mts";
 import { validateSecondsDurationFlag } from "./duration-flag.mts";
 import { parseIterateFlags } from "./iterate-flags.mts";
 import { emitIterateResult } from "./iterate-emitter.mts";

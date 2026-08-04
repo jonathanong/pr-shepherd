@@ -6,6 +6,7 @@ import {
   stderrSpy,
 } from "../test-helpers/cli-parser.test-support.mts";
 import { main } from "./cli-parser.mts";
+import { EXIT } from "./exit-codes.mts";
 
 registerHooks();
 
@@ -76,6 +77,6 @@ describe("main — mark-files-as-viewed", () => {
     expect(stderrSpy).toHaveBeenCalledWith(
       "pr-shepherd: mark-files-as-viewed: provide at least one file, --tests, or --match <regex>\n",
     );
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
   });
 });

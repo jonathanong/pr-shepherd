@@ -1,3 +1,4 @@
+import { EXIT } from "../exit-codes.mts";
 import { GitHubRequestError, type GitHubGraphQlError } from "./errors.mts";
 import type { RateLimitInfo } from "./http-utils.mts";
 
@@ -64,9 +65,13 @@ function malformedGraphQlResponse(
   rateLimit: RateLimitInfo | null,
   retryAfterSeconds: number | undefined,
 ): GitHubRequestError {
+  // A response that fails to parse as valid GraphQL shape is an internal/unexpected
+  // failure, not a precondition or permission problem — force EX_SOFTWARE rather
+  // than letting the (likely 200) status fall through to EX_UNAVAILABLE.
   return new GitHubRequestError(`Malformed GitHub GraphQL response: ${detail}`, {
     status,
     rateLimit: rateLimit ?? undefined,
     retryAfterSeconds,
+    exitCodeOverride: EXIT.SOFTWARE,
   });
 }

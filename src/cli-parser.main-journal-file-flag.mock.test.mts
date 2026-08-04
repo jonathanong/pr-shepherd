@@ -19,6 +19,7 @@ vi.mock("./github/client.mts", () => ({
 }));
 
 import { main } from "./cli-parser.mts";
+import { EXIT } from "./exit-codes.mts";
 
 const HAPPY_RESULT = { prNumber: 42, mutated: true, sectionExisted: false, dryRun: false };
 
@@ -107,11 +108,11 @@ describe("main — journal --file", () => {
   it("errors when both a positional entry and --file are given", async () => {
     await main(["node", "shepherd", "journal", "42", "- Decision.", "--file", "somefile.md"]);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("not both"));
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunJournal).not.toHaveBeenCalled();
   });
 
-  it("sets exitCode=1 when the --file path does not exist", async () => {
+  it("sets exitCode=EX_NOINPUT when the --file path does not exist", async () => {
     await main([
       "node",
       "shepherd",
@@ -121,7 +122,7 @@ describe("main — journal --file", () => {
       "/nonexistent/pr-shepherd-entry.md",
     ]);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("journal:"));
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.NOINPUT);
     expect(mockRunJournal).not.toHaveBeenCalled();
   });
 });
