@@ -7,13 +7,14 @@ import {
   stderrSpy,
 } from "../test-helpers/cli-parser.commit-suggestion.test-support.mts";
 import { main } from "./cli-parser.mts";
+import { EXIT } from "./exit-codes.mts";
 
 registerHooks();
 
 describe("main — commit-suggestion", () => {
   it("errors when --thread-id is omitted", async () => {
     await main(["node", "shepherd", "commit-suggestion", "42", "--message", "fix"]);
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunCommitSuggestion).not.toHaveBeenCalled();
     const err = stderrSpy.mock.calls.map((c: string[]) => c[0]).join("");
     expect(err).toContain("--thread-id");
@@ -21,7 +22,7 @@ describe("main — commit-suggestion", () => {
 
   it("errors when --message is omitted", async () => {
     await main(["node", "shepherd", "commit-suggestion", "42", "--thread-id", "t1"]);
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunCommitSuggestion).not.toHaveBeenCalled();
     const err = stderrSpy.mock.calls.map((c: string[]) => c[0]).join("");
     expect(err).toContain("--message");
@@ -29,7 +30,7 @@ describe("main — commit-suggestion", () => {
 
   it("errors when --message is whitespace only", async () => {
     await main(["node", "shepherd", "commit-suggestion", "--thread-id", "t1", "--message", "   "]);
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunCommitSuggestion).not.toHaveBeenCalled();
     const err = stderrSpy.mock.calls.map((c: string[]) => c[0]).join("");
     expect(err).toContain("--message");

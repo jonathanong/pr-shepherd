@@ -2,6 +2,7 @@
 
 import { readFileSync } from "node:fs";
 
+import { EXIT, errorToExitCode } from "./exit-codes.mts";
 import { runResolveMutate } from "./commands/resolve.mts";
 import { runLogFile } from "./commands/log-file.mts";
 import { parseCommonArgs, getFlag, hasFlag, parseList } from "./cli/args.mts";
@@ -96,7 +97,7 @@ export async function main(argv: string[]): Promise<void> {
     default:
       process.stderr.write(`Unknown subcommand: ${subcommand ?? "(none)"}\n`);
       process.stderr.write(`${USAGE.top}\n`);
-      process.exitCode = 1;
+      process.exitCode = EXIT.USAGE;
       return;
   }
 }
@@ -125,7 +126,7 @@ async function handleLogFile(args: string[]): Promise<void> {
     process.stdout.write(jsonOut ? `${JSON.stringify(result, null, 2)}\n` : `${result.path}\n`);
   } catch (e) {
     process.stderr.write(`pr-shepherd: log-file: ${String(e)}\n`);
-    process.exitCode = 1;
+    process.exitCode = errorToExitCode(e);
   }
 }
 
@@ -147,7 +148,7 @@ async function handleResolve(args: string[]): Promise<void> {
     process.stderr.write(
       "pr-shepherd: resolve: --fetch has been removed; run pr-shepherd iterate or poll to fetch the next action.\n",
     );
-    process.exitCode = 1;
+    process.exitCode = EXIT.USAGE;
     return;
   }
 
@@ -160,7 +161,7 @@ async function handleResolve(args: string[]): Promise<void> {
     process.stderr.write(
       "pr-shepherd: resolve: an action flag is required (--reply-thread-ids, --resolve-thread-ids, --minimize-comment-ids, or --dismiss-review-ids).\n",
     );
-    process.exitCode = 1;
+    process.exitCode = EXIT.USAGE;
     return;
   }
 

@@ -8,7 +8,7 @@
 
 ### "Resource not accessible by personal access token"
 
-**Symptom:** Shepherd exits with a `403` or GraphQL error instead of returning an iterate action. The message may include the GraphQL field path that GitHub denied.
+**Symptom:** Shepherd exits `77` (`EX_NOPERM`) — a `403` or GraphQL error — instead of returning an iterate action (0/10–14). The message may include the GraphQL field path that GitHub denied. See [exit-codes.md](exit-codes.md) for the full code table.
 
 **Cause:** The token does not include the target repository, lacks a required fine-grained permission, needs organization approval or SSO authorization, or belongs to a user whose repository role cannot perform the operation.
 

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { validateSecondsDurationFlag } from "./duration-flag.mts";
-import { parseDurationToSeconds } from "./exit-codes.mts";
+import { parseDurationToSeconds } from "./duration.mts";
+import { EXIT } from "../exit-codes.mts";
 
 describe("validateSecondsDurationFlag", () => {
   let stderrSpy: ReturnType<typeof vi.spyOn>;
@@ -22,36 +23,36 @@ describe("validateSecondsDurationFlag", () => {
 
   it("rejects a missing separate value", () => {
     expect(validateSecondsDurationFlag("cmd", "--interval", null, true)).toBeNull();
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("requires a value"));
   });
 
   it("rejects the next flag as a value", () => {
     expect(validateSecondsDurationFlag("cmd", "--interval", "--timeout", true)).toBeNull();
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("requires a value"));
   });
 
   it("rejects malformed durations", () => {
     expect(validateSecondsDurationFlag("cmd", "--interval", "soon", true)).toBeNull();
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("invalid --interval"));
   });
 
   it("rejects zero", () => {
     expect(validateSecondsDurationFlag("cmd", "--interval", "0", true)).toBeNull();
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("invalid --interval"));
   });
 
   it("rejects 0s", () => {
     expect(validateSecondsDurationFlag("cmd", "--interval", "0s", true)).toBeNull();
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
   });
 
   it("rejects bare fractional seconds", () => {
     expect(validateSecondsDurationFlag("cmd", "--timeout", "4.5", true)).toBeNull();
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
   });
 
   it("accepts bare integer (seconds)", () => {
@@ -93,7 +94,7 @@ describe("validateSecondsDurationFlag", () => {
     expect(
       validateSecondsDurationFlag("cmd", "--stall-timeout", "0", true, { defaultUnit: "m" }),
     ).toBeNull();
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
   });
 
   it("accepts zero when allowZero is set", () => {

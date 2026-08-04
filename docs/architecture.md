@@ -15,11 +15,12 @@ shepherd/
 ├── index.mts              # bin entrypoint — thin shim that imports cli-parser
 ├── cli-parser.mts         # argv dispatch; subcommand routing
 ├── types.mts              # barrel re-exporting types/github.mts, types/iterate.mts, types/report.mts
+├── exit-codes.mts         # EXIT map, ShepherdError, iterateResultToExitCode, errorToExitCode — see docs/exit-codes.md
 ├── config.json            # default config values
 │
 ├── cli/                   # formatting and argument helpers
 │   ├── args.mts           # low-level argv parsing helpers (getFlag, hasFlag, parseCommonArgs, …)
-│   ├── exit-codes.mts     # exit-code derivation + parseDurationToMinutes
+│   ├── duration.mts       # duration parsing — parseDurationToSeconds, parseSecondsDurationParts
 │   ├── handlers.mts       # async handlers wired from cli-parser (iterate, commit-suggestion)
 │   ├── formatters.mts     # barrel for per-output formatters
 │   ├── iterate-formatter.mts  # Markdown formatter for IterateResult
@@ -116,6 +117,7 @@ comments → state
 - `github` must not import from `commands`, `checks`, or `comments`.
 - `merge-status` and `reporters` are leaf-ish domain modules — they do not import from `commands` or `github`.
 - `types/` is shared by all — the files there have no imports from `commands` or `github`. Keep them lean.
+- `exit-codes.mts` (top-level) is a shared leaf like `types/` — it imports only from `types.mts`, and `github`, `config`, `commands`, and `cli` all import from it. It does not live under `cli/` because non-CLI modules (`github/errors.mts`, `config/load.mts`) need it too.
 
 Never import upward (e.g., `github` importing from `commands`) — that creates circular dependencies and breaks the single-responsibility model.
 
@@ -131,5 +133,6 @@ Never import upward (e.g., `github` importing from `commands`) — that creates 
 | New merge state derivation rule  | `merge-status/derive.mts`                                       |
 | New tunable constant             | `config.json` + `PrShepherdConfig` in `config/load.mts`         |
 | New shared type                  | `types/github.mts`, `types/iterate.mts`, or `types/report.mts`  |
+| New exit code                    | `EXIT` map in `exit-codes.mts` + [exit-codes.md](exit-codes.md) |
 
 See [extending.md](extending.md) for step-by-step recipes.

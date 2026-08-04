@@ -1,8 +1,15 @@
 import { appendEntry, nextEntry } from "../log/log-file.mts";
 import { formatRequestEntry, formatResponseEntry } from "../log/session.mts";
+import { GitHubRequestError } from "./errors.mts";
 import { makeHeaders } from "./http-auth.mts";
 import { requestWithTokenRetry } from "./http-request.mts";
-import { redactToken, redactUrl, sanitizeBody } from "./http-utils.mts";
+import {
+  parseRateLimit,
+  parseRetryAfter,
+  redactToken,
+  redactUrl,
+  sanitizeBody,
+} from "./http-utils.mts";
 
 const BASE_URL = "https://api.github.com";
 
@@ -41,7 +48,14 @@ export async function rest<T = unknown>(method: string, path: string, body?: unk
         attempt: attempt > 1 ? attempt : undefined,
       }),
     );
-    throw new Error(`GitHub REST ${method} ${path} failed: ${res.status} ${sanitizeBody(text)}`);
+    throw new GitHubRequestError(
+      `GitHub REST ${method} ${path} failed: ${res.status} ${sanitizeBody(text)}`,
+      {
+        status: res.status,
+        rateLimit: parseRateLimit(res.headers) ?? undefined,
+        retryAfterSeconds: parseRetryAfter(res.headers),
+      },
+    );
   }
 
   if (ct.includes("application/json")) {
@@ -110,7 +124,14 @@ export async function restText(path: string): Promise<string> {
         attempt: attempt > 1 ? attempt : undefined,
       }),
     );
-    throw new Error(`GitHub REST GET ${path} failed: ${res.status} ${sanitizeBody(text)}`);
+    throw new GitHubRequestError(
+      `GitHub REST GET ${path} failed: ${res.status} ${sanitizeBody(text)}`,
+      {
+        status: res.status,
+        rateLimit: parseRateLimit(res.headers) ?? undefined,
+        retryAfterSeconds: parseRetryAfter(res.headers),
+      },
+    );
   }
 
   appendEntry(
@@ -162,7 +183,13 @@ async function followRestTextRedirect(
       contentLength: parseContentLength(redirectRes.headers),
     }),
   );
-  if (!redirectRes.ok) throw new Error(`redirect target ${location} failed: ${redirectRes.status}`);
+  if (!redirectRes.ok) {
+    throw new GitHubRequestError(`redirect target ${location} failed: ${redirectRes.status}`, {
+      status: redirectRes.status,
+      rateLimit: parseRateLimit(redirectRes.headers) ?? undefined,
+      retryAfterSeconds: parseRetryAfter(redirectRes.headers),
+    });
+  }
   return redirectRes.text();
 }
 

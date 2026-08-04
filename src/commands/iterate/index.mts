@@ -4,6 +4,7 @@ import { getCurrentPrNumber } from "../../github/client.mts";
 import { graphql } from "../../github/http.mts";
 import { MARK_PR_READY_MUTATION } from "../../github/queries.mts";
 import { loadConfig } from "../../config/load.mts";
+import { EXIT, ShepherdError } from "../../exit-codes.mts";
 import {
   getCurrentHeadSha,
   buildSummary,
@@ -28,8 +29,12 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   const stallTimeoutSeconds = opts.stallTimeoutSeconds ?? config.iterate.stallTimeoutMinutes * 60;
 
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
-  if (prNumber === null)
-    throw new Error("No open PR found for current branch. Pass a PR number explicitly.");
+  if (prNumber === null) {
+    throw new ShepherdError(
+      "No open PR found for current branch. Pass a PR number explicitly.",
+      EXIT.UNAVAILABLE,
+    );
+  }
   const neverCancelRuns = opts.neverCancelRuns ?? config.actions.neverCancelRuns;
 
   const report = await runCheck({
@@ -41,7 +46,10 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
 
   const [repoOwner, repoName] = report.repo.split("/");
   if (!repoOwner || !repoName) {
-    throw new Error(`Unexpected repo format: "${report.repo}" (expected "owner/name")`);
+    throw new ShepherdError(
+      `Unexpected repo format: "${report.repo}" (expected "owner/name")`,
+      EXIT.DATAERR,
+    );
   }
   const stallKey = { owner: repoOwner, repo: repoName, pr: prNumber };
 

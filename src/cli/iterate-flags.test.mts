@@ -5,6 +5,7 @@ vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
 import type { loadConfig } from "../config/load.mts";
 import { parseIterateFlags } from "./iterate-flags.mts";
+import { EXIT } from "../exit-codes.mts";
 
 type PrShepherdConfig = ReturnType<typeof loadConfig>;
 
@@ -85,7 +86,7 @@ describe("parseIterateFlags", () => {
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     const flags = parseIterateFlags(["--stall-timeout", "bad"], defaultConfig());
     expect(flags.stallTimeoutSuffix).toBeNull();
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     stderrSpy.mockRestore();
   });
 

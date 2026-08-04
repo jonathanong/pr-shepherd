@@ -1,3 +1,4 @@
+import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type { RepoInfo } from "./client.mts";
 import { GitHubRequestError } from "./errors.mts";
 import type { RawBatchResponse, RawContextNode, RawPr } from "./batch-raw-types.mts";
@@ -13,7 +14,9 @@ export function requireRawPr(
       { status: 200 },
     );
   }
-  if (!response.repository.pullRequest) throw new Error(`PR #${pr} not found`);
+  if (!response.repository.pullRequest) {
+    throw new ShepherdError(`PR #${pr} not found`, EXIT.UNAVAILABLE);
+  }
   return response.repository.pullRequest;
 }
 

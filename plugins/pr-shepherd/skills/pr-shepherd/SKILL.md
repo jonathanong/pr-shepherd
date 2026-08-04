@@ -20,7 +20,7 @@ Poll dispatcher for iterating a PR to completion.
 
 3. **Loop:** Run the poll, print its full output, and follow its `## Instructions` section exactly. Then run the poll again. Repeat until the CLI emits `[CANCEL]` or `[ESCALATE]`, unless the human directs you to stop. `[FIX_CODE]` is non-terminal: do its instructions, then poll again. The poll already waits between ticks via `--interval`; do not add manual `sleep`s between ticks.
 
-4. **Nonzero exit codes:** Treat a nonzero poll exit as PR state only when the output contains a matching `# PR #$N [ACTION]` heading. Exit `1` can also mean a command or validation failure; if there is no `[ACTION]` heading, surface the error and stop instead of looping.
+4. **Exit codes:** an exit code of `64` or higher means the `pr-shepherd` command itself failed (bad flag, GitHub auth/permission error, transient failure, etc.) — surface the error and stop instead of looping. Any other exit code (`0` or `10`–`19`) means the command ran and the output above is real PR state — proceed to step 5.
 
 5. **Terminal states (stop):**
    - `[CANCEL]` — ready-delay completed, or PR merged/closed.

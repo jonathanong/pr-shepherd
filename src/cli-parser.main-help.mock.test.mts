@@ -26,7 +26,7 @@ describe("main — top-level help", () => {
     expect(out).toContain("current");
     expect(out).toContain("repo");
     expect(out).toContain("all");
-    expect(out).toContain("Exit codes for iterate and poll:");
+    expect(out).toContain("Exit codes: 0 done, 10-19 PR state, 64-78 shepherd failed");
     expect(process.exitCode).toBeUndefined();
     expect(stderrSpy).not.toHaveBeenCalled();
   });

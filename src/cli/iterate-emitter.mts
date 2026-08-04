@@ -1,5 +1,5 @@
+import { iterateResultToExitCode } from "../exit-codes.mts";
 import type { IterateResult } from "../types.mts";
-import { iterateActionToExitCode } from "./exit-codes.mts";
 import { formatIterateResult, projectIterateLean, projectIterateVerbose } from "./formatters.mts";
 
 interface EmitIterateResultOpts {
@@ -21,5 +21,5 @@ export function emitIterateResult(result: IterateResult, opts: EmitIterateResult
     const text = formatIterateResult(result, { verbose: opts.verbose, ...projectionOpts });
     process.stdout.write(`${text}\n`);
   }
-  process.exitCode = iterateActionToExitCode(result.action);
+  process.exitCode = iterateResultToExitCode(result);
 }

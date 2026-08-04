@@ -10,6 +10,7 @@ import {
 import { markReplySeen } from "../state/seen-comments.mts";
 import { threadTranscriptBody } from "../threads/transcript.mts";
 import { addPrShepherdMarker } from "../comments/marker.mts";
+import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type { ResolveOptions } from "../types.mts";
 import type { ResolveCommandOptions } from "./resolve.mts";
 
@@ -19,7 +20,10 @@ export async function runResolveMutate(
   const repo = await getRepoInfo();
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
   if (prNumber === null) {
-    throw new Error("No open PR found for current branch. Pass a PR number explicitly.");
+    throw new ShepherdError(
+      "No open PR found for current branch. Pass a PR number explicitly.",
+      EXIT.UNAVAILABLE,
+    );
   }
   const { data } = await fetchPrBatch(prNumber, repo, { paginateApprovedReviews: true });
   const config = loadConfig();

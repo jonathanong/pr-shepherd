@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { EXIT } from "./exit-codes.mts";
 
 const { mockMain } = vi.hoisted(() => ({ mockMain: vi.fn() }));
 
@@ -28,18 +29,18 @@ async function loadIndex() {
 }
 
 describe("index — error exit", () => {
-  it("writes 'pr-shepherd error: <message>' to stderr and exits 1 when main rejects with Error", async () => {
+  it("writes 'pr-shepherd error: <message>' to stderr and exits EX_SOFTWARE when main rejects with Error", async () => {
     mockMain.mockRejectedValueOnce(new Error("something broke"));
     await loadIndex();
     expect(stderrSpy).toHaveBeenCalledWith("pr-shepherd error: something broke\n");
-    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(exitSpy).toHaveBeenCalledWith(EXIT.SOFTWARE);
   });
 
   it("stringifies non-Error rejections", async () => {
     mockMain.mockRejectedValueOnce("not an error object");
     await loadIndex();
     expect(stderrSpy).toHaveBeenCalledWith("pr-shepherd error: not an error object\n");
-    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(exitSpy).toHaveBeenCalledWith(EXIT.SOFTWARE);
   });
 
   it("appends cause when err.cause is set", async () => {
@@ -52,7 +53,7 @@ describe("index — error exit", () => {
       /^pr-shepherd error: fetch failed \(cause: Error: getaddrinfo ENOTFOUND api\.github\.com/,
     );
     expect(written).toMatch(/\)\n$/);
-    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(exitSpy).toHaveBeenCalledWith(EXIT.SOFTWARE);
   });
 
   it("formats non-Error causes", async () => {
@@ -61,7 +62,7 @@ describe("index — error exit", () => {
     mockMain.mockRejectedValueOnce(err);
     await loadIndex();
     expect(stderrSpy.mock.calls[0][0]).toBe("pr-shepherd error: outer (cause: plain cause)\n");
-    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(exitSpy).toHaveBeenCalledWith(EXIT.SOFTWARE);
   });
 
   it("falls back to the cause message when an Error has no stack", async () => {
@@ -72,7 +73,7 @@ describe("index — error exit", () => {
     mockMain.mockRejectedValueOnce(err);
     await loadIndex();
     expect(stderrSpy.mock.calls[0][0]).toContain("(cause: stackless cause)");
-    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(exitSpy).toHaveBeenCalledWith(EXIT.SOFTWARE);
   });
 
   it("does not recurse infinitely for circular cause chains", async () => {
@@ -82,7 +83,7 @@ describe("index — error exit", () => {
     await loadIndex();
     const written = stderrSpy.mock.calls[0][0] as string;
     expect(written).toContain("[circular or deep cause chain]");
-    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(exitSpy).toHaveBeenCalledWith(EXIT.SOFTWARE);
   });
 
   it("truncates deeply nested cause chains at max depth", async () => {
@@ -96,6 +97,6 @@ describe("index — error exit", () => {
     await loadIndex();
     const written = stderrSpy.mock.calls[0][0] as string;
     expect(written).toContain("[circular or deep cause chain]");
-    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(exitSpy).toHaveBeenCalledWith(EXIT.SOFTWARE);
   });
 });

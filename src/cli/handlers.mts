@@ -3,6 +3,7 @@ import { runMarkFilesAsViewed } from "../commands/mark-files-as-viewed.mts";
 import { runIterate } from "../commands/iterate/index.mts";
 import { runClean, type CleanVariant } from "../commands/clean.mts";
 import { loadConfig } from "../config/load.mts";
+import { EXIT } from "../exit-codes.mts";
 import { parseCommonArgs, getFlag } from "./args.mts";
 import { USAGE } from "./help.mts";
 import {
@@ -21,7 +22,7 @@ export async function handleClean(args: string[]): Promise<void> {
 
   if (!variant || !CLEAN_VARIANTS.has(variant)) {
     process.stderr.write(`${USAGE.clean}\n`);
-    process.exitCode = 1;
+    process.exitCode = EXIT.USAGE;
     return;
   }
 
@@ -31,7 +32,7 @@ export async function handleClean(args: string[]): Promise<void> {
     if (!a.startsWith("--")) continue;
     if (a === "--dry-run" || a === "--format" || a.startsWith("--format=")) continue;
     process.stderr.write(`pr-shepherd: clean: unknown flag: "${a}"\n`);
-    process.exitCode = 1;
+    process.exitCode = EXIT.USAGE;
     return;
   }
 
@@ -47,7 +48,7 @@ export async function handleClean(args: string[]): Promise<void> {
     process.stderr.write(
       `pr-shepherd: clean: invalid --format value: "${formatValue}". Expected "text" or "json".\n`,
     );
-    process.exitCode = 1;
+    process.exitCode = EXIT.USAGE;
     return;
   }
 
@@ -64,7 +65,7 @@ export async function handleClean(args: string[]): Promise<void> {
     process.stderr.write(
       `pr-shepherd: clean: too many positional arguments (expected at most 1, got ${positionals.length})\n`,
     );
-    process.exitCode = 1;
+    process.exitCode = EXIT.USAGE;
     return;
   }
   const value = positionals[0];
@@ -73,7 +74,7 @@ export async function handleClean(args: string[]): Promise<void> {
 
   if (!result.ok) {
     process.stderr.write(`pr-shepherd: clean: ${result.error}\n`);
-    process.exitCode = 1;
+    process.exitCode = EXIT.SOFTWARE;
     return;
   }
 
@@ -88,7 +89,7 @@ export async function handleCommitSuggestion(args: string[]): Promise<void> {
   const threadId = getFlag(extra, "--thread-id");
   if (!threadId) {
     process.stderr.write(`${USAGE["commit-suggestion"]}\n`);
-    process.exitCode = 1;
+    process.exitCode = EXIT.USAGE;
     return;
   }
 
@@ -96,7 +97,7 @@ export async function handleCommitSuggestion(args: string[]): Promise<void> {
 
   if (!message || message.trim() === "") {
     process.stderr.write("--message is required and must be non-empty\n");
-    process.exitCode = 1;
+    process.exitCode = EXIT.USAGE;
     return;
   }
 
@@ -145,7 +146,7 @@ export async function handleMarkFilesAsViewed(args: string[]): Promise<void> {
   const parsed = parseMarkFilesAsViewedArgs(extra);
   if (!parsed.ok) {
     process.stderr.write(`pr-shepherd: mark-files-as-viewed: ${parsed.error}\n`);
-    process.exitCode = 1;
+    process.exitCode = EXIT.USAGE;
     return;
   }
 

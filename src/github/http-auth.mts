@@ -1,5 +1,6 @@
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
+import { EXIT, ShepherdError } from "../exit-codes.mts";
 
 const execFile = promisify(execFileCb);
 
@@ -43,8 +44,9 @@ async function resolveToken(): Promise<string> {
     return _token;
   }
 
-  throw new Error(
+  throw new ShepherdError(
     "No GitHub token found. Set GH_TOKEN, GITHUB_TOKEN, or GITHUB_PERSONAL_ACCESS_TOKEN, or run `gh auth login`.",
+    EXIT.NOPERM,
   );
 }
 

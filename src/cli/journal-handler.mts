@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { EXIT, errorToExitCode } from "../exit-codes.mts";
 import { runJournal } from "../commands/journal/index.mts";
 import { getFlag, parsePrNumber } from "./args.mts";
 import { USAGE } from "./help.mts";
@@ -9,7 +10,7 @@ export async function handleJournal(args: string[]): Promise<void> {
     if (a === "--dry-run" || a === "--format" || a.startsWith("--format=")) continue;
     if (a === "--file" || a.startsWith("--file=")) continue;
     process.stderr.write(`pr-shepherd: journal: unknown flag: "${a}"\n`);
-    process.exitCode = 1;
+    process.exitCode = EXIT.USAGE;
     return;
   }
 
@@ -20,7 +21,7 @@ export async function handleJournal(args: string[]): Promise<void> {
     process.stderr.write(
       `pr-shepherd: journal: provide the entry as a positional argument or via --file, not both\n`,
     );
-    process.exitCode = 1;
+    process.exitCode = EXIT.USAGE;
     return;
   }
 
@@ -29,13 +30,13 @@ export async function handleJournal(args: string[]): Promise<void> {
     rawItem = filePath !== null ? await readItemSource(filePath) : extra[0];
   } catch (e) {
     process.stderr.write(`pr-shepherd: journal: ${String(e)}\n`);
-    process.exitCode = 1;
+    process.exitCode = EXIT.NOINPUT;
     return;
   }
 
   if (rawItem === undefined) {
     process.stderr.write(`${USAGE.journal}\n`);
-    process.exitCode = 1;
+    process.exitCode = EXIT.USAGE;
     return;
   }
 
@@ -53,7 +54,7 @@ export async function handleJournal(args: string[]): Promise<void> {
     }
   } catch (e) {
     process.stderr.write(`pr-shepherd: journal: ${String(e)}\n`);
-    process.exitCode = 1;
+    process.exitCode = errorToExitCode(e);
   }
 }
 

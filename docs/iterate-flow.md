@@ -111,12 +111,18 @@ CONFLICTS is included here because the `fix_code` instructions tell the caller t
 
 ## Decision table
 
+Exit codes: `0`/`10`–`14` is `IterateResult` PR state; see
+[exit-codes.md](exit-codes.md) for the full scheme, including the `sysexits.h`
+codes (64–78) emitted when a step fails outright rather than reaching a step
+below.
+
 | Step    | Condition                                               | Action       | Exit code |
 | ------- | ------------------------------------------------------- | ------------ | --------- |
-| 1.5     | `state !== 'OPEN'`                                      | `cancel`     | 2         |
-| 2 cont. | `shouldCancel`                                          | `cancel`     | 2         |
-| 2.5     | Same fingerprint for ≥ `stallTimeoutMinutes` (any step) | `escalate`   | 3         |
-| 3       | Actionable threads/comments/any failing CI or CONFLICTS | `fix_code`   | 1         |
-| 3 esc.  | Same thread hit `fixAttemptsPerThread` times            | `escalate`   | 3         |
-| 4       | READY + CLEAN + isDraft                                 | `mark_ready` | 0         |
-| 5       | Fallthrough                                             | `wait`       | 0         |
+| 1.5     | `state === 'MERGED'`                                    | `cancel`     | 0         |
+| 1.5     | `state === 'CLOSED'`                                    | `cancel`     | 14        |
+| 2 cont. | `shouldCancel` (ready-delay elapsed)                    | `cancel`     | 0         |
+| 2.5     | Same fingerprint for ≥ `stallTimeoutMinutes` (any step) | `escalate`   | 13        |
+| 3       | Actionable threads/comments/any failing CI or CONFLICTS | `fix_code`   | 12        |
+| 3 esc.  | Same thread hit `fixAttemptsPerThread` times            | `escalate`   | 13        |
+| 4       | READY + CLEAN + isDraft                                 | `mark_ready` | 11        |
+| 5       | Fallthrough                                             | `wait`       | 10        |

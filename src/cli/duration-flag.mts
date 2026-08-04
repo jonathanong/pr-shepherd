@@ -1,5 +1,6 @@
-import type { DurationParseOptions } from "./exit-codes.mts";
-import { parseSecondsDurationParts } from "./exit-codes.mts";
+import { EXIT } from "../exit-codes.mts";
+import type { DurationParseOptions } from "./duration.mts";
+import { parseSecondsDurationParts } from "./duration.mts";
 
 export function validateSecondsDurationFlag(
   command: string,
@@ -13,7 +14,7 @@ export function validateSecondsDurationFlag(
   if (value === null) {
     if (presentAsSeparateArg) {
       process.stderr.write(`${command}: ${flag} requires a value (e.g. ${flag} ${example})\n`);
-      process.exitCode = 1;
+      process.exitCode = EXIT.USAGE;
       return null;
     }
     return undefined;
@@ -21,14 +22,14 @@ export function validateSecondsDurationFlag(
   const trimmed = value.trim();
   if (trimmed.startsWith("--")) {
     process.stderr.write(`${command}: ${flag} requires a value (e.g. ${flag} ${example})\n`);
-    process.exitCode = 1;
+    process.exitCode = EXIT.USAGE;
     return null;
   }
   if (!parseSecondsDurationParts(trimmed, opts)) {
     process.stderr.write(
       `${command}: invalid ${flag}: ${value}. Expected a duration like 30s, 4.5m, 1h, or a bare number (${bareUnit}).\n`,
     );
-    process.exitCode = 1;
+    process.exitCode = EXIT.USAGE;
     return null;
   }
   return trimmed;

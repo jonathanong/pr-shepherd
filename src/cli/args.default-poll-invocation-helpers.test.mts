@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { isDefaultPollInvocation, validateDefaultPollArgs } from "./default-poll.mts";
+import { EXIT } from "../exit-codes.mts";
 
 describe("default poll invocation helpers", () => {
   let stderrSpy: ReturnType<typeof vi.spyOn>;
@@ -49,7 +50,7 @@ describe("default poll invocation helpers", () => {
 
   it("rejects missing values for default poll value flags", () => {
     expect(validateDefaultPollArgs(["42", "--ready-delay"])).toBe(false);
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("Unknown subcommand"));
   });
 

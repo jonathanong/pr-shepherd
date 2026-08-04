@@ -6,6 +6,7 @@ import {
   getStderr,
 } from "../test-helpers/cli-parser.clean.test-support.mts";
 import { main } from "./cli-parser.mts";
+import { EXIT } from "./exit-codes.mts";
 
 registerHooks();
 
@@ -31,17 +32,17 @@ const ERROR_RESULT = {
 };
 
 describe("main — clean dispatch", () => {
-  it("writes usage to stderr and exits 1 when no variant given", async () => {
+  it("writes usage to stderr and exits EX_USAGE when no variant given", async () => {
     await main(["node", "shepherd", "clean"]);
     expect(getStderr()).toContain("Usage:");
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunClean).not.toHaveBeenCalled();
   });
 
-  it("writes usage to stderr and exits 1 for unknown variant", async () => {
+  it("writes usage to stderr and exits EX_USAGE for unknown variant", async () => {
     await main(["node", "shepherd", "clean", "unknown"]);
     expect(getStderr()).toContain("Usage:");
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunClean).not.toHaveBeenCalled();
   });
 
@@ -55,11 +56,11 @@ describe("main — clean dispatch", () => {
     expect(process.exitCode).toBeUndefined();
   });
 
-  it("writes error to stderr and exits 1 when runClean returns ok=false", async () => {
+  it("writes error to stderr and exits EX_SOFTWARE when runClean returns ok=false", async () => {
     mockRunClean.mockResolvedValue(ERROR_RESULT);
     await main(["node", "shepherd", "clean", "pr"]);
     expect(getStderr()).toContain("No open PR found");
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.SOFTWARE);
   });
 
   it("outputs JSON when --format=json is passed (combined form)", async () => {
@@ -91,10 +92,10 @@ describe("main — clean dispatch", () => {
     expect(mockRunClean).toHaveBeenCalledWith(expect.objectContaining({ dryRun: true }));
   });
 
-  it("writes error to stderr and exits 1 for extra positional arguments", async () => {
+  it("writes error to stderr and exits EX_USAGE for extra positional arguments", async () => {
     await main(["node", "shepherd", "clean", "pr", "42", "99"]);
     expect(getStderr()).toContain("too many positional");
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunClean).not.toHaveBeenCalled();
   });
 
@@ -106,17 +107,17 @@ describe("main — clean dispatch", () => {
     );
   });
 
-  it("writes error to stderr and exits 1 for unknown flag", async () => {
+  it("writes error to stderr and exits EX_USAGE for unknown flag", async () => {
     await main(["node", "shepherd", "clean", "all", "--dryrun"]);
     expect(getStderr()).toContain("unknown flag");
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunClean).not.toHaveBeenCalled();
   });
 
-  it("writes error to stderr and exits 1 for invalid --format value", async () => {
+  it("writes error to stderr and exits EX_USAGE for invalid --format value", async () => {
     await main(["node", "shepherd", "clean", "all", "--format", "xml"]);
     expect(getStderr()).toContain("invalid --format value");
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunClean).not.toHaveBeenCalled();
   });
 });

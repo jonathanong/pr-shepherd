@@ -6,6 +6,7 @@ import {
   stderrSpy,
 } from "../test-helpers/cli-parser.test-support.mts";
 import { main } from "./cli-parser.mts";
+import { EXIT } from "./exit-codes.mts";
 
 registerHooks();
 
@@ -32,6 +33,6 @@ describe("main — log-file", () => {
     mockRunLogFile.mockRejectedValue(new Error("not in repo"));
     await main(["node", "shepherd", "log-file"]);
     expect(stderrSpy).toHaveBeenCalledWith("pr-shepherd: log-file: Error: not in repo\n");
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.SOFTWARE);
   });
 });

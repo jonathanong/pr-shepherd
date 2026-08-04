@@ -54,11 +54,14 @@ Clean variants:
   repo                 Remove all state for the current repository.
   all                  Remove all pr-shepherd state.
 
-Exit codes for iterate and poll:
-  0  WAIT or MARK_READY
-  1  FIX_CODE, or a command/validation error
-  2  CANCEL
-  3  ESCALATE
+Exit codes: 0 done, 10-19 PR state, 64-78 shepherd failed (sysexits.h).
+  0   CANCEL (merged or ready-delay elapsed)
+  10  WAIT
+  11  MARK_READY
+  12  FIX_CODE
+  13  ESCALATE
+  14  CANCEL (closed without merging)
+See docs/exit-codes.md for the full sysexits.h error-code table.
 
 Duration examples: 30s, 4.5m, 1h. A bare number uses each flag's default unit (see above); decimals are allowed with an explicit unit (4.5m).
 

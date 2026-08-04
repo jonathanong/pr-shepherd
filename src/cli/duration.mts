@@ -1,5 +1,3 @@
-import type { ShepherdAction } from "../types.mts";
-
 const SECOND_DURATION_UNITS = new Set([
   "s",
   "sec",
@@ -58,32 +56,4 @@ export function parseDurationToSeconds(
   if (parsed.unit.startsWith("h")) return parsed.value * 3600;
   if (parsed.unit.startsWith("m")) return parsed.value * 60;
   return parsed.value;
-}
-
-export function statusToExitCode(status: string): number {
-  switch (status) {
-    case "MERGED":
-    case "CLOSED":
-    case "READY":
-      return 0;
-    case "IN_PROGRESS":
-      return 2;
-    case "UNRESOLVED_COMMENTS":
-      return 3;
-    default:
-      return 1;
-  }
-}
-
-export function iterateActionToExitCode(action: ShepherdAction): number {
-  switch (action) {
-    case "fix_code":
-      return 1;
-    case "cancel":
-      return 2;
-    case "escalate":
-      return 3;
-    default:
-      return 0;
-  }
 }

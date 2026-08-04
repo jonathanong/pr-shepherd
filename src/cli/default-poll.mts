@@ -1,3 +1,4 @@
+import { EXIT } from "../exit-codes.mts";
 import { parsePrNumber } from "./args.mts";
 import { validateDefaultArgs } from "./validate-default-args.mts";
 import { USAGE } from "./help.mts";
@@ -42,5 +43,5 @@ function isDefaultPollFlag(arg: string): boolean {
 function writeDefaultUsageError(arg: string): void {
   process.stderr.write(`Unknown subcommand: ${arg}\n`);
   process.stderr.write(`${USAGE.top}\n`);
-  process.exitCode = 1;
+  process.exitCode = EXIT.USAGE;
 }

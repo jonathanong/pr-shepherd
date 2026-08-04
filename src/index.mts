@@ -9,6 +9,7 @@
  */
 
 import { main } from "./cli-parser.mts";
+import { errorToExitCode } from "./exit-codes.mts";
 
 function formatCause(cause: unknown, seen = new Set<unknown>(), depth = 0): string {
   if (depth > 5 || seen.has(cause)) return "[circular or deep cause chain]";
@@ -28,5 +29,5 @@ main(process.argv).catch((err) => {
   process.stderr.write(
     `pr-shepherd error: ${msg}${causeStr !== null ? ` (cause: ${causeStr})` : ""}\n`,
   );
-  process.exit(1);
+  process.exit(errorToExitCode(err));
 });

@@ -26,6 +26,7 @@ import { markReviewInlineThreadMarkers } from "../comments/review-thread-markers
 import { normalizeBotUsernames } from "../comments/authors.mts";
 import { discoverRuleFiles, loadRules } from "../classify/loader.mts";
 import { buildClassifyIndex, partitionBatch, type BatchPartition } from "../classify/apply.mts";
+import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type {
   GlobalOptions,
   ShepherdReport,
@@ -43,7 +44,10 @@ export async function runCheck(
   const repo = await getRepoInfo();
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
   if (prNumber === null) {
-    throw new Error("No open PR found for current branch. Pass a PR number explicitly.");
+    throw new ShepherdError(
+      "No open PR found for current branch. Pass a PR number explicitly.",
+      EXIT.UNAVAILABLE,
+    );
   }
   const config = loadConfig();
   const paginateApprovedReviews = config.iterate.minimizeApprovals;

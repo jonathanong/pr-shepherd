@@ -7,6 +7,7 @@ import {
 } from "../test-helpers/cli-parser.iterate.test-support.mts";
 import { makeIterateResult } from "../fixtures/cli-parser.iterate-fixtures.mts";
 import { main } from "./cli-parser.mts";
+import { EXIT } from "./exit-codes.mts";
 
 registerHooks();
 
@@ -23,7 +24,7 @@ describe("main — default (poll)", () => {
     await main(["node", "shepherd"]);
     expect(mockRunIterate).toHaveBeenCalledTimes(1);
     expect(mockRunIterate).toHaveBeenCalledWith(expect.objectContaining({ prNumber: undefined }));
-    expect(process.exitCode).toBe(2);
+    expect(process.exitCode).toBe(EXIT.OK);
   });
 
   it("defaults to poll when the first argument is a PR number", async () => {
@@ -57,7 +58,7 @@ describe("main — default (poll)", () => {
     await promise;
 
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
-    expect(process.exitCode).toBe(2);
+    expect(process.exitCode).toBe(EXIT.OK);
   });
 
   it("accepts --until-terminal on the default path", async () => {
@@ -70,10 +71,10 @@ describe("main — default (poll)", () => {
     await promise;
 
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
-    expect(process.exitCode).toBe(2);
+    expect(process.exitCode).toBe(EXIT.OK);
   });
 
-  it("loops on wait then stops on cancel — exits 2", async () => {
+  it("loops on wait then stops on cancel — exits EX_OK", async () => {
     mockRunIterate
       .mockResolvedValueOnce(makeIterateResult("wait"))
       .mockResolvedValue(makeIterateResult("cancel"));
@@ -84,35 +85,35 @@ describe("main — default (poll)", () => {
 
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
     expect(getStdout()).toContain("[CANCEL]");
-    expect(process.exitCode).toBe(2);
+    expect(process.exitCode).toBe(EXIT.OK);
   });
 
   it("rejects unknown flag-first default invocations", async () => {
     await main(["node", "shepherd", "--formt", "json"]);
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunIterate).not.toHaveBeenCalled();
     expect(getStderr()).toContain("Unknown subcommand: --formt");
   });
 
   it("rejects extra positional arguments in default poll form", async () => {
     await main(["node", "shepherd", "42", "resolve"]);
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunIterate).not.toHaveBeenCalled();
     expect(getStderr()).toContain("Unknown subcommand: resolve");
   });
 });
 
 describe("main — iterate subcommand", () => {
-  it("exits with iterateActionToExitCode(fix_code)=1", async () => {
+  it("exits with iterateResultToExitCode(fix_code)=EXIT.FIX_CODE", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("fix_code"));
     await main(["node", "shepherd", "iterate", "42"]);
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.FIX_CODE);
   });
 
-  it("exits with 0 for wait action", async () => {
+  it("exits with EXIT.WAIT for wait action", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
     await main(["node", "shepherd", "iterate", "42"]);
-    expect(process.exitCode).toBe(0);
+    expect(process.exitCode).toBe(EXIT.WAIT);
   });
 
   it("passes stallTimeoutSeconds derived from --stall-timeout to runIterate", async () => {
@@ -125,14 +126,14 @@ describe("main — iterate subcommand", () => {
 
   it("invalid --ready-delay exits before runIterate", async () => {
     await main(["node", "shepherd", "iterate", "42", "--ready-delay", "notaduration"]);
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunIterate).not.toHaveBeenCalled();
     expect(getStderr()).toContain("invalid --ready-delay");
   });
 
   it("--ready-delay without a value exits before runIterate", async () => {
     await main(["node", "shepherd", "iterate", "42", "--ready-delay", "--format=json"]);
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunIterate).not.toHaveBeenCalled();
     expect(getStderr()).toContain("--ready-delay requires a value");
   });
