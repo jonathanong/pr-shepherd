@@ -49,4 +49,39 @@ describe("errorToExitCode", () => {
     });
     expect(errorToExitCode(err)).toBe(EXIT.TEMPFAIL);
   });
+
+  it("classifies a GraphQL 'resource not accessible' error at HTTP 200 as EX_NOPERM", () => {
+    // GitHub reports field-level PAT scope failures as an errors[] entry at HTTP 200,
+    // not as a 401/403 — status alone can't see this; it requires the message.
+    const err = new GitHubRequestError("GitHub GraphQL error: not accessible", {
+      status: 200,
+      graphqlErrors: [{ message: "Resource not accessible by personal access token" }],
+    });
+    expect(errorToExitCode(err)).toBe(EXIT.NOPERM);
+  });
+
+  it("does not classify an unrelated GraphQL error at HTTP 200 as EX_NOPERM", () => {
+    const err = new GitHubRequestError("GitHub GraphQL error: bad field", {
+      status: 200,
+      graphqlErrors: [{ message: "Variable $id has an invalid value" }],
+    });
+    expect(errorToExitCode(err)).toBe(EXIT.UNAVAILABLE);
+  });
+
+  it("lets a retry signal win over a GraphQL permission-error message", () => {
+    const err = new GitHubRequestError("secondary rate limit", {
+      status: 200,
+      retryAfterSeconds: 30,
+      graphqlErrors: [{ message: "Resource not accessible by personal access token" }],
+    });
+    expect(errorToExitCode(err)).toBe(EXIT.TEMPFAIL);
+  });
+
+  it("honors exitCodeOverride, bypassing status-based classification entirely", () => {
+    const err = new GitHubRequestError("malformed response", {
+      status: 200,
+      exitCodeOverride: EXIT.SOFTWARE,
+    });
+    expect(errorToExitCode(err)).toBe(EXIT.SOFTWARE);
+  });
 });

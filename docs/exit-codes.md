@@ -100,6 +100,20 @@ signal (`Retry-After`, `429`, `5xx`, or an exhausted rate limit) _before_
 falling back to the blanket 401/403 → `77` rule, so a throttled 403 correctly
 resolves to `75`, not `77`.
 
+**GraphQL permission failures often arrive at HTTP 200, not 401/403.** A
+fine-grained PAT missing a scope for one field (e.g. `statusCheckRollup`)
+still gets a 200 response with the field's error listed in `errors[]` —
+GitHub only fails the one field, not the whole request. Status-only
+classification would misclassify this as `69` (`EX_UNAVAILABLE`, "nothing to
+act on") instead of `77` (`EX_NOPERM`, "fix your token"). `GitHubRequestError`
+also checks `graphqlErrors[].message` against `/resource not accessible/i` —
+the literal string GitHub uses for this failure — before falling back to the
+status-only rule. A malformed/unparseable GraphQL response (wrong shape, a
+null node where one is required) is a third, distinct case: it isn't a
+permission or precondition problem either, so those call sites pass an
+explicit `exitCodeOverride: EXIT.SOFTWARE` to `GitHubRequestError` rather than
+letting status-based classification guess.
+
 **78 (`EX_CONFIG`) is defined but not wired up.** A malformed
 `.pr-shepherdrc.yml` currently degrades gracefully: shepherd logs a
 `failed to parse` warning to stderr and falls back to built-in defaults rather

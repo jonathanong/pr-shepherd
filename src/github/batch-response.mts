@@ -23,9 +23,12 @@ export function requireRawPr(
 export function requireContextNodes(nodes: Array<RawContextNode | null>): RawContextNode[] {
   const nullIndex = nodes.findIndex((node) => node === null);
   if (nullIndex !== -1) {
+    // A null context node is an unexpected/malformed shape, not a precondition or
+    // permission problem — force EX_SOFTWARE rather than falling through to the
+    // (200-status-derived) EX_UNAVAILABLE default.
     throw new GitHubRequestError(
       `Malformed GitHub GraphQL response: null check context at repository.pullRequest.commits.nodes.0.commit.statusCheckRollup.contexts.nodes.${nullIndex}`,
-      { status: 200 },
+      { status: 200, exitCodeOverride: EXIT.SOFTWARE },
     );
   }
   return nodes as RawContextNode[];
