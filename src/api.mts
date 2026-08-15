@@ -11,6 +11,7 @@ import {
 } from "./commands/mark-files-as-viewed.mts";
 import { runResolveMutate } from "./commands/resolve-mutate.mts";
 import { runWithExecutionCwd } from "./execution-context.mts";
+import { getRepoInfo } from "./github/client.mts";
 import type { ResolveResult } from "./comments/resolve.mts";
 import type { CommitSuggestionResult, IterateCommandOptions, IterateResult } from "./types.mts";
 
@@ -115,14 +116,17 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
 
   return Object.freeze({
     iterate(input: IterateInput = {}) {
-      const prNumber = parsePrReference(input.pr);
       const { pr: _pr, ...options } = input;
-      return runWithExecutionCwd(cwd, () => runIterate({ ...options, prNumber, format: "json" }));
+      return runWithExecutionCwd(cwd, async () => {
+        const prNumber = await resolvePrReference(input.pr);
+        return runIterate({ ...options, prNumber, format: "json" });
+      });
     },
 
     apply(input: ApplyInput) {
       return runWithExecutionCwd(cwd, async () => {
-        const prNumber = validateApplyInput(input);
+        validateApplyInput(input);
+        const prNumber = await resolvePrReference(input.pr);
         const results: ApplyOperationResult[] = [];
 
         for (let index = 0; index < input.operations.length; index += 1) {
@@ -172,21 +176,21 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
 
     buildSuggestionPatch(input: BuildSuggestionPatchInput) {
       validateSuggestionPatchInput(input);
-      const prNumber = parsePrReference(input.pr);
       const { pr: _pr, ...options } = input;
-      return runWithExecutionCwd(cwd, () =>
-        runCommitSuggestion({ ...options, prNumber, format: "json" }),
-      );
+      return runWithExecutionCwd(cwd, async () => {
+        const prNumber = await resolvePrReference(input.pr);
+        return runCommitSuggestion({ ...options, prNumber, format: "json" });
+      });
     },
   });
 }
 
-function validateApplyInput(input: ApplyInput): number | undefined {
+function validateApplyInput(input: ApplyInput): void {
   if (!input || !Array.isArray(input.operations) || input.operations.length === 0) {
     throw new PrShepherdValidationError("apply requires a non-empty operations array");
   }
   for (const operation of input.operations) validateOperation(operation);
-  return parsePrReference(input.pr);
+  parsePrReference(input.pr);
 }
 
 function validateOperation(operation: ApplyOperation): void {
@@ -290,9 +294,14 @@ function validateSuggestionPatchInput(input: BuildSuggestionPatchInput): void {
   parsePrReference(input.pr);
 }
 
-function parsePrReference(pr: PrReference | undefined): number | undefined {
-  if (pr === undefined) return undefined;
-  if (typeof pr === "number" && Number.isInteger(pr) && pr > 0) return pr;
+interface ParsedPrReference {
+  number?: number;
+  repository?: string;
+}
+
+function parsePrReference(pr: PrReference | undefined): ParsedPrReference {
+  if (pr === undefined) return {};
+  if (typeof pr === "number" && Number.isInteger(pr) && pr > 0) return { number: pr };
   if (typeof pr === "string") {
     try {
       const url = new URL(pr);
@@ -304,13 +313,27 @@ function parsePrReference(pr: PrReference | undefined): number | undefined {
         parts[2] === "pull" &&
         /^[1-9][0-9]*$/.test(parts[3]!)
       ) {
-        return Number(parts[3]);
+        return { number: Number(parts[3]), repository: `${parts[0]}/${parts[1]}` };
       }
     } catch {
       // Construct the uniform public validation error below.
     }
   }
   throw new PrShepherdValidationError("pr must be a positive number or a GitHub pull-request URL");
+}
+
+async function resolvePrReference(pr: PrReference | undefined): Promise<number | undefined> {
+  const parsed = parsePrReference(pr);
+  if (parsed.repository !== undefined) {
+    const repo = await getRepoInfo();
+    const currentRepository = `${repo.owner}/${repo.name}`;
+    if (parsed.repository.toLowerCase() !== currentRepository.toLowerCase()) {
+      throw new PrShepherdValidationError(
+        `PR URL repository ${parsed.repository} does not match the configured repository ${currentRepository}`,
+      );
+    }
+  }
+  return parsed.number;
 }
 
 function validateStringArray(value: string[] | undefined, label: string): void {

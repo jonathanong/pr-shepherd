@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
@@ -6,12 +7,14 @@ const {
   mockRunJournal,
   mockRunMarkFilesAsViewed,
   mockRunResolveMutate,
+  mockGetRepoInfo,
 } = vi.hoisted(() => ({
   mockRunCommitSuggestion: vi.fn(),
   mockRunIterate: vi.fn(),
   mockRunJournal: vi.fn(),
   mockRunMarkFilesAsViewed: vi.fn(),
   mockRunResolveMutate: vi.fn(),
+  mockGetRepoInfo: vi.fn(),
 }));
 
 vi.mock("./commands/commit-suggestion.mts", () => ({
@@ -23,11 +26,13 @@ vi.mock("./commands/mark-files-as-viewed.mts", () => ({
   runMarkFilesAsViewed: mockRunMarkFilesAsViewed,
 }));
 vi.mock("./commands/resolve-mutate.mts", () => ({ runResolveMutate: mockRunResolveMutate }));
+vi.mock("./github/client.mts", () => ({ getRepoInfo: mockGetRepoInfo }));
 
 import { createPrShepherd, PartialApplyError, PrShepherdValidationError } from "./api.mts";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockGetRepoInfo.mockResolvedValue({ owner: "openai", name: "pr-shepherd" });
 });
 
 describe("public API", () => {
@@ -89,6 +94,7 @@ describe("public API", () => {
     mockRunMarkFilesAsViewed.mockResolvedValue({ markedPaths: ["src/api.mts"] });
     mockRunJournal.mockResolvedValue({ prNumber: 9, mutated: true });
     mockRunCommitSuggestion.mockResolvedValue({ threadId: "PRRT_two" });
+    mockGetRepoInfo.mockResolvedValue({ owner: "acme", name: "widgets" });
     const shepherd = createPrShepherd({ cwd: "." });
 
     await expect(
@@ -135,6 +141,18 @@ describe("public API", () => {
         operations: [{ type: "review_mutations", resolveThreadIds: ["PRRT_one"] }],
       }),
     ).rejects.toBe(failure);
+  });
+
+  it("rejects a cross-repository PR URL before calling an operation", async () => {
+    const shepherd = createPrShepherd({ cwd: "." });
+
+    await expect(
+      shepherd.iterate({ pr: "https://github.com/other/widgets/pull/42" }),
+    ).rejects.toThrow(
+      "PR URL repository other/widgets does not match the configured repository openai/pr-shepherd",
+    );
+
+    expect(mockRunIterate).not.toHaveBeenCalled();
   });
 
   it.each([
