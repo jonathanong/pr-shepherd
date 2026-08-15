@@ -25,10 +25,8 @@ function defaultConfig(): PrShepherdConfig {
     checks: { ciTriggerEvents: ["pull_request"] },
     mergeStatus: { blockingReviewerLogins: [] },
     actions: {
-      autoResolveOutdated: false,
       autoMinimizeSuppressed: false,
       autoMarkReady: false,
-      commitSuggestions: false,
       neverCancelRuns: [],
     },
   };

@@ -107,6 +107,7 @@ export async function applyResolveOptions(
   return result;
 }
 
+/** @deprecated Compatibility alias; use `autoResolveThreads`. */
 export async function autoResolveOutdated(
   threadIds: string[],
 ): Promise<{ resolved: string[]; errors: string[] }> {
