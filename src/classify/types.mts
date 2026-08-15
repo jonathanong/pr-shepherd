@@ -1,4 +1,13 @@
-import type { CommentAuthorAssociation } from "../types/github.mts";
+/** Raw relationship between a comment author and the repository, as reported by GitHub. */
+export type CommentAuthorAssociation =
+  | "COLLABORATOR"
+  | "CONTRIBUTOR"
+  | "FIRST_TIMER"
+  | "FIRST_TIME_CONTRIBUTOR"
+  | "MANNEQUIN"
+  | "MEMBER"
+  | "NONE"
+  | "OWNER";
 
 export type ClassifyItemKind =
   | "review-thread"
