@@ -25,10 +25,8 @@ describe("fix_code — protected in-progress runs", () => {
       checks: { ciTriggerEvents: ["pull_request"] },
       mergeStatus: { blockingReviewerLogins: [] },
       actions: {
-        autoResolveOutdated: false,
         autoMinimizeSuppressed: false,
         autoMarkReady: false,
-        commitSuggestions: false,
         neverCancelRuns: ["Final Code Review"],
       },
       botUsernames: [],
