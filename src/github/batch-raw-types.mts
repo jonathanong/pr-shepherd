@@ -1,5 +1,7 @@
 // Private raw GraphQL response types for the batch PR query.
 
+import type { CommentAuthorAssociation } from "../types/github.mts";
+
 export interface RawBatchResponse {
   repository: {
     pullRequest: RawPr | null;
@@ -81,6 +83,7 @@ export interface RawThreadComment {
   id: string;
   isMinimized: boolean;
   url: string;
+  authorAssociation?: CommentAuthorAssociation;
   author: RawAuthor | null;
   pullRequestReview?: { id: string } | null;
   body: string;
@@ -117,6 +120,7 @@ export interface RawComment {
   id: string;
   isMinimized: boolean;
   url: string;
+  authorAssociation?: CommentAuthorAssociation;
   author: RawAuthor | null;
   body: string;
   createdAt?: string;
@@ -124,6 +128,7 @@ export interface RawComment {
 
 export interface RawReview {
   id: string;
+  authorAssociation?: CommentAuthorAssociation;
   author: RawAuthor | null;
   body: string;
   createdAt?: string;
@@ -133,6 +138,7 @@ export interface RawReview {
 export interface RawReviewSummary {
   id: string;
   isMinimized: boolean;
+  authorAssociation?: CommentAuthorAssociation;
   author: RawAuthor | null;
   body: string;
   createdAt?: string;

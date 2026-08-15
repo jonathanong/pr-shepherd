@@ -4,11 +4,13 @@ export function threadComments(thread: {
   body: string;
   author: string;
   authorType?: ReviewThreadComment["authorType"];
+  authorAssociation?: ReviewThreadComment["authorAssociation"];
   url?: string;
   createdAtUnix?: number;
   comments?: Array<
     Pick<ReviewThreadComment, "id" | "author" | "body" | "url"> & {
       authorType?: ReviewThreadComment["authorType"];
+      authorAssociation?: ReviewThreadComment["authorAssociation"];
     } & Partial<Pick<ReviewThreadComment, "isMinimized" | "createdAtUnix">>
   >;
 }): ReviewThreadComment[] {
@@ -18,6 +20,7 @@ export function threadComments(thread: {
       isMinimized: c.isMinimized ?? false,
       author: c.author,
       authorType: c.authorType ?? "Unknown",
+      ...(c.authorAssociation !== undefined && { authorAssociation: c.authorAssociation }),
       body: c.body,
       url: c.url,
       createdAtUnix: c.createdAtUnix ?? 0,
@@ -29,6 +32,9 @@ export function threadComments(thread: {
       isMinimized: false,
       author: thread.author,
       authorType: thread.authorType ?? "Unknown",
+      ...(thread.authorAssociation !== undefined && {
+        authorAssociation: thread.authorAssociation,
+      }),
       body: thread.body,
       url: thread.url ?? "",
       createdAtUnix: thread.createdAtUnix ?? 0,

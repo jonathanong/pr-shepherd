@@ -96,6 +96,29 @@ describe("buildClassifyIndex", () => {
     expect(idx.suppressedIds).not.toContain("t2");
   });
 
+  it("surfaces raw author association to classification rules", () => {
+    const seen: Array<ClassifyItem["authorAssociation"]> = [];
+    const rule = makeRule("association", (item) => {
+      seen.push(item.authorAssociation);
+      return null;
+    });
+    const thread = { ...makeThread("t1"), authorAssociation: "OWNER" as const };
+    const comment = { ...makeComment("c1"), authorAssociation: "NONE" as const };
+    const review = { ...makeReview("r1"), authorAssociation: "MEMBER" as const };
+
+    buildClassifyIndex(
+      [rule],
+      makeBatch({
+        reviewThreads: [thread],
+        comments: [comment],
+        reviewSummaries: [review],
+        changesRequestedReviews: [review],
+      }),
+    );
+
+    expect(seen).toEqual(["OWNER", "NONE", "MEMBER", "MEMBER"]);
+  });
+
   it("auto-resolves matching pr-comments", () => {
     const rule = makeRule("r", (item) =>
       item.kind === "pr-comment" ? { autoResolve: true, suppress: true } : null,

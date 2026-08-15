@@ -33,9 +33,10 @@ describe("fetchPrBatch — thread pagination", () => {
   });
 
   it("paginates comments within a review thread when the nested connection is incomplete", async () => {
-    const comment = (id: string, body: string) => ({
+    const comment = (id: string, body: string, authorAssociation: "OWNER" | "CONTRIBUTOR") => ({
       id,
       isMinimized: false,
+      authorAssociation,
       url: `https://github.com/owner/repo/pull/42#discussion_${id}`,
       author: { __typename: "User", login: "alice" },
       body,
@@ -57,7 +58,7 @@ describe("fetchPrBatch — thread pagination", () => {
             startLine: null,
             comments: {
               pageInfo: { hasNextPage: true, endCursor: "comment-cursor-1" },
-              nodes: [comment("c-1", "first")],
+              nodes: [comment("c-1", "first", "OWNER")],
             },
           },
         ],
@@ -69,7 +70,7 @@ describe("fetchPrBatch — thread pagination", () => {
         node: {
           comments: {
             pageInfo: { hasNextPage: false, endCursor: null },
-            nodes: [comment("c-2", "reply")],
+            nodes: [comment("c-2", "reply", "CONTRIBUTOR")],
           },
         },
       },
@@ -81,6 +82,10 @@ describe("fetchPrBatch — thread pagination", () => {
     expect(data.reviewThreads[0]?.comments?.map((c) => [c.id, c.body])).toEqual([
       ["c-1", "first"],
       ["c-2", "reply"],
+    ]);
+    expect(data.reviewThreads[0]?.comments?.map((c) => c.authorAssociation)).toEqual([
+      "OWNER",
+      "CONTRIBUTOR",
     ]);
   });
 

@@ -1,3 +1,5 @@
+import type { CommentAuthorAssociation } from "../types/github.mts";
+
 export type ClassifyItemKind =
   | "review-thread"
   | "pr-comment"
@@ -9,6 +11,7 @@ export interface ClassifyItemBase {
   readonly id: string;
   readonly author: string;
   readonly authorType: "User" | "Bot" | "Unknown";
+  readonly authorAssociation?: CommentAuthorAssociation;
   readonly body: string;
   readonly url?: string;
 }

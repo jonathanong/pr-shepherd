@@ -21,6 +21,7 @@ function reviewActivityItems(
       id: r.id,
       author: r.author,
       authorType: r.authorType,
+      ...(r.authorAssociation !== undefined && { authorAssociation: r.authorAssociation }),
       body: r.body,
       createdAtUnix: r.createdAtUnix ?? 0,
     }));
@@ -48,6 +49,9 @@ export function buildPrActivitySummary(
               id: c.id,
               author: c.author,
               authorType: c.authorType,
+              ...(c.authorAssociation !== undefined && {
+                authorAssociation: c.authorAssociation,
+              }),
               body: c.body,
               url: c.url,
               createdAtUnix: c.createdAtUnix,
@@ -60,6 +64,9 @@ export function buildPrActivitySummary(
                 id: c.id,
                 author: c.author,
                 authorType: c.authorType,
+                ...(c.authorAssociation !== undefined && {
+                  authorAssociation: c.authorAssociation,
+                }),
                 body: c.body,
                 url: c.url,
                 createdAtUnix: c.createdAtUnix,

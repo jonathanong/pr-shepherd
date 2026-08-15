@@ -1,12 +1,16 @@
-import type { AuthorType, SuggestionBlock } from "../types.mts";
+import type { AuthorType, CommentAuthorAssociation, SuggestionBlock } from "../types.mts";
 import type { FirstLookThread, FirstLookComment } from "../types/report.mts";
 import { renderLineRange, renderSuggestionBlock } from "./suggestion-renderer.mts";
 import { threadComments } from "../threads/transcript.mts";
 
 const BODY_PREVIEW_MAX = 100;
 
-export function renderAuthor(author: string, authorType?: AuthorType): string {
-  return authorType ? `@${author} · ${authorType}` : `@${author}`;
+export function renderAuthor(
+  author: string,
+  authorType?: AuthorType,
+  authorAssociation?: CommentAuthorAssociation,
+): string {
+  return [`@${author}`, authorType, authorAssociation].filter(Boolean).join(" · ");
 }
 
 export function renderBodyPreview(body: string): string {
@@ -45,11 +49,13 @@ interface ThreadBulletInput {
   line?: number | null;
   author: string;
   authorType?: AuthorType;
+  authorAssociation?: CommentAuthorAssociation;
   body: string;
   comments?: Array<{
     id: string;
     author: string;
     authorType?: AuthorType;
+    authorAssociation?: CommentAuthorAssociation;
     body: string;
     url: string;
   }>;
@@ -74,7 +80,7 @@ export function renderThreadBullet(
   const editedMarker = t.edited && !opts.suppressEditedMarker ? " [edited since first look]" : "";
   const reviewMarker = t.reviewId ? ` [reviewId=${t.reviewId}]` : "";
   const statusSuffix = opts.statusTag ? ` ${opts.statusTag}` : "";
-  const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (${renderAuthor(t.author, t.authorType)})${reviewMarker}${suggestionMarker}${editedMarker}${statusSuffix}`;
+  const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (${renderAuthor(t.author, t.authorType, t.authorAssociation)})${reviewMarker}${suggestionMarker}${editedMarker}${statusSuffix}`;
   if (!opts.noBody && (!t.comments || t.comments.length === 0)) {
     const legacyLine = `${bulletLine}: ${renderBodyPreview(t.body)}`;
     return t.suggestion && opts.renderSuggestion
@@ -97,9 +103,9 @@ export function renderThreadConversation(t: ThreadBulletInput): string {
     .map((c) => {
       const heading = c.id
         ? c.url
-          ? `#### [commentId=${c.id}](${c.url}) (${renderAuthor(c.author, c.authorType)})`
-          : `#### \`commentId=${c.id}\` (${renderAuthor(c.author, c.authorType)})`
-        : `#### (${renderAuthor(c.author, c.authorType)})`;
+          ? `#### [commentId=${c.id}](${c.url}) (${renderAuthor(c.author, c.authorType, c.authorAssociation)})`
+          : `#### \`commentId=${c.id}\` (${renderAuthor(c.author, c.authorType, c.authorAssociation)})`
+        : `#### (${renderAuthor(c.author, c.authorType, c.authorAssociation)})`;
       return `${heading}\n\n${blockquote(c.body)}`;
     })
     .join("\n\n");
@@ -119,7 +125,7 @@ function renderThreadCommentBullets(t: ThreadBulletInput): string {
       const link = c.url ? ` [↗](${c.url})` : "";
       const id = c.id ? `\`commentId=${c.id}\`` : "comment";
       return [
-        `  - ${id}${link} (${renderAuthor(c.author, c.authorType)})`,
+        `  - ${id}${link} (${renderAuthor(c.author, c.authorType, c.authorAssociation)})`,
         indentBlockquote(c.body, "    "),
       ].join("\n");
     })
@@ -134,12 +140,19 @@ function indentBlockquote(body: string, indent: string): string {
 }
 
 export function renderCommentBullet(
-  c: { id: string; url?: string; author: string; authorType?: AuthorType; body: string },
+  c: {
+    id: string;
+    url?: string;
+    author: string;
+    authorType?: AuthorType;
+    authorAssociation?: CommentAuthorAssociation;
+    body: string;
+  },
   opts: { statusTag?: string } = {},
 ): string {
   const link = c.url ? ` [↗](${c.url})` : "";
   const statusSuffix = opts.statusTag ? ` ${opts.statusTag}` : "";
-  return `- \`commentId=${c.id}\`${link} (${renderAuthor(c.author, c.authorType)})${statusSuffix}: ${renderBodyPreview(c.body)}`;
+  return `- \`commentId=${c.id}\`${link} (${renderAuthor(c.author, c.authorType, c.authorAssociation)})${statusSuffix}: ${renderBodyPreview(c.body)}`;
 }
 
 export function renderEditedCommentTag(c: { edited?: boolean }): string | undefined {
@@ -151,13 +164,14 @@ export function renderReviewBullet(
     id: string;
     author: string;
     authorType?: AuthorType;
+    authorAssociation?: CommentAuthorAssociation;
     body?: string;
     staleBotCr?: boolean;
     staleReview?: boolean;
   },
   opts: { includeBody?: boolean } = {},
 ): string {
-  const base = `- \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType)})`;
+  const base = `- \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})`;
   const staleTag = r.staleReview
     ? " [stale — review is on an old commit, all threads resolved]"
     : "";
@@ -173,7 +187,13 @@ export function renderReviewBullet(
 
 export function renderReviewListSection(
   heading: string,
-  items: { id: string; author: string; authorType?: AuthorType; body?: string }[],
+  items: {
+    id: string;
+    author: string;
+    authorType?: AuthorType;
+    authorAssociation?: CommentAuthorAssociation;
+    body?: string;
+  }[],
 ): string | null {
   if (items.length === 0) return null;
   return `## ${heading}\n\n${items.map((r) => renderReviewBullet(r, { includeBody: true })).join("\n")}`;

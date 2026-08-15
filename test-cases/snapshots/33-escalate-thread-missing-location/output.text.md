@@ -11,7 +11,7 @@ Review thread has no file/line reference — automated location routing failed a
 
 ## Items needing attention
 
-- thread `PRRT_noloc` — (no location) (@reviewer):
+- thread `PRRT_noloc` — (no location) (@reviewer · User):
 
   > This thread has no file location.
 

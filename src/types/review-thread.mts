@@ -1,4 +1,4 @@
-import type { AuthorType } from "./github.mts";
+import type { AuthorType, CommentAuthorAssociation } from "./github.mts";
 
 export interface ReviewThreadComment {
   id: string;
@@ -6,6 +6,7 @@ export interface ReviewThreadComment {
   reviewId?: string;
   author: string;
   authorType: AuthorType;
+  authorAssociation?: CommentAuthorAssociation;
   body: string;
   url: string;
   createdAtUnix: number;

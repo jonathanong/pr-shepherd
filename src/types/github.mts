@@ -45,6 +45,17 @@ export type ReviewDecision = "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED
 
 export type AuthorType = "User" | "Bot" | "Unknown";
 
+/** Raw relationship between a comment author and the repository, as reported by GitHub. */
+export type CommentAuthorAssociation =
+  | "COLLABORATOR"
+  | "CONTRIBUTOR"
+  | "FIRST_TIMER"
+  | "FIRST_TIME_CONTRIBUTOR"
+  | "MANNEQUIN"
+  | "MEMBER"
+  | "NONE"
+  | "OWNER";
+
 export interface CheckRun {
   /** GitHub node ID for CheckRun contexts. Missing for StatusContext and synthetic checks. */
   id?: string | null;
@@ -79,6 +90,7 @@ export interface ReviewThread {
   reviewId?: string;
   author: string;
   authorType: AuthorType;
+  authorAssociation?: CommentAuthorAssociation;
   body: string;
   url: string;
   createdAtUnix?: number;
@@ -109,6 +121,7 @@ export interface PrComment {
   isMinimized: boolean;
   author: string;
   authorType: AuthorType;
+  authorAssociation?: CommentAuthorAssociation;
   body: string;
   url: string;
   createdAtUnix: number;
@@ -118,6 +131,7 @@ export interface Review {
   id: string;
   author: string;
   authorType: AuthorType;
+  authorAssociation?: CommentAuthorAssociation;
   body: string;
   createdAtUnix?: number;
   edited?: boolean;

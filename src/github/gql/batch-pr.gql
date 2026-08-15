@@ -82,6 +82,7 @@ query BatchPr(
               id
               isMinimized
               url
+              authorAssociation
               author {
                 __typename
                 login
@@ -107,6 +108,7 @@ query BatchPr(
           id
           isMinimized
           url
+          authorAssociation
           author {
             __typename
             login
@@ -126,6 +128,7 @@ query BatchPr(
         }
         nodes {
           id
+          authorAssociation
           author {
             __typename
             login
@@ -145,6 +148,7 @@ query BatchPr(
         nodes {
           id
           isMinimized
+          authorAssociation
           author {
             __typename
             login
@@ -164,6 +168,7 @@ query BatchPr(
         nodes {
           id
           isMinimized
+          authorAssociation
           author {
             __typename
             login

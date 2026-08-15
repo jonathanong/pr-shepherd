@@ -108,18 +108,19 @@ export interface AgentThread {
   startLine?: number; // multi-line range only; omitted when equal to line
   author: string;
   authorType?: AuthorType;
+  authorAssociation?: import("./github.mts").CommentAuthorAssociation;
   body: string;
   url: string;
   comments?: AgentThreadComment[];
   suggestion?: SuggestionBlock; // present when body contains a ```suggestion fence
   edited?: boolean;
 }
-
 /** Comment shape emitted to the iterate agent — stripped of always-false flags. */
 export interface AgentComment {
   id: string;
   author: string;
   authorType?: AuthorType;
+  authorAssociation?: import("./github.mts").CommentAuthorAssociation;
   body: string;
   url: string;
   edited?: boolean;
