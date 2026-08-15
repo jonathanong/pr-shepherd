@@ -49,6 +49,7 @@ The module supports a focused automation loop for PR monitoring and deterministi
 - Fetches and surfaces top-level PR comments.
 - Fetches and surfaces `COMMENTED` review summaries.
 - Fetches and surfaces `APPROVED` reviews.
+- Surfaces GitHub's raw `authorAssociation` on comments, thread replies, and reviews without deriving a trust label.
 - Surfaces outdated review threads; human-authored threads receive replies, while bot/non-human threads are resolved.
 - Supports first-look tracking for outdated/resolved/minimized items with edit-aware resurface behavior.
 - Supports review-summary minimization through the same comment minimization pipeline.

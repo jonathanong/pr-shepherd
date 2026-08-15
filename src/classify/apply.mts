@@ -45,6 +45,7 @@ function threadToItem(t: ReviewThread): ClassifyItem {
     id: t.id,
     author: t.author,
     authorType: t.authorType,
+    ...(t.authorAssociation !== undefined && { authorAssociation: t.authorAssociation }),
     body: t.body,
     url: t.url,
     path: t.path,
@@ -57,6 +58,7 @@ function commentToItem(c: PrComment): ClassifyItem {
     id: c.id,
     author: c.author,
     authorType: c.authorType,
+    ...(c.authorAssociation !== undefined && { authorAssociation: c.authorAssociation }),
     body: c.body,
     url: c.url,
   };
@@ -68,6 +70,7 @@ function reviewSummaryToItem(r: Review): ClassifyItem {
     id: r.id,
     author: r.author,
     authorType: r.authorType,
+    ...(r.authorAssociation !== undefined && { authorAssociation: r.authorAssociation }),
     body: r.body,
   };
 }
@@ -78,6 +81,7 @@ function changesRequestedToItem(r: Review): ClassifyItem {
     id: r.id,
     author: r.author,
     authorType: r.authorType,
+    ...(r.authorAssociation !== undefined && { authorAssociation: r.authorAssociation }),
     body: r.body,
   };
 }

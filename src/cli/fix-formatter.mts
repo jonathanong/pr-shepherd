@@ -27,7 +27,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
       const suggestionMarker = t.suggestion ? " [suggestion]" : "";
       const editedMarker = t.edited ? " [edited since first look]" : "";
       sections.push(
-        `### ${heading} — ${loc} (${renderAuthor(t.author, t.authorType)})${reviewMarker}${suggestionMarker}${editedMarker}`,
+        `### ${heading} — ${loc} (${renderAuthor(t.author, t.authorType, t.authorAssociation)})${reviewMarker}${suggestionMarker}${editedMarker}`,
       );
       sections.push(renderThreadConversation(t));
       if (t.suggestion) {
@@ -50,7 +50,9 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     for (const c of result.fix.actionableComments) {
       const heading = c.url ? `[commentId=${c.id}](${c.url})` : `\`commentId=${c.id}\``;
       const editedMarker = c.edited ? " [edited since first look]" : "";
-      sections.push(`### ${heading} (${renderAuthor(c.author, c.authorType)})${editedMarker}`);
+      sections.push(
+        `### ${heading} (${renderAuthor(c.author, c.authorType, c.authorAssociation)})${editedMarker}`,
+      );
       sections.push(blockquote(c.body));
     }
   }
@@ -101,7 +103,9 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
   if (result.fix.firstLookSummaries.length > 0) {
     sections.push("## Review summaries (first look)");
     for (const r of result.fix.firstLookSummaries) {
-      sections.push(`### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType)})`);
+      sections.push(
+        `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})`,
+      );
       sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body));
     }
   }
@@ -111,7 +115,9 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
       "## Review summaries (edited since first look — already minimized; do not re-minimize)",
     );
     for (const r of result.fix.editedSummaries) {
-      sections.push(`### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType)})`);
+      sections.push(
+        `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})`,
+      );
       sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body));
     }
   }
@@ -126,7 +132,9 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
   if (result.fix.surfacedApprovals.length > 0) {
     sections.push("## Approvals (surfaced — not minimized)");
     for (const r of result.fix.surfacedApprovals) {
-      sections.push(`### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType)})`);
+      sections.push(
+        `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})`,
+      );
       sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body));
     }
   }

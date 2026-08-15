@@ -18,6 +18,7 @@ Quick entry point. For a command overview see [`../README.md`](../README.md).
 | [graphql.md](graphql.md)               | Batch query, pagination strategy, REST fallbacks                |
 | [checks.md](checks.md)                 | Classify → triage → `failedStep`, `jobName`, event filtering    |
 | [comments.md](comments.md)             | Threads vs comments, outdated detection, push-before-resolve    |
+| [comparison.md](comparison.md)         | Named alternatives, tradeoffs, and best-fit guidance            |
 | [merge-status.md](merge-status.md)     | `deriveMergeStatus` rules, edge cases                           |
 | [extending.md](extending.md)           | Recipes: add an action, classifier, mutation                    |
 | [debugging.md](debugging.md)           | Failure modes, how to replay an iteration                       |

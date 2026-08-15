@@ -30,7 +30,7 @@ Example shape:
 
 ## Review threads
 
-### `threadId=PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate/index.mts:42` (@alice)
+### `threadId=PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate/index.mts:42` (@alice · User · MEMBER)
 
 > The variable name is misleading.
 

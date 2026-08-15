@@ -28,6 +28,7 @@ describe("escalate message helpers", () => {
             id: "c-ambiguous",
             author: "reviewer",
             authorType: "User",
+            authorAssociation: "MEMBER",
             body: "Please consider the whole design\nmore detail",
             url: "",
           },
@@ -39,6 +40,7 @@ describe("escalate message helpers", () => {
     );
 
     expect(message).toContain("comment `c-ambiguous`");
+    expect(message).toContain("@reviewer · User · MEMBER");
     expect(message).toContain("Please consider the whole design");
     expect(buildEscalateSuggestion([])).toBe(
       "Ambiguous state — automated handling cannot proceed safely. Inspect the PR and act manually.",

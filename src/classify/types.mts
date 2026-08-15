@@ -1,3 +1,14 @@
+/** Raw relationship between a comment author and the repository, as reported by GitHub. */
+export type CommentAuthorAssociation =
+  | "COLLABORATOR"
+  | "CONTRIBUTOR"
+  | "FIRST_TIMER"
+  | "FIRST_TIME_CONTRIBUTOR"
+  | "MANNEQUIN"
+  | "MEMBER"
+  | "NONE"
+  | "OWNER";
+
 export type ClassifyItemKind =
   | "review-thread"
   | "pr-comment"
@@ -9,6 +20,7 @@ export interface ClassifyItemBase {
   readonly id: string;
   readonly author: string;
   readonly authorType: "User" | "Bot" | "Unknown";
+  readonly authorAssociation?: CommentAuthorAssociation;
   readonly body: string;
   readonly url?: string;
 }

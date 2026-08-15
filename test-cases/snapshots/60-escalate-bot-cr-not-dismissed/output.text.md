@@ -11,7 +11,7 @@ Bot CHANGES_REQUESTED review(s) remained undismissed past the stall window (revi
 
 ## Items needing attention
 
-- review `PRR_bot_overdue` (@claude):
+- review `PRR_bot_overdue` (@claude · Bot):
 
   > ## Summary
   > 

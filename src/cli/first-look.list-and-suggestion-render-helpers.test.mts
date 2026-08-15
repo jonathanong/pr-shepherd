@@ -22,6 +22,7 @@ import { safeFence } from "./fence.mts";
 describe("list and suggestion render helpers", () => {
   it("renders author, body preview, line ranges, and safe fences", () => {
     expect(renderAuthor("alice")).toBe("@alice");
+    expect(renderAuthor("alice", "User", "MEMBER")).toBe("@alice · User · MEMBER");
     expect(renderBodyPreview("  first line  \r\nsecond")).toBe("first line");
     expect(renderBodyPreview("x".repeat(120))).toHaveLength(100);
     expect(renderLineRange(undefined, null)).toBe("?");

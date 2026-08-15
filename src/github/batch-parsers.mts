@@ -23,6 +23,7 @@ function parseReviewNode(r: RawReview | RawReviewSummary): Review {
     id: r.id,
     author: r.author?.login ?? "unknown",
     authorType: mapAuthorType(r.author?.__typename, r.author?.login),
+    ...(r.authorAssociation !== undefined && { authorAssociation: r.authorAssociation }),
     body: r.body,
     createdAtUnix: r.createdAt ? parseCreatedAt(r.createdAt) : 0,
   };
@@ -59,6 +60,7 @@ export function parseRawPr(
       ...(c.pullRequestReview?.id ? { reviewId: c.pullRequestReview.id } : undefined),
       author: c.author?.login ?? "unknown",
       authorType: mapAuthorType(c.author?.__typename, c.author?.login),
+      ...(c.authorAssociation !== undefined && { authorAssociation: c.authorAssociation }),
       body: c.body,
       url: c.url,
       createdAtUnix: c.createdAt ? parseCreatedAt(c.createdAt) : 0,
@@ -74,6 +76,9 @@ export function parseRawPr(
       ...(comment?.pullRequestReview?.id ? { reviewId: comment.pullRequestReview.id } : undefined),
       author: comment?.author?.login ?? "unknown",
       authorType: mapAuthorType(comment?.author?.__typename, comment?.author?.login),
+      ...(comment?.authorAssociation !== undefined && {
+        authorAssociation: comment.authorAssociation,
+      }),
       body: comment?.body ?? "",
       url: comment?.url ?? "",
       createdAtUnix: comment?.createdAt ? parseCreatedAt(comment.createdAt) : 0,
@@ -86,6 +91,7 @@ export function parseRawPr(
     isMinimized: c.isMinimized,
     author: c.author?.login ?? "unknown",
     authorType: mapAuthorType(c.author?.__typename, c.author?.login),
+    ...(c.authorAssociation !== undefined && { authorAssociation: c.authorAssociation }),
     body: c.body,
     url: c.url,
     createdAtUnix: c.createdAt ? parseCreatedAt(c.createdAt) : 0,

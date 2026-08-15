@@ -38,6 +38,7 @@ describe("fetchPrBatch — PR activity", () => {
               {
                 id: "IC_new",
                 isMinimized: false,
+                authorAssociation: "MEMBER",
                 url: "https://example.test/new",
                 author: { __typename: "User", login: "reviewer" },
                 body: "new",
@@ -61,6 +62,7 @@ describe("fetchPrBatch — PR activity", () => {
                     {
                       id: "PRRC_1",
                       isMinimized: false,
+                      authorAssociation: "OWNER",
                       url: "https://example.test/thread",
                       author: { __typename: "User", login: "reviewer" },
                       pullRequestReview: { id: "PRR_1" },
@@ -81,6 +83,7 @@ describe("fetchPrBatch — PR activity", () => {
               {
                 id: "PRR_1",
                 isMinimized: false,
+                authorAssociation: "NONE",
                 author: { __typename: "Bot", login: "review-bot" },
                 body: "summary note",
                 createdAt: "2024-01-01T00:03:00Z",
@@ -154,6 +157,17 @@ describe("fetchPrBatch — PR activity", () => {
       "PRR_CR",
       "PRR_CR_DONE",
       "PRR_AP",
+    ]);
+    expect(
+      data
+        .activity!.reviewItemsSinceLatestCommit.filter(
+          (item) => item.authorAssociation !== undefined,
+        )
+        .map((item) => [item.id, item.authorAssociation]),
+    ).toEqual([
+      ["IC_new", "MEMBER"],
+      ["PRRC_1", "OWNER"],
+      ["PRR_1", "NONE"],
     ]);
     expect(data.changesRequestedReviews.map((r) => r.id)).toEqual(["PRR_CR"]);
   });

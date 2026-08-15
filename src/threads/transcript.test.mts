@@ -6,6 +6,7 @@ describe("thread transcript helpers", () => {
   it("builds a fallback single-comment transcript for legacy thread shapes", () => {
     const comments = threadComments({
       author: "alice",
+      authorAssociation: "OWNER",
       body: "legacy body",
       url: undefined,
     });
@@ -16,6 +17,7 @@ describe("thread transcript helpers", () => {
         isMinimized: false,
         author: "alice",
         authorType: "Unknown",
+        authorAssociation: "OWNER",
         body: "legacy body",
         url: "",
         createdAtUnix: 0,

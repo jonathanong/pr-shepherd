@@ -1,4 +1,4 @@
-import type { AuthorType, CheckStatus } from "./github.mts";
+import type { AuthorType, CheckStatus, CommentAuthorAssociation } from "./github.mts";
 
 type ReviewActivityKind =
   | "pr-comment"
@@ -12,6 +12,7 @@ export interface ReviewActivityItem {
   id: string;
   author: string;
   authorType: AuthorType;
+  authorAssociation?: CommentAuthorAssociation;
   body: string;
   url?: string;
   createdAtUnix: number;

@@ -6,6 +6,14 @@ interface EscalateCheck {
   thrashHistory?: EscalateDetails["thrashHistory"];
 }
 
+function renderEscalateAuthor(item: {
+  author: string;
+  authorType?: string;
+  authorAssociation?: string;
+}): string {
+  return [`@${item.author}`, item.authorType, item.authorAssociation].filter(Boolean).join(" · ");
+}
+
 export function checkEscalateTriggers(
   actionableThreads: ReviewThread[],
   threadAttempts: Record<string, number>,
@@ -115,19 +123,19 @@ export function buildEscalateHumanMessage(
     if ((escalate.stalledChecks?.length ?? 0) > 0) lines.push("");
     for (const t of escalate.unresolvedThreads) {
       const loc = t.path ? `\`${t.path}:${t.line ?? "?"}\`` : "(no location)";
-      lines.push(`- thread \`${t.id}\` — ${loc} (@${t.author}):`);
+      lines.push(`- thread \`${t.id}\` — ${loc} (${renderEscalateAuthor(t)}):`);
       lines.push("");
       for (const bodyLine of t.body.split("\n")) lines.push(`  > ${bodyLine}`);
       lines.push("");
     }
     for (const r of escalate.changesRequestedReviews) {
-      lines.push(`- review \`${r.id}\` (@${r.author}):`);
+      lines.push(`- review \`${r.id}\` (${renderEscalateAuthor(r)}):`);
       lines.push("");
       for (const bodyLine of r.body.split("\n")) lines.push(`  > ${bodyLine}`);
       lines.push("");
     }
     for (const c of escalate.ambiguousComments) {
-      lines.push(`- comment \`${c.id}\` (@${c.author}):`);
+      lines.push(`- comment \`${c.id}\` (${renderEscalateAuthor(c)}):`);
       lines.push("");
       for (const bodyLine of c.body.split("\n")) lines.push(`  > ${bodyLine}`);
       lines.push("");
