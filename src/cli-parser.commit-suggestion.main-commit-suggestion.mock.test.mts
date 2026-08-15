@@ -54,6 +54,26 @@ describe("main — commit-suggestion", () => {
     expect(process.exitCode).toBeUndefined();
   });
 
+  it("routes the canonical build-suggestion-patch command", async () => {
+    mockRunCommitSuggestion.mockResolvedValue(SUGGESTION_RESULT);
+
+    await main([
+      "node",
+      "shepherd",
+      "build-suggestion-patch",
+      "42",
+      "--thread-id",
+      "t1",
+      "--message",
+      "apply fix",
+    ]);
+
+    expect(mockRunCommitSuggestion).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: 42, threadId: "t1" }),
+    );
+    expect(stderrSpy).not.toHaveBeenCalledWith(expect.stringContaining("deprecated"));
+  });
+
   it("passes --description when supplied", async () => {
     mockRunCommitSuggestion.mockResolvedValue(SUGGESTION_RESULT);
     await main([

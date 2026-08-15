@@ -157,9 +157,6 @@ async function handleAdmin(args: string[]): Promise<void> {
     case "clean":
       await handleClean(args.slice(1));
       return;
-    case "log-file":
-      await handleLogFile(args.slice(1));
-      return;
     default:
       process.stderr.write(`Unknown admin command: ${args[0] ?? "(none)"}\n`);
       process.stderr.write(`${USAGE.admin}\n`);

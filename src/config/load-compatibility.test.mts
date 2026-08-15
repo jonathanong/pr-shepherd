@@ -33,7 +33,7 @@ describe("loadConfig — compatibility keys", () => {
   });
 
   it("warns for unknown keys while preserving classify", async () => {
-    writeRc("classify:\n  custom: true\nunknownSetting: true\n");
+    writeRc("classify:\n  custom: true\nunknownSetting: true\nactions:\n  unknownAction: true\n");
     const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     const config = await freshLoadConfig();
     const result = config();
@@ -43,5 +43,9 @@ describe("loadConfig — compatibility keys", () => {
       'unknown key "unknownSetting" ignored',
     );
     expect(stderr.mock.calls.map((call) => call[0]).join("")).not.toContain("classify");
+    expect(result.actions).not.toHaveProperty("unknownAction");
+    expect(stderr.mock.calls.map((call) => call[0]).join("")).toContain(
+      'unknown key "actions.unknownAction" ignored',
+    );
   });
 });

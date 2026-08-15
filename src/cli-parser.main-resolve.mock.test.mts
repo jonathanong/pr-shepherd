@@ -91,6 +91,21 @@ describe("main — resolve", () => {
     await main(["node", "shepherd", "resolve", "42", "--resolve-thread-ids", "t-1"]);
     expect(mockRunResolveMutate).toHaveBeenCalledTimes(1);
   });
+
+  it("routes the canonical apply review command without a deprecation warning", async () => {
+    mockRunResolveMutate.mockResolvedValue({
+      repliedThreads: [],
+      resolvedThreads: ["t-1"],
+      minimizedComments: [],
+      dismissedReviews: [],
+      errors: [],
+    });
+
+    await main(["node", "shepherd", "apply", "review", "42", "--resolve-thread-ids", "t-1"]);
+
+    expect(mockRunResolveMutate).toHaveBeenCalledTimes(1);
+    expect(stderrSpy).not.toHaveBeenCalledWith(expect.stringContaining("deprecated"));
+  });
   it("formatMutateResult renders rate-limit stop and pending IDs", async () => {
     mockRunResolveMutate.mockResolvedValue({
       repliedThreads: [],

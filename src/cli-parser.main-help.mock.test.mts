@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { registerHooks, stderrSpy, stdoutSpy } from "../test-helpers/cli-parser.test-support.mts";
 import { main } from "./cli-parser.mts";
+import { EXIT } from "./exit-codes.mts";
 
 registerHooks();
 
@@ -42,5 +43,15 @@ describe("main — top-level help", () => {
     expect(out).toContain("Clean variants:");
     expect(process.exitCode).toBeUndefined();
     expect(stderrSpy).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [["apply"], "Unknown apply action"],
+    [["admin"], "Unknown admin command"],
+  ])("rejects an incomplete public command group", async (args, message) => {
+    await main(["node", "shepherd", ...args]);
+
+    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining(message));
+    expect(process.exitCode).toBe(EXIT.USAGE);
   });
 });

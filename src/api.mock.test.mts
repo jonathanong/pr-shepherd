@@ -83,4 +83,110 @@ describe("public API", () => {
       expect.objectContaining({ prNumber: 7, dismissMessage: "Fixed it", format: "json" }),
     );
   });
+
+  it("runs every operation in order and builds suggestion patches in the configured cwd", async () => {
+    mockRunResolveMutate.mockResolvedValue({ resolvedThreads: ["PRRT_one"] });
+    mockRunMarkFilesAsViewed.mockResolvedValue({ markedPaths: ["src/api.mts"] });
+    mockRunJournal.mockResolvedValue({ prNumber: 9, mutated: true });
+    mockRunCommitSuggestion.mockResolvedValue({ threadId: "PRRT_two" });
+    const shepherd = createPrShepherd({ cwd: "." });
+
+    await expect(
+      shepherd.apply({
+        pr: "https://www.github.com/acme/widgets/pull/9",
+        operations: [
+          { type: "review_mutations", resolveThreadIds: ["PRRT_one"] },
+          { type: "mark_files_viewed", tests: true },
+          { type: "append_journal", item: "- Covered the public API.", dryRun: true },
+        ],
+      }),
+    ).resolves.toEqual({
+      operations: [
+        { type: "review_mutations", result: { resolvedThreads: ["PRRT_one"] } },
+        { type: "mark_files_viewed", result: { markedPaths: ["src/api.mts"] } },
+        { type: "append_journal", result: { prNumber: 9, mutated: true } },
+      ],
+    });
+
+    await shepherd.buildSuggestionPatch({
+      pr: 9,
+      threadId: "PRRT_two",
+      message: "apply suggestion",
+      description: "Keep the API covered.",
+    });
+
+    expect(mockRunMarkFilesAsViewed).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: 9, files: [], tests: true, format: "json" }),
+    );
+    expect(mockRunJournal).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: 9, dryRun: true }),
+    );
+    expect(mockRunCommitSuggestion).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: 9, threadId: "PRRT_two", format: "json" }),
+    );
+  });
+
+  it("rethrows a failure from the first apply operation unchanged", async () => {
+    const failure = new Error("first operation failed");
+    mockRunResolveMutate.mockRejectedValue(failure);
+
+    await expect(
+      createPrShepherd().apply({
+        operations: [{ type: "review_mutations", resolveThreadIds: ["PRRT_one"] }],
+      }),
+    ).rejects.toBe(failure);
+  });
+
+  it.each([
+    ["missing operations", null],
+    ["non-object operation", { operations: [null] }],
+    ["non-string journal item", { operations: [{ type: "append_journal", item: 1 }] }],
+    [
+      "non-boolean journal dryRun",
+      { operations: [{ type: "append_journal", item: "- item", dryRun: "yes" }] },
+    ],
+    ["unsupported operation", { operations: [{ type: "unknown" }] }],
+    ["empty review mutation", { operations: [{ type: "review_mutations" }] }],
+    [
+      "missing review reply message",
+      { operations: [{ type: "review_mutations", replyThreadIds: ["PRRT_one"] }] },
+    ],
+    [
+      "non-string review message",
+      {
+        operations: [{ type: "review_mutations", resolveThreadIds: ["PRRT_one"], message: 1 }],
+      },
+    ],
+    [
+      "invalid required SHA",
+      {
+        operations: [
+          { type: "review_mutations", resolveThreadIds: ["PRRT_one"], requireSha: "abc" },
+        ],
+      },
+    ],
+    ["non-string review ID", { operations: [{ type: "review_mutations", resolveThreadIds: [1] }] }],
+    ["non-boolean tests selector", { operations: [{ type: "mark_files_viewed", tests: 1 }] }],
+    ["empty file selectors", { operations: [{ type: "mark_files_viewed" }] }],
+    [
+      "invalid match pattern",
+      { operations: [{ type: "mark_files_viewed", matchPatterns: ["["] }] },
+    ],
+    ["invalid PR", { pr: "not-a-url", operations: [{ type: "mark_files_viewed", tests: true }] }],
+  ])("rejects %s before mutation", async (_label, input) => {
+    await expect(createPrShepherd().apply(input as never)).rejects.toBeInstanceOf(
+      PrShepherdValidationError,
+    );
+  });
+
+  it.each([
+    ["missing thread", { threadId: "", message: "message" }],
+    ["missing message", { threadId: "PRRT_one", message: " " }],
+    ["invalid description", { threadId: "PRRT_one", message: "message", description: 1 }],
+    ["invalid PR number", { pr: 0, threadId: "PRRT_one", message: "message" }],
+  ])("validates suggestion patch input: %s", (_label, input) => {
+    expect(() => createPrShepherd().buildSuggestionPatch(input as never)).toThrow(
+      PrShepherdValidationError,
+    );
+  });
 });

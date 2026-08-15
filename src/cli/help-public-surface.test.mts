@@ -22,5 +22,6 @@ describe("public CLI help surface", () => {
     expect(helpKeyForArgs(["apply", "journal", "--help"])).toBe("apply journal");
     expect(helpKeyForArgs(["admin", "clean", "--help"])).toBe("admin clean");
     expect(helpKeyForArgs(["admin", "log-file", "--help"])).toBe("admin log-file");
+    expect(helpKeyForArgs(["not-a-command", "--help"])).toBe("top");
   });
 });
