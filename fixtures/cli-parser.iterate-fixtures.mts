@@ -46,7 +46,7 @@ export function makeIterateResult(
         checks: [],
         changesRequestedReviews: [],
         resolveCommand: {
-          argv: ["pr-shepherd", "resolve", "42"],
+          argv: ["pr-shepherd", "apply", "review", "42"],
           requiresHeadSha: true,
           requiresDismissMessage: false,
           hasMutations: false,

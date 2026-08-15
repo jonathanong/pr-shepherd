@@ -40,7 +40,10 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   const report = await runCheck({
     ...opts,
     prNumber,
-    autoResolve: config.actions.autoResolveOutdated,
+    // Outdated Shepherd-visible threads are always resolved by iterate. The
+    // old actions.autoResolveOutdated switch is retained only as an ignored
+    // compatibility key in the config loader.
+    autoResolve: true,
     autoMinimizeSuppressed: config.actions.autoMinimizeSuppressed,
   });
 
@@ -78,7 +81,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   // GitHub can still return a null/error/rate-limit result per ID without
   // throwing (autoMinimizeComments reports this via `errors`, not a rejection);
   // any ID it did not confirm minimized falls back into the agent-facing set so
-  // the resolve command remains a working fallback instead of silently dropping it.
+  // the apply command remains a working fallback instead of silently dropping it.
   let reviewSummaryIds = minimizeIds;
   if (selfMinimizeIds.length > 0) {
     const { minimized } = await autoMinimizeComments(selfMinimizeIds);

@@ -22,7 +22,7 @@ describe("shepherd journal instruction helpers", () => {
     );
 
     expect(result).toContain(SHEPHERD_JOURNAL_SECTION);
-    expect(result).toContain("pr-shepherd journal 42");
+    expect(result).toContain("pr-shepherd apply journal 42");
     expect(result).toContain("idempotent");
     expect(countMentions(result, SHEPHERD_JOURNAL_SECTION)).toBe(1);
   });
@@ -76,7 +76,7 @@ describe("shepherd journal instruction helpers", () => {
     const text = instructions.join("\n");
 
     expect(text).toContain(SHEPHERD_JOURNAL_SECTION);
-    expect(text).toContain("pr-shepherd journal 42");
+    expect(text).toContain("pr-shepherd apply journal 42");
     expect(text).toContain("idempotent");
     expect(text).toContain(
       SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,

@@ -64,7 +64,7 @@ describe("runCommitSuggestion — happy path", () => {
     );
   });
 
-  it("postActionInstructions include git add, git commit, and pr-shepherd resolve steps", async () => {
+  it("postActionInstructions include git add, git commit, and apply-review steps", async () => {
     const result = await runCommitSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
@@ -73,7 +73,7 @@ describe("runCommitSuggestion — happy path", () => {
     const joined = result.postActionInstructions.join("\n");
     expect(joined).toContain("git add");
     expect(joined).toContain("git commit");
-    expect(joined).toContain("pr-shepherd resolve");
+    expect(joined).toContain("pr-shepherd apply review");
     expect(joined).toContain("git push");
   });
 

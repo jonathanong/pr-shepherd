@@ -169,7 +169,7 @@ export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: st
   }
   if (triggers.includes("bot-cr-not-dismissed")) {
     const ids = detail ? ` (review IDs: ${detail})` : "";
-    return `Bot CHANGES_REQUESTED review(s) remained undismissed past the stall window${ids}. The agent likely dropped \`--dismiss-review-ids\` from a prior resolve command. Dismiss the review(s) manually (or re-run resolve with the IDs) to unblock the PR.`;
+    return `Bot CHANGES_REQUESTED review(s) remained undismissed past the stall window${ids}. The agent likely dropped \`--dismiss-review-ids\` from a prior apply command. Dismiss the review(s) manually (or re-run \`pr-shepherd apply review\` with the IDs) to unblock the PR.`;
   }
   return "Ambiguous state — automated handling cannot proceed safely. Inspect the PR and act manually.";
 }

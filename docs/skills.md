@@ -2,10 +2,10 @@
 
 [← README](../README.md)
 
-Two skills are shipped for both Claude Code and Codex:
+Two MCP-backed skills are shipped for both Claude Code and Codex:
 
-- `pr-shepherd` is a thin poll dispatcher — it runs the default `pr-shepherd <PR>` command with a bounded interval/timeout and follows the `## Instructions` embedded in the output. All policy, state transitions, and per-action guidance live in the CLI output, not in the skill.
-- `mark-files-as-viewed` marks PR changed files as viewed in GitHub by invoking `pr-shepherd mark-files-as-viewed`.
+- `pr-shepherd` calls `iterate`, then uses its returned action data with `apply` and `build_suggestion_patch` when needed.
+- `mark-files-as-viewed` calls `apply` with a `mark_files_viewed` operation.
 
 ## Claude Code
 
@@ -24,7 +24,7 @@ Use the skill inside a `/goal`:
 /pr-shepherd:mark-files-as-viewed 42 tests
 ```
 
-The goal loop handles recurrence. The skill invokes the default poll dispatcher and prints the output. For non-terminal actions, follow the CLI's `## Instructions`, then invoke the skill again. `[CANCEL]` and `[ESCALATE]` stop the goal.
+The goal loop handles recurrence. The skill prints the full MCP result and follows its plan. `[CANCEL]` and `[ESCALATE]` stop the goal.
 
 ## Codex
 
@@ -49,8 +49,6 @@ codex plugin marketplace add ~/.codex/plugin-sources/pr-shepherd
 
 After adding the marketplace, open the Codex plugin directory, choose the `jonathanong` marketplace, and install/enable `pr-shepherd`.
 
-Then make the CLI available in the repository where Codex will work.
-
 Use the skill inside a `/goal`:
 
 ```
@@ -59,25 +57,8 @@ Use the skill inside a `/goal`:
 $mark-files-as-viewed 42 tests
 ```
 
-Codex runs the same skill: invoke the default poll dispatcher, follow the output, and continue until `[CANCEL]` or `[ESCALATE]`.
+Codex runs the same MCP-backed skill and continues until `[CANCEL]` or `[ESCALATE]`.
 
-## Resolve after iterating
+## MCP operations
 
-Use `pr-shepherd iterate <N>` or `pr-shepherd <N>` to fetch review state and the next action. The `fix_code` action emits the exact `resolve` command to run after pushing fixes.
-
-`pr-shepherd resolve` itself is mutation-only and requires at least one action flag:
-
-```bash
-pr-shepherd resolve <N> --reply-thread-ids PRRT_abc --message "Renamed the variable for clarity."
-```
-
-## Mark files as viewed
-
-To hide already-reviewed files in GitHub's PR diff:
-
-```bash
-pr-shepherd mark-files-as-viewed <N> --tests
-pr-shepherd mark-files-as-viewed <N> src/a.ts --match '^docs/'
-```
-
-The `mark-files-as-viewed` skill treats a standalone `tests` argument as `--tests`; exact file paths and explicit `--match <regex>` selectors are passed through.
+`iterate` obtains the next state-machine action and returns its structured review mutation arguments. `apply` performs explicit ordered review mutations, `mark_files_viewed` file operations, or `append_journal` operations. `build_suggestion_patch` validates and builds a patch for one anchored suggestion. The skills leave this policy in MCP/iterate output rather than duplicating it in prompts.

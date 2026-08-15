@@ -4,7 +4,7 @@
 
 ## Design rationale
 
-- **No MCP surface** — skills call the CLI directly; no long-lived MCP server, no extra auth boundary, smaller reasoning surface.
+- **One local MCP surface** — the version-matched stdio server is the canonical agent integration. It shares command implementations and GitHub token resolution with the CLI; plugins only declare the same local server.
 - **Skills over subagents** — skill prompts inject into the main conversation rather than spawning a subagent that reloads CLAUDE.md every turn, keeping cost and latency low.
 - **Safe to interrupt** — durable state lives in the PR on GitHub; the iterate loop self-terminates when the PR is merged, closed, or settles after ready-delay. Local state in `$PR_SHEPHERD_STATE_DIR` can be deleted without data loss.
 
@@ -26,6 +26,9 @@ shepherd/
 │   ├── iterate-formatter.mts  # Markdown formatter for IterateResult
 │   ├── iterate-lean.mts   # lean JSON projection for default --format=json output
 │   └── fix-formatter.mts  # Markdown formatter for fix_code variant
+│
+├── mcp/                   # stdio MCP server and tool adapters
+│   └── server.mts          # iterate, apply, build_suggestion_patch tool registration
 │
 ├── commands/              # one file (or dir) per subcommand
 │   ├── check-annotations.mts  # fetches inline annotations for failing CheckRuns
@@ -125,6 +128,7 @@ Never import upward (e.g., `github` importing from `commands`) — that creates 
 
 | What you're adding               | Where it goes                                                   |
 | -------------------------------- | --------------------------------------------------------------- |
+| New MCP tool                     | `mcp/server.mts` adapter over an existing command               |
 | New subcommand                   | `commands/<name>.mts`                                           |
 | New GraphQL query or mutation    | `github/gql/<name>.gql` + loader in `queries.mts`               |
 | New CI check classifier category | `checks/classify.mts` + type in `types/github.mts`              |

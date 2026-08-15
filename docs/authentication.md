@@ -39,4 +39,4 @@ GitHub references:
 
 Missing access commonly appears as a `403 Resource not accessible by personal access token` GraphQL error. pr-shepherd treats GraphQL read errors as fatal because partial PR, review, or check data could otherwise produce an unsafe state transition. `iterate` and `poll` exit `77` (`EX_NOPERM`) instead of emitting `wait`, `retry`, or another action from an incomplete snapshot. A 403 carrying a `Retry-After` header (GitHub's secondary rate limit, not a real permission failure) exits `75` (`EX_TEMPFAIL`) instead — see [exit-codes.md](exit-codes.md).
 
-Check the error's GraphQL path to identify the affected field, update the token permission or repository selection, and retry. Use `pr-shepherd log-file` to locate the request log when more context is needed.
+Check the error's GraphQL path to identify the affected field, update the token permission or repository selection, and retry. Use `pr-shepherd admin log-file` to locate the request log when more context is needed.

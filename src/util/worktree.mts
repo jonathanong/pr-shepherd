@@ -3,12 +3,15 @@ import { promisify } from "node:util";
 import { createHash } from "node:crypto";
 import { basename } from "node:path";
 import { SAFE_SEGMENT } from "./path-segment.mts";
+import { getExecutionCwd } from "../execution-context.mts";
 
 const execFile = promisify(execFileCb);
 
 /** Returns the absolute path to the current git worktree root. Throws outside a git repo. */
 export async function getWorktreeRoot(): Promise<string> {
-  const { stdout } = await execFile("git", ["rev-parse", "--show-toplevel"]);
+  const { stdout } = await execFile("git", ["rev-parse", "--show-toplevel"], {
+    cwd: getExecutionCwd(),
+  });
   return stdout.trim();
 }
 

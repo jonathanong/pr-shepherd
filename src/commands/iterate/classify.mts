@@ -47,7 +47,7 @@ export function classifyReviewSummaries(
     shouldMinimizeAuthor(r.authorType, minimizeComments, r.author, botUsernames) &&
     !blockedReviewIds.has(r.id);
   // First-look summaries still need one tick to surface their body to the agent,
-  // so their minimize IDs ride in the agent-facing resolve command. Seen summaries
+  // so their minimize IDs ride in the agent-facing apply command. Seen summaries
   // (already surfaced in a prior tick) have no new content to show — the CLI
   // self-minimizes them in-process (selfMinimizeIds) instead of routing a
   // cosmetic-only mutation through fix_code (issue #313). Edited summaries are
@@ -124,7 +124,7 @@ export function buildResolveCommand(
   if (hasMessageMutations && hasResolveOrMinimize) {
     // Split: message-bearing mutations (replies + dismissals) ride in resolveArgv;
     // resolve/minimize mutations go in resolveOnlyArgv so they can run without SHA or message.
-    const resolveArgv = buildPrShepherdCommand(["resolve", String(prNumber)]).argv;
+    const resolveArgv = buildPrShepherdCommand(["apply", "review", String(prNumber)]).argv;
     if (replyThreadIds.length > 0) {
       resolveArgv.push("--reply-thread-ids", replyThreadIds.join(","));
     }
@@ -144,7 +144,7 @@ export function buildResolveCommand(
       hasMutations: true,
     };
 
-    const resolveOnlyArgv = buildPrShepherdCommand(["resolve", String(prNumber)]).argv;
+    const resolveOnlyArgv = buildPrShepherdCommand(["apply", "review", String(prNumber)]).argv;
     if (resolveThreadIds.length > 0) {
       resolveOnlyArgv.push("--resolve-thread-ids", resolveThreadIds.join(","));
     }
@@ -163,7 +163,7 @@ export function buildResolveCommand(
   }
 
   // Single command: all mutations combined (or only one category present).
-  const argv = buildPrShepherdCommand(["resolve", String(prNumber)]).argv;
+  const argv = buildPrShepherdCommand(["apply", "review", String(prNumber)]).argv;
   if (replyThreadIds.length > 0) {
     argv.push("--reply-thread-ids", replyThreadIds.join(","));
     argv.push("--message", "$DISMISS_MESSAGE");

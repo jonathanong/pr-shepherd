@@ -4,9 +4,9 @@
 
 ## Overview
 
-pr-shepherd iterates a PR to completion via the active goal loops of Claude Code and Codex. The skill invokes the default `pr-shepherd <PR>` command with `--until-terminal`. That default command is the poll dispatcher: with `--until-terminal`, it loops internally through `[WAIT]` and auto-handled `[MARK_READY]`, then returns when work or terminal state appears.
+pr-shepherd iterates a PR to completion via the active goal loops of Claude Code and Codex. The skill calls the MCP `iterate` tool once per tick, then uses its returned action data with `apply` or `build_suggestion_patch` when needed.
 
-Each non-terminal action is followed by another default poll-dispatcher invocation. Do not run `while true` or unbounded polling loops outside of Shepherd's poll dispatcher.
+Each non-terminal action is followed by another `iterate` call. The active goal/runtime owns the recheck schedule; the MCP server does not run an unbounded polling loop.
 
 Both runtimes use the same `pr-shepherd` skill. Claude Code users invoke it with `/goal /pr-shepherd:pr-shepherd`; Codex users invoke it with `/goal $pr-shepherd`.
 
@@ -19,17 +19,13 @@ Both runtimes use the same `pr-shepherd` skill. Claude Code users invoke it with
    /goal $pr-shepherd <PR>              # Codex
    ```
 
-   The skill resolves the PR number and runs the default poll dispatcher:
+   The skill resolves the optional PR number and calls `iterate`.
 
-   ```bash
-   pr-shepherd <PR> --interval 60s --until-terminal --quiet-status
-   ```
-
-2. **CLI emits an action with `## Instructions`**
-   The output begins with `# PR #N [ACTION]` and ends with a numbered `## Instructions` block. The skill follows those instructions exactly.
+2. **MCP returns an action and data**
+   The result includes the action, surfaced GitHub data, and structured review-mutation arguments when applicable. The skill follows its action-specific instructions exactly.
 
 3. **Non-terminal actions** (`[WAIT]`, `[MARK_READY]`, `[FIX_CODE]`)
-   The active goal follows the `## Instructions` and then invokes the skill again. `[FIX_CODE]` output must be handled before the next poll invocation.
+   The active goal follows the returned action-specific instructions and then invokes the skill again. `[FIX_CODE]` work must be handled before the next tick.
 
 4. **Terminal actions**
    - `[CANCEL]` — PR is merged/closed, or the ready-delay has elapsed. Goal stops.
@@ -40,18 +36,18 @@ For the full decision tree see [iterate-flow.md](iterate-flow.md). For the merma
 ## Sequence diagram
 
 ```
-User                    Active Goal             shepherd iterate / poll
+User                    Active Goal             pr-shepherd MCP
  |                          |                        |
  |-- /goal /pr-shepherd --> |                        |
- |                          |-- poll <PR> ---------> |
+ |                          |-- iterate <PR> ------> |
  |                          |                        |-- GraphQL fetch
  |                          |                        |-- classify
  |                          |                        |-- dispatch
- |                          |<-- [ACTION] + ## Instructions
+ |                          |<-- action + data
  |                          |                        |
  |  [if non-terminal]       |                        |
- |                          |-- follow instructions  |
- |                          |-- poll <PR> ---------> |
+ |                          |-- apply / patch work   |
+ |                          |-- iterate <PR> ------> |
  |                          |                        |
  |  [if cancel/escalate]    |                        |
  |                          |   goal ends            |
@@ -60,12 +56,12 @@ User                    Active Goal             shepherd iterate / poll
  |                          |-- fix code             |
  |                          |-- commit               |
  |                          |-- push                 |
- |                          |-- resolve threads      |
- |                          |-- poll <PR> ---------> |
+ |                          |-- apply review changes |
+ |                          |-- iterate <PR> ------> |
 ```
 
 ## Notes
 
-- Poll uses `--interval` for WAIT-state rechecks. Without `--until-terminal`, `--timeout` caps WAIT polling; with `--until-terminal`, polling continues until `FIX_CODE`, `CANCEL`, or `ESCALATE`.
+- The active goal/runtime chooses when to call `iterate` for a WAIT-state recheck. The shell-only default `pr-shepherd [PR]` remains the bounded polling option.
 - Code changes (`fix_code`, rebase) are handled inline by the active goal — no subagent is spawned.
 - The ready-delay (default 10 minutes) is read from `watch.readyDelayMinutes` in `.pr-shepherdrc.yml`. See [ready-delay.md](ready-delay.md) and [configuration.md](configuration.md).

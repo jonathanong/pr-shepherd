@@ -67,7 +67,7 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
         "**If any code changes are needed:** apply edits, commit, push",
       );
       expect(result.fix.instructions.join("\n")).toContain(
-        "Run the `resolve:` command shown above",
+        "Run the `apply review:` command shown above",
       );
       expect(result.fix.instructions.join("\n")).toContain(
         "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",

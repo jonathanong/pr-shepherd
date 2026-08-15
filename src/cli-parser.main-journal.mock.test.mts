@@ -52,7 +52,9 @@ describe("main — journal text output", () => {
     expect(getStdout()).toContain("Created ## Shepherd Journal");
     expect(getStdout()).toContain("PR #42");
     expect(process.exitCode).toBeUndefined();
-    expect(stderrSpy).not.toHaveBeenCalled();
+    expect(stderrSpy).toHaveBeenCalledWith(
+      "pr-shepherd: journal is deprecated; use pr-shepherd apply journal instead.\n",
+    );
   });
 
   it("prints appended message when section existed", async () => {

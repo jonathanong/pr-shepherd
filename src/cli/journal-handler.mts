@@ -3,13 +3,17 @@ import { EXIT, errorToExitCode } from "../exit-codes.mts";
 import { runJournal } from "../commands/journal/index.mts";
 import { getFlag, parsePrNumber } from "./args.mts";
 import { USAGE } from "./help.mts";
+import { formatJournalResult } from "./journal-formatter.mts";
 
-export async function handleJournal(args: string[]): Promise<void> {
+export async function handleJournal(
+  args: string[],
+  command: "apply journal" | "journal" = "apply journal",
+): Promise<void> {
   for (const a of args) {
     if (!a.startsWith("--")) continue;
     if (a === "--dry-run" || a === "--format" || a.startsWith("--format=")) continue;
     if (a === "--file" || a.startsWith("--file=")) continue;
-    process.stderr.write(`pr-shepherd: journal: unknown flag: "${a}"\n`);
+    process.stderr.write(`pr-shepherd: ${command}: unknown flag: "${a}"\n`);
     process.exitCode = EXIT.USAGE;
     return;
   }
@@ -19,7 +23,7 @@ export async function handleJournal(args: string[]): Promise<void> {
 
   if (filePath !== null && extra[0]) {
     process.stderr.write(
-      `pr-shepherd: journal: provide the entry as a positional argument or via --file, not both\n`,
+      `pr-shepherd: ${command}: provide the entry as a positional argument or via --file, not both\n`,
     );
     process.exitCode = EXIT.USAGE;
     return;
@@ -29,13 +33,13 @@ export async function handleJournal(args: string[]): Promise<void> {
   try {
     rawItem = filePath !== null ? await readItemSource(filePath) : extra[0];
   } catch (e) {
-    process.stderr.write(`pr-shepherd: journal: ${String(e)}\n`);
+    process.stderr.write(`pr-shepherd: ${command}: ${String(e)}\n`);
     process.exitCode = EXIT.NOINPUT;
     return;
   }
 
   if (rawItem === undefined) {
-    process.stderr.write(`${USAGE.journal}\n`);
+    process.stderr.write(`${USAGE[command]}\n`);
     process.exitCode = EXIT.USAGE;
     return;
   }
@@ -53,7 +57,7 @@ export async function handleJournal(args: string[]): Promise<void> {
       process.stdout.write(`${formatJournalResult(result)}\n`);
     }
   } catch (e) {
-    process.stderr.write(`pr-shepherd: journal: ${String(e)}\n`);
+    process.stderr.write(`pr-shepherd: ${command}: ${String(e)}\n`);
     process.exitCode = errorToExitCode(e);
   }
 }
@@ -104,24 +108,4 @@ function parseJournalArgs(args: string[]): { prNumber: number | undefined; extra
   }
 
   return { prNumber, extra };
-}
-
-function formatJournalResult(result: {
-  prNumber: number;
-  mutated: boolean;
-  sectionExisted: boolean;
-  dryRun: boolean;
-  previewBody?: string;
-}): string {
-  if (result.dryRun) {
-    const lines = ["Dry run — no body change written."];
-    if (result.previewBody !== undefined) {
-      lines.push("", result.previewBody);
-    }
-    return lines.join("\n");
-  }
-  if (!result.mutated) return "No change — entry already present.";
-  if (!result.sectionExisted)
-    return `Created ## Shepherd Journal section in PR #${result.prNumber}.`;
-  return `Appended to ## Shepherd Journal in PR #${result.prNumber}.`;
 }

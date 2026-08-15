@@ -25,7 +25,7 @@ flowchart TD
   A_W --> DEC
 
   DEC -->|cancel/escalate| STOP["stop"]
-  DEC -->|fix_code| FIX[inspect CI as needed →<br/>rerun or edit+commit →<br/>rebase/push by repo convention →<br/>pr-shepherd resolve]
+  DEC -->|fix_code| FIX[inspect CI as needed →<br/>rerun or edit+commit →<br/>rebase/push by repo convention →<br/>pr-shepherd apply review]
   FIX --> RERUN[rerun the poll<br/>'--interval'/'--timeout' bound each wait]
   DEC -->|other| RERUN
   RERUN --> ITER

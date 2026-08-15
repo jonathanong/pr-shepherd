@@ -1,14 +1,18 @@
+/* eslint-disable max-lines */
 import { readFileSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { parse } from "yaml";
 import builtins from "../config.json" with { type: "json" };
+import { getEffectiveCwd } from "../execution-context.mts";
 
 const MINIMIZE_COMMENTS_POLICIES = ["all", "bots", "users", "none"] as const;
 
 export type MinimizeCommentsPolicy = (typeof MINIMIZE_COMMENTS_POLICIES)[number];
 
 interface PrShepherdConfig {
+  /** Optional user classification configuration; preserved for rule consumers. */
+  classify?: unknown;
   /** GitHub logins that should be treated as bots even when GitHub reports User/Unknown. */
   botUsernames: string[];
   /** Case-insensitive glob patterns for check/status context names Shepherd should ignore. */
@@ -50,13 +54,14 @@ interface PrShepherdConfig {
     blockingReviewerLogins: string[];
   };
   actions: {
-    autoResolveOutdated: boolean;
     autoMinimizeSuppressed: boolean;
     autoMarkReady: boolean;
-    /** When true, the resolve skill prefers applying reviewer suggestion blocks as a commit over manual edits. */
-    commitSuggestions: boolean;
     /** Case-insensitive glob patterns for workflow/check names Shepherd must not cancel. */
     neverCancelRuns: string[];
+    /** @deprecated Accepted for compatibility, ignored by the loader. */
+    autoResolveOutdated?: boolean;
+    /** @deprecated Accepted for compatibility, ignored by the loader. */
+    commitSuggestions?: boolean;
   };
 }
 
@@ -107,6 +112,12 @@ function isMinimizeCommentsPolicy(value: unknown): value is MinimizeCommentsPoli
 }
 
 function parseMinimizeCommentsPolicy(value: unknown): MinimizeCommentsPolicy {
+  if (value === "users") {
+    process.stderr.write(
+      'pr-shepherd: config: iterate.minimizeComments: "users" is deprecated and is now treated as "none".\n',
+    );
+    return "none";
+  }
   if (isMinimizeCommentsPolicy(value)) return value;
   throw new Error(
     `Invalid config: iterate.minimizeComments must be one of "all", "bots", "users", or "none", got ${JSON.stringify(value)}`,
@@ -134,12 +145,70 @@ function parseNeverCancelRuns(value: unknown): string[] {
   return value;
 }
 
+const KNOWN_CONFIG_KEYS = new Set([
+  "classify",
+  "botUsernames",
+  "ignoreChecks",
+  "iterate",
+  "watch",
+  "resolve",
+  "checks",
+  "mergeStatus",
+  "actions",
+]);
+const KNOWN_NESTED_KEYS: Record<string, ReadonlySet<string>> = {
+  iterate: new Set([
+    "fixAttemptsPerThread",
+    "stallTimeoutMinutes",
+    "minimizeApprovals",
+    "minimizeComments",
+    "behindBaseHint",
+  ]),
+  watch: new Set(["readyDelayMinutes"]),
+  resolve: new Set(["shaPoll"]),
+  checks: new Set(["ciTriggerEvents"]),
+  mergeStatus: new Set(["blockingReviewerLogins"]),
+  actions: new Set([
+    "autoMinimizeSuppressed",
+    "autoMarkReady",
+    "neverCancelRuns",
+    "autoResolveOutdated",
+    "commitSuggestions",
+  ]),
+};
+
+function warnUnknownConfigKeys(config: Record<string, unknown>): void {
+  for (const key of Object.keys(config)) {
+    if (!KNOWN_CONFIG_KEYS.has(key)) {
+      process.stderr.write(`pr-shepherd: config: unknown key "${key}" ignored.\n`);
+      delete config[key];
+      continue;
+    }
+    const value = config[key];
+    const nested = KNOWN_NESTED_KEYS[key];
+    if (
+      nested === undefined ||
+      value === null ||
+      typeof value !== "object" ||
+      Array.isArray(value)
+    ) {
+      continue;
+    }
+    for (const child of Object.keys(value as Record<string, unknown>)) {
+      if (!nested.has(child)) {
+        process.stderr.write(`pr-shepherd: config: unknown key "${key}.${child}" ignored.\n`);
+        delete (value as Record<string, unknown>)[child];
+      }
+    }
+  }
+}
+
 const defaults = builtins as PrShepherdConfig;
 
 const configCache = new Map<string, PrShepherdConfig>();
 
 export function loadConfig(): PrShepherdConfig {
-  const cwd = process.cwd();
+  const cwd = getEffectiveCwd();
   if (configCache.has(cwd)) return configCache.get(cwd)!;
 
   const rcPath = findRcFile(cwd);
@@ -151,6 +220,17 @@ export function loadConfig(): PrShepherdConfig {
   try {
     const raw = readFileSync(rcPath, "utf8");
     const parsed = (parse(raw) ?? {}) as Record<string, unknown>;
+    const rawActions = parsed.actions;
+    if (rawActions !== null && typeof rawActions === "object" && !Array.isArray(rawActions)) {
+      const actions = rawActions as Record<string, unknown>;
+      for (const key of ["autoResolveOutdated", "commitSuggestions"] as const) {
+        if (key in actions) {
+          process.stderr.write(`pr-shepherd: config: actions.${key} is deprecated and ignored.\n`);
+          delete actions[key];
+        }
+      }
+    }
+    warnUnknownConfigKeys(parsed);
     const config = deepMerge(
       defaults as unknown as Record<string, unknown>,
       parsed,

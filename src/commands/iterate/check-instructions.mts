@@ -30,13 +30,13 @@ export function buildBehindBaseHintInstruction(
   return [`The branch is behind \`origin/${baseBranch}\` — ${trimmedHint} before pushing.`];
 }
 
-/** Build the `Run the resolve: command` instruction, including its optional substitution hint. */
+/** Build the `Run the apply review: command` instruction, including its optional substitution hint. */
 export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): string[] {
   if (!resolveCommand.hasMutations) return [];
   const instructions: string[] = [];
   if ((resolveCommand.replyThreadIds?.length ?? 0) > 0) {
     instructions.push(
-      `Before running the \`resolve:\` command, remove any thread from \`--reply-thread-ids\` if the latest visible comment in that thread is your own prior Shepherd reply. Do not reply to your own comments.`,
+      `Before running the \`apply review:\` command, remove any thread from \`--reply-thread-ids\` if the latest visible comment in that thread is your own prior Shepherd reply. Do not reply to your own comments.`,
     );
   }
   const substituteParts: string[] = [];
@@ -52,7 +52,7 @@ export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): 
   }
   const substituteHint =
     substituteParts.length > 0 ? `, substituting ${substituteParts.join(" and ")}` : "";
-  instructions.push(`Run the \`resolve:\` command shown above${substituteHint}.`);
+  instructions.push(`Run the \`apply review:\` command shown above${substituteHint}.`);
   return instructions;
 }
 

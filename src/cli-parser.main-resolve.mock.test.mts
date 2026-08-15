@@ -55,7 +55,7 @@ describe("main — resolve", () => {
     expect(mockRunResolveMutate).toHaveBeenCalledTimes(1);
   });
 
-  it("accepts a valid 40-char SHA without warnings", async () => {
+  it("accepts a valid 40-char SHA with only the alias deprecation warning", async () => {
     mockRunResolveMutate.mockResolvedValue({
       repliedThreads: [],
       resolvedThreads: ["PRRT_1"],
@@ -75,7 +75,9 @@ describe("main — resolve", () => {
       sha,
     ]);
     expect(mockRunResolveMutate).toHaveBeenCalledTimes(1);
-    expect(stderrSpy).not.toHaveBeenCalled();
+    expect(stderrSpy).toHaveBeenCalledWith(
+      "pr-shepherd: resolve is deprecated; use pr-shepherd apply review instead.\n",
+    );
   });
 
   it("calls runResolveMutate when --resolve-thread-ids is given", async () => {

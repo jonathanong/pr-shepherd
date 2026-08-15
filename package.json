@@ -2,14 +2,34 @@
   "name": "pr-shepherd",
   "version": "0.34.0",
   "description": "Autonomous PR CI monitor and review-comment resolver for agentic coding tools",
+  "keywords": [
+    "automation",
+    "ci",
+    "claude",
+    "claude-code",
+    "code-review",
+    "codex",
+    "github",
+    "pull-request"
+  ],
+  "homepage": "https://github.com/jonathanong/pr-shepherd",
+  "bugs": {
+    "url": "https://github.com/jonathanong/pr-shepherd/issues"
+  },
   "license": "MIT",
   "author": "Jonathan Ong",
-  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jonathanong/pr-shepherd.git"
+  },
   "bin": {
-    "pr-shepherd": "bin/index.mjs"
+    "pr-shepherd": "bin/index.mjs",
+    "pr-shepherd-mcp": "bin/mcp-stdio.mjs"
   },
   "files": [
     "bin/**",
+    "plugins/**/.mcp.json",
+    "plugins/**/.codex.mcp.json",
     "src/classify/types.mts",
     "plugins/**",
     "plugins/**/.codex-plugin/**",
@@ -19,29 +39,20 @@
     "README.md",
     "LICENSE"
   ],
-  "engines": {
-    "node": ">=22.18.0"
-  },
-  "dependencies": {
-    "picomatch": "^4.0.4",
-    "yaml": "^2.7.0"
-  },
+  "type": "module",
   "exports": {
+    ".": {
+      "types": "./bin/api.d.mts",
+      "default": "./bin/api.mjs"
+    },
+    "./mcp": {
+      "types": "./bin/mcp/index.d.mts",
+      "default": "./bin/mcp/index.mjs"
+    },
     "./classify": {
       "types": "./src/classify/types.mts",
       "default": "./bin/classify/types.mjs"
     }
-  },
-  "devDependencies": {
-    "@types/node": "^26.0.0",
-    "@types/picomatch": "^4.0.3",
-    "@vitest/coverage-v8": "^4.1.4",
-    "husky": "^9.1.7",
-    "knip": "^6.14.1",
-    "oxfmt": "^0.61.0",
-    "oxlint": "^1.60.0",
-    "typescript": "^7.0.2",
-    "vitest": "^4.1.4"
   },
   "scripts": {
     "build": "node scripts/build.mjs",
@@ -58,22 +69,24 @@
     "test:coverage": "vitest run --coverage && node scripts/strip-lcov-branches.mjs",
     "test:watch": "vitest"
   },
-  "keywords": [
-    "github",
-    "pull-request",
-    "ci",
-    "code-review",
-    "automation",
-    "codex",
-    "claude",
-    "claude-code"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/jonathanong/pr-shepherd.git"
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "picomatch": "^4.0.4",
+    "yaml": "^2.7.0",
+    "zod": "^4.4.3"
   },
-  "bugs": {
-    "url": "https://github.com/jonathanong/pr-shepherd/issues"
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "@types/picomatch": "^4.0.3",
+    "@vitest/coverage-v8": "^4.1.4",
+    "husky": "^9.1.7",
+    "knip": "^6.14.1",
+    "oxfmt": "^0.61.0",
+    "oxlint": "^1.60.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.4"
   },
-  "homepage": "https://github.com/jonathanong/pr-shepherd"
+  "engines": {
+    "node": ">=22.18.0"
+  }
 }

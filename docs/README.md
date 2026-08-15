@@ -5,8 +5,8 @@ Quick entry point. For a command overview see [`../README.md`](../README.md).
 | Document                               | What it covers                                                  |
 | -------------------------------------- | --------------------------------------------------------------- |
 | [authentication.md](authentication.md) | PAT resolution, required fine-grained access, classic scopes    |
-| [cli-usage.md](cli-usage.md)           | CLI command reference and flags                                 |
-| [skills.md](skills.md)                 | Claude Code and Codex skill usage                               |
+| [cli-usage.md](cli-usage.md)           | Canonical shell commands and MCP tool reference                 |
+| [skills.md](skills.md)                 | Claude Code and Codex MCP-backed skill usage                    |
 | [configuration.md](configuration.md)   | `.pr-shepherdrc.yml` reference                                  |
 | [flow.md](flow.md)                     | End-to-end mermaid flow diagram                                 |
 | [architecture.md](architecture.md)     | Module map, dependency rules, where to put new code             |

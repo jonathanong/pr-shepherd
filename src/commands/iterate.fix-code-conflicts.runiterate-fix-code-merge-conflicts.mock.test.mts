@@ -44,7 +44,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       const joined = result.fix.instructions.join("\n");
       expect(joined).not.toContain("git commit");
       expect(joined).not.toContain("gh pr edit");
-      expect(joined).not.toContain("pr-shepherd journal");
+      expect(joined).not.toContain("pr-shepherd apply journal");
       // Conflicts are surfaced by pointing at the `**branch**` state; CLI does not prescribe rebase
       expect(joined).toContain(
         "The branch has merge conflicts that must be resolved before merging",
@@ -110,7 +110,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       // No prescriptive git commands — agent decides based on conditional phrasing.
       const joined = result.fix.instructions.join("\n");
       expect(joined).not.toContain("git commit");
-      expect(joined).toContain("pr-shepherd journal"); // shepherd journal
+      expect(joined).toContain("pr-shepherd apply journal"); // shepherd journal
       // CONFLICTS + threads: conflict preamble points at `**branch**` and says commit/push;
       // CLI no longer prescribes rebase mechanics.
       expect(joined).toContain(
@@ -121,7 +121,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       expect(joined).not.toContain("origin/main");
       expect(joined).not.toContain("git rebase --continue");
       expect(joined).not.toMatch(/rebase origin\/\w+ && git push/);
-      expect(joined).toContain("resolve:");
+      expect(joined).toContain("apply review:");
     }
   });
 });

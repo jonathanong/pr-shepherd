@@ -2,7 +2,7 @@
  * Persistent first-seen state for bot CHANGES_REQUESTED reviews.
  *
  * Bot CRs are auto-dismissed via `--dismiss-review-ids` in the post-push
- * `resolve:` command. If the agent drops that flag, the bot CR keeps the PR in
+ * `apply review:` command. If the agent drops that flag, the bot CR keeps the PR in
  * `CHANGES_REQUESTED` state. This file tracks when each bot CR was first
  * observed so the iterate loop can escalate after `iterate.stallTimeoutMinutes`
  * — independent of the broader fingerprint-based `stall-timeout` mechanism in

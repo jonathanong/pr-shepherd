@@ -73,7 +73,9 @@ export function buildFixInstructions(
       actionableSections.push("`## Changes-requested reviews`");
     const sectionRef =
       actionableSections.length > 0 ? `under ${actionableSections.join(", ")}` : "above";
-    const resolveClause = resolveCommand.hasMutations ? ", then run the `resolve:` command" : "";
+    const resolveClause = resolveCommand.hasMutations
+      ? ", then run the `apply review:` command"
+      : "";
     if (hasConflicts) {
       // Conflicts make push mandatory regardless of whether code edits are needed.
       instructions.push(
@@ -81,7 +83,7 @@ export function buildFixInstructions(
       );
     } else {
       const skipClause = resolveCommand.hasMutations
-        ? "skip the commit/push and run the `resolve:` command"
+        ? "skip the commit/push and run the `apply review:` command"
         : "no push is needed";
       instructions.push(
         `Decide for each item ${sectionRef} whether a code change is warranted. **If any code changes are needed:** apply edits, commit, push${resolveClause}. **If no code changes are needed:** ${skipClause}.`,
@@ -110,14 +112,14 @@ export function buildFixInstructions(
     // is only accurate when threads are present.
     const filesRef = threads.length > 0 ? "each file referenced above" : "the relevant files";
     const suggestionFallback = hasSuggestions
-      ? ` When applying a \`[suggestion]\` thread manually (e.g. after a failed \`commit-suggestion\` run), replace the exact line range shown in the heading (\`path:startLine-endLine\`) with the replacement shown in its \`Replaces lines …\` block verbatim — an empty replacement deletes those lines, a single blank line replaces the range with one blank line.`
+      ? ` When applying a \`[suggestion]\` thread manually (e.g. after a failed \`build-suggestion-patch\` run), replace the exact line range shown in the heading (\`path:startLine-endLine\`) with the replacement shown in its \`Replaces lines …\` block verbatim — an empty replacement deletes those lines, a single blank line replaces the range with one blank line.`
       : "";
     instructions.push(`Apply code fixes: read and edit ${filesRef}.${suggestionFallback}`);
   }
 
   if (resolutionOnlyThreads.length > 0) {
     instructions.push(
-      `Review the threads under \`## Review threads to resolve\`. Human-authored threads are replied to by the \`resolve:\` command shown below; Shepherd does not resolve them. Bot/non-human threads are included in \`--resolve-thread-ids\`.`,
+      `Review the threads under \`## Review threads to resolve\`. Human-authored threads are replied to by the \`apply review:\` command shown below; Shepherd does not resolve them. Bot/non-human threads are included in \`--resolve-thread-ids\`.`,
     );
   }
 
@@ -136,7 +138,7 @@ export function buildFixInstructions(
     );
     if ((resolveCommand.dismissReviewIds?.length ?? 0) > 0)
       instructions.push(
-        `Pass every ID listed in \`--dismiss-review-ids\` to the \`resolve:\` command verbatim — these are bot/non-human CR reviews that the agent (not the author) must dismiss. Dropping an ID leaves the PR in \`CHANGES_REQUESTED\` state; the next tick re-surfaces it as \`[pending dismissal]\` and an unattended bot CR escalates after \`iterate.stallTimeoutMinutes\`.`,
+        `Pass every ID listed in \`--dismiss-review-ids\` to the \`apply review:\` command verbatim — these are bot/non-human CR reviews that the agent (not the author) must dismiss. Dropping an ID leaves the PR in \`CHANGES_REQUESTED\` state; the next tick re-surfaces it as \`[pending dismissal]\` and an unattended bot CR escalates after \`iterate.stallTimeoutMinutes\`.`,
       );
   }
 
@@ -154,7 +156,7 @@ export function buildFixInstructions(
   const firstLookTotal = firstLookThreads.length + firstLookComments.length;
   if (firstLookTotal > 0) {
     instructions.push(
-      `Items in \`## First-look items\` are shown so you can acknowledge their current status before acting. If a first-look thread also appears under \`## Review threads to resolve\`, its ID is already included in the \`resolve:\` command; otherwise do not pass first-look-only IDs to mutation flags.`,
+      `Items in \`## First-look items\` are shown so you can acknowledge their current status before acting. If a first-look thread also appears under \`## Review threads to resolve\`, its ID is already included in the \`apply review:\` command; otherwise do not pass first-look-only IDs to mutation flags.`,
     );
   }
   if (firstLookSummaries.length > 0) instructions.push(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);

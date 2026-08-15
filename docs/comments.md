@@ -22,9 +22,9 @@ Shepherd no longer auto-resolves outdated threads during the sweep step.
 
 ## Outdated-thread path
 
-Outdated threads are fetched from `batch.mts` and surfaced under `report.threads.resolutionOnly` until GitHub reports `isResolved: true`. Seen markers suppress repeated first-look/body display, but they do not suppress unresolved outdated/minimized threads from resolution routing. Human-authored outdated threads are replied to by the generated resolve command; Shepherd does not mark them resolved. Bot/non-human outdated threads are routed to `--resolve-thread-ids` on every run until GitHub reports them resolved.
+Outdated threads are fetched from `batch.mts` and surfaced under `report.threads.resolutionOnly` until GitHub reports `isResolved: true`. Seen markers suppress repeated first-look/body display, but they do not suppress unresolved outdated/minimized threads from resolution routing. Human-authored outdated threads are replied to by the generated `apply review` command; Shepherd does not mark them resolved. Bot/non-human outdated threads are routed to `--resolve-thread-ids` on every run until GitHub reports them resolved.
 
-The legacy `actions.autoResolveOutdated` setting is retained for config compatibility but no longer causes a resolve mutation.
+Outdated threads are surfaced and routed according to their current author and resolution state; no separate automatic-resolution setting controls them.
 
 ## Actionable triage is LLM-side
 
@@ -56,7 +56,7 @@ State module: `src/state/seen-comments.mts`.
 
 ## `--require-sha` polling
 
-When `pr-shepherd resolve --require-sha <SHA>` is used, shepherd polls the GraphQL `get-pr-head-sha.gql` query for `headRefOid` until it matches `expectedSha`, then issues the resolve/minimize/dismiss mutations.
+When `pr-shepherd apply review --require-sha <SHA>` is used, shepherd polls the GraphQL `get-pr-head-sha.gql` query for `headRefOid` until it matches `expectedSha`, then issues the resolve/minimize/dismiss mutations.
 
 **Why:** Without this guard, shepherd might auto-merge before the reviewer sees the fix. The polling ensures GitHub has received the push and updated the PR head before any mutations fire.
 
@@ -85,4 +85,4 @@ GitHub provided retry or reset details.
 
 ## Applying reviewer suggestions
 
-For review threads whose body contains a ` ```suggestion ` fenced block, `iterate fix_code` attaches a parsed `suggestion` field (`{ startLine, endLine, lines, author }`, where `lines: string[]` losslessly carries the replacement — `[]` means "delete these lines", `[""]` means "replace with one blank line") and emits commit-suggestion instructions when `actions.commitSuggestions` is enabled. The agent can then invoke [`pr-shepherd commit-suggestion`](cli-usage.md#pr-shepherd-commit-suggestion-pr---thread-id-id---message) (singular) per thread — one thread at a time — to build a unified diff and produce the suggested commit message + body (with `Co-authored-by: <reviewer>` trailer). The CLI does not mutate the working tree or git history; the agent applies the patch, stages, commits, and resolves the thread using the `## Instructions` section in the output.
+For review threads whose body contains a ` ```suggestion ` fenced block, `iterate fix_code` attaches a parsed `suggestion` field (`{ startLine, endLine, lines, author }`, where `lines: string[]` losslessly carries the replacement — `[]` means "delete these lines", `[""]` means "replace with one blank line"). An MCP client can call `build_suggestion_patch` once per thread to build a unified diff and suggested commit metadata (including a `Co-authored-by: <reviewer>` trailer). Neither MCP nor the CLI mutates the working tree or git history; the agent applies the patch, stages, commits, and uses `apply` for the associated review mutation.

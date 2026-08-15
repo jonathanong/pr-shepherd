@@ -4,7 +4,7 @@ export function rejectPrrcMinimizeIds(ids: string[]): string[] {
   const prrcIds = ids.filter((id) => id.startsWith("PRRC_"));
   if (prrcIds.length > 0) {
     process.stderr.write(
-      `pr-shepherd: resolve: --minimize-comment-ids contains thread comment IDs (PRRC_*): ${prrcIds.join(", ")}. Thread comments cannot be minimized individually — resolve the parent thread using --resolve-thread-ids with the PRRT_* thread ID instead.\n`,
+      `pr-shepherd: apply review: --minimize-comment-ids contains thread comment IDs (PRRC_*): ${prrcIds.join(", ")}. Thread comments cannot be minimized individually — resolve the parent thread using --resolve-thread-ids with the PRRT_* thread ID instead.\n`,
     );
     process.exitCode = EXIT.DATAERR;
   }
@@ -15,7 +15,7 @@ export function warnPrrcThreadIds(ids: string[]): string[] {
   const prrcIds = ids.filter((id) => id.startsWith("PRRC_"));
   if (prrcIds.length > 0) {
     process.stderr.write(
-      `pr-shepherd: resolve: warning: --resolve-thread-ids contains comment IDs (PRRC_*) instead of thread IDs (PRRT_*): ${prrcIds.join(", ")}. The resolveReviewThread mutation requires PRRT_* thread IDs. Run a GraphQL query for pullRequest.reviewThreads to get the correct IDs.\n`,
+      `pr-shepherd: apply review: warning: --resolve-thread-ids contains comment IDs (PRRC_*) instead of thread IDs (PRRT_*): ${prrcIds.join(", ")}. The resolveReviewThread mutation requires PRRT_* thread IDs. Run a GraphQL query for pullRequest.reviewThreads to get the correct IDs.\n`,
     );
   }
   return prrcIds;
@@ -25,7 +25,7 @@ export function validateRequireSha(sha: string | undefined): boolean {
   if (sha === undefined) return true;
   if (/^[0-9a-f]{40}$/.test(sha)) return true;
   process.stderr.write(
-    `pr-shepherd: resolve: --require-sha must be a full 40-character lowercase hex SHA, got "${sha}". Short SHAs will never match GitHub's headRefOid. Use $(git rev-parse HEAD) to get the full SHA.\n`,
+    `pr-shepherd: apply review: --require-sha must be a full 40-character lowercase hex SHA, got "${sha}". Short SHAs will never match GitHub's headRefOid. Use $(git rev-parse HEAD) to get the full SHA.\n`,
   );
   process.exitCode = EXIT.DATAERR;
   return false;

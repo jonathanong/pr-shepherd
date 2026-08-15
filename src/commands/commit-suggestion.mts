@@ -1,5 +1,6 @@
 import { execFile as execFileCb } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { promisify } from "node:util";
 
 import { getRepoInfo, getCurrentPrNumber, getCurrentBranch } from "../github/client.mts";
@@ -9,15 +10,17 @@ import { buildUnifiedDiff } from "../suggestions/patch.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type { CommitSuggestionResult, GlobalOptions } from "../types.mts";
 import { buildPrShepherdCommand } from "../cli/runner.mts";
+import { getEffectiveCwd, getExecutionCwd } from "../execution-context.mts";
 
 const execFile = promisify(execFileCb);
 
-interface CommitSuggestionOptions extends GlobalOptions {
+export interface CommitSuggestionOptions extends GlobalOptions {
   threadId: string;
   message: string;
   description?: string;
 }
 
+/** @deprecated Hidden implementation for `commit-suggestion`; use `build-suggestion-patch`. */
 export async function runCommitSuggestion(
   opts: CommitSuggestionOptions,
 ): Promise<CommitSuggestionResult> {
@@ -38,7 +41,9 @@ export async function runCommitSuggestion(
   }
 
   const currentBranch = await getCurrentBranch();
-  const { stdout: localHeadOut } = await execFile("git", ["rev-parse", "HEAD"]);
+  const { stdout: localHeadOut } = await execFile("git", ["rev-parse", "HEAD"], {
+    cwd: getExecutionCwd(),
+  });
   const localHeadSha = localHeadOut.trim();
 
   const { data } = await fetchPrBatch(prNumber, repo);
@@ -84,15 +89,14 @@ export async function runCommitSuggestion(
 
   // Validate the target file is clean before generating the patch, so the emitted
   // `git add -- <file>` instruction cannot accidentally stage unrelated local edits.
-  const { stdout: fileStatus } = await execFile("git", [
-    "status",
-    "--porcelain",
-    "--",
-    thread.path,
-  ]);
+  const { stdout: fileStatus } = await execFile(
+    "git",
+    ["status", "--porcelain", "--", thread.path],
+    { cwd: getExecutionCwd() },
+  );
   if (fileStatus.trim() !== "") {
     throw new ShepherdError(
-      `${thread.path} has uncommitted changes. Commit or stash them before running commit-suggestion.`,
+      `${thread.path} has uncommitted changes. Commit or stash them before running build-suggestion-patch.`,
       EXIT.UNAVAILABLE,
     );
   }
@@ -115,7 +119,7 @@ export async function runCommitSuggestion(
   const startLine = thread.startLine ?? thread.line;
   const endLine = thread.line;
   const filePath = thread.path;
-  const originalContent = await readFile(filePath, "utf8");
+  const originalContent = await readFile(resolve(getEffectiveCwd(), filePath), "utf8");
   const patch = buildUnifiedDiff({
     path: filePath,
     originalContent,
@@ -139,7 +143,8 @@ export async function runCommitSuggestion(
     ...commitBodyArg.split("\n\n").map((p) => `-m ${sq(p)}`),
   ].join(" ");
   const resolveCommand = buildPrShepherdCommand([
-    "resolve",
+    "apply",
+    "review",
     String(prNumber),
     "--resolve-thread-ids",
     opts.threadId,
