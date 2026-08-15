@@ -4,14 +4,12 @@
 
 The module supports a focused automation loop for PR monitoring and deterministic GitHub comment/review maintenance.
 
-### CLI commands and invocation
+### MCP and shell invocation
 
-- Supports default invocation `pr-shepherd [PR]` as the poll dispatcher.
-- Supports explicit `pr-shepherd iterate [PR]` for one single tick.
-- Supports `pr-shepherd resolve [PR]` mutation actions with `--reply-thread-ids`, `--resolve-thread-ids`, `--minimize-comment-ids`, `--dismiss-review-ids`.
-- Supports `pr-shepherd commit-suggestion [PR] --thread-id <id> --message "<one-sentence headline>"` (or `--description`) for suggestion-thread patch generation.
-- Supports `pr-shepherd mark-files-as-viewed [PR] [files...] [--tests] [--match REGEX]` for marking PR changed files as viewed in GitHub.
-- Supports `pr-shepherd log-file` to print the per-worktree debug log path.
+- Supports local stdio MCP tools: `iterate`, `apply`, and `build_suggestion_patch`.
+- Supports ordered `apply` operations for review mutations, marking files viewed, and appending journal entries.
+- Supports default shell invocation `pr-shepherd [PR]` as the bounded poll dispatcher and `pr-shepherd iterate [PR]` for one single tick.
+- Supports `pr-shepherd admin log-file` to print the per-worktree debug log path.
 - Supports `--version`/`-v`.
 - Supports `--format text|json`, and `--verbose` output mode (iterate only).
 - Supports `--ready-delay`, `--stall-timeout`, `--no-auto-mark-ready`, `--no-auto-cancel-actionable`.
@@ -54,18 +52,18 @@ The module supports a focused automation loop for PR monitoring and deterministi
 - Surfaces outdated review threads; human-authored threads receive replies, while bot/non-human threads are resolved.
 - Supports first-look tracking for outdated/resolved/minimized items with edit-aware resurface behavior.
 - Supports review-summary minimization through the same comment minimization pipeline.
-- Supports resolving comment threads after fixes using the generated resolve command.
+- Supports resolving comment threads after fixes through an `apply` review-mutation operation.
 - Supports minimizing PR-level comments and review summaries when eligible by `iterate.minimizeComments`.
 - Supports keeping `APPROVED` reviews surfaced by default and optionally minimizing them when configured.
 
 ### Mutation behavior
 
-- Supports replying to human review threads by ID (`--reply-thread-ids`).
-- Supports resolving non-human/manual review thread IDs (`--resolve-thread-ids`).
-- Supports minimizing non-human minimizable objects by ID (`--minimize-comment-ids`), including review summaries/review IDs.
-- Supports dismissing `CHANGES_REQUESTED` reviews with a message (`--dismiss-review-ids` + `--message`).
+- Supports replying to human review threads by ID.
+- Supports resolving non-human/manual review thread IDs.
+- Supports minimizing non-human minimizable objects by ID, including review summaries/review IDs.
+- Supports dismissing `CHANGES_REQUESTED` reviews with a message.
 - Supports batching mutation IDs in groups of 10.
-- Supports explicit `--require-sha <sha>` polling before mutating so replies/resolves/minimizes/dismissals follow the pushed commit.
+- Supports explicit `requireSha` polling before mutating so replies/resolves/minimizes/dismissals follow the pushed commit.
 
 ### Suggestion-thread workflow
 
@@ -90,7 +88,7 @@ The module supports a focused automation loop for PR monitoring and deterministi
 
 ## Features this module does not support
 
-- Does not run as a long-running daemon; `poll` is a bounded command and must be re-invoked for continued iteration after actionable output.
+- Does not run as a long-running daemon; MCP clients call `iterate` again after actionable output, while the shell poll dispatcher remains bounded.
 - Does not merge PRs or merge branches itself.
 - Does not continuously rebase branches outside required conflict-resolution scenarios.
 - Does not modify files or apply suggestion patches to the working tree automatically; it only emits what to run.

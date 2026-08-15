@@ -23,6 +23,14 @@ describe("main — log-file", () => {
     expect(JSON.parse(getStdout())).toEqual({ path: "/tmp/shepherd.md" });
   });
 
+  it("routes the canonical admin log-file command before log initialization", async () => {
+    mockRunLogFile.mockResolvedValue({ path: "/tmp/shepherd.md" });
+
+    await main(["node", "shepherd", "admin", "log-file"]);
+
+    expect(getStdout()).toBe("/tmp/shepherd.md\n");
+  });
+
   it("prints the log path as JSON for --format json", async () => {
     mockRunLogFile.mockResolvedValue({ path: "/tmp/shepherd.md" });
     await main(["node", "shepherd", "log-file", "--format", "json"]);

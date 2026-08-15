@@ -56,6 +56,14 @@ describe("main — clean dispatch", () => {
     expect(process.exitCode).toBeUndefined();
   });
 
+  it("routes the canonical admin clean command", async () => {
+    mockRunClean.mockResolvedValue(OK_RESULT);
+
+    await main(["node", "shepherd", "admin", "clean", "all"]);
+
+    expect(mockRunClean).toHaveBeenCalledWith(expect.objectContaining({ variant: "all" }));
+  });
+
   it("writes error to stderr and exits EX_SOFTWARE when runClean returns ok=false", async () => {
     mockRunClean.mockResolvedValue(ERROR_RESULT);
     await main(["node", "shepherd", "clean", "pr"]);

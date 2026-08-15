@@ -7,24 +7,23 @@ Usage:
   pr-shepherd --help | -h
   pr-shepherd [PR] [poll-flags] [iterate-flags]
   pr-shepherd iterate [PR] [iterate-flags]
-  pr-shepherd poll [PR] [poll-flags] [iterate-flags]
-  pr-shepherd resolve [PR] [resolve-flags]
-  pr-shepherd commit-suggestion [PR] --thread-id ID --message MSG [flags]
-  pr-shepherd mark-files-as-viewed [PR] [files...] [--tests] [--match REGEX]
-  pr-shepherd journal [PR] <item> [--dry-run] [--format text|json]
-  pr-shepherd clean <pr|branch|current|repo|all> [value] [flags]
-  pr-shepherd log-file [--format text|json]
+  pr-shepherd apply review [PR] [review-flags]
+  pr-shepherd apply files [PR] [files...] [--tests] [--match REGEX]
+  pr-shepherd apply journal [PR] <item> [--dry-run] [--format text|json]
+  pr-shepherd build-suggestion-patch [PR] --thread-id ID --message MSG [flags]
+  pr-shepherd admin clean <pr|branch|current|repo|all> [value] [flags]
+  pr-shepherd admin log-file [--format text|json]
 
 Commands:
   [PR]                 Poll until non-WAIT or timeout. This is the default command.
   iterate              Run one iterate tick (single-tick alias).
-  poll                 Re-run iterate while the action is WAIT, then print the final tick.
-  resolve              Apply review-state mutations (requires at least one action flag).
-  commit-suggestion    Convert one GitHub suggestion thread into a patch and commit instructions.
-  mark-files-as-viewed Mark PR changed files as viewed in GitHub.
-  journal              Append a list item to the ## Shepherd Journal section of a PR body.
-  clean                Remove pr-shepherd state files.
-  log-file             Print the per-worktree debug log path.
+  apply review         Apply review-state mutations after fixes.
+  apply files          Mark changed files as viewed in GitHub.
+  apply journal        Append a list item to the ## Shepherd Journal section of a PR body.
+  build-suggestion-patch
+                       Convert one GitHub suggestion thread into a patch and commit instructions.
+  admin clean          Remove pr-shepherd state files.
+  admin log-file       Print the per-worktree debug log path.
 
 PR argument:
   PR may be a number such as 42 or a GitHub pull request URL.
@@ -41,7 +40,7 @@ Iterate flags:
   --no-auto-mark-ready           Do not convert draft PRs to ready for review.
   --no-auto-cancel-actionable    Do not cancel in-progress runs before actionable fixes.
 
-Poll flags:
+Polling flags:
   --interval <duration>          Delay between WAIT ticks. Bare number = seconds. Default: 60s.
   --timeout <duration>           Poll wall-clock cap. Bare number = seconds. Default: 4.5m.
   --quiet-status                 During WAIT polling, print only changed status snapshots.

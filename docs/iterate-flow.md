@@ -10,7 +10,7 @@
 
 **What:** `runCheck({ autoResolve: true })` fires one GraphQL batch query (CI checks + review threads + PR comments + merge state). If the PR is already merged or closed, it returns a terminal report immediately; otherwise it surfaces outdated threads without resolving them.
 
-**Why:** Human-authored threads must remain visible and unresolved; Shepherd replies to human threads later through the printed resolve command.
+**Why:** Human-authored threads must remain visible and unresolved; Shepherd replies to human threads later through the printed `apply review` command.
 
 ---
 

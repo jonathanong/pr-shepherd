@@ -62,7 +62,7 @@ describe("runCommitSuggestion — output shape", () => {
       threadId: "PRRT_x",
       message: "fix",
     });
-    expect(result.postActionInstructions[3]).toContain("pr-shepherd resolve");
+    expect(result.postActionInstructions[3]).toContain("pr-shepherd apply review");
     expect(result.postActionInstructions[3]).toContain("PRRT_x");
   });
 

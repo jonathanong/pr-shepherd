@@ -17,11 +17,15 @@ import { parseMarkFilesAsViewedArgs } from "./mark-files-as-viewed-flags.mts";
 
 const CLEAN_VARIANTS = new Set<string>(["pr", "branch", "current", "repo", "all"]);
 
-export async function handleClean(args: string[]): Promise<void> {
+export async function handleClean(
+  args: string[],
+  command: "admin clean" | "clean" = "admin clean",
+): Promise<void> {
+  const usage = command === "admin clean" ? USAGE["admin clean"] : USAGE.clean;
   const variant = args[0];
 
   if (!variant || !CLEAN_VARIANTS.has(variant)) {
-    process.stderr.write(`${USAGE.clean}\n`);
+    process.stderr.write(`${usage}\n`);
     process.exitCode = EXIT.USAGE;
     return;
   }
@@ -31,7 +35,7 @@ export async function handleClean(args: string[]): Promise<void> {
   for (const a of rest) {
     if (!a.startsWith("--")) continue;
     if (a === "--dry-run" || a === "--format" || a.startsWith("--format=")) continue;
-    process.stderr.write(`pr-shepherd: clean: unknown flag: "${a}"\n`);
+    process.stderr.write(`pr-shepherd: ${command}: unknown flag: "${a}"\n`);
     process.exitCode = EXIT.USAGE;
     return;
   }
@@ -46,7 +50,7 @@ export async function handleClean(args: string[]): Promise<void> {
   }
   if (formatValue !== undefined && formatValue !== "text" && formatValue !== "json") {
     process.stderr.write(
-      `pr-shepherd: clean: invalid --format value: "${formatValue}". Expected "text" or "json".\n`,
+      `pr-shepherd: ${command}: invalid --format value: "${formatValue}". Expected "text" or "json".\n`,
     );
     process.exitCode = EXIT.USAGE;
     return;
@@ -63,7 +67,7 @@ export async function handleClean(args: string[]): Promise<void> {
   const positionals = rest.filter((a, i) => !flagConsumedIndices.has(i) && !a.startsWith("--"));
   if (positionals.length > 1) {
     process.stderr.write(
-      `pr-shepherd: clean: too many positional arguments (expected at most 1, got ${positionals.length})\n`,
+      `pr-shepherd: ${command}: too many positional arguments (expected at most 1, got ${positionals.length})\n`,
     );
     process.exitCode = EXIT.USAGE;
     return;
@@ -73,7 +77,7 @@ export async function handleClean(args: string[]): Promise<void> {
   const result = await runClean({ variant: variant as CleanVariant, value, dryRun });
 
   if (!result.ok) {
-    process.stderr.write(`pr-shepherd: clean: ${result.error}\n`);
+    process.stderr.write(`pr-shepherd: ${command}: ${result.error}\n`);
     process.exitCode = EXIT.SOFTWARE;
     return;
   }
@@ -83,12 +87,15 @@ export async function handleClean(args: string[]): Promise<void> {
   );
 }
 
-export async function handleCommitSuggestion(args: string[]): Promise<void> {
+export async function handleCommitSuggestion(
+  args: string[],
+  command: "build-suggestion-patch" | "commit-suggestion" = "build-suggestion-patch",
+): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
 
   const threadId = getFlag(extra, "--thread-id");
   if (!threadId) {
-    process.stderr.write(`${USAGE["commit-suggestion"]}\n`);
+    process.stderr.write(`${USAGE[command]}\n`);
     process.exitCode = EXIT.USAGE;
     return;
   }
@@ -141,11 +148,14 @@ export async function handleIterate(args: string[]): Promise<void> {
   });
 }
 
-export async function handleMarkFilesAsViewed(args: string[]): Promise<void> {
+export async function handleMarkFilesAsViewed(
+  args: string[],
+  command: "apply files" | "mark-files-as-viewed" = "apply files",
+): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
   const parsed = parseMarkFilesAsViewedArgs(extra);
   if (!parsed.ok) {
-    process.stderr.write(`pr-shepherd: mark-files-as-viewed: ${parsed.error}\n`);
+    process.stderr.write(`pr-shepherd: ${command}: ${parsed.error}\n`);
     process.exitCode = EXIT.USAGE;
     return;
   }

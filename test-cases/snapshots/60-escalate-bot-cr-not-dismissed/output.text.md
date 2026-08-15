@@ -7,7 +7,7 @@
 
 **Triggers:** `bot-cr-not-dismissed`
 
-Bot CHANGES_REQUESTED review(s) remained undismissed past the stall window (review IDs: PRR_bot_overdue). The agent likely dropped `--dismiss-review-ids` from a prior resolve command. Dismiss the review(s) manually (or re-run resolve with the IDs) to unblock the PR.
+Bot CHANGES_REQUESTED review(s) remained undismissed past the stall window (review IDs: PRR_bot_overdue). The agent likely dropped `--dismiss-review-ids` from a prior apply command. Dismiss the review(s) manually (or re-run `pr-shepherd apply review` with the IDs) to unblock the PR.
 
 ## Items needing attention
 

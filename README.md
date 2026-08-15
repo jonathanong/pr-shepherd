@@ -6,9 +6,9 @@ The goal is to help an agent carry a planned change to a human-reviewable PR: pa
 
 ## How It Works
 
-`pr-shepherd` moves deterministic PR orchestration into a CLI. The CLI fetches GitHub state, emits raw-enough context, and prints a numbered `## Instructions` section for the calling agent to follow. The agent still decides whether a comment or CI failure requires a code change.
+`pr-shepherd` moves deterministic PR orchestration into a local MCP server, with a CLI for shells and CI. Both interfaces fetch the same GitHub state, emit raw-enough context, and return a numbered plan for the calling agent to follow. The agent still decides whether a comment or CI failure requires a code change.
 
-The shipped skills invoke the default poll dispatcher (`pr-shepherd <PR>`, equivalent to `pr-shepherd poll <PR>`). Use `pr-shepherd iterate <PR>` for one single tick.
+The MCP server exposes three tools: `iterate`, `apply`, and `build_suggestion_patch`. `apply` accepts ordered review mutations, file-view mutations, and journal entries. The shipped skills are thin dispatchers for those tools.
 
 Each tick returns exactly one action:
 
@@ -39,16 +39,16 @@ Example shape:
 - `24697658766` — `CI › lint / typecheck / test (22.x)` [conclusion: FAILURE]
   > oxfmt
 
-## Post-fix push
+## Post-fix plan
 
 - base: `main`
-- resolve: `pr-shepherd resolve 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
+- apply: reply to `PRRT_kwDOSGizTs58XB1L` after the relevant HEAD SHA is visible
 
 ## Instructions
 
-1. Decide for each item under `## Review threads` and `## Failing checks` whether a code change is warranted. If code changes are needed, apply edits, commit, rebase/push according to the repository's conventions, then run the `resolve:` command.
+1. Decide for each item under `## Review threads` and `## Failing checks` whether a code change is warranted. If code changes are needed, apply edits, commit, and push according to the repository's conventions.
 2. For each failing check under `## Failing checks`: fetch logs when needed and decide whether to rerun or fix.
-3. Run the `resolve:` command shown above with a specific `$DISMISS_MESSAGE` and the relevant `$HEAD_SHA`.
+3. Use `apply` with a specific reply/dismiss message and the relevant HEAD SHA.
 4. Stop this iteration.
 ```
 
@@ -64,7 +64,7 @@ This system is opinionated and works best with PRs that use required status chec
 - Every review thread/comment/review summary is surfaced at least once, even if already outdated, resolved, or minimized; edited items re-surface through seen markers.
 - Draft PRs can be marked ready automatically when clean; disable with `actions.autoMarkReady: false` or `--no-auto-mark-ready`.
 - The CLI never performs git mutations. It emits instructions; the caller commits, rebases, pushes, and handles repository hooks.
-- `commit-suggestion` turns one GitHub suggestion thread into a patch and commit instructions, but still does not edit the working tree or git history.
+- `build_suggestion_patch` turns one GitHub suggestion thread into a patch and commit metadata, but never edits the working tree or git history.
 
 ## Usage
 
@@ -84,7 +84,9 @@ Codex:
 /goal $pr-shepherd 42
 ```
 
-Direct CLI:
+MCP clients call `iterate` once per tick, then use `apply` for review/file/journal mutations and `build_suggestion_patch` for an anchored suggestion. `iterate` returns the same structured action data as the CLI, including its review mutation arguments. The client owns recurrence, so this works consistently in Codex, Claude Code, Grok, and any other stdio MCP client.
+
+The CLI remains useful for shell workflows. Its canonical polling form is:
 
 ```sh
 pr-shepherd 42                         # poll until non-WAIT or timeout
@@ -93,48 +95,26 @@ pr-shepherd 42 --quiet-status          # print only changed WAIT status snapshot
 pr-shepherd 42 --until-terminal        # continue through WAIT/MARK_READY until work or terminal state
 pr-shepherd 42 --ready-delay 15m
 pr-shepherd iterate 42                 # single tick
-pr-shepherd poll 42                    # explicit poll command
 ```
 
-### Resolve Review Items
+### Apply Review, File, And Journal Changes
 
-```sh
-pr-shepherd resolve 42 --reply-thread-ids PRRT_abc --message "Renamed the variable for clarity." --require-sha "$(git rev-parse HEAD)"
-```
-
-Use `pr-shepherd iterate 42` or `pr-shepherd 42` to fetch the next PR action. `resolve` requires at least one action flag and only applies explicit review-state mutations.
-
-### Apply One Suggestion Thread
-
-```sh
-pr-shepherd commit-suggestion 42 --thread-id PRRT_abc --message "rename value for clarity"
-```
-
-The output contains a diff and numbered instructions for applying, staging, committing, resolving, and pushing.
-
-### Mark Files As Viewed
-
-```sh
-pr-shepherd mark-files-as-viewed 42 --tests
-pr-shepherd mark-files-as-viewed 42 src/a.ts --match '^docs/'
-```
-
-The shipped `mark-files-as-viewed` skill maps a standalone `tests` argument to `--tests`.
+Use `apply` with ordered operations to reply/resolve/minimize/dismiss review items, mark changed files viewed, or append an idempotent Shepherd Journal item. Use `build_suggestion_patch` to turn one review suggestion into a validated patch and commit metadata; it never changes the worktree or git history.
 
 ### Clean Local State
 
 `pr-shepherd` stores seen markers, fix-attempt counters, stall fingerprints, ready-delay markers, and logs under `$PR_SHEPHERD_STATE_DIR` (default `$TMPDIR/pr-shepherd-state`).
 
 ```sh
-pr-shepherd clean current
-pr-shepherd clean repo
-pr-shepherd clean all --dry-run
-pr-shepherd log-file
+pr-shepherd admin clean current
+pr-shepherd admin clean repo
+pr-shepherd admin clean all --dry-run
+pr-shepherd admin log-file
 ```
 
 ## Install
 
-Skill and plugin install methods add the skill definitions only. Install the `pr-shepherd` CLI separately wherever the skill runs.
+The plugin launches the version-matched `pr-shepherd-mcp` binary from the `pr-shepherd` npm package automatically. Install the `pr-shepherd` CLI separately only when you want the shell interface.
 
 ### Claude Code
 
@@ -175,7 +155,7 @@ iterate:
   fixAttemptsPerThread: 5
   stallTimeoutMinutes: 60
   minimizeApprovals: false
-  minimizeComments: all # all | bots | users | none
+  minimizeComments: all # all | bots | none
 checks:
   ciTriggerEvents:
     - pull_request
@@ -217,6 +197,10 @@ export default rule;
 TypeScript rules are loaded by the runtime's native TypeScript support; keep them to erasable syntax such as type annotations and `import type`. Runtime TypeScript features that need transpilation, such as enums, namespaces, parameter properties, and decorators, are not supported. Use `.mts` for portable ESM rules across Node, Bun, and Deno.
 
 Ready-to-use examples for common patterns are in [`examples/classification/`](examples/classification/).
+
+## Compatibility aliases
+
+The legacy CLI subcommands `poll`, `resolve`, `commit-suggestion`, and `mark-files-as-viewed` remain available for compatibility but are no longer advertised as the primary integration. Prefer canonical default polling/`iterate` in a shell and the MCP `iterate`, `apply`, and `build_suggestion_patch` tools in an agent client.
 
 ## Requirements
 

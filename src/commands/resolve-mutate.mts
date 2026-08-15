@@ -14,6 +14,7 @@ import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type { ResolveOptions } from "../types.mts";
 import type { ResolveCommandOptions } from "./resolve.mts";
 
+/** @deprecated Hidden implementation for `resolve`; use `apply review`. */
 export async function runResolveMutate(
   opts: ResolveCommandOptions & ResolveOptions,
 ): Promise<import("../comments/resolve.mts").ResolveResult> {

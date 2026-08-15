@@ -70,6 +70,16 @@ describe("main — mark-files-as-viewed", () => {
     expect(JSON.parse(getStdout())).toMatchObject({ prNumber: 42, markedPaths: ["src/a.test.ts"] });
   });
 
+  it("routes the canonical apply files command", async () => {
+    mockRunMarkFilesAsViewed.mockResolvedValue(BASE_RESULT);
+
+    await main(["node", "shepherd", "apply", "files", "42", "--tests"]);
+
+    expect(mockRunMarkFilesAsViewed).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: 42, tests: true }),
+    );
+  });
+
   it("rejects missing selectors", async () => {
     await main(["node", "shepherd", "mark-files-as-viewed", "42"]);
 

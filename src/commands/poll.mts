@@ -91,6 +91,7 @@ function writeWaitProgress(opts: {
   return signature;
 }
 
+/** @deprecated Hidden implementation for the legacy `poll` alias. */
 export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> {
   const {
     intervalSeconds,

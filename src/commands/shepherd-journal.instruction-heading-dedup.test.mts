@@ -59,7 +59,7 @@ describe("shepherd journal instruction helpers", () => {
     const text = instructions.join("\n");
     expect(text).toContain(SHEPHERD_JOURNAL_SECTION);
     expect(text).toContain(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
-    expect(text).toContain("pr-shepherd journal 42");
+    expect(text).toContain("pr-shepherd apply journal 42");
     expect(text).toContain("idempotent");
     expect(text).toContain(
       SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,

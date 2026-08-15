@@ -16,6 +16,7 @@ import {
   UPDATE_PR_BODY_MUTATION,
 } from "./queries.mts";
 import type { MergeableState, MergeStateStatus } from "../types.mts";
+import { getExecutionCwd } from "../execution-context.mts";
 
 export type { RateLimitInfo } from "./http.mts";
 
@@ -41,7 +42,9 @@ export interface RepoInfo {
  * Handles https://, git@, and ssh:// remote URL formats.
  */
 export async function getRepoInfo(): Promise<RepoInfo> {
-  const { stdout } = await execFile("git", ["remote", "get-url", "origin"]);
+  const { stdout } = await execFile("git", ["remote", "get-url", "origin"], {
+    cwd: getExecutionCwd(),
+  });
   const url = stdout.trim();
   return parseRemoteUrl(url);
 }
@@ -147,7 +150,9 @@ export async function getMergeableState(
 // ---------------------------------------------------------------------------
 
 export async function getCurrentBranch(): Promise<string> {
-  const { stdout } = await execFile("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
+  const { stdout } = await execFile("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+    cwd: getExecutionCwd(),
+  });
   return stdout.trim();
 }
 

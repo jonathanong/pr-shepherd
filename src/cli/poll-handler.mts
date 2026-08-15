@@ -18,7 +18,7 @@ export async function handlePoll(args: string[]): Promise<void> {
 
   const intervalStr = getFlag(extra, "--interval");
   const intervalSuffix = validateSecondsDurationFlag(
-    "pr-shepherd poll",
+    "pr-shepherd",
     "--interval",
     intervalStr,
     hasFlag(extra, "--interval"),
@@ -31,7 +31,7 @@ export async function handlePoll(args: string[]): Promise<void> {
 
   const timeoutStr = getFlag(extra, "--timeout");
   const timeoutSuffix = validateSecondsDurationFlag(
-    "pr-shepherd poll",
+    "pr-shepherd",
     "--timeout",
     timeoutStr,
     hasFlag(extra, "--timeout"),

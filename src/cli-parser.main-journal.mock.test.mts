@@ -52,13 +52,24 @@ describe("main — journal text output", () => {
     expect(getStdout()).toContain("Created ## Shepherd Journal");
     expect(getStdout()).toContain("PR #42");
     expect(process.exitCode).toBeUndefined();
-    expect(stderrSpy).not.toHaveBeenCalled();
+    expect(stderrSpy).toHaveBeenCalledWith(
+      "pr-shepherd: journal is deprecated; use pr-shepherd apply journal instead.\n",
+    );
   });
 
   it("prints appended message when section existed", async () => {
     mockRunJournal.mockResolvedValue({ ...HAPPY_RESULT, sectionExisted: true });
     await main(["node", "shepherd", "journal", "42", "- Decision."]);
     expect(getStdout()).toContain("Appended to ## Shepherd Journal");
+  });
+
+  it("routes the canonical apply journal command", async () => {
+    await main(["node", "shepherd", "apply", "journal", "42", "- Decision."]);
+
+    expect(mockRunJournal).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: 42, rawItem: "- Decision." }),
+    );
+    expect(stderrSpy).not.toHaveBeenCalledWith(expect.stringContaining("deprecated"));
   });
 
   it("prints no-change message when entry already present", async () => {

@@ -124,13 +124,13 @@ export interface ResolveCommand {
   resolveThreadIds?: string[];
   /** Bot/non-human CHANGES_REQUESTED review IDs to dismiss. Human-authored IDs must not appear here. */
   dismissReviewIds?: string[];
-  /** True when any mutation flag was appended (threads/comments/reviews). False for a bare runner-specific `pr-shepherd resolve <PR>` with nothing to do. Callers use this to gate emitting a "run the resolve command" instruction — coupling to argv length would break silently if the base argv ever grew a global flag. */
+  /** True when any mutation flag was appended (threads/comments/reviews). False for a bare runner-specific `pr-shepherd apply review <PR>` with nothing to do. Callers use this to gate emitting an apply instruction — coupling to argv length would break silently if the base argv ever grew a global flag. */
   hasMutations: boolean;
 }
 
 /**
  * Default fix_code variant: agent applies edits locally, commits, pushes,
- * then runs the pre-built resolve command. Emitted under `## Post-fix push`.
+ * then runs the pre-built apply command. Emitted under `## Post-fix push`.
  */
 interface FixRebaseAndPush {
   threads: AgentThread[];
@@ -148,7 +148,7 @@ interface FixRebaseAndPush {
   surfacedApprovals: Review[];
   checks: AgentCheck[];
   changesRequestedReviews: Review[];
-  /** Pre-built resolve command. Run after committing and pushing. */
+  /** Pre-built apply command. Run after committing and pushing. */
   resolveCommand: ResolveCommand;
   /** When present, run this command first (no SHA substitution needed) to resolve bot threads and minimize comments, independent of any push. */
   resolveOnlyCommand?: ResolveCommand;

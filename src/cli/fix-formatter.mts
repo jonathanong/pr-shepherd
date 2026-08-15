@@ -163,7 +163,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
   if (result.fix.resolveOnlyCommand?.hasMutations)
     postFixLines.push(`- resolve-only: \`${renderResolveCommand(result.fix.resolveOnlyCommand)}\``);
   if (result.fix.resolveCommand.hasMutations) {
-    postFixLines.push(`- resolve: \`${renderResolveCommand(result.fix.resolveCommand)}\``);
+    postFixLines.push(`- apply review: \`${renderResolveCommand(result.fix.resolveCommand)}\``);
   }
   sections.push(postFixLines.join("\n"));
 

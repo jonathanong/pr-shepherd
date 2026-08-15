@@ -20,6 +20,7 @@ export interface JournalResult {
   previewBody?: string;
 }
 
+/** @deprecated Hidden implementation for standalone `journal`; use `apply journal`. */
 export async function runJournal(opts: RunJournalOptions): Promise<JournalResult> {
   const validation = validateJournalItem(opts.rawItem);
   if (!validation.ok) {

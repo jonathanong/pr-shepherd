@@ -18,9 +18,9 @@ Iterate flags:
 Durations accept s/m/h suffixes: 30s, 4.5m, 1h. A bare number is minutes; decimals are allowed only with an explicit unit (4.5m).
 
 Actions:
-  WAIT        No immediate code action; recheck later or use pr-shepherd poll.
+  WAIT        No immediate code action; run another iterate tick later.
   MARK_READY  Draft PR was marked ready for review.
-  FIX_CODE    Apply fixes, commit, push, and run the printed resolve command.
+  FIX_CODE    Apply fixes, commit, push, and run the printed apply command.
   CANCEL      Terminal state: merged/closed or ready-delay elapsed.
   ESCALATE    Terminal state requiring human direction.
 
@@ -71,3 +71,6 @@ Exit codes: same as iterate (the final tick's action/reason decides the code).
   13  ESCALATE
   14  CANCEL (closed without merging)
   A command/validation/GitHub failure exits with a sysexits.h code instead (see docs/exit-codes.md).`;
+
+/** Public help page for the default PR polling invocation. */
+export const DEFAULT_USAGE = POLL_USAGE.replaceAll("pr-shepherd poll", "pr-shepherd [PR]");

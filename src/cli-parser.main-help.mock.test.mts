@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { registerHooks, stderrSpy, stdoutSpy } from "../test-helpers/cli-parser.test-support.mts";
 import { main } from "./cli-parser.mts";
+import { EXIT } from "./exit-codes.mts";
 
 registerHooks();
 
@@ -15,12 +16,14 @@ describe("main — top-level help", () => {
     expect(out).toContain("Usage:");
     expect(out).toContain("pr-shepherd [PR]");
     expect(out).toContain("pr-shepherd iterate");
-    expect(out).toContain("pr-shepherd poll");
-    expect(out).toContain("pr-shepherd resolve");
-    expect(out).toContain("pr-shepherd commit-suggestion");
-    expect(out).toContain("pr-shepherd mark-files-as-viewed");
-    expect(out).toContain("pr-shepherd clean <pr|branch|current|repo|all>");
-    expect(out).toContain("pr-shepherd log-file");
+    expect(out).toContain("pr-shepherd apply review");
+    expect(out).toContain("pr-shepherd apply files");
+    expect(out).toContain("pr-shepherd apply journal");
+    expect(out).toContain("pr-shepherd build-suggestion-patch");
+    expect(out).toContain("pr-shepherd admin clean <pr|branch|current|repo|all>");
+    expect(out).toContain("pr-shepherd admin log-file");
+    expect(out).not.toContain("pr-shepherd resolve");
+    expect(out).not.toContain("pr-shepherd commit-suggestion");
     expect(out).toContain("pr [number]");
     expect(out).toContain("branch [name]");
     expect(out).toContain("current");
@@ -40,5 +43,15 @@ describe("main — top-level help", () => {
     expect(out).toContain("Clean variants:");
     expect(process.exitCode).toBeUndefined();
     expect(stderrSpy).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [["apply"], "Unknown apply action"],
+    [["admin"], "Unknown admin command"],
+  ])("rejects an incomplete public command group", async (args, message) => {
+    await main(["node", "shepherd", ...args]);
+
+    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining(message));
+    expect(process.exitCode).toBe(EXIT.USAGE);
   });
 });

@@ -9,6 +9,7 @@ import type {
   RelevantCheck,
   ShepherdReport,
 } from "../../types.mts";
+import { getExecutionCwd } from "../../execution-context.mts";
 
 const execFile = promisify(execFileCb);
 
@@ -138,7 +139,9 @@ export async function tryCancelRun(
 
 export async function getCurrentHeadSha(): Promise<string | null> {
   try {
-    const { stdout } = await execFile("git", ["rev-parse", "HEAD"]);
+    const { stdout } = await execFile("git", ["rev-parse", "HEAD"], {
+      cwd: getExecutionCwd(),
+    });
     return stdout.trim();
   } catch {
     return null;

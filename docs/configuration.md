@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-pr-shepherd looks for a `.pr-shepherdrc.yml` file starting from the current working directory and walking up to `$HOME`. The first file found wins. All fields are optional — built-in defaults apply when omitted.
+pr-shepherd looks for a `.pr-shepherdrc.yml` file starting from the current working directory and walking up to `$HOME`. The first file found wins. All fields are optional — built-in defaults apply when omitted. The MCP server and CLI read the same file.
 
 ## Example
 
@@ -20,7 +20,7 @@ iterate:
   fixAttemptsPerThread: 5 # raise before escalating to manual review
   stallTimeoutMinutes: 60 # escalate if state unchanged or CI has not started for this many minutes
   minimizeApprovals: false # set true to also minimize APPROVED-state reviews
-  minimizeComments: all # all | bots | users | none
+  minimizeComments: all # all | bots | none
   behindBaseHint: "rebase --force-with-lease" # one-liner shown on the fix_code push step when behind base
 
 watch:
@@ -42,10 +42,8 @@ mergeStatus:
     - sonar # add other review bots here
 
 actions:
-  autoResolveOutdated: true
   autoMinimizeSuppressed: true
   autoMarkReady: true
-  commitSuggestions: true
   neverCancelRuns:
     - "Final Code Review"
 ```
@@ -61,17 +59,15 @@ actions:
 | `iterate.fixAttemptsPerThread`       | `3`                                       | Max fix attempts per surfaced unresolved thread body before `escalate`                                                                                      |
 | `iterate.stallTimeoutMinutes`        | `60`                                      | Minutes the loop may repeat the same action without progress, or CI may stay pending without starting, before `escalate` with `stall-timeout`; `0` disables |
 | `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination).                                                                      |
-| `iterate.minimizeComments`           | `"all"`                                   | Which non-human GitHub author classes to minimize for PR comments and review summaries: `all`, `bots`, `users`, or `none`; humans are never minimized       |
+| `iterate.minimizeComments`           | `"all"`                                   | Which non-human GitHub author classes to minimize for PR comments and review summaries: `all`, `bots`, or `none`; humans are never minimized                |
 | `iterate.behindBaseHint`             | `""`                                      | One-liner shown on the `fix_code` push step when the branch is behind its base; empty omits the hint entirely                                               |
 | `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                                                                                   |
 | `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                                                            |
 | `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                                                                                  |
 | `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos)                                                                            |
 | `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                                                                      |
-| `actions.autoResolveOutdated`        | `true`                                    | Deprecated compatibility setting; outdated threads are surfaced before human-authored threads are replied to and bot/non-human threads are resolved         |
 | `actions.autoMinimizeSuppressed`     | `true`                                    | Silently resolve/minimize classification-rule matches with both `suppress: true` and `autoResolve: true` before emitting `fix_code`                         |
 | `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR reaches a clean handoff state                                                                                             |
-| `actions.commitSuggestions`          | `true`                                    | Route `/pr-shepherd:resolve` through `commit-suggestion` (singular) for threads with a ` ```suggestion ` block                                              |
 | `actions.neverCancelRuns`            | `[]`                                      | Case-insensitive glob patterns for workflow/check names whose GitHub Actions workflow runs Shepherd must never cancel                                       |
 
 ## `botUsernames`
@@ -127,7 +123,7 @@ Override per-invocation with `--stall-timeout <duration>` (e.g. `--stall-timeout
 
 **Breaking change from `iterate.minimizeReviewSummaries.{bots, humans, approvals}`** — the old nested keys are no longer recognized.
 
-Non-human `COMMENTED` review summaries can be minimized by the `iterate` loop. Human-authored summaries are surfaced through seen markers and are never minimized. Review summary IDs ride along inside the existing resolve command — no code change needed to minimize them. Rendered under `## Review IDs to minimize queue` in the iterate markdown output.
+Non-human `COMMENTED` review summaries can be minimized by the `iterate` loop. Human-authored summaries are surfaced through seen markers and are never minimized. Review summary IDs are returned in the `iterate` mutation plan and applied with the MCP `apply` tool. Rendered under `## Review IDs to minimize queue` in the iterate markdown output.
 `iterate.minimizeComments` controls which authors are eligible for that minimization.
 
 Opt in to also minimize `APPROVED`-state reviews (`pr approve` clicks with or without a body). Off by default because approvals are an affirmative signal you usually want to keep visible. Flip to `true` for long-running PRs where stale approvals pile up. When enabled, `iterate.minimizeComments` still filters which approval authors are minimized; approvals excluded by that policy are surfaced instead.
@@ -142,7 +138,6 @@ Controls which non-human GitHub-classified author types are passed to `--minimiz
 
 - `"all"` minimizes Bot and Unknown authors.
 - `"bots"` minimizes only GitHub `Bot` authors.
-- `"users"` is retained for compatibility but does not minimize human authors.
 - `"none"` surfaces minimizable comments/reviews but does not auto-minimize them.
 
 Items excluded by this policy still go through seen markers: Shepherd surfaces them the first time it sees them, writes a body hash marker, suppresses unchanged repeats on later ticks, and re-surfaces them if the author edits the body in place.
@@ -169,7 +164,7 @@ The ready-delay countdown resets if the PR drops out of READY state at any tick.
 
 ### `resolve.shaPoll`
 
-Controls the push-safety polling used when `--require-sha <SHA>` is passed to `pr-shepherd resolve`.
+Controls the push-safety polling used when `requireSha` is passed to an MCP `apply` `review_mutations` operation (or its legacy CLI compatibility alias).
 
 #### `resolve.shaPoll.maxAttempts` — default `10`
 
@@ -208,27 +203,17 @@ Add other review bots (e.g. `sonar`, `codeclimate`, `reviewdog`) if they submit 
 
 These flags control whether shepherd automatically performs each class of mutation during an `iterate` tick. Some actions also have `--no-auto-*` CLI flags for per-invocation overrides.
 
-### `actions.autoResolveOutdated` — default `true`
-
-Deprecated. Shepherd no longer auto-resolves outdated threads. Outdated threads are surfaced as `[status: outdated]`, marker-gated, and human-authored threads are replied to through `--reply-thread-ids` when the resolve command runs.
-
 ### `actions.autoMinimizeSuppressed` — default `true`
 
 When `true`, Shepherd silently applies the resolve/minimize mutation for classification-rule matches that set both `suppress: true` and `autoResolve: true`, then removes successful IDs from the agent-facing queues before `iterate` decides whether to emit `fix_code`.
 
-This applies only to explicit classification-rule auto-resolve matches. Ordinary `iterate.minimizeComments` policy queues and `autoResolve: true` rules without `suppress: true` still flow through the generated resolve command.
+This applies only to explicit classification-rule auto-resolve matches. Ordinary `iterate.minimizeComments` policy queues and `autoResolve: true` rules without `suppress: true` still flow through the generated `apply review` command.
 
 ### `actions.autoMarkReady` — default `true`
 
 When `true`, shepherd converts a draft PR to ready-for-review once all checks pass, no Shepherd-visible work remains, no configured blocking review is in progress, and the ready-delay has not yet elapsed. After the ready-delay elapses, the loop emits `cancel` instead.
 
 Disable if your team uses the draft state as a deliberate gate that requires a human to promote.
-
-### `actions.commitSuggestions` — default `true`
-
-When `true`, `fix_code` instructions prefer applying reviewer-authored ` ```suggestion ` blocks via [`pr-shepherd commit-suggestion`](cli-usage.md#pr-shepherd-commit-suggestion-pr---thread-id-id---message) (singular, one per thread) — creating a local commit per suggestion that co-credits the reviewer — rather than having the agent re-type the fix. Each actionable thread with a parsed suggestion is annotated in the iterate payload.
-
-Disable if you want the agent to read and re-implement every suggestion (e.g. because your team prefers all commits to come from a single author, or because you want an extra human-ish review pass over every change). Flipping this to `false` still surfaces `suggestion` blocks in the iterate payload so the agent has the reviewer's exact proposal available as context; the skill just falls through to its manual-edit path.
 
 ### `actions.neverCancelRuns` — default `[]`
 

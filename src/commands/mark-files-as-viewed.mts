@@ -16,7 +16,7 @@ import {
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type { GlobalOptions } from "../types.mts";
 
-interface MarkFilesAsViewedOptions extends GlobalOptions {
+export interface MarkFilesAsViewedOptions extends GlobalOptions {
   prNumber?: number;
   files: string[];
   tests?: boolean;
@@ -84,6 +84,7 @@ const TEST_FILE_RE =
 
 const BULK_CHUNK_SIZE = 10;
 
+/** @deprecated Hidden implementation for `mark-files-as-viewed`; use `apply files`. */
 export async function runMarkFilesAsViewed(
   opts: MarkFilesAsViewedOptions,
 ): Promise<MarkFilesAsViewedResult> {

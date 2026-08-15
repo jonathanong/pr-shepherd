@@ -4,7 +4,7 @@
  *
  * Usage:
  *   pr-shepherd [PR]
- *   pr-shepherd resolve [PR]
+ *   pr-shepherd apply review [PR]
  *   pr-shepherd iterate [PR]
  */
 

@@ -27,6 +27,7 @@ import { normalizeBotUsernames } from "../comments/authors.mts";
 import { discoverRuleFiles, loadRules } from "../classify/loader.mts";
 import { buildClassifyIndex, partitionBatch, type BatchPartition } from "../classify/apply.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
+import { getEffectiveCwd } from "../execution-context.mts";
 import type {
   GlobalOptions,
   ShepherdReport,
@@ -78,7 +79,7 @@ export async function runCheck(
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
   const seenMap = await loadSeenMap(stateKey);
   const botUsernames = normalizeBotUsernames(config.botUsernames);
-  const ruleSet = await loadRules(discoverRuleFiles(process.cwd()));
+  const ruleSet = await loadRules(discoverRuleFiles(getEffectiveCwd()));
   const classifyIndex = buildClassifyIndex(ruleSet, batchData);
   const partition = partitionBatch(classifyIndex, batchData);
   const triaged = await attachUnseenCheckAnnotations(triagedBase, seenMap, prNumber);
