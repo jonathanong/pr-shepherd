@@ -78,7 +78,7 @@ grok mcp add pr-shepherd -- npx --yes --package pr-shepherd@<version> pr-shepher
 
 Use the skill from the slash menu:
 
-```
+```text
 /pr-shepherd
 /pr-shepherd 42
 /pr-shepherd:mark-files-as-viewed 42 tests
