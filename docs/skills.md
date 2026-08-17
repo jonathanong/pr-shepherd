@@ -2,9 +2,9 @@
 
 [← README](../README.md)
 
-Two skills are shipped for Claude Code, Codex, and Grok. Each uses the MCP server when it is available and the CLI otherwise:
+Two skills are shipped for Claude Code, Codex, and Grok. The iterate skill polls with the CLI and falls back to MCP `iterate` if the CLI is missing. `mark-files-as-viewed` uses MCP when the server is available and the CLI otherwise:
 
-- `pr-shepherd` calls MCP `iterate`, or runs `pr-shepherd` (the bounded poll command, not `pr-shepherd iterate`). It then follows the returned action data with `apply` / `build_suggestion_patch` (MCP) or the printed apply instructions (CLI).
+- `pr-shepherd` runs the poll command `pr-shepherd` (not `pr-shepherd iterate`). If the CLI is unavailable, it calls MCP `iterate`. It then follows the returned action data with `apply` / `build_suggestion_patch` (MCP) or the printed apply instructions (CLI).
 - `mark-files-as-viewed` calls MCP `apply` with a `mark_files_viewed` operation, or runs `pr-shepherd apply files`.
 
 Install the plugin (skills plus the version-matched MCP server) or register `pr-shepherd-mcp` yourself. See [mcp.md](mcp.md). The CLI path needs `pr-shepherd` on `PATH`.
@@ -88,4 +88,4 @@ The session owns recurrence. The skill prints the full result and follows its pl
 
 ## Operations
 
-MCP `iterate` (or CLI `pr-shepherd`) obtains the next state-machine action and returns structured review-mutation arguments. MCP `apply` (or the CLI `apply` commands named in the output) performs explicit ordered review mutations, `mark_files_viewed` file operations, or `append_journal` operations. `build_suggestion_patch` validates and builds a patch for one anchored suggestion. The skills leave this policy in the printed output rather than duplicating it in prompts.
+CLI `pr-shepherd` (the poll command) or MCP `iterate` obtains the next state-machine action and returns structured review-mutation arguments. MCP `apply` (or the CLI `apply` commands named in the output) performs explicit ordered review mutations, `mark_files_viewed` file operations, or `append_journal` operations. `build_suggestion_patch` validates and builds a patch for one anchored suggestion. The skills leave this policy in the printed output rather than duplicating it in prompts.

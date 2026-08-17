@@ -8,12 +8,12 @@ allowed-tools: ["MCP", "Bash", "Read", "Grep", "Glob", "Edit", "Write"]
 
 # pr-shepherd
 
-Thin dispatcher for iterating a PR. Use the MCP server when it is available; otherwise use the CLI.
+Thin dispatcher for iterating a PR. Poll with the CLI; use MCP `iterate` only when the CLI is unavailable.
 
 ## Arguments: $ARGUMENTS
 
 1. Parse an optional PR number or GitHub PR URL from `$ARGUMENTS`; otherwise let pr-shepherd infer the current branch PR.
 
-2. If the `iterate` MCP tool is available, call it and print its full result. Otherwise run `pr-shepherd` with the optional PR argument and print its full result. Do not run `pr-shepherd iterate`.
+2. Run the poll command `pr-shepherd` with the optional PR argument and print its full result. Do not run `pr-shepherd iterate`. If the CLI is unavailable and the `iterate` MCP tool is available, call `iterate` and print its full result.
 
-3. Follow the returned instructions exactly. After completing an action, call `iterate` again (MCP) or run `pr-shepherd` again (CLI) until a terminal action or the human directs you to stop.
+3. Follow the returned instructions exactly. After completing an action, run `pr-shepherd` again (or call `iterate` if only MCP is available) until a terminal action or the human directs you to stop.

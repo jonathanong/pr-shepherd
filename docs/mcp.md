@@ -25,7 +25,7 @@ Confirm GitHub auth before the first tool call. See [authentication.md](authenti
 
 ### Plugin
 
-The plugin launches `npx --yes --package pr-shepherd@<version> pr-shepherd-mcp` from `plugins/pr-shepherd/.mcp.json` (Claude Code and Grok) or `plugins/pr-shepherd/.codex.mcp.json` (Codex). The shipped skills call those MCP tools when the server is connected and fall back to the `pr-shepherd` CLI otherwise.
+The plugin launches `npx --yes --package pr-shepherd@<version> pr-shepherd-mcp` from `plugins/pr-shepherd/.mcp.json` (Claude Code and Grok) or `plugins/pr-shepherd/.codex.mcp.json` (Codex). The shipped `pr-shepherd` skill runs the poll command `pr-shepherd` and uses MCP `iterate` only when the CLI is unavailable. `apply` and `build_suggestion_patch` still go through MCP when the server is connected.
 
 #### Claude Code
 
