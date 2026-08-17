@@ -132,27 +132,22 @@ Confirm with `grok mcp list`, `grok mcp doctor pr-shepherd`, or `/mcps`.
 
 ### Local checkout
 
-From this repository, after `npm install` (which builds `bin/`):
+From this repository, after `npm install` (which builds `bin/`), launch once with:
 
 ```bash
 npx pr-shepherd-mcp
 ```
 
-Point a client at that checkout instead of the published package:
+That one-off command only resolves the checkout bin while the current directory is this repository. Persist the built file in client config with an absolute path; do not store `npx pr-shepherd-mcp`, which later launches from the PR repo and will not see this package's self-bin:
 
 ```bash
-claude mcp add --transport stdio --scope user pr-shepherd -- npx pr-shepherd-mcp
-codex mcp add pr-shepherd -- npx pr-shepherd-mcp
-grok mcp add pr-shepherd -- npx pr-shepherd-mcp
+claude mcp add --transport stdio --scope user pr-shepherd -- \
+  node /path/to/pr-shepherd/bin/mcp-stdio.mjs
+codex mcp add pr-shepherd -- node /path/to/pr-shepherd/bin/mcp-stdio.mjs
+grok mcp add pr-shepherd -- node /path/to/pr-shepherd/bin/mcp-stdio.mjs
 ```
 
-Run the `add` commands from the checkout so `npx` resolves the local `pr-shepherd-mcp` bin. Alternatively pass an absolute command:
-
-```text
-node /path/to/pr-shepherd/bin/mcp-stdio.mjs
-```
-
-Do not use a globally installed `pr-shepherd-mcp` while developing this repo. A stale global binary will not include unreleased tools.
+Replace `/path/to/pr-shepherd` with this checkout's absolute path. Do not use a globally installed `pr-shepherd-mcp` while developing this repo. A stale global binary will not include unreleased tools.
 
 ## Tools
 

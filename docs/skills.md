@@ -4,7 +4,7 @@
 
 Two skills are shipped for Claude Code, Codex, and Grok. The iterate skill polls with the CLI and falls back to MCP `iterate` if the CLI is missing. `mark-files-as-viewed` uses MCP when the server is available and the CLI otherwise:
 
-- `pr-shepherd` runs the poll command `pr-shepherd` (not `pr-shepherd iterate`). If the CLI is unavailable, it calls MCP `iterate`. It then follows the returned action data with `apply` / `build_suggestion_patch` (MCP) or the printed apply instructions (CLI).
+- `pr-shepherd` runs the poll command `pr-shepherd` (not `pr-shepherd iterate`). If the CLI is unavailable, it calls MCP `iterate` and must use MCP `apply` / `build_suggestion_patch` for the returned mutations (there is no `pr-shepherd apply` shell command in that setup). After a CLI poll it runs the printed apply command.
 - `mark-files-as-viewed` calls MCP `apply` with a `mark_files_viewed` operation, or runs `pr-shepherd apply files`.
 
 Install the plugin (skills plus the version-matched MCP server) or register `pr-shepherd-mcp` yourself. See [mcp.md](mcp.md). The CLI path needs `pr-shepherd` on `PATH`.
