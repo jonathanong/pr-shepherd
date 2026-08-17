@@ -84,6 +84,13 @@ Codex:
 /goal $pr-shepherd 42
 ```
 
+Grok:
+
+```text
+/pr-shepherd                          # infer PR from current branch
+/pr-shepherd 42
+```
+
 MCP clients call `iterate` once per tick, then use `apply` for review/file/journal mutations and `build_suggestion_patch` for an anchored suggestion. `iterate` returns the same structured action data as the CLI, including its review mutation arguments. The client owns recurrence, so this works consistently in Codex, Claude Code, Grok, and any other stdio MCP client.
 
 The CLI remains useful for shell workflows. Its canonical polling form is:
@@ -116,6 +123,8 @@ pr-shepherd admin log-file
 
 The plugin launches the version-matched `pr-shepherd-mcp` binary from the `pr-shepherd` npm package automatically. Install the `pr-shepherd` CLI separately only when you want the shell interface.
 
+To register the MCP server without the plugin, or to wire a local checkout, see [docs/mcp.md](docs/mcp.md).
+
 ### Claude Code
 
 ```bash
@@ -143,6 +152,30 @@ codex plugin marketplace add ~/.codex/plugin-sources/pr-shepherd
 ```
 
 After adding the marketplace, install/enable the `pr-shepherd` plugin from Codex. The marketplace root must contain `.agents/plugins/marketplace.json` and `plugins/pr-shepherd/`.
+
+### Grok
+
+```bash
+grok plugin marketplace add jonathanong/pr-shepherd
+grok plugin install pr-shepherd --trust
+```
+
+Grok starts a plugin's MCP server only after the plugin is trusted. Confirm with `grok mcp list` or `/mcps`.
+
+### MCP server only
+
+Any stdio MCP client can run the published binary without installing the plugin:
+
+```bash
+claude mcp add --transport stdio --scope user pr-shepherd -- \
+  npx --yes --package pr-shepherd@<version> pr-shepherd-mcp
+codex mcp add pr-shepherd -- \
+  npx --yes --package pr-shepherd@<version> pr-shepherd-mcp
+grok mcp add pr-shepherd -- \
+  npx --yes --package pr-shepherd@<version> pr-shepherd-mcp
+```
+
+Replace `<version>` with a published version. Full config-file examples, tool schemas, and local-checkout wiring are in [docs/mcp.md](docs/mcp.md).
 
 ## Configuration
 
