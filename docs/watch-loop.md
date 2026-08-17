@@ -4,11 +4,11 @@
 
 ## Overview
 
-pr-shepherd iterates a PR to completion via the active goal loops of Claude Code and Codex. The skill calls the MCP `iterate` tool once per tick, then uses its returned action data with `apply` or `build_suggestion_patch` when needed.
+pr-shepherd iterates a PR to completion via the active session of Claude Code, Codex, or Grok. The skill calls the MCP `iterate` tool when that server is available; otherwise it runs `pr-shepherd` (the bounded poll command). It then uses the returned action data with `apply` or `build_suggestion_patch` when needed.
 
-Each non-terminal action is followed by another `iterate` call. The active goal/runtime owns the recheck schedule; the MCP server does not run an unbounded polling loop.
+Each non-terminal action is followed by another `iterate` call (MCP) or another `pr-shepherd` run (CLI). The active goal/runtime owns the recheck schedule; the MCP server does not run an unbounded polling loop.
 
-Both runtimes use the same `pr-shepherd` skill. Claude Code users invoke it with `/goal /pr-shepherd:pr-shepherd`; Codex users invoke it with `/goal $pr-shepherd`.
+All three hosts use the same `pr-shepherd` skill. Claude Code users invoke it with `/goal /pr-shepherd:pr-shepherd`; Codex users invoke it with `/goal $pr-shepherd`; Grok users invoke it with `/pr-shepherd` or `/pr-shepherd:pr-shepherd`.
 
 ## Lifecycle
 
@@ -17,11 +17,12 @@ Both runtimes use the same `pr-shepherd` skill. Claude Code users invoke it with
    ```
    /goal /pr-shepherd:pr-shepherd <PR>   # Claude Code
    /goal $pr-shepherd <PR>              # Codex
+   /pr-shepherd <PR>                    # Grok
    ```
 
-   The skill resolves the optional PR number and calls `iterate`.
+   The skill resolves the optional PR number and calls MCP `iterate` or runs `pr-shepherd`.
 
-2. **MCP returns an action and data**
+2. **The tool returns an action and data**
    The result includes the action, surfaced GitHub data, and structured review-mutation arguments when applicable. The skill follows its action-specific instructions exactly.
 
 3. **Non-terminal actions** (`[WAIT]`, `[MARK_READY]`, `[FIX_CODE]`)

@@ -33,4 +33,17 @@ describe("plugin MCP configuration", () => {
     expect(codex.mcpServers).toBe("./.codex.mcp.json");
     expect(claude.mcpServers).toBe("./plugins/pr-shepherd/.mcp.json");
   });
+
+  it("registers a Grok marketplace that points at the plugin with MCP config", () => {
+    const marketplace = readJson(".grok-plugin/marketplace.json") as {
+      plugins: Array<{ name: string; source: { type: string; path: string } }>;
+    };
+
+    expect(marketplace.plugins).toEqual([
+      expect.objectContaining({
+        name: "pr-shepherd",
+        source: { type: "local", path: "./plugins/pr-shepherd" },
+      }),
+    ]);
+  });
 });
