@@ -132,4 +132,38 @@ describe("fetchPrBatch — slim combined extra pages", () => {
     const { data } = await fetchPrBatch(42, REPO);
     expect(data.checks.map((c) => c.name)).toEqual(["check-1"]);
   });
+
+  it("throws when an included extra-page connection is missing", async () => {
+    const firstPage = makeRawPr({
+      comments: {
+        pageInfo: { hasPreviousPage: true, startCursor: "cursor-c" },
+        nodes: [],
+      },
+    });
+    mockGraphqlWithRateLimit
+      .mockResolvedValueOnce(makeResponse(firstPage))
+      .mockResolvedValueOnce({ data: { repository: { pullRequest: {} } } });
+    await expect(fetchPrBatch(42, REPO)).rejects.toThrow("PR #42 not found");
+  });
+
+  it("sets checkSuitesComplete when the suite page is complete", async () => {
+    mockGraphqlWithRateLimit.mockResolvedValueOnce(
+      makeResponse(
+        makeRawPr({
+          commits: {
+            nodes: [
+              {
+                commit: {
+                  checkSuites: { pageInfo: { hasNextPage: false }, nodes: [] },
+                  statusCheckRollup: null,
+                },
+              },
+            ],
+          },
+        }),
+      ),
+    );
+    const result = await fetchPrBatch(42, REPO);
+    expect(result.checkSuitesComplete).toBe(true);
+  });
 });

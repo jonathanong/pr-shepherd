@@ -108,4 +108,36 @@ describe("fetchSuggestionThread", () => {
     expect(result.headRepoWithOwner).toBeNull();
     expect(result.thread).toBeNull();
   });
+
+  it("falls back when the original comment is sparse", async () => {
+    mockGraphql.mockResolvedValue({
+      data: {
+        repository: {
+          pullRequest: {
+            headRefOid: "abc",
+            headRefName: "feature",
+            headRepository: { nameWithOwner: "owner/repo" },
+          },
+        },
+        node: {
+          id: "PRRT_x",
+          isResolved: false,
+          isOutdated: false,
+          comments: { nodes: [{}] },
+        },
+      },
+    });
+    const result = await fetchSuggestionThread(42, REPO, "PRRT_x");
+    expect(result.thread).toMatchObject({
+      isMinimized: false,
+      path: null,
+      line: null,
+      startLine: null,
+      author: "unknown",
+      body: "",
+      url: "",
+      createdAtUnix: 0,
+    });
+    expect(result.thread?.authorAssociation).toBeUndefined();
+  });
 });

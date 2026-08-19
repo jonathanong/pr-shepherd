@@ -81,4 +81,22 @@ describe("parseSuiteStartupFailures", () => {
       detailsUrl: "",
     });
   });
+
+  it("names unnamed suites from the workflow run id", () => {
+    const raw = withSuites({
+      pageInfo: { hasNextPage: false },
+      nodes: [
+        {
+          conclusion: "STARTUP_FAILURE",
+          workflowRun: {
+            databaseId: 7,
+            event: "pull_request",
+            url: "",
+            workflow: { name: "  " },
+          },
+        },
+      ],
+    });
+    expect(parseSuiteStartupFailures(raw)[0]!.name).toBe("workflow run 7");
+  });
 });

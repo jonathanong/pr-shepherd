@@ -100,4 +100,20 @@ describe("restWithRateLimit", () => {
     expect(result.data).toEqual({ id: 1 });
     expect(result.rateLimit).toEqual({ remaining: 42, limit: 5000, resetAt: 99 });
   });
+
+  it("returns undefined data when there is no JSON content-type", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 204,
+      headers: new Headers({
+        "x-ratelimit-remaining": "1",
+        "x-ratelimit-limit": "5000",
+        "x-ratelimit-reset": "99",
+      }),
+      text: () => Promise.resolve(""),
+    });
+    const result = await restWithRateLimit("POST", "/repos/o/r/actions/runs/1/cancel");
+    expect(result.data).toBeUndefined();
+    expect(result.rateLimit?.remaining).toBe(1);
+  });
 });
