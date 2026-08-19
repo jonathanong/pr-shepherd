@@ -10,6 +10,7 @@ import type {
   ShepherdReport,
 } from "../../types.mts";
 import { getExecutionCwd } from "../../execution-context.mts";
+import { blockedReasonFromRequirements } from "../../merge-status/requirements-format.mts";
 
 const execFile = promisify(execFileCb);
 
@@ -59,6 +60,7 @@ export function buildTerminalCancelResult(report: ShepherdReport): IterateResult
     summary: buildSummary(report),
     baseBranch: report.baseBranch,
     branchProtection: report.branchProtection,
+    mergeRequirements: report.mergeStatus.mergeRequirements,
     checks: buildRelevantChecks(report),
     inProgressChecks: buildActiveChecks(report),
     ...buildSuppressedCheckFields(report),
@@ -162,11 +164,14 @@ export function buildWaitLog(base: IterateResultBase): string {
   }
 
   switch (base.mergeStatus) {
-    case "BLOCKED":
-      if (base.reviewDecision === "REVIEW_REQUIRED") parts.push("awaiting human review");
-      else if (base.reviewDecision === "APPROVED") parts.push("awaiting additional approvals");
-      else parts.push("awaiting human review or branch protection");
+    case "BLOCKED": {
+      const fromRules = blockedReasonFromRequirements(base.mergeRequirements);
+      if (fromRules) parts.push(fromRules);
+      else if (!base.blockingBotReviewInProgress) {
+        parts.push("awaiting human review or branch protection");
+      }
       break;
+    }
     case "BEHIND":
       parts.push("branch is behind base");
       break;
@@ -183,4 +188,10 @@ export function buildWaitLog(base: IterateResultBase): string {
   }
 
   return parts.join(" — ");
+}
+
+export function blockedCancelNote(base: IterateResultBase): string {
+  if (base.mergeStatus !== "BLOCKED") return "has been ready for review";
+  const fromRules = blockedReasonFromRequirements(base.mergeRequirements);
+  return fromRules ? `is ${fromRules}` : "is awaiting human review or branch protection resolution";
 }

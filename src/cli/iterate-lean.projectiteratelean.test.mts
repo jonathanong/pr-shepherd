@@ -127,6 +127,27 @@ describe("projectIterateLean", () => {
     const lean = projectIterateLean(result) as Record<string, unknown>;
     expect(lean.reviewDecision).toBeUndefined();
   });
+
+  it("includes mergeRequirements after a sweep", () => {
+    const result = {
+      ...makeIterateResult("wait"),
+      mergeRequirements: {
+        approvals: { current: 0, requiredCount: 0 },
+        conversationsResolved: { resolved: true, unresolvedCount: 0, required: false },
+        mergeQueue: {
+          required: true,
+          enabled: true,
+          inQueue: true,
+          position: 2,
+          state: "QUEUED",
+        },
+        stack: { number: 4, size: 3, position: 2, baseRefName: "main" },
+      },
+    };
+    const lean = projectIterateLean(result) as Record<string, unknown>;
+    expect(lean.mergeRequirements).toEqual(result.mergeRequirements);
+  });
+
   it("wait: includes log, omits checks", () => {
     const lean = projectIterateLean(makeIterateResult("wait")) as Record<string, unknown>;
     expect(lean.action).toBe("wait");

@@ -8,3 +8,4 @@ export * from "./types/agent-thread.mts";
 export * from "./types/check-annotations.mts";
 export * from "./types/report.mts";
 export * from "./types/iterate.mts";
+export * from "./types/merge-requirements.mts";

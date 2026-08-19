@@ -2,6 +2,8 @@
 
 **status** `FAILING` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 0 passing
+Approvals: None [Not Required]
+Conversations Resolved: Yes [Not Required]
 
 ## Actionable comments
 

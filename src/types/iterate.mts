@@ -18,6 +18,7 @@ import type {
   ReviewThread,
   ShepherdMergeStatus,
 } from "./github.mts";
+import type { MergeRequirements } from "./merge-requirements.mts";
 import type { ProtectedRun } from "./protected-run.mts";
 
 export type ShepherdAction = "wait" | "fix_code" | "mark_ready" | "cancel" | "escalate";
@@ -81,15 +82,12 @@ export interface IterateResultBase {
   summary: IterateResultSummary;
   /** Validated base branch (e.g. "main") for this PR. */
   baseBranch: string;
-  /** Branch protection rule for the PR's base branch. Null when no rule exists or the base ref is unavailable. */
+  /** Null when no classic protection rule exists or the base ref is unavailable. */
   branchProtection: BranchProtection | null;
+  mergeRequirements?: MergeRequirements;
   /**
-   * All CI checks that are relevant to PR readiness: triggered by a PR event
-   * (pull_request / pull_request_target, or StatusContext with null event),
-   * completed (status === COMPLETED), and not skipped/neutral.
-   *
-   * Includes both passing and failing checks. Failing entries carry
-   * `workflowName`, `jobName`, `failedStep`, and `summary`.
+   * PR-event checks that completed and are not skipped/neutral.
+   * Failing entries carry `workflowName`, `jobName`, `failedStep`, and `summary`.
    */
   checks: RelevantCheck[];
   inProgressChecks?: ActiveCheck[];

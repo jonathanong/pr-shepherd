@@ -2,6 +2,8 @@
 
 **status** `IN_PROGRESS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 0 passing, 1 inProgress, 1 superseded
+Approvals: None [Not Required]
+Conversations Resolved: Yes [Not Required]
 **superseded** `CI / build`
 **activity** 0 commits · 0 review rounds · active: `CI / tests`
 

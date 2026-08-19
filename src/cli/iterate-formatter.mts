@@ -6,6 +6,7 @@ import {
   buildSimpleIterateInstructions,
   numberInstructions,
 } from "./iterate-instructions.mts";
+import { formatMergeRequirementLines } from "../merge-status/requirements-format.mts";
 
 function formatActivityLine(result: IterateResult): string | null {
   const activity = result.activity ?? {
@@ -127,7 +128,11 @@ export function formatIterateResult(
   const requiredLine = requiredParts.length > 0 ? `**required** ${requiredParts.join(", ")}` : null;
 
   const headerLines = [heading, "", baseLine, summaryLine];
-  if (requiredLine) headerLines.push(requiredLine);
+  if (result.mergeRequirements) {
+    headerLines.push(...formatMergeRequirementLines(result.mergeRequirements));
+  } else if (requiredLine) {
+    headerLines.push(requiredLine);
+  }
   if (result.ignoredNames && result.ignoredNames.length > 0) {
     const names = result.ignoredNames.map((n) => "`" + n + "`").join(", ");
     headerLines.push(`**ignored** ${names}`);
@@ -157,7 +162,11 @@ export function formatIterateResult(
 
     case "cancel": {
       const cancelHeaderLines = [`${heading} — ${result.reason}`, "", baseLine, summaryLine];
-      if (requiredLine) cancelHeaderLines.push(requiredLine);
+      if (result.mergeRequirements) {
+        cancelHeaderLines.push(...formatMergeRequirementLines(result.mergeRequirements));
+      } else if (requiredLine) {
+        cancelHeaderLines.push(requiredLine);
+      }
       if (result.ignoredNames && result.ignoredNames.length > 0) {
         const ignoredStr = result.ignoredNames.map((n) => "`" + n + "`").join(", ");
         cancelHeaderLines.push(`**ignored** ${ignoredStr}`);

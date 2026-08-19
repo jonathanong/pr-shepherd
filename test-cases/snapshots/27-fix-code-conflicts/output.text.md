@@ -2,6 +2,8 @@
 
 **status** `FAILING` · **merge** `DIRTY` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 1 passing · **branch** conflicts with `origin/main`
+Approvals: None [Not Required]
+Conversations Resolved: Yes [Not Required]
 
 ## Post-fix push
 

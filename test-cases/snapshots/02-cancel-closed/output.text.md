@@ -2,6 +2,8 @@
 
 **status** `CLOSED` · **merge** `CLEAN` · **state** `CLOSED` · **repo** `owner/repo`
 **summary** 0 passing
+Approvals: None [Not Required]
+Conversations Resolved: Yes [Not Required]
 
 CANCEL: PR #42 is closed — stopping
 

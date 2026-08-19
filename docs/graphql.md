@@ -9,10 +9,12 @@
 A single GraphQL query fetches everything shepherd needs per PR on the first page:
 
 - PR state (`state`, `isDraft`, `mergeable`, `mergeStateStatus`, `reviewDecision`, `headRefOid`)
-- Review threads (first 100, newest)
-- PR comments (first 100, newest)
-- Reviews / changes-requested / commented / approved reviews (first 50 each)
-- CI check runs (first 100) and `checkSuites` (first 50, used for startup-failure detection)
+- Base-branch rules that apply to this PR (`baseRef.rules` from active repository/org rulesets, plus classic `branchProtectionRule`) — no extra round-trip
+- Merge queue membership (`isInMergeQueue`, `isMergeQueueEnabled`, `mergeQueueEntry`) and GitHub stack membership (`stack`, `stackEntry`)
+- Review threads (paginated backward, see below)
+- PR comments (paginated backward)
+- Reviews / changes-requested / commented / approved reviews (paginated backward)
+- CI check runs (paginated forward, see below) and `checkSuites` (first 50, used for startup-failure detection)
 
 This single round-trip replaces the 6–12 API calls the former multi-agent design needed.
 

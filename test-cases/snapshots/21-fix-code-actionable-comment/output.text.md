@@ -2,6 +2,8 @@
 
 **status** `UNRESOLVED_COMMENTS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 1 passing
+Approvals: None [Not Required]
+Conversations Resolved: Yes [Not Required]
 
 ## Actionable comments
 

@@ -2,6 +2,8 @@
 
 **status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 1 passing · **remainingSeconds** 127
+Approvals: None [Not Required]
+Conversations Resolved: Yes [Not Required]
 
 WAIT: 1 passing, 0 in-progress
 

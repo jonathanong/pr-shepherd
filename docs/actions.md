@@ -19,7 +19,11 @@ Pass `--verbose` to get more debug state. In JSON mode, the output starts from t
 
 **status** `<…>` · **merge** `<…>` · **state** `<…>` · **repo** `<…>`
 **summary** <N> passing[, <N> skipped][, <N> filtered][, <N> inProgress][, <N> superseded][· **remainingSeconds** <N>][· **blockingBotReviewInProgress**][· **isDraft**][· **branch** behind `origin/<base>` | · **branch** conflicts with `origin/<base>`]
-[**required** [approvals `<N>`][, conversation-resolution required][, checks: `<ctx>`, …]]
+Approvals: <None|N[/M]> [Required|Not Required]
+Conversations Resolved: <Yes|No> [Required|Not Required]
+[Merge queue: <No|position N STATE> [Required|Not Required]]
+[Stack: #<n> <pos>/<size> (base <ref>)]
+[other required-only merge-rule lines]
 [**ignored** `<check-name>`, …]
 [**superseded** `<check-name>`, …]
 [**activity** <N> commits · <N> review rounds[ · <N> review items since latest commit][ · active: `<check>`, …]]
@@ -44,13 +48,9 @@ Lean-mode rules for the summary line:
 
 The `**branch**` segment is appended to the `**summary**` line on any action when `mergeStatus` is `"BEHIND"` or `"CONFLICTS"`. It surfaces the raw branch state so the agent can decide whether to rebase without further tool calls.
 
-The `**required**` line is emitted only when branch-protection rules are non-trivial (any of: approvals required, conversation-resolution required, or required check contexts present). When all fields are at their trivial defaults the line is omitted. Possible fields (each omitted when its condition is false):
+After a sweep, iterate always prints `Approvals:` and `Conversations Resolved:` (current vs required). Extra merge-rule lines appear only when they apply (code-owner review, last-push approval, signed commits, linear history, branch up to date, required status checks, deployments, workflows, code scanning, merge queue, GitHub stacks). The legacy `**required**` line is a fallback when `mergeRequirements` is absent (for example in tests that construct an iterate result without a sweep). When `mergeRequirements` is present it replaces `**required**`.
 
-- `approvals N` — emitted when `requiredApprovingReviewCount > 0`
-- `conversation-resolution required` — emitted when `requiresConversationResolution`
-- `checks: context, …` — lists required status-check context names; emitted when `requiresStatusChecks` and contexts are present. When `requiresStatusChecks` is true but the context list is empty or unknown, `status checks required` is emitted instead.
-
-The agent cross-references this line against per-check bullets in `## Failing checks` to know which checks are gating merge.
+The agent should read the Approvals / Conversations Resolved lines instead of inferring a required review from `reviewDecision`. `REVIEW_REQUIRED` with `Approvals: None [Not Required]` means GitHub is not waiting on an approval.
 
 `--verbose` restores the full summary line: all five counts, `remainingSeconds`, `blockingBotReviewInProgress`, `isDraft`, and `shouldCancel` always present.
 
@@ -83,6 +83,8 @@ Nothing actionable to do; all CI is passing or in-progress.
 
 **status** `IN_PROGRESS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 3 passing, 2 inProgress
+Approvals: None [Not Required]
+Conversations Resolved: Yes [Not Required]
 [**ignored** `<check-name>`, …]
 
 WAIT: 3 passing, 2 in-progress — 120s until auto-cancel
@@ -94,7 +96,7 @@ WAIT: 3 passing, 2 in-progress — 120s until auto-cancel
 
 The poll already bounds each wait via `--interval`/`--timeout`, so the CLI no longer tells the agent to sleep before rerunning. When the current command includes a ready-delay override (`--ready-delay 15m`), it is surfaced as a header field on the summary line rather than embedded in a rerun command — e.g. `**summary** 3 passing, 2 inProgress · **ready-delay** `15m` (override)`. JSON output carries the same value as a `readyDelayOverride` field.
 
-The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, `blocked by pending reviews or required status checks`, `PR is a draft`, or `some checks are unstable`.
+The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, unmet merge requirements (approvals, conversations, merge queue, …), `PR is a draft`, or `some checks are unstable`. After a sweep, iterate also prints current-vs-required merge rules so the agent can see _why_ GitHub is not mergeable (for example `Approvals: None [Not Required]` vs `Approvals: None [Required]`). Merge-queue and GitHub-stack membership appear as extra lines when they apply (`Merge queue: position 2 QUEUED [Required]`, `Stack: #7 2/3 (base main)`); they are omitted when the PR is not in a queue or stack and merge queue is not required.
 
 **What the skill does:** Follow `## Instructions`, then run the default poll dispatcher again unless the action is terminal.
 
@@ -158,7 +160,7 @@ CANCEL: PR #42 is merged — stopping
 
 Other heading variants: `# PR #42 [CANCEL] — closed`, `# PR #42 [CANCEL] — ready-delay-elapsed`.
 
-Merged and closed PRs surface terminal top-level statuses (`MERGED` or `CLOSED`) because `runCheck` short-circuits before CI/comment processing. Other body-line variants: `CANCEL: PR #42 is closed — stopping`, `CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping`.
+Merged and closed PRs surface terminal top-level statuses (`MERGED` or `CLOSED`) because `runCheck` short-circuits before CI/comment processing. Other body-line variants: `CANCEL: PR #42 is closed — stopping`, `CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping`. When merge is still `BLOCKED` after the delay, the body uses a specific unmet-requirement note when one is known (`awaiting 1 approval`, `in merge queue position 2`, …) and otherwise `is awaiting human review or branch protection resolution` — it does not guess from `reviewDecision` alone.
 
 **What the skill does:** Follow `## Instructions` — stop.
 

@@ -18,6 +18,7 @@
 
 import type { BatchPrData, MergeStatusResult } from "../types.mts";
 import { loadConfig } from "../config/load.mts";
+import { deriveMergeRequirements } from "./requirements.mts";
 
 export function deriveMergeStatus(pr: BatchPrData): MergeStatusResult {
   const blockingBotReviewInProgress = detectBlockingBotReview(pr);
@@ -53,6 +54,7 @@ export function deriveMergeStatus(pr: BatchPrData): MergeStatusResult {
     reviewDecision: pr.reviewDecision,
     blockingBotReviewInProgress,
     mergeStateStatus: pr.mergeStateStatus,
+    mergeRequirements: deriveMergeRequirements(pr),
   };
 }
 

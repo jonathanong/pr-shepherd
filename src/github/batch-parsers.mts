@@ -17,6 +17,7 @@ import {
 } from "./batch-parser-helpers.mts";
 import { buildPrActivitySummary } from "./activity.mts";
 import { parseBranchProtection } from "./branch-protection.mts";
+import { parseBranchRules, parseMergeQueueEntry, parseStack } from "./batch-parsers-rules.mts";
 
 function parseReviewNode(r: RawReview | RawReviewSummary): Review {
   const base: Review = {
@@ -165,6 +166,11 @@ export function parseRawPr(
     approvedReviews,
     checks,
     branchProtection: parseBranchProtection(raw),
+    branchRules: parseBranchRules(raw.baseRef),
+    isInMergeQueue: raw.isInMergeQueue ?? false,
+    isMergeQueueEnabled: raw.isMergeQueueEnabled ?? false,
+    mergeQueueEntry: parseMergeQueueEntry(raw.mergeQueueEntry),
+    stack: parseStack(raw),
     activity: buildPrActivitySummary(
       raw,
       comments,
