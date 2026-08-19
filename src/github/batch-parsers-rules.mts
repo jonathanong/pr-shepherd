@@ -18,7 +18,11 @@ export const EMPTY_BRANCH_RULES: BranchRules = {
 };
 
 export function parseBranchRules(baseRef: RawBaseRef | null | undefined): BranchRules {
-  const rules = { ...EMPTY_BRANCH_RULES };
+  const rules: BranchRules = {
+    ...EMPTY_BRANCH_RULES,
+    requiredStatusCheckContexts: [],
+    requiredDeploymentEnvironments: [],
+  };
   if (!baseRef) return rules;
   foldClassicProtection(rules, baseRef.branchProtectionRule);
   for (const node of baseRef.rules?.nodes ?? []) foldRulesetRule(rules, node);
