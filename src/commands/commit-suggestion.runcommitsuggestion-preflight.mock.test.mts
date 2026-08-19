@@ -67,4 +67,30 @@ describe("runCommitSuggestion — preflight", () => {
       runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("uncommitted changes");
   });
+
+  it("throws when the thread path escapes the working tree", async () => {
+    mockFetchBatch.mockResolvedValue({
+      data: makeBatch([makeThread({ path: "../secret.ts" })]),
+    });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
+      return makeGitSuccess("");
+    });
+    await expect(
+      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+    ).rejects.toThrow("path escapes the working tree");
+  });
+
+  it("throws when the thread path resolves to the working tree root", async () => {
+    mockFetchBatch.mockResolvedValue({
+      data: makeBatch([makeThread({ path: "." })]),
+    });
+    mockExecFile.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("headsha\n");
+      return makeGitSuccess("");
+    });
+    await expect(
+      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+    ).rejects.toThrow("path escapes the working tree");
+  });
 });
