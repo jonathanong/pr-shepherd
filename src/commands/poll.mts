@@ -182,8 +182,11 @@ export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> 
         }
         writeDebounceProgress(tick, Date.now() - start, remainingMs);
         await sleep(Math.min(intervalMs, remainingMs));
-        continue;
       }
+      // Always continue so a tick that *started* before debounceUntil but *finished*
+      // after it cannot return with persistSeen: false. The next loop iteration
+      // sees pastDebounce and persists.
+      continue;
     }
 
     break;

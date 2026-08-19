@@ -141,6 +141,26 @@ describe("runPoll — FIX_CODE debounce", () => {
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
   });
 
+  it("persists seen when a FIX_CODE iterate starts before debounceUntil and finishes after", async () => {
+    mockRunIterate.mockImplementation(async () => {
+      if (mockRunIterate.mock.calls.length === 2) {
+        await new Promise((resolve) => setTimeout(resolve, 2_000));
+      }
+      return makeFixCodeResult();
+    });
+
+    const pollPromise = runPoll(pollOpts({ intervalSeconds: 4, debounceSeconds: 5 }));
+    await vi.advanceTimersByTimeAsync(4_000);
+    await vi.advanceTimersByTimeAsync(2_000);
+    const result = await pollPromise;
+
+    expect(result.action).toBe("fix_code");
+    expect(mockRunIterate).toHaveBeenCalledTimes(3);
+    expect(persistSeenAt(0)).toBe(false);
+    expect(persistSeenAt(1)).toBe(false);
+    expect(persistSeenAt(2)).toBe(true);
+  });
+
   it("writes a debounce remaining line to stderr", async () => {
     mockRunIterate.mockResolvedValue(makeFixCodeResult());
     const pollPromise = runPoll(pollOpts({ intervalSeconds: 60, debounceSeconds: 60 }));

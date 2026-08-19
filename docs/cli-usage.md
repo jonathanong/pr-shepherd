@@ -19,7 +19,7 @@ pr-shepherd admin log-file [--format text|json]
 
 `PR` may be a number or GitHub pull request URL. When omitted, Shepherd infers the current branch's open PR.
 
-`pr-shepherd [PR]` is the canonical bounded poll dispatcher. It repeats `iterate` while the action is `WAIT`, then prints the first `MARK_READY`, `CANCEL`, or `ESCALATE` result. `FIX_CODE` is delayed by `--debounce` (default 1m): poll keeps iterating at `--interval` for that window, then returns one later tick. Use `iterate` when the caller owns recurrence.
+`pr-shepherd [PR]` is the canonical bounded poll dispatcher. It repeats `iterate` while the action is `WAIT`, then prints the first `MARK_READY`, `CANCEL`, or `ESCALATE` result. If `--timeout` expires during WAIT polling, poll returns that final `WAIT` result rather than a terminal action. `FIX_CODE` is delayed by `--debounce` (default 1m): poll keeps iterating at `--interval` for that window, then returns one later tick. Use `iterate` when the caller owns recurrence.
 
 ```sh
 pr-shepherd 42 --interval 60s --timeout 4.5m --quiet-status
