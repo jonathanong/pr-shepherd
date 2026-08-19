@@ -34,7 +34,7 @@ The polling flags are `--interval`, `--timeout`, `--debounce`, `--quiet-status`,
 
 ## MCP server
 
-The plugin runs a version-matched local server with:
+Install and configure the stdio server in Claude Code, Codex, or Grok with [mcp.md](mcp.md). The plugin and a manual `pr-shepherd-mcp` registration both run:
 
 ```text
 npx --yes --package pr-shepherd@<version> pr-shepherd-mcp

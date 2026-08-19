@@ -105,6 +105,7 @@ The module supports a focused automation loop for PR monitoring and deterministi
 ## References
 
 - Command surface and argument parsing: `src/cli-parser.mts`
+- MCP server install and tools: [mcp.md](mcp.md)
 - CLI usage reference: [docs/cli-usage.md](docs/cli-usage.md)
 - Action model and flow: [docs/actions.md](docs/actions.md), [docs/iterate-flow.md](docs/iterate-flow.md)
 - Configuration options: [docs/configuration.md](docs/configuration.md)

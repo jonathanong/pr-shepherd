@@ -41,7 +41,7 @@ The CLI surfaces raw-enough GitHub fields, log excerpts, annotations, author pro
 
 ### It is a portable state machine, not a hosted agent
 
-The same action model is available through the CLI and MCP API. A Codex, Claude, or other MCP-capable client can consume it, but that client owns recurrence and code execution. This is useful when portability and inspectable behavior matter; it is less convenient when a fully hosted background worker is the requirement.
+The same action model is available through the CLI and MCP API. A Codex, Claude Code, Grok, or other MCP-capable client can consume it, but that client owns recurrence and code execution. This is useful when portability and inspectable behavior matter; it is less convenient when a fully hosted background worker is the requirement.
 
 ## When pr-shepherd is not the right fit
 

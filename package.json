@@ -1,6 +1,6 @@
 {
   "name": "pr-shepherd",
-  "version": "0.34.0",
+  "version": "0.35.0",
   "description": "Autonomous PR CI monitor and review-comment resolver for agentic coding tools",
   "keywords": [
     "automation",
@@ -34,6 +34,7 @@
     "plugins/**",
     "plugins/**/.codex-plugin/**",
     ".claude-plugin/**",
+    ".grok-plugin/**",
     ".agents/plugins/marketplace.json",
     "marketplace.json",
     "README.md",
@@ -81,7 +82,7 @@
     "@vitest/coverage-v8": "^4.1.4",
     "husky": "^9.1.7",
     "knip": "^6.14.1",
-    "oxfmt": "^0.61.0",
+    "oxfmt": "^0.62.0",
     "oxlint": "^1.60.0",
     "typescript": "^7.0.2",
     "vitest": "^4.1.4"

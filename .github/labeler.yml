@@ -18,7 +18,10 @@ ci:
 
 plugin:
   - changed-files:
-      - any-glob-to-any-file: '.claude-plugin/**'
+      - any-glob-to-any-file:
+          - '.claude-plugin/**'
+          - '.grok-plugin/**'
+          - 'plugins/**'
 
 config:
   - changed-files:
