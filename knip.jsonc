@@ -34,6 +34,7 @@
     "src/config/load.mts": ["exports"],
     "src/github/http-auth.mts": ["exports"],
     "src/github/http.mts": ["exports"],
+    "src/github/pagination.mts": ["exports"],
     "src/github/rest-http.mts": ["exports"],
     "src/log/log-file.mts": ["exports"],
     "src/mcp/index.mts": ["exports", "types"],

@@ -4,7 +4,6 @@ import {
   REPO,
   makeRawPr,
   makeResponse,
-  mockGraphql,
   mockGraphqlWithRateLimit,
 } from "../../test-helpers/github/batch.test-support.mts";
 import { fetchPrBatch } from "./batch.mts";
@@ -78,8 +77,9 @@ describe("fetchPrBatch — approvedReviews", () => {
         nodes: [{ id: "PRR_1", isMinimized: false, author: { login: "alice" }, body: "" }],
       },
     });
-    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
-    mockGraphql.mockResolvedValue(makeResponse(prevPage));
+    mockGraphqlWithRateLimit
+      .mockResolvedValueOnce(makeResponse(firstPage))
+      .mockResolvedValueOnce(makeResponse(prevPage));
 
     const { data } = await fetchPrBatch(42, REPO, { paginateApprovedReviews: true });
     expect(data.approvedReviews.map((r) => r.id)).toEqual(["PRR_1", "PRR_2"]);
@@ -93,10 +93,9 @@ describe("fetchPrBatch — approvedReviews", () => {
       },
     });
     mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
-    mockGraphql.mockClear();
 
     const { data } = await fetchPrBatch(42, REPO);
     expect(data.approvedReviews.map((r) => r.id)).toEqual(["PRR_2"]);
-    expect(mockGraphql).not.toHaveBeenCalled();
+    expect(mockGraphqlWithRateLimit).toHaveBeenCalledTimes(1);
   });
 });

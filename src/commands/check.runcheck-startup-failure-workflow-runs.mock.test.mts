@@ -138,4 +138,15 @@ describe("runCheck — startup failure workflow runs", () => {
       expect.objectContaining({ name: "nightly", conclusion: "STARTUP_FAILURE" }),
     ]);
   });
+
+  it("skips REST startup-failure fetch when GraphQL CheckSuites are complete", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData(),
+      checkSuitesComplete: true,
+    });
+
+    await runCheck(BASE_OPTS);
+
+    expect(mockFetchStartupFailureChecks).not.toHaveBeenCalled();
+  });
 });

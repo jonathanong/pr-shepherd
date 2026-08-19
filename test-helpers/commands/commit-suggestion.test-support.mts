@@ -34,8 +34,8 @@ vi.mock("../../src/github/client.mts", () => ({
   getCurrentBranch: vi.fn().mockResolvedValue("feature/foo"),
 }));
 
-vi.mock("../../src/github/batch.mts", () => ({
-  fetchPrBatch: vi.fn(),
+vi.mock("../../src/github/suggestion-thread.mts", () => ({
+  fetchSuggestionThread: vi.fn(),
 }));
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
@@ -45,14 +45,26 @@ vi.mock("../../src/config/load.mts", () => ({
 
 import { runCommitSuggestion } from "../../src/commands/commit-suggestion.mts";
 import { getCurrentBranch, getCurrentPrNumber } from "../../src/github/client.mts";
-import { fetchPrBatch } from "../../src/github/batch.mts";
+import { fetchSuggestionThread } from "../../src/github/suggestion-thread.mts";
 import { readFile } from "node:fs/promises";
 import type { ReviewThread, BatchPrData } from "../../src/types.mts";
 
 const mockGetCurrentBranch = vi.mocked(getCurrentBranch);
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
-const mockFetchBatch = vi.mocked(fetchPrBatch);
+const mockFetchSuggestionThread = vi.mocked(fetchSuggestionThread);
 const mockReadFile = vi.mocked(readFile);
+
+const mockFetchBatch = {
+  mockResolvedValue(value: { data: BatchPrData; rateLimit?: unknown }): void {
+    const data = value.data;
+    mockFetchSuggestionThread.mockImplementation(async (_pr, _repo, threadId) => ({
+      headRefOid: data.headRefOid,
+      headRefName: data.headRefName,
+      headRepoWithOwner: data.headRepoWithOwner,
+      thread: data.reviewThreads.find((t) => t.id === threadId) ?? null,
+    }));
+  },
+};
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -144,7 +156,7 @@ export function registerHooks(): void {
 export {
   FILE_CONTENT,
   GLOBAL_OPTS,
-  fetchPrBatch,
+  fetchSuggestionThread,
   getCurrentBranch,
   getCurrentPrNumber,
   makeBatch,

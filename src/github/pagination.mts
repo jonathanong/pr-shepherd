@@ -6,8 +6,9 @@
  * that returns pages of fake data.
  *
  * GitHub's GraphQL connections support two cursor directions:
- *   - Forward (`after` + `first`) — used by check contexts.
- *   - Backward (`before` + `last`) — used by reviewThreads (default GitHub order).
+ *   - Forward (`after` + `first`) — used by check contexts and nested thread comments.
+ *   - Backward (`before` + `last`) — used by reviewThreads/comments/reviews extra pages
+ *     (combined in `batch-page.mts`; `paginateBackward` remains the generic primitive).
  */
 
 interface PageInfo {

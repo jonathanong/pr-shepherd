@@ -62,11 +62,9 @@ export async function runCheck(
   if (mergeStatus.state === "MERGED" || mergeStatus.state === "CLOSED") {
     return buildTerminalReport(prNumber, repo, batchData, mergeStatus, mergeStatus.state);
   }
-  const startupFailureChecks = await fetchStartupFailureChecks(
-    repo,
-    batchData.headRefOid,
-    prNumber,
-  );
+  const startupFailureChecks = result.checkSuitesComplete
+    ? []
+    : await fetchStartupFailureChecks(repo, batchData.headRefOid, prNumber);
   const allChecks = mergeStartupFailureChecks(batchData.checks, startupFailureChecks);
   const classifiedChecks = classifyChecks(allChecks);
   const verdict = getCiVerdict(classifiedChecks);

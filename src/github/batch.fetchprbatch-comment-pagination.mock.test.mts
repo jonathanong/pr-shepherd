@@ -4,7 +4,6 @@ import {
   REPO,
   makeRawPr,
   makeResponse,
-  mockGraphql,
   mockGraphqlWithRateLimit,
 } from "../../test-helpers/github/batch.test-support.mts";
 import { fetchPrBatch } from "./batch.mts";
@@ -32,8 +31,9 @@ describe("fetchPrBatch — comment pagination", () => {
         nodes: [makeComment("c-1")],
       },
     });
-    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
-    mockGraphql.mockResolvedValue(makeResponse(prevPage));
+    mockGraphqlWithRateLimit
+      .mockResolvedValueOnce(makeResponse(firstPage))
+      .mockResolvedValueOnce(makeResponse(prevPage));
 
     const { data } = await fetchPrBatch(42, REPO);
     expect(data.comments.map((c) => c.id)).toEqual(["c-1", "c-2"]);

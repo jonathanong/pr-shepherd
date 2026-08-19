@@ -1,26 +1,19 @@
-import { graphql, graphqlWithRateLimit, type RateLimitInfo, type RepoInfo } from "./client.mts";
-import { paginateForward, paginateBackward } from "./pagination.mts";
+import { graphqlWithRateLimit, type RateLimitInfo, type RepoInfo } from "./client.mts";
 import { hydrateThreadCommentPages } from "./thread-comments.mts";
 import { BATCH_PR_QUERY } from "./queries.mts";
 import { parseRawPr } from "./batch-parsers.mts";
-import { requireContextNodes, requireRawPr } from "./batch-response.mts";
-import type {
-  RawBatchResponse,
-  RawThread,
-  RawComment,
-  RawReview,
-  RawReviewSummary,
-  RawContextNode,
-} from "./batch-raw-types.mts";
+import { parseCheckSuitesComplete, parseSuiteStartupFailures } from "./batch-parse-suites.mts";
+import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
+import { paginateBatchConnections } from "./batch-page.mts";
+import { requireRawPr } from "./batch-response.mts";
+import type { RawBatchResponse } from "./batch-raw-types.mts";
 import type { BatchPrData } from "../types.mts";
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
 
 interface BatchResult {
   data: BatchPrData;
   rateLimit?: RateLimitInfo;
+  /** True when GraphQL returned a complete CheckSuite page; skip REST startup-failure fetch. */
+  checkSuitesComplete?: boolean;
 }
 
 interface FetchPrBatchOptions {
@@ -43,7 +36,6 @@ export async function fetchPrBatch(
   repo: RepoInfo,
   opts: FetchPrBatchOptions = {},
 ): Promise<BatchResult> {
-  // First page: no cursor variables.
   const result = await graphqlWithRateLimit<RawBatchResponse>(BATCH_PR_QUERY, {
     owner: repo.owner,
     repo: repo.name,
@@ -51,144 +43,22 @@ export async function fetchPrBatch(
   });
 
   const raw = requireRawPr(result.data, pr, repo);
-
-  // Paginate reviewThreads backward if the first page is incomplete.
-  let rawThreadPages = raw.reviewThreads.nodes;
-  if (raw.reviewThreads.pageInfo.hasPreviousPage && raw.reviewThreads.pageInfo.startCursor) {
-    // Pass startCursor so paginateBackward fetches pages *before* the already-
-    // fetched first page instead of re-fetching it from the start.
-    const extra = await paginateBackward<RawThread>(async (cursor) => {
-      const res = await graphql<RawBatchResponse>(BATCH_PR_QUERY, {
-        owner: repo.owner,
-        repo: repo.name,
-        pr,
-        ...(cursor ? { threadsCursor: cursor } : {}),
-      });
-      const pr2 = requireRawPr(res.data, pr, repo);
-      return pr2.reviewThreads;
-    }, raw.reviewThreads.pageInfo.startCursor);
-    // extra contains pages before the first page.
-    rawThreadPages = [...extra, ...rawThreadPages];
-  }
-  rawThreadPages = await hydrateThreadCommentPages(rawThreadPages);
-
-  // Paginate comments backward if the first page is incomplete.
-  let rawCommentNodes = raw.comments.nodes;
-  if (raw.comments.pageInfo.hasPreviousPage && raw.comments.pageInfo.startCursor) {
-    const extra = await paginateBackward<RawComment>(async (cursor) => {
-      const res = await graphql<RawBatchResponse>(BATCH_PR_QUERY, {
-        owner: repo.owner,
-        repo: repo.name,
-        pr,
-        ...(cursor ? { commentsCursor: cursor } : {}),
-      });
-      const pr2 = requireRawPr(res.data, pr, repo);
-      return pr2.comments;
-    }, raw.comments.pageInfo.startCursor);
-    rawCommentNodes = [...extra, ...rawCommentNodes];
-  }
-
-  // Paginate CHANGES_REQUESTED reviews backward if the first page is incomplete.
-  let rawReviewNodes = raw.changesRequestedReviews.nodes;
-  if (
-    raw.changesRequestedReviews.pageInfo.hasPreviousPage &&
-    raw.changesRequestedReviews.pageInfo.startCursor
-  ) {
-    const extra = await paginateBackward<RawReview>(async (cursor) => {
-      const res = await graphql<RawBatchResponse>(BATCH_PR_QUERY, {
-        owner: repo.owner,
-        repo: repo.name,
-        pr,
-        ...(cursor ? { changesRequestedCursor: cursor } : {}),
-      });
-      const pr2 = requireRawPr(res.data, pr, repo);
-      return pr2.changesRequestedReviews;
-    }, raw.changesRequestedReviews.pageInfo.startCursor);
-    rawReviewNodes = [...extra, ...rawReviewNodes];
-  }
-
-  // Paginate COMMENTED review summaries backward if the first page is incomplete.
-  let rawReviewSummaryNodes = raw.reviewSummaries.nodes;
-  if (raw.reviewSummaries.pageInfo.hasPreviousPage && raw.reviewSummaries.pageInfo.startCursor) {
-    const extra = await paginateBackward<RawReviewSummary>(async (cursor) => {
-      const res = await graphql<RawBatchResponse>(BATCH_PR_QUERY, {
-        owner: repo.owner,
-        repo: repo.name,
-        pr,
-        ...(cursor ? { reviewSummariesCursor: cursor } : {}),
-      });
-      const pr2 = requireRawPr(res.data, pr, repo);
-      return pr2.reviewSummaries;
-    }, raw.reviewSummaries.pageInfo.startCursor);
-    rawReviewSummaryNodes = [...extra, ...rawReviewSummaryNodes];
-  }
-
-  // Paginate APPROVED reviews backward if the first page is incomplete — gated behind
-  // `paginateApprovedReviews` because approvals minimization is opt-in. See FetchPrBatchOptions.
-  let rawApprovedReviewNodes = raw.approvedReviews.nodes;
-  if (
-    opts.paginateApprovedReviews &&
-    raw.approvedReviews.pageInfo.hasPreviousPage &&
-    raw.approvedReviews.pageInfo.startCursor
-  ) {
-    const extra = await paginateBackward<RawReviewSummary>(async (cursor) => {
-      const res = await graphql<RawBatchResponse>(BATCH_PR_QUERY, {
-        owner: repo.owner,
-        repo: repo.name,
-        pr,
-        ...(cursor ? { approvedReviewsCursor: cursor } : {}),
-      });
-      const pr2 = requireRawPr(res.data, pr, repo);
-      return pr2.approvedReviews;
-    }, raw.approvedReviews.pageInfo.startCursor);
-    rawApprovedReviewNodes = [...extra, ...rawApprovedReviewNodes];
-  }
-
-  // Paginate check contexts forward if the first page is incomplete.
-  let rawCheckNodes = requireContextNodes(
-    raw.commits.nodes[0]?.commit.statusCheckRollup?.contexts.nodes ?? [],
-  );
-  const checksPageInfo = raw.commits.nodes[0]?.commit.statusCheckRollup?.contexts.pageInfo;
-  const firstOid = raw.commits.nodes[0]?.commit.oid;
-  if (checksPageInfo?.hasNextPage && checksPageInfo.endCursor) {
-    // Pass endCursor so paginateForward fetches pages *after* the already-
-    // fetched first page instead of re-fetching it from the start.
-    let pageCount = 0;
-    const extra = await paginateForward<RawContextNode>(async (cursor) => {
-      const res = await graphql<RawBatchResponse>(BATCH_PR_QUERY, {
-        owner: repo.owner,
-        repo: repo.name,
-        pr,
-        ...(cursor ? { checksCursor: cursor } : {}),
-      });
-      const pr2 = requireRawPr(res.data, pr, repo);
-      if (!pr2?.commits.nodes[0]?.commit.statusCheckRollup) {
-        throw new Error(
-          `Check-context pagination interrupted: statusCheckRollup disappeared on page ${pageCount + 2} (possible force-push race). Retry after the push stabilizes.`,
-        );
-      }
-      const currentOid = pr2.commits.nodes[0]?.commit.oid;
-      if (firstOid !== undefined && currentOid !== undefined && currentOid !== firstOid) {
-        throw new Error(
-          `Check-context pagination interrupted: head commit changed from ${firstOid} to ${currentOid} between pages (force-push race). Retry.`,
-        );
-      }
-      pageCount++;
-      const ctxs = pr2.commits.nodes[0]?.commit.statusCheckRollup?.contexts;
-      if (!ctxs) return { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [] };
-      return { ...ctxs, nodes: requireContextNodes(ctxs.nodes) };
-    }, checksPageInfo.endCursor);
-    rawCheckNodes = [...rawCheckNodes, ...extra];
-  }
+  const paged = await paginateBatchConnections(pr, repo, raw, opts, result.rateLimit);
+  const rawThreadPages = await hydrateThreadCommentPages(paged.threads);
 
   const data = parseRawPr(
     raw,
     rawThreadPages,
-    rawCommentNodes,
-    rawReviewNodes,
-    rawReviewSummaryNodes,
-    rawApprovedReviewNodes,
-    rawCheckNodes,
+    paged.comments,
+    paged.changesRequested,
+    paged.reviewSummaries,
+    paged.approvedReviews,
+    paged.checks,
   );
-  return { data, rateLimit: result.rateLimit };
+  data.checks = mergeStartupFailureChecks(data.checks, parseSuiteStartupFailures(raw));
+  return {
+    data,
+    rateLimit: paged.rateLimit ?? result.rateLimit,
+    ...(parseCheckSuitesComplete(raw) && { checkSuitesComplete: true }),
+  };
 }

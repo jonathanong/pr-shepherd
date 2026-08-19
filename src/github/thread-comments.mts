@@ -1,31 +1,45 @@
-import { graphql } from "./client.mts";
+import { graphqlWithRateLimit } from "./client.mts";
+import { GitHubRequestError } from "./errors.mts";
 import { paginateForward } from "./pagination.mts";
 import { REVIEW_THREAD_COMMENTS_QUERY } from "./queries.mts";
+import { mapPool } from "../util/pool.mts";
 import type {
   RawReviewThreadCommentsResponse,
   RawThread,
   RawThreadComment,
 } from "./batch-raw-types.mts";
 
+const THREAD_COMMENT_PAGE_CONCURRENCY = 4;
+
 export async function hydrateThreadCommentPages(threads: RawThread[]): Promise<RawThread[]> {
-  const hydrated: RawThread[] = [];
-
-  for (const thread of threads) {
-    hydrated.push(await hydrateThreadCommentPage(thread));
-  }
-
-  return hydrated;
+  const gate: { remaining?: number } = {};
+  return mapPool(threads, THREAD_COMMENT_PAGE_CONCURRENCY, (thread) =>
+    hydrateThreadCommentPage(thread, gate),
+  );
 }
 
-async function hydrateThreadCommentPage(thread: RawThread): Promise<RawThread> {
+async function hydrateThreadCommentPage(
+  thread: RawThread,
+  gate: { remaining?: number },
+): Promise<RawThread> {
   const pageInfo = thread.comments.pageInfo;
   if (!pageInfo?.hasNextPage || !pageInfo.endCursor) return thread;
 
   const extra = await paginateForward<RawThreadComment>(async (cursor) => {
-    const res = await graphql<RawReviewThreadCommentsResponse>(REVIEW_THREAD_COMMENTS_QUERY, {
-      threadId: thread.id,
-      ...(cursor ? { commentsCursor: cursor } : {}),
-    });
+    if (gate.remaining === 0) {
+      throw new GitHubRequestError(
+        "GitHub GraphQL rate limit remaining is 0; thread comment pagination incomplete",
+        { status: 403 },
+      );
+    }
+    const res = await graphqlWithRateLimit<RawReviewThreadCommentsResponse>(
+      REVIEW_THREAD_COMMENTS_QUERY,
+      {
+        threadId: thread.id,
+        ...(cursor ? { commentsCursor: cursor } : {}),
+      },
+    );
+    gate.remaining = res.rateLimit?.remaining;
     const node = res.data.node;
     if (!node?.comments) {
       const nodeType = node?.__typename ?? "null";

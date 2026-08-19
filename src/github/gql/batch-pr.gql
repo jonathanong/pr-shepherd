@@ -1,14 +1,6 @@
-query BatchPr(
-  $owner: String!
-  $repo: String!
-  $pr: Int!
-  $threadsCursor: String
-  $checksCursor: String
-  $commentsCursor: String
-  $changesRequestedCursor: String
-  $reviewSummariesCursor: String
-  $approvedReviewsCursor: String
-) {
+# First page only. Extra pages use batch-pr-page.gql so follow-ups do not
+# re-select every connection (GraphQL points scale with possible nodes).
+query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
       id
@@ -110,7 +102,7 @@ query BatchPr(
           state
         }
       }
-      reviewThreads(last: 100, before: $threadsCursor) {
+      reviewThreads(last: 100) {
         pageInfo {
           hasPreviousPage
           startCursor
@@ -148,7 +140,7 @@ query BatchPr(
           }
         }
       }
-      comments(last: 100, before: $commentsCursor) {
+      comments(last: 100) {
         pageInfo {
           hasPreviousPage
           startCursor
@@ -166,11 +158,7 @@ query BatchPr(
           createdAt
         }
       }
-      changesRequestedReviews: reviews(
-        states: CHANGES_REQUESTED
-        last: 50
-        before: $changesRequestedCursor
-      ) {
+      changesRequestedReviews: reviews(states: CHANGES_REQUESTED, last: 50) {
         pageInfo {
           hasPreviousPage
           startCursor
@@ -189,7 +177,7 @@ query BatchPr(
           }
         }
       }
-      reviewSummaries: reviews(states: COMMENTED, last: 50, before: $reviewSummariesCursor) {
+      reviewSummaries: reviews(states: COMMENTED, last: 50) {
         pageInfo {
           hasPreviousPage
           startCursor
@@ -209,7 +197,7 @@ query BatchPr(
       allReviews: reviews(last: 1) {
         totalCount
       }
-      approvedReviews: reviews(states: APPROVED, last: 50, before: $approvedReviewsCursor) {
+      approvedReviews: reviews(states: APPROVED, last: 50) {
         pageInfo {
           hasPreviousPage
           startCursor
@@ -232,8 +220,24 @@ query BatchPr(
           commit {
             oid
             committedDate
+            checkSuites(first: 50) {
+              pageInfo {
+                hasNextPage
+              }
+              nodes {
+                conclusion
+                workflowRun {
+                  databaseId
+                  event
+                  url
+                  workflow {
+                    name
+                  }
+                }
+              }
+            }
             statusCheckRollup {
-              contexts(first: 100, after: $checksCursor) {
+              contexts(first: 100) {
                 pageInfo {
                   hasNextPage
                   endCursor

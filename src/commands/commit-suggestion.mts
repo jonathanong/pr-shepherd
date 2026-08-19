@@ -1,10 +1,10 @@
 import { execFile as execFileCb } from "node:child_process";
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { promisify } from "node:util";
 
 import { getRepoInfo, getCurrentPrNumber, getCurrentBranch } from "../github/client.mts";
-import { fetchPrBatch } from "../github/batch.mts";
+import { fetchSuggestionThread } from "../github/suggestion-thread.mts";
 import { parseSuggestion, isCommittableSuggestion } from "../suggestions/parse.mts";
 import { buildUnifiedDiff } from "../suggestions/patch.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
@@ -46,7 +46,7 @@ export async function runCommitSuggestion(
   });
   const localHeadSha = localHeadOut.trim();
 
-  const { data } = await fetchPrBatch(prNumber, repo);
+  const data = await fetchSuggestionThread(prNumber, repo, opts.threadId);
   if (!data.headRepoWithOwner) {
     throw new ShepherdError(
       `PR #${prNumber} head repository is unavailable (fork may have been deleted).`,
@@ -67,7 +67,7 @@ export async function runCommitSuggestion(
       EXIT.UNAVAILABLE,
     );
   }
-  const thread = data.reviewThreads.find((t) => t.id === opts.threadId);
+  const thread = data.thread;
   if (!thread) {
     throw new ShepherdError(
       `Thread ${opts.threadId} not found on PR #${prNumber}.`,
@@ -119,7 +119,16 @@ export async function runCommitSuggestion(
   const startLine = thread.startLine ?? thread.line;
   const endLine = thread.line;
   const filePath = thread.path;
-  const originalContent = await readFile(resolve(getEffectiveCwd(), filePath), "utf8");
+  const cwd = getEffectiveCwd();
+  const resolvedPath = resolve(cwd, filePath);
+  const rel = relative(cwd, resolvedPath);
+  if (rel.startsWith("..") || rel === "") {
+    throw new ShepherdError(
+      `Thread ${opts.threadId} path escapes the working tree.`,
+      EXIT.UNAVAILABLE,
+    );
+  }
+  const originalContent = await readFile(resolvedPath, "utf8");
   const patch = buildUnifiedDiff({
     path: filePath,
     originalContent,

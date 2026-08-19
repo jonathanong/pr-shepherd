@@ -62,6 +62,7 @@ export interface RawPr extends RawPrMergeFields {
       commit: {
         oid: string;
         committedDate?: string;
+        checkSuites?: RawCheckSuites;
         statusCheckRollup: {
           contexts: {
             pageInfo: { hasNextPage: boolean; endCursor: string | null };
@@ -71,6 +72,19 @@ export interface RawPr extends RawPrMergeFields {
       };
     }>;
   };
+}
+
+interface RawCheckSuites {
+  pageInfo: { hasNextPage: boolean };
+  nodes: Array<{
+    conclusion: string | null;
+    workflowRun: {
+      databaseId: number | null;
+      event: string | null;
+      url: string | null;
+      workflow: { name: string | null } | null;
+    } | null;
+  }>;
 }
 
 interface RawAuthor {
@@ -141,21 +155,6 @@ export interface RawReviewSummary {
   author: RawAuthor | null;
   body: string;
   createdAt?: string;
-}
-
-export interface RawBranchProtectionRule {
-  requiresApprovingReviews: boolean;
-  requiredApprovingReviewCount: number;
-  requiresConversationResolution: boolean;
-  requiresStatusChecks: boolean;
-  requiredStatusCheckContexts: string[] | null;
-  requiresCodeOwnerReviews?: boolean;
-  requireLastPushApproval?: boolean;
-  requiresCommitSignatures?: boolean;
-  requiresLinearHistory?: boolean;
-  requiresStrictStatusChecks?: boolean;
-  requiresDeployments?: boolean;
-  requiredDeploymentEnvironments?: string[] | null;
 }
 
 export type RawContextNode =

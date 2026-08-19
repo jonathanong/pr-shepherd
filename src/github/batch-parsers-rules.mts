@@ -1,6 +1,6 @@
 import type { BranchRules, MergeQueueEntryStatus, StackStatus } from "../types.mts";
 import type { RawBaseRef, RawPrMergeFields, RawRepositoryRule } from "./batch-raw-rules.mts";
-import type { RawBranchProtectionRule } from "./batch-raw-types.mts";
+import type { RawBranchProtectionRule } from "./batch-raw-rules.mts";
 
 export const EMPTY_BRANCH_RULES: BranchRules = {
   requiredApprovingReviewCount: 0,

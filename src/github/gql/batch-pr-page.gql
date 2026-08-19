@@ -1,0 +1,189 @@
+# Follow-up pages only — skipped connections are omitted via @include so extra
+# pages do not re-pay the full batch-pr.gql node cost. Outstanding cursors are
+# sent together in one request.
+query BatchPrPage(
+  $owner: String!
+  $repo: String!
+  $pr: Int!
+  $includeThreads: Boolean!
+  $threadsCursor: String
+  $includeComments: Boolean!
+  $commentsCursor: String
+  $includeChangesRequested: Boolean!
+  $changesRequestedCursor: String
+  $includeReviewSummaries: Boolean!
+  $reviewSummariesCursor: String
+  $includeApprovedReviews: Boolean!
+  $approvedReviewsCursor: String
+  $includeChecks: Boolean!
+  $checksCursor: String
+) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $pr) {
+      reviewThreads(last: 100, before: $threadsCursor) @include(if: $includeThreads) {
+        pageInfo {
+          hasPreviousPage
+          startCursor
+        }
+        nodes {
+          id
+          isResolved
+          isOutdated
+          path
+          line
+          startLine
+          comments(first: 100) {
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            nodes {
+              id
+              isMinimized
+              url
+              authorAssociation
+              author {
+                __typename
+                login
+              }
+              pullRequestReview {
+                id
+              }
+              body
+              path
+              line
+              startLine
+              createdAt
+            }
+          }
+        }
+      }
+      comments(last: 100, before: $commentsCursor) @include(if: $includeComments) {
+        pageInfo {
+          hasPreviousPage
+          startCursor
+        }
+        nodes {
+          id
+          isMinimized
+          url
+          authorAssociation
+          author {
+            __typename
+            login
+          }
+          body
+          createdAt
+        }
+      }
+      changesRequestedReviews: reviews(
+        states: CHANGES_REQUESTED
+        last: 50
+        before: $changesRequestedCursor
+      ) @include(if: $includeChangesRequested) {
+        pageInfo {
+          hasPreviousPage
+          startCursor
+        }
+        nodes {
+          id
+          authorAssociation
+          author {
+            __typename
+            login
+          }
+          body
+          createdAt
+          commit {
+            oid
+          }
+        }
+      }
+      reviewSummaries: reviews(states: COMMENTED, last: 50, before: $reviewSummariesCursor)
+        @include(if: $includeReviewSummaries) {
+        pageInfo {
+          hasPreviousPage
+          startCursor
+        }
+        nodes {
+          id
+          isMinimized
+          authorAssociation
+          author {
+            __typename
+            login
+          }
+          body
+          createdAt
+        }
+      }
+      approvedReviews: reviews(states: APPROVED, last: 50, before: $approvedReviewsCursor)
+        @include(if: $includeApprovedReviews) {
+        pageInfo {
+          hasPreviousPage
+          startCursor
+        }
+        nodes {
+          id
+          isMinimized
+          authorAssociation
+          author {
+            __typename
+            login
+          }
+          body
+          createdAt
+        }
+      }
+      commits(last: 1) @include(if: $includeChecks) {
+        nodes {
+          commit {
+            oid
+            statusCheckRollup {
+              contexts(first: 100, after: $checksCursor) {
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                }
+                nodes {
+                  __typename
+                  ... on CheckRun {
+                    id
+                    name
+                    status
+                    conclusion
+                    detailsUrl
+                    completedAt
+                    startedAt
+                    title
+                    summary
+                    checkSuite {
+                      createdAt
+                      updatedAt
+                      workflowRun {
+                        event
+                        createdAt
+                        updatedAt
+                        workflow {
+                          name
+                          databaseId
+                        }
+                      }
+                    }
+                  }
+                  ... on StatusContext {
+                    context
+                    state
+                    createdAt
+                    targetUrl
+                    description
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

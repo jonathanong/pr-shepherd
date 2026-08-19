@@ -4,21 +4,23 @@
 
 ## The batch query
 
-**File:** `src/github/gql/batch-pr.gql`
+**File:** [`src/github/gql/batch-pr.gql`](../src/github/gql/batch-pr.gql)
 
-A single GraphQL query fetches everything shepherd needs per PR:
+A single GraphQL query fetches everything shepherd needs per PR on the first page:
 
 - PR state (`state`, `isDraft`, `mergeable`, `mergeStateStatus`, `reviewDecision`, `headRefOid`)
 - Base-branch rules that apply to this PR (`baseRef.rules` from active repository/org rulesets, plus classic `branchProtectionRule`) — no extra round-trip
 - Merge queue membership (`isInMergeQueue`, `isMergeQueueEnabled`, `mergeQueueEntry`) and GitHub stack membership (`stack`, `stackEntry`)
 - Review threads (paginated backward, see below)
 - PR comments (paginated backward)
-- Reviews / changes-requested reviews (paginated backward)
-- CI check runs (paginated forward, see below)
+- Reviews / changes-requested / commented / approved reviews (paginated backward)
+- CI check runs (paginated forward, see below) and `checkSuites` (first 50, used for startup-failure detection)
 
 This single round-trip replaces the 6–12 API calls the former multi-agent design needed.
 
-Startup-failure workflow runs and failed-job log excerpts are check-read supplements outside the batch query. GitHub can omit workflow runs that fail before job/check contexts exist from `statusCheckRollup`, so Shepherd queries the Actions REST runs endpoint by PR head SHA, keeps only runs associated with the current PR, and merges `startup_failure` runs into the check list before classification. For ordinary failing Actions jobs, Shepherd also fetches a bounded raw log excerpt from the matched job after classification/triage.
+`latestReviews` is capped at 100 and `reviewRequests` at 50; extra pages are not fetched. Copilot-in-progress detection can miss reviewers beyond those caps.
+
+Startup-failure workflow runs and failed-job log excerpts are check-read supplements. GraphQL `statusCheckRollup` can omit workflow runs that fail before job/check contexts exist. The batch query reads `commit.checkSuites` and merges suites whose `conclusion` is `STARTUP_FAILURE` into the check list. REST `GET /actions/runs?status=startup_failure` runs only when that CheckSuite page is missing or truncated (`hasNextPage`). For ordinary failing Actions jobs, Shepherd also fetches a bounded raw log excerpt from the matched job after classification/triage.
 
 ## Response integrity
 
@@ -28,7 +30,7 @@ Only mutation batches that can preserve independent per-alias successes opt in t
 
 ## Pagination strategy
 
-Shepherd uses cursor-based GraphQL pagination. The direction depends on the data type:
+Shepherd uses cursor-based GraphQL pagination. Extra pages do **not** re-run `batch-pr.gql`. They use [`src/github/gql/batch-pr-page.gql`](../src/github/gql/batch-pr-page.gql), a slim document that `@include`s only the connections that still have a cursor. Outstanding cursors are sent together in one request per round so a PR that needs another page of threads _and_ checks pays one follow-up, not two full snapshots.
 
 | Data type      | Direction                                     | Cursor field  | Why                                                                             |
 | -------------- | --------------------------------------------- | ------------- | ------------------------------------------------------------------------------- |
@@ -36,6 +38,10 @@ Shepherd uses cursor-based GraphQL pagination. The direction depends on the data
 | PR comments    | **Backward**                                  | `startCursor` | Same rationale as threads                                                       |
 | Reviews        | **Backward**                                  | `startCursor` | Same rationale                                                                  |
 | CI check runs  | **Forward** (`first: N, after: endCursor`)    | `endCursor`   | Checks are added chronologically; newest are at the end                         |
+
+Approved-review extra pages are opt-in (`paginateApprovedReviews`) so monitor ticks do not walk long approval histories.
+
+If `x-ratelimit-remaining` is 0 before a follow-up page, pagination throws rather than returning a silently truncated thread list (every thread must be surfaced at least once). Nested thread-comment extra pages (`review-thread-comments.gql`) run with a concurrency cap of 4 and likewise stop when remaining is 0.
 
 The generic paginator is in `github/pagination.mts`. It accepts a `direction` parameter and handles cursor tracking.
 
@@ -55,20 +61,32 @@ The generic paginator is in `github/pagination.mts`. It accepts a `direction` pa
 
 **Why:** Shepherd needs to verify GitHub has received a push before resolving threads. This GraphQL query polls `headRefOid` until it matches the expected SHA.
 
-### Startup-failure Actions runs
+### Startup-failure CheckSuites (GraphQL) + Actions REST fallback
 
-**When:** Every check sweep, using the PR `headRefOid`.
+**When:** GraphQL `statusCheckRollup` omits workflow runs that failed during startup before any jobs were created. The batch query reads `commit.checkSuites` and merges suites whose `conclusion` is `STARTUP_FAILURE` into the check list.
 
-**Why:** GraphQL `statusCheckRollup` may not include workflow runs that failed during startup before any jobs were created. Shepherd uses `GET /repos/{owner}/{repo}/actions/runs?head_sha=<sha>&status=startup_failure`, filters the repository-wide result to the current PR's `pull_requests` association, and reports matching runs with the raw run ID, event, URL, workflow name, and display title. This supplement is best-effort: if the Actions runs request fails, Shepherd logs a warning and continues with the GraphQL check data.
+**REST fallback:** `GET /repos/{owner}/{repo}/actions/runs?head_sha=<sha>&status=startup_failure` runs only when CheckSuites are missing or `hasNextPage` is true. The result is filtered to the current PR's `pull_requests` association. This supplement is best-effort: if the Actions runs request fails, Shepherd logs a warning and continues with the GraphQL check data. Extra REST pages stop if `x-ratelimit-remaining` is 0.
 
 ### Failed job log excerpts
 
 **When:** A failing, non-cancelled, non-startup-failure GitHub Actions check has a matched job from the Actions jobs API.
 
-**Why:** Some useful failure context, such as aggregate `needs` job results, is only present in job logs and not in GraphQL check-run fields or check annotations. Shepherd fetches `GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs` and includes a bounded raw excerpt in the failing-check output. This supplement is best-effort: if the log request fails or the log is empty, the field is omitted.
+**Why:** Some useful failure context, such as aggregate `needs` job results, is only present in job logs and not in GraphQL check-run fields or check annotations. Shepherd fetches `GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs` and includes a bounded raw excerpt in the failing-check output. This supplement is best-effort: if the log request fails or the log is empty, the field is omitted. Extra jobs-list pages stop if remaining is 0.
+
+### `commit-suggestion` thread query
+
+**When:** `commit-suggestion` / `build-suggestion-patch` needs PR head fields and one review thread.
+
+**Why:** A full `BATCH_PR_QUERY` snapshot would also pull CI, comments, and reviews. [`src/github/gql/commit-suggestion-thread.gql`](../src/github/gql/commit-suggestion-thread.gql) selects `headRefOid` / `headRefName` / `headRepository` plus `node(id: $threadId)`.
 
 ## Rate limiting
 
-`graphqlWithRateLimit` (in `github/client.mts`) parses the `x-ratelimit-remaining` header from GitHub's response and returns it in `BatchResult.rateLimit`. The value is available for callers to inspect; shepherd does not log warnings at any threshold by default.
+`graphqlWithRateLimit` and `restWithRateLimit` parse `x-ratelimit-remaining` / `x-ratelimit-limit` / `x-ratelimit-reset` (and `Retry-After` when present). Failed REST calls throw `GitHubRequestError` with that metadata.
 
-Each iterate tick fetches fresh data from the GitHub GraphQL API — there is no local cache. Rate limit consumption is one batched request per tick.
+Typical green wait tick (PR number passed, no extra pages, mergeable known, CheckSuites complete): **1 GraphQL batch**, no startup-failure REST.
+
+CI failing (one workflow run): those plus 1 REST jobs list (more if the run has >100 jobs) and an optional log excerpt.
+
+Large review PR: 1 batch + N slim page queries (combined cursors), not N full snapshots.
+
+Each iterate tick fetches fresh data from the GitHub GraphQL API — there is no local cache.

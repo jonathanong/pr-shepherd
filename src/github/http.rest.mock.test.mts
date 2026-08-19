@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { registerHooks, jsonOk, mockFetch } from "../../test-helpers/github/http.test-support.mts";
-import { rest } from "./http.mts";
+import { rest, restWithRateLimit } from "./http.mts";
 
 registerHooks();
 
@@ -76,5 +76,44 @@ describe("rest", () => {
       });
 
     await expect(rest("GET", "/repos/o/r")).rejects.toThrow(/500/);
+  });
+});
+
+describe("restWithRateLimit", () => {
+  beforeEach(() => {
+    process.env["GH_TOKEN"] = "tok";
+  });
+
+  it("returns parsed JSON and rate-limit headers", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({
+        "content-type": "application/json",
+        "x-ratelimit-remaining": "42",
+        "x-ratelimit-limit": "5000",
+        "x-ratelimit-reset": "99",
+      }),
+      json: () => Promise.resolve({ id: 1 }),
+    });
+    const result = await restWithRateLimit<{ id: number }>("GET", "/repos/o/r/pulls/1");
+    expect(result.data).toEqual({ id: 1 });
+    expect(result.rateLimit).toEqual({ remaining: 42, limit: 5000, resetAt: 99 });
+  });
+
+  it("returns undefined data when there is no JSON content-type", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 204,
+      headers: new Headers({
+        "x-ratelimit-remaining": "1",
+        "x-ratelimit-limit": "5000",
+        "x-ratelimit-reset": "99",
+      }),
+      text: () => Promise.resolve(""),
+    });
+    const result = await restWithRateLimit("POST", "/repos/o/r/actions/runs/1/cancel");
+    expect(result.data).toBeUndefined();
+    expect(result.rateLimit?.remaining).toBe(1);
   });
 });
