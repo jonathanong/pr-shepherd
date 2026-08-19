@@ -1,4 +1,17 @@
-import type { RawBranchProtectionRule } from "./batch-raw-types.mts";
+export interface RawBranchProtectionRule {
+  requiresApprovingReviews: boolean;
+  requiredApprovingReviewCount: number;
+  requiresConversationResolution: boolean;
+  requiresStatusChecks: boolean;
+  requiredStatusCheckContexts: string[] | null;
+  requiresCodeOwnerReviews?: boolean;
+  requireLastPushApproval?: boolean;
+  requiresCommitSignatures?: boolean;
+  requiresLinearHistory?: boolean;
+  requiresStrictStatusChecks?: boolean;
+  requiresDeployments?: boolean;
+  requiredDeploymentEnvironments?: string[] | null;
+}
 
 interface RawMergeQueueEntry {
   position: number;
