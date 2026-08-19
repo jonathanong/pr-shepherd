@@ -44,7 +44,7 @@ export function forwardCursor(
   return undefined;
 }
 
-export function prependConnection<T>(
+function prependConnection<T>(
   dest: T[],
   conn: RawConnection<T> | undefined,
   pr: number,
@@ -53,7 +53,7 @@ export function prependConnection<T>(
   dest.unshift(...conn.nodes);
 }
 
-export function takeCheckPage(
+function takeCheckPage(
   pr2: NonNullable<RawPageResponse["repository"]["pullRequest"]>,
   firstOid: string | undefined,
   pageCount: number,
