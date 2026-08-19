@@ -44,11 +44,7 @@ export function forwardCursor(
   return undefined;
 }
 
-function prependConnection<T>(
-  dest: T[],
-  conn: RawConnection<T> | undefined,
-  pr: number,
-): void {
+function prependConnection<T>(dest: T[], conn: RawConnection<T> | undefined, pr: number): void {
   if (!conn) throw new Error(`PR #${pr} not found`);
   dest.unshift(...conn.nodes);
 }
