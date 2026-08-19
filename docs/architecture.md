@@ -46,7 +46,7 @@ shepherd/
 │   │   └── stall.mts      # stall-timeout guard
 │   ├── log-file.mts       # prints the per-worktree debug log path
 │   ├── mark-files-as-viewed.mts  # marks changed PR files viewed in GitHub
-│   ├── poll.mts           # repeats iterate while action is WAIT
+│   ├── poll.mts           # repeats iterate while WAIT; debounce window after first FIX_CODE
 │   ├── ready-delay.mts    # ready-delay state machine (ready-since.txt marker)
 │   ├── resolve.mts        # resolve mutations (threads, comments, reviews)
 │

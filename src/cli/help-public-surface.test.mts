@@ -14,6 +14,9 @@ describe("public CLI help surface", () => {
     }
     expect(USAGE.default).toContain("pr-shepherd [PR]");
     expect(USAGE.default).not.toContain("pr-shepherd poll");
+    expect(USAGE.top).toContain("--debounce");
+    expect(USAGE.default).toContain("--debounce");
+    expect(USAGE.poll).toContain("--debounce");
   });
 
   it("resolves nested help pages without doing command I/O", () => {

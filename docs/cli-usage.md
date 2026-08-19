@@ -19,15 +19,16 @@ pr-shepherd admin log-file [--format text|json]
 
 `PR` may be a number or GitHub pull request URL. When omitted, Shepherd infers the current branch's open PR.
 
-`pr-shepherd [PR]` is the canonical bounded poll dispatcher. It repeats `iterate` while the action is `WAIT`, then prints the first `MARK_READY`, `FIX_CODE`, `CANCEL`, or `ESCALATE` result. Use `iterate` when the caller owns recurrence.
+`pr-shepherd [PR]` is the canonical bounded poll dispatcher. It repeats `iterate` while the action is `WAIT`, then prints the first `MARK_READY`, `CANCEL`, or `ESCALATE` result. `FIX_CODE` is delayed by `--debounce` (default 1m): poll keeps iterating at `--interval` for that window, then returns one later tick. Use `iterate` when the caller owns recurrence.
 
 ```sh
 pr-shepherd 42 --interval 60s --timeout 4.5m --quiet-status
 pr-shepherd 42 --until-terminal --quiet-status
+pr-shepherd 42 --debounce 5m
 pr-shepherd iterate 42 --ready-delay 15m
 ```
 
-The polling flags are `--interval`, `--timeout`, `--quiet-status`, and `--until-terminal`. Iterate flags are `--ready-delay`, `--stall-timeout`, `--no-auto-mark-ready`, `--no-auto-cancel-actionable`, `--format`, and `--verbose`. Durations accept `s`, `m`, and `h`; bare polling durations are seconds and bare iterate durations are minutes.
+The polling flags are `--interval`, `--timeout`, `--debounce`, `--quiet-status`, and `--until-terminal`. `--debounce` (default 1m, `0` disables) is a settle window after the first `FIX_CODE`: poll keeps iterating at `--interval`, then runs one more tick after the window and returns that result so late review comments and CI failures batch into the same agent-facing tick. `--timeout` bounds `WAIT` ticks only and does not cut an in-flight debounce short. Iterate flags are `--ready-delay`, `--stall-timeout`, `--no-auto-mark-ready`, `--no-auto-cancel-actionable`, `--format`, and `--verbose`. Durations accept `s`, `m`, and `h`; bare polling durations are seconds and bare iterate durations are minutes.
 
 `admin clean` removes local state and `admin log-file` prints the append-only debug log path. They are shell administration commands, not MCP tools.
 

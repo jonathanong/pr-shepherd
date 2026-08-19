@@ -21,6 +21,7 @@ const FLAGS_WITH_VALUES = new Set([
   "--dismiss-review-ids",
   "--interval",
   "--timeout",
+  "--debounce",
   "--match",
 ]);
 

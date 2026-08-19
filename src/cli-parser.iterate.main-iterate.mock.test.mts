@@ -48,6 +48,15 @@ describe("main — default (poll)", () => {
     );
   });
 
+  it("accepts --debounce on the default path", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
+
+    await main(["node", "shepherd", "42", "--debounce", "5m"]);
+
+    expect(mockRunIterate).toHaveBeenCalledTimes(1);
+    expect(process.exitCode).toBe(EXIT.OK);
+  });
+
   it("accepts --interval and --timeout on the default path", async () => {
     mockRunIterate
       .mockResolvedValueOnce(makeIterateResult("wait"))

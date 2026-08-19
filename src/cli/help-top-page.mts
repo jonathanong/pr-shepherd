@@ -42,7 +42,8 @@ Iterate flags:
 
 Polling flags:
   --interval <duration>          Delay between WAIT ticks. Bare number = seconds. Default: 60s.
-  --timeout <duration>           Poll wall-clock cap. Bare number = seconds. Default: 4.5m.
+  --timeout <duration>           Poll wall-clock cap for WAIT ticks. Bare number = seconds. Default: 4.5m.
+  --debounce <duration>          Settle window after first FIX_CODE before returning. Bare number = seconds. Default: 60s. 0 disables.
   --quiet-status                 During WAIT polling, print only changed status snapshots.
   --until-terminal               Continue through WAIT/MARK_READY until FIX_CODE/CANCEL/ESCALATE.
 

@@ -97,6 +97,26 @@ function makeMarkReadyResult(): IterateResult {
   } as unknown as IterateResult;
 }
 
+function makeEscalateResult(): IterateResult {
+  return {
+    ...makeWaitResult({
+      status: "UNRESOLVED_COMMENTS",
+      mergeStateStatus: "BLOCKED",
+      mergeStatus: "BLOCKED",
+      reviewDecision: "CHANGES_REQUESTED",
+    }),
+    action: "escalate",
+    escalate: {
+      triggers: ["stall-timeout"],
+      unresolvedThreads: [],
+      ambiguousComments: [],
+      changesRequestedReviews: [],
+      suggestion: "Escalate to a human.",
+      humanMessage: "Shepherd stalled on PR #42.",
+    },
+  } as unknown as IterateResult;
+}
+
 function makeFixCodeResult(): IterateResult {
   return {
     action: "fix_code",
@@ -164,5 +184,6 @@ export {
   makeCancelResult,
   makeMarkReadyResult,
   makeFixCodeResult,
+  makeEscalateResult,
   registerPollHooks,
 };

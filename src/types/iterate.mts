@@ -196,4 +196,5 @@ export interface IterateCommandOptions extends GlobalOptions {
   stallTimeoutSeconds?: number;
   /** Case-insensitive workflow/check glob patterns Shepherd must not cancel. */
   neverCancelRuns?: string[];
+  persistSeen?: boolean; // false skips seen-marker writes (poll discarded ticks)
 }

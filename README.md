@@ -93,6 +93,7 @@ pr-shepherd 42                         # poll until non-WAIT or timeout
 pr-shepherd 42 --interval 60s --timeout 270s
 pr-shepherd 42 --quiet-status          # print only changed WAIT status snapshots
 pr-shepherd 42 --until-terminal        # continue through WAIT/MARK_READY until work or terminal state
+pr-shepherd 42 --debounce 5m           # wait 5m after first FIX_CODE, then return one batched tick
 pr-shepherd 42 --ready-delay 15m
 pr-shepherd iterate 42                 # single tick
 ```

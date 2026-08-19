@@ -62,6 +62,6 @@ User                    Active Goal             pr-shepherd MCP
 
 ## Notes
 
-- The active goal/runtime chooses when to call `iterate` for a WAIT-state recheck. The shell-only default `pr-shepherd [PR]` remains the bounded polling option.
+- The active goal/runtime chooses when to call `iterate` for a WAIT-state recheck. The shell-only default `pr-shepherd [PR]` remains the bounded polling option. After the first `FIX_CODE`, that poll command waits `--debounce` (default 1m) while still iterating at `--interval`, then returns the post-window tick so late review comments and CI failures batch into one agent-facing result.
 - Code changes (`fix_code`, rebase) are handled inline by the active goal — no subagent is spawned.
 - The ready-delay (default 10 minutes) is read from `watch.readyDelayMinutes` in `.pr-shepherdrc.yml`. See [ready-delay.md](ready-delay.md) and [configuration.md](configuration.md).

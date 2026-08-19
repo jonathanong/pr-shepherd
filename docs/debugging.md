@@ -78,7 +78,7 @@ rm $TMPDIR/pr-shepherd-state/acme-myrepo/42/ready-since.txt
 
 **Fix options:**
 
-1. Pause or cancel the monitor loop if API budget is tight, or increase `poll --interval` / reduce `poll --timeout` for explicit poll sessions.
+1. Pause or cancel the monitor loop if API budget is tight, or increase `poll --interval` / reduce `poll --timeout` / `--debounce` for explicit poll sessions.
 2. Check rate-limit metadata in JSON output or the per-worktree log.
 3. For `resolve` mutate output, retry only the IDs listed under `Not resolved`,
    `Not minimized`, or `Not dismissed`; IDs listed as completed already succeeded.

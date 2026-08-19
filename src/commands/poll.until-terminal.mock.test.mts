@@ -77,6 +77,7 @@ describe("runPoll — until-terminal mode", () => {
       format: "text",
       intervalSeconds: 30,
       timeoutSeconds: 300,
+      debounceSeconds: 0,
       untilTerminal: true,
     });
 
