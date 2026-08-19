@@ -51,6 +51,7 @@ export function projectIterateLean(
       }),
     ...(result.baseBranch && { baseBranch: result.baseBranch }),
     ...(result.branchProtection !== null && { branchProtection: result.branchProtection }),
+    ...(result.mergeRequirements && { mergeRequirements: result.mergeRequirements }),
     ...(hasActivity && {
       activity: {
         commitCount: activity.commitCount,

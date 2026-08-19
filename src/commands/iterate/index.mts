@@ -13,6 +13,7 @@ import {
   buildWaitLog,
   buildSuppressedCheckFields,
   buildTerminalCancelResult,
+  blockedCancelNote,
 } from "./helpers.mts";
 import { classifyReviewSummaries } from "./classify.mts";
 import { applyStallGuard } from "./stall.mts";
@@ -128,6 +129,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     summary: buildSummary(report),
     baseBranch: report.baseBranch,
     branchProtection: report.branchProtection,
+    mergeRequirements: report.mergeStatus.mergeRequirements,
     checks: buildRelevantChecks(report),
     inProgressChecks: buildActiveChecks(report),
     ...buildSuppressedCheckFields(report),
@@ -136,11 +138,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
 
   if (readyState.shouldCancel) {
     await clearStallState(stallKey);
-    let cancelNote: string;
-    if (base.mergeStatus !== "BLOCKED") cancelNote = "has been ready for review";
-    else if (base.reviewDecision === "REVIEW_REQUIRED") cancelNote = "is awaiting human review";
-    else if (base.reviewDecision === "APPROVED") cancelNote = "is awaiting additional approvals";
-    else cancelNote = "is awaiting human review or branch protection resolution";
+    const cancelNote = blockedCancelNote(base);
     return {
       ...base,
       action: "cancel",

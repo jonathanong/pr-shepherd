@@ -58,7 +58,9 @@ GitHub sometimes updates `mergeStateStatus` to `'DRAFT'` before the `isDraft` bo
 - `mergeStatus.status === "BLOCKED"` (from `deriveMergeStatus`).
 - `mergeStatus.blockingBotReviewInProgress === false` — a bot review still pending is shepherd's problem, not a hand-off case.
 
-The specific reason GitHub is BLOCKED (`reviewDecision === "REVIEW_REQUIRED"`, `"APPROVED"` with insufficient approvals, signed-commit policy, etc.) is not consulted — it is informational only, surfaced in the iterate output for human/agent readers but not used to gate state. Shepherd cannot resolve any of these on its own.
+The specific reason GitHub is BLOCKED (`reviewDecision === "REVIEW_REQUIRED"`, `"APPROVED"` with insufficient approvals, signed-commit policy, etc.) is not consulted — it is informational only. Shepherd cannot resolve any of these on its own.
+
+After each sweep, `deriveMergeRequirements` folds classic branch protection and the PR's applicable rulesets together with current PR state (approvals, unresolved threads, merge-queue entry, stack membership) into `mergeRequirements`. Iterate prints that snapshot so agents can see whether approvals, conversation resolution, an up-to-date branch, merge queue, stacks, etc. are actually required — without treating `reviewDecision` as “must wait for an approval.”
 
 In this case `mergeStatus.status` in the report is still `BLOCKED` (truthful about the GitHub merge state), but the top-level `ShepherdStatus` is `READY`, signalling that shepherd has nothing more to do. The ready-delay timer starts, and `action: cancel` is emitted after it elapses.
 

@@ -4,6 +4,7 @@
 
 import type { ReviewThreadComment } from "./review-thread.mts";
 import type { PrActivitySummary } from "./activity.mts";
+import type { BatchPrMergeFields, MergeRequirements } from "./merge-requirements.mts";
 
 // ---------------------------------------------------------------------------
 // GitHub primitives
@@ -99,12 +100,7 @@ export interface ReviewThread {
   edited?: boolean;
 }
 
-/**
- * Parsed GitHub ```suggestion block, attached to a review thread when the
- * reviewer left a machine-applicable replacement. The `lines` are the
- * exact text the agent (or the CLI's commit-suggestions path) would write
- * into the file in place of lines [startLine..endLine].
- */
+/** Parsed GitHub ```suggestion block attached to a review thread. */
 export interface SuggestionBlock {
   /** 1-indexed inclusive start line. Equal to `endLine` for single-line suggestions. */
   startLine: number;
@@ -169,9 +165,10 @@ export interface MergeStatusResult {
   reviewDecision: ReviewDecision;
   blockingBotReviewInProgress: boolean;
   mergeStateStatus: MergeStateStatus;
+  mergeRequirements?: MergeRequirements;
 }
 
-export interface BatchPrData {
+export interface BatchPrData extends BatchPrMergeFields {
   nodeId: string;
   number: number;
   state: "OPEN" | "CLOSED" | "MERGED";
