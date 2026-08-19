@@ -104,7 +104,7 @@ describe("fix_code — check annotation seen markers", () => {
               name: "ci",
               status: "COMPLETED",
               conclusion: "FAILURE",
-              detailsUrl: null,
+              detailsUrl: "https://checks.example/1",
               event: "pull_request",
               runId: "1",
               category: "failing",
