@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import { rest, restText } from "../github/http.mts";
+import { restWithRateLimit, restText } from "../github/http.mts";
 import type { CheckRun, ClassifiedCheck, TriagedCheck } from "../types.mts";
 import type { RepoInfo } from "../github/client.mts";
 
@@ -68,7 +68,7 @@ async function fetchStartupFailureChecksUncached(
   const MAX_RUN_PAGES = 10;
   const checks: CheckRun[] = [];
   for (let page = 1; page <= MAX_RUN_PAGES; page++) {
-    const data = await rest<WorkflowRunsResponse>(
+    const { data, rateLimit } = await restWithRateLimit<WorkflowRunsResponse>(
       "GET",
       `/repos/${owner}/${name}/actions/runs?head_sha=${encodeURIComponent(headSha)}&status=${STARTUP_FAILURE_STATUS}&per_page=${perPage}&page=${page}`,
     );
@@ -77,6 +77,12 @@ async function fetchStartupFailureChecksUncached(
         .filter((run) => runBelongsToPr(run, prNumber, headSha))
         .map(workflowRunToCheckRun),
     );
+    if (rateLimit?.remaining === 0) {
+      process.stderr.write(
+        `pr-shepherd: REST rate limit remaining is 0 while listing startup-failure runs for ${headSha} — detection may be incomplete\n`,
+      );
+      break;
+    }
     if (data.workflow_runs.length < perPage) break;
     if (page === MAX_RUN_PAGES) {
       process.stderr.write(
@@ -173,11 +179,17 @@ async function fetchJobsUncached(
         );
         break;
       }
-      const data = await rest<JobsResponse>(
+      const { data, rateLimit } = await restWithRateLimit<JobsResponse>(
         "GET",
         `/repos/${owner}/${name}/actions/runs/${runId}/jobs?filter=latest&per_page=${perPage}&page=${page}`,
       );
       allJobs.push(...data.jobs);
+      if (rateLimit?.remaining === 0) {
+        process.stderr.write(
+          `pr-shepherd: REST rate limit remaining is 0 while listing jobs for run ${runId} — triage may be incomplete\n`,
+        );
+        break;
+      }
       if (data.jobs.length < perPage) break;
     }
   } catch {

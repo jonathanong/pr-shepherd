@@ -34,19 +34,32 @@ vi.mock("../../src/github/client.mts", () => ({
   getCurrentBranch: vi.fn().mockResolvedValue("feature/foo"),
 }));
 
-vi.mock("../../src/github/batch.mts", () => ({
-  fetchPrBatch: vi.fn(),
+vi.mock("../../src/github/suggestion-thread.mts", () => ({
+  fetchSuggestionThread: vi.fn(),
 }));
 
 import { runCommitSuggestion } from "../../src/commands/commit-suggestion.mts";
 import { getCurrentBranch } from "../../src/github/client.mts";
-import { fetchPrBatch } from "../../src/github/batch.mts";
+import { fetchSuggestionThread } from "../../src/github/suggestion-thread.mts";
 import { readFile } from "node:fs/promises";
 import type { ReviewThread, BatchPrData } from "../../src/types.mts";
+import type { SuggestionThreadResult } from "../../src/github/suggestion-thread.mts";
 
 const mockGetCurrentBranch = vi.mocked(getCurrentBranch);
-const mockFetchBatch = vi.mocked(fetchPrBatch);
+const mockFetchSuggestionThread = vi.mocked(fetchSuggestionThread);
 const mockReadFile = vi.mocked(readFile);
+
+const mockFetchBatch = {
+  mockResolvedValue(value: { data: BatchPrData; rateLimit?: unknown }): void {
+    const data = value.data;
+    mockFetchSuggestionThread.mockResolvedValue({
+      headRefOid: data.headRefOid,
+      headRefName: data.headRefName,
+      headRepoWithOwner: data.headRepoWithOwner,
+      thread: data.reviewThreads[0] ?? null,
+    } satisfies SuggestionThreadResult);
+  },
+};
 
 function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
   return {
@@ -113,7 +126,7 @@ function makeGitSuccess(stdout = ""): Promise<{ stdout: string; stderr: string }
 export {
   FILE_CONTENT,
   GLOBAL_OPTS,
-  fetchPrBatch,
+  fetchSuggestionThread,
   getCurrentBranch,
   makeBatch,
   makeGitSuccess,

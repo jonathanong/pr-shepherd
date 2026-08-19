@@ -1,59 +1,26 @@
-# First page only. Extra pages use batch-pr-page.gql so follow-ups do not
-# re-select every connection (GraphQL points scale with possible nodes).
-query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
+# Follow-up pages only — skipped connections are omitted via @include so extra
+# pages do not re-pay the full batch-pr.gql node cost. Outstanding cursors are
+# sent together in one request.
+query BatchPrPage(
+  $owner: String!
+  $repo: String!
+  $pr: Int!
+  $includeThreads: Boolean!
+  $threadsCursor: String
+  $includeComments: Boolean!
+  $commentsCursor: String
+  $includeChangesRequested: Boolean!
+  $changesRequestedCursor: String
+  $includeReviewSummaries: Boolean!
+  $reviewSummariesCursor: String
+  $includeApprovedReviews: Boolean!
+  $approvedReviewsCursor: String
+  $includeChecks: Boolean!
+  $checksCursor: String
+) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
-      id
-      number
-      state
-      isDraft
-      mergeable
-      mergeStateStatus
-      reviewDecision
-      headRefOid
-      headRefName
-      headRepository {
-        nameWithOwner
-      }
-      baseRefName
-      baseRef {
-        branchProtectionRule {
-          requiresApprovingReviews
-          requiredApprovingReviewCount
-          requiresConversationResolution
-          requiresStatusChecks
-          requiredStatusCheckContexts
-        }
-      }
-      # Not paginated — capped at 50; PRs with more pending reviewers truncate silently.
-      reviewRequests(last: 50) {
-        nodes {
-          requestedReviewer {
-            ... on Bot {
-              login
-            }
-            ... on User {
-              login
-            }
-            ... on Team {
-              name
-            }
-          }
-        }
-      }
-      # Not paginated — capped at 100 distinct reviewers; PRs with more are not plausible
-      # in practice. Used to derive which CHANGES_REQUESTED rows are superseded by a later
-      # APPROVED/DISMISSED review from the same author.
-      latestReviews(last: 100) {
-        nodes {
-          author {
-            __typename
-            login
-          }
-          state
-        }
-      }
-      reviewThreads(last: 100) {
+      reviewThreads(last: 100, before: $threadsCursor) @include(if: $includeThreads) {
         pageInfo {
           hasPreviousPage
           startCursor
@@ -91,7 +58,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
           }
         }
       }
-      comments(last: 100) {
+      comments(last: 100, before: $commentsCursor) @include(if: $includeComments) {
         pageInfo {
           hasPreviousPage
           startCursor
@@ -109,7 +76,11 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
           createdAt
         }
       }
-      changesRequestedReviews: reviews(states: CHANGES_REQUESTED, last: 50) {
+      changesRequestedReviews: reviews(
+        states: CHANGES_REQUESTED
+        last: 50
+        before: $changesRequestedCursor
+      ) @include(if: $includeChangesRequested) {
         pageInfo {
           hasPreviousPage
           startCursor
@@ -128,7 +99,8 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
           }
         }
       }
-      reviewSummaries: reviews(states: COMMENTED, last: 50) {
+      reviewSummaries: reviews(states: COMMENTED, last: 50, before: $reviewSummariesCursor)
+        @include(if: $includeReviewSummaries) {
         pageInfo {
           hasPreviousPage
           startCursor
@@ -145,10 +117,8 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
           createdAt
         }
       }
-      allReviews: reviews(last: 1) {
-        totalCount
-      }
-      approvedReviews: reviews(states: APPROVED, last: 50) {
+      approvedReviews: reviews(states: APPROVED, last: 50, before: $approvedReviewsCursor)
+        @include(if: $includeApprovedReviews) {
         pageInfo {
           hasPreviousPage
           startCursor
@@ -165,30 +135,12 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
           createdAt
         }
       }
-      commits(last: 1) {
-        totalCount
+      commits(last: 1) @include(if: $includeChecks) {
         nodes {
           commit {
             oid
-            committedDate
-            checkSuites(first: 50) {
-              pageInfo {
-                hasNextPage
-              }
-              nodes {
-                conclusion
-                workflowRun {
-                  databaseId
-                  event
-                  url
-                  workflow {
-                    name
-                  }
-                }
-              }
-            }
             statusCheckRollup {
-              contexts(first: 100) {
+              contexts(first: 100, after: $checksCursor) {
                 pageInfo {
                   hasNextPage
                   endCursor

@@ -63,6 +63,7 @@ export interface RawPr {
       commit: {
         oid: string;
         committedDate?: string;
+        checkSuites?: RawCheckSuites;
         statusCheckRollup: {
           contexts: {
             pageInfo: { hasNextPage: boolean; endCursor: string | null };
@@ -72,6 +73,19 @@ export interface RawPr {
       };
     }>;
   };
+}
+
+export interface RawCheckSuites {
+  pageInfo: { hasNextPage: boolean };
+  nodes: Array<{
+    conclusion: string | null;
+    workflowRun: {
+      databaseId: number | null;
+      event: string | null;
+      url: string | null;
+      workflow: { name: string | null } | null;
+    } | null;
+  }>;
 }
 
 interface RawAuthor {

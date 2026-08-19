@@ -1,0 +1,37 @@
+query CommitSuggestionThread($owner: String!, $repo: String!, $pr: Int!, $threadId: ID!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $pr) {
+      headRefOid
+      headRefName
+      headRepository {
+        nameWithOwner
+      }
+    }
+  }
+  node(id: $threadId) {
+    ... on PullRequestReviewThread {
+      id
+      isResolved
+      isOutdated
+      path
+      line
+      startLine
+      comments(first: 1) {
+        nodes {
+          isMinimized
+          url
+          authorAssociation
+          author {
+            __typename
+            login
+          }
+          body
+          path
+          line
+          startLine
+          createdAt
+        }
+      }
+    }
+  }
+}

@@ -4,7 +4,6 @@ import {
   REPO,
   makeRawPr,
   makeResponse,
-  mockGraphql,
   mockGraphqlWithRateLimit,
 } from "../../test-helpers/github/batch.test-support.mts";
 import { fetchPrBatch } from "./batch.mts";
@@ -78,8 +77,9 @@ describe("fetchPrBatch — checks pagination", () => {
         ],
       },
     });
-    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
-    mockGraphql.mockResolvedValue(makeResponse(nextPage));
+    mockGraphqlWithRateLimit
+      .mockResolvedValueOnce(makeResponse(firstPage))
+      .mockResolvedValueOnce(makeResponse(nextPage));
 
     const { data } = await fetchPrBatch(42, REPO);
     expect(data.checks.map((c) => c.name)).toEqual(["check-1", "check-2"]);
@@ -114,8 +114,9 @@ describe("fetchPrBatch — checks pagination", () => {
     const nullRollupPage = makeRawPr({
       commits: { nodes: [{ commit: { statusCheckRollup: null } }] },
     });
-    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
-    mockGraphql.mockResolvedValue(makeResponse(nullRollupPage));
+    mockGraphqlWithRateLimit
+      .mockResolvedValueOnce(makeResponse(firstPage))
+      .mockResolvedValueOnce(makeResponse(nullRollupPage));
 
     await expect(fetchPrBatch(42, REPO)).rejects.toThrow("Check-context pagination interrupted");
   });
@@ -163,8 +164,9 @@ describe("fetchPrBatch — checks pagination", () => {
         ],
       },
     });
-    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
-    mockGraphql.mockResolvedValue(makeResponse(nextPage));
+    mockGraphqlWithRateLimit
+      .mockResolvedValueOnce(makeResponse(firstPage))
+      .mockResolvedValueOnce(makeResponse(nextPage));
 
     await expect(fetchPrBatch(42, REPO)).rejects.toThrow("head commit changed");
   });

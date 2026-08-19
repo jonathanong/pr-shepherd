@@ -4,7 +4,6 @@ import {
   REPO,
   makeRawPr,
   makeResponse,
-  mockGraphql,
   mockGraphqlWithRateLimit,
 } from "../../test-helpers/github/batch.test-support.mts";
 import { fetchPrBatch } from "./batch.mts";
@@ -25,8 +24,9 @@ describe("fetchPrBatch — changesRequestedReviews pagination", () => {
         nodes: [{ id: "PRR_CR_1", author: { login: "bob" }, body: "Fix that" }],
       },
     });
-    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
-    mockGraphql.mockResolvedValue(makeResponse(prevPage));
+    mockGraphqlWithRateLimit
+      .mockResolvedValueOnce(makeResponse(firstPage))
+      .mockResolvedValueOnce(makeResponse(prevPage));
 
     const { data } = await fetchPrBatch(42, REPO);
     expect(data.changesRequestedReviews.map((r) => r.id)).toEqual(["PRR_CR_1", "PRR_CR_2"]);

@@ -4,7 +4,6 @@ import {
   REPO,
   makeRawPr,
   makeResponse,
-  mockGraphql,
   mockGraphqlWithRateLimit,
 } from "../../test-helpers/github/batch.test-support.mts";
 import { fetchPrBatch } from "./batch.mts";
@@ -19,8 +18,9 @@ describe("fetchPrBatch — PR not found in pagination callbacks", () => {
         nodes: [{ id: "t-2", isResolved: false, isOutdated: false, comments: { nodes: [] } }],
       },
     });
-    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
-    mockGraphql.mockResolvedValue(makeResponse(null));
+    mockGraphqlWithRateLimit
+      .mockResolvedValueOnce(makeResponse(firstPage))
+      .mockResolvedValueOnce(makeResponse(null));
     await expect(fetchPrBatch(42, REPO)).rejects.toThrow("PR #42 not found");
   });
 
@@ -31,8 +31,9 @@ describe("fetchPrBatch — PR not found in pagination callbacks", () => {
         nodes: [],
       },
     });
-    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
-    mockGraphql.mockResolvedValue(makeResponse(null));
+    mockGraphqlWithRateLimit
+      .mockResolvedValueOnce(makeResponse(firstPage))
+      .mockResolvedValueOnce(makeResponse(null));
     await expect(fetchPrBatch(42, REPO)).rejects.toThrow("PR #42 not found");
   });
 
@@ -43,8 +44,9 @@ describe("fetchPrBatch — PR not found in pagination callbacks", () => {
         nodes: [],
       },
     });
-    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
-    mockGraphql.mockResolvedValue(makeResponse(null));
+    mockGraphqlWithRateLimit
+      .mockResolvedValueOnce(makeResponse(firstPage))
+      .mockResolvedValueOnce(makeResponse(null));
     await expect(fetchPrBatch(42, REPO)).rejects.toThrow("PR #42 not found");
   });
 
@@ -55,8 +57,9 @@ describe("fetchPrBatch — PR not found in pagination callbacks", () => {
         nodes: [],
       },
     });
-    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
-    mockGraphql.mockResolvedValue(makeResponse(null));
+    mockGraphqlWithRateLimit
+      .mockResolvedValueOnce(makeResponse(firstPage))
+      .mockResolvedValueOnce(makeResponse(null));
     await expect(fetchPrBatch(42, REPO)).rejects.toThrow("PR #42 not found");
   });
 });

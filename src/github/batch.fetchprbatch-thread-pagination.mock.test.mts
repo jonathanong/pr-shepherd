@@ -4,7 +4,6 @@ import {
   REPO,
   makeRawPr,
   makeResponse,
-  mockGraphql,
   mockGraphqlWithRateLimit,
 } from "../../test-helpers/github/batch.test-support.mts";
 import { fetchPrBatch } from "./batch.mts";
@@ -25,8 +24,9 @@ describe("fetchPrBatch — thread pagination", () => {
         nodes: [{ id: "t-1", isResolved: false, isOutdated: false, comments: { nodes: [] } }],
       },
     });
-    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
-    mockGraphql.mockResolvedValue(makeResponse(prevPage));
+    mockGraphqlWithRateLimit
+      .mockResolvedValueOnce(makeResponse(firstPage))
+      .mockResolvedValueOnce(makeResponse(prevPage));
 
     const { data } = await fetchPrBatch(42, REPO);
     expect(data.reviewThreads.map((t) => t.id)).toEqual(["t-1", "t-2"]);
@@ -64,8 +64,7 @@ describe("fetchPrBatch — thread pagination", () => {
         ],
       },
     });
-    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
-    mockGraphql.mockResolvedValue({
+    mockGraphqlWithRateLimit.mockResolvedValueOnce(makeResponse(firstPage)).mockResolvedValueOnce({
       data: {
         node: {
           comments: {
@@ -106,8 +105,9 @@ describe("fetchPrBatch — thread pagination", () => {
         ],
       },
     });
-    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
-    mockGraphql.mockResolvedValue({ data: { node: null } });
+    mockGraphqlWithRateLimit
+      .mockResolvedValueOnce(makeResponse(firstPage))
+      .mockResolvedValueOnce({ data: { node: null } });
 
     await expect(fetchPrBatch(42, REPO)).rejects.toThrow(
       "Review thread t-missing did not resolve to PullRequestReviewThread while paginating comments (node type: null)",
@@ -131,8 +131,9 @@ describe("fetchPrBatch — thread pagination", () => {
         ],
       },
     });
-    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(firstPage));
-    mockGraphql.mockResolvedValue({ data: { node: { __typename: "Issue" } } });
+    mockGraphqlWithRateLimit
+      .mockResolvedValueOnce(makeResponse(firstPage))
+      .mockResolvedValueOnce({ data: { node: { __typename: "Issue" } } });
 
     await expect(fetchPrBatch(42, REPO)).rejects.toThrow(
       "Review thread t-wrong-type did not resolve to PullRequestReviewThread while paginating comments (node type: Issue)",

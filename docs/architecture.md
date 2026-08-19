@@ -57,12 +57,15 @@ shepherd/
 │   ├── client.mts         # getRepoInfo + getCurrentPrNumber
 │   ├── http.mts           # fetch-based graphql/rest helpers; token resolution
 │   ├── queries.mts        # loads .gql files from disk (never inline raw GraphQL)
-│   ├── batch.mts          # single batched GraphQL query (CI + comments + merge state)
+│   ├── batch.mts          # first-page batch query + slim extra-page follow-ups
+│   ├── batch-page.mts     # combined @include pagination for outstanding cursors
 │   ├── batch-parsers.mts  # parses raw batch response into typed structures
 │   ├── batch-raw-types.mts  # raw GraphQL response types
 │   ├── pagination.mts     # generic GraphQL paginator (cursor-based, forward + backward)
 │   └── gql/               # *.gql files — one per query/mutation
-│       ├── batch-pr.gql   # main batch query
+│       ├── batch-pr.gql   # main batch query (first page)
+│       ├── batch-pr-page.gql  # slim @include follow-up pages
+│       ├── commit-suggestion-thread.gql
 │       ├── check-run-annotations.gql
 │       ├── get-pr-head-sha.gql
 │       ├── mark-pr-ready.gql
