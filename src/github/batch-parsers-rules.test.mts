@@ -107,6 +107,7 @@ describe("parseBranchRules", () => {
       makeBaseRef({
         branchProtectionRule: {
           requiresApprovingReviews: true,
+          requiredApprovingReviewCount: 0,
           requiresConversationResolution: false,
           requiresCodeOwnerReviews: false,
           requireLastPushApproval: false,
