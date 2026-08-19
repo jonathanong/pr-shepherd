@@ -33,6 +33,7 @@
     "src/comments/resolve.mts": ["exports"],
     "src/config/load.mts": ["exports"],
     "src/github/http-auth.mts": ["exports"],
+    "src/github/http.mts": ["exports"],
     "src/github/pagination.mts": ["exports"],
     "src/github/rest-http.mts": ["exports"],
     "src/log/log-file.mts": ["exports"],
