@@ -24,13 +24,62 @@ query BatchPr(
         nameWithOwner
       }
       baseRefName
+      isInMergeQueue
+      isMergeQueueEnabled
+      mergeQueueEntry {
+        position
+        state
+        estimatedTimeToMerge
+      }
+      stack {
+        number
+        size
+        baseRefName
+      }
+      stackEntry {
+        position
+      }
       baseRef {
         branchProtectionRule {
           requiresApprovingReviews
           requiredApprovingReviewCount
           requiresConversationResolution
+          requiresCodeOwnerReviews
+          requireLastPushApproval
+          requiresCommitSignatures
+          requiresLinearHistory
           requiresStatusChecks
           requiredStatusCheckContexts
+          requiresStrictStatusChecks
+          requiresDeployments
+          requiredDeploymentEnvironments
+        }
+        rules(first: 100) {
+          nodes {
+            type
+            parameters {
+              ... on PullRequestParameters {
+                requiredApprovingReviewCount
+                requiredReviewThreadResolution
+                requireCodeOwnerReview
+                requireLastPushApproval
+              }
+              ... on RequiredStatusChecksParameters {
+                strictRequiredStatusChecksPolicy
+                requiredStatusChecks {
+                  context
+                }
+              }
+              ... on RequiredDeploymentsParameters {
+                requiredDeploymentEnvironments
+              }
+              ... on CodeScanningParameters {
+                codeScanningTools {
+                  tool
+                }
+              }
+            }
+          }
         }
       }
       # Not paginated — capped at 50; PRs with more pending reviewers truncate silently.

@@ -2,6 +2,8 @@
 
 **status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 1 passing · **remainingSeconds** 600
+Approvals: None [Not Required]
+Conversations Resolved: Yes [Not Required]
 
 ## Review summaries (first look)
 

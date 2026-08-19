@@ -2,8 +2,10 @@
 
 **status** `READY` · **merge** `BLOCKED` · **reviewDecision** `APPROVED` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 1 passing
+Approvals: None [Not Required]
+Conversations Resolved: Yes [Not Required]
 
-CANCEL: PR #42 is awaiting additional approvals — ready-delay elapsed, stopping
+CANCEL: PR #42 is awaiting human review or branch protection resolution — ready-delay elapsed, stopping
 
 ## Instructions
 

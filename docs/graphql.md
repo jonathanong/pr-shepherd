@@ -4,11 +4,13 @@
 
 ## The batch query
 
-**File:** `shepherd/github/gql/batch-pr.gql`
+**File:** `src/github/gql/batch-pr.gql`
 
 A single GraphQL query fetches everything shepherd needs per PR:
 
 - PR state (`state`, `isDraft`, `mergeable`, `mergeStateStatus`, `reviewDecision`, `headRefOid`)
+- Base-branch rules that apply to this PR (`baseRef.rules` from active repository/org rulesets, plus classic `branchProtectionRule`) — no extra round-trip
+- Merge queue membership (`isInMergeQueue`, `isMergeQueueEnabled`, `mergeQueueEntry`) and GitHub stack membership (`stack`, `stackEntry`)
 - Review threads (paginated backward, see below)
 - PR comments (paginated backward)
 - Reviews / changes-requested reviews (paginated backward)

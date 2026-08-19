@@ -2,6 +2,8 @@
 
 **status** `FAILING` · **merge** `DIRTY` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 0 passing · **branch** conflicts with `origin/main`
+Approvals: None [Not Required]
+Conversations Resolved: Yes [Not Required]
 
 ## Review summaries (edited since first look — already minimized; do not re-minimize)
 

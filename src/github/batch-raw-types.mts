@@ -1,6 +1,7 @@
 // Private raw GraphQL response types for the batch PR query.
 
 import type { CommentAuthorAssociation } from "../types/github.mts";
+import type { RawPrMergeFields } from "./batch-raw-rules.mts";
 
 export interface RawBatchResponse {
   repository: {
@@ -8,7 +9,7 @@ export interface RawBatchResponse {
   } | null;
 }
 
-export interface RawPr {
+export interface RawPr extends RawPrMergeFields {
   id: string;
   number: number;
   state: string;
@@ -20,9 +21,7 @@ export interface RawPr {
   headRefName: string;
   headRepository: { nameWithOwner: string } | null;
   baseRefName: string;
-  baseRef: {
-    branchProtectionRule: RawBranchProtectionRule | null;
-  } | null;
+  baseRef: import("./batch-raw-rules.mts").RawBaseRef | null;
   reviewRequests: {
     nodes: Array<{
       requestedReviewer: { login?: string; name?: string } | null;
@@ -144,12 +143,19 @@ export interface RawReviewSummary {
   createdAt?: string;
 }
 
-interface RawBranchProtectionRule {
+export interface RawBranchProtectionRule {
   requiresApprovingReviews: boolean;
   requiredApprovingReviewCount: number;
   requiresConversationResolution: boolean;
   requiresStatusChecks: boolean;
   requiredStatusCheckContexts: string[] | null;
+  requiresCodeOwnerReviews?: boolean;
+  requireLastPushApproval?: boolean;
+  requiresCommitSignatures?: boolean;
+  requiresLinearHistory?: boolean;
+  requiresStrictStatusChecks?: boolean;
+  requiresDeployments?: boolean;
+  requiredDeploymentEnvironments?: string[] | null;
 }
 
 export type RawContextNode =

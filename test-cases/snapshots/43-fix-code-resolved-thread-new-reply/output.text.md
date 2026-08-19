@@ -2,6 +2,8 @@
 
 **status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 0 passing · **remainingSeconds** 600
+Approvals: None [Not Required]
+Conversations Resolved: Yes [Not Required]
 
 ## First-look items (1) — acknowledge status before acting
 
