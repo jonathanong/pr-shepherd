@@ -43,7 +43,6 @@ import { getCurrentBranch } from "../../src/github/client.mts";
 import { fetchSuggestionThread } from "../../src/github/suggestion-thread.mts";
 import { readFile } from "node:fs/promises";
 import type { ReviewThread, BatchPrData } from "../../src/types.mts";
-import type { SuggestionThreadResult } from "../../src/github/suggestion-thread.mts";
 
 const mockGetCurrentBranch = vi.mocked(getCurrentBranch);
 const mockFetchSuggestionThread = vi.mocked(fetchSuggestionThread);
@@ -52,12 +51,12 @@ const mockReadFile = vi.mocked(readFile);
 const mockFetchBatch = {
   mockResolvedValue(value: { data: BatchPrData; rateLimit?: unknown }): void {
     const data = value.data;
-    mockFetchSuggestionThread.mockResolvedValue({
+    mockFetchSuggestionThread.mockImplementation(async (_pr, _repo, threadId) => ({
       headRefOid: data.headRefOid,
       headRefName: data.headRefName,
       headRepoWithOwner: data.headRepoWithOwner,
-      thread: data.reviewThreads[0] ?? null,
-    } satisfies SuggestionThreadResult);
+      thread: data.reviewThreads.find((t) => t.id === threadId) ?? null,
+    }));
   },
 };
 

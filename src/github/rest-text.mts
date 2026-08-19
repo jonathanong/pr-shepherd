@@ -101,7 +101,7 @@ async function followRestTextRedirect(
     }),
   );
   if (!redirectRes.ok) {
-    throw new GitHubRequestError(`redirect target ${location} failed: ${redirectRes.status}`, {
+    throw new GitHubRequestError(`redirect target ${logUrl} failed: ${redirectRes.status}`, {
       status: redirectRes.status,
       rateLimit: parseRateLimit(redirectRes.headers) ?? undefined,
       retryAfterSeconds: parseRetryAfter(redirectRes.headers),

@@ -37,5 +37,6 @@ describe("queries — GQL constants load at import time", () => {
   it("COMMIT_SUGGESTION_THREAD_QUERY selects node(id) plus PR head fields", () => {
     expect(COMMIT_SUGGESTION_THREAD_QUERY).toContain("node(id: $threadId)");
     expect(COMMIT_SUGGESTION_THREAD_QUERY).toContain("headRefOid");
+    expect(COMMIT_SUGGESTION_THREAD_QUERY).toContain("pullRequest");
   });
 });

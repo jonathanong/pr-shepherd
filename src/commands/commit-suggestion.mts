@@ -1,6 +1,6 @@
 import { execFile as execFileCb } from "node:child_process";
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { promisify } from "node:util";
 
 import { getRepoInfo, getCurrentPrNumber, getCurrentBranch } from "../github/client.mts";
@@ -119,7 +119,16 @@ export async function runCommitSuggestion(
   const startLine = thread.startLine ?? thread.line;
   const endLine = thread.line;
   const filePath = thread.path;
-  const originalContent = await readFile(resolve(getEffectiveCwd(), filePath), "utf8");
+  const cwd = getEffectiveCwd();
+  const resolvedPath = resolve(cwd, filePath);
+  const rel = relative(cwd, resolvedPath);
+  if (rel.startsWith("..") || rel === "") {
+    throw new ShepherdError(
+      `Thread ${opts.threadId} path escapes the working tree.`,
+      EXIT.UNAVAILABLE,
+    );
+  }
+  const originalContent = await readFile(resolvedPath, "utf8");
   const patch = buildUnifiedDiff({
     path: filePath,
     originalContent,

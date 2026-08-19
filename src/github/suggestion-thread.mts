@@ -12,6 +12,10 @@ export interface SuggestionThreadResult {
   thread: ReviewThread | null;
 }
 
+interface RawSuggestionThread extends RawThread {
+  pullRequest?: { number: number } | null;
+}
+
 interface RawSuggestionResponse {
   repository: {
     pullRequest: {
@@ -20,7 +24,7 @@ interface RawSuggestionResponse {
       headRepository: { nameWithOwner: string } | null;
     } | null;
   };
-  node: RawThread | null;
+  node: RawSuggestionThread | null;
 }
 
 export async function fetchSuggestionThread(
@@ -38,17 +42,21 @@ export async function fetchSuggestionThread(
   if (!pull) {
     throw new Error(`PR #${pr} not found`);
   }
-  const thread = parseThread(result.data.node);
   return {
     headRefOid: pull.headRefOid,
     headRefName: pull.headRefName,
     headRepoWithOwner: pull.headRepository?.nameWithOwner ?? null,
-    thread: thread?.id === threadId ? thread : null,
+    thread: parseThread(result.data.node, pr, threadId),
   };
 }
 
-function parseThread(raw: RawThread | null): ReviewThread | null {
-  if (!raw?.id || !raw.comments) return null;
+function parseThread(
+  raw: RawSuggestionThread | null,
+  pr: number,
+  threadId: string,
+): ReviewThread | null {
+  if (!raw?.id || !raw.comments || raw.id !== threadId) return null;
+  if (raw.pullRequest?.number !== pr) return null;
   const comment = raw.comments.nodes[0];
   return {
     id: raw.id,

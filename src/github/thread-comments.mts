@@ -12,18 +12,21 @@ import type {
 const THREAD_COMMENT_PAGE_CONCURRENCY = 4;
 
 export async function hydrateThreadCommentPages(threads: RawThread[]): Promise<RawThread[]> {
+  const gate: { remaining?: number } = {};
   return mapPool(threads, THREAD_COMMENT_PAGE_CONCURRENCY, (thread) =>
-    hydrateThreadCommentPage(thread),
+    hydrateThreadCommentPage(thread, gate),
   );
 }
 
-async function hydrateThreadCommentPage(thread: RawThread): Promise<RawThread> {
+async function hydrateThreadCommentPage(
+  thread: RawThread,
+  gate: { remaining?: number },
+): Promise<RawThread> {
   const pageInfo = thread.comments.pageInfo;
   if (!pageInfo?.hasNextPage || !pageInfo.endCursor) return thread;
 
-  let rateLimitRemaining: number | undefined;
   const extra = await paginateForward<RawThreadComment>(async (cursor) => {
-    if (rateLimitRemaining === 0) {
+    if (gate.remaining === 0) {
       throw new GitHubRequestError(
         "GitHub GraphQL rate limit remaining is 0; thread comment pagination incomplete",
         { status: 403 },
@@ -36,7 +39,7 @@ async function hydrateThreadCommentPage(thread: RawThread): Promise<RawThread> {
         ...(cursor ? { commentsCursor: cursor } : {}),
       },
     );
-    rateLimitRemaining = res.rateLimit?.remaining;
+    gate.remaining = res.rateLimit?.remaining;
     const node = res.data.node;
     if (!node?.comments) {
       const nodeType = node?.__typename ?? "null";

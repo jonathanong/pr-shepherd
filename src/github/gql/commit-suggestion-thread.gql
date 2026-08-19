@@ -16,6 +16,9 @@ query CommitSuggestionThread($owner: String!, $repo: String!, $pr: Int!, $thread
       path
       line
       startLine
+      pullRequest {
+        number
+      }
       comments(first: 1) {
         nodes {
           isMinimized

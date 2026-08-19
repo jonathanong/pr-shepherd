@@ -1,5 +1,12 @@
 import { requireContextNodes } from "./batch-response.mts";
-import type { RawContextNode, RawPr } from "./batch-raw-types.mts";
+import type {
+  RawContextNode,
+  RawComment,
+  RawPr,
+  RawReview,
+  RawReviewSummary,
+  RawThread,
+} from "./batch-raw-types.mts";
 
 export interface RawPageResponse {
   repository: {
@@ -67,4 +74,61 @@ export function takeCheckPage(
     return { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [] };
   }
   return { ...ctxs, nodes: requireContextNodes(ctxs.nodes) };
+}
+
+export interface PageCursors {
+  threads?: string;
+  comments?: string;
+  changesRequested?: string;
+  reviewSummaries?: string;
+  approvedReviews?: string;
+  checks?: string;
+}
+
+export interface PageAccumulator {
+  threads: RawThread[];
+  comments: RawComment[];
+  changesRequested: RawReview[];
+  reviewSummaries: RawReviewSummary[];
+  approvedReviews: RawReviewSummary[];
+  checks: RawContextNode[];
+}
+
+export function applyIncludedPage(
+  dest: PageAccumulator,
+  pr2: NonNullable<RawPageResponse["repository"]["pullRequest"]>,
+  cursors: PageCursors,
+  firstOid: string | undefined,
+  pageCount: number,
+  pr: number,
+): { cursors: PageCursors; pageCount: number } {
+  const next: PageCursors = {};
+  let nextPageCount = pageCount;
+  if (cursors.threads !== undefined) {
+    prependConnection(dest.threads, pr2.reviewThreads, pr);
+    next.threads = backwardCursor(pr2.reviewThreads);
+  }
+  if (cursors.comments !== undefined) {
+    prependConnection(dest.comments, pr2.comments, pr);
+    next.comments = backwardCursor(pr2.comments);
+  }
+  if (cursors.changesRequested !== undefined) {
+    prependConnection(dest.changesRequested, pr2.changesRequestedReviews, pr);
+    next.changesRequested = backwardCursor(pr2.changesRequestedReviews);
+  }
+  if (cursors.reviewSummaries !== undefined) {
+    prependConnection(dest.reviewSummaries, pr2.reviewSummaries, pr);
+    next.reviewSummaries = backwardCursor(pr2.reviewSummaries);
+  }
+  if (cursors.approvedReviews !== undefined) {
+    prependConnection(dest.approvedReviews, pr2.approvedReviews, pr);
+    next.approvedReviews = backwardCursor(pr2.approvedReviews);
+  }
+  if (cursors.checks !== undefined) {
+    nextPageCount++;
+    const extra = takeCheckPage(pr2, firstOid, nextPageCount);
+    dest.checks.push(...extra.nodes);
+    next.checks = forwardCursor(extra);
+  }
+  return { cursors: next, pageCount: nextPageCount };
 }

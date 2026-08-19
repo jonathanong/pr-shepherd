@@ -11,7 +11,7 @@ import { COMMIT_SUGGESTION_THREAD_QUERY } from "./queries.mts";
 const mockGraphql = vi.mocked(graphql);
 const REPO = { owner: "owner", name: "repo" };
 
-function threadNode(id = "PRRT_x") {
+function threadNode(id = "PRRT_x", prNumber = 42) {
   return {
     id,
     isResolved: false,
@@ -19,6 +19,7 @@ function threadNode(id = "PRRT_x") {
     path: "src/foo.ts",
     line: 5,
     startLine: null,
+    pullRequest: { number: prNumber },
     comments: {
       nodes: [
         {
@@ -123,6 +124,7 @@ describe("fetchSuggestionThread", () => {
           id: "PRRT_x",
           isResolved: false,
           isOutdated: false,
+          pullRequest: { number: 42 },
           comments: { nodes: [{}] },
         },
       },
@@ -139,5 +141,22 @@ describe("fetchSuggestionThread", () => {
       createdAtUnix: 0,
     });
     expect(result.thread?.authorAssociation).toBeUndefined();
+  });
+
+  it("returns a null thread when the node belongs to another PR", async () => {
+    mockGraphql.mockResolvedValue({
+      data: {
+        repository: {
+          pullRequest: {
+            headRefOid: "abc",
+            headRefName: "feature",
+            headRepository: { nameWithOwner: "owner/repo" },
+          },
+        },
+        node: threadNode("PRRT_x", 99),
+      },
+    });
+    const result = await fetchSuggestionThread(42, REPO, "PRRT_x");
+    expect(result.thread).toBeNull();
   });
 });

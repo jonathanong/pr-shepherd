@@ -2,8 +2,7 @@ import type { CheckRun } from "../types.mts";
 import type { RawPr } from "./batch-raw-types.mts";
 
 export function parseCheckSuitesComplete(raw: RawPr): boolean {
-  const suites = raw.commits.nodes[0]?.commit.checkSuites;
-  return suites != null && suites.pageInfo.hasNextPage === false;
+  return raw.commits.nodes[0]?.commit.checkSuites?.pageInfo.hasNextPage === false;
 }
 
 export function parseSuiteStartupFailures(raw: RawPr): CheckRun[] {
