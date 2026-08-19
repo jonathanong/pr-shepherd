@@ -75,7 +75,7 @@ export interface RawPr {
   };
 }
 
-export interface RawCheckSuites {
+interface RawCheckSuites {
   pageInfo: { hasNextPage: boolean };
   nodes: Array<{
     conclusion: string | null;
