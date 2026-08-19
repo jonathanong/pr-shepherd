@@ -1,12 +1,12 @@
 import type { RawBranchProtectionRule } from "./batch-raw-types.mts";
 
-export interface RawMergeQueueEntry {
+interface RawMergeQueueEntry {
   position: number;
   state: string;
   estimatedTimeToMerge: number | null;
 }
 
-export interface RawStack {
+interface RawStack {
   number: number;
   size: number;
   baseRefName: string;
@@ -17,7 +17,7 @@ export interface RawRepositoryRule {
   parameters: RawRuleParameters | null;
 }
 
-export interface RawRuleParameters {
+interface RawRuleParameters {
   requiredApprovingReviewCount?: number;
   requiredReviewThreadResolution?: boolean;
   requireCodeOwnerReview?: boolean;
