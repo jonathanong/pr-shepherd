@@ -146,7 +146,7 @@ describe("runPoll — FIX_CODE debounce", () => {
     const pollPromise = runPoll(pollOpts({ intervalSeconds: 60, debounceSeconds: 60 }));
     await vi.advanceTimersByTimeAsync(60_000);
     await pollPromise;
-    expect(stderrSpy.mock.calls.map((args) => String(args[0])).join("")).toContain(
+    expect(stderrSpy.mock.calls.map((args: unknown[]) => String(args[0])).join("")).toContain(
       "FIX_CODE — debounce 60s remaining",
     );
   });
