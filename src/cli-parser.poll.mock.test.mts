@@ -125,4 +125,26 @@ describe("main — poll subcommand", () => {
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("invalid --timeout"));
     expect(mockRunIterate).not.toHaveBeenCalled();
   });
+
+  it("accepts --debounce 5m and --debounce 0", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
+
+    await main(["node", "shepherd", "poll", "42", "--debounce", "5m"]);
+    expect(process.exitCode).not.toBe(EXIT.USAGE);
+    expect(mockRunIterate).toHaveBeenCalledTimes(1);
+
+    mockRunIterate.mockClear();
+    process.exitCode = undefined;
+    await main(["node", "shepherd", "poll", "42", "--debounce", "0"]);
+    expect(process.exitCode).not.toBe(EXIT.USAGE);
+    expect(mockRunIterate).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects an invalid --debounce value", async () => {
+    await main(["node", "shepherd", "poll", "42", "--debounce", "bad"]);
+
+    expect(process.exitCode).toBe(EXIT.USAGE);
+    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("invalid --debounce"));
+    expect(mockRunIterate).not.toHaveBeenCalled();
+  });
 });

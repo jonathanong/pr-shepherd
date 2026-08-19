@@ -294,7 +294,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     report,
     reviewSummaryIds,
   );
-  if (result.action === "fix_code") {
+  if (result.action === "fix_code" && opts.persistSeen !== false) {
     await Promise.allSettled(
       result.fix.checks.flatMap((ch) =>
         (ch.annotations ?? []).map((a) => markSeen(stallKey, a.id, annotationMarkerBody(a))),

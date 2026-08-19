@@ -35,16 +35,20 @@ Exit codes:
 
 export const POLL_USAGE = `pr-shepherd poll
 
-Run iterate repeatedly while the action is WAIT. Print only the final tick to stdout.
-Poll exits as soon as iterate returns MARK_READY, FIX_CODE, CANCEL, or ESCALATE, or when timeout
-returns the last WAIT result. With --until-terminal, poll also continues through MARK_READY.
+Run iterate repeatedly for WAIT ticks and during the FIX_CODE debounce window. Print only the
+final tick to stdout.
+Poll exits as soon as iterate returns MARK_READY, CANCEL, or ESCALATE, or when timeout
+returns the last WAIT result. FIX_CODE starts a --debounce settle window (default 1m): poll keeps
+iterating at --interval, then runs one more tick after the window and returns that result.
+With --until-terminal, poll also continues through MARK_READY.
 
 Usage:
   pr-shepherd poll [PR] [poll-flags] [iterate-flags]
 
 Poll flags:
   --interval <duration>          Sleep between WAIT ticks. Bare number = seconds. Default: 60s.
-  --timeout <duration>           Maximum wall-clock wait. Bare number = seconds. Default: 4.5m.
+  --timeout <duration>           Maximum wall-clock wait for WAIT ticks. Bare number = seconds. Default: 4.5m.
+  --debounce <duration>          Settle window after first FIX_CODE before returning. Bare number = seconds. Default: 60s. 0 disables.
   --quiet-status                 During WAIT polling, print only changed status snapshots.
   --until-terminal               Continue through WAIT/MARK_READY until FIX_CODE/CANCEL/ESCALATE.
 
@@ -58,9 +62,10 @@ Forwarded iterate flags:
   --help, -h                     Print this help and exit before GitHub, git, config, or log I/O.
 
 Durations accept s/m/h suffixes: 30s, 4.5m, 1h. A bare number uses each flag's default unit (seconds
-for --interval/--timeout, minutes for --ready-delay/--stall-timeout); decimals are allowed only with
+for --interval/--timeout/--debounce, minutes for --ready-delay/--stall-timeout); decimals are allowed only with
 an explicit unit (4.5m).
 Each WAIT tick writes a single dot to stderr by default; --quiet-status prints only changed WAIT snapshots, and --verbose emits detailed per-tick lines.
+FIX_CODE debounce writes a remaining-seconds line to stderr. --timeout does not cut an in-flight debounce short.
 With --until-terminal, --timeout is ignored for WAIT ticks and polling continues until FIX_CODE, CANCEL, or ESCALATE.
 
 Exit codes: same as iterate (the final tick's action/reason decides the code).

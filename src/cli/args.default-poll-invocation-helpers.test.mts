@@ -25,6 +25,7 @@ describe("default poll invocation helpers", () => {
     expect(isDefaultPollInvocation("--until-terminal")).toBe(true);
     expect(isDefaultPollInvocation("--interval=60s")).toBe(true);
     expect(isDefaultPollInvocation("--timeout=4.5m")).toBe(true);
+    expect(isDefaultPollInvocation("--debounce=1m")).toBe(true);
     expect(isDefaultPollInvocation("resolve")).toBe(false);
   });
 
@@ -41,6 +42,8 @@ describe("default poll invocation helpers", () => {
         "60",
         "--timeout",
         "4.5m",
+        "--debounce",
+        "1m",
         "--verbose",
         "--quiet-status",
         "--until-terminal",

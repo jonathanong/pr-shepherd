@@ -7,6 +7,7 @@ import {
   mockFetchPrBatch,
   mockLoadSeenMap,
   mockMarkSeen,
+  mockMarkReviewInlineThreads,
   makeThread,
 } from "../../test-helpers/commands/check.test-support.mts";
 import { hashBody } from "../state/seen-comments.mts";
@@ -32,6 +33,16 @@ describe("runCheck — first-look items", () => {
 
     expect(report.threads.actionable.map((t) => t.id)).toEqual(["t-active"]);
     expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "t-active", "active feedback");
+  });
+  it("does not write seen markers when persistSeen is false", async () => {
+    const active = makeThread({ id: "t-active", body: "active feedback" });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [active] }) });
+
+    const report = await runCheck({ ...BASE_OPTS, persistSeen: false });
+
+    expect(report.threads.actionable.map((t) => t.id)).toEqual(["t-active"]);
+    expect(mockMarkSeen).not.toHaveBeenCalled();
+    expect(mockMarkReviewInlineThreads).not.toHaveBeenCalled();
   });
   it("suppresses already-seen active thread with unchanged body", async () => {
     const active = makeThread({ id: "t-active", body: "active feedback" });

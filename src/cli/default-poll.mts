@@ -9,6 +9,7 @@ const DEFAULT_POLL_FLAGS_WITH_VALUES = new Set([
   "--stall-timeout",
   "--interval",
   "--timeout",
+  "--debounce",
 ]);
 
 const DEFAULT_POLL_BOOLEAN_FLAGS = new Set([

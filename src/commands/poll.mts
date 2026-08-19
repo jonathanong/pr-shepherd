@@ -5,9 +5,13 @@ import { sleep } from "../util/sleep.mts";
 interface PollCommandOptions extends IterateCommandOptions {
   intervalSeconds: number;
   timeoutSeconds: number;
+  /** Settle window after first FIX_CODE before returning. Default 60. 0 disables. */
+  debounceSeconds?: number;
   quietStatus?: boolean;
   untilTerminal?: boolean;
 }
+
+const DEFAULT_POLL_DEBOUNCE_SECONDS = 60;
 
 function writeTickProgress(
   tick: number,
@@ -91,17 +95,28 @@ function writeWaitProgress(opts: {
   return signature;
 }
 
+function writeDebounceProgress(tick: number, elapsedMs: number, remainingMs: number): void {
+  const elapsedSeconds = Math.round(elapsedMs / 1000);
+  const remainingSeconds = Math.round(remainingMs / 1000);
+  process.stderr.write(
+    `[poll tick ${tick} / +${elapsedSeconds}s] FIX_CODE — debounce ${remainingSeconds}s remaining\n`,
+  );
+}
+
 /** @deprecated Hidden implementation for the legacy `poll` alias. */
 export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> {
   const {
     intervalSeconds,
     timeoutSeconds,
+    debounceSeconds: debounceSecondsOpt,
     quietStatus: quietStatusOpt,
     untilTerminal: untilTerminalOpt,
     ...iterateOpts
   } = opts;
   const intervalMs = Math.min(intervalSeconds * 1000, MAX_TIMER_MS);
   const timeoutMs = Math.min(timeoutSeconds * 1000, MAX_TIMER_MS);
+  const debounceSeconds = debounceSecondsOpt ?? DEFAULT_POLL_DEBOUNCE_SECONDS;
+  const debounceMs = Math.min(debounceSeconds * 1000, MAX_TIMER_MS);
   const start = Date.now();
   let tick = 0;
   let lastResult: IterateResult | undefined;
@@ -116,36 +131,65 @@ export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> 
   // terminal CANCEL/merged result. Pin the PR resolved by the first tick so later ticks target it
   // directly and never re-run branch discovery.
   let prNumber = opts.prNumber;
+  let debounceUntil: number | null = null;
 
   while (true) {
     tick += 1;
-    lastResult = await runIterate({ ...iterateOpts, prNumber });
+    const pastDebounce = debounceUntil !== null && Date.now() >= debounceUntil;
+    lastResult = await runIterate({
+      ...iterateOpts,
+      prNumber,
+      persistSeen: debounceSeconds === 0 || pastDebounce,
+    });
     prNumber ??= lastResult.pr;
-    if (lastResult.action !== "wait" && !(untilTerminal && lastResult.action === "mark_ready")) {
-      break;
-    }
 
-    const elapsedMs = Date.now() - start;
-    if (!untilTerminal) {
-      const remainingMs = timeoutMs - elapsedMs;
-      if (remainingMs <= 0) break;
-      if (remainingMs + TIMER_DRIFT_TOLERANCE_MS < intervalMs) break;
-    }
+    if (lastResult.action === "wait" && !pastDebounce) {
+      debounceUntil = null;
+      const elapsedMs = Date.now() - start;
+      if (!untilTerminal) {
+        const remainingMs = timeoutMs - elapsedMs;
+        if (remainingMs <= 0) break;
+        if (remainingMs + TIMER_DRIFT_TOLERANCE_MS < intervalMs) break;
+      }
 
-    const nextSleepMs = intervalMs;
-    if (lastResult.action === "wait") {
       lastWaitSignature = writeWaitProgress({
         tick,
         elapsedMs,
-        sleepMs: nextSleepMs,
+        sleepMs: intervalMs,
         result: lastResult,
         quietStatus,
         verbose,
         lastWaitSignature,
       });
       if (!quietStatus && !verbose) dotsPrinted = true;
+      await sleep(intervalMs);
+      continue;
     }
-    await sleep(nextSleepMs);
+
+    if (untilTerminal && lastResult.action === "mark_ready" && !pastDebounce) {
+      debounceUntil = null;
+      await sleep(intervalMs);
+      continue;
+    }
+
+    if (lastResult.action === "fix_code" && debounceSeconds > 0 && !pastDebounce) {
+      debounceUntil ??= Date.now() + debounceMs;
+      const remainingMs = debounceUntil - Date.now();
+      if (remainingMs > 0) {
+        if (dotsPrinted) {
+          process.stderr.write("\n");
+          dotsPrinted = false;
+        }
+        writeDebounceProgress(tick, Date.now() - start, remainingMs);
+        await sleep(Math.min(intervalMs, remainingMs));
+      }
+      // Always continue so a tick that *started* before debounceUntil but *finished*
+      // after it cannot return with persistSeen: false. The next loop iteration
+      // sees pastDebounce and persists.
+      continue;
+    }
+
+    break;
   }
 
   if (dotsPrinted) process.stderr.write("\n");

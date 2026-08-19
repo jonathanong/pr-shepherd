@@ -8,6 +8,7 @@ import { emitIterateResult } from "./iterate-emitter.mts";
 
 const DEFAULT_POLL_INTERVAL_SECONDS = 60;
 const DEFAULT_POLL_TIMEOUT_SECONDS = 270;
+const DEFAULT_POLL_DEBOUNCE_SECONDS = 60;
 
 export async function handlePoll(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
@@ -39,6 +40,21 @@ export async function handlePoll(args: string[]): Promise<void> {
   if (timeoutSuffix === null) return;
   const timeoutSeconds = parseDurationToSeconds(timeoutSuffix ?? "", DEFAULT_POLL_TIMEOUT_SECONDS);
 
+  const debounceStr = getFlag(extra, "--debounce");
+  const debounceSuffix = validateSecondsDurationFlag(
+    "pr-shepherd",
+    "--debounce",
+    debounceStr,
+    hasFlag(extra, "--debounce"),
+    { allowZero: true },
+  );
+  if (debounceSuffix === null) return;
+  const debounceSeconds = parseDurationToSeconds(
+    debounceSuffix ?? "",
+    DEFAULT_POLL_DEBOUNCE_SECONDS,
+    { allowZero: true },
+  );
+
   const result = await runPoll({
     ...globalOpts,
     prNumber,
@@ -48,6 +64,7 @@ export async function handlePoll(args: string[]): Promise<void> {
     noAutoCancelActionable: flags.noAutoCancelActionable,
     intervalSeconds,
     timeoutSeconds,
+    debounceSeconds,
     quietStatus: hasFlag(extra, "--quiet-status"),
     untilTerminal: hasFlag(extra, "--until-terminal"),
   });

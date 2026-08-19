@@ -63,6 +63,6 @@ User                    Active Goal             pr-shepherd
 
 ## Notes
 
-- The skill's default fetch is the bounded poll command `pr-shepherd [PR]`, which sleeps through `WAIT`. MCP `iterate` is the fallback when the CLI is unavailable; the host then chooses when to recheck.
+- The skill's default fetch is the bounded poll command `pr-shepherd [PR]`, which sleeps through `WAIT`. After the first `FIX_CODE`, poll waits `--debounce` (default 1m) while still iterating at `--interval`, then returns the post-window tick. That settle window batches late review comments and CI failures into one agent-facing result — the polling alternative to an event-driven runner. MCP `iterate` is the fallback when the CLI is unavailable; the host then chooses when to recheck.
 - Code changes (`fix_code`, rebase) are handled inline by the active goal — no subagent is spawned.
 - The ready-delay (default 10 minutes) is read from `watch.readyDelayMinutes` in `.pr-shepherdrc.yml`. See [ready-delay.md](ready-delay.md) and [configuration.md](configuration.md).

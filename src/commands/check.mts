@@ -40,6 +40,7 @@ export async function runCheck(
     autoResolve?: boolean;
     autoMinimizeSuppressed?: boolean;
     skipTriage?: boolean;
+    persistSeen?: boolean;
   },
 ): Promise<ShepherdReport> {
   const repo = await getRepoInfo();
@@ -123,27 +124,29 @@ export async function runCheck(
     botUsernames,
   );
   const approvedReviewVisibility = classifyReviewsForDisplay(batchData.approvedReviews, seenMap);
-  await Promise.allSettled([
-    ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
-    ...threadVisibility.toMarkSeen.map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
-    ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
-    ...[...firstLookSummaries, ...editedSummaries].map((r) => markSeen(stateKey, r.id, r.body)),
-    ...changesRequestedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
-    ...approvedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
-    ...batchData.comments
-      .filter((c) => partition.suppressedCommentIds.has(c.id))
-      .map((c) => markSeen(stateKey, c.id, c.body)),
-    ...batchData.reviewThreads
-      .filter((t) => partition.suppressedThreadIds.has(t.id))
-      .map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
-    ...batchData.reviewSummaries
-      .filter((r) => partition.suppressedReviewSummaryIds.has(r.id))
-      .map((r) => markSeen(stateKey, r.id, r.body)),
-    ...batchData.changesRequestedReviews
-      .filter((r) => partition.suppressedChangesRequestedIds.has(r.id))
-      .map((r) => markSeen(stateKey, r.id, r.body)),
-  ]);
-  await markReviewInlineThreadMarkers(stateKey, batchData.reviewThreads);
+  if (opts.persistSeen !== false) {
+    await Promise.allSettled([
+      ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
+      ...threadVisibility.toMarkSeen.map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
+      ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
+      ...[...firstLookSummaries, ...editedSummaries].map((r) => markSeen(stateKey, r.id, r.body)),
+      ...changesRequestedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
+      ...approvedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
+      ...batchData.comments
+        .filter((c) => partition.suppressedCommentIds.has(c.id))
+        .map((c) => markSeen(stateKey, c.id, c.body)),
+      ...batchData.reviewThreads
+        .filter((t) => partition.suppressedThreadIds.has(t.id))
+        .map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
+      ...batchData.reviewSummaries
+        .filter((r) => partition.suppressedReviewSummaryIds.has(r.id))
+        .map((r) => markSeen(stateKey, r.id, r.body)),
+      ...batchData.changesRequestedReviews
+        .filter((r) => partition.suppressedChangesRequestedIds.has(r.id))
+        .map((r) => markSeen(stateKey, r.id, r.body)),
+    ]);
+    await markReviewInlineThreadMarkers(stateKey, batchData.reviewThreads);
+  }
   const {
     threadIds: ruleAutoResolveThreadIds,
     commentIds: ruleAutoResolveCommentIds,

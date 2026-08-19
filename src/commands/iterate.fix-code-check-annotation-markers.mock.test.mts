@@ -91,4 +91,51 @@ describe("fix_code — check annotation seen markers", () => {
       expect.anything(),
     );
   });
+
+  it("skips annotation seen markers when persistSeen is false", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        checks: {
+          passing: [],
+          failing: [
+            {
+              id: "CR_1",
+              name: "ci",
+              status: "COMPLETED",
+              conclusion: "FAILURE",
+              detailsUrl: "https://checks.example/1",
+              event: "pull_request",
+              runId: "1",
+              category: "failing",
+              annotations: [
+                {
+                  id: "check_annotation_skip",
+                  path: "src/a.mts",
+                  startLine: 1,
+                  endLine: 1,
+                  level: "FAILURE",
+                  message: "Skip me.",
+                },
+              ],
+            },
+          ],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts({ persistSeen: false }));
+    expect(result.action).toBe("fix_code");
+    expect(mockMarkSeen).not.toHaveBeenCalled();
+  });
 });

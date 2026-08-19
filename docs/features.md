@@ -9,6 +9,7 @@ The module supports a focused automation loop for PR monitoring and deterministi
 - Supports local stdio MCP tools: `iterate`, `apply`, and `build_suggestion_patch`.
 - Supports ordered `apply` operations for review mutations, marking files viewed, and appending journal entries.
 - Supports default shell invocation `pr-shepherd [PR]` as the bounded poll dispatcher and `pr-shepherd iterate [PR]` for one single tick.
+- Supports poll `--debounce` (default 1m) so `FIX_CODE` waits a settle window, still iterating at `--interval`, then returns one batched tick.
 - Supports `pr-shepherd admin log-file` to print the per-worktree debug log path.
 - Supports `--version`/`-v`.
 - Supports `--format text|json`, and `--verbose` output mode (iterate only).
