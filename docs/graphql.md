@@ -18,8 +18,6 @@ A single GraphQL query fetches everything shepherd needs per PR on the first pag
 - Reviews / changes-requested / commented / approved reviews (paginated backward)
 - CI check runs (paginated forward, see below) and `checkSuites` (first 50, used for startup-failure detection)
 
-This single round-trip replaces the 6–12 API calls the former multi-agent design needed.
-
 `latestReviews` is capped at 100 and `reviewRequests` at 50; extra pages are not fetched. Copilot-in-progress detection can miss reviewers beyond those caps.
 
 Startup-failure workflow runs and failed-job log excerpts are check-read supplements. GraphQL `statusCheckRollup` can omit workflow runs that fail before job/check contexts exist. The batch query reads `commit.checkSuites` and merges suites whose `conclusion` is `STARTUP_FAILURE` into the check list. REST `GET /actions/runs?status=startup_failure` runs only when that CheckSuite page is missing or truncated (`hasNextPage`). For ordinary failing Actions jobs, Shepherd also fetches a bounded raw log excerpt from the matched job after classification/triage.

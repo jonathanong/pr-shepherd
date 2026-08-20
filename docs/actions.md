@@ -48,7 +48,7 @@ Lean-mode rules for the summary line:
 
 The `**branch**` segment is appended to the `**summary**` line on any action when `mergeStatus` is `"BEHIND"` or `"CONFLICTS"`. It surfaces the raw branch state so the agent can decide whether to rebase without further tool calls. `**reviewDecision**` is appended to the status line when the _derived_ merge status is `BLOCKED`.
 
-After a sweep, iterate always prints `Approvals:` and `Conversations Resolved:` (current vs required). Extra merge-rule lines appear only when they apply (code-owner review, last-push approval, signed commits, linear history, branch up to date, required status checks, deployments, workflows, code scanning, merge queue, GitHub stacks). The legacy `**required**` line is a fallback when `mergeRequirements` is absent (for example in tests that construct an iterate result without a sweep). When `mergeRequirements` is present it replaces `**required**`.
+After a sweep, iterate always prints `Approvals:` and `Conversations Resolved:` (current vs required). Extra merge-rule lines appear only when they apply (code-owner review, last-push approval, signed commits, linear history, branch up to date, required status checks, deployments, workflows, code scanning, merge queue, GitHub stacks). Tests that construct an iterate result without a sweep (no `mergeRequirements`) still get a fallback `**required**` line listing names from `requiredStatusCheckContexts`. Live iterate output uses `mergeRequirements` and does not emit that `**required**` line.
 
 The agent should read the Approvals / Conversations Resolved lines instead of inferring a required review from `reviewDecision`. `REVIEW_REQUIRED` with `Approvals: None [Not Required]` means GitHub is not waiting on an approval.
 
@@ -94,7 +94,7 @@ WAIT: 0 passing, 1 in-progress — active checks: CI / build
 1. No action this tick — the poll loop reruns automatically.
 ```
 
-The poll already bounds each wait via `--interval`/`--timeout`, so the CLI no longer tells the agent to sleep before rerunning. That “poll loop reruns automatically” instruction is for the **poll dispatcher**. MCP `iterate` and `pr-shepherd iterate` return once; the caller must schedule the next tick. When the current command includes a ready-delay override (`--ready-delay 15m`), it is surfaced as a header field on the summary line rather than embedded in a rerun command — e.g. `**summary** 3 passing, 2 inProgress · **ready-delay** `15m` (override)`. JSON output carries the same value as a `readyDelayOverride` field.
+The poll already bounds each wait via `--interval`/`--timeout`; iterate output does not tell the agent to sleep before rerunning. That “poll loop reruns automatically” instruction is for the **poll dispatcher**. MCP `iterate` and `pr-shepherd iterate` return once; the caller must schedule the next tick. When the current command includes a ready-delay override (`--ready-delay 15m`), it is surfaced as a header field on the summary line rather than embedded in a rerun command — e.g. `**summary** 3 passing, 2 inProgress · **ready-delay** `15m` (override)`. JSON output carries the same value as a `readyDelayOverride` field.
 
 The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, unmet merge requirements (approvals, conversations, merge queue, …), `PR is a draft`, or `some checks are unstable`. After a sweep, iterate also prints current-vs-required merge rules so the agent can see _why_ GitHub is not mergeable (for example `Approvals: None [Not Required]` vs `Approvals: None [Required]`). Merge-queue and GitHub-stack membership appear as extra lines when they apply (`Merge queue: position 2 QUEUED [Required]`, `Stack: #7 2/3 (base main)`); they are omitted when the PR is not in a queue or stack and merge queue is not required.
 
@@ -211,7 +211,7 @@ Conversations Resolved: No [Not Required]
 6. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
 ```
 
-The branch-behind/conflict mechanics that step 1 previously spelled out are intentionally omitted: the CLI surfaces the raw `**branch**` state on the summary line and leaves rebase/commit/push conventions to the caller (see the "Keep skills and loop prompts minimal" rule in `CLAUDE.md`). There is no longer a separate "commit, then rebase onto `origin/main`" step, and no per-tick "recheck after a delay" line — the poll loop's `--interval`/`--timeout` already bounds each wait.
+The CLI surfaces the raw `**branch**` state on the summary line and leaves rebase/commit/push conventions to the caller (see the "Keep skills and loop prompts minimal" rule in `CLAUDE.md`). Iterate does not emit a separate rebase step or a per-tick "recheck after a delay" line — the poll loop's `--interval`/`--timeout` already bounds each wait.
 
 When `mergeStatus` is `"BEHIND"` and [`iterate.behindBaseHint`](configuration.md#iteratebehindbasehint--default-) is configured (empty by default), an extra `## Instructions` step is inserted right after the leading decide/conflict step: `` `The branch is behind `origin/<base>` — <hint> before pushing.` ``. The CLI still never decides the mechanics itself — this only echoes back the caller's own configured one-liner.
 
@@ -264,7 +264,7 @@ The "Apply code fixes" step reads "each file referenced above" only when `## Rev
 
 The JSON payload exposes the same data under `fix.{threads, resolutionOnlyThreads, actionableComments, reviewSummaryIds, firstLookSummaries, editedSummaries, surfacedApprovals, checks, changesRequestedReviews, resolveCommand, resolveOnlyCommand, instructions, firstLookThreads, firstLookComments, inProgressRunIds, protectedRuns}` plus top-level `baseBranch`, `branchProtection` (on `IterateResultBase`, not under `fix`; omitted in lean JSON when `null`, always present in verbose JSON), and `cancelled`.
 
-Comment/review/thread objects include `authorType` (`User`, `Bot`, or `Unknown`) and the raw GitHub `authorAssociation` when available. Text author labels render as `@author · <authorType> · <authorAssociation>` with unavailable segments omitted. The association is provenance, not a trusted/untrusted classification, and does not change built-in routing. Thread objects keep top-comment compatibility fields (`body`, `author`, `url`) and include `comments[]` with the full thread transcript. `fix.actionableComments[]` includes `edited: true` when a non-auto-minimized PR comment body changed after Shepherd previously surfaced it. `fix.changesRequestedReviews[]` items include `commitOid` (the commit the review was made against) when available, and `staleReview: true` when the review is stale (commit behind HEAD, all threads resolved/outdated). In lean JSON mode, optional fields are omitted when unavailable.
+Comment/review/thread objects include `authorType` (`User`, `Bot`, or `Unknown`) and the raw GitHub `authorAssociation` when available. Text author labels render as `@author · <authorType> · <authorAssociation>` with unavailable segments omitted. The association is provenance, not a trusted/untrusted classification, and does not change built-in routing. Thread objects keep top-comment fields (`body`, `author`, `url`) and include `comments[]` with the full thread transcript. `fix.actionableComments[]` includes `edited: true` when a non-auto-minimized PR comment body changed after Shepherd previously surfaced it. `fix.changesRequestedReviews[]` items include `commitOid` (the commit the review was made against) when available, and `staleReview: true` when the review is stale (commit behind HEAD, all threads resolved/outdated). In lean JSON mode, optional fields are omitted when unavailable.
 
 `fix.checks[]` includes `logExcerpt` when Shepherd fetched a bounded raw excerpt from the matched failed job log. `fix.checks[].annotations[]` contains marker-gated annotations for failing checks only: `{ id, path, startLine, endLine, startColumn?, endColumn?, level, title?, message, rawDetails?, blobUrl? }`. Annotation `message` and `rawDetails` values are capped independently before rendering or JSON projection.
 
@@ -465,13 +465,3 @@ Rules from multiple files combine permissively: `suppress` and `autoResolve` are
 Files starting with `_` or `.` are ignored. The loader walks up from `cwd` looking for `.pr-shepherd/classification/`, stopping at the home directory. Unlike `.pr-shepherdrc.yml`, only the first classification directory found is used. TypeScript rule files (`.ts` / `.mts`) are loaded by the runtime's native TypeScript support, so keep them to erasable syntax such as type annotations and `import type`. Runtime TypeScript features that need transpilation, such as enums, namespaces, parameter properties, and decorators, are not supported. Use `.mts` for portable ESM rules across Node, Bun, and Deno.
 
 Example rules for common bot-noise patterns are in [`examples/classification/`](../examples/classification/).
-
----
-
-## Archived / no longer emitted
-
-### `rerun_ci`
-
-> **This action is no longer emitted by `iterate`.** Transient CI failure detection (timeout / cancelled) has been moved to the agent: the `fix_code` action now carries `failedStep`/`conclusion` for every failing check, and the `## Instructions` section tells the agent to run `gh run view <runId> --log-failed` and decide whether to rerun or apply a code fix. Current releases no longer include a `rerun_ci` action or `[RERUN_CI]` formatter output.
-
-**Trigger:** Previously emitted when one or more failing checks had `failureKind === "timeout"` or `"cancelled"` and no actionable work was found. Removed in favour of routing all failing checks through `fix_code` with raw log data.

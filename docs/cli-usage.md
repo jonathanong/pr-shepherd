@@ -56,8 +56,8 @@ Use `iterate` first. Its result surfaces review threads, comments, checks, and t
 
 MCP clients own polling recurrence. Do not call a long-running polling tool: call `iterate` again after the returned action-specific work is complete or when the client’s scheduler chooses to recheck.
 
-## Compatibility aliases
+## CLI aliases
 
-`poll`, `resolve`, `commit-suggestion`, `mark-files-as-viewed`, `journal`, `clean`, and `log-file` remain supported CLI aliases for existing automation. They are no longer the advertised integration surface; new agent integrations should use MCP `iterate`, `apply`, and `build_suggestion_patch`.
+`poll`, `resolve`, `commit-suggestion`, `mark-files-as-viewed`, `journal`, `clean`, and `log-file` are CLI aliases. Prefer MCP `iterate`, `apply`, and `build_suggestion_patch` for agent integrations.
 
 All CLI commands honor `--help`/`-h` before I/O. Iterate/poll PR outcomes use exit codes `0` and `10`–`14`; command, validation, and GitHub failures use `sysexits.h` codes. See [exit-codes.md](exit-codes.md).

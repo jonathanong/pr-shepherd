@@ -22,15 +22,15 @@ Shepherd intentionally does not turn this failure into `wait` or `retry`: incomp
 
 **Symptom:** PR was merged but shepherd keeps emitting `action: wait`.
 
-**Cause:** GitHub returns `mergeable: UNKNOWN` and `mergeStateStatus: UNKNOWN` for merged PRs. Before the fix in this repo, shepherd had no branch for `state !== OPEN`, so it fell through to `wait`.
+**Cause:** GitHub often returns `mergeable: UNKNOWN` and `mergeStateStatus: UNKNOWN` for merged PRs. Iterate treats `state` as authoritative for terminal PRs; if that short-circuit is skipped, the tick can fall through to `wait`.
 
-**Fix:** Verify the fix is deployed. Check the iterate output:
+**Fix:** Check the iterate output:
 
 ```bash
 pr-shepherd <PR> --format=json
 ```
 
-Should return `{"action":"cancel","status":"MERGED","state":"MERGED",...}`.
+A merged PR should return `{"action":"cancel","status":"MERGED","state":"MERGED",...}`.
 
 If it still returns `wait`, check that `report.mergeStatus.state` is being set correctly in the JSON output. If it returns `cancel` but the status is not `MERGED` or `CLOSED`, check that `runCheck` is short-circuiting terminal PRs before CI/comment processing.
 

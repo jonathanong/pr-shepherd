@@ -251,9 +251,9 @@ TypeScript rules are loaded by the runtime's native TypeScript support; keep the
 
 Ready-to-use examples for common patterns are in [`examples/classification/`](examples/classification/).
 
-## Compatibility aliases
+## CLI aliases
 
-The legacy CLI subcommands `poll`, `resolve`, `commit-suggestion`, `mark-files-as-viewed`, `journal`, `clean`, and `log-file` remain available for compatibility but are no longer advertised as the primary integration. Prefer canonical default polling/`iterate` in a shell and the MCP `iterate`, `apply`, and `build_suggestion_patch` tools in an agent client.
+`poll`, `resolve`, `commit-suggestion`, `mark-files-as-viewed`, `journal`, `clean`, and `log-file` are CLI aliases. Prefer default polling/`iterate` in a shell and the MCP `iterate`, `apply`, and `build_suggestion_patch` tools in an agent client.
 
 ## Requirements
 

@@ -54,7 +54,7 @@ The agent should read these lines instead of inferring a required review from `r
 
 `reviewDecision` is **not** used for ShepherdStatus derivation. Iterate still prints why merge is blocked: cancel notes use `blockedReasonFromRequirements` (awaiting N approvals, unresolved conversations, branch behind base, merge queue) rather than guessing from `reviewDecision` alone.
 
-The legacy `**required**` line is a fallback when `mergeRequirements` is absent (tests that construct an iterate result without a sweep). When `mergeRequirements` is present it replaces `**required**`.
+Tests that construct an iterate result without a sweep (no `mergeRequirements`) still get a fallback `**required**` line listing names from `requiredStatusCheckContexts`. Live iterate output uses `mergeRequirements` and does not emit that `**required**` line.
 
 ## Gotchas
 
