@@ -180,7 +180,7 @@ Replace `<version>` with a published version. Full config-file examples, tool sc
 
 ## Configuration
 
-Create `.pr-shepherdrc.yml` in your project root or an ancestor directory.
+Create `.pr-shepherdrc.yml` in your project root, an ancestor directory, or `$HOME`. Every file on the walk is deep-merged; closer directories override farther ones.
 
 ```yaml
 ignoreChecks:

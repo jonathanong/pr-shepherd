@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import { readFileSync, statSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { parse } from "yaml";
 import builtins from "../config.json" with { type: "json" };
@@ -67,17 +67,33 @@ interface PrShepherdConfig {
 
 const RC_FILENAME = ".pr-shepherdrc.yml";
 
-function findRcFile(startDir: string): string | null {
-  const home = homedir();
-  let current = startDir;
-  while (true) {
-    const candidate = join(current, RC_FILENAME);
+/**
+ * Collect `.pr-shepherdrc.yml` files from `startDir` up to `$HOME` (closest first).
+ * `$HOME/.pr-shepherdrc.yml` is always included when it exists, even if cwd is
+ * outside the home directory.
+ */
+function collectRcFiles(startDir: string): string[] {
+  const home = resolve(homedir());
+  const seen = new Set<string>();
+  const files: string[] = [];
+
+  const add = (dir: string): void => {
+    const candidate = resolve(join(dir, RC_FILENAME));
+    if (seen.has(candidate)) return;
     if (statSync(candidate, { throwIfNoEntry: false })?.isFile()) {
-      return candidate;
+      seen.add(candidate);
+      files.push(candidate);
     }
-    if (current === home || current === dirname(current)) return null;
+  };
+
+  let current = resolve(startDir);
+  while (true) {
+    add(current);
+    if (current === home || current === dirname(current)) break;
     current = dirname(current);
   }
+  add(home);
+  return files;
 }
 
 function deepMerge(
@@ -207,33 +223,60 @@ const defaults = builtins as PrShepherdConfig;
 
 const configCache = new Map<string, PrShepherdConfig>();
 
+function stripDeprecatedActionKeys(parsed: Record<string, unknown>): void {
+  const rawActions = parsed.actions;
+  if (rawActions === null || typeof rawActions !== "object" || Array.isArray(rawActions)) return;
+  const actions = rawActions as Record<string, unknown>;
+  for (const key of ["autoResolveOutdated", "commitSuggestions"] as const) {
+    if (key in actions) {
+      process.stderr.write(`pr-shepherd: config: actions.${key} is deprecated and ignored.\n`);
+      delete actions[key];
+    }
+  }
+}
+
+function readRcFile(rcPath: string): Record<string, unknown> | null {
+  try {
+    const raw = readFileSync(rcPath, "utf8");
+    const parsed = (parse(raw) ?? {}) as Record<string, unknown>;
+    stripDeprecatedActionKeys(parsed);
+    warnUnknownConfigKeys(parsed);
+    return parsed;
+  } catch (err) {
+    process.stderr.write(
+      `pr-shepherd: failed to parse ${rcPath}: ${err instanceof Error ? err.message : String(err)}\n`,
+    );
+    return null;
+  }
+}
+
 export function loadConfig(): PrShepherdConfig {
   const cwd = getEffectiveCwd();
   if (configCache.has(cwd)) return configCache.get(cwd)!;
 
-  const rcPath = findRcFile(cwd);
-  if (!rcPath) {
+  const rcPaths = collectRcFiles(cwd);
+  if (rcPaths.length === 0) {
     configCache.set(cwd, defaults);
     return defaults;
   }
 
   try {
-    const raw = readFileSync(rcPath, "utf8");
-    const parsed = (parse(raw) ?? {}) as Record<string, unknown>;
-    const rawActions = parsed.actions;
-    if (rawActions !== null && typeof rawActions === "object" && !Array.isArray(rawActions)) {
-      const actions = rawActions as Record<string, unknown>;
-      for (const key of ["autoResolveOutdated", "commitSuggestions"] as const) {
-        if (key in actions) {
-          process.stderr.write(`pr-shepherd: config: actions.${key} is deprecated and ignored.\n`);
-          delete actions[key];
-        }
-      }
+    // Farthest file first so closer directories override, ESLint-style.
+    let overlay: Record<string, unknown> = {};
+    let loaded = false;
+    for (const rcPath of [...rcPaths].reverse()) {
+      const parsed = readRcFile(rcPath);
+      if (parsed === null) continue;
+      overlay = deepMerge(overlay, parsed);
+      loaded = true;
     }
-    warnUnknownConfigKeys(parsed);
+    if (!loaded) {
+      configCache.set(cwd, defaults);
+      return defaults;
+    }
     const config = deepMerge(
-      defaults as unknown as Record<string, unknown>,
-      parsed,
+      structuredClone(defaults) as unknown as Record<string, unknown>,
+      overlay,
     ) as unknown as PrShepherdConfig;
     config.botUsernames = parseBotUsernames(config.botUsernames);
     config.ignoreChecks = parseIgnoreChecks(config.ignoreChecks);
@@ -243,7 +286,7 @@ export function loadConfig(): PrShepherdConfig {
     return config;
   } catch (err) {
     process.stderr.write(
-      `pr-shepherd: failed to parse ${rcPath}: ${err instanceof Error ? err.message : String(err)}\n`,
+      `pr-shepherd: failed to parse ${rcPaths[0]}: ${err instanceof Error ? err.message : String(err)}\n`,
     );
     const fallback = { ...defaults };
     configCache.set(cwd, fallback);

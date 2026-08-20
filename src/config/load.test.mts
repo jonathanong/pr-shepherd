@@ -158,7 +158,7 @@ describe("loadConfig — malformed YAML", () => {
   });
 });
 
-describe("loadConfig — findRcFile", () => {
+describe("loadConfig — ancestor rc file", () => {
   it("finds rc file in a parent directory when cwd is a nested subdir", async () => {
     writeRc("iterate:\n  fixAttemptsPerThread: 50\n");
     const sub = tmpPath("nested", "deep");

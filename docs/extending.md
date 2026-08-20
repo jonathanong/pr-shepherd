@@ -90,4 +90,4 @@ All tunable constants live in `src/config.json`. Edit there — do not hardcode 
 }
 ```
 
-Modules that need config should call `loadConfig()` from `src/config/load.mts` rather than importing `config.json` directly. This ensures `.pr-shepherdrc.yml` overrides are honoured.
+Modules that need config should call `loadConfig()` from `src/config/load.mts` rather than importing `config.json` directly. This ensures cascading `.pr-shepherdrc.yml` overrides are honoured.

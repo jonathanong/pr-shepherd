@@ -2,7 +2,23 @@
 
 [← README](../README.md)
 
-pr-shepherd looks for a `.pr-shepherdrc.yml` file starting from the current working directory and walking up to `$HOME`. The first file found wins. All fields are optional — built-in defaults apply when omitted. The MCP server and CLI read the same file.
+pr-shepherd loads every `.pr-shepherdrc.yml` starting from the current working directory and walking up to `$HOME`, then deep-merges them ESLint-style: closer files override farther ones, nested objects merge, and arrays replace. `$HOME/.pr-shepherdrc.yml` is always included as the user-level file when it exists, even if the working directory is outside `$HOME`. All fields are optional — built-in defaults apply when omitted. The MCP server and CLI read the same files.
+
+For example, a user-level file at `$HOME/.pr-shepherdrc.yml` can set personal defaults, and a project file can override only the keys it cares about:
+
+```yaml
+# ~/.pr-shepherdrc.yml
+ignoreChecks:
+  - "Kilo*"
+iterate:
+  stallTimeoutMinutes: 90
+
+# <repo>/.pr-shepherdrc.yml
+iterate:
+  fixAttemptsPerThread: 5
+```
+
+From the repo, the merged result keeps `ignoreChecks` and `stallTimeoutMinutes` from `$HOME` and uses `fixAttemptsPerThread: 5` from the project file. Built-in defaults fill every other key. If both files set `ignoreChecks`, the closer file's list replaces the farther one.
 
 ## Example
 

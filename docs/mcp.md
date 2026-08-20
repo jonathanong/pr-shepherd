@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-pr-shepherd's agent integration is a local stdio MCP server. It shares command implementations, GitHub token resolution, and `.pr-shepherdrc.yml` with the CLI. The server returns structured tool results; the calling client owns recurrence and any git mutations.
+pr-shepherd's agent integration is a local stdio MCP server. It shares command implementations, GitHub token resolution, and cascading `.pr-shepherdrc.yml` files with the CLI. The server returns structured tool results; the calling client owns recurrence and any git mutations.
 
 The published binary is `pr-shepherd-mcp` from the `pr-shepherd` npm package:
 
