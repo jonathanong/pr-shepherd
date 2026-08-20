@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-pr-shepherd loads every `.pr-shepherdrc.yml` starting from the current working directory and walking toward `$HOME`, then deep-merges them ESLint-style: closer files override farther ones, nested objects merge, and arrays replace. `$HOME/.pr-shepherdrc.yml` is always included as the farthest user-level overlay when it exists, even if the working directory is outside `$HOME`. When cwd is outside `$HOME`, the walk includes ancestor directories of cwd but stops before the filesystem root, so `/.pr-shepherdrc.yml` cannot override the user file. All fields are optional — built-in defaults apply when omitted. The MCP server and CLI read the same files.
+pr-shepherd loads every `.pr-shepherdrc.yml` starting from the current working directory and walking toward `$HOME`, then deep-merges them ESLint-style: closer files override farther ones, nested objects merge, and arrays replace. `$HOME/.pr-shepherdrc.yml` is always included as the farthest user-level overlay when it exists, even if the working directory is outside `$HOME`. When cwd is outside `$HOME`, the walk includes ancestor directories of cwd but stops before the filesystem root, so `/.pr-shepherdrc.yml` cannot override the user file. All fields are optional — built-in defaults apply when omitted. The MCP server and CLI read the same files. These knobs tune what context is gathered (ignore checks, bot usernames, classification) and which actions iterate may take automatically.
 
 For example, a user-level file at `$HOME/.pr-shepherdrc.yml` can set personal defaults, and a project file can override only the keys it cares about:
 
@@ -68,23 +68,23 @@ actions:
 
 ## All supported keys
 
-| Key                                  | Default                                   | Purpose                                                                                                                                                     |
-| ------------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `botUsernames`                       | Known code-review bot logins              | GitHub logins treated as bots for repeat unresolved-thread visibility even when GitHub reports them as `User` or `Unknown`                                  |
-| `ignoreChecks`                       | `[]`                                      | Case-insensitive glob patterns for check/status context names Shepherd should ignore completely                                                             |
-| `iterate.fixAttemptsPerThread`       | `3`                                       | Max fix attempts per surfaced unresolved thread body before `escalate`                                                                                      |
-| `iterate.stallTimeoutMinutes`        | `60`                                      | Minutes the loop may repeat the same action without progress, or CI may stay pending without starting, before `escalate` with `stall-timeout`; `0` disables |
-| `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination).                                                                      |
-| `iterate.minimizeComments`           | `"all"`                                   | Which non-human GitHub author classes to minimize for PR comments and review summaries: `all`, `bots`, or `none`; humans are never minimized                |
-| `iterate.behindBaseHint`             | `""`                                      | One-liner shown on the `fix_code` push step when the branch is behind its base; empty omits the hint entirely                                               |
-| `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                                                                                   |
-| `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                                                            |
-| `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                                                                                  |
-| `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos)                                                                            |
-| `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                                                                      |
-| `actions.autoMinimizeSuppressed`     | `true`                                    | Silently resolve/minimize classification-rule matches with both `suppress: true` and `autoResolve: true` before emitting `fix_code`                         |
-| `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR reaches a clean handoff state                                                                                             |
-| `actions.neverCancelRuns`            | `[]`                                      | Case-insensitive glob patterns for workflow/check names whose GitHub Actions workflow runs Shepherd must never cancel                                       |
+| Key                                  | Default                                   | Purpose                                                                                                                                                                                                                |
+| ------------------------------------ | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `botUsernames`                       | Known code-review bot logins              | GitHub logins treated as bots for repeat unresolved-thread visibility even when GitHub reports them as `User` or `Unknown`                                                                                             |
+| `ignoreChecks`                       | `[]`                                      | Case-insensitive glob patterns for check/status context names Shepherd should ignore completely                                                                                                                        |
+| `iterate.fixAttemptsPerThread`       | `3`                                       | Max fix attempts per surfaced unresolved thread body before `escalate`                                                                                                                                                 |
+| `iterate.stallTimeoutMinutes`        | `60`                                      | Minutes the loop may repeat the same action without progress, or CI may stay pending without starting, before `escalate` with `stall-timeout`; `0` disables                                                            |
+| `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination).                                                                                                                                 |
+| `iterate.minimizeComments`           | `"all"`                                   | Which non-human GitHub author classes to minimize for PR comments and review summaries: `all`, `bots`, or `none`; humans are never minimized. Deprecated `"users"` is accepted and treated as `"none"` with a warning. |
+| `iterate.behindBaseHint`             | `""`                                      | One-liner shown on the `fix_code` push step when the branch is behind its base; empty omits the hint entirely                                                                                                          |
+| `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                                                                                                                                              |
+| `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                                                                                                                       |
+| `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                                                                                                                                             |
+| `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos)                                                                                                                                       |
+| `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                                                                                                                                 |
+| `actions.autoMinimizeSuppressed`     | `true`                                    | Silently resolve/minimize classification-rule matches with both `suppress: true` and `autoResolve: true` before emitting `fix_code`                                                                                    |
+| `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR reaches a clean handoff state                                                                                                                                                        |
+| `actions.neverCancelRuns`            | `[]`                                      | Case-insensitive glob patterns for workflow/check names whose GitHub Actions workflow runs Shepherd must never cancel                                                                                                  |
 
 ## `botUsernames`
 
@@ -156,6 +156,8 @@ Controls which non-human GitHub-classified author types are passed to `--minimiz
 - `"bots"` minimizes only GitHub `Bot` authors.
 - `"none"` surfaces minimizable comments/reviews but does not auto-minimize them.
 
+Deprecated `"users"` is still accepted and treated as `"none"`, with a warning.
+
 Items excluded by this policy still go through seen markers: Shepherd surfaces them the first time it sees them, writes a body hash marker, suppresses unchanged repeats on later ticks, and re-surfaces them if the author edits the body in place.
 
 ### `iterate.behindBaseHint` — default `""`
@@ -170,9 +172,9 @@ Empty (default) omits the hint entirely, matching prior behavior.
 
 ### `watch.readyDelayMinutes` — default `10`
 
-After the PR first reaches READY status (all checks green, no open threads), shepherd continues to loop for this many minutes before cancelling the loop. This settle window gives reviewers time to request changes or for a Copilot review to finish.
+After the PR first reaches a clean READY handoff (checks green, no Shepherd-visible work, no blocking bot review pending), shepherd continues to loop for this many minutes before cancelling. This settle window gives reviewers time to request changes or for a configured blocking reviewer to finish.
 
-The ready-delay countdown resets if the PR drops out of READY state at any tick.
+The ready-delay countdown resets if the PR drops out of that handoff state at any tick. Lifecycle: [iterate-flow.md](iterate-flow.md#2-ready-delay).
 
 ---
 
@@ -247,6 +249,8 @@ Protected runs still count as failing or in-progress checks. Shepherd surfaces t
 
 Protection also takes precedence over `ignoreChecks` for GitHub Actions check runs from the same workflow/run: a protected check is kept visible and can block ready-delay even if its raw job name matches `ignoreChecks`.
 
+`actions.autoResolveOutdated` and `actions.commitSuggestions` are accepted in `.pr-shepherdrc.yml` but ignored, with a deprecation warning. Outdated threads are surfaced through the seen-marker gate; suggestion patches are built only when the caller runs `build_suggestion_patch`.
+
 ---
 
 ## Environment variables
@@ -254,4 +258,6 @@ Protection also takes precedence over `ignoreChecks` for GitHub Actions check ru
 | Variable                                                     | Effect                                                                                                                                                                                                                |
 | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PR_SHEPHERD_STATE_DIR`                                      | Override the loop-state base directory (default `$TMPDIR/pr-shepherd-state`)                                                                                                                                          |
+| `PR_SHEPHERD_LOG_DISABLED`                                   | Set to `1` to disable the per-worktree debug log                                                                                                                                                                      |
+| `PR_SHEPHERD_LOG_MAX_BODY`                                   | Max characters of each logged HTTP body (default `262144`). Larger bodies are truncated.                                                                                                                              |
 | `GH_TOKEN` / `GITHUB_TOKEN` / `GITHUB_PERSONAL_ACCESS_TOKEN` | GitHub auth token. Resolution order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` fallback (requires `gh` CLI) → `GITHUB_PERSONAL_ACCESS_TOKEN`. See [authentication.md](authentication.md) for required PAT access. |

@@ -4,105 +4,60 @@
 
 ## Design rationale
 
+Modules split along the two jobs: **context gather** (github, checks, comments, merge-status) and **action emit** (iterate, poll, formatters, MCP tools). I/O (CLI parser, MCP stdio, `api.mts`) is a thin adapter over those.
+
 - **One local MCP surface** — the version-matched stdio server is the canonical agent integration. It shares command implementations and GitHub token resolution with the CLI; plugins only declare the same local server. See [mcp.md](mcp.md).
 - **Skills over subagents** — skill prompts inject into the main conversation rather than spawning a subagent that reloads CLAUDE.md every turn, keeping cost and latency low.
 - **Safe to interrupt** — durable state lives in the PR on GitHub; the iterate loop self-terminates when the PR is merged, closed, or settles after ready-delay. Local state in `$PR_SHEPHERD_STATE_DIR` can be deleted without data loss.
 
 ## Module tree
 
-````
-shepherd/
+```
+src/
 ├── index.mts              # bin entrypoint — thin shim that imports cli-parser
-├── cli-parser.mts         # argv dispatch; subcommand routing
-├── types.mts              # barrel re-exporting types/github.mts, types/iterate.mts, types/report.mts
-├── exit-codes.mts         # EXIT map, ShepherdError, iterateResultToExitCode, errorToExitCode — see docs/exit-codes.md
+├── api.mts                # createPrShepherd programmatic API
+├── mcp-stdio.mts          # pr-shepherd-mcp binary entry
+├── cli-parser.mts         # argv dispatch
+├── types.mts              # barrel for types/*
+├── exit-codes.mts         # EXIT map — see docs/exit-codes.md
 ├── config.json            # default config values
+├── config/                # cascading RC loader
 │
 ├── cli/                   # formatting and argument helpers
-│   ├── args.mts           # low-level argv parsing helpers (getFlag, hasFlag, parseCommonArgs, …)
-│   ├── duration.mts       # duration parsing — parseDurationToSeconds, parseSecondsDurationParts
-│   ├── handlers.mts       # async handlers wired from cli-parser (iterate, commit-suggestion)
-│   ├── formatters.mts     # barrel for per-output formatters
-│   ├── iterate-formatter.mts  # Markdown formatter for IterateResult
-│   ├── iterate-lean.mts   # lean JSON projection for default --format=json output
-│   └── fix-formatter.mts  # Markdown formatter for fix_code variant
-│
-├── mcp/                   # stdio MCP server and tool adapters
-│   └── server.mts          # iterate, apply, build_suggestion_patch tool registration
+├── mcp/                   # iterate, apply, build_suggestion_patch tools
+│   ├── server.mts
+│   └── index.mts          # createPrShepherdMcpServer / runPrShepherdMcpStdio
 │
 ├── commands/              # one file (or dir) per subcommand
-│   ├── check-annotations.mts  # fetches inline annotations for failing CheckRuns
-│   ├── check.mts          # read-only snapshot (GraphQL fetch → classify → report); internal helper
-│   ├── check-status.mts   # derives ShepherdStatus from a report
-│   ├── clean.mts          # removes local state files
-│   ├── commit-suggestion.mts  # emits patch and commit instructions for one suggestion
-│   ├── iterate/           # iterate subcommand (default invocation)
-│   │   ├── index.mts      # main runIterate orchestrator
-│   │   ├── classify.mts   # classifyReviewSummaries
-│   │   ├── escalate.mts   # escalation predicate
-│   │   ├── fix-code.mts   # fix_code action builder
-│   │   ├── helpers.mts    # shared small utilities
-│   │   ├── render.mts     # renderResolveCommand
-│   │   └── stall.mts      # stall-timeout guard
-│   ├── log-file.mts       # prints the per-worktree debug log path
-│   ├── mark-files-as-viewed.mts  # marks changed PR files viewed in GitHub
-│   ├── poll.mts           # repeats iterate while WAIT; debounce window after first FIX_CODE
-│   ├── ready-delay.mts    # ready-delay state machine (ready-since.txt marker)
-│   ├── resolve.mts        # resolve mutations (threads, comments, reviews)
+│   ├── check.mts          # context sweep (GraphQL fetch → classify → report)
+│   ├── check-status.mts   # ShepherdStatus from a report
+│   ├── iterate/           # action dispatch (runIterate)
+│   ├── poll.mts           # bounded WAIT loop + FIX_CODE debounce
+│   ├── ready-delay.mts    # ready-since.txt
+│   ├── resolve-mutate.mts # apply review mutations
+│   ├── journal/           # PR-body journal
+│   ├── commit-suggestion.mts  # build-suggestion-patch
+│   ├── mark-files-as-viewed.mts
+│   └── clean.mts
 │
-├── config/
-│   └── load.mts           # cascading RC loader with deepMerge
-│
-├── github/
-│   ├── client.mts         # getRepoInfo + getCurrentPrNumber
-│   ├── http.mts           # fetch-based graphql/rest helpers; token resolution
-│   ├── queries.mts        # loads .gql files from disk (never inline raw GraphQL)
-│   ├── batch.mts          # first-page batch query + slim extra-page follow-ups
-│   ├── batch-page.mts     # combined @include pagination for outstanding cursors
-│   ├── batch-parsers.mts  # parses raw batch response into typed structures
-│   ├── batch-raw-types.mts  # raw GraphQL response types
-│   ├── pagination.mts     # generic GraphQL paginator (cursor-based, forward + backward)
-│   └── gql/               # *.gql files — one per query/mutation
-│       ├── batch-pr.gql   # main batch query (first page)
-│       ├── batch-pr-page.gql  # slim @include follow-up pages
-│       ├── commit-suggestion-thread.gql
-│       ├── check-run-annotations.gql
-│       ├── get-pr-head-sha.gql
-│       ├── mark-pr-ready.gql
-│       ├── pr-number-by-branch.gql
-│       └── review-thread-comments.gql
-│
-├── state/
-│   ├── fix-attempts.mts   # per-thread fix-attempt counter (JSON file in state dir)
-│   ├── iterate-stall.mts  # stall-state persistence
-│   └── seen-comments.mts  # seen-marker gate for first-look threads/comments
-│
-├── checks/
-│   ├── classify.mts       # event filter + CI verdict
-│   └── triage.mts         # conclusion → failure kind + failed step name via jobs API
-│
-├── comments/
-│   ├── outdated.mts       # outdated-thread detection (isOutdated flag)
-│   └── resolve.mts        # batch mutations (resolve / minimize / dismiss)
-│
-├── merge-status/
-│   └── derive.mts         # CLEAN/BEHIND/CONFLICTS/BLOCKED/UNSTABLE/DRAFT/UNKNOWN derivation
-│
-├── reporters/
-│   └── agent.mts          # agent-facing output helpers
-│
-├── suggestions/
-│   ├── parse.mts          # parse ```suggestion blocks from review thread bodies
-│   └── patch.mts          # apply a parsed suggestion as a file patch
-│
-├── types/
-│   ├── github.mts         # GitHub API types (CheckRun, Review, MergeStatusResult, …)
-│   ├── iterate.mts        # IterateResult union + IterateCommandOptions
-│   └── report.mts         # ShepherdReport + RelevantCheck + related types
-│
-└── util/
-    └── path-segment.mts   # path-segment parsing utility
-````
+├── github/                # GraphQL batch + REST supplements
+│   ├── graphql-http.mts   # graphqlWithRateLimit
+│   ├── batch.mts          # first-page batch + slim extra-page follow-ups
+│   ├── batch-page.mts     # combined @include pagination
+│   └── gql/
+│       ├── batch-pr.gql
+│       ├── batch-pr-page.gql
+│       └── commit-suggestion-thread.gql
+├── checks/                # classify, triage, startup-failures, superseded
+├── comments/              # resolve / minimize / dismiss mutations
+├── merge-status/          # deriveMergeStatus + deriveMergeRequirements
+├── classify/              # .pr-shepherd/classification/ loader + types
+├── log/                   # per-worktree debug log
+├── state/                 # seen markers, stall, fix-attempts
+├── threads/               # thread transcripts
+├── suggestions/           # suggestion fence parse + unified diff
+└── types/
+```
 
 ## Dependency direction rule
 
@@ -129,17 +84,19 @@ Never import upward (e.g., `github` importing from `commands`) — that creates 
 
 ## Where to put new code
 
-| What you're adding               | Where it goes                                                   |
-| -------------------------------- | --------------------------------------------------------------- |
-| New MCP tool                     | `mcp/server.mts` adapter over an existing command               |
-| New subcommand                   | `commands/<name>.mts`                                           |
-| New GraphQL query or mutation    | `github/gql/<name>.gql` + loader in `queries.mts`               |
-| New CI check classifier category | `checks/classify.mts` + type in `types/github.mts`              |
-| New failure kind                 | `checks/triage.mts` + type in `types/github.mts`                |
-| New thread/comment mutation      | `comments/resolve.mts` + `ResolveOptions` in `types/report.mts` |
-| New merge state derivation rule  | `merge-status/derive.mts`                                       |
-| New tunable constant             | `config.json` + `PrShepherdConfig` in `config/load.mts`         |
-| New shared type                  | `types/github.mts`, `types/iterate.mts`, or `types/report.mts`  |
-| New exit code                    | `EXIT` map in `exit-codes.mts` + [exit-codes.md](exit-codes.md) |
+| What you're adding               | Where it goes                                                    |
+| -------------------------------- | ---------------------------------------------------------------- |
+| New MCP tool                     | `mcp/server.mts` adapter over an existing command                |
+| New subcommand                   | `commands/<name>.mts`                                            |
+| New GraphQL query or mutation    | `github/gql/<name>.gql` + loader in `queries.mts`                |
+| New CI check classifier category | `checks/classify.mts` + type in `types/check-classification.mts` |
+| New failure kind                 | `checks/triage.mts` + type in `types/github.mts`                 |
+| New thread/comment mutation      | `comments/resolve.mts` + `ResolveOptions` in `types/report.mts`  |
+| New merge state derivation rule  | `merge-status/derive.mts`                                        |
+| New merge-requirement field      | `merge-status/requirements.mts` + `requirements-format.mts`      |
+| New MCP/API operation            | `api.mts` + `mcp/server.mts`                                     |
+| New tunable constant             | `config.json` + `PrShepherdConfig` in `config/load.mts`          |
+| New shared type                  | `types/github.mts`, `types/iterate.mts`, or `types/report.mts`   |
+| New exit code                    | `EXIT` map in `exit-codes.mts` + [exit-codes.md](exit-codes.md)  |
 
 See [extending.md](extending.md) for step-by-step recipes.

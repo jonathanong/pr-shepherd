@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-pr-shepherd is a deterministic GitHub-to-agent orchestration layer. It fetches PR state, preserves review visibility, surfaces CI and review context, proposes explicit GitHub mutations, and tells a calling coding agent what to do next. It does not provide a model, generate a fresh code review, edit code, mutate git, or run as a hosted service.
+pr-shepherd gathers all context for a PR and emits one deterministic next action for a calling coding agent. It does not provide a model, generate a fresh code review, edit code, mutate git, or run as a hosted service.
 
 That makes several products below complements as often as competitors. The useful question is which part of the PR workflow you want a tool to own.
 

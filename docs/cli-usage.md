@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-pr-shepherd has one workflow model and two transports: the local stdio MCP server for agent clients and a CLI for shells and CI. The MCP server returns structured data; the CLI renders the same state as text or JSON.
+pr-shepherd has one workflow model and two transports: the local stdio MCP server for agent clients and a CLI for shells and CI. Both **gather PR context** and **emit the same deterministic action**. The MCP server returns structured data; the CLI renders it as text or JSON.
 
 ## Canonical shell commands
 
@@ -12,12 +12,16 @@ pr-shepherd iterate [PR] [iterate-flags]
 pr-shepherd apply review [PR] [review-flags]
 pr-shepherd apply files [PR] [files...] [--tests] [--match REGEX]
 pr-shepherd apply journal [PR] <item> [--dry-run] [--format text|json]
+pr-shepherd apply journal [PR] --file <path> [--dry-run] [--format text|json]
+pr-shepherd apply journal [PR] --file - [--dry-run] [--format text|json]
 pr-shepherd build-suggestion-patch [PR] --thread-id ID --message MSG [flags]
 pr-shepherd admin clean <pr|branch|current|repo|all> [value] [--dry-run] [--format text|json]
 pr-shepherd admin log-file [--format text|json]
 ```
 
 `PR` may be a number or GitHub pull request URL. When omitted, Shepherd infers the current branch's open PR.
+
+`apply journal --file <path>` reads the journal item from a file; `--file -` reads stdin. Provide either a positional `<item>` or `--file`, not both.
 
 `pr-shepherd [PR]` is the canonical bounded poll dispatcher. It repeats `iterate` while the action is `WAIT`, then prints the first `MARK_READY`, `CANCEL`, or `ESCALATE` result. If `--timeout` expires during WAIT polling, poll returns that final `WAIT` result rather than a terminal action. `FIX_CODE` is delayed by `--debounce` (default 1m): poll keeps iterating at `--interval` for that window, then returns one later tick. Use `iterate` when the caller owns recurrence.
 
@@ -54,6 +58,6 @@ MCP clients own polling recurrence. Do not call a long-running polling tool: cal
 
 ## Compatibility aliases
 
-`poll`, `resolve`, `commit-suggestion`, and `mark-files-as-viewed` remain supported CLI aliases for existing automation. They are no longer the advertised integration surface; new agent integrations should use MCP `iterate`, `apply`, and `build_suggestion_patch`.
+`poll`, `resolve`, `commit-suggestion`, `mark-files-as-viewed`, `journal`, `clean`, and `log-file` remain supported CLI aliases for existing automation. They are no longer the advertised integration surface; new agent integrations should use MCP `iterate`, `apply`, and `build_suggestion_patch`.
 
 All CLI commands honor `--help`/`-h` before I/O. Iterate/poll PR outcomes use exit codes `0` and `10`–`14`; command, validation, and GitHub failures use `sysexits.h` codes. See [exit-codes.md](exit-codes.md).

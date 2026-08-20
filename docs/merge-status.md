@@ -1,6 +1,8 @@
 # shepherd merge-status derivation
 
-[← README](../README.md)
+[← README](../README.md) | [context.md](context.md)
+
+This page is the mergeability and merge-requirements spec — part of **context gathering**. Shepherd derives a merge discriminator for the state machine, then prints current-vs-required merge rules so the agent can see why GitHub will or will not merge. It does not merge PRs.
 
 ## `deriveMergeStatus` — first-match-wins table
 
@@ -12,12 +14,47 @@ Located in `src/merge-status/derive.mts`. Given a `BatchPrData`, returns a `Merg
 | 1        | `mergeable === 'CONFLICTING'`                     | `CONFLICTS`    | GraphQL merge conflict signal                                                  |
 | 2        | `blockingBotReviewInProgress`                     | `BLOCKED`      | Takes priority over BEHIND to avoid hiding a real blocker                      |
 | 3        | `mergeStateStatus === 'DIRTY'`                    | `CONFLICTS`    | REST-layer merge conflict signal                                               |
-| 4        | `mergeStateStatus === 'BEHIND'`                   | `BEHIND`       | Branch needs rebase                                                            |
-| 5        | `mergeStateStatus === 'BLOCKED'` or `'HAS_HOOKS'` | `BLOCKED`      | Protected branch rules blocking merge                                          |
-| 6        | `mergeStateStatus === 'UNSTABLE'`                 | `UNSTABLE`     | Some checks not passing                                                        |
-| 7        | `isDraft` or `mergeStateStatus === 'DRAFT'`       | `DRAFT`        | Draft PR state                                                                 |
+| 4        | `isDraft` or `mergeStateStatus === 'DRAFT'`       | `DRAFT`        | Draft wins over BEHIND / BLOCKED / UNSTABLE                                    |
+| 5        | `mergeStateStatus === 'BEHIND'`                   | `BEHIND`       | Branch needs rebase; status information, not a rebase                          |
+| 6        | `mergeStateStatus === 'BLOCKED'` or `'HAS_HOOKS'` | `BLOCKED`      | Protected branch rules blocking merge                                          |
+| 7        | `mergeStateStatus === 'UNSTABLE'`                 | `UNSTABLE`     | Some checks not passing                                                        |
 | 8        | `mergeStateStatus === 'UNKNOWN'`                  | `UNKNOWN`      | GitHub hasn't computed merge state yet                                         |
 | 9        | (fallthrough)                                     | `CLEAN`        | Ready to merge                                                                 |
+
+A draft that is also behind is `DRAFT`, not `BEHIND`.
+
+## Merge requirements
+
+After each sweep, `deriveMergeRequirements` (`src/merge-status/requirements.mts`) folds classic branch protection and the PR's applicable rulesets together with current PR state. Iterate prints that snapshot. JSON lives on `mergeRequirements`; text is formatted by `src/merge-status/requirements-format.mts`.
+
+Always printed:
+
+| Text                                         | JSON                                                             | Meaning                                                                                 |
+| -------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `Approvals: None [Not Required]`             | `approvals: { current, requiredCount }`                          | Current APPROVED reviews vs required count. `[Required]` only when `requiredCount > 0`. |
+| `Conversations Resolved: Yes [Not Required]` | `conversationsResolved: { resolved, unresolvedCount, required }` | Unresolved thread count vs `requiresConversationResolution`.                            |
+
+Printed only when they apply:
+
+| Text                                    | JSON field                         | When                                                                                      |
+| --------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------- |
+| `Code owner review: [Required]`         | `codeOwnerReview`                  | `requiresCodeOwnerReviews`                                                                |
+| `Last-push approval: [Required]`        | `lastPushApproval`                 | `requiresLastPushApproval`                                                                |
+| `Signed commits: [Required]`            | `signedCommits`                    | `requiresCommitSignatures`                                                                |
+| `Linear history: [Required]`            | `linearHistory`                    | `requiresLinearHistory`                                                                   |
+| `Branch up to date: Yes\|No [Required]` | `branchUpToDate`                   | **Only** when `requiresStrictStatusChecks`. `current` is `mergeStateStatus !== "BEHIND"`. |
+| `Required status checks: N [Required]`  | `requiredStatusChecks.contexts`    | Non-empty required contexts                                                               |
+| `Required deployments: … [Required]`    | `requiredDeployments.environments` | Non-empty environments                                                                    |
+| `Required workflows: [Required]`        | `requiredWorkflows`                | `requiresWorkflows`                                                                       |
+| `Code scanning: [Required]`             | `codeScanning`                     | `requiresCodeScanning`                                                                    |
+| `Merge queue: …`                        | `mergeQueue`                       | Required, enabled, or already in queue                                                    |
+| `Stack: #<n> <pos>/<size> (base <ref>)` | `stack`                            | GitHub stack membership                                                                   |
+
+The agent should read these lines instead of inferring a required review from `reviewDecision`. `REVIEW_REQUIRED` with `Approvals: None [Not Required]` means GitHub is not waiting on an approval.
+
+`reviewDecision` is **not** used for ShepherdStatus derivation. Iterate still prints why merge is blocked: cancel notes use `blockedReasonFromRequirements` (awaiting N approvals, unresolved conversations, branch behind base, merge queue) rather than guessing from `reviewDecision` alone.
+
+The legacy `**required**` line is a fallback when `mergeRequirements` is absent (tests that construct an iterate result without a sweep). When `mergeRequirements` is present it replaces `**required**`.
 
 ## Gotchas
 
@@ -36,35 +73,29 @@ Both map to `CONFLICTS` in shepherd's derived status.
 
 GitHub often reports `mergeable: UNKNOWN` and `mergeStateStatus: UNKNOWN` after a PR is merged or closed. Shepherd treats `state` as authoritative for those PRs: `runCheck` returns top-level `status: "MERGED"` or `status: "CLOSED"` and skips CI/comment processing, while `deriveMergeStatus` continues to pass through the raw `state` and derived mergeability fields.
 
+`state` is used by iterate at step **1.5** to cancel the loop for terminal PRs. The merge status derivation logic itself does not branch on `state`.
+
 ### Blocking-bot detection takes priority over BEHIND
 
-Priority 2 (`blockingBotReviewInProgress`) comes before priority 4 (BEHIND). If a blocking bot review is pending AND the branch is behind, shepherd reports `BLOCKED`, not `BEHIND`. This prevents the loop from rebasing and pushing when the bot is still reviewing — the rebase would dismiss the in-progress review.
+Priority 2 (`blockingBotReviewInProgress`) comes before priority 5 (BEHIND). If a blocking bot review is pending AND the branch is behind, shepherd reports `BLOCKED`, not `BEHIND`. This prevents the loop from treating the PR as a rebase problem while the bot is still reviewing — a rebase would dismiss the in-progress review.
 
 ### DRAFT uses both `isDraft` and `mergeStateStatus === 'DRAFT'`
 
-GitHub sometimes updates `mergeStateStatus` to `'DRAFT'` before the `isDraft` boolean is reflected in the GraphQL response (timing inconsistency). Checking both fields ensures the DRAFT status is caught reliably.
+GitHub sometimes updates `mergeStateStatus` to `'DRAFT'` before the `isDraft` boolean is reflected in the GraphQL response. Checking both fields ensures the DRAFT status is caught. Because DRAFT is priority 4, a draft that is also behind, blocked, or unstable reports `DRAFT`.
 
-### `state` pass-through
+### BLOCKED or UNSTABLE with no remaining shepherd work → ShepherdStatus READY
 
-`state` (OPEN/MERGED/CLOSED) is passed through directly from `BatchPrData` without any transformation. It is used by `iterate.mts` at step 2.5 to cancel the loop for terminal PRs. The merge status derivation logic itself does not branch on `state` — it always derives a `status` regardless of PR state.
-
-### BLOCKED + no remaining shepherd work → ShepherdStatus READY
-
-`deriveMergeStatus` sets `status: "BLOCKED"` whenever `mergeStateStatus` is `BLOCKED`. However, `computeStatus` in `check.mts` overrides this to `ShepherdStatus: "READY"` when all of the following are true:
+`deriveMergeStatus` sets `status: "BLOCKED"` whenever `mergeStateStatus` is `BLOCKED`. However, `computeStatus` in `src/commands/check-status.mts` overrides this to `ShepherdStatus: "READY"` when all of the following are true:
 
 - `verdict.allPassed` — no failing or in-progress CI checks.
-- `verdict.hasChecks` — at least one relevant (non-filtered, non-skipped) check has completed. Prevents a PR with zero relevant checks (CI never started, or all checks filtered/skipped) from prematurely triggering READY before any check has reported.
+- Relevant passing checks exist: `verdict.hasChecks`, **or** `mergeStatus.status === "UNSTABLE"` with at least one ignored check. The UNSTABLE+ignored case is a safe handoff even with no other checks, because UNSTABLE means only non-required checks are pending/failing. BLOCKED is excluded from that ignored-names extension: BLOCKED can mean required checks have not started.
 - No unresolved threads, comments, or changes-requested reviews. This includes outdated/minimized threads that still have `isResolved === false`; those are routed as resolution-only work instead of being treated as ready.
-- `mergeStatus.status === "BLOCKED"` (from `deriveMergeStatus`).
+- `mergeStatus.status === "BLOCKED"` or `"UNSTABLE"`.
 - `mergeStatus.blockingBotReviewInProgress === false` — a bot review still pending is shepherd's problem, not a hand-off case.
 
-The specific reason GitHub is BLOCKED (`reviewDecision === "REVIEW_REQUIRED"`, `"APPROVED"` with insufficient approvals, signed-commit policy, etc.) is not consulted — it is informational only. Shepherd cannot resolve any of these on its own.
+In this case `mergeStatus.status` in the report is still `BLOCKED` or `UNSTABLE` (truthful about the GitHub merge state), but the top-level `ShepherdStatus` is `READY`, signalling that shepherd has nothing more to do. The ready-delay timer starts, and `action: cancel` is emitted after it elapses.
 
-After each sweep, `deriveMergeRequirements` folds classic branch protection and the PR's applicable rulesets together with current PR state (approvals, unresolved threads, merge-queue entry, stack membership) into `mergeRequirements`. Iterate prints that snapshot so agents can see whether approvals, conversation resolution, an up-to-date branch, merge queue, stacks, etc. are actually required — without treating `reviewDecision` as “must wait for an approval.”
-
-In this case `mergeStatus.status` in the report is still `BLOCKED` (truthful about the GitHub merge state), but the top-level `ShepherdStatus` is `READY`, signalling that shepherd has nothing more to do. The ready-delay timer starts, and `action: cancel` is emitted after it elapses.
-
-A `BLOCKED` case that does not satisfy the above (e.g. a blocking bot review in progress, unresolved threads, or failing CI) maps to `ShepherdStatus: "PENDING"`. The same applies to `UNSTABLE` (non-required checks are red but merge is not fully blocked) and `BEHIND` (head branch is out of date). `FAILING` is reserved for red CI checks (`verdict.anyFailing`) and merge conflicts (`CONFLICTS`).
+A `BLOCKED` case that does not satisfy the above (blocking bot review in progress, unresolved threads, or failing CI) maps to `ShepherdStatus: "PENDING"`. The same applies to `BEHIND` (head branch is out of date) when it is not a READY handoff. `FAILING` is reserved for red CI checks (`verdict.anyFailing`) and merge conflicts (`CONFLICTS`).
 
 ## Blocking-bot review detection
 

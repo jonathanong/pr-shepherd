@@ -1,6 +1,8 @@
 # shepherd GraphQL
 
-[← README](../README.md)
+[← README](../README.md) | [context.md](context.md)
+
+This page is **how context is fetched**. A typical green tick is one GraphQL batch. Extra pages use a slim follow-up query. REST supplements run only where GraphQL cannot return the data.
 
 ## The batch query
 
@@ -57,7 +59,7 @@ The generic paginator is in `github/pagination.mts`. It accepts a `direction` pa
 
 ### `getPrHeadSha`
 
-**When:** `--require-sha` flag is set on `resolve`.
+**When:** `--require-sha` is set on `apply review` (or the MCP `apply` `review_mutations.requireSha` field).
 
 **Why:** Shepherd needs to verify GitHub has received a push before resolving threads. This GraphQL query polls `headRefOid` until it matches the expected SHA.
 
@@ -81,7 +83,7 @@ The generic paginator is in `github/pagination.mts`. It accepts a `direction` pa
 
 ## Rate limiting
 
-`graphqlWithRateLimit` and `restWithRateLimit` parse `x-ratelimit-remaining` / `x-ratelimit-limit` / `x-ratelimit-reset` (and `Retry-After` when present). Failed REST calls throw `GitHubRequestError` with that metadata.
+`graphqlWithRateLimit` (in `github/graphql-http.mts`, re-exported from `http.mts` / `client.mts`) and `restWithRateLimit` parse `x-ratelimit-remaining` / `x-ratelimit-limit` / `x-ratelimit-reset` (and `Retry-After` when present). Failed REST calls throw `GitHubRequestError` with that metadata.
 
 Typical green wait tick (PR number passed, no extra pages, mergeable known, CheckSuites complete): **1 GraphQL batch**, no startup-failure REST.
 

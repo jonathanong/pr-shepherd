@@ -70,6 +70,16 @@ rm $TMPDIR/pr-shepherd-state/acme-myrepo/42/ready-since.txt
 
 ---
 
+### "First-look items keep coming back during debounce"
+
+**Symptom:** During `pr-shepherd [PR]` poll, intermediate `FIX_CODE` ticks inside `--debounce` seem to re-surface the same first-look comments.
+
+**Cause:** Debounce ticks run `iterate` with `persistSeen: false`. Seen markers are written only on the post-window tick that the agent actually sees.
+
+**Fix:** Expected. Wait for the poll to return the post-debounce result. MCP `iterate` has no debounce and writes seen markers each tick.
+
+---
+
 ### "Rate limit exhaustion"
 
 **Symptom:** Shepherd errors with `API rate limit exceeded` or `secondary rate limit`.

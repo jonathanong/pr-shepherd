@@ -2,11 +2,28 @@
 
 Autonomous PR CI monitor and review-comment resolver for agentic coding tools, including Claude Code and Codex.
 
-The goal is to help an agent carry a planned change to a human-reviewable PR: passing CI, no unresolved Shepherd-visible work, and a useful PR description/journal.
+## Why
+
+An agent finishing a PR should think about code, not reconstruct GitHub state or invent a next-step policy each tick. Without Shepherd it fans out across GitHub MCP, `gh`, and GraphQL, then guesses what to do with the result.
+
+## What it does
+
+1. **Gather all context for a PR** in one invocation: review threads, comments, replies, summaries, CI, mergeability, merge requirements, first-look / outdated / edited items, and author provenance.
+2. **Provide deterministic actions for the agent**: exactly one of `WAIT`, `MARK_READY`, `FIX_CODE`, `CANCEL`, or `ESCALATE`, plus numbered `## Instructions` and explicit `apply` / `build_suggestion_patch` mutations. The agent still decides whether a comment or CI failure needs a code change. Shepherd does not classify signal vs noise and does not mutate git.
+
+Highlights:
+
+- Batched GraphQL reads and writes (plus REST where GraphQL cannot) so one poll replaces a tool-call fan-out. MCP `iterate` is one tick and the client owns recurrence; `--debounce` is a poll-dispatcher settle window, not an MCP tool.
+- CI summaries include failed checks, and the failed job/step plus a log excerpt when triage can fetch them. Job and log details are omitted for `STARTUP_FAILURE` and `CANCELLED`; agents may still inspect logs.
+- Handles GitHub comment types (comments, threads, replies) and their states, including first-look, outdated, resolved, minimized, and edited.
+- `apply` batches resolve / reply / minimize / dismiss. `build_suggestion_patch` emits a unified diff in output, not a patch file, and does not mutate git.
+- `BEHIND` is mergeability information, not a rebase or a guarantee that the next push is at the default-branch tip. The agent can update the branch before pushing.
+
+Full reference: [docs/README.md](docs/README.md). Feature matrix: [docs/features.md](docs/features.md).
 
 ## How It Works
 
-`pr-shepherd` moves deterministic PR orchestration into a local MCP server, with a CLI for shells and CI. Both interfaces fetch the same GitHub state, emit raw-enough context, and return a numbered plan for the calling agent to follow. The agent still decides whether a comment or CI failure requires a code change.
+`pr-shepherd` moves deterministic PR orchestration into a local MCP server, with a CLI for shells and CI. Both interfaces fetch the same GitHub state, emit raw-enough context, and return a numbered plan for the calling agent to follow.
 
 The MCP server exposes three tools: `iterate`, `apply`, and `build_suggestion_patch`. `apply` accepts ordered review mutations, file-view mutations, and journal entries. The shipped skills are thin dispatchers for those tools.
 
@@ -25,8 +42,10 @@ Example shape:
 
 # PR #123 [FIX_CODE]
 
-**status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
+**status** `UNRESOLVED_COMMENTS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 3 passing
+Approvals: None [Not Required]
+Conversations Resolved: No [Not Required]
 
 ## Review threads
 
@@ -39,20 +58,20 @@ Example shape:
 - `24697658766` — `CI › lint / typecheck / test (22.x)` [conclusion: FAILURE]
   > oxfmt
 
-## Post-fix plan
+## Post-fix push
 
 - base: `main`
-- apply: reply to `PRRT_kwDOSGizTs58XB1L` after the relevant HEAD SHA is visible
+- apply review: `pr-shepherd apply review 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
 
 ## Instructions
 
-1. Decide for each item under `## Review threads` and `## Failing checks` whether a code change is warranted. If code changes are needed, apply edits, commit, and push according to the repository's conventions.
+1. Decide for each item under `## Review threads` and `## Failing checks` whether a code change is warranted. If code changes are needed, apply edits, commit, push, then run the `apply review:` command.
 2. For each failing check under `## Failing checks`: fetch logs when needed and decide whether to rerun or fix.
-3. Use `apply` with a specific reply/dismiss message and the relevant HEAD SHA.
+3. Run the `apply review:` command shown above, substituting `$HEAD_SHA` and `$DISMISS_MESSAGE`.
 4. Stop this iteration.
 ```
 
-See [docs/actions.md](docs/actions.md) for the complete output contract.
+See [docs/actions.md](docs/actions.md) for the complete output contract. Iterate/poll PR outcomes use exit codes `0` and `10`–`14`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).
 
 ## Workflow Assumptions
 
@@ -234,7 +253,7 @@ Ready-to-use examples for common patterns are in [`examples/classification/`](ex
 
 ## Compatibility aliases
 
-The legacy CLI subcommands `poll`, `resolve`, `commit-suggestion`, and `mark-files-as-viewed` remain available for compatibility but are no longer advertised as the primary integration. Prefer canonical default polling/`iterate` in a shell and the MCP `iterate`, `apply`, and `build_suggestion_patch` tools in an agent client.
+The legacy CLI subcommands `poll`, `resolve`, `commit-suggestion`, `mark-files-as-viewed`, `journal`, `clean`, and `log-file` remain available for compatibility but are no longer advertised as the primary integration. Prefer canonical default polling/`iterate` in a shell and the MCP `iterate`, `apply`, and `build_suggestion_patch` tools in an agent client.
 
 ## Requirements
 
@@ -244,7 +263,7 @@ The legacy CLI subcommands `poll`, `resolve`, `commit-suggestion`, and `mark-fil
 
 ## Docs
 
-Full reference: [docs/README.md](docs/README.md).
+Full reference, grouped by the two jobs (gather context / emit actions): [docs/README.md](docs/README.md).
 
 ## Harness Ecosystem
 

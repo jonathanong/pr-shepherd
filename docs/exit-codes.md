@@ -2,6 +2,8 @@
 
 [← README](../README.md)
 
+Exit codes are the process-level counterpart of the action tag in [actions.md](actions.md). `0` and `10`–`14` mean Shepherd gathered context and chose an action; `64+` means the command itself failed before that.
+
 ## The rule
 
 ```text
