@@ -1,13 +1,38 @@
 # pr-shepherd skills
 
-[← README](../README.md)
+[← README](../README.md) | [actions.md](actions.md) | [iterate-flow.md](iterate-flow.md)
 
-Two skills are shipped for Claude Code, Codex, and Grok. The iterate skill polls with the CLI and falls back to MCP `iterate` if the CLI is missing. `mark-files-as-viewed` uses MCP when the server is available and the CLI otherwise:
+Two skills are shipped for Claude Code, Codex, and Grok. They are thin dispatchers: parse arguments, call the CLI or MCP, print the full result, and follow `## Instructions`. Policy lives in that output, not in the skill prompt.
 
 - `pr-shepherd` runs the poll command `pr-shepherd` (not `pr-shepherd iterate`). If the CLI is unavailable, it calls MCP `iterate` and must use MCP `apply` / `build_suggestion_patch` for the returned mutations (there is no `pr-shepherd apply` shell command in that setup). After a CLI poll it runs the printed apply command.
 - `mark-files-as-viewed` calls MCP `apply` with a `mark_files_viewed` operation, or runs `pr-shepherd apply files`.
 
 Install the plugin (skills plus the version-matched MCP server) or register `pr-shepherd-mcp` yourself. See [mcp.md](mcp.md). The CLI path needs `pr-shepherd` on `PATH`.
+
+## Recurrence
+
+The skill's default fetch is the bounded poll command `pr-shepherd [PR]`, which sleeps through `WAIT`. After the first `FIX_CODE`, poll waits `--debounce` (default 1m) while still iterating at `--interval`, then returns the post-window tick. That settle window batches late review comments and CI failures into one agent-facing result. MCP `iterate` is the fallback when the CLI is unavailable; it has no debounce, and the host chooses when to recheck.
+
+Each non-terminal action is followed by another poll (or another `iterate` call when only MCP is available). `[FIX_CODE]` work must be handled before the next tick. `[CANCEL]` and `[ESCALATE]` stop the goal. The MCP server does not run an unbounded polling loop.
+
+```
+User                    Active Goal             pr-shepherd
+ |                          |                        |
+ |-- /goal /pr-shepherd --> |                        |
+ |                          |-- pr-shepherd <PR> --> |
+ |                          |                        |-- GraphQL fetch
+ |                          |                        |-- classify
+ |                          |                        |-- dispatch
+ |                          |<-- action + data
+ |                          |                        |
+ |  [if wait/mark_ready]    |-- pr-shepherd <PR> --> |
+ |  [if fix_code]           |-- fix, commit, push    |
+ |                          |-- apply review         |
+ |                          |-- pr-shepherd <PR> --> |
+ |  [if cancel/escalate]    |   goal ends            |
+```
+
+Ready-delay (default 10 minutes) is `watch.readyDelayMinutes`. See [iterate-flow.md](iterate-flow.md#2-ready-delay) and [configuration.md](configuration.md).
 
 ## Claude Code
 

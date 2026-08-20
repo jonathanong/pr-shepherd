@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-pr-shepherd's agent integration is a local stdio MCP server. It shares command implementations, GitHub token resolution, and cascading `.pr-shepherdrc.yml` files with the CLI. The server returns structured tool results; the calling client owns recurrence and any git mutations.
+pr-shepherd's agent integration is a local stdio MCP server. It shares command implementations, GitHub token resolution, and cascading `.pr-shepherdrc.yml` files with the CLI. Tools gather PR context (`iterate`) and apply deterministic mutations (`apply`, `build_suggestion_patch`). The calling client owns recurrence and any git mutations.
 
 The published binary is `pr-shepherd-mcp` from the `pr-shepherd` npm package:
 
@@ -25,7 +25,7 @@ Confirm GitHub auth before the first tool call. See [authentication.md](authenti
 
 ### Plugin
 
-The plugin launches `npx --yes --package pr-shepherd@<version> pr-shepherd-mcp` from `plugins/pr-shepherd/.mcp.json` (Claude Code and Grok) or `plugins/pr-shepherd/.codex.mcp.json` (Codex). The shipped `pr-shepherd` skill runs the poll command `pr-shepherd` and uses MCP `iterate` only when the CLI is unavailable. `apply` and `build_suggestion_patch` still go through MCP when the server is connected.
+The plugin launches `npx --yes --package pr-shepherd@<version> pr-shepherd-mcp` from `plugins/pr-shepherd/.mcp.json` (Claude Code and Grok) or `plugins/pr-shepherd/.codex.mcp.json` (Codex). The shipped `pr-shepherd` skill runs the poll command `pr-shepherd` and uses MCP `iterate` only when the CLI is unavailable. After a CLI poll, run the printed apply command. Use MCP `apply` / `build_suggestion_patch` only when this tick used MCP `iterate`.
 
 #### Claude Code
 
@@ -227,7 +227,7 @@ The result includes `patch`, `commitMessage`, `commitBody`, and `postActionInstr
 
 ## Recurrence
 
-MCP clients own polling. Do not expect a long-running poll tool.
+MCP clients own polling. Do not expect a long-running poll tool. MCP `iterate` has no `--debounce`; late comments and CI failures are not batched the way the shell poll dispatcher batches them.
 
 1. Call `iterate`.
 2. Follow the returned `## Instructions`.
@@ -235,11 +235,11 @@ MCP clients own polling. Do not expect a long-running poll tool.
 4. For `FIX_CODE`, finish the code/review work, then call `iterate` again.
 5. Stop on `CANCEL` or `ESCALATE`.
 
-The shell command `pr-shepherd [PR]` is the bounded poll dispatcher. It is not an MCP tool. See [watch-loop.md](watch-loop.md) and [skills.md](skills.md).
+The shell command `pr-shepherd [PR]` is the bounded poll dispatcher. It is not an MCP tool. See [skills.md](skills.md).
 
 ## Authentication, cwd, and environment
 
-The server uses the client's working directory for git, `.pr-shepherdrc.yml`, and classification rules. Start the client from the repository that contains the PR.
+The server uses the client's working directory for git, cascading `.pr-shepherdrc.yml` files, and classification rules. Start the client from the repository that contains the PR.
 
 Token resolution is the same as the CLI: `GH_TOKEN`, `GITHUB_TOKEN`, `gh auth token`, then `GITHUB_PERSONAL_ACCESS_TOKEN`. See [authentication.md](authentication.md).
 
@@ -277,7 +277,7 @@ await runPrShepherdMcpStdio({ cwd: "/path/to/repo" });
 ## Related docs
 
 - [cli-usage.md](cli-usage.md) — shell commands that pair with these tools
-- [skills.md](skills.md) — Claude Code, Codex, and Grok skill dispatch
+- [skills.md](skills.md) — Claude Code, Codex, and Grok skill dispatch and recurrence
 - [actions.md](actions.md) — iterate action contract
-- [watch-loop.md](watch-loop.md) — who calls `iterate` next
+- [api.md](api.md) — embed `createPrShepherd` / `createPrShepherdMcpServer`
 - [architecture.md](architecture.md) — `src/mcp/` module map

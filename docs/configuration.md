@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-pr-shepherd loads every `.pr-shepherdrc.yml` starting from the current working directory and walking toward `$HOME`, then deep-merges them ESLint-style: closer files override farther ones, nested objects merge, and arrays replace. `$HOME/.pr-shepherdrc.yml` is always included as the farthest user-level overlay when it exists, even if the working directory is outside `$HOME`. When cwd is outside `$HOME`, the walk includes ancestor directories of cwd but stops before the filesystem root, so `/.pr-shepherdrc.yml` cannot override the user file. All fields are optional — built-in defaults apply when omitted. The MCP server and CLI read the same files.
+pr-shepherd loads every `.pr-shepherdrc.yml` starting from the current working directory and walking toward `$HOME`, then deep-merges them ESLint-style: closer files override farther ones, nested objects merge, and arrays replace. `$HOME/.pr-shepherdrc.yml` is always included as the farthest user-level overlay when it exists, even if the working directory is outside `$HOME`. When cwd is outside `$HOME`, the walk includes ancestor directories of cwd but stops before the filesystem root, so `/.pr-shepherdrc.yml` cannot override the user file. All fields are optional — built-in defaults apply when omitted. The MCP server and CLI read the same files. These knobs tune what context is gathered (ignore checks, bot usernames, classification) and which actions iterate may take automatically.
 
 For example, a user-level file at `$HOME/.pr-shepherdrc.yml` can set personal defaults, and a project file can override only the keys it cares about:
 
@@ -75,7 +75,7 @@ actions:
 | `iterate.fixAttemptsPerThread`       | `3`                                       | Max fix attempts per surfaced unresolved thread body before `escalate`                                                                                      |
 | `iterate.stallTimeoutMinutes`        | `60`                                      | Minutes the loop may repeat the same action without progress, or CI may stay pending without starting, before `escalate` with `stall-timeout`; `0` disables |
 | `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination).                                                                      |
-| `iterate.minimizeComments`           | `"all"`                                   | Which non-human GitHub author classes to minimize for PR comments and review summaries: `all`, `bots`, or `none`; humans are never minimized                |
+| `iterate.minimizeComments`           | `"all"`                                   | Which non-human GitHub author classes to minimize for PR comments and review summaries: `all`, `bots`, or `none`; humans are never minimized.               |
 | `iterate.behindBaseHint`             | `""`                                      | One-liner shown on the `fix_code` push step when the branch is behind its base; empty omits the hint entirely                                               |
 | `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                                                                                   |
 | `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                                                            |
@@ -137,8 +137,6 @@ Override per-invocation with `--stall-timeout <duration>` (e.g. `--stall-timeout
 
 ### `iterate.minimizeApprovals` — default `false`
 
-**Breaking change from `iterate.minimizeReviewSummaries.{bots, humans, approvals}`** — the old nested keys are no longer recognized.
-
 Non-human `COMMENTED` review summaries can be minimized by the `iterate` loop. Human-authored summaries are surfaced through seen markers and are never minimized. Review summary IDs are returned in the `iterate` mutation plan and applied with the MCP `apply` tool. Rendered under `## Review IDs to minimize queue` in the iterate markdown output.
 `iterate.minimizeComments` controls which authors are eligible for that minimization.
 
@@ -162,7 +160,7 @@ Items excluded by this policy still go through seen markers: Shepherd surfaces t
 
 One-liner appended to the `fix_code` push instruction when the branch is behind its base (`mergeStatus: "BEHIND"`) — e.g. `"rebase --force-with-lease"`, `"merge the main branch"`, or `"see .agents/skills/agent-workflow/git-and-prs.md"`. Shepherd never decides the convention itself (see [`docs/actions.md`](actions.md) on why rebase/merge mechanics are intentionally left to the caller) — it only echoes back whatever pointer you configure here.
 
-Empty (default) omits the hint entirely, matching prior behavior.
+Empty (default) omits the hint entirely.
 
 ---
 
@@ -170,9 +168,9 @@ Empty (default) omits the hint entirely, matching prior behavior.
 
 ### `watch.readyDelayMinutes` — default `10`
 
-After the PR first reaches READY status (all checks green, no open threads), shepherd continues to loop for this many minutes before cancelling the loop. This settle window gives reviewers time to request changes or for a Copilot review to finish.
+After the PR first reaches a clean READY handoff (checks green, no Shepherd-visible work, no blocking bot review pending), shepherd continues to loop for this many minutes before cancelling. This settle window gives reviewers time to request changes or for a configured blocking reviewer to finish.
 
-The ready-delay countdown resets if the PR drops out of READY state at any tick.
+The ready-delay countdown resets if the PR drops out of that handoff state at any tick. Lifecycle: [iterate-flow.md](iterate-flow.md#2-ready-delay).
 
 ---
 
@@ -180,7 +178,7 @@ The ready-delay countdown resets if the PR drops out of READY state at any tick.
 
 ### `resolve.shaPoll`
 
-Controls the push-safety polling used when `requireSha` is passed to an MCP `apply` `review_mutations` operation (or its legacy CLI compatibility alias).
+Controls the push-safety polling used when `requireSha` is passed to an MCP `apply` `review_mutations` operation (or the CLI `apply review` command).
 
 #### `resolve.shaPoll.maxAttempts` — default `10`
 
@@ -254,4 +252,6 @@ Protection also takes precedence over `ignoreChecks` for GitHub Actions check ru
 | Variable                                                     | Effect                                                                                                                                                                                                                |
 | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PR_SHEPHERD_STATE_DIR`                                      | Override the loop-state base directory (default `$TMPDIR/pr-shepherd-state`)                                                                                                                                          |
+| `PR_SHEPHERD_LOG_DISABLED`                                   | Set to `1` to disable the per-worktree debug log                                                                                                                                                                      |
+| `PR_SHEPHERD_LOG_MAX_BODY`                                   | Max characters of each logged HTTP body (default `262144`). Larger bodies are truncated.                                                                                                                              |
 | `GH_TOKEN` / `GITHUB_TOKEN` / `GITHUB_PERSONAL_ACCESS_TOKEN` | GitHub auth token. Resolution order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` fallback (requires `gh` CLI) → `GITHUB_PERSONAL_ACCESS_TOKEN`. See [authentication.md](authentication.md) for required PAT access. |

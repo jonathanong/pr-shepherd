@@ -2,11 +2,11 @@
 
 [← README](../README.md)
 
-Each `pr-shepherd iterate` invocation returns exactly one action. The default `pr-shepherd <PR>` command runs the poll dispatcher and prints the final iterate action. See [docs/iterate-flow.md](iterate-flow.md) for the decision order.
+Each `pr-shepherd iterate` invocation returns exactly one action. The default `pr-shepherd <PR>` command runs the poll dispatcher and prints the final iterate action. See [iterate-flow.md](iterate-flow.md) for the decision order and [context.md](context.md) for what the header and body gather.
 
 The default output format is Markdown — what the skill receives from the default poll dispatcher and what direct CLI users see. `--format=json` emits the same action data as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
 
-The CLI's default command accepts `--interval`/`--timeout`/`--debounce`/`--quiet-status` (e.g. `pr-shepherd <PR> --interval 60s --timeout 4.5m --quiet-status`), waits while the PR remains in `[WAIT]`, and returns on `MARK_READY`, `CANCEL`, or `ESCALATE`. If `--timeout` expires during WAIT polling, poll returns that final `WAIT` result. `FIX_CODE` is delayed by `--debounce` (default 1m, `0` disables): poll keeps iterating at `--interval` without printing those ticks, then runs one more iterate after the window and returns that result so later review comments and CI failures batch into the same agent-facing tick. `--quiet-status` keeps unchanged WAIT ticks out of agent context. MCP callers invoke one `iterate` tick at a time and let their host schedule the next call.
+The CLI's default command accepts `--interval`/`--timeout`/`--debounce`/`--quiet-status` (e.g. `pr-shepherd <PR> --interval 60s --timeout 4.5m --quiet-status`), waits while the PR remains in `[WAIT]`, and returns on `MARK_READY`, `CANCEL`, or `ESCALATE`. If `--timeout` expires during WAIT polling, poll returns that final `WAIT` result. `FIX_CODE` is delayed by `--debounce` (default 1m, `0` disables): poll keeps iterating at `--interval` without printing those ticks, then runs one more iterate after the window and returns that result so later review comments and CI failures batch into the same agent-facing tick. Debounce ticks set `persistSeen: false` — seen markers and first-look suppression wait for the post-window tick. `--quiet-status` keeps unchanged WAIT ticks out of agent context. MCP callers invoke one `iterate` tick at a time (no debounce) and let their host schedule the next call.
 
 Command examples call `pr-shepherd` directly everywhere a follow-up command is emitted.
 
@@ -17,7 +17,7 @@ Pass `--verbose` to get more debug state. In JSON mode, the output starts from t
 ```
 # PR #<N> [ACTION]
 
-**status** `<…>` · **merge** `<…>` · **state** `<…>` · **repo** `<…>`
+**status** `<…>` · **merge** `<…>`[ · **reviewDecision** `<…>`] · **state** `<…>` · **repo** `<…>`
 **summary** <N> passing[, <N> skipped][, <N> filtered][, <N> inProgress][, <N> superseded][· **remainingSeconds** <N>][· **blockingBotReviewInProgress**][· **isDraft**][· **branch** behind `origin/<base>` | · **branch** conflicts with `origin/<base>`]
 Approvals: <None|N[/M]> [Required|Not Required]
 Conversations Resolved: <Yes|No> [Required|Not Required]
@@ -46,9 +46,9 @@ Lean-mode rules for the summary line:
 
 **`superseded` line:** Emitted (in both Markdown and JSON as `supersededNames`) only when at least one `CANCELLED` check was superseded by a newer run of the same GitHub Actions workflow on the same commit — the concurrency-group eviction that happens when a new push (or a second trigger of the same push) cancels an in-flight run. These checks do not contribute to the CI verdict (`anyFailing`/`allPassed`) and never appear under `## Failing checks` — no action is needed; GitHub branch protection itself resolves required status checks by latest-run-per-name and will merge past them. A `CANCELLED` check with no newer same-workflow run present is **not** superseded — it still appears under `## Failing checks` with `[conclusion: CANCELLED]`, per the existing guidance there.
 
-The `**branch**` segment is appended to the `**summary**` line on any action when `mergeStatus` is `"BEHIND"` or `"CONFLICTS"`. It surfaces the raw branch state so the agent can decide whether to rebase without further tool calls.
+The `**branch**` segment is appended to the `**summary**` line on any action when `mergeStatus` is `"BEHIND"` or `"CONFLICTS"`. It surfaces the raw branch state so the agent can decide whether to rebase without further tool calls. `**reviewDecision**` is appended to the status line when the _derived_ merge status is `BLOCKED`.
 
-After a sweep, iterate always prints `Approvals:` and `Conversations Resolved:` (current vs required). Extra merge-rule lines appear only when they apply (code-owner review, last-push approval, signed commits, linear history, branch up to date, required status checks, deployments, workflows, code scanning, merge queue, GitHub stacks). The legacy `**required**` line is a fallback when `mergeRequirements` is absent (for example in tests that construct an iterate result without a sweep). When `mergeRequirements` is present it replaces `**required**`.
+After a sweep, iterate always prints `Approvals:` and `Conversations Resolved:` (current vs required). Extra merge-rule lines appear only when they apply (code-owner review, last-push approval, signed commits, linear history, branch up to date, required status checks, deployments, workflows, code scanning, merge queue, GitHub stacks). Tests that construct an iterate result without a sweep (no `mergeRequirements`) still get a fallback `**required**` line listing names from `requiredStatusCheckContexts`. Live iterate output uses `mergeRequirements` and does not emit that `**required**` line.
 
 The agent should read the Approvals / Conversations Resolved lines instead of inferring a required review from `reviewDecision`. `REVIEW_REQUIRED` with `Approvals: None [Not Required]` means GitHub is not waiting on an approval.
 
@@ -61,7 +61,7 @@ Load-bearing conventions (the iterate skill depends on these):
 1. Line 1 is always an H1 heading of the form `# PR #<N> [<ACTION>]`. The action tag identifies the output for logging and validation — behavior is driven by the `## Instructions` section, not by dispatching on the tag.
 2. Lines 3–4 carry the base fields (status, merge, state, repo, summary). In lean mode, fields at their trivial default are omitted; `--verbose` restores the full scalar header/summary line in Markdown. JSON verbose mode returns the complete `IterateResult` including fields not present in Markdown (e.g. `baseBranch`, `checks` on all actions); Markdown is structurally lossy relative to JSON and `--verbose` does not close that gap.
 3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … — that tells the agent exactly what to do. The skill follows those steps; it does not need its own dispatch table.
-4. Under `[FIX_CODE]`, the `## Post-fix push` section has a `` resolve: `<command>` `` bullet — the instructions reference this bullet so the skill strips backticks and runs the command.
+4. Under `[FIX_CODE]`, the `## Post-fix push` section has an `` apply review: `<command>` `` bullet (and an optional `` resolve-only: `<command>` `` bullet when bot resolve/minimize is split from replies). The instructions reference those bullets so the skill strips backticks and runs the command.
 5. Passing check counts are surfaced only via the `**summary**` line — no per-check detail is emitted for passing checks. Failing check detail appears in `## Failing checks` (within `[FIX_CODE]` output). JSON surfaces check data as `checks: RelevantCheck[]` only on `fix_code` actions in lean mode; `--format=json --verbose` includes `checks` on all actions (full IterateResult).
 
 ---
@@ -81,20 +81,20 @@ Nothing actionable to do; all CI is passing or in-progress.
 ```markdown
 # PR #42 [WAIT]
 
-**status** `IN_PROGRESS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 3 passing, 2 inProgress
+**status** `IN_PROGRESS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**summary** 0 passing, 1 inProgress
 Approvals: None [Not Required]
 Conversations Resolved: Yes [Not Required]
-[**ignored** `<check-name>`, …]
+**activity** 0 commits · 0 review rounds · active: `CI / build`
 
-WAIT: 3 passing, 2 in-progress — 120s until auto-cancel
+WAIT: 0 passing, 1 in-progress — active checks: CI / build
 
 ## Instructions
 
 1. No action this tick — the poll loop reruns automatically.
 ```
 
-The poll already bounds each wait via `--interval`/`--timeout`, so the CLI no longer tells the agent to sleep before rerunning. When the current command includes a ready-delay override (`--ready-delay 15m`), it is surfaced as a header field on the summary line rather than embedded in a rerun command — e.g. `**summary** 3 passing, 2 inProgress · **ready-delay** `15m` (override)`. JSON output carries the same value as a `readyDelayOverride` field.
+The poll already bounds each wait via `--interval`/`--timeout`; iterate output does not tell the agent to sleep before rerunning. That “poll loop reruns automatically” instruction is for the **poll dispatcher**. MCP `iterate` and `pr-shepherd iterate` return once; the caller must schedule the next tick. When the current command includes a ready-delay override (`--ready-delay 15m`), it is surfaced as a header field on the summary line rather than embedded in a rerun command — e.g. `**summary** 3 passing, 2 inProgress · **ready-delay** `15m` (override)`. JSON output carries the same value as a `readyDelayOverride` field.
 
 The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, unmet merge requirements (approvals, conversations, merge queue, …), `PR is a draft`, or `some checks are unstable`. After a sweep, iterate also prints current-vs-required merge rules so the agent can see _why_ GitHub is not mergeable (for example `Approvals: None [Not Required]` vs `Approvals: None [Required]`). Merge-queue and GitHub-stack membership appear as extra lines when they apply (`Merge queue: position 2 QUEUED [Required]`, `Stack: #7 2/3 (base main)`); they are omitted when the PR is not in a queue or stack and merge queue is not required.
 
@@ -106,7 +106,7 @@ The body line (`WAIT: …`) varies with the merge state — `branch is behind ba
 
 Converts a draft PR to ready for review.
 
-**Trigger:** All of: `status === "READY"`, `mergeStateStatus === "CLEAN"` (or `"DRAFT"` when `isDraft`), Copilot review not in progress, `isDraft === true`, `config.actions.autoMarkReady` is enabled (disable with `--no-auto-mark-ready`), and ready-delay not elapsed (`readyState.shouldCancel === false`). Once the delay elapses, the action flips to `cancel`.
+**Trigger:** All of: `status === "READY"`, `isDraft === true`, `!blockingBotReviewInProgress`, `config.actions.autoMarkReady` is enabled (disable with `--no-auto-mark-ready`), and ready-delay not elapsed (`readyState.shouldCancel === false`). Once the delay elapses, the action flips to `cancel`. There is no extra `mergeStateStatus === "CLEAN"` check.
 
 **CLI side-effects:** Calls the `markPullRequestReadyForReview` GraphQL mutation before returning.
 
@@ -117,8 +117,10 @@ Converts a draft PR to ready for review.
 ```markdown
 # PR #42 [MARK_READY]
 
-**status** `READY` · **merge** `DRAFT` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 5 passing · **remainingSeconds** 600 · **isDraft**
+**status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**summary** 1 passing · **remainingSeconds** 300 · **isDraft**
+Approvals: None [Not Required]
+Conversations Resolved: Yes [Not Required]
 
 MARKED READY: PR #42 converted from draft to ready for review
 
@@ -127,7 +129,7 @@ MARKED READY: PR #42 converted from draft to ready for review
 1. The CLI already marked the PR ready for review. No further action this tick — the poll loop reruns automatically.
 ```
 
-**What the skill does:** Follow `## Instructions`, then run the default poll dispatcher again unless the action is terminal.
+**What the skill does:** Follow `## Instructions`, then run the default poll dispatcher again unless the action is terminal. Direct MCP/`iterate` callers must reschedule themselves.
 
 ---
 
@@ -183,71 +185,33 @@ Eligible **already-seen** `COMMENTED` review summaries (surfaced in a prior iter
 ```markdown
 # PR #42 [FIX_CODE]
 
-**status** `UNRESOLVED_COMMENTS` · **merge** `BLOCKED` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 3 passing · **branch** behind `origin/main`
-**required** approvals `1`, conversation-resolution required, checks: `ci/build`, `ci/test`
+**status** `UNRESOLVED_COMMENTS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**summary** 0 passing
+Approvals: None [Not Required]
+Conversations Resolved: No [Not Required]
 
 ## Review threads
 
-### `threadId=PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate/index.mts:42` (@alice)
-
-#### `commentId=PRRC_kwDOSGizTs58XB1M` (@alice)
+### [threadId=PRRT_kwDOSGizTs58XB1L](https://github.com/owner/repo/pull/42#discussion_r100) — `src/commands/iterate/index.mts:42` (@alice · User · MEMBER)
 
 > The variable name is misleading.
->
-> Consider renaming `x` to `remainingSeconds` so readers don't have to
-> trace back to the declaration to understand its meaning.
-
-## Actionable comments
-
-### `commentId=IC_kwDOSGizTs7_ajT8` (@bob)
-
-> Consider using a more descriptive name here.
-
-## Failing checks
-
-- `24697658766` — `CI › lint / typecheck / test (22.x)` [conclusion: FAILURE]
-
-  > Run tests
-  > 2 tests failed
-
-- `24697658767` — `CI › build` [conclusion: CANCELLED]
-
-## Changes-requested reviews
-
-- `reviewId=PRR_kwDOSGizTs58XB1R` (@alice)
-
-## In-progress runs
-
-- `24697658764`
-
-## Protected runs
-
-- `24697658768` — `Final Code Review (DeepSeek Code Review)` [matched: `Final Code Review`]
-
-## Cancelled runs
-
-- `24697658765`
 
 ## Post-fix push
 
 - base: `main`
-- apply review: `pr-shepherd apply review 42 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --minimize-comment-ids IC_kwDOSGizTs7_ajT8 --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
+- apply review: `pr-shepherd apply review 42 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
 
 ## Instructions
 
-1. Decide for each item under `## Review threads`, `## Actionable comments`, `## Failing checks`, `## Changes-requested reviews` whether a code change is warranted. **If any code changes are needed:** apply edits, commit, push, then run the `resolve:` command. **If no code changes are needed:** skip the commit/push and run the `resolve:` command.
-2. If you decide to push new commits: cancel each in-progress run listed under `## In-progress runs` before applying code fixes (e.g. `gh run cancel <id>`). Skip this step if you are only resolving threads without pushing — the existing runs remain relevant.
-3. Apply code fixes: read and edit each file referenced above.
-4. For each failing check under `## Failing checks`: read any included log excerpt first; fetch the full log with `gh run view <runId> --log-failed` if insufficient; rerun with `gh run rerun <runId> --failed` for transient infra failures, or apply a code fix for real test/build failures; if API/log output lacks detail, open the run URL in the GitHub UI; for `[conclusion: CANCELLED]` entries (not concurrency-superseded — see `**superseded**`): rerun with `gh run rerun <runId>` unless already pushing new commits this tick, in which case the fresh run supersedes it; don't treat as resolved — distinct from `## Cancelled runs`; for `[conclusion: STARTUP_FAILURE]` entries: inspect with `gh run view <runId>`, rerun with `gh run rerun <runId>` if warranted; for `external` entries: open the URL to inspect the failure; for `(no runId)` entries: no log or URL available — escalate to a human.
-5. For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.
-6. Run the `resolve:` command shown above, substituting `$HEAD_SHA` with the pushed commit SHA (or `$(git rev-parse HEAD)` if you did not push) and `$DISMISS_MESSAGE` with a one-sentence description of what you changed.
-7. Do not re-run `gh run cancel` on the IDs listed under `## Cancelled runs` — those runs were already cancelled by the CLI before this turn.
-8. For any large decisions or rejections you made this iteration, run `pr-shepherd apply journal 42 '- <decision>'` to append an entry to the `## Shepherd Journal` section. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. The command is idempotent — re-running with the same text is a no-op.
-9. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
+1. Decide for each item under `## Review threads` whether a code change is warranted. **If any code changes are needed:** apply edits, commit, push, then run the `apply review:` command. **If no code changes are needed:** skip the commit/push and run the `apply review:` command.
+2. Apply code fixes: read and edit each file referenced above.
+3. Before running the `apply review:` command, remove any thread from `--reply-thread-ids` if the latest visible comment in that thread is your own prior Shepherd reply. Do not reply to your own comments.
+4. Run the `apply review:` command shown above, substituting `$HEAD_SHA` with the pushed commit SHA (or `$(git rev-parse HEAD)` if you did not push) and `$DISMISS_MESSAGE` with a one-sentence reply/description of what you changed.
+5. For any large decisions or rejections you made this iteration, run `pr-shepherd apply journal 42 '- <decision>'` to append an entry to the `## Shepherd Journal` section. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. The command is idempotent — re-running with the same text is a no-op.
+6. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
 ```
 
-The branch-behind/conflict mechanics that step 1 previously spelled out are intentionally omitted: the CLI surfaces the raw `**branch**` state on the summary line and leaves rebase/commit/push conventions to the caller (see the "Keep skills and loop prompts minimal" rule in `CLAUDE.md`). There is no longer a separate "commit, then rebase onto `origin/main`" step, and no per-tick "recheck after a delay" line — the poll loop's `--interval`/`--timeout` already bounds each wait.
+The CLI surfaces the raw `**branch**` state on the summary line and leaves rebase/commit/push conventions to the caller (see the "Keep skills and loop prompts minimal" rule in `CLAUDE.md`). Iterate does not emit a separate rebase step or a per-tick "recheck after a delay" line — the poll loop's `--interval`/`--timeout` already bounds each wait.
 
 When `mergeStatus` is `"BEHIND"` and [`iterate.behindBaseHint`](configuration.md#iteratebehindbasehint--default-) is configured (empty by default), an extra `## Instructions` step is inserted right after the leading decide/conflict step: `` `The branch is behind `origin/<base>` — <hint> before pushing.` ``. The CLI still never decides the mechanics itself — this only echoes back the caller's own configured one-liner.
 
@@ -300,7 +264,7 @@ The "Apply code fixes" step reads "each file referenced above" only when `## Rev
 
 The JSON payload exposes the same data under `fix.{threads, resolutionOnlyThreads, actionableComments, reviewSummaryIds, firstLookSummaries, editedSummaries, surfacedApprovals, checks, changesRequestedReviews, resolveCommand, resolveOnlyCommand, instructions, firstLookThreads, firstLookComments, inProgressRunIds, protectedRuns}` plus top-level `baseBranch`, `branchProtection` (on `IterateResultBase`, not under `fix`; omitted in lean JSON when `null`, always present in verbose JSON), and `cancelled`.
 
-Comment/review/thread objects include `authorType` (`User`, `Bot`, or `Unknown`) and the raw GitHub `authorAssociation` when available. Text author labels render as `@author · <authorType> · <authorAssociation>` with unavailable segments omitted. The association is provenance, not a trusted/untrusted classification, and does not change built-in routing. Thread objects keep top-comment compatibility fields (`body`, `author`, `url`) and include `comments[]` with the full thread transcript. `fix.actionableComments[]` includes `edited: true` when a non-auto-minimized PR comment body changed after Shepherd previously surfaced it. `fix.changesRequestedReviews[]` items include `commitOid` (the commit the review was made against) when available, and `staleReview: true` when the review is stale (commit behind HEAD, all threads resolved/outdated). In lean JSON mode, optional fields are omitted when unavailable.
+Comment/review/thread objects include `authorType` (`User`, `Bot`, or `Unknown`) and the raw GitHub `authorAssociation` when available. Text author labels render as `@author · <authorType> · <authorAssociation>` with unavailable segments omitted. The association is provenance, not a trusted/untrusted classification, and does not change built-in routing. Thread objects keep top-comment fields (`body`, `author`, `url`) and include `comments[]` with the full thread transcript. `fix.actionableComments[]` includes `edited: true` when a non-auto-minimized PR comment body changed after Shepherd previously surfaced it. `fix.changesRequestedReviews[]` items include `commitOid` (the commit the review was made against) when available, and `staleReview: true` when the review is stale (commit behind HEAD, all threads resolved/outdated). In lean JSON mode, optional fields are omitted when unavailable.
 
 `fix.checks[]` includes `logExcerpt` when Shepherd fetched a bounded raw excerpt from the matched failed job log. `fix.checks[].annotations[]` contains marker-gated annotations for failing checks only: `{ id, path, startLine, endLine, startColumn?, endColumn?, level, title?, message, rawDetails?, blobUrl? }`. Annotation `message` and `rawDetails` values are capped independently before rendering or JSON projection.
 
@@ -413,7 +377,7 @@ return value ?? defaultValue;
 ```
 ````
 
-The `resolve:` command at the bottom of `## Post-fix push` includes both IDs:
+The `apply review:` command at the bottom of `## Post-fix push` includes both IDs:
 
 ```
 - apply review: `pr-shepherd apply review 42 --reply-thread-ids PRRT_kwDOSGizTs58XB1L,PRRT_kwDOSGizTs58XC2M --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
@@ -435,7 +399,7 @@ Ambiguous state that requires human judgement — iteration stops and surfaces d
 - **`fix-thrash`** — same surfaced active thread body dispatched ≥ `config.iterate.fixAttemptsPerThread` times (default 3) without resolving or changing. This is a manual handoff: automated fixes pause. Threads suppressed by seen markers do not count toward this trigger; edited thread bodies reset the per-thread attempt count.
 - **`thread-missing-location`** — an actionable review thread has no file or line reference, so the code location cannot be found automatically.
 - **`base-branch-unknown`** — the GraphQL batch did not yield a usable base branch name: the derived value was empty or contained unsafe characters. Preempts any `[FIX_CODE]` that would require a push, since rebasing onto the wrong base is worse than pausing iteration.
-- **`bot-cr-not-dismissed`** — a bot/non-human `CHANGES_REQUESTED` review has remained undismissed for `config.iterate.stallTimeoutMinutes`. Bot CRs are the agent's responsibility (auto-dismissed via `--dismiss-review-ids` in the post-push `resolve:` command); a stale entry means the agent dropped that flag and the PR is silently blocked. The timer is per-review and tracked separately from the generic `stall-timeout` fingerprint (so it still fires when CI or other state is flapping). The body hash resets the timer when the bot re-issues the review with different content. `escalate.changesRequestedReviews` lists the offending reviews; their IDs are also included in `escalate.suggestion`.
+- **`bot-cr-not-dismissed`** — a bot/non-human `CHANGES_REQUESTED` review has remained undismissed for `config.iterate.stallTimeoutMinutes`. Bot CRs are the agent's responsibility (auto-dismissed via `--dismiss-review-ids` in the post-push `apply review:` command); a stale entry means the agent dropped that flag and the PR is silently blocked. The timer is per-review and tracked separately from the generic `stall-timeout` fingerprint (so it still fires when CI or other state is flapping). The body hash resets the timer when the bot re-issues the review with different content. `escalate.changesRequestedReviews` lists the offending reviews; their IDs are also included in `escalate.suggestion`.
 
 **CLI side-effects:** None.
 
@@ -501,13 +465,3 @@ Rules from multiple files combine permissively: `suppress` and `autoResolve` are
 Files starting with `_` or `.` are ignored. The loader walks up from `cwd` looking for `.pr-shepherd/classification/`, stopping at the home directory. Unlike `.pr-shepherdrc.yml`, only the first classification directory found is used. TypeScript rule files (`.ts` / `.mts`) are loaded by the runtime's native TypeScript support, so keep them to erasable syntax such as type annotations and `import type`. Runtime TypeScript features that need transpilation, such as enums, namespaces, parameter properties, and decorators, are not supported. Use `.mts` for portable ESM rules across Node, Bun, and Deno.
 
 Example rules for common bot-noise patterns are in [`examples/classification/`](../examples/classification/).
-
----
-
-## Archived / no longer emitted
-
-### `rerun_ci`
-
-> **This action is no longer emitted by `iterate`.** Transient CI failure detection (timeout / cancelled) has been moved to the agent: the `fix_code` action now carries `failedStep`/`conclusion` for every failing check, and the `## Instructions` section tells the agent to run `gh run view <runId> --log-failed` and decide whether to rerun or apply a code fix. Current releases no longer include a `rerun_ci` action or `[RERUN_CI]` formatter output.
-
-**Trigger:** Previously emitted when one or more failing checks had `failureKind === "timeout"` or `"cancelled"` and no actionable work was found. Removed in favour of routing all failing checks through `fix_code` with raw log data.

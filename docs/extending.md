@@ -27,7 +27,7 @@ Four recipes for common extension patterns.
 
 3. **Add the dispatch step** — in `commands/iterate/index.mts`, insert a new numbered step in the decision chain. Return the new result shape.
 
-4. **Add the formatter** — in `cli/iterate-formatter.mts`, add a `case "my_action":` branch that emits the action-specific body and a numbered `## Instructions` section. The iterate skill follows those steps verbatim — no changes to `skills/pr-shepherd/SKILL.md` are required.
+4. **Add the formatter** — in `cli/iterate-formatter.mts`, add a `case "my_action":` branch that emits the action-specific body and a numbered `## Instructions` section. The iterate skill follows those steps verbatim — no changes to `plugins/pr-shepherd/skills/pr-shepherd/SKILL.md` are required.
 
 5. **Add tests** — in `commands/iterate.mock.test.mts`, add a `describe('runIterate — my_action')` block.
 
@@ -35,7 +35,7 @@ Four recipes for common extension patterns.
 
 ## Recipe 2: Add a new check classifier category
 
-1. **Add the type** — in `types.mts`, add to the `CheckCategory` union:
+1. **Add the type** — in `types/check-classification.mts`, add to the `CheckCategory` union:
 
    ```ts
    export type CheckCategory = 'passed' | 'failing' | ... | 'my_category'
@@ -81,11 +81,17 @@ All tunable constants live in `src/config.json`. Edit there — do not hardcode 
     "fixAttemptsPerThread": 3,
     "stallTimeoutMinutes": 60,
     "minimizeApprovals": false,
-    "minimizeComments": "all"
+    "minimizeComments": "all",
+    "behindBaseHint": ""
   },
   "watch": { "readyDelayMinutes": 10 },
   "resolve": {
     "shaPoll": { "maxAttempts": 10, "intervalMs": 2000 }
+  },
+  "actions": {
+    "autoMinimizeSuppressed": true,
+    "autoMarkReady": true,
+    "neverCancelRuns": []
   }
 }
 ```

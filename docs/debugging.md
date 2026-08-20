@@ -22,15 +22,15 @@ Shepherd intentionally does not turn this failure into `wait` or `retry`: incomp
 
 **Symptom:** PR was merged but shepherd keeps emitting `action: wait`.
 
-**Cause:** GitHub returns `mergeable: UNKNOWN` and `mergeStateStatus: UNKNOWN` for merged PRs. Before the fix in this repo, shepherd had no branch for `state !== OPEN`, so it fell through to `wait`.
+**Cause:** GitHub often returns `mergeable: UNKNOWN` and `mergeStateStatus: UNKNOWN` for merged PRs. Iterate treats `state` as authoritative for terminal PRs; if that short-circuit is skipped, the tick can fall through to `wait`.
 
-**Fix:** Verify the fix is deployed. Check the iterate output:
+**Fix:** Check the iterate output:
 
 ```bash
 pr-shepherd <PR> --format=json
 ```
 
-Should return `{"action":"cancel","status":"MERGED","state":"MERGED",...}`.
+A merged PR should return `{"action":"cancel","status":"MERGED","state":"MERGED",...}`.
 
 If it still returns `wait`, check that `report.mergeStatus.state` is being set correctly in the JSON output. If it returns `cancel` but the status is not `MERGED` or `CLOSED`, check that `runCheck` is short-circuiting terminal PRs before CI/comment processing.
 
@@ -67,6 +67,16 @@ Replace `<owner>-<repo>` and `<pr>` with actual values. Example:
 ```bash
 rm $TMPDIR/pr-shepherd-state/acme-myrepo/42/ready-since.txt
 ```
+
+---
+
+### "First-look items keep coming back during debounce"
+
+**Symptom:** During `pr-shepherd [PR]` poll, intermediate `FIX_CODE` ticks inside `--debounce` seem to re-surface the same first-look comments.
+
+**Cause:** Debounce ticks run `iterate` with `persistSeen: false`. Seen markers are written only on the post-window tick that the agent actually sees.
+
+**Fix:** Expected. Wait for the poll to return the post-debounce result. MCP `iterate` has no debounce and writes seen markers each tick.
 
 ---
 

@@ -1,6 +1,8 @@
 # shepherd comments and threads
 
-[← README](../README.md)
+[← README](../README.md) | [context.md](context.md)
+
+This is the review/comment spec for **context gathering** (what is surfaced) and the mutation table used by **deterministic actions** (`apply review`).
 
 ## Review threads vs PR comments
 
@@ -23,13 +25,13 @@ Shepherd surfaces two distinct author fields instead of deriving a trusted/untru
 - `authorType` is Shepherd's existing account-shape value: `User`, `Bot`, or `Unknown`.
 - `authorAssociation` is GitHub's raw relationship between the author and repository: `COLLABORATOR`, `CONTRIBUTOR`, `FIRST_TIMER`, `FIRST_TIME_CONTRIBUTOR`, `MANNEQUIN`, `MEMBER`, `NONE`, or `OWNER`.
 
-The association is optional for compatibility with older serialized results and is not an authentication or safety verdict. Live GitHub results populate it when GitHub returns the field. Text output appends it to the author label, for example `@alice · User · MEMBER`; JSON exposes the same raw value as `authorAssociation`. The value is also available to custom classification rules, but Shepherd's built-in human/bot routing does not use it.
+The association is optional and is not an authentication or safety verdict. Live GitHub results populate it when GitHub returns the field. Text output appends it to the author label, for example `@alice · User · MEMBER`; JSON exposes the same raw value as `authorAssociation`. The value is also available to custom classification rules, but Shepherd's built-in human/bot routing does not use it.
 
 ## `isOutdated` flag
 
 GitHub sets `isOutdated: true` on a review thread when the commit the comment was originally attached to has been superseded by a newer push. Outdated threads are no longer blocking — the code they commented on no longer exists in the current state of the PR.
 
-Shepherd no longer auto-resolves outdated threads during the sweep step.
+Shepherd does not auto-resolve outdated threads during the sweep.
 
 ## Outdated-thread path
 
@@ -47,7 +49,7 @@ Shepherd does **not** classify threads as "actionable" vs "informational" — th
 
 Active human-authored threads are suppressed after their transcript is seen unless the transcript changes. Active detected/configured bot threads are returned every tick until resolved so Shepherd can keep asking the agent to resolve them. After Shepherd replies to a human thread, it writes a marker for both the pre-reply transcript and the expected post-reply transcript; this suppresses immediate stale refetches and prevents replying to the agent's own latest comment.
 
-The loop prompt reads these and decides what to fix.
+The agent reads these fields and decides what to fix. Skills are thin dispatchers; they follow the printed `## Instructions` rather than a separate loop prompt.
 
 ## First-look items (comment visibility invariant)
 
@@ -69,7 +71,7 @@ State module: `src/state/seen-comments.mts`.
 
 When `pr-shepherd apply review --require-sha <SHA>` is used, shepherd polls the GraphQL `get-pr-head-sha.gql` query for `headRefOid` until it matches `expectedSha`, then issues the resolve/minimize/dismiss mutations.
 
-**Why:** Without this guard, shepherd might auto-merge before the reviewer sees the fix. The polling ensures GitHub has received the push and updated the PR head before any mutations fire.
+**Why:** Mutations must not race a push GitHub has not yet acknowledged. The poll waits until `headRefOid` matches the expected SHA, then fires. Shepherd never merges PRs; this guard only delays review mutations.
 
 **Polling:** Retries up to `resolve.shaPoll.maxAttempts` times with `resolve.shaPoll.intervalMs` delay. Any exception is retried; on the last attempt it is re-thrown.
 

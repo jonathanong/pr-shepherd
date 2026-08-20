@@ -2,6 +2,8 @@
 
 [← README](../README.md)
 
+A token with the permissions below is required so Shepherd can **gather PR context** and **apply review mutations**. Without it, iterate fails before emitting an action.
+
 pr-shepherd accepts a GitHub personal access token (PAT) from the environment or uses the authenticated GitHub CLI. Token resolution order is:
 
 1. `GH_TOKEN`

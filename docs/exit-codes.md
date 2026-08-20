@@ -2,6 +2,8 @@
 
 [← README](../README.md)
 
+Exit codes are the process-level counterpart of the action tag in [actions.md](actions.md). `0` and `10`–`14` mean Shepherd gathered context and chose an action; `64+` means the command itself failed before that.
+
 ## The rule
 
 ```text
@@ -22,11 +24,6 @@ if [ "$code" -ge 64 ]; then
 fi
 # code is 0 or 10-19 here — a real PR outcome, not an error
 ```
-
-This replaces the old scheme, where `fix_code` and every command/validation
-error both exited `1` — callers had to grep stdout for a `# PR #$N [ACTION]`
-heading to tell them apart. Under the new scheme the _range_ of the exit code
-already answers that question, so no heading-sniffing is needed.
 
 ## 0 — done
 
@@ -119,9 +116,8 @@ letting status-based classification guess.
 **78 (`EX_CONFIG`) is defined but not wired up.** A malformed
 `.pr-shepherdrc.yml` currently degrades gracefully: shepherd logs a
 `failed to parse` warning to stderr and falls back to built-in defaults rather
-than failing the run. That fallback is intentional, tested behavior, and this
-change does not alter it. The code is reserved in case a future change makes
-config validation fatal.
+than failing the run. That fallback is intentional, tested behavior. The code
+is reserved in case config validation becomes fatal.
 
 **`apply`, `build-suggestion-patch`, and `admin` commands never emit
 0/10–19** — those codes are specific to `IterateResult`.
@@ -132,20 +128,6 @@ each command's `--help` for which codes it can realistically hit.
 
 Every subcommand's `--help`/`-h` short-circuits before any I/O and exits `0`.
 See the "Help flags" section of the project `CLAUDE.md`.
-
-## Migrating from the old scheme
-
-| Old | Old meaning                                     | New                                                                                                                  |
-| --- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| 0   | `wait` or `mark_ready`                          | `10` (`wait`) or `11` (`mark_ready`) — no longer `0`                                                                 |
-| 1   | `fix_code`, **or** any command/validation error | `12` (`fix_code`) if a report was fetched; a `sysexits.h` code (64–78) if shepherd failed before or during the fetch |
-| 2   | `cancel` (any reason)                           | `0` (`merged` or `ready-delay-elapsed`) or `14` (`closed`)                                                           |
-| 3   | `escalate`                                      | `13`                                                                                                                 |
-
-The old scheme's worst problem — exit `1` meaning either "agent has work to
-do" or "the CLI itself broke" — no longer exists. If you previously branched
-on `$? -eq 1` to mean `fix_code`, branch on `$? -eq 12` instead; if you
-branched on it to detect a failure, branch on `$? -ge 64`.
 
 ## Where this is implemented
 

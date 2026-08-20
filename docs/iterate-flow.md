@@ -1,14 +1,53 @@
-# shepherd iterate — step-by-step flow
+# shepherd iterate — dispatch flow
 
-[← README](../README.md) | [actions.md](actions.md)
+[← README](../README.md) | [actions.md](actions.md) | [context.md](context.md)
 
-`commands/iterate/index.mts` is the heart of the iterate loop. Each tick calls it once and follows the `## Instructions` in the result.
+`commands/iterate/index.mts` is the heart of the iterate loop. Each tick gathers context, then returns exactly one action. The caller follows the `## Instructions` in the result.
+
+## End-to-end
+
+```mermaid
+flowchart TD
+  U(["pr-shepherd skill"]) --> POLL["pr-shepherd PR<br/>bounded poll"]
+
+  POLL --> S1["1. runCheck<br/>batch GraphQL<br/>classify + deriveMergeStatus"]
+
+  S1 --> S15{"1.5 state != OPEN?"}
+  S15 -->|yes| A_CAN(["action: cancel"])
+  S15 -->|no| S2["2. updateReadyDelay"]
+  S2 --> S2C{"shouldCancel?"}
+  S2C -->|yes| A_CAN
+  S2C -->|no| S3{"3. hasActionableWork?"}
+  S3 -->|yes| S3X["REST cancel failing Actions runs"]
+  S3X --> A_FIX(["action: fix_code"])
+  S3 -->|no| S4{"4. READY + isDraft<br/>+ !blockingBotReview?"}
+  S4 -->|yes| S4X["markPullRequestReadyForReview"]
+  S4X --> A_MR(["action: mark_ready"])
+  S4 -->|no| A_W(["action: wait"])
+
+  A_FIX --> STALL{"stall timeout?"}
+  A_W --> STALL
+  STALL -->|yes| A_ESC(["action: escalate"])
+  STALL -->|no| DEC{"Follow ## Instructions"}
+
+  A_CAN --> DEC
+  A_MR --> DEC
+  A_ESC --> DEC
+
+  DEC -->|cancel/escalate| STOP["stop"]
+  DEC -->|fix_code| FIX["inspect CI as needed<br/>edit+commit by repo convention<br/>pr-shepherd apply review"]
+  FIX --> RERUN["rerun the poll"]
+  DEC -->|wait/mark_ready| RERUN
+  RERUN --> POLL
+```
+
+The shipped skill runs the **poll** command `pr-shepherd`, not `pr-shepherd iterate`. After the first `FIX_CODE`, poll holds `--debounce` (default 1m) while still iterating at `--interval`, then returns one later tick. MCP `iterate` has no debounce; the client owns recurrence.
 
 ## Steps
 
 ### 1. Sweep
 
-**What:** `runCheck({ autoResolve: true })` fires one GraphQL batch query (CI checks + review threads + PR comments + merge state). If the PR is already merged or closed, it returns a terminal report immediately; otherwise it surfaces outdated threads without resolving them.
+**What:** `runCheck({ autoResolve: true })` fires one GraphQL batch query (CI checks + review threads + PR comments + merge state + branch rules). If the PR is already merged or closed, it returns a terminal report immediately; otherwise it surfaces outdated threads without resolving them. Eligible already-seen `COMMENTED` review summaries are minimized in-process here.
 
 **Why:** Human-authored threads must remain visible and unresolved; Shepherd replies to human threads later through the printed `apply review` command.
 
@@ -18,84 +57,71 @@
 
 **Check:** `report.mergeStatus.state !== 'OPEN'`
 
-**Why:** GitHub returns `mergeable: UNKNOWN` and `mergeStateStatus: UNKNOWN` for merged/closed PRs. `runCheck` surfaces this as top-level `status: 'MERGED'` or `status: 'CLOSED'`, and this branch stops the loop before actionable checks.
+**Why:** GitHub returns `mergeable: UNKNOWN` and `mergeStateStatus: UNKNOWN` for merged/closed PRs. `runCheck` surfaces this as top-level `status: 'MERGED'` or `status: 'CLOSED'`, and this branch stops before actionable checks.
 
-**Emits:** `action: 'cancel'` — clears any stale ready-delay marker, skips all actionable checks.
+**Emits:** `action: 'cancel'` — clears any stale ready-delay marker.
 
 ---
 
-### 2. Ready-delay state machine
+### 2. Ready-delay
 
 **What:** `updateReadyDelay(pr, isCleanReadyHandoff, readyDelaySeconds, owner, repo)` reads/writes `ready-since.txt`.
 
+A clean handoff means `status === "READY"` and `hasActionableWork` is false. That includes BLOCKED/UNSTABLE handoffs where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending).
+
 - On first clean handoff sweep: creates the file with the current timestamp.
 - On subsequent clean handoff sweeps: checks if `now − readySince >= readyDelaySeconds`. If so, `shouldCancel: true`.
-- On any unclean sweep: deletes the file (resets the countdown). This includes non-READY status, failing CI, conflicts, unresolved/actionable comments, review-summary minimization, and first-look items.
+- On any unclean sweep: deletes the file (resets the countdown). This includes non-READY status, failing CI, conflicts, unresolved comments, review-summary minimization, and first-look items.
 
-Before a READY sweep reaches the ready-delay state machine, `runCheck` performs one fresh REST mergeability read unless the UNKNOWN fallback already did so. If the refreshed mergeability reports `CONFLICTING`/`DIRTY`, the sweep becomes `FAILING`/`CONFLICTS`, resets the ready-delay marker, and routes to `fix_code`.
+Before a READY sweep reaches this step, `runCheck` performs one fresh REST mergeability read unless the UNKNOWN fallback already did so. If the refreshed mergeability reports `CONFLICTING`/`DIRTY`, the sweep becomes `FAILING`/`CONFLICTS`, resets the marker, and routes to `fix_code`.
 
-See [ready-delay.md](ready-delay.md) for full lifecycle.
+If `readyState.shouldCancel`, iterate emits `action: 'cancel'` with `reason: "ready-delay-elapsed"`.
 
----
+Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/ready-since.txt` (Unix timestamp, seconds). A future timestamp (clock skew) is reset to now. Default delay is 10 minutes (`watch.readyDelayMinutes` or `--ready-delay`).
 
-### 2 (cont.). Cancel (ready-delay elapsed)
-
-**Check:** `readyState.shouldCancel`
-
-**Emits:** `action: 'cancel'`
-
----
-
-### 2.5. Stall guard
-
-**What:** After building `base` from the sweep results, `applyStallGuard` is called for every non-terminal action (`wait`, `fix_code`). It computes a fingerprint of the material iterate inputs:
-
-- HEAD SHA (from `git rev-parse HEAD`)
-- Action about to be emitted
-- `status`, `mergeStateStatus`, `state`, `isDraft`
-- Sorted failing-check names + conclusions
-- Sorted actionable thread/comment/review IDs
-- Sorted review-summary minimize IDs
-
-The fingerprint and a `firstSeenAt` timestamp are persisted to `$TMPDIR/pr-shepherd-state/<owner>-<repo>/<pr>/iterate-stall.json`.
-
-- **Fingerprint matches and `now − firstSeenAt ≥ stallTimeoutSeconds`** → return `action: 'escalate'` with trigger `stall-timeout`.
-- **Fingerprint matches but within threshold** → preserve `firstSeenAt`, return the original action.
-- **Fingerprint differs or no stored state** → write new state with `firstSeenAt = now`, return the original action.
-
-In-progress check **names** are included so that a long-running CI pipeline where jobs complete one by one (moving from in-progress to passing) resets the timer as progress happens. Timing-only fields (`remainingSeconds`, `inProgress` count by itself) are excluded — only the set of check names changes the fingerprint, not how many are still running.
-
-Before the generic fingerprint check, `wait` results also inspect relevant in-progress CI checks for a start stall. Queued/requested/waiting check runs with no `startedAt`, and pending external status contexts with only `createdAt`, escalate with `stall-timeout` when their latest source activity timestamp is at least `stallTimeoutSeconds` old. For check runs, activity is `updatedAtUnix` when present and `createdAtUnix` otherwise, so requeued checks do not inherit an old creation-time timeout. Started `IN_PROGRESS` check runs are not treated as CI-start stalls.
-
-**Applies to:** `wait`, `fix_code`. Not applied to `cancel`, `mark_ready`, or `escalate` — these are either already terminal or one-shot.
+| Event                                        | Effect on `ready-since.txt`          |
+| -------------------------------------------- | ------------------------------------ |
+| First clean handoff sweep                    | Created with current timestamp       |
+| Subsequent clean handoff (delay not elapsed) | Read; `remainingSeconds` decremented |
+| Clean handoff, delay elapsed                 | `shouldCancel: true`; file deleted   |
+| Non-READY, or READY with actionable work     | Deleted (countdown resets)           |
+| PR merged/closed (step 1.5)                  | Deleted before `cancel`              |
 
 ---
 
 ### 3. Actionable work
 
-**Check:** any of:
+**Check:** `hasActionableWork` is true when any of:
 
 - `report.threads.actionable.length > 0`
+- `report.threads.resolutionOnly.length > 0`
+- `report.threads.firstLook.length > 0`
+- `report.threads.ruleAutoResolveIds` is non-empty
 - `report.comments.actionable.length > 0`
+- `report.comments.minimizeIds` is non-empty
+- `report.comments.firstLook.length > 0`
 - `report.changesRequestedReviews.length > 0`
-- `report.checks.failing.length > 0` (any failing check, regardless of conclusion)
+- `report.checks.failing.length > 0`
 - `report.mergeStatus.status === 'CONFLICTS'`
+- pending review-summary IDs, first-look summaries, or edited summaries
 
-All failing checks — including timeout, cancelled, startup-failure, and flaky failures — route here. The `fix` payload carries `conclusion` for each failing check; `workflowName`, `jobName`, `failedStep`, and `logExcerpt` are populated only when triage runs (that is, not for cancelled or startup-failure checks). The agent reads any included excerpt first, runs `gh run view <runId> --log-failed` to fetch the full log when needed, and decides whether to rerun (transient failure) or apply a code fix (real failure). Cancelled checks carry a `[conclusion: CANCELLED]` tag — the agent reruns with `gh run rerun <runId>` (no `--failed`) if the cancellation looks unintended. Startup failures carry a `[conclusion: STARTUP_FAILURE]` tag — the agent inspects metadata with `gh run view <runId>` and reruns with `gh run rerun <runId>` if the workflow should be attempted again.
+All failing checks — including timeout, cancelled, startup-failure, and flaky failures — route here. The `fix` payload carries `conclusion` for each failing check; `workflowName`, `jobName`, `failedStep`, and `logExcerpt` are populated only when triage runs (not for cancelled or startup-failure checks).
 
-CONFLICTS is included here because the `fix_code` instructions tell the caller to rebase onto `origin/<BASE_BRANCH>` according to repository conventions, so merge conflicts and review comments can be resolved together in a single push rather than across two separate ticks.
+CONFLICTS is included so merge conflicts and review comments can be handled in one tick. Iterate surfaces raw `**branch**` state; it does not tell the caller how to rebase.
 
-**Side-effects:** cancels stale CI runs (`gh run cancel <runId>`) for all failing checks.
+**Side-effects:** REST `POST /repos/{owner}/{repo}/actions/runs/{runId}/cancel` for unique run IDs of failing GitHub Actions checks (best-effort; already-completed runs return 409). Not `gh run cancel`. Third-party status checks without a run ID are not cancelled. Disable with `--no-auto-cancel-actionable`; protect named workflows with `actions.neverCancelRuns`.
 
-**Emits:** `action: 'fix_code'` with the full `fix` payload (may have empty threads/checks when CONFLICTS-only).
+**Emits:** `action: 'fix_code'`. Stall guard runs inside `handleFixCode`.
 
 ---
 
 ### 4. Mark ready
 
-**Check:** `report.status === 'READY'` AND `mergeStateStatus` is `CLEAN` (or `DRAFT` when `isDraft`) AND `!blockingBotReviewInProgress` AND `isDraft` AND `!shouldCancel`.
+**Check:** `report.status === 'READY'` AND `isDraft` AND `!blockingBotReviewInProgress` AND `!shouldCancel` AND `config.actions.autoMarkReady` (disable with `--no-auto-mark-ready`).
 
-**Side-effects:** calls GitHub's `markPullRequestReadyForReview` GraphQL mutation.
+There is no extra `mergeStateStatus === "CLEAN"` requirement. A draft that derived `DRAFT` (including a draft that is also behind) can still be marked ready when the Shepherd status is `READY`.
+
+**Side-effects:** `markPullRequestReadyForReview` GraphQL mutation.
 
 **Emits:** `action: 'mark_ready'`
 
@@ -103,26 +129,36 @@ CONFLICTS is included here because the `fix_code` instructions tell the caller t
 
 ### 5. Wait
 
-**Fallthrough:** nothing actionable, no terminal state, no ready-delay elapsed.
+**Fallthrough:** nothing actionable, no terminal state, no ready-delay elapsed, not marking ready.
 
-**Emits:** `action: 'wait'`
+**Emits:** `action: 'wait'`. Stall guard runs on this path.
 
 ---
 
+### Stall guard
+
+Applied to `wait` and `fix_code` after those actions are chosen — not before actionable work, and not on `cancel` / `mark_ready` / `escalate`.
+
+Fingerprint: HEAD SHA, action, `status`, `mergeStateStatus`, `state`, `isDraft`, sorted failing-check names + conclusions, sorted actionable thread/comment/review IDs, sorted review-summary minimize IDs. Stored at `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/iterate-stall.json`.
+
+- Fingerprint matches and `now − firstSeenAt ≥ stallTimeoutSeconds` → `escalate` with trigger `stall-timeout`.
+- Fingerprint matches but within threshold → preserve `firstSeenAt`, keep the original action.
+- Fingerprint differs or no stored state → write new state.
+
+`wait` also inspects in-progress CI for a start stall (queued/requested checks that never start).
+
 ## Decision table
 
-Exit codes: `0`/`10`–`14` is `IterateResult` PR state; see
-[exit-codes.md](exit-codes.md) for the full scheme, including the `sysexits.h`
-codes (64–78) emitted when a step fails outright rather than reaching a step
-below.
+Exit codes: `0`/`10`–`14` is `IterateResult` PR state; see [exit-codes.md](exit-codes.md) for `sysexits.h` codes when a step fails before reaching a row below.
 
-| Step    | Condition                                                           | Action       | Exit code |
-| ------- | ------------------------------------------------------------------- | ------------ | --------- |
-| 1.5     | `state === 'MERGED'`                                                | `cancel`     | 0         |
-| 1.5     | `state === 'CLOSED'`                                                | `cancel`     | 14        |
-| 2 cont. | `shouldCancel` (ready-delay elapsed)                                | `cancel`     | 0         |
-| 2.5     | Same fingerprint for ≥ `stallTimeoutMinutes` (`wait` or `fix_code`) | `escalate`   | 13        |
-| 3       | Actionable threads/comments/any failing CI or CONFLICTS             | `fix_code`   | 12        |
-| 3 esc.  | Same thread hit `fixAttemptsPerThread` times                        | `escalate`   | 13        |
-| 4       | READY + CLEAN + isDraft                                             | `mark_ready` | 11        |
-| 5       | Fallthrough                                                         | `wait`       | 10        |
+| Step    | Condition                                    | Action       | Exit code |
+| ------- | -------------------------------------------- | ------------ | --------- |
+| 1.5     | `state === 'MERGED'`                         | `cancel`     | 0         |
+| 1.5     | `state === 'CLOSED'`                         | `cancel`     | 14        |
+| 2       | `shouldCancel` (ready-delay elapsed)         | `cancel`     | 0         |
+| 3       | `hasActionableWork`                          | `fix_code`   | 12        |
+| 3 stall | Same fingerprint for ≥ `stallTimeoutMinutes` | `escalate`   | 13        |
+| 3 esc.  | Same thread hit `fixAttemptsPerThread` times | `escalate`   | 13        |
+| 4       | READY + isDraft + !blockingBotReview         | `mark_ready` | 11        |
+| 5       | Fallthrough                                  | `wait`       | 10        |
+| 5 stall | Same fingerprint for ≥ `stallTimeoutMinutes` | `escalate`   | 13        |
