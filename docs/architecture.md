@@ -51,7 +51,7 @@ shepherd/
 │   ├── resolve.mts        # resolve mutations (threads, comments, reviews)
 │
 ├── config/
-│   └── load.mts           # RC file loader with deepMerge
+│   └── load.mts           # cascading RC loader with deepMerge
 │
 ├── github/
 │   ├── client.mts         # getRepoInfo + getCurrentPrNumber

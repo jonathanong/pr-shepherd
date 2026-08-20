@@ -76,7 +76,7 @@ The module supports a focused automation loop for PR monitoring and deterministi
 
 ### Configuration and environment
 
-- Supports `.pr-shepherdrc.yml` with documented keys for iterate behavior, checks, merge status, resolve, and actions.
+- Supports cascading `.pr-shepherdrc.yml` files (cwd up to `$HOME`, including a user-level `$HOME/.pr-shepherdrc.yml`) with documented keys for iterate behavior, checks, merge status, resolve, and actions.
 - Supports auth discovery via `GH_TOKEN`, `GITHUB_TOKEN`, and `gh auth token` fallback, then `GITHUB_PERSONAL_ACCESS_TOKEN`.
 - Supports per-worktree/run state directory override via `PR_SHEPHERD_STATE_DIR`.
 - Supports log capture with `PR_SHEPHERD_LOG_DISABLED=1`.

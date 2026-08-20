@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, vi } from "vitest";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -30,6 +30,12 @@ export async function freshLoadConfig() {
 
 export function writeRc(contents: string): void {
   writeFileSync(join(tmpDir, RC), contents);
+}
+
+export function writeRcAt(relativeDir: string, contents: string): void {
+  const dir = relativeDir === "" ? tmpDir : join(tmpDir, relativeDir);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, RC), contents);
 }
 
 export function removeRc(): void {
