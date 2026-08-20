@@ -68,9 +68,10 @@ interface PrShepherdConfig {
 const RC_FILENAME = ".pr-shepherdrc.yml";
 
 /**
- * Collect `.pr-shepherdrc.yml` files from `startDir` up to `$HOME` (closest first).
+ * Collect `.pr-shepherdrc.yml` files from `startDir` toward `$HOME` (closest first).
  * `$HOME/.pr-shepherdrc.yml` is always included when it exists, even if cwd is
- * outside the home directory.
+ * outside the home directory. The walk never includes the filesystem root, so a
+ * `/.pr-shepherdrc.yml` cannot override the user-level file.
  */
 function collectRcFiles(startDir: string): string[] {
   const home = resolve(homedir());
@@ -87,9 +88,9 @@ function collectRcFiles(startDir: string): string[] {
   };
 
   let current = resolve(startDir);
-  while (true) {
+  while (current !== dirname(current)) {
     add(current);
-    if (current === home || current === dirname(current)) break;
+    if (current === home) break;
     current = dirname(current);
   }
   add(home);

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -66,6 +66,21 @@ describe("loadConfig — cascade deep-merge", () => {
       process.chdir(outside);
       const loadConfig = await freshLoadConfig();
       expect(loadConfig().iterate.fixAttemptsPerThread).toBe(50);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("lets an outside-home project rc override $HOME while keeping sibling home keys", async () => {
+    writeRc("iterate:\n  fixAttemptsPerThread: 50\n  stallTimeoutMinutes: 90\n");
+    const outside = mkdtempSync(join(tmpdir(), "shepherd-outside-home-"));
+    try {
+      writeFileSync(join(outside, ".pr-shepherdrc.yml"), "iterate:\n  stallTimeoutMinutes: 15\n");
+      process.chdir(outside);
+      const loadConfig = await freshLoadConfig();
+      const result = loadConfig();
+      expect(result.iterate.fixAttemptsPerThread).toBe(50);
+      expect(result.iterate.stallTimeoutMinutes).toBe(15);
     } finally {
       rmSync(outside, { recursive: true, force: true });
     }

@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-pr-shepherd loads every `.pr-shepherdrc.yml` starting from the current working directory and walking up to `$HOME`, then deep-merges them ESLint-style: closer files override farther ones, nested objects merge, and arrays replace. `$HOME/.pr-shepherdrc.yml` is always included as the user-level file when it exists, even if the working directory is outside `$HOME`. All fields are optional — built-in defaults apply when omitted. The MCP server and CLI read the same files.
+pr-shepherd loads every `.pr-shepherdrc.yml` starting from the current working directory and walking toward `$HOME`, then deep-merges them ESLint-style: closer files override farther ones, nested objects merge, and arrays replace. `$HOME/.pr-shepherdrc.yml` is always included as the farthest user-level overlay when it exists, even if the working directory is outside `$HOME`. When cwd is outside `$HOME`, the walk includes ancestor directories of cwd but stops before the filesystem root, so `/.pr-shepherdrc.yml` cannot override the user file. All fields are optional — built-in defaults apply when omitted. The MCP server and CLI read the same files.
 
 For example, a user-level file at `$HOME/.pr-shepherdrc.yml` can set personal defaults, and a project file can override only the keys it cares about:
 
