@@ -110,7 +110,13 @@ describe("updateReadyDelay", () => {
   it("rejects when owner contains an invalid path segment character", async () => {
     // owner contains '/' which is not in the allowed SAFE_SEGMENT charset.
     await expect(updateReadyDelay(PR, true, DELAY, "owner/bad", "repo")).rejects.toThrow(
-      "Invalid path segment",
+      "Invalid state key segment",
+    );
+  });
+
+  it("rejects when pr is not a positive integer", async () => {
+    await expect(updateReadyDelay(-1, true, DELAY, OWNER, REPO)).rejects.toThrow(
+      'Invalid state key segment "pr"',
     );
   });
 });

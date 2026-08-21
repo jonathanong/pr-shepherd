@@ -66,6 +66,11 @@ describe("readFixAttempts — unsafe key segments", () => {
     const result = await readFixAttempts({ owner: "owner", repo: "my repo", pr: 1 });
     expect(result).toBeNull();
   });
+
+  it("returns null (does not throw) when pr is not a positive integer", async () => {
+    const result = await readFixAttempts({ owner: "owner", repo: "repo", pr: 0 });
+    expect(result).toBeNull();
+  });
 });
 
 describe("writeFixAttempts — fire and forget", () => {
