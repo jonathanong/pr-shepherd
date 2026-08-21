@@ -81,13 +81,20 @@ describe("rest", () => {
 
 describe("rest — path validation", () => {
   it.each([
-    ["missing leading slash", "repos/o/r"],
-    ["absolute URL", "https://evil.example/repos/o/r"],
-    ["parent segment", "/repos/o/../secret"],
-    ["protocol-relative", "//evil.example/repos/o/r"],
-  ])("rejects %s before fetch", async (_label, path) => {
-    await expect(rest("GET", path)).rejects.toThrow("Invalid GitHub REST path");
+    ["missing leading slash", "repos/o/r", "Invalid GitHub REST path"],
+    ["absolute URL", "https://evil.example/repos/o/r", "Invalid GitHub REST path"],
+    ["parent segment", "/repos/o/../secret", "Invalid GitHub REST path"],
+    ["dot segment", "/repos/./r", "Invalid GitHub REST path"],
+    ["protocol-relative", "//evil.example/repos/o/r", "Invalid GitHub REST URL origin"],
+  ])("rejects %s before fetch", async (_label, path, message) => {
+    await expect(rest("GET", path)).rejects.toThrow(message);
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("allows consecutive dots inside a path component", async () => {
+    process.env["GH_TOKEN"] = "tok";
+    mockFetch.mockResolvedValue(jsonOk({ id: 1 }));
+    await expect(rest("GET", "/repos/acme/widgets..js/pulls/1")).resolves.toEqual({ id: 1 });
   });
 });
 
