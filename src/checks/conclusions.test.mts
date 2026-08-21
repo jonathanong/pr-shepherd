@@ -1,24 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { isFailingCheckConclusion } from "./conclusions.mts";
+import { isFailingAgentCheck } from "./conclusions.mts";
 
-describe("isFailingCheckConclusion", () => {
+describe("isFailingAgentCheck", () => {
   it("treats GitHub failure conclusions as failing", () => {
-    expect(isFailingCheckConclusion("FAILURE")).toBe(true);
-    expect(isFailingCheckConclusion("TIMED_OUT")).toBe(true);
-    expect(isFailingCheckConclusion("CANCELLED")).toBe(true);
-    expect(isFailingCheckConclusion("STARTUP_FAILURE")).toBe(true);
-    expect(isFailingCheckConclusion("ACTION_REQUIRED")).toBe(true);
-    expect(isFailingCheckConclusion("STALE")).toBe(true);
+    expect(isFailingAgentCheck({ conclusion: "FAILURE" })).toBe(true);
+    expect(isFailingAgentCheck({ conclusion: "TIMED_OUT" })).toBe(true);
+    expect(isFailingAgentCheck({ conclusion: "CANCELLED" })).toBe(true);
+    expect(isFailingAgentCheck({ conclusion: "STARTUP_FAILURE" })).toBe(true);
+    expect(isFailingAgentCheck({ conclusion: "ACTION_REQUIRED" })).toBe(true);
+    expect(isFailingAgentCheck({ conclusion: "STALE" })).toBe(true);
+    expect(isFailingAgentCheck({ conclusion: null })).toBe(true);
   });
 
   it("treats success, skipped, and neutral as not failing", () => {
-    expect(isFailingCheckConclusion("SUCCESS")).toBe(false);
-    expect(isFailingCheckConclusion("SKIPPED")).toBe(false);
-    expect(isFailingCheckConclusion("NEUTRAL")).toBe(false);
+    expect(isFailingAgentCheck({ conclusion: "SUCCESS" })).toBe(false);
+    expect(isFailingAgentCheck({ conclusion: "SKIPPED" })).toBe(false);
+    expect(isFailingAgentCheck({ conclusion: "NEUTRAL" })).toBe(false);
   });
 
-  it("treats null conclusions as failing-check rows", () => {
-    expect(isFailingCheckConclusion(null)).toBe(true);
-    expect(isFailingCheckConclusion(undefined)).toBe(true);
+  it("excludes annotation-only carriers even when the conclusion is failing", () => {
+    expect(isFailingAgentCheck({ conclusion: "FAILURE", annotationOnly: true })).toBe(false);
   });
 });

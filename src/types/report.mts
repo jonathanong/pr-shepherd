@@ -145,8 +145,8 @@ export interface AgentCheck {
   /** One-line status text shown in the GitHub UI (e.g. "67.68% of diff hit (target 85.00%)"). */
   summary?: string;
   logExcerpt?: string;
-  /** Marker-gated inline annotations from this check, surfaced once per PR. */
   annotations?: CheckAnnotation[];
+  annotationOnly?: true; // annotation carrier from a non-failing check bucket
 }
 
 /**

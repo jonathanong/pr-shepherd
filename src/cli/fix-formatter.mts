@@ -12,7 +12,7 @@ import {
 } from "./list-formatters.mts";
 import { numberInstructions } from "./iterate-instructions.mts";
 import { renderCheckAnnotation, renderProtectedRun } from "./fix-formatter-extra.mts";
-import { isFailingCheckConclusion } from "../checks/conclusions.mts";
+import { isFailingAgentCheck } from "../checks/conclusions.mts";
 import type { IterateResultFixCode } from "../types.mts";
 
 export function formatFixCodeResult(header: string, result: IterateResultFixCode): string {
@@ -58,7 +58,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     }
   }
 
-  const failingChecks = result.fix.checks.filter((ch) => isFailingCheckConclusion(ch.conclusion));
+  const failingChecks = result.fix.checks.filter((ch) => isFailingAgentCheck(ch));
   if (failingChecks.length > 0) {
     sections.push("## Failing checks");
     const bullets = failingChecks.map((ch) => {

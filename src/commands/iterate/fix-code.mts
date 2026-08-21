@@ -29,7 +29,6 @@ import {
 import { annotationMarkerBody, checksWithUnseenAnnotations } from "../check-annotations.mts";
 import { threadTranscriptBody } from "../../threads/transcript.mts";
 import { isHumanAuthor, isConfiguredBotAuthor } from "../../comments/authors.mts";
-import { isFailingCheckConclusion } from "../../checks/conclusions.mts";
 import { loadConfig } from "../../config/load.mts";
 import type {
   EscalateDetails,
@@ -182,8 +181,11 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const threads = report.threads.actionable.map(toAgentThread);
   const resolutionOnlyThreads = report.threads.resolutionOnly;
   const actionableComments = report.comments.actionable.map(toAgentComment);
-  const checks = [...toAgentChecks(failingChecks), ...toAgentChecks(annotatedExtra)];
-  const failingAgentChecks = checks.filter((c) => isFailingCheckConclusion(c.conclusion));
+  const failingAgentChecks = toAgentChecks(failingChecks);
+  const checks = [
+    ...failingAgentChecks,
+    ...toAgentChecks(annotatedExtra).map((c) => ({ ...c, annotationOnly: true as const })),
+  ];
   const { changesRequestedReviews } = report;
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
   const isBehind = report.mergeStatus.status === "BEHIND";

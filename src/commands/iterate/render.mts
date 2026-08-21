@@ -20,7 +20,7 @@ import {
   SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
   buildShepherdJournalInstruction,
 } from "../shepherd-journal.mts";
-import { isFailingCheckConclusion } from "../../checks/conclusions.mts";
+import { isFailingAgentCheck } from "../../checks/conclusions.mts";
 import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
 
 const FIX_INSTRUCTION_STOP =
@@ -55,7 +55,7 @@ export function buildFixInstructions(
 ): string[] {
   const instructions: string[] = [];
 
-  const failingChecks = checks.filter((c) => isFailingCheckConclusion(c.conclusion));
+  const failingChecks = checks.filter((c) => isFailingAgentCheck(c));
   const hasAnnotations = checks.some((c) => (c.annotations?.length ?? 0) > 0);
   const hasNonConflictHints =
     threads.length > 0 ||

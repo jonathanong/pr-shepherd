@@ -5,6 +5,7 @@ import {
   buildEscalateHumanMessage,
   formatDurationApprox,
 } from "./escalate.mts";
+import { checksWithUnseenAnnotations } from "../check-annotations.mts";
 import type {
   ClassifiedCheck,
   EscalateDetails,
@@ -35,6 +36,9 @@ function computeStallFingerprint(
   const ruleAutoResolveSummaries = (report.ruleAutoResolveReviewSummaryIds ?? []).sort((a, b) =>
     a.localeCompare(b),
   );
+  const annotations = checksWithUnseenAnnotations(report)
+    .flatMap((c) => (c.annotations ?? []).map((a) => a.id))
+    .sort();
   return JSON.stringify({
     action,
     headSha,
@@ -50,6 +54,7 @@ function computeStallFingerprint(
     reviews,
     summaries,
     ruleAutoResolveSummaries,
+    annotations,
   });
 }
 

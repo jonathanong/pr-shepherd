@@ -102,4 +102,59 @@ describe("fix_code — passing-check annotations", () => {
 
     expect(result.action).toBe("wait");
   });
+
+  it("does not treat ignored annotated checks as failing CI", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        checks: {
+          passing: [],
+          failing: [],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+          ignored: [
+            {
+              id: "CR_ign",
+              name: "ignored-ci",
+              status: "COMPLETED",
+              conclusion: "FAILURE",
+              detailsUrl: "https://checks.example/ignored",
+              event: "push",
+              runId: "99",
+              category: "ignored",
+              annotations: [
+                {
+                  id: "check_annotation_ign",
+                  path: "src/a.mts",
+                  startLine: 1,
+                  endLine: 1,
+                  level: "FAILURE",
+                  message: "Ignored check annotation.",
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.checks).toHaveLength(1);
+      expect(result.fix.checks[0]?.annotationOnly).toBe(true);
+      expect(result.fix.checks[0]?.conclusion).toBe("FAILURE");
+      expect(result.fix.instructions.join("\n")).not.toContain("## Failing checks");
+      expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
+    }
+  });
 });
