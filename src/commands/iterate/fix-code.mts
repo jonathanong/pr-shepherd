@@ -26,7 +26,7 @@ import {
   buildInProgressRunIds,
   buildRunProtection,
 } from "./helpers.mts";
-import { annotationMarkerBody } from "../check-annotations.mts";
+import { annotationMarkerBody, checksWithUnseenAnnotations } from "../check-annotations.mts";
 import { threadTranscriptBody } from "../../threads/transcript.mts";
 import { isHumanAuthor, isConfiguredBotAuthor } from "../../comments/authors.mts";
 import { loadConfig } from "../../config/load.mts";
@@ -96,6 +96,9 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     ruleAutoResolveThreadIds,
   } = ctx;
   const failingChecks = report.checks.failing;
+  const annotatedExtra = checksWithUnseenAnnotations(report).filter(
+    (c) => c.category !== "failing",
+  );
   const { protectedRunIds, protectedRuns } = buildRunProtection(
     [...failingChecks, ...report.checks.inProgress],
     opts.neverCancelRuns,
@@ -178,7 +181,11 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const threads = report.threads.actionable.map(toAgentThread);
   const resolutionOnlyThreads = report.threads.resolutionOnly;
   const actionableComments = report.comments.actionable.map(toAgentComment);
-  const checks = toAgentChecks(failingChecks);
+  const failingAgentChecks = toAgentChecks(failingChecks);
+  const checks = [
+    ...failingAgentChecks,
+    ...toAgentChecks(annotatedExtra).map((c) => ({ ...c, annotationOnly: true as const })),
+  ];
   const { changesRequestedReviews } = report;
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
   const isBehind = report.mergeStatus.status === "BEHIND";
@@ -188,7 +195,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   // unnecessary cancellation.
   const pushLikely =
     threads.length > 0 ||
-    checks.length > 0 ||
+    failingAgentChecks.length > 0 ||
+    annotatedExtra.length > 0 ||
     hasConflicts ||
     changesRequestedReviews.length > 0 ||
     actionableComments.length > 0;
@@ -205,7 +213,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     resolutionOnlyThreads,
     allCommentIds,
     changesRequestedReviews,
-    checks,
+    failingAgentChecks,
     prNumber,
     botUsernames,
     ruleAutoResolveThreadIds,
@@ -216,7 +224,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   // resolution-only threads also need a known base in case the agent does push.
   const pushIsPlausible =
     threads.length > 0 ||
-    checks.length > 0 ||
+    failingAgentChecks.length > 0 ||
+    annotatedExtra.length > 0 ||
     hasConflicts ||
     changesRequestedReviews.length > 0 ||
     actionableComments.length > 0 ||

@@ -23,6 +23,7 @@ describe("runCheck — check annotations", () => {
             name: "SonarCloud Code Analysis",
             conclusion: "FAILURE",
             category: "failing",
+            hasAnnotations: true,
           }),
         ],
       }),
@@ -62,6 +63,7 @@ describe("runCheck — check annotations", () => {
             id: "CR_fail",
             conclusion: "FAILURE",
             category: "failing",
+            hasAnnotations: true,
           }),
         ],
       }),
@@ -88,7 +90,7 @@ describe("runCheck — check annotations", () => {
     );
   });
 
-  it("does not fetch annotations for passing checks", async () => {
+  it("does not fetch annotations for passing checks without a probe hit", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
         checks: [makeCheck({ id: "CR_pass", conclusion: "SUCCESS", category: "passed" })],
@@ -100,6 +102,69 @@ describe("runCheck — check annotations", () => {
     expect(mockFetchCheckRunAnnotations).not.toHaveBeenCalled();
   });
 
+  it("surfaces unseen annotations on passing checks with a probe hit", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        checks: [
+          makeCheck({
+            id: "CR_pass",
+            name: "SonarCloud Code Analysis",
+            conclusion: "SUCCESS",
+            category: "passed",
+            hasAnnotations: true,
+          }),
+        ],
+      }),
+    });
+    mockFetchCheckRunAnnotations.mockResolvedValue([
+      {
+        id: "check_annotation_lua",
+        path: "scripts/instrument-lua.cjs",
+        startLine: 30,
+        endLine: 30,
+        level: "WARNING",
+        title: 'Remove this assignment of "i".',
+        message: "See more on https://sonarcloud.io",
+      },
+    ]);
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.checks.passing[0]?.annotations).toEqual([
+      expect.objectContaining({ id: "check_annotation_lua", path: "scripts/instrument-lua.cjs" }),
+    ]);
+    expect(mockFetchCheckRunAnnotations).toHaveBeenCalledWith("CR_pass");
+  });
+
+  it("surfaces unseen annotations on skipped checks with a probe hit", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        checks: [
+          makeCheck({
+            id: "CR_skip",
+            conclusion: "NEUTRAL",
+            category: "skipped",
+            hasAnnotations: true,
+          }),
+        ],
+      }),
+    });
+    mockFetchCheckRunAnnotations.mockResolvedValue([
+      {
+        id: "check_annotation_skip",
+        path: "src/a.mts",
+        startLine: 1,
+        endLine: 1,
+        level: "NOTICE",
+        message: "note",
+      },
+    ]);
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.checks.skipped[0]?.annotations?.[0]?.id).toBe("check_annotation_skip");
+  });
+
   it("keeps the failing check when annotation fetch fails", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
@@ -108,6 +173,7 @@ describe("runCheck — check annotations", () => {
             id: "CR_fail",
             conclusion: "FAILURE",
             category: "failing",
+            hasAnnotations: true,
           }),
         ],
       }),

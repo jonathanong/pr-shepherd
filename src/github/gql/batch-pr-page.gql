@@ -157,6 +157,11 @@ query BatchPrPage(
                     startedAt
                     title
                     summary
+                    annotations(first: 1) {
+                      nodes {
+                        message
+                      }
+                    }
                     checkSuite {
                       createdAt
                       updatedAt

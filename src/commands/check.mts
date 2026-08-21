@@ -7,7 +7,7 @@ import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
 import { classifyVisibleComments } from "../comments/visible-comments.mts";
 import { computeStatus } from "./check-status.mts";
-import { attachUnseenCheckAnnotations } from "./check-annotations.mts";
+import { attachAndMergeCheckAnnotations } from "./check-annotations.mts";
 import { buildTerminalReport } from "./check-terminal-report.mts";
 import {
   isBlockedByFilteredCheck,
@@ -73,6 +73,7 @@ export async function runCheck(
   const inProgress = classifiedChecks.filter((c) => c.category === "in_progress");
   const skipped = classifiedChecks.filter((c) => c.category === "skipped");
   const filtered = classifiedChecks.filter((c) => c.category === "filtered");
+  const ignored = classifiedChecks.filter((c) => c.category === "ignored");
   const triagedBase =
     failing.length > 0 && !opts.skipTriage ? await triageFailingChecks(failing, repo) : failing;
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
@@ -81,7 +82,12 @@ export async function runCheck(
   const ruleSet = await loadRules(discoverRuleFiles(getEffectiveCwd()));
   const classifyIndex = buildClassifyIndex(ruleSet, batchData);
   const partition = partitionBatch(classifyIndex, batchData);
-  const triaged = await attachUnseenCheckAnnotations(triagedBase, seenMap, prNumber);
+  const merged = await attachAndMergeCheckAnnotations(
+    { passing, failing: triagedBase, skipped, filtered, ignored },
+    seenMap,
+    prNumber,
+  );
+  const ignoredAnnotated = merged.ignored.filter((c) => (c.annotations?.length ?? 0) > 0);
   const minimizedCommentCandidates = batchData.comments.filter(
     (c) => c.isMinimized && !partition.suppressedCommentIds.has(c.id),
   );
@@ -186,11 +192,12 @@ export async function runCheck(
     baseBranch: batchData.baseRefName,
     mergeStatus,
     checks: {
-      passing,
-      failing: triaged,
+      passing: merged.passing,
+      failing: merged.failing,
       inProgress: inProgress as ClassifiedCheck[],
-      skipped,
-      filtered,
+      skipped: merged.skipped,
+      filtered: merged.filtered,
+      ...(ignoredAnnotated.length > 0 && { ignored: ignoredAnnotated }),
       filteredNames: verdict.filteredNames,
       blockedByFilteredCheck,
       ...(verdict.ignoredNames.length > 0 && { ignoredNames: verdict.ignoredNames }),

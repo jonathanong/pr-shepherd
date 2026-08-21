@@ -16,7 +16,7 @@ A single GraphQL query fetches everything shepherd needs per PR on the first pag
 - Review threads (paginated backward, see below)
 - PR comments (paginated backward)
 - Reviews / changes-requested / commented / approved reviews (paginated backward)
-- CI check runs (paginated forward, see below) and `checkSuites` (first 50, used for startup-failure detection)
+- CI check runs (paginated forward, see below) and `checkSuites` (first 50, used for startup-failure detection). Each `CheckRun` includes an `annotations(first: 1)` probe so later annotation pagination runs only for checks that have at least one annotation.
 
 `latestReviews` is capped at 100 and `reviewRequests` at 50; extra pages are not fetched. Copilot-in-progress detection can miss reviewers beyond those caps.
 

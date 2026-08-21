@@ -76,6 +76,8 @@ export interface CheckRun {
   /** Workflow display name for GitHub Actions check runs, when GraphQL exposes it. */
   workflowName?: string;
   workflowId?: string; // Stable workflow database ID (stringified); groups runs across concurrency evictions.
+  /** True when GraphQL reported at least one CheckRun annotation. Omitted when false. */
+  hasAnnotations?: boolean;
 }
 
 export interface ReviewThread {

@@ -62,7 +62,7 @@ Human-authored threads are replied to, not resolved or minimized. Bot/non-human 
 | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | Check runs and status contexts, classified (passed / failing / in_progress / skipped / filtered / ignored / superseded) | [checks.md](checks.md)                                                              |
 | Failed job name, failed step, bounded log excerpt                                                                       | [checks.md](checks.md) — omitted for `CANCELLED` and `STARTUP_FAILURE`              |
-| Inline annotations on failing check runs (once per PR)                                                                  | [checks.md](checks.md)                                                              |
+| Inline annotations on completed check runs (once per PR)                                                                | [checks.md](checks.md)                                                              |
 | Startup-failure CheckSuites, with REST only when that page is missing or truncated                                      | [graphql.md](graphql.md#startup-failure-checksuites-graphql--actions-rest-fallback) |
 | In-progress / protected / already-cancelled run IDs on `FIX_CODE`                                                       | [actions.md](actions.md)                                                            |
 

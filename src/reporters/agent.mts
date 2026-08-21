@@ -64,9 +64,6 @@ export function toAgentComment(c: PrComment & { edited?: boolean }): AgentCommen
 }
 
 export function toAgentCheck(c: TriagedCheck): AgentCheck {
-  if (c.conclusion === "SKIPPED" || c.conclusion === "NEUTRAL") {
-    throw new Error(`Unexpected conclusion ${c.conclusion} in toAgentCheck`);
-  }
   return {
     name: c.name,
     runId: c.runId,
