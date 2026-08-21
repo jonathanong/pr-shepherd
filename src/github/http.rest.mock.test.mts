@@ -79,6 +79,18 @@ describe("rest", () => {
   });
 });
 
+describe("rest — path validation", () => {
+  it.each([
+    ["missing leading slash", "repos/o/r"],
+    ["absolute URL", "https://evil.example/repos/o/r"],
+    ["parent segment", "/repos/o/../secret"],
+    ["protocol-relative", "//evil.example/repos/o/r"],
+  ])("rejects %s before fetch", async (_label, path) => {
+    await expect(rest("GET", path)).rejects.toThrow("Invalid GitHub REST path");
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+
 describe("restWithRateLimit", () => {
   beforeEach(() => {
     process.env["GH_TOKEN"] = "tok";
