@@ -12,6 +12,22 @@ import {
 } from "./http-utils.mts";
 
 const BASE_URL = "https://api.github.com";
+const SAFE_GITHUB_REST_PATH = /^\/[A-Za-z0-9._~!$&'()*+,;=:@%/?-]*$/;
+
+function githubApiUrl(path: string): string {
+  if (!SAFE_GITHUB_REST_PATH.test(path) || path.includes("://")) {
+    throw new Error(`Invalid GitHub REST path: ${path}`);
+  }
+  const url = new URL(path, `${BASE_URL}/`);
+  if (url.origin !== BASE_URL) {
+    throw new Error(`Invalid GitHub REST URL origin: ${url.origin}`);
+  }
+  const pathname = path.split("?")[0] ?? path;
+  if (pathname.split("/").some((seg) => seg === ".." || seg === ".")) {
+    throw new Error(`Invalid GitHub REST path: ${path}`);
+  }
+  return url.href;
+}
 
 export interface RestResult<T = unknown> {
   data: T;
@@ -28,7 +44,7 @@ export async function restWithRateLimit<T = unknown>(
   path: string,
   body?: unknown,
 ): Promise<RestResult<T>> {
-  const url = `${BASE_URL}${path}`;
+  const url = githubApiUrl(path);
   const n = nextEntry();
   appendEntry(formatRequestEntry({ n, kind: "REST", method, url, body }));
   const t0 = performance.now();
