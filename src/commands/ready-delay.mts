@@ -7,9 +7,8 @@
  */
 
 import { readFile, writeFile, mkdir, unlink } from "node:fs/promises";
-import { join, dirname } from "node:path";
-import { SAFE_SEGMENT } from "../util/path-segment.mts";
-import { resolveStateBase } from "../state/base.mts";
+import { dirname } from "node:path";
+import { resolvePrStatePath } from "../state/base.mts";
 
 // ---------------------------------------------------------------------------
 // Ready-delay state machine
@@ -87,16 +86,7 @@ export async function updateReadyDelay(
 // ---------------------------------------------------------------------------
 
 function readySincePath(pr: number, owner: string, repo: string): string {
-  for (const [field, value] of [
-    ["owner", owner],
-    ["repo", repo],
-  ] as const) {
-    if (!SAFE_SEGMENT.test(value)) {
-      throw new Error(`Invalid path segment "${field}": ${value}`);
-    }
-  }
-  const base = resolveStateBase();
-  return join(base, `${owner}-${repo}`, String(pr), "ready-since.txt");
+  return resolvePrStatePath({ owner, repo, pr }, "ready-since.txt");
 }
 
 async function safeUnlink(path: string): Promise<void> {

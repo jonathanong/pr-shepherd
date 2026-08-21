@@ -10,9 +10,8 @@
 
 import { readFile, writeFile, rename, unlink, mkdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { join, dirname } from "node:path";
-import { SAFE_SEGMENT } from "../util/path-segment.mts";
-import { resolveStateBase } from "./base.mts";
+import { dirname } from "node:path";
+import { resolvePrStatePath } from "./base.mts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -91,14 +90,5 @@ export async function writeStallState(key: StateKey, state: StallState): Promise
 // ---------------------------------------------------------------------------
 
 function resolvePath(key: StateKey): string {
-  for (const [field, value] of [
-    ["owner", key.owner],
-    ["repo", key.repo],
-  ] as const) {
-    if (!SAFE_SEGMENT.test(value)) {
-      throw new Error(`Invalid state key segment "${field}": ${value}`);
-    }
-  }
-  const base = resolveStateBase();
-  return join(base, `${key.owner}-${key.repo}`, String(key.pr), "iterate-stall.json");
+  return resolvePrStatePath(key, "iterate-stall.json");
 }

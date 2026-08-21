@@ -30,4 +30,8 @@ describe("hasSeen / markSeen — unsafe key segments", () => {
   it("markSeen does not throw when id is unsafe", async () => {
     await expect(markSeen(testKey, "bad id", "body")).resolves.toBeUndefined();
   });
+
+  it("hasSeen returns false when pr is not a positive integer", async () => {
+    expect(await hasSeen({ owner: "owner", repo: "repo", pr: -1 }, testId)).toBe(false);
+  });
 });

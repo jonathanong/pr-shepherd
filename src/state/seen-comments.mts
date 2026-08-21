@@ -3,8 +3,7 @@ import { readFile, writeFile, rename, unlink, mkdir, access, readdir } from "nod
 import { join, dirname } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { SAFE_SEGMENT } from "../util/path-segment.mts";
-
-import { resolveStateBase } from "./base.mts";
+import { resolvePrStatePath } from "./base.mts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -81,7 +80,8 @@ export async function loadSeenMap(key: StateKey): Promise<Map<string, SeenMarker
   try {
     const dir = resolveDir(key);
     const entries = await readdir(dir);
-    for (const entry of entries.filter((e) => e.endsWith(".json"))) {
+    for (const entry of entries) {
+      if (!entry.endsWith(".json") || !SAFE_SEGMENT.test(entry)) continue;
       try {
         const raw = await readFile(join(dir, entry), "utf8");
         const marker = JSON.parse(raw) as SeenMarker;
@@ -221,16 +221,7 @@ export async function readSeenMarker(key: StateKey, id: string): Promise<SeenMar
 // ---------------------------------------------------------------------------
 
 function resolveDir(key: StateKey): string {
-  for (const [field, value] of [
-    ["owner", key.owner],
-    ["repo", key.repo],
-  ] as const) {
-    if (!SAFE_SEGMENT.test(value)) {
-      throw new Error(`Invalid state key segment "${field}": ${value}`);
-    }
-  }
-  const base = resolveStateBase();
-  return join(base, `${key.owner}-${key.repo}`, String(key.pr), "seen");
+  return resolvePrStatePath(key, "seen");
 }
 
 function resolvePath(key: StateKey, id: string): string {
@@ -243,5 +234,5 @@ function resolvePath(key: StateKey, id: string): string {
   // causing seen-markers to overwrite each other and items to re-surface every
   // tick. SHA-256 is case-sensitive so distinct IDs get distinct files.
   const hash = createHash("sha256").update(id, "utf8").digest("hex");
-  return join(resolveDir(key), `${hash}.json`);
+  return resolvePrStatePath(key, "seen", `${hash}.json`);
 }

@@ -129,4 +129,8 @@ describe("readBotCrSeenState — unsafe key segments", () => {
   it("returns null (does not throw) when owner contains a slash", async () => {
     expect(await readBotCrSeenState({ owner: "a/b", repo: "repo", pr: 1 })).toBeNull();
   });
+
+  it("returns null (does not throw) when pr is not a positive integer", async () => {
+    expect(await readBotCrSeenState({ owner: "owner", repo: "repo", pr: 0 })).toBeNull();
+  });
 });
