@@ -169,6 +169,7 @@ export type RawContextNode =
       startedAt?: string | null;
       title: string | null;
       summary: string | null;
+      annotations?: { nodes: Array<{ message: string }> };
       checkSuite: {
         createdAt?: string;
         updatedAt?: string;

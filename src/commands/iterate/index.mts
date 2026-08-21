@@ -21,6 +21,7 @@ import { clearStallState } from "../../state/iterate-stall.mts";
 import { handleFixCode } from "./fix-code.mts";
 import { normalizeBotUsernames } from "../../comments/authors.mts";
 import { autoMinimizeComments } from "../../comments/resolve.mts";
+import { checksWithUnseenAnnotations } from "../check-annotations.mts";
 import type { IterateCommandOptions, IterateResult, IterateResultBase } from "../../types.mts";
 
 export async function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
@@ -100,6 +101,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     report.comments.firstLook.length > 0 ||
     report.changesRequestedReviews.length > 0 ||
     report.checks.failing.length > 0 ||
+    checksWithUnseenAnnotations(report).length > 0 ||
     report.mergeStatus.status === "CONFLICTS" ||
     reviewSummaryIds.length > 0 ||
     firstLookSummaries.length > 0 ||

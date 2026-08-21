@@ -12,6 +12,7 @@ import {
 } from "./list-formatters.mts";
 import { numberInstructions } from "./iterate-instructions.mts";
 import { renderCheckAnnotation, renderProtectedRun } from "./fix-formatter-extra.mts";
+import { isFailingCheckConclusion } from "../checks/conclusions.mts";
 import type { IterateResultFixCode } from "../types.mts";
 
 export function formatFixCodeResult(header: string, result: IterateResultFixCode): string {
@@ -57,9 +58,10 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     }
   }
 
-  if (result.fix.checks.length > 0) {
+  const failingChecks = result.fix.checks.filter((ch) => isFailingCheckConclusion(ch.conclusion));
+  if (failingChecks.length > 0) {
     sections.push("## Failing checks");
-    const bullets = result.fix.checks.map((ch) => {
+    const bullets = failingChecks.map((ch) => {
       const workflowPrefix = ch.workflowName ? `${ch.workflowName} › ` : "";
       const jobLabel = ch.jobName ? ch.jobName : ch.name;
       const locator = ch.runId

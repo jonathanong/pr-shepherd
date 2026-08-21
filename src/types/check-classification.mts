@@ -14,6 +14,8 @@ type CheckCategory =
 
 export interface ClassifiedCheck extends CheckRun {
   category: CheckCategory;
+  /** Inline annotations attached to this check run, surfaced once per PR. */
+  annotations?: CheckAnnotation[];
 }
 
 export interface TriagedCheck extends ClassifiedCheck {
@@ -25,6 +27,4 @@ export interface TriagedCheck extends ClassifiedCheck {
   failedStep?: string;
   /** Bounded raw excerpt from the matched failed job log, when GitHub exposes one. */
   logExcerpt?: string;
-  /** Inline annotations attached to this failing check run, surfaced once per PR. */
-  annotations?: CheckAnnotation[];
 }

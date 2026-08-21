@@ -206,6 +206,48 @@ describe("buildFixInstructions", () => {
     );
   });
 
+  it("includes annotation-only passing-check guidance without a failing-checks section", () => {
+    const instructions = buildFixInstructions(
+      [],
+      [],
+      [
+        {
+          name: "SonarCloud Code Analysis",
+          runId: null,
+          detailsUrl: "https://sonarcloud.io",
+          conclusion: "SUCCESS",
+          annotations: [
+            {
+              id: "check_annotation_1",
+              path: "scripts/instrument-lua.cjs",
+              startLine: 30,
+              endLine: 30,
+              level: "WARNING",
+              message: 'Remove this assignment of "i".',
+            },
+          ],
+        },
+      ],
+      [],
+      "main",
+      {
+        argv: ["pr-shepherd", "resolve", "42"],
+        requiresHeadSha: false,
+        requiresDismissMessage: false,
+        hasMutations: false,
+      },
+      false,
+      42,
+      0,
+    );
+
+    const text = instructions.join("\n");
+    expect(text).toContain("`## Check annotations`");
+    expect(text).not.toContain("`## Failing checks`");
+    expect(text).toContain("For each item under `## Check annotations`");
+    expect(text).not.toContain("For each failing check");
+  });
+
   it("includes annotation sections in failing-check guidance", () => {
     const instructions = buildFixInstructions(
       [],

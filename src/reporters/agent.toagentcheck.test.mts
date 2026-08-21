@@ -33,12 +33,12 @@ describe("toAgentCheck", () => {
     expect(result.conclusion).toBe("CANCELLED");
   });
 
-  it("rejects skipped and neutral checks before projecting to agent output", () => {
-    expect(() => toAgentCheck({ ...makeCheck("run-1"), conclusion: "SKIPPED" })).toThrow(
-      "Unexpected conclusion SKIPPED",
+  it("projects skipped and neutral conclusions", () => {
+    expect(toAgentCheck({ ...makeCheck("run-1"), conclusion: "SKIPPED" }).conclusion).toBe(
+      "SKIPPED",
     );
-    expect(() => toAgentCheck({ ...makeCheck("run-2"), conclusion: "NEUTRAL" })).toThrow(
-      "Unexpected conclusion NEUTRAL",
+    expect(toAgentCheck({ ...makeCheck("run-2"), conclusion: "NEUTRAL" }).conclusion).toBe(
+      "NEUTRAL",
     );
   });
 

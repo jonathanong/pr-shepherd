@@ -266,6 +266,16 @@ function deepMerge(
   return result;
 }
 
+function stampAnnotationProbe<T>(checks: T[], annotationCheckIds: Set<string>): T[] {
+  if (annotationCheckIds.size === 0) return checks;
+  return checks.map((c) => {
+    if (c !== null && typeof c === "object" && "id" in c && annotationCheckIds.has(String(c.id))) {
+      return { ...c, hasAnnotations: true };
+    }
+    return c;
+  });
+}
+
 export function applyFixture(fixture: Fixture): void {
   const baseCfg = defaultConfig() as unknown as Record<string, unknown>;
   const overlayCfg: Record<string, unknown> = {};
@@ -281,6 +291,13 @@ export function applyFixture(fixture: Fixture): void {
   const batchData = fixture.batchData
     ? { ...DEFAULT_BATCH, ...fixture.batchData }
     : { ...DEFAULT_BATCH };
+  const annotationCheckIds = new Set(Object.keys(fixture.checkAnnotationsByCheckId ?? {}));
+  if (Array.isArray(batchData.checks)) {
+    batchData.checks = stampAnnotationProbe(
+      batchData.checks as Array<Record<string, unknown>>,
+      annotationCheckIds,
+    );
+  }
   mockFetchPrBatch.mockResolvedValue({ data: batchData });
 
   const mergeableFallback = fixture.mergeableFallback ?? {
@@ -290,7 +307,9 @@ export function applyFixture(fixture: Fixture): void {
   mockGetMergeableState.mockResolvedValue(mergeableFallback);
 
   if (fixture.triagedChecks !== undefined) {
-    mockTriageFailingChecks.mockResolvedValue(fixture.triagedChecks);
+    mockTriageFailingChecks.mockResolvedValue(
+      stampAnnotationProbe(fixture.triagedChecks, annotationCheckIds),
+    );
   } else {
     mockTriageFailingChecks.mockImplementation((checks) => Promise.resolve(checks));
   }

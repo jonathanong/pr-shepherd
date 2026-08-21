@@ -121,4 +121,35 @@ describe("## Check annotations — fix formatter rendering", () => {
     expect(output).toContain("Error from function 'fromJSON'");
     expect(output).toContain("Unexpected symbol: 'ubicloud'");
   });
+
+  it("renders passing-check annotations without a failing-checks section", () => {
+    const result: IterateResult = { ...makeIterateResult("fix_code") };
+    if (result.action !== "fix_code") throw new Error("expected fix_code fixture");
+    result.fix.checks = [
+      {
+        name: "SonarCloud Code Analysis",
+        runId: null,
+        detailsUrl: "https://sonarcloud.io",
+        conclusion: "SUCCESS",
+        annotations: [
+          {
+            id: "check_annotation_lua",
+            path: "scripts/instrument-lua.cjs",
+            startLine: 30,
+            endLine: 30,
+            level: "WARNING",
+            title: 'Remove this assignment of "i".',
+            message: "See more on https://sonarcloud.io",
+          },
+        ],
+      },
+    ];
+
+    const output = formatIterateResult(result);
+
+    expect(output).not.toContain("## Failing checks");
+    expect(output).toContain("## Check annotations");
+    expect(output).toContain("`scripts/instrument-lua.cjs:30` [WARNING]");
+    expect(output).toContain('Remove this assignment of "i".');
+  });
 });

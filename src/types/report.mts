@@ -51,6 +51,8 @@ export interface ShepherdReport {
     skipped: ClassifiedCheck[];
     /** Checks filtered out because they were triggered by a non-PR event (push, schedule, etc.). */
     filtered: ClassifiedCheck[];
+    /** Ignored checks with unseen annotations; omitted when empty. */
+    ignored?: ClassifiedCheck[];
     filteredNames: string[];
     blockedByFilteredCheck: boolean;
     ignoredNames?: string[]; // Suppressed by ignoreChecks config; omitted when empty.
@@ -126,16 +128,14 @@ export interface AgentComment {
   edited?: boolean;
 }
 
-/** Check shape emitted to the iterate agent under `fix_code`. Cancelled checks
- * should be handled from `name`/`runId`/`detailsUrl`/`conclusion`; optional
- * workflow/job/step metadata may still be present when available. */
+/** Check shape emitted to the iterate agent under `fix_code`. */
 export interface AgentCheck {
   name: string;
   runId: string | null;
   /** Fallback for checks where runId is null (e.g. external status checks). */
   detailsUrl: string | null;
   /** Raw GitHub check conclusion; may be null for some completed checks from upstream data. */
-  conclusion: Exclude<CheckConclusion, "SKIPPED" | "NEUTRAL">;
+  conclusion: CheckConclusion;
   /** Workflow display name (e.g. `"CI"`). Populated on a best-effort basis when available from the jobs API. */
   workflowName?: string;
   /** Name of the matched job (e.g. `"tests (ubuntu)"`). Distinct from check name for matrix builds. */
@@ -145,7 +145,7 @@ export interface AgentCheck {
   /** One-line status text shown in the GitHub UI (e.g. "67.68% of diff hit (target 85.00%)"). */
   summary?: string;
   logExcerpt?: string;
-  /** Marker-gated inline annotations from this failing check. */
+  /** Marker-gated inline annotations from this check, surfaced once per PR. */
   annotations?: CheckAnnotation[];
 }
 

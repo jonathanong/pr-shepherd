@@ -20,6 +20,7 @@ import {
   SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
   buildShepherdJournalInstruction,
 } from "../shepherd-journal.mts";
+import { isFailingCheckConclusion } from "../../checks/conclusions.mts";
 import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
 
 const FIX_INSTRUCTION_STOP =
@@ -54,9 +55,12 @@ export function buildFixInstructions(
 ): string[] {
   const instructions: string[] = [];
 
+  const failingChecks = checks.filter((c) => isFailingCheckConclusion(c.conclusion));
+  const hasAnnotations = checks.some((c) => (c.annotations?.length ?? 0) > 0);
   const hasNonConflictHints =
     threads.length > 0 ||
-    checks.length > 0 ||
+    failingChecks.length > 0 ||
+    hasAnnotations ||
     changesRequestedReviews.length > 0 ||
     actionableComments.length > 0;
 
@@ -65,8 +69,8 @@ export function buildFixInstructions(
     const actionableSections: string[] = [];
     if (threads.length > 0) actionableSections.push("`## Review threads`");
     if (actionableComments.length > 0) actionableSections.push("`## Actionable comments`");
-    if (checks.length > 0) actionableSections.push("`## Failing checks`");
-    if (checks.some((c) => (c.annotations?.length ?? 0) > 0)) {
+    if (failingChecks.length > 0) actionableSections.push("`## Failing checks`");
+    if (hasAnnotations) {
       actionableSections.push("`## Check annotations`");
     }
     if (changesRequestedReviews.length > 0)
@@ -123,9 +127,9 @@ export function buildFixInstructions(
     );
   }
 
-  instructions.push(...buildFailingCheckInstructions(checks));
+  instructions.push(...buildFailingCheckInstructions(failingChecks));
 
-  if (checks.some((c) => (c.annotations?.length ?? 0) > 0)) {
+  if (hasAnnotations) {
     instructions.push(
       `For each item under \`## Check annotations\`: inspect the referenced file range and decide whether the annotation requires a code change. These annotations are surfaced once per PR and do not need any resolve/minimize mutation.`,
     );

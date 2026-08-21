@@ -254,6 +254,11 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
                     startedAt
                     title
                     summary
+                    annotations(first: 1) {
+                      nodes {
+                        message
+                      }
+                    }
                     checkSuite {
                       createdAt
                       updatedAt
