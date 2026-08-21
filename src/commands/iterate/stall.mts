@@ -38,7 +38,7 @@ function computeStallFingerprint(
   );
   const annotations = checksWithUnseenAnnotations(report)
     .flatMap((c) => (c.annotations ?? []).map((a) => a.id))
-    .sort();
+    .sort((a, b) => a.localeCompare(b));
   return JSON.stringify({
     action,
     headSha,
