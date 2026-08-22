@@ -2,7 +2,7 @@
   "mcpServers": {
     "pr-shepherd": {
       "command": "npx",
-      "args": ["--yes", "--package", "pr-shepherd@0.36.0", "pr-shepherd-mcp"]
+      "args": ["--yes", "--package", "pr-shepherd@0.37.0", "pr-shepherd-mcp"]
     }
   }
 }
