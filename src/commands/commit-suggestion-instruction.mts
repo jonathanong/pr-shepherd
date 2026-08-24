@@ -28,7 +28,7 @@ export function buildCommitSuggestionInstruction(
   return [
     `For each thread marked \`[suggestion]\` under \`${sectionName}\`, run \`${command}\` to retrieve its patch and suggested commit.`,
     "The CLI only builds the patch. Apply it, stage the listed file, and follow the returned commit instructions.",
-    `If the command refuses because the suggestion does not safely fit GitHub's anchored range, skip patch application and use the ${manualStep} below. Do not retry the command.`,
+    `If the command refuses for any reason, including an unsafe anchored range or nested/unbalanced suggestion fences, skip patch application and use the ${manualStep} below. Do not retry the command.`,
     driftHint,
     "Keep human-authored thread IDs in `apply review:` so Shepherd replies instead of resolving them.",
   ];

@@ -127,7 +127,7 @@ export function buildFixInstructions(
     if (hasSuggestions) {
       instructions.push(
         "After source drift prevents a generated suggestion patch from applying, replace the heading's exact `path:startLine-endLine` range with the `Replaces lines …` block verbatim. An empty replacement deletes the range. One blank line replaces it with one blank line.",
-        "When `build-suggestion-patch` refuses an unsafe anchored range, do not apply the replacement block verbatim. Inspect the surrounding source and reviewer intent, then make the intended edit manually.",
+        "When `build-suggestion-patch` refuses for any reason, do not apply the replacement block verbatim. Inspect the surrounding source and reviewer intent, then make the intended edit manually.",
       );
     }
   }

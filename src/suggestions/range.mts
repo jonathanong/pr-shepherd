@@ -7,29 +7,15 @@ function linesEqual(left: readonly string[], right: readonly string[]): boolean 
   );
 }
 
-function partiallyRewritesAdjacentBlock(
-  replacementLines: readonly string[],
-  adjacentLines: readonly string[],
-): boolean {
-  if (replacementLines.length < 3 || replacementLines.length !== adjacentLines.length) {
-    return false;
-  }
-  if (
-    normalizeLine(replacementLines[0]!) !== normalizeLine(adjacentLines[0]!) ||
-    normalizeLine(replacementLines.at(-1)!) !== normalizeLine(adjacentLines.at(-1)!)
-  ) {
-    return false;
-  }
-  return !linesEqual(replacementLines, adjacentLines);
-}
-
+// Range metadata cannot distinguish an intentional near-duplicate insertion
+// from a copied-and-edited adjacent line. Require a substantive shared affix;
+// ambiguous matches take the manual path instead of producing a risky patch.
 function closelyRewritesLine(replacementLine: string, adjacentLine: string): boolean {
   const replacement = normalizeLine(replacementLine);
   const adjacent = normalizeLine(adjacentLine);
   if (replacement === adjacent) return false;
 
   const shorterLength = Math.min(replacement.length, adjacent.length);
-  if (shorterLength < 16) return false;
 
   let prefixLength = 0;
   while (prefixLength < shorterLength && replacement[prefixLength] === adjacent[prefixLength]) {
@@ -45,19 +31,72 @@ function closelyRewritesLine(replacementLine: string, adjacentLine: string): boo
     suffixLength++;
   }
 
-  return prefixLength + suffixLength >= Math.ceil(shorterLength * 0.6);
+  const sharedLength = prefixLength + suffixLength;
+  return sharedLength >= 12 && sharedLength >= Math.ceil(shorterLength * 0.6);
 }
 
-function ambiguouslyRewritesAdjacentLines(
+function likelyRewritesAdjacentBlock(
   replacementLines: readonly string[],
   adjacentLines: readonly string[],
+  minimumLines: number,
 ): boolean {
   return (
-    replacementLines.length > 0 &&
+    replacementLines.length >= minimumLines &&
     replacementLines.length === adjacentLines.length &&
-    !linesEqual(replacementLines, adjacentLines) &&
     replacementLines.some((line, index) => closelyRewritesLine(line, adjacentLines[index]!))
   );
+}
+
+function retainedAnchorRewritesAfter(
+  fileLines: readonly string[],
+  removedLines: readonly string[],
+  endLine: number,
+  replacementLines: readonly string[],
+): boolean {
+  if (replacementLines.length <= removedLines.length) return false;
+  const leadingAnchor = replacementLines.slice(0, removedLines.length);
+  if (!linesEqual(leadingAnchor, removedLines)) return false;
+  const extension = replacementLines.slice(removedLines.length);
+  const adjacentLines = fileLines.slice(endLine, endLine + extension.length);
+  return likelyRewritesAdjacentBlock(extension, adjacentLines, 1);
+}
+
+function retainedAnchorRewritesBefore(
+  fileLines: readonly string[],
+  removedLines: readonly string[],
+  startLine: number,
+  replacementLines: readonly string[],
+): boolean {
+  if (replacementLines.length <= removedLines.length) return false;
+  const trailingAnchor = replacementLines.slice(-removedLines.length);
+  if (!linesEqual(trailingAnchor, removedLines)) return false;
+  const extension = replacementLines.slice(0, -removedLines.length);
+  const adjacentStart = startLine - 1 - extension.length;
+  if (adjacentStart < 0) return false;
+  const adjacentLines = fileLines.slice(adjacentStart, startLine - 1);
+  return likelyRewritesAdjacentBlock(extension, adjacentLines, 1);
+}
+
+function rewritesBlockBeforeAnchor(
+  fileLines: readonly string[],
+  startLine: number,
+  replacementLines: readonly string[],
+): boolean {
+  const adjacentStart = startLine - 1 - replacementLines.length;
+  if (adjacentStart < 0) return false;
+  const adjacentLines = fileLines.slice(adjacentStart, startLine - 1);
+  return likelyRewritesAdjacentBlock(replacementLines, adjacentLines, 2);
+}
+
+function rewritesBlockAfterAnchor(
+  fileLines: readonly string[],
+  endLine: number,
+  replacementLines: readonly string[],
+): boolean {
+  const adjacentEnd = endLine + replacementLines.length;
+  if (adjacentEnd > fileLines.length) return false;
+  const adjacentLines = fileLines.slice(endLine, adjacentEnd);
+  return likelyRewritesAdjacentBlock(replacementLines, adjacentLines, 2);
 }
 
 /**
@@ -91,40 +130,17 @@ export function getUnsafeSuggestionRangeReason({
   }
 
   const removedLines = fileLines.slice(startLine - 1, endLine);
-  if (replacementLines.length > removedLines.length) {
-    const leadingAnchor = replacementLines.slice(0, removedLines.length);
-    const trailingAnchor = replacementLines.slice(-removedLines.length);
-    if (linesEqual(leadingAnchor, removedLines)) {
-      const extension = replacementLines.slice(removedLines.length);
-      const adjacentLines = fileLines.slice(endLine, endLine + extension.length);
-      if (ambiguouslyRewritesAdjacentLines(extension, adjacentLines)) {
-        return "The replacement retains the complete anchored range and appears to rewrite source immediately after it.";
-      }
-    }
-    if (linesEqual(trailingAnchor, removedLines)) {
-      const extension = replacementLines.slice(0, -removedLines.length);
-      const adjacentStart = startLine - 1 - extension.length;
-      const adjacentLines = adjacentStart < 0 ? [] : fileLines.slice(adjacentStart, startLine - 1);
-      if (ambiguouslyRewritesAdjacentLines(extension, adjacentLines)) {
-        return "The replacement retains the complete anchored range and appears to rewrite source immediately before it.";
-      }
-    }
+  if (retainedAnchorRewritesAfter(fileLines, removedLines, endLine, replacementLines)) {
+    return "The replacement retains the complete anchored range and appears to rewrite source immediately after it.";
   }
-
-  const beforeStart = startLine - 1 - replacementLines.length;
-  if (beforeStart >= 0) {
-    const beforeRange = fileLines.slice(beforeStart, startLine - 1);
-    if (partiallyRewritesAdjacentBlock(replacementLines, beforeRange)) {
-      return "The replacement partially rewrites a source block before the anchored range.";
-    }
+  if (retainedAnchorRewritesBefore(fileLines, removedLines, startLine, replacementLines)) {
+    return "The replacement retains the complete anchored range and appears to rewrite source immediately before it.";
   }
-
-  const afterEnd = endLine + replacementLines.length;
-  if (afterEnd <= fileLines.length) {
-    const afterRange = fileLines.slice(endLine, afterEnd);
-    if (partiallyRewritesAdjacentBlock(replacementLines, afterRange)) {
-      return "The replacement partially rewrites a source block after the anchored range.";
-    }
+  if (rewritesBlockBeforeAnchor(fileLines, startLine, replacementLines)) {
+    return "The replacement partially rewrites a source block before the anchored range.";
+  }
+  if (rewritesBlockAfterAnchor(fileLines, endLine, replacementLines)) {
+    return "The replacement partially rewrites a source block after the anchored range.";
   }
   return null;
 }

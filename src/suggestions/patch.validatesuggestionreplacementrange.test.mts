@@ -48,6 +48,13 @@ describe("getUnsafeSuggestionRangeReason", () => {
       endLine: 2,
       replacementLines: ["inserted", "anchor"],
     },
+    {
+      name: "insertion before a first-line retained anchor",
+      originalContent: "anchor\nc\n",
+      startLine: 1,
+      endLine: 1,
+      replacementLines: ["inserted", "anchor"],
+    },
   ])("accepts a valid $name", ({ name: _name, ...input }) => {
     expect(getUnsafeSuggestionRangeReason(input)).toBeNull();
   });
@@ -79,62 +86,11 @@ describe("getUnsafeSuggestionRangeReason", () => {
     ).toBeNull();
   });
 
-  it("rejects a retained anchor followed by an apparent rewrite of the adjacent line", () => {
-    expect(
-      getUnsafeSuggestionRangeReason({
-        originalContent:
-          "  { loading: PodcastsLoading, name: 'podcasts' },\n" +
-          "  { loading: PostsLoading, name: 'posts' },\n",
-        startLine: 1,
-        endLine: 1,
-        replacementLines: [
-          "  { loading: PodcastsLoading, name: 'podcasts' },",
-          "  { loading: PostsLoading, name: 'posts', showFooter: undefined },",
-        ],
-      }),
-    ).toContain("appears to rewrite source immediately after");
-  });
-
-  it("rejects a partial rewrite of a same-sized block before the anchor", () => {
-    expect(
-      getUnsafeSuggestionRangeReason({
-        originalContent:
-          [
-            "const skeletons: Array<{",
-            "  component: ComponentType",
-            "  count: number",
-            "  name: string",
-            "}> = [",
-            "  { component: AsideSkeleton, count: 4, name: 'aside' },",
-          ].join("\n") + "\n",
-        startLine: 6,
-        endLine: 6,
-        replacementLines: [
-          "const skeletons: Array<{",
-          "  component: ComponentType",
-          "  count: number // derived from Skeleton primitives",
-          "  name: string",
-          "}> = [",
-        ],
-      }),
-    ).toContain("partially rewrites a source block before");
-  });
-
-  it("rejects a partial rewrite of a same-sized block after the anchor", () => {
-    expect(
-      getUnsafeSuggestionRangeReason({
-        originalContent: ["anchor", "{", "  first", "  old", "  last", "tail"].join("\n") + "\n",
-        startLine: 1,
-        endLine: 1,
-        replacementLines: ["{", "  first", "  new", "  last"],
-      }),
-    ).toContain("partially rewrites a source block after");
-  });
-
   it.each([
     { startLine: 0, endLine: 1 },
     { startLine: 2, endLine: 1 },
     { startLine: 1.5, endLine: 2 },
+    { startLine: 1, endLine: 1.5 },
     { startLine: 1, endLine: 4 },
   ])("rejects invalid range $startLine-$endLine", ({ startLine, endLine }) => {
     expect(

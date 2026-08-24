@@ -30,7 +30,7 @@ describe("buildFixInstructions", () => {
     ]);
   });
 
-  it("distinguishes unsafe-range refusal from source-drift fallback", () => {
+  it("distinguishes command refusal from source-drift fallback", () => {
     const instructions = buildFixInstructions(
       [
         {
@@ -38,12 +38,12 @@ describe("buildFixInstructions", () => {
           path: "src/foo.ts",
           line: 2,
           author: "reviewer",
-          body: "```suggestion\nreplacement\n```",
+          body: "```suggestion\ntext ```suggestion nested\n```",
           url: "",
           suggestion: {
             startLine: 2,
             endLine: 2,
-            lines: ["replacement"],
+            lines: ["text ```suggestion nested"],
             author: "reviewer",
           },
         },
@@ -64,7 +64,8 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(text).toContain("does not safely fit GitHub's anchored range");
+    expect(text).toContain("refuses for any reason");
+    expect(text).toContain("nested/unbalanced suggestion fences");
     expect(text).toContain("do not apply the replacement block verbatim");
     expect(text).toContain("source drift prevents a generated suggestion patch from applying");
     expect(text).toContain("replace the heading's exact `path:startLine-endLine` range");
