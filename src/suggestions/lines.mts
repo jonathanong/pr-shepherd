@@ -1,7 +1,7 @@
 export const normalizeLine = (line: string): string =>
   line.endsWith("\r") ? line.slice(0, -1) : line;
 
-export function linesEqual(left: readonly string[], right: readonly string[]): boolean {
+function linesEqual(left: readonly string[], right: readonly string[]): boolean {
   return (
     left.length === right.length &&
     left.every((line, index) => normalizeLine(line) === normalizeLine(right[index]!))

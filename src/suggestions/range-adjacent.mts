@@ -1,5 +1,9 @@
-import { linesEqual, normalizeLine } from "./lines.mts";
-import { likelyRewritesAdjacentSpan } from "./range-similarity.mts";
+import { normalizeLine } from "./lines.mts";
+import { findLineSequenceOffsets } from "./range-anchor.mts";
+import {
+  likelyRewritesChangedLineSubrange,
+  likelyRewritesAdjacentSpan,
+} from "./range-similarity.mts";
 
 function adjacentSpansBefore(
   fileLines: readonly string[],
@@ -27,9 +31,14 @@ function likelyRewritesAdjacentSource(
   adjacentSpans: readonly (readonly string[])[],
   allowSingleLinePair: boolean,
 ): boolean {
-  return adjacentSpans.some((span) =>
-    likelyRewritesAdjacentSpan(replacementLines, span, allowSingleLinePair),
-  );
+  if (
+    adjacentSpans.some((span) =>
+      likelyRewritesAdjacentSpan(replacementLines, span, allowSingleLinePair),
+    )
+  ) {
+    return true;
+  }
+  return likelyRewritesChangedLineSubrange(replacementLines, adjacentSpans);
 }
 
 function sharedExactPrefixLength(
@@ -79,16 +88,12 @@ function sharesExactProperSuffix(
   return sharedLength > 0 && sharedLength < replacementLines.length;
 }
 
-function retainedAnchorRewritesAfter(
+function extensionRewritesAfter(
   fileLines: readonly string[],
-  removedLines: readonly string[],
   endLine: number,
-  replacementLines: readonly string[],
+  extension: readonly string[],
 ): boolean {
-  if (replacementLines.length <= removedLines.length) return false;
-  const leadingAnchor = replacementLines.slice(0, removedLines.length);
-  if (!linesEqual(leadingAnchor, removedLines)) return false;
-  const extension = replacementLines.slice(removedLines.length);
+  if (extension.length === 0) return false;
   const adjacentLines = fileLines.slice(endLine, endLine + extension.length);
   return (
     sharesExactProperPrefix(extension, adjacentLines) ||
@@ -100,16 +105,12 @@ function retainedAnchorRewritesAfter(
   );
 }
 
-function retainedAnchorRewritesBefore(
+function extensionRewritesBefore(
   fileLines: readonly string[],
-  removedLines: readonly string[],
   startLine: number,
-  replacementLines: readonly string[],
+  extension: readonly string[],
 ): boolean {
-  if (replacementLines.length <= removedLines.length) return false;
-  const trailingAnchor = replacementLines.slice(-removedLines.length);
-  if (!linesEqual(trailingAnchor, removedLines)) return false;
-  const extension = replacementLines.slice(0, -removedLines.length);
+  if (extension.length === 0) return false;
   const adjacentStart = startLine - 1 - extension.length;
   const adjacentLines = fileLines.slice(Math.max(0, adjacentStart), startLine - 1);
   return (
@@ -120,6 +121,25 @@ function retainedAnchorRewritesBefore(
       true,
     )
   );
+}
+
+function retainedAnchorRewriteDirection(
+  fileLines: readonly string[],
+  removedLines: readonly string[],
+  startLine: number,
+  endLine: number,
+  replacementLines: readonly string[],
+): "before" | "after" | "ambiguous" | null {
+  const offsets = findLineSequenceOffsets(replacementLines, removedLines);
+  // Bound repeated extension scans while rejecting ambiguous bodies safely.
+  if (offsets.length * replacementLines.length > 4_096) return "ambiguous";
+  for (const offset of offsets) {
+    const before = replacementLines.slice(0, offset);
+    const after = replacementLines.slice(offset + removedLines.length);
+    if (extensionRewritesAfter(fileLines, endLine, after)) return "after";
+    if (extensionRewritesBefore(fileLines, startLine, before)) return "before";
+  }
+  return null;
 }
 
 export function getAdjacentSuggestionRangeReason({
@@ -135,11 +155,21 @@ export function getAdjacentSuggestionRangeReason({
   endLine: number;
   replacementLines: readonly string[];
 }): string | null {
-  if (retainedAnchorRewritesAfter(fileLines, removedLines, endLine, replacementLines)) {
+  const retainedAnchorDirection = retainedAnchorRewriteDirection(
+    fileLines,
+    removedLines,
+    startLine,
+    endLine,
+    replacementLines,
+  );
+  if (retainedAnchorDirection === "after") {
     return "The replacement retains the complete anchored range and appears to rewrite source immediately after it.";
   }
-  if (retainedAnchorRewritesBefore(fileLines, removedLines, startLine, replacementLines)) {
+  if (retainedAnchorDirection === "before") {
     return "The replacement retains the complete anchored range and appears to rewrite source immediately before it.";
+  }
+  if (retainedAnchorDirection === "ambiguous") {
+    return "The replacement repeats the complete anchored range too many times to validate its surrounding source safely.";
   }
   if (
     likelyRewritesAdjacentSource(

@@ -101,3 +101,46 @@ export function likelyRewritesAdjacentSpan(
     hasSubstantiveInternalOverlap(replacementLines, adjacentLines)
   );
 }
+
+function likelyRewritesChangedProperWindow(
+  replacementLines: readonly string[],
+  adjacentSpan: readonly string[],
+): boolean {
+  const length = adjacentSpan.length;
+  for (let start = 0; start <= replacementLines.length - length; start++) {
+    const candidate = replacementLines.slice(start, start + length);
+    if (!candidate.every(isSubstantiveLine)) continue;
+    const hasExactLine = candidate.some(
+      (line, index) => normalizeSharedLine(line) === normalizeSharedLine(adjacentSpan[index]!),
+    );
+    if (!hasExactLine && likelyRewritesAdjacentSpan(candidate, adjacentSpan, true)) return true;
+  }
+  return false;
+}
+
+export function likelyRewritesChangedLineSubrange(
+  replacementLines: readonly string[],
+  adjacentSpans: readonly (readonly string[])[],
+): boolean {
+  if (replacementLines.length < 2) return false;
+  const adjacentLine = adjacentSpans.find((span) => span.length === 1)?.[0];
+  if (adjacentLine === undefined || !isSubstantiveLine(adjacentLine)) return false;
+  const adjacent = normalizeSharedLine(adjacentLine);
+  if (
+    replacementLines.some((line) => {
+      if (!isSubstantiveLine(line)) return false;
+      const replacement = normalizeSharedLine(line);
+      return replacement !== adjacent && closelyRewritesText(replacement, adjacent);
+    })
+  ) {
+    return true;
+  }
+
+  const maxLength = Math.min(8, replacementLines.length - 1);
+  for (let length = 2; length <= maxLength; length++) {
+    const adjacentSpan = adjacentSpans.find((span) => span.length === length);
+    if (adjacentSpan === undefined || !adjacentSpan.every(isSubstantiveLine)) continue;
+    if (likelyRewritesChangedProperWindow(replacementLines, adjacentSpan)) return true;
+  }
+  return false;
+}
