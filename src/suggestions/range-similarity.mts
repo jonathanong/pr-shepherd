@@ -143,8 +143,10 @@ function isChangedWithUnrelatedSubstantivePair(
 ): boolean {
   if (candidate.length !== 2 || adjacentSpan.length !== 2) return false;
   if (!candidate.every(isSubstantiveLine) || !adjacentSpan.every(isSubstantiveLine)) return false;
-  const relations = candidate.map((line, index) => alignedLineRelation(line, adjacentSpan[index]!));
-  return relations.includes("changed") && !relations.includes("exact");
+  const relations = new Set(
+    candidate.map((line, index) => alignedLineRelation(line, adjacentSpan[index]!)),
+  );
+  return relations.has("changed") && !relations.has("exact");
 }
 
 function likelyRewritesChangedWindow(
