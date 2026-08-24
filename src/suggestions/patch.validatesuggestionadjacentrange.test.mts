@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { getUnsafeSuggestionRangeReason } from "../../test-helpers/suggestions/patch.test-support.mts";
+import {
+  buildUnifiedDiff,
+  getUnsafeSuggestionRangeReason,
+} from "../../test-helpers/suggestions/patch.test-support.mts";
 
 describe("getUnsafeSuggestionRangeReason — adjacent source", () => {
   it("rejects a retained anchor followed by an apparent rewrite of the adjacent line", () => {
@@ -32,6 +35,64 @@ describe("getUnsafeSuggestionRangeReason — adjacent source", () => {
         ],
       }),
     ).toContain("appears to rewrite source immediately before");
+  });
+
+  it("rejects exact adjacent context followed by unmatched insertion content", () => {
+    expect(
+      getUnsafeSuggestionRangeReason({
+        originalContent: "anchor\nnext line\nunrelated line\n",
+        startLine: 1,
+        endLine: 1,
+        replacementLines: ["anchor", "next line", "inserted line"],
+      }),
+    ).toContain("appears to rewrite source immediately after");
+  });
+
+  it("rejects unmatched insertion content followed by exact context before the anchor", () => {
+    expect(
+      getUnsafeSuggestionRangeReason({
+        originalContent: "unrelated line\nprevious line\nanchor\n",
+        startLine: 3,
+        endLine: 3,
+        replacementLines: ["inserted line", "previous line", "anchor"],
+      }),
+    ).toContain("appears to rewrite source immediately before");
+  });
+
+  it("rejects partial exact context at EOF", () => {
+    expect(
+      getUnsafeSuggestionRangeReason({
+        originalContent: "anchor\nnext line\n",
+        startLine: 1,
+        endLine: 1,
+        replacementLines: ["anchor", "next line", "inserted line"],
+      }),
+    ).toContain("appears to rewrite source immediately after");
+  });
+
+  it("rejects partial exact context at BOF", () => {
+    expect(
+      getUnsafeSuggestionRangeReason({
+        originalContent: "previous line\nanchor\n",
+        startLine: 2,
+        endLine: 2,
+        replacementLines: ["inserted line", "previous line", "anchor"],
+      }),
+    ).toContain("appears to rewrite source immediately before");
+  });
+
+  it("accepts a retained anchor followed by fully exact adjacent context", () => {
+    const input = {
+      originalContent: "anchor\nnext line\nother line\n",
+      startLine: 1,
+      endLine: 1,
+      replacementLines: ["anchor", "next line", "other line"],
+    };
+    expect(getUnsafeSuggestionRangeReason(input)).toBeNull();
+
+    const patch = buildUnifiedDiff({ path: "f.ts", ...input });
+    expect(patch).not.toContain("+next line\n");
+    expect(patch).not.toContain("+other line\n");
   });
 
   it("rejects a partial rewrite of a same-sized block before the anchor", () => {

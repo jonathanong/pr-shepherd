@@ -47,6 +47,53 @@ function likelyRewritesAdjacentBlock(
   );
 }
 
+function sharedExactPrefixLength(
+  replacementLines: readonly string[],
+  adjacentLines: readonly string[],
+): number {
+  const limit = Math.min(replacementLines.length, adjacentLines.length);
+  let length = 0;
+  while (
+    length < limit &&
+    normalizeLine(replacementLines[length]!) === normalizeLine(adjacentLines[length]!)
+  ) {
+    length++;
+  }
+  return length;
+}
+
+function sharedExactSuffixLength(
+  replacementLines: readonly string[],
+  adjacentLines: readonly string[],
+): number {
+  const limit = Math.min(replacementLines.length, adjacentLines.length);
+  let length = 0;
+  while (
+    length < limit &&
+    normalizeLine(replacementLines[replacementLines.length - 1 - length]!) ===
+      normalizeLine(adjacentLines[adjacentLines.length - 1 - length]!)
+  ) {
+    length++;
+  }
+  return length;
+}
+
+function sharesExactProperPrefix(
+  replacementLines: readonly string[],
+  adjacentLines: readonly string[],
+): boolean {
+  const sharedLength = sharedExactPrefixLength(replacementLines, adjacentLines);
+  return sharedLength > 0 && sharedLength < replacementLines.length;
+}
+
+function sharesExactProperSuffix(
+  replacementLines: readonly string[],
+  adjacentLines: readonly string[],
+): boolean {
+  const sharedLength = sharedExactSuffixLength(replacementLines, adjacentLines);
+  return sharedLength > 0 && sharedLength < replacementLines.length;
+}
+
 function retainedAnchorRewritesAfter(
   fileLines: readonly string[],
   removedLines: readonly string[],
@@ -58,7 +105,10 @@ function retainedAnchorRewritesAfter(
   if (!linesEqual(leadingAnchor, removedLines)) return false;
   const extension = replacementLines.slice(removedLines.length);
   const adjacentLines = fileLines.slice(endLine, endLine + extension.length);
-  return likelyRewritesAdjacentBlock(extension, adjacentLines, 1);
+  return (
+    sharesExactProperPrefix(extension, adjacentLines) ||
+    likelyRewritesAdjacentBlock(extension, adjacentLines, 1)
+  );
 }
 
 function retainedAnchorRewritesBefore(
@@ -72,9 +122,11 @@ function retainedAnchorRewritesBefore(
   if (!linesEqual(trailingAnchor, removedLines)) return false;
   const extension = replacementLines.slice(0, -removedLines.length);
   const adjacentStart = startLine - 1 - extension.length;
-  if (adjacentStart < 0) return false;
-  const adjacentLines = fileLines.slice(adjacentStart, startLine - 1);
-  return likelyRewritesAdjacentBlock(extension, adjacentLines, 1);
+  const adjacentLines = fileLines.slice(Math.max(0, adjacentStart), startLine - 1);
+  return (
+    sharesExactProperSuffix(extension, adjacentLines) ||
+    likelyRewritesAdjacentBlock(extension, adjacentLines, 1)
+  );
 }
 
 function rewritesBlockBeforeAnchor(
