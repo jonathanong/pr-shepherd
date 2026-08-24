@@ -79,16 +79,16 @@ the same thing they do everywhere else on the system. Emitted by every
 subcommand, not just `iterate` — this range is uniform across `apply`,
 `build-suggestion-patch`, and the `admin` commands too.
 
-| Code | Name             | When                                                                                                                                                                            |
-| ---- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 64   | `EX_USAGE`       | Bad or unknown flag, unknown subcommand, missing required argument, invalid `--format`, malformed duration                                                                      |
-| 65   | `EX_DATAERR`     | Malformed caller data: `--require-sha` not a 40-char lowercase hex SHA, `PRRC_*` comment IDs passed to `--minimize-comment-ids`, an unparseable `owner/repo` string             |
-| 66   | `EX_NOINPUT`     | `apply journal --file` path could not be read (including `--file -` for stdin)                                                                                                  |
-| 69   | `EX_UNAVAILABLE` | A precondition is unmet: no open PR for the current branch, a `build-suggestion-patch` thread is resolved/outdated/minimized/unanchored, or GitHub returned an unclassified 4xx |
-| 70   | `EX_SOFTWARE`    | Unexpected or unclassified internal failure — the fallback when nothing more specific applies                                                                                   |
-| 75   | `EX_TEMPFAIL`    | A **retryable** GitHub failure: HTTP 429, any 5xx, a `Retry-After` header, or an exhausted rate limit                                                                           |
-| 77   | `EX_NOPERM`      | GitHub 401/403 that is not a rate-limit signal — missing token or insufficient PAT scopes                                                                                       |
-| 78   | `EX_CONFIG`      | Reserved for `.pr-shepherdrc.yml` validation failures. **Not currently emitted** — see below.                                                                                   |
+| Code | Name             | When                                                                                                                                                                                                                   |
+| ---- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 64   | `EX_USAGE`       | Bad or unknown flag, unknown subcommand, missing required argument, invalid `--format`, malformed duration                                                                                                             |
+| 65   | `EX_DATAERR`     | Malformed caller data: `--require-sha` not a 40-char lowercase hex SHA, `PRRC_*` comment IDs passed to `--minimize-comment-ids`, an unparseable `owner/repo` string                                                    |
+| 66   | `EX_NOINPUT`     | `apply journal --file` path could not be read (including `--file -` for stdin)                                                                                                                                         |
+| 69   | `EX_UNAVAILABLE` | A precondition is unmet: no open PR for the current branch; a `build-suggestion-patch` thread is resolved, outdated, minimized, unanchored, or has an unsafe replacement range; or GitHub returned an unclassified 4xx |
+| 70   | `EX_SOFTWARE`    | Unexpected or unclassified internal failure — the fallback when nothing more specific applies                                                                                                                          |
+| 75   | `EX_TEMPFAIL`    | A **retryable** GitHub failure: HTTP 429, any 5xx, a `Retry-After` header, or an exhausted rate limit                                                                                                                  |
+| 77   | `EX_NOPERM`      | GitHub 401/403 that is not a rate-limit signal — missing token or insufficient PAT scopes                                                                                                                              |
+| 78   | `EX_CONFIG`      | Reserved for `.pr-shepherdrc.yml` validation failures. **Not currently emitted** — see below.                                                                                                                          |
 
 **Reading 75 vs. 77 vs. 69:** these are the highest-value split in the error
 range for a calling agent or script. `75` means back off and retry (GitHub is

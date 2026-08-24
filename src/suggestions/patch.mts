@@ -5,6 +5,13 @@
  * `git apply --check` accept it without a `diff --git` preamble.
  */
 
+const normalizeLine = (line: string): string => (line.endsWith("\r") ? line.slice(0, -1) : line);
+
+function splitFileLines(originalContent: string): string[] {
+  const body = originalContent.endsWith("\n") ? originalContent.slice(0, -1) : originalContent;
+  return body === "" ? [] : body.split("\n");
+}
+
 /**
  * Strip leading/trailing replacement lines that are identical to the adjacent
  * file lines just outside the removed range.
@@ -25,14 +32,13 @@ function trimReplacementToContext(
   endLine: number,
   replacementLines: readonly string[],
 ): readonly string[] {
-  const norm = (s: string) => (s.endsWith("\r") ? s.slice(0, -1) : s);
-
   // Leading trim: largest L where replacement[0..L) == fileLines[startLine-1-L..startLine-1)
   const maxL = Math.min(startLine - 1, replacementLines.length);
   let L = 0;
   leading: for (let l = maxL; l >= 1; l--) {
     for (let i = 0; i < l; i++) {
-      if (norm(replacementLines[i]!) !== norm(fileLines[startLine - 1 - l + i]!)) continue leading;
+      if (normalizeLine(replacementLines[i]!) !== normalizeLine(fileLines[startLine - 1 - l + i]!))
+        continue leading;
     }
     L = l;
     break;
@@ -45,7 +51,10 @@ function trimReplacementToContext(
   let T = 0;
   trailing: for (let t = maxT; t >= 1; t--) {
     for (let j = 0; j < t; j++) {
-      if (norm(remainder[remainder.length - t + j]!) !== norm(fileLines[endLine + j]!))
+      if (
+        normalizeLine(remainder[remainder.length - t + j]!) !==
+        normalizeLine(fileLines[endLine + j]!)
+      )
         continue trailing;
     }
     T = t;
@@ -72,8 +81,7 @@ export function buildUnifiedDiff({
   context?: number;
 }): string {
   const endsWithNewline = originalContent.endsWith("\n");
-  const body = endsWithNewline ? originalContent.slice(0, -1) : originalContent;
-  const fileLines = body === "" ? [] : body.split("\n");
+  const fileLines = splitFileLines(originalContent);
 
   const removedLines = fileLines.slice(startLine - 1, endLine);
 

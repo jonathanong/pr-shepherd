@@ -30,6 +30,46 @@ describe("buildFixInstructions", () => {
     ]);
   });
 
+  it("distinguishes unsafe-range refusal from source-drift fallback", () => {
+    const instructions = buildFixInstructions(
+      [
+        {
+          id: "PRRT_suggestion",
+          path: "src/foo.ts",
+          line: 2,
+          author: "reviewer",
+          body: "```suggestion\nreplacement\n```",
+          url: "",
+          suggestion: {
+            startLine: 2,
+            endLine: 2,
+            lines: ["replacement"],
+            author: "reviewer",
+          },
+        },
+      ],
+      [],
+      [],
+      [],
+      "main",
+      {
+        argv: [],
+        requiresHeadSha: false,
+        requiresDismissMessage: false,
+        hasMutations: false,
+      },
+      false,
+      42,
+      0,
+    );
+
+    const text = instructions.join("\n");
+    expect(text).toContain("does not safely fit GitHub's anchored range");
+    expect(text).toContain("do not apply the replacement block verbatim");
+    expect(text).toContain("source drift prevents a generated suggestion patch from applying");
+    expect(text).toContain("replace the heading's exact `path:startLine-endLine` range");
+  });
+
   it("adds edited guidance for edited first-look threads", () => {
     const instructions = buildFixInstructions(
       [],

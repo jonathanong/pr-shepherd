@@ -227,11 +227,13 @@ When one or more threads carry a `[suggestion]` marker, `## Instructions` expand
 1. Review each item under `## Review threads` and decide whether it needs a code change.
 2. For each thread marked `[suggestion]` under `## Review threads`, run `pr-shepherd build-suggestion-patch 42 --thread-id <id> --message "<one-sentence headline>" --format=json` to retrieve its patch and suggested commit.
 3. The CLI only builds the patch. Apply it, stage the listed file, and follow the returned commit instructions.
-4. If the patch does not apply, use the manual-edit step below. Do not retry the command.
-5. Keep human-authored thread IDs in `apply review:` so Shepherd replies instead of resolving them.
-6. Apply every warranted review fix in each file referenced above.
-7. For a manual `[suggestion]` fix, replace the heading's exact `path:startLine-endLine` range with the `Replaces lines …` block verbatim.
-8. [remaining remediation, finalization, mutation, and recurrence steps]
+4. If the command refuses because the suggestion does not safely fit GitHub's anchored range, skip patch application and use the manual-edit step below. Do not retry the command.
+5. If the patch does not apply, use the manual-edit step below. Do not retry the command.
+6. Keep human-authored thread IDs in `apply review:` so Shepherd replies instead of resolving them.
+7. Apply every warranted review fix in each file referenced above.
+8. After source drift prevents a generated suggestion patch from applying, replace the heading's exact `path:startLine-endLine` range with the `Replaces lines …` block verbatim.
+9. When `build-suggestion-patch` refuses an unsafe anchored range, do not apply the replacement block verbatim. Inspect the surrounding source and reviewer intent, then make the intended edit manually.
+10. [remaining remediation, finalization, mutation, and recurrence steps]
 ```
 
 The `build-suggestion-patch` step is absent when no thread has a `[suggestion]` marker; the manual-fallback clause on "Apply code fixes" is absent in the same case.
@@ -302,15 +304,15 @@ When at least one thread has a `[suggestion]` marker, the agent sees separate re
 
 **Step 1 — structured path (preferred):**
 
-> For each thread marked `` `[suggestion]` `` under `` `## Review threads` ``, run `` `pr-shepherd build-suggestion-patch 42 --thread-id <id> --message "<one-sentence headline>" --format=json` `` to retrieve its patch and suggested commit. The CLI only builds the patch. Apply it, stage the listed file, and follow the returned commit instructions. If the patch does not apply, use the manual-edit step and do not retry. Keep human-authored thread IDs in `apply review:` so Shepherd replies instead of resolving them.
+> For each thread marked `` `[suggestion]` `` under `` `## Review threads` ``, run `` `pr-shepherd build-suggestion-patch 42 --thread-id <id> --message "<one-sentence headline>" --format=json` `` to retrieve its patch and suggested commit. The CLI only builds the patch. Apply it, stage the listed file, and follow the returned commit instructions. If the command refuses because the suggestion does not safely fit GitHub's anchored range, skip patch application and use the manual-edit step; do not retry. If the patch does not apply, use the manual-edit step and do not retry. Keep human-authored thread IDs in `apply review:` so Shepherd replies instead of resolving them.
 
 `build-suggestion-patch` builds a unified diff from the `Replaces lines …` block and emits the suggested commit message and body (with a `Co-authored-by: <reviewer>` trailer) in a `## Suggested commit message` section, plus numbered `## Instructions` telling the agent exactly what to run. It handles one thread at a time; for multi-suggestion PRs invoke it in sequence, then push all commits together.
 
 **Manual fallback:**
 
-> For a manual `` `[suggestion]` `` fix, replace the heading's exact `path:startLine-endLine` range with the `Replaces lines …` block verbatim. An empty replacement deletes the range. One blank line replaces it with one blank line.
+> After source drift prevents a generated suggestion patch from applying, replace the heading's exact `path:startLine-endLine` range with the `Replaces lines …` block verbatim. An empty replacement deletes the range. One blank line replaces it with one blank line. When `build-suggestion-patch` refuses an unsafe anchored range, do not apply the replacement block verbatim. Inspect the surrounding source and reviewer intent, then make the intended edit manually.
 
-When a patch fails to apply (drift since the suggestion was written), use the `Replaces lines …` block from the iterate output to apply the change directly. Do not retry `build-suggestion-patch`.
+When a patch fails to apply because of source drift, use the `Replaces lines …` block from the iterate output to apply the change directly. When the command refuses an unsafe anchored range, inspect the surrounding source and reviewer intent instead of applying the block verbatim. Do not retry `build-suggestion-patch`.
 
 ---
 

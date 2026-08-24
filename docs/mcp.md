@@ -161,6 +161,8 @@ The server registers three tools. Each result includes Markdown `content` (the s
 
 Call `iterate` first. Translate its `resolveCommand` / `resolveOnlyCommand` arguments into an `apply` `review_mutations` operation. Use `build_suggestion_patch` only for a suggestion thread that needs its validated diff. Use `mark_files_viewed` and `append_journal` when the iterate output or the caller asks for those mutations.
 
+`build_suggestion_patch` treats GitHub's anchored line range as authoritative. It refuses to emit a patch when the replacement appears to extend into or rewrite an adjacent source block; inspect the surrounding source and reviewer intent and apply that review manually.
+
 Hosts namespace tool names with the server name (`pr-shepherd__iterate` in Grok, `mcp__pr-shepherd__iterate` in some Claude setups). The unqualified names below are the server-registered names.
 
 ### `iterate`

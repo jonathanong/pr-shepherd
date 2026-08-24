@@ -46,7 +46,7 @@ const patch = await shepherd.buildSuggestionPatch({
 
 Validation failures throw `PrShepherdValidationError` before any GitHub mutation. If a later apply operation fails after earlier ones succeeded, Shepherd throws `PartialApplyError` with `failedIndex` and `completed`.
 
-`buildSuggestionPatch` returns a unified diff plus commit metadata. It does not write a patch file or mutate git.
+`buildSuggestionPatch` returns a unified diff plus commit metadata. It does not write a patch file or mutate git. It rejects when the suggestion does not safely fit GitHub's anchored range; callers should inspect the surrounding source and reviewer intent and apply that review manually.
 
 ## `pr-shepherd/mcp`
 
