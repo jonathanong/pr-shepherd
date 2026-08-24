@@ -1,8 +1,6 @@
 import { normalizeLine } from "./lines.mts";
 
-// Range metadata cannot distinguish an intentional near-duplicate insertion
-// from a copied-and-edited adjacent block. Require a substantive shared affix;
-// ambiguous matches take the manual path instead of producing a risky patch.
+// Near-copy matches are ambiguous, so risky spans take the manual path.
 function closelyRewritesText(replacement: string, adjacent: string): boolean {
   const shorterLength = Math.min(replacement.length, adjacent.length);
   let prefixLength = 0;
@@ -27,9 +25,8 @@ function normalizeBlockText(lines: readonly string[]): string {
   return lines.map(normalizeLine).join(" ").trim().replace(/\s+/g, " ");
 }
 
-function normalizeSharedLine(line: string): string {
-  return normalizeLine(line).trim().replace(/\s+/g, " ");
-}
+const normalizeSharedLine = (line: string): string =>
+  normalizeLine(line).trim().replace(/\s+/g, " ");
 
 function sharedInternalRunAt(
   replacementLines: readonly string[],
@@ -52,13 +49,10 @@ function sharedInternalRunAt(
   return sharedLines;
 }
 
-function hasLetterOrNumber(line: string): boolean {
-  return /[\p{L}\p{N}]/u.test(line);
-}
+const hasLetterOrNumber = (line: string): boolean => /[\p{L}\p{N}]/u.test(line);
 
-function isSubstantiveLine(line: string): boolean {
-  return hasLetterOrNumber(line) && line.replace(/\s/g, "").length >= 8;
-}
+const isSubstantiveLine = (line: string): boolean =>
+  hasLetterOrNumber(line) && line.replace(/\s/g, "").length >= 8;
 
 function isSubstantiveSharedRun(sharedLines: readonly string[]): boolean {
   const substantiveLines = sharedLines.filter(isSubstantiveLine);
@@ -141,11 +135,22 @@ function isChangedWithUnrelatedSubstantiveNeighbors(
   candidate: readonly string[],
   adjacentSpan: readonly string[],
 ): boolean {
-  if (!candidate.every(isSubstantiveLine) || !adjacentSpan.every(isSubstantiveLine)) return false;
   const relations = new Set(
     candidate.map((line, index) => alignedLineRelation(line, adjacentSpan[index]!)),
   );
-  return relations.has("changed") && !relations.has("exact");
+  if (!relations.has("changed") || relations.has("exact")) return false;
+  if (
+    ![...candidate, ...adjacentSpan].every(
+      (line) => isSubstantiveLine(line) || !hasLetterOrNumber(line),
+    )
+  ) {
+    return false;
+  }
+  return (
+    candidate.filter(
+      (line, index) => isSubstantiveLine(line) && isSubstantiveLine(adjacentSpan[index]!),
+    ).length >= 2
+  );
 }
 
 function likelyRewritesChangedWindow(

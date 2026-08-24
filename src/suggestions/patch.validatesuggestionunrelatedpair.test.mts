@@ -93,4 +93,59 @@ describe("getUnsafeSuggestionRangeReason — unrelated paired line", () => {
       }),
     ).toContain("partially rewrites a source block before");
   });
+
+  it("rejects a longer rewrite containing a changed delimiter before the anchor", () => {
+    expect(
+      getUnsafeSuggestionRangeReason({
+        originalContent: `${original}\n}\n${unrelatedSource}\nanchor\n`,
+        startLine: 4,
+        endLine: 4,
+        replacementLines: [updated, "]", unrelatedReplacement],
+      }),
+    ).toContain("partially rewrites a source block before");
+  });
+
+  it("rejects a longer rewrite containing a changed delimiter after the anchor", () => {
+    expect(
+      getUnsafeSuggestionRangeReason({
+        originalContent: `anchor\n${unrelatedSource}\n}\n${original}\n`,
+        startLine: 1,
+        endLine: 1,
+        replacementLines: [unrelatedReplacement, "]", updated],
+      }),
+    ).toContain("partially rewrites a source block after");
+  });
+
+  it("rejects a longer rewrite containing a changed blank line", () => {
+    expect(
+      getUnsafeSuggestionRangeReason({
+        originalContent: `${original}\n\n${unrelatedSource}\nanchor\n`,
+        startLine: 4,
+        endLine: 4,
+        replacementLines: [updated, "}", unrelatedReplacement],
+      }),
+    ).toContain("partially rewrites a source block before");
+  });
+
+  it("accepts a near-copy with only changed neutral neighbors", () => {
+    expect(
+      getUnsafeSuggestionRangeReason({
+        originalContent: `${original}\n}\n\nanchor\n`,
+        startLine: 4,
+        endLine: 4,
+        replacementLines: [updated, "]", "{"],
+      }),
+    ).toBeNull();
+  });
+
+  it("accepts a near-copy with a changed delimiter and short text", () => {
+    expect(
+      getUnsafeSuggestionRangeReason({
+        originalContent: `${original}\n}\ntodo\nanchor\n`,
+        startLine: 4,
+        endLine: 4,
+        replacementLines: [updated, "]", "done"],
+      }),
+    ).toBeNull();
+  });
 });
