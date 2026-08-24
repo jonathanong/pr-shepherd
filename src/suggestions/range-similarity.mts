@@ -139,7 +139,7 @@ export function likelyRewritesChangedLineSubrange(
   const maxLength = Math.min(8, replacementLines.length - 1);
   for (let length = 2; length <= maxLength; length++) {
     const adjacentSpan = adjacentSpans.find((span) => span.length === length);
-    if (adjacentSpan === undefined || !adjacentSpan.every(isSubstantiveLine)) continue;
+    if (!adjacentSpan?.every(isSubstantiveLine)) continue;
     if (likelyRewritesChangedProperWindow(replacementLines, adjacentSpan)) return true;
   }
   return false;
