@@ -130,4 +130,17 @@ describe("buildUnifiedDiff", () => {
     expect(patch).toContain("+inserted\n");
     expect(patch).toContain("@@ -1,0 +1,1 @@\n");
   });
+  it("replaces the blank line in an LF-only file", () => {
+    const patch = buildUnifiedDiff({
+      path: "f.ts",
+      originalContent: "\n",
+      startLine: 1,
+      endLine: 1,
+      replacementLines: ["inserted"],
+    });
+    expect(patch).toContain("@@ -1,1 +1,1 @@\n");
+    expect(patch).toContain("-\n");
+    expect(patch).toContain("+inserted\n");
+    expect(patch).not.toContain("No newline");
+  });
 });

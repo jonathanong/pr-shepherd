@@ -7,6 +7,7 @@ import { getRepoInfo, getCurrentPrNumber, getCurrentBranch } from "../github/cli
 import { fetchSuggestionThread } from "../github/suggestion-thread.mts";
 import { parseSuggestion, isCommittableSuggestion } from "../suggestions/parse.mts";
 import { buildUnifiedDiff } from "../suggestions/patch.mts";
+import { getUnsafeSuggestionRangeReason } from "../suggestions/range.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type { CommitSuggestionResult, GlobalOptions } from "../types.mts";
 import { buildPrShepherdCommand } from "../cli/runner.mts";
@@ -129,6 +130,21 @@ export async function runCommitSuggestion(
     );
   }
   const originalContent = await readFile(resolvedPath, "utf8");
+  const unsafeRangeReason = getUnsafeSuggestionRangeReason({
+    originalContent,
+    startLine,
+    endLine,
+    replacementLines: parsed.lines,
+  });
+  if (unsafeRangeReason) {
+    const range = startLine === endLine ? `${startLine}` : `${startLine}-${endLine}`;
+    throw new ShepherdError(
+      `Thread ${opts.threadId}'s suggestion does not safely fit GitHub's anchored range ` +
+        `${filePath}:${range}: ${unsafeRangeReason} Refusing to build a patch; inspect the surrounding ` +
+        `source and reviewer intent, then apply the change manually.`,
+      EXIT.UNAVAILABLE,
+    );
+  }
   const patch = buildUnifiedDiff({
     path: filePath,
     originalContent,

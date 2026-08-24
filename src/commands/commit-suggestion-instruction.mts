@@ -24,9 +24,12 @@ export function buildCommitSuggestionInstruction(
   const driftHint = includeDriftHint
     ? "If the patch does not apply because the suggestion drifted, use the manual-fix step below. Do not retry the command."
     : "If the patch does not apply, use the manual-edit step below. Do not retry the command.";
+  const manualStep = includeDriftHint ? "manual-fix step" : "manual-edit step";
   return [
     `For each thread marked \`[suggestion]\` under \`${sectionName}\`, run \`${command}\` to retrieve its patch and suggested commit.`,
     "The CLI only builds the patch. Apply it, stage the listed file, and follow the returned commit instructions.",
+    `If the command refuses because the suggestion is unsafe (an unsafe anchored range or nested/unbalanced suggestion fences), skip patch application and use the ${manualStep} below. Do not retry the command.`,
+    "For any other refusal, follow the CLI error's stated recovery action; do not manually edit the suggestion.",
     driftHint,
     "Keep human-authored thread IDs in `apply review:` so Shepherd replies instead of resolving them.",
   ];

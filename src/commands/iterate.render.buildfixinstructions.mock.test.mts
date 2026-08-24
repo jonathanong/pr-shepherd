@@ -30,6 +30,51 @@ describe("buildFixInstructions", () => {
     ]);
   });
 
+  it("distinguishes command refusal from source-drift fallback", () => {
+    const instructions = buildFixInstructions(
+      [
+        {
+          id: "PRRT_suggestion",
+          path: "src/foo.ts",
+          line: 2,
+          author: "reviewer",
+          body: "```suggestion\ntext ```suggestion nested\n```",
+          url: "",
+          suggestion: {
+            startLine: 2,
+            endLine: 2,
+            lines: ["text ```suggestion nested"],
+            author: "reviewer",
+          },
+        },
+      ],
+      [],
+      [],
+      [],
+      "main",
+      {
+        argv: [],
+        requiresHeadSha: false,
+        requiresDismissMessage: false,
+        hasMutations: false,
+      },
+      false,
+      42,
+      0,
+    );
+
+    const text = instructions.join("\n");
+    expect(text).toContain("refuses because the suggestion is unsafe");
+    expect(text).toContain("nested/unbalanced suggestion fences");
+    expect(text).toContain("do not apply the replacement block verbatim");
+    expect(text).toContain("follow the CLI error's stated recovery action");
+    expect(text).toContain("do not manually edit the suggestion");
+    expect(text.match(/follow the CLI error's stated recovery action/g)).toHaveLength(1);
+    expect(text).not.toContain("refuses for any reason");
+    expect(text).toContain("source drift prevents a generated suggestion patch from applying");
+    expect(text).toContain("replace the heading's exact `path:startLine-endLine` range");
+  });
+
   it("adds edited guidance for edited first-look threads", () => {
     const instructions = buildFixInstructions(
       [],

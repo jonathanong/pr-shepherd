@@ -5,56 +5,7 @@
  * `git apply --check` accept it without a `diff --git` preamble.
  */
 
-/**
- * Strip leading/trailing replacement lines that are identical to the adjacent
- * file lines just outside the removed range.
- *
- * GitHub stores a suggestion as a verbatim replacement for the *highlighted*
- * line range, but reviewers often paste surrounding context into the box. Those
- * context-duplicating lines must not appear as additions in the diff — they
- * belong to the surrounding unchanged file content. Stripping them here produces
- * a minimal diff that applies cleanly without duplicating lines.
- *
- * Comparison normalises trailing `\r` from file lines so CRLF files (which
- * carry `\r` on each entry after `split("\n")`) still match suggestion lines
- * delivered as LF-only by the GitHub API.
- */
-function trimReplacementToContext(
-  fileLines: readonly string[],
-  startLine: number,
-  endLine: number,
-  replacementLines: readonly string[],
-): readonly string[] {
-  const norm = (s: string) => (s.endsWith("\r") ? s.slice(0, -1) : s);
-
-  // Leading trim: largest L where replacement[0..L) == fileLines[startLine-1-L..startLine-1)
-  const maxL = Math.min(startLine - 1, replacementLines.length);
-  let L = 0;
-  leading: for (let l = maxL; l >= 1; l--) {
-    for (let i = 0; i < l; i++) {
-      if (norm(replacementLines[i]!) !== norm(fileLines[startLine - 1 - l + i]!)) continue leading;
-    }
-    L = l;
-    break;
-  }
-
-  const remainder = replacementLines.slice(L);
-
-  // Trailing trim: largest T where remainder[len-T..len) == fileLines[endLine..endLine+T)
-  const maxT = Math.min(fileLines.length - endLine, remainder.length);
-  let T = 0;
-  trailing: for (let t = maxT; t >= 1; t--) {
-    for (let j = 0; j < t; j++) {
-      if (norm(remainder[remainder.length - t + j]!) !== norm(fileLines[endLine + j]!))
-        continue trailing;
-    }
-    T = t;
-    break;
-  }
-
-  if (L === 0 && T === 0) return replacementLines;
-  return T === 0 ? remainder : remainder.slice(0, remainder.length - T);
-}
+import { splitFileLines, trimReplacementToContext } from "./lines.mts";
 
 export function buildUnifiedDiff({
   path,
@@ -72,8 +23,7 @@ export function buildUnifiedDiff({
   context?: number;
 }): string {
   const endsWithNewline = originalContent.endsWith("\n");
-  const body = endsWithNewline ? originalContent.slice(0, -1) : originalContent;
-  const fileLines = body === "" ? [] : body.split("\n");
+  const fileLines = splitFileLines(originalContent);
 
   const removedLines = fileLines.slice(startLine - 1, endLine);
 

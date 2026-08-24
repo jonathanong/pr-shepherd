@@ -54,6 +54,8 @@ The server exposes these tools:
 
 Use `iterate` first. Its result surfaces review threads, comments, checks, and the existing structured `resolveCommand`/`resolveOnlyCommand` arguments for review work. Translate those arguments into an `apply` `review_mutations` operation when making the mutation; use `mark_files_viewed` to mark selected changed files viewed; use `append_journal` for an idempotent PR-body journal entry. Use `build_suggestion_patch` only for a suggestion thread that needs its validated unified diff.
 
+`build-suggestion-patch` and `build_suggestion_patch` treat GitHub's anchored line range as authoritative. They preserve ordinary insertions before or after a retained anchor, but refuse to emit a patch when the replacement appears to rewrite an adjacent source block; inspect the surrounding source and reviewer intent and apply that review manually.
+
 MCP clients own polling recurrence. Do not call a long-running polling tool: call `iterate` again after the returned action-specific work is complete or when the client’s scheduler chooses to recheck.
 
 ## CLI aliases

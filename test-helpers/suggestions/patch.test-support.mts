@@ -1,3 +1,2 @@
-import { buildUnifiedDiff } from "../../src/suggestions/patch.mts";
-
-export { buildUnifiedDiff };
+export { buildUnifiedDiff } from "../../src/suggestions/patch.mts";
+export { getUnsafeSuggestionRangeReason } from "../../src/suggestions/range.mts";
