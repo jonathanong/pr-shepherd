@@ -52,7 +52,7 @@ export function makeIterateResult(
           hasMutations: false,
         },
         instructions: [
-          "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
+          "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again. Stop only on `[CANCEL]`, `[ESCALATE]`, or human direction.",
         ],
         firstLookThreads: [],
         firstLookComments: [],

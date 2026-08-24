@@ -20,10 +20,14 @@ Conversations Resolved: No [Not Required]
 
 ## Instructions
 
-1. Review the threads under `## Review threads to resolve`. Human-authored threads are replied to by the `apply review:` command shown below; Shepherd does not resolve them. Bot/non-human threads are included in `--resolve-thread-ids`.
-2. Before running the `apply review:` command, remove any thread from `--reply-thread-ids` if the latest visible comment in that thread is your own prior Shepherd reply. Do not reply to your own comments.
-3. Run the `apply review:` command shown above, substituting `$DISMISS_MESSAGE` with a one-sentence reply/description of what you changed.
-4. Items in `## First-look items` are shown so you can acknowledge their current status before acting. If a first-look thread also appears under `## Review threads to resolve`, its ID is already included in the `apply review:` command; otherwise do not pass first-look-only IDs to mutation flags.
-5. Items marked `[edited since first look]`, items under `## Review summaries (edited since first look)`, and any first-look bullet tagged `, edited` were updated by their author after you previously acknowledged them. Read the updated body before deciding whether any matching `## Review threads to resolve` item should be resolved.
-6. For any large decisions or rejections you made this iteration, run `pr-shepherd apply journal 42 '- <decision>'` to append an entry to the `## Shepherd Journal` section. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. The command is idempotent — re-running with the same text is a no-op.
-7. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
+1. Review every item under `## First-look items` before acting.
+2. If a first-look thread also appears under `## Review threads to resolve`, its ID is already in `apply review:`. Do not add first-look-only IDs to mutation flags.
+3. Read every item marked `[edited since first look]`, including edited summaries and edited first-look bullets, before deciding whether to resolve a matching thread.
+4. Review the threads under `## Review threads to resolve` before running mutations.
+5. Use the generated commands as shown. Human-authored IDs use `--reply-thread-ids`. Bot and non-human IDs use `--resolve-thread-ids`. Shepherd does not resolve human-authored threads.
+6. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+7. Link threads and comments from their headings. Cite reviews by ID.
+8. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
+9. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
+10. Run the `apply review:` command shown above.
+11. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again. Stop only on `[CANCEL]`, `[ESCALATE]`, or human direction.

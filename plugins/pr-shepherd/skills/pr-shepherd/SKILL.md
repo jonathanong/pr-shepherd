@@ -16,4 +16,6 @@ Thin dispatcher for iterating a PR. Poll with the CLI; use MCP `iterate` only wh
 
 2. Run the poll command `pr-shepherd` with the optional PR argument and print its full result. Do not run `pr-shepherd iterate`. If the CLI is unavailable and the `iterate` MCP tool is available, call `iterate` and print its full result.
 
-3. Follow the returned instructions exactly. If this tick used MCP `iterate`, use MCP `apply` and `build_suggestion_patch` for the returned review mutations and suggestion patches — do not run a `pr-shepherd apply` shell command. If this tick used the CLI poll, run the printed apply command. After completing an action, run `pr-shepherd` again (or call `iterate` if only MCP is available) until a terminal action or the human directs you to stop.
+3. Print the full result and follow every returned `## Instructions` step exactly. For CLI output, run each printed mutation command when instructed. For MCP output, use MCP `apply` and `build_suggestion_patch`; do not run a shell `pr-shepherd apply` command.
+
+4. After completing the returned instructions, repeat step 2 unless the action is `[CANCEL]` or `[ESCALATE]`, or the human directs you to stop.

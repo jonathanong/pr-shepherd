@@ -60,7 +60,7 @@ describe("shepherd journal instruction helpers", () => {
     expect(text).toContain(SHEPHERD_JOURNAL_SECTION);
     expect(text).toContain(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
     expect(text).toContain("pr-shepherd apply journal 42");
-    expect(text).toContain("idempotent");
+    expect(text).not.toContain("idempotent");
     expect(text).toContain(
       SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
     );
@@ -75,10 +75,10 @@ describe("shepherd journal instruction helpers", () => {
       42,
       SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
     );
-    const merged = `${first}\n---\n${second}`;
+    const merged = `${first.join("\n")}\n---\n${second.join("\n")}`;
     const total = countMentions(merged, SHEPHERD_JOURNAL_SECTION);
     expect(total).toBe(2);
-    expect(first).not.toContain("`## Shepherd Journal` entry");
-    expect(second).not.toContain("`## Shepherd Journal` entry");
+    expect(first.join("\n")).not.toContain("`## Shepherd Journal` entry");
+    expect(second.join("\n")).not.toContain("`## Shepherd Journal` entry");
   });
 });

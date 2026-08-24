@@ -16,6 +16,9 @@ Conversations Resolved: Yes [Not Required]
 
 ## Instructions
 
-1. The branch has merge conflicts that must be resolved before merging (see `**branch**` above). Resolve them and push.
-2. If you decide to push new commits: cancel each in-progress run listed under `## In-progress runs` before applying code fixes (e.g. `gh run cancel <id>`). Runs may complete between the tick and your action; treat cancellation errors on already-finished runs as non-fatal. Skip this step if you are only resolving threads without pushing — the existing runs remain relevant.
-3. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
+1. The branch has merge conflicts (see `**branch**` above). Resolve them before committing and pushing.
+2. If you will push, first cancel every ID under `## In-progress runs` with `gh run cancel <id>`.
+3. Ignore cancellation errors for runs that already finished.
+4. If you will not push, leave the in-progress runs alone.
+5. Commit any remaining changes and push the conflict resolution.
+6. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again. Stop only on `[CANCEL]`, `[ESCALATE]`, or human direction.

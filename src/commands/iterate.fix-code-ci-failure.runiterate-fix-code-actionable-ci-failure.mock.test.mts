@@ -56,10 +56,8 @@ describe("runIterate — fix_code (actionable CI failure)", () => {
       expect(result.fix.checks).toHaveLength(1);
       expect(result.cancelled).toEqual(["run-99"]);
       const joined = result.fix.instructions.join("\n");
-      // cancelled > 0 + push → no-recancel warning present
-      expect(joined).toContain("Do not re-run `gh run cancel`");
-      // any push → stop-iteration instruction present
-      expect(joined).toContain("Stop this iteration");
+      expect(joined).toContain("Do not cancel the IDs under `## Cancelled runs` again");
+      expect(joined).toContain("`[FIX_CODE]` is non-terminal");
     }
     const cancelCall = (mockFetch.mock.calls as Array<[string, RequestInit]>).find(([url]) =>
       url.includes("run-99/cancel"),

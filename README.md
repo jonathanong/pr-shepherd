@@ -29,11 +29,11 @@ The MCP server exposes three tools: `iterate`, `apply`, and `build_suggestion_pa
 
 Each tick returns exactly one action:
 
-- `WAIT` — no immediate action; poll can recheck until timeout.
-- `MARK_READY` — the CLI already converted an eligible draft PR to ready for review.
-- `FIX_CODE` — review items, failing CI, conflicts, or minimization work need agent action.
-- `CANCEL` — terminal success for merged/closed PRs or elapsed ready-delay.
-- `ESCALATE` — manual direction is needed.
+- `WAIT` — no immediate action; continue with the next poll.
+- `MARK_READY` — the CLI converted an eligible draft PR to ready; continue polling.
+- `FIX_CODE` — agent work is required; complete it, then continue polling.
+- `CANCEL` — stop polling because the PR merged, closed, or completed its ready-delay.
+- `ESCALATE` — stop polling until a human provides direction.
 
 Example shape:
 
@@ -65,10 +65,12 @@ Conversations Resolved: No [Not Required]
 
 ## Instructions
 
-1. Decide for each item under `## Review threads` and `## Failing checks` whether a code change is warranted. If code changes are needed, apply edits, commit, push, then run the `apply review:` command.
-2. For each failing check under `## Failing checks`: fetch logs when needed and decide whether to rerun or fix.
-3. Run the `apply review:` command shown above, substituting `$HEAD_SHA` and `$DISMISS_MESSAGE`.
-4. Stop this iteration.
+1. Review each item under `## Review threads` and `## Failing checks` and decide whether it needs a code change.
+2. Apply every warranted review fix in each file referenced above.
+3. Read the included CI log excerpt; fetch the full log if needed, then rerun transient failures or fix real failures.
+4. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
+5. Replace `$HEAD_SHA` and `$DISMISS_MESSAGE`, then run the `apply review:` command shown above.
+6. `[FIX_CODE]` is non-terminal. Continue with the next poll. Stop only on `[CANCEL]`, `[ESCALATE]`, or human direction.
 ```
 
 See [docs/actions.md](docs/actions.md) for the complete output contract. Iterate/poll PR outcomes use exit codes `0` and `10`–`14`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).

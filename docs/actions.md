@@ -91,10 +91,10 @@ WAIT: 0 passing, 1 in-progress — active checks: CI / build
 
 ## Instructions
 
-1. No action this tick — the poll loop reruns automatically.
+1. No action is needed this tick. Continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again.
 ```
 
-The poll already bounds each wait via `--interval`/`--timeout`; iterate output does not tell the agent to sleep before rerunning. That “poll loop reruns automatically” instruction is for the **poll dispatcher**. MCP `iterate` and `pr-shepherd iterate` return once; the caller must schedule the next tick. When the current command includes a ready-delay override (`--ready-delay 15m`), it is surfaced as a header field on the summary line rather than embedded in a rerun command — e.g. `**summary** 3 passing, 2 inProgress · **ready-delay** `15m` (override)`. JSON output carries the same value as a `readyDelayOverride` field.
+The default CLI command owns its `--interval`/`--timeout` waits. A final `WAIT` returned at timeout is still non-terminal, so the skill starts another bounded poll. MCP `iterate` and `pr-shepherd iterate` return one tick and their caller schedules the next one. A `--ready-delay 15m` override remains a summary field rather than part of a rerun command; JSON carries the same value as `readyDelayOverride`.
 
 The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, unmet merge requirements (approvals, conversations, merge queue, …), `PR is a draft`, or `some checks are unstable`. After a sweep, iterate also prints current-vs-required merge rules so the agent can see _why_ GitHub is not mergeable (for example `Approvals: None [Not Required]` vs `Approvals: None [Required]`). Merge-queue and GitHub-stack membership appear as extra lines when they apply (`Merge queue: position 2 QUEUED [Required]`, `Stack: #7 2/3 (base main)`); they are omitted when the PR is not in a queue or stack and merge queue is not required.
 
@@ -126,7 +126,7 @@ MARKED READY: PR #42 converted from draft to ready for review
 
 ## Instructions
 
-1. The CLI already marked the PR ready for review. No further action this tick — the poll loop reruns automatically.
+1. The CLI marked the PR ready for review. Continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again.
 ```
 
 **What the skill does:** Follow `## Instructions`, then run the default poll dispatcher again unless the action is terminal. Direct MCP/`iterate` callers must reschedule themselves.
@@ -157,7 +157,7 @@ CANCEL: PR #42 is merged — stopping
 
 ## Instructions
 
-1. Stop — the active goal is complete.
+1. Stop — the PR loop is complete. No further polling is needed.
 ```
 
 Other heading variants: `# PR #42 [CANCEL] — closed`, `# PR #42 [CANCEL] — ready-delay-elapsed`.
@@ -203,33 +203,40 @@ Conversations Resolved: No [Not Required]
 
 ## Instructions
 
-1. Decide for each item under `## Review threads` whether a code change is warranted. **If any code changes are needed:** apply edits, commit, push, then run the `apply review:` command. **If no code changes are needed:** skip the commit/push and run the `apply review:` command.
-2. Apply code fixes: read and edit each file referenced above.
-3. Before running the `apply review:` command, remove any thread from `--reply-thread-ids` if the latest visible comment in that thread is your own prior Shepherd reply. Do not reply to your own comments.
-4. Run the `apply review:` command shown above, substituting `$HEAD_SHA` with the pushed commit SHA (or `$(git rev-parse HEAD)` if you did not push) and `$DISMISS_MESSAGE` with a one-sentence reply/description of what you changed.
-5. For any large decisions or rejections you made this iteration, run `pr-shepherd apply journal 42 '- <decision>'` to append an entry to the `## Shepherd Journal` section. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. The command is idempotent — re-running with the same text is a no-op.
-6. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
+1. Review each item under `## Review threads` and decide whether it needs a code change.
+2. Apply every warranted review fix in each file referenced above.
+3. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
+4. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+5. Link threads and comments from their headings. Cite reviews by ID.
+6. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
+7. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
+8. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
+9. Run the `apply review:` command shown above.
+10. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again. Stop only on `[CANCEL]`, `[ESCALATE]`, or human direction.
 ```
 
-The CLI surfaces the raw `**branch**` state on the summary line and leaves rebase/commit/push conventions to the caller (see the "Keep skills and loop prompts minimal" rule in `CLAUDE.md`). Iterate does not emit a separate rebase step or a per-tick "recheck after a delay" line — the poll loop's `--interval`/`--timeout` already bounds each wait.
+The CLI surfaces the raw `**branch**` state on the summary line and leaves rebase/commit/push conventions to the caller. The final FIX_CODE instruction hands control back to the skill; the next default poll owns any CI wait through its existing `--interval`/`--timeout` behavior.
 
-When `mergeStatus` is `"BEHIND"` and [`iterate.behindBaseHint`](configuration.md#iteratebehindbasehint--default-) is configured (empty by default), an extra `## Instructions` step is inserted right after the leading decide/conflict step: `` `The branch is behind `origin/<base>` — <hint> before pushing.` ``. The CLI still never decides the mechanics itself — this only echoes back the caller's own configured one-liner.
+When `mergeStatus` is `"BEHIND"` and [`iterate.behindBaseHint`](configuration.md#iteratebehindbasehint--default-) is configured (empty by default), an extra instruction appears immediately before commit/push finalization: `` `The branch is behind `origin/<base>`. <hint> before pushing.` ``. The CLI still never chooses the mechanics; it only echoes the configured hint.
 
-When one or more threads carry a `[suggestion]` marker, the `## Instructions` section inserts a `build-suggestion-patch` step before "Apply code fixes" and gains a manual-fallback clause on that step:
+When one or more threads carry a `[suggestion]` marker, `## Instructions` expands suggestion handling into short ordered steps:
 
 ```markdown
 ## Instructions
 
-1. Decide for each item under `## Review threads` and `## Actionable comments` whether a code change is warranted. …
-2. If you decide to push new commits: cancel each in-progress run …
-3. For each thread marked `[suggestion]` under `## Review threads`: run `pr-shepherd build-suggestion-patch 42 --thread-id <id> --message "<one-sentence headline>" --format=json` to retrieve the patch and suggested commit. The CLI does not mutate the working tree — apply the patch yourself, then stage the listed file and run the suggested `git commit`. Human-authored thread IDs are replied to by the apply command below; Shepherd does not auto-resolve them. If the patch fails to apply, fall through to the manual-edit step. Do not retry the same command.
-4. Apply code fixes: read and edit each file referenced above. When applying a `[suggestion]` thread manually (e.g. when a patch fails to apply), replace the exact line range shown in the heading (`path:startLine-endLine`) with the replacement shown in its `Replaces lines …` block verbatim.
-5. [remaining steps — resolution-only, failing checks, reviews, commit/rebase, resolve, cancelled-runs guard, journal, stop — renumber starting here]
+1. Review each item under `## Review threads` and decide whether it needs a code change.
+2. For each thread marked `[suggestion]` under `## Review threads`, run `pr-shepherd build-suggestion-patch 42 --thread-id <id> --message "<one-sentence headline>" --format=json` to retrieve its patch and suggested commit.
+3. The CLI only builds the patch. Apply it, stage the listed file, and follow the returned commit instructions.
+4. If the patch does not apply, use the manual-edit step below. Do not retry the command.
+5. Keep human-authored thread IDs in `apply review:` so Shepherd replies instead of resolving them.
+6. Apply every warranted review fix in each file referenced above.
+7. For a manual `[suggestion]` fix, replace the heading's exact `path:startLine-endLine` range with the `Replaces lines …` block verbatim.
+8. [remaining remediation, finalization, mutation, and recurrence steps]
 ```
 
 The `build-suggestion-patch` step is absent when no thread has a `[suggestion]` marker; the manual-fallback clause on "Apply code fixes" is absent in the same case.
 
-The "Apply code fixes" step reads "each file referenced above" only when `## Review threads` is present — thread headings carry a `path:line` location. `## Actionable comments` items carry no such location, so when only actionable comments trigger this step (no threads), the wording is "read and edit the relevant files" instead.
+The review-fix step says "each file referenced above" only when `## Review threads` is present. With actionable comments alone, it says "the relevant files" because comments have no file location.
 
 **Section order:**
 
@@ -244,7 +251,7 @@ The "Apply code fixes" step reads "each file referenced above" only when `## Rev
 
    Every bullet carries a `[conclusion: <CONCLUSION>]` tag (e.g. `[conclusion: FAILURE]`, `[conclusion: TIMED_OUT]`, `[conclusion: CANCELLED]`, `[conclusion: STARTUP_FAILURE]`); null conclusions produce no tag. Non-CANCELLED bullets may also carry a `> <failedStep>` blockquote line (the first step that failed, GitHub Actions only), a `> <summary>` blockquote line (one-line status text from the GitHub UI), and a bounded `> <logExcerpt>` blockquote from the matched failed job log. For aggregate jobs that print `Job results`, `logExcerpt` is condensed to non-success job results plus the exit-code/error line; otherwise it is a bounded raw excerpt. All three are omitted when not available.
 
-   The numbered instructions emit a single collapsed step covering all failing-check categories present, using semicolon-separated clauses: runId checks → fetch log + rerun or fix; CANCELLED → rerun unless a same-tick push already supersedes it, never silently treat as resolved (concurrency-superseded CANCELLED checks never reach this section — see `**superseded**` below); STARTUP_FAILURE → inspect metadata + rerun; external (URL, no runId) → open the URL; bare (no runId, no URL) → escalate to a human. The step is omitted when `checks` is empty.
+   The numbered instructions emit separate entries for each category present: runId checks → read/fetch logs and rerun or fix; CANCELLED → rerun unless a same-tick push supersedes it, never silently treat as resolved; STARTUP_FAILURE → inspect metadata and rerun; external URL → inspect it; no run ID or URL → escalate to a human. These entries are omitted when no failing checks exist.
 
 6. `## Check annotations` — inline annotations attached to completed `CheckRun` checks (any conclusion: passing, failing, skipped, ignored, or filtered), grouped by the same check locator used in `## Failing checks`. Each bullet includes the marker-gated annotation ID (`check_annotation_…`), optional blob link, file range, raw annotation level, optional title, bounded message blockquote, and optional bounded raw details blockquote. In-progress checks are not fetched. Each annotation is surfaced once per PR through the seen-marker store and does not add any resolve/minimize mutation ID. After that tick the annotation is omitted from later output. Not emitted when empty. When this section is present without any failing conclusions, `## Failing checks` is omitted.
 7. `## Changes-requested reviews` — `CHANGES_REQUESTED` reviews. **Human-authored CRs are marker-gated**: each entry is emitted once, then suppressed until the body changes. Edited reviews are emitted again with `edited: true` in JSON. Human CRs are never auto-dismissed — the reviewer must re-review or dismiss themselves. **Bot/non-human CRs (`authorType` is `Bot`, `Unknown`, or a `[bot]`-suffix login, or a login in `botUsernames`) bypass the marker gate**: they are emitted on every tick until they actually leave `CHANGES_REQUESTED` state. The first emission renders the full body; subsequent ticks (body unchanged) render a terse one-liner tagged `[pending dismissal — already surfaced; include in --dismiss-review-ids]` and carry `staleBotCr: true` in JSON. Edited bot CRs render the full updated body with `edited: true`. Bot CR IDs are included in `--dismiss-review-ids` on every tick they appear, so the agent can always recover a dropped dismiss. If a bot CR remains undismissed for `iterate.stallTimeoutMinutes`, iterate emits the `bot-cr-not-dismissed` escalate trigger (see `## escalate` below). **Stale CR detection** — a review is marked `staleReview: true` in JSON when its `commit.oid` differs from `headRefOid` AND every associated review thread (matched by `thread.reviewId === review.id`) is `isResolved || isOutdated`. Reviews with no associated threads are treated conservatively and are NOT marked stale. **Stale bot CRs** are still routed to `--dismiss-review-ids` via the existing path and gain a `[stale — review is on an old commit, all threads resolved]` tag in text output. **Stale human CRs** carry a `[stale — review is on an old commit, all threads resolved; ask reviewer to re-review or dismiss]` tag and are never added to `--dismiss-review-ids`; do not treat them as fresh feedback requiring code changes.
@@ -253,12 +260,12 @@ The "Apply code fixes" step reads "each file referenced above" only when `## Rev
 10. `## Review IDs to minimize queue` — backticked review IDs (`PRR_…`) queued for `--minimize-comment-ids` that are not first-look bodies. Eligible non-human `COMMENTED` review summaries whose bodies were surfaced in a **prior** iteration are minimized in-process (see `## fix_code` CLI side-effects above) and never reach this section — unless GitHub does not confirm that in-process mutation (null/error/rate-limit), in which case the ID falls back here so the `apply review` command stays a working retry path. What else remains here: classification-rule `autoResolve` review-summary IDs not consumed by `actions.autoMinimizeSuppressed`, and — when `iterate.minimizeApprovals` is `true` — matching non-human `APPROVED` review IDs queued for minimization even though their bodies were not previously surfaced. All IDs from sections 8 and 10 that pass the policy are merged into `--minimize-comment-ids` in the `apply review` command. Not emitted when empty (the common case, since most seen COMMENTED summaries are minimized before this section is built).
 11. `## Approvals (surfaced — not minimized)` — emitted for `APPROVED`-state reviews that are not routed to `--minimize-comment-ids` (including the default `iterate.minimizeApprovals: false`, human approvals, or non-human approvals excluded by `iterate.minimizeComments`). H3 heading uses `` `reviewId=<id>` `` (same prefix scheme as other item types); body is a `>` blockquote or `(no review body)` when empty. Surfaced for visibility, but NOT included in `--minimize-comment-ids`.
 12. `## First-look items (N) — acknowledge status before acting` — threads and PR comments that are outdated, resolved, or minimized and have not yet been acknowledged by the agent. Emitted on first encounter only; a per-item seen-marker file (`src/state/seen-comments.mts`) suppresses them on subsequent runs. Each bullet carries a `[status: …]` tag: `outdated`, `resolved`, or `minimized`. If a thread transcript or comment body was edited since the item was first acknowledged, the tag gains an `, edited` suffix (e.g. `[status: minimized, edited]`). Thread bullets include the full comment transcript and links so a reply to a resolved thread gives the agent enough context to view or act on the entire thread again. If a first-look human thread also appears under `## Review threads to resolve`, its ID is already included in the reply command; otherwise do not pass first-look-only IDs to mutation flags. Active unresolved threads are marker-gated under `## Review threads`, not duplicated here. Not emitted when empty.
-13. `## In-progress runs` — backticked GitHub Actions run IDs of in-progress checks that the agent should cancel before pushing. Emitted only when at least one in-progress check has a non-null run ID that the CLI did not already cancel, is not protected by `actions.neverCancelRuns`, **and** the iteration has plausible-push work (actionable threads, failing checks, `CHANGES_REQUESTED` reviews, actionable PR comments, or merge conflicts). Resolution-only and summary-only iterations suppress this section — those paths have no push, so listing runs would prompt unnecessary cancellation. The agent decides whether to cancel (step 2 of `## Instructions`): cancel before pushing code fixes; skip if only resolving threads without pushing. Distinct from `## Cancelled runs`: those IDs were already cancelled by the CLI before the agent acts; these IDs the agent must cancel itself if it decides to push. Not emitted when empty.
+13. `## In-progress runs` — backticked GitHub Actions run IDs of in-progress checks that the agent should cancel before pushing. Emitted only when at least one in-progress check has a non-null run ID that the CLI did not already cancel, is not protected by `actions.neverCancelRuns`, **and** the iteration has plausible-push work (actionable threads, failing checks, `CHANGES_REQUESTED` reviews, actionable PR comments, or merge conflicts). Resolution-only and summary-only iterations suppress this section — those paths have no push, so listing runs would prompt unnecessary cancellation. The instructions say to cancel these IDs when pushing, ignore errors for runs that already finished, and leave the runs alone when not pushing. Distinct from `## Cancelled runs`, whose IDs the CLI already cancelled. Not emitted when empty.
 14. `## Protected runs` — backticked GitHub Actions run IDs deliberately excluded from cancellation by `actions.neverCancelRuns`. Each line includes the workflow/check names that caused the protection and the matched pattern. Protected runs still appear in failing/in-progress check data and still affect readiness; they are only excluded from workflow-run cancellation. Not emitted when empty.
 15. `## Cancelled runs` — backticked IDs, emitted only when at least one pre-push REST cancellation succeeded.
 16. `## Post-fix push`:
     - ``- base: `<branch>` `` — rebase target for the push step. Also the branch named in the optional behind-base hint step (see `iterate.behindBaseHint` above) when `mergeStatus` is `"BEHIND"`.
-    - ``- resolve-only: `<argv>` `` — present only when bot/non-human resolve-thread and minimize-comment mutations are split from the reply command. Run this command first, before any push; no substitutions needed. Omitted when all mutations are combined into the single `apply review:` line.
+    - ``- resolve-only: `<argv>` `` — present only when bot/non-human resolve-thread and minimize-comment mutations are split from the reply command. Its instruction appears before `apply review:` and requires no substitutions. Omitted when all mutations are combined into the single `apply review:` line.
     - ``- apply review: `<argv>` `` — fully quoted apply command. `$DISMISS_MESSAGE` and `$HEAD_SHA` are always quoted so substituting a multi-word sentence keeps it as one argument. Human thread IDs use `--reply-thread-ids` and require `$DISMISS_MESSAGE`; bot/non-human thread IDs use `--resolve-thread-ids` (or move to `resolve-only:` when split). Bot/non-human CR review IDs use `--dismiss-review-ids` in the same command as replies (both need `--message`); when dismiss mutations are split from resolve/minimize mutations, the dismiss IDs ride in the `apply review:` line, not `resolve-only:`. Shepherd does not resolve, minimize, or dismiss human-authored reviews or threads. Agents must remove any ID from `--reply-thread-ids` when the latest visible comment in that thread is their own prior Shepherd reply. `--require-sha "$HEAD_SHA"` is appended when the command contains `--reply-thread-ids` following actionable thread fixes, when failing checks are being addressed, or whenever `--dismiss-review-ids` is present (dismissal is a post-push mutation).
 17. `## Instructions` — numbered list to execute in order. When a `resolve-only:` bullet is present, a `Run the resolve-only: command` step precedes the `Run the apply review: command` step. The instructions reference the command bullets by name rather than duplicating them — that single source of truth is what the skill executes.
 
@@ -291,17 +298,17 @@ GitHub reviewers can leave ` ```suggestion ` fenced blocks in review thread bodi
 - A `[suggestion]` marker on the heading.
 - A `Replaces line(s) …` block immediately after the blockquoted body, showing the parsed replacement. An empty suggestion (deletion) uses the label `Replaces line(s) … with nothing:` followed by an empty fenced block.
 
-When at least one thread has a `[suggestion]` marker, the agent sees these two instruction steps. The CLI substitutes the real PR number; `<id>` and `<one-sentence headline>` are left for the agent to fill in.
+When at least one thread has a `[suggestion]` marker, the agent sees separate retrieve, apply, fallback, and human-reply instructions. The CLI substitutes the real PR number; `<id>` and `<one-sentence headline>` are left for the agent to fill in.
 
 **Step 1 — structured path (preferred):**
 
-> For each thread marked `` `[suggestion]` `` under `` `## Review threads` ``: run `` `pr-shepherd build-suggestion-patch 42 --thread-id <id> --message "<one-sentence headline>" --format=json` `` to retrieve the patch and suggested commit. The CLI does not mutate the working tree — apply the patch yourself (run `git apply` with the diff shown, or edit the file directly using the line range), then stage the listed file and run the suggested `git commit` from the `## Instructions` section. Human-authored thread IDs are replied to by the apply command below; Shepherd does not auto-resolve them. If the patch fails to apply, fall through to the manual-edit step. Do not retry the same command.
+> For each thread marked `` `[suggestion]` `` under `` `## Review threads` ``, run `` `pr-shepherd build-suggestion-patch 42 --thread-id <id> --message "<one-sentence headline>" --format=json` `` to retrieve its patch and suggested commit. The CLI only builds the patch. Apply it, stage the listed file, and follow the returned commit instructions. If the patch does not apply, use the manual-edit step and do not retry. Keep human-authored thread IDs in `apply review:` so Shepherd replies instead of resolving them.
 
 `build-suggestion-patch` builds a unified diff from the `Replaces lines …` block and emits the suggested commit message and body (with a `Co-authored-by: <reviewer>` trailer) in a `## Suggested commit message` section, plus numbered `## Instructions` telling the agent exactly what to run. It handles one thread at a time; for multi-suggestion PRs invoke it in sequence, then push all commits together.
 
-**Step 2 — manual fallback (apply code fixes step, with suggestion clause):**
+**Manual fallback:**
 
-> Apply code fixes: read and edit each file referenced above. When applying a `` `[suggestion]` `` thread manually (e.g. when a patch fails to apply), replace the exact line range shown in the heading (`path:startLine-endLine`) with the replacement shown in its `Replaces lines …` block verbatim — an empty replacement deletes those lines, a single blank line replaces the range with one blank line.
+> For a manual `` `[suggestion]` `` fix, replace the heading's exact `path:startLine-endLine` range with the `Replaces lines …` block verbatim. An empty replacement deletes the range. One blank line replaces it with one blank line.
 
 When a patch fails to apply (drift since the suggestion was written), use the `Replaces lines …` block from the iterate output to apply the change directly. Do not retry `build-suggestion-patch`.
 
@@ -433,7 +440,7 @@ After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-
 
 ## Instructions
 
-1. Stop — the PR needs human direction before iterating can resume. This is a manual handoff; do not continue automated fix attempts.
+1. Stop — human direction is required before automated polling can resume.
 ```
 
 The block after the base-fields line (separated by a blank line) is `escalate.humanMessage` in JSON — ready to print verbatim.

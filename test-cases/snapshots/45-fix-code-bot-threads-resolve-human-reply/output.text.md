@@ -27,10 +27,14 @@ Conversations Resolved: No [Not Required]
 
 ## Instructions
 
-1. Decide for each item under `## Review threads` whether a code change is warranted. **If any code changes are needed:** apply edits, commit, push, then run the `apply review:` command. **If no code changes are needed:** skip the commit/push and run the `apply review:` command.
-2. Apply code fixes: read and edit each file referenced above.
-3. Run the `resolve-only:` command shown above — no substitutions needed.
-4. Before running the `apply review:` command, remove any thread from `--reply-thread-ids` if the latest visible comment in that thread is your own prior Shepherd reply. Do not reply to your own comments.
-5. Run the `apply review:` command shown above, substituting `$HEAD_SHA` with the pushed commit SHA (or `$(git rev-parse HEAD)` if you did not push) and `$DISMISS_MESSAGE` with a one-sentence reply/description of what you changed.
-6. For any large decisions or rejections you made this iteration, run `pr-shepherd apply journal 42 '- <decision>'` to append an entry to the `## Shepherd Journal` section. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. The command is idempotent — re-running with the same text is a no-op.
-7. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
+1. Review each item under `## Review threads` and decide whether it needs a code change.
+2. Apply every warranted review fix in each file referenced above.
+3. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
+4. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+5. Link threads and comments from their headings. Cite reviews by ID.
+6. Run the `resolve-only:` command shown above.
+7. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
+8. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
+9. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
+10. Run the `apply review:` command shown above.
+11. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again. Stop only on `[CANCEL]`, `[ESCALATE]`, or human direction.

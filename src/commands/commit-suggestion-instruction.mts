@@ -11,7 +11,7 @@ export function buildCommitSuggestionInstruction(
   prNumber: number,
   sectionName: string,
   includeDriftHint: boolean,
-): string {
+): string[] {
   const command = buildPrShepherdCommand([
     "build-suggestion-patch",
     String(prNumber),
@@ -22,7 +22,12 @@ export function buildCommitSuggestionInstruction(
     "--format=json",
   ]).text;
   const driftHint = includeDriftHint
-    ? " If the patch fails to apply (drift since the suggestion was written), fall through to the manual fix step."
-    : " If the patch fails to apply, fall through to the manual-edit step.";
-  return `For each thread marked \`[suggestion]\` under \`${sectionName}\`: run \`${command}\` to retrieve the patch and suggested commit. The CLI does not mutate the working tree — apply the patch yourself (run \`git apply\` with the diff shown, or edit the file directly using the line range), then stage the listed file and run the suggested \`git commit\` from the \`## Instructions\` section. Human-authored thread IDs are replied to by the apply command below; Shepherd does not auto-resolve them.${driftHint} Do not retry the same command.`;
+    ? "If the patch does not apply because the suggestion drifted, use the manual-fix step below. Do not retry the command."
+    : "If the patch does not apply, use the manual-edit step below. Do not retry the command.";
+  return [
+    `For each thread marked \`[suggestion]\` under \`${sectionName}\`, run \`${command}\` to retrieve its patch and suggested commit.`,
+    "The CLI only builds the patch. Apply it, stage the listed file, and follow the returned commit instructions.",
+    driftHint,
+    "Keep human-authored thread IDs in `apply review:` so Shepherd replies instead of resolving them.",
+  ];
 }

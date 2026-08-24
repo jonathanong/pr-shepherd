@@ -9,4 +9,4 @@ MARKED READY: PR #42 converted from draft to ready for review
 
 ## Instructions
 
-1. The CLI already marked the PR ready for review. No further action this tick — the poll loop reruns automatically.
+1. The CLI marked the PR ready for review. Continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again.

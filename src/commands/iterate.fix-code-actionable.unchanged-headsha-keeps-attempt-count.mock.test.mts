@@ -97,7 +97,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
       expect(joined).toContain("Shepherd Journal");
       expect(journalMentions).toBe(1);
       expect(joined).toContain("pr-shepherd apply journal");
-      expect(joined).toContain("idempotent");
+      expect(joined).not.toContain("idempotent");
     }
   });
 });

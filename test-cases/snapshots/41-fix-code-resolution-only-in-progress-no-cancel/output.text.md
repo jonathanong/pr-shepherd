@@ -21,9 +21,13 @@ Conversations Resolved: No [Not Required]
 
 ## Instructions
 
-1. Review the threads under `## Review threads to resolve`. Human-authored threads are replied to by the `apply review:` command shown below; Shepherd does not resolve them. Bot/non-human threads are included in `--resolve-thread-ids`.
-2. Before running the `apply review:` command, remove any thread from `--reply-thread-ids` if the latest visible comment in that thread is your own prior Shepherd reply. Do not reply to your own comments.
-3. Run the `apply review:` command shown above, substituting `$DISMISS_MESSAGE` with a one-sentence reply/description of what you changed.
-4. Items in `## First-look items` are shown so you can acknowledge their current status before acting. If a first-look thread also appears under `## Review threads to resolve`, its ID is already included in the `apply review:` command; otherwise do not pass first-look-only IDs to mutation flags.
-5. For any large decisions or rejections you made this iteration, run `pr-shepherd apply journal 42 '- <decision>'` to append an entry to the `## Shepherd Journal` section. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. The command is idempotent — re-running with the same text is a no-op.
-6. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
+1. Review every item under `## First-look items` before acting.
+2. If a first-look thread also appears under `## Review threads to resolve`, its ID is already in `apply review:`. Do not add first-look-only IDs to mutation flags.
+3. Review the threads under `## Review threads to resolve` before running mutations.
+4. Use the generated commands as shown. Human-authored IDs use `--reply-thread-ids`. Bot and non-human IDs use `--resolve-thread-ids`. Shepherd does not resolve human-authored threads.
+5. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+6. Link threads and comments from their headings. Cite reviews by ID.
+7. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
+8. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
+9. Run the `apply review:` command shown above.
+10. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again. Stop only on `[CANCEL]`, `[ESCALATE]`, or human direction.

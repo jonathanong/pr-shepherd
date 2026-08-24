@@ -1,10 +1,24 @@
 import { describe, it, expect } from "vitest";
-import { buildBehindBaseHintInstruction } from "./check-instructions.mts";
+import type { AgentCheck } from "../../types.mts";
+import {
+  buildBehindBaseHintInstruction,
+  buildFailingCheckInstructions,
+} from "./check-instructions.mts";
+
+function check(overrides: Partial<AgentCheck>): AgentCheck {
+  return {
+    name: "check",
+    runId: "123",
+    detailsUrl: "https://github.com/owner/repo/actions/runs/123",
+    conclusion: "FAILURE",
+    ...overrides,
+  };
+}
 
 describe("buildBehindBaseHintInstruction", () => {
   it("renders the hint when behind and configured", () => {
     expect(buildBehindBaseHintInstruction("main", "rebase --force-with-lease", true)).toEqual([
-      "The branch is behind `origin/main` — rebase --force-with-lease before pushing.",
+      "The branch is behind `origin/main`. rebase --force-with-lease before pushing.",
     ]);
   });
 
@@ -18,7 +32,7 @@ describe("buildBehindBaseHintInstruction", () => {
 
   it("trims surrounding whitespace from the configured hint", () => {
     expect(buildBehindBaseHintInstruction("main", "  rebase  ", true)).toEqual([
-      "The branch is behind `origin/main` — rebase before pushing.",
+      "The branch is behind `origin/main`. rebase before pushing.",
     ]);
   });
 
@@ -30,5 +44,28 @@ describe("buildBehindBaseHintInstruction", () => {
     // yaml parsing does not enforce the TS type at runtime (e.g. `behindBaseHint: true`).
     const malformed = true as unknown as string;
     expect(buildBehindBaseHintInstruction("main", malformed, true)).toEqual([]);
+  });
+});
+
+describe("buildFailingCheckInstructions", () => {
+  it("emits every mixed failure category once in deterministic order", () => {
+    const instructions = buildFailingCheckInstructions([
+      check({}),
+      check({ runId: "124", conclusion: "CANCELLED" }),
+      check({ runId: "125", conclusion: "STARTUP_FAILURE" }),
+      check({ runId: null, detailsUrl: "https://ci.example/check" }),
+      check({ runId: null, detailsUrl: null }),
+    ]);
+
+    expect(instructions).toEqual([
+      "For each GitHub Actions failure under `## Failing checks`, read the included log excerpt first.",
+      "If the excerpt is insufficient, run `gh run view <runId> --log-failed`. Open the run URL only if the API still lacks detail.",
+      "Rerun transient infrastructure failures with `gh run rerun <runId> --failed`. Apply a code fix for real test or build failures.",
+      "For each `[conclusion: CANCELLED]` failure, run `gh run rerun <runId>` unless this tick will push new commits.",
+      "Do not treat a cancelled failure as resolved. `## Cancelled runs` is a different section.",
+      "For each `[conclusion: STARTUP_FAILURE]` failure, inspect it with `gh run view <runId>` and rerun it with `gh run rerun <runId>` if warranted.",
+      "For each `external` failure, open its URL and inspect it.",
+      "For each `(no runId)` failure, escalate to a human because no log or URL is available.",
+    ]);
   });
 });

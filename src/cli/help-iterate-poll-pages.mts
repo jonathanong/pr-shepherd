@@ -18,11 +18,11 @@ Iterate flags:
 Durations accept s/m/h suffixes: 30s, 4.5m, 1h. A bare number is minutes; decimals are allowed only with an explicit unit (4.5m).
 
 Actions:
-  WAIT        No immediate code action; run another iterate tick later.
-  MARK_READY  Draft PR was marked ready for review.
-  FIX_CODE    Apply fixes, commit, push, and run the printed apply command.
-  CANCEL      Terminal state: merged/closed or ready-delay elapsed.
-  ESCALATE    Terminal state requiring human direction.
+  WAIT        No immediate action; continue with the next poll.
+  MARK_READY  Draft PR was marked ready; continue with the next poll.
+  FIX_CODE    Agent action is required; follow the instructions, then continue polling.
+  CANCEL      Stop polling: merged/closed or ready-delay elapsed.
+  ESCALATE    Stop polling until a human provides direction.
 
 Exit codes:
   0   CANCEL (merged or ready-delay elapsed)

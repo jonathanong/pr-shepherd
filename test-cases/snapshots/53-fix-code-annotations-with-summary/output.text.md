@@ -29,9 +29,12 @@ Conversations Resolved: Yes [Not Required]
 
 ## Instructions
 
-1. Decide for each item under `## Failing checks`, `## Check annotations` whether a code change is warranted. **If any code changes are needed:** apply edits, commit, push. **If no code changes are needed:** no push is needed.
-2. For each failing check under `## Failing checks`: for `external` entries: open the URL to inspect the failure.
-3. For each item under `## Check annotations`: inspect the referenced file range and decide whether the annotation requires a code change. These annotations are surfaced once per PR and do not need any resolve/minimize mutation.
-4. Review the bodies shown under `## Review summaries (first look)` — you are seeing these for the first time. Eligible non-human IDs, when present, are already included in `--minimize-comment-ids` in the `apply review:` or `resolve-only:` command above; if any warrants a Shepherd Journal note, append it before applying review mutations.
-5. For any large decisions or rejections you made this iteration, run `pr-shepherd apply journal 42 '- <decision>'` to append an entry to the `## Shepherd Journal` section. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. The command is idempotent — re-running with the same text is a no-op.
-6. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
+1. Review each item under `## Failing checks`, `## Check annotations` and decide whether it needs a code change.
+2. Review each body under `## Review summaries (first look)`. Eligible non-human IDs are already in `--minimize-comment-ids`. Record any warranted Shepherd Journal note before review mutations.
+3. For each `external` failure, open its URL and inspect it.
+4. Inspect every referenced range under `## Check annotations` and apply any warranted change.
+5. Do not add annotation IDs to resolve or minimize mutations.
+6. If you changed code, commit any remaining changes and push. Otherwise, do not commit or push.
+7. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+8. Link threads and comments from their headings. Cite reviews by ID.
+9. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again. Stop only on `[CANCEL]`, `[ESCALATE]`, or human direction.

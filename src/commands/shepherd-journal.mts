@@ -5,21 +5,20 @@ export const SHEPHERD_JOURNAL_APPEND_HINT =
   "If this section already exists, append your entries under it instead of creating a duplicate heading.";
 
 export const SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE =
-  "Review the bodies shown under `## Review summaries (first look)` — you are seeing these for the first time. Eligible non-human IDs, when present, are already included in `--minimize-comment-ids` in the `apply review:` or `resolve-only:` command above; if any warrants a Shepherd Journal note, append it before applying review mutations.";
+  "Review each body under `## Review summaries (first look)`. Eligible non-human IDs are already in `--minimize-comment-ids`. Record any warranted Shepherd Journal note before review mutations.";
 
 export function buildShepherdJournalInstruction(
   prNumber: number,
   itemReferenceGuidance: string,
-): string {
+): string[] {
   return [
-    `For any large decisions or rejections you made this iteration, run \`pr-shepherd apply journal ${prNumber} '- <decision>'\` to append an entry to the \`${SHEPHERD_JOURNAL_SECTION}\` section.`,
+    `For any substantial decision or rejection, append \`- <decision>\` to \`${SHEPHERD_JOURNAL_SECTION}\` with \`pr-shepherd apply journal ${prNumber} '- <decision>'\`.`,
     itemReferenceGuidance,
-    `The command is idempotent — re-running with the same text is a no-op.`,
-  ].join(" ");
+  ];
 }
 
 export const SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS =
-  "For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID.";
+  "Link threads and comments from their headings. Cite reviews by ID.";
 
 export const SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEMS =
-  "For threads and comments, use the markdown link shown in each item's bullet above; for reviews, reference the review ID.";
+  "Link threads and comments from their item bullets. Cite reviews by ID.";

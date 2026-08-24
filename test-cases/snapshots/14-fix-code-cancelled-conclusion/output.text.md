@@ -19,8 +19,11 @@ Conversations Resolved: Yes [Not Required]
 
 ## Instructions
 
-1. Decide for each item under `## Failing checks` whether a code change is warranted. **If any code changes are needed:** apply edits, commit, push. **If no code changes are needed:** no push is needed.
-2. For each failing check under `## Failing checks`: for `[conclusion: CANCELLED]` entries (not concurrency-superseded — see `**superseded**`): rerun with `gh run rerun <runId>` unless already pushing new commits this tick, in which case the fresh run supersedes it; don't treat as resolved — distinct from `## Cancelled runs`.
-3. Do not re-run `gh run cancel` on the IDs listed under `## Cancelled runs` — those runs were already cancelled by the CLI before this turn.
-4. For any large decisions or rejections you made this iteration, run `pr-shepherd apply journal 42 '- <decision>'` to append an entry to the `## Shepherd Journal` section. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. The command is idempotent — re-running with the same text is a no-op.
-5. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
+1. Review each item under `## Failing checks` and decide whether it needs a code change.
+2. Do not cancel the IDs under `## Cancelled runs` again. The CLI already cancelled them.
+3. For each `[conclusion: CANCELLED]` failure, run `gh run rerun <runId>` unless this tick will push new commits.
+4. Do not treat a cancelled failure as resolved. `## Cancelled runs` is a different section.
+5. If you changed code, commit any remaining changes and push. Otherwise, do not commit or push.
+6. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+7. Link threads and comments from their headings. Cite reviews by ID.
+8. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again. Stop only on `[CANCEL]`, `[ESCALATE]`, or human direction.

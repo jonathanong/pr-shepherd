@@ -21,7 +21,9 @@ describe("main — iterate text format", () => {
     expect(out).toMatch(/^# PR #42 \[WAIT\]\n/);
     expect(out).toContain("WAIT: 0 passing, 1 in-progress");
     expect(out).toContain("## Instructions");
-    expect(out).toContain("1. No action this tick — the poll loop reruns automatically.");
+    expect(out).toContain(
+      "1. No action is needed this tick. Continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again.",
+    );
   });
   it("mark_ready: heading includes [MARK_READY] tag and ## Instructions with end-iteration step", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("mark_ready"));
@@ -31,7 +33,7 @@ describe("main — iterate text format", () => {
     expect(out).toContain("MARKED READY: PR 42");
     expect(out).toContain("## Instructions");
     expect(out).toContain(
-      "1. The CLI already marked the PR ready for review. No further action this tick — the poll loop reruns automatically.",
+      "1. The CLI marked the PR ready for review. Continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again.",
     );
   });
   it("cancel: heading includes [CANCEL] tag with reason and ## Instructions with stop steps", async () => {
@@ -41,7 +43,7 @@ describe("main — iterate text format", () => {
     expect(out).toContain("# PR #42 [CANCEL]");
     expect(out).toContain("— ready-delay-elapsed");
     expect(out).toContain("## Instructions");
-    expect(out).toContain("1. Stop — the active goal is complete.");
+    expect(out).toContain("1. Stop — the PR loop is complete. No further polling is needed.");
   });
   it("escalate: heading, base/summary, humanMessage, then ## Instructions with stop steps", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("escalate"));
@@ -52,7 +54,7 @@ describe("main — iterate text format", () => {
     expect(out).toContain("⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required");
     expect(out).toContain("## Instructions");
     expect(out).toContain(
-      "1. Stop — the PR needs human direction before iterating can resume. This is a manual handoff; do not continue automated fix attempts.",
+      "1. Stop — human direction is required before automated polling can resume.",
     );
   });
   it("wait: surfaces --ready-delay override as a header field, not a rerun command", async () => {
@@ -68,7 +70,7 @@ describe("main — iterate text format", () => {
     );
     // The override is surfaced once on the summary line; the instruction stays a plain no-op.
     expect(out).toContain("**ready-delay** `15m` (override)");
-    expect(out).toContain("1. No action this tick — the poll loop reruns automatically.");
+    expect(out).toContain("1. No action is needed this tick. Continue with the next poll:");
     expect(out).not.toContain("Recheck");
     expect(out).not.toContain("auto-cancel");
   });
@@ -77,14 +79,14 @@ describe("main — iterate text format", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain(
-      "1. The CLI already marked the PR ready for review. No further action this tick — the poll loop reruns automatically.",
+      "1. The CLI marked the PR ready for review. Continue with the next poll:",
     );
   });
-  it("cancel: instructions say active goal is complete", async () => {
+  it("cancel: instructions say the PR loop is complete", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
-    expect(out).toContain("1. Stop — the active goal is complete.");
+    expect(out).toContain("1. Stop — the PR loop is complete. No further polling is needed.");
     expect(out).not.toContain("CronList");
     expect(out).not.toContain("/loop cancel");
   });
@@ -93,7 +95,7 @@ describe("main — iterate text format", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain(
-      "1. Stop — the PR needs human direction before iterating can resume. This is a manual handoff; do not continue automated fix attempts.",
+      "1. Stop — human direction is required before automated polling can resume.",
     );
     expect(out).not.toContain("CronList");
   });
@@ -111,7 +113,7 @@ describe("main — iterate text format", () => {
     expect(parsed.action).toBe("wait");
     expect(parsed.pr).toBe(42);
     expect(parsed.instructions).toEqual([
-      "No action this tick — the poll loop reruns automatically.",
+      "No action is needed this tick. Continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again.",
     ]);
   });
   it("cancel json: emits reason field so consumers can branch without parsing log", async () => {

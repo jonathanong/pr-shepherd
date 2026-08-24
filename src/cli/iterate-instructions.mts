@@ -5,17 +5,17 @@ export function buildSimpleIterateInstructions(
 ): string[] {
   switch (result.action) {
     case "wait":
-      return ["No action this tick — the poll loop reruns automatically."];
+      return [
+        "No action is needed this tick. Continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again.",
+      ];
     case "mark_ready":
       return [
-        "The CLI already marked the PR ready for review. No further action this tick — the poll loop reruns automatically.",
+        "The CLI marked the PR ready for review. Continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again.",
       ];
     case "cancel":
-      return ["Stop — the active goal is complete."];
+      return ["Stop — the PR loop is complete. No further polling is needed."];
     case "escalate":
-      return [
-        "Stop — the PR needs human direction before iterating can resume. This is a manual handoff; do not continue automated fix attempts.",
-      ];
+      return ["Stop — human direction is required before automated polling can resume."];
   }
 }
 

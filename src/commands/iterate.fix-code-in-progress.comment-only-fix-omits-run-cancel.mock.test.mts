@@ -62,8 +62,7 @@ describe("fix_code — in-progress run cancellation", () => {
       expect(result.fix.actionableComments).toHaveLength(1);
       // actionable comments may require code edits, so in-progress runs are surfaced
       expect(result.fix.inProgressRunIds).toContain("run-in-comment-only");
-      // Instruction is conditional ("If you decide to push") rather than mandatory
-      expect(result.fix.instructions.join("\n")).toMatch(/If you decide to push new commits/);
+      expect(result.fix.instructions.join("\n")).toContain("If you will push");
       // No prescriptive rebase commands
       expect(result.fix.instructions.join("\n")).not.toMatch(/git fetch origin && git rebase/);
     }
@@ -136,15 +135,10 @@ describe("fix_code — in-progress run cancellation", () => {
       expect(result.fix.resolveOnlyCommand?.argv).toContain("--minimize-comment-ids");
       expect(result.fix.resolveOnlyCommand?.argv).toContain("IC_comment_only_with_review");
       const instructions = result.fix.instructions.join("\n");
-      expect(instructions).toMatch(/If you decide to push new commits/);
-      // Commit/push guidance lives in the leading decision line; CLI no longer prescribes rebase
-      expect(instructions).toContain(
-        "**If any code changes are needed:** apply edits, commit, push",
-      );
+      expect(instructions).toContain("If you will push");
+      expect(instructions).toContain("If you changed code, commit any remaining changes and push");
       expect(instructions).not.toMatch(/rebase onto/);
-      expect(instructions).toContain(
-        "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
-      );
+      expect(instructions).toContain("`[FIX_CODE]` is non-terminal");
     }
   });
 });

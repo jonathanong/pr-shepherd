@@ -77,8 +77,7 @@ describe("fix_code — in-progress run cancellation", () => {
     if (result.action === "fix_code") {
       expect(result.fix.inProgressRunIds).toContain("run-in-1");
       expect(result.fix.inProgressRunIds).not.toContain("run-fail-1");
-      // Instruction is conditional on whether agent decides to push
-      expect(result.fix.instructions.join("\n")).toMatch(/If you decide to push new commits/);
+      expect(result.fix.instructions.join("\n")).toContain("If you will push");
     }
   });
   it("inProgressRunIds is empty for summary-only dispatch (no push possible, leave CI running)", async () => {

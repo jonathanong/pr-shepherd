@@ -16,9 +16,13 @@ Conversations Resolved: Yes [Not Required]
 
 ## Instructions
 
-1. Decide for each item under `## Changes-requested reviews` whether a code change is warranted. **If any code changes are needed:** apply edits, commit, push, then run the `apply review:` command. **If no code changes are needed:** skip the commit/push and run the `apply review:` command.
-2. For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes. `[pending dismissal — already surfaced]` bullets are bot CRs from a prior tick.
-3. Pass every ID listed in `--dismiss-review-ids` to the `apply review:` command verbatim — these are bot/non-human CR reviews that the agent (not the author) must dismiss. Dropping an ID leaves the PR in `CHANGES_REQUESTED` state; the next tick re-surfaces it as `[pending dismissal]` and an unattended bot CR escalates after `iterate.stallTimeoutMinutes`.
-4. Run the `apply review:` command shown above, substituting `$HEAD_SHA` with the pushed commit SHA (or `$(git rev-parse HEAD)` if you did not push) and `$DISMISS_MESSAGE` with a one-sentence reply/description of what you changed.
-5. For any large decisions or rejections you made this iteration, run `pr-shepherd apply journal 42 '- <decision>'` to append an entry to the `## Shepherd Journal` section. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. The command is idempotent — re-running with the same text is a no-op.
-6. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
+1. Review each item under `## Changes-requested reviews` and decide whether it needs a code change.
+2. Read every body under `## Changes-requested reviews` and apply any warranted change.
+3. Keep every existing `--dismiss-review-ids` ID in `apply review:`. Each is a bot or non-human review that must be dismissed. Omitting one leaves the PR in `CHANGES_REQUESTED`.
+4. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
+5. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+6. Link threads and comments from their headings. Cite reviews by ID.
+7. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
+8. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
+9. Run the `apply review:` command shown above.
+10. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again. Stop only on `[CANCEL]`, `[ESCALATE]`, or human direction.

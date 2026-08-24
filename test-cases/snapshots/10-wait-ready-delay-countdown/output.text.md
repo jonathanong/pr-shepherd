@@ -9,4 +9,4 @@ WAIT: 1 passing, 0 in-progress
 
 ## Instructions
 
-1. No action this tick — the poll loop reruns automatically.
+1. No action is needed this tick. Continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again.

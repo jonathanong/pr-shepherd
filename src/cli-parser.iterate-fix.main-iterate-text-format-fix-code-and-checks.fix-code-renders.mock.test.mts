@@ -197,7 +197,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     result.fix.instructions = [
       "Decide for each item under `## Changes-requested reviews` whether a code change is warranted.",
       "For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes. `[stale]` bullets are human CRs on an old commit; ask reviewer to re-review.",
-      "Stop this iteration.",
+      "`[FIX_CODE]` is non-terminal. Continue with the next poll.",
     ];
     mockRunIterate.mockResolvedValue(result);
 
