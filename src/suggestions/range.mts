@@ -1,6 +1,26 @@
-import { analyzeReplacementContext, splitFileLines } from "./lines.mts";
+import { analyzeReplacementContext, normalizeLine, splitFileLines } from "./lines.mts";
 import { getAdjacentSuggestionRangeReason } from "./range-adjacent.mts";
 import { findLineSequenceOffsets } from "./range-anchor.mts";
+
+function discardedContextContainsAnchorLine({
+  leadingLength,
+  removedLines,
+  replacementLines,
+  trailingLength,
+}: {
+  leadingLength: number;
+  removedLines: readonly string[];
+  replacementLines: readonly string[];
+  trailingLength: number;
+}): boolean {
+  if (removedLines.length < 2) return false;
+  const discardedLines = [
+    ...replacementLines.slice(0, leadingLength),
+    ...replacementLines.slice(replacementLines.length - trailingLength),
+  ];
+  const normalizedAnchorLines = new Set(removedLines.map(normalizeLine));
+  return discardedLines.some((line) => normalizedAnchorLines.has(normalizeLine(line)));
+}
 
 /**
  * Return why a suggestion body cannot be reconciled safely with GitHub's
@@ -42,6 +62,16 @@ export function getUnsafeSuggestionRangeReason({
     ).length;
     if (originalOccurrences > trimmedOccurrences) {
       return "Exact-context trimming would discard a complete copy of the anchored range, so the intended duplicate insertion is ambiguous.";
+    }
+    if (
+      discardedContextContainsAnchorLine({
+        leadingLength: contextTrim.leadingLength,
+        removedLines,
+        replacementLines,
+        trailingLength: contextTrim.trailingLength,
+      })
+    ) {
+      return "Exact-context trimming would discard a partial copy of the anchored range, so the intended duplicate insertion is ambiguous.";
     }
   }
 
