@@ -73,3 +73,103 @@ describe("getUnsafeSuggestionRangeReason — changed line counts", () => {
     ).toContain("partially rewrites a source block before");
   });
 });
+
+const internalSource = [
+  "const start = oldStart();",
+  "const middle = preserveThisValue();",
+  "return middle;",
+  "const finish = oldFinish();",
+];
+const internalReplacement = [
+  "const start = newStart();",
+  "const middle = preserveThisValue();",
+  "return middle;",
+  "const finish = newFinish();",
+];
+
+describe("getUnsafeSuggestionRangeReason — internal overlap", () => {
+  it.each([
+    {
+      name: "before the anchor",
+      originalContent: `${[...internalSource, "anchor"].join("\n")}\n`,
+      startLine: 5,
+      replacementLines: internalReplacement,
+      reason: "partially rewrites a source block before",
+    },
+    {
+      name: "after the anchor",
+      originalContent: `${["anchor", ...internalSource].join("\n")}\n`,
+      startLine: 1,
+      replacementLines: internalReplacement,
+      reason: "partially rewrites a source block after",
+    },
+    {
+      name: "after a retained anchor",
+      originalContent: `${["anchor", ...internalSource].join("\n")}\n`,
+      startLine: 1,
+      replacementLines: ["anchor", ...internalReplacement],
+      reason: "appears to rewrite source immediately after",
+    },
+    {
+      name: "before a retained anchor",
+      originalContent: `${[...internalSource, "anchor"].join("\n")}\n`,
+      startLine: 5,
+      replacementLines: [...internalReplacement, "anchor"],
+      reason: "appears to rewrite source immediately before",
+    },
+  ])("rejects copied internal lines $name", ({ reason, ...input }) => {
+    expect(getUnsafeSuggestionRangeReason({ ...input, endLine: input.startLine })).toContain(
+      reason,
+    );
+  });
+
+  it("detects copied internal lines after a shifted replacement line", () => {
+    expect(
+      getUnsafeSuggestionRangeReason({
+        originalContent: `${[...internalSource, "anchor"].join("\n")}\n`,
+        startLine: 5,
+        endLine: 5,
+        replacementLines: [
+          internalReplacement[0],
+          "const added = prepare();",
+          ...internalReplacement.slice(1),
+        ],
+      }),
+    ).toContain("partially rewrites a source block before");
+  });
+
+  it.each([
+    {
+      name: "only one substantive internal line matches",
+      source: [
+        "alphaOriginalBoundary();",
+        "const sharedValue = preserve();",
+        "omegaOriginalEnding();",
+      ],
+      replacement: [
+        "zetaReplacementOpening();",
+        "const sharedValue = preserve();",
+        "deltaReplacementClosing();",
+      ],
+    },
+    {
+      name: "the internal run includes a delimiter",
+      source: ["old boundary with detail", "}", "const sharedValue = preserve();", "old ending"],
+      replacement: [
+        "new boundary with detail",
+        "}",
+        "const sharedValue = preserve();",
+        "new ending",
+      ],
+    },
+  ])("accepts an ordinary replacement when $name", ({ source, replacement }) => {
+    expect(
+      getUnsafeSuggestionRangeReason({
+        originalContent: `${[...source, "anchor"].join("\n")}\n`,
+        startLine: source.length + 1,
+        endLine: source.length + 1,
+        replacementLines: replacement,
+      }),
+    ).toBeNull();
+  });
+});

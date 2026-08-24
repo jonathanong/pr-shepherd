@@ -27,6 +27,62 @@ function normalizeBlockText(lines: readonly string[]): string {
   return lines.map(normalizeLine).join(" ").trim().replace(/\s+/g, " ");
 }
 
+function normalizeSharedLine(line: string): string {
+  return normalizeLine(line).trim().replace(/\s+/g, " ");
+}
+
+function sharedInternalRunAt(
+  replacementLines: readonly string[],
+  adjacentLines: readonly string[],
+  replacementStart: number,
+  adjacentStart: number,
+): readonly string[] {
+  const sharedLines: string[] = [];
+  while (
+    replacementStart + sharedLines.length < replacementLines.length - 1 &&
+    adjacentStart + sharedLines.length < adjacentLines.length - 1
+  ) {
+    const replacement = normalizeSharedLine(
+      replacementLines[replacementStart + sharedLines.length]!,
+    );
+    const adjacent = normalizeSharedLine(adjacentLines[adjacentStart + sharedLines.length]!);
+    if (replacement !== adjacent) break;
+    sharedLines.push(replacement);
+  }
+  return sharedLines;
+}
+
+function isSubstantiveSharedRun(sharedLines: readonly string[]): boolean {
+  return (
+    sharedLines.length >= 2 &&
+    sharedLines.every((line) => /[A-Za-z0-9]/.test(line) && line.replace(/\s/g, "").length >= 8) &&
+    sharedLines.join("").replace(/\s/g, "").length >= 24
+  );
+}
+
+function hasSubstantiveInternalOverlap(
+  replacementLines: readonly string[],
+  adjacentLines: readonly string[],
+): boolean {
+  if (replacementLines.length < 4 || adjacentLines.length < 4) return false;
+  for (
+    let replacementStart = 1;
+    replacementStart < replacementLines.length - 1;
+    replacementStart++
+  ) {
+    for (let adjacentStart = 1; adjacentStart < adjacentLines.length - 1; adjacentStart++) {
+      if (
+        isSubstantiveSharedRun(
+          sharedInternalRunAt(replacementLines, adjacentLines, replacementStart, adjacentStart),
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 export function likelyRewritesAdjacentSpan(
   replacementLines: readonly string[],
   adjacentLines: readonly string[],
@@ -38,5 +94,9 @@ export function likelyRewritesAdjacentSpan(
   }
   const replacement = normalizeBlockText(replacementLines);
   const adjacent = normalizeBlockText(adjacentLines);
-  return replacement === adjacent || closelyRewritesText(replacement, adjacent);
+  return (
+    replacement === adjacent ||
+    closelyRewritesText(replacement, adjacent) ||
+    hasSubstantiveInternalOverlap(replacementLines, adjacentLines)
+  );
 }
