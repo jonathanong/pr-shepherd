@@ -1,4 +1,10 @@
 import { normalizeLine } from "./lines.mts";
+import {
+  hasLetterOrNumber,
+  isSubstantiveExactAlignedBlock,
+  isSubstantiveLine,
+  isSubstantiveSharedRun,
+} from "./range-substantive.mts";
 
 function closelyRewritesText(replacement: string, adjacent: string): boolean {
   const shorterLength = Math.min(replacement.length, adjacent.length);
@@ -46,16 +52,6 @@ function sharedInternalRunAt(
     sharedLines.push(replacement);
   }
   return sharedLines;
-}
-
-const hasLetterOrNumber = (line: string): boolean => /[\p{L}\p{N}]/u.test(line);
-
-const isSubstantiveLine = (line: string): boolean =>
-  hasLetterOrNumber(line) && line.replace(/\s/g, "").length >= 8;
-
-function isSubstantiveSharedRun(sharedLines: readonly string[]): boolean {
-  const substantiveLines = sharedLines.filter(isSubstantiveLine);
-  return substantiveLines.length >= 2 && substantiveLines.join("").replace(/\s/g, "").length >= 24;
 }
 
 function hasSubstantiveInternalOverlap(
@@ -161,6 +157,10 @@ function likelyRewritesChangedWindow(
     const candidate = replacementLines.slice(start, start + length);
     if (isMixedAlignedRewrite(candidate, adjacentSpan)) return true;
     if (isChangedWithUnrelatedSubstantiveNeighbors(candidate, adjacentSpan)) return true;
+    const isProperSubrange = start > 0 || start + length < replacementLines.length;
+    if (isProperSubrange && isSubstantiveExactAlignedBlock(candidate, adjacentSpan)) {
+      return true;
+    }
     if (!candidate.every(isSubstantiveLine) || !adjacentSpan.every(isSubstantiveLine)) continue;
     const hasExactLine = candidate.some(
       (line, index) => normalizeSharedLine(line) === normalizeSharedLine(adjacentSpan[index]!),

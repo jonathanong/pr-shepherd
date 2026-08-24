@@ -152,4 +152,30 @@ describe("getUnsafeSuggestionRangeReason — ambiguous context trim", () => {
       }),
     ).toBeNull();
   });
+
+  it.each([
+    {
+      name: "trailing delimiter context",
+      originalContent: "function oldName() {\n}\n}\n",
+      startLine: 1,
+      endLine: 2,
+      replacementLines: ["function newName() {", "}", "}"],
+    },
+    {
+      name: "leading delimiter context",
+      originalContent: "}\nfunction oldName() {\n}\n",
+      startLine: 2,
+      endLine: 3,
+      replacementLines: ["}", "function newName() {", "}"],
+    },
+    {
+      name: "CRLF trailing delimiter context",
+      originalContent: "function oldName() {\r\n}\r\n}\r\n",
+      startLine: 1,
+      endLine: 2,
+      replacementLines: ["function newName() {", "}", "}"],
+    },
+  ])("accepts a renamed multi-line anchor with $name", ({ name: _name, ...input }) => {
+    expect(getUnsafeSuggestionRangeReason(input)).toBeNull();
+  });
 });

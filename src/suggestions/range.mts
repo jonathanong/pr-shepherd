@@ -1,6 +1,7 @@
 import { analyzeReplacementContext, normalizeLine, splitFileLines } from "./lines.mts";
 import { getAdjacentSuggestionRangeReason } from "./range-adjacent.mts";
 import { findLineSequenceOffsets } from "./range-anchor.mts";
+import { hasLetterOrNumber } from "./range-substantive.mts";
 
 function discardedContextContainsAnchorLine({
   leadingLength,
@@ -18,7 +19,7 @@ function discardedContextContainsAnchorLine({
     ...replacementLines.slice(0, leadingLength),
     ...replacementLines.slice(replacementLines.length - trailingLength),
   ];
-  const normalizedAnchorLines = new Set(removedLines.map(normalizeLine));
+  const normalizedAnchorLines = new Set(removedLines.map(normalizeLine).filter(hasLetterOrNumber));
   return discardedLines.some((line) => normalizedAnchorLines.has(normalizeLine(line)));
 }
 
