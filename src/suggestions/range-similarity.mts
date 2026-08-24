@@ -137,11 +137,10 @@ function isMixedAlignedRewrite(
   return false;
 }
 
-function isChangedWithUnrelatedSubstantivePair(
+function isChangedWithUnrelatedSubstantiveNeighbors(
   candidate: readonly string[],
   adjacentSpan: readonly string[],
 ): boolean {
-  if (candidate.length !== 2 || adjacentSpan.length !== 2) return false;
   if (!candidate.every(isSubstantiveLine) || !adjacentSpan.every(isSubstantiveLine)) return false;
   const relations = new Set(
     candidate.map((line, index) => alignedLineRelation(line, adjacentSpan[index]!)),
@@ -157,7 +156,7 @@ function likelyRewritesChangedWindow(
   for (let start = 0; start <= replacementLines.length - length; start++) {
     const candidate = replacementLines.slice(start, start + length);
     if (isMixedAlignedRewrite(candidate, adjacentSpan)) return true;
-    if (isChangedWithUnrelatedSubstantivePair(candidate, adjacentSpan)) return true;
+    if (isChangedWithUnrelatedSubstantiveNeighbors(candidate, adjacentSpan)) return true;
     if (!candidate.every(isSubstantiveLine) || !adjacentSpan.every(isSubstantiveLine)) continue;
     const hasExactLine = candidate.some(
       (line, index) => normalizeSharedLine(line) === normalizeSharedLine(adjacentSpan[index]!),
