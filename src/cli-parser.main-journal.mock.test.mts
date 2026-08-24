@@ -49,7 +49,7 @@ afterEach(() => {
 describe("main — journal text output", () => {
   it("prints created message when section did not exist", async () => {
     await main(["node", "shepherd", "journal", "42", "- Decision."]);
-    expect(getStdout()).toContain("Created ## Shepherd Journal");
+    expect(getStdout()).toContain("Created Shepherd Journal details");
     expect(getStdout()).toContain("PR #42");
     expect(process.exitCode).toBeUndefined();
     expect(stderrSpy).toHaveBeenCalledWith(
@@ -60,7 +60,7 @@ describe("main — journal text output", () => {
   it("prints appended message when section existed", async () => {
     mockRunJournal.mockResolvedValue({ ...HAPPY_RESULT, sectionExisted: true });
     await main(["node", "shepherd", "journal", "42", "- Decision."]);
-    expect(getStdout()).toContain("Appended to ## Shepherd Journal");
+    expect(getStdout()).toContain("Appended to Shepherd Journal details");
   });
 
   it("routes the canonical apply journal command", async () => {
@@ -83,11 +83,11 @@ describe("main — journal text output", () => {
     mockRunJournal.mockResolvedValue({
       ...HAPPY_RESULT,
       dryRun: true,
-      previewBody: "## Shepherd Journal\n\n- Decision.",
+      previewBody: "<details>\n<summary>Shepherd Journal</summary>\n\n- Decision.\n</details>",
     });
     await main(["node", "shepherd", "journal", "42", "- Decision.", "--dry-run"]);
     expect(getStdout()).toContain("Dry run");
-    expect(getStdout()).toContain("## Shepherd Journal");
+    expect(getStdout()).toContain("<summary>Shepherd Journal</summary>");
   });
 
   it("prints dry-run message without preview when previewBody is absent", async () => {

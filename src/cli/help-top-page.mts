@@ -19,7 +19,7 @@ Commands:
   iterate              Run one iterate tick (single-tick alias).
   apply review         Apply review-state mutations after fixes.
   apply files          Mark changed files as viewed in GitHub.
-  apply journal        Append a list item to the ## Shepherd Journal section of a PR body.
+  apply journal        Append a list item to the Shepherd Journal details block of a PR body.
   build-suggestion-patch
                        Convert one GitHub suggestion thread into a patch and commit instructions.
   admin clean          Remove pr-shepherd state files.

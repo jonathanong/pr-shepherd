@@ -72,7 +72,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
     if (result.action === "fix_code") {
       expect(result.fix.checks).toHaveLength(1);
       const joined = result.fix.instructions.join("\n");
-      const mentions = joined.match(/## Shepherd Journal/g)?.length ?? 0;
+      const mentions = joined.match(/append `- <decision>` to Shepherd Journal/g)?.length ?? 0;
       expect(mentions).toBe(1);
       expect(joined).toContain("Shepherd Journal");
     }

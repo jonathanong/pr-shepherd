@@ -10,7 +10,7 @@ export function formatJournalResult(result: JournalResult): string {
   }
   if (!result.mutated) return "No change — entry already present.";
   if (!result.sectionExisted) {
-    return `Created ## Shepherd Journal section in PR #${result.prNumber}.`;
+    return `Created Shepherd Journal details in PR #${result.prNumber}.`;
   }
-  return `Appended to ## Shepherd Journal in PR #${result.prNumber}.`;
+  return `Appended to Shepherd Journal details in PR #${result.prNumber}.`;
 }

@@ -20,7 +20,7 @@ Conversations Resolved: Yes [Not Required]
 2. Read every body under `## Changes-requested reviews` and apply any warranted change.
 3. Keep every existing `--dismiss-review-ids` ID in `apply review:`. Each is a bot or non-human review that must be dismissed. Omitting one leaves the PR in `CHANGES_REQUESTED`.
 4. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
-5. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`.
 6. Link threads and comments from their headings. Cite reviews by ID.
 7. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
 8. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.

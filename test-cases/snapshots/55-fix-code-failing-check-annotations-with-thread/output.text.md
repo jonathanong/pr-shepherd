@@ -36,7 +36,7 @@ Conversations Resolved: No [Not Required]
 4. Inspect every referenced range under `## Check annotations` and apply any warranted change.
 5. Do not add annotation IDs to resolve or minimize mutations.
 6. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
-7. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+7. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`.
 8. Link threads and comments from their headings. Cite reviews by ID.
 9. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
 10. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.

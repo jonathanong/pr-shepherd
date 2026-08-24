@@ -45,7 +45,7 @@ Conversations Resolved: No [Not Required]
 6. Rerun transient infrastructure failures with `gh run rerun <runId> --failed`. Apply a code fix for real test or build failures.
 7. Read every body under `## Changes-requested reviews` and apply any warranted change.
 8. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
-9. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+9. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`.
 10. Link threads and comments from their headings. Cite reviews by ID.
 11. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
 12. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.

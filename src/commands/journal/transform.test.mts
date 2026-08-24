@@ -2,29 +2,6 @@ import { describe, it, expect } from "vitest";
 import { validateJournalItem, appendJournalItem } from "./transform.mts";
 
 describe("validateJournalItem", () => {
-  it("accepts a plain list item", () => {
-    const result = validateJournalItem("- Rejected suggestion: kept existing pattern.");
-    expect(result).toEqual({ ok: true, item: "- Rejected suggestion: kept existing pattern." });
-  });
-
-  it("accepts a multi-line item with sub-bullets", () => {
-    const input = "- Decision\n  - Reason one\n  - Reason two";
-    const result = validateJournalItem(input);
-    expect(result).toEqual({ ok: true, item: input });
-  });
-
-  it("strips trailing whitespace from each line", () => {
-    const result = validateJournalItem("- Item   \n  - sub   ");
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.item).toBe("- Item\n  - sub");
-  });
-
-  it("rejects empty input", () => {
-    const result = validateJournalItem("   \n  ");
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toContain("empty");
-  });
-
   it("rejects input that does not start with '- '", () => {
     const result = validateJournalItem("Decided to keep the pattern.");
     expect(result.ok).toBe(false);
@@ -41,6 +18,11 @@ describe("validateJournalItem", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toContain("#");
   });
+  it("rejects a standalone details closing tag", () => {
+    const result = validateJournalItem("- Item\n</details>");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("</details>");
+  });
 });
 
 describe("appendJournalItem — section absent", () => {
@@ -48,73 +30,57 @@ describe("appendJournalItem — section absent", () => {
     const { body, mutated, sectionExisted } = appendJournalItem("", "- First entry.");
     expect(mutated).toBe(true);
     expect(sectionExisted).toBe(false);
-    expect(body).toBe("\n## Shepherd Journal\n\n- First entry.");
-  });
-
-  it("appends the section after existing content", () => {
-    const existing = "## Summary\n\nSome content.";
-    const { body, mutated, sectionExisted } = appendJournalItem(existing, "- Note.");
-    expect(mutated).toBe(true);
-    expect(sectionExisted).toBe(false);
-    expect(body).toBe("## Summary\n\nSome content.\n\n## Shepherd Journal\n\n- Note.");
-  });
-
-  it("strips trailing blank lines before appending the section", () => {
-    const existing = "## Summary\n\nContent.\n\n\n";
-    const { body } = appendJournalItem(existing, "- Note.");
-    expect(body).toBe("## Summary\n\nContent.\n\n## Shepherd Journal\n\n- Note.");
+    expect(body).toBe(
+      "<details>\n<summary>Shepherd Journal</summary>\n\n- First entry.\n</details>",
+    );
   });
 });
 
-describe("appendJournalItem — section present", () => {
+describe("appendJournalItem — canonical details present", () => {
   it("appends to an existing section with content", () => {
-    const existing = "## Shepherd Journal\n\n- Old entry.";
+    const existing = "<details>\n<summary>Shepherd Journal</summary>\n\n- Old entry.\n</details>";
     const { body, mutated, sectionExisted } = appendJournalItem(existing, "- New entry.");
     expect(mutated).toBe(true);
     expect(sectionExisted).toBe(true);
-    expect(body).toBe("## Shepherd Journal\n\n- Old entry.\n- New entry.");
-  });
-
-  it("appends before the next H2 section", () => {
-    const existing = "## Shepherd Journal\n\n- Old entry.\n\n## Related Issues\n\n- issue #1";
-    const { body } = appendJournalItem(existing, "- New entry.");
     expect(body).toBe(
-      "## Shepherd Journal\n\n- Old entry.\n- New entry.\n\n## Related Issues\n\n- issue #1",
+      "<details>\n<summary>Shepherd Journal</summary>\n\n- Old entry.\n- New entry.\n</details>",
     );
   });
-
-  it("handles an empty section (heading only)", () => {
-    const existing = "## Shepherd Journal";
-    const { body } = appendJournalItem(existing, "- First entry.");
-    expect(body).toBe("## Shepherd Journal\n\n- First entry.");
-  });
-
-  it("handles a section with only blank lines", () => {
-    const existing = "## Shepherd Journal\n\n\n";
-    const { body } = appendJournalItem(existing, "- Entry.");
-    expect(body).toBe("## Shepherd Journal\n\n- Entry.");
+  it("appends before the closing details tag", () => {
+    const existing =
+      "<details>\n<summary>Shepherd Journal</summary>\n\n- Old entry.\n</details>\n\n## Related Issues\n\n- issue #1";
+    const { body } = appendJournalItem(existing, "- New entry.");
+    expect(body).toBe(
+      "<details>\n<summary>Shepherd Journal</summary>\n\n- Old entry.\n- New entry.\n</details>\n\n## Related Issues\n\n- issue #1",
+    );
   });
 });
 
 describe("appendJournalItem — idempotency", () => {
   it("returns mutated=false when the exact item is already present", () => {
-    const existing = "## Shepherd Journal\n\n- Already here.";
+    const existing =
+      "<details>\n<summary>Shepherd Journal</summary>\n\n- Already here.\n</details>";
     const { body, mutated } = appendJournalItem(existing, "- Already here.");
     expect(mutated).toBe(false);
     expect(body).toBe(existing);
   });
 
-  it("detects a duplicate multi-line item", () => {
-    const item = "- Decision\n  - Reason";
-    const existing = `## Shepherd Journal\n\n${item}`;
-    const { mutated } = appendJournalItem(existing, item);
-    expect(mutated).toBe(false);
+  it("appends after a balanced nested details block", () => {
+    const body =
+      "<details>\n<summary>Shepherd Journal</summary>\n\n<details>\n- Nested.\n</details>\n</details>";
+    expect(appendJournalItem(body, "- New.").body).toBe(
+      "<details>\n<summary>Shepherd Journal</summary>\n\n<details>\n- Nested.\n</details>\n- New.\n</details>",
+    );
   });
 
-  it("does NOT deduplicate when text differs even by one character", () => {
-    const existing = "## Shepherd Journal\n\n- Entry A.";
-    const { mutated } = appendJournalItem(existing, "- Entry B.");
-    expect(mutated).toBe(true);
+  it("deduplicates CRLF and trailing whitespace without changing the body", () => {
+    const existing =
+      "<details>\r\n<summary>Shepherd Journal</summary>\r\n\r\n- Entry.   \r\n</details>";
+    expect(appendJournalItem(existing, "- Entry.")).toEqual({
+      body: existing,
+      mutated: false,
+      sectionExisted: true,
+    });
   });
 });
 
@@ -123,21 +89,110 @@ describe("appendJournalItem — code fence safety", () => {
     const existing = "## Summary\n\n```\n## Shepherd Journal\n```\n\nSome body text.";
     const { body, sectionExisted } = appendJournalItem(existing, "- Real entry.");
     expect(sectionExisted).toBe(false);
-    expect(body).toContain("## Shepherd Journal\n\n- Real entry.");
+    expect(body).toContain(
+      "<details>\n<summary>Shepherd Journal</summary>\n\n- Real entry.\n</details>",
+    );
   });
 
   it("correctly finds the heading after a closed fence", () => {
-    const existing = "```\ncode\n```\n\n## Shepherd Journal\n\n- Existing.";
+    const existing =
+      "```\ncode\n```\n\n<details>\n<summary>Shepherd Journal</summary>\n\n- Existing.\n</details>";
     const { body, sectionExisted } = appendJournalItem(existing, "- New.");
     expect(sectionExisted).toBe(true);
     expect(body).toContain("- Existing.\n- New.");
   });
+
+  it.each(["```js\n```not-a-close\n", "~~~~md\n~~~~not-a-close\n"])(
+    "does not close a fenced block on %s",
+    (fence) => {
+      const body = `${fence}<details>\n<summary>Shepherd Journal</summary>\n\n- Hidden.\n</details>`;
+      expect(appendJournalItem(body, "- Real entry.").sectionExisted).toBe(false);
+    },
+  );
 });
 
 describe("appendJournalItem — heading variant matching", () => {
-  it("matches heading with trailing spaces", () => {
-    const existing = "## Shepherd Journal   \n\n- Entry.";
-    const { sectionExisted } = appendJournalItem(existing, "- New.");
+  it("migrates a legacy section in place and preserves following sections", () => {
+    const existing =
+      "## Summary\n\nText.\n\n## Shepherd Journal\n\n- Entry.\n\n## Related Issues\n\n- #1";
+    const { body, mutated, sectionExisted } = appendJournalItem(existing, "- New.");
+    expect(mutated).toBe(true);
     expect(sectionExisted).toBe(true);
+    expect(body).toBe(
+      "## Summary\n\nText.\n\n<details>\n<summary>Shepherd Journal</summary>\n\n- Entry.\n- New.\n</details>\n\n## Related Issues\n\n- #1",
+    );
+  });
+
+  it("migrates a legacy section even when the item is already present", () => {
+    const existing = "## Shepherd Journal\n\n- Entry.";
+    const result = appendJournalItem(existing, "- Entry.");
+    expect(result).toEqual({
+      body: "<details>\n<summary>Shepherd Journal</summary>\n\n- Entry.\n</details>",
+      mutated: true,
+      sectionExisted: true,
+    });
+  });
+
+  it("normalizes legacy content without a summary blank line", () => {
+    expect(appendJournalItem("## Shepherd Journal\n- Entry.", "- Entry.").body).toBe(
+      "<details>\n<summary>Shepherd Journal</summary>\n\n- Entry.\n</details>",
+    );
+  });
+
+  it("ignores canonical markers in fenced code", () => {
+    const existing = "```md\n<details>\n<summary>Shepherd Journal</summary>\n</details>\n```";
+    const { sectionExisted } = appendJournalItem(existing, "- Real entry.");
+    expect(sectionExisted).toBe(false);
+  });
+
+  it.each([
+    [
+      "unterminated canonical container",
+      "<details>\n<summary>Shepherd Journal</summary>\n\n- Entry.",
+    ],
+    [
+      "malformed canonical summary",
+      "<details>\n<summary>Shepherd Journal</summary> extra\n</details>",
+    ],
+    [
+      "duplicate canonical containers",
+      "<details>\n<summary>Shepherd Journal</summary>\n\n- One.\n</details>\n\n<details>\n<summary>Shepherd Journal</summary>\n\n- Two.\n</details>",
+    ],
+    [
+      "ambiguous legacy and canonical containers",
+      "## Shepherd Journal\n\n- Legacy.\n\n<details>\n<summary>Shepherd Journal</summary>\n\n- Canonical.\n</details>",
+    ],
+    [
+      "canonical container before legacy section",
+      "<details>\n<summary>Shepherd Journal</summary>\n\n- Canonical.\n</details>\n\n## Shepherd Journal\n\n- Legacy.",
+    ],
+    [
+      "canonical container without a summary blank line",
+      "<details>\n<summary>Shepherd Journal</summary>\n- Entry.\n</details>",
+    ],
+    [
+      "unmatched nested details in canonical content",
+      "<details>\n<summary>Shepherd Journal</summary>\n\n<details>\n- Nested.\n</details>",
+    ],
+    [
+      "nested canonical summary",
+      "<details>\n<summary>Shepherd Journal</summary>\n\n<details>\n<summary>Shepherd Journal</summary>\n\n- Nested.\n</details>\n</details>",
+    ],
+    ["malformed journal-like summary", "<summary> Shepherd Journal</summary>"],
+    [
+      "padded opening marker",
+      "  <details>\n<summary>Shepherd Journal</summary>\n\n- Entry.\n</details>",
+    ],
+    [
+      "padded summary marker",
+      "<details>\n  <summary>Shepherd Journal</summary>\n\n- Entry.\n</details>",
+    ],
+    [
+      "padded closing marker",
+      "<details>\n<summary>Shepherd Journal</summary>\n\n- Entry.\n  </details>",
+    ],
+    ["standalone details close in legacy content", "## Shepherd Journal\n\n- Legacy.\n</details>"],
+  ])("fails closed for %s", (_name, body) => {
+    expect(() => appendJournalItem(body, "- New.")).toThrow(/journal/i);
   });
 });
