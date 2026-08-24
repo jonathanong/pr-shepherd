@@ -1,6 +1,5 @@
 import { normalizeLine } from "./lines.mts";
 
-// Near-copy matches are ambiguous, so risky spans take the manual path.
 function closelyRewritesText(replacement: string, adjacent: string): boolean {
   const shorterLength = Math.min(replacement.length, adjacent.length);
   let prefixLength = 0;
@@ -166,7 +165,8 @@ function likelyRewritesChangedWindow(
     const hasExactLine = candidate.some(
       (line, index) => normalizeSharedLine(line) === normalizeSharedLine(adjacentSpan[index]!),
     );
-    if (!hasExactLine && likelyRewritesAdjacentSpan(candidate, adjacentSpan, true)) return true;
+    if (length > 8 || hasExactLine) continue;
+    if (likelyRewritesAdjacentSpan(candidate, adjacentSpan, true)) return true;
   }
   return false;
 }
@@ -190,7 +190,7 @@ export function likelyRewritesChangedLineSubrange(
     }
   }
 
-  const maxLength = Math.min(8, replacementLines.length);
+  const maxLength = Math.min(replacementLines.length, adjacentSpans.length);
   for (let length = 2; length <= maxLength; length++) {
     const adjacentSpan = adjacentSpans.find((span) => span.length === length);
     if (adjacentSpan === undefined) continue;

@@ -1,9 +1,10 @@
-import { normalizeLine } from "./lines.mts";
 import { findLineSequenceOffsets } from "./range-anchor.mts";
+import { sharesExactProperPrefix, sharesExactProperSuffix } from "./range-exact-overlap.mts";
 import {
   likelyRewritesChangedLineSubrange,
   likelyRewritesAdjacentSpan,
 } from "./range-similarity.mts";
+import { createScanWorkBudget, type ChargeScanWork } from "./range-work.mts";
 
 function adjacentSpansBefore(
   fileLines: readonly string[],
@@ -11,7 +12,7 @@ function adjacentSpansBefore(
   replacementLineCount: number,
 ): readonly string[][] {
   const endIndex = startLine - 1;
-  const limit = Math.min(endIndex, 8, Math.max(2, replacementLineCount * 2));
+  const limit = Math.min(endIndex, Math.max(2, replacementLineCount * 2));
   return Array.from({ length: limit }, (_, index) =>
     fileLines.slice(endIndex - index - 1, endIndex),
   );
@@ -22,7 +23,7 @@ function adjacentSpansAfter(
   endLine: number,
   replacementLineCount: number,
 ): readonly string[][] {
-  const limit = Math.min(fileLines.length - endLine, 8, Math.max(2, replacementLineCount * 2));
+  const limit = Math.min(fileLines.length - endLine, Math.max(2, replacementLineCount * 2));
   return Array.from({ length: limit }, (_, index) => fileLines.slice(endLine, endLine + index + 1));
 }
 
@@ -32,60 +33,13 @@ function likelyRewritesAdjacentSource(
   allowSingleLinePair: boolean,
 ): boolean {
   if (
-    adjacentSpans.some((span) =>
-      likelyRewritesAdjacentSpan(replacementLines, span, allowSingleLinePair),
-    )
+    adjacentSpans
+      .slice(0, 8)
+      .some((span) => likelyRewritesAdjacentSpan(replacementLines, span, allowSingleLinePair))
   ) {
     return true;
   }
   return likelyRewritesChangedLineSubrange(replacementLines, adjacentSpans);
-}
-
-function sharedExactPrefixLength(
-  replacementLines: readonly string[],
-  adjacentLines: readonly string[],
-): number {
-  const limit = Math.min(replacementLines.length, adjacentLines.length);
-  let length = 0;
-  while (
-    length < limit &&
-    normalizeLine(replacementLines[length]!) === normalizeLine(adjacentLines[length]!)
-  ) {
-    length++;
-  }
-  return length;
-}
-
-function sharedExactSuffixLength(
-  replacementLines: readonly string[],
-  adjacentLines: readonly string[],
-): number {
-  const limit = Math.min(replacementLines.length, adjacentLines.length);
-  let length = 0;
-  while (
-    length < limit &&
-    normalizeLine(replacementLines[replacementLines.length - 1 - length]!) ===
-      normalizeLine(adjacentLines[adjacentLines.length - 1 - length]!)
-  ) {
-    length++;
-  }
-  return length;
-}
-
-function sharesExactProperPrefix(
-  replacementLines: readonly string[],
-  adjacentLines: readonly string[],
-): boolean {
-  const sharedLength = sharedExactPrefixLength(replacementLines, adjacentLines);
-  return sharedLength > 0 && sharedLength < replacementLines.length;
-}
-
-function sharesExactProperSuffix(
-  replacementLines: readonly string[],
-  adjacentLines: readonly string[],
-): boolean {
-  const sharedLength = sharedExactSuffixLength(replacementLines, adjacentLines);
-  return sharedLength > 0 && sharedLength < replacementLines.length;
 }
 
 function extensionRewritesAfter(
@@ -129,17 +83,25 @@ function retainedAnchorRewriteDirection(
   startLine: number,
   endLine: number,
   replacementLines: readonly string[],
-): "before" | "after" | "ambiguous" | null {
+  chargeScanWork: ChargeScanWork,
+): "before" | "after" | "ambiguous" | "work" | "safe" | null {
   const offsets = findLineSequenceOffsets(replacementLines, removedLines);
   // Bound repeated extension scans while rejecting ambiguous bodies safely.
   if (offsets.length * replacementLines.length > 4_096) return "ambiguous";
+  if (offsets.length === 0) return null;
   for (const offset of offsets) {
     const before = replacementLines.slice(0, offset);
     const after = replacementLines.slice(offset + removedLines.length);
+    if (chargeScanWork(after.length, fileLines.length - endLine)) return "work";
     if (extensionRewritesAfter(fileLines, endLine, after)) return "after";
+    if (chargeScanWork(after.length, startLine - 1)) return "work";
+    if (extensionRewritesBefore(fileLines, startLine, after)) return "before";
+    if (chargeScanWork(before.length, startLine - 1)) return "work";
     if (extensionRewritesBefore(fileLines, startLine, before)) return "before";
+    if (chargeScanWork(before.length, fileLines.length - endLine)) return "work";
+    if (extensionRewritesAfter(fileLines, endLine, before)) return "after";
   }
-  return null;
+  return "safe";
 }
 
 export function getAdjacentSuggestionRangeReason({
@@ -155,12 +117,14 @@ export function getAdjacentSuggestionRangeReason({
   endLine: number;
   replacementLines: readonly string[];
 }): string | null {
+  const chargeScanWork = createScanWorkBudget();
   const retainedAnchorDirection = retainedAnchorRewriteDirection(
     fileLines,
     removedLines,
     startLine,
     endLine,
     replacementLines,
+    chargeScanWork,
   );
   if (retainedAnchorDirection === "after") {
     return "The replacement retains the complete anchored range and appears to rewrite source immediately after it.";
@@ -171,6 +135,13 @@ export function getAdjacentSuggestionRangeReason({
   if (retainedAnchorDirection === "ambiguous") {
     return "The replacement repeats the complete anchored range too many times to validate its surrounding source safely.";
   }
+  if (retainedAnchorDirection === "work") {
+    return "The replacement and adjacent source require too much similarity work to validate the anchored range safely.";
+  }
+  if (retainedAnchorDirection === "safe") return null;
+  if (chargeScanWork(replacementLines.length, startLine - 1)) {
+    return "The replacement and adjacent source require too much similarity work to validate the anchored range safely.";
+  }
   if (
     likelyRewritesAdjacentSource(
       replacementLines,
@@ -179,6 +150,9 @@ export function getAdjacentSuggestionRangeReason({
     )
   ) {
     return "The replacement partially rewrites a source block before the anchored range.";
+  }
+  if (chargeScanWork(replacementLines.length, fileLines.length - endLine)) {
+    return "The replacement and adjacent source require too much similarity work to validate the anchored range safely.";
   }
   if (
     likelyRewritesAdjacentSource(

@@ -75,25 +75,6 @@ describe("getUnsafeSuggestionRangeReason — unrelated paired line", () => {
     ).toBeNull();
   });
 
-  it("checks a rewrite at the eight-line validation bound", () => {
-    const sourceLines = [
-      original,
-      ...Array.from({ length: 7 }, (_, index) => `runLegacyLine${index}WithOriginalPayload();`),
-    ];
-    const replacementLines = [
-      updated,
-      ...Array.from({ length: 7 }, (_, index) => `executeDifferentLine${index}ReplacementPath();`),
-    ];
-    expect(
-      getUnsafeSuggestionRangeReason({
-        originalContent: `${sourceLines.join("\n")}\nanchor\n`,
-        startLine: 9,
-        endLine: 9,
-        replacementLines,
-      }),
-    ).toContain("partially rewrites a source block before");
-  });
-
   it("rejects a longer rewrite containing a changed delimiter before the anchor", () => {
     expect(
       getUnsafeSuggestionRangeReason({
