@@ -5,12 +5,7 @@
  * `git apply --check` accept it without a `diff --git` preamble.
  */
 
-const normalizeLine = (line: string): string => (line.endsWith("\r") ? line.slice(0, -1) : line);
-
-function splitFileLines(originalContent: string): string[] {
-  const body = originalContent.endsWith("\n") ? originalContent.slice(0, -1) : originalContent;
-  return body === "" ? [] : body.split("\n");
-}
+import { normalizeLine, splitFileLines } from "./lines.mts";
 
 /**
  * Strip leading/trailing replacement lines that are identical to the adjacent

@@ -1,9 +1,4 @@
-const normalizeLine = (line: string): string => (line.endsWith("\r") ? line.slice(0, -1) : line);
-
-function splitFileLines(originalContent: string): string[] {
-  const body = originalContent.endsWith("\n") ? originalContent.slice(0, -1) : originalContent;
-  return body === "" ? [] : body.split("\n");
-}
+import { normalizeLine, splitFileLines } from "./lines.mts";
 
 function linesEqual(left: readonly string[], right: readonly string[]): boolean {
   return (
@@ -26,6 +21,43 @@ function partiallyRewritesAdjacentBlock(
     return false;
   }
   return !linesEqual(replacementLines, adjacentLines);
+}
+
+function closelyRewritesLine(replacementLine: string, adjacentLine: string): boolean {
+  const replacement = normalizeLine(replacementLine);
+  const adjacent = normalizeLine(adjacentLine);
+  if (replacement === adjacent) return false;
+
+  const shorterLength = Math.min(replacement.length, adjacent.length);
+  if (shorterLength < 16) return false;
+
+  let prefixLength = 0;
+  while (prefixLength < shorterLength && replacement[prefixLength] === adjacent[prefixLength]) {
+    prefixLength++;
+  }
+
+  let suffixLength = 0;
+  while (
+    prefixLength + suffixLength < shorterLength &&
+    replacement[replacement.length - 1 - suffixLength] ===
+      adjacent[adjacent.length - 1 - suffixLength]
+  ) {
+    suffixLength++;
+  }
+
+  return prefixLength + suffixLength >= Math.ceil(shorterLength * 0.6);
+}
+
+function ambiguouslyRewritesAdjacentLines(
+  replacementLines: readonly string[],
+  adjacentLines: readonly string[],
+): boolean {
+  return (
+    replacementLines.length > 0 &&
+    replacementLines.length === adjacentLines.length &&
+    !linesEqual(replacementLines, adjacentLines) &&
+    replacementLines.some((line, index) => closelyRewritesLine(line, adjacentLines[index]!))
+  );
 }
 
 /**
@@ -62,8 +94,20 @@ export function getUnsafeSuggestionRangeReason({
   if (replacementLines.length > removedLines.length) {
     const leadingAnchor = replacementLines.slice(0, removedLines.length);
     const trailingAnchor = replacementLines.slice(-removedLines.length);
-    if (linesEqual(leadingAnchor, removedLines) || linesEqual(trailingAnchor, removedLines)) {
-      return "The replacement reproduces the complete anchored range while extending beyond it.";
+    if (linesEqual(leadingAnchor, removedLines)) {
+      const extension = replacementLines.slice(removedLines.length);
+      const adjacentLines = fileLines.slice(endLine, endLine + extension.length);
+      if (ambiguouslyRewritesAdjacentLines(extension, adjacentLines)) {
+        return "The replacement retains the complete anchored range and appears to rewrite source immediately after it.";
+      }
+    }
+    if (linesEqual(trailingAnchor, removedLines)) {
+      const extension = replacementLines.slice(0, -removedLines.length);
+      const adjacentStart = startLine - 1 - extension.length;
+      const adjacentLines = adjacentStart < 0 ? [] : fileLines.slice(adjacentStart, startLine - 1);
+      if (ambiguouslyRewritesAdjacentLines(extension, adjacentLines)) {
+        return "The replacement retains the complete anchored range and appears to rewrite source immediately before it.";
+      }
     }
   }
 

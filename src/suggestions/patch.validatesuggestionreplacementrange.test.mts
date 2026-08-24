@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { getUnsafeSuggestionRangeReason } from "../../test-helpers/suggestions/patch.test-support.mts";
+import {
+  buildUnifiedDiff,
+  getUnsafeSuggestionRangeReason,
+} from "../../test-helpers/suggestions/patch.test-support.mts";
 
 describe("getUnsafeSuggestionRangeReason", () => {
   it.each([
@@ -31,8 +34,34 @@ describe("getUnsafeSuggestionRangeReason", () => {
       endLine: 2,
       replacementLines: ["B", "inserted"],
     },
+    {
+      name: "insertion after a retained anchor",
+      originalContent: "a\nanchor\nc\n",
+      startLine: 2,
+      endLine: 2,
+      replacementLines: ["anchor", "inserted"],
+    },
+    {
+      name: "insertion before a retained anchor",
+      originalContent: "a\nanchor\nc\n",
+      startLine: 2,
+      endLine: 2,
+      replacementLines: ["inserted", "anchor"],
+    },
   ])("accepts a valid $name", ({ name: _name, ...input }) => {
     expect(getUnsafeSuggestionRangeReason(input)).toBeNull();
+  });
+
+  it("builds a replacement patch for an insertion after a retained anchor", () => {
+    const input = {
+      originalContent: "a\nanchor\nc\n",
+      startLine: 2,
+      endLine: 2,
+      replacementLines: ["anchor", "inserted"],
+    };
+
+    expect(getUnsafeSuggestionRangeReason(input)).toBeNull();
+    expect(buildUnifiedDiff({ path: "f.ts", ...input })).toContain("-anchor\n+anchor\n+inserted\n");
   });
 
   it("keeps exact outside-context trimming compatible with issue #294", () => {
@@ -50,7 +79,7 @@ describe("getUnsafeSuggestionRangeReason", () => {
     ).toBeNull();
   });
 
-  it("rejects a replacement that replays the complete anchor and extends past it", () => {
+  it("rejects a retained anchor followed by an apparent rewrite of the adjacent line", () => {
     expect(
       getUnsafeSuggestionRangeReason({
         originalContent:
@@ -63,7 +92,7 @@ describe("getUnsafeSuggestionRangeReason", () => {
           "  { loading: PostsLoading, name: 'posts', showFooter: undefined },",
         ],
       }),
-    ).toContain("reproduces the complete anchored range");
+    ).toContain("appears to rewrite source immediately after");
   });
 
   it("rejects a partial rewrite of a same-sized block before the anchor", () => {
@@ -118,14 +147,31 @@ describe("getUnsafeSuggestionRangeReason", () => {
     ).toContain("invalid or out-of-bounds range");
   });
 
-  it("normalizes CRLF while detecting an anchored-range replay", () => {
+  it("normalizes CRLF while detecting an apparent adjacent rewrite", () => {
     expect(
       getUnsafeSuggestionRangeReason({
-        originalContent: "anchor\r\nnext\r\n",
+        originalContent: "anchor\r\nconst value = computeOriginalThing();\r\n",
         startLine: 1,
         endLine: 1,
-        replacementLines: ["anchor", "replacement"],
+        replacementLines: ["anchor", "const value = computeUpdatedThing();"],
       }),
-    ).toContain("reproduces the complete anchored range");
+    ).toContain("appears to rewrite source immediately after");
+  });
+
+  it("treats an LF-only blank file as one replaceable line", () => {
+    const input = {
+      originalContent: "\n",
+      startLine: 1,
+      endLine: 1,
+      replacementLines: ["filled"],
+    };
+
+    expect(getUnsafeSuggestionRangeReason(input)).toBeNull();
+    expect(
+      buildUnifiedDiff({
+        path: "blank.txt",
+        ...input,
+      }),
+    ).toContain("@@ -1,1 +1,1 @@\n-\n+filled\n");
   });
 });
