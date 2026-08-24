@@ -102,6 +102,34 @@ export function likelyRewritesAdjacentSpan(
   );
 }
 
+function alignedLineRelation(
+  replacementLine: string,
+  adjacentLine: string,
+): "exact" | "changed" | null {
+  if (!isSubstantiveLine(replacementLine) || !isSubstantiveLine(adjacentLine)) return null;
+  const replacement = normalizeSharedLine(replacementLine);
+  const adjacent = normalizeSharedLine(adjacentLine);
+  if (replacement === adjacent) return "exact";
+  return closelyRewritesText(replacement, adjacent) ? "changed" : null;
+}
+
+function isMixedAlignedRewrite(
+  candidate: readonly string[],
+  adjacentSpan: readonly string[],
+): boolean {
+  for (let index = 0; index < candidate.length - 1; index++) {
+    const first = alignedLineRelation(candidate[index]!, adjacentSpan[index]!);
+    const second = alignedLineRelation(candidate[index + 1]!, adjacentSpan[index + 1]!);
+    if (
+      (first === "exact" && second === "changed") ||
+      (first === "changed" && second === "exact")
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function likelyRewritesChangedProperWindow(
   replacementLines: readonly string[],
   adjacentSpan: readonly string[],
@@ -109,7 +137,8 @@ function likelyRewritesChangedProperWindow(
   const length = adjacentSpan.length;
   for (let start = 0; start <= replacementLines.length - length; start++) {
     const candidate = replacementLines.slice(start, start + length);
-    if (!candidate.every(isSubstantiveLine)) continue;
+    if (isMixedAlignedRewrite(candidate, adjacentSpan)) return true;
+    if (!candidate.every(isSubstantiveLine) || !adjacentSpan.every(isSubstantiveLine)) continue;
     const hasExactLine = candidate.some(
       (line, index) => normalizeSharedLine(line) === normalizeSharedLine(adjacentSpan[index]!),
     );
@@ -139,7 +168,7 @@ export function likelyRewritesChangedLineSubrange(
   const maxLength = Math.min(8, replacementLines.length - 1);
   for (let length = 2; length <= maxLength; length++) {
     const adjacentSpan = adjacentSpans.find((span) => span.length === length);
-    if (!adjacentSpan?.every(isSubstantiveLine)) continue;
+    if (adjacentSpan === undefined) continue;
     if (likelyRewritesChangedProperWindow(replacementLines, adjacentSpan)) return true;
   }
   return false;
