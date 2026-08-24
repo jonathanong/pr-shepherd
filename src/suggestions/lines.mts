@@ -51,12 +51,12 @@ function largestPermittedContextTrim({
  * Strip leading/trailing replacement lines that exactly duplicate file lines
  * immediately outside the anchored range.
  */
-export function trimReplacementToContext(
+export function analyzeReplacementContext(
   fileLines: readonly string[],
   startLine: number,
   endLine: number,
   replacementLines: readonly string[],
-): readonly string[] {
+) {
   const removedLines = fileLines.slice(startLine - 1, endLine);
   const leadingMayBeAnchor =
     removedLines.length > 0 &&
@@ -85,6 +85,16 @@ export function trimReplacementToContext(
     removedLines,
   });
 
-  if (leadingLength === 0 && trailingLength === 0) return replacementLines;
-  return trailingLength === 0 ? remainder : remainder.slice(0, -trailingLength);
+  const trimmedLines = trailingLength === 0 ? remainder : remainder.slice(0, -trailingLength);
+  return { leadingLength, replacementLines: trimmedLines, trailingLength };
+}
+
+export function trimReplacementToContext(
+  fileLines: readonly string[],
+  startLine: number,
+  endLine: number,
+  replacementLines: readonly string[],
+): readonly string[] {
+  return analyzeReplacementContext(fileLines, startLine, endLine, replacementLines)
+    .replacementLines;
 }
