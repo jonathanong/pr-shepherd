@@ -163,6 +163,10 @@ describe("appendJournalItem — heading variant matching", () => {
       "## Shepherd Journal\n\n- Legacy.\n\n<details>\n<summary>Shepherd Journal</summary>\n\n- Canonical.\n</details>",
     ],
     [
+      "canonical container before legacy section",
+      "<details>\n<summary>Shepherd Journal</summary>\n\n- Canonical.\n</details>\n\n## Shepherd Journal\n\n- Legacy.",
+    ],
+    [
       "canonical container without a summary blank line",
       "<details>\n<summary>Shepherd Journal</summary>\n- Entry.\n</details>",
     ],
