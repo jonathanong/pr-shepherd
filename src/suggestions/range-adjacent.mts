@@ -77,6 +77,25 @@ function extensionRewritesBefore(
   );
 }
 
+type SourceDirection = "before" | "after";
+
+function scanExtension(
+  fileLines: readonly string[],
+  startLine: number,
+  endLine: number,
+  extension: readonly string[],
+  direction: SourceDirection,
+  chargeScanWork: ChargeScanWork,
+): SourceDirection | "work" | null {
+  const available = direction === "before" ? startLine - 1 : fileLines.length - endLine;
+  if (chargeScanWork(extension.length, available)) return "work";
+  const rewrites =
+    direction === "before"
+      ? extensionRewritesBefore(fileLines, startLine, extension)
+      : extensionRewritesAfter(fileLines, endLine, extension);
+  return rewrites ? direction : null;
+}
+
 function retainedAnchorRewriteDirection(
   fileLines: readonly string[],
   removedLines: readonly string[],
@@ -92,14 +111,23 @@ function retainedAnchorRewriteDirection(
   for (const offset of offsets) {
     const before = replacementLines.slice(0, offset);
     const after = replacementLines.slice(offset + removedLines.length);
-    if (chargeScanWork(after.length, fileLines.length - endLine)) return "work";
-    if (extensionRewritesAfter(fileLines, endLine, after)) return "after";
-    if (chargeScanWork(after.length, startLine - 1)) return "work";
-    if (extensionRewritesBefore(fileLines, startLine, after)) return "before";
-    if (chargeScanWork(before.length, startLine - 1)) return "work";
-    if (extensionRewritesBefore(fileLines, startLine, before)) return "before";
-    if (chargeScanWork(before.length, fileLines.length - endLine)) return "work";
-    if (extensionRewritesAfter(fileLines, endLine, before)) return "after";
+    const scans = [
+      [after, "after"],
+      [after, "before"],
+      [before, "before"],
+      [before, "after"],
+    ] as const;
+    for (const [extension, direction] of scans) {
+      const result = scanExtension(
+        fileLines,
+        startLine,
+        endLine,
+        extension,
+        direction,
+        chargeScanWork,
+      );
+      if (result !== null) return result;
+    }
   }
   return "safe";
 }
