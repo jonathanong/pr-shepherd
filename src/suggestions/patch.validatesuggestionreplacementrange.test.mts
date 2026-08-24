@@ -71,6 +71,18 @@ describe("getUnsafeSuggestionRangeReason", () => {
     expect(buildUnifiedDiff({ path: "f.ts", ...input })).toContain("-anchor\n+anchor\n+inserted\n");
   });
 
+  it("preserves a retained anchor that duplicates the preceding context", () => {
+    const input = {
+      originalContent: "same\nsame\nnext\n",
+      startLine: 2,
+      endLine: 2,
+      replacementLines: ["same", "inserted"],
+    };
+
+    expect(getUnsafeSuggestionRangeReason(input)).toBeNull();
+    expect(buildUnifiedDiff({ path: "f.ts", ...input })).toContain("-same\n+same\n+inserted\n");
+  });
+
   it("keeps exact outside-context trimming compatible with issue #294", () => {
     const originalContent =
       ["finish({", "  code: a,", "  retryable: b,", "  isStall: x,", "  hung,", "})"].join("\n") +

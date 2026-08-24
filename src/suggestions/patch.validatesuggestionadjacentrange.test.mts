@@ -95,6 +95,20 @@ describe("getUnsafeSuggestionRangeReason — adjacent source", () => {
     expect(patch).not.toContain("+other line\n");
   });
 
+  it("accepts fully exact adjacent context followed by a retained anchor", () => {
+    const input = {
+      originalContent: "previous line\nother line\nanchor\n",
+      startLine: 3,
+      endLine: 3,
+      replacementLines: ["previous line", "other line", "anchor"],
+    };
+    expect(getUnsafeSuggestionRangeReason(input)).toBeNull();
+
+    const patch = buildUnifiedDiff({ path: "f.ts", ...input });
+    expect(patch).not.toContain("+previous line\n");
+    expect(patch).not.toContain("+other line\n");
+  });
+
   it("rejects a partial rewrite of a same-sized block before the anchor", () => {
     expect(
       getUnsafeSuggestionRangeReason({

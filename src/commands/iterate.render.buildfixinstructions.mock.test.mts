@@ -64,9 +64,13 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(text).toContain("refuses for any reason");
+    expect(text).toContain("refuses because the suggestion is unsafe");
     expect(text).toContain("nested/unbalanced suggestion fences");
     expect(text).toContain("do not apply the replacement block verbatim");
+    expect(text).toContain("follow the CLI error's stated recovery action");
+    expect(text).toContain("do not manually edit the suggestion");
+    expect(text.match(/follow the CLI error's stated recovery action/g)).toHaveLength(1);
+    expect(text).not.toContain("refuses for any reason");
     expect(text).toContain("source drift prevents a generated suggestion patch from applying");
     expect(text).toContain("replace the heading's exact `path:startLine-endLine` range");
   });
