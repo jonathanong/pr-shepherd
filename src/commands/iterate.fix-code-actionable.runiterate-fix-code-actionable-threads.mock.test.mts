@@ -114,9 +114,8 @@ describe("runIterate — fix_code (actionable threads)", () => {
       expect(result.fix.checks).toHaveLength(0);
       expect(result.cancelled).toHaveLength(0);
       const joined = result.fix.instructions.join("\n");
-      // push with no cancelled → stop-iteration but no no-recancel warning
-      expect(joined).toContain("Stop this iteration");
-      expect(joined).not.toContain("Do not re-run");
+      expect(joined).toContain("`[FIX_CODE]` is non-terminal");
+      expect(joined).not.toContain("## Cancelled runs");
     }
   });
 });

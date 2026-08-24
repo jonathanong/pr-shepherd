@@ -10,6 +10,18 @@ import { main } from "./cli-parser.mts";
 registerHooks();
 
 describe("main — iterate text format (fix_code and checks)", () => {
+  it("fix_code JSON preserves the caller's single-tick CLI mode and flags", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("fix_code"));
+
+    await main(["node", "shepherd", "iterate", "42", "--format=json"]);
+    const parsed = JSON.parse(getStdout().trimEnd());
+
+    expect(parsed.fix.instructions.at(-1)).toContain(
+      "rerun the current `pr-shepherd` CLI invocation with its flags",
+    );
+    expect(parsed.fix.instructions.at(-1)).not.toContain("run the default");
+  });
+
   it("fix_code: renders '## Review IDs to minimize queue' for seen summary IDs", async () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
@@ -197,7 +209,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     result.fix.instructions = [
       "Decide for each item under `## Changes-requested reviews` whether a code change is warranted.",
       "For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes. `[stale]` bullets are human CRs on an old commit; ask reviewer to re-review.",
-      "Stop this iteration.",
+      "`[FIX_CODE]` is non-terminal. Continue with the next poll.",
     ];
     mockRunIterate.mockResolvedValue(result);
 

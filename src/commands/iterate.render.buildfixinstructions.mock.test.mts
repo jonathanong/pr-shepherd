@@ -7,6 +7,29 @@ import { buildFixInstructions } from "./iterate/render.mts";
 registerIterateHooks();
 
 describe("buildFixInstructions", () => {
+  it("keeps an otherwise empty fix_code action non-terminal", () => {
+    const instructions = buildFixInstructions(
+      [],
+      [],
+      [],
+      [],
+      "main",
+      {
+        argv: ["pr-shepherd", "resolve", "42"],
+        requiresHeadSha: false,
+        requiresDismissMessage: false,
+        hasMutations: false,
+      },
+      false,
+      42,
+      0,
+    );
+
+    expect(instructions).toEqual([
+      "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.",
+    ]);
+  });
+
   it("adds edited guidance for edited first-look threads", () => {
     const instructions = buildFixInstructions(
       [],
@@ -43,7 +66,7 @@ describe("buildFixInstructions", () => {
       ],
     );
 
-    expect(instructions.join("\n")).toContain("were updated by their author");
+    expect(instructions.join("\n")).toContain("edited first-look bullets");
   });
 
   it("treats changes-requested reviews as review-only when no threads/checks exist", () => {
@@ -73,19 +96,20 @@ describe("buildFixInstructions", () => {
 
     const text = instructions.join("\n");
     expect(text).toContain(
-      "For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.",
+      "Read every body under `## Changes-requested reviews` and apply any warranted change.",
     );
-    // Conditional commit/push phrasing lives in the leading decision line (agent decides if
-    // code edits are needed); there is no longer a separate prescriptive commit/rebase step.
-    expect(text).toContain("**If any code changes are needed:** apply edits, commit, push");
+    expect(text).toContain("If you changed code, commit any remaining changes and push");
     // CLI no longer prescribes rebase mechanics — that is the caller's convention.
     expect(text).not.toContain("rebase onto");
-    // resolve substitution uses backtick-quoted $HEAD_SHA with fallback
-    expect(text).toContain("substituting `$HEAD_SHA` with the pushed commit SHA");
-    // New stop sentinel
-    expect(text).toContain(
-      "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
+    expect(text).toContain("Replace `$HEAD_SHA` with the pushed commit SHA");
+    expect(instructions.at(-2)).toBe("Run the `apply review:` command shown above.");
+    expect(instructions.at(-1)).toBe(
+      "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.",
     );
+    expect(text).toContain(
+      "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll",
+    );
+    expect(text).not.toContain("Stop this iteration");
     // Old prescriptive git commands gone
     expect(text).not.toContain("Commit changed files:");
     expect(text).not.toContain("Rebase and push:");
@@ -117,8 +141,7 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    // Always includes "pushed commit SHA" with unpushed fallback
-    expect(text).toContain("substituting `$HEAD_SHA` with the pushed commit SHA");
+    expect(text).toContain("Replace `$HEAD_SHA` with the pushed commit SHA");
     expect(text).toContain("$(git rev-parse HEAD)");
   });
 
@@ -148,19 +171,17 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    // New conditional phrasing in the decision line — no prescriptive git commands
-    expect(text).toContain("**If any code changes are needed:** apply edits, commit, push");
+    expect(text).toContain("If you changed code, commit any remaining changes and push");
     // CLI no longer prescribes rebase mechanics or names origin/main
     expect(text).not.toContain("rebase onto");
     expect(text).not.toContain("origin/main");
-    expect(text).toContain("substituting `$HEAD_SHA` with the pushed commit SHA");
+    expect(text).toContain("Replace `$HEAD_SHA` with the pushed commit SHA");
     // No prescriptive git command lines
     expect(text).not.toContain("git add");
     expect(text).not.toContain("git fetch origin");
     expect(text).not.toContain("git push --force-with-lease");
-    // New stop sentinel
     expect(text).toContain(
-      "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll",
     );
   });
 
@@ -191,18 +212,16 @@ describe("buildFixInstructions", () => {
 
     const text = instructions.join("\n");
     expect(text).toContain(
-      "For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.",
+      "Read every body under `## Changes-requested reviews` and apply any warranted change.",
     );
-    // Conditional phrasing in the decision line — agent decides whether code edits are needed
-    expect(text).toContain("**If any code changes are needed:** apply edits, commit, push");
+    expect(text).toContain("If you changed code, commit any remaining changes and push");
     // No old prescriptive commands
     expect(text).not.toContain("Commit changed files:");
     expect(text).not.toContain("Rebase and push:");
     expect(text).not.toContain("git add");
     expect(text).not.toContain("git push --force-with-lease");
-    // New stop sentinel
     expect(text).toContain(
-      "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll",
     );
   });
 
@@ -244,7 +263,7 @@ describe("buildFixInstructions", () => {
     const text = instructions.join("\n");
     expect(text).toContain("`## Check annotations`");
     expect(text).not.toContain("`## Failing checks`");
-    expect(text).toContain("For each item under `## Check annotations`");
+    expect(text).toContain("Inspect every referenced range under `## Check annotations`");
     expect(text).not.toContain("For each failing check");
   });
 
@@ -285,7 +304,7 @@ describe("buildFixInstructions", () => {
 
     const text = instructions.join("\n");
     expect(text).toContain("`## Failing checks`, `## Check annotations`");
-    expect(text).toContain("For each item under `## Check annotations`");
+    expect(text).toContain("Inspect every referenced range under `## Check annotations`");
   });
 
   it("renders the configured behind-base hint when the branch is behind", () => {
@@ -317,7 +336,7 @@ describe("buildFixInstructions", () => {
 
     const text = instructions.join("\n");
     expect(text).toContain(
-      "The branch is behind `origin/main` — rebase --force-with-lease before pushing.",
+      "The branch is behind `origin/main`. rebase --force-with-lease before pushing.",
     );
   });
 

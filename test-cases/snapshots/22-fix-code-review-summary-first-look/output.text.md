@@ -17,5 +17,7 @@ Conversations Resolved: Yes [Not Required]
 
 ## Instructions
 
-1. Review the bodies shown under `## Review summaries (first look)` — you are seeing these for the first time. Eligible non-human IDs, when present, are already included in `--minimize-comment-ids` in the `apply review:` or `resolve-only:` command above; if any warrants a Shepherd Journal note, append it before applying review mutations.
-2. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
+1. Review each body under `## Review summaries (first look)`. Eligible non-human IDs are already in `--minimize-comment-ids`. Record any warranted Shepherd Journal note before review mutations.
+2. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+3. Link threads and comments from their headings. Cite reviews by ID.
+4. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.

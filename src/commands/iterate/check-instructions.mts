@@ -2,13 +2,10 @@ import type { AgentCheck, ResolveCommand, Review } from "../../types.mts";
 
 /** Build the stale-CR clause appended to the `## Changes-requested reviews` instruction. */
 export function buildCrStaleClause(reviews: Review[]): string {
-  const bot = reviews.some((r) => r.staleBotCr)
-    ? " `[pending dismissal — already surfaced]` bullets are bot CRs from a prior tick."
-    : "";
   const human = reviews.some((r) => r.staleReview && !r.staleBotCr)
-    ? " `[stale]` bullets are human CRs on an old commit; ask reviewer to re-review."
+    ? " `[stale]` bullets are human CRs on an old commit. Ask the reviewer to re-review."
     : "";
-  return bot + human;
+  return human;
 }
 
 /**
@@ -27,7 +24,7 @@ export function buildBehindBaseHintInstruction(
 ): string[] {
   const trimmedHint = typeof hint === "string" ? hint.trim() : "";
   if (!isBehind || trimmedHint === "") return [];
-  return [`The branch is behind \`origin/${baseBranch}\` — ${trimmedHint} before pushing.`];
+  return [`The branch is behind \`origin/${baseBranch}\`. ${trimmedHint} before pushing.`];
 }
 
 /** Build the `Run the apply review: command` instruction, including its optional substitution hint. */
@@ -36,23 +33,18 @@ export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): 
   const instructions: string[] = [];
   if ((resolveCommand.replyThreadIds?.length ?? 0) > 0) {
     instructions.push(
-      `Before running the \`apply review:\` command, remove any thread from \`--reply-thread-ids\` if the latest visible comment in that thread is your own prior Shepherd reply. Do not reply to your own comments.`,
+      "Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.",
     );
   }
-  const substituteParts: string[] = [];
   if (resolveCommand.requiresHeadSha) {
-    substituteParts.push(
-      `\`$HEAD_SHA\` with the pushed commit SHA (or \`$(git rev-parse HEAD)\` if you did not push)`,
+    instructions.push(
+      "Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.",
     );
   }
   if (resolveCommand.requiresDismissMessage) {
-    substituteParts.push(
-      `\`$DISMISS_MESSAGE\` with a one-sentence reply/description of what you changed`,
-    );
+    instructions.push("Replace `$DISMISS_MESSAGE` with one sentence describing what changed.");
   }
-  const substituteHint =
-    substituteParts.length > 0 ? `, substituting ${substituteParts.join(" and ")}` : "";
-  instructions.push(`Run the \`apply review:\` command shown above${substituteHint}.`);
+  instructions.push("Run the `apply review:` command shown above.");
   return instructions;
 }
 
@@ -66,28 +58,41 @@ export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   const hasExternal = checks.some((c) => !c.runId && c.detailsUrl);
   const hasBare = checks.some((c) => !c.runId && !c.detailsUrl);
 
-  const parts: string[] = [];
+  const instructions: string[] = [];
   if (hasRunId) {
-    parts.push(
-      "read any included log excerpt first; fetch the full log with `gh run view <runId> --log-failed` if insufficient; rerun with `gh run rerun <runId> --failed` for transient infra failures, or apply a code fix for real test/build failures; if API/log output lacks detail, open the run URL in the GitHub UI",
+    instructions.push(
+      "For each GitHub Actions failure under `## Failing checks`, read the included log excerpt first.",
+      "If the excerpt is insufficient, run `gh run view <runId> --log-failed`. Open the run URL only if the API still lacks detail.",
+      "Rerun transient infrastructure failures with `gh run rerun <runId> --failed`. Apply a code fix for real test or build failures.",
     );
   }
   if (hasCancelled) {
-    parts.push(
-      "for `[conclusion: CANCELLED]` entries (not concurrency-superseded — see `**superseded**`): rerun with `gh run rerun <runId>` unless already pushing new commits this tick, in which case the fresh run supersedes it; don't treat as resolved — distinct from `## Cancelled runs`",
+    instructions.push(
+      "For each `[conclusion: CANCELLED]` failure, run `gh run rerun <runId>` unless this tick will push new commits.",
+      "Do not treat a cancelled failure as resolved. `## Cancelled runs` is a different section.",
     );
   }
   if (hasStartupFailure) {
-    parts.push(
-      "for `[conclusion: STARTUP_FAILURE]` entries: inspect with `gh run view <runId>`, rerun with `gh run rerun <runId>` if warranted",
+    instructions.push(
+      "For each `[conclusion: STARTUP_FAILURE]` failure, inspect it with `gh run view <runId>` and rerun it with `gh run rerun <runId>` if warranted.",
     );
   }
   if (hasExternal) {
-    parts.push("for `external` entries: open the URL to inspect the failure");
+    instructions.push("For each `external` failure, open its URL and inspect it.");
   }
   if (hasBare) {
-    parts.push("for `(no runId)` entries: no log or URL available — escalate to a human");
+    instructions.push(
+      "For each `(no runId)` failure, escalate to a human because no log or URL is available.",
+    );
   }
 
-  return [`For each failing check under \`## Failing checks\`: ${parts.join("; ")}.`];
+  return instructions;
+}
+
+export function buildFixCompletionInstruction(checks: AgentCheck[]): string {
+  const requiresHumanHandoff = checks.some((check) => !check.runId && !check.detailsUrl);
+  if (requiresHumanHandoff) {
+    return "`[FIX_CODE]` requires a human handoff for an uninspectable failing check. Stop polling after escalating, and resume only after human direction.";
+  }
+  return "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.";
 }

@@ -17,6 +17,9 @@ Conversations Resolved: Yes [Not Required]
 
 ## Instructions
 
-1. The branch has merge conflicts that must be resolved before merging (see `**branch**` above). Resolve them and push.
-2. Items marked `[edited since first look]`, items under `## Review summaries (edited since first look)`, and any first-look bullet tagged `, edited` were updated by their author after you previously acknowledged them. Read the updated body before deciding whether any matching `## Review threads to resolve` item should be resolved.
-3. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
+1. The branch has merge conflicts (see `**branch**` above). Resolve them before committing and pushing.
+2. Read every item marked `[edited since first look]`, including edited summaries and edited first-look bullets, before deciding whether to resolve a matching thread.
+3. Commit any remaining changes and push the conflict resolution.
+4. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+5. Link threads and comments from their headings. Cite reviews by ID.
+6. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.

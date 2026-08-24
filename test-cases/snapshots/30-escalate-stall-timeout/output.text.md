@@ -18,4 +18,4 @@ After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-
 
 ## Instructions
 
-1. Stop — the PR needs human direction before iterating can resume. This is a manual handoff; do not continue automated fix attempts.
+1. Stop — human direction is required before automated polling can resume.

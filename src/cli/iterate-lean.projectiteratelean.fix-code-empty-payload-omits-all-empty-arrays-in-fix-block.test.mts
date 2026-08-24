@@ -146,9 +146,7 @@ describe("projectIterateLean", () => {
   it("projectIterateVerbose passes fix_code instructions through unchanged (no recheck appended)", () => {
     const result = makeIterateResult("fix_code");
     if (result.action !== "fix_code") throw new Error("unreachable");
-    result.fix.instructions = [
-      "Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.",
-    ];
+    result.fix.instructions = ["`[FIX_CODE]` is non-terminal. Continue with the next poll."];
     const verbose = projectIterateVerbose(result, {}) as typeof result;
     expect(verbose.fix.instructions).toEqual(result.fix.instructions);
     expect(verbose.fix.instructions[0]).not.toContain("rerun");

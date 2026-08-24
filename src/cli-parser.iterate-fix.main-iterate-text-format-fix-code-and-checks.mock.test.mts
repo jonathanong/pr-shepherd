@@ -31,7 +31,8 @@ describe("main — iterate text format (fix_code and checks)", () => {
     // Fallback instruction always present for consistency with the invariant that
     // every iterate output ends with ## Instructions.
     expect(out).toContain("## Instructions");
-    expect(out).toContain("Stop this iteration — if you pushed new commits");
+    expect(out).toContain("`[FIX_CODE]` is non-terminal");
+    expect(out).not.toContain("Stop this iteration");
   });
   it("fix_code (rich payload): sections appear in fixed order with backtick-quoted codes", async () => {
     const result: IterateResult = {

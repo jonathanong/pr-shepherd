@@ -158,7 +158,7 @@ function makeFixCodeResult(): IterateResult {
         requiresDismissMessage: false,
         hasMutations: false,
       },
-      instructions: ["Stop this iteration."],
+      instructions: ["`[FIX_CODE]` is non-terminal. Continue with the next poll."],
       inProgressRunIds: [],
       protectedRuns: [],
       firstLookThreads: [],

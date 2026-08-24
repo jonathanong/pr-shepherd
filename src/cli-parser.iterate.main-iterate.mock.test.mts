@@ -57,6 +57,18 @@ describe("main — default (poll)", () => {
     expect(process.exitCode).toBe(EXIT.OK);
   });
 
+  it("returns fix_code from the default path with an explicit next-poll handoff", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("fix_code"));
+
+    await main(["node", "shepherd", "42", "--debounce", "0"]);
+
+    expect(mockRunIterate).toHaveBeenCalledTimes(1);
+    expect(process.exitCode).toBe(EXIT.FIX_CODE);
+    expect(getStdout()).toContain("`[FIX_CODE]` is non-terminal");
+    expect(getStdout()).toContain("continue with the next poll");
+    expect(getStdout()).not.toContain("Stop this iteration");
+  });
+
   it("accepts --interval and --timeout on the default path", async () => {
     mockRunIterate
       .mockResolvedValueOnce(makeIterateResult("wait"))

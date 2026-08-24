@@ -20,11 +20,12 @@ describe("shepherd journal instruction helpers", () => {
       42,
       SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEMS,
     );
+    const text = result.join("\n");
 
-    expect(result).toContain(SHEPHERD_JOURNAL_SECTION);
-    expect(result).toContain("pr-shepherd apply journal 42");
-    expect(result).toContain("idempotent");
-    expect(countMentions(result, SHEPHERD_JOURNAL_SECTION)).toBe(1);
+    expect(text).toContain(SHEPHERD_JOURNAL_SECTION);
+    expect(text).toContain("pr-shepherd apply journal 42");
+    expect(text).not.toContain("idempotent");
+    expect(countMentions(text, SHEPHERD_JOURNAL_SECTION)).toBe(1);
   });
   it("validates the Shepherd Journal section heading matcher", () => {
     expect(SHEPHERD_JOURNAL_SECTION_PATTERN.test("## Shepherd Journal")).toBe(true);
@@ -77,7 +78,7 @@ describe("shepherd journal instruction helpers", () => {
 
     expect(text).toContain(SHEPHERD_JOURNAL_SECTION);
     expect(text).toContain("pr-shepherd apply journal 42");
-    expect(text).toContain("idempotent");
+    expect(text).not.toContain("idempotent");
     expect(text).toContain(
       SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
     );

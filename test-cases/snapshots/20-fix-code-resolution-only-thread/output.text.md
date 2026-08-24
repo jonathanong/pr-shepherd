@@ -16,8 +16,11 @@ Conversations Resolved: No [Not Required]
 
 ## Instructions
 
-1. Review the threads under `## Review threads to resolve`. Human-authored threads are replied to by the `apply review:` command shown below; Shepherd does not resolve them. Bot/non-human threads are included in `--resolve-thread-ids`.
-2. Before running the `apply review:` command, remove any thread from `--reply-thread-ids` if the latest visible comment in that thread is your own prior Shepherd reply. Do not reply to your own comments.
-3. Run the `apply review:` command shown above, substituting `$DISMISS_MESSAGE` with a one-sentence reply/description of what you changed.
-4. For any large decisions or rejections you made this iteration, run `pr-shepherd apply journal 42 '- <decision>'` to append an entry to the `## Shepherd Journal` section. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. The command is idempotent — re-running with the same text is a no-op.
-5. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
+1. Review the threads under `## Review threads to resolve` before running mutations.
+2. Use the generated commands as shown. Human-authored IDs use `--reply-thread-ids`. Bot and non-human IDs use `--resolve-thread-ids`. Shepherd does not resolve human-authored threads.
+3. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+4. Link threads and comments from their headings. Cite reviews by ID.
+5. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
+6. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
+7. Run the `apply review:` command shown above.
+8. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.

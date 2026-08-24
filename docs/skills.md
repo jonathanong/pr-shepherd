@@ -13,7 +13,7 @@ Install the plugin (skills plus the version-matched MCP server) or register `pr-
 
 The skill's default fetch is the bounded poll command `pr-shepherd [PR]`, which sleeps through `WAIT`. After the first `FIX_CODE`, poll waits `--debounce` (default 1m) while still iterating at `--interval`, then returns the post-window tick. That settle window batches late review comments and CI failures into one agent-facing result. MCP `iterate` is the fallback when the CLI is unavailable; it has no debounce, and the host chooses when to recheck.
 
-Each non-terminal action is followed by another poll (or another `iterate` call when only MCP is available). `[FIX_CODE]` work must be handled before the next tick. `[CANCEL]` and `[ESCALATE]` stop the goal. The MCP server does not run an unbounded polling loop.
+Each non-terminal action is followed by another poll (or another `iterate` call when only MCP is available). `[FIX_CODE]` work must be handled before the next tick. `[CANCEL]`, `[ESCALATE]`, and an explicit human handoff in the returned instructions pause automated recurrence. The MCP server does not run an unbounded polling loop.
 
 ```
 User                    Active Goal             pr-shepherd

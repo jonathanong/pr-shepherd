@@ -26,10 +26,19 @@ const DEFAULT_TIMEOUT_MS = 5000;
 
 ## Instructions
 
-1. The branch has merge conflicts that must be resolved before merging (see `**branch**` above). Apply any code edits for items under `## Review threads`, then commit and push, then run the `apply review:` command.
-2. For each thread marked `[suggestion]` under `## Review threads`: run `pr-shepherd build-suggestion-patch 42 --thread-id "<id>" --message "<one-sentence headline>" --format=json` to retrieve the patch and suggested commit. The CLI does not mutate the working tree — apply the patch yourself (run `git apply` with the diff shown, or edit the file directly using the line range), then stage the listed file and run the suggested `git commit` from the `## Instructions` section. Human-authored thread IDs are replied to by the apply command below; Shepherd does not auto-resolve them. If the patch fails to apply, fall through to the manual-edit step. Do not retry the same command.
-3. Apply code fixes: read and edit each file referenced above. When applying a `[suggestion]` thread manually (e.g. after a failed `build-suggestion-patch` run), replace the exact line range shown in the heading (`path:startLine-endLine`) with the replacement shown in its `Replaces lines …` block verbatim — an empty replacement deletes those lines, a single blank line replaces the range with one blank line.
-4. Before running the `apply review:` command, remove any thread from `--reply-thread-ids` if the latest visible comment in that thread is your own prior Shepherd reply. Do not reply to your own comments.
-5. Run the `apply review:` command shown above, substituting `$HEAD_SHA` with the pushed commit SHA (or `$(git rev-parse HEAD)` if you did not push) and `$DISMISS_MESSAGE` with a one-sentence reply/description of what you changed.
-6. For any large decisions or rejections you made this iteration, run `pr-shepherd apply journal 42 '- <decision>'` to append an entry to the `## Shepherd Journal` section. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. The command is idempotent — re-running with the same text is a no-op.
-7. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
+1. Review each item under `## Review threads` and decide whether it needs a code change.
+2. The branch has merge conflicts (see `**branch**` above). Resolve them before committing and pushing.
+3. For each thread marked `[suggestion]` under `## Review threads`, run `pr-shepherd build-suggestion-patch 42 --thread-id "<id>" --message "<one-sentence headline>" --format=json` to retrieve its patch and suggested commit.
+4. The CLI only builds the patch. Apply it, stage the listed file, and follow the returned commit instructions.
+5. If the patch does not apply, use the manual-edit step below. Do not retry the command.
+6. Keep human-authored thread IDs in `apply review:` so Shepherd replies instead of resolving them.
+7. Apply every warranted review fix in each file referenced above.
+8. For a manual `[suggestion]` fix, replace the heading's exact `path:startLine-endLine` range with the `Replaces lines …` block verbatim. An empty replacement deletes the range. One blank line replaces it with one blank line.
+9. Commit any remaining changes and push the conflict resolution before review mutations.
+10. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+11. Link threads and comments from their headings. Cite reviews by ID.
+12. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
+13. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
+14. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
+15. Run the `apply review:` command shown above.
+16. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.

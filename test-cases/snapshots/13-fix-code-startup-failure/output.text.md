@@ -20,8 +20,10 @@ Conversations Resolved: Yes [Not Required]
 
 ## Instructions
 
-1. Decide for each item under `## Failing checks` whether a code change is warranted. **If any code changes are needed:** apply edits, commit, push. **If no code changes are needed:** no push is needed.
-2. For each failing check under `## Failing checks`: for `[conclusion: STARTUP_FAILURE]` entries: inspect with `gh run view <runId>`, rerun with `gh run rerun <runId>` if warranted.
-3. Do not re-run `gh run cancel` on the IDs listed under `## Cancelled runs` — those runs were already cancelled by the CLI before this turn.
-4. For any large decisions or rejections you made this iteration, run `pr-shepherd apply journal 42 '- <decision>'` to append an entry to the `## Shepherd Journal` section. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. The command is idempotent — re-running with the same text is a no-op.
-5. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
+1. Review each item under `## Failing checks` and decide whether it needs a code change.
+2. Do not cancel the IDs under `## Cancelled runs` again. The CLI already cancelled them.
+3. For each `[conclusion: STARTUP_FAILURE]` failure, inspect it with `gh run view <runId>` and rerun it with `gh run rerun <runId>` if warranted.
+4. If you changed code, commit any remaining changes and push. Otherwise, do not commit or push.
+5. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+6. Link threads and comments from their headings. Cite reviews by ID.
+7. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.

@@ -37,12 +37,18 @@ Conversations Resolved: No [Not Required]
 
 ## Instructions
 
-1. Decide for each item under `## Review threads`, `## Actionable comments`, `## Failing checks`, `## Changes-requested reviews` whether a code change is warranted. **If any code changes are needed:** apply edits, commit, push, then run the `apply review:` command. **If no code changes are needed:** skip the commit/push and run the `apply review:` command.
-2. Apply code fixes: read and edit each file referenced above.
-3. For each failing check under `## Failing checks`: read any included log excerpt first; fetch the full log with `gh run view <runId> --log-failed` if insufficient; rerun with `gh run rerun <runId> --failed` for transient infra failures, or apply a code fix for real test/build failures; if API/log output lacks detail, open the run URL in the GitHub UI.
-4. For each bullet under `## Changes-requested reviews` above: read the review body and apply the requested changes.
-5. Before running the `apply review:` command, remove any thread from `--reply-thread-ids` if the latest visible comment in that thread is your own prior Shepherd reply. Do not reply to your own comments.
-6. Run the `apply review:` command shown above, substituting `$HEAD_SHA` with the pushed commit SHA (or `$(git rev-parse HEAD)` if you did not push) and `$DISMISS_MESSAGE` with a one-sentence reply/description of what you changed.
-7. Do not re-run `gh run cancel` on the IDs listed under `## Cancelled runs` — those runs were already cancelled by the CLI before this turn.
-8. For any large decisions or rejections you made this iteration, run `pr-shepherd apply journal 42 '- <decision>'` to append an entry to the `## Shepherd Journal` section. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. The command is idempotent — re-running with the same text is a no-op.
-9. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
+1. Review each item under `## Review threads`, `## Actionable comments`, `## Failing checks`, `## Changes-requested reviews` and decide whether it needs a code change.
+2. Do not cancel the IDs under `## Cancelled runs` again. The CLI already cancelled them.
+3. Apply every warranted review fix in each file referenced above.
+4. For each GitHub Actions failure under `## Failing checks`, read the included log excerpt first.
+5. If the excerpt is insufficient, run `gh run view <runId> --log-failed`. Open the run URL only if the API still lacks detail.
+6. Rerun transient infrastructure failures with `gh run rerun <runId> --failed`. Apply a code fix for real test or build failures.
+7. Read every body under `## Changes-requested reviews` and apply any warranted change.
+8. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
+9. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+10. Link threads and comments from their headings. Cite reviews by ID.
+11. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
+12. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
+13. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
+14. Run the `apply review:` command shown above.
+15. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.

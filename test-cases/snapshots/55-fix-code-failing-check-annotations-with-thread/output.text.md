@@ -30,11 +30,16 @@ Conversations Resolved: No [Not Required]
 
 ## Instructions
 
-1. Decide for each item under `## Review threads`, `## Failing checks`, `## Check annotations` whether a code change is warranted. **If any code changes are needed:** apply edits, commit, push, then run the `apply review:` command. **If no code changes are needed:** skip the commit/push and run the `apply review:` command.
-2. Apply code fixes: read and edit each file referenced above.
-3. For each failing check under `## Failing checks`: for `external` entries: open the URL to inspect the failure.
-4. For each item under `## Check annotations`: inspect the referenced file range and decide whether the annotation requires a code change. These annotations are surfaced once per PR and do not need any resolve/minimize mutation.
-5. Before running the `apply review:` command, remove any thread from `--reply-thread-ids` if the latest visible comment in that thread is your own prior Shepherd reply. Do not reply to your own comments.
-6. Run the `apply review:` command shown above, substituting `$HEAD_SHA` with the pushed commit SHA (or `$(git rev-parse HEAD)` if you did not push) and `$DISMISS_MESSAGE` with a one-sentence reply/description of what you changed.
-7. For any large decisions or rejections you made this iteration, run `pr-shepherd apply journal 42 '- <decision>'` to append an entry to the `## Shepherd Journal` section. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. The command is idempotent — re-running with the same text is a no-op.
-8. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
+1. Review each item under `## Review threads`, `## Failing checks`, `## Check annotations` and decide whether it needs a code change.
+2. Apply every warranted review fix in each file referenced above.
+3. For each `external` failure, open its URL and inspect it.
+4. Inspect every referenced range under `## Check annotations` and apply any warranted change.
+5. Do not add annotation IDs to resolve or minimize mutations.
+6. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
+7. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+8. Link threads and comments from their headings. Cite reviews by ID.
+9. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
+10. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
+11. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
+12. Run the `apply review:` command shown above.
+13. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.

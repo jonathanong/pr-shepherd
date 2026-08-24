@@ -9,4 +9,4 @@ CANCEL: PR #42 is awaiting human review or branch protection resolution — read
 
 ## Instructions
 
-1. Stop — the active goal is complete.
+1. Stop — the PR loop is complete. No further polling is needed.

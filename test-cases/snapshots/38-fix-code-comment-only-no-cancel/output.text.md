@@ -22,8 +22,12 @@ Conversations Resolved: Yes [Not Required]
 
 ## Instructions
 
-1. Decide for each item under `## Actionable comments` whether a code change is warranted. **If any code changes are needed:** apply edits, commit, push. **If no code changes are needed:** no push is needed.
-2. If you decide to push new commits: cancel each in-progress run listed under `## In-progress runs` before applying code fixes (e.g. `gh run cancel <id>`). Runs may complete between the tick and your action; treat cancellation errors on already-finished runs as non-fatal. Skip this step if you are only resolving threads without pushing — the existing runs remain relevant.
-3. Apply code fixes: read and edit the relevant files.
-4. For any large decisions or rejections you made this iteration, run `pr-shepherd apply journal 42 '- <decision>'` to append an entry to the `## Shepherd Journal` section. For threads and comments, use the markdown link shown in its heading above; for reviews, reference the review ID. The command is idempotent — re-running with the same text is a no-op.
-5. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
+1. Review each item under `## Actionable comments` and decide whether it needs a code change.
+2. If you will push, first cancel every ID under `## In-progress runs` with `gh run cancel <id>`.
+3. Ignore cancellation errors for runs that already finished.
+4. If you will not push, leave the in-progress runs alone.
+5. Apply every warranted review fix in the relevant files.
+6. If you changed code, commit any remaining changes and push. Otherwise, do not commit or push.
+7. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+8. Link threads and comments from their headings. Cite reviews by ID.
+9. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.

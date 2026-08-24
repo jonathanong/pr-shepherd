@@ -11,5 +11,6 @@ Conversations Resolved: Yes [Not Required]
 
 ## Instructions
 
-1. The branch has merge conflicts that must be resolved before merging (see `**branch**` above). Resolve them and push.
-2. Stop this iteration — if you pushed new commits, CI needs time before the next tick; otherwise stop before the next tick.
+1. The branch has merge conflicts (see `**branch**` above). Resolve them before committing and pushing.
+2. Commit any remaining changes and push the conflict resolution.
+3. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.
