@@ -106,10 +106,13 @@ function alignedLineRelation(
   replacementLine: string,
   adjacentLine: string,
 ): "exact" | "changed" | null {
-  if (!isSubstantiveLine(replacementLine) || !isSubstantiveLine(adjacentLine)) return null;
   const replacement = normalizeSharedLine(replacementLine);
   const adjacent = normalizeSharedLine(adjacentLine);
-  if (replacement === adjacent) return "exact";
+  if (replacement === adjacent) {
+    const isNeutral = replacement === "" || !/[A-Za-z0-9]/.test(replacement);
+    return isNeutral || isSubstantiveLine(replacementLine) ? "exact" : null;
+  }
+  if (!isSubstantiveLine(replacementLine) || !isSubstantiveLine(adjacentLine)) return null;
   return closelyRewritesText(replacement, adjacent) ? "changed" : null;
 }
 
@@ -153,16 +156,17 @@ export function likelyRewritesChangedLineSubrange(
 ): boolean {
   if (replacementLines.length < 2) return false;
   const adjacentLine = adjacentSpans.find((span) => span.length === 1)?.[0];
-  if (adjacentLine === undefined || !isSubstantiveLine(adjacentLine)) return false;
-  const adjacent = normalizeSharedLine(adjacentLine);
-  if (
-    replacementLines.some((line) => {
-      if (!isSubstantiveLine(line)) return false;
-      const replacement = normalizeSharedLine(line);
-      return replacement !== adjacent && closelyRewritesText(replacement, adjacent);
-    })
-  ) {
-    return true;
+  if (adjacentLine !== undefined && isSubstantiveLine(adjacentLine)) {
+    const adjacent = normalizeSharedLine(adjacentLine);
+    if (
+      replacementLines.some((line) => {
+        if (!isSubstantiveLine(line)) return false;
+        const replacement = normalizeSharedLine(line);
+        return replacement !== adjacent && closelyRewritesText(replacement, adjacent);
+      })
+    ) {
+      return true;
+    }
   }
 
   const maxLength = Math.min(8, replacementLines.length - 1);

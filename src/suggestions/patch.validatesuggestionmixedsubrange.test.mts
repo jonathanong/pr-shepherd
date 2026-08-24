@@ -111,4 +111,84 @@ describe("getUnsafeSuggestionRangeReason — mixed replacement subranges", () =>
       }),
     ).toContain("appears to rewrite source immediately before");
   });
+
+  it("checks a substantive rewrite beyond an exact delimiter", () => {
+    expect(
+      getUnsafeSuggestionRangeReason({
+        originalContent: "const value = computeOriginalThing();\n}\nanchor\n",
+        startLine: 3,
+        endLine: 3,
+        replacementLines: ["prepare();", "const value = computeUpdatedThing();", "}", "finish();"],
+      }),
+    ).toContain("partially rewrites a source block before");
+  });
+
+  it("checks a substantive rewrite beyond an exact blank line", () => {
+    expect(
+      getUnsafeSuggestionRangeReason({
+        originalContent: "anchor\n\nconst value = computeOriginalThing();\n",
+        startLine: 1,
+        endLine: 1,
+        replacementLines: ["prepare();", "", "const value = computeUpdatedThing();", "finish();"],
+      }),
+    ).toContain("partially rewrites a source block after");
+  });
+
+  it("checks a neutral-boundary rewrite after a retained internal anchor", () => {
+    expect(
+      getUnsafeSuggestionRangeReason({
+        originalContent: "anchor\nconst value = computeOriginalThing();\n}\n",
+        startLine: 1,
+        endLine: 1,
+        replacementLines: [
+          "inserted before anchor",
+          "anchor",
+          "prepare();",
+          "const value = computeUpdatedThing();",
+          "}",
+          "finish();",
+        ],
+      }),
+    ).toContain("appears to rewrite source immediately after");
+  });
+
+  it.each([
+    {
+      name: "a short exact text neighbor",
+      originalContent: "const value = computeOriginalThing();\ntodo\nanchor\n",
+      replacementLines: ["prepare();", "const value = computeUpdatedThing();", "todo", "finish();"],
+      startLine: 3,
+    },
+    {
+      name: "a changed delimiter",
+      originalContent: "const value = computeOriginalThing();\n}\nanchor\n",
+      replacementLines: ["prepare();", "const value = computeUpdatedThing();", "]", "finish();"],
+      startLine: 3,
+    },
+    {
+      name: "a non-adjacent exact delimiter",
+      originalContent:
+        "const value = computeOriginalThing();\nconst spacer = keepDistinctValue();\n}\nanchor\n",
+      replacementLines: [
+        "prepare();",
+        "const value = computeUpdatedThing();",
+        "runUnrelatedReplacementPath();",
+        "}",
+        "finish();",
+      ],
+      startLine: 4,
+    },
+  ])(
+    "accepts $name without local mixed evidence",
+    ({ originalContent, replacementLines, startLine }) => {
+      expect(
+        getUnsafeSuggestionRangeReason({
+          originalContent,
+          startLine,
+          endLine: startLine,
+          replacementLines,
+        }),
+      ).toBeNull();
+    },
+  );
 });
