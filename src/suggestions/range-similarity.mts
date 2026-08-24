@@ -52,12 +52,13 @@ function sharedInternalRunAt(
   return sharedLines;
 }
 
+function isSubstantiveLine(line: string): boolean {
+  return /[A-Za-z0-9]/.test(line) && line.replace(/\s/g, "").length >= 8;
+}
+
 function isSubstantiveSharedRun(sharedLines: readonly string[]): boolean {
-  return (
-    sharedLines.length >= 2 &&
-    sharedLines.every((line) => /[A-Za-z0-9]/.test(line) && line.replace(/\s/g, "").length >= 8) &&
-    sharedLines.join("").replace(/\s/g, "").length >= 24
-  );
+  const substantiveLines = sharedLines.filter(isSubstantiveLine);
+  return substantiveLines.length >= 2 && substantiveLines.join("").replace(/\s/g, "").length >= 24;
 }
 
 function hasSubstantiveInternalOverlap(
