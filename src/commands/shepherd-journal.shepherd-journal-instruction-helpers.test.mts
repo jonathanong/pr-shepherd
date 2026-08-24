@@ -25,7 +25,7 @@ describe("shepherd journal instruction helpers", () => {
     expect(text).toContain(SHEPHERD_JOURNAL_SECTION);
     expect(text).toContain("pr-shepherd apply journal 42");
     expect(text).not.toContain("idempotent");
-    expect(countMentions(text, SHEPHERD_JOURNAL_SECTION)).toBe(1);
+    expect(countMentions(text, "append `- <decision>` to Shepherd Journal")).toBe(1);
   });
   it("validates the Shepherd Journal section heading matcher", () => {
     expect(SHEPHERD_JOURNAL_SECTION_PATTERN.test("## Shepherd Journal")).toBe(true);
@@ -83,7 +83,7 @@ describe("shepherd journal instruction helpers", () => {
       SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
     );
     expect(text).toContain(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
-    expect(countMentions(text, SHEPHERD_JOURNAL_SECTION)).toBe(1);
+    expect(countMentions(text, "append `- <decision>` to Shepherd Journal")).toBe(1);
     expect(text).not.toContain("`## Shepherd Journal` entry");
   });
   it("omits Shepherd Journal guidance when no mutations are required", () => {

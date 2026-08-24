@@ -34,7 +34,7 @@ Conversations Resolved: No [Not Required]
 5. Apply every warranted review fix in each file referenced above.
 6. Read every body under `## Changes-requested reviews` and apply any warranted change.
 7. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
-8. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+8. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`.
 9. Link threads and comments from their headings. Cite reviews by ID.
 10. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
 11. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.

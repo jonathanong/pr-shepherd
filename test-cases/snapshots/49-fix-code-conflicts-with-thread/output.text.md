@@ -22,7 +22,7 @@ Conversations Resolved: No [Not Required]
 2. The branch has merge conflicts (see `**branch**` above). Resolve them before committing and pushing.
 3. Apply every warranted review fix in each file referenced above.
 4. Commit any remaining changes and push the conflict resolution before review mutations.
-5. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`.
 6. Link threads and comments from their headings. Cite reviews by ID.
 7. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
 8. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.

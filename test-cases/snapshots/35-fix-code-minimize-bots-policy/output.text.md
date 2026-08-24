@@ -39,7 +39,7 @@ Conversations Resolved: No [Not Required]
 2. Review each body under `## Review summaries (first look)`. Eligible non-human IDs are already in `--minimize-comment-ids`. Record any warranted Shepherd Journal note before review mutations.
 3. Apply every warranted review fix in each file referenced above.
 4. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
-5. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`.
 6. Link threads and comments from their headings. Cite reviews by ID.
 7. Run the `resolve-only:` command shown above.
 8. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.

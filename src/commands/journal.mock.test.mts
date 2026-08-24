@@ -42,14 +42,16 @@ describe("runJournal — happy path", () => {
     expect(result.previewBody).toBeUndefined();
     expect(mockUpdatePullRequestBody).toHaveBeenCalledOnce();
     expect(mockUpdatePullRequestBody.mock.calls[0]![0]).toBe("PR_node123");
-    expect(mockUpdatePullRequestBody.mock.calls[0]![1]).toContain("## Shepherd Journal");
+    expect(mockUpdatePullRequestBody.mock.calls[0]![1]).toContain(
+      "<summary>Shepherd Journal</summary>",
+    );
     expect(mockUpdatePullRequestBody.mock.calls[0]![1]).toContain("- Decision made.");
   });
 
   it("appends to an existing section", async () => {
     mockGetPullRequestBody.mockResolvedValue({
       nodeId: "PR_node123",
-      body: "## Shepherd Journal\n\n- Old entry.",
+      body: "<details>\n<summary>Shepherd Journal</summary>\n\n- Old entry.\n</details>",
     });
 
     const result = await runJournal({ prNumber: 42, rawItem: "- New entry.", dryRun: false });
@@ -76,7 +78,7 @@ describe("runJournal — dry-run", () => {
     expect(result.dryRun).toBe(true);
     expect(result.mutated).toBe(true);
     expect(result.previewBody).toBeDefined();
-    expect(result.previewBody).toContain("## Shepherd Journal");
+    expect(result.previewBody).toContain("<summary>Shepherd Journal</summary>");
     expect(result.previewBody).toContain("- Note.");
     expect(mockUpdatePullRequestBody).not.toHaveBeenCalled();
   });
@@ -86,7 +88,7 @@ describe("runJournal — idempotency (dedup)", () => {
   it("returns mutated=false when item already present and does not mutate", async () => {
     mockGetPullRequestBody.mockResolvedValue({
       nodeId: "PR_node123",
-      body: "## Shepherd Journal\n\n- Existing entry.",
+      body: "<details>\n<summary>Shepherd Journal</summary>\n\n- Existing entry.\n</details>",
     });
 
     const result = await runJournal({

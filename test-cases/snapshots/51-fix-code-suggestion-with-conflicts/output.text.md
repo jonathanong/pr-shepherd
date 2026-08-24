@@ -38,7 +38,7 @@ const DEFAULT_TIMEOUT_MS = 5000;
 10. After source drift prevents a generated suggestion patch from applying, replace the heading's exact `path:startLine-endLine` range with the `Replaces lines …` block verbatim. An empty replacement deletes the range. One blank line replaces it with one blank line.
 11. When `build-suggestion-patch` refuses because the suggestion is unsafe (an unsafe anchored range or nested/unbalanced suggestion fences), do not apply the replacement block verbatim. Inspect the surrounding source and reviewer intent, then make the intended edit manually.
 12. Commit any remaining changes and push the conflict resolution before review mutations.
-13. For any substantial decision or rejection, append `- <decision>` to `## Shepherd Journal` with `pr-shepherd apply journal 42 '- <decision>'`.
+13. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`.
 14. Link threads and comments from their headings. Cite reviews by ID.
 15. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
 16. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.

@@ -18,7 +18,7 @@ Shepherd does two jobs: **gather all context for a PR**, then **emit one determi
 - Local stdio MCP tools: `iterate`, `apply`, and `build_suggestion_patch`. Shell: `pr-shepherd [PR]` (bounded poll) and `pr-shepherd iterate [PR]` (one tick). See [mcp.md](mcp.md) and [cli-usage.md](cli-usage.md).
 - Poll `--debounce` (default 1m) so `FIX_CODE` waits a settle window, still iterating at `--interval`, then returns one batched tick. MCP `iterate` has no debounce.
 - `--format text|json`, `--verbose` (poll and iterate), `--version`/`-v`, `--ready-delay`, `--stall-timeout`, `--no-auto-mark-ready`, `--no-auto-cancel-actionable`.
-- Ordered `apply` operations: review mutations (reply/resolve/minimize/dismiss, batched in groups of 10), mark files viewed, append journal (`--file` / `--file -`). `requireSha` polls until HEAD is visible.
+- Ordered `apply` operations: review mutations (reply/resolve/minimize/dismiss, batched in groups of 10), mark files viewed, append to the canonical Shepherd Journal details block (`--file` / `--file -`). Legacy H2 journals migrate in place. `requireSha` polls until HEAD is visible.
 - `build_suggestion_patch` emits a unified diff plus commit metadata for one suggestion thread. It does not write a patch file or mutate git.
 - Auto-cancels stale failing GitHub Actions runs on `FIX_CODE` (REST cancel; protect with `actions.neverCancelRuns`; disable with `--no-auto-cancel-actionable`). `FIX_CODE` instructions also list remaining in-progress run IDs for the agent to cancel before a push.
 - Optional `mark_ready` for eligible draft PRs. Ready-delay then `CANCEL` on a clean handoff.

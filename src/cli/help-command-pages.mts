@@ -57,7 +57,7 @@ Selectors:
 
   "apply journal": `pr-shepherd apply journal
 
-Append a list item to the ## Shepherd Journal section of a PR body.
+Append a list item to the Shepherd Journal details block of a PR body.
 
 Usage:
   pr-shepherd apply journal [PR] <item> [--dry-run] [--format text|json]
@@ -223,7 +223,7 @@ Exit code: 0 on success (including a no-op --dry-run on a nonexistent target); n
 
   journal: `pr-shepherd journal
 
-Append a list item to the ## Shepherd Journal section of a PR body.
+Append a list item to the Shepherd Journal details block of a PR body.
 Creates the section at the end if absent. Idempotent — duplicate items are skipped.
 
 Usage:

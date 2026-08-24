@@ -64,7 +64,7 @@ describe("shepherd journal instruction helpers", () => {
     expect(text).toContain(
       SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
     );
-    expect(countMentions(text, SHEPHERD_JOURNAL_SECTION)).toBe(1);
+    expect(countMentions(text, "append `- <decision>` to Shepherd Journal")).toBe(1);
   });
   it("buildShepherdJournalInstruction remains de-duped when reused across multiple instruction blocks", () => {
     const first = buildShepherdJournalInstruction(
