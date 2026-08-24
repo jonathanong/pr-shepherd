@@ -52,8 +52,12 @@ function sharedInternalRunAt(
   return sharedLines;
 }
 
+function hasLetterOrNumber(line: string): boolean {
+  return /[\p{L}\p{N}]/u.test(line);
+}
+
 function isSubstantiveLine(line: string): boolean {
-  return /[A-Za-z0-9]/.test(line) && line.replace(/\s/g, "").length >= 8;
+  return hasLetterOrNumber(line) && line.replace(/\s/g, "").length >= 8;
 }
 
 function isSubstantiveSharedRun(sharedLines: readonly string[]): boolean {
@@ -109,7 +113,7 @@ function alignedLineRelation(
   const replacement = normalizeSharedLine(replacementLine);
   const adjacent = normalizeSharedLine(adjacentLine);
   if (replacement === adjacent) {
-    const isNeutral = replacement === "" || !/[A-Za-z0-9]/.test(replacement);
+    const isNeutral = replacement === "" || !hasLetterOrNumber(replacement);
     return isNeutral || isSubstantiveLine(replacementLine) ? "exact" : null;
   }
   if (!isSubstantiveLine(replacementLine) || !isSubstantiveLine(adjacentLine)) return null;
