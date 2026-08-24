@@ -88,3 +88,11 @@ export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
 
   return instructions;
 }
+
+export function buildFixCompletionInstruction(checks: AgentCheck[]): string {
+  const requiresHumanHandoff = checks.some((check) => !check.runId && !check.detailsUrl);
+  if (requiresHumanHandoff) {
+    return "`[FIX_CODE]` requires a human handoff for an uninspectable failing check. Stop polling after escalating, and resume only after human direction.";
+  }
+  return "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.";
+}

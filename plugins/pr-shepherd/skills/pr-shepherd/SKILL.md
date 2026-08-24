@@ -18,4 +18,4 @@ Thin dispatcher for iterating a PR. Poll with the CLI; use MCP `iterate` only wh
 
 3. Print the full result and follow every returned `## Instructions` step exactly. For CLI output, run each printed mutation command when instructed. For MCP output, use MCP `apply` and `build_suggestion_patch`; do not run a shell `pr-shepherd apply` command.
 
-4. After completing the returned instructions, repeat step 2 unless the action is `[CANCEL]` or `[ESCALATE]`, or the human directs you to stop.
+4. After completing the returned instructions, repeat step 2 unless the action is `[CANCEL]` or `[ESCALATE]`, the instructions require a human handoff, or the human directs you to stop.

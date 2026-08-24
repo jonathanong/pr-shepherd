@@ -106,6 +106,10 @@ describe("runIterate — fix_code agent projection", () => {
       const instructionsJoined = result.fix.instructions.join("\n");
       expect(instructionsJoined).toContain("(no runId)");
       expect(instructionsJoined).toMatch(/escalate/i);
+      expect(result.fix.instructions.at(-1)).toBe(
+        "`[FIX_CODE]` requires a human handoff for an uninspectable failing check. Stop polling after escalating, and resume only after human direction.",
+      );
+      expect(instructionsJoined).not.toContain("`[FIX_CODE]` is non-terminal");
       // external-check instruction is gated separately and must NOT appear for a bare check.
       expect(instructionsJoined).not.toContain("external status check");
     }

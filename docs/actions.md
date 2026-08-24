@@ -91,7 +91,7 @@ WAIT: 0 passing, 1 in-progress — active checks: CI / build
 
 ## Instructions
 
-1. No action is needed this tick. Continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again.
+1. No action is needed this tick. Continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.
 ```
 
 The default CLI command owns its `--interval`/`--timeout` waits. A final `WAIT` returned at timeout is still non-terminal, so the skill starts another bounded poll. MCP `iterate` and `pr-shepherd iterate` return one tick and their caller schedules the next one. A `--ready-delay 15m` override remains a summary field rather than part of a rerun command; JSON carries the same value as `readyDelayOverride`.
@@ -126,7 +126,7 @@ MARKED READY: PR #42 converted from draft to ready for review
 
 ## Instructions
 
-1. The CLI marked the PR ready for review. Continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again.
+1. The CLI marked the PR ready for review. Continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.
 ```
 
 **What the skill does:** Follow `## Instructions`, then run the default poll dispatcher again unless the action is terminal. Direct MCP/`iterate` callers must reschedule themselves.
@@ -212,10 +212,10 @@ Conversations Resolved: No [Not Required]
 7. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
 8. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
 9. Run the `apply review:` command shown above.
-10. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again. Stop only on `[CANCEL]`, `[ESCALATE]`, or human direction.
+10. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.
 ```
 
-The CLI surfaces the raw `**branch**` state on the summary line and leaves rebase/commit/push conventions to the caller. The final FIX_CODE instruction hands control back to the skill; the next default poll owns any CI wait through its existing `--interval`/`--timeout` behavior.
+The CLI surfaces the raw `**branch**` state on the summary line and leaves rebase/commit/push conventions to the caller. The final FIX_CODE instruction hands control back to the caller while preserving its transport and mode: default polling stays default polling, single-tick CLI callers rerun `pr-shepherd iterate` with their flags, and MCP callers call `iterate` again. A bare failing check with neither a run ID nor a URL instead ends with a human-handoff instruction that pauses polling until human direction.
 
 When `mergeStatus` is `"BEHIND"` and [`iterate.behindBaseHint`](configuration.md#iteratebehindbasehint--default-) is configured (empty by default), an extra instruction appears immediately before commit/push finalization: `` `The branch is behind `origin/<base>`. <hint> before pushing.` ``. The CLI still never chooses the mechanics; it only echoes the configured hint.
 
@@ -392,7 +392,7 @@ The `apply review:` command at the bottom of `## Post-fix push` includes both ID
 
 Both IDs stay in `--reply-thread-ids` — `build-suggestion-patch` does not resolve threads automatically. If a patch failed to apply and was handled manually instead, the ID still belongs in `--reply-thread-ids`.
 
-**What the skill does:** Follow `## Instructions` in order. The instructions are self-contained and action-specific — no dispatch table needed. See `## Instructions` in the output for the exact steps. After handling the action, run the default poll dispatcher again unless the action is terminal.
+**What the skill does:** Follow `## Instructions` in order. The instructions are self-contained and action-specific — no dispatch table needed. See `## Instructions` in the output for the exact steps. After handling the action, run the default poll dispatcher again unless the action is terminal or the instructions require a human handoff.
 
 ---
 

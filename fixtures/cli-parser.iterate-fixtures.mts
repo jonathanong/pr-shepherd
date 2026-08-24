@@ -52,7 +52,7 @@ export function makeIterateResult(
           hasMutations: false,
         },
         instructions: [
-          "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again. Stop only on `[CANCEL]`, `[ESCALATE]`, or human direction.",
+          "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.",
         ],
         firstLookThreads: [],
         firstLookComments: [],

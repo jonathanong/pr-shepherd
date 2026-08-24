@@ -11,4 +11,4 @@ WAIT: 0 passing, 1 in-progress — active checks: CI / tests
 
 ## Instructions
 
-1. No action is needed this tick. Continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again.
+1. No action is needed this tick. Continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.

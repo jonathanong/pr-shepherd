@@ -3,6 +3,7 @@ import type { AgentCheck } from "../../types.mts";
 import {
   buildBehindBaseHintInstruction,
   buildFailingCheckInstructions,
+  buildFixCompletionInstruction,
 } from "./check-instructions.mts";
 
 function check(overrides: Partial<AgentCheck>): AgentCheck {
@@ -67,5 +68,19 @@ describe("buildFailingCheckInstructions", () => {
       "For each `external` failure, open its URL and inspect it.",
       "For each `(no runId)` failure, escalate to a human because no log or URL is available.",
     ]);
+  });
+});
+
+describe("buildFixCompletionInstruction", () => {
+  it("preserves the current CLI mode and flags for the next tick", () => {
+    expect(buildFixCompletionInstruction([check({})])).toBe(
+      "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.",
+    );
+  });
+
+  it("pauses polling when a bare check requires a human handoff", () => {
+    expect(buildFixCompletionInstruction([check({ runId: null, detailsUrl: null })])).toBe(
+      "`[FIX_CODE]` requires a human handoff for an uninspectable failing check. Stop polling after escalating, and resume only after human direction.",
+    );
   });
 });

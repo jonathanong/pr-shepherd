@@ -61,9 +61,10 @@ means the PR reached a terminal, successful state.
 continues on the next tick. `poll` stops on it by default; pass
 `--until-terminal` to keep polling through it.
 
-`fix_code` (12) is non-terminal too. Complete the printed work, then start the
-next default poll (or schedule another MCP/direct `iterate` tick). Only
-`cancel` and `escalate` stop automated recurrence.
+`fix_code` (12) is normally non-terminal too. Complete the printed work, then
+repeat the current CLI mode with its flags (or schedule another MCP `iterate`
+tick). When the printed instructions identify an uninspectable bare check,
+they explicitly pause polling for a human handoff instead.
 
 Codes 10–19 are chosen so they sit strictly above the small single-digit
 range and strictly below the `sysexits.h` block that starts at 64 — there is

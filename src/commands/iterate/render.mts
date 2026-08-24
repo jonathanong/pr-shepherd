@@ -14,6 +14,7 @@ import {
   buildCrStaleClause,
   buildBehindBaseHintInstruction,
   buildResolveCommandInstruction,
+  buildFixCompletionInstruction,
 } from "./check-instructions.mts";
 import {
   SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE,
@@ -22,9 +23,6 @@ import {
 } from "../shepherd-journal.mts";
 import { isFailingAgentCheck } from "../../checks/conclusions.mts";
 import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
-
-const FIX_INSTRUCTION_CONTINUE =
-  "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again. Stop only on `[CANCEL]`, `[ESCALATE]`, or human direction.";
 
 /** Render a resolve command as a shell snippet. Appends `--require-sha "$HEAD_SHA"` when set. */
 export function renderResolveCommand(rc: ResolveCommand): string {
@@ -195,6 +193,6 @@ export function buildFixInstructions(
 
   instructions.push(...buildResolveCommandInstruction(resolveCommand));
 
-  instructions.push(FIX_INSTRUCTION_CONTINUE);
+  instructions.push(buildFixCompletionInstruction(failingChecks));
   return instructions;
 }

@@ -26,7 +26,7 @@ describe("buildFixInstructions", () => {
     );
 
     expect(instructions).toEqual([
-      "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again. Stop only on `[CANCEL]`, `[ESCALATE]`, or human direction.",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.",
     ]);
   });
 
@@ -104,12 +104,11 @@ describe("buildFixInstructions", () => {
     expect(text).toContain("Replace `$HEAD_SHA` with the pushed commit SHA");
     expect(instructions.at(-2)).toBe("Run the `apply review:` command shown above.");
     expect(instructions.at(-1)).toBe(
-      "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll: run the default `pr-shepherd` command again, or call MCP `iterate` again. Stop only on `[CANCEL]`, `[ESCALATE]`, or human direction.",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.",
     );
     expect(text).toContain(
       "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll",
     );
-    expect(text).toContain("Stop only on `[CANCEL]`, `[ESCALATE]`, or human direction.");
     expect(text).not.toContain("Stop this iteration");
     // Old prescriptive git commands gone
     expect(text).not.toContain("Commit changed files:");

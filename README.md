@@ -70,7 +70,7 @@ Conversations Resolved: No [Not Required]
 3. Read the included CI log excerpt; fetch the full log if needed, then rerun transient failures or fix real failures.
 4. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
 5. Replace `$HEAD_SHA` and `$DISMISS_MESSAGE`, then run the `apply review:` command shown above.
-6. `[FIX_CODE]` is non-terminal. Continue with the next poll. Stop only on `[CANCEL]`, `[ESCALATE]`, or human direction.
+6. `[FIX_CODE]` is non-terminal. Continue with the next poll using the same CLI mode and flags, or call MCP `iterate` again.
 ```
 
 See [docs/actions.md](docs/actions.md) for the complete output contract. Iterate/poll PR outcomes use exit codes `0` and `10`–`14`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).
