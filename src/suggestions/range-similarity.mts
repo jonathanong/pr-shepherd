@@ -137,7 +137,17 @@ function isMixedAlignedRewrite(
   return false;
 }
 
-function likelyRewritesChangedProperWindow(
+function isChangedWithUnrelatedSubstantivePair(
+  candidate: readonly string[],
+  adjacentSpan: readonly string[],
+): boolean {
+  if (candidate.length !== 2 || adjacentSpan.length !== 2) return false;
+  if (!candidate.every(isSubstantiveLine) || !adjacentSpan.every(isSubstantiveLine)) return false;
+  const relations = candidate.map((line, index) => alignedLineRelation(line, adjacentSpan[index]!));
+  return relations.includes("changed") && !relations.includes("exact");
+}
+
+function likelyRewritesChangedWindow(
   replacementLines: readonly string[],
   adjacentSpan: readonly string[],
 ): boolean {
@@ -145,6 +155,7 @@ function likelyRewritesChangedProperWindow(
   for (let start = 0; start <= replacementLines.length - length; start++) {
     const candidate = replacementLines.slice(start, start + length);
     if (isMixedAlignedRewrite(candidate, adjacentSpan)) return true;
+    if (isChangedWithUnrelatedSubstantivePair(candidate, adjacentSpan)) return true;
     if (!candidate.every(isSubstantiveLine) || !adjacentSpan.every(isSubstantiveLine)) continue;
     const hasExactLine = candidate.some(
       (line, index) => normalizeSharedLine(line) === normalizeSharedLine(adjacentSpan[index]!),
@@ -173,11 +184,11 @@ export function likelyRewritesChangedLineSubrange(
     }
   }
 
-  const maxLength = Math.min(8, replacementLines.length - 1);
+  const maxLength = Math.min(8, replacementLines.length);
   for (let length = 2; length <= maxLength; length++) {
     const adjacentSpan = adjacentSpans.find((span) => span.length === length);
     if (adjacentSpan === undefined) continue;
-    if (likelyRewritesChangedProperWindow(replacementLines, adjacentSpan)) return true;
+    if (likelyRewritesChangedWindow(replacementLines, adjacentSpan)) return true;
   }
   return false;
 }
