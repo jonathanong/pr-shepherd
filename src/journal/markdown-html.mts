@@ -77,7 +77,12 @@ export function rawHtmlStart(line: string): RawHtmlBlock | null {
   const block = visible
     .match(/^ {0,3}<\/?([A-Za-z][A-Za-z0-9-]*)(?:\s|\/?>|$)/)?.[1]
     ?.toLowerCase();
-  if (!block || !BLOCK_TAGS.has(block)) return null;
+  if (!block || block === "details" || block === "summary") return null;
+  if (
+    !BLOCK_TAGS.has(block) &&
+    !/^ {0,3}<\/?[A-Za-z][A-Za-z0-9-]*(?:\s[^<>]*?|\/?)>$/.test(visible)
+  )
+    return null;
   return { container: tokens, kind: "blank-line" };
 }
 

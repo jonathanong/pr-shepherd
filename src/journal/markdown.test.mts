@@ -49,6 +49,8 @@ describe("Markdown HTML and structure parsing", () => {
     expect(rawHtmlStart('<pre class="sample">')).toMatchObject({ tag: "pre" });
     expect(rawHtmlStart("  <script>")).toMatchObject({ tag: "script" });
     expect(rawHtmlStart("text <pre>")).toBeNull();
+    expect(rawHtmlStart("<widget>"))?.toMatchObject({ kind: "blank-line" });
+    expect(rawHtmlStart("<details>")).toBeNull();
   });
 
   it("distinguishes quoted HTML attributes from normal tags", () => {
@@ -86,6 +88,18 @@ describe("Markdown scanner masking", () => {
       ignored: false,
       visiblePrefix: expect.stringContaining("visible"),
     });
+  });
+
+  it("masks CommonMark type-7 raw HTML through its first blank line", () => {
+    const lines = scanMarkdownLines([
+      "<widget>",
+      "<details>",
+      "<summary>Shepherd Journal</summary>",
+      "",
+      "Visible",
+    ]);
+    expect(lines.slice(0, 4).every((line) => line.ignored)).toBe(true);
+    expect(lines[4]).toMatchObject({ ignored: false, visiblePrefix: "Visible" });
   });
 
   it("keeps container fences and comments bounded when their container ends", () => {

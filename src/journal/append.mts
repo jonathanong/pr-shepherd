@@ -1,5 +1,5 @@
 import { validateJournalItem } from "../commands/journal/journal-item.mts";
-import { scanShepherdJournal } from "./reconcile.mts";
+import { containsJournalEntry, scanShepherdJournal } from "./reconcile.mts";
 
 const OPEN = "<details>";
 const SUMMARY = "<summary>Shepherd Journal</summary>";
@@ -14,13 +14,16 @@ export interface AppendResult {
 }
 
 export function appendJournalItem(body: string, item: string): AppendResult {
+  const validated = validateJournalItem(item);
+  if (!validated.ok) throw new Error(validated.error);
+  item = validated.item;
   const lines = body.replaceAll("\r\n", "\n").split("\n");
   const bounds = scanShepherdJournal(lines);
   if (bounds === "error")
     throw new Error("malformed, duplicate, or ambiguous Shepherd Journal container");
   if (!bounds) return create(lines, item);
   const content = lines.slice(bounds.contentStart, bounds.contentEnd);
-  if (bounds.format === "details" && contains(content, item))
+  if (bounds.format === "details" && containsJournalEntry(content, item))
     return { body, mutated: false, sectionExisted: true };
   const next = [...trimEnd(content), ...item.split("\n")];
   if (bounds.format === "details") {
@@ -40,7 +43,7 @@ export function appendJournalItem(body: string, item: string): AppendResult {
     SUMMARY,
     "",
     ...legacyContent,
-    ...(contains(content, item) ? [] : item.split("\n")),
+    ...(containsJournalEntry(content, item) ? [] : item.split("\n")),
     CLOSE,
   ];
   const suffix = lines.slice(bounds.end);
@@ -71,13 +74,6 @@ function create(lines: string[], item: string): AppendResult {
     mutated: true,
     sectionExisted: false,
   };
-}
-
-function contains(lines: string[], item: string): boolean {
-  const target = item.split("\n").map((line) => line.trimEnd());
-  return lines.some((_, index) =>
-    target.every((line, offset) => lines[index + offset]?.trimEnd() === line),
-  );
 }
 
 function trimEnd(lines: string[]): string[] {

@@ -26,6 +26,16 @@ describe("public Shepherd Journal API", () => {
     });
   });
 
+  it("rejects invalid items before creating or changing a journal", () => {
+    const existing = journal(["- Kept."]);
+    expect(() => appendJournalItem("", "</details>")).toThrow(/must start/i);
+    expect(() => appendJournalItem(existing, "- Unsafe.\n</details>")).toThrow(/container marker/i);
+    expect(appendJournalItem(existing, "- Kept.")).toMatchObject({
+      body: existing,
+      mutated: false,
+    });
+  });
+
   it("ignores journal-shaped details nested in a list item", () => {
     const example = [
       "- Example:",
@@ -75,6 +85,14 @@ describe("public Shepherd Journal API", () => {
     expect(appendJournalItem(body, "- New.")).toMatchObject({
       body: expect.stringContaining("- Kept.\n- New."),
       sectionExisted: true,
+    });
+  });
+
+  it("does not deduplicate an item found only in a fenced sample or HTML comment", () => {
+    const body = journal(["```md", "- Requested.", "```", "<!-- - Requested. -->"]);
+    expect(appendJournalItem(body, "- Requested.")).toMatchObject({
+      body: journal(["```md", "- Requested.", "```", "<!-- - Requested. -->", "- Requested."]),
+      mutated: true,
     });
   });
 

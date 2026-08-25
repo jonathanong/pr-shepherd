@@ -142,6 +142,11 @@ function contains(item: string[], body: string[]): boolean {
   return a.length === b.length && a.every((line, index) => line === b[index]);
 }
 
+export function containsJournalEntry(lines: string[], item: string): boolean {
+  const target = item.split("\n").map((line) => line.trimEnd());
+  return entries(lines).some((entry) => contains(target, entry));
+}
+
 function fail(reason: string): ShepherdJournalReconcileResult {
   return {
     error: `${reason}. Supply every live Shepherd Journal entry verbatim, or omit the journal from the supplied body to preserve it automatically.`,
