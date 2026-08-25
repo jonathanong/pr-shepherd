@@ -22,7 +22,7 @@ describe("main — iterate text format", () => {
     expect(out).toContain("WAIT: 0 passing, 1 in-progress");
     expect(out).toContain("## Instructions");
     expect(out).toContain(
-      "1. Non-terminal — no action needed this tick. Rerun this command to continue.",
+      "1. Non-terminal — no action needed this tick. Iterate again to continue.",
     );
   });
   it("mark_ready: heading includes [MARK_READY] tag and ## Instructions with end-iteration step", async () => {
@@ -32,9 +32,7 @@ describe("main — iterate text format", () => {
     expect(out).toContain("# PR #42 [MARK_READY]");
     expect(out).toContain("MARKED READY: PR 42");
     expect(out).toContain("## Instructions");
-    expect(out).toContain(
-      "1. The CLI marked the PR ready for review. Rerun this command to continue.",
-    );
+    expect(out).toContain("1. The CLI marked the PR ready for review. Iterate again to continue.");
   });
   it("cancel: heading includes [CANCEL] tag with reason and ## Instructions with stop steps", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
@@ -70,7 +68,7 @@ describe("main — iterate text format", () => {
     );
     // The override is surfaced once on the summary line; the instruction stays a plain no-op.
     expect(out).toContain("**ready-delay** `15m` (override)");
-    expect(out).toContain("1. Non-terminal — no action needed this tick. Rerun this command");
+    expect(out).toContain("1. Non-terminal — no action needed this tick. Iterate again");
     expect(out).not.toContain("Recheck");
     expect(out).not.toContain("auto-cancel");
   });
@@ -78,9 +76,7 @@ describe("main — iterate text format", () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("mark_ready"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
-    expect(out).toContain(
-      "1. The CLI marked the PR ready for review. Rerun this command to continue.",
-    );
+    expect(out).toContain("1. The CLI marked the PR ready for review. Iterate again to continue.");
   });
   it("cancel: instructions say the PR loop is complete", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
@@ -113,7 +109,7 @@ describe("main — iterate text format", () => {
     expect(parsed.action).toBe("wait");
     expect(parsed.pr).toBe(42);
     expect(parsed.instructions).toEqual([
-      "Non-terminal — no action needed this tick. Rerun this command to continue.",
+      "Non-terminal — no action needed this tick. Iterate again to continue.",
     ]);
   });
   it("cancel json: emits reason field so consumers can branch without parsing log", async () => {

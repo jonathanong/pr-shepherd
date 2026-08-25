@@ -26,7 +26,7 @@ describe("buildFixInstructions", () => {
     );
 
     expect(instructions).toEqual([
-      "`[FIX_CODE]` is non-terminal. After completing these steps, rerun this command to continue.",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again to continue.",
     ]);
   });
 
@@ -147,28 +147,29 @@ describe("buildFixInstructions", () => {
     expect(text).toContain("If you changed code, commit any remaining changes and push");
     // CLI no longer prescribes rebase mechanics — that is the caller's convention.
     expect(text).not.toContain("rebase onto");
-    // $HEAD_SHA substitution is invariant mechanics that moved to the skill's
-    // "Review-mutation mechanics" playbook — buildResolveCommandInstruction now always
-    // returns just the run-the-command step (plus a pointer to that playbook), regardless
-    // of requiresHeadSha.
-    expect(text).not.toContain("Replace `$HEAD_SHA`");
+    // $HEAD_SHA/$DISMISS_MESSAGE substitution stays in the CLI (unlike the self-reply
+    // exclusion and dismiss-ID retention rules, which moved to the skill's
+    // "Review-mutation mechanics" playbook) — the printed command is not independently
+    // runnable without it.
+    expect(text).toContain("Replace `$HEAD_SHA` with the pushed commit SHA");
+    expect(text).toContain("Replace `$DISMISS_MESSAGE` with one sentence");
     expect(instructions.at(-2)).toBe(
-      'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for placeholder substitution and ID-retention rules.',
+      'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for the self-reply exclusion rule and dismiss-ID retention.',
     );
     expect(instructions.at(-1)).toBe(
-      "`[FIX_CODE]` is non-terminal. After completing these steps, rerun this command to continue.",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again to continue.",
     );
-    expect(text).toContain("`[FIX_CODE]` is non-terminal. After completing these steps, rerun");
+    expect(text).toContain(
+      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again",
+    );
     expect(text).not.toContain("Stop this iteration");
     // Old prescriptive git commands gone
     expect(text).not.toContain("Commit changed files:");
     expect(text).not.toContain("Rebase and push:");
   });
 
-  it("emits only the run-the-command step regardless of requiresHeadSha/requiresDismissMessage", () => {
-    // Placeholder substitution ($HEAD_SHA, $DISMISS_MESSAGE) moved to the skill's
-    // "Review-mutation mechanics" playbook — buildResolveCommandInstruction no longer
-    // branches on these flags, it only gates on hasMutations.
+  it("emits only the placeholder substitution steps that apply, plus the pointer", () => {
+    // requiresHeadSha true, requiresDismissMessage false: only the $HEAD_SHA step appears.
     const instructions = buildFixInstructions(
       [],
       [],
@@ -194,9 +195,12 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(text).not.toContain("Replace `$HEAD_SHA`");
-    expect(text).not.toContain("$(git rev-parse HEAD)");
-    expect(text).toContain("Run the `apply review:` command shown above.");
+    expect(text).toContain("Replace `$HEAD_SHA` with the pushed commit SHA");
+    expect(text).toContain("$(git rev-parse HEAD)");
+    expect(text).not.toContain("Replace `$DISMISS_MESSAGE`");
+    expect(text).toContain(
+      'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill',
+    );
   });
 
   it("conditional commit/rebase instruction present when changes-requested reviews exist", () => {
@@ -229,14 +233,14 @@ describe("buildFixInstructions", () => {
     // CLI no longer prescribes rebase mechanics or names origin/main
     expect(text).not.toContain("rebase onto");
     expect(text).not.toContain("origin/main");
-    // $HEAD_SHA substitution moved to the skill's "Review-mutation mechanics" playbook.
-    expect(text).not.toContain("Replace `$HEAD_SHA`");
+    // $HEAD_SHA substitution stays in the CLI — the printed command needs it to be valid.
+    expect(text).toContain("Replace `$HEAD_SHA` with the pushed commit SHA");
     // No prescriptive git command lines
     expect(text).not.toContain("git add");
     expect(text).not.toContain("git fetch origin");
     expect(text).not.toContain("git push --force-with-lease");
     expect(text).toContain(
-      "`[FIX_CODE]` is non-terminal. After completing these steps, rerun this command to continue.",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again to continue.",
     );
   });
 
@@ -276,7 +280,7 @@ describe("buildFixInstructions", () => {
     expect(text).not.toContain("git add");
     expect(text).not.toContain("git push --force-with-lease");
     expect(text).toContain(
-      "`[FIX_CODE]` is non-terminal. After completing these steps, rerun this command to continue.",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again to continue.",
     );
   });
 

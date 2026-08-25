@@ -28,19 +28,33 @@ export function buildBehindBaseHintInstruction(
 }
 
 /**
- * Build the `Run the apply review: command` instruction. Placeholder substitution
- * ($HEAD_SHA, $DISMISS_MESSAGE), the self-reply exclusion rule, and — highest-severity —
- * retaining every existing `--dismiss-review-ids` ID (omitting one leaves the PR stuck in
- * `CHANGES_REQUESTED`) are invariant across every invocation, so they live in the
- * pr-shepherd skill's "Review-mutation mechanics" playbook instead of being re-emitted
- * every tick (see CLAUDE.md "Keep skills and loop prompts minimal"). The pointer below is
- * load-bearing: without it, nothing in CLI output tells the agent that playbook exists.
+ * Build the `Run the apply review: command` instruction. `$HEAD_SHA`/`$DISMISS_MESSAGE`
+ * substitution stays here (not in the skill) because the printed command is not
+ * independently runnable without it: a standalone CLI caller that copies the command
+ * verbatim, with these placeholders unset, has an empty `--message`/invalid `--require-sha`
+ * and `apply review` rejects the mutation. The self-reply exclusion rule and — highest
+ * severity — retaining every existing `--dismiss-review-ids` ID (omitting one leaves the PR
+ * stuck in `CHANGES_REQUESTED`) do not affect whether the printed command itself is valid,
+ * so those stay invariant text in the pr-shepherd skill's "Review-mutation mechanics"
+ * playbook instead of being re-emitted every tick (see CLAUDE.md "Keep skills and loop
+ * prompts minimal"). The pointer below is load-bearing: without it, nothing in CLI output
+ * tells the agent that playbook exists.
  */
 export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): string[] {
   if (!resolveCommand.hasMutations) return [];
-  return [
-    'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for placeholder substitution and ID-retention rules.',
-  ];
+  const instructions: string[] = [];
+  if (resolveCommand.requiresHeadSha) {
+    instructions.push(
+      "Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.",
+    );
+  }
+  if (resolveCommand.requiresDismissMessage) {
+    instructions.push("Replace `$DISMISS_MESSAGE` with one sentence describing what changed.");
+  }
+  instructions.push(
+    'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for the self-reply exclusion rule and dismiss-ID retention.',
+  );
+  return instructions;
 }
 
 /**
@@ -51,7 +65,10 @@ export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): 
  * instead of being re-emitted every tick. This supersedes the "CI budget rules" example in
  * CLAUDE.md's "Keep skills and loop prompts minimal" section (see that section's amendment
  * note). The `(no runId)` case stays here because it flips `buildFixCompletionInstruction`
- * to a human-handoff terminal state — that trigger, unlike the others, is CLI-decided.
+ * to a human-handoff terminal state — that trigger, unlike the others, is CLI-decided. The
+ * CLI sentence does not claim every failure has a log excerpt to read (only GitHub Actions
+ * checks with a runId do — CANCELLED, STARTUP_FAILURE, and external checks may not); that
+ * per-kind detail is exactly what the skill playbook table disambiguates.
  */
 export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   if (checks.length === 0) return [];
@@ -61,7 +78,7 @@ export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   const instructions: string[] = [];
   if (hasTriageable) {
     instructions.push(
-      'Triage every failure under `## Failing checks` — read its included log excerpt first. See "CI failure triage" in the pr-shepherd skill for `gh run view` / `gh run rerun` rules.',
+      'Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for `gh run view` / `gh run rerun` rules.',
     );
   }
   if (hasBare) {
@@ -78,5 +95,5 @@ export function buildFixCompletionInstruction(checks: AgentCheck[]): string {
   if (requiresHumanHandoff) {
     return "`[FIX_CODE]` requires a human handoff for an uninspectable failing check. Stop polling after escalating, and resume only after human direction.";
   }
-  return "`[FIX_CODE]` is non-terminal. After completing these steps, rerun this command to continue.";
+  return "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again to continue.";
 }

@@ -67,10 +67,12 @@ Conversations Resolved: No [Not Required]
 
 1. Review each item under `## Review threads` and `## Failing checks` and decide whether it needs a code change.
 2. Apply every warranted review fix in each file referenced above.
-3. Triage every failure under `## Failing checks` — read its included log excerpt first. See "CI failure triage" in the pr-shepherd skill for `gh run view` / `gh run rerun` rules.
+3. Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for `gh run view` / `gh run rerun` rules.
 4. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
-5. Run the `apply review:` command shown above.
-6. `[FIX_CODE]` is non-terminal. After completing these steps, rerun this command to continue.
+5. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
+6. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
+7. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for the self-reply exclusion rule and dismiss-ID retention.
+8. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again to continue.
 ```
 
 See [docs/actions.md](docs/actions.md) for the complete output contract. Iterate/poll PR outcomes use exit codes `0` and `10`–`14`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).

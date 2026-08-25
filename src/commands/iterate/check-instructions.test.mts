@@ -69,7 +69,7 @@ describe("buildFailingCheckInstructions", () => {
     ]);
 
     expect(instructions).toEqual([
-      'Triage every failure under `## Failing checks` — read its included log excerpt first. See "CI failure triage" in the pr-shepherd skill for `gh run view` / `gh run rerun` rules.',
+      'Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for `gh run view` / `gh run rerun` rules.',
       "For each `(no runId)` failure, escalate to a human because no log or URL is available.",
     ]);
   });
@@ -84,7 +84,7 @@ describe("buildFailingCheckInstructions", () => {
 describe("buildFixCompletionInstruction", () => {
   it("hands control back to the caller for the next tick", () => {
     expect(buildFixCompletionInstruction([check({})])).toBe(
-      "`[FIX_CODE]` is non-terminal. After completing these steps, rerun this command to continue.",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again to continue.",
     );
   });
 

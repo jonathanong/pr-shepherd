@@ -10,4 +10,4 @@ WAIT: 0 passing, 1 in-progress — active checks: CI / build
 
 ## Instructions
 
-1. Non-terminal — no action needed this tick. Rerun this command to continue.
+1. Non-terminal — no action needed this tick. Iterate again to continue.
