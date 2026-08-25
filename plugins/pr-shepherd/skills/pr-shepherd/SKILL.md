@@ -40,14 +40,14 @@ Match each failure's `[conclusion: …]` tag under `## Failing checks` to a rule
 
 More specific rows win over the general "GitHub Actions failure" row — check conclusion first.
 
-| Tag / kind                                                            | Do                                                                                                                                                                    |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GitHub Actions failure (has a run ID, not `CANCELLED`/`STARTUP_FAILURE`) | Read the included log excerpt if one is rendered. If missing or insufficient, run `gh run view <runId> --log-failed`; open the run URL only if the API still lacks detail. |
-| Transient infrastructure failure                                       | Rerun with `gh run rerun <runId> --failed`.                                                                                                                          |
-| Real test or build failure                                             | Apply a code fix — do not rerun.                                                                                                                                     |
-| `[conclusion: CANCELLED]`                                              | No log excerpt is rendered for this conclusion. Run `gh run rerun <runId>` unless this tick will push new commits. Not resolved by a rerun classification — `## Cancelled runs` is a different section. |
-| `[conclusion: STARTUP_FAILURE]`                                        | No log excerpt is rendered for this conclusion. Inspect with `gh run view <runId>`, rerun with `gh run rerun <runId>` if warranted.                                  |
-| `external` (no run ID, has a URL)                                      | Open its URL and inspect it.                                                                                                                                         |
+| Tag / kind                                                               | Do                                                                                                                                                                                                      |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GitHub Actions failure (has a run ID, not `CANCELLED`/`STARTUP_FAILURE`) | Read the included log excerpt if one is rendered. If missing or insufficient, run `gh run view <runId> --log-failed`; open the run URL only if the API still lacks detail.                              |
+| Transient infrastructure failure                                         | Rerun with `gh run rerun <runId> --failed`.                                                                                                                                                             |
+| Real test or build failure                                               | Apply a code fix — do not rerun.                                                                                                                                                                        |
+| `[conclusion: CANCELLED]`                                                | No log excerpt is rendered for this conclusion. Run `gh run rerun <runId>` unless this tick will push new commits. Not resolved by a rerun classification — `## Cancelled runs` is a different section. |
+| `[conclusion: STARTUP_FAILURE]`                                          | No log excerpt is rendered for this conclusion. Inspect with `gh run view <runId>`, rerun with `gh run rerun <runId>` if warranted.                                                                     |
+| `external` (no run ID, has a URL)                                        | Open its URL and inspect it.                                                                                                                                                                            |
 
 ### Review-mutation mechanics
 
