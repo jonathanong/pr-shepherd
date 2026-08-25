@@ -32,7 +32,8 @@ Conversations Resolved: No [Not Required]
 2. Apply every warranted review fix in each file referenced above.
 3. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
 4. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
-5. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
-6. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
-7. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for the self-reply exclusion rule and dismiss-ID retention.
-8. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.
+5. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
+6. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
+7. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
+8. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.
+9. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.

@@ -147,14 +147,15 @@ describe("buildFixInstructions", () => {
     expect(text).toContain("If you changed code, commit any remaining changes and push");
     // CLI no longer prescribes rebase mechanics — that is the caller's convention.
     expect(text).not.toContain("rebase onto");
-    // $HEAD_SHA/$DISMISS_MESSAGE substitution stays in the CLI (unlike the self-reply
-    // exclusion and dismiss-ID retention rules, which moved to the skill's
+    // $HEAD_SHA/$DISMISS_MESSAGE substitution stays in the CLI (unlike dismiss-ID
+    // retention and the ID-exclusion rules, which moved to the skill's
     // "Review-mutation mechanics" playbook) — the printed command is not independently
-    // runnable without it.
+    // runnable without it. This fixture has no replyThreadIds, so the self-reply exclusion
+    // step (also CLI-side — see the buildResolveCommandInstruction docblock) is absent.
     expect(text).toContain("Replace `$HEAD_SHA` with the pushed commit SHA");
     expect(text).toContain("Replace `$DISMISS_MESSAGE` with one sentence");
     expect(instructions.at(-2)).toBe(
-      'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for the self-reply exclusion rule and dismiss-ID retention.',
+      'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',
     );
     expect(instructions.at(-1)).toBe(
       "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.",

@@ -28,21 +28,31 @@ export function buildBehindBaseHintInstruction(
 }
 
 /**
- * Build the `Run the apply review: command` instruction. `$HEAD_SHA`/`$DISMISS_MESSAGE`
- * substitution stays here (not in the skill) because the printed command is not
- * independently runnable without it: a standalone CLI caller that copies the command
- * verbatim, with these placeholders unset, has an empty `--message`/invalid `--require-sha`
- * and `apply review` rejects the mutation. The self-reply exclusion rule and — highest
- * severity — retaining every existing `--dismiss-review-ids` ID (omitting one leaves the PR
- * stuck in `CHANGES_REQUESTED`) do not affect whether the printed command itself is valid,
- * so those stay invariant text in the pr-shepherd skill's "Review-mutation mechanics"
- * playbook instead of being re-emitted every tick (see CLAUDE.md "Keep skills and loop
- * prompts minimal"). The pointer below is load-bearing: without it, nothing in CLI output
- * tells the agent that playbook exists.
+ * Build the `Run the apply review: command` instruction. Steps stay here (not in the skill)
+ * whenever the *unmodified, as-printed* command is unsafe without them:
+ *
+ * - `$HEAD_SHA`/`$DISMISS_MESSAGE` substitution: without it, the printed command has an
+ *   empty `--message`/invalid `--require-sha` and `apply review` rejects the mutation.
+ * - Self-reply exclusion: a human thread whose latest visible comment is already Shepherd's
+ *   own prior reply still has its ID in `--reply-thread-ids` by default. Running the
+ *   printed command as-is replies to Shepherd's own reply, which can re-surface the thread
+ *   and produce a self-perpetuating reply loop — worse than a rejected mutation, and not
+ *   something a caller can discover by inspecting the command alone.
+ *
+ * Contrast with what *does* stay in the skill's "Review-mutation mechanics" playbook —
+ * dismiss-ID retention and the first-look/annotation ID-exclusion rules. Those only matter
+ * if the caller *edits* the printed command (removes an ID, or adds one back); the printed
+ * command run unmodified is already correct for them. The pointer below is load-bearing:
+ * without it, nothing in CLI output tells the agent that playbook exists.
  */
 export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): string[] {
   if (!resolveCommand.hasMutations) return [];
   const instructions: string[] = [];
+  if ((resolveCommand.replyThreadIds?.length ?? 0) > 0) {
+    instructions.push(
+      "Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.",
+    );
+  }
   if (resolveCommand.requiresHeadSha) {
     instructions.push(
       "Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.",
@@ -52,7 +62,7 @@ export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): 
     instructions.push("Replace `$DISMISS_MESSAGE` with one sentence describing what changed.");
   }
   instructions.push(
-    'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for the self-reply exclusion rule and dismiss-ID retention.',
+    'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',
   );
   return instructions;
 }

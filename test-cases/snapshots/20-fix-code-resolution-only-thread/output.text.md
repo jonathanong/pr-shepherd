@@ -18,6 +18,7 @@ Conversations Resolved: No [Not Required]
 
 1. Review the threads under `## Review threads to resolve` before running mutations. Use the generated commands as shown — see "Review-mutation routing" in the pr-shepherd skill for which flag applies to which ID.
 2. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
-3. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
-4. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for the self-reply exclusion rule and dismiss-ID retention.
-5. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.
+3. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
+4. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
+5. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.
+6. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.

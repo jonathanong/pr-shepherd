@@ -49,9 +49,8 @@ Match each failure's `[conclusion: …]` tag under `## Failing checks` to a rule
 
 ### Review-mutation mechanics
 
-Applies to every `apply review:` / `resolve-only:` command the CLI prints. (`$HEAD_SHA`/`$DISMISS_MESSAGE` substitution is a separate CLI-printed step, not covered here — the CLI needs it to make the printed command itself valid, so it is never left to this playbook.)
+Applies to every `apply review:` / `resolve-only:` command the CLI prints. Covers only what stays safe if you run the printed command **unmodified** — `$HEAD_SHA`/`$DISMISS_MESSAGE` substitution and the self-reply exclusion rule are separate CLI-printed steps, not covered here, because the printed command is unsafe by default without them.
 
-- Before running the command, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
 - Never add first-look-only or check-annotation IDs to `--reply-thread-ids`, `--resolve-thread-ids`, `--dismiss-review-ids`, or `--minimize-comment-ids` — those flags are pre-populated by the CLI.
 - Keep every existing `--dismiss-review-ids` ID the CLI already included. Each is a bot or non-human review that must be dismissed; omitting one leaves the PR in `CHANGES_REQUESTED`.
 

@@ -1,10 +1,21 @@
 import { describe, it, expect } from "vitest";
-import type { AgentCheck } from "../../types.mts";
+import type { AgentCheck, ResolveCommand } from "../../types.mts";
 import {
   buildBehindBaseHintInstruction,
   buildFailingCheckInstructions,
   buildFixCompletionInstruction,
+  buildResolveCommandInstruction,
 } from "./check-instructions.mts";
+
+function resolveCommand(overrides: Partial<ResolveCommand>): ResolveCommand {
+  return {
+    argv: ["pr-shepherd", "apply", "review", "42"],
+    requiresHeadSha: false,
+    requiresDismissMessage: false,
+    hasMutations: true,
+    ...overrides,
+  };
+}
 
 function check(overrides: Partial<AgentCheck>): AgentCheck {
   return {
@@ -77,6 +88,55 @@ describe("buildFailingCheckInstructions", () => {
   it("emits only the bare-check escalation when every failure lacks a runId and a URL", () => {
     expect(buildFailingCheckInstructions([check({ runId: null, detailsUrl: null })])).toEqual([
       "For each `(no runId)` failure, escalate to a human because no log or URL is available.",
+    ]);
+  });
+});
+
+describe("buildResolveCommandInstruction", () => {
+  it("returns nothing when there are no mutations", () => {
+    expect(buildResolveCommandInstruction(resolveCommand({ hasMutations: false }))).toEqual([]);
+  });
+
+  it("emits only the run-the-command step (plus pointer) when nothing else applies", () => {
+    expect(buildResolveCommandInstruction(resolveCommand({}))).toEqual([
+      'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',
+    ]);
+  });
+
+  it("puts the self-reply exclusion step first when replyThreadIds is non-empty", () => {
+    // Regression coverage for a real bug caught in review: this step must stay in the CLI,
+    // not move to the skill playbook. Unlike dismiss-ID retention (safe if the printed
+    // command is run unmodified), a self-reply ID sits in `--reply-thread-ids` by default —
+    // running the command as printed replies to Shepherd's own prior reply, which can
+    // re-surface the thread and produce a self-perpetuating reply loop. A caller without
+    // the skill loaded has no other way to learn this from the command alone.
+    expect(buildResolveCommandInstruction(resolveCommand({ replyThreadIds: ["PRRT_1"] }))).toEqual([
+      "Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.",
+      'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',
+    ]);
+  });
+
+  it("omits the self-reply exclusion step when replyThreadIds is empty", () => {
+    const instructions = buildResolveCommandInstruction(resolveCommand({}));
+    expect(instructions.some((i) => i.includes("remove any `--reply-thread-ids` entry"))).toBe(
+      false,
+    );
+  });
+
+  it("emits $HEAD_SHA and $DISMISS_MESSAGE substitution steps before the run-the-command step, in order", () => {
+    expect(
+      buildResolveCommandInstruction(
+        resolveCommand({
+          replyThreadIds: ["PRRT_1"],
+          requiresHeadSha: true,
+          requiresDismissMessage: true,
+        }),
+      ),
+    ).toEqual([
+      "Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.",
+      "Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.",
+      "Replace `$DISMISS_MESSAGE` with one sentence describing what changed.",
+      'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',
     ]);
   });
 });
