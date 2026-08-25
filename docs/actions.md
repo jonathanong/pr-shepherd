@@ -91,7 +91,7 @@ WAIT: 0 passing, 1 in-progress — active checks: CI / build
 
 ## Instructions
 
-1. Non-terminal — no action needed this tick. Iterate again to continue.
+1. Non-terminal — no action needed this tick. Iterate again with the same options to continue.
 ```
 
 The default CLI command owns its `--interval`/`--timeout` waits. A final `WAIT` returned at timeout is still non-terminal, so the skill starts another bounded poll. MCP `iterate` and `pr-shepherd iterate` return one tick and their caller schedules the next one — the instruction text itself no longer names a transport; it stays terse ("iterate again") because the pr-shepherd skill's dispatcher step already owns the loop for both CLI and MCP callers (see [`plugins/pr-shepherd/skills/pr-shepherd/SKILL.md`](../plugins/pr-shepherd/skills/pr-shepherd/SKILL.md)). A `--ready-delay 15m` override remains a summary field rather than part of a rerun command; JSON carries the same value as `readyDelayOverride`.
@@ -126,7 +126,7 @@ MARKED READY: PR #42 converted from draft to ready for review
 
 ## Instructions
 
-1. The CLI marked the PR ready for review. Iterate again to continue.
+1. The CLI marked the PR ready for review. Iterate again with the same options to continue.
 ```
 
 **What the skill does:** Follow `## Instructions`, then run the default poll dispatcher again unless the action is terminal. Direct MCP/`iterate` callers must reschedule themselves.
@@ -210,7 +210,7 @@ Conversations Resolved: No [Not Required]
 5. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
 6. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
 7. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for the self-reply exclusion rule and dismiss-ID retention.
-8. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again to continue.
+8. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.
 ```
 
 The CLI surfaces the raw `**branch**` state on the summary line and leaves rebase/commit/push conventions to the caller. `$HEAD_SHA`/`$DISMISS_MESSAGE` substitution stays a CLI step, conditional on `resolveCommand.requiresHeadSha`/`requiresDismissMessage` as before — the printed `apply review:` command is not independently runnable without it, so a standalone CLI caller who never loads the skill still gets a working command. Only the self-reply exclusion rule and dismiss-ID retention (omitting a `--dismiss-review-ids` ID leaves the PR stuck in `CHANGES_REQUESTED`) moved to the pr-shepherd skill's `## Playbooks` section (see [`plugins/pr-shepherd/skills/pr-shepherd/SKILL.md`](../plugins/pr-shepherd/skills/pr-shepherd/SKILL.md)) — those are exception-handling policy, not part of making the command itself valid. Shepherd Journal citation conventions moved the same way. The final FIX_CODE instruction no longer names a transport — it reads "iterate again to continue" regardless of caller, since that phrasing works whether the caller reruns a CLI command or calls the MCP `iterate` tool again. A bare failing check with neither a run ID nor a URL instead ends with a human-handoff instruction that pauses polling until human direction.

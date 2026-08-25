@@ -95,5 +95,5 @@ export function buildFixCompletionInstruction(checks: AgentCheck[]): string {
   if (requiresHumanHandoff) {
     return "`[FIX_CODE]` requires a human handoff for an uninspectable failing check. Stop polling after escalating, and resume only after human direction.";
   }
-  return "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again to continue.";
+  return "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.";
 }

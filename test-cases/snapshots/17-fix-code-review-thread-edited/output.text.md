@@ -26,4 +26,4 @@ Conversations Resolved: No [Not Required]
 4. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
 5. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
 6. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for the self-reply exclusion rule and dismiss-ID retention.
-7. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again to continue.
+7. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.

@@ -30,4 +30,4 @@ Conversations Resolved: Yes [Not Required]
 4. Read every body under `## Changes-requested reviews` and apply any warranted change.
 5. If you changed code, commit any remaining changes and push. Otherwise, do not commit or push.
 6. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
-7. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again to continue.
+7. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.

@@ -47,4 +47,4 @@ Conversations Resolved: No [Not Required]
 8. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
 9. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
 10. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for the self-reply exclusion rule and dismiss-ID retention.
-11. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again to continue.
+11. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.

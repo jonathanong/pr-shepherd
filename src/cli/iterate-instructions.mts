@@ -5,9 +5,13 @@ export function buildSimpleIterateInstructions(
 ): string[] {
   switch (result.action) {
     case "wait":
-      return ["Non-terminal — no action needed this tick. Iterate again to continue."];
+      return [
+        "Non-terminal — no action needed this tick. Iterate again with the same options to continue.",
+      ];
     case "mark_ready":
-      return ["The CLI marked the PR ready for review. Iterate again to continue."];
+      return [
+        "The CLI marked the PR ready for review. Iterate again with the same options to continue.",
+      ];
     case "cancel":
       return ["Stop — the PR loop is complete. No further polling is needed."];
     case "escalate":

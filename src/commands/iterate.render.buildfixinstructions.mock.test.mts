@@ -26,7 +26,7 @@ describe("buildFixInstructions", () => {
     );
 
     expect(instructions).toEqual([
-      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again to continue.",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.",
     ]);
   });
 
@@ -157,7 +157,7 @@ describe("buildFixInstructions", () => {
       'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for the self-reply exclusion rule and dismiss-ID retention.',
     );
     expect(instructions.at(-1)).toBe(
-      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again to continue.",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.",
     );
     expect(text).toContain(
       "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again",
@@ -240,7 +240,7 @@ describe("buildFixInstructions", () => {
     expect(text).not.toContain("git fetch origin");
     expect(text).not.toContain("git push --force-with-lease");
     expect(text).toContain(
-      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again to continue.",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.",
     );
   });
 
@@ -280,7 +280,7 @@ describe("buildFixInstructions", () => {
     expect(text).not.toContain("git add");
     expect(text).not.toContain("git push --force-with-lease");
     expect(text).toContain(
-      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again to continue.",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.",
     );
   });
 

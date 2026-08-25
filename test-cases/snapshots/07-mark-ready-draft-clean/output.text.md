@@ -9,4 +9,4 @@ MARKED READY: PR #42 converted from draft to ready for review
 
 ## Instructions
 
-1. The CLI marked the PR ready for review. Iterate again to continue.
+1. The CLI marked the PR ready for review. Iterate again with the same options to continue.

@@ -84,7 +84,7 @@ describe("buildFailingCheckInstructions", () => {
 describe("buildFixCompletionInstruction", () => {
   it("hands control back to the caller for the next tick", () => {
     expect(buildFixCompletionInstruction([check({})])).toBe(
-      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again to continue.",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.",
     );
   });
 

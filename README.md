@@ -72,7 +72,7 @@ Conversations Resolved: No [Not Required]
 5. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
 6. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
 7. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for the self-reply exclusion rule and dismiss-ID retention.
-8. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again to continue.
+8. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.
 ```
 
 See [docs/actions.md](docs/actions.md) for the complete output contract. Iterate/poll PR outcomes use exit codes `0` and `10`–`14`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).

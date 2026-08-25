@@ -19,4 +19,4 @@ Conversations Resolved: Yes [Not Required]
 1. The branch has merge conflicts (see `**branch**` above). Resolve them before committing and pushing.
 2. If you will push, first cancel every ID under `## In-progress runs` with `gh run cancel <id>` (ignore errors for runs that already finished). If you will not push, leave them alone.
 3. Commit any remaining changes and push the conflict resolution.
-4. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again to continue.
+4. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.
