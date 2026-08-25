@@ -59,4 +59,22 @@ describe("runCheck — READY mergeability recheck", () => {
     expect(report.status).toBe("READY");
     expect(mockGetMergeableState).toHaveBeenCalledTimes(1);
   });
+
+  it("honors merged state returned by the existing READY refresh without another request", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" }),
+    });
+    mockGetMergeableState.mockResolvedValue({
+      mergeable: "UNKNOWN",
+      mergeStateStatus: "UNKNOWN",
+      state: "MERGED",
+    });
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(mockGetMergeableState).toHaveBeenCalledTimes(1);
+    expect(report.mergeStatus.state).toBe("MERGED");
+    expect(report.status).toBe("MERGED");
+    expect(report.checks.passing).toEqual([]);
+  });
 });

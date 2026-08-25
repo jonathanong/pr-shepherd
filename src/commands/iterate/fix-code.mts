@@ -26,7 +26,7 @@ import {
   buildInProgressRunIds,
   buildRunProtection,
 } from "./helpers.mts";
-import { annotationMarkerBody, checksWithUnseenAnnotations } from "../check-annotations.mts";
+import { annotationMarkerBody, checksWithActionableAnnotations } from "../check-annotations.mts";
 import { threadTranscriptBody } from "../../threads/transcript.mts";
 import { isHumanAuthor, isConfiguredBotAuthor } from "../../comments/authors.mts";
 import { loadConfig } from "../../config/load.mts";
@@ -96,7 +96,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     ruleAutoResolveThreadIds,
   } = ctx;
   const failingChecks = report.checks.failing;
-  const annotatedExtra = checksWithUnseenAnnotations(report).filter(
+  const annotatedExtra = checksWithActionableAnnotations(report).filter(
     (c) => c.category !== "failing",
   );
   const { protectedRunIds, protectedRuns } = buildRunProtection(

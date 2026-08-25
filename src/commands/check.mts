@@ -7,7 +7,7 @@ import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
 import { classifyVisibleComments } from "../comments/visible-comments.mts";
 import { computeStatus } from "./check-status.mts";
-import { attachAndMergeCheckAnnotations } from "./check-annotations.mts";
+import { annotationMarkerBody, attachAndMergeCheckAnnotations } from "./check-annotations.mts";
 import { buildTerminalReport } from "./check-terminal-report.mts";
 import {
   isBlockedByFilteredCheck,
@@ -129,7 +129,16 @@ export async function runCheck(
   );
   const approvedReviewVisibility = classifyReviewsForDisplay(batchData.approvedReviews, seenMap);
   if (opts.persistSeen !== false) {
+    const successfulAnnotations = [
+      ...merged.passing,
+      ...merged.skipped,
+      ...merged.filtered,
+      ...merged.ignored,
+    ]
+      .filter((check) => check.conclusion === "SUCCESS")
+      .flatMap((check) => check.annotations ?? []);
     await Promise.allSettled([
+      ...successfulAnnotations.map((a) => markSeen(stateKey, a.id, annotationMarkerBody(a))),
       ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
       ...threadVisibility.toMarkSeen.map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
       ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
@@ -182,6 +191,9 @@ export async function runCheck(
     batchData = refreshed.batchData;
     mergeStatus = refreshed.mergeStatus;
     status = refreshed.status;
+    if (mergeStatus.state === "MERGED" || mergeStatus.state === "CLOSED") {
+      return buildTerminalReport(prNumber, repo, batchData, mergeStatus, mergeStatus.state);
+    }
   }
   const blockedByFilteredCheck = isBlockedByFilteredCheck(mergeStatus, verdict);
   return {

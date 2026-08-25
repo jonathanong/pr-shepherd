@@ -26,4 +26,19 @@ describe("getMergeableState", () => {
     const result = await getMergeableState(42, "owner", "repo");
     expect(result).toEqual({ mergeable: "UNKNOWN", mergeStateStatus: "UNKNOWN" });
   });
+
+  it("maps a merged REST pull request to MERGED", async () => {
+    mockFetch.mockResolvedValue(
+      restOk({
+        mergeable: null,
+        mergeable_state: "unknown",
+        state: "closed",
+        merged_at: "2026-08-25T00:18:25Z",
+      }),
+    );
+
+    const result = await getMergeableState(42, "owner", "repo");
+
+    expect(result.state).toBe("MERGED");
+  });
 });
