@@ -27,12 +27,12 @@ const FAILING_CHECK: ClassifiedCheck = {
   category: "failing",
 };
 
-function failingReport(passing: ClassifiedCheck[] = []) {
+function failingReport(annotations?: ClassifiedCheck["annotations"]) {
   return makeReport({
     status: "FAILING",
     checks: {
-      passing,
-      failing: [FAILING_CHECK],
+      passing: [],
+      failing: [{ ...FAILING_CHECK, ...(annotations !== undefined && { annotations }) }],
       inProgress: [],
       skipped: [],
       filtered: [],
@@ -53,23 +53,12 @@ describe("runIterate — stall fingerprint includes unseen annotations", () => {
     mockRunCheck.mockResolvedValue(
       failingReport([
         {
-          name: "SonarCloud Code Analysis",
-          status: "COMPLETED",
-          conclusion: "SUCCESS",
-          detailsUrl: "https://sonarcloud.io",
-          event: "pull_request",
-          runId: null,
-          category: "passed",
-          annotations: [
-            {
-              id: "check_annotation_new",
-              path: "src/a.mts",
-              startLine: 1,
-              endLine: 1,
-              level: "WARNING",
-              message: "New annotation.",
-            },
-          ],
+          id: "check_annotation_new",
+          path: "src/a.mts",
+          startLine: 1,
+          endLine: 1,
+          level: "WARNING",
+          message: "New annotation.",
         },
       ]),
     );

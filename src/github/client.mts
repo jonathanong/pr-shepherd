@@ -122,27 +122,41 @@ export async function updatePullRequestBody(pullRequestId: string, body: string)
 }
 
 /**
- * Fetches `mergeable` and `mergeStateStatus` via the REST API.
+ * Fetches PR state, `mergeable`, and `mergeStateStatus` via the REST API.
  *
- * Used as a fallback when the GraphQL API returns `UNKNOWN` for these fields —
- * a known GitHub quirk where GraphQL lags behind the REST layer.
+ * Used when the GraphQL API returns `UNKNOWN` for mergeability or before a
+ * READY handoff. The same response carries state so a concurrent merge or
+ * close can supersede the earlier GraphQL snapshot without another request.
  */
 export async function getMergeableState(
   pr: number,
   owner: string,
   repo: string,
-): Promise<{ mergeable: MergeableState; mergeStateStatus: MergeStateStatus }> {
-  const data = await rest<{ mergeable: boolean | null; mergeable_state: string }>(
-    "GET",
-    `/repos/${owner}/${repo}/pulls/${pr}`,
-  );
+): Promise<{
+  mergeable: MergeableState;
+  mergeStateStatus: MergeStateStatus;
+  state?: "OPEN" | "CLOSED" | "MERGED";
+}> {
+  const data = await rest<{
+    mergeable: boolean | null;
+    mergeable_state: string;
+    state?: string;
+    merged_at?: string | null;
+  }>("GET", `/repos/${owner}/${repo}/pulls/${pr}`);
 
   const mergeable: MergeableState =
     data.mergeable === true ? "MERGEABLE" : data.mergeable === false ? "CONFLICTING" : "UNKNOWN";
 
   const mergeStateStatus = data.mergeable_state.toUpperCase() as MergeStateStatus;
+  const rawState = data.state?.toUpperCase();
+  const state =
+    data.merged_at != null
+      ? ("MERGED" as const)
+      : rawState === "OPEN" || rawState === "CLOSED"
+        ? rawState
+        : undefined;
 
-  return { mergeable, mergeStateStatus };
+  return { mergeable, mergeStateStatus, ...(state !== undefined && { state }) };
 }
 
 // ---------------------------------------------------------------------------

@@ -11,7 +11,7 @@ import { runIterate } from "./iterate/index.mts";
 registerHooks();
 
 describe("fix_code — passing-check annotations", () => {
-  it("returns fix_code for unseen passing-check annotations and omits them from failing checks", async () => {
+  it("does not return fix_code for annotations whose parent check passed", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "READY",
@@ -56,14 +56,7 @@ describe("fix_code — passing-check annotations", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
-      expect(result.fix.checks).toHaveLength(1);
-      expect(result.fix.checks[0]?.conclusion).toBe("SUCCESS");
-      expect(result.fix.checks[0]?.annotations?.[0]?.id).toBe("check_annotation_lua");
-      expect(result.fix.instructions.join("\n")).not.toContain("## Failing checks");
-      expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
-    }
+    expect(result.action).toBe("wait");
   });
 
   it("does not keep fix_code alive for already-seen passing-check annotations", async () => {

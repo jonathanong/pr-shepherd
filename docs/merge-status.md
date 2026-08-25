@@ -67,7 +67,7 @@ These are two different signals for the same underlying condition (merge conflic
 
 Both map to `CONFLICTS` in shepherd's derived status.
 
-`runCheck` also refreshes mergeability for candidate READY handoffs. This catches short-lived GraphQL lag where the batch query still reports `CLEAN` but the REST pull-request endpoint already reports `DIRTY`; in that case the refreshed value maps to `CONFLICTS` before iterate can complete ready-delay.
+`runCheck` also refreshes mergeability for candidate READY handoffs. This catches short-lived GraphQL lag where the batch query still reports `CLEAN` but the REST pull-request endpoint already reports `DIRTY`; in that case the refreshed value maps to `CONFLICTS` before iterate can complete ready-delay. The same already-required REST response refreshes the PR state, so a merge or close that races the initial GraphQL snapshot cancels the tick without adding another API request.
 
 ### Terminal PRs use state, not mergeability
 

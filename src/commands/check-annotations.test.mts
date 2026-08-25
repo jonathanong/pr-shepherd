@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checksWithUnseenAnnotations } from "./check-annotations.mts";
+import { checksWithActionableAnnotations } from "./check-annotations.mts";
 import type { ClassifiedCheck, ShepherdReport } from "../types.mts";
 
 function check(overrides: Partial<ClassifiedCheck> = {}): ClassifiedCheck {
@@ -59,8 +59,8 @@ function emptyReport(overrides: Partial<ShepherdReport["checks"]> = {}): Shepher
   };
 }
 
-describe("checksWithUnseenAnnotations", () => {
-  it("collects unseen annotations from every stored bucket", () => {
+describe("checksWithActionableAnnotations", () => {
+  it("collects annotated non-passing checks but excludes successful checks", () => {
     const annotation = {
       id: "check_annotation_1",
       path: "src/a.mts",
@@ -71,7 +71,14 @@ describe("checksWithUnseenAnnotations", () => {
     };
     const report = emptyReport({
       passing: [check({ annotations: [annotation] })],
-      skipped: [check({ id: "CR_skip", category: "skipped", conclusion: "NEUTRAL" })],
+      skipped: [
+        check({
+          id: "CR_skip",
+          category: "skipped",
+          conclusion: "NEUTRAL",
+          annotations: [annotation],
+        }),
+      ],
       ignored: [
         check({
           id: "CR_ign",
@@ -80,6 +87,6 @@ describe("checksWithUnseenAnnotations", () => {
         }),
       ],
     });
-    expect(checksWithUnseenAnnotations(report).map((c) => c.id)).toEqual(["CR_1", "CR_ign"]);
+    expect(checksWithActionableAnnotations(report).map((c) => c.id)).toEqual(["CR_skip", "CR_ign"]);
   });
 });

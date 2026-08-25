@@ -66,6 +66,7 @@ async function readMergeability(
   const restState = await getMergeableState(prNumber, repo.owner, repo.name);
   return {
     ...batchData,
+    state: restState.state ?? batchData.state,
     mergeable: restState.mergeable ?? batchData.mergeable,
     mergeStateStatus: restState.mergeStateStatus ?? batchData.mergeStateStatus,
   };
