@@ -74,5 +74,7 @@ describe("runCheck — READY mergeability recheck", () => {
 
     expect(mockGetMergeableState).toHaveBeenCalledTimes(1);
     expect(report.mergeStatus.state).toBe("MERGED");
+    expect(report.status).toBe("MERGED");
+    expect(report.checks.passing).toEqual([]);
   });
 });

@@ -134,6 +134,11 @@ describe("runCheck — check annotations", () => {
       expect.objectContaining({ id: "check_annotation_lua", path: "scripts/instrument-lua.cjs" }),
     ]);
     expect(mockFetchCheckRunAnnotations).toHaveBeenCalledWith("CR_pass");
+    expect(mockMarkSeen).toHaveBeenCalledWith(
+      expect.any(Object),
+      "check_annotation_lua",
+      expect.any(String),
+    );
   });
 
   it("surfaces unseen annotations on skipped checks with a probe hit", async () => {

@@ -83,7 +83,20 @@ describe("checksWithActionableAnnotations", () => {
         check({
           id: "CR_ign",
           category: "ignored",
+          conclusion: "FAILURE",
           annotations: [{ ...annotation, id: "check_annotation_ign" }],
+        }),
+        check({
+          id: "CR_ign_success",
+          category: "ignored",
+          annotations: [{ ...annotation, id: "check_annotation_ign_success" }],
+        }),
+      ],
+      filtered: [
+        check({
+          id: "CR_filtered_success",
+          category: "filtered",
+          annotations: [{ ...annotation, id: "check_annotation_filtered_success" }],
         }),
       ],
     });

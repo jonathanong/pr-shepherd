@@ -8,10 +8,11 @@ function shouldFetchCheckAnnotations(check: ClassifiedCheck): boolean {
 export function checksWithActionableAnnotations(report: ShepherdReport): TriagedCheck[] {
   return [
     ...report.checks.failing,
+    ...report.checks.passing,
     ...report.checks.skipped,
     ...report.checks.filtered,
     ...(report.checks.ignored ?? []),
-  ].filter((c) => (c.annotations?.length ?? 0) > 0);
+  ].filter((c) => c.conclusion !== "SUCCESS" && (c.annotations?.length ?? 0) > 0);
 }
 
 export async function attachAndMergeCheckAnnotations(
