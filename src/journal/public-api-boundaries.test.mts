@@ -60,6 +60,37 @@ describe("public Shepherd Journal API boundaries", () => {
     });
   });
 
+  it.each(["## Shepherd Journal ##", "## Shepherd Journal \t### \t"])(
+    "recognizes whitespace-delimited closing hashes on a legacy H2 journal",
+    (heading) => {
+      const live = `${heading}\n\n- Kept.`;
+      expect(reconcileShepherdJournal("Updated.", live)).toEqual({
+        body: `Updated.\n\n${live}`,
+        ok: true,
+      });
+      expect(appendJournalItem(live, "- New.")).toMatchObject({
+        body: journal(["- Kept.", "- New."]),
+        sectionExisted: true,
+      });
+    },
+  );
+
+  it.each([
+    "## Shepherd Journal##",
+    "## Shepherd Journal ## trailing",
+    "## Shepherd Journal\u00a0##",
+  ])(
+    "does not recognize a legacy H2 journal without an exact closing-hash boundary: %s",
+    (heading) => {
+      const body = `${heading}\n\n- Kept.`;
+      expect(reconcileShepherdJournal("Updated.", body)).toEqual({ body: "Updated.", ok: true });
+      expect(appendJournalItem(body, "- New.")).toMatchObject({
+        body: `${body}\n\n${journal(["- New."])}`,
+        sectionExisted: false,
+      });
+    },
+  );
+
   it("rejects multiple top-level items but permits nested continuation content", () => {
     expect(() => appendJournalItem("", "- First.\n- Second.")).toThrow(/exactly one/i);
     expect(appendJournalItem("", "- First.\n  More context.\n  - Nested detail.")).toMatchObject({

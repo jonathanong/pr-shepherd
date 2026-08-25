@@ -2,7 +2,7 @@ import { inQuotedHtmlAttribute } from "./markdown-html.mts";
 import { isSafeMarkdownInsertionPoint, scanMarkdownLines } from "./markdown-line.mts";
 import { setextParagraphStart } from "./markdown-setext.mts";
 import { structuralDetailsStart } from "./markdown-structure.mts";
-const LEGACY = /^ {0,3}##[ \t]+Shepherd\s+Journal\s*$/;
+const LEGACY = /^ {0,3}##[ \t]+Shepherd[ \t]+Journal(?:[ \t]+#+)?[ \t]*$/;
 const JOURNAL_SUMMARY = /^<summary>\s*Shepherd\s+Journal\b/i;
 const SETEXT = /^ {0,3}(?:=+|-+)[ \t]*$/;
 const CLOSE = "</details>";
@@ -35,7 +35,7 @@ function close(
   for (let i = start; i < lines.length; i++) {
     if (syntax[i]!.ignored || syntax[i]!.nested) continue;
     const visible = syntax[i]!.visiblePrefix;
-    if (JOURNAL_SUMMARY.test(visible.trimStart()) || LEGACY.test(visible.trimEnd())) return null;
+    if (JOURNAL_SUMMARY.test(visible.trimStart()) || LEGACY.test(visible)) return null;
     depth += detailsTags(visible, false);
     const closes = detailsTags(visible, true);
     if (closes) {
@@ -57,7 +57,7 @@ export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | nu
       legacy?.end === lines.length &&
       /^ {0,3}#{1,2}(?:[ \t]+|$)/.test(lines[i]!)
     ) {
-      if (LEGACY.test(syntax[i]!.visiblePrefix.trimEnd())) return "error";
+      if (LEGACY.test(syntax[i]!.visiblePrefix)) return "error";
       legacy.contentEnd = legacy.end = i;
       continue;
     }
@@ -87,7 +87,7 @@ export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | nu
       i = end;
       continue;
     }
-    if (LEGACY.test(visible.trimEnd())) {
+    if (LEGACY.test(visible)) {
       if (legacy) return "error";
       legacy = {
         contentEnd: lines.length,
