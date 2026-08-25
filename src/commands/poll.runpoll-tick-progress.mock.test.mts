@@ -31,7 +31,7 @@ function withStderrTTY(isTTY: boolean, fn: (spy: SpyCalls) => Promise<void>): ()
 
 describe("runPoll — tick progress logging", () => {
   it(
-    "writes a dot per WAIT tick to stderr (non-TTY, non-verbose)",
+    "writes an explicit liveness line per WAIT tick to stderr (non-TTY, non-verbose)",
     withStderrTTY(false, async (stderrSpy) => {
       mockRunIterate
         .mockResolvedValueOnce(makeWaitResult())
@@ -49,14 +49,15 @@ describe("runPoll — tick progress logging", () => {
       await pollPromise;
 
       const written = stderrSpy.mock.calls.map((args) => String(args[0])).join("");
-      expect(written).toContain("..");
-      expect(written).toContain("\n");
-      expect(written).not.toContain("[poll tick");
+      expect(written).toBe(
+        "[poll tick 1 / +0s] WAIT — still running; next tick in 30s\n" +
+          "[poll tick 2 / +30s] WAIT — still running; next tick in 30s\n",
+      );
     }),
   );
 
   it(
-    "writes dots even when stderr is a TTY (non-verbose)",
+    "writes explicit liveness even when stderr is a TTY (non-verbose)",
     withStderrTTY(true, async (stderrSpy) => {
       mockRunIterate.mockResolvedValueOnce(makeWaitResult()).mockResolvedValue(makeCancelResult());
 
@@ -71,8 +72,7 @@ describe("runPoll — tick progress logging", () => {
       await pollPromise;
 
       const written = stderrSpy.mock.calls.map((args) => String(args[0])).join("");
-      expect(written).toContain(".");
-      expect(written).not.toContain("[poll tick");
+      expect(written).toBe("[poll tick 1 / +0s] WAIT — still running; next tick in 30s\n");
     }),
   );
 
@@ -99,7 +99,7 @@ describe("runPoll — tick progress logging", () => {
   );
 
   it(
-    "writes trailing newline after dots when loop exits",
+    "terminates each liveness line with a newline",
     withStderrTTY(false, async (stderrSpy) => {
       mockRunIterate.mockResolvedValueOnce(makeWaitResult()).mockResolvedValue(makeCancelResult());
 
@@ -114,7 +114,7 @@ describe("runPoll — tick progress logging", () => {
       await pollPromise;
 
       const lastWrite = String(stderrSpy.mock.calls[stderrSpy.mock.calls.length - 1]?.[0] ?? "");
-      expect(lastWrite).toBe("\n");
+      expect(lastWrite).toBe("[poll tick 1 / +0s] WAIT — still running; next tick in 30s\n");
     }),
   );
 

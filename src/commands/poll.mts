@@ -24,7 +24,9 @@ function writeTickProgress(
       `[poll tick ${tick} / +${elapsedSeconds}s] WAIT — sleeping ${sleepSeconds}s\n`,
     );
   } else {
-    process.stderr.write(".");
+    process.stderr.write(
+      `[poll tick ${tick} / +${elapsedSeconds}s] WAIT — still running; next tick in ${sleepSeconds}s\n`,
+    );
   }
 }
 
@@ -123,7 +125,6 @@ export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> 
   const verbose = opts.verbose === true;
   const quietStatus = quietStatusOpt === true;
   const untilTerminal = untilTerminalOpt === true;
-  let dotsPrinted = false;
   let lastWaitSignature: string | null = null;
   // When prNumber is omitted, iterateOpts.prNumber starts undefined and each tick would otherwise
   // re-infer the PR from the current branch. That inference query only matches OPEN PRs, so once
@@ -161,7 +162,6 @@ export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> 
         verbose,
         lastWaitSignature,
       });
-      if (!quietStatus && !verbose) dotsPrinted = true;
       await sleep(intervalMs);
       continue;
     }
@@ -176,10 +176,6 @@ export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> 
       debounceUntil ??= Date.now() + debounceMs;
       const remainingMs = debounceUntil - Date.now();
       if (remainingMs > 0) {
-        if (dotsPrinted) {
-          process.stderr.write("\n");
-          dotsPrinted = false;
-        }
         writeDebounceProgress(tick, Date.now() - start, remainingMs);
         await sleep(Math.min(intervalMs, remainingMs));
       }
@@ -192,6 +188,5 @@ export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> 
     break;
   }
 
-  if (dotsPrinted) process.stderr.write("\n");
   return lastResult!;
 }

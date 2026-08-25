@@ -161,14 +161,15 @@ describe("runPoll — FIX_CODE debounce", () => {
     expect(persistSeenAt(2)).toBe(true);
   });
 
-  it("writes a newline before debounce progress when WAIT dots were printed", async () => {
+  it("writes debounce progress after the newline-terminated WAIT liveness line", async () => {
     mockRunIterate.mockResolvedValueOnce(makeWaitResult()).mockResolvedValue(makeFixCodeResult());
     const pollPromise = runPoll(pollOpts({ intervalSeconds: 30, debounceSeconds: 60 }));
     await vi.advanceTimersByTimeAsync(30_000);
     await vi.advanceTimersByTimeAsync(60_000);
     await pollPromise;
     expect(stderrSpy.mock.calls.map((args: unknown[]) => String(args[0])).join("")).toContain(
-      ".\n[poll tick 2 / +30s] FIX_CODE — debounce 60s remaining\n",
+      "[poll tick 1 / +0s] WAIT — still running; next tick in 30s\n" +
+        "[poll tick 2 / +30s] FIX_CODE — debounce 60s remaining\n",
     );
   });
 

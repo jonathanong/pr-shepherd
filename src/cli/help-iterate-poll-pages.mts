@@ -64,7 +64,7 @@ Forwarded iterate flags:
 Durations accept s/m/h suffixes: 30s, 4.5m, 1h. A bare number uses each flag's default unit (seconds
 for --interval/--timeout/--debounce, minutes for --ready-delay/--stall-timeout); decimals are allowed only with
 an explicit unit (4.5m).
-Each WAIT tick writes a single dot to stderr by default; --quiet-status prints only changed WAIT snapshots, and --verbose emits detailed per-tick lines.
+Each WAIT tick writes an explicit still-running line to stderr by default; --quiet-status prints only changed WAIT snapshots, and --verbose emits detailed per-tick lines.
 FIX_CODE debounce writes a remaining-seconds line to stderr. --timeout does not cut an in-flight debounce short.
 With --until-terminal, --timeout is ignored for WAIT ticks and polling continues until FIX_CODE, CANCEL, or ESCALATE.
 
