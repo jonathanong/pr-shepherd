@@ -61,7 +61,9 @@ const result = reconcileShepherdJournal(suppliedBody, liveBody);
 if (!result.ok) throw new Error(result.error);
 
 const validation = validateJournalItem("- Kept the existing behavior.");
-if (validation.ok) appendJournalItem(result.body, validation.item);
+const updatedBody = validation.ok
+  ? appendJournalItem(result.body, validation.item).body
+  : result.body;
 ```
 
 `reconcileShepherdJournal(suppliedBody, liveBody)` ensures a supplied body preserves every live Shepherd Journal item. If the supplied body omits a non-empty live journal, the function appends that container verbatim. It fails closed for malformed, duplicate, ambiguous, or canonical-to-legacy-downgrade containers. Its discriminated result is `{ ok: true, body } | { ok: false, error }`.

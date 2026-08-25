@@ -1,3 +1,4 @@
+import { inQuotedHtmlAttribute } from "./markdown-html.mts";
 import { scanMarkdownLines } from "./markdown-line.mts";
 import { structuralDetailsStart } from "./markdown-structure.mts";
 
@@ -11,7 +12,7 @@ export type ShepherdJournalReconcileResult =
   | { body: string; ok: true }
   | { error: string; ok: false };
 
-type Bounds = {
+export type ShepherdJournalBounds = {
   contentEnd: number;
   contentStart: number;
   end: number;
@@ -19,10 +20,15 @@ type Bounds = {
   start: number;
 };
 
-const detailsOpens = (line: string): number =>
-  structuralDetailsStart(line) !== null ? (line.match(/<details(?:\s+[^>]*)?>/gi) ?? []).length : 0;
-const detailsCloses = (line: string): number =>
-  structuralDetailsStart(line) !== null ? (line.match(/<\/details>/gi) ?? []).length : 0;
+function detailsTags(line: string, closing: boolean): number {
+  if (structuralDetailsStart(line) === null) return 0;
+  const expression = closing ? /<\/details>/gi : /<details(?:\s+[^>]*)?>/gi;
+  return [...line.matchAll(expression)].filter(
+    (match) => !inQuotedHtmlAttribute(line, match.index!),
+  ).length;
+}
+const detailsOpens = (line: string): number => detailsTags(line, false);
+const detailsCloses = (line: string): number => detailsTags(line, true);
 
 function close(
   lines: string[],
@@ -44,11 +50,11 @@ function close(
   return null;
 }
 
-function scan(lines: string[]): Bounds | null | "error" {
+export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | null | "error" {
   const syntax = scanMarkdownLines(lines);
-  const found: Bounds[] = [];
+  const found: ShepherdJournalBounds[] = [];
   let detailsDepth = 0;
-  let legacy: Bounds | null = null;
+  let legacy: ShepherdJournalBounds | null = null;
   for (let i = 0; i < lines.length; i++) {
     if (syntax[i]!.ignored) continue;
     const visible = syntax[i]!.visiblePrefix;
@@ -88,7 +94,7 @@ function scan(lines: string[]): Bounds | null | "error" {
       found.push(legacy);
       continue;
     }
-    if (legacy && legacy.end === lines.length && /^#{1,2} /.test(visible)) {
+    if (legacy && legacy.end === lines.length && /^#{1,2}[ \t]/.test(visible)) {
       legacy.contentEnd = i;
       legacy.end = i;
     }
@@ -140,21 +146,26 @@ export function reconcileShepherdJournal(
   liveBody: string,
 ): ShepherdJournalReconcileResult {
   const liveLines = liveBody.split("\n");
-  const live = scan(liveBody.replaceAll("\r\n", "\n").split("\n"));
+  const live = scanShepherdJournal(liveBody.replaceAll("\r\n", "\n").split("\n"));
   const suppliedLines = suppliedBody.split("\n");
-  const supplied = scan(suppliedBody.replaceAll("\r\n", "\n").split("\n"));
+  const supplied = scanShepherdJournal(suppliedBody.replaceAll("\r\n", "\n").split("\n"));
   if (supplied === "error" || live === "error")
     return fail("malformed, duplicate, or ambiguous Shepherd Journal container");
   if (!live) return { body: suppliedBody, ok: true };
   if (live.format === "details" && supplied?.format === "legacy")
     return fail("canonical Shepherd Journal details container cannot be downgraded to legacy H2");
-  const liveEntries = entries(liveLines.slice(live.contentStart, live.contentEnd));
-  if (!liveEntries.length) return { body: suppliedBody, ok: true };
+  const liveContent = trim(liveLines.slice(live.contentStart, live.contentEnd));
+  if (!liveContent.length) return { body: suppliedBody, ok: true };
   if (!supplied)
     return {
-      body: [...trim(suppliedLines), "", ...trim(liveLines.slice(live.start, live.end))].join("\n"),
+      body: `${suppliedBody}${suppliedBody === "" ? "" : suppliedBody.endsWith("\n") ? "\n" : "\n\n"}${liveLines
+        .slice(live.start, live.end)
+        .join("\n")}`,
       ok: true,
     };
+  const liveEntries = entries(liveLines.slice(live.contentStart, live.contentEnd));
+  if (!liveEntries.length)
+    return fail("live Shepherd Journal content uses an unrecognized entry format");
   const target = entries(suppliedLines.slice(supplied.contentStart, supplied.contentEnd));
   for (const entry of liveEntries) {
     const match = target.findIndex((candidate) => contains(entry, candidate));

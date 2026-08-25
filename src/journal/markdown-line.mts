@@ -4,7 +4,12 @@ import {
   resolveMarkdownContainer,
   stripMarkdownContainer,
 } from "./markdown-container.mts";
-import { inQuotedHtmlAttribute, rawHtmlStart, type RawHtmlBlock } from "./markdown-html.mts";
+import {
+  inQuotedHtmlAttribute,
+  rawHtmlEnd,
+  rawHtmlStart,
+  type RawHtmlBlock,
+} from "./markdown-html.mts";
 import { isIndentedCode, structuralDetailsStart } from "./markdown-structure.mts";
 
 type BacktickRun = { escaped: boolean; index: number; length: number };
@@ -87,15 +92,15 @@ export function scanMarkdownLines(lines: string[]): MarkdownLine[] {
       const content = stripMarkdownContainer(line, html.container);
       if (content === null) html = null;
       else {
-        const close = new RegExp(`</${html.tag}\\s*>`, "i").exec(content);
-        if (!close) {
+        const end = rawHtmlEnd(html, content);
+        if (end === null) {
           result.push({ ignored: true, visiblePrefix: "" });
           continue;
         }
         html = null;
         allowCodeOpeners = false;
         forceIgnored = true;
-        scanOffset = line.length - content.length + close.index + close[0].length;
+        scanOffset = line.length - content.length + end;
       }
     }
     if (!forceIgnored && fence) {
@@ -130,15 +135,15 @@ export function scanMarkdownLines(lines: string[]): MarkdownLine[] {
       const openingHtml = rawHtmlStart(line);
       if (openingHtml) {
         const content = stripMarkdownContainer(line, openingHtml.container) ?? "";
-        const close = new RegExp(`</${openingHtml.tag}\\s*>`, "i").exec(content);
-        if (!close) {
+        const end = rawHtmlEnd(openingHtml, content);
+        if (end === null) {
           html = openingHtml;
           result.push({ ignored: true, visiblePrefix: "" });
           continue;
         }
         allowCodeOpeners = false;
         forceIgnored = true;
-        scanOffset = line.length - content.length + close.index + close[0].length;
+        scanOffset = line.length - content.length + end;
       }
     }
     const startsMasked = forceIgnored || codeSpan !== null || comment !== null;

@@ -9,7 +9,7 @@ describe("reconcileShepherdJournal", () => {
   it("splices an omitted live legacy journal verbatim", () => {
     const live = "## Summary\n\nOld.\n\n## Shepherd Journal\n\n- Keep me.\n\n## Next\n\nText.";
     expect(reconcileShepherdJournal("## Summary\n\nNew.", live)).toEqual({
-      body: "## Summary\n\nNew.\n\n## Shepherd Journal\n\n- Keep me.",
+      body: "## Summary\n\nNew.\n\n## Shepherd Journal\n\n- Keep me.\n",
       ok: true,
     });
   });
