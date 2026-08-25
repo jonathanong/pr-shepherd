@@ -51,6 +51,14 @@ export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | nu
   let detailsDepth = 0;
   let legacy: ShepherdJournalBounds | null = null;
   for (let i = 0; i < lines.length; i++) {
+    if (
+      !syntax[i]!.ignored &&
+      legacy?.end === lines.length &&
+      /^ {0,3}#{1,2}[ \t]/.test(lines[i]!)
+    ) {
+      legacy.contentEnd = legacy.end = i;
+      continue;
+    }
     if (syntax[i]!.ignored || syntax[i]!.nested) continue;
     const visible = syntax[i]!.visiblePrefix;
     detailsDepth += detailsOpens(visible);
@@ -89,10 +97,6 @@ export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | nu
       found.push(legacy);
       continue;
     }
-    if (legacy && legacy.end === lines.length && /^#{1,2}[ \t]/.test(visible)) {
-      legacy.contentEnd = i;
-      legacy.end = i;
-    }
     if (
       legacy &&
       legacy.end === lines.length &&
@@ -102,8 +106,7 @@ export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | nu
       !syntax[i - 1]!.nested &&
       lines[i - 1]!.trim() !== ""
     ) {
-      legacy.contentEnd = i - 1;
-      legacy.end = i - 1;
+      legacy.contentEnd = legacy.end = i - 1;
     }
     if (legacy && legacy.end === lines.length && lines[i]!.trim() === CLOSE) return "error";
   }
@@ -144,19 +147,16 @@ function contains(item: string[], body: string[]): boolean {
   const b = body.map((line) => line.trimEnd());
   return a.length === b.length && a.every((line, index) => line === b[index]);
 }
-
 export function containsJournalEntry(lines: string[], item: string): boolean {
   const target = item.split("\n").map((line) => line.trimEnd());
   return entries(lines).some((entry) => contains(target, entry));
 }
-
 function fail(reason: string): ShepherdJournalReconcileResult {
   return {
     error: `${reason}. Supply every live Shepherd Journal entry verbatim, or omit the journal from the supplied body to preserve it automatically.`,
     ok: false,
   };
 }
-
 /** Reconciles a candidate body without GitHub I/O, preserving every existing journal entry. */
 export function reconcileShepherdJournal(
   suppliedBody: string,
@@ -174,7 +174,7 @@ export function reconcileShepherdJournal(
   const liveContent = trim(liveLines.slice(live.contentStart, live.contentEnd));
   if (!liveContent.length) return { body: suppliedBody, ok: true };
   if (!supplied) {
-    if (!isSafeMarkdownInsertionPoint(suppliedLines))
+    if (!isSafeMarkdownInsertionPoint(suppliedBody.replaceAll("\r\n", "\n").split("\n")))
       return fail(
         "supplied body ends inside a Markdown construct that would hide the preserved journal",
       );

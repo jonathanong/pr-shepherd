@@ -150,11 +150,12 @@ function scanMarkdown(lines: string[]): MarkdownScan {
     let offset = scanOffset;
     while (offset < line.length) {
       if (comment) {
-        const close = line.indexOf("-->", offset);
-        mask(offset, close === -1 ? line.length : close + 3);
-        if (close === -1) break;
+        const close = /--!?>/.exec(line.slice(offset));
+        const end = close === null ? line.length : offset + close.index + close[0].length;
+        mask(offset, end);
+        if (close === null) break;
         comment = null;
-        offset = close + 3;
+        offset = end;
         continue;
       }
       if (codeSpan !== null) {
