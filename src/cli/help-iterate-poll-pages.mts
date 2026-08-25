@@ -79,6 +79,6 @@ Exit codes: same as iterate (the final tick's action/reason decides the code).
 
 /** Public help page for the default PR polling invocation. */
 export const DEFAULT_USAGE = POLL_USAGE.replace(/^pr-shepherd poll$/m, "pr-shepherd [PR]").replace(
-  /^  pr-shepherd poll \[PR\]/m,
+  /^ {2}pr-shepherd poll \[PR\]/m,
   "  pr-shepherd [PR]",
 );
