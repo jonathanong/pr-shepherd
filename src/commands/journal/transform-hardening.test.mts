@@ -19,6 +19,13 @@ describe("journal container hardening", () => {
     (rawHtml) => expect(validateJournalItem(`- Entry.\n${rawHtml}`).ok).toBe(false),
   );
 
+  it.each([
+    ["when its list container ends", "- <pre>\noutside list"],
+    ["when it closes inside its list container", "- <pre>\n  </pre>"],
+  ])("continues legacy validation after raw HTML %s", (_name, item) => {
+    expect(validateJournalItem(item).ok).toBe(true);
+  });
+
   it("rejects a duplicate legacy heading after the first section boundary", () => {
     const body =
       "## Shepherd Journal\n\n- First.\n\n## Next\n\nText.\n\n## Shepherd Journal\n\n- Second.";
