@@ -1,4 +1,6 @@
 import { validateJournalItem } from "../commands/journal/journal-item.mts";
+import { fenceStart } from "./markdown-container.mts";
+import { rawHtmlStart } from "./markdown-html.mts";
 import { containsJournalEntry, scanShepherdJournal } from "./reconcile.mts";
 import { isSafeMarkdownInsertionPoint } from "./markdown-line.mts";
 
@@ -25,6 +27,9 @@ export function appendJournalItem(body: string, item: string): AppendResult {
   )
     throw new Error("journal item must contain exactly one top-level list item");
   item = validated.item;
+  const firstContent = item.slice(2).split("\n")[0]!;
+  if (fenceStart(firstContent) || rawHtmlStart(firstContent))
+    throw new Error("journal item must not start with a fenced or raw HTML block");
   const lines = body.replaceAll("\r\n", "\n").split("\n");
   const bounds = scanShepherdJournal(lines);
   if (bounds === "error")

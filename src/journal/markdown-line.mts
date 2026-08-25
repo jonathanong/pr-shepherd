@@ -10,23 +10,10 @@ import {
   rawHtmlStart,
   type RawHtmlBlock,
 } from "./markdown-html.mts";
+import { backtickRuns, nextBacktickRun, nextCodeOpener } from "./markdown-backticks.mts";
 import { isIndentedCode, structuralDetailsStart } from "./markdown-structure.mts";
-type BacktickRun = { escaped: boolean; index: number; length: number };
 type MarkdownLine = { ignored: boolean; nested: boolean; visiblePrefix: string };
 type MarkdownScan = { lines: MarkdownLine[]; safeAtEof: boolean };
-function backtickRuns(line: string): BacktickRun[] {
-  const runs: BacktickRun[] = [];
-  for (let i = 0; i < line.length; i++) {
-    if (line[i] !== "`") continue;
-    let slashes = 0;
-    while (line[i - slashes - 1] === "\\") slashes++;
-    let end = i;
-    while (line[end] === "`") end++;
-    runs.push({ escaped: slashes % 2 === 1, index: i, length: end - i });
-    i = end - 1;
-  }
-  return runs;
-}
 function interruptsInlineContent(line: string): boolean {
   return (
     line.trim() === "" ||
@@ -49,17 +36,6 @@ function hasCloser(lines: string[], lineIndex: number, offset: number, length: n
       return true;
   }
   return false;
-}
-function nextBacktickRun(line: string, offset: number, length?: number): BacktickRun | undefined {
-  return backtickRuns(line).find(
-    (run) => run.index >= offset && (length === undefined || run.length === length),
-  );
-}
-function nextCodeOpener(line: string, offset: number): BacktickRun | undefined {
-  let run = nextBacktickRun(line, offset);
-  while (run && inQuotedHtmlAttribute(line, run.index))
-    run = nextBacktickRun(line, run.index + run.length);
-  return run;
 }
 function scanMarkdown(lines: string[]): MarkdownScan {
   const result: MarkdownLine[] = [];
@@ -146,6 +122,7 @@ function scanMarkdown(lines: string[]): MarkdownScan {
     }
     const startsMasked = forceIgnored || codeSpan !== null || comment !== null;
     const visible = line.split("");
+    const runs = backtickRuns(line);
     const mask = (start: number, end: number) => visible.fill(" ", start, end);
     let offset = scanOffset;
     while (offset < line.length) {
@@ -159,7 +136,7 @@ function scanMarkdown(lines: string[]): MarkdownScan {
         continue;
       }
       if (codeSpan !== null) {
-        const close = nextBacktickRun(line, offset, codeSpan);
+        const close = nextBacktickRun(runs, offset, codeSpan);
         mask(offset, close ? close.index + close.length : line.length);
         if (!close) break;
         codeSpan = null;
@@ -167,7 +144,7 @@ function scanMarkdown(lines: string[]): MarkdownScan {
         continue;
       }
       const commentAt = line.indexOf("<!--", offset);
-      const nextRun = allowCodeOpeners ? nextCodeOpener(line, offset) : undefined;
+      const nextRun = allowCodeOpeners ? nextCodeOpener(runs, offset) : undefined;
       if (commentAt !== -1 && (!nextRun || commentAt < nextRun.index)) {
         let slashes = 0;
         while (line[commentAt - slashes - 1] === "\\") slashes++;

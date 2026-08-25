@@ -128,6 +128,11 @@ describe("Markdown scanner masking", () => {
     expect(scanMarkdownLines(['<span title="`"> `code`'])[0]!.ignored).toBe(false);
   });
 
+  it("scans quoted backtick runs without repeatedly traversing the attribute prefix", () => {
+    const line = `<span title="${"` ".repeat(5_000)}"> visible`;
+    expect(scanMarkdownLines([line])[0]).toMatchObject({ ignored: false });
+  });
+
   it("does not carry an unmatched inline code span across a new list item", () => {
     expect(scanMarkdownLines(["- `unmatched", "- `separate entry"])[1]).toMatchObject({
       ignored: false,

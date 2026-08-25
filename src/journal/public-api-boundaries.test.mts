@@ -61,6 +61,13 @@ describe("public Shepherd Journal API boundaries", () => {
     });
   });
 
+  it.each(["- ```md", "- <pre>Evidence</pre>"])(
+    "rejects an item whose content starts a Markdown block",
+    (item) => {
+      expect(() => appendJournalItem("", item)).toThrow(/fenced or raw HTML block/i);
+    },
+  );
+
   it.each(["Next section\n============", "Next section\n------------"])(
     "ends a legacy journal before a Setext heading",
     (heading) => {
