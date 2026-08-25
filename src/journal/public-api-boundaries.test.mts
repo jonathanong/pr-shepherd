@@ -42,6 +42,12 @@ describe("public Shepherd Journal API boundaries", () => {
     },
   );
 
+  it("rejects an unrelated unclosed details container at EOF", () => {
+    const supplied = "<details>\n<summary>Evidence</summary>\n\nUnclosed.";
+    expect(() => appendJournalItem(supplied, "- Kept.")).toThrow(/malformed|ambiguous/i);
+    expect(reconcileShepherdJournal(supplied, journal(["- Kept."]))).toMatchObject({ ok: false });
+  });
+
   it.each([" ", "  ", "   "])("recognizes an indented legacy H2 journal", (indent) => {
     const live = `${indent}## Shepherd Journal\n\n- Kept.`;
     expect(reconcileShepherdJournal("Updated.", live)).toEqual({
@@ -82,6 +88,17 @@ describe("public Shepherd Journal API boundaries", () => {
     const live = "## Shepherd Journal\n\n- Kept.\n\n### Investigation\n\n- Detail.";
     expect(appendJournalItem(live, "- New.")).toMatchObject({
       body: journal(["- Kept.", "", "### Investigation", "", "- Detail.", "- New."]),
+    });
+  });
+
+  it("keeps an ATX subsection followed by a thematic break inside a legacy journal", () => {
+    const live = "## Shepherd Journal\n\n- Kept.\n\n### Investigation\n---\n\n- Detail.";
+    expect(reconcileShepherdJournal("Updated.", live)).toEqual({
+      body: `Updated.\n\n${live}`,
+      ok: true,
+    });
+    expect(appendJournalItem(live, "- New.")).toMatchObject({
+      body: journal(["- Kept.", "", "### Investigation", "---", "", "- Detail.", "- New."]),
     });
   });
 

@@ -103,13 +103,16 @@ export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | nu
       i > legacy.contentStart &&
       !syntax[i - 1]!.ignored &&
       !syntax[i - 1]!.nested &&
-      lines[i - 1]!.trim() !== ""
+      lines[i - 1]!.trim() !== "" &&
+      !/^ {0,3}(?:#{1,6}(?:[ \t]+|$)|>|(?:[-+*]|\d{1,9}[.)])[ \t]+)/.test(
+        syntax[i - 1]!.visiblePrefix,
+      )
     ) {
       legacy.contentEnd = legacy.end = i - 1;
     }
     if (legacy && legacy.end === lines.length && lines[i]!.trim() === CLOSE) return "error";
   }
-  return found.length > 1 ? "error" : (found[0] ?? null);
+  return detailsDepth !== 0 || found.length > 1 ? "error" : (found[0] ?? null);
 }
 function trim(lines: string[]): string[] {
   let a = 0;
@@ -141,10 +144,8 @@ function hasUnrecognizedLeadingContent(lines: string[]): boolean {
   if (firstEntry === -1) return lines.some((line) => line.trim() !== "");
   return lines.slice(0, firstEntry).some((line) => line.trim() !== "");
 }
-function contains(item: string[], body: string[]): boolean {
-  const a = item.map((line) => line.trimEnd());
-  const b = body.map((line) => line.trimEnd());
-  return a.length === b.length && a.every((line, index) => line === b[index]);
+function contains(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((line, index) => line.trimEnd() === b[index]!.trimEnd());
 }
 export function containsJournalEntry(lines: string[], item: string): boolean {
   const target = item.split("\n").map((line) => line.trimEnd());
@@ -156,7 +157,6 @@ function fail(reason: string): ShepherdJournalReconcileResult {
     ok: false,
   };
 }
-
 /** Reconciles a candidate body without GitHub I/O, preserving every existing journal entry. */
 export function reconcileShepherdJournal(
   suppliedBody: string,
