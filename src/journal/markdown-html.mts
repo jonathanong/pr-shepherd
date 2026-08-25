@@ -98,7 +98,7 @@ export function rawHtmlEnd(block: RawHtmlBlock, content: string): number | null 
     const index = content.indexOf(block.terminator);
     return index === -1 ? null : index + block.terminator.length;
   }
-  const close = new RegExp(`</${block.tag}\\s*>`, "i").exec(content);
+  const close = new RegExp(`</${block.tag}>`, "i").exec(content);
   return close ? close.index + close[0].length : null;
 }
 

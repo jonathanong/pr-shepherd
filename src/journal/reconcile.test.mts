@@ -26,6 +26,12 @@ describe("reconcileShepherdJournal", () => {
     if (!result.ok) expect(result.error).toContain("Keep me");
   });
 
+  it("preserves trailing spaces that render Markdown hard breaks", () => {
+    const live = journal(["- Keep me.  ", "  Continued."]);
+    const supplied = journal(["- Keep me.", "  Continued."]);
+    expect(reconcileShepherdJournal(supplied, live)).toMatchObject({ ok: false });
+  });
+
   it("preserves duplicate live entries only when every duplicate survives", () => {
     const live = journal(["- Keep me.", "- Keep me."]);
     expect(reconcileShepherdJournal(journal(["- Keep me."]), live)).toMatchObject({ ok: false });

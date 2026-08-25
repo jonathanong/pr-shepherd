@@ -7,6 +7,7 @@ const SETEXT = /^ {0,3}(?:=+|-+)[ \t]*$/;
 const CLOSE = "</details>";
 const OPEN = "<details>";
 const SUMMARY = "<summary>Shepherd Journal</summary>";
+const stripCr = (s: string): string => s.replace(/\r$/, "");
 export type ShepherdJournalReconcileResult =
   | { body: string; ok: true }
   | { error: string; ok: false };
@@ -145,10 +146,10 @@ function hasUnrecognizedLeadingContent(lines: string[]): boolean {
   return lines.slice(0, firstEntry).some((line) => line.trim() !== "");
 }
 function contains(a: string[], b: string[]): boolean {
-  return a.length === b.length && a.every((line, index) => line.trimEnd() === b[index]!.trimEnd());
+  return a.length === b.length && a.every((s, i) => stripCr(s) === stripCr(b[i]!));
 }
 export function containsJournalEntry(lines: string[], item: string): boolean {
-  const target = item.split("\n").map((line) => line.trimEnd());
+  const target = item.split("\n");
   return entries(lines).some((entry) => contains(target, entry));
 }
 function fail(reason: string): ShepherdJournalReconcileResult {
@@ -157,7 +158,6 @@ function fail(reason: string): ShepherdJournalReconcileResult {
     ok: false,
   };
 }
-/** Reconciles a candidate body without GitHub I/O, preserving every existing journal entry. */
 export function reconcileShepherdJournal(
   suppliedBody: string,
   liveBody: string,

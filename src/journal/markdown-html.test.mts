@@ -29,4 +29,14 @@ describe("CommonMark type-6 HTML blocks", () => {
       });
     },
   );
+
+  it.each(["pre", "script", "style", "textarea"])(
+    "requires an exact </%s> terminator before exposing following journal-shaped text",
+    (tag) => {
+      const block = rawHtmlStart(`<${tag}>`);
+      expect(block && rawHtmlEnd(block, `</${tag} >`)).toBeNull();
+      const hidden = `<${tag}>\n</${tag} >\n${journal(["- Hidden."])}`;
+      expect(reconcileShepherdJournal("Updated.", hidden)).toEqual({ body: "Updated.", ok: true });
+    },
+  );
 });
