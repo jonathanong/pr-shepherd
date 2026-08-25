@@ -114,6 +114,13 @@ describe("Markdown scanner masking", () => {
     expect(scanMarkdownLines(['<span title="`"> `code`'])[0]!.ignored).toBe(false);
   });
 
+  it("does not carry an unmatched inline code span across a new list item", () => {
+    expect(scanMarkdownLines(["- `unmatched", "- `separate entry"])[1]).toMatchObject({
+      ignored: false,
+      visiblePrefix: "- `separate entry",
+    });
+  });
+
   it("keeps list-contained indented code and detects inline raw HTML closures", () => {
     const indented = scanMarkdownLines(["-     code", "  continued code", "visible"]);
     expect(indented[0]!.ignored).toBe(true);

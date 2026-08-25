@@ -127,6 +127,15 @@ function entries(lines: string[]): string[][] {
   return result;
 }
 
+function hasUnrecognizedLeadingContent(lines: string[]): boolean {
+  const syntax = scanMarkdownLines(
+    lines.map((line) => (line.endsWith("\r") ? line.slice(0, -1) : line)),
+  );
+  const firstEntry = syntax.findIndex((line) => line.visiblePrefix.startsWith("- "));
+  if (firstEntry === -1) return lines.some((line) => line.trim() !== "");
+  return lines.slice(0, firstEntry).some((line) => line.trim() !== "");
+}
+
 function contains(item: string[], body: string[]): boolean {
   const a = item.map((line) => line.trimEnd());
   const b = body.map((line) => line.trimEnd());
@@ -164,7 +173,8 @@ export function reconcileShepherdJournal(
       ok: true,
     };
   const liveEntries = entries(liveLines.slice(live.contentStart, live.contentEnd));
-  if (!liveEntries.length)
+  const liveJournalLines = liveLines.slice(live.contentStart, live.contentEnd);
+  if (!liveEntries.length || hasUnrecognizedLeadingContent(liveJournalLines))
     return fail("live Shepherd Journal content uses an unrecognized entry format");
   const target = entries(suppliedLines.slice(supplied.contentStart, supplied.contentEnd));
   for (const entry of liveEntries) {

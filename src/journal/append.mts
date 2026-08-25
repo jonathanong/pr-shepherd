@@ -43,8 +43,14 @@ export function appendJournalItem(body: string, item: string): AppendResult {
     ...(contains(content, item) ? [] : item.split("\n")),
     CLOSE,
   ];
+  const suffix = lines.slice(bounds.end);
   return {
-    body: [...lines.slice(0, bounds.start), ...canonical, ...lines.slice(bounds.end)].join("\n"),
+    body: [
+      ...lines.slice(0, bounds.start),
+      ...canonical,
+      ...(suffix[0]?.trim() ? [""] : []),
+      ...suffix,
+    ].join("\n"),
     mutated: true,
     sectionExisted: true,
   };

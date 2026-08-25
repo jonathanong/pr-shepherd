@@ -7,11 +7,14 @@ const journal = (content: string[]) =>
   ["<details>", "<summary>Shepherd Journal</summary>", "", ...content, "</details>"].join("\n");
 
 describe("public Shepherd Journal API", () => {
-  it.each(["div", "table", "section", "address", "blockquote", "ol"])(
-    "ignores a journal-shaped sample in a CommonMark <%s> raw HTML block",
+  it.each(["div", "table"])(
+    "ends a CommonMark <%s> raw HTML block at its first blank line",
     (tag) => {
-      const hidden = `<${tag}>\n${journal(["- Hidden."])}\n\n</${tag}>`;
-      expect(reconcileShepherdJournal("Updated.", hidden)).toEqual({ body: "Updated.", ok: true });
+      const live = `<${tag}>\nSample.\n\n${journal(["- Visible."])}\n</${tag}>`;
+      expect(reconcileShepherdJournal("Updated.", live)).toEqual({
+        body: `Updated.\n\n${journal(["- Visible."])}`,
+        ok: true,
+      });
     },
   );
 
@@ -40,7 +43,7 @@ describe("public Shepherd Journal API", () => {
   });
 
   it("shares scanner behavior with appendJournalItem", () => {
-    const body = `<div>\n${journal(["- Hidden."])}\n\n</div>\n\n${journal(["- Kept."])}`;
+    const body = `<pre>\n${journal(["- Hidden."])}\n</pre>\n\n${journal(["- Kept."])}`;
     const reconciled = reconcileShepherdJournal(body, body);
     expect(reconciled).toEqual({ body, ok: true });
     expect(appendJournalItem(body, "- New.")).toMatchObject({
@@ -69,6 +72,17 @@ describe("public Shepherd Journal API", () => {
     });
   });
 
+  it.each(["Narrative before the first entry.", "```md\n- Sample entry.\n```"])(
+    "fails closed when unrecognized content precedes the first live entry",
+    (prefix) => {
+      const live = journal([prefix, "", "- Kept."]);
+      expect(reconcileShepherdJournal(journal(["- Kept."]), live)).toMatchObject({
+        error: expect.stringMatching(/unrecognized entry format/i),
+        ok: false,
+      });
+    },
+  );
+
   it("creates, appends, and deduplicates canonical containers", () => {
     expect(appendJournalItem("", "- First.")).toEqual({
       body: journal(["- First."]),
@@ -88,6 +102,12 @@ describe("public Shepherd Journal API", () => {
     });
   });
 
+  it("keeps the canonical summary separator when appending to an empty journal", () => {
+    expect(appendJournalItem(journal([]), "- First.")).toMatchObject({
+      body: journal(["- First."]),
+    });
+  });
+
   it("migrates legacy containers while retaining their entries", () => {
     expect(appendJournalItem("## Shepherd Journal\n\n- First.", "- Second.")).toEqual({
       body: journal(["- First.", "- Second."]),
@@ -101,6 +121,14 @@ describe("public Shepherd Journal API", () => {
     });
   });
 
+  it("separates a migrated legacy journal from its following heading", () => {
+    expect(
+      appendJournalItem("## Shepherd Journal\n\n- First.\n\n## Next\n\nText.", "- Second."),
+    ).toMatchObject({
+      body: `${journal(["- First.", "- Second."])}\n\n## Next\n\nText.`,
+    });
+  });
+
   it("rejects ambiguous public append bodies", () => {
     expect(() =>
       appendJournalItem(`${journal(["- One."])}\n\n## Shepherd Journal\n\n- Two.`, "- New."),
@@ -108,12 +136,12 @@ describe("public Shepherd Journal API", () => {
   });
 
   it("recognizes all raw HTML termination strategies", () => {
-    const tag = rawHtmlStart("<div>");
+    const tag = rawHtmlStart("<pre>");
     const declaration = rawHtmlStart("<!DOCTYPE html>");
     const processing = rawHtmlStart("<?php");
     const cdata = rawHtmlStart("<![CDATA[");
-    expect(tag && rawHtmlEnd(tag, "</div> trailing")).toBe(6);
-    expect(declaration && rawHtmlEnd(declaration, "")).toBe(0);
+    expect(tag && rawHtmlEnd(tag, "</pre> trailing")).toBe(6);
+    expect(declaration && rawHtmlEnd(declaration, "<!DOCTYPE html>")).toBe(15);
     expect(processing && rawHtmlEnd(processing, "?> trailing")).toBe(2);
     expect(cdata && rawHtmlEnd(cdata, "]]>")).toBe(3);
   });

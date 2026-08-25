@@ -58,8 +58,6 @@ const BLOCK_TAGS = new Set([
   "ul",
   "wbr",
 ]);
-const VOID_BLOCK_TAGS = new Set(["base", "basefont", "col", "hr", "link", "track", "wbr"]);
-
 export type RawHtmlBlock =
   | { container: MarkdownContainer; kind: "closing-tag"; tag: string }
   | { container: MarkdownContainer; kind: "blank-line" }
@@ -74,14 +72,13 @@ export function rawHtmlStart(line: string): RawHtmlBlock | null {
     return { container: tokens, kind: "terminator", terminator: "?>" };
   if (/^ {0,3}<!\[CDATA\[/i.test(visible))
     return { container: tokens, kind: "terminator", terminator: "]]>" };
-  if (/^ {0,3}<![A-Z]/.test(visible)) return { container: tokens, kind: "blank-line" };
+  if (/^ {0,3}<![A-Z]/.test(visible))
+    return { container: tokens, kind: "terminator", terminator: ">" };
   const block = visible
     .match(/^ {0,3}<\/?([A-Za-z][A-Za-z0-9-]*)(?:\s|\/?>|$)/)?.[1]
     ?.toLowerCase();
   if (!block || !BLOCK_TAGS.has(block)) return null;
-  return VOID_BLOCK_TAGS.has(block)
-    ? { container: tokens, kind: "blank-line" }
-    : { container: tokens, kind: "closing-tag", tag: block };
+  return { container: tokens, kind: "blank-line" };
 }
 
 export function rawHtmlEnd(block: RawHtmlBlock, content: string): number | null {
