@@ -16,6 +16,13 @@ export function validateJournalItem(input: string): ValidationResult {
       error: `journal item must start with "- <text>"; got: ${JSON.stringify(nonBlank[0]!.slice(0, 40))}`,
     };
   }
+  const firstContent = nonBlank[0]!.slice(2).trim();
+  if (isReservedJournalMarker(firstContent) || isJournalLikeSummary(firstContent)) {
+    return {
+      ok: false,
+      error: `journal item must not contain standalone journal container marker ${JSON.stringify(firstContent)}`,
+    };
+  }
   for (const line of nonBlank.slice(1)) {
     if (line.startsWith("#")) {
       return {

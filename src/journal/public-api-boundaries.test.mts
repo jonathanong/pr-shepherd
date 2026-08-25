@@ -68,8 +68,8 @@ describe("public Shepherd Journal API boundaries", () => {
     },
   );
 
-  it.each(["#", "### Next", "###### Last"])(
-    "ends a legacy journal before every ATX heading level, including empty headings",
+  it.each(["#", "## Next"])(
+    "ends a legacy journal before an H1 or H2 heading, including empty headings",
     (heading) => {
       const live = `## Shepherd Journal\n\n- Kept.\n\n${heading}\n\nText.`;
       expect(appendJournalItem(live, "- New.")).toMatchObject({
@@ -77,6 +77,13 @@ describe("public Shepherd Journal API boundaries", () => {
       });
     },
   );
+
+  it("keeps H3 journal subsections inside a legacy journal", () => {
+    const live = "## Shepherd Journal\n\n- Kept.\n\n### Investigation\n\n- Detail.";
+    expect(appendJournalItem(live, "- New.")).toMatchObject({
+      body: journal(["- Kept.", "", "### Investigation", "", "- Detail.", "- New."]),
+    });
+  });
 
   it("preserves CRLF line endings when appending", () => {
     const body =

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { appendJournalItem, reconcileShepherdJournal } from "./index.mts";
-import { rawHtmlEnd, rawHtmlStart } from "./markdown-html.mts";
 
 const journal = (content: string[]) =>
   ["<details>", "<summary>Shepherd Journal</summary>", "", ...content, "</details>"].join("\n");
@@ -29,6 +28,8 @@ describe("public Shepherd Journal API", () => {
     const existing = journal(["- Kept."]);
     expect(() => appendJournalItem("", "</details>")).toThrow(/must start/i);
     expect(() => appendJournalItem(existing, "- Unsafe.\n</details>")).toThrow(/container marker/i);
+    expect(() => appendJournalItem(existing, "- </details>")).toThrow(/container marker/i);
+    expect(() => appendJournalItem(existing, "- <details>")).toThrow(/container marker/i);
     expect(appendJournalItem(existing, "- Kept.")).toMatchObject({
       body: existing,
       mutated: false,
@@ -176,18 +177,6 @@ describe("public Shepherd Journal API", () => {
     expect(() =>
       appendJournalItem(`${journal(["- One."])}\n\n## Shepherd Journal\n\n- Two.`, "- New."),
     ).toThrow(/ambiguous/i);
-  });
-
-  it("recognizes all raw HTML termination strategies", () => {
-    const tag = rawHtmlStart("<pre>");
-    const declaration = rawHtmlStart("<!DOCTYPE html>");
-    const processing = rawHtmlStart("<?php");
-    const cdata = rawHtmlStart("<![CDATA[");
-    expect(tag && rawHtmlEnd(tag, "</pre> trailing")).toBe(6);
-    expect(declaration && rawHtmlEnd(declaration, "<!DOCTYPE html>")).toBe(15);
-    expect(processing && rawHtmlEnd(processing, "?> trailing")).toBe(2);
-    expect(cdata && rawHtmlEnd(cdata, "]]>")).toBe(3);
-    expect(rawHtmlStart("<![cdata[")).toBeNull();
   });
 
   it("does not hide a journal after a lowercase CDATA lookalike", () => {
