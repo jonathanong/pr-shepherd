@@ -1,8 +1,19 @@
-import { isJournalLikeSummary, isReservedJournalMarker } from "./journal-markdown.mts";
+import { scanMarkdownLines } from "../../journal/markdown-line.mts";
 
 type ValidationOk = { ok: true; item: string };
 type ValidationError = { ok: false; error: string };
 export type ValidationResult = ValidationOk | ValidationError;
+
+const RESERVED_CONTAINER_TAG = /<\/?details(?:\s+[^>]*)?>|<summary\s*Shepherd\s+Journal\b[^>]*>/i;
+
+function reservedContainerTag(lines: string[]): string | null {
+  const syntax = scanMarkdownLines(lines);
+  for (const [index] of lines.entries()) {
+    const match = RESERVED_CONTAINER_TAG.exec(syntax[index]!.visiblePrefix);
+    if (match) return match[0];
+  }
+  return null;
+}
 
 export function validateJournalItem(input: string): ValidationResult {
   const lines = input.split("\n").map((line) => line.trimEnd());
@@ -16,11 +27,11 @@ export function validateJournalItem(input: string): ValidationResult {
       error: `journal item must start with "- <text>"; got: ${JSON.stringify(nonBlank[0]!.slice(0, 40))}`,
     };
   }
-  const firstContent = nonBlank[0]!.slice(2).trim();
-  if (isReservedJournalMarker(firstContent) || isJournalLikeSummary(firstContent)) {
+  const marker = reservedContainerTag(lines);
+  if (marker) {
     return {
       ok: false,
-      error: `journal item must not contain standalone journal container marker ${JSON.stringify(firstContent)}`,
+      error: `journal item must not contain journal container marker ${JSON.stringify(marker)}`,
     };
   }
   for (const line of nonBlank.slice(1)) {
@@ -28,12 +39,6 @@ export function validateJournalItem(input: string): ValidationResult {
       return {
         ok: false,
         error: "journal item lines must not start with # (would break section structure)",
-      };
-    }
-    if (isReservedJournalMarker(line.trim()) || isJournalLikeSummary(line.trim())) {
-      return {
-        ok: false,
-        error: `journal item must not contain standalone journal container marker ${JSON.stringify(line.trim())}`,
       };
     }
   }

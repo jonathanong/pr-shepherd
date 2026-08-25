@@ -110,4 +110,12 @@ describe("reconcileShepherdJournal", () => {
       ok: true,
     });
   });
+
+  it("does not leave an orphaned CR when splicing a bounded CRLF journal", () => {
+    const live = ["## Shepherd Journal", "", "- Keep me.", "", "## Next", "", "Text."].join("\r\n");
+    expect(reconcileShepherdJournal("## Summary\r\n\r\nNew.", live)).toEqual({
+      body: "## Summary\r\n\r\nNew.\n\n## Shepherd Journal\r\n\r\n- Keep me.\r\n\r\n",
+      ok: true,
+    });
+  });
 });

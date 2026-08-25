@@ -156,6 +156,7 @@ function fail(reason: string): ShepherdJournalReconcileResult {
     ok: false,
   };
 }
+
 /** Reconciles a candidate body without GitHub I/O, preserving every existing journal entry. */
 export function reconcileShepherdJournal(
   suppliedBody: string,
@@ -177,10 +178,10 @@ export function reconcileShepherdJournal(
       return fail(
         "supplied body ends inside a Markdown construct that would hide the preserved journal",
       );
+    const journal = liveLines.slice(live.start, live.end).join("\n");
+    const preservedJournal = journal.endsWith("\r") ? `${journal}\n` : journal;
     return {
-      body: `${suppliedBody}${suppliedBody === "" ? "" : suppliedBody.endsWith("\n") ? "\n" : "\n\n"}${liveLines
-        .slice(live.start, live.end)
-        .join("\n")}`,
+      body: `${suppliedBody}${suppliedBody === "" ? "" : suppliedBody.endsWith("\n") ? "\n" : "\n\n"}${preservedJournal}`,
       ok: true,
     };
   }
