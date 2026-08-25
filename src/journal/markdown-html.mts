@@ -70,7 +70,7 @@ export function rawHtmlStart(line: string): RawHtmlBlock | null {
   if (tag) return { container: tokens, kind: "closing-tag", tag };
   if (/^ {0,3}<\?(?:.|\n)*/.test(visible))
     return { container: tokens, kind: "terminator", terminator: "?>" };
-  if (/^ {0,3}<!\[CDATA\[/i.test(visible))
+  if (/^ {0,3}<!\[CDATA\[/.test(visible))
     return { container: tokens, kind: "terminator", terminator: "]]>" };
   if (/^ {0,3}<![A-Z]/.test(visible))
     return { container: tokens, kind: "terminator", terminator: ">" };

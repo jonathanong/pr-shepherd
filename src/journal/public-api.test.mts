@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-
 import { appendJournalItem, reconcileShepherdJournal } from "./index.mts";
 import { rawHtmlEnd, rawHtmlStart } from "./markdown-html.mts";
 
@@ -188,5 +187,14 @@ describe("public Shepherd Journal API", () => {
     expect(declaration && rawHtmlEnd(declaration, "<!DOCTYPE html>")).toBe(15);
     expect(processing && rawHtmlEnd(processing, "?> trailing")).toBe(2);
     expect(cdata && rawHtmlEnd(cdata, "]]>")).toBe(3);
+    expect(rawHtmlStart("<![cdata[")).toBeNull();
+  });
+
+  it("does not hide a journal after a lowercase CDATA lookalike", () => {
+    const live = `<![cdata[\n\n${journal(["- Kept."])}`;
+    expect(reconcileShepherdJournal("Updated.", live)).toEqual({
+      body: `Updated.\n\n${journal(["- Kept."])}`,
+      ok: true,
+    });
   });
 });

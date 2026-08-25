@@ -1,17 +1,15 @@
 import { inQuotedHtmlAttribute } from "./markdown-html.mts";
 import { isSafeMarkdownInsertionPoint, scanMarkdownLines } from "./markdown-line.mts";
 import { structuralDetailsStart } from "./markdown-structure.mts";
-
 const LEGACY = /^##\s+Shepherd\s+Journal\s*$/;
 const JOURNAL_SUMMARY = /^<summary>\s*Shepherd\s+Journal\b/i;
+const SETEXT = /^ {0,3}(?:=+|-+)[ \t]*$/;
 const CLOSE = "</details>";
 const OPEN = "<details>";
 const SUMMARY = "<summary>Shepherd Journal</summary>";
-
 export type ShepherdJournalReconcileResult =
   | { body: string; ok: true }
   | { error: string; ok: false };
-
 export type ShepherdJournalBounds = {
   contentEnd: number;
   contentStart: number;
@@ -19,7 +17,6 @@ export type ShepherdJournalBounds = {
   format: "details" | "legacy";
   start: number;
 };
-
 function detailsTags(line: string, closing: boolean): number {
   if (structuralDetailsStart(line) === null) return 0;
   const expression = closing ? /<\/details>/gi : /<details(?:\s+[^>]*)?>/gi;
@@ -29,7 +26,6 @@ function detailsTags(line: string, closing: boolean): number {
 }
 const detailsOpens = (line: string): number => detailsTags(line, false);
 const detailsCloses = (line: string): number => detailsTags(line, true);
-
 function close(
   lines: string[],
   syntax: ReturnType<typeof scanMarkdownLines>,
@@ -49,7 +45,6 @@ function close(
   }
   return null;
 }
-
 export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | null | "error" {
   const syntax = scanMarkdownLines(lines);
   const found: ShepherdJournalBounds[] = [];
@@ -98,11 +93,22 @@ export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | nu
       legacy.contentEnd = i;
       legacy.end = i;
     }
+    if (
+      legacy &&
+      legacy.end === lines.length &&
+      SETEXT.test(visible) &&
+      i > legacy.contentStart &&
+      !syntax[i - 1]!.ignored &&
+      !syntax[i - 1]!.nested &&
+      lines[i - 1]!.trim() !== ""
+    ) {
+      legacy.contentEnd = i - 1;
+      legacy.end = i - 1;
+    }
     if (legacy && legacy.end === lines.length && lines[i]!.trim() === CLOSE) return "error";
   }
   return found.length > 1 ? "error" : (found[0] ?? null);
 }
-
 function trim(lines: string[]): string[] {
   let a = 0;
   let b = lines.length;
@@ -110,7 +116,6 @@ function trim(lines: string[]): string[] {
   while (b > a && lines[b - 1]!.trim() === "") b--;
   return lines.slice(a, b);
 }
-
 function entries(lines: string[]): string[][] {
   const result: string[][] = [];
   const syntax = scanMarkdownLines(
@@ -126,7 +131,6 @@ function entries(lines: string[]): string[][] {
   if (current) result.push(trim(current));
   return result;
 }
-
 function hasUnrecognizedLeadingContent(lines: string[]): boolean {
   const syntax = scanMarkdownLines(
     lines.map((line) => (line.endsWith("\r") ? line.slice(0, -1) : line)),
@@ -135,7 +139,6 @@ function hasUnrecognizedLeadingContent(lines: string[]): boolean {
   if (firstEntry === -1) return lines.some((line) => line.trim() !== "");
   return lines.slice(0, firstEntry).some((line) => line.trim() !== "");
 }
-
 function contains(item: string[], body: string[]): boolean {
   const a = item.map((line) => line.trimEnd());
   const b = body.map((line) => line.trimEnd());

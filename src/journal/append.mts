@@ -16,6 +16,13 @@ export interface AppendResult {
 export function appendJournalItem(body: string, item: string): AppendResult {
   const validated = validateJournalItem(item);
   if (!validated.ok) throw new Error(validated.error);
+  if (
+    validated.item
+      .split("\n")
+      .slice(1)
+      .some((line) => /^(?:[-+*]|\d{1,9}[.)])[ \t]+/.test(line))
+  )
+    throw new Error("journal item must contain exactly one top-level list item");
   item = validated.item;
   const lines = body.replaceAll("\r\n", "\n").split("\n");
   const bounds = scanShepherdJournal(lines);
