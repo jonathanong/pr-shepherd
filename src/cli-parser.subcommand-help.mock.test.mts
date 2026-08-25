@@ -101,11 +101,13 @@ for (const sub of SUBCOMMANDS) {
 describe("default poll path (pr 123 --help)", () => {
   it("prints poll usage to stdout and exits 0 for '123 --help'", async () => {
     await main(["node", "shepherd", "123", "--help"]);
-    expect(getStdout()).toContain("Usage:");
-    expect(getStdout()).toContain("Poll flags:");
-    expect(getStdout()).toContain("--interval");
-    expect(getStdout()).toContain("--timeout");
-    expect(getStdout()).toContain("--until-terminal");
+    const out = getStdout();
+    expect(out).toContain("Usage:\n  pr-shepherd [PR] [poll-flags] [iterate-flags]");
+    expect(out).not.toContain("[PR] [PR]");
+    expect(out).toContain("Poll flags:");
+    expect(out).toContain("--interval");
+    expect(out).toContain("--timeout");
+    expect(out).toContain("--until-terminal");
     expect(process.exitCode).toBeUndefined();
     expect(stderrSpy).not.toHaveBeenCalled();
     expect(mockRunIterate).not.toHaveBeenCalled();
@@ -113,9 +115,11 @@ describe("default poll path (pr 123 --help)", () => {
 
   it("prints poll usage to stdout and exits 0 for '123 -h'", async () => {
     await main(["node", "shepherd", "123", "-h"]);
-    expect(getStdout()).toContain("Usage:");
-    expect(getStdout()).toContain("Poll flags:");
-    expect(getStdout()).toContain("--interval");
+    const out = getStdout();
+    expect(out).toContain("Usage:\n  pr-shepherd [PR] [poll-flags] [iterate-flags]");
+    expect(out).not.toContain("[PR] [PR]");
+    expect(out).toContain("Poll flags:");
+    expect(out).toContain("--interval");
     expect(process.exitCode).toBeUndefined();
     expect(stderrSpy).not.toHaveBeenCalled();
     expect(mockRunIterate).not.toHaveBeenCalled();

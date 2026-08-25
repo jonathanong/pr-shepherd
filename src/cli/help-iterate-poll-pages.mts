@@ -78,4 +78,7 @@ Exit codes: same as iterate (the final tick's action/reason decides the code).
   A command/validation/GitHub failure exits with a sysexits.h code instead (see docs/exit-codes.md).`;
 
 /** Public help page for the default PR polling invocation. */
-export const DEFAULT_USAGE = POLL_USAGE.replaceAll("pr-shepherd poll", "pr-shepherd [PR]");
+export const DEFAULT_USAGE = POLL_USAGE.replace(/^pr-shepherd poll$/m, "pr-shepherd [PR]").replace(
+  /^ {2}pr-shepherd poll \[PR\]/m,
+  "  pr-shepherd [PR]",
+);
