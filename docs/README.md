@@ -31,14 +31,14 @@ Quick start: [`../README.md`](../README.md).
 
 ## How you run it
 
-| Document                               | What it covers                                                |
-| -------------------------------------- | ------------------------------------------------------------- |
-| [mcp.md](mcp.md)                       | Install and use the local stdio MCP server                    |
-| [cli-usage.md](cli-usage.md)           | Canonical shell commands and MCP tool reference               |
-| [skills.md](skills.md)                 | Claude Code, Codex, and Grok skill usage and recurrence       |
-| [api.md](api.md)                       | Package exports: `pr-shepherd`, `pr-shepherd/mcp`, `classify` |
-| [configuration.md](configuration.md)   | `.pr-shepherdrc.yml` and environment variables                |
-| [authentication.md](authentication.md) | PAT resolution, required fine-grained access, classic scopes  |
+| Document                               | What it covers                                                           |
+| -------------------------------------- | ------------------------------------------------------------------------ |
+| [mcp.md](mcp.md)                       | Install and use the local stdio MCP server                               |
+| [cli-usage.md](cli-usage.md)           | Canonical shell commands and MCP tool reference                          |
+| [skills.md](skills.md)                 | Claude Code, Codex, and Grok skill usage and recurrence                  |
+| [api.md](api.md)                       | Package exports: `pr-shepherd`, `pr-shepherd/mcp`, `classify`, `journal` |
+| [configuration.md](configuration.md)   | `.pr-shepherdrc.yml` and environment variables                           |
+| [authentication.md](authentication.md) | PAT resolution, required fine-grained access, classic scopes             |
 
 ## Internals
 

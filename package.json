@@ -53,6 +53,10 @@
     "./classify": {
       "types": "./src/classify/types.mts",
       "default": "./bin/classify/types.mjs"
+    },
+    "./journal": {
+      "types": "./bin/journal/index.d.mts",
+      "default": "./bin/journal/index.mjs"
     }
   },
   "scripts": {

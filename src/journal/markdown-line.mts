@@ -1,0 +1,190 @@
+import {
+  fenceStart,
+  type MarkdownContainer,
+  resolveMarkdownContainer,
+  stripMarkdownContainer,
+} from "./markdown-container.mts";
+import { inQuotedHtmlAttribute, rawHtmlStart, type RawHtmlBlock } from "./markdown-html.mts";
+import { isIndentedCode, structuralDetailsStart } from "./markdown-structure.mts";
+
+type BacktickRun = { escaped: boolean; index: number; length: number };
+type MarkdownLine = { ignored: boolean; visiblePrefix: string };
+
+function backtickRuns(line: string): BacktickRun[] {
+  const runs: BacktickRun[] = [];
+  for (let i = 0; i < line.length; i++) {
+    if (line[i] !== "`") continue;
+    let slashes = 0;
+    while (line[i - slashes - 1] === "\\") slashes++;
+    let end = i;
+    while (line[end] === "`") end++;
+    runs.push({ escaped: slashes % 2 === 1, index: i, length: end - i });
+    i = end - 1;
+  }
+  return runs;
+}
+
+function interruptsInlineContent(line: string): boolean {
+  return (
+    line.trim() === "" ||
+    /^ {0,3}(?:#{1,6}(?:[ \t]+|$)|>)/.test(line) ||
+    /^ {0,3}(?:(?:\*[ \t]*){3,}|-+[ \t]*|(?:_[ \t]*){3,}|=+[ \t]*)$/.test(line) ||
+    fenceStart(line) !== null ||
+    rawHtmlStart(line) !== null ||
+    structuralDetailsStart(line) !== null
+  );
+}
+
+function hasCloser(lines: string[], lineIndex: number, offset: number, length: number): boolean {
+  for (let i = lineIndex; i < lines.length; i++) {
+    if (i > lineIndex && interruptsInlineContent(lines[i]!)) return false;
+    if (
+      backtickRuns(lines[i]!).some(
+        (run) => run.length === length && (i > lineIndex || run.index > offset),
+      )
+    )
+      return true;
+  }
+  return false;
+}
+
+function nextBacktickRun(line: string, offset: number, length?: number): BacktickRun | undefined {
+  return backtickRuns(line).find(
+    (run) => run.index >= offset && (length === undefined || run.length === length),
+  );
+}
+
+function nextCodeOpener(line: string, offset: number): BacktickRun | undefined {
+  let run = nextBacktickRun(line, offset);
+  while (run && inQuotedHtmlAttribute(line, run.index))
+    run = nextBacktickRun(line, run.index + run.length);
+  return run;
+}
+
+export function scanMarkdownLines(lines: string[]): MarkdownLine[] {
+  const result: MarkdownLine[] = [];
+  let codeSpan: number | null = null;
+  let comment: { container: MarkdownContainer } | null = null;
+  let fence: { container: MarkdownContainer; length: number; marker: string } | null = null;
+  let html: RawHtmlBlock | null = null;
+  let activeContainer: MarkdownContainer = [];
+  let indentedCodeContainer: MarkdownContainer | null = null;
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    const line = lines[lineIndex]!;
+    const container = resolveMarkdownContainer(line, activeContainer);
+    activeContainer = container.tokens;
+    if (indentedCodeContainer) {
+      if (stripMarkdownContainer(line, indentedCodeContainer) !== null) {
+        result.push({ ignored: true, visiblePrefix: "" });
+        continue;
+      }
+      indentedCodeContainer = null;
+    }
+    let allowCodeOpeners = true;
+    let forceIgnored = false;
+    let scanOffset = 0;
+    if (html) {
+      const content = stripMarkdownContainer(line, html.container);
+      if (content === null) html = null;
+      else {
+        const close = new RegExp(`</${html.tag}\\s*>`, "i").exec(content);
+        if (!close) {
+          result.push({ ignored: true, visiblePrefix: "" });
+          continue;
+        }
+        html = null;
+        allowCodeOpeners = false;
+        forceIgnored = true;
+        scanOffset = line.length - content.length + close.index + close[0].length;
+      }
+    }
+    if (!forceIgnored && fence) {
+      const content = stripMarkdownContainer(line, fence.container);
+      if (content === null) fence = null;
+      else {
+        const match = content.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+        if (
+          match &&
+          match[1]![0] === fence.marker &&
+          match[1]!.length >= fence.length &&
+          /^[ \t]*$/.test(match[2]!)
+        )
+          fence = null;
+        result.push({ ignored: true, visiblePrefix: "" });
+        continue;
+      }
+    }
+    if (comment && stripMarkdownContainer(line, comment.container) === null) comment = null;
+    if (!forceIgnored && codeSpan === null && !comment) {
+      if (isIndentedCode(`${" ".repeat(container.indent)}${container.content}`)) {
+        if (container.tokens.length) indentedCodeContainer = container.tokens;
+        result.push({ ignored: true, visiblePrefix: "" });
+        continue;
+      }
+      const openingFence = fenceStart(line, container);
+      if (openingFence) {
+        fence = openingFence;
+        result.push({ ignored: true, visiblePrefix: "" });
+        continue;
+      }
+      const openingHtml = rawHtmlStart(line);
+      if (openingHtml) {
+        const content = stripMarkdownContainer(line, openingHtml.container) ?? "";
+        const close = new RegExp(`</${openingHtml.tag}\\s*>`, "i").exec(content);
+        if (!close) {
+          html = openingHtml;
+          result.push({ ignored: true, visiblePrefix: "" });
+          continue;
+        }
+        allowCodeOpeners = false;
+        forceIgnored = true;
+        scanOffset = line.length - content.length + close.index + close[0].length;
+      }
+    }
+    const startsMasked = forceIgnored || codeSpan !== null || comment !== null;
+    const visible = line.split("");
+    const mask = (start: number, end: number) => visible.fill(" ", start, end);
+    let offset = scanOffset;
+    while (offset < line.length) {
+      if (comment) {
+        const close = line.indexOf("-->", offset);
+        mask(offset, close === -1 ? line.length : close + 3);
+        if (close === -1) break;
+        comment = null;
+        offset = close + 3;
+        continue;
+      }
+      if (codeSpan !== null) {
+        const close = nextBacktickRun(line, offset, codeSpan);
+        mask(offset, close ? close.index + close.length : line.length);
+        if (!close) break;
+        codeSpan = null;
+        offset = close.index + close.length;
+        continue;
+      }
+      const commentAt = line.indexOf("<!--", offset);
+      const nextRun = allowCodeOpeners ? nextCodeOpener(line, offset) : undefined;
+      if (commentAt !== -1 && (!nextRun || commentAt < nextRun.index)) {
+        let slashes = 0;
+        while (line[commentAt - slashes - 1] === "\\") slashes++;
+        if (slashes % 2 === 1 || inQuotedHtmlAttribute(line, commentAt)) {
+          offset = commentAt + 4;
+          continue;
+        }
+        mask(commentAt, commentAt + 4);
+        comment = { container: activeContainer };
+        offset = commentAt + 4;
+        continue;
+      }
+      if (!nextRun) break;
+      if (!nextRun.escaped && hasCloser(lines, lineIndex, nextRun.index, nextRun.length)) {
+        codeSpan = nextRun.length;
+        mask(nextRun.index, nextRun.index + nextRun.length);
+      }
+      offset = nextRun.index + nextRun.length;
+    }
+    const visiblePrefix = visible.join("");
+    result.push({ ignored: startsMasked || visiblePrefix === "", visiblePrefix });
+  }
+  return result;
+}
