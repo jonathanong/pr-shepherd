@@ -21,7 +21,7 @@ export type ShepherdJournalBounds = {
 };
 function detailsTags(line: string, closing: boolean): number {
   if (structuralDetailsStart(line) === null) return 0;
-  const expression = closing ? /<\/details>/gi : /<details(?:\s+[^>]*)?>/gi;
+  const expression = closing ? /<\/details>/gi : /<details(?:\s+[^>]*)?\/?>/gi;
   return [...line.matchAll(expression)].filter(
     (match) => !inQuotedHtmlAttribute(line, match.index!),
   ).length;

@@ -30,6 +30,8 @@ describe("public Shepherd Journal API", () => {
     expect(() => appendJournalItem(existing, "- Unsafe.\n</details>")).toThrow(/container marker/i);
     expect(() => appendJournalItem(existing, "- </details>")).toThrow(/container marker/i);
     expect(() => appendJournalItem(existing, "- <details>")).toThrow(/container marker/i);
+    expect(() => appendJournalItem(existing, "- <details/>")).toThrow(/container marker/i);
+    expect(() => appendJournalItem(existing, "- <details />")).toThrow(/container marker/i);
     expect(() => appendJournalItem(existing, "- Decision </details>")).toThrow(/container marker/i);
     expect(() =>
       appendJournalItem(existing, "- Decision <summary>Shepherd Journal</summary>"),

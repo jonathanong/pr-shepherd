@@ -64,6 +64,9 @@ describe("Markdown HTML and structure parsing", () => {
     expect(isIndentedCode("\tcode")).toBe(true);
     expect(isIndentedCode("   prose")).toBe(false);
     expect(structuralDetailsStart("  <details open>")).toBe(2);
+    expect(structuralDetailsStart("<details/>")).toBe(0);
+    expect(structuralDetailsStart("<details />")).toBe(0);
+    expect(structuralDetailsStart("</details/>")).toBeNull();
     expect(structuralDetailsStart("-\t<details>")).not.toBeNull();
     expect(structuralDetailsStart("-     <details>")).toBeNull();
     expect(structuralDetailsStart("    <details>")).toBeNull();
@@ -182,6 +185,10 @@ describe("reconciliation parser edge cases", () => {
     expect(
       reconcileShepherdJournal("<details>\n<summary>Shepherd Journal</summary>\n\n- Kept.", ""),
     ).toMatchObject({ ok: false });
+  });
+
+  it("treats a self-closing details tag as an unclosed non-void details container", () => {
+    expect(reconcileShepherdJournal("<details/>", "")).toMatchObject({ ok: false });
   });
 
   it("balances unrelated nested details without creating a journal", () => {
