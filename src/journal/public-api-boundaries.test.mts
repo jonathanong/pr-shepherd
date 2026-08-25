@@ -17,18 +17,15 @@ describe("public Shepherd Journal API boundaries", () => {
     });
   });
 
-  it.each([" "])(
-    "ends a legacy journal before an optionally indented top-level H1 or H2 heading",
-    (indent) => {
-      for (const marker of ["#", "##"]) {
-        const heading = `${indent}${marker} Next`;
-        const live = `## Shepherd Journal\n\n- Kept.\n\n${heading}\n\nText.`;
-        expect(appendJournalItem(live, "- New.")).toMatchObject({
-          body: `${journal(["- Kept.", "- New."])}\n\n${heading}\n\nText.`,
-        });
-      }
-    },
-  );
+  it("ends a legacy journal before an optionally indented top-level H1 or H2 heading", () => {
+    for (const marker of ["#", "##"]) {
+      const heading = ` ${marker} Next`;
+      const live = `## Shepherd Journal\n\n- Kept.\n\n${heading}\n\nText.`;
+      expect(appendJournalItem(live, "- New.")).toMatchObject({
+        body: `${journal(["- Kept.", "- New."])}\n\n${heading}\n\nText.`,
+      });
+    }
+  });
 
   it("permits a CRLF body that ends after a closed fence", () => {
     const supplied = "```md\r\nSample.\r\n```\r\n";

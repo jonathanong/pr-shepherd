@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { appendJournalItem, reconcileShepherdJournal } from "./index.mts";
-
 const journal = (content: string[]) =>
   ["<details>", "<summary>Shepherd Journal</summary>", "", ...content, "</details>"].join("\n");
 
@@ -27,18 +26,17 @@ describe("public Shepherd Journal API", () => {
   it("rejects invalid items before creating or changing a journal", () => {
     const existing = journal(["- Kept."]);
     expect(() => appendJournalItem("", "</details>")).toThrow(/must start/i);
-    expect(() => appendJournalItem(existing, "- Unsafe.\n</details>")).toThrow(/container marker/i);
-    expect(() => appendJournalItem(existing, "- </details>")).toThrow(/container marker/i);
-    expect(() => appendJournalItem(existing, "- <details>")).toThrow(/container marker/i);
-    expect(() => appendJournalItem(existing, "- <details/>")).toThrow(/container marker/i);
-    expect(() => appendJournalItem(existing, "- <details />")).toThrow(/container marker/i);
-    expect(() => appendJournalItem(existing, "- Entry.\n<pre>\n<details>")).toThrow(
-      /container marker/i,
-    );
-    expect(() => appendJournalItem(existing, "- Decision </details>")).toThrow(/container marker/i);
-    expect(() =>
-      appendJournalItem(existing, "- Decision <summary>Shepherd Journal</summary>"),
-    ).toThrow(/container marker/i);
+    for (const item of [
+      "- Unsafe.\n</details>",
+      "- </details>",
+      "- <details>",
+      "- <details/>",
+      "- <details />",
+      "- Entry.\n<pre>\n<details>",
+      "- Decision </details>",
+      "- Decision <summary>Shepherd Journal</summary>",
+    ])
+      expect(() => appendJournalItem(existing, item)).toThrow(/container marker/i);
     expect(appendJournalItem(existing, "- Decision `</details>`")).toMatchObject({
       body: expect.stringContaining("- Decision `</details>`"),
       mutated: true,
