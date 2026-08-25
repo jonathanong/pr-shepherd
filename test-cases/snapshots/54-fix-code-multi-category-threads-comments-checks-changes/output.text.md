@@ -40,15 +40,12 @@ Conversations Resolved: No [Not Required]
 1. Review each item under `## Review threads`, `## Actionable comments`, `## Failing checks`, `## Changes-requested reviews` and decide whether it needs a code change.
 2. Do not cancel the IDs under `## Cancelled runs` again. The CLI already cancelled them.
 3. Apply every warranted review fix in each file referenced above.
-4. For each GitHub Actions failure under `## Failing checks`, read the included log excerpt first.
-5. If the excerpt is insufficient, run `gh run view <runId> --log-failed`. Open the run URL only if the API still lacks detail.
-6. Rerun transient infrastructure failures with `gh run rerun <runId> --failed`. Apply a code fix for real test or build failures.
-7. Read every body under `## Changes-requested reviews` and apply any warranted change.
-8. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
-9. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`.
-10. Link threads and comments from their headings. Cite reviews by ID.
-11. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
-12. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
-13. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
-14. Run the `apply review:` command shown above.
-15. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.
+4. Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for `gh run view` / `gh run rerun` rules.
+5. Read every body under `## Changes-requested reviews` and apply any warranted change.
+6. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
+7. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
+8. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
+9. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
+10. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
+11. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.
+12. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.

@@ -21,6 +21,5 @@ Conversations Resolved: Yes [Not Required]
 2. Read every item marked `[edited since first look]`, including edited summaries and edited first-look bullets, before deciding whether to resolve a matching thread.
 3. Apply every warranted review fix in the relevant files.
 4. If you changed code, commit any remaining changes and push. Otherwise, do not commit or push.
-5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`.
-6. Link threads and comments from their headings. Cite reviews by ID.
-7. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.
+5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
+6. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.

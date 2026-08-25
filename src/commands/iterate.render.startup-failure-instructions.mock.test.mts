@@ -11,7 +11,7 @@ import { runIterate } from "./iterate/index.mts";
 registerIterateHooks();
 
 describe("runIterate — prescriptive fields: log strings", () => {
-  it("fix_code startup failure instructions avoid failed job logs", async () => {
+  it("fix_code startup failure data carries `conclusion: STARTUP_FAILURE`; instructions no longer prescribe --log-failed/--failed", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "FAILING",
@@ -47,10 +47,15 @@ describe("runIterate — prescriptive fields: log strings", () => {
 
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
+      // The `[conclusion: STARTUP_FAILURE]` tag still round-trips as data (rendered in the
+      // `## Failing checks` section by fix-formatter.mts) so the skill's "CI failure
+      // triage" playbook — which prescribes plain `gh run view <runId>` / `gh run rerun
+      // <runId>` without --log-failed/--failed for this conclusion — can key off it. That
+      // per-conclusion distinction is no longer testable at the CLI-instruction level; it
+      // moved out of `## Instructions` entirely.
+      expect(result.fix.checks.some((c) => c.conclusion === "STARTUP_FAILURE")).toBe(true);
       const joined = result.fix.instructions.join("\n");
-      expect(joined).toContain("[conclusion: STARTUP_FAILURE]");
-      expect(joined).toContain("gh run view <runId>");
-      expect(joined).toContain("gh run rerun <runId>");
+      expect(joined).toContain("Triage every failure under `## Failing checks`");
       expect(joined).not.toContain("gh run view <runId> --log-failed");
       expect(joined).not.toContain("gh run rerun <runId> --failed");
     }

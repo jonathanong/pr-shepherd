@@ -10,18 +10,12 @@ export const SHEPHERD_JOURNAL_APPEND_HINT =
 export const SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE =
   "Review each body under `## Review summaries (first look)`. Eligible non-human IDs are already in `--minimize-comment-ids`. Record any warranted Shepherd Journal note before review mutations.";
 
-export function buildShepherdJournalInstruction(
-  prNumber: number,
-  itemReferenceGuidance: string,
-): string[] {
-  return [
-    `For any substantial decision or rejection, append \`- <decision>\` to Shepherd Journal with \`pr-shepherd apply journal ${prNumber} '- <decision>'\`.`,
-    itemReferenceGuidance,
-  ];
+/**
+ * Build the Shepherd Journal instruction step. The reference-citation convention (link
+ * threads/comments from their headings, cite reviews by ID) is invariant across every
+ * invocation, so it lives in the pr-shepherd skill's "Shepherd Journal" playbook instead
+ * of being re-emitted every tick (see CLAUDE.md "Keep skills and loop prompts minimal").
+ */
+export function buildShepherdJournalInstruction(prNumber: number): string {
+  return `For any substantial decision or rejection, append \`- <decision>\` to Shepherd Journal with \`pr-shepherd apply journal ${prNumber} '- <decision>'\`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.`;
 }
-
-export const SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS =
-  "Link threads and comments from their headings. Cite reviews by ID.";
-
-export const SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEMS =
-  "Link threads and comments from their item bullets. Cite reviews by ID.";

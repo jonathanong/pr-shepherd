@@ -22,7 +22,7 @@ describe("main — iterate text format", () => {
     expect(out).toContain("WAIT: 0 passing, 1 in-progress");
     expect(out).toContain("## Instructions");
     expect(out).toContain(
-      "1. No action is needed this tick. Continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.",
+      "1. Non-terminal — no action needed this tick. Iterate again with the same options to continue.",
     );
   });
   it("mark_ready: heading includes [MARK_READY] tag and ## Instructions with end-iteration step", async () => {
@@ -33,7 +33,7 @@ describe("main — iterate text format", () => {
     expect(out).toContain("MARKED READY: PR 42");
     expect(out).toContain("## Instructions");
     expect(out).toContain(
-      "1. The CLI marked the PR ready for review. Continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.",
+      "1. The CLI marked the PR ready for review. Iterate again with the same options to continue.",
     );
   });
   it("cancel: heading includes [CANCEL] tag with reason and ## Instructions with stop steps", async () => {
@@ -70,9 +70,7 @@ describe("main — iterate text format", () => {
     );
     // The override is surfaced once on the summary line; the instruction stays a plain no-op.
     expect(out).toContain("**ready-delay** `15m` (override)");
-    expect(out).toContain(
-      "1. No action is needed this tick. Continue with the next poll using the same interface and mode:",
-    );
+    expect(out).toContain("1. Non-terminal — no action needed this tick. Iterate again");
     expect(out).not.toContain("Recheck");
     expect(out).not.toContain("auto-cancel");
   });
@@ -81,7 +79,7 @@ describe("main — iterate text format", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain(
-      "1. The CLI marked the PR ready for review. Continue with the next poll using the same interface and mode:",
+      "1. The CLI marked the PR ready for review. Iterate again with the same options to continue.",
     );
   });
   it("cancel: instructions say the PR loop is complete", async () => {
@@ -115,7 +113,7 @@ describe("main — iterate text format", () => {
     expect(parsed.action).toBe("wait");
     expect(parsed.pr).toBe(42);
     expect(parsed.instructions).toEqual([
-      "No action is needed this tick. Continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.",
+      "Non-terminal — no action needed this tick. Iterate again with the same options to continue.",
     ]);
   });
   it("cancel json: emits reason field so consumers can branch without parsing log", async () => {

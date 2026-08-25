@@ -59,12 +59,12 @@ describe("runIterate — fix_code agent projection", () => {
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       const instructionsJoined = result.fix.instructions.join("\n");
-      // GitHub Actions check with runId — agent fetches logs and decides rerun vs fix
-      expect(instructionsJoined).toContain("gh run view <runId> --log-failed");
-      expect(instructionsJoined).toContain("gh run rerun");
-      // External check with detailsUrl but no runId — open URL
-      expect(instructionsJoined).toContain("For each `external` failure");
-      expect(instructionsJoined).toContain("open its URL and inspect it");
+      // GitHub Actions and external (detailsUrl, no runId) failures both route through the
+      // single triage pointer — per-conclusion `gh run view`/`gh run rerun` mechanics moved
+      // to the pr-shepherd skill's "CI failure triage" playbook (invariant text, not
+      // re-emitted per tick).
+      expect(instructionsJoined).toContain("Triage every failure under `## Failing checks`");
+      expect(instructionsJoined).toContain('"CI failure triage" in the pr-shepherd skill');
       // No bare-check bullets in this test, so the `(no runId)` instruction is omitted.
       expect(instructionsJoined).not.toContain("(no runId)");
     }

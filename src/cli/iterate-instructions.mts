@@ -6,11 +6,11 @@ export function buildSimpleIterateInstructions(
   switch (result.action) {
     case "wait":
       return [
-        "No action is needed this tick. Continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.",
+        "Non-terminal — no action needed this tick. Iterate again with the same options to continue.",
       ];
     case "mark_ready":
       return [
-        "The CLI marked the PR ready for review. Continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.",
+        "The CLI marked the PR ready for review. Iterate again with the same options to continue.",
       ];
     case "cancel":
       return ["Stop — the PR loop is complete. No further polling is needed."];

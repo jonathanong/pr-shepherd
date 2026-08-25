@@ -27,7 +27,24 @@ export function buildBehindBaseHintInstruction(
   return [`The branch is behind \`origin/${baseBranch}\`. ${trimmedHint} before pushing.`];
 }
 
-/** Build the `Run the apply review: command` instruction, including its optional substitution hint. */
+/**
+ * Build the `Run the apply review: command` instruction. Steps stay here (not in the skill)
+ * whenever the *unmodified, as-printed* command is unsafe without them:
+ *
+ * - `$HEAD_SHA`/`$DISMISS_MESSAGE` substitution: without it, the printed command has an
+ *   empty `--message`/invalid `--require-sha` and `apply review` rejects the mutation.
+ * - Self-reply exclusion: a human thread whose latest visible comment is already Shepherd's
+ *   own prior reply still has its ID in `--reply-thread-ids` by default. Running the
+ *   printed command as-is replies to Shepherd's own reply, which can re-surface the thread
+ *   and produce a self-perpetuating reply loop — worse than a rejected mutation, and not
+ *   something a caller can discover by inspecting the command alone.
+ *
+ * Contrast with what *does* stay in the skill's "Review-mutation mechanics" playbook —
+ * dismiss-ID retention and the first-look/annotation ID-exclusion rules. Those only matter
+ * if the caller *edits* the printed command (removes an ID, or adds one back); the printed
+ * command run unmodified is already correct for them. The pointer below is load-bearing:
+ * without it, nothing in CLI output tells the agent that playbook exists.
+ */
 export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): string[] {
   if (!resolveCommand.hasMutations) return [];
   const instructions: string[] = [];
@@ -44,41 +61,35 @@ export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): 
   if (resolveCommand.requiresDismissMessage) {
     instructions.push("Replace `$DISMISS_MESSAGE` with one sentence describing what changed.");
   }
-  instructions.push("Run the `apply review:` command shown above.");
+  instructions.push(
+    'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',
+  );
   return instructions;
 }
 
+/**
+ * Build the CI-triage instruction. The per-conclusion rerun policy (GitHub Actions log
+ * excerpts, `gh run view`/`gh run rerun` rules for CANCELLED/STARTUP_FAILURE/external
+ * failures) is invariant text keyed on the `[conclusion: …]` tags already rendered in
+ * `## Failing checks` — it lives in the pr-shepherd skill's "CI failure triage" playbook
+ * instead of being re-emitted every tick. This supersedes the "CI budget rules" example in
+ * CLAUDE.md's "Keep skills and loop prompts minimal" section (see that section's amendment
+ * note). The `(no runId)` case stays here because it flips `buildFixCompletionInstruction`
+ * to a human-handoff terminal state — that trigger, unlike the others, is CLI-decided. The
+ * CLI sentence does not claim every failure has a log excerpt to read (only GitHub Actions
+ * checks with a runId do — CANCELLED, STARTUP_FAILURE, and external checks may not); that
+ * per-kind detail is exactly what the skill playbook table disambiguates.
+ */
 export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   if (checks.length === 0) return [];
-  const hasRunId = checks.some(
-    (c) => c.runId && c.conclusion !== "CANCELLED" && c.conclusion !== "STARTUP_FAILURE",
-  );
-  const hasCancelled = checks.some((c) => c.runId && c.conclusion === "CANCELLED");
-  const hasStartupFailure = checks.some((c) => c.runId && c.conclusion === "STARTUP_FAILURE");
-  const hasExternal = checks.some((c) => !c.runId && c.detailsUrl);
   const hasBare = checks.some((c) => !c.runId && !c.detailsUrl);
+  const hasTriageable = checks.some((c) => c.runId || c.detailsUrl);
 
   const instructions: string[] = [];
-  if (hasRunId) {
+  if (hasTriageable) {
     instructions.push(
-      "For each GitHub Actions failure under `## Failing checks`, read the included log excerpt first.",
-      "If the excerpt is insufficient, run `gh run view <runId> --log-failed`. Open the run URL only if the API still lacks detail.",
-      "Rerun transient infrastructure failures with `gh run rerun <runId> --failed`. Apply a code fix for real test or build failures.",
+      'Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for `gh run view` / `gh run rerun` rules.',
     );
-  }
-  if (hasCancelled) {
-    instructions.push(
-      "For each `[conclusion: CANCELLED]` failure, run `gh run rerun <runId>` unless this tick will push new commits.",
-      "Do not treat a cancelled failure as resolved. `## Cancelled runs` is a different section.",
-    );
-  }
-  if (hasStartupFailure) {
-    instructions.push(
-      "For each `[conclusion: STARTUP_FAILURE]` failure, inspect it with `gh run view <runId>` and rerun it with `gh run rerun <runId>` if warranted.",
-    );
-  }
-  if (hasExternal) {
-    instructions.push("For each `external` failure, open its URL and inspect it.");
   }
   if (hasBare) {
     instructions.push(
@@ -94,5 +105,5 @@ export function buildFixCompletionInstruction(checks: AgentCheck[]): string {
   if (requiresHumanHandoff) {
     return "`[FIX_CODE]` requires a human handoff for an uninspectable failing check. Stop polling after escalating, and resume only after human direction.";
   }
-  return "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.";
+  return "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.";
 }
