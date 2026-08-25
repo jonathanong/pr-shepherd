@@ -100,7 +100,7 @@ export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | nu
       continue;
     }
     const start = SETEXT.test(visible) ? setextParagraphStart(lines, syntax, i) : null;
-    if (legacy && legacy.end === lines.length && start !== null && start > legacy.contentStart) {
+    if (legacy && legacy.end === lines.length && start !== null && start >= legacy.contentStart) {
       legacy.contentEnd = legacy.end = start;
     }
     if (legacy && legacy.end === lines.length && lines[i]!.trim() === CLOSE) return "error";

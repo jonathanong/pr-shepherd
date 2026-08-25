@@ -177,6 +177,17 @@ describe("public Shepherd Journal API boundaries", () => {
     },
   );
 
+  it.each(["Next section\n============", "Next section\n------------"])(
+    "ends an empty legacy journal before an immediately following Setext heading",
+    (heading) => {
+      const live = `## Shepherd Journal\n${heading}\n\nText.`;
+      expect(appendJournalItem(live, "- New.")).toMatchObject({
+        body: `${journal(["- New."])}\n\n${heading}\n\nText.`,
+        sectionExisted: true,
+      });
+    },
+  );
+
   it("moves an entire multiline Setext heading outside a legacy journal", () => {
     const heading = "Next section\nwith context\n---";
     const live = `## Shepherd Journal\n\n- Kept.\n\n${heading}\n\nText.`;

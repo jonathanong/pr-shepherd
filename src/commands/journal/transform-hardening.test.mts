@@ -14,6 +14,11 @@ describe("journal container hardening", () => {
     expect(validateJournalItem(`- Entry.\n${marker}`).ok).toBe(false),
   );
 
+  it.each(["<pre>\n<details>", "<div>\n<details />"])(
+    "rejects a reserved marker hidden by a raw HTML block in the legacy transform path",
+    (rawHtml) => expect(validateJournalItem(`- Entry.\n${rawHtml}`).ok).toBe(false),
+  );
+
   it("rejects a duplicate legacy heading after the first section boundary", () => {
     const body =
       "## Shepherd Journal\n\n- First.\n\n## Next\n\nText.\n\n## Shepherd Journal\n\n- Second.";

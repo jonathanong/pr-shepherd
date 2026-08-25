@@ -1,4 +1,7 @@
+import { inQuotedHtmlAttribute, rawHtmlEnd, rawHtmlStart } from "../../journal/markdown-html.mts";
+import { stripMarkdownContainer } from "../../journal/markdown-container.mts";
 import { scanMarkdownLines } from "../../journal/markdown-line.mts";
+import type { RawHtmlBlock } from "../../journal/markdown-html.mts";
 
 type ValidationOk = { ok: true; item: string };
 type ValidationError = { ok: false; error: string };
@@ -12,6 +15,38 @@ function reservedContainerTag(lines: string[]): string | null {
   for (const [index] of lines.entries()) {
     const match = RESERVED_CONTAINER_TAG.exec(syntax[index]!.visiblePrefix);
     if (match) return match[0];
+  }
+  return reservedContainerTagInRawHtml(lines);
+}
+
+function reservedContainerTagInRawHtml(lines: string[]): string | null {
+  let block: RawHtmlBlock | null = null;
+  for (const line of lines) {
+    if (block) {
+      const content = stripMarkdownContainer(line, block.container);
+      if (content === null) {
+        block = null;
+      } else {
+        const marker = reservedContainerTagOutsideHtmlAttributes(content);
+        if (marker) return marker;
+        if (rawHtmlEnd(block, content) !== null) block = null;
+        continue;
+      }
+    }
+    const opening = rawHtmlStart(line);
+    if (!opening) continue;
+    const content = stripMarkdownContainer(line, opening.container) ?? "";
+    const marker = reservedContainerTagOutsideHtmlAttributes(content);
+    if (marker) return marker;
+    if (rawHtmlEnd(opening, content) === null) block = opening;
+  }
+  return null;
+}
+
+function reservedContainerTagOutsideHtmlAttributes(line: string): string | null {
+  const expression = new RegExp(RESERVED_CONTAINER_TAG.source, "gi");
+  for (const match of line.matchAll(expression)) {
+    if (!inQuotedHtmlAttribute(line, match.index!)) return match[0];
   }
   return null;
 }
