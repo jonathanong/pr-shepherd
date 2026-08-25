@@ -49,7 +49,17 @@ describe("buildBehindBaseHintInstruction", () => {
 });
 
 describe("buildFailingCheckInstructions", () => {
-  it("emits every mixed failure category once in deterministic order", () => {
+  it("returns nothing when there are no failing checks", () => {
+    expect(buildFailingCheckInstructions([])).toEqual([]);
+  });
+
+  it("emits a single triage pointer for any GitHub Actions / external failure, plus the bare-check escalation", () => {
+    // Per-conclusion rerun mechanics (gh run view/rerun rules for CANCELLED,
+    // STARTUP_FAILURE, external) are invariant text now covered by the pr-shepherd
+    // skill's "CI failure triage" playbook — see the collision note on
+    // buildFailingCheckInstructions in check-instructions.mts. Only the `(no runId)`
+    // bare-check escalation stays here, because it flips buildFixCompletionInstruction
+    // to a human-handoff terminal state.
     const instructions = buildFailingCheckInstructions([
       check({}),
       check({ runId: "124", conclusion: "CANCELLED" }),
@@ -59,22 +69,22 @@ describe("buildFailingCheckInstructions", () => {
     ]);
 
     expect(instructions).toEqual([
-      "For each GitHub Actions failure under `## Failing checks`, read the included log excerpt first.",
-      "If the excerpt is insufficient, run `gh run view <runId> --log-failed`. Open the run URL only if the API still lacks detail.",
-      "Rerun transient infrastructure failures with `gh run rerun <runId> --failed`. Apply a code fix for real test or build failures.",
-      "For each `[conclusion: CANCELLED]` failure, run `gh run rerun <runId>` unless this tick will push new commits.",
-      "Do not treat a cancelled failure as resolved. `## Cancelled runs` is a different section.",
-      "For each `[conclusion: STARTUP_FAILURE]` failure, inspect it with `gh run view <runId>` and rerun it with `gh run rerun <runId>` if warranted.",
-      "For each `external` failure, open its URL and inspect it.",
+      'Triage every failure under `## Failing checks` — read its included log excerpt first. See "CI failure triage" in the pr-shepherd skill for `gh run view` / `gh run rerun` rules.',
+      "For each `(no runId)` failure, escalate to a human because no log or URL is available.",
+    ]);
+  });
+
+  it("emits only the bare-check escalation when every failure lacks a runId and a URL", () => {
+    expect(buildFailingCheckInstructions([check({ runId: null, detailsUrl: null })])).toEqual([
       "For each `(no runId)` failure, escalate to a human because no log or URL is available.",
     ]);
   });
 });
 
 describe("buildFixCompletionInstruction", () => {
-  it("preserves the current CLI mode and flags for the next tick", () => {
+  it("hands control back to the caller for the next tick", () => {
     expect(buildFixCompletionInstruction([check({})])).toBe(
-      "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, rerun this command to continue.",
     );
   });
 

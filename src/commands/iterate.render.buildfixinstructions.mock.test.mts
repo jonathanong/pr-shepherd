@@ -26,11 +26,16 @@ describe("buildFixInstructions", () => {
     );
 
     expect(instructions).toEqual([
-      "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, rerun this command to continue.",
     ]);
   });
 
-  it("distinguishes command refusal from source-drift fallback", () => {
+  it("points at the skill's Suggestion patches playbook instead of inlining refusal/drift mechanics", () => {
+    // The refusal-vs-drift distinction (unsafe refusal -> manual edit, other refusal ->
+    // follow the CLI error, drift -> replace the `path:startLine-endLine` range verbatim)
+    // is invariant text that moved to the pr-shepherd skill's "Suggestion patches"
+    // playbook — see plugins/pr-shepherd/skills/pr-shepherd/SKILL.md. buildFixInstructions
+    // now emits only the trigger and the concrete command.
     const instructions = buildFixInstructions(
       [
         {
@@ -64,15 +69,11 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(text).toContain("refuses because the suggestion is unsafe");
-    expect(text).toContain("nested/unbalanced suggestion fences");
-    expect(text).toContain("do not apply the replacement block verbatim");
-    expect(text).toContain("follow the CLI error's stated recovery action");
-    expect(text).toContain("do not manually edit the suggestion");
-    expect(text.match(/follow the CLI error's stated recovery action/g)).toHaveLength(1);
-    expect(text).not.toContain("refuses for any reason");
-    expect(text).toContain("source drift prevents a generated suggestion patch from applying");
-    expect(text).toContain("replace the heading's exact `path:startLine-endLine` range");
+    expect(text).toContain("build-suggestion-patch");
+    expect(text).toContain('See "Suggestion patches" in the pr-shepherd skill');
+    expect(text.match(/"Suggestion patches" in the pr-shepherd skill/g)).toHaveLength(1);
+    expect(text).not.toContain("refuses because the suggestion is unsafe");
+    expect(text).not.toContain("replace the heading's exact `path:startLine-endLine` range");
   });
 
   it("adds edited guidance for edited first-look threads", () => {
@@ -146,21 +147,28 @@ describe("buildFixInstructions", () => {
     expect(text).toContain("If you changed code, commit any remaining changes and push");
     // CLI no longer prescribes rebase mechanics — that is the caller's convention.
     expect(text).not.toContain("rebase onto");
-    expect(text).toContain("Replace `$HEAD_SHA` with the pushed commit SHA");
-    expect(instructions.at(-2)).toBe("Run the `apply review:` command shown above.");
+    // $HEAD_SHA substitution is invariant mechanics that moved to the skill's
+    // "Review-mutation mechanics" playbook — buildResolveCommandInstruction now always
+    // returns just the run-the-command step (plus a pointer to that playbook), regardless
+    // of requiresHeadSha.
+    expect(text).not.toContain("Replace `$HEAD_SHA`");
+    expect(instructions.at(-2)).toBe(
+      'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for placeholder substitution and ID-retention rules.',
+    );
     expect(instructions.at(-1)).toBe(
-      "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, rerun this command to continue.",
     );
-    expect(text).toContain(
-      "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll",
-    );
+    expect(text).toContain("`[FIX_CODE]` is non-terminal. After completing these steps, rerun");
     expect(text).not.toContain("Stop this iteration");
     // Old prescriptive git commands gone
     expect(text).not.toContain("Commit changed files:");
     expect(text).not.toContain("Rebase and push:");
   });
 
-  it("resolve substitution always includes fallback for unpushed case", () => {
+  it("emits only the run-the-command step regardless of requiresHeadSha/requiresDismissMessage", () => {
+    // Placeholder substitution ($HEAD_SHA, $DISMISS_MESSAGE) moved to the skill's
+    // "Review-mutation mechanics" playbook — buildResolveCommandInstruction no longer
+    // branches on these flags, it only gates on hasMutations.
     const instructions = buildFixInstructions(
       [],
       [],
@@ -186,8 +194,9 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(text).toContain("Replace `$HEAD_SHA` with the pushed commit SHA");
-    expect(text).toContain("$(git rev-parse HEAD)");
+    expect(text).not.toContain("Replace `$HEAD_SHA`");
+    expect(text).not.toContain("$(git rev-parse HEAD)");
+    expect(text).toContain("Run the `apply review:` command shown above.");
   });
 
   it("conditional commit/rebase instruction present when changes-requested reviews exist", () => {
@@ -220,13 +229,14 @@ describe("buildFixInstructions", () => {
     // CLI no longer prescribes rebase mechanics or names origin/main
     expect(text).not.toContain("rebase onto");
     expect(text).not.toContain("origin/main");
-    expect(text).toContain("Replace `$HEAD_SHA` with the pushed commit SHA");
+    // $HEAD_SHA substitution moved to the skill's "Review-mutation mechanics" playbook.
+    expect(text).not.toContain("Replace `$HEAD_SHA`");
     // No prescriptive git command lines
     expect(text).not.toContain("git add");
     expect(text).not.toContain("git fetch origin");
     expect(text).not.toContain("git push --force-with-lease");
     expect(text).toContain(
-      "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, rerun this command to continue.",
     );
   });
 
@@ -266,7 +276,7 @@ describe("buildFixInstructions", () => {
     expect(text).not.toContain("git add");
     expect(text).not.toContain("git push --force-with-lease");
     expect(text).toContain(
-      "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, rerun this command to continue.",
     );
   });
 

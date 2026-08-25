@@ -18,7 +18,6 @@ import {
 } from "./check-instructions.mts";
 import {
   SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE,
-  SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
   buildShepherdJournalInstruction,
 } from "../shepherd-journal.mts";
 import { isFailingAgentCheck } from "../../checks/conclusions.mts";
@@ -85,10 +84,7 @@ export function buildFixInstructions(
 
   const firstLookTotal = firstLookThreads.length + firstLookComments.length;
   if (firstLookTotal > 0) {
-    instructions.push(
-      "Review every item under `## First-look items` before acting.",
-      "If a first-look thread also appears under `## Review threads to resolve`, its ID is already in `apply review:`. Do not add first-look-only IDs to mutation flags.",
-    );
+    instructions.push("Review every item under `## First-look items` before acting.");
   }
   if (firstLookSummaries.length > 0) instructions.push(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
   const editedTotal =
@@ -104,9 +100,7 @@ export function buildFixInstructions(
 
   if (inProgressRunIds.length > 0) {
     instructions.push(
-      "If you will push, first cancel every ID under `## In-progress runs` with `gh run cancel <id>`.",
-      "Ignore cancellation errors for runs that already finished.",
-      "If you will not push, leave the in-progress runs alone.",
+      "If you will push, first cancel every ID under `## In-progress runs` with `gh run cancel <id>` (ignore errors for runs that already finished). If you will not push, leave them alone.",
     );
   }
   if (cancelledCount > 0) {
@@ -117,25 +111,18 @@ export function buildFixInstructions(
 
   const hasSuggestions = threads.some((t) => t.suggestion);
   if (hasSuggestions)
-    instructions.push(...buildCommitSuggestionInstruction(prNumber, "## Review threads", false));
+    instructions.push(buildCommitSuggestionInstruction(prNumber, "## Review threads"));
 
   if (threads.length > 0 || actionableComments.length > 0) {
     // Actionable comments carry no file/line location (unlike threads), so "referenced above"
     // is only accurate when threads are present.
     const filesRef = threads.length > 0 ? "each file referenced above" : "the relevant files";
     instructions.push(`Apply every warranted review fix in ${filesRef}.`);
-    if (hasSuggestions) {
-      instructions.push(
-        "After source drift prevents a generated suggestion patch from applying, replace the heading's exact `path:startLine-endLine` range with the `Replaces lines …` block verbatim. An empty replacement deletes the range. One blank line replaces it with one blank line.",
-        "When `build-suggestion-patch` refuses because the suggestion is unsafe (an unsafe anchored range or nested/unbalanced suggestion fences), do not apply the replacement block verbatim. Inspect the surrounding source and reviewer intent, then make the intended edit manually.",
-      );
-    }
   }
 
   if (resolutionOnlyThreads.length > 0) {
     instructions.push(
-      "Review the threads under `## Review threads to resolve` before running mutations.",
-      "Use the generated commands as shown. Human-authored IDs use `--reply-thread-ids`. Bot and non-human IDs use `--resolve-thread-ids`. Shepherd does not resolve human-authored threads.",
+      'Review the threads under `## Review threads to resolve` before running mutations. Use the generated commands as shown — see "Review-mutation routing" in the pr-shepherd skill for which flag applies to which ID.',
     );
   }
 
@@ -144,7 +131,6 @@ export function buildFixInstructions(
   if (hasAnnotations) {
     instructions.push(
       "Inspect every referenced range under `## Check annotations` and apply any warranted change.",
-      "Do not add annotation IDs to resolve or minimize mutations.",
     );
   }
 
@@ -153,10 +139,6 @@ export function buildFixInstructions(
     instructions.push(
       `Read every body under \`## Changes-requested reviews\` and apply any warranted change.${staleClause}`,
     );
-    if ((resolveCommand.dismissReviewIds?.length ?? 0) > 0)
-      instructions.push(
-        "Keep every existing `--dismiss-review-ids` ID in `apply review:`. Each is a bot or non-human review that must be dismissed. Omitting one leaves the PR in `CHANGES_REQUESTED`.",
-      );
   }
 
   instructions.push(...buildBehindBaseHintInstruction(baseBranch, behindBaseHint, isBehind));
@@ -181,12 +163,7 @@ export function buildFixInstructions(
     firstLookSummaries.length > 0 ||
     editedTotal > 0
   ) {
-    instructions.push(
-      ...buildShepherdJournalInstruction(
-        prNumber,
-        SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
-      ),
-    );
+    instructions.push(buildShepherdJournalInstruction(prNumber));
   }
 
   if (resolveOnlyCommand?.hasMutations)

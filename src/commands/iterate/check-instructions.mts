@@ -27,58 +27,42 @@ export function buildBehindBaseHintInstruction(
   return [`The branch is behind \`origin/${baseBranch}\`. ${trimmedHint} before pushing.`];
 }
 
-/** Build the `Run the apply review: command` instruction, including its optional substitution hint. */
+/**
+ * Build the `Run the apply review: command` instruction. Placeholder substitution
+ * ($HEAD_SHA, $DISMISS_MESSAGE), the self-reply exclusion rule, and — highest-severity —
+ * retaining every existing `--dismiss-review-ids` ID (omitting one leaves the PR stuck in
+ * `CHANGES_REQUESTED`) are invariant across every invocation, so they live in the
+ * pr-shepherd skill's "Review-mutation mechanics" playbook instead of being re-emitted
+ * every tick (see CLAUDE.md "Keep skills and loop prompts minimal"). The pointer below is
+ * load-bearing: without it, nothing in CLI output tells the agent that playbook exists.
+ */
 export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): string[] {
   if (!resolveCommand.hasMutations) return [];
-  const instructions: string[] = [];
-  if ((resolveCommand.replyThreadIds?.length ?? 0) > 0) {
-    instructions.push(
-      "Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.",
-    );
-  }
-  if (resolveCommand.requiresHeadSha) {
-    instructions.push(
-      "Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.",
-    );
-  }
-  if (resolveCommand.requiresDismissMessage) {
-    instructions.push("Replace `$DISMISS_MESSAGE` with one sentence describing what changed.");
-  }
-  instructions.push("Run the `apply review:` command shown above.");
-  return instructions;
+  return [
+    'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for placeholder substitution and ID-retention rules.',
+  ];
 }
 
+/**
+ * Build the CI-triage instruction. The per-conclusion rerun policy (GitHub Actions log
+ * excerpts, `gh run view`/`gh run rerun` rules for CANCELLED/STARTUP_FAILURE/external
+ * failures) is invariant text keyed on the `[conclusion: …]` tags already rendered in
+ * `## Failing checks` — it lives in the pr-shepherd skill's "CI failure triage" playbook
+ * instead of being re-emitted every tick. This supersedes the "CI budget rules" example in
+ * CLAUDE.md's "Keep skills and loop prompts minimal" section (see that section's amendment
+ * note). The `(no runId)` case stays here because it flips `buildFixCompletionInstruction`
+ * to a human-handoff terminal state — that trigger, unlike the others, is CLI-decided.
+ */
 export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   if (checks.length === 0) return [];
-  const hasRunId = checks.some(
-    (c) => c.runId && c.conclusion !== "CANCELLED" && c.conclusion !== "STARTUP_FAILURE",
-  );
-  const hasCancelled = checks.some((c) => c.runId && c.conclusion === "CANCELLED");
-  const hasStartupFailure = checks.some((c) => c.runId && c.conclusion === "STARTUP_FAILURE");
-  const hasExternal = checks.some((c) => !c.runId && c.detailsUrl);
   const hasBare = checks.some((c) => !c.runId && !c.detailsUrl);
+  const hasTriageable = checks.some((c) => c.runId || c.detailsUrl);
 
   const instructions: string[] = [];
-  if (hasRunId) {
+  if (hasTriageable) {
     instructions.push(
-      "For each GitHub Actions failure under `## Failing checks`, read the included log excerpt first.",
-      "If the excerpt is insufficient, run `gh run view <runId> --log-failed`. Open the run URL only if the API still lacks detail.",
-      "Rerun transient infrastructure failures with `gh run rerun <runId> --failed`. Apply a code fix for real test or build failures.",
+      'Triage every failure under `## Failing checks` — read its included log excerpt first. See "CI failure triage" in the pr-shepherd skill for `gh run view` / `gh run rerun` rules.',
     );
-  }
-  if (hasCancelled) {
-    instructions.push(
-      "For each `[conclusion: CANCELLED]` failure, run `gh run rerun <runId>` unless this tick will push new commits.",
-      "Do not treat a cancelled failure as resolved. `## Cancelled runs` is a different section.",
-    );
-  }
-  if (hasStartupFailure) {
-    instructions.push(
-      "For each `[conclusion: STARTUP_FAILURE]` failure, inspect it with `gh run view <runId>` and rerun it with `gh run rerun <runId>` if warranted.",
-    );
-  }
-  if (hasExternal) {
-    instructions.push("For each `external` failure, open its URL and inspect it.");
   }
   if (hasBare) {
     instructions.push(
@@ -94,5 +78,5 @@ export function buildFixCompletionInstruction(checks: AgentCheck[]): string {
   if (requiresHumanHandoff) {
     return "`[FIX_CODE]` requires a human handoff for an uninspectable failing check. Stop polling after escalating, and resume only after human direction.";
   }
-  return "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.";
+  return "`[FIX_CODE]` is non-terminal. After completing these steps, rerun this command to continue.";
 }

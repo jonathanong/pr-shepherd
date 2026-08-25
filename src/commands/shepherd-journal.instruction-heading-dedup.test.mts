@@ -1,8 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE,
-  SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEMS,
-  SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
   SHEPHERD_JOURNAL_SECTION,
   buildFixInstructions,
   buildShepherdJournalInstruction,
@@ -61,24 +59,22 @@ describe("shepherd journal instruction helpers", () => {
     expect(text).toContain(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
     expect(text).toContain("pr-shepherd apply journal 42");
     expect(text).not.toContain("idempotent");
-    expect(text).toContain(
-      SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
-    );
+    // Citation conventions moved to the pr-shepherd skill's "Shepherd Journal" playbook —
+    // invariant text, not re-emitted per tick.
+    expect(text).toContain('See "Shepherd Journal" in the pr-shepherd skill');
     expect(countMentions(text, "append `- <decision>` to Shepherd Journal")).toBe(1);
   });
   it("buildShepherdJournalInstruction remains de-duped when reused across multiple instruction blocks", () => {
-    const first = buildShepherdJournalInstruction(
-      42,
-      SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEMS,
-    );
-    const second = buildShepherdJournalInstruction(
-      42,
-      SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
-    );
-    const merged = `${first.join("\n")}\n---\n${second.join("\n")}`;
+    const first = buildShepherdJournalInstruction(42);
+    const second = buildShepherdJournalInstruction(42);
+    const merged = `${first}\n---\n${second}`;
+    // Each call now mentions "Shepherd Journal" twice (the append instruction and the
+    // skill-playbook pointer) — 4 total across two independent calls. What this test
+    // actually guards is that reusing the function doesn't fabricate an extra
+    // "## Shepherd Journal" markdown heading of its own.
     const total = countMentions(merged, SHEPHERD_JOURNAL_SECTION);
-    expect(total).toBe(2);
-    expect(first.join("\n")).not.toContain("`## Shepherd Journal` entry");
-    expect(second.join("\n")).not.toContain("`## Shepherd Journal` entry");
+    expect(total).toBe(4);
+    expect(first).not.toContain("`## Shepherd Journal` entry");
+    expect(second).not.toContain("`## Shepherd Journal` entry");
   });
 });

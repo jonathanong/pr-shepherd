@@ -19,6 +19,5 @@ Conversations Resolved: Yes [Not Required]
 2. The branch has merge conflicts (see `**branch**` above). Resolve them before committing and pushing.
 3. Read every body under `## Changes-requested reviews` and apply any warranted change.
 4. Commit any remaining changes and push the conflict resolution.
-5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`.
-6. Link threads and comments from their headings. Cite reviews by ID.
-7. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.
+5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
+6. `[FIX_CODE]` is non-terminal. After completing these steps, rerun this command to continue.

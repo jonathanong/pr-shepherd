@@ -26,11 +26,8 @@ Conversations Resolved: Yes [Not Required]
 
 1. Review each item under `## Failing checks`, `## Changes-requested reviews` and decide whether it needs a code change.
 2. Do not cancel the IDs under `## Cancelled runs` again. The CLI already cancelled them.
-3. For each GitHub Actions failure under `## Failing checks`, read the included log excerpt first.
-4. If the excerpt is insufficient, run `gh run view <runId> --log-failed`. Open the run URL only if the API still lacks detail.
-5. Rerun transient infrastructure failures with `gh run rerun <runId> --failed`. Apply a code fix for real test or build failures.
-6. Read every body under `## Changes-requested reviews` and apply any warranted change.
-7. If you changed code, commit any remaining changes and push. Otherwise, do not commit or push.
-8. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`.
-9. Link threads and comments from their headings. Cite reviews by ID.
-10. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.
+3. Triage every failure under `## Failing checks` — read its included log excerpt first. See "CI failure triage" in the pr-shepherd skill for `gh run view` / `gh run rerun` rules.
+4. Read every body under `## Changes-requested reviews` and apply any warranted change.
+5. If you changed code, commit any remaining changes and push. Otherwise, do not commit or push.
+6. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
+7. `[FIX_CODE]` is non-terminal. After completing these steps, rerun this command to continue.

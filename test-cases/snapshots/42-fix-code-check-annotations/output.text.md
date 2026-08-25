@@ -28,10 +28,8 @@ Conversations Resolved: Yes [Not Required]
 ## Instructions
 
 1. Review each item under `## Failing checks`, `## Check annotations` and decide whether it needs a code change.
-2. For each `external` failure, open its URL and inspect it.
+2. Triage every failure under `## Failing checks` — read its included log excerpt first. See "CI failure triage" in the pr-shepherd skill for `gh run view` / `gh run rerun` rules.
 3. Inspect every referenced range under `## Check annotations` and apply any warranted change.
-4. Do not add annotation IDs to resolve or minimize mutations.
-5. If you changed code, commit any remaining changes and push. Otherwise, do not commit or push.
-6. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`.
-7. Link threads and comments from their headings. Cite reviews by ID.
-8. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.
+4. If you changed code, commit any remaining changes and push. Otherwise, do not commit or push.
+5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
+6. `[FIX_CODE]` is non-terminal. After completing these steps, rerun this command to continue.

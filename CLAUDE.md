@@ -155,15 +155,17 @@ Skills (`plugins/pr-shepherd/skills/*/SKILL.md`) and `/loop` prompts should be t
 4. Print the full output.
 5. Follow the output's own `## Instructions` section exactly.
 
-The canonical example is `plugins/pr-shepherd/skills/pr-shepherd/SKILL.md` — pure dispatcher, no policy.
+The canonical example is `plugins/pr-shepherd/skills/pr-shepherd/SKILL.md` — pure dispatcher for its numbered steps, plus an appended `## Playbooks` section (see the invariant-procedure exception below). The dispatch logic itself carries no policy.
 
 Everything else belongs in the CLI's Markdown `## Instructions` output, not in the skill:
 
 - Per-action dispatch (which command to extract, which tool to call, what variant to run).
-- **Interpretation and policy tables keyed on CLI output shape** — enum meanings (e.g. what `CONFLICTS` means for rebase), CI budget rules (`failureKind` handling, rerun commands), ready-to-merge predicates, field-by-field reporting templates.
-- Any instruction the reader is expected to act on.
+- **Interpretation and policy tables keyed on CLI output shape** — enum meanings (e.g. what `CONFLICTS` means for rebase), ready-to-merge predicates, field-by-field reporting templates. (CI rerun policy — `failureKind` handling, `gh run view`/`gh run rerun` rules — is the one exception: see the invariant-procedure rule below. It moved to the skill's "CI failure triage" playbook because its trigger data, the `[conclusion: …]` tags, stays in the CLI's `## Failing checks` section, so applying it costs the agent no extra tool call.)
+- Any instruction the reader is expected to act on, **unless** it is an invariant procedure per the rule below.
 
-Rule of thumb: if a skill contains a table, policy, or interpretation block whose inputs come from CLI output fields, that content belongs in the CLI's `## Instructions` section instead.
+Rule of thumb: if a skill contains a table, policy, or interpretation block whose inputs come from CLI output fields, that content belongs in the CLI's `## Instructions` section instead — unless the block's *text* is invariant (see below), in which case the CLI keeps only the trigger and the concrete command, and the skill holds the fixed procedure.
+
+**Invariant-procedure exception:** a step whose *text* is byte-identical on every invocation — exception handling, placeholder substitution (`$HEAD_SHA`, `$DISMISS_MESSAGE`), or ID-routing policy — belongs inline in the skill under `## Playbooks`, which loads it once per session, rather than in `## Instructions`, which would repeat it every tick. This applies only when the text itself never varies; the CLI still owns the *trigger* (deciding from output fields which playbook applies) and the *concrete command* (built from output fields, e.g. thread IDs, PR number), so a consumer without the skill still acts correctly on the happy path — only the exception branches move. Skills must not link to files outside `plugins/pr-shepherd/`, so moved content is written inline in `SKILL.md`, never linked to `docs/`.
 
 However, the CLI's `## Instructions` output must not duplicate guidance the caller's runtime already provides deterministically. Specifically:
 

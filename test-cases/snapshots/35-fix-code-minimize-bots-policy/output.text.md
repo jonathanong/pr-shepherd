@@ -39,11 +39,7 @@ Conversations Resolved: No [Not Required]
 2. Review each body under `## Review summaries (first look)`. Eligible non-human IDs are already in `--minimize-comment-ids`. Record any warranted Shepherd Journal note before review mutations.
 3. Apply every warranted review fix in each file referenced above.
 4. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
-5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`.
-6. Link threads and comments from their headings. Cite reviews by ID.
-7. Run the `resolve-only:` command shown above.
-8. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
-9. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
-10. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
-11. Run the `apply review:` command shown above.
-12. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.
+5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
+6. Run the `resolve-only:` command shown above.
+7. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for placeholder substitution and ID-retention rules.
+8. `[FIX_CODE]` is non-terminal. After completing these steps, rerun this command to continue.

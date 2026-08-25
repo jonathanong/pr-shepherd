@@ -22,10 +22,6 @@ Conversations Resolved: No [Not Required]
 2. The branch has merge conflicts (see `**branch**` above). Resolve them before committing and pushing.
 3. Apply every warranted review fix in each file referenced above.
 4. Commit any remaining changes and push the conflict resolution before review mutations.
-5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`.
-6. Link threads and comments from their headings. Cite reviews by ID.
-7. Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.
-8. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
-9. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
-10. Run the `apply review:` command shown above.
-11. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.
+5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
+6. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for placeholder substitution and ID-retention rules.
+7. `[FIX_CODE]` is non-terminal. After completing these steps, rerun this command to continue.

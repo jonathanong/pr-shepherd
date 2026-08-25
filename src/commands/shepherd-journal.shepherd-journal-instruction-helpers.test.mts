@@ -1,8 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE,
-  SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEMS,
-  SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
   SHEPHERD_JOURNAL_SECTION,
   SHEPHERD_JOURNAL_SECTION_PATTERN,
   buildFixInstructions,
@@ -16,11 +14,7 @@ import type {
 
 describe("shepherd journal instruction helpers", () => {
   it("buildShepherdJournalInstruction references the journal subcommand", () => {
-    const result = buildShepherdJournalInstruction(
-      42,
-      SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEMS,
-    );
-    const text = result.join("\n");
+    const text = buildShepherdJournalInstruction(42);
 
     expect(text).toContain(SHEPHERD_JOURNAL_SECTION);
     expect(text).toContain("pr-shepherd apply journal 42");
@@ -79,9 +73,10 @@ describe("shepherd journal instruction helpers", () => {
     expect(text).toContain(SHEPHERD_JOURNAL_SECTION);
     expect(text).toContain("pr-shepherd apply journal 42");
     expect(text).not.toContain("idempotent");
-    expect(text).toContain(
-      SHEPHERD_JOURNAL_REFERENCE_GUIDANCE_THREADS_AND_COMMENTS_IN_ITEM_HEADINGS,
-    );
+    // Citation conventions (link threads/comments from their headings, cite reviews by
+    // ID) moved to the pr-shepherd skill's "Shepherd Journal" playbook — invariant text,
+    // not re-emitted per tick. The instruction now points there instead of inlining it.
+    expect(text).toContain('See "Shepherd Journal" in the pr-shepherd skill');
     expect(text).toContain(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
     expect(countMentions(text, "append `- <decision>` to Shepherd Journal")).toBe(1);
     expect(text).not.toContain("`## Shepherd Journal` entry");

@@ -23,11 +23,15 @@ function makeActionableCheck(runId: string, name = "typecheck") {
 }
 
 describe("runIterate — fix_code agent projection", () => {
-  it("combined runId + external + bare checks — all three instruction variants coexist", async () => {
+  it("combined runId + external + bare checks — the triage pointer and bare-check escalation coexist", async () => {
     // Guards against a filter-predicate drift between buildFixInstructions
     // (which buckets checks by truthiness) and the CLI formatter (which emits
     // bullets by the same truthiness). If either side stops agreeing, an
-    // emitted bullet shape would have no matching instruction.
+    // emitted bullet shape would have no matching instruction. runId and external
+    // (URL, no runId) checks now share one triage pointer — see "CI failure
+    // triage" in the pr-shepherd skill for the per-conclusion mechanics; only the
+    // bare (no runId, no URL) case still gets its own CLI-side instruction, since
+    // it flips completion to a human-handoff terminal state.
     const ghActionsCheck = makeActionableCheck("run-77", "lint");
     const externalCheck = {
       name: "codecov/patch",
@@ -73,12 +77,11 @@ describe("runIterate — fix_code agent projection", () => {
     if (result.action === "fix_code") {
       expect(result.fix.checks).toHaveLength(3);
       const joined = result.fix.instructions.join("\n");
-      // All three instruction variants are separate, ordered instructions.
-      expect(joined).toContain("gh run view <runId> --log-failed"); // runId variant
-      expect(joined).toContain("For each `external` failure"); // external (URL, no runId) variant
-      expect(joined).toContain("(no runId)"); // bare (no runId, no URL) variant
-      expect(joined.match(/gh run view <runId> --log-failed/g)).toHaveLength(1);
-      expect(joined.match(/For each `external` failure/g)).toHaveLength(1);
+      // The runId and external (URL, no runId) variants share one triage pointer; the
+      // bare (no runId, no URL) variant still gets its own instruction.
+      expect(joined).toContain("Triage every failure under `## Failing checks`");
+      expect(joined).toContain("(no runId)");
+      expect(joined.match(/Triage every failure under `## Failing checks`/g)).toHaveLength(1);
       expect(joined.match(/\(no runId\)/g)).toHaveLength(1);
     }
   });

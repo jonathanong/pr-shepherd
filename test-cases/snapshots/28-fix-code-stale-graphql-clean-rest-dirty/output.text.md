@@ -13,4 +13,4 @@ Conversations Resolved: Yes [Not Required]
 
 1. The branch has merge conflicts (see `**branch**` above). Resolve them before committing and pushing.
 2. Commit any remaining changes and push the conflict resolution.
-3. `[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.
+3. `[FIX_CODE]` is non-terminal. After completing these steps, rerun this command to continue.

@@ -57,9 +57,11 @@ describe("runIterate — timeout/cancelled failures route to fix_code", () => {
       // Both failing checks are in the fix payload so the agent can decide.
       expect(result.fix.checks.map((c) => c.runId)).toContain("run-10");
       expect(result.fix.checks.map((c) => c.runId)).toContain("run-11");
-      // Instructions tell the agent to fetch logs and decide rerun vs fix.
+      // Instructions point the agent at the triage playbook to fetch logs and decide
+      // rerun vs fix; the `gh run view --log-failed` mechanics now live in the
+      // pr-shepherd skill's "CI failure triage" playbook, not in `## Instructions`.
       const joined = result.fix.instructions.join("\n");
-      expect(joined).toContain("gh run view <runId> --log-failed");
+      expect(joined).toContain("Triage every failure under `## Failing checks`");
     }
   });
 
