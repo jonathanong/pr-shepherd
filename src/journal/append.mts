@@ -1,5 +1,6 @@
 import { validateJournalItem } from "../commands/journal/journal-item.mts";
 import { containsJournalEntry, scanShepherdJournal } from "./reconcile.mts";
+import { isSafeMarkdownInsertionPoint } from "./markdown-line.mts";
 
 const OPEN = "<details>";
 const SUMMARY = "<summary>Shepherd Journal</summary>";
@@ -28,7 +29,11 @@ export function appendJournalItem(body: string, item: string): AppendResult {
   const bounds = scanShepherdJournal(lines);
   if (bounds === "error")
     throw new Error("malformed, duplicate, or ambiguous Shepherd Journal container");
-  if (!bounds) return create(lines, item);
+  if (!bounds) {
+    if (!isSafeMarkdownInsertionPoint(lines))
+      throw new Error("cannot append Shepherd Journal inside an unterminated Markdown construct");
+    return create(lines, item);
+  }
   const content = lines.slice(bounds.contentStart, bounds.contentEnd);
   if (bounds.format === "details" && containsJournalEntry(content, item))
     return { body, mutated: false, sectionExisted: true };

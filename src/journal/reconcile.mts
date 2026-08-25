@@ -1,7 +1,7 @@
 import { inQuotedHtmlAttribute } from "./markdown-html.mts";
 import { isSafeMarkdownInsertionPoint, scanMarkdownLines } from "./markdown-line.mts";
 import { structuralDetailsStart } from "./markdown-structure.mts";
-const LEGACY = /^##\s+Shepherd\s+Journal\s*$/;
+const LEGACY = /^ {0,3}##\s+Shepherd\s+Journal\s*$/;
 const JOURNAL_SUMMARY = /^<summary>\s*Shepherd\s+Journal\b/i;
 const SETEXT = /^ {0,3}(?:=+|-+)[ \t]*$/;
 const CLOSE = "</details>";
