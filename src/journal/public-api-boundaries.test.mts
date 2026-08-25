@@ -17,8 +17,8 @@ describe("public Shepherd Journal API boundaries", () => {
     });
   });
 
-  it.each([" ", "  ", "   "])(
-    "ends a legacy journal before an indented H1 or H2 heading",
+  it.each([" "])(
+    "ends a legacy journal before an optionally indented top-level H1 or H2 heading",
     (indent) => {
       for (const marker of ["#", "##"]) {
         const heading = `${indent}${marker} Next`;
@@ -82,6 +82,13 @@ describe("public Shepherd Journal API boundaries", () => {
     const live = "## Shepherd Journal\n\n- Kept.\n\n### Investigation\n\n- Detail.";
     expect(appendJournalItem(live, "- New.")).toMatchObject({
       body: journal(["- Kept.", "", "### Investigation", "", "- Detail.", "- New."]),
+    });
+  });
+
+  it("keeps a nested H2 heading inside a legacy journal", () => {
+    const live = "## Shepherd Journal\n\n- Kept.\n  ## Investigation\n  More context.";
+    expect(appendJournalItem(live, "- New.")).toMatchObject({
+      body: journal(["- Kept.", "  ## Investigation", "  More context.", "- New."]),
     });
   });
 

@@ -24,8 +24,6 @@ function detailsTags(line: string, closing: boolean): number {
     (match) => !inQuotedHtmlAttribute(line, match.index!),
   ).length;
 }
-const detailsOpens = (line: string): number => detailsTags(line, false);
-const detailsCloses = (line: string): number => detailsTags(line, true);
 function close(
   lines: string[],
   syntax: ReturnType<typeof scanMarkdownLines>,
@@ -36,8 +34,8 @@ function close(
     if (syntax[i]!.ignored || syntax[i]!.nested) continue;
     const visible = syntax[i]!.visiblePrefix;
     if (JOURNAL_SUMMARY.test(visible.trimStart()) || LEGACY.test(visible.trimEnd())) return null;
-    depth += detailsOpens(visible);
-    const closes = detailsCloses(visible);
+    depth += detailsTags(visible, false);
+    const closes = detailsTags(visible, true);
     if (closes) {
       depth -= closes;
       if (depth <= 0) return depth === 0 && lines[i] === CLOSE ? i : null;
@@ -53,6 +51,7 @@ export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | nu
   for (let i = 0; i < lines.length; i++) {
     if (
       !syntax[i]!.ignored &&
+      !syntax[i]!.nested &&
       legacy?.end === lines.length &&
       /^ {0,3}#{1,2}(?:[ \t]+|$)/.test(lines[i]!)
     ) {
@@ -61,8 +60,8 @@ export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | nu
     }
     if (syntax[i]!.ignored || syntax[i]!.nested) continue;
     const visible = syntax[i]!.visiblePrefix;
-    detailsDepth += detailsOpens(visible);
-    const closes = detailsCloses(visible);
+    detailsDepth += detailsTags(visible, false);
+    const closes = detailsTags(visible, true);
     if (closes) {
       if (detailsDepth >= closes) {
         detailsDepth -= closes;
