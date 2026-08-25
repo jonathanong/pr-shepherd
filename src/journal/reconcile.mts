@@ -1,7 +1,8 @@
 import { inQuotedHtmlAttribute } from "./markdown-html.mts";
 import { isSafeMarkdownInsertionPoint, scanMarkdownLines } from "./markdown-line.mts";
+import { setextParagraphStart } from "./markdown-setext.mts";
 import { structuralDetailsStart } from "./markdown-structure.mts";
-const LEGACY = /^ {0,3}##\s+Shepherd\s+Journal\s*$/;
+const LEGACY = /^ {0,3}##[ \t]+Shepherd\s+Journal\s*$/;
 const JOURNAL_SUMMARY = /^<summary>\s*Shepherd\s+Journal\b/i;
 const SETEXT = /^ {0,3}(?:=+|-+)[ \t]*$/;
 const CLOSE = "</details>";
@@ -56,6 +57,7 @@ export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | nu
       legacy?.end === lines.length &&
       /^ {0,3}#{1,2}(?:[ \t]+|$)/.test(lines[i]!)
     ) {
+      if (LEGACY.test(syntax[i]!.visiblePrefix.trimEnd())) return "error";
       legacy.contentEnd = legacy.end = i;
       continue;
     }
@@ -97,19 +99,9 @@ export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | nu
       found.push(legacy);
       continue;
     }
-    if (
-      legacy &&
-      legacy.end === lines.length &&
-      SETEXT.test(visible) &&
-      i > legacy.contentStart &&
-      !syntax[i - 1]!.ignored &&
-      !syntax[i - 1]!.nested &&
-      lines[i - 1]!.trim() !== "" &&
-      !/^ {0,3}(?:#{1,6}(?:[ \t]+|$)|>|(?:[-+*]|\d{1,9}[.)])[ \t]+)/.test(
-        syntax[i - 1]!.visiblePrefix,
-      )
-    ) {
-      legacy.contentEnd = legacy.end = i - 1;
+    const start = SETEXT.test(visible) ? setextParagraphStart(lines, syntax, i) : null;
+    if (legacy && legacy.end === lines.length && start !== null && start > legacy.contentStart) {
+      legacy.contentEnd = legacy.end = start;
     }
     if (legacy && legacy.end === lines.length && lines[i]!.trim() === CLOSE) return "error";
   }

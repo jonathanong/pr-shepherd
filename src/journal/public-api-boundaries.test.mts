@@ -84,6 +84,21 @@ describe("public Shepherd Journal API boundaries", () => {
     },
   );
 
+  it("does not treat a nonbreaking space as a legacy heading delimiter", () => {
+    const body = "##\u00a0Shepherd Journal\n\n- Kept.";
+    expect(reconcileShepherdJournal("Updated.", body)).toEqual({ body: "Updated.", ok: true });
+    expect(appendJournalItem(body, "- New.")).toMatchObject({
+      body: `${body}\n\n${journal(["- New."])}`,
+      sectionExisted: false,
+    });
+  });
+
+  it("fails closed for adjacent duplicate legacy headings", () => {
+    const body = "## Shepherd Journal\n\n- First.\n\n## Shepherd Journal\n\n- Second.";
+    expect(reconcileShepherdJournal("Updated.", body)).toMatchObject({ ok: false });
+    expect(() => appendJournalItem(body, "- New.")).toThrow(/malformed|duplicate|ambiguous/i);
+  });
+
   it("keeps H3 journal subsections inside a legacy journal", () => {
     const live = "## Shepherd Journal\n\n- Kept.\n\n### Investigation\n\n- Detail.";
     expect(appendJournalItem(live, "- New.")).toMatchObject({
@@ -130,4 +145,16 @@ describe("public Shepherd Journal API boundaries", () => {
       });
     },
   );
+
+  it("moves an entire multiline Setext heading outside a legacy journal", () => {
+    const heading = "Next section\nwith context\n---";
+    const live = `## Shepherd Journal\n\n- Kept.\n\n${heading}\n\nText.`;
+    expect(reconcileShepherdJournal("Updated.", live)).toEqual({
+      body: "Updated.\n\n## Shepherd Journal\n\n- Kept.\n",
+      ok: true,
+    });
+    expect(appendJournalItem(live, "- New.")).toMatchObject({
+      body: `${journal(["- Kept.", "- New."])}\n\n${heading}\n\nText.`,
+    });
+  });
 });
