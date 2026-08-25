@@ -1,5 +1,5 @@
 import { inQuotedHtmlAttribute } from "./markdown-html.mts";
-import { scanMarkdownLines } from "./markdown-line.mts";
+import { isSafeMarkdownInsertionPoint, scanMarkdownLines } from "./markdown-line.mts";
 import { structuralDetailsStart } from "./markdown-structure.mts";
 
 const LEGACY = /^##\s+Shepherd\s+Journal\s*$/;
@@ -37,7 +37,7 @@ function close(
 ): number | null {
   let depth = 1;
   for (let i = start; i < lines.length; i++) {
-    if (syntax[i]!.ignored) continue;
+    if (syntax[i]!.ignored || syntax[i]!.nested) continue;
     const visible = syntax[i]!.visiblePrefix;
     if (JOURNAL_SUMMARY.test(visible.trimStart()) || LEGACY.test(visible.trimEnd())) return null;
     depth += detailsOpens(visible);
@@ -56,7 +56,7 @@ export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | nu
   let detailsDepth = 0;
   let legacy: ShepherdJournalBounds | null = null;
   for (let i = 0; i < lines.length; i++) {
-    if (syntax[i]!.ignored) continue;
+    if (syntax[i]!.ignored || syntax[i]!.nested) continue;
     const visible = syntax[i]!.visiblePrefix;
     detailsDepth += detailsOpens(visible);
     const closes = detailsCloses(visible);
@@ -165,13 +165,18 @@ export function reconcileShepherdJournal(
     return fail("canonical Shepherd Journal details container cannot be downgraded to legacy H2");
   const liveContent = trim(liveLines.slice(live.contentStart, live.contentEnd));
   if (!liveContent.length) return { body: suppliedBody, ok: true };
-  if (!supplied)
+  if (!supplied) {
+    if (!isSafeMarkdownInsertionPoint(suppliedLines))
+      return fail(
+        "supplied body ends inside a Markdown construct that would hide the preserved journal",
+      );
     return {
       body: `${suppliedBody}${suppliedBody === "" ? "" : suppliedBody.endsWith("\n") ? "\n" : "\n\n"}${liveLines
         .slice(live.start, live.end)
         .join("\n")}`,
       ok: true,
     };
+  }
   const liveEntries = entries(liveLines.slice(live.contentStart, live.contentEnd));
   const liveJournalLines = liveLines.slice(live.contentStart, live.contentEnd);
   if (!liveEntries.length || hasUnrecognizedLeadingContent(liveJournalLines))

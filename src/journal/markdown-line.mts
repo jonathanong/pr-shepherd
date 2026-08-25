@@ -11,10 +11,9 @@ import {
   type RawHtmlBlock,
 } from "./markdown-html.mts";
 import { isIndentedCode, structuralDetailsStart } from "./markdown-structure.mts";
-
 type BacktickRun = { escaped: boolean; index: number; length: number };
-type MarkdownLine = { ignored: boolean; visiblePrefix: string };
-
+type MarkdownLine = { ignored: boolean; nested: boolean; visiblePrefix: string };
+type MarkdownScan = { lines: MarkdownLine[]; safeAtEof: boolean };
 function backtickRuns(line: string): BacktickRun[] {
   const runs: BacktickRun[] = [];
   for (let i = 0; i < line.length; i++) {
@@ -28,7 +27,6 @@ function backtickRuns(line: string): BacktickRun[] {
   }
   return runs;
 }
-
 function interruptsInlineContent(line: string): boolean {
   return (
     line.trim() === "" ||
@@ -40,7 +38,6 @@ function interruptsInlineContent(line: string): boolean {
     structuralDetailsStart(line) !== null
   );
 }
-
 function hasCloser(lines: string[], lineIndex: number, offset: number, length: number): boolean {
   for (let i = lineIndex; i < lines.length; i++) {
     if (i > lineIndex && interruptsInlineContent(lines[i]!)) return false;
@@ -53,21 +50,18 @@ function hasCloser(lines: string[], lineIndex: number, offset: number, length: n
   }
   return false;
 }
-
 function nextBacktickRun(line: string, offset: number, length?: number): BacktickRun | undefined {
   return backtickRuns(line).find(
     (run) => run.index >= offset && (length === undefined || run.length === length),
   );
 }
-
 function nextCodeOpener(line: string, offset: number): BacktickRun | undefined {
   let run = nextBacktickRun(line, offset);
   while (run && inQuotedHtmlAttribute(line, run.index))
     run = nextBacktickRun(line, run.index + run.length);
   return run;
 }
-
-export function scanMarkdownLines(lines: string[]): MarkdownLine[] {
+function scanMarkdown(lines: string[]): MarkdownScan {
   const result: MarkdownLine[] = [];
   let codeSpan: number | null = null;
   let comment: { container: MarkdownContainer } | null = null;
@@ -79,9 +73,12 @@ export function scanMarkdownLines(lines: string[]): MarkdownLine[] {
     const line = lines[lineIndex]!;
     const container = resolveMarkdownContainer(line, activeContainer);
     activeContainer = container.tokens;
+    const nested = container.tokens.length > 0;
+    const push = (ignored: boolean, visiblePrefix: string) =>
+      result.push({ ignored, nested, visiblePrefix });
     if (indentedCodeContainer) {
       if (stripMarkdownContainer(line, indentedCodeContainer) !== null) {
-        result.push({ ignored: true, visiblePrefix: "" });
+        push(true, "");
         continue;
       }
       indentedCodeContainer = null;
@@ -95,7 +92,7 @@ export function scanMarkdownLines(lines: string[]): MarkdownLine[] {
       else {
         const end = rawHtmlEnd(html, content);
         if (end === null) {
-          result.push({ ignored: true, visiblePrefix: "" });
+          push(true, "");
           continue;
         }
         html = null;
@@ -116,7 +113,7 @@ export function scanMarkdownLines(lines: string[]): MarkdownLine[] {
           /^[ \t]*$/.test(match[2]!)
         )
           fence = null;
-        result.push({ ignored: true, visiblePrefix: "" });
+        push(true, "");
         continue;
       }
     }
@@ -124,13 +121,13 @@ export function scanMarkdownLines(lines: string[]): MarkdownLine[] {
     if (!forceIgnored && codeSpan === null && !comment) {
       if (isIndentedCode(`${" ".repeat(container.indent)}${container.content}`)) {
         if (container.tokens.length) indentedCodeContainer = container.tokens;
-        result.push({ ignored: true, visiblePrefix: "" });
+        push(true, "");
         continue;
       }
       const openingFence = fenceStart(line, container);
       if (openingFence) {
         fence = openingFence;
-        result.push({ ignored: true, visiblePrefix: "" });
+        push(true, "");
         continue;
       }
       const openingHtml = rawHtmlStart(line);
@@ -139,7 +136,7 @@ export function scanMarkdownLines(lines: string[]): MarkdownLine[] {
         const end = rawHtmlEnd(openingHtml, content);
         if (end === null) {
           html = openingHtml;
-          result.push({ ignored: true, visiblePrefix: "" });
+          push(true, "");
           continue;
         }
         allowCodeOpeners = false;
@@ -190,7 +187,13 @@ export function scanMarkdownLines(lines: string[]): MarkdownLine[] {
       offset = nextRun.index + nextRun.length;
     }
     const visiblePrefix = visible.join("");
-    result.push({ ignored: startsMasked || visiblePrefix === "", visiblePrefix });
+    push(startsMasked || visiblePrefix === "", visiblePrefix);
   }
-  return result;
+  return {
+    lines: result,
+    safeAtEof: comment === null && fence === null && (html === null || html.kind === "blank-line"),
+  };
 }
+export const scanMarkdownLines = (lines: string[]): MarkdownLine[] => scanMarkdown(lines).lines;
+export const isSafeMarkdownInsertionPoint = (lines: string[]): boolean =>
+  scanMarkdown(lines).safeAtEof;

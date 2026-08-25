@@ -26,6 +26,22 @@ describe("public Shepherd Journal API", () => {
     });
   });
 
+  it("ignores journal-shaped details nested in a list item", () => {
+    const example = [
+      "- Example:",
+      "  <details>",
+      "  <summary>Shepherd Journal</summary>",
+      "",
+      "  - Not a journal.",
+      "  </details>",
+    ].join("\n");
+    expect(reconcileShepherdJournal("Updated.", example)).toEqual({ body: "Updated.", ok: true });
+    expect(appendJournalItem(example, "- Actual entry.")).toMatchObject({
+      body: `${example}\n\n${journal(["- Actual entry."])}`,
+      sectionExisted: false,
+    });
+  });
+
   it("ends a legacy journal at a tab-delimited ATX heading", () => {
     const live = "## Shepherd Journal\n\n- Kept.\n\n##\tNext\n\nText.";
     expect(reconcileShepherdJournal("Updated.", live)).toEqual({
@@ -41,6 +57,16 @@ describe("public Shepherd Journal API", () => {
       ok: true,
     });
   });
+
+  it.each(["```md\nUnclosed.", "<!-- Unclosed.", "<pre>\nUnclosed."])(
+    "fails closed rather than insert a journal into an unterminated Markdown construct",
+    (supplied) => {
+      expect(reconcileShepherdJournal(supplied, journal(["- Kept."]))).toMatchObject({
+        error: expect.stringMatching(/hide the preserved journal/i),
+        ok: false,
+      });
+    },
+  );
 
   it("shares scanner behavior with appendJournalItem", () => {
     const body = `<pre>\n${journal(["- Hidden."])}\n</pre>\n\n${journal(["- Kept."])}`;
