@@ -4,7 +4,8 @@ type ValidationOk = { ok: true; item: string };
 type ValidationError = { ok: false; error: string };
 export type ValidationResult = ValidationOk | ValidationError;
 
-const RESERVED_CONTAINER_TAG = /<\/?details(?:\s+[^>]*)?>|<summary\s*Shepherd\s+Journal\b[^>]*>/i;
+const RESERVED_CONTAINER_TAG =
+  /<\/?details(?:\s+[^>]*)?>|<summary(?:\s+[^>]*)?>\s*Shepherd\s+Journal\b/i;
 
 function reservedContainerTag(lines: string[]): string | null {
   const syntax = scanMarkdownLines(lines);
