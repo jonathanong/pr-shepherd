@@ -63,8 +63,8 @@ export type RawHtmlBlock =
   | { container: MarkdownContainer; kind: "blank-line" }
   | { container: MarkdownContainer; kind: "terminator"; terminator: string };
 
-export function rawHtmlStart(line: string): RawHtmlBlock | null {
-  const { content, indent, tokens } = markdownContainer(line);
+export function rawHtmlStart(line: string, parsed = markdownContainer(line)): RawHtmlBlock | null {
+  const { content, indent, tokens } = parsed;
   const visible = `${" ".repeat(indent)}${content}`;
   const tag = visible.match(/^ {0,3}<(pre|script|style|textarea)(?:\s|>|$)/i)?.[1];
   if (tag) return { container: tokens, kind: "closing-tag", tag };

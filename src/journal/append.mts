@@ -27,9 +27,17 @@ export function appendJournalItem(body: string, item: string): AppendResult {
   )
     throw new Error("journal item must contain exactly one top-level list item");
   item = validated.item;
-  const firstContent = item.slice(2).split("\n")[0]!;
-  if (fenceStart(firstContent) || rawHtmlStart(firstContent))
+  if (
+    item
+      .split("\n")
+      .some(
+        (line, index) =>
+          fenceStart(index === 0 ? line.slice(2) : line) ||
+          rawHtmlStart(index === 0 ? line.slice(2) : line),
+      )
+  )
     throw new Error("journal item must not start with a fenced or raw HTML block");
+  const newline = body.includes("\r\n") ? "\r\n" : "\n";
   const lines = body.replaceAll("\r\n", "\n").split("\n");
   const bounds = scanShepherdJournal(lines);
   if (bounds === "error")
@@ -37,7 +45,7 @@ export function appendJournalItem(body: string, item: string): AppendResult {
   if (!bounds) {
     if (!isSafeMarkdownInsertionPoint(lines))
       throw new Error("cannot append Shepherd Journal inside an unterminated Markdown construct");
-    return create(lines, item);
+    return create(lines, item, newline);
   }
   const content = lines.slice(bounds.contentStart, bounds.contentEnd);
   if (bounds.format === "details" && containsJournalEntry(content, item))
@@ -49,7 +57,7 @@ export function appendJournalItem(body: string, item: string): AppendResult {
         ...lines.slice(0, bounds.contentStart),
         ...next,
         ...lines.slice(bounds.contentEnd),
-      ].join("\n"),
+      ].join(newline),
       mutated: true,
       sectionExisted: true,
     };
@@ -70,13 +78,13 @@ export function appendJournalItem(body: string, item: string): AppendResult {
       ...canonical,
       ...(suffix[0]?.trim() ? [""] : []),
       ...suffix,
-    ].join("\n"),
+    ].join(newline),
     mutated: true,
     sectionExisted: true,
   };
 }
 
-function create(lines: string[], item: string): AppendResult {
+function create(lines: string[], item: string, newline: string): AppendResult {
   const existing = trimEnd(lines);
   return {
     body: [
@@ -87,7 +95,7 @@ function create(lines: string[], item: string): AppendResult {
       "",
       ...item.split("\n"),
       CLOSE,
-    ].join("\n"),
+    ].join(newline),
     mutated: true,
     sectionExisted: false,
   };

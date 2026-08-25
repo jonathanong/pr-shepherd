@@ -150,6 +150,31 @@ describe("Markdown scanner masking", () => {
       visiblePrefix: expect.stringContaining("visible"),
     });
   });
+
+  it("ends an inline HTML comment at its paragraph boundary", () => {
+    expect(
+      scanMarkdownLines([
+        "Sample <!-- unfinished",
+        "",
+        "<details>",
+        "<summary>Shepherd Journal</summary>",
+      ]),
+    ).toMatchObject([
+      { ignored: false },
+      { ignored: true },
+      { ignored: false, visiblePrefix: "<details>" },
+      { ignored: false, visiblePrefix: "<summary>Shepherd Journal</summary>" },
+    ]);
+  });
+
+  it("ends a list-contained raw HTML block when its list container ends", () => {
+    expect(scanMarkdownLines(["- Sample", "  <pre>", "outside list", "<details>"])).toMatchObject([
+      { ignored: false, nested: true },
+      { ignored: true, nested: true },
+      { ignored: false, nested: false, visiblePrefix: "outside list" },
+      { ignored: false, nested: false, visiblePrefix: "<details>" },
+    ]);
+  });
 });
 
 describe("reconciliation parser edge cases", () => {

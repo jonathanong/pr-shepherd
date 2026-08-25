@@ -6,7 +6,7 @@ const journal = (content: string[]) =>
   ["<details>", "<summary>Shepherd Journal</summary>", "", ...content, "</details>"].join("\n");
 
 describe("public Shepherd Journal API boundaries", () => {
-  it("recognizes the CommonMark --!> HTML comment terminator", () => {
+  it("recognizes the repository-supported --!> HTML comment terminator", () => {
     const live = `<!-- Sample --!>\n\n${journal(["- Kept."])}`;
     expect(reconcileShepherdJournal("Updated.", live)).toEqual({
       body: `Updated.\n\n${journal(["- Kept."])}`,
@@ -61,12 +61,30 @@ describe("public Shepherd Journal API boundaries", () => {
     });
   });
 
-  it.each(["- ```md", "- <pre>Evidence</pre>"])(
-    "rejects an item whose content starts a Markdown block",
+  it.each(["- ```md", "- <pre>Evidence</pre>", "- First.\n```md", "- First.\n<pre>"])(
+    "rejects an item containing a Markdown block opener",
     (item) => {
       expect(() => appendJournalItem("", item)).toThrow(/fenced or raw HTML block/i);
     },
   );
+
+  it.each(["#", "### Next", "###### Last"])(
+    "ends a legacy journal before every ATX heading level, including empty headings",
+    (heading) => {
+      const live = `## Shepherd Journal\n\n- Kept.\n\n${heading}\n\nText.`;
+      expect(appendJournalItem(live, "- New.")).toMatchObject({
+        body: `${journal(["- Kept.", "- New."])}\n\n${heading}\n\nText.`,
+      });
+    },
+  );
+
+  it("preserves CRLF line endings when appending", () => {
+    const body =
+      "Intro.\r\n\r\n<details>\r\n<summary>Shepherd Journal</summary>\r\n\r\n- Kept.\r\n</details>";
+    expect(appendJournalItem(body, "- New.").body).toBe(
+      "Intro.\r\n\r\n<details>\r\n<summary>Shepherd Journal</summary>\r\n\r\n- Kept.\r\n- New.\r\n</details>",
+    );
+  });
 
   it.each(["Next section\n============", "Next section\n------------"])(
     "ends a legacy journal before a Setext heading",

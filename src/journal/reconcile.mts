@@ -54,7 +54,7 @@ export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | nu
     if (
       !syntax[i]!.ignored &&
       legacy?.end === lines.length &&
-      /^ {0,3}#{1,2}[ \t]/.test(lines[i]!)
+      /^ {0,3}#{1,6}(?:[ \t]+|$)/.test(lines[i]!)
     ) {
       legacy.contentEnd = legacy.end = i;
       continue;

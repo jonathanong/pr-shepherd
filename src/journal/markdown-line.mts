@@ -40,7 +40,7 @@ function hasCloser(lines: string[], lineIndex: number, offset: number, length: n
 function scanMarkdown(lines: string[]): MarkdownScan {
   const result: MarkdownLine[] = [];
   let codeSpan: number | null = null;
-  let comment: { container: MarkdownContainer } | null = null;
+  let comment: { container: MarkdownContainer; inline: boolean } | null = null;
   let fence: { container: MarkdownContainer; length: number; marker: string } | null = null;
   let html: RawHtmlBlock | null = null;
   let activeContainer: MarkdownContainer = [];
@@ -93,7 +93,12 @@ function scanMarkdown(lines: string[]): MarkdownScan {
         continue;
       }
     }
-    if (comment && stripMarkdownContainer(line, comment.container) === null) comment = null;
+    if (
+      comment &&
+      (stripMarkdownContainer(line, comment.container) === null ||
+        (comment.inline && line.trim() === ""))
+    )
+      comment = null;
     if (!forceIgnored && codeSpan === null && !comment) {
       if (isIndentedCode(`${" ".repeat(container.indent)}${container.content}`)) {
         if (container.tokens.length) indentedCodeContainer = container.tokens;
@@ -106,7 +111,7 @@ function scanMarkdown(lines: string[]): MarkdownScan {
         push(true, "");
         continue;
       }
-      const openingHtml = rawHtmlStart(line);
+      const openingHtml = rawHtmlStart(line, container);
       if (openingHtml) {
         const content = stripMarkdownContainer(line, openingHtml.container) ?? "";
         const end = rawHtmlEnd(openingHtml, content);
@@ -153,7 +158,7 @@ function scanMarkdown(lines: string[]): MarkdownScan {
           continue;
         }
         mask(commentAt, commentAt + 4);
-        comment = { container: activeContainer };
+        comment = { container: activeContainer, inline: line.slice(0, commentAt).trim() !== "" };
         offset = commentAt + 4;
         continue;
       }
