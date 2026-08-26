@@ -32,6 +32,7 @@ describe("extractShepherdJournal", () => {
   it("extracts canonical entries in order without deduplicating them", () => {
     const body = journal([
       "- First.  ",
+      "Lazy continuation.",
       "  Continued.",
       "  > Nested quote.",
       "  * Nested list.",
@@ -43,7 +44,7 @@ describe("extractShepherdJournal", () => {
     expect(extractShepherdJournal(body)).toEqual({
       journal: {
         entries: [
-          "- First.  \n  Continued.\n  > Nested quote.\n  * Nested list.",
+          "- First.  \nLazy continuation.\n  Continued.\n  > Nested quote.\n  * Nested list.",
           "- Duplicate.",
           "- Duplicate.",
         ],
@@ -110,6 +111,7 @@ describe("extractShepherdJournal", () => {
 
   it.each([
     ["a heading", ["- Kept.", "", "## Other"]],
+    ["a prose block", ["- Kept.", "", "Other"]],
     ["a block quote", ["- Kept.", "", "> Other"]],
     ["an alternate list", ["- Kept.", "", "* Other"]],
     ["a fenced block", ["- Kept.", "", "```", "Other", "```"]],

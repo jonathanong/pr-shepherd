@@ -13,15 +13,24 @@ export type ShepherdJournalExtraction =
 function hasUnrecognizedJournalContent(lines: string[]): boolean {
   const syntax = scanMarkdownLines(lines);
   let foundEntry = false;
+  let separated = false;
   for (const [index, line] of lines.entries()) {
     if (syntax[index]!.visiblePrefix.startsWith("- ")) {
       foundEntry = true;
+      separated = false;
       continue;
     }
-    if (line.trim() === "") continue;
+    if (line.trim() === "") {
+      if (foundEntry) separated = true;
+      continue;
+    }
     const indent = line.match(/^ */)![0].length;
-    if (!foundEntry || (indent < 2 && !line.startsWith("\t") && isMarkdownBlockStart(line)))
+    if (
+      !foundEntry ||
+      (indent < 2 && !line.startsWith("\t") && (separated || isMarkdownBlockStart(line)))
+    )
       return true;
+    separated = false;
   }
   return false;
 }
