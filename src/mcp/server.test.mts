@@ -6,6 +6,9 @@ import { createPrShepherdMcpServer } from "./server.mts";
 
 interface RegisteredTool {
   annotations: Record<string, boolean>;
+  inputSchema: {
+    safeParse: (input: unknown) => { success: boolean };
+  };
   handler: (input: unknown) => Promise<{
     isError?: boolean;
     structuredContent?: unknown;
@@ -63,10 +66,118 @@ describe("pr-shepherd MCP server", () => {
       destructiveHint: false,
       idempotentHint: true,
     });
-    const response = await tools.iterate!.handler({ pr: 3 });
+    const response = await tools.iterate!.handler({ pr: "openai/pr-shepherd#3" });
 
-    expect(iterate).toHaveBeenCalledWith({ pr: 3 });
+    expect(iterate).toHaveBeenCalledWith({ pr: "openai/pr-shepherd#3" });
     expect(response.structuredContent).toBe(result);
+  });
+
+  it("requires a repository-qualified PR string in every tool schema and handler", async () => {
+    const shepherd = {
+      iterate: vi.fn(),
+      apply: vi.fn(),
+      buildSuggestionPatch: vi.fn(),
+    };
+    const tools = registeredTools(createPrShepherdMcpServer({ shepherd }));
+    const invalidByTool = {
+      iterate: [
+        {},
+        { pr: 3 },
+        { pr: "42" },
+        { pr: "openai/pr-shepherd" },
+        { pr: "openai/pr-shepherd#0" },
+        { pr: "openai#3" },
+        { pr: "https://example.com/openai/pr-shepherd/pull/3" },
+      ],
+      apply: [
+        {},
+        { pr: 3, operations: [{ type: "review_mutations", resolveThreadIds: ["PRRT_one"] }] },
+        {
+          pr: "42",
+          operations: [{ type: "review_mutations", resolveThreadIds: ["PRRT_one"] }],
+        },
+        {
+          pr: "openai/pr-shepherd",
+          operations: [{ type: "review_mutations", resolveThreadIds: ["PRRT_one"] }],
+        },
+        {
+          pr: "openai/pr-shepherd#0",
+          operations: [{ type: "review_mutations", resolveThreadIds: ["PRRT_one"] }],
+        },
+        {
+          pr: "openai#3",
+          operations: [{ type: "review_mutations", resolveThreadIds: ["PRRT_one"] }],
+        },
+        {
+          pr: "https://example.com/openai/pr-shepherd/pull/3",
+          operations: [{ type: "review_mutations", resolveThreadIds: ["PRRT_one"] }],
+        },
+      ],
+      build_suggestion_patch: [
+        {},
+        { pr: 3, threadId: "PRRT_one", message: "Apply it" },
+        { pr: "42", threadId: "PRRT_one", message: "Apply it" },
+        { pr: "openai/pr-shepherd", threadId: "PRRT_one", message: "Apply it" },
+        { pr: "openai/pr-shepherd#0", threadId: "PRRT_one", message: "Apply it" },
+        { pr: "openai#3", threadId: "PRRT_one", message: "Apply it" },
+        {
+          pr: "https://example.com/openai/pr-shepherd/pull/3",
+          threadId: "PRRT_one",
+          message: "Apply it",
+        },
+      ],
+    } as const;
+
+    for (const [name, inputs] of Object.entries(invalidByTool)) {
+      for (const input of inputs) {
+        expect(tools[name]!.inputSchema.safeParse(input).success).toBe(false);
+        await expect(tools[name]!.handler(input)).resolves.toMatchObject({
+          isError: true,
+          structuredContent: { code: 64, details: { validation: true } },
+        });
+      }
+    }
+
+    const validByTool = {
+      iterate: { pr: "openai/pr-shepherd#3" },
+      apply: {
+        pr: "openai/pr-shepherd#3",
+        operations: [{ type: "review_mutations", resolveThreadIds: ["PRRT_one"] }],
+      },
+      build_suggestion_patch: {
+        pr: "https://github.com/openai/pr-shepherd/pull/3",
+        threadId: "PRRT_one",
+        message: "Apply it",
+      },
+    } as const;
+
+    for (const [name, input] of Object.entries(validByTool)) {
+      expect(tools[name]!.inputSchema.safeParse(input).success).toBe(true);
+    }
+
+    expect(shepherd.iterate).not.toHaveBeenCalled();
+    expect(shepherd.apply).not.toHaveBeenCalled();
+    expect(shepherd.buildSuggestionPatch).not.toHaveBeenCalled();
+  });
+
+  it("rejects a mismatched repository before the real API can append a journal", async () => {
+    const server = createPrShepherdMcpServer({ cwd: process.cwd() });
+
+    const response = await registeredTools(server).apply!.handler({
+      pr: "definitely-not-current/widgets#347",
+      operations: [{ type: "append_journal", item: "- Must not be written." }],
+    });
+
+    expect(response).toMatchObject({
+      isError: true,
+      structuredContent: {
+        code: 64,
+        message: expect.stringContaining(
+          "PR reference repository definitely-not-current/widgets does not match the configured repository",
+        ),
+        details: { validation: true },
+      },
+    });
   });
 
   it("maps typed API errors to safe coded MCP errors", async () => {
@@ -78,7 +189,9 @@ describe("pr-shepherd MCP server", () => {
       },
     });
 
-    const response = await registeredTools(server).iterate!.handler({});
+    const response = await registeredTools(server).iterate!.handler({
+      pr: "openai/pr-shepherd#3",
+    });
 
     expect(response).toMatchObject({
       isError: true,
@@ -144,9 +257,11 @@ describe("pr-shepherd MCP server", () => {
     const tools = registeredTools(server);
 
     const applyResponse = await tools.apply!.handler({
+      pr: "acme/widgets#3",
       operations: [{ type: "mark_files_viewed", tests: true }],
     });
     const suggestionResponse = await tools.build_suggestion_patch!.handler({
+      pr: "acme/widgets#3",
       threadId: "PRRT_two",
       message: "apply suggestion",
     });
@@ -157,6 +272,7 @@ describe("pr-shepherd MCP server", () => {
     expect(applyResponse.content?.[0]?.text).toContain("Operation 3: append_journal");
     expect(suggestionResponse.structuredContent).toBe(suggestionResult);
     expect(buildSuggestionPatch).toHaveBeenCalledWith({
+      pr: "acme/widgets#3",
       threadId: "PRRT_two",
       message: "apply suggestion",
     });
@@ -185,7 +301,10 @@ describe("pr-shepherd MCP server", () => {
       },
     });
 
-    const response = await registeredTools(server).apply!.handler({ operations: [] });
+    const response = await registeredTools(server).apply!.handler({
+      pr: "acme/widgets#3",
+      operations: [],
+    });
 
     expect(response).toMatchObject({
       isError: true,

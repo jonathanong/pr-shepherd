@@ -48,6 +48,45 @@ describe("runJournal — happy path", () => {
     expect(mockUpdatePullRequestBody.mock.calls[0]![1]).toContain("- Decision made.");
   });
 
+  it("preserves the exact non-journal body while appending", async () => {
+    const originalBody = [
+      "# Summary",
+      "",
+      "Keep this description exactly as written.",
+      "",
+      "## Shepherd Journal",
+      "",
+      "- Existing entry.",
+      "",
+      "## Follow-up",
+      "",
+      "Keep this section too.",
+    ].join("\n");
+    mockGetPullRequestBody.mockResolvedValue({ nodeId: "PR_node123", body: originalBody });
+
+    await runJournal({ prNumber: 42, rawItem: "- New entry.", dryRun: false });
+
+    expect(mockUpdatePullRequestBody).toHaveBeenCalledWith(
+      "PR_node123",
+      [
+        "# Summary",
+        "",
+        "Keep this description exactly as written.",
+        "",
+        "<details>",
+        "<summary>Shepherd Journal</summary>",
+        "",
+        "- Existing entry.",
+        "- New entry.",
+        "</details>",
+        "",
+        "## Follow-up",
+        "",
+        "Keep this section too.",
+      ].join("\n"),
+    );
+  });
+
   it("appends to an existing section", async () => {
     mockGetPullRequestBody.mockResolvedValue({
       nodeId: "PR_node123",
