@@ -1,7 +1,4 @@
-import {
-  SHEPHERD_JOURNAL_DETAILS_CLOSE,
-  SHEPHERD_JOURNAL_DETAILS_SUMMARY,
-} from "../shepherd-journal.mts";
+import { SHEPHERD_JOURNAL_DETAILS_CLOSE } from "../shepherd-journal.mts";
 
 type Fence = { marker: "`" | "~"; length: number };
 export type MarkdownScanState = { comment: boolean; fence: Fence | null };
@@ -29,14 +26,6 @@ export function findDetailsClose(lines: string[], startIdx: number): number {
 
 export function isJournalLikeSummary(line: string): boolean {
   return /^<summary>\s*Shepherd\s+Journal\b/i.test(line);
-}
-
-export function isReservedJournalMarker(line: string): boolean {
-  return (
-    isDetailsOpening(line) ||
-    line === SHEPHERD_JOURNAL_DETAILS_SUMMARY ||
-    line === SHEPHERD_JOURNAL_DETAILS_CLOSE
-  );
 }
 
 function isDetailsOpening(line: string): boolean {

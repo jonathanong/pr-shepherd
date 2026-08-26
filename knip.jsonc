@@ -3,12 +3,13 @@
   "entry": [
     "src/index.mts!",
     "src/api.mts!",
+    "src/journal/index.mts!",
     "src/mcp/index.mts!",
     "src/mcp-stdio.mts!",
     "scripts/build.mjs",
     "scripts/install-husky.mjs",
     "scripts/strip-lcov-branches.mjs",
-    ".github/scripts/sync-plugin-version.mjs"
+    ".github/scripts/sync-plugin-version.mjs",
   ],
   "project": [
     "src/**/*.mts!",
@@ -20,7 +21,7 @@
     "test-cases/**/*.mts",
     "!test-cases/**/*.mts!",
     "scripts/**/*.mjs",
-    ".github/scripts/**/*.mjs"
+    ".github/scripts/**/*.mjs",
   ],
   "ignoreDependencies": ["husky"],
   "ignoreIssues": {
@@ -42,6 +43,6 @@
     "src/classify/loader.mts": ["exports"],
     "src/state/seen-comments.mts": ["exports"],
     "src/types/iterate.mts": ["types"],
-    "src/util/worktree.mts": ["exports"]
-  }
+    "src/util/worktree.mts": ["exports"],
+  },
 }

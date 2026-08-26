@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-The `pr-shepherd` npm package exports three entry points. They share command implementations, GitHub token resolution, and `.pr-shepherdrc.yml` with the CLI and MCP server.
+The `pr-shepherd` npm package exports four entry points. `pr-shepherd/journal` is pure and does not read GitHub, resolve tokens, or load configuration.
 
 Install the MCP server: [mcp.md](mcp.md). Classification rules: [configuration.md](configuration.md).
 
@@ -47,6 +47,28 @@ const patch = await shepherd.buildSuggestionPatch({
 Validation failures throw `PrShepherdValidationError` before any GitHub mutation. If a later apply operation fails after earlier ones succeeded, Shepherd throws `PartialApplyError` with `failedIndex` and `completed`.
 
 `buildSuggestionPatch` returns a unified diff plus commit metadata. It does not write a patch file or mutate git. It rejects when the suggestion does not safely fit GitHub's anchored range; callers should inspect the surrounding source and reviewer intent and apply that review manually.
+
+## `pr-shepherd/journal`
+
+```ts
+import {
+  appendJournalItem,
+  reconcileShepherdJournal,
+  validateJournalItem,
+} from "pr-shepherd/journal";
+
+const result = reconcileShepherdJournal(suppliedBody, liveBody);
+if (!result.ok) throw new Error(result.error);
+
+const validation = validateJournalItem("- Kept the existing behavior.");
+const updatedBody = validation.ok
+  ? appendJournalItem(result.body, validation.item).body
+  : result.body;
+```
+
+`reconcileShepherdJournal(suppliedBody, liveBody)` ensures a supplied body preserves every live Shepherd Journal item. If the supplied body omits a non-empty live journal, the function appends that container verbatim. It fails closed for malformed, duplicate, ambiguous, or canonical-to-legacy-downgrade containers. Its discriminated result is `{ ok: true, body } | { ok: false, error }`.
+
+`appendJournalItem` creates or migrates the canonical details container and idempotently appends one item. `validateJournalItem` returns a discriminated validation result for a `- <text>` journal item. Both functions are pure.
 
 ## `pr-shepherd/mcp`
 
