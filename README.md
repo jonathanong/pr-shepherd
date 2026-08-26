@@ -25,7 +25,7 @@ Full reference: [docs/README.md](docs/README.md). Feature matrix: [docs/features
 
 `pr-shepherd` moves deterministic PR orchestration into a local MCP server, with a CLI for shells and CI. Both interfaces fetch the same GitHub state, emit raw-enough context, and return a numbered plan for the calling agent to follow.
 
-The MCP server exposes three tools: `iterate`, `apply`, and `build_suggestion_patch`. `apply` accepts ordered review mutations, file-view mutations, and journal entries. The shipped skills are thin dispatchers for those tools.
+The MCP server exposes three tools: `iterate`, `apply`, and `build_suggestion_patch`. `apply` accepts ordered review mutations, file-view mutations, and journal entries. Direct MCP calls require a repository-qualified `pr`: a GitHub PR URL or `owner/repo#N`, matching the repository where the server started. The CLI and programmatic API also retain bare-number and current-branch PR discovery. The shipped skills are thin dispatchers for those tools.
 
 Each tick returns exactly one action:
 
@@ -115,7 +115,7 @@ Grok:
 /pr-shepherd 42
 ```
 
-MCP clients call `iterate` once per tick, then use `apply` for review/file/journal mutations and `build_suggestion_patch` for an anchored suggestion. `iterate` returns the same structured action data as the CLI, including its review mutation arguments. The client owns recurrence, so this works consistently in Codex, Claude Code, Grok, and any other stdio MCP client.
+MCP clients call `iterate` once per tick, then use `apply` for review/file/journal mutations and `build_suggestion_patch` for an anchored suggestion. Every direct MCP call supplies the same repository-qualified PR reference. `iterate` returns the same structured action data as the CLI, including its review mutation arguments. The client owns recurrence, so this works consistently in Codex, Claude Code, Grok, and any other stdio MCP client.
 
 The CLI remains useful for shell workflows. Its canonical polling form is:
 

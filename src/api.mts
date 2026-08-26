@@ -12,6 +12,7 @@ import {
 import { runResolveMutate } from "./commands/resolve-mutate.mts";
 import { runWithExecutionCwd } from "./execution-context.mts";
 import { getRepoInfo } from "./github/client.mts";
+import { parsePrReference, type ParsedPrReference } from "./pr-reference.mts";
 import type { ResolveResult } from "./comments/resolve.mts";
 import type { CommitSuggestionResult, IterateCommandOptions, IterateResult } from "./types.mts";
 
@@ -20,7 +21,7 @@ export interface CreatePrShepherdOptions {
   cwd?: string;
 }
 
-/** A positive PR number or canonical GitHub pull-request URL. */
+/** A positive PR number, GitHub pull-request URL, or owner/repo#number reference. */
 export type PrReference = number | string;
 
 export type IterateInput = Omit<IterateCommandOptions, "format" | "prNumber"> & {
@@ -190,7 +191,7 @@ function validateApplyInput(input: ApplyInput): void {
     throw new PrShepherdValidationError("apply requires a non-empty operations array");
   }
   for (const operation of input.operations) validateOperation(operation);
-  parsePrReference(input.pr);
+  validatePrReference(input.pr);
 }
 
 function validateOperation(operation: ApplyOperation): void {
@@ -291,45 +292,25 @@ function validateSuggestionPatchInput(input: BuildSuggestionPatchInput): void {
   if (input.description !== undefined && typeof input.description !== "string") {
     throw new PrShepherdValidationError("buildSuggestionPatch.description must be a string");
   }
-  parsePrReference(input.pr);
+  validatePrReference(input.pr);
 }
 
-interface ParsedPrReference {
-  number?: number;
-  repository?: string;
-}
-
-function parsePrReference(pr: PrReference | undefined): ParsedPrReference {
-  if (pr === undefined) return {};
-  if (typeof pr === "number" && Number.isInteger(pr) && pr > 0) return { number: pr };
-  if (typeof pr === "string") {
-    try {
-      const url = new URL(pr);
-      const parts = url.pathname.split("/").filter(Boolean);
-      if (
-        (url.protocol === "https:" || url.protocol === "http:") &&
-        (url.hostname === "github.com" || url.hostname === "www.github.com") &&
-        parts.length === 4 &&
-        parts[2] === "pull" &&
-        /^[1-9][0-9]*$/.test(parts[3]!)
-      ) {
-        return { number: Number(parts[3]), repository: `${parts[0]}/${parts[1]}` };
-      }
-    } catch {
-      // Construct the uniform public validation error below.
-    }
-  }
-  throw new PrShepherdValidationError("pr must be a positive number or a GitHub pull-request URL");
+function validatePrReference(pr: PrReference | undefined): ParsedPrReference {
+  const parsed = parsePrReference(pr);
+  if (parsed !== null) return parsed;
+  throw new PrShepherdValidationError(
+    "pr must be a positive number, a GitHub pull-request URL, or owner/repo#number",
+  );
 }
 
 async function resolvePrReference(pr: PrReference | undefined): Promise<number | undefined> {
-  const parsed = parsePrReference(pr);
+  const parsed = validatePrReference(pr);
   if (parsed.repository !== undefined) {
     const repo = await getRepoInfo();
     const currentRepository = `${repo.owner}/${repo.name}`;
     if (parsed.repository.toLowerCase() !== currentRepository.toLowerCase()) {
       throw new PrShepherdValidationError(
-        `PR URL repository ${parsed.repository} does not match the configured repository ${currentRepository}`,
+        `PR reference repository ${parsed.repository} does not match the configured repository ${currentRepository}`,
       );
     }
   }

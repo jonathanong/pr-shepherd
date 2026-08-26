@@ -14,6 +14,7 @@ import {
   type PrShepherd,
   PrShepherdValidationError,
 } from "../api.mts";
+import { isRepositoryQualifiedPrReference } from "../pr-reference.mts";
 import { formatJournalResult } from "../cli/journal-formatter.mts";
 import {
   formatCommitSuggestionResult,
@@ -28,7 +29,11 @@ export interface CreatePrShepherdMcpServerOptions extends CreatePrShepherdOption
   shepherd?: PrShepherd;
 }
 
-const pr = z.union([z.number().int().positive(), z.string().url()]).optional();
+const QUALIFIED_PR_ERROR = "pr must be a GitHub pull-request URL or an owner/repo#number reference";
+const pr = z
+  .string()
+  .refine(isRepositoryQualifiedPrReference, { message: QUALIFIED_PR_ERROR })
+  .describe("GitHub pull-request URL or owner/repo#number");
 const ids = z.array(z.string().min(1)).optional();
 
 const iterateInputSchema = z.object({
@@ -102,7 +107,11 @@ export function createPrShepherdMcpServer(
         openWorldHint: true,
       },
     },
-    async (input) => runTool(() => shepherd.iterate(input as IterateInput), formatIterateResult),
+    async (input) =>
+      runTool(
+        () => shepherd.iterate(requireRepositoryQualifiedPr(input) as IterateInput),
+        formatIterateResult,
+      ),
   );
 
   server.registerTool(
@@ -117,7 +126,11 @@ export function createPrShepherdMcpServer(
         openWorldHint: true,
       },
     },
-    async (input) => runTool(() => shepherd.apply(input as ApplyInput), formatApplyResult),
+    async (input) =>
+      runTool(
+        () => shepherd.apply(requireRepositoryQualifiedPr(input) as ApplyInput),
+        formatApplyResult,
+      ),
   );
 
   server.registerTool(
@@ -134,12 +147,24 @@ export function createPrShepherdMcpServer(
     },
     async (input) =>
       runTool(
-        () => shepherd.buildSuggestionPatch(input as BuildSuggestionPatchInput),
+        () =>
+          shepherd.buildSuggestionPatch(
+            requireRepositoryQualifiedPr(input) as BuildSuggestionPatchInput,
+          ),
         formatCommitSuggestionResult,
       ),
   );
 
   return server;
+}
+
+function requireRepositoryQualifiedPr<Input extends { pr?: unknown }>(
+  input: Input,
+): Input & { pr: string } {
+  if (!isRepositoryQualifiedPrReference(input.pr)) {
+    throw new PrShepherdValidationError(QUALIFIED_PR_ERROR);
+  }
+  return input as Input & { pr: string };
 }
 
 function readPackageVersion(): string {

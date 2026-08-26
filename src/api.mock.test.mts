@@ -48,6 +48,41 @@ describe("public API", () => {
     );
   });
 
+  it("accepts an owner/repo#number shorthand and translates it", async () => {
+    mockRunIterate.mockResolvedValue({ action: "wait" });
+    const shepherd = createPrShepherd();
+
+    await shepherd.iterate({ pr: "openai/pr-shepherd#42" });
+
+    expect(mockRunIterate).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: 42, format: "json" }),
+    );
+  });
+
+  it("rejects a mismatched owner/repo#number shorthand before running the command", async () => {
+    const shepherd = createPrShepherd();
+
+    await expect(shepherd.iterate({ pr: "other/widgets#42" })).rejects.toThrow(
+      "PR reference repository other/widgets does not match the configured repository openai/pr-shepherd",
+    );
+
+    expect(mockRunIterate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["a numeric PR", { pr: 42 }],
+    ["an omitted PR", {}],
+  ])("keeps API compatibility for %s", async (_label, input) => {
+    mockRunIterate.mockResolvedValue({ action: "wait" });
+    const shepherd = createPrShepherd();
+
+    await shepherd.iterate(input);
+
+    expect(mockRunIterate).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: "pr" in input ? 42 : undefined, format: "json" }),
+    );
+  });
+
   it("validates every operation before starting any mutation", async () => {
     const shepherd = createPrShepherd();
 
@@ -149,7 +184,7 @@ describe("public API", () => {
     await expect(
       shepherd.iterate({ pr: "https://github.com/other/widgets/pull/42" }),
     ).rejects.toThrow(
-      "PR URL repository other/widgets does not match the configured repository openai/pr-shepherd",
+      "PR reference repository other/widgets does not match the configured repository openai/pr-shepherd",
     );
 
     expect(mockRunIterate).not.toHaveBeenCalled();

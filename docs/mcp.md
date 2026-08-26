@@ -153,10 +153,12 @@ Replace `/path/to/pr-shepherd` with this checkout's absolute path. Do not use a 
 
 The server registers three tools. Each result includes Markdown `content` (the same text the CLI would print) and `structuredContent` (the JSON object).
 
+Every MCP call requires a repository-qualified `pr`: either a GitHub PR URL such as `https://github.com/owner/repo/pull/123` or `owner/repo#123`. Bare PR numbers and omitted PRs are rejected. The referenced repository must match the repository at the server's startup working directory (or the `cwd` supplied to an embedded factory); a mismatch is rejected before the operation runs. Start a separate server from the target repository when working across repositories.
+
 | Tool                     | Purpose                                                                                                       | Side effects                                                                             |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | `iterate`                | One state-machine tick. Surfaces review items, checks, merge state, and structured review-mutation arguments. | May mark a draft ready or cancel actionable runs unless those automations are disabled.  |
-| `apply`                  | Ordered review mutations, `mark_files_viewed`, and `append_journal` under one optional `pr`.                  | Writes to GitHub after prevalidation. A later failure leaves earlier operations applied. |
+| `apply`                  | Ordered review mutations, `mark_files_viewed`, and `append_journal` under one required `pr`.                  | Writes to GitHub after prevalidation. A later failure leaves earlier operations applied. |
 | `build_suggestion_patch` | Validate one anchored review suggestion and return a unified diff plus commit metadata.                       | None. Never edits the worktree or git history.                                           |
 
 Call `iterate` first. Translate its `resolveCommand` / `resolveOnlyCommand` arguments into an `apply` `review_mutations` operation. Use `build_suggestion_patch` only for a suggestion thread that needs its validated diff. Use `mark_files_viewed` and `append_journal` when the iterate output or the caller asks for those mutations.
@@ -167,23 +169,23 @@ Hosts namespace tool names with the server name (`pr-shepherd__iterate` in Grok,
 
 ### `iterate`
 
-| Input                    | Type                       | Required | Meaning                                                               |
-| ------------------------ | -------------------------- | -------- | --------------------------------------------------------------------- |
-| `pr`                     | positive int or GitHub URL | no       | PR to inspect. When omitted, Shepherd infers the current branch's PR. |
-| `readyDelaySeconds`      | non-negative number        | no       | Override the ready-delay window.                                      |
-| `stallTimeoutSeconds`    | non-negative number        | no       | Override the stall timeout.                                           |
-| `noAutoMarkReady`        | boolean                    | no       | Disable automatic draft → ready.                                      |
-| `noAutoCancelActionable` | boolean                    | no       | Disable cancellation of stale in-progress runs.                       |
-| `neverCancelRuns`        | string array               | no       | Extra workflow/check glob patterns Shepherd must not cancel.          |
+| Input                    | Type                            | Required | Meaning                                                         |
+| ------------------------ | ------------------------------- | -------- | --------------------------------------------------------------- |
+| `pr`                     | GitHub PR URL or `owner/repo#N` | yes      | PR to inspect; its repository must match the server repository. |
+| `readyDelaySeconds`      | non-negative number             | no       | Override the ready-delay window.                                |
+| `stallTimeoutSeconds`    | non-negative number             | no       | Override the stall timeout.                                     |
+| `noAutoMarkReady`        | boolean                         | no       | Disable automatic draft → ready.                                |
+| `noAutoCancelActionable` | boolean                         | no       | Disable cancellation of stale in-progress runs.                 |
+| `neverCancelRuns`        | string array                    | no       | Extra workflow/check glob patterns Shepherd must not cancel.    |
 
 The result is an `IterateResult`. Action semantics, instruction text, and field contracts live in [actions.md](actions.md).
 
 ### `apply`
 
-| Input        | Type                       | Required | Meaning                                                                    |
-| ------------ | -------------------------- | -------- | -------------------------------------------------------------------------- |
-| `pr`         | positive int or GitHub URL | no       | PR shared by every operation. Inferred from the current branch if omitted. |
-| `operations` | non-empty array            | yes      | Mutations, in this exact order, after every operation is validated.        |
+| Input        | Type                            | Required | Meaning                                                                        |
+| ------------ | ------------------------------- | -------- | ------------------------------------------------------------------------------ |
+| `pr`         | GitHub PR URL or `owner/repo#N` | yes      | PR shared by every operation; its repository must match the server repository. |
+| `operations` | non-empty array                 | yes      | Mutations, in this exact order, after every operation is validated.            |
 
 Each operation is one of:
 
@@ -218,12 +220,12 @@ Each operation is one of:
 
 ### `build_suggestion_patch`
 
-| Input         | Type                       | Required | Meaning                                      |
-| ------------- | -------------------------- | -------- | -------------------------------------------- |
-| `pr`          | positive int or GitHub URL | no       | Inferred from the current branch if omitted. |
-| `threadId`    | string                     | yes      | Review thread that contains a suggestion.    |
-| `message`     | string                     | yes      | Commit subject for the suggested commit.     |
-| `description` | string                     | no       | Optional commit body.                        |
+| Input         | Type                            | Required | Meaning                                                                 |
+| ------------- | ------------------------------- | -------- | ----------------------------------------------------------------------- |
+| `pr`          | GitHub PR URL or `owner/repo#N` | yes      | PR for the suggestion; its repository must match the server repository. |
+| `threadId`    | string                          | yes      | Review thread that contains a suggestion.                               |
+| `message`     | string                          | yes      | Commit subject for the suggested commit.                                |
+| `description` | string                          | no       | Optional commit body.                                                   |
 
 The result includes `patch`, `commitMessage`, `commitBody`, and `postActionInstructions`. The caller applies the patch and runs git.
 
@@ -231,7 +233,7 @@ The result includes `patch`, `commitMessage`, `commitBody`, and `postActionInstr
 
 MCP clients own polling. Do not expect a long-running poll tool. MCP `iterate` has no `--debounce`; late comments and CI failures are not batched the way the shell poll dispatcher batches them.
 
-1. Call `iterate`.
+1. Call `iterate` with a repository-qualified `pr`.
 2. Follow the returned `## Instructions`.
 3. For `WAIT` or `MARK_READY`, call `iterate` again when the host is ready to recheck.
 4. For `FIX_CODE`, finish the code/review work, then call `iterate` again.
@@ -241,7 +243,7 @@ The shell command `pr-shepherd [PR]` is the bounded poll dispatcher. It is not a
 
 ## Authentication, cwd, and environment
 
-The server uses the client's working directory for git, cascading `.pr-shepherdrc.yml` files, and classification rules. Start the client from the repository that contains the PR.
+The server uses its startup working directory (or an embedded factory's `cwd`) for git, cascading `.pr-shepherdrc.yml` files, and classification rules. Start the server from the repository that contains the PR. An MCP request cannot change that repository; qualified PR references to another repository are rejected.
 
 Token resolution is the same as the CLI: `GH_TOKEN`, `GITHUB_TOKEN`, `gh auth token`, then `GITHUB_PERSONAL_ACCESS_TOKEN`. See [authentication.md](authentication.md).
 

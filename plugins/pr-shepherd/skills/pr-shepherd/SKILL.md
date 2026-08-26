@@ -12,11 +12,11 @@ Thin dispatcher for iterating a PR. Poll with the CLI; use MCP `iterate` only wh
 
 ## Arguments: $ARGUMENTS
 
-1. Parse an optional PR number or GitHub PR URL from `$ARGUMENTS`; otherwise let pr-shepherd infer the current branch PR.
+1. Parse an optional PR number, repository-qualified `owner/repo#N`, or GitHub PR URL from `$ARGUMENTS`; otherwise let pr-shepherd infer the current branch PR.
 
-2. Run the poll command `pr-shepherd` with the optional PR argument and print its full result. Do not run `pr-shepherd iterate`. If the CLI is unavailable and the `iterate` MCP tool is available, call `iterate` and print its full result.
+2. Before passing a supplied GitHub PR URL or `owner/repo#N` to the CLI, run `gh repo view --json nameWithOwner --jq .nameWithOwner` and verify that repository matches the reference case-insensitively. Stop on a mismatch or failed lookup; the CLI does not validate the URL repository. Convert a verified `owner/repo#N` to `https://github.com/owner/repo/pull/N`, then run the poll command `pr-shepherd` with the optional PR argument and print its full result. Do not run `pr-shepherd iterate`. If the CLI is unavailable and the `iterate` MCP tool is available, first obtain a repository-qualified reference: use a supplied GitHub PR URL or `owner/repo#N` unchanged; for a bare number, run `gh pr view <number> --json url --jq .url`; when omitted, run `gh pr view --json url --jq .url`. If that does not produce one qualified PR reference, stop and report that MCP cannot safely determine the PR. Otherwise call `iterate` with that qualified reference and print its full result.
 
-3. Print the full result and follow every returned `## Instructions` step exactly. For CLI output, run each printed mutation command when instructed. For MCP output, use MCP `apply` and `build_suggestion_patch`; do not run a shell `pr-shepherd apply` command.
+3. Print the full result and follow every returned `## Instructions` step exactly. For CLI output, run each printed mutation command when instructed. For MCP output, use MCP `apply` and `build_suggestion_patch` with the same qualified PR reference; do not run a shell `pr-shepherd apply` command.
 
 4. After completing the returned instructions, repeat step 2 unless the action is `[CANCEL]` or `[ESCALATE]`, the instructions require a human handoff, or the human directs you to stop.
 

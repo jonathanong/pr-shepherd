@@ -40,7 +40,7 @@ const patch = await shepherd.buildSuggestionPatch({
 | `apply({ pr, operations })`                                     | MCP `apply`                           |
 | `buildSuggestionPatch({ pr, threadId, message, description? })` | MCP `build_suggestion_patch`          |
 
-`pr` is an optional positive number or GitHub pull-request URL. Omitted, Shepherd infers the current branch's open PR. `cwd` is used for git, config, and classification-rule lookups.
+For the programmatic API, `pr` is an optional positive number, repository-qualified `owner/repo#N`, or GitHub pull-request URL. Omitted, Shepherd infers the current branch's open PR. Repository-qualified references must match the repository at the configured `cwd` (or process working directory when omitted). `cwd` is used for git, config, and classification-rule lookups.
 
 `apply` runs `operations` in list order after validating every operation. Types: `review_mutations`, `mark_files_viewed`, `append_journal`. Replies and dismissals require `message`. `requireSha` must be a full 40-character lowercase hex SHA.
 
@@ -91,7 +91,7 @@ const server = createPrShepherdMcpServer({ cwd: "/path/to/repo" });
 await runPrShepherdMcpStdio({ cwd: "/path/to/repo" });
 ```
 
-`createPrShepherdMcpServer` accepts an optional `shepherd` for tests. The public factory still only exposes `iterate`, `apply`, and `build_suggestion_patch`. Host install and tool schemas: [mcp.md](mcp.md).
+`createPrShepherdMcpServer` accepts an optional `shepherd` for tests. The public factory still only exposes `iterate`, `apply`, and `build_suggestion_patch`. Unlike `createPrShepherd`, every MCP tool call requires a repository-qualified `pr` — a GitHub PR URL or `owner/repo#N` — matching the factory's `cwd`; bare and omitted PR references are rejected. Host install and tool schemas: [mcp.md](mcp.md).
 
 ## `pr-shepherd/classify`
 
