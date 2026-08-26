@@ -21,6 +21,7 @@ export function isMarkdownBlockStart(line: string): boolean {
     /^ {0,3}(?:#{1,6}(?:[ \t]+|$)|>)/.test(line) ||
     /^ {0,3}(?:[-+*]|\d{1,9}[.)])[ \t]+/.test(line) ||
     /^ {0,3}(?:(?:\*[ \t]*){3,}|-+[ \t]*|(?:_[ \t]*){3,}|=+[ \t]*)$/.test(line) ||
+    /^ {0,3}<!--/.test(line) ||
     fenceStart(line) !== null ||
     rawHtmlStart(line) !== null ||
     structuralDetailsStart(line) !== null

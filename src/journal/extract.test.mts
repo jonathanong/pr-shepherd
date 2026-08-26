@@ -75,6 +75,13 @@ describe("extractShepherdJournal", () => {
     });
   });
 
+  it("accepts a continuation indented with a space and tab", () => {
+    expect(extractShepherdJournal(journal(["- Kept.", "", " \tContinued."]))).toEqual({
+      journal: { entries: ["- Kept.\n\n \tContinued."], format: "details" },
+      ok: true,
+    });
+  });
+
   it.each([journal([]), "## Shepherd Journal\n"])(
     "returns an empty entry list for an empty journal",
     (body) => {
@@ -116,6 +123,10 @@ describe("extractShepherdJournal", () => {
     ["a block quote", ["- Kept.", "", "> Other"]],
     ["an alternate list", ["- Kept.", "", "* Other"]],
     ["a fenced block", ["- Kept.", "", "```", "Other", "```"]],
+    ["an HTML comment", ["- Kept.", "<!-- Other -->"]],
+    ["prose after a nested quote", ["- Kept.", "  > Nested.", "Other"]],
+    ["prose after a nested list", ["- Kept.", "  * Nested.", "    Continued.", "Other"]],
+    ["prose after a nested fence", ["- Kept.", "  ```", "  Nested.", "  ```", "Other"]],
   ])("fails closed for top-level %s after an entry", (_description, content) => {
     expect(extractShepherdJournal(journal(content))).toMatchObject({
       error: expect.stringMatching(/unrecognized entry format/i),

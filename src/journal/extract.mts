@@ -1,5 +1,7 @@
 import { parseShepherdJournalEntries, scanShepherdJournal } from "./reconcile.mts";
 import { isMarkdownBlockStart, scanMarkdownLines } from "./markdown-line.mts";
+import { stripMarkdownContainer } from "./markdown-container.mts";
+import { isIndentedCode } from "./markdown-structure.mts";
 
 /** Result of extracting the single visible structural Shepherd Journal from Markdown. */
 export type ShepherdJournalExtraction =
@@ -13,24 +15,37 @@ export type ShepherdJournalExtraction =
 function hasUnrecognizedJournalContent(lines: string[]): boolean {
   const syntax = scanMarkdownLines(lines);
   let foundEntry = false;
-  let separated = false;
+  let lazyContinuation = false;
+  let nestedBlock = false;
   for (const [index, line] of lines.entries()) {
-    if (syntax[index]!.visiblePrefix.startsWith("- ") && /^- \S/.test(line)) {
+    const scanned = syntax[index]!;
+    if (scanned.visiblePrefix.startsWith("- ") && /^- \S/.test(line)) {
       foundEntry = true;
-      separated = false;
+      lazyContinuation = true;
+      nestedBlock = false;
       continue;
     }
     if (line.trim() === "") {
-      if (foundEntry) separated = true;
+      if (foundEntry) lazyContinuation = false;
       continue;
     }
-    const indent = line.match(/^ */)![0].length;
-    if (
-      !foundEntry ||
-      (indent < 2 && !line.startsWith("\t") && (separated || isMarkdownBlockStart(line)))
-    )
-      return true;
-    separated = false;
+    if (!foundEntry) return true;
+    const content = stripMarkdownContainer(line, [{ kind: "list", width: 2 }]);
+    if (content === null) {
+      if (!lazyContinuation || isMarkdownBlockStart(line)) return true;
+      continue;
+    }
+    if (scanned.ignored || isMarkdownBlockStart(content) || isIndentedCode(content)) {
+      lazyContinuation = false;
+      nestedBlock = true;
+      continue;
+    }
+    if (nestedBlock && /^[ \t]/.test(content)) {
+      lazyContinuation = false;
+      continue;
+    }
+    lazyContinuation = true;
+    nestedBlock = false;
   }
   return false;
 }
