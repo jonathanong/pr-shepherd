@@ -133,6 +133,24 @@ pr-shepherd iterate 42                 # single tick
 
 Use `apply` with ordered operations to reply/resolve/minimize/dismiss review items, mark changed files viewed, or append an idempotent Shepherd Journal item. Use `build_suggestion_patch` to turn one review suggestion into a validated patch and commit metadata; it never changes the worktree or git history.
 
+### Extract Shepherd Journal Entries
+
+The pure `pr-shepherd/journal` entry point can extract one validated journal without GitHub access:
+
+```ts
+import { extractShepherdJournal } from "pr-shepherd/journal";
+
+const result = extractShepherdJournal(prBody);
+if (!result.ok) throw new Error(result.error);
+
+for (const entry of result.journal?.entries ?? []) console.log(entry);
+```
+
+The result identifies canonical `details` versus historical `legacy` H2 journals and returns each
+complete Markdown list item with LF line endings. It fails closed for malformed or ambiguous
+containers and ignores journal-shaped examples hidden in Markdown constructs. The full journal API,
+including append and reconciliation helpers, is documented in [docs/api.md](docs/api.md).
+
 ### Clean Local State
 
 `pr-shepherd` stores seen markers, fix-attempt counters, stall fingerprints, ready-delay markers, and logs under `$PR_SHEPHERD_STATE_DIR` (default `$TMPDIR/pr-shepherd-state`).
