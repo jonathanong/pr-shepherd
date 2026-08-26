@@ -28,7 +28,7 @@ function hasUnrecognizedJournalContent(lines: string[]): boolean {
 
 /** Extract ordered journal entries while failing closed on malformed or ambiguous content. */
 export function extractShepherdJournal(body: string): ShepherdJournalExtraction {
-  const lines = body.replaceAll("\r\n", "\n").split("\n");
+  const lines = body.replaceAll("\r\n", "\n").replaceAll("\r", "\n").split("\n");
   const journal = scanShepherdJournal(lines);
   if (journal === "error") {
     return {

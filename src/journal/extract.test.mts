@@ -53,7 +53,10 @@ describe("extractShepherdJournal", () => {
     });
   });
 
-  it("extracts a bounded legacy journal and normalizes CRLF entries", () => {
+  it.each([
+    ["CRLF", "\r\n"],
+    ["CR", "\r"],
+  ])("extracts a bounded legacy journal and normalizes %s entries", (_name, newline) => {
     const body = [
       "## Shepherd Journal",
       "",
@@ -63,7 +66,7 @@ describe("extractShepherdJournal", () => {
       "## Next",
       "",
       "Text.",
-    ].join("\r\n");
+    ].join(newline);
 
     expect(extractShepherdJournal(body)).toEqual({
       journal: { entries: ["- Kept.\n  Context."], format: "legacy" },
