@@ -135,7 +135,7 @@ export function parseShepherdJournalEntries(lines: string[]): string[][] {
   if (current) result.push(trim(current));
   return result;
 }
-export function hasUnrecognizedLeadingJournalContent(lines: string[]): boolean {
+function hasUnrecognizedLeadingJournalContent(lines: string[]): boolean {
   const syntax = scanMarkdownLines(
     lines.map((line) => (line.endsWith("\r") ? line.slice(0, -1) : line)),
   );

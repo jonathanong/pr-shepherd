@@ -30,11 +30,23 @@ describe("extractShepherdJournal", () => {
   });
 
   it("extracts canonical entries in order without deduplicating them", () => {
-    const body = journal(["- First.  ", "  Continued.", "", "- Duplicate.", "- Duplicate."]);
+    const body = journal([
+      "- First.  ",
+      "  Continued.",
+      "  > Nested quote.",
+      "  * Nested list.",
+      "",
+      "- Duplicate.",
+      "- Duplicate.",
+    ]);
 
     expect(extractShepherdJournal(body)).toEqual({
       journal: {
-        entries: ["- First.  \n  Continued.", "- Duplicate.", "- Duplicate."],
+        entries: [
+          "- First.  \n  Continued.\n  > Nested quote.\n  * Nested list.",
+          "- Duplicate.",
+          "- Duplicate.",
+        ],
         format: "details",
       },
       ok: true,
@@ -92,4 +104,16 @@ describe("extractShepherdJournal", () => {
       });
     },
   );
+
+  it.each([
+    ["a heading", ["- Kept.", "", "## Other"]],
+    ["a block quote", ["- Kept.", "", "> Other"]],
+    ["an alternate list", ["- Kept.", "", "* Other"]],
+    ["a fenced block", ["- Kept.", "", "```", "Other", "```"]],
+  ])("fails closed for top-level %s after an entry", (_description, content) => {
+    expect(extractShepherdJournal(journal(content))).toMatchObject({
+      error: expect.stringMatching(/unrecognized entry format/i),
+      ok: false,
+    });
+  });
 });

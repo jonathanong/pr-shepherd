@@ -73,7 +73,7 @@ const updatedBody = validation.ok
 
 `extractShepherdJournal(body)` returns the one visible structural journal as
 `{ ok: true, journal: { format, entries } }`, or `{ ok: true, journal: null }` when none exists.
-Each entry retains its leading `- ` marker and continuation indentation, with line endings
+Each entry retains its leading hyphen-and-space marker and continuation indentation, with line endings
 normalized to LF. Empty journals return `entries: []`; malformed, duplicate, mixed, nested, or
 unrecognized journal content returns `{ ok: false, error }`. Journal-shaped examples inside fenced
 code, comments, raw HTML, quotes, and list containers are ignored.
