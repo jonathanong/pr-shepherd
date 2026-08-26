@@ -14,12 +14,14 @@ import { backtickRuns, nextBacktickRun, nextCodeOpener } from "./markdown-backti
 import { isIndentedCode, structuralDetailsStart } from "./markdown-structure.mts";
 type MarkdownLine = { ignored: boolean; nested: boolean; visiblePrefix: string };
 type MarkdownScan = { lines: MarkdownLine[]; safeAtEof: boolean };
-function interruptsInlineContent(line: string): boolean {
+/** Return whether a Markdown line starts a block that interrupts inline content. */
+export function isMarkdownBlockStart(line: string): boolean {
   return (
     line.trim() === "" ||
     /^ {0,3}(?:#{1,6}(?:[ \t]+|$)|>)/.test(line) ||
     /^ {0,3}(?:[-+*]|\d{1,9}[.)])[ \t]+/.test(line) ||
     /^ {0,3}(?:(?:\*[ \t]*){3,}|-+[ \t]*|(?:_[ \t]*){3,}|=+[ \t]*)$/.test(line) ||
+    /^ {0,3}<!--/.test(line) ||
     fenceStart(line) !== null ||
     rawHtmlStart(line) !== null ||
     structuralDetailsStart(line) !== null
@@ -27,7 +29,7 @@ function interruptsInlineContent(line: string): boolean {
 }
 function hasCloser(lines: string[], lineIndex: number, offset: number, length: number): boolean {
   for (let i = lineIndex; i < lines.length; i++) {
-    if (i > lineIndex && interruptsInlineContent(lines[i]!)) return false;
+    if (i > lineIndex && isMarkdownBlockStart(lines[i]!)) return false;
     if (
       backtickRuns(lines[i]!).some(
         (run) => run.length === length && (i > lineIndex || run.index > offset),

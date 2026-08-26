@@ -73,7 +73,13 @@ export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | nu
       return "error";
     }
     if (JOURNAL_SUMMARY.test(visible.trimStart())) {
-      if (lines[i] !== SUMMARY || lines[i - 1] !== OPEN || lines[i + 1] !== "") return "error";
+      if (
+        detailsDepth !== 1 ||
+        lines[i] !== SUMMARY ||
+        lines[i - 1] !== OPEN ||
+        lines[i + 1] !== ""
+      )
+        return "error";
       const end = close(lines, syntax, i + 2);
       if (end === null) return "error";
       detailsDepth--;
@@ -88,7 +94,7 @@ export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | nu
       continue;
     }
     if (LEGACY.test(visible)) {
-      if (legacy) return "error";
+      if (detailsDepth !== 0 || legacy) return "error";
       legacy = {
         contentEnd: lines.length,
         contentStart: i + 1,
@@ -114,7 +120,7 @@ function trim(lines: string[]): string[] {
   while (b > a && lines[b - 1]!.trim() === "") b--;
   return lines.slice(a, b);
 }
-function entries(lines: string[]): string[][] {
+export function parseShepherdJournalEntries(lines: string[]): string[][] {
   const result: string[][] = [];
   const syntax = scanMarkdownLines(
     lines.map((line) => (line.endsWith("\r") ? line.slice(0, -1) : line)),
@@ -129,7 +135,7 @@ function entries(lines: string[]): string[][] {
   if (current) result.push(trim(current));
   return result;
 }
-function hasUnrecognizedLeadingContent(lines: string[]): boolean {
+function hasUnrecognizedLeadingJournalContent(lines: string[]): boolean {
   const syntax = scanMarkdownLines(
     lines.map((line) => (line.endsWith("\r") ? line.slice(0, -1) : line)),
   );
@@ -142,7 +148,7 @@ function contains(a: string[], b: string[]): boolean {
 }
 export function containsJournalEntry(lines: string[], item: string): boolean {
   const target = item.split("\n");
-  return entries(lines).some((entry) => contains(target, entry));
+  return parseShepherdJournalEntries(lines).some((entry) => contains(target, entry));
 }
 function fail(reason: string): ShepherdJournalReconcileResult {
   return {
@@ -177,11 +183,13 @@ export function reconcileShepherdJournal(
       ok: true,
     };
   }
-  const liveEntries = entries(liveLines.slice(live.contentStart, live.contentEnd));
   const liveJournalLines = liveLines.slice(live.contentStart, live.contentEnd);
-  if (!liveEntries.length || hasUnrecognizedLeadingContent(liveJournalLines))
+  const liveEntries = parseShepherdJournalEntries(liveJournalLines);
+  if (!liveEntries.length || hasUnrecognizedLeadingJournalContent(liveJournalLines))
     return fail("live Shepherd Journal content uses an unrecognized entry format");
-  const target = entries(suppliedLines.slice(supplied.contentStart, supplied.contentEnd));
+  const target = parseShepherdJournalEntries(
+    suppliedLines.slice(supplied.contentStart, supplied.contentEnd),
+  );
   for (const entry of liveEntries) {
     const match = target.findIndex((candidate) => contains(entry, candidate));
     if (match === -1)

@@ -53,9 +53,14 @@ Validation failures throw `PrShepherdValidationError` before any GitHub mutation
 ```ts
 import {
   appendJournalItem,
+  extractShepherdJournal,
   reconcileShepherdJournal,
   validateJournalItem,
 } from "pr-shepherd/journal";
+
+const extracted = extractShepherdJournal(liveBody);
+if (!extracted.ok) throw new Error(extracted.error);
+for (const entry of extracted.journal?.entries ?? []) console.log(entry);
 
 const result = reconcileShepherdJournal(suppliedBody, liveBody);
 if (!result.ok) throw new Error(result.error);
@@ -65,6 +70,13 @@ const updatedBody = validation.ok
   ? appendJournalItem(result.body, validation.item).body
   : result.body;
 ```
+
+`extractShepherdJournal(body)` returns the one visible structural journal as
+`{ ok: true, journal: { format, entries } }`, or `{ ok: true, journal: null }` when none exists.
+Each entry retains its leading hyphen-and-space marker and continuation indentation, with line endings
+normalized to LF. Empty journals return `entries: []`; malformed, duplicate, mixed, nested, or
+unrecognized journal content returns `{ ok: false, error }`. Journal-shaped examples inside fenced
+code, comments, raw HTML, quotes, and list containers are ignored.
 
 `reconcileShepherdJournal(suppliedBody, liveBody)` ensures a supplied body preserves every live Shepherd Journal item. If the supplied body omits a non-empty live journal, the function appends that container verbatim. It fails closed for malformed, duplicate, ambiguous, or canonical-to-legacy-downgrade containers. Its discriminated result is `{ ok: true, body } | { ok: false, error }`.
 
