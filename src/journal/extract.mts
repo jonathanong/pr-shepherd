@@ -15,7 +15,7 @@ function hasUnrecognizedJournalContent(lines: string[]): boolean {
   let foundEntry = false;
   let separated = false;
   for (const [index, line] of lines.entries()) {
-    if (syntax[index]!.visiblePrefix.startsWith("- ")) {
+    if (syntax[index]!.visiblePrefix.startsWith("- ") && /^- \S/.test(line)) {
       foundEntry = true;
       separated = false;
       continue;

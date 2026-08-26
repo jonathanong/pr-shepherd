@@ -99,15 +99,16 @@ describe("extractShepherdJournal", () => {
     });
   });
 
-  it.each([journal(["Narrative only."]), journal(["Narrative first.", "", "- Entry."])])(
-    "fails closed for unrecognized entry content",
-    (body) => {
-      expect(extractShepherdJournal(body)).toMatchObject({
-        error: expect.stringMatching(/unrecognized entry format/i),
-        ok: false,
-      });
-    },
-  );
+  it.each([
+    journal(["Narrative only."]),
+    journal(["Narrative first.", "", "- Entry."]),
+    journal(["- "]),
+  ])("fails closed for unrecognized entry content", (body) => {
+    expect(extractShepherdJournal(body)).toMatchObject({
+      error: expect.stringMatching(/unrecognized entry format/i),
+      ok: false,
+    });
+  });
 
   it.each([
     ["a heading", ["- Kept.", "", "## Other"]],
