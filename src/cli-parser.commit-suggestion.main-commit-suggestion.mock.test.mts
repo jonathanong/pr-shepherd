@@ -54,7 +54,7 @@ describe("main — commit-suggestion", () => {
     expect(process.exitCode).toBeUndefined();
   });
 
-  it("routes the canonical build-suggestion-patch command", async () => {
+  it("routes the deprecated build-suggestion-patch adapter with a warning", async () => {
     mockRunCommitSuggestion.mockResolvedValue(SUGGESTION_RESULT);
 
     await main([
@@ -71,7 +71,7 @@ describe("main — commit-suggestion", () => {
     expect(mockRunCommitSuggestion).toHaveBeenCalledWith(
       expect.objectContaining({ prNumber: 42, threadId: "t1" }),
     );
-    expect(stderrSpy).not.toHaveBeenCalledWith(expect.stringContaining("deprecated"));
+    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("deprecated"));
   });
 
   it("passes --description when supplied", async () => {

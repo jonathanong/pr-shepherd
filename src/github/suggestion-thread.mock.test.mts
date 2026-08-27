@@ -5,8 +5,8 @@ vi.mock("./client.mts", () => ({
 }));
 
 import { graphql } from "./client.mts";
-import { fetchSuggestionThread } from "./suggestion-thread.mts";
-import { COMMIT_SUGGESTION_THREAD_QUERY } from "./queries.mts";
+import { fetchSuggestionThreads } from "./suggestion-thread.mts";
+import { SUGGESTION_THREADS_QUERY } from "./queries.mts";
 
 const mockGraphql = vi.mocked(graphql);
 const REPO = { owner: "owner", name: "repo" };
@@ -38,7 +38,7 @@ function threadNode(id = "PRRT_x", prNumber = 42) {
   };
 }
 
-describe("fetchSuggestionThread", () => {
+describe("fetchSuggestionThreads", () => {
   beforeEach(() => {
     mockGraphql.mockReset();
   });
@@ -53,26 +53,26 @@ describe("fetchSuggestionThread", () => {
             headRepository: { nameWithOwner: "owner/repo" },
           },
         },
-        node: threadNode(),
+        nodes: [threadNode()],
       },
     });
-    const result = await fetchSuggestionThread(42, REPO, "PRRT_x");
+    const result = await fetchSuggestionThreads(42, REPO, ["PRRT_x"]);
     expect(result.headRefOid).toBe("abc");
-    expect(result.thread?.author).toBe("alice");
-    expect(result.thread?.authorType).toBe("User");
-    expect(mockGraphql).toHaveBeenCalledWith(COMMIT_SUGGESTION_THREAD_QUERY, {
+    expect(result.threads[0]?.author).toBe("alice");
+    expect(result.threads[0]?.authorType).toBe("User");
+    expect(mockGraphql).toHaveBeenCalledWith(SUGGESTION_THREADS_QUERY, {
       owner: "owner",
       repo: "repo",
       pr: 42,
-      threadId: "PRRT_x",
+      threadIds: ["PRRT_x"],
     });
   });
 
   it("throws when the PR is missing", async () => {
     mockGraphql.mockResolvedValue({
-      data: { repository: { pullRequest: null }, node: null },
+      data: { repository: { pullRequest: null }, nodes: [] },
     });
-    await expect(fetchSuggestionThread(42, REPO, "PRRT_x")).rejects.toThrow("PR #42 not found");
+    await expect(fetchSuggestionThreads(42, REPO, ["PRRT_x"])).rejects.toThrow("PR #42 not found");
   });
 
   it("returns a null thread when the node is not a review thread", async () => {
@@ -85,11 +85,11 @@ describe("fetchSuggestionThread", () => {
             headRepository: { nameWithOwner: "owner/repo" },
           },
         },
-        node: null,
+        nodes: [null],
       },
     });
-    const result = await fetchSuggestionThread(42, REPO, "PRRT_x");
-    expect(result.thread).toBeNull();
+    const result = await fetchSuggestionThreads(42, REPO, ["PRRT_x"]);
+    expect(result.threads[0]).toBeNull();
   });
 
   it("returns a null thread when the node id does not match", async () => {
@@ -102,12 +102,12 @@ describe("fetchSuggestionThread", () => {
             headRepository: null,
           },
         },
-        node: threadNode("PRRT_other"),
+        nodes: [threadNode("PRRT_other")],
       },
     });
-    const result = await fetchSuggestionThread(42, REPO, "PRRT_x");
+    const result = await fetchSuggestionThreads(42, REPO, ["PRRT_x"]);
     expect(result.headRepoWithOwner).toBeNull();
-    expect(result.thread).toBeNull();
+    expect(result.threads[0]).toBeNull();
   });
 
   it("falls back when the original comment is sparse", async () => {
@@ -120,17 +120,19 @@ describe("fetchSuggestionThread", () => {
             headRepository: { nameWithOwner: "owner/repo" },
           },
         },
-        node: {
-          id: "PRRT_x",
-          isResolved: false,
-          isOutdated: false,
-          pullRequest: { number: 42 },
-          comments: { nodes: [{}] },
-        },
+        nodes: [
+          {
+            id: "PRRT_x",
+            isResolved: false,
+            isOutdated: false,
+            pullRequest: { number: 42 },
+            comments: { nodes: [{}] },
+          },
+        ],
       },
     });
-    const result = await fetchSuggestionThread(42, REPO, "PRRT_x");
-    expect(result.thread).toMatchObject({
+    const result = await fetchSuggestionThreads(42, REPO, ["PRRT_x"]);
+    expect(result.threads[0]).toMatchObject({
       isMinimized: false,
       path: null,
       line: null,
@@ -140,7 +142,7 @@ describe("fetchSuggestionThread", () => {
       url: "",
       createdAtUnix: 0,
     });
-    expect(result.thread?.authorAssociation).toBeUndefined();
+    expect(result.threads[0]?.authorAssociation).toBeUndefined();
   });
 
   it("returns a null thread when the node belongs to another PR", async () => {
@@ -153,10 +155,27 @@ describe("fetchSuggestionThread", () => {
             headRepository: { nameWithOwner: "owner/repo" },
           },
         },
-        node: threadNode("PRRT_x", 99),
+        nodes: [threadNode("PRRT_x", 99)],
       },
     });
-    const result = await fetchSuggestionThread(42, REPO, "PRRT_x");
-    expect(result.thread).toBeNull();
+    const result = await fetchSuggestionThreads(42, REPO, ["PRRT_x"]);
+    expect(result.threads[0]).toBeNull();
+  });
+
+  it("returns requested threads in caller order", async () => {
+    mockGraphql.mockResolvedValue({
+      data: {
+        repository: {
+          pullRequest: {
+            headRefOid: "abc",
+            headRefName: "feature",
+            headRepository: { nameWithOwner: "owner/repo" },
+          },
+        },
+        nodes: [threadNode("PRRT_two"), threadNode("PRRT_one")],
+      },
+    });
+    const result = await fetchSuggestionThreads(42, REPO, ["PRRT_one", "PRRT_two"]);
+    expect(result.threads.map((thread) => thread?.id)).toEqual(["PRRT_one", "PRRT_two"]);
   });
 });

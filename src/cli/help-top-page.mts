@@ -10,7 +10,7 @@ Usage:
   pr-shepherd apply review [PR] [review-flags]
   pr-shepherd apply files [PR] [files...] [--tests] [--match REGEX]
   pr-shepherd apply journal [PR] <item> [--dry-run] [--format text|json]
-  pr-shepherd build-suggestion-patch [PR] --thread-id ID --message MSG [flags]
+  pr-shepherd build-suggestion-patches [PR] --thread-id ID --message MSG [groups...]
   pr-shepherd admin clean <pr|branch|current|repo|all> [value] [flags]
   pr-shepherd admin log-file [--format text|json]
 
@@ -20,8 +20,8 @@ Commands:
   apply review         Apply review-state mutations after fixes.
   apply files          Mark changed files as viewed in GitHub.
   apply journal        Append a list item to the Shepherd Journal details block of a PR body.
-  build-suggestion-patch
-                       Convert one GitHub suggestion thread into a patch and commit instructions.
+  build-suggestion-patches
+                       Convert ordered GitHub suggestion threads into patches and commit instructions.
   admin clean          Remove pr-shepherd state files.
   admin log-file       Print the per-worktree debug log path.
 

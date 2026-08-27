@@ -224,12 +224,12 @@ When one or more threads carry a `[suggestion]` marker, `## Instructions` adds o
 ## Instructions
 
 1. Review each item under `## Review threads` and decide whether it needs a code change.
-2. For each thread marked `[suggestion]` under `## Review threads`, run `pr-shepherd build-suggestion-patch 42 --thread-id <id> --message "<one-sentence headline>" --format=json` and apply the returned patch. See "Suggestion patches" in the pr-shepherd skill for refusals and drift.
+2. For all threads marked `[suggestion]` under `## Review threads`, run one `pr-shepherd build-suggestion-patches 42 --thread-id <id> --message "<one-sentence headline>" --format=json` command, repeating the `--thread-id <id> --message <one-sentence headline>` group in displayed order, then apply the returned patches in order. See "Suggestion patches" in the pr-shepherd skill for refusals and drift.
 3. Apply every warranted review fix in each file referenced above.
 4. [remaining remediation, finalization, mutation, and recurrence steps]
 ```
 
-The `build-suggestion-patch` step is absent when no thread has a `[suggestion]` marker.
+The `build-suggestion-patches` step is absent when no thread has a `[suggestion]` marker.
 
 The review-fix step says "each file referenced above" only when `## Review threads` is present. With actionable comments alone, it says "the relevant files" because comments have no file location.
 
@@ -297,15 +297,15 @@ When at least one thread has a `[suggestion]` marker, `## Instructions` emits on
 
 **Step 1 — structured path (preferred):**
 
-> For each thread marked `` `[suggestion]` `` under `` `## Review threads` ``, run `` `pr-shepherd build-suggestion-patch 42 --thread-id <id> --message "<one-sentence headline>" --format=json` `` and apply the returned patch: stage the listed file and follow the returned commit instructions. If the command refuses because the suggestion is unsafe (an unsafe anchored range or nested/unbalanced suggestion fences), skip patch application and use the manual-edit step; do not retry. For any other refusal, follow the CLI error's stated recovery action and do not manually edit the suggestion. If the patch does not apply for any other reason, use the manual-edit step and do not retry. Keep human-authored thread IDs in `apply review:` so Shepherd replies instead of resolving them.
+> For all threads marked `` `[suggestion]` `` under `` `## Review threads` ``, run one `` `pr-shepherd build-suggestion-patches 42 --thread-id <id> --message "<one-sentence headline>" --format=json` `` command, repeating the thread/message group in displayed order. Apply, stage, and commit the returned patches in order, then push once. If the command refuses because a suggestion is unsafe or the ordered patches do not apply to the current local descendant, inspect the surrounding source and reviewer intent and apply the intended change manually. Keep human-authored thread IDs in `apply review:` so Shepherd replies instead of resolving them.
 
-`build-suggestion-patch` builds a unified diff from the `Replaces lines …` block and emits the suggested commit message and body (with a `Co-authored-by: <reviewer>` trailer) in a `## Suggested commit message` section, plus numbered `## Instructions` telling the agent exactly what to run. It handles one thread at a time; for multi-suggestion PRs invoke it in sequence, then push all commits together.
+`build-suggestion-patches` builds every diff from the fetched PR-head blobs, permits a local HEAD that descends from that PR head, and dry-runs the ordered stream with `git apply --check` before returning anything. Each patch retains its own suggested commit message and `Co-authored-by: <reviewer>` trailer. The instructions apply and commit patches in input order, then push once.
 
 **Manual fallback:**
 
-> After source drift prevents a generated suggestion patch from applying, replace the heading's exact `path:startLine-endLine` range with the `Replaces lines …` block verbatim. An empty replacement deletes the range. One blank line replaces it with one blank line. When `build-suggestion-patch` refuses because the suggestion is unsafe (an unsafe anchored range or nested/unbalanced suggestion fences), do not apply the replacement block verbatim. Inspect the surrounding source and reviewer intent, then make the intended edit manually. For any other refusal, follow the CLI error's stated recovery action and do not edit the suggestion manually.
+> When `build-suggestion-patches` refuses because a suggestion is unsafe or no longer applies, inspect the current source together with the displayed `Replaces lines …` block and reviewer intent, then make the intended edit manually. Do not apply a stale numeric range blindly after source drift.
 
-When a patch fails to apply because of source drift, use the `Replaces lines …` block from the iterate output to apply the change directly. When the command refuses because the suggestion is unsafe, inspect the surrounding source and reviewer intent instead of applying the block verbatim. For other refusals, follow the CLI error's recovery action without manually editing the suggestion. Do not retry an unsafe suggestion-body refusal.
+Returned patches were already checked against the current clean worktree. If one later fails, the worktree changed after validation; inspect the new source and reviewer intent rather than retrying or applying the old numeric range verbatim.
 
 ---
 
@@ -327,7 +327,7 @@ const remainingSeconds = computeRemaining();
 ```
 ````
 
-Structured path: run `pr-shepherd build-suggestion-patch 42 --thread-id PRRT_kwDOSGizTs58XB1L --message "rename x to remainingSeconds" --format=json`, then follow the `## Instructions` in the output (apply patch → `git add` → `git commit` → include ID in `pr-shepherd apply review`). Manual fallback: open `src/foo.ts` and replace line 42 with `const remainingSeconds = computeRemaining();`.
+Structured path: run `pr-shepherd build-suggestion-patches 42 --thread-id PRRT_kwDOSGizTs58XB1L --message "rename x to remainingSeconds" --format=json`, then follow the ordered `## Instructions`. Manual fallback: inspect `src/foo.ts`, the replacement block, and reviewer intent before editing.
 
 **Multi-line suggestion.** When the thread spans a range, the heading shows `path:startLine-endLine` (e.g. `src/foo.ts:40-42`). The `Replaces lines 40–42:` block contains the replacement spliced in for that entire range. An empty block means "delete those lines"; a block containing a single blank line means "replace with one blank line".
 
@@ -347,9 +347,9 @@ const result = computeAll();
 ```
 ````
 
-Structured path: run `pr-shepherd build-suggestion-patch 42 --thread-id PRRT_kwDOSGizTs58XB2M --message "collapse three assignments" --format=json`, then follow the `## Instructions` in the output. Manual fallback: replace lines 40–42 in `src/foo.ts` with `const result = computeAll();`.
+Structured path: run `pr-shepherd build-suggestion-patches 42 --thread-id PRRT_kwDOSGizTs58XB2M --message "collapse three assignments" --format=json`, then follow the ordered `## Instructions`. Manual fallback: inspect the current range and reviewer intent before editing.
 
-**Multiple suggestions (two or more threads).** Invoke `build-suggestion-patch` once per thread in sequence. Each invocation returns a patch + commit instructions; the agent applies each patch and commits before moving to the next. Human-authored thread IDs are replied to through `--reply-thread-ids` — the CLI does not resolve them. Push all commits together after all threads are handled.
+**Multiple suggestions (two or more threads).** Invoke `build-suggestion-patches` once with one repeated `--thread-id … --message … [--description …]` group per thread in displayed order. The command returns an ordered patch list only after the complete series passes `git apply --check`. Apply and commit each patch in order, push once, then continue with the existing `apply review:` routing. Human-authored thread IDs remain under `--reply-thread-ids`.
 
 ````markdown
 ## Review threads
@@ -385,7 +385,7 @@ The `apply review:` command at the bottom of `## Post-fix push` includes both ID
 - apply review: `pr-shepherd apply review 42 --reply-thread-ids PRRT_kwDOSGizTs58XB1L,PRRT_kwDOSGizTs58XC2M --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
 ```
 
-Both IDs stay in `--reply-thread-ids` — `build-suggestion-patch` does not resolve threads automatically. If a patch failed to apply and was handled manually instead, the ID still belongs in `--reply-thread-ids`.
+Both IDs stay in `--reply-thread-ids` — `build-suggestion-patches` does not resolve threads automatically. If a suggestion was handled manually instead, its ID still belongs in `--reply-thread-ids`.
 
 **What the skill does:** Follow `## Instructions` in order. The instructions are self-contained and action-specific — no dispatch table needed. See `## Instructions` in the output for the exact steps. After handling the action, run the default poll dispatcher again unless the action is terminal or the instructions require a human handoff.
 

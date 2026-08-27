@@ -6,7 +6,7 @@ describe("public CLI help surface", () => {
     expect(USAGE.top).toContain("pr-shepherd apply review");
     expect(USAGE.top).toContain("pr-shepherd apply files");
     expect(USAGE.top).toContain("pr-shepherd apply journal");
-    expect(USAGE.top).toContain("pr-shepherd build-suggestion-patch");
+    expect(USAGE.top).toContain("pr-shepherd build-suggestion-patches");
     expect(USAGE.top).toContain("pr-shepherd admin clean");
     expect(USAGE.top).toContain("pr-shepherd admin log-file");
     for (const legacy of ["pr-shepherd poll", "pr-shepherd resolve", "pr-shepherd journal"]) {

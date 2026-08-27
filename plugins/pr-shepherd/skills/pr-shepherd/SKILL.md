@@ -16,7 +16,7 @@ Thin dispatcher for iterating a PR. Poll with the CLI; use MCP `iterate` only wh
 
 2. Before passing a supplied GitHub PR URL or `owner/repo#N` to the CLI, run `gh repo view --json nameWithOwner --jq .nameWithOwner` and verify that repository matches the reference case-insensitively. Stop on a mismatch or failed lookup; the CLI does not validate the URL repository. Convert a verified `owner/repo#N` to `https://github.com/owner/repo/pull/N`, then run the poll command `pr-shepherd` with the optional PR argument and print its full result. Do not run `pr-shepherd iterate`. If the CLI is unavailable and the `iterate` MCP tool is available, first obtain a repository-qualified reference: use a supplied GitHub PR URL or `owner/repo#N` unchanged; for a bare number, run `gh pr view <number> --json url --jq .url`; when omitted, run `gh pr view --json url --jq .url`. If that does not produce one qualified PR reference, stop and report that MCP cannot safely determine the PR. Otherwise call `iterate` with that qualified reference and print its full result.
 
-3. Print the full result and follow every returned `## Instructions` step exactly. For CLI output, run each printed mutation command when instructed. For MCP output, use MCP `apply` and `build_suggestion_patch` with the same qualified PR reference; do not run a shell `pr-shepherd apply` command.
+3. Print the full result and follow every returned `## Instructions` step exactly. For CLI output, run each printed mutation command when instructed. For MCP output, use MCP `apply` and `build_suggestion_patches` with the same qualified PR reference; do not run a shell `pr-shepherd apply` command.
 
 4. After completing the returned instructions, repeat step 2 unless the action is `[CANCEL]` or `[ESCALATE]`, the instructions require a human handoff, or the human directs you to stop.
 
@@ -27,11 +27,11 @@ mechanics every tick. Apply the referenced playbook in full whenever a step poin
 
 ### Suggestion patches
 
-- The CLI only builds the patch. Apply it, stage the listed file, and follow the returned commit instructions.
-- If the command refuses because the suggestion is unsafe (an unsafe anchored range or nested/unbalanced suggestion fences), skip patch application and edit the file manually. Do not retry the command.
-- For any other refusal, follow the CLI error's stated recovery action; do not manually edit the suggestion.
-- If the patch does not apply for any other reason, edit the file manually instead. Do not retry the command.
-- After source drift prevents a generated suggestion patch from applying, replace the heading's exact `path:startLine-endLine` range with the `Replaces lines …` block verbatim. An empty replacement deletes the range. One blank line replaces it with one blank line.
+- Run one plural `build-suggestion-patches` command with a repeated `--thread-id … --message … [--description …]` group for every marked thread in displayed order.
+- The CLI only builds patches. Apply, stage, and commit the returned patches in order, then push once.
+- The command builds from the fetched PR head and accepts a clean local descendant only when the complete ordered patch stream passes `git apply --check`.
+- If the command refuses because a suggestion is unsafe or no longer applies, inspect the current source, the displayed replacement block, and reviewer intent before editing manually. Do not apply a stale numeric range blindly or retry unchanged input.
+- A returned patch was checked against the then-current worktree. If it later fails, re-inspect the worktree because it changed after validation.
 - Keep human-authored thread IDs in `apply review:` so Shepherd replies instead of resolving them.
 
 ### CI failure triage

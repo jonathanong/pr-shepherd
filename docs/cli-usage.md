@@ -14,7 +14,7 @@ pr-shepherd apply files [PR] [files...] [--tests] [--match REGEX]
 pr-shepherd apply journal [PR] <item> [--dry-run] [--format text|json]
 pr-shepherd apply journal [PR] --file <path> [--dry-run] [--format text|json]
 pr-shepherd apply journal [PR] --file - [--dry-run] [--format text|json]
-pr-shepherd build-suggestion-patch [PR] --thread-id ID --message MSG [flags]
+pr-shepherd build-suggestion-patches [PR] --thread-id ID --message MSG [groups...]
 pr-shepherd admin clean <pr|branch|current|repo|all> [value] [--dry-run] [--format text|json]
 pr-shepherd admin log-file [--format text|json]
 ```
@@ -48,20 +48,21 @@ npx --yes --package pr-shepherd@<version> pr-shepherd-mcp
 
 The server exposes these tools:
 
-| Tool                     | Purpose                                                                                                                                     |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `iterate`                | Run one state-machine tick. Optional inputs include `pr` (a number or PR URL), timing overrides, and auto-action overrides.                 |
-| `apply`                  | Apply an ordered set of review mutations, `mark_files_viewed`, or `append_journal` operations under one optional `pr` (a number or PR URL). |
-| `build_suggestion_patch` | Validate one anchored review suggestion and return an applyable patch plus commit metadata.                                                 |
+| Tool                       | Purpose                                                                                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `iterate`                  | Run one state-machine tick. Optional inputs include `pr` (a number or PR URL), timing overrides, and auto-action overrides.                 |
+| `apply`                    | Apply an ordered set of review mutations, `mark_files_viewed`, or `append_journal` operations under one optional `pr` (a number or PR URL). |
+| `build_suggestion_patches` | Validate ordered anchored suggestions and return checked patches plus commit metadata.                                                      |
+| `build_suggestion_patch`   | Deprecated one-item adapter for `build_suggestion_patches`.                                                                                 |
 
-Use `iterate` first. Its result surfaces review threads, comments, checks, and the existing structured `resolveCommand`/`resolveOnlyCommand` arguments for review work. Translate those arguments into an `apply` `review_mutations` operation when making the mutation; use `mark_files_viewed` to mark selected changed files viewed; use `append_journal` for an idempotent PR-body journal entry. Use `build_suggestion_patch` only for a suggestion thread that needs its validated unified diff.
+Use `iterate` first. Its result surfaces review threads, comments, checks, and the existing structured `resolveCommand`/`resolveOnlyCommand` arguments for review work. Translate those arguments into an `apply` `review_mutations` operation when making the mutation; use `mark_files_viewed` to mark selected changed files viewed; use `append_journal` for an idempotent PR-body journal entry. Use one `build_suggestion_patches` call for all marked suggestion threads in displayed order.
 
-`build-suggestion-patch` and `build_suggestion_patch` treat GitHub's anchored line range as authoritative. They preserve ordinary insertions before or after a retained anchor, but refuse to emit a patch when the replacement appears to rewrite an adjacent source block; inspect the surrounding source and reviewer intent and apply that review manually.
+`build-suggestion-patches` and `build_suggestion_patches` treat GitHub's anchored line range at the fetched PR head as authoritative. They accept a clean local descendant only when the ordered patches pass `git apply --check`; otherwise inspect the current source and reviewer intent manually.
 
 MCP clients own polling recurrence. Do not call a long-running polling tool: call `iterate` again after the returned action-specific work is complete or when the client’s scheduler chooses to recheck.
 
 ## CLI aliases
 
-`poll`, `resolve`, `commit-suggestion`, `mark-files-as-viewed`, `journal`, `clean`, and `log-file` are CLI aliases. Prefer MCP `iterate`, `apply`, and `build_suggestion_patch` for agent integrations.
+`poll`, `resolve`, `build-suggestion-patch`, `commit-suggestion`, `mark-files-as-viewed`, `journal`, `clean`, and `log-file` are deprecated CLI aliases or adapters. Prefer MCP `iterate`, `apply`, and `build_suggestion_patches` for agent integrations.
 
 All CLI commands honor `--help`/`-h` before I/O. Iterate/poll PR outcomes use exit codes `0` and `10`–`14`; command, validation, and GitHub failures use `sysexits.h` codes. See [exit-codes.md](exit-codes.md).

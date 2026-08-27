@@ -9,6 +9,7 @@ vi.mock("./commands/resolve.mts", () => ({
   runResolveMutate: vi.fn(),
 }));
 vi.mock("./commands/commit-suggestion.mts", () => ({ runCommitSuggestion: vi.fn() }));
+vi.mock("./commands/suggestion-patches.mts", () => ({ runSuggestionPatches: vi.fn() }));
 vi.mock("./commands/mark-files-as-viewed.mts", () => ({ runMarkFilesAsViewed: vi.fn() }));
 vi.mock("./commands/clean.mts", () => ({ runClean: vi.fn() }));
 vi.mock("./commands/log-file.mts", () => ({ runLogFile: vi.fn() }));
@@ -20,9 +21,11 @@ vi.mock("./github/client.mts", () => ({
 import { main } from "./cli-parser.mts";
 import { runIterate } from "./commands/iterate/index.mts";
 import { runCommitSuggestion } from "./commands/commit-suggestion.mts";
+import { runSuggestionPatches } from "./commands/suggestion-patches.mts";
 
 const mockRunIterate = vi.mocked(runIterate);
 const mockRunCommitSuggestion = vi.mocked(runCommitSuggestion);
+const mockRunSuggestionPatches = vi.mocked(runSuggestionPatches);
 
 let stdoutSpy: ReturnType<typeof vi.spyOn>;
 let stderrSpy: ReturnType<typeof vi.spyOn>;
@@ -47,6 +50,7 @@ afterEach(() => {
 const SUBCOMMANDS = [
   "resolve",
   "commit-suggestion",
+  "build-suggestion-patches",
   "mark-files-as-viewed",
   "iterate",
   "poll",
@@ -58,6 +62,7 @@ const SUBCOMMANDS = [
 const HELP_EXPECTATIONS: Record<(typeof SUBCOMMANDS)[number], string[]> = {
   resolve: ["action flag is required", "--resolve-thread-ids", "--require-sha", "Exit code:"],
   "commit-suggestion": ["Preconditions:", "--thread-id", "--description", "Exit codes:"],
+  "build-suggestion-patches": ["Each --thread-id", "--message", "git apply --check"],
   "mark-files-as-viewed": ["Selectors:", "--tests", "--match", "Exit code:"],
   iterate: ["Actions:", "FIX_CODE", "--stall-timeout", "Exit codes:"],
   poll: ["Poll flags:", "--interval", "--timeout", "--until-terminal", "Forwarded iterate flags:"],
@@ -94,6 +99,7 @@ for (const sub of SUBCOMMANDS) {
       await main(["node", "shepherd", sub, "--help"]);
       expect(mockRunIterate).not.toHaveBeenCalled();
       expect(mockRunCommitSuggestion).not.toHaveBeenCalled();
+      expect(mockRunSuggestionPatches).not.toHaveBeenCalled();
     });
   });
 }

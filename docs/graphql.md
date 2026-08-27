@@ -73,11 +73,11 @@ The generic paginator is in `github/pagination.mts`. It accepts a `direction` pa
 
 **Why:** Some useful failure context, such as aggregate `needs` job results, is only present in job logs and not in GraphQL check-run fields or check annotations. Shepherd fetches `GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs` and includes a bounded raw excerpt in the failing-check output. This supplement is best-effort: if the log request fails or the log is empty, the field is omitted. Extra jobs-list pages stop if remaining is 0.
 
-### `commit-suggestion` thread query
+### Suggestion threads query
 
-**When:** `commit-suggestion` / `build-suggestion-patch` needs PR head fields and one review thread.
+**When:** `build-suggestion-patches` needs PR head fields and an ordered set of review threads.
 
-**Why:** A full `BATCH_PR_QUERY` snapshot would also pull CI, comments, and reviews. [`src/github/gql/commit-suggestion-thread.gql`](../src/github/gql/commit-suggestion-thread.gql) selects `headRefOid` / `headRefName` / `headRepository` plus `node(id: $threadId)`.
+**Why:** A full `BATCH_PR_QUERY` snapshot would also pull CI, comments, and reviews. [`src/github/gql/suggestion-threads.gql`](../src/github/gql/suggestion-threads.gql) selects `headRefOid` / `headRefName` / `headRepository` plus `nodes(ids: $threadIds)`.
 
 ## Rate limiting
 

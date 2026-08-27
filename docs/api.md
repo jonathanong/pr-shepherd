@@ -25,20 +25,23 @@ const applied = await shepherd.apply({
     },
   ],
 });
-const patch = await shepherd.buildSuggestionPatch({
+const patches = await shepherd.buildSuggestionPatches({
   pr: 42,
-  threadId: "PRRT_…",
-  message: "Apply reviewer suggestion",
+  suggestions: [
+    { threadId: "PRRT_…", message: "Apply reviewer suggestion" },
+    { threadId: "PRRT_…", message: "Apply second suggestion" },
+  ],
 });
 ```
 
-`createPrShepherd({ cwd })` returns three methods — the same operations as the MCP tools:
+`createPrShepherd({ cwd })` returns the canonical methods below plus a deprecated singular adapter:
 
-| Method                                                          | Same as                               |
-| --------------------------------------------------------------- | ------------------------------------- |
-| `iterate(input?)`                                               | MCP `iterate` / `pr-shepherd iterate` |
-| `apply({ pr, operations })`                                     | MCP `apply`                           |
-| `buildSuggestionPatch({ pr, threadId, message, description? })` | MCP `build_suggestion_patch`          |
+| Method                                               | Same as                                |
+| ---------------------------------------------------- | -------------------------------------- |
+| `iterate(input?)`                                    | MCP `iterate` / `pr-shepherd iterate`  |
+| `apply({ pr, operations })`                          | MCP `apply`                            |
+| `buildSuggestionPatches({ pr, suggestions })`        | MCP `build_suggestion_patches`         |
+| `buildSuggestionPatch({ pr, threadId, message, … })` | Deprecated one-item compatibility path |
 
 For the programmatic API, `pr` is an optional positive number, repository-qualified `owner/repo#N`, or GitHub pull-request URL. Omitted, Shepherd infers the current branch's open PR. Repository-qualified references must match the repository at the configured `cwd` (or process working directory when omitted). `cwd` is used for git, config, and classification-rule lookups.
 
@@ -46,7 +49,7 @@ For the programmatic API, `pr` is an optional positive number, repository-qualif
 
 Validation failures throw `PrShepherdValidationError` before any GitHub mutation. If a later apply operation fails after earlier ones succeeded, Shepherd throws `PartialApplyError` with `failedIndex` and `completed`.
 
-`buildSuggestionPatch` returns a unified diff plus commit metadata. It does not write a patch file or mutate git. It rejects when the suggestion does not safely fit GitHub's anchored range; callers should inspect the surrounding source and reviewer intent and apply that review manually.
+`buildSuggestionPatches` returns an ordered patch list plus per-patch commit metadata and shared instructions. It accepts one or more `{ threadId, message, description? }` items, builds against the fetched PR-head blobs, permits a clean local descendant of that head, and returns nothing unless the ordered stream passes `git apply --check`. It never writes a patch file or mutates git. `buildSuggestionPatch` remains temporarily as a deprecated one-item adapter.
 
 ## `pr-shepherd/journal`
 
@@ -91,7 +94,7 @@ const server = createPrShepherdMcpServer({ cwd: "/path/to/repo" });
 await runPrShepherdMcpStdio({ cwd: "/path/to/repo" });
 ```
 
-`createPrShepherdMcpServer` accepts an optional `shepherd` for tests. The public factory still only exposes `iterate`, `apply`, and `build_suggestion_patch`. Unlike `createPrShepherd`, every MCP tool call requires a repository-qualified `pr` — a GitHub PR URL or `owner/repo#N` — matching the factory's `cwd`; bare and omitted PR references are rejected. Host install and tool schemas: [mcp.md](mcp.md).
+`createPrShepherdMcpServer` accepts an optional `shepherd` for tests. The public factory exposes canonical `iterate`, `apply`, and `build_suggestion_patches` tools plus the deprecated singular adapter. Unlike `createPrShepherd`, every MCP tool call requires a repository-qualified `pr` — a GitHub PR URL or `owner/repo#N` — matching the factory's `cwd`; bare and omitted PR references are rejected. Host install and tool schemas: [mcp.md](mcp.md).
 
 ## `pr-shepherd/classify`
 

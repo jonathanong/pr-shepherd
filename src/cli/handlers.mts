@@ -1,4 +1,5 @@
 import { runCommitSuggestion } from "../commands/commit-suggestion.mts";
+import { runSuggestionPatches } from "../commands/suggestion-patches.mts";
 import { runMarkFilesAsViewed } from "../commands/mark-files-as-viewed.mts";
 import { runIterate } from "../commands/iterate/index.mts";
 import { runClean, type CleanVariant } from "../commands/clean.mts";
@@ -8,9 +9,11 @@ import { parseCommonArgs, getFlag } from "./args.mts";
 import { USAGE } from "./help.mts";
 import {
   formatCommitSuggestionResult,
+  formatSuggestionPatchesResult,
   formatCleanResult,
   formatMarkFilesAsViewedResult,
 } from "./formatters.mts";
+import { parseSuggestionPatchGroups } from "./suggestion-patch-flags.mts";
 import { parseIterateFlags } from "./iterate-flags.mts";
 import { emitIterateResult } from "./iterate-emitter.mts";
 import { parseMarkFilesAsViewedArgs } from "./mark-files-as-viewed-flags.mts";
@@ -122,6 +125,26 @@ export async function handleCommitSuggestion(
     globalOpts.format === "json"
       ? `${JSON.stringify(result, null, 2)}\n`
       : `${formatCommitSuggestionResult(result)}\n`,
+  );
+}
+
+export async function handleSuggestionPatches(args: string[]): Promise<void> {
+  const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
+  const parsed = parseSuggestionPatchGroups(extra);
+  if (!parsed.ok) {
+    process.stderr.write(`${parsed.error}\n${USAGE["build-suggestion-patches"]}\n`);
+    process.exitCode = EXIT.USAGE;
+    return;
+  }
+  const result = await runSuggestionPatches({
+    ...globalOpts,
+    prNumber,
+    suggestions: parsed.suggestions,
+  });
+  process.stdout.write(
+    globalOpts.format === "json"
+      ? `${JSON.stringify(result, null, 2)}\n`
+      : `${formatSuggestionPatchesResult(result)}\n`,
   );
 }
 

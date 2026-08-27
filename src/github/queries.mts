@@ -20,7 +20,7 @@ export const BATCH_PR_QUERY = gql("batch-pr.gql");
 export const BATCH_PR_PAGE_QUERY = gql("batch-pr-page.gql");
 
 /** PR head fields plus a single review thread for `commit-suggestion`. */
-export const COMMIT_SUGGESTION_THREAD_QUERY = gql("commit-suggestion-thread.gql");
+export const SUGGESTION_THREADS_QUERY = gql("suggestion-threads.gql");
 
 /** Fetches additional comments for a single review thread when its nested connection paginates. */
 export const REVIEW_THREAD_COMMENTS_QUERY = gql("review-thread-comments.gql");

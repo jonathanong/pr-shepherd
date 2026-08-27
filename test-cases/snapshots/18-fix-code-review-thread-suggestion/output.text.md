@@ -27,7 +27,7 @@ const MAX_RETRIES = 3;
 ## Instructions
 
 1. Review each item under `## Review threads` and decide whether it needs a code change.
-2. For each thread marked `[suggestion]` under `## Review threads`, run `pr-shepherd build-suggestion-patch 42 --thread-id "<id>" --message "<one-sentence headline>" --format=json` and apply the returned patch. See "Suggestion patches" in the pr-shepherd skill for refusals and drift.
+2. For all threads marked `[suggestion]` under `## Review threads`, run one `pr-shepherd build-suggestion-patches 42 --thread-id "<id>" --message "<one-sentence headline>" --format=json` command, repeating the `--thread-id <id> --message <one-sentence headline>` group in displayed order, then apply the returned patches in order. See "Suggestion patches" in the pr-shepherd skill for refusals and drift.
 3. Apply every warranted review fix in each file referenced above.
 4. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
 5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.

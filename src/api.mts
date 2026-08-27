@@ -2,6 +2,7 @@
 import { resolve } from "node:path";
 
 import { runCommitSuggestion } from "./commands/commit-suggestion.mts";
+import { runSuggestionPatches } from "./commands/suggestion-patches.mts";
 import { runIterate } from "./commands/iterate/index.mts";
 import { runJournal, type JournalResult } from "./commands/journal/index.mts";
 import { validateJournalItem } from "./commands/journal/transform.mts";
@@ -14,7 +15,12 @@ import { runWithExecutionCwd } from "./execution-context.mts";
 import { getRepoInfo } from "./github/client.mts";
 import { parsePrReference, type ParsedPrReference } from "./pr-reference.mts";
 import type { ResolveResult } from "./comments/resolve.mts";
-import type { CommitSuggestionResult, IterateCommandOptions, IterateResult } from "./types.mts";
+import type {
+  BuildSuggestionPatchesResult,
+  CommitSuggestionResult,
+  IterateCommandOptions,
+  IterateResult,
+} from "./types.mts";
 
 export interface CreatePrShepherdOptions {
   /** Working directory used for git, config, and classification-rule lookups. */
@@ -80,9 +86,22 @@ export interface BuildSuggestionPatchInput {
   description?: string;
 }
 
+export interface SuggestionPatchInput {
+  threadId: string;
+  message: string;
+  description?: string;
+}
+
+export interface BuildSuggestionPatchesInput {
+  pr?: PrReference;
+  suggestions: SuggestionPatchInput[];
+}
+
 export interface PrShepherd {
   iterate(input?: IterateInput): Promise<IterateResult>;
   apply(input: ApplyInput): Promise<ApplyResult>;
+  buildSuggestionPatches(input: BuildSuggestionPatchesInput): Promise<BuildSuggestionPatchesResult>;
+  /** @deprecated Use buildSuggestionPatches. */
   buildSuggestionPatch(input: BuildSuggestionPatchInput): Promise<CommitSuggestionResult>;
 }
 
@@ -181,6 +200,15 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
       return runWithExecutionCwd(cwd, async () => {
         const prNumber = await resolvePrReference(input.pr);
         return runCommitSuggestion({ ...options, prNumber, format: "json" });
+      });
+    },
+
+    buildSuggestionPatches(input: BuildSuggestionPatchesInput) {
+      validateSuggestionPatchesInput(input);
+      const { pr: _pr, ...options } = input;
+      return runWithExecutionCwd(cwd, async () => {
+        const prNumber = await resolvePrReference(input.pr);
+        return runSuggestionPatches({ ...options, prNumber, format: "json" });
       });
     },
   });
@@ -291,6 +319,31 @@ function validateSuggestionPatchInput(input: BuildSuggestionPatchInput): void {
   }
   if (input.description !== undefined && typeof input.description !== "string") {
     throw new PrShepherdValidationError("buildSuggestionPatch.description must be a string");
+  }
+  validatePrReference(input.pr);
+}
+
+function validateSuggestionPatchesInput(input: BuildSuggestionPatchesInput): void {
+  if (!input || !Array.isArray(input.suggestions) || input.suggestions.length === 0) {
+    throw new PrShepherdValidationError(
+      "buildSuggestionPatches.suggestions must be a non-empty array",
+    );
+  }
+  const seen = new Set<string>();
+  for (const suggestion of input.suggestions) {
+    if (!suggestion || typeof suggestion.threadId !== "string" || suggestion.threadId === "") {
+      throw new PrShepherdValidationError("each suggestion.threadId is required");
+    }
+    if (typeof suggestion.message !== "string" || suggestion.message.trim() === "") {
+      throw new PrShepherdValidationError("each suggestion.message must be non-empty");
+    }
+    if (suggestion.description !== undefined && typeof suggestion.description !== "string") {
+      throw new PrShepherdValidationError("each suggestion.description must be a string");
+    }
+    if (seen.has(suggestion.threadId)) {
+      throw new PrShepherdValidationError(`duplicate suggestion thread ID: ${suggestion.threadId}`);
+    }
+    seen.add(suggestion.threadId);
   }
   validatePrReference(input.pr);
 }

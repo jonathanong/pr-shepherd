@@ -71,7 +71,7 @@ Human-authored threads are replied to, not resolved or minimized. Bot/non-human 
 Context gathering also emits the arguments for later mutations so the agent does not reconstruct them:
 
 - `apply review:` command (reply / resolve / minimize / dismiss, optional `resolve-only:` split)
-- `build_suggestion_patch` inputs when a thread contains a ` ```suggestion ` fence
+- grouped `build_suggestion_patches` inputs when threads contain ` ```suggestion ` fences
 - Journal instruction for large decisions
 
 Those commands are actions, documented in [actions.md](actions.md) and [cli-usage.md](cli-usage.md).

@@ -7,6 +7,9 @@ vi.mock("../src/commands/resolve.mts", () => ({
 vi.mock("../src/commands/commit-suggestion.mts", () => ({
   runCommitSuggestion: vi.fn(),
 }));
+vi.mock("../src/commands/suggestion-patches.mts", () => ({
+  runSuggestionPatches: vi.fn(),
+}));
 vi.mock("../src/commands/iterate/index.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../src/commands/iterate/index.mts")>();
   return { ...actual, runIterate: vi.fn() };
@@ -17,8 +20,10 @@ vi.mock("../src/github/client.mts", () => ({
 
 import { main } from "../src/cli-parser.mts";
 import { runCommitSuggestion } from "../src/commands/commit-suggestion.mts";
+import { runSuggestionPatches } from "../src/commands/suggestion-patches.mts";
 
 const mockRunCommitSuggestion = vi.mocked(runCommitSuggestion);
+const mockRunSuggestionPatches = vi.mocked(runSuggestionPatches);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let stdoutSpy: any;
@@ -53,6 +58,25 @@ const SUGGESTION_RESULT = {
   ],
 };
 
+const SUGGESTIONS_RESULT = {
+  pr: 42,
+  repo: "owner/repo",
+  patches: [
+    {
+      threadId: "t1",
+      path: "a.ts",
+      startLine: 5,
+      endLine: 5,
+      author: "alice",
+      patch: SUGGESTION_RESULT.patch,
+      commitMessage: "apply fix",
+      commitBody: SUGGESTION_RESULT.commitBody,
+      filesToStage: ["a.ts"],
+    },
+  ],
+  postActionInstructions: ["Apply patch 1.", "Push once."],
+};
+
 // ---------------------------------------------------------------------------
 // commit-suggestion dispatch
 // ---------------------------------------------------------------------------
@@ -73,10 +97,13 @@ export function registerHooks(): void {
 
 export {
   SUGGESTION_RESULT,
+  SUGGESTIONS_RESULT,
   getStdout,
   main,
   mockRunCommitSuggestion,
+  mockRunSuggestionPatches,
   runCommitSuggestion,
+  runSuggestionPatches,
   stderrSpy,
   stdoutSpy,
 };

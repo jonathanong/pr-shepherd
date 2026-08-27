@@ -15,11 +15,11 @@ Shepherd does two jobs: **gather all context for a PR**, then **emit one determi
 ## Actions emitted
 
 - Exactly one action per tick: `WAIT`, `MARK_READY`, `CANCEL`, `ESCALATE`, or `FIX_CODE`. See [actions.md](actions.md) and [iterate-flow.md](iterate-flow.md).
-- Local stdio MCP tools: `iterate`, `apply`, and `build_suggestion_patch`. Shell: `pr-shepherd [PR]` (bounded poll) and `pr-shepherd iterate [PR]` (one tick). See [mcp.md](mcp.md) and [cli-usage.md](cli-usage.md).
+- Canonical local stdio MCP tools: `iterate`, `apply`, and `build_suggestion_patches`, plus a deprecated singular suggestion adapter. Shell: `pr-shepherd [PR]` (bounded poll) and `pr-shepherd iterate [PR]` (one tick). See [mcp.md](mcp.md) and [cli-usage.md](cli-usage.md).
 - Poll `--debounce` (default 1m) so `FIX_CODE` waits a settle window, still iterating at `--interval`, then returns one batched tick. MCP `iterate` has no debounce.
 - `--format text|json`, `--verbose` (poll and iterate), `--version`/`-v`, `--ready-delay`, `--stall-timeout`, `--no-auto-mark-ready`, `--no-auto-cancel-actionable`.
 - Ordered `apply` operations: review mutations (reply/resolve/minimize/dismiss, batched in groups of 10), mark files viewed, append to the canonical Shepherd Journal details block (`--file` / `--file -`). Legacy H2 journals migrate in place. `requireSha` polls until HEAD is visible.
-- `build_suggestion_patch` emits a unified diff plus commit metadata for one suggestion thread. It does not write a patch file or mutate git.
+- `build_suggestion_patches` emits an ordered, apply-checked patch list plus per-patch commit metadata. It does not write patch files or mutate git.
 - Auto-cancels stale failing GitHub Actions runs on `FIX_CODE` (REST cancel; protect with `actions.neverCancelRuns`; disable with `--no-auto-cancel-actionable`). `FIX_CODE` instructions also list remaining in-progress run IDs for the agent to cancel before a push.
 - Optional `mark_ready` for eligible draft PRs. Ready-delay then `CANCEL` on a clean handoff.
 - Process exit codes `0` / `10`–`14` for PR-state actions; `64`–`78` for command/GitHub failures. See [exit-codes.md](exit-codes.md).

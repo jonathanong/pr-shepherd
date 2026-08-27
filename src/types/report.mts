@@ -174,25 +174,6 @@ export interface RelevantCheck {
   annotations?: CheckAnnotation[];
 }
 
-export interface CommitSuggestionResult {
-  pr: number;
-  repo: string;
-  threadId: string;
-  path: string;
-  startLine: number;
-  endLine: number;
-  author: string;
-  /** The unified diff generated for this suggestion. */
-  patch: string;
-  /** The commit subject line (user-supplied --message). */
-  commitMessage: string;
-  /** The commit body (optional description + Co-authored-by trailer). */
-  commitBody: string;
-  /** Files the agent should stage before committing. */
-  filesToStage: string[];
-  /** Numbered steps the agent must execute to apply, commit, resolve, and push. */
-  postActionInstructions: string[];
-}
 export interface GlobalOptions {
   prNumber?: number;
   format: "text" | "json";

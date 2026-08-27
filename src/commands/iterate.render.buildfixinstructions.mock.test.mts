@@ -69,7 +69,7 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(text).toContain("build-suggestion-patch");
+    expect(text).toContain("build-suggestion-patches");
     expect(text).toContain('See "Suggestion patches" in the pr-shepherd skill');
     expect(text.match(/"Suggestion patches" in the pr-shepherd skill/g)).toHaveLength(1);
     expect(text).not.toContain("refuses because the suggestion is unsafe");

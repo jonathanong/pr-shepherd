@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   mockRunCommitSuggestion,
+  mockRunSuggestionPatches,
   mockRunIterate,
   mockRunJournal,
   mockRunMarkFilesAsViewed,
@@ -10,6 +11,7 @@ const {
   mockGetRepoInfo,
 } = vi.hoisted(() => ({
   mockRunCommitSuggestion: vi.fn(),
+  mockRunSuggestionPatches: vi.fn(),
   mockRunIterate: vi.fn(),
   mockRunJournal: vi.fn(),
   mockRunMarkFilesAsViewed: vi.fn(),
@@ -19,6 +21,9 @@ const {
 
 vi.mock("./commands/commit-suggestion.mts", () => ({
   runCommitSuggestion: mockRunCommitSuggestion,
+}));
+vi.mock("./commands/suggestion-patches.mts", () => ({
+  runSuggestionPatches: mockRunSuggestionPatches,
 }));
 vi.mock("./commands/iterate/index.mts", () => ({ runIterate: mockRunIterate }));
 vi.mock("./commands/journal/index.mts", () => ({ runJournal: mockRunJournal }));
@@ -36,11 +41,16 @@ beforeEach(() => {
 });
 
 describe("public API", () => {
-  it("exposes only the three supported operations and translates a GitHub PR URL", async () => {
+  it("exposes the supported operations and translates a GitHub PR URL", async () => {
     mockRunIterate.mockResolvedValue({ action: "wait" });
     const shepherd = createPrShepherd();
 
-    expect(Object.keys(shepherd).sort()).toEqual(["apply", "buildSuggestionPatch", "iterate"]);
+    expect(Object.keys(shepherd).sort()).toEqual([
+      "apply",
+      "buildSuggestionPatch",
+      "buildSuggestionPatches",
+      "iterate",
+    ]);
     await shepherd.iterate({ pr: "https://github.com/openai/pr-shepherd/pull/42" });
 
     expect(mockRunIterate).toHaveBeenCalledWith(
@@ -129,6 +139,7 @@ describe("public API", () => {
     mockRunMarkFilesAsViewed.mockResolvedValue({ markedPaths: ["src/api.mts"] });
     mockRunJournal.mockResolvedValue({ prNumber: 9, mutated: true });
     mockRunCommitSuggestion.mockResolvedValue({ threadId: "PRRT_two" });
+    mockRunSuggestionPatches.mockResolvedValue({ patches: [{ threadId: "PRRT_two" }] });
     mockGetRepoInfo.mockResolvedValue({ owner: "acme", name: "widgets" });
     const shepherd = createPrShepherd({ cwd: "." });
 
@@ -155,6 +166,10 @@ describe("public API", () => {
       message: "apply suggestion",
       description: "Keep the API covered.",
     });
+    await shepherd.buildSuggestionPatches({
+      pr: 9,
+      suggestions: [{ threadId: "PRRT_two", message: "apply suggestion", description: "Covered." }],
+    });
 
     expect(mockRunMarkFilesAsViewed).toHaveBeenCalledWith(
       expect.objectContaining({ prNumber: 9, files: [], tests: true, format: "json" }),
@@ -164,6 +179,15 @@ describe("public API", () => {
     );
     expect(mockRunCommitSuggestion).toHaveBeenCalledWith(
       expect.objectContaining({ prNumber: 9, threadId: "PRRT_two", format: "json" }),
+    );
+    expect(mockRunSuggestionPatches).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prNumber: 9,
+        format: "json",
+        suggestions: [
+          { threadId: "PRRT_two", message: "apply suggestion", description: "Covered." },
+        ],
+      }),
     );
   });
 
@@ -239,6 +263,26 @@ describe("public API", () => {
     ["invalid PR number", { pr: 0, threadId: "PRRT_one", message: "message" }],
   ])("validates suggestion patch input: %s", (_label, input) => {
     expect(() => createPrShepherd().buildSuggestionPatch(input as never)).toThrow(
+      PrShepherdValidationError,
+    );
+  });
+
+  it.each([
+    ["missing suggestions", {}],
+    ["empty suggestions", { suggestions: [] }],
+    ["missing thread", { suggestions: [{ threadId: "", message: "message" }] }],
+    ["missing message", { suggestions: [{ threadId: "PRRT_one", message: " " }] }],
+    [
+      "duplicate thread",
+      {
+        suggestions: [
+          { threadId: "PRRT_one", message: "one" },
+          { threadId: "PRRT_one", message: "two" },
+        ],
+      },
+    ],
+  ])("validates suggestion patches input: %s", (_label, input) => {
+    expect(() => createPrShepherd().buildSuggestionPatches(input as never)).toThrow(
       PrShepherdValidationError,
     );
   });
