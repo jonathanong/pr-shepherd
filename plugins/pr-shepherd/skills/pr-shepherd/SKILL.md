@@ -53,12 +53,13 @@ More specific rows win over the general "GitHub Actions failure" row — check c
 
 Applies to every `apply review:` / `resolve-only:` command the CLI prints. Covers only what stays safe if you run the printed command **unmodified** — `$HEAD_SHA`/`$DISMISS_MESSAGE` substitution and the self-reply exclusion rule are separate CLI-printed steps, not covered here, because the printed command is unsafe by default without them.
 
+- Run every generated `apply review:` / `resolve-only:` command even when no code change is warranted. The command records the agent's disposition of the included review items; skipping it leaves bot threads active and can eventually trigger `fix-thrash`.
 - Never add first-look-only or check-annotation IDs to `--reply-thread-ids`, `--resolve-thread-ids`, `--dismiss-review-ids`, or `--minimize-comment-ids` — those flags are pre-populated by the CLI.
 - Keep every existing `--dismiss-review-ids` ID the CLI already included. Each is a bot or non-human review that must be dismissed; omitting one leaves the PR in `CHANGES_REQUESTED`.
 
 ### Review-mutation routing
 
-For threads under `## Review threads to resolve`: human-authored IDs use `--reply-thread-ids` (Shepherd replies instead of resolving them); bot and non-human IDs use `--resolve-thread-ids`. Use the commands as generated — do not move an ID between flags.
+For threads under both `## Review threads` and `## Review threads to resolve`, evaluate every thread before running mutations. Keep bot and non-human IDs in `--resolve-thread-ids`, including when the feedback is advisory, already satisfied, or otherwise warrants no code change. Human-authored IDs use `--reply-thread-ids`; Shepherd replies instead of resolving them. Never move a human-authored ID to `--resolve-thread-ids`. Use the commands as generated — do not move an ID between flags.
 
 ### Shepherd Journal
 
