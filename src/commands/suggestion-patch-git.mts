@@ -44,7 +44,7 @@ export function checkPatchesApply(patches: readonly string[]): Promise<void> {
   const input = patches.join("\n");
   return new Promise((resolve, reject) => {
     const child = execFileCb(
-      "git",
+      "git", // NOSONAR -- resolve git through PATH consistently with all CLI git helpers.
       ["apply", "--check"],
       { cwd: getExecutionCwd() },
       (error, _stdout, stderr) => {

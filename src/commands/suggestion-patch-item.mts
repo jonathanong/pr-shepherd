@@ -8,6 +8,8 @@ import { buildUnifiedDiff } from "../suggestions/patch.mts";
 import { getUnsafeSuggestionRangeReason } from "../suggestions/range.mts";
 import type { ReviewThread, SuggestionPatchResult } from "../types.mts";
 
+const SINGLE_QUOTE_ESCAPE = String.raw`'\''`;
+
 export interface SuggestionPatchRequest {
   threadId: string;
   message: string;
@@ -120,7 +122,7 @@ export function quotePath(path: string): string {
 }
 
 function shellQuote(value: string): string {
-  return `'${value.replaceAll("'", String.raw`'\''`)}'`;
+  return "'" + value.replaceAll("'", SINGLE_QUOTE_ESCAPE) + "'";
 }
 
 function ensureSafePath(path: string): void {
