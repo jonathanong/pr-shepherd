@@ -309,7 +309,7 @@ function validateMarkFilesViewed(operation: MarkFilesViewedOperation): void {
 }
 
 function validateSuggestionPatchInput(input: BuildSuggestionPatchInput): void {
-  if (!input || typeof input.threadId !== "string" || input.threadId === "") {
+  if (!input || typeof input.threadId !== "string" || input.threadId.trim() === "") {
     throw new PrShepherdValidationError("buildSuggestionPatch.threadId is required");
   }
   if (typeof input.message !== "string" || input.message.trim() === "") {
@@ -331,7 +331,11 @@ function validateSuggestionPatchesInput(input: BuildSuggestionPatchesInput): voi
   }
   const seen = new Set<string>();
   for (const suggestion of input.suggestions) {
-    if (!suggestion || typeof suggestion.threadId !== "string" || suggestion.threadId === "") {
+    if (
+      !suggestion ||
+      typeof suggestion.threadId !== "string" ||
+      suggestion.threadId.trim() === ""
+    ) {
       throw new PrShepherdValidationError("each suggestion.threadId is required");
     }
     if (typeof suggestion.message !== "string" || suggestion.message.trim() === "") {

@@ -257,7 +257,7 @@ describe("public API", () => {
   });
 
   it.each([
-    ["missing thread", { threadId: "", message: "message" }],
+    ["missing thread", { threadId: " ", message: "message" }],
     ["missing message", { threadId: "PRRT_one", message: " " }],
     ["invalid description", { threadId: "PRRT_one", message: "message", description: 1 }],
     ["invalid PR number", { pr: 0, threadId: "PRRT_one", message: "message" }],
@@ -270,7 +270,7 @@ describe("public API", () => {
   it.each([
     ["missing suggestions", {}],
     ["empty suggestions", { suggestions: [] }],
-    ["missing thread", { suggestions: [{ threadId: "", message: "message" }] }],
+    ["missing thread", { suggestions: [{ threadId: " ", message: "message" }] }],
     ["missing message", { suggestions: [{ threadId: "PRRT_one", message: " " }] }],
     [
       "invalid description",
