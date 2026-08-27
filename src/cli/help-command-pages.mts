@@ -69,10 +69,27 @@ Use --file to read an item from a file, or --file - to read it from stdin. Exact
 is required. --dry-run previews the resulting body without writing it.
 --help, -h                      Print this help and exit before GitHub I/O.`,
 
+  "build-suggestion-patches": `pr-shepherd build-suggestion-patches
+
+Build an ordered list of patches and commit instructions from GitHub review suggestions.
+The command does not edit files or mutate git history.
+
+Usage:
+  pr-shepherd build-suggestion-patches [PR]
+    --thread-id ID --message MSG [--description DESC]
+    [--thread-id ID --message MSG [--description DESC] ...]
+    [--format text|json]
+
+Each --thread-id starts a suggestion group. Its following --message and optional --description
+belong to that suggestion. Groups are validated and returned in command-line order.
+
+The current branch must match the PR head ref. Local HEAD may equal or descend from the PR head;
+every generated patch is dry-run in order with git apply --check before output.
+--help, -h                      Print this help and exit before GitHub, git, config, or log I/O.`,
+
   "build-suggestion-patch": `pr-shepherd build-suggestion-patch
 
-Build a patch and commit instructions for one GitHub review thread containing a suggestion block.
-The command does not edit files or mutate git history.
+Deprecated one-suggestion adapter. Use build-suggestion-patches.
 
 Usage:
   pr-shepherd build-suggestion-patch [PR] --thread-id ID --message MSG
@@ -84,7 +101,7 @@ Flags:
   --description <text>   Optional longer commit body.
   --format text|json     Output format. Default: text.
 
-The current branch must match the PR head ref and local HEAD must match the PR head SHA.
+The current branch must match the PR head ref. Local HEAD may equal or descend from the PR head.
 --help, -h                      Print this help and exit before GitHub, git, config, or log I/O.`,
 
   admin: `pr-shepherd admin
@@ -162,7 +179,7 @@ Flags:
   --help, -h             Print this help and exit before GitHub, git, config, or log I/O.
 
 Preconditions:
-  The current branch must match the PR head ref, and local HEAD must match the PR head SHA.
+  The current branch must match the PR head ref. Local HEAD may equal or descend from the PR head.
 
 Exit codes:
   0   suggestion patch and instructions produced

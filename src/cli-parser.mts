@@ -13,6 +13,7 @@ import { formatMutateResult } from "./cli/formatters.mts";
 import {
   handleClean,
   handleCommitSuggestion,
+  handleSuggestionPatches,
   handleIterate,
   handleMarkFilesAsViewed,
 } from "./cli/handlers.mts";
@@ -73,7 +74,8 @@ export async function main(argv: string[]): Promise<void> {
     resolve: "apply review",
     "mark-files-as-viewed": "apply files",
     journal: "apply journal",
-    "commit-suggestion": "build-suggestion-patch",
+    "build-suggestion-patch": "build-suggestion-patches",
+    "commit-suggestion": "build-suggestion-patches",
   };
   if (subcommand !== undefined && legacyReplacement[subcommand] !== undefined) {
     warnLegacyAlias(subcommand, legacyReplacement[subcommand]!);
@@ -91,6 +93,9 @@ export async function main(argv: string[]): Promise<void> {
   switch (subcommand) {
     case "apply":
       await handleApply(args.slice(1));
+      break;
+    case "build-suggestion-patches":
+      await handleSuggestionPatches(args.slice(1));
       break;
     case "build-suggestion-patch":
       await handleCommitSuggestion(args.slice(1));

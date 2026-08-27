@@ -24,7 +24,7 @@ src/
 ├── config/                # cascading RC loader
 │
 ├── cli/                   # formatting and argument helpers
-├── mcp/                   # iterate, apply, build_suggestion_patch tools
+├── mcp/                   # iterate, apply, build_suggestion_patches tools
 │   ├── server.mts
 │   └── index.mts          # createPrShepherdMcpServer / runPrShepherdMcpStdio
 │
@@ -36,7 +36,7 @@ src/
 │   ├── ready-delay.mts    # ready-since.txt
 │   ├── resolve-mutate.mts # apply review mutations
 │   ├── journal/           # PR-body journal
-│   ├── commit-suggestion.mts  # build-suggestion-patch
+│   ├── suggestion-patches.mts # build-suggestion-patches
 │   ├── mark-files-as-viewed.mts
 │   └── clean.mts
 │
@@ -47,7 +47,7 @@ src/
 │   └── gql/
 │       ├── batch-pr.gql
 │       ├── batch-pr-page.gql
-│       └── commit-suggestion-thread.gql
+│       └── suggestion-threads.gql
 ├── checks/                # classify, triage, startup-failures, superseded
 ├── comments/              # resolve / minimize / dismiss mutations
 ├── merge-status/          # deriveMergeStatus + deriveMergeRequirements

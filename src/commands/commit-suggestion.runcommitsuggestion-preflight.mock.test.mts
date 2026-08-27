@@ -37,14 +37,17 @@ describe("runCommitSuggestion — preflight", () => {
     ).rejects.toThrow('does not match PR head branch "feature/foo"');
   });
 
-  it("throws when local HEAD SHA does not match PR head SHA", async () => {
+  it("throws when local HEAD is not the PR head or its descendant", async () => {
     mockExecFile.mockImplementation((cmd: string, args: string[]) => {
       if (cmd === "git" && args[0] === "rev-parse") return makeGitSuccess("divergedsha\n");
+      if (cmd === "git" && args[0] === "merge-base") {
+        return Promise.reject(Object.assign(new Error("not ancestor"), { code: 1 }));
+      }
       return makeGitSuccess("");
     });
     await expect(
       runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
-    ).rejects.toThrow("does not match PR head headsha");
+    ).rejects.toThrow("is not PR head headsha or its descendant");
   });
 
   it("throws when head repository is unavailable (deleted fork)", async () => {

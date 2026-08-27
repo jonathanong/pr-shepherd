@@ -19,7 +19,7 @@ describe("main — top-level help", () => {
     expect(out).toContain("pr-shepherd apply review");
     expect(out).toContain("pr-shepherd apply files");
     expect(out).toContain("pr-shepherd apply journal");
-    expect(out).toContain("pr-shepherd build-suggestion-patch");
+    expect(out).toContain("pr-shepherd build-suggestion-patches");
     expect(out).toContain("pr-shepherd admin clean <pr|branch|current|repo|all>");
     expect(out).toContain("pr-shepherd admin log-file");
     expect(out).not.toContain("pr-shepherd resolve");

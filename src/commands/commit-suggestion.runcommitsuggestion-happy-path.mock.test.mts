@@ -39,15 +39,21 @@ describe("runCommitSuggestion — happy path", () => {
     expect(result.repo).toBe("owner/repo");
   });
 
-  it("never calls git apply, git add, or git commit", async () => {
+  it("only invokes git apply in read-only check mode", async () => {
     await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" });
 
     const mutatingCalls = mockExecFile.mock.calls.filter(
       (call) =>
-        call[0] === "git" &&
-        ["apply", "add", "commit", "checkout"].includes((call[1] as string[])[0] ?? ""),
+        (call[0] === "git" &&
+          ["add", "commit", "checkout"].includes((call[1] as string[])[0] ?? "")) ||
+        ((call[1] as string[])[0] === "apply" && !(call[1] as string[]).includes("--check")),
     );
     expect(mutatingCalls).toHaveLength(0);
+    expect(mockExecFile).toHaveBeenCalledWith(
+      "git",
+      ["apply", "--check"],
+      expect.stringContaining("--- a/src/foo.ts"),
+    );
   });
 
   it("prepends --description to commitBody before Co-authored-by", async () => {

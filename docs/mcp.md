@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-pr-shepherd's agent integration is a local stdio MCP server. It shares command implementations, GitHub token resolution, and cascading `.pr-shepherdrc.yml` files with the CLI. Tools gather PR context (`iterate`) and apply deterministic mutations (`apply`, `build_suggestion_patch`). The calling client owns recurrence and any git mutations.
+pr-shepherd's agent integration is a local stdio MCP server. It shares command implementations, GitHub token resolution, and cascading `.pr-shepherdrc.yml` files with the CLI. Tools gather PR context (`iterate`), apply deterministic GitHub mutations (`apply`), and build checked suggestion patches (`build_suggestion_patches`). The calling client owns recurrence and any git mutations.
 
 The published binary is `pr-shepherd-mcp` from the `pr-shepherd` npm package:
 
@@ -25,7 +25,7 @@ Confirm GitHub auth before the first tool call. See [authentication.md](authenti
 
 ### Plugin
 
-The plugin launches `npx --yes --package pr-shepherd@<version> pr-shepherd-mcp` from `plugins/pr-shepherd/.mcp.json` (Claude Code and Grok) or `plugins/pr-shepherd/.codex.mcp.json` (Codex). The shipped `pr-shepherd` skill runs the poll command `pr-shepherd` and uses MCP `iterate` only when the CLI is unavailable. After a CLI poll, run the printed apply command. Use MCP `apply` / `build_suggestion_patch` only when this tick used MCP `iterate`.
+The plugin launches `npx --yes --package pr-shepherd@<version> pr-shepherd-mcp` from `plugins/pr-shepherd/.mcp.json` (Claude Code and Grok) or `plugins/pr-shepherd/.codex.mcp.json` (Codex). The shipped `pr-shepherd` skill runs the poll command `pr-shepherd` and uses MCP `iterate` only when the CLI is unavailable. After a CLI poll, run the printed apply command. Use MCP `apply` / `build_suggestion_patches` only when this tick used MCP `iterate`.
 
 #### Claude Code
 
@@ -151,19 +151,20 @@ Replace `/path/to/pr-shepherd` with this checkout's absolute path. Do not use a 
 
 ## Tools
 
-The server registers three tools. Each result includes Markdown `content` (the same text the CLI would print) and `structuredContent` (the JSON object).
+The server registers three canonical tools plus a deprecated singular suggestion adapter. Each result includes Markdown `content` (the same text the CLI would print) and `structuredContent` (the JSON object).
 
 Every MCP call requires a repository-qualified `pr`: either a GitHub PR URL such as `https://github.com/owner/repo/pull/123` or `owner/repo#123`. Bare PR numbers and omitted PRs are rejected. The referenced repository must match the repository at the server's startup working directory (or the `cwd` supplied to an embedded factory); a mismatch is rejected before the operation runs. Start a separate server from the target repository when working across repositories.
 
-| Tool                     | Purpose                                                                                                       | Side effects                                                                             |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `iterate`                | One state-machine tick. Surfaces review items, checks, merge state, and structured review-mutation arguments. | May mark a draft ready or cancel actionable runs unless those automations are disabled.  |
-| `apply`                  | Ordered review mutations, `mark_files_viewed`, and `append_journal` under one required `pr`.                  | Writes to GitHub after prevalidation. A later failure leaves earlier operations applied. |
-| `build_suggestion_patch` | Validate one anchored review suggestion and return a unified diff plus commit metadata.                       | None. Never edits the worktree or git history.                                           |
+| Tool                       | Purpose                                                                                                       | Side effects                                                                             |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `iterate`                  | One state-machine tick. Surfaces review items, checks, merge state, and structured review-mutation arguments. | May mark a draft ready or cancel actionable runs unless those automations are disabled.  |
+| `apply`                    | Ordered review mutations, `mark_files_viewed`, and `append_journal` under one required `pr`.                  | Writes to GitHub after prevalidation. A later failure leaves earlier operations applied. |
+| `build_suggestion_patches` | Validate ordered anchored suggestions and return checked diffs plus commit metadata.                          | None. Never edits the worktree or git history.                                           |
+| `build_suggestion_patch`   | Deprecated one-item adapter for `build_suggestion_patches`.                                                   | None. Never edits the worktree or git history.                                           |
 
-Call `iterate` first. Translate its `resolveCommand` / `resolveOnlyCommand` arguments into an `apply` `review_mutations` operation. Use `build_suggestion_patch` only for a suggestion thread that needs its validated diff. Use `mark_files_viewed` and `append_journal` when the iterate output or the caller asks for those mutations.
+Call `iterate` first. Translate its `resolveCommand` / `resolveOnlyCommand` arguments into an `apply` `review_mutations` operation. Use one `build_suggestion_patches` call for all marked suggestion threads in displayed order. Use `mark_files_viewed` and `append_journal` when the iterate output or the caller asks for those mutations.
 
-`build_suggestion_patch` treats GitHub's anchored line range as authoritative. It preserves ordinary insertions before or after a retained anchor, but refuses to emit a patch when the replacement appears to rewrite an adjacent source block; inspect the surrounding source and reviewer intent and apply that review manually.
+`build_suggestion_patches` treats GitHub's anchored line range at the fetched PR head as authoritative. It accepts a clean local descendant only when the full ordered patch stream passes `git apply --check`; otherwise inspect the current source and reviewer intent manually.
 
 Hosts namespace tool names with the server name (`pr-shepherd__iterate` in Grok, `mcp__pr-shepherd__iterate` in some Claude setups). The unqualified names below are the server-registered names.
 
@@ -218,16 +219,14 @@ Each operation is one of:
 | `item`   | string             | yes      | Idempotent Shepherd Journal entry   |
 | `dryRun` | boolean            | no       | Preview without writing the PR body |
 
-### `build_suggestion_patch`
+### `build_suggestion_patches`
 
-| Input         | Type                            | Required | Meaning                                                                 |
-| ------------- | ------------------------------- | -------- | ----------------------------------------------------------------------- |
-| `pr`          | GitHub PR URL or `owner/repo#N` | yes      | PR for the suggestion; its repository must match the server repository. |
-| `threadId`    | string                          | yes      | Review thread that contains a suggestion.                               |
-| `message`     | string                          | yes      | Commit subject for the suggested commit.                                |
-| `description` | string                          | no       | Optional commit body.                                                   |
+| Input         | Type                            | Required | Meaning                                                              |
+| ------------- | ------------------------------- | -------- | -------------------------------------------------------------------- |
+| `pr`          | GitHub PR URL or `owner/repo#N` | yes      | PR for the suggestions; repository must match the server repository. |
+| `suggestions` | non-empty object array          | yes      | Ordered `{ threadId, message, description? }` suggestion requests.   |
 
-The result includes `patch`, `commitMessage`, `commitBody`, and `postActionInstructions`. The caller applies the patch and runs git.
+The result includes ordered `patches[]` entries with thread, path, range, author, patch, files-to-stage, and commit metadata, plus shared `postActionInstructions`. Apply and commit each patch in order, then push once. `build_suggestion_patch` remains temporarily as a deprecated adapter with its prior singular input and result.
 
 ## Recurrence
 
@@ -276,7 +275,7 @@ const server = createPrShepherdMcpServer({ cwd: "/path/to/repo" });
 await runPrShepherdMcpStdio({ cwd: "/path/to/repo" });
 ```
 
-`createPrShepherdMcpServer` accepts an optional `shepherd` for tests or alternate transports. The public factory still only exposes `iterate`, `apply`, and `build_suggestion_patch`.
+`createPrShepherdMcpServer` accepts an optional `shepherd` for tests or alternate transports. The public factory exposes canonical `iterate`, `apply`, and `build_suggestion_patches` plus the deprecated singular adapter.
 
 ## Related docs
 

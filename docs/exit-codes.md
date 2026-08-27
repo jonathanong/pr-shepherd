@@ -77,14 +77,14 @@ These are the standard BSD `sysexits.h` codes
 (`/usr/include/sysexits.h`), reused rather than invented, so the numbers mean
 the same thing they do everywhere else on the system. Emitted by every
 subcommand, not just `iterate` — this range is uniform across `apply`,
-`build-suggestion-patch`, and the `admin` commands too.
+`build-suggestion-patches`, its deprecated singular adapter, and the `admin` commands too.
 
 | Code | Name             | When                                                                                                                                                                                                                   |
 | ---- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 64   | `EX_USAGE`       | Bad or unknown flag, unknown subcommand, missing required argument, invalid `--format`, malformed duration                                                                                                             |
 | 65   | `EX_DATAERR`     | Malformed caller data: `--require-sha` not a 40-char lowercase hex SHA, `PRRC_*` comment IDs passed to `--minimize-comment-ids`, an unparseable `owner/repo` string                                                    |
 | 66   | `EX_NOINPUT`     | `apply journal --file` path could not be read (including `--file -` for stdin)                                                                                                                                         |
-| 69   | `EX_UNAVAILABLE` | A precondition is unmet: no open PR for the current branch; a `build-suggestion-patch` thread is resolved, outdated, minimized, unanchored, or has an unsafe replacement range; or GitHub returned an unclassified 4xx |
+| 69   | `EX_UNAVAILABLE` | A precondition is unmet: no open PR for the current branch; a suggestion thread is resolved, outdated, minimized, unanchored, unsafe, or not applyable to the local descendant; or GitHub returned an unclassified 4xx |
 | 70   | `EX_SOFTWARE`    | Unexpected or unclassified internal failure — the fallback when nothing more specific applies                                                                                                                          |
 | 75   | `EX_TEMPFAIL`    | A **retryable** GitHub failure: HTTP 429, any 5xx, a `Retry-After` header, or an exhausted rate limit                                                                                                                  |
 | 77   | `EX_NOPERM`      | GitHub 401/403 that is not a rate-limit signal — missing token or insufficient PAT scopes                                                                                                                              |
@@ -124,7 +124,7 @@ letting status-based classification guess.
 than failing the run. That fallback is intentional, tested behavior. The code
 is reserved in case config validation becomes fatal.
 
-**`apply`, `build-suggestion-patch`, and `admin` commands never emit
+**`apply`, `build-suggestion-patches`, and `admin` commands never emit
 0/10–19** — those codes are specific to `IterateResult`.
 These commands exit `0` on success and a `sysexits.h` code on failure. See
 each command's `--help` for which codes it can realistically hit.

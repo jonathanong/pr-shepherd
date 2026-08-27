@@ -1,15 +1,15 @@
 import { graphql } from "./client.mts";
-import { COMMIT_SUGGESTION_THREAD_QUERY } from "./queries.mts";
+import { SUGGESTION_THREADS_QUERY } from "./queries.mts";
 import { mapAuthorType, parseCreatedAt } from "./batch-parser-helpers.mts";
 import type { ReviewThread } from "../types.mts";
 import type { RepoInfo } from "./client.mts";
 import type { RawThread } from "./batch-raw-types.mts";
 
-export interface SuggestionThreadResult {
+export interface SuggestionThreadsResult {
   headRefOid: string;
   headRefName: string;
   headRepoWithOwner: string | null;
-  thread: ReviewThread | null;
+  threads: (ReviewThread | null)[];
 }
 
 interface RawSuggestionThread extends RawThread {
@@ -24,19 +24,19 @@ interface RawSuggestionResponse {
       headRepository: { nameWithOwner: string } | null;
     } | null;
   };
-  node: RawSuggestionThread | null;
+  nodes: (RawSuggestionThread | null)[];
 }
 
-export async function fetchSuggestionThread(
+export async function fetchSuggestionThreads(
   pr: number,
   repo: RepoInfo,
-  threadId: string,
-): Promise<SuggestionThreadResult> {
-  const result = await graphql<RawSuggestionResponse>(COMMIT_SUGGESTION_THREAD_QUERY, {
+  threadIds: readonly string[],
+): Promise<SuggestionThreadsResult> {
+  const result = await graphql<RawSuggestionResponse>(SUGGESTION_THREADS_QUERY, {
     owner: repo.owner,
     repo: repo.name,
     pr,
-    threadId,
+    threadIds,
   });
   const pull = result.data.repository.pullRequest;
   if (!pull) {
@@ -46,7 +46,10 @@ export async function fetchSuggestionThread(
     headRefOid: pull.headRefOid,
     headRefName: pull.headRefName,
     headRepoWithOwner: pull.headRepository?.nameWithOwner ?? null,
-    thread: parseThread(result.data.node, pr, threadId),
+    threads: threadIds.map((threadId) => {
+      const raw = result.data.nodes.find((candidate) => candidate?.id === threadId) ?? null;
+      return parseThread(raw, pr, threadId);
+    }),
   };
 }
 

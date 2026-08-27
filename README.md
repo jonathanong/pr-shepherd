@@ -9,14 +9,14 @@ An agent finishing a PR should think about code, not reconstruct GitHub state or
 ## What it does
 
 1. **Gather all context for a PR** in one invocation: review threads, comments, replies, summaries, CI, mergeability, merge requirements, first-look / outdated / edited items, and author provenance.
-2. **Provide deterministic actions for the agent**: exactly one of `WAIT`, `MARK_READY`, `FIX_CODE`, `CANCEL`, or `ESCALATE`, plus numbered `## Instructions` and explicit `apply` / `build_suggestion_patch` mutations. The agent still decides whether a comment or CI failure needs a code change. Shepherd does not classify signal vs noise and does not mutate git.
+2. **Provide deterministic actions for the agent**: exactly one of `WAIT`, `MARK_READY`, `FIX_CODE`, `CANCEL`, or `ESCALATE`, plus numbered `## Instructions` and explicit `apply` / `build_suggestion_patches` operations. The agent still decides whether a comment or CI failure needs a code change. Shepherd does not classify signal vs noise and does not mutate git.
 
 Highlights:
 
 - Batched GraphQL reads and writes (plus REST where GraphQL cannot) so one poll replaces a tool-call fan-out. MCP `iterate` is one tick and the client owns recurrence; `--debounce` is a poll-dispatcher settle window, not an MCP tool.
 - CI summaries include failed checks, and the failed job/step plus a log excerpt when triage can fetch them. Job and log details are omitted for `STARTUP_FAILURE` and `CANCELLED`; agents may still inspect logs.
 - Handles GitHub comment types (comments, threads, replies) and their states, including first-look, outdated, resolved, minimized, and edited.
-- `apply` batches resolve / reply / minimize / dismiss. `build_suggestion_patch` emits a unified diff in output, not a patch file, and does not mutate git.
+- `apply` batches resolve / reply / minimize / dismiss. `build_suggestion_patches` validates and returns ordered diffs without mutating git.
 - `BEHIND` is mergeability information, not a rebase or a guarantee that the next push is at the default-branch tip. The agent can update the branch before pushing.
 
 Full reference: [docs/README.md](docs/README.md). Feature matrix: [docs/features.md](docs/features.md).
@@ -25,7 +25,7 @@ Full reference: [docs/README.md](docs/README.md). Feature matrix: [docs/features
 
 `pr-shepherd` moves deterministic PR orchestration into a local MCP server, with a CLI for shells and CI. Both interfaces fetch the same GitHub state, emit raw-enough context, and return a numbered plan for the calling agent to follow.
 
-The MCP server exposes three tools: `iterate`, `apply`, and `build_suggestion_patch`. `apply` accepts ordered review mutations, file-view mutations, and journal entries. Direct MCP calls require a repository-qualified `pr`: a GitHub PR URL or `owner/repo#N`, matching the repository where the server started. The CLI and programmatic API also retain bare-number and current-branch PR discovery. The shipped skills are thin dispatchers for those tools.
+The MCP server exposes canonical `iterate`, `apply`, and `build_suggestion_patches` tools. `apply` accepts ordered review mutations, file-view mutations, and journal entries; the deprecated singular suggestion tool remains temporarily as an adapter. Direct MCP calls require a repository-qualified `pr`: a GitHub PR URL or `owner/repo#N`, matching the repository where the server started. The CLI and programmatic API also retain bare-number and current-branch PR discovery. The shipped skills are thin dispatchers for those tools.
 
 Each tick returns exactly one action:
 
@@ -88,7 +88,7 @@ This system is opinionated and works best with PRs that use required status chec
 - Every review thread/comment/review summary is surfaced at least once, even if already outdated, resolved, or minimized; edited items re-surface through seen markers.
 - Draft PRs can be marked ready automatically when clean; disable with `actions.autoMarkReady: false` or `--no-auto-mark-ready`.
 - The CLI never performs git mutations. It emits instructions; the caller commits, rebases, pushes, and handles repository hooks.
-- `build_suggestion_patch` turns one GitHub suggestion thread into a patch and commit metadata, but never edits the working tree or git history.
+- `build_suggestion_patches` turns one or more ordered GitHub suggestion threads into checked patches and commit metadata, but never edits the working tree or git history. Local HEAD may be ahead when the live PR head is its ancestor.
 
 ## Usage
 
@@ -115,7 +115,7 @@ Grok:
 /pr-shepherd 42
 ```
 
-MCP clients call `iterate` once per tick, then use `apply` for review/file/journal mutations and `build_suggestion_patch` for an anchored suggestion. Every direct MCP call supplies the same repository-qualified PR reference. `iterate` returns the same structured action data as the CLI, including its review mutation arguments. The client owns recurrence, so this works consistently in Codex, Claude Code, Grok, and any other stdio MCP client.
+MCP clients call `iterate` once per tick, then use `apply` for review/file/journal mutations and `build_suggestion_patches` for anchored suggestions. Every direct MCP call supplies the same repository-qualified PR reference. `iterate` returns the same structured action data as the CLI, including its review mutation arguments. The client owns recurrence, so this works consistently in Codex, Claude Code, Grok, and any other stdio MCP client.
 
 The CLI remains useful for shell workflows. Its canonical polling form is:
 
@@ -131,7 +131,7 @@ pr-shepherd iterate 42                 # single tick
 
 ### Apply Review, File, And Journal Changes
 
-Use `apply` with ordered operations to reply/resolve/minimize/dismiss review items, mark changed files viewed, or append an idempotent Shepherd Journal item. Use `build_suggestion_patch` to turn one review suggestion into a validated patch and commit metadata; it never changes the worktree or git history.
+Use `apply` with ordered operations to reply/resolve/minimize/dismiss review items, mark changed files viewed, or append an idempotent Shepherd Journal item. Use `build_suggestion_patches` to turn ordered review suggestions into checked patches and commit metadata; it never changes the worktree or git history.
 
 ### Extract Shepherd Journal Entries
 
@@ -276,7 +276,7 @@ Ready-to-use examples for common patterns are in [`examples/classification/`](ex
 
 ## CLI aliases
 
-`poll`, `resolve`, `commit-suggestion`, `mark-files-as-viewed`, `journal`, `clean`, and `log-file` are CLI aliases. Prefer default polling/`iterate` in a shell and the MCP `iterate`, `apply`, and `build_suggestion_patch` tools in an agent client.
+`poll`, `resolve`, `build-suggestion-patch`, `commit-suggestion`, `mark-files-as-viewed`, `journal`, `clean`, and `log-file` are CLI aliases or deprecated adapters. Prefer default polling/`iterate` in a shell and the MCP `iterate`, `apply`, and `build_suggestion_patches` tools in an agent client.
 
 ## Requirements
 

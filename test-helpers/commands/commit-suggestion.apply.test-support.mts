@@ -6,26 +6,24 @@ import { vi } from "vitest";
 
 const { mockExecFile } = vi.hoisted(() => ({ mockExecFile: vi.fn() }));
 
-vi.mock("node:child_process", () => ({
-  execFile: (
-    cmd: string,
-    args: string[],
-    optsOrCb:
-      | Record<string, unknown>
-      | ((err: Error | null, result: { stdout: string; stderr: string }) => void),
-    maybeCb?: (err: Error | null, result: { stdout: string; stderr: string }) => void,
-  ) => {
-    const cb = typeof optsOrCb === "function" ? optsOrCb : maybeCb!;
-    mockExecFile(cmd, args)
-      .then((result: { stdout: string; stderr: string }) => cb(null, result))
-      .catch((err: Error & { stderr?: string }) =>
-        cb(err, { stdout: "", stderr: err.stderr ?? "" }),
-      );
-  },
-}));
+const { mockReadFile } = vi.hoisted(() => ({ mockReadFile: vi.fn() }));
 
-vi.mock("node:fs/promises", () => ({
-  readFile: vi.fn(),
+vi.mock("../../src/commands/suggestion-patch-git.mts", () => ({
+  getLocalHeadSha: async () => (await mockExecFile("git", ["rev-parse", "HEAD"])).stdout.trim(),
+  getPathsStatus: async (paths: string[]) =>
+    (await mockExecFile("git", ["status", "--porcelain", "--", ...paths])).stdout.trim(),
+  isAncestor: async (ancestor: string, descendant: string) => {
+    try {
+      await mockExecFile("git", ["merge-base", "--is-ancestor", ancestor, descendant]);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  readPrHeadFile: mockReadFile,
+  checkPatchesApply: async (patches: string[]) => {
+    await mockExecFile("git", ["apply", "--check"], patches.join("\n"));
+  },
 }));
 
 vi.mock("../../src/github/client.mts", () => ({
@@ -35,27 +33,27 @@ vi.mock("../../src/github/client.mts", () => ({
 }));
 
 vi.mock("../../src/github/suggestion-thread.mts", () => ({
-  fetchSuggestionThread: vi.fn(),
+  fetchSuggestionThreads: vi.fn(),
 }));
 
 import { runCommitSuggestion } from "../../src/commands/commit-suggestion.mts";
 import { getCurrentBranch } from "../../src/github/client.mts";
-import { fetchSuggestionThread } from "../../src/github/suggestion-thread.mts";
-import { readFile } from "node:fs/promises";
+import { fetchSuggestionThreads } from "../../src/github/suggestion-thread.mts";
 import type { ReviewThread, BatchPrData } from "../../src/types.mts";
 
 const mockGetCurrentBranch = vi.mocked(getCurrentBranch);
-const mockFetchSuggestionThread = vi.mocked(fetchSuggestionThread);
-const mockReadFile = vi.mocked(readFile);
+const mockFetchSuggestionThreads = vi.mocked(fetchSuggestionThreads);
 
 const mockFetchBatch = {
   mockResolvedValue(value: { data: BatchPrData; rateLimit?: unknown }): void {
     const data = value.data;
-    mockFetchSuggestionThread.mockImplementation(async (_pr, _repo, threadId) => ({
+    mockFetchSuggestionThreads.mockImplementation(async (_pr, _repo, threadIds) => ({
       headRefOid: data.headRefOid,
       headRefName: data.headRefName,
       headRepoWithOwner: data.headRepoWithOwner,
-      thread: data.reviewThreads.find((t) => t.id === threadId) ?? null,
+      threads: threadIds.map(
+        (threadId) => data.reviewThreads.find((thread) => thread.id === threadId) ?? null,
+      ),
     }));
   },
 };
@@ -125,7 +123,7 @@ function makeGitSuccess(stdout = ""): Promise<{ stdout: string; stderr: string }
 export {
   FILE_CONTENT,
   GLOBAL_OPTS,
-  fetchSuggestionThread,
+  fetchSuggestionThreads,
   getCurrentBranch,
   makeBatch,
   makeGitSuccess,
@@ -134,7 +132,6 @@ export {
   mockFetchBatch,
   mockGetCurrentBranch,
   mockReadFile,
-  readFile,
   runCommitSuggestion,
 };
 export type { BatchPrData, ReviewThread };

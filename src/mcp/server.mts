@@ -8,6 +8,7 @@ import {
   createPrShepherd,
   type ApplyInput,
   type BuildSuggestionPatchInput,
+  type BuildSuggestionPatchesInput,
   type CreatePrShepherdOptions,
   type IterateInput,
   PartialApplyError,
@@ -18,6 +19,7 @@ import { isRepositoryQualifiedPrReference } from "../pr-reference.mts";
 import { formatJournalResult } from "../cli/journal-formatter.mts";
 import {
   formatCommitSuggestionResult,
+  formatSuggestionPatchesResult,
   formatIterateResult,
   formatMarkFilesAsViewedResult,
   formatMutateResult,
@@ -88,7 +90,20 @@ const suggestionPatchInputSchema = z.object({
   description: z.string().optional(),
 });
 
-/** Creates a local-only MCP server with the three public Shepherd operations. */
+const suggestionPatchesInputSchema = z.object({
+  pr,
+  suggestions: z
+    .array(
+      z.object({
+        threadId: z.string().min(1),
+        message: z.string().min(1),
+        description: z.string().optional(),
+      }),
+    )
+    .min(1),
+});
+
+/** Creates a local-only MCP server with Shepherd's public operations. */
 export function createPrShepherdMcpServer(
   options: CreatePrShepherdMcpServerOptions = {},
 ): McpServer {
@@ -134,9 +149,31 @@ export function createPrShepherdMcpServer(
   );
 
   server.registerTool(
+    "build_suggestion_patches",
+    {
+      description: "Build, but never apply, an ordered list of eligible review suggestion patches.",
+      inputSchema: suggestionPatchesInputSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async (input) =>
+      runTool(
+        () =>
+          shepherd.buildSuggestionPatches(
+            requireRepositoryQualifiedPr(input) as BuildSuggestionPatchesInput,
+          ),
+        formatSuggestionPatchesResult,
+      ),
+  );
+
+  server.registerTool(
     "build_suggestion_patch",
     {
-      description: "Build, but never apply, a patch from an eligible review suggestion.",
+      description: "Deprecated: use build_suggestion_patches with a one-item suggestions array.",
       inputSchema: suggestionPatchInputSchema,
       annotations: {
         readOnlyHint: true,

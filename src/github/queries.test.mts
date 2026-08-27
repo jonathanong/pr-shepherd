@@ -4,7 +4,7 @@ import {
   BATCH_PR_PAGE_QUERY,
   GET_PR_HEAD_SHA_QUERY,
   REVIEW_THREAD_COMMENTS_QUERY,
-  COMMIT_SUGGESTION_THREAD_QUERY,
+  SUGGESTION_THREADS_QUERY,
 } from "./queries.mts";
 
 describe("queries — GQL constants load at import time", () => {
@@ -34,9 +34,9 @@ describe("queries — GQL constants load at import time", () => {
     expect(BATCH_PR_QUERY).toContain("checkSuites");
   });
 
-  it("COMMIT_SUGGESTION_THREAD_QUERY selects node(id) plus PR head fields", () => {
-    expect(COMMIT_SUGGESTION_THREAD_QUERY).toContain("node(id: $threadId)");
-    expect(COMMIT_SUGGESTION_THREAD_QUERY).toContain("headRefOid");
-    expect(COMMIT_SUGGESTION_THREAD_QUERY).toContain("pullRequest");
+  it("SUGGESTION_THREADS_QUERY selects nodes(ids) plus PR head fields", () => {
+    expect(SUGGESTION_THREADS_QUERY).toContain("nodes(ids: $threadIds)");
+    expect(SUGGESTION_THREADS_QUERY).toContain("headRefOid");
+    expect(SUGGESTION_THREADS_QUERY).toContain("pullRequest");
   });
 });

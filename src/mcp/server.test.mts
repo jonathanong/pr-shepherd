@@ -50,18 +50,29 @@ describe("pr-shepherd MCP server", () => {
       shepherd: {
         iterate,
         apply: vi.fn(),
+        buildSuggestionPatches: vi.fn(),
         buildSuggestionPatch: vi.fn(),
       },
     });
     const tools = registeredTools(server);
 
-    expect(Object.keys(tools).sort()).toEqual(["apply", "build_suggestion_patch", "iterate"]);
+    expect(Object.keys(tools).sort()).toEqual([
+      "apply",
+      "build_suggestion_patch",
+      "build_suggestion_patches",
+      "iterate",
+    ]);
     expect(tools.iterate!.annotations).toMatchObject({
       readOnlyHint: false,
       destructiveHint: true,
       idempotentHint: false,
     });
     expect(tools.build_suggestion_patch!.annotations).toMatchObject({
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+    });
+    expect(tools.build_suggestion_patches!.annotations).toMatchObject({
       readOnlyHint: true,
       destructiveHint: false,
       idempotentHint: true,
@@ -76,6 +87,7 @@ describe("pr-shepherd MCP server", () => {
     const shepherd = {
       iterate: vi.fn(),
       apply: vi.fn(),
+      buildSuggestionPatches: vi.fn(),
       buildSuggestionPatch: vi.fn(),
     };
     const tools = registeredTools(createPrShepherdMcpServer({ shepherd }));
@@ -126,6 +138,12 @@ describe("pr-shepherd MCP server", () => {
           message: "Apply it",
         },
       ],
+      build_suggestion_patches: [
+        {},
+        { pr: 3, suggestions: [{ threadId: "PRRT_one", message: "Apply it" }] },
+        { pr: "42", suggestions: [{ threadId: "PRRT_one", message: "Apply it" }] },
+        { pr: "openai/pr-shepherd#0", suggestions: [] },
+      ],
     } as const;
 
     for (const [name, inputs] of Object.entries(invalidByTool)) {
@@ -149,6 +167,10 @@ describe("pr-shepherd MCP server", () => {
         threadId: "PRRT_one",
         message: "Apply it",
       },
+      build_suggestion_patches: {
+        pr: "openai/pr-shepherd#3",
+        suggestions: [{ threadId: "PRRT_one", message: "Apply it" }],
+      },
     } as const;
 
     for (const [name, input] of Object.entries(validByTool)) {
@@ -157,6 +179,7 @@ describe("pr-shepherd MCP server", () => {
 
     expect(shepherd.iterate).not.toHaveBeenCalled();
     expect(shepherd.apply).not.toHaveBeenCalled();
+    expect(shepherd.buildSuggestionPatches).not.toHaveBeenCalled();
     expect(shepherd.buildSuggestionPatch).not.toHaveBeenCalled();
   });
 
@@ -185,6 +208,7 @@ describe("pr-shepherd MCP server", () => {
       shepherd: {
         iterate: vi.fn().mockRejectedValue(new PrShepherdValidationError("bad input")),
         apply: vi.fn(),
+        buildSuggestionPatches: vi.fn(),
         buildSuggestionPatch: vi.fn(),
       },
     });
@@ -251,8 +275,27 @@ describe("pr-shepherd MCP server", () => {
     };
     const apply = vi.fn().mockResolvedValue(applyResult);
     const buildSuggestionPatch = vi.fn().mockResolvedValue(suggestionResult);
+    const batchResult = {
+      pr: 3,
+      repo: "acme/widgets",
+      patches: [
+        {
+          threadId: "PRRT_two",
+          author: "reviewer",
+          path: "src/api.mts",
+          startLine: 1,
+          endLine: 1,
+          patch: "",
+          commitMessage: "apply suggestion",
+          commitBody: "",
+          filesToStage: ["src/api.mts"],
+        },
+      ],
+      postActionInstructions: [],
+    };
+    const buildSuggestionPatches = vi.fn().mockResolvedValue(batchResult);
     const server = createPrShepherdMcpServer({
-      shepherd: { iterate: vi.fn(), apply, buildSuggestionPatch },
+      shepherd: { iterate: vi.fn(), apply, buildSuggestionPatches, buildSuggestionPatch },
     });
     const tools = registeredTools(server);
 
@@ -265,16 +308,26 @@ describe("pr-shepherd MCP server", () => {
       threadId: "PRRT_two",
       message: "apply suggestion",
     });
+    const batchResponse = await tools.build_suggestion_patches!.handler({
+      pr: "acme/widgets#3",
+      suggestions: [{ threadId: "PRRT_two", message: "apply suggestion" }],
+    });
 
     expect(applyResponse.structuredContent).toBe(applyResult);
     expect(applyResponse.content?.[0]?.text).toContain("Operation 1: review_mutations");
     expect(applyResponse.content?.[0]?.text).toContain("Operation 2: mark_files_viewed");
     expect(applyResponse.content?.[0]?.text).toContain("Operation 3: append_journal");
     expect(suggestionResponse.structuredContent).toBe(suggestionResult);
+    expect(batchResponse.structuredContent).toBe(batchResult);
+    expect(batchResponse.content?.[0]?.text).toContain("## Patch 1");
     expect(buildSuggestionPatch).toHaveBeenCalledWith({
       pr: "acme/widgets#3",
       threadId: "PRRT_two",
       message: "apply suggestion",
+    });
+    expect(buildSuggestionPatches).toHaveBeenCalledWith({
+      pr: "acme/widgets#3",
+      suggestions: [{ threadId: "PRRT_two", message: "apply suggestion" }],
     });
   });
 
@@ -297,6 +350,7 @@ describe("pr-shepherd MCP server", () => {
       shepherd: {
         iterate: vi.fn(),
         apply: vi.fn().mockRejectedValue(error),
+        buildSuggestionPatches: vi.fn(),
         buildSuggestionPatch: vi.fn(),
       },
     });
