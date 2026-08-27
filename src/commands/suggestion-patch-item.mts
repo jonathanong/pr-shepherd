@@ -120,7 +120,7 @@ export function quotePath(path: string): string {
 }
 
 function shellQuote(value: string): string {
-  return `'${value.replace(/'/g, "'\\''")}'`;
+  return `'${value.replaceAll("'", String.raw`'\''`)}'`;
 }
 
 function ensureSafePath(path: string): void {

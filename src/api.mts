@@ -101,7 +101,7 @@ export interface PrShepherd {
   iterate(input?: IterateInput): Promise<IterateResult>;
   apply(input: ApplyInput): Promise<ApplyResult>;
   buildSuggestionPatches(input: BuildSuggestionPatchesInput): Promise<BuildSuggestionPatchesResult>;
-  /** @deprecated Use buildSuggestionPatches. */
+  /** Compatibility adapter; prefer buildSuggestionPatches. */
   buildSuggestionPatch(input: BuildSuggestionPatchInput): Promise<CommitSuggestionResult>;
 }
 

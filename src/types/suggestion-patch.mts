@@ -23,7 +23,7 @@ export interface BuildSuggestionPatchesResult {
   postActionInstructions: string[];
 }
 
-/** @deprecated Use BuildSuggestionPatchesResult. */
+/** Compatibility result for the singular suggestion-patch adapter. */
 export interface CommitSuggestionResult extends SuggestionPatchResult {
   pr: number;
   repo: string;

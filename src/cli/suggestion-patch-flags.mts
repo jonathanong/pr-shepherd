@@ -1,31 +1,45 @@
 import type { SuggestionPatchRequest } from "../commands/suggestion-patch-item.mts";
 
-type ParseResult =
-  | { ok: true; suggestions: SuggestionPatchRequest[] }
-  | { ok: false; error: string };
+type ParseFailure = { ok: false; error: string };
+type ParseResult = { ok: true; suggestions: SuggestionPatchRequest[] } | ParseFailure;
+
+interface ParsedFlag {
+  name: "--thread-id" | "--message" | "--description";
+  value: string;
+  consumed: number;
+}
 
 export function parseSuggestionPatchGroups(args: readonly string[]): ParseResult {
-  const suggestions: SuggestionPatchRequest[] = [];
-  let current: Partial<SuggestionPatchRequest> | null = null;
-  for (let index = 0; index < args.length; index += 1) {
+  const parsed = parseFlags(args);
+  if (!parsed.ok) return parsed;
+  return groupFlags(parsed.flags);
+}
+
+function parseFlags(args: readonly string[]): { ok: true; flags: ParsedFlag[] } | ParseFailure {
+  const flags: ParsedFlag[] = [];
+  for (let index = 0; index < args.length;) {
     const parsed = parseFlag(args, index);
     if (!parsed) return { ok: false, error: `Unknown argument: ${args[index]}` };
-    index = parsed.nextIndex;
-    if (parsed.name === "--thread-id") {
+    flags.push(parsed);
+    index += parsed.consumed;
+  }
+  return { ok: true, flags };
+}
+
+function groupFlags(flags: readonly ParsedFlag[]): ParseResult {
+  const suggestions: SuggestionPatchRequest[] = [];
+  let current: Partial<SuggestionPatchRequest> | null = null;
+  for (const flag of flags) {
+    if (flag.name === "--thread-id") {
       const finalized = finalize(current);
       if (!finalized.ok) return finalized;
       if (finalized.suggestion) suggestions.push(finalized.suggestion);
-      current = { threadId: parsed.value };
+      current = { threadId: flag.value };
       continue;
     }
-    if (!current) {
-      return { ok: false, error: `${parsed.name} must follow --thread-id.` };
-    }
-    const property = parsed.name === "--message" ? "message" : "description";
-    if (current[property] !== undefined) {
-      return { ok: false, error: `${parsed.name} may appear only once per suggestion.` };
-    }
-    current[property] = parsed.value;
+    const updated = setMetadata(current, flag);
+    if (!updated.ok) return updated;
+    current = updated.current;
   }
   const finalized = finalize(current);
   if (!finalized.ok) return finalized;
@@ -35,21 +49,33 @@ export function parseSuggestionPatchGroups(args: readonly string[]): ParseResult
   return { ok: true, suggestions };
 }
 
+function setMetadata(
+  current: Partial<SuggestionPatchRequest> | null,
+  flag: ParsedFlag,
+): { ok: true; current: Partial<SuggestionPatchRequest> } | { ok: false; error: string } {
+  if (!current) return { ok: false, error: `${flag.name} must follow --thread-id.` };
+  const property = flag.name === "--message" ? "message" : "description";
+  if (current[property] !== undefined) {
+    return { ok: false, error: `${flag.name} may appear only once per suggestion.` };
+  }
+  return { ok: true, current: { ...current, [property]: flag.value } };
+}
+
 function parseFlag(
   args: readonly string[],
   index: number,
 ): {
   name: "--thread-id" | "--message" | "--description";
   value: string;
-  nextIndex: number;
+  consumed: number;
 } | null {
   const arg = args[index]!;
   for (const name of ["--thread-id", "--message", "--description"] as const) {
     if (arg.startsWith(`${name}=`)) {
-      return { name, value: arg.slice(name.length + 1), nextIndex: index };
+      return { name, value: arg.slice(name.length + 1), consumed: 1 };
     }
     if (arg === name && index + 1 < args.length) {
-      return { name, value: args[index + 1]!, nextIndex: index + 1 };
+      return { name, value: args[index + 1]!, consumed: 2 };
     }
   }
   return null;

@@ -1,4 +1,4 @@
-import { execFile as execFileCb, spawn } from "node:child_process";
+import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 
 import { getExecutionCwd } from "../execution-context.mts";
@@ -43,24 +43,19 @@ export async function getPathsStatus(paths: readonly string[]): Promise<string> 
 export function checkPatchesApply(patches: readonly string[]): Promise<void> {
   const input = patches.join("\n");
   return new Promise((resolve, reject) => {
-    const child = spawn("git", ["apply", "--check"], {
-      cwd: getExecutionCwd(),
-      stdio: ["pipe", "ignore", "pipe"],
-    });
-    let stderr = "";
-    child.stderr.setEncoding("utf8");
-    child.stderr.on("data", (chunk: string) => {
-      stderr += chunk;
-    });
-    child.on("error", reject);
-    child.on("close", (code) => {
-      if (code === 0) {
-        resolve();
-        return;
-      }
-      reject(new Error(stderr.trim() || `git apply --check exited ${code ?? "unknown"}`));
-    });
-    child.stdin.end(input);
+    const child = execFileCb(
+      "git",
+      ["apply", "--check"],
+      { cwd: getExecutionCwd() },
+      (error, _stdout, stderr) => {
+        if (!error) {
+          resolve();
+          return;
+        }
+        reject(new Error(stderr.trim() || error.message));
+      },
+    );
+    child.stdin!.end(input);
   });
 }
 

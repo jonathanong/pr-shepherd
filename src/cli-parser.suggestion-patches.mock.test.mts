@@ -7,6 +7,7 @@ import {
   stderrSpy,
 } from "../test-helpers/cli-parser.commit-suggestion.test-support.mts";
 import { main } from "./cli-parser.mts";
+import { parseSuggestionPatchGroups } from "./cli/suggestion-patch-flags.mts";
 import { EXIT } from "./exit-codes.mts";
 
 registerHooks();
@@ -58,5 +59,21 @@ describe("main — build-suggestion-patches", () => {
     expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunSuggestionPatches).not.toHaveBeenCalled();
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("--message is required"));
+  });
+
+  it.each([
+    [["--message", "fix"], "--message must follow --thread-id"],
+    [
+      ["--thread-id", "t1", "--message", "first", "--message", "second"],
+      "--message may appear only once",
+    ],
+    [[], "At least one --thread-id is required"],
+    [["--unknown"], "Unknown argument"],
+    [["--thread-id=", "--message", "fix"], "--thread-id must be non-empty"],
+  ])("rejects malformed grouped flags: %j", (args, message) => {
+    expect(parseSuggestionPatchGroups(args)).toEqual({
+      ok: false,
+      error: expect.stringContaining(message),
+    });
   });
 });

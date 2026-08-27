@@ -44,7 +44,7 @@ describe("runSuggestionPatches", () => {
     const result = await runSuggestionPatches({
       ...GLOBAL_OPTS,
       suggestions: [
-        { threadId: "PRRT_one", message: "first" },
+        { threadId: "PRRT_one", message: "reviewer's fix" },
         { threadId: "PRRT_two", message: "second", description: "details" },
       ],
     });
@@ -52,6 +52,9 @@ describe("runSuggestionPatches", () => {
     expect(result.patches.map((patch) => patch.threadId)).toEqual(["PRRT_one", "PRRT_two"]);
     expect(result.postActionInstructions.filter((step) => step.includes("Push once"))).toHaveLength(
       1,
+    );
+    expect(result.postActionInstructions).toContainEqual(
+      expect.stringContaining(String.raw`'reviewer'\''s fix'`),
     );
     expect(mockExecFile).toHaveBeenCalledWith("git", [
       "merge-base",

@@ -159,19 +159,16 @@ async function readOriginals(
 }
 
 function buildBatchInstructions(patches: BuildSuggestionPatchesResult["patches"]): string[] {
-  const instructions: string[] = [];
-  patches.forEach((patch, index) => {
-    instructions.push(`Apply patch ${index + 1} to \`${patch.path}\` using \`git apply\`.`);
-    instructions.push(`Stage patch ${index + 1}: \`git add -- ${quotePath(patch.path)}\``);
-    instructions.push(`Commit patch ${index + 1}: \`${buildCommitCommand(patch)}\``);
-  });
-  instructions.push(
+  const patchInstructions = patches.flatMap((patch, index) => [
+    `Apply patch ${index + 1} to \`${patch.path}\` using \`git apply\`.`,
+    `Stage patch ${index + 1}: \`git add -- ${quotePath(patch.path)}\``,
+    `Commit patch ${index + 1}: \`${buildCommitCommand(patch)}\``,
+  ]);
+  return [
+    ...patchInstructions,
     "Push once after every patch is committed: `git push` (or `git push --force-with-lease` after rebasing).",
-  );
-  instructions.push(
     `Then continue with the originating iterate output's \`apply review\` instructions for thread IDs: ${patches.map((patch) => patch.threadId).join(", ")}.`,
-  );
-  return instructions;
+  ];
 }
 
 function errorMessage(error: unknown): string {

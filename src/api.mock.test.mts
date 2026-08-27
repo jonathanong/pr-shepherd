@@ -273,6 +273,10 @@ describe("public API", () => {
     ["missing thread", { suggestions: [{ threadId: "", message: "message" }] }],
     ["missing message", { suggestions: [{ threadId: "PRRT_one", message: " " }] }],
     [
+      "invalid description",
+      { suggestions: [{ threadId: "PRRT_one", message: "message", description: 42 }] },
+    ],
+    [
       "duplicate thread",
       {
         suggestions: [

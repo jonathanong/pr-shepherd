@@ -47,6 +47,9 @@ describe("suggestion patch git helpers", () => {
       expect(await isAncestor(secondHead, firstHead)).toBe(false);
       expect(await isAncestor("0".repeat(40), secondHead)).toBe(false);
     });
+    await runWithExecutionCwd(join(repoDir, "missing"), async () => {
+      await expect(isAncestor(firstHead, secondHead)).rejects.toMatchObject({ code: "ENOENT" });
+    });
   });
 
   it("surfaces path status and only dry-runs ordered patches", async () => {
