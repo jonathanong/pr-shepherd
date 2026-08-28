@@ -8,6 +8,7 @@ import {
   registerIterateHooks,
 } from "../../test-helpers/commands/iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
+import { makeThread } from "../../test-helpers/commands/iterate-thread-test-support.mts";
 
 registerIterateHooks();
 
@@ -61,5 +62,42 @@ describe("fix_code — GitHub Actions authorization", () => {
     expect(result.fix.inProgressRunIds).toEqual([]);
     expect(result.fix.instructions.join("\n")).not.toContain("gh run cancel");
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("escalates a denied suppressed auto-resolve thread without recommending a mutation", async () => {
+    const thread = makeThread({
+      id: "thread-denied",
+      author: "review-bot",
+      authorType: "Bot",
+      viewerCanReply: false,
+      viewerCanResolve: false,
+    });
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: {
+          actionable: [thread],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+          ruleAutoResolveIds: [thread.id],
+        },
+      }),
+    );
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("escalate");
+    if (result.action !== "escalate") return;
+    expect(result.escalate.triggers).toContain("authorization-required");
+    expect(result.escalate.authorization).toEqual([
+      {
+        action: "resolve-thread",
+        targetIds: [thread.id],
+        reason: "denied-or-unverifiable",
+      },
+    ]);
+    expect(result.escalate.humanMessage).not.toContain("pr-shepherd apply review");
   });
 });

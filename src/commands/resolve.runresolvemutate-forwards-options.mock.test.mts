@@ -34,7 +34,7 @@ describe("runResolveMutate — forwards options", () => {
         minimizeCommentIds: [],
         dismissReviewIds: [],
         dismissMessage: "done",
-        requireSha: "sha-abc",
+        requireSha: undefined,
       }),
     );
     const result = await runResolveMutate({

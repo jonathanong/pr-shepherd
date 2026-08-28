@@ -94,6 +94,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     (c) => c.category !== "failing",
   );
   const allThreads = [...report.threads.actionable, ...report.threads.resolutionOnly];
+  const ruleAutoResolveIds = new Set(ruleAutoResolveThreadIds ?? []);
   const unauthorizedReplies = allThreads.filter(
     (thread) =>
       report.viewerAuthorization !== undefined &&
@@ -104,7 +105,9 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const unauthorizedResolves = allThreads.filter(
     (thread) =>
       report.viewerAuthorization !== undefined &&
-      (!isHumanAuthor(thread) || isConfiguredBotAuthor(thread, botUsernames)) &&
+      (ruleAutoResolveIds.has(thread.id) ||
+        !isHumanAuthor(thread) ||
+        isConfiguredBotAuthor(thread, botUsernames)) &&
       thread.viewerCanResolve !== true,
   );
   const unauthorizedDismissals = report.changesRequestedReviews.filter(

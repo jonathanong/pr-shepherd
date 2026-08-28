@@ -102,7 +102,8 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     report.mergeStatus.status === "CONFLICTS" ||
     reviewSummaryIds.length > 0 ||
     firstLookSummaries.length > 0 ||
-    editedSummaries.length > 0;
+    editedSummaries.length > 0 ||
+    (config.iterate.minimizeApprovals && surfacedApprovals.length > 0);
 
   const activeMerge = Boolean(
     opts.merge && (report.mergeQueue?.inQueue || report.mergeQueue?.autoMergeRequest),

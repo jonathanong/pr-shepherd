@@ -122,6 +122,11 @@ export async function runResolveMutate(
   const skippedUnauthorizedDismissals = (opts.dismissReviewIds ?? []).filter(
     (id) => !humanReviewIds.has(id) && !dismissReviewIds.includes(id),
   );
+  const hasAuthorizedMutation =
+    resolveThreadIds.length > 0 ||
+    (replyThreadIds?.length ?? 0) > 0 ||
+    minimizeCommentIds.length > 0 ||
+    dismissReviewIds.length > 0;
 
   const result = await applyResolveOptions(prNumber, repo, {
     resolveThreadIds,
@@ -129,7 +134,7 @@ export async function runResolveMutate(
     minimizeCommentIds,
     dismissReviewIds,
     dismissMessage: opts.dismissMessage,
-    requireSha: opts.requireSha,
+    requireSha: hasAuthorizedMutation ? opts.requireSha : undefined,
   });
   if (skippedHumanResolves.length > 0) result.skippedHumanResolves = skippedHumanResolves;
   if (skippedHumanMinimizes.length > 0) result.skippedHumanMinimizes = skippedHumanMinimizes;

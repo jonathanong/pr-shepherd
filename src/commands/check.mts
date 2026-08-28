@@ -114,8 +114,15 @@ export async function runCheck(
     config.iterate.minimizeComments,
     botUsernames,
   );
+  const deniedRuleAutoResolveThreadIds = new Set(
+    partition.ruleAutoResolveThreadIds.filter(
+      (id) => batchData.reviewThreads.find((thread) => thread.id === id)?.viewerCanResolve !== true,
+    ),
+  );
   const threadVisibility = classifyThreadVisibility(
-    batchData.reviewThreads.filter((t) => !partition.suppressedThreadIds.has(t.id)),
+    batchData.reviewThreads.filter(
+      (t) => !partition.suppressedThreadIds.has(t.id) || deniedRuleAutoResolveThreadIds.has(t.id),
+    ),
     seenMap,
     botUsernames,
   );
@@ -191,10 +198,14 @@ export async function runCheck(
     ),
   };
   const {
-    threadIds: ruleAutoResolveThreadIds,
+    threadIds: authorizedRuleAutoResolveThreadIds,
     commentIds: ruleAutoResolveCommentIds,
     reviewSummaryIds: ruleAutoResolveReviewSummaryIds,
   } = await remainingRuleAutoResolveIds(authorizedPartition, opts.autoMinimizeSuppressed);
+  const ruleAutoResolveThreadIds = [
+    ...authorizedRuleAutoResolveThreadIds,
+    ...deniedRuleAutoResolveThreadIds,
+  ];
   const changesRequestedReviews = changesRequestedReviewVisibility.visible;
   const changesRequestedReviewCount = batchData.changesRequestedReviews.filter(
     (r) => !partition.suppressedChangesRequestedIds.has(r.id),

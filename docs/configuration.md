@@ -150,6 +150,8 @@ Opt in to also minimize `APPROVED`-state reviews (`pr approve` clicks with or wi
 
 When `false` (default), approval reviews are surfaced under `## Approvals (surfaced — not minimized)` only in iterate output that is already being emitted for other actionable work (for example, alongside a `fix_code` payload). They remain visible and are not passed to `--minimize-comment-ids`, but approvals by themselves do not cause iterate to emit that section instead of returning `wait`.
 
+When `true`, an approval that cannot be minimized because policy excludes it or GitHub does not report `viewerCanMinimize: true` produces a one-time `FIX_CODE` visibility tick. It remains absent from `--minimize-comment-ids` and is marker-gated afterward.
+
 > Perf note: when this is `false` (default), `fetchPrBatch` does not paginate beyond the first 50 approved reviews. Turn it on to fetch all approvals.
 
 ### `iterate.minimizeComments` — default `"all"`

@@ -106,6 +106,20 @@ describe("runCheck — classification auto-minimize", () => {
     expect(report.threads.actionable.map((t) => t.id)).not.toContain("t-bot");
     expect(report.threads.ruleAutoResolveIds ?? []).not.toContain("t-bot");
   });
+
+  it("surfaces a suppressed auto-resolve thread when resolve authorization is denied", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        reviewThreads: [{ ...botThread(), viewerCanResolve: false }],
+      }),
+    });
+
+    const report = await runCheck({ ...BASE_OPTS, autoMinimizeSuppressed: true });
+
+    expect(mockAutoResolveThreads).not.toHaveBeenCalled();
+    expect(report.threads.actionable.map((thread) => thread.id)).toContain("t-bot");
+    expect(report.threads.ruleAutoResolveIds).toContain("t-bot");
+  });
 });
 
 function botComment() {

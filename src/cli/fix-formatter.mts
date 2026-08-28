@@ -124,7 +124,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     );
     for (const r of result.fix.editedSummaries) {
       sections.push(
-        `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})`,
+        `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})${r.viewerCanMinimize === false ? " [viewer cannot minimize]" : ""}`,
       );
       sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body));
     }
@@ -141,7 +141,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     sections.push("## Approvals (surfaced — not minimized)");
     for (const r of result.fix.surfacedApprovals) {
       sections.push(
-        `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})`,
+        `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})${r.viewerCanMinimize === false ? " [viewer cannot minimize]" : ""}`,
       );
       sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body));
     }
