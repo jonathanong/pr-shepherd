@@ -60,6 +60,18 @@ describe("runCheck — classification auto-minimize", () => {
     expect(report.comments.minimizeIds).toContain("c-bot");
   });
 
+  it("surfaces a suppressed auto-resolve pr-comment when minimization is denied", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ comments: [{ ...botComment(), viewerCanMinimize: false }] }),
+    });
+
+    const report = await runCheck({ ...BASE_OPTS, autoMinimizeSuppressed: true });
+
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
+    expect(report.comments.actionable.map((comment) => comment.id)).toContain("c-bot");
+    expect(report.comments.minimizeIds).not.toContain("c-bot");
+  });
+
   it("does not self-minimize auto-resolve-only pr-comments", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({

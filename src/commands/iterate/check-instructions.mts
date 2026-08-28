@@ -87,9 +87,17 @@ export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
 }
 
 export function buildFixCompletionInstruction(checks: AgentCheck[]): string {
-  const requiresHumanHandoff = checks.some((check) => !check.runId && !check.detailsUrl);
-  if (requiresHumanHandoff) {
+  const hasUninspectableFailure = checks.some((check) => !check.runId && !check.detailsUrl);
+  const hasOnlyCiAuthorizationHandoffs =
+    checks.length > 0 &&
+    checks.every(
+      (check) => check.conclusion === "CANCELLED" || check.conclusion === "STARTUP_FAILURE",
+    );
+  if (hasUninspectableFailure) {
     return "`[FIX_CODE]` requires a human handoff for an uninspectable failing check. Stop polling after escalating, and resume only after human direction.";
+  }
+  if (hasOnlyCiAuthorizationHandoffs) {
+    return "`[FIX_CODE]` requires a human handoff for a failing check with no authorized follow-up action. Stop polling after escalating, and resume only after human direction.";
   }
   return "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.";
 }

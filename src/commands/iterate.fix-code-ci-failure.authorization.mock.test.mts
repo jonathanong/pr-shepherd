@@ -143,4 +143,39 @@ describe("fix_code — GitHub Actions authorization", () => {
       "dismiss-review",
     ]);
   });
+
+  it("escalates when a paired viewer-authored reply is allowed but its resolve is denied", async () => {
+    const thread = makeThread({
+      id: "thread-viewer",
+      author: "viewer",
+      authorType: "User",
+      viewerDidAuthor: true,
+      viewerCanReply: true,
+      viewerCanResolve: false,
+    });
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: {
+          actionable: [thread],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
+      }),
+    );
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("escalate");
+    if (result.action !== "escalate") return;
+    expect(result.escalate.authorization).toEqual([
+      {
+        action: "resolve-thread",
+        targetIds: [thread.id],
+        reason: "denied-or-unverifiable",
+      },
+    ]);
+  });
 });

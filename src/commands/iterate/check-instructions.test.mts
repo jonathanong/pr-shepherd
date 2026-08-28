@@ -150,4 +150,19 @@ describe("buildFixCompletionInstruction", () => {
       "`[FIX_CODE]` requires a human handoff for an uninspectable failing check. Stop polling after escalating, and resume only after human direction.",
     );
   });
+
+  it.each(["CANCELLED", "STARTUP_FAILURE"] as const)(
+    "pauses polling when every failure is an authorization-only %s handoff",
+    (conclusion) => {
+      expect(buildFixCompletionInstruction([check({ conclusion })])).toContain(
+        "requires a human handoff",
+      );
+    },
+  );
+
+  it("continues polling when an actionable failure accompanies a CI-only handoff", () => {
+    expect(
+      buildFixCompletionInstruction([check({ conclusion: "CANCELLED" }), check({})]),
+    ).toContain("non-terminal");
+  });
 });

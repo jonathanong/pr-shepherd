@@ -18,6 +18,7 @@ import {
   buildEscalateHumanMessage,
 } from "./escalate.mts";
 import { buildResolveCommand } from "./classify.mts";
+import { buildThreadMutationRouting } from "./thread-mutation-routing.mts";
 import { buildFixInstructions } from "./render.mts";
 import { applyStallGuard } from "./stall.mts";
 import { annotationMarkerBody, checksWithActionableAnnotations } from "../check-annotations.mts";
@@ -95,19 +96,21 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   );
   const allThreads = [...report.threads.actionable, ...report.threads.resolutionOnly];
   const ruleAutoResolveIds = new Set(ruleAutoResolveThreadIds ?? []);
+  const routedThreadMutations = buildThreadMutationRouting(allThreads, botUsernames, [
+    ...ruleAutoResolveIds,
+  ]);
+  const replyIdSet = new Set(routedThreadMutations.replyThreadIds);
+  const resolveIdSet = new Set(routedThreadMutations.resolveThreadIds);
   const unauthorizedReplies = allThreads.filter(
     (thread) =>
       report.viewerAuthorization !== undefined &&
-      isHumanAuthor(thread) &&
-      !isConfiguredBotAuthor(thread, botUsernames) &&
+      replyIdSet.has(thread.id) &&
       thread.viewerCanReply !== true,
   );
   const unauthorizedResolves = allThreads.filter(
     (thread) =>
       report.viewerAuthorization !== undefined &&
-      (ruleAutoResolveIds.has(thread.id) ||
-        !isHumanAuthor(thread) ||
-        isConfiguredBotAuthor(thread, botUsernames)) &&
+      resolveIdSet.has(thread.id) &&
       thread.viewerCanResolve !== true,
   );
   const unauthorizedDismissals = report.changesRequestedReviews.filter(

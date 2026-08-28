@@ -108,8 +108,15 @@ export async function runCheck(
   const minimizedCommentCandidates = batchData.comments.filter(
     (c) => c.isMinimized && !partition.suppressedCommentIds.has(c.id),
   );
+  const deniedRuleAutoResolveCommentIds = new Set(
+    partition.ruleAutoResolveCommentIds.filter(
+      (id) => batchData.comments.find((comment) => comment.id === id)?.viewerCanMinimize !== true,
+    ),
+  );
   const visibleCommentClassification = classifyVisibleComments(
-    batchData.comments.filter((c) => !partition.suppressedCommentIds.has(c.id)),
+    batchData.comments.filter(
+      (c) => !partition.suppressedCommentIds.has(c.id) || deniedRuleAutoResolveCommentIds.has(c.id),
+    ),
     seenMap,
     config.iterate.minimizeComments,
     botUsernames,
