@@ -5,6 +5,7 @@ import { homedir } from "node:os";
 import { parse } from "yaml";
 import builtins from "../config.json" with { type: "json" };
 import { getEffectiveCwd } from "../execution-context.mts";
+import { findMergeStrategies } from "./merge-command-args.mts";
 
 const MINIMIZE_COMMENTS_POLICIES = ["all", "bots", "users", "none"] as const;
 
@@ -166,7 +167,6 @@ function parseNeverCancelRuns(value: unknown): string[] {
   return value;
 }
 
-const MERGE_STRATEGY_FLAGS = new Set(["--merge", "-m", "--squash", "-s", "--rebase", "-r"]);
 const SHEPHERD_OWNED_MERGE_FLAGS = [
   "--repo",
   "-R",
@@ -194,7 +194,7 @@ function parseMergeCommandArgs(value: unknown): string[] {
       throw new Error(`Invalid config: merge.commandArgs cannot include Shepherd-owned ${arg}`);
     }
   }
-  const strategies = value.filter((arg) => MERGE_STRATEGY_FLAGS.has(arg));
+  const strategies = findMergeStrategies(value);
   if (strategies.length > 1) {
     throw new Error(
       `Invalid config: merge.commandArgs includes multiple merge strategies: ${strategies.join(", ")}`,

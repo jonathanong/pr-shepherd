@@ -1,5 +1,5 @@
 import { renderResolveCommand } from "../commands/iterate/render.mts";
-import { joinSections } from "../util/markdown.mts";
+import { inlineCode, joinSections } from "../util/markdown.mts";
 import { renderSuggestionBlock, renderLineRange } from "./suggestion-renderer.mts";
 import {
   renderThreadBullet,
@@ -180,10 +180,10 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     postFixLines.push(`- apply review: \`${renderResolveCommand(result.fix.resolveCommand)}\``);
   }
   if (result.fix.requeue) {
-    postFixLines.push(`- requeue: \`${renderMergeCommand(result.fix.requeue.command)}\``);
+    postFixLines.push(`- requeue: ${inlineCode(renderMergeCommand(result.fix.requeue.command))}`);
     if (result.fix.requeue.queueApiFallbackCommand) {
       postFixLines.push(
-        `- requeue API fallback: \`${renderMergeCommand(result.fix.requeue.queueApiFallbackCommand)}\``,
+        `- requeue API fallback: ${inlineCode(renderMergeCommand(result.fix.requeue.queueApiFallbackCommand))}`,
       );
     }
   }

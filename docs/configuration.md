@@ -210,7 +210,7 @@ Common additions:
 
 ## `merge`
 
-`merge.commandArgs` is appended only to ordinary auto/direct `gh pr merge` commands emitted by `--merge`. Shepherd rejects the PR selector, `--repo`/`-R`, auto-mode controls (`--auto`/`--disable-auto`), `--match-head-commit`, privilege bypass via `--admin`, and file-reading body options (`--body-file`/`-F`), including attached short-option values. Select at most one of `--merge`/`-m`, `--squash`/`-s`, or `--rebase`/`-r`. If none is configured, Shepherd adds `--merge`. Queue commands omit every configured option because the queue controls the merge method and does not accept branch deletion.
+`merge.commandArgs` is appended only to ordinary auto/direct `gh pr merge` commands emitted by `--merge`. Shepherd rejects the PR selector, `--repo`/`-R`, auto-mode controls (`--auto`/`--disable-auto`), `--match-head-commit`, privilege bypass via `--admin`, and file-reading body options (`--body-file`/`-F`), including attached short-option values. Select at most one of `--merge`/`-m`, `--squash`/`-s`, or `--rebase`/`-r`; boolean assignments such as `--squash=true` and safe short boolean bundles such as `-sd` are recognized. If none is configured, Shepherd adds `--merge`. Queue commands omit every configured option because the queue controls the merge method and does not accept branch deletion.
 
 ---
 

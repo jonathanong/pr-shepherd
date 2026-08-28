@@ -1,5 +1,6 @@
 import type { IterateResult } from "../types.mts";
 import { renderMergeCommand } from "../commands/iterate/merge.mts";
+import { inlineCode } from "../util/markdown.mts";
 
 export function buildSimpleIterateInstructions(
   result: Exclude<IterateResult, { action: "fix_code" }>,
@@ -19,11 +20,11 @@ export function buildSimpleIterateInstructions(
       ];
       if (result.merge.mode === "queue" && result.merge.queueApiFallbackCommand) {
         instructions.push(
-          `If the gh CLI says auto-merge is disabled instead of adding the PR to the queue, run the \`queue API fallback\` command: \`${renderMergeCommand(result.merge.queueApiFallbackCommand)}\`.`,
+          `If the gh CLI says auto-merge is disabled instead of adding the PR to the queue, run the \`queue API fallback\` command: ${inlineCode(renderMergeCommand(result.merge.queueApiFallbackCommand))}.`,
         );
       } else if (result.merge.fallbackCommand) {
         instructions.push(
-          `Only if GitHub reports that auto-merge is unavailable, run the \`plain merge fallback\` command: \`${renderMergeCommand(result.merge.fallbackCommand)}\`.`,
+          `Only if GitHub reports that auto-merge is unavailable, run the \`plain merge fallback\` command: ${inlineCode(renderMergeCommand(result.merge.fallbackCommand))}.`,
         );
       }
       instructions.push(

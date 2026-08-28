@@ -70,7 +70,7 @@ for --interval/--timeout/--debounce, minutes for --ready-delay/--stall-timeout);
 an explicit unit (4.5m).
 Each WAIT tick writes an explicit still-running line to stderr by default; --quiet-status prints only changed WAIT snapshots, and --verbose emits detailed per-tick lines.
 FIX_CODE debounce writes a remaining-seconds line to stderr. --timeout does not cut an in-flight debounce short.
-With --until-terminal or --merge, --timeout is ignored for WAIT ticks and polling continues until FIX_CODE, MERGE, CANCEL, or ESCALATE.
+With --until-terminal, --timeout is ignored for WAIT ticks and polling continues until FIX_CODE, MERGE, CANCEL, or ESCALATE. With --merge, --timeout still bounds WAIT ticks; it only continues through MARK_READY while polling remains within that timeout.
 
 Exit codes: same as iterate (the final tick's action/reason decides the code).
   0   CANCEL (merged or ready-delay elapsed)

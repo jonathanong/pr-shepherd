@@ -98,6 +98,17 @@ describe("iterate merge formatting", () => {
     });
   });
 
+  it("keeps backticks in configured arguments inside one Markdown code span", () => {
+    const result = mergeResult("auto");
+    result.merge.command.argv.push("--subject", "release `v1`");
+    if (!result.merge.fallbackCommand) throw new Error("expected fallback command");
+    result.merge.fallbackCommand.argv.push("--subject", "release `v1`");
+
+    const output = formatMergeAction("header", result);
+    expect(output).toContain("``gh pr merge 42 --subject 'release `v1`'``");
+    expect(output).toContain("command: ``gh pr merge 42 --merge --subject 'release `v1`'``.");
+  });
+
   it("renders post-fix requeue commands", () => {
     const result = makeFixCodeResult();
     if (result.action !== "fix_code") throw new Error("expected fix_code fixture");

@@ -29,6 +29,31 @@ describe("loadConfig — merge.commandArgs", () => {
     ).toContain("--squash");
   });
 
+  it.each([
+    ["--squash=true", ["--squash=true"]],
+    ["-sd", ["-sd"]],
+  ])("recognizes compound strategy form %s", async (arg, expected) => {
+    writeRc(`merge:\n  commandArgs:\n    - ${arg}\n`);
+    const loadConfig = await freshLoadConfig();
+    expect(loadConfig().merge?.commandArgs).toEqual(expected);
+    const { buildMergeCommandPlan } = await import("../commands/iterate/merge.mts");
+    expect(
+      buildMergeCommandPlan({
+        pr: 42,
+        repo: "owner/repo",
+        nodeId: "PR_node",
+        headSha: "abc123",
+        queue: false,
+      }).command.argv,
+    ).not.toContain("--merge");
+  });
+
+  it("treats an explicitly false strategy as inactive", async () => {
+    writeRc("merge:\n  commandArgs:\n    - --squash=false\n");
+    const loadConfig = await freshLoadConfig();
+    expect(loadConfig().merge?.commandArgs).toEqual(["--squash=false", "--merge"]);
+  });
+
   it("rejects Shepherd-owned args and falls back to defaults", async () => {
     writeRc("merge:\n  commandArgs:\n    - --repo=other/repo\n");
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
@@ -71,4 +96,26 @@ describe("loadConfig — merge.commandArgs", () => {
     expect(loadConfig().merge?.commandArgs).toEqual([]);
     expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain("multiple merge strategies");
   });
+
+  it.each(["-ms", "--squash=true\n    - --rebase"])(
+    "rejects compound multiple strategies in %s",
+    async (args) => {
+      writeRc(`merge:\n  commandArgs:\n    - ${args}\n`);
+      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+      const loadConfig = await freshLoadConfig();
+      expect(loadConfig().merge?.commandArgs).toEqual([]);
+      expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain("multiple merge strategies");
+    },
+  );
+
+  it.each(["--squash=maybe", "-sfoo", "-dR"])(
+    "rejects ambiguous strategy syntax %s",
+    async (arg) => {
+      writeRc(`merge:\n  commandArgs:\n    - ${arg}\n`);
+      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+      const loadConfig = await freshLoadConfig();
+      expect(loadConfig().merge?.commandArgs).toEqual([]);
+      expect(stderrSpy).toHaveBeenCalled();
+    },
+  );
 });

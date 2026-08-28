@@ -1,6 +1,6 @@
 import type { IterateResult, IterateResultMerge } from "../types.mts";
 import { renderMergeCommand } from "../commands/iterate/merge.mts";
-import { joinSections } from "../util/markdown.mts";
+import { inlineCode, joinSections } from "../util/markdown.mts";
 import { buildSimpleIterateInstructions, numberInstructions } from "./iterate-instructions.mts";
 
 export function appendMergeQueueHeader(lines: string[], result: IterateResult): void {
@@ -37,16 +37,16 @@ export function appendMergeQueueHeader(lines: string[], result: IterateResult): 
 
 export function formatMergeAction(header: string, result: IterateResultMerge): string {
   const commandLines = [
-    `- ${result.merge.mode === "queue" ? "merge queue" : "auto-merge"}: \`${renderMergeCommand(result.merge.command)}\``,
+    `- ${result.merge.mode === "queue" ? "merge queue" : "auto-merge"}: ${inlineCode(renderMergeCommand(result.merge.command))}`,
   ];
   if (result.merge.fallbackCommand) {
     commandLines.push(
-      `- plain merge fallback: \`${renderMergeCommand(result.merge.fallbackCommand)}\``,
+      `- plain merge fallback: ${inlineCode(renderMergeCommand(result.merge.fallbackCommand))}`,
     );
   }
   if (result.merge.queueApiFallbackCommand) {
     commandLines.push(
-      `- queue API fallback: \`${renderMergeCommand(result.merge.queueApiFallbackCommand)}\``,
+      `- queue API fallback: ${inlineCode(renderMergeCommand(result.merge.queueApiFallbackCommand))}`,
     );
   }
   return joinSections([

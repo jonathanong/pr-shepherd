@@ -1,4 +1,5 @@
 import { loadConfig } from "../../config/load.mts";
+import { findMergeStrategies } from "../../config/merge-command-args.mts";
 import type { MergeCommandPlan } from "../../types.mts";
 import { renderShellCommand } from "../../cli/runner.mts";
 
@@ -45,9 +46,7 @@ export function buildMergeCommandPlan(input: MergePlanInput): MergeCommandPlan {
   }
 
   const configuredArgs = loadConfig().merge?.commandArgs ?? [];
-  const hasStrategy = configuredArgs.some((arg) =>
-    ["--merge", "-m", "--squash", "-s", "--rebase", "-r"].includes(arg),
-  );
+  const hasStrategy = findMergeStrategies(configuredArgs).length > 0;
   const commandArgs = hasStrategy ? configuredArgs : [...configuredArgs, "--merge"];
   return {
     mode: "auto",
