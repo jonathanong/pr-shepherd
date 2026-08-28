@@ -3,6 +3,7 @@ import {
   BATCH_PR_QUERY,
   BATCH_PR_PAGE_QUERY,
   GET_PR_HEAD_SHA_QUERY,
+  GET_PR_BODY_QUERY,
   REVIEW_THREAD_COMMENTS_QUERY,
   SUGGESTION_THREADS_QUERY,
 } from "./queries.mts";
@@ -32,6 +33,20 @@ describe("queries — GQL constants load at import time", () => {
     expect(BATCH_PR_PAGE_QUERY).toContain("@include(if: $includeChecks)");
     expect(BATCH_PR_QUERY).not.toContain("$threadsCursor");
     expect(BATCH_PR_QUERY).toContain("checkSuites");
+  });
+
+  it("selects raw viewer authorization fields for every generated GitHub action", () => {
+    expect(BATCH_PR_QUERY).toContain("viewerPermission");
+    expect(BATCH_PR_QUERY).toContain("viewerCanAdminister");
+    expect(BATCH_PR_QUERY).toContain("viewerCanUpdate");
+    expect(BATCH_PR_QUERY).toContain("viewerCanEnableAutoMerge");
+    expect(BATCH_PR_QUERY).toContain("viewerCanReply");
+    expect(BATCH_PR_QUERY).toContain("viewerCanResolve");
+    expect(BATCH_PR_QUERY).toContain("viewerCanMinimize");
+    expect(BATCH_PR_PAGE_QUERY).toContain("viewerCanReply");
+    expect(BATCH_PR_PAGE_QUERY).toContain("viewerCanResolve");
+    expect(BATCH_PR_PAGE_QUERY).toContain("viewerCanMinimize");
+    expect(GET_PR_BODY_QUERY).toContain("viewerCanUpdate");
   });
 
   it("SUGGESTION_THREADS_QUERY selects nodes(ids) plus PR head fields", () => {

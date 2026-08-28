@@ -16,16 +16,42 @@ export function buildReadyMergeResult(
     report.mergeStatus.mergeRequirements?.mergeQueue?.required ||
     report.mergeStatus.mergeRequirements?.mergeQueue?.enabled,
   );
+  if (!queue && report.viewerAuthorization?.viewerCanEnableAutoMerge === true) {
+    return {
+      ...base,
+      action: "merge",
+      merge: buildMergeCommandPlan({
+        pr: report.pr,
+        repo: report.repo,
+        nodeId: report.nodeId,
+        headSha: report.headSha ?? "unknown",
+        queue: false,
+      }),
+    };
+  }
+  const authorizationEscalateBase = {
+    triggers: ["authorization-required" as const],
+    unresolvedThreads: [],
+    ambiguousComments: [],
+    changesRequestedReviews: [],
+    authorization: [
+      {
+        action: "merge-or-enqueue" as const,
+        targetIds: [report.nodeId],
+        reason: "denied-or-unverifiable" as const,
+      },
+    ],
+    suggestion: buildEscalateSuggestion(["authorization-required"]),
+  };
   return {
     ...base,
-    action: "merge",
-    merge: buildMergeCommandPlan({
-      pr: report.pr,
-      repo: report.repo,
-      nodeId: report.nodeId,
-      headSha: report.headSha ?? "unknown",
-      queue,
-    }),
+    action: "escalate",
+    escalate: {
+      ...authorizationEscalateBase,
+      humanMessage: buildEscalateHumanMessage(authorizationEscalateBase, report.pr, {
+        merge: true,
+      }),
+    },
   };
 }
 

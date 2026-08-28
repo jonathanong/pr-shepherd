@@ -19,7 +19,7 @@ export interface BuildSuggestionPatchesResult {
   repo: string;
   /** Suggestion patches in caller-supplied application order. */
   patches: SuggestionPatchResult[];
-  /** Steps for applying and committing every patch, then pushing once. */
+  /** Steps for applying and committing every patch; branch updates require separate authorization. */
   postActionInstructions: string[];
 }
 

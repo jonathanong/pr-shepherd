@@ -183,6 +183,15 @@ const DEFAULT_BATCH = {
   headRefOid: "abc123",
   headRefName: "feature",
   headRepoWithOwner: "owner/repo",
+  viewerAuthorization: {
+    repositoryPermission: "ADMIN",
+    viewerCanAdminister: true,
+    viewerDidAuthor: true,
+    viewerCanUpdate: true,
+    viewerCanEnableAutoMerge: true,
+    viewerCanEditFiles: true,
+    headRepositoryPermission: "ADMIN",
+  },
   baseRefName: "main",
   reviewRequests: [],
   latestReviews: [],
@@ -292,6 +301,27 @@ export function applyFixture(fixture: Fixture): void {
     ? { ...DEFAULT_BATCH, ...fixture.batchData }
     : { ...DEFAULT_BATCH };
   const annotationCheckIds = new Set(Object.keys(fixture.checkAnnotationsByCheckId ?? {}));
+  if (Array.isArray(batchData.reviewThreads)) {
+    batchData.reviewThreads = batchData.reviewThreads.map((thread) => ({
+      viewerCanReply: true,
+      viewerCanResolve: true,
+      ...thread,
+    }));
+  }
+  if (Array.isArray(batchData.comments)) {
+    batchData.comments = batchData.comments.map((comment) => ({
+      viewerCanMinimize: true,
+      ...comment,
+    }));
+  }
+  for (const key of ["reviewSummaries", "approvedReviews"]) {
+    if (Array.isArray(batchData[key])) {
+      batchData[key] = batchData[key].map((review) => ({
+        viewerCanMinimize: true,
+        ...review,
+      }));
+    }
+  }
   if (Array.isArray(batchData.checks)) {
     batchData.checks = stampAnnotationProbe(
       batchData.checks as Array<Record<string, unknown>>,

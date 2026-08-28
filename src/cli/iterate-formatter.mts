@@ -47,7 +47,7 @@ function formatActivityLine(result: IterateResult): string | null {
  *   1. The H1 heading on line 1 contains `[<ACTION>]` — the action tag identifies
  *      the output for logging and validation. Behavior is driven by `## Instructions`,
  *      not by dispatching on the tag.
- *   2. `[FIX_CODE]` wraps the `resolve` command under `## Post-fix push` in
+ *   2. `[FIX_CODE]` wraps the `resolve` command under `## Post-fix actions` in
  *      backticks — the skill extracts the backticked content for execution.
  *   3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … —
  *      that tells the agent exactly what to do with this output. The section is

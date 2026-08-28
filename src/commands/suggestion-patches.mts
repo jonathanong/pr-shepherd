@@ -166,8 +166,8 @@ function buildBatchInstructions(patches: BuildSuggestionPatchesResult["patches"]
   ]);
   return [
     ...patchInstructions,
-    "Push once after every patch is committed: `git push` (or `git push --force-with-lease` after rebasing).",
-    `Then continue with the originating iterate output's \`apply review\` instructions for thread IDs: ${patches.map((patch) => patch.threadId).join(", ")}.`,
+    "Shepherd cannot verify authorization for the Git credential that would push this branch, so this output does not recommend a push.",
+    `Continue only with authorization-checked \`apply review\` instructions from the originating iterate output for thread IDs: ${patches.map((patch) => patch.threadId).join(", ")}.`,
   ];
 }
 

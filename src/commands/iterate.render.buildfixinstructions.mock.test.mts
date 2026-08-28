@@ -144,7 +144,8 @@ describe("buildFixInstructions", () => {
     expect(text).toContain(
       "Read every body under `## Changes-requested reviews` and apply any warranted change.",
     );
-    expect(text).toContain("If you changed code, commit any remaining changes and push");
+    expect(text).toContain("If you changed code, commit any remaining changes");
+    expect(text).toContain("does not recommend a push");
     // CLI no longer prescribes rebase mechanics — that is the caller's convention.
     expect(text).not.toContain("rebase onto");
     // $HEAD_SHA/$DISMISS_MESSAGE substitution stays in the CLI (unlike dismiss-ID
@@ -230,7 +231,8 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(text).toContain("If you changed code, commit any remaining changes and push");
+    expect(text).toContain("If you changed code, commit any remaining changes");
+    expect(text).toContain("does not recommend a push");
     // CLI no longer prescribes rebase mechanics or names origin/main
     expect(text).not.toContain("rebase onto");
     expect(text).not.toContain("origin/main");
@@ -274,7 +276,8 @@ describe("buildFixInstructions", () => {
     expect(text).toContain(
       "Read every body under `## Changes-requested reviews` and apply any warranted change.",
     );
-    expect(text).toContain("If you changed code, commit any remaining changes and push");
+    expect(text).toContain("If you changed code, commit any remaining changes");
+    expect(text).toContain("does not recommend a push");
     // No old prescriptive commands
     expect(text).not.toContain("Commit changed files:");
     expect(text).not.toContain("Rebase and push:");

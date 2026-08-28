@@ -15,7 +15,7 @@ Conversations Resolved: Yes [Not Required]
   - `commentId=PRRC_resolved_3` [↗](https://github.com/owner/repo/pull/42#discussion_r202) (@reviewer · User)
     > Thanks. One follow-up: please add the missing test-case too.
 
-## Post-fix push
+## Post-fix actions
 
 - base: `main`
 

@@ -1,9 +1,11 @@
+/* eslint-disable max-lines */
 import type {
   AgentThread,
   Review,
   ResolveCommand,
   AgentCheck,
   ReviewThread,
+  ViewerAuthorization,
 } from "../../types.mts";
 import { buildPrShepherdCommand } from "../../cli/runner.mts";
 import { shouldMinimizeAuthor } from "../../comments/minimize-policy.mts";
@@ -45,6 +47,7 @@ export function classifyReviewSummaries(
     unresolvedThreads.flatMap((t) => (t.reviewId !== undefined ? [t.reviewId] : [])),
   );
   const eligible = (r: Review): boolean =>
+    r.viewerCanMinimize === true &&
     shouldMinimizeAuthor(r.authorType, minimizeComments, r.author, botUsernames) &&
     !blockedReviewIds.has(r.id);
   // First-look summaries still need one tick to surface their body to the agent,
@@ -64,7 +67,10 @@ export function classifyReviewSummaries(
   if (minimizeApprovals) {
     const surfacedApprovals: Review[] = [];
     for (const r of approvals) {
-      if (shouldMinimizeAuthor(r.authorType, minimizeComments, r.author, botUsernames))
+      if (
+        r.viewerCanMinimize === true &&
+        shouldMinimizeAuthor(r.authorType, minimizeComments, r.author, botUsernames)
+      )
         minimizeIds.push(r.id);
       else surfacedApprovals.push(r);
     }
@@ -94,16 +100,39 @@ export function buildResolveCommand(
   prNumber: number,
   botUsernames: NormalizedBotUsernames = new Set(),
   ruleAutoResolveThreadIds: string[] = [],
+  viewerAuthorization?: ViewerAuthorization,
+  authorizationThreads: ReviewThread[] = [],
 ): { resolveCommand: ResolveCommand; resolveOnlyCommand?: ResolveCommand } {
   const allThreads = [...threads, ...resolutionOnlyThreads];
-  const { replyThreadIds, pairedResolveThreadIds, standaloneResolveThreadIds, resolveThreadIds } =
-    buildThreadMutationRouting(allThreads, botUsernames, ruleAutoResolveThreadIds);
+  const routed = buildThreadMutationRouting(allThreads, botUsernames, ruleAutoResolveThreadIds);
+  const canReply = new Set(
+    authorizationThreads
+      .filter((thread) => thread.viewerCanReply === true)
+      .map((thread) => thread.id),
+  );
+  const canResolve = new Set(
+    authorizationThreads
+      .filter((thread) => thread.viewerCanResolve === true)
+      .map((thread) => thread.id),
+  );
+  const replyThreadIds = routed.replyThreadIds.filter((id) => canReply.has(id));
+  // Viewer-authored human resolves stay paired with an authorized reply. Marker-ended
+  // viewer-authored retries and bot/non-human resolves need only resolve authorization.
+  const pairedResolveThreadIds = routed.pairedResolveThreadIds.filter(
+    (id) => canReply.has(id) && canResolve.has(id),
+  );
+  const standaloneResolveThreadIds = routed.standaloneResolveThreadIds.filter((id) =>
+    canResolve.has(id),
+  );
+  const resolveThreadIds = dedupeIds([...pairedResolveThreadIds, ...standaloneResolveThreadIds]);
   // Bot/non-human CHANGES_REQUESTED reviews are auto-dismissed after the agent pushes a fix.
   // Human reviews are left for the reviewer to re-review or dismiss themselves.
   const dismissReviewIds = dedupeIds(
-    reviews
-      .filter((r) => !isHumanAuthor(r) || isConfiguredBotAuthor(r, botUsernames))
-      .map((r) => r.id),
+    viewerAuthorization?.viewerCanAdminister === true
+      ? reviews
+          .filter((r) => !isHumanAuthor(r) || isConfiguredBotAuthor(r, botUsernames))
+          .map((r) => r.id)
+      : [],
   );
 
   const hasReply = replyThreadIds.length > 0;

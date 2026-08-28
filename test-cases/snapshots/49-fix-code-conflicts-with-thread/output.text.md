@@ -11,7 +11,7 @@ Conversations Resolved: No [Not Required]
 
 > Rename this helper before merging.
 
-## Post-fix push
+## Post-fix actions
 
 - base: `main`
 - apply review: `pr-shepherd apply review 42 --reply-thread-ids PRRT_conflict_thread --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
@@ -19,9 +19,9 @@ Conversations Resolved: No [Not Required]
 ## Instructions
 
 1. Review each item under `## Review threads` and decide whether it needs a code change.
-2. The branch has merge conflicts (see `**branch**` above). Resolve them before committing and pushing.
+2. The branch has merge conflicts (see `**branch**` above). Resolve them before committing.
 3. Apply every warranted review fix in each file referenced above.
-4. Commit any remaining changes and push the conflict resolution before review mutations.
+4. Commit any remaining conflict-resolution changes before review mutations.
 5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
 6. Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked viewer-authored human thread is emitted resolve-only, not for another reply.
 7. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.

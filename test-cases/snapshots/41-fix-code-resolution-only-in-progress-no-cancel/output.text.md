@@ -14,7 +14,7 @@ Conversations Resolved: No [Not Required]
 
 - `threadId=PRRT_outdated` [↗](https://github.com/owner/repo/pull/42#discussion_r10) `src/helpers.ts:12` (@reviewer · User) [status: outdated]
 
-## Post-fix push
+## Post-fix actions
 
 - base: `main`
 - apply review: `pr-shepherd apply review 42 --reply-thread-ids PRRT_outdated --message "$DISMISS_MESSAGE"`

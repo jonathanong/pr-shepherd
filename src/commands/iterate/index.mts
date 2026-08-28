@@ -1,8 +1,6 @@
 import { runCheck } from "../check.mts";
 import { updateReadyDelay } from "../ready-delay.mts";
 import { getCurrentPrNumber } from "../../github/client.mts";
-import { graphql } from "../../github/http.mts";
-import { MARK_PR_READY_MUTATION } from "../../github/queries.mts";
 import { loadConfig } from "../../config/load.mts";
 import { EXIT, ShepherdError } from "../../exit-codes.mts";
 import {
@@ -20,6 +18,7 @@ import { autoMinimizeComments } from "../../comments/resolve.mts";
 import { checksWithActionableAnnotations } from "../check-annotations.mts";
 import { buildReadyMergeResult, handleActiveMergeState } from "./merge-state.mts";
 import { buildIterateBase } from "./base.mts";
+import { markReadyIfAuthorized } from "./mark-ready.mts";
 import type { IterateCommandOptions, IterateResult } from "../../types.mts";
 
 export async function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
@@ -155,15 +154,12 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     report.mergeStatus.isDraft &&
     !report.mergeStatus.blockingBotReviewInProgress;
 
-  if (canMarkReady && !opts.noAutoMarkReady && config.actions.autoMarkReady) {
-    await graphql(MARK_PR_READY_MUTATION, { pullRequestId: report.nodeId });
-    return {
-      ...base,
-      action: "mark_ready",
-      markedReady: true,
-      log: `MARKED READY: PR #${report.pr} converted from draft to ready for review`,
-    };
-  }
+  const markReadyResult = await markReadyIfAuthorized(
+    canMarkReady && !opts.noAutoMarkReady && config.actions.autoMarkReady,
+    base,
+    report,
+  );
+  if (markReadyResult) return markReadyResult;
 
   if (readyState.shouldCancel) {
     await clearStallState(stallKey);

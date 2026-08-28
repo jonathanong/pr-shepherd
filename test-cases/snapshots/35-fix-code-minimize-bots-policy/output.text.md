@@ -27,7 +27,7 @@ Conversations Resolved: No [Not Required]
 
 > LGTM but please add tests.
 
-## Post-fix push
+## Post-fix actions
 
 - base: `main`
 - resolve-only: `pr-shepherd apply review 42 --minimize-comment-ids PRR_bot1`
@@ -38,7 +38,7 @@ Conversations Resolved: No [Not Required]
 1. Review each item under `## Review threads`, `## Actionable comments` and decide whether it needs a code change.
 2. Review each body under `## Review summaries (first look)`. Eligible non-human IDs are already in `--minimize-comment-ids`. Record any warranted Shepherd Journal note before review mutations.
 3. Apply every warranted review fix in each file referenced above.
-4. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
+4. If you changed code, commit any remaining changes before review mutations. Otherwise, do not commit. Shepherd cannot verify authorization for the Git credential that would push this branch, so this output does not recommend a push.
 5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
 6. Run the `resolve-only:` command shown above.
 7. Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked viewer-authored human thread is emitted resolve-only, not for another reply.

@@ -23,7 +23,7 @@ Conversations Resolved: No [Not Required]
 - `check_annotation_5501` [↗](https://github.com/owner/repo/blob/abc123/src/util/parse.ts#L18) `src/util/parse.ts:18` [FAILURE] — Unhandled edge case
 > Empty input is not handled before indexing.
 
-## Post-fix push
+## Post-fix actions
 
 - base: `main`
 - apply review: `pr-shepherd apply review 42 --reply-thread-ids PRRT_with_annotations --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
@@ -32,9 +32,9 @@ Conversations Resolved: No [Not Required]
 
 1. Review each item under `## Review threads`, `## Failing checks`, `## Check annotations` and decide whether it needs a code change.
 2. Apply every warranted review fix in each file referenced above.
-3. Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for `gh run view` / `gh run rerun` rules.
+3. Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for read-only inspection rules.
 4. Inspect every referenced range under `## Check annotations` and apply any warranted change.
-5. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
+5. If you changed code, commit any remaining changes before review mutations. Otherwise, do not commit. Shepherd cannot verify authorization for the Git credential that would push this branch, so this output does not recommend a push.
 6. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
 7. Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked viewer-authored human thread is emitted resolve-only, not for another reply.
 8. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.

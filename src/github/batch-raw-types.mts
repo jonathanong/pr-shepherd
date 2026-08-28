@@ -3,6 +3,8 @@ import type { RawPrMergeFields } from "./batch-raw-rules.mts";
 
 export interface RawBatchResponse {
   repository: {
+    viewerPermission: string | null;
+    viewerCanAdminister: boolean;
     pullRequest: RawPr | null;
   } | null;
 }
@@ -12,12 +14,16 @@ export interface RawPr extends RawPrMergeFields {
   number: number;
   state: string;
   isDraft: boolean;
+  viewerDidAuthor: boolean;
+  viewerCanUpdate: boolean;
+  viewerCanEnableAutoMerge: boolean;
+  viewerCanEditFiles: boolean;
   mergeable: string;
   mergeStateStatus: string;
   reviewDecision: string | null;
   headRefOid: string;
   headRefName: string;
-  headRepository: { nameWithOwner: string } | null;
+  headRepository: { nameWithOwner: string; viewerPermission: string | null } | null;
   baseRefName: string;
   baseRef: import("./batch-raw-rules.mts").RawBaseRef | null;
   reviewRequests: {
@@ -109,6 +115,8 @@ export interface RawThread {
   id: string;
   isResolved: boolean;
   isOutdated: boolean;
+  viewerCanReply: boolean;
+  viewerCanResolve: boolean;
   path?: string | null;
   line?: number | null;
   startLine?: number | null;
@@ -131,6 +139,7 @@ export interface RawReviewThreadCommentsResponse {
 export interface RawComment {
   id: string;
   isMinimized: boolean;
+  viewerCanMinimize: boolean;
   url: string;
   authorAssociation?: CommentAuthorAssociation;
   author: RawAuthor | null;
@@ -150,6 +159,7 @@ export interface RawReview {
 export interface RawReviewSummary {
   id: string;
   isMinimized: boolean;
+  viewerCanMinimize: boolean;
   authorAssociation?: CommentAuthorAssociation;
   author: RawAuthor | null;
   body: string;

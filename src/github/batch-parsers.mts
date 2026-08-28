@@ -1,5 +1,13 @@
-import type { BatchPrData, PrComment, Review, ReviewThread } from "../types.mts";
+/* eslint-disable max-lines */
 import type {
+  BatchPrData,
+  PrComment,
+  Review,
+  ReviewThread,
+  ViewerAuthorization,
+} from "../types.mts";
+import type {
+  RawBatchResponse,
   RawPr,
   RawThread,
   RawComment,
@@ -31,6 +39,7 @@ function parseReviewNode(r: RawReview | RawReviewSummary): Review {
     author: r.author?.login ?? "unknown",
     authorType: mapAuthorType(r.author?.__typename, r.author?.login),
     ...(r.authorAssociation !== undefined && { authorAssociation: r.authorAssociation }),
+    viewerCanMinimize: "viewerCanMinimize" in r && r.viewerCanMinimize === true,
     body: r.body,
     createdAtUnix: r.createdAt ? parseCreatedAt(r.createdAt) : 0,
   };
@@ -48,6 +57,10 @@ export function parseRawPr(
   rawReviewSummaryNodes: RawReviewSummary[],
   rawApprovedReviewNodes: RawReviewSummary[],
   rawCheckNodes: RawContextNode[],
+  repository?: Pick<
+    NonNullable<RawBatchResponse["repository"]>,
+    "viewerPermission" | "viewerCanAdminister"
+  >,
 ): BatchPrData {
   const reviewRequests = (raw.reviewRequests?.nodes ?? []).flatMap((n) => {
     const login = n.requestedReviewer?.login ?? n.requestedReviewer?.name;
@@ -78,6 +91,8 @@ export function parseRawPr(
       isResolved: t.isResolved,
       isOutdated: t.isOutdated,
       isMinimized: comment?.isMinimized ?? false,
+      viewerCanReply: t.viewerCanReply === true,
+      viewerCanResolve: t.viewerCanResolve === true,
       path: t.path ?? comment?.path ?? null,
       line: t.line ?? comment?.line ?? null,
       startLine: t.startLine ?? comment?.startLine ?? null,
@@ -98,6 +113,7 @@ export function parseRawPr(
   const comments: PrComment[] = rawCommentNodes.map((c) => ({
     id: c.id,
     isMinimized: c.isMinimized,
+    viewerCanMinimize: c.viewerCanMinimize === true,
     author: c.author?.login ?? "unknown",
     authorType: mapAuthorType(c.author?.__typename, c.author?.login),
     ...(c.authorAssociation !== undefined && { authorAssociation: c.authorAssociation }),
@@ -155,6 +171,18 @@ export function parseRawPr(
     headRefOid: raw.headRefOid,
     headRefName: raw.headRefName,
     headRepoWithOwner: raw.headRepository?.nameWithOwner ?? null,
+    viewerAuthorization: {
+      repositoryPermission:
+        (repository?.viewerPermission as ViewerAuthorization["repositoryPermission"]) ?? null,
+      viewerCanAdminister: repository?.viewerCanAdminister === true,
+      viewerDidAuthor: raw.viewerDidAuthor === true,
+      viewerCanUpdate: raw.viewerCanUpdate === true,
+      viewerCanEnableAutoMerge: raw.viewerCanEnableAutoMerge === true,
+      viewerCanEditFiles: raw.viewerCanEditFiles === true,
+      headRepositoryPermission:
+        (raw.headRepository?.viewerPermission as ViewerAuthorization["headRepositoryPermission"]) ??
+        null,
+    },
     baseRefName: raw.baseRefName,
     reviewRequests,
     latestReviews,

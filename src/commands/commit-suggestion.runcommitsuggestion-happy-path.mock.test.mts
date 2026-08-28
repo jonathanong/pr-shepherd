@@ -79,8 +79,8 @@ describe("runCommitSuggestion — happy path", () => {
     const joined = result.postActionInstructions.join("\n");
     expect(joined).toContain("git add");
     expect(joined).toContain("git commit");
-    expect(joined).toContain("pr-shepherd apply review");
-    expect(joined).toContain("git push");
+    expect(joined).toContain("authorization-checked GitHub review action");
+    expect(joined).toContain("does not recommend a push");
   });
 
   it("multi-line range: uses startLine from thread", async () => {

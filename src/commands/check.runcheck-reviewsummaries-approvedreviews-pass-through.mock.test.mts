@@ -26,11 +26,23 @@ describe("runCheck — reviewSummaries + approvedReviews pass-through", () => {
     });
     const report = await runCheck(BASE_OPTS);
     expect(report.firstLookSummaries).toEqual([
-      { id: "PRR_SUM", author: "copilot", authorType: "Unknown" as const, body: "overview" },
+      {
+        id: "PRR_SUM",
+        author: "copilot",
+        authorType: "Unknown" as const,
+        viewerCanMinimize: true,
+        body: "overview",
+      },
     ]);
     expect(report.reviewSummaries).toEqual([]);
     expect(report.approvedReviews).toEqual([
-      { id: "PRR_AP", author: "alice", authorType: "Unknown" as const, body: "" },
+      {
+        id: "PRR_AP",
+        author: "alice",
+        authorType: "Unknown" as const,
+        viewerCanMinimize: true,
+        body: "",
+      },
     ]);
     expect(mockMarkSeen).toHaveBeenCalledWith(expect.anything(), "PRR_SUM", "overview");
   });
@@ -48,7 +60,13 @@ describe("runCheck — reviewSummaries + approvedReviews pass-through", () => {
     });
     const report = await runCheck(BASE_OPTS);
     expect(report.reviewSummaries).toEqual([
-      { id: "PRR_SUM", author: "copilot", authorType: "Unknown" as const, body: "overview" },
+      {
+        id: "PRR_SUM",
+        author: "copilot",
+        authorType: "Unknown" as const,
+        viewerCanMinimize: true,
+        body: "overview",
+      },
     ]);
     expect(report.firstLookSummaries).toEqual([]);
     expect(mockMarkSeen).not.toHaveBeenCalledWith(expect.anything(), "PRR_SUM", expect.anything());
@@ -76,6 +94,7 @@ describe("runCheck — reviewSummaries + approvedReviews pass-through", () => {
         id: "PRR_SUM",
         author: "copilot",
         authorType: "Unknown" as const,
+        viewerCanMinimize: true,
         body: "new overview",
       },
     ]);

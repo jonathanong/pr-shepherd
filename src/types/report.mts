@@ -4,6 +4,7 @@ import type {
   PrComment,
   Review,
   MergeStatusResult,
+  ViewerAuthorization,
   CheckConclusion,
   SuggestionBlock,
 } from "./github.mts";
@@ -43,6 +44,8 @@ export interface ShepherdReport {
   /** GitHub PR head OID from the same batch used to decide the action. */
   headSha?: string;
   repo: string;
+  /** Raw GitHub viewer fields used to decide which remote actions may be offered. */
+  viewerAuthorization?: ViewerAuthorization;
   status: ShepherdStatus;
   /** PR base branch from the GraphQL batch. */
   baseBranch: string;
@@ -108,6 +111,10 @@ export interface ResolveOptions {
 
 export interface AgentThread {
   id: string;
+  /** Raw GitHub capability; omitted only in legacy/incomplete snapshots. */
+  viewerCanReply?: boolean;
+  /** Raw GitHub capability; omitted only in legacy/incomplete snapshots. */
+  viewerCanResolve?: boolean;
   reviewId?: string;
   path: string | null;
   line: number | null;
@@ -125,6 +132,8 @@ export interface AgentThread {
 /** Comment shape emitted to the iterate agent — stripped of always-false flags. */
 export interface AgentComment {
   id: string;
+  /** Raw GitHub capability; omitted only in legacy/incomplete snapshots. */
+  viewerCanMinimize?: boolean;
   author: string;
   authorType?: AuthorType;
   authorAssociation?: import("./github.mts").CommentAuthorAssociation;

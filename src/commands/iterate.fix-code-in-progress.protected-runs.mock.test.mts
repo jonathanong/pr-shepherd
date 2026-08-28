@@ -11,8 +11,8 @@ import { runIterate } from "./iterate/index.mts";
 
 registerHooks();
 
-describe("fix_code — protected in-progress runs", () => {
-  it("excludes runs protected by workflow name", async () => {
+describe("fix_code — legacy protected-run configuration", () => {
+  it("does not emit cancellation metadata", async () => {
     mockLoadConfig.mockReturnValue({
       iterate: {
         fixAttemptsPerThread: 3,
@@ -85,14 +85,7 @@ describe("fix_code — protected in-progress runs", () => {
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       expect(result.fix.inProgressRunIds).toEqual([]);
-      expect(result.fix.protectedRuns).toEqual([
-        {
-          runId: "run-final-review",
-          matchedPattern: "Final Code Review",
-          workflowName: "Final Code Review",
-          checkNames: ["Claude Code Review"],
-        },
-      ]);
+      expect(result.fix.protectedRuns).toEqual([]);
     }
   });
 });

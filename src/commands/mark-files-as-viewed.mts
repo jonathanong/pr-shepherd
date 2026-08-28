@@ -1,18 +1,8 @@
 /* eslint-disable max-lines */
-import {
-  graphql,
-  graphqlWithRateLimit,
-  getCurrentPrNumber,
-  getRepoInfo,
-} from "../github/client.mts";
+import { graphql, getCurrentPrNumber, getRepoInfo } from "../github/client.mts";
 import { paginateForward, type Connection } from "../github/pagination.mts";
 import type { RepoInfo } from "../github/client.mts";
-import {
-  isRateLimitMessage,
-  rateLimitFromError,
-  rateLimitFromGraphQlResult,
-  type ResolveRateLimitStop,
-} from "../comments/rate-limit.mts";
+import type { ResolveRateLimitStop } from "../comments/rate-limit.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type { GlobalOptions } from "../types.mts";
 
@@ -43,6 +33,7 @@ export interface MarkFilesAsViewedResult {
   errors: string[];
   rateLimit?: ResolveRateLimitStop;
   unmarkedPaths?: string[];
+  authorizationSkipped?: "unverifiable";
 }
 
 interface PullRequestFilesResponse {
@@ -53,11 +44,6 @@ interface PullRequestFilesResponse {
       files: Connection<ChangedFile>;
     } | null;
   } | null;
-}
-
-interface GraphQlErrorLike {
-  message: string;
-  path?: unknown;
 }
 
 const FILES_QUERY = `query PullRequestFiles($owner: String!, $repo: String!, $pr: Int!, $filesCursor: String) {
@@ -81,8 +67,6 @@ const FILES_QUERY = `query PullRequestFiles($owner: String!, $repo: String!, $pr
 
 const TEST_FILE_RE =
   /(^|\/)(tests?|__tests__|spec)(\/|$)|\.(test|spec)\.[cm]?[jt]sx?$|_tests?\.rs$|(^|\/)tests?\.rs$/i;
-
-const BULK_CHUNK_SIZE = 10;
 
 /** @deprecated Hidden implementation for `mark-files-as-viewed`; use `apply files`. */
 export async function runMarkFilesAsViewed(
@@ -120,9 +104,11 @@ export async function runMarkFilesAsViewed(
     missingPaths: selected.missingPaths,
     unmatchedSelectors: selected.unmatchedSelectors,
     errors: [],
+    ...(selected.pathsToMark.length > 0 && { authorizationSkipped: "unverifiable" as const }),
   };
 
-  await bulkMarkFilesAsViewed(fetched.pullRequestId, selected.pathsToMark, result);
+  // GitHub exposes no exact viewer capability for markFileAsViewed. Repository role and
+  // viewerCanEditFiles describe different operations, so this command fails closed.
   return result;
 }
 
@@ -222,114 +208,4 @@ function selectChangedFiles(
   const pathsToMark = matchedPaths.filter((path) => !alreadyViewedSet.has(path));
 
   return { matchedPaths, alreadyViewedPaths, missingPaths, unmatchedSelectors, pathsToMark };
-}
-
-function buildBulkMutation(paths: string[]): string {
-  const ops = paths.map(
-    (path, i) =>
-      `  m${i}: markFileAsViewed(input: { pullRequestId: $pullRequestId, path: ${JSON.stringify(path)} }) { pullRequest { id } }`,
-  );
-  return `mutation BulkMarkFilesAsViewed($pullRequestId: ID!) {\n${ops.join("\n")}\n}`;
-}
-
-async function bulkMarkFilesAsViewed(
-  pullRequestId: string,
-  paths: string[],
-  result: MarkFilesAsViewedResult,
-): Promise<void> {
-  for (let i = 0; i < paths.length; i += BULK_CHUNK_SIZE) {
-    const chunk = paths.slice(i, i + BULK_CHUNK_SIZE);
-    // eslint-disable-next-line no-await-in-loop
-    const stopped = await bulkMarkFilesAsViewedChunk(
-      pullRequestId,
-      chunk,
-      result,
-      i + BULK_CHUNK_SIZE < paths.length,
-    );
-    if (stopped) {
-      const markedSet = new Set(result.markedPaths);
-      result.unmarkedPaths = paths.slice(i).filter((path) => !markedSet.has(path));
-      return;
-    }
-  }
-}
-
-async function bulkMarkFilesAsViewedChunk(
-  pullRequestId: string,
-  paths: string[],
-  result: MarkFilesAsViewedResult,
-  hasPendingAfter: boolean,
-): Promise<boolean> {
-  if (paths.length === 0) return false;
-
-  let data: Record<string, unknown> = {};
-  let graphQlErrors: GraphQlErrorLike[] = [];
-  let suppressCurrentChunkErrors = false;
-  let rateLimitStop: ResolveRateLimitStop | undefined;
-  try {
-    const resp = await graphqlWithRateLimit<Record<string, unknown>>(
-      buildBulkMutation(paths),
-      { pullRequestId },
-      { allowPartialData: true },
-    );
-    data = resp.data;
-    graphQlErrors = (resp.errors ?? []) as GraphQlErrorLike[];
-    const messages = graphQlErrors.map((e) => e.message);
-    suppressCurrentChunkErrors = messages.some(isRateLimitMessage);
-    rateLimitStop = rateLimitFromGraphQlResult(messages, {
-      rateLimit: resp.rateLimit,
-      retryAfterSeconds: resp.retryAfterSeconds,
-      stopOnZeroRemaining: hasPendingAfter,
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    const stop = rateLimitFromError(err, msg);
-    if (stop) {
-      result.errors.push(`rate limit: ${stop.message}`);
-      result.rateLimit = stop;
-      return true;
-    }
-    for (const path of paths) result.errors.push(`${path}: ${msg}`);
-    return false;
-  }
-
-  const errorMessagesByAlias = mapAliasErrors(graphQlErrors);
-  for (let i = 0; i < paths.length; i += 1) {
-    const alias = `m${i}`;
-    const m = data[alias] as { pullRequest?: { id?: string } } | null | undefined;
-    if (m?.pullRequest?.id === pullRequestId) {
-      result.markedPaths.push(paths[i]!);
-    } else if (!suppressCurrentChunkErrors) {
-      result.errors.push(
-        `${paths[i]!}: ${errorMessagesByAlias.get(alias) ?? "mark returned null"}`,
-      );
-    }
-  }
-
-  if (rateLimitStop) {
-    result.errors.push(`rate limit: ${rateLimitStop.message}`);
-    result.rateLimit = rateLimitStop;
-    return true;
-  }
-
-  return false;
-}
-
-function mapAliasErrors(errors: GraphQlErrorLike[]): Map<string, string> {
-  const out = new Map<string, string>();
-  for (const error of errors) {
-    if (!Array.isArray(error.path)) continue;
-    const alias = error.path.find((part) => typeof part === "string" && isMarkAlias(part));
-    if (typeof alias === "string") out.set(alias, error.message);
-  }
-  return out;
-}
-
-function isMarkAlias(value: string): boolean {
-  if (!value.startsWith("m")) return false;
-  if (value.length === 1) return false;
-  for (const char of value.slice(1)) {
-    if (char < "0" || char > "9") return false;
-  }
-  return true;
 }

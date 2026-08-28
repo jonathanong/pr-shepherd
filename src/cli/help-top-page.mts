@@ -38,7 +38,7 @@ Iterate flags:
   --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Example: 15m.
   --stall-timeout <duration>     Escalate repeated unchanged failures after this duration. Bare number = minutes. 0 disables.
   --no-auto-mark-ready           Do not convert draft PRs to ready for review.
-  --no-auto-cancel-actionable    Do not cancel in-progress runs before actionable fixes.
+  --no-auto-cancel-actionable    Legacy no-op; workflow runs are never cancelled.
 
 Polling flags:
   --interval <duration>          Delay between WAIT ticks. Bare number = seconds. Default: 60s.

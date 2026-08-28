@@ -38,11 +38,11 @@ describe("runIterate — merge", () => {
         "--auto",
         "--merge",
       ]);
-      expect(result.merge.fallbackCommand?.argv).not.toContain("--auto");
+      expect(result.merge.fallbackCommand).toBeUndefined();
     }
   });
 
-  it("emits queue commands without configured ordinary merge options", async () => {
+  it("escalates queue enrollment when GitHub exposes no exact viewer capability", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "READY",
@@ -72,11 +72,10 @@ describe("runIterate — merge", () => {
 
     const result = await runIterate(makeOpts({ merge: true }));
 
-    expect(result.action).toBe("merge");
-    if (result.action === "merge") {
-      expect(result.merge.mode).toBe("queue");
-      expect(result.merge.command.argv).not.toContain("--merge");
-      expect(result.merge.queueApiFallbackCommand?.argv.join(" ")).toContain("enqueuePullRequest");
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toContain("authorization-required");
+      expect(result.escalate.authorization?.[0]?.action).toBe("merge-or-enqueue");
     }
   });
 
@@ -119,7 +118,7 @@ describe("runIterate — merge", () => {
     expect(result.action).toBe("cancel");
   });
 
-  it("adds requeue commands to actionable work after an ejection", async () => {
+  it("does not add unverifiable requeue commands to actionable work after an ejection", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "FAILING",
@@ -162,8 +161,7 @@ describe("runIterate — merge", () => {
     const result = await runIterate(makeOpts({ merge: true, noAutoCancelActionable: true }));
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
-      expect(result.fix.requeue?.mode).toBe("queue");
-      expect(result.fix.requeue?.command.argv).toContain("$HEAD_SHA");
+      expect(result.fix.requeue).toBeUndefined();
     }
   });
 

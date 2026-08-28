@@ -11,14 +11,14 @@ Conversations Resolved: Yes [Not Required]
 
 > Re-reviewed after the rebase: the conflict resolution looks mostly right, one nit left.
 
-## Post-fix push
+## Post-fix actions
 
 - base: `main`
 
 ## Instructions
 
-1. The branch has merge conflicts (see `**branch**` above). Resolve them before committing and pushing.
+1. The branch has merge conflicts (see `**branch**` above). Resolve them before committing.
 2. Read every item marked `[edited since first look]`, including edited summaries and edited first-look bullets, before deciding whether to resolve a matching thread.
-3. Commit any remaining changes and push the conflict resolution.
+3. Commit any remaining conflict-resolution changes.
 4. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
 5. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.

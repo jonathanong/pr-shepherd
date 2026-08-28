@@ -110,7 +110,9 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       expect(joined).not.toContain("git commit");
       expect(joined).toContain("pr-shepherd apply journal"); // shepherd journal
       expect(joined).toContain("The branch has merge conflicts (see `**branch**` above)");
-      expect(joined).toContain("push the conflict resolution before review mutations");
+      expect(joined).toContain(
+        "Commit any remaining conflict-resolution changes before review mutations",
+      );
       expect(joined).not.toContain("rebase onto");
       expect(joined).not.toContain("origin/main");
       expect(joined).not.toContain("git rebase --continue");

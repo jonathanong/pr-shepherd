@@ -43,7 +43,7 @@ describe("runIterate — review summary auto-minimize (first look)", () => {
     expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
     expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") return;
-    expect(result.fix.firstLookSummaries).toEqual([summary]);
+    expect(result.fix.firstLookSummaries).toEqual([{ viewerCanMinimize: true, ...summary }]);
     expect(result.fix.reviewSummaryIds).toEqual([]);
     expect(result.fix.resolveCommand.hasMutations).toBe(false);
   });

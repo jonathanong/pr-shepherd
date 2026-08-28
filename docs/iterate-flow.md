@@ -114,7 +114,7 @@ All failing checks — including timeout, cancelled, startup-failure, flaky fail
 
 CONFLICTS is included so merge conflicts and review comments can be handled in one tick. Iterate surfaces raw `**branch**` state; it does not tell the caller how to rebase.
 
-**Side-effects:** REST `POST /repos/{owner}/{repo}/actions/runs/{runId}/cancel` for unique run IDs of failing GitHub Actions checks (best-effort; already-completed runs return 409). Not `gh run cancel`. Third-party status checks without a run ID are not cancelled. Disable with `--no-auto-cancel-actionable`; protect named workflows with `actions.neverCancelRuns`.
+**Side-effects:** No workflow-run cancellation. GitHub exposes no exact viewer capability for cancel/rerun actions, so Shepherd only surfaces failure context for inspection.
 
 **Emits:** `action: 'fix_code'`. Stall guard runs inside `handleFixCode`.
 
@@ -134,7 +134,7 @@ There is no extra `mergeStateStatus === "CLEAN"` requirement. A draft that deriv
 
 ### 4.5. Active merge and queue removal
 
-An active auto-merge request or merge-queue entry emits `wait` after actionable checks are handled. This path clears stall state and does not ready-delay-cancel or stall-escalate. If `--merge` is enabled and the latest queue removal has no actionable failure, iterate emits `escalate` with the raw removal fields.
+An active auto-merge request or merge-queue entry emits `wait` after actionable checks are handled. New auto-merge commands require `viewerCanEnableAutoMerge: true`; queue enrollment has no exact capability and returns an authorization handoff. If `--merge` is enabled and the latest queue removal has no actionable failure, iterate emits `escalate` with the raw removal fields.
 
 ### 5. Wait
 

@@ -65,19 +65,7 @@ export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): 
   return instructions;
 }
 
-/**
- * Build the CI-triage instruction. The per-conclusion rerun policy (GitHub Actions log
- * excerpts, `gh run view`/`gh run rerun` rules for CANCELLED/STARTUP_FAILURE/external
- * failures) is invariant text keyed on the `[conclusion: …]` tags already rendered in
- * `## Failing checks` — it lives in the pr-shepherd skill's "CI failure triage" playbook
- * instead of being re-emitted every tick. This supersedes the "CI budget rules" example in
- * CLAUDE.md's "Keep skills and loop prompts minimal" section (see that section's amendment
- * note). The `(no runId)` case stays here because it flips `buildFixCompletionInstruction`
- * to a human-handoff terminal state — that trigger, unlike the others, is CLI-decided. The
- * CLI sentence does not claim every failure has a log excerpt to read (only GitHub Actions
- * checks with a runId do — CANCELLED, STARTUP_FAILURE, and external checks may not); that
- * per-kind detail is exactly what the skill playbook table disambiguates.
- */
+/** Build the CI-triage pointer; the skill limits follow-up actions to included evidence. */
 export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   if (checks.length === 0) return [];
   const hasBare = checks.some((c) => !c.runId && !c.detailsUrl);
@@ -86,7 +74,7 @@ export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   const instructions: string[] = [];
   if (hasTriageable) {
     instructions.push(
-      'Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for `gh run view` / `gh run rerun` rules.',
+      'Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for read-only inspection rules.',
     );
   }
   if (hasBare) {

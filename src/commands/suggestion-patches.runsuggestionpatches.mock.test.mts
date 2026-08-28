@@ -50,9 +50,9 @@ describe("runSuggestionPatches", () => {
     });
 
     expect(result.patches.map((patch) => patch.threadId)).toEqual(["PRRT_one", "PRRT_two"]);
-    expect(result.postActionInstructions.filter((step) => step.includes("Push once"))).toHaveLength(
-      1,
-    );
+    expect(
+      result.postActionInstructions.filter((step) => step.includes("does not recommend a push")),
+    ).toHaveLength(1);
     expect(result.postActionInstructions).toContainEqual(
       expect.stringContaining(String.raw`'reviewer'\''s fix'`),
     );

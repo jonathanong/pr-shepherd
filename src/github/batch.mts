@@ -56,6 +56,7 @@ export async function fetchPrBatch(
     paged.reviewSummaries,
     paged.approvedReviews,
     paged.checks,
+    result.data.repository!,
   );
   data.checks = mergeStartupFailureChecks(data.checks, parseSuiteStartupFailures(raw));
   return {

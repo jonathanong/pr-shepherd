@@ -5,12 +5,12 @@
 Approvals: None [Not Required]
 Conversations Resolved: Yes [Not Required]
 
-## Post-fix push
+## Post-fix actions
 
 - base: `main`
 
 ## Instructions
 
-1. The branch has merge conflicts (see `**branch**` above). Resolve them before committing and pushing.
-2. Commit any remaining changes and push the conflict resolution.
+1. The branch has merge conflicts (see `**branch**` above). Resolve them before committing.
+2. Commit any remaining conflict-resolution changes.
 3. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.

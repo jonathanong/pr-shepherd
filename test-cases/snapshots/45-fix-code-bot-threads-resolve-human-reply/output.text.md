@@ -19,7 +19,7 @@ Conversations Resolved: No [Not Required]
 
 > Bracket bot cleanup.
 
-## Post-fix push
+## Post-fix actions
 
 - base: `main`
 - resolve-only: `pr-shepherd apply review 42 --resolve-thread-ids PRRT_bot,PRRT_bracket_bot`
@@ -29,7 +29,7 @@ Conversations Resolved: No [Not Required]
 
 1. Review each item under `## Review threads` and decide whether it needs a code change.
 2. Apply every warranted review fix in each file referenced above.
-3. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
+3. If you changed code, commit any remaining changes before review mutations. Otherwise, do not commit. Shepherd cannot verify authorization for the Git credential that would push this branch, so this output does not recommend a push.
 4. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
 5. Run the `resolve-only:` command shown above.
 6. Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked viewer-authored human thread is emitted resolve-only, not for another reply.

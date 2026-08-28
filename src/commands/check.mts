@@ -177,11 +177,24 @@ export async function runCheck(
     ]);
     await markReviewInlineThreadMarkers(stateKey, batchData.reviewThreads);
   }
+  const authorizedPartition: BatchPartition = {
+    ...partition,
+    ruleAutoResolveThreadIds: partition.ruleAutoResolveThreadIds.filter(
+      (id) => batchData.reviewThreads.find((thread) => thread.id === id)?.viewerCanResolve === true,
+    ),
+    ruleAutoResolveCommentIds: partition.ruleAutoResolveCommentIds.filter(
+      (id) => batchData.comments.find((comment) => comment.id === id)?.viewerCanMinimize === true,
+    ),
+    ruleAutoResolveReviewSummaryIds: partition.ruleAutoResolveReviewSummaryIds.filter(
+      (id) =>
+        batchData.reviewSummaries.find((review) => review.id === id)?.viewerCanMinimize === true,
+    ),
+  };
   const {
     threadIds: ruleAutoResolveThreadIds,
     commentIds: ruleAutoResolveCommentIds,
     reviewSummaryIds: ruleAutoResolveReviewSummaryIds,
-  } = await remainingRuleAutoResolveIds(partition, opts.autoMinimizeSuppressed);
+  } = await remainingRuleAutoResolveIds(authorizedPartition, opts.autoMinimizeSuppressed);
   const changesRequestedReviews = changesRequestedReviewVisibility.visible;
   const changesRequestedReviewCount = batchData.changesRequestedReviews.filter(
     (r) => !partition.suppressedChangesRequestedIds.has(r.id),
@@ -227,6 +240,7 @@ export async function runCheck(
     nodeId: batchData.nodeId,
     headSha: batchData.headRefOid,
     repo: `${repo.owner}/${repo.name}`,
+    ...(batchData.viewerAuthorization && { viewerAuthorization: batchData.viewerAuthorization }),
     status,
     baseBranch: batchData.baseRefName,
     mergeStatus,

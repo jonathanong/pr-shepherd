@@ -76,4 +76,43 @@ describe("runIterate — mark_ready", () => {
     );
     expect(graphqlCalls).toHaveLength(0);
   });
+
+  it("escalates without mutating when viewerCanUpdate is false", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        viewerAuthorization: {
+          repositoryPermission: "READ",
+          viewerCanAdminister: false,
+          viewerDidAuthor: true,
+          viewerCanUpdate: false,
+          viewerCanEnableAutoMerge: false,
+          viewerCanEditFiles: false,
+          headRepositoryPermission: "WRITE",
+        },
+        mergeStatus: {
+          status: "CLEAN",
+          state: "OPEN",
+          isDraft: true,
+          mergeable: "MERGEABLE",
+          reviewDecision: "APPROVED",
+          blockingBotReviewInProgress: false,
+          mergeStateStatus: "CLEAN",
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: false,
+      remainingSeconds: 300,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.authorization?.[0]?.action).toBe("mark-ready");
+    }
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
 });

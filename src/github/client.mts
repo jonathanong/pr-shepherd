@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 /**
  * High-level GitHub client — wraps http.mts for application-level concerns.
  *
@@ -102,9 +103,11 @@ export async function getPullRequestBody(
   pr: number,
   owner: string,
   name: string,
-): Promise<{ nodeId: string; body: string }> {
+): Promise<{ nodeId: string; body: string; viewerCanUpdate?: boolean }> {
   const result = await httpGraphql<{
-    repository: { pullRequest: { id: string; body: string | null } | null } | null;
+    repository: {
+      pullRequest: { id: string; body: string | null; viewerCanUpdate?: boolean } | null;
+    } | null;
   }>(GET_PR_BODY_QUERY, { owner, repo: name, pr });
   const pullRequest = result.data.repository?.pullRequest;
   if (!pullRequest) {
@@ -113,7 +116,13 @@ export async function getPullRequestBody(
       : "PR not found or access denied";
     throw new Error(`Could not fetch body for ${owner}/${name} PR #${pr}: ${detail}`);
   }
-  return { nodeId: pullRequest.id, body: pullRequest.body ?? "" };
+  return {
+    nodeId: pullRequest.id,
+    body: pullRequest.body ?? "",
+    ...(pullRequest.viewerCanUpdate !== undefined && {
+      viewerCanUpdate: pullRequest.viewerCanUpdate,
+    }),
+  };
 }
 
 /** Overwrites the PR body. */

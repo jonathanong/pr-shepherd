@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type { EscalateDetails, EscalateTrigger, ReviewThread } from "../../types.mts";
 import { loadConfig } from "../../config/load.mts";
 
@@ -154,6 +155,17 @@ export function buildEscalateHumanMessage(
     if (removal.beforeCommitOid) lines.push(`- queue commit: \`${removal.beforeCommitOid}\``);
   }
 
+  if (escalate.authorization && escalate.authorization.length > 0) {
+    lines.push("");
+    lines.push("## Authorization");
+    lines.push("");
+    for (const item of escalate.authorization) {
+      lines.push(
+        `- ${item.action}: ${item.targetIds.map((id) => `\`${id}\``).join(", ")} — GitHub denied the action or did not expose a confirming capability`,
+      );
+    }
+  }
+
   if (escalate.thrashHistory && escalate.thrashHistory.length > 0) {
     lines.push("");
     lines.push("## Fix attempts");
@@ -173,6 +185,9 @@ export function buildEscalateHumanMessage(
 }
 
 export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: string): string {
+  if (triggers.includes("authorization-required")) {
+    return "GitHub did not confirm that the current viewer may perform one or more required actions. Ask a repository maintainer to handle the listed items; Shepherd will not recommend commands that would be denied.";
+  }
   if (triggers.includes("merge-queue-removed")) {
     const reason = detail ? ` GitHub reason: ${detail}.` : "";
     return `The PR left the merge queue without an actionable check failure.${reason} Confirm the removal was not intentional before adding it again.`;

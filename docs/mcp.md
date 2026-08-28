@@ -227,7 +227,7 @@ Each operation is one of:
 | `pr`          | GitHub PR URL or `owner/repo#N` | yes      | PR for the suggestions; repository must match the server repository. |
 | `suggestions` | non-empty object array          | yes      | Ordered `{ threadId, message, description? }` suggestion requests.   |
 
-The result includes ordered `patches[]` entries with thread, path, range, author, patch, files-to-stage, and commit metadata, plus shared `postActionInstructions`. Apply and commit each patch in order, then push once. `build_suggestion_patch` remains temporarily as a deprecated adapter with its prior singular input and result.
+The result includes ordered `patches[]` entries with thread, path, range, author, patch, files-to-stage, and commit metadata, plus shared `postActionInstructions`. Apply and commit each patch in order. Shepherd does not recommend a push or review mutation from this standalone result because it cannot verify those authorizations; use the originating iterate output for authorization-checked actions. `build_suggestion_patch` remains temporarily as a deprecated adapter.
 
 ## Recurrence
 

@@ -57,23 +57,23 @@ describe("runCommitSuggestion — output shape", () => {
     expect(result.postActionInstructions[2]).toContain("rename x to const");
   });
 
-  it("postActionInstructions step 4 resolves the thread", async () => {
+  it("postActionInstructions step 4 defers to authorization-checked iterate output", async () => {
     const result = await runCommitSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
       message: "fix",
     });
-    expect(result.postActionInstructions[3]).toContain("pr-shepherd apply review");
+    expect(result.postActionInstructions[3]).toContain("authorization-checked");
     expect(result.postActionInstructions[3]).toContain("PRRT_x");
   });
 
-  it("postActionInstructions step 5 mentions git push", async () => {
+  it("postActionInstructions step 5 does not recommend git push", async () => {
     const result = await runCommitSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
       message: "fix",
     });
-    expect(result.postActionInstructions[4]).toContain("git push");
+    expect(result.postActionInstructions[4]).toContain("does not recommend a push");
   });
 
   it("multi-line range label in step 1 uses en-dash notation", async () => {

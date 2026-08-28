@@ -35,7 +35,7 @@ pr-shepherd iterate 42 --ready-delay 15m
 pr-shepherd 42 --merge
 ```
 
-The polling flags are `--interval`, `--timeout`, `--debounce`, `--quiet-status`, and `--until-terminal`. Each ordinary `WAIT` tick writes an explicit still-running line to stderr; the final action remains the only stdout result. `--debounce` (default 1m, `0` disables) is a settle window after the first `FIX_CODE`: poll keeps iterating at `--interval`, then runs one more tick after the window and returns that result so late review comments and CI failures batch into the same agent-facing tick. `--timeout` bounds `WAIT` ticks only and does not cut an in-flight debounce short. Iterate flags are `--ready-delay`, `--stall-timeout`, `--merge`, `--no-auto-mark-ready`, `--no-auto-cancel-actionable`, `--format`, and `--verbose`. Durations accept `s`, `m`, and `h`; bare polling durations are seconds and bare iterate durations are minutes.
+The polling flags are `--interval`, `--timeout`, `--debounce`, `--quiet-status`, and `--until-terminal`. Each ordinary `WAIT` tick writes an explicit still-running line to stderr; the final action remains the only stdout result. `--debounce` (default 1m, `0` disables) is a settle window after the first `FIX_CODE`. Iterate flags are `--ready-delay`, `--stall-timeout`, `--merge`, `--no-auto-mark-ready`, `--format`, and `--verbose`. The legacy `--no-auto-cancel-actionable` flag remains accepted as a no-op. Durations accept `s`, `m`, and `h`; bare polling durations are seconds and bare iterate durations are minutes.
 
 `admin clean` removes local state and `admin log-file` prints the append-only debug log path. They are shell administration commands, not MCP tools.
 

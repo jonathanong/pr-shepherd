@@ -242,7 +242,7 @@ Disable if your team uses the draft state as a deliberate gate that requires a h
 
 ### `actions.neverCancelRuns` — default `[]`
 
-Case-insensitive glob patterns for GitHub Actions workflow/check names that Shepherd must not cancel. Cancellation is workflow-run scoped in GitHub, so a match on any check/job in a run protects the entire run ID from automatic cancellation and from `## In-progress runs` prompts.
+Legacy compatibility key. Shepherd no longer cancels or recommends cancelling workflow runs because GitHub exposes no exact viewer capability for that action. The patterns remain accepted so existing configuration files do not fail to load.
 
 Use this for workflows where sibling jobs should be allowed to finish even after one job fails:
 
@@ -252,9 +252,7 @@ actions:
     - "Final Code Review"
 ```
 
-Protected runs still count as failing or in-progress checks. Shepherd surfaces them under `## Protected runs` in text output and `fix.protectedRuns` in JSON so the agent knows they were deliberately left running.
-
-Protection also takes precedence over `ignoreChecks` for GitHub Actions check runs from the same workflow/run: a protected check is kept visible and can block ready-delay even if its raw job name matches `ignoreChecks`.
+For backward compatibility, a matching run remains visible and can block readiness even if a raw job name also matches `ignoreChecks`.
 
 ---
 

@@ -46,7 +46,30 @@ export async function runResolveMutate(
       .filter((r) => isHumanAuthor(r) && !isConfiguredBotAuthor(r, botUsernames))
       .map((r) => r.id),
   );
-  const requestedReplyIds = new Set(opts.replyThreadIds ?? []);
+  const replyAuthorizedIds = new Set(
+    data.reviewThreads
+      .filter((thread) => thread.viewerCanReply === true)
+      .map((thread) => thread.id),
+  );
+  const resolveAuthorizedIds = new Set(
+    data.reviewThreads
+      .filter((thread) => thread.viewerCanResolve === true)
+      .map((thread) => thread.id),
+  );
+  const minimizeAuthorizedIds = new Set([
+    ...data.comments
+      .filter((comment) => comment.viewerCanMinimize === true)
+      .map((comment) => comment.id),
+    ...data.reviewSummaries
+      .filter((review) => review.viewerCanMinimize === true)
+      .map((review) => review.id),
+    ...data.approvedReviews
+      .filter((review) => review.viewerCanMinimize === true)
+      .map((review) => review.id),
+  ]);
+  const requestedReplyIds = new Set(
+    (opts.replyThreadIds ?? []).filter((id) => replyAuthorizedIds.has(id)),
+  );
   const allowedViewerHumanResolveIds = new Set(
     data.reviewThreads
       .filter(
@@ -57,24 +80,47 @@ export async function runResolveMutate(
       .map((thread) => thread.id),
   );
   const resolveThreadIds = (opts.resolveThreadIds ?? []).filter(
-    (id) => !humanThreadIds.has(id) || allowedViewerHumanResolveIds.has(id),
+    (id) =>
+      (!humanThreadIds.has(id) || allowedViewerHumanResolveIds.has(id)) &&
+      resolveAuthorizedIds.has(id),
   );
   const skippedHumanResolves = (opts.resolveThreadIds ?? []).filter(
     (id) => humanThreadIds.has(id) && !allowedViewerHumanResolveIds.has(id),
   );
-  const replyThreadIds = opts.replyThreadIds?.filter((id) => humanThreadIds.has(id));
+  const skippedUnauthorizedResolves = (opts.resolveThreadIds ?? []).filter(
+    (id) =>
+      (!humanThreadIds.has(id) || allowedViewerHumanResolveIds.has(id)) &&
+      !resolveAuthorizedIds.has(id),
+  );
+  const replyThreadIds = opts.replyThreadIds?.filter(
+    (id) => humanThreadIds.has(id) && replyAuthorizedIds.has(id),
+  );
   const skippedNonHumanReplies = (opts.replyThreadIds ?? []).filter(
     (id) => !humanThreadIds.has(id),
   );
+  const skippedUnauthorizedReplies = (opts.replyThreadIds ?? []).filter(
+    (id) => humanThreadIds.has(id) && !replyAuthorizedIds.has(id),
+  );
   const minimizeCommentIds = (opts.minimizeCommentIds ?? []).filter(
-    (id) => !humanCommentIds.has(id) && !humanReviewIds.has(id),
+    (id) => !humanCommentIds.has(id) && !humanReviewIds.has(id) && minimizeAuthorizedIds.has(id),
   );
   const skippedHumanMinimizes = (opts.minimizeCommentIds ?? []).filter(
     (id) => humanCommentIds.has(id) || humanReviewIds.has(id),
   );
-  const dismissReviewIds = (opts.dismissReviewIds ?? []).filter((id) => !humanReviewIds.has(id));
+  const skippedUnauthorizedMinimizes = (opts.minimizeCommentIds ?? []).filter(
+    (id) => !humanCommentIds.has(id) && !humanReviewIds.has(id) && !minimizeAuthorizedIds.has(id),
+  );
+  const dismissReviewIds = (opts.dismissReviewIds ?? []).filter(
+    (id) =>
+      !humanReviewIds.has(id) &&
+      data.changesRequestedReviews.some((review) => review.id === id) &&
+      data.viewerAuthorization?.viewerCanAdminister === true,
+  );
   const skippedHumanDismissals = (opts.dismissReviewIds ?? []).filter((id) =>
     humanReviewIds.has(id),
+  );
+  const skippedUnauthorizedDismissals = (opts.dismissReviewIds ?? []).filter(
+    (id) => !humanReviewIds.has(id) && !dismissReviewIds.includes(id),
   );
 
   const result = await applyResolveOptions(prNumber, repo, {
@@ -89,6 +135,14 @@ export async function runResolveMutate(
   if (skippedHumanMinimizes.length > 0) result.skippedHumanMinimizes = skippedHumanMinimizes;
   if (skippedHumanDismissals.length > 0) result.skippedHumanDismissals = skippedHumanDismissals;
   if (skippedNonHumanReplies.length > 0) result.skippedNonHumanReplies = skippedNonHumanReplies;
+  if (skippedUnauthorizedReplies.length > 0)
+    result.skippedUnauthorizedReplies = skippedUnauthorizedReplies;
+  if (skippedUnauthorizedResolves.length > 0)
+    result.skippedUnauthorizedResolves = skippedUnauthorizedResolves;
+  if (skippedUnauthorizedMinimizes.length > 0)
+    result.skippedUnauthorizedMinimizes = skippedUnauthorizedMinimizes;
+  if (skippedUnauthorizedDismissals.length > 0)
+    result.skippedUnauthorizedDismissals = skippedUnauthorizedDismissals;
   if (opts.dismissMessage) {
     const markedMessage = addPrShepherdMarker(opts.dismissMessage);
     await Promise.all(

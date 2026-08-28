@@ -22,6 +22,10 @@ export interface ResolveResult {
   skippedHumanMinimizes?: string[];
   skippedHumanDismissals?: string[];
   skippedNonHumanReplies?: string[];
+  skippedUnauthorizedReplies?: string[];
+  skippedUnauthorizedResolves?: string[];
+  skippedUnauthorizedMinimizes?: string[];
+  skippedUnauthorizedDismissals?: string[];
   rateLimit?: ResolveRateLimitStop;
   unrepliedThreads?: string[];
   unresolvedThreads?: string[];

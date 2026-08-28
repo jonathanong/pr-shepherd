@@ -15,7 +15,7 @@ Conversations Resolved: No [Not Required]
 
 - `reviewId=PRR_cr` (@reviewer · User)
 
-## Post-fix push
+## Post-fix actions
 
 - base: `main`
 - apply review: `pr-shepherd apply review 42 --reply-thread-ids PRRT_thread1 --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
@@ -25,7 +25,7 @@ Conversations Resolved: No [Not Required]
 1. Review each item under `## Review threads`, `## Changes-requested reviews` and decide whether it needs a code change.
 2. Apply every warranted review fix in each file referenced above.
 3. Read every body under `## Changes-requested reviews` and apply any warranted change.
-4. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
+4. If you changed code, commit any remaining changes before review mutations. Otherwise, do not commit. Shepherd cannot verify authorization for the Git credential that would push this branch, so this output does not recommend a push.
 5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
 6. Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked viewer-authored human thread is emitted resolve-only, not for another reply.
 7. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.

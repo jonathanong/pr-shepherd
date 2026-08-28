@@ -3,6 +3,7 @@ query GetPrBody($owner: String!, $repo: String!, $pr: Int!) {
     pullRequest(number: $pr) {
       id
       body
+      viewerCanUpdate
     }
   }
 }

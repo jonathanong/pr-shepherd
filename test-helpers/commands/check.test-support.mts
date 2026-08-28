@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { vi, beforeEach } from "vitest";
 
 vi.mock("../../src/github/batch.mts", () => ({ fetchPrBatch: vi.fn() }));
@@ -97,7 +98,7 @@ function makeCheck(overrides: Partial<ClassifiedCheck> = {}): ClassifiedCheck {
 }
 
 function makeBatchData(overrides: Partial<BatchPrData> = {}): BatchPrData {
-  return {
+  const data: BatchPrData = {
     nodeId: "PR_kgDOAAA",
     number: 42,
     state: "OPEN",
@@ -108,6 +109,15 @@ function makeBatchData(overrides: Partial<BatchPrData> = {}): BatchPrData {
     headRefOid: "abc123",
     headRefName: "feature",
     headRepoWithOwner: "owner/repo",
+    viewerAuthorization: {
+      repositoryPermission: "ADMIN",
+      viewerCanAdminister: true,
+      viewerDidAuthor: true,
+      viewerCanUpdate: true,
+      viewerCanEnableAutoMerge: true,
+      viewerCanEditFiles: true,
+      headRepositoryPermission: "ADMIN",
+    },
     baseRefName: "main",
     reviewRequests: [],
     latestReviews: [],
@@ -120,6 +130,23 @@ function makeBatchData(overrides: Partial<BatchPrData> = {}): BatchPrData {
     checks: [makeCheck()],
     ...overrides,
   };
+  return {
+    ...data,
+    reviewThreads: data.reviewThreads.map((thread) => ({
+      viewerCanReply: true,
+      viewerCanResolve: true,
+      ...thread,
+    })),
+    comments: data.comments.map((comment) => ({ viewerCanMinimize: true, ...comment })),
+    reviewSummaries: data.reviewSummaries.map((review) => ({
+      viewerCanMinimize: true,
+      ...review,
+    })),
+    approvedReviews: data.approvedReviews.map((review) => ({
+      viewerCanMinimize: true,
+      ...review,
+    })),
+  };
 }
 
 function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
@@ -128,6 +155,8 @@ function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
     isResolved: false,
     isOutdated: false,
     isMinimized: false,
+    viewerCanReply: true,
+    viewerCanResolve: true,
     path: "src/foo.mts",
     line: 10,
     startLine: null,
@@ -149,6 +178,7 @@ function makeComment(overrides: Partial<PrComment> = {}): PrComment {
     url: "",
     createdAtUnix: 0,
     isMinimized: false,
+    viewerCanMinimize: true,
     ...overrides,
   };
 }

@@ -32,7 +32,7 @@ Each tick returns exactly one action:
 - `WAIT` — no immediate action; continue with the next poll.
 - `MARK_READY` — the CLI converted an eligible draft PR to ready; continue polling.
 - `FIX_CODE` — agent work is required; complete it, then continue polling.
-- `MERGE` — run the emitted auto-merge or merge-queue command, then continue polling.
+- `MERGE` — run the emitted auto-merge command only when GitHub reports `viewerCanEnableAutoMerge`; queue enrollment otherwise hands off for authorization.
 - `CANCEL` — stop polling because the PR merged, closed, or completed its ready-delay.
 - `ESCALATE` — stop polling until a human provides direction.
 
@@ -59,7 +59,7 @@ Conversations Resolved: No [Not Required]
 - `24697658766` — `CI › lint / typecheck / test (22.x)` [conclusion: FAILURE]
   > oxfmt
 
-## Post-fix push
+## Post-fix actions
 
 - base: `main`
 - apply review: `pr-shepherd apply review 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
@@ -68,9 +68,9 @@ Conversations Resolved: No [Not Required]
 
 1. Review each item under `## Review threads` and `## Failing checks` and decide whether it needs a code change.
 2. Apply every warranted review fix in each file referenced above.
-3. Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for `gh run view` / `gh run rerun` rules.
-4. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
-5. Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an earlier Shepherd reply: a marked viewer-authored human thread is emitted resolve-only, while a marked other-human thread is already acknowledged and has no further mutation.
+3. Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for read-only inspection rules.
+4. If you changed code, commit any remaining changes before review mutations. Shepherd does not recommend a push because it cannot verify the local Git credential's authorization.
+5. Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an earlier Shepherd reply: a marked viewer-authored human thread is emitted resolve-only when authorized, while a marked other-human thread is already acknowledged and has no further mutation.
 6. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
 7. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
 8. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.
@@ -88,7 +88,8 @@ This system is opinionated and works best with PRs that use required status chec
 - Shepherd identifies its own latest reply only when that comment begins `<!-- pr-shepherd -->`, not from author equality. A marked viewer-authored thread can be resolved without another reply as a retry.
 - Every review thread/comment/review summary is surfaced at least once, even if already outdated, resolved, or minimized; edited items re-surface through seen markers.
 - Draft PRs can be marked ready automatically when clean; disable with `actions.autoMarkReady: false` or `--no-auto-mark-ready`.
-- The CLI never performs git mutations. It emits instructions; the caller commits, rebases, pushes, and handles repository hooks.
+- The CLI never performs git mutations. It may emit local commit guidance, but it does not recommend a push because GitHub viewer fields cannot verify the local Git credential.
+- Every GitHub mutation is permission-aware. Shepherd uses raw viewer capability fields, omits unauthorized commands, and repeats authorization checks in direct `apply` commands. Missing capability data fails closed.
 - `build_suggestion_patches` turns one or more ordered GitHub suggestion threads into checked patches and commit metadata, but never edits the working tree or git history. Local HEAD may be ahead when the live PR head is its ancestor.
 
 ## Usage
@@ -127,7 +128,7 @@ pr-shepherd 42 --quiet-status          # print only changed WAIT status snapshot
 pr-shepherd 42 --until-terminal        # continue through WAIT/MARK_READY until work or terminal state
 pr-shepherd 42 --debounce 5m           # wait 5m after first FIX_CODE, then return one batched tick
 pr-shepherd 42 --ready-delay 15m
-pr-shepherd 42 --merge                  # enable auto-merge or enter an enabled/required merge queue when ready
+pr-shepherd 42 --merge                  # enable auto-merge when GitHub confirms viewer authorization
 pr-shepherd iterate 42                 # single tick
 ```
 
@@ -245,8 +246,6 @@ merge:
 actions:
   autoMinimizeSuppressed: true
   autoMarkReady: false
-  neverCancelRuns:
-    - "Final Code Review"
 ```
 
 Environment variables:

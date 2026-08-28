@@ -13,16 +13,18 @@ pr-shepherd accepts a GitHub personal access token (PAT) from the environment or
 
 Fine-grained PATs are recommended. Select the repository that contains the pull request and grant these repository permissions for the complete pr-shepherd workflow:
 
-| Permission      | Access         | Used for                                                                                                                                                             |
-| --------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Metadata        | Read           | Repository identity and other baseline repository metadata. GitHub includes this permission automatically.                                                           |
-| Contents        | Read           | Commit, branch, and repository content context. pr-shepherd itself never pushes through the GitHub API.                                                              |
-| Pull requests   | Read and write | Read PR state, files, reviews, and review threads; mark files viewed; reply to and resolve review threads; dismiss reviews; mark drafts ready; and update PR bodies. |
-| Issues          | Read and write | Read, reply to, and minimize PR conversation comments, which GitHub exposes through issue-comment APIs.                                                              |
-| Actions         | Read and write | Read workflow runs, jobs, and logs; rerun workflows; and cancel actionable in-progress runs.                                                                         |
-| Commit statuses | Read           | Read third-party commit status contexts included in the PR status rollup.                                                                                            |
+| Permission    | Access         | Used for                                                                                                                                                                                                      |
+| ------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Metadata      | Read           | Repository identity and other baseline repository metadata. GitHub includes this permission automatically.                                                                                                    |
+| Contents      | Read           | Commit, branch, and repository content context. pr-shepherd itself never pushes through the GitHub API.                                                                                                       |
+| Pull requests | Read and write | Read PR state, files, reviews, and review threads. Mutations are emitted only when GitHub's matching viewer capability is true. File-view mutations are currently skipped because no exact capability exists. |
 
-If automatic workflow cancellation is disabled with `--no-auto-cancel-actionable` and no rerun or cancel command will be used, `Actions: Read` is sufficient. The default workflow needs `Actions: Read and write`.
+The requested token scope is not treated as proof that the current viewer may perform an action. Shepherd checks object-level fields such as `viewerCanMinimize`, `viewerCanReply`, `viewerCanResolve`, `viewerCanUpdate`, and `viewerCanEnableAutoMerge`; dismissal conservatively requires `viewerCanAdminister`. Missing fields fail closed.
+| Issues | Read and write | Read, reply to, and minimize PR conversation comments, which GitHub exposes through issue-comment APIs. |
+| Actions | Read and write | Read workflow runs, jobs, and logs; rerun workflows; and cancel actionable in-progress runs. |
+| Commit statuses | Read | Read third-party commit status contexts included in the PR status rollup. |
+
+`Actions: Read` is sufficient. Shepherd does not cancel or rerun workflow runs because GitHub exposes no exact viewer capability for those actions.
 
 The token owner must also have enough access to perform the requested operation in the repository. Organization approval, SAML SSO authorization, and repository-selection policies can restrict a token independently of its listed permissions.
 

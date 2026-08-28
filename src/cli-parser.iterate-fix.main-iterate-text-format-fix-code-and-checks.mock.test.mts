@@ -11,12 +11,12 @@ import type { IterateResult } from "../test-helpers/cli-parser.iterate-fix.test-
 registerHooks();
 
 describe("main — iterate text format (fix_code and checks)", () => {
-  it("fix_code (empty payload): heading + base/summary + Post-fix push + fallback Instructions", async () => {
+  it("fix_code (empty payload): heading + base/summary + Post-fix actions + fallback Instructions", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("fix_code"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain("# PR #42 [FIX_CODE]");
-    expect(out).toContain("## Post-fix push");
+    expect(out).toContain("## Post-fix actions");
     expect(out).not.toContain("## Rebase");
     expect(out).toContain("- base: `main`");
     // hasMutations: false in the fixture → resolve line is omitted (no-op commit).
@@ -116,7 +116,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
       "## Failing checks",
       "## Changes-requested reviews",
       "## Cancelled runs",
-      "## Post-fix push",
+      "## Post-fix actions",
       "## Instructions",
     ];
     let cursor = 0;
@@ -140,7 +140,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain("- `reviewId=REV_1` (@reviewer · Unknown)");
     // Cancelled runs
     expect(out).toContain("`run-99`");
-    // Post-fix push section uses backticked base + resolve command with --require-sha appended.
+    // Post-fix actions use a backticked base + resolve command with --require-sha appended.
     expect(out).toContain("- base: `main`");
     expect(out).toContain(
       '- apply review: `pr-shepherd apply review 42 --dismiss-review-ids REV_1 --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`',

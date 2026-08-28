@@ -49,7 +49,7 @@ describe("runIterate — prescriptive fields: log strings", () => {
     if (result.action === "fix_code") {
       // The `[conclusion: STARTUP_FAILURE]` tag still round-trips as data (rendered in the
       // `## Failing checks` section by fix-formatter.mts) so the skill's "CI failure
-      // triage" playbook — which prescribes plain `gh run view <runId>` / `gh run rerun
+      // triage" playbook — which limits follow-up work to already included evidence
       // <runId>` without --log-failed/--failed for this conclusion — can key off it. That
       // per-conclusion distinction is no longer testable at the CLI-instruction level; it
       // moved out of `## Instructions` entirely.

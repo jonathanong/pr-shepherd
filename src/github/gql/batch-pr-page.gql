@@ -29,6 +29,8 @@ query BatchPrPage(
           id
           isResolved
           isOutdated
+          viewerCanReply
+          viewerCanResolve
           path
           line
           startLine
@@ -67,6 +69,7 @@ query BatchPrPage(
         nodes {
           id
           isMinimized
+          viewerCanMinimize
           url
           authorAssociation
           author {
@@ -109,6 +112,7 @@ query BatchPrPage(
         nodes {
           id
           isMinimized
+          viewerCanMinimize
           authorAssociation
           author {
             __typename
@@ -127,6 +131,7 @@ query BatchPrPage(
         nodes {
           id
           isMinimized
+          viewerCanMinimize
           authorAssociation
           author {
             __typename

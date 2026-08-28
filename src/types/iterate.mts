@@ -96,8 +96,8 @@ export interface ResolveCommand {
 }
 
 /**
- * Default fix_code variant: agent applies edits locally, commits, pushes,
- * then runs the pre-built apply command. Emitted under `## Post-fix push`.
+ * Default fix_code variant: agent applies edits locally, commits when needed,
+ * then runs the pre-built apply command. Emitted under `## Post-fix actions`.
  */
 interface FixRebaseAndPush {
   threads: AgentThread[];

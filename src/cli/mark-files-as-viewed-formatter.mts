@@ -8,6 +8,15 @@ export function formatMarkFilesAsViewedResult(result: MarkFilesAsViewedResult): 
   lines.push("");
   lines.push(`repo: ${result.repo}`);
 
+  if (result.authorizationSkipped) {
+    lines.push("");
+    lines.push("## Authorization");
+    lines.push("");
+    lines.push(
+      "- Not marked: GitHub does not expose a capability that confirms the current viewer may mark PR files as viewed.",
+    );
+  }
+
   appendPathSection(lines, "Matched files", result.matchedPaths);
   appendPathSection(lines, "Marked viewed", result.markedPaths);
   appendPathSection(lines, "Already viewed", result.alreadyViewedPaths);

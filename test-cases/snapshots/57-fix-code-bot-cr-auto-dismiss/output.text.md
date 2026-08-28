@@ -9,7 +9,7 @@ Conversations Resolved: Yes [Not Required]
 
 - `reviewId=PRR_bot_cr` (@claude · Bot)
 
-## Post-fix push
+## Post-fix actions
 
 - base: `main`
 - apply review: `pr-shepherd apply review 42 --message "$DISMISS_MESSAGE" --dismiss-review-ids PRR_bot_cr --require-sha "$HEAD_SHA"`
@@ -18,7 +18,7 @@ Conversations Resolved: Yes [Not Required]
 
 1. Review each item under `## Changes-requested reviews` and decide whether it needs a code change.
 2. Read every body under `## Changes-requested reviews` and apply any warranted change.
-3. If you changed code, commit any remaining changes and push before review mutations. Otherwise, do not commit or push.
+3. If you changed code, commit any remaining changes before review mutations. Otherwise, do not commit. Shepherd cannot verify authorization for the Git credential that would push this branch, so this output does not recommend a push.
 4. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
 5. Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.
 6. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.

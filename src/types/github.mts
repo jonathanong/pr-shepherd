@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type { ReviewThreadComment } from "./review-thread.mts";
 import type { PrActivitySummary } from "./activity.mts";
 import type { BatchPrMergeFields, MergeRequirements } from "./merge-requirements.mts";
@@ -39,6 +40,19 @@ export type MergeStateStatus =
 export type ReviewDecision = "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
 
 export type AuthorType = "User" | "Bot" | "Unknown";
+
+type RepositoryPermission = "NONE" | "READ" | "TRIAGE" | "WRITE" | "MAINTAIN" | "ADMIN";
+
+/** Raw GitHub viewer fields used to gate remote actions. */
+export interface ViewerAuthorization {
+  repositoryPermission: RepositoryPermission | null;
+  viewerCanAdminister: boolean;
+  viewerDidAuthor: boolean;
+  viewerCanUpdate: boolean;
+  viewerCanEnableAutoMerge: boolean;
+  viewerCanEditFiles: boolean;
+  headRepositoryPermission: RepositoryPermission | null;
+}
 
 /** Raw relationship between a comment author and the repository, as reported by GitHub. */
 export type CommentAuthorAssociation =
@@ -83,6 +97,8 @@ export interface ReviewThread {
   isResolved: boolean;
   isOutdated: boolean;
   isMinimized: boolean;
+  viewerCanReply?: boolean;
+  viewerCanResolve?: boolean;
   path: string | null;
   line: number | null;
   /** Start of the comment's line range. Null for single-line comments (use `line` for both). */
@@ -116,6 +132,7 @@ export interface SuggestionBlock {
 export interface PrComment {
   id: string;
   isMinimized: boolean;
+  viewerCanMinimize?: boolean;
   author: string;
   authorType: AuthorType;
   authorAssociation?: CommentAuthorAssociation;
@@ -129,6 +146,8 @@ export interface Review {
   author: string;
   authorType: AuthorType;
   authorAssociation?: CommentAuthorAssociation;
+  /** Present for minimizable COMMENTED/APPROVED reviews; false for non-minimizable review rows. */
+  viewerCanMinimize?: boolean;
   body: string;
   createdAtUnix?: number;
   edited?: boolean;
@@ -181,6 +200,7 @@ export interface BatchPrData extends BatchPrMergeFields {
   headRefName: string;
   /** `"owner/name"` of the head repository; null when the fork has been deleted. */
   headRepoWithOwner: string | null;
+  viewerAuthorization?: ViewerAuthorization;
   baseRefName: string;
   reviewRequests: Array<{ login: string }>;
   latestReviews: Array<{ login: string; state: string }>;

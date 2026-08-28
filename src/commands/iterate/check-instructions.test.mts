@@ -80,7 +80,7 @@ describe("buildFailingCheckInstructions", () => {
     ]);
 
     expect(instructions).toEqual([
-      'Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for `gh run view` / `gh run rerun` rules.',
+      'Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for read-only inspection rules.',
       "For each `(no runId)` failure, escalate to a human because no log or URL is available.",
     ]);
   });
