@@ -35,7 +35,9 @@ const QUALIFIED_PR_ERROR = "pr must be a GitHub pull-request URL or an owner/rep
 const pr = z
   .string()
   .refine(isRepositoryQualifiedPrReference, { message: QUALIFIED_PR_ERROR })
-  .describe("GitHub pull-request URL or owner/repo#number");
+  .describe(
+    "GitHub pull-request URL or owner/repo#number; the explicit repository may differ from the server working directory",
+  );
 const ids = z.array(z.string().min(1)).optional();
 
 const iterateInputSchema = z.object({
@@ -120,7 +122,7 @@ export function createPrShepherdMcpServer(
   server.registerTool(
     "iterate",
     {
-      description: "Inspect the current pull request and return the next Shepherd state.",
+      description: "Inspect the specified pull request and return the next Shepherd state.",
       inputSchema: iterateInputSchema,
       annotations: {
         readOnlyHint: false,

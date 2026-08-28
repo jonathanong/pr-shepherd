@@ -22,16 +22,16 @@ Always present after a sweep:
 
 Shown when they apply:
 
-| Text                                          | When                                        |
-| --------------------------------------------- | ------------------------------------------- |
-| `**reviewDecision**` on the status line       | Derived merge status is `BLOCKED`           |
-| `**branch** behind \`origin/<base>\``         | Derived merge is `BEHIND`                   |
-| `**branch** conflicts with \`origin/<base>\`` | Derived merge is `CONFLICTS`                |
-| `**remainingSeconds**`                        | Ready-delay countdown is active             |
-| `**blockingBotReviewInProgress**`             | A configured blocking reviewer is pending   |
-| `**isDraft**`                                 | The PR is a draft                           |
-| `**ignored**` / `**superseded**`              | Matching checks exist                       |
-| `**activity**`                                | Commit / review-round / active-check rollup |
+| Text                                                  | When                                        |
+| ----------------------------------------------------- | ------------------------------------------- |
+| `**reviewDecision**` on the status line               | Derived merge status is `BLOCKED`           |
+| `**branch** behind PR base branch \`<base>\``         | Derived merge is `BEHIND`                   |
+| `**branch** conflicts with PR base branch \`<base>\`` | Derived merge is `CONFLICTS`                |
+| `**remainingSeconds**`                                | Ready-delay countdown is active             |
+| `**blockingBotReviewInProgress**`                     | A configured blocking reviewer is pending   |
+| `**isDraft**`                                         | The PR is a draft                           |
+| `**ignored**` / `**superseded**`                      | Matching checks exist                       |
+| `**activity**`                                        | Commit / review-round / active-check rollup |
 
 ## Merge requirements
 

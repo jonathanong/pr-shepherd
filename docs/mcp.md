@@ -153,7 +153,7 @@ Replace `/path/to/pr-shepherd` with this checkout's absolute path. Do not use a 
 
 The server registers three canonical tools plus a deprecated singular suggestion adapter. Each result includes Markdown `content` (the same text the CLI would print) and `structuredContent` (the JSON object).
 
-Every MCP call requires a repository-qualified `pr`: either a GitHub PR URL such as `https://github.com/owner/repo/pull/123` or `owner/repo#123`. Bare PR numbers and omitted PRs are rejected. The referenced repository must match the repository at the server's startup working directory (or the `cwd` supplied to an embedded factory); a mismatch is rejected before the operation runs. Start a separate server from the target repository when working across repositories.
+Every MCP call requires a repository-qualified `pr`: either a GitHub PR URL such as `https://github.com/owner/repo/pull/123` or `owner/repo#123`. Bare PR numbers and omitted PRs are rejected. The named repository is the GitHub target and may differ from the server's startup working directory (or the `cwd` supplied to an embedded factory), which remains the local git/configuration/rules context.
 
 | Tool                       | Purpose                                                                                                       | Side effects                                                                                 |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
@@ -170,24 +170,24 @@ Hosts namespace tool names with the server name (`pr-shepherd__iterate` in Grok,
 
 ### `iterate`
 
-| Input                    | Type                            | Required | Meaning                                                         |
-| ------------------------ | ------------------------------- | -------- | --------------------------------------------------------------- |
-| `pr`                     | GitHub PR URL or `owner/repo#N` | yes      | PR to inspect; its repository must match the server repository. |
-| `readyDelaySeconds`      | non-negative number             | no       | Override the ready-delay window.                                |
-| `stallTimeoutSeconds`    | non-negative number             | no       | Override the stall timeout.                                     |
-| `noAutoMarkReady`        | boolean                         | no       | Disable automatic draft → ready.                                |
-| `noAutoCancelActionable` | boolean                         | no       | Deprecated no-op; Shepherd never cancels workflow runs.         |
-| `merge`                  | boolean                         | no       | Shepherd to readiness and emit merge/queue commands.            |
-| `neverCancelRuns`        | string array                    | no       | Deprecated per-call no-op retained for compatibility.           |
+| Input                    | Type                            | Required | Meaning                                                   |
+| ------------------------ | ------------------------------- | -------- | --------------------------------------------------------- |
+| `pr`                     | GitHub PR URL or `owner/repo#N` | yes      | PR to inspect; its named repository is the GitHub target. |
+| `readyDelaySeconds`      | non-negative number             | no       | Override the ready-delay window.                          |
+| `stallTimeoutSeconds`    | non-negative number             | no       | Override the stall timeout.                               |
+| `noAutoMarkReady`        | boolean                         | no       | Disable automatic draft → ready.                          |
+| `noAutoCancelActionable` | boolean                         | no       | Deprecated no-op; Shepherd never cancels workflow runs.   |
+| `merge`                  | boolean                         | no       | Shepherd to readiness and emit merge/queue commands.      |
+| `neverCancelRuns`        | string array                    | no       | Deprecated per-call no-op retained for compatibility.     |
 
 The result is an `IterateResult`. Action semantics, instruction text, and field contracts live in [actions.md](actions.md).
 
 ### `apply`
 
-| Input        | Type                            | Required | Meaning                                                                        |
-| ------------ | ------------------------------- | -------- | ------------------------------------------------------------------------------ |
-| `pr`         | GitHub PR URL or `owner/repo#N` | yes      | PR shared by every operation; its repository must match the server repository. |
-| `operations` | non-empty array                 | yes      | Mutations, in this exact order, after every operation is validated.            |
+| Input        | Type                            | Required | Meaning                                                                  |
+| ------------ | ------------------------------- | -------- | ------------------------------------------------------------------------ |
+| `pr`         | GitHub PR URL or `owner/repo#N` | yes      | PR shared by every operation; its named repository is the GitHub target. |
+| `operations` | non-empty array                 | yes      | Mutations, in this exact order, after every operation is validated.      |
 
 Each operation is one of:
 
@@ -222,10 +222,10 @@ Each operation is one of:
 
 ### `build_suggestion_patches`
 
-| Input         | Type                            | Required | Meaning                                                              |
-| ------------- | ------------------------------- | -------- | -------------------------------------------------------------------- |
-| `pr`          | GitHub PR URL or `owner/repo#N` | yes      | PR for the suggestions; repository must match the server repository. |
-| `suggestions` | non-empty object array          | yes      | Ordered `{ threadId, message, description? }` suggestion requests.   |
+| Input         | Type                            | Required | Meaning                                                            |
+| ------------- | ------------------------------- | -------- | ------------------------------------------------------------------ |
+| `pr`          | GitHub PR URL or `owner/repo#N` | yes      | PR for the suggestions; its named repository is the GitHub target. |
+| `suggestions` | non-empty object array          | yes      | Ordered `{ threadId, message, description? }` suggestion requests. |
 
 The result includes ordered `patches[]` entries with thread, path, range, author, patch, files-to-stage, and commit metadata, plus shared `postActionInstructions`. Apply and commit each patch in order. Shepherd does not recommend a push or review mutation from this standalone result because it cannot verify those authorizations; use the originating iterate output for authorization-checked actions. `build_suggestion_patch` remains temporarily as a deprecated adapter.
 
@@ -244,7 +244,7 @@ The shell command `pr-shepherd [PR]` is the bounded poll dispatcher. It is not a
 
 ## Authentication, cwd, and environment
 
-The server uses its startup working directory (or an embedded factory's `cwd`) for git, cascading `.pr-shepherdrc.yml` files, and classification rules. Start the server from the repository that contains the PR. An MCP request cannot change that repository; qualified PR references to another repository are rejected.
+The server uses its startup working directory (or an embedded factory's `cwd`) for local git, cascading `.pr-shepherdrc.yml` files, classification rules, and per-worktree debug logging. An explicit `pr` changes only the GitHub target; it does not change that local context. PR-scoped state uses the explicit target repository and PR number.
 
 Token resolution is the same as the CLI: `GH_TOKEN`, `GITHUB_TOKEN`, `gh auth token`, then `GITHUB_PERSONAL_ACCESS_TOKEN`. See [authentication.md](authentication.md).
 

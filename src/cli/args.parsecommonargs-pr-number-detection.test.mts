@@ -16,6 +16,23 @@ describe("parseCommonArgs — PR number detection", () => {
     expect(prNumber).toBe(42);
   });
 
+  it.each([
+    ["owner/repo#42", { owner: "owner", name: "repo" }],
+    ["https://github.com/fork/widgets/pull/42", { owner: "fork", name: "widgets" }],
+    [
+      "https://www.github.com/fork/widgets/pull/42#discussion_r1",
+      { owner: "fork", name: "widgets" },
+    ],
+  ])("preserves the explicit repository for %s", (reference, targetRepository) => {
+    const parsed = parseCommonArgs([reference]);
+    expect(parsed.prNumber).toBe(42);
+    expect(parsed.global.targetRepository).toEqual(targetRepository);
+  });
+
+  it("leaves targetRepository unset for bare-number compatibility", () => {
+    expect(parseCommonArgs(["42"]).global.targetRepository).toBeUndefined();
+  });
+
   it("does NOT treat unknown flag values as PR numbers", () => {
     const { prNumber } = parseCommonArgs(["--last-push-time", "100", "42"]);
     expect(prNumber).toBe(42);

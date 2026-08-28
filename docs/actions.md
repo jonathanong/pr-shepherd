@@ -4,6 +4,8 @@
 
 Each `pr-shepherd iterate` invocation returns exactly one action. The default `pr-shepherd <PR>` command runs the poll dispatcher and prints the final iterate action. See [iterate-flow.md](iterate-flow.md) for the decision order and [context.md](context.md) for what the header and body gather.
 
+CLI `PR` accepts a positive number, `owner/repo#N`, or a GitHub pull-request URL. A qualified reference selects its repository for GitHub I/O; the current working directory remains the local git, configuration, classification-rule, and debug-log context. Direct MCP calls still require a qualified reference, but it can name any accessible repository.
+
 The default output format is Markdown — what the skill receives from the default poll dispatcher and what direct CLI users see. `--format=json` emits the same action data as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
 
 The CLI's default command accepts `--interval`/`--timeout`/`--debounce`/`--quiet-status` (e.g. `pr-shepherd <PR> --interval 60s --timeout 4.5m --quiet-status`), waits while the PR remains in `[WAIT]`, and returns on an agent-facing action. With `--merge`, it continues through `MARK_READY` and returns `MERGE` when the ready-delay completes. Each ordinary `WAIT` tick writes an explicit still-running line to stderr; the final action remains the only stdout result. If `--timeout` expires during WAIT polling, poll returns that final `WAIT` result. `FIX_CODE` is delayed by `--debounce` (default 1m, `0` disables): poll keeps iterating at `--interval` without printing those ticks, then runs one more iterate after the window and returns that result so later review comments and CI failures batch into the same agent-facing tick. Debounce ticks set `persistSeen: false` — seen markers and first-look suppression wait for the post-window tick. `--quiet-status` keeps unchanged WAIT ticks out of agent context. MCP callers invoke one `iterate` tick at a time (no debounce) and let their host schedule the next call.
@@ -18,7 +20,7 @@ Pass `--verbose` to get more debug state. In JSON mode, the output starts from t
 # PR #<N> [ACTION]
 
 **status** `<…>` · **merge** `<…>`[ · **reviewDecision** `<…>`] · **state** `<…>` · **repo** `<…>`
-**summary** <N> passing[, <N> skipped][, <N> filtered][, <N> inProgress][, <N> superseded][· **remainingSeconds** <N>][· **blockingBotReviewInProgress**][· **isDraft**][· **branch** behind `origin/<base>` | · **branch** conflicts with `origin/<base>`]
+**summary** <N> passing[, <N> skipped][, <N> filtered][, <N> inProgress][, <N> superseded][· **remainingSeconds** <N>][· **blockingBotReviewInProgress**][· **isDraft**][· **branch** behind PR base branch `<base>` | · **branch** conflicts with PR base branch `<base>`]
 Approvals: <None|N[/M]> [Required|Not Required]
 Conversations Resolved: <Yes|No> [Required|Not Required]
 [Merge queue: <No|position N STATE> [Required|Not Required]]
@@ -218,14 +220,14 @@ Conversations Resolved: No [Not Required]
 ## Post-fix actions
 
 - base: `main`
-- apply review: `pr-shepherd apply review 42 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
+- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
 
 ## Instructions
 
 1. Review each item under `## Review threads` and decide whether it needs a code change.
 2. Apply every warranted review fix in each file referenced above.
 3. If you changed code, commit any remaining changes, then stop and hand off for a push whose authorization is established outside Shepherd; do not run the remaining review mutations or iterate until the remote PR head changes. If you did not change code, do not commit and continue.
-4. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
+4. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
 5. Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply: a marked viewer-authored human thread is emitted resolve-only, while a marked other-human thread is already acknowledged and has no further mutation.
 6. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, wait for an authorized push and use its SHA.
 7. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
@@ -235,7 +237,7 @@ Conversations Resolved: No [Not Required]
 
 The CLI surfaces the raw `**branch**` state on the summary line and leaves rebase/commit mechanics to the caller. A conflict tick suppresses review mutations and ends with a terminal handoff for an authorized push; Shepherd cannot verify the local Git credential, and a fresh iteration must rebuild SHA-safe commands after the remote PR head changes. `$HEAD_SHA`/`$DISMISS_MESSAGE` substitution stays a CLI step — conditional on `resolveCommand.requiresHeadSha`/`requiresDismissMessage`/`replyThreadIds` as before — because the printed `apply review:` command is syntactically invalid without the placeholders. The CLI itself recognizes a Shepherd reply only when the latest comment begins `<!-- pr-shepherd -->`; author equality is not enough. Thus an unmarked human comment from the authenticated viewer is feedback and is emitted for ordered reply-and-resolve, while a marked viewer-authored thread is emitted resolve-only for retry. A marked other-human thread is already acknowledged and is suppressed from further mutation. A standalone CLI caller who never loads the skill still gets a command that is safe to run as printed. Only dismiss-ID retention (omitting a `--dismiss-review-ids` ID leaves the PR stuck in `CHANGES_REQUESTED`) and the first-look/annotation ID-exclusion rules moved to the pr-shepherd skill's `## Playbooks` section (see [`plugins/pr-shepherd/skills/pr-shepherd/SKILL.md`](../plugins/pr-shepherd/skills/pr-shepherd/SKILL.md)) — those only matter if the caller _edits_ the printed command, which the printed command run unmodified never requires. Shepherd Journal citation conventions moved the same way. SHA-gated review work ends conditionally: local code changes require a handoff until an authorized push changes the remote head, while a no-code-change path completes authorized mutations and iterates again. Bare, external, CANCELLED, STARTUP_FAILURE, and GitHub Actions failures with no nonblank included log excerpt instead end with a human-handoff instruction that pauses polling until human direction.
 
-When `mergeStatus` is `"BEHIND"` and [`iterate.behindBaseHint`](configuration.md#iteratebehindbasehint--default-) is configured (empty by default), an extra instruction appears immediately before commit/push finalization: `` `The branch is behind `origin/<base>`. <hint> before pushing.` ``. The CLI still never chooses the mechanics; it only echoes the configured hint.
+When `mergeStatus` is `"BEHIND"` and [`iterate.behindBaseHint`](configuration.md#iteratebehindbasehint--default-) is configured (empty by default), an extra instruction appears immediately before commit/push finalization: `` `The branch is behind PR base branch `<base>`. <hint> before pushing.` ``. The CLI still never chooses the mechanics; it only echoes the configured hint.
 
 When one or more threads carry a `[suggestion]` marker, `## Instructions` adds one triage step pointing at the retrieve/apply command; the refusal and drift mechanics are invariant text that lives in the pr-shepherd skill's "Suggestion patches" playbook instead of being spelled out per tick:
 
@@ -243,7 +245,7 @@ When one or more threads carry a `[suggestion]` marker, `## Instructions` adds o
 ## Instructions
 
 1. Review each item under `## Review threads` and decide whether it needs a code change.
-2. For all threads marked `[suggestion]` under `## Review threads`, run one `pr-shepherd build-suggestion-patches 42 --thread-id <id> --message "<one-sentence headline>" --format=json` command, repeating the `--thread-id <id> --message <one-sentence headline>` group in displayed order, then apply the returned patches in order. See "Suggestion patches" in the pr-shepherd skill for refusals and drift.
+2. For all threads marked `[suggestion]` under `## Review threads`, run one `pr-shepherd build-suggestion-patches https://github.com/owner/repo/pull/42 --thread-id <id> --message "<one-sentence headline>" --format=json` command, repeating the `--thread-id <id> --message <one-sentence headline>` group in displayed order, then apply the returned patches in order. See "Suggestion patches" in the pr-shepherd skill for refusals and drift.
 3. Apply every warranted review fix in each file referenced above.
 4. [remaining remediation, finalization, mutation, and recurrence steps]
 ```
@@ -320,7 +322,7 @@ When at least one thread has a `[suggestion]` marker, `## Instructions` emits on
 
 **Step 1 — structured path (preferred):**
 
-> For all threads marked `` `[suggestion]` `` under `` `## Review threads` ``, run one `` `pr-shepherd build-suggestion-patches 42 --thread-id <id> --message "<one-sentence headline>" --format=json` `` command, repeating the thread/message group in displayed order. Apply, stage, and commit the returned patches in order. The patch command does not recommend a push or review mutation; use authorization-checked iterate output for remote actions.
+> For all threads marked `` `[suggestion]` `` under `` `## Review threads` ``, run one `` `pr-shepherd build-suggestion-patches https://github.com/owner/repo/pull/42 --thread-id <id> --message "<one-sentence headline>" --format=json` `` command, repeating the thread/message group in displayed order. Apply, stage, and commit the returned patches in order. The patch command does not recommend a push or review mutation; use authorization-checked iterate output for remote actions.
 
 `build-suggestion-patches` builds every diff from the fetched PR-head blobs, permits a local HEAD that descends from that PR head, and dry-runs the ordered stream with `git apply --check` before returning anything. Each patch retains its own suggested commit message and `Co-authored-by: <reviewer>` trailer. The instructions apply and commit patches in input order without recommending a push.
 
@@ -350,7 +352,7 @@ const remainingSeconds = computeRemaining();
 ```
 ````
 
-Structured path: run `pr-shepherd build-suggestion-patches 42 --thread-id PRRT_kwDOSGizTs58XB1L --message "rename x to remainingSeconds" --format=json`, then follow the ordered `## Instructions`. Manual fallback: inspect `src/foo.ts`, the replacement block, and reviewer intent before editing.
+Structured path: run `pr-shepherd build-suggestion-patches https://github.com/owner/repo/pull/42 --thread-id PRRT_kwDOSGizTs58XB1L --message "rename x to remainingSeconds" --format=json`, then follow the ordered `## Instructions`. Manual fallback: inspect `src/foo.ts`, the replacement block, and reviewer intent before editing.
 
 **Multi-line suggestion.** When the thread spans a range, the heading shows `path:startLine-endLine` (e.g. `src/foo.ts:40-42`). The `Replaces lines 40–42:` block contains the replacement spliced in for that entire range. An empty block means "delete those lines"; a block containing a single blank line means "replace with one blank line".
 
@@ -370,7 +372,7 @@ const result = computeAll();
 ```
 ````
 
-Structured path: run `pr-shepherd build-suggestion-patches 42 --thread-id PRRT_kwDOSGizTs58XB2M --message "collapse three assignments" --format=json`, then follow the ordered `## Instructions`. Manual fallback: inspect the current range and reviewer intent before editing.
+Structured path: run `pr-shepherd build-suggestion-patches https://github.com/owner/repo/pull/42 --thread-id PRRT_kwDOSGizTs58XB2M --message "collapse three assignments" --format=json`, then follow the ordered `## Instructions`. Manual fallback: inspect the current range and reviewer intent before editing.
 
 **Multiple suggestions (two or more threads).** Invoke `build-suggestion-patches` once with one repeated `--thread-id … --message … [--description …]` group per thread in displayed order. The command returns an ordered patch list only after the complete series passes `git apply --check`. Apply and commit each patch in order, then continue only with authorization-checked iterate output.
 
@@ -405,7 +407,7 @@ return value ?? defaultValue;
 The `apply review:` command at the bottom of `## Post-fix actions` includes both IDs when their capabilities authorize the mutations:
 
 ```
-- apply review: `pr-shepherd apply review 42 --reply-thread-ids PRRT_kwDOSGizTs58XB1L,PRRT_kwDOSGizTs58XC2M --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
+- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_kwDOSGizTs58XB1L,PRRT_kwDOSGizTs58XC2M --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
 ```
 
 Both IDs stay in `--reply-thread-ids` — `build-suggestion-patches` does not resolve threads automatically. If a suggestion was handled manually instead, its ID still belongs in `--reply-thread-ids`.

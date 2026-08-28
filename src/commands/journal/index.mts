@@ -8,6 +8,7 @@ import { validateJournalItem, appendJournalItem } from "./transform.mts";
 
 export interface RunJournalOptions {
   prNumber: number | undefined;
+  targetRepository?: { owner: string; name: string };
   rawItem: string;
   dryRun: boolean;
 }
@@ -29,7 +30,7 @@ export async function runJournal(opts: RunJournalOptions): Promise<JournalResult
   }
   const { item } = validation;
 
-  const { owner, name } = await getRepoInfo();
+  const { owner, name } = opts.targetRepository ?? (await getRepoInfo());
 
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
   if (!prNumber) {

@@ -24,7 +24,7 @@ export function buildBehindBaseHintInstruction(
 ): string[] {
   const trimmedHint = typeof hint === "string" ? hint.trim() : "";
   if (!isBehind || trimmedHint === "") return [];
-  return [`The branch is behind \`origin/${baseBranch}\`. ${trimmedHint} before pushing.`];
+  return [`The branch is behind PR base branch \`${baseBranch}\`. ${trimmedHint} before pushing.`];
 }
 
 /**

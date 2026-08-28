@@ -3,6 +3,11 @@ export interface ParsedPrReference {
   repository?: string;
 }
 
+export interface ResolvedPrTarget {
+  prNumber?: number;
+  targetRepository?: { owner: string; name: string };
+}
+
 /** Parses API PR references without performing repository or GitHub I/O. */
 export function parsePrReference(pr: number | string | undefined): ParsedPrReference | null {
   if (pr === undefined) return {};
@@ -23,7 +28,7 @@ export function parsePrReference(pr: number | string | undefined): ParsedPrRefer
     if (
       (url.protocol === "https:" || url.protocol === "http:") &&
       (url.hostname === "github.com" || url.hostname === "www.github.com") &&
-      parts.length === 4 &&
+      parts.length >= 4 &&
       parts[2] === "pull" &&
       /^[1-9][0-9]*$/.test(parts[3]!)
     ) {
@@ -34,6 +39,28 @@ export function parsePrReference(pr: number | string | undefined): ParsedPrRefer
   }
 
   return null;
+}
+
+/** Parses a positional CLI PR reference, including a bare numeric string. */
+export function parseCliPrReference(value: string): ParsedPrReference | null {
+  if (/^[0-9]+$/.test(value)) return { number: Number(value) };
+  return parsePrReference(value);
+}
+
+/** Converts a validated parsed reference into the command-layer target shape. */
+export function resolveParsedPrTarget(parsed: ParsedPrReference): ResolvedPrTarget {
+  if (parsed.repository === undefined) return { prNumber: parsed.number };
+  const [owner, name] = parsed.repository.split("/");
+  if (!owner || !name) throw new Error(`Invalid repository reference: ${parsed.repository}`);
+  return {
+    prNumber: parsed.number,
+    targetRepository: { owner, name },
+  };
+}
+
+/** Canonical collision-safe PR reference for generated commands and handoffs. */
+export function formatPrUrl(repository: string, prNumber: number): string {
+  return `https://github.com/${repository}/pull/${prNumber}`;
 }
 
 export function isRepositoryQualifiedPrReference(pr: unknown): pr is string {

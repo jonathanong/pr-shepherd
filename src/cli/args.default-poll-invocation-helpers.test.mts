@@ -19,6 +19,7 @@ describe("default poll invocation helpers", () => {
     expect(isDefaultPollInvocation(undefined)).toBe(true);
     expect(isDefaultPollInvocation("42")).toBe(true);
     expect(isDefaultPollInvocation("https://github.com/o/r/pull/42")).toBe(true);
+    expect(isDefaultPollInvocation("o/r#42")).toBe(true);
     expect(isDefaultPollInvocation("--format=json")).toBe(true);
     expect(isDefaultPollInvocation("--no-auto-mark-ready")).toBe(true);
     expect(isDefaultPollInvocation("--quiet-status")).toBe(true);
@@ -51,6 +52,7 @@ describe("default poll invocation helpers", () => {
         "--merge",
       ]),
     ).toBe(true);
+    expect(validateDefaultPollArgs(["fork/widgets#42", "--merge"])).toBe(true);
   });
 
   it("rejects missing values for default poll value flags", () => {

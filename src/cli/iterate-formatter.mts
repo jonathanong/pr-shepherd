@@ -75,9 +75,9 @@ export function formatIterateResult(
   if (verbose) {
     let verboseBranch = "";
     if (result.mergeStatus === "BEHIND" && result.baseBranch) {
-      verboseBranch = ` · **branch** behind \`origin/${result.baseBranch}\``;
+      verboseBranch = ` · **branch** behind PR base \`${result.baseBranch}\``;
     } else if (result.mergeStatus === "CONFLICTS" && result.baseBranch) {
-      verboseBranch = ` · **branch** conflicts with \`origin/${result.baseBranch}\``;
+      verboseBranch = ` · **branch** conflicts with PR base \`${result.baseBranch}\``;
     }
     summaryLine = `**summary** ${result.summary.passing} passing, ${result.summary.skipped} skipped, ${result.summary.filtered} filtered, ${result.summary.inProgress} inProgress, ${result.summary.superseded} superseded · **remainingSeconds** ${result.remainingSeconds} · **blockingBotReviewInProgress** ${result.blockingBotReviewInProgress} · **isDraft** ${result.isDraft} · **shouldCancel** ${result.shouldCancel}${verboseBranch}`;
   } else {
@@ -93,9 +93,9 @@ export function formatIterateResult(
     if (result.blockingBotReviewInProgress) segs.push(`**blockingBotReviewInProgress**`);
     if (result.isDraft) segs.push(`**isDraft**`);
     if (result.mergeStatus === "BEHIND" && result.baseBranch) {
-      segs.push(`**branch** behind \`origin/${result.baseBranch}\``);
+      segs.push(`**branch** behind PR base \`${result.baseBranch}\``);
     } else if (result.mergeStatus === "CONFLICTS" && result.baseBranch) {
-      segs.push(`**branch** conflicts with \`origin/${result.baseBranch}\``);
+      segs.push(`**branch** conflicts with PR base \`${result.baseBranch}\``);
     }
     summaryLine = segs.join(" · ");
   }

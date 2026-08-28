@@ -1,7 +1,7 @@
 # PR #42 [FIX_CODE]
 
 **status** `FAILING` · **merge** `DIRTY` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 0 passing · **branch** conflicts with `origin/main`
+**summary** 0 passing · **branch** conflicts with PR base `main`
 Approvals: None [Not Required]
 Conversations Resolved: Yes [Not Required]
 
@@ -20,5 +20,5 @@ Conversations Resolved: Yes [Not Required]
 1. The branch has merge conflicts (see `**branch**` above). Resolve them before committing.
 2. Read every item marked `[edited since first look]`, including edited summaries and edited first-look bullets, before deciding whether to resolve a matching thread.
 3. Commit any remaining conflict-resolution changes.
-4. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
+4. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
 5. `[FIX_CODE]` requires a human handoff for an authorized push after conflict resolution. Shepherd cannot verify the Git credential's push authorization. Stop polling after committing, and resume only after the remote PR head changes.

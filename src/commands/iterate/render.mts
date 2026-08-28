@@ -38,7 +38,7 @@ export function buildFixInstructions(
   baseBranch: string,
   resolveCommand: ResolveCommand,
   hasConflicts: boolean,
-  prNumber: number,
+  prReference: string | number,
   cancelledCount: number,
   firstLookThreads: FirstLookThread[] = [],
   firstLookComments: FirstLookComment[] = [],
@@ -107,7 +107,7 @@ export function buildFixInstructions(
 
   const hasSuggestions = threads.some((t) => t.suggestion);
   if (hasSuggestions)
-    instructions.push(buildCommitSuggestionInstruction(prNumber, "## Review threads"));
+    instructions.push(buildCommitSuggestionInstruction(prReference, "## Review threads"));
 
   if (threads.length > 0 || actionableComments.length > 0) {
     // Actionable comments carry no file/line location (unlike threads), so "referenced above"
@@ -158,7 +158,7 @@ export function buildFixInstructions(
       firstLookSummaries.length > 0 ||
       editedTotal > 0)
   ) {
-    instructions.push(buildShepherdJournalInstruction(prNumber));
+    instructions.push(buildShepherdJournalInstruction(prReference));
   }
 
   if (resolveOnlyCommand?.hasMutations)

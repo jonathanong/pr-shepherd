@@ -97,7 +97,7 @@ export function buildResolveCommand(
   allCommentIds: string[],
   reviews: Review[],
   checks: AgentCheck[],
-  prNumber: number,
+  prReference: string | number,
   botUsernames: NormalizedBotUsernames = new Set(),
   ruleAutoResolveThreadIds: string[] = [],
   viewerAuthorization?: ViewerAuthorization,
@@ -147,7 +147,7 @@ export function buildResolveCommand(
     // Split: message-bearing mutations plus their paired viewer-authored resolves ride in
     // resolveArgv; standalone resolve/minimize mutations go in resolveOnlyArgv so they can
     // run without SHA or message.
-    const resolveArgv = buildPrShepherdCommand(["apply", "review", String(prNumber)]).argv;
+    const resolveArgv = buildPrShepherdCommand(["apply", "review", String(prReference)]).argv;
     if (replyThreadIds.length > 0) {
       resolveArgv.push("--reply-thread-ids", replyThreadIds.join(","));
     }
@@ -173,7 +173,7 @@ export function buildResolveCommand(
       hasMutations: true,
     };
 
-    const resolveOnlyArgv = buildPrShepherdCommand(["apply", "review", String(prNumber)]).argv;
+    const resolveOnlyArgv = buildPrShepherdCommand(["apply", "review", String(prReference)]).argv;
     if (standaloneResolveThreadIds.length > 0) {
       resolveOnlyArgv.push("--resolve-thread-ids", standaloneResolveThreadIds.join(","));
     }
@@ -194,7 +194,7 @@ export function buildResolveCommand(
   }
 
   // Single command: all mutations combined (or only one category present).
-  const argv = buildPrShepherdCommand(["apply", "review", String(prNumber)]).argv;
+  const argv = buildPrShepherdCommand(["apply", "review", String(prReference)]).argv;
   if (replyThreadIds.length > 0) {
     argv.push("--reply-thread-ids", replyThreadIds.join(","));
     argv.push("--message", "$DISMISS_MESSAGE");

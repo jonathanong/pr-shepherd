@@ -194,6 +194,7 @@ export interface RelevantCheck {
 
 export interface GlobalOptions {
   prNumber?: number;
+  targetRepository?: { owner: string; name: string }; // Explicit repository from a qualified PR.
   format: "text" | "json";
   verbose?: boolean;
 }

@@ -1,6 +1,7 @@
 import type { CommitSuggestionResult, GlobalOptions } from "../types.mts";
 import { buildSingularInstructions } from "./suggestion-patch-item.mts";
 import { runSuggestionPatches } from "./suggestion-patches.mts";
+import { formatPrUrl } from "../pr-reference.mts";
 
 export interface CommitSuggestionOptions extends GlobalOptions {
   threadId: string;
@@ -14,6 +15,7 @@ export async function runCommitSuggestion(
 ): Promise<CommitSuggestionResult> {
   const result = await runSuggestionPatches({
     prNumber: opts.prNumber,
+    targetRepository: opts.targetRepository,
     format: opts.format,
     verbose: opts.verbose,
     suggestions: [
@@ -29,6 +31,6 @@ export async function runCommitSuggestion(
     ...patch,
     pr: result.pr,
     repo: result.repo,
-    postActionInstructions: buildSingularInstructions(patch, result.pr),
+    postActionInstructions: buildSingularInstructions(patch, formatPrUrl(result.repo, result.pr)),
   };
 }

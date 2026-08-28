@@ -16,6 +16,6 @@ export const SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE =
  * invocation, so it lives in the pr-shepherd skill's "Shepherd Journal" playbook instead
  * of being re-emitted every tick (see CLAUDE.md "Keep skills and loop prompts minimal").
  */
-export function buildShepherdJournalInstruction(prNumber: number): string {
-  return `For any substantial decision or rejection, append \`- <decision>\` to Shepherd Journal with \`pr-shepherd apply journal ${prNumber} '- <decision>'\`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.`;
+export function buildShepherdJournalInstruction(prReference: string | number): string {
+  return `For any substantial decision or rejection, append \`- <decision>\` to Shepherd Journal with \`pr-shepherd apply journal ${prReference} '- <decision>'\`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.`;
 }

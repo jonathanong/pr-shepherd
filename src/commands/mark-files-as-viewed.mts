@@ -72,7 +72,7 @@ const TEST_FILE_RE =
 export async function runMarkFilesAsViewed(
   opts: MarkFilesAsViewedOptions,
 ): Promise<MarkFilesAsViewedResult> {
-  const repo = await getRepoInfo();
+  const repo = opts.targetRepository ?? (await getRepoInfo());
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
   if (!prNumber) {
     throw new ShepherdError(
