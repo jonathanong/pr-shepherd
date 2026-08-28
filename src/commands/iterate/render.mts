@@ -49,6 +49,7 @@ export function buildFixInstructions(
   resolveOnlyCommand?: ResolveCommand,
   behindBaseHint = "", // iterate.behindBaseHint — see buildBehindBaseHintInstruction
   isBehind = false,
+  viewerCanUpdate = false,
 ): string[] {
   const instructions: string[] = [];
 
@@ -78,7 +79,7 @@ export function buildFixInstructions(
   }
   if (hasConflicts) {
     instructions.push(
-      "The branch has merge conflicts (see `**branch**` above). Resolve them before committing and pushing.",
+      "The branch has merge conflicts (see `**branch**` above). Resolve them before committing.",
     );
   }
 
@@ -86,7 +87,8 @@ export function buildFixInstructions(
   if (firstLookTotal > 0) {
     instructions.push("Review every item under `## First-look items` before acting.");
   }
-  if (firstLookSummaries.length > 0) instructions.push(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
+  if (firstLookSummaries.length > 0 && viewerCanUpdate)
+    instructions.push(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
   const editedTotal =
     editedSummaries.length +
     actionableComments.filter((c) => c.edited).length +
@@ -98,16 +100,10 @@ export function buildFixInstructions(
     );
   }
 
-  if (inProgressRunIds.length > 0) {
-    instructions.push(
-      "If you will push, first cancel every ID under `## In-progress runs` with `gh run cancel <id>` (ignore errors for runs that already finished). If you will not push, leave them alone.",
-    );
-  }
-  if (cancelledCount > 0) {
-    instructions.push(
-      "Do not cancel the IDs under `## Cancelled runs` again. The CLI already cancelled them.",
-    );
-  }
+  // GitHub exposes no exact viewer capability for workflow-run cancellation, so the
+  // informational run lists never produce a cancellation recommendation.
+  void inProgressRunIds;
+  void cancelledCount;
 
   const hasSuggestions = threads.some((t) => t.suggestion);
   if (hasSuggestions)
@@ -147,21 +143,20 @@ export function buildFixInstructions(
     resolveCommand.hasMutations || resolveOnlyCommand?.hasMutations === true;
   const mutationSuffix = hasReviewMutations ? " before review mutations" : "";
   if (hasConflicts) {
-    instructions.push(
-      `Commit any remaining changes and push the conflict resolution${mutationSuffix}.`,
-    );
+    instructions.push(`Commit any remaining conflict-resolution changes${mutationSuffix}.`);
   } else if (hasNonConflictHints) {
     instructions.push(
-      `If you changed code, commit any remaining changes and push${mutationSuffix}. Otherwise, do not commit or push.`,
+      "If you changed code, commit any remaining changes, then stop and hand off for a push whose authorization is established outside Shepherd; do not run the remaining review mutations or iterate until the remote PR head changes. Shepherd cannot verify the Git credential's push authorization. If you did not change code, do not commit and continue with the remaining steps.",
     );
   }
 
   if (
-    hasReviewMutations ||
-    hasNonConflictHints ||
-    firstLookTotal > 0 ||
-    firstLookSummaries.length > 0 ||
-    editedTotal > 0
+    viewerCanUpdate &&
+    (hasReviewMutations ||
+      hasNonConflictHints ||
+      firstLookTotal > 0 ||
+      firstLookSummaries.length > 0 ||
+      editedTotal > 0)
   ) {
     instructions.push(buildShepherdJournalInstruction(prNumber));
   }
@@ -171,6 +166,8 @@ export function buildFixInstructions(
 
   instructions.push(...buildResolveCommandInstruction(resolveCommand));
 
-  instructions.push(buildFixCompletionInstruction(failingChecks));
+  instructions.push(
+    buildFixCompletionInstruction(failingChecks, hasConflicts, resolveCommand.requiresHeadSha),
+  );
   return instructions;
 }

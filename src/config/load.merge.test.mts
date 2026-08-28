@@ -29,6 +29,20 @@ describe("loadConfig — merge.commandArgs", () => {
     ).toContain("--squash");
   });
 
+  it("builds the merge-queue command plan", async () => {
+    const { buildMergeCommandPlan } = await import("../commands/iterate/merge.mts");
+    const plan = buildMergeCommandPlan({
+      pr: 42,
+      repo: "owner/repo",
+      nodeId: "PR_node",
+      headSha: "abc123",
+      queue: true,
+    });
+
+    expect(plan.mode).toBe("queue");
+    expect(plan.queueApiFallbackCommand?.argv).toContain("pullRequestId=PR_node");
+  });
+
   it.each([
     ["--squash=true", ["--squash=true"]],
     ["-sd", ["-sd"]],

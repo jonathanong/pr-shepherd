@@ -5,7 +5,7 @@
 Two skills are shipped for Claude Code, Codex, and Grok. They are thin dispatchers: parse arguments, call the CLI or MCP, print the full result, and follow `## Instructions`. Policy lives in that output, not in the skill prompt.
 
 - `pr-shepherd` runs the poll command `pr-shepherd` (not `pr-shepherd iterate`). If the CLI is unavailable, it calls MCP `iterate` and must use MCP `apply` / `build_suggestion_patches` for the returned operations (there is no `pr-shepherd apply` shell command in that setup). After a CLI poll it runs the printed apply command.
-- `mark-files-as-viewed` calls MCP `apply` with a `mark_files_viewed` operation, or runs `pr-shepherd apply files`.
+- `mark-files-as-viewed` calls MCP `apply` with a `mark_files_viewed` operation, or runs `pr-shepherd apply files`; the operation currently returns an authorization-unverifiable skip without mutating because GitHub exposes no exact capability.
 
 Install the plugin (skills plus the version-matched MCP server) or register `pr-shepherd-mcp` yourself. See [mcp.md](mcp.md). The CLI path needs `pr-shepherd` on `PATH`.
 
@@ -113,4 +113,4 @@ The session owns recurrence. The skill prints the full result and follows its pl
 
 ## Operations
 
-CLI `pr-shepherd` (the poll command) or MCP `iterate` obtains the next state-machine action and returns structured review-mutation arguments. MCP `apply` (or the CLI `apply` commands named in the output) performs explicit ordered review mutations, `mark_files_viewed` file operations, or `append_journal` operations. `build_suggestion_patches` validates and builds ordered patches for anchored suggestions. The skills leave this policy in the printed output rather than duplicating it in prompts.
+CLI `pr-shepherd` (the poll command) or MCP `iterate` obtains the next state-machine action and returns structured review-mutation arguments. MCP `apply` (or the CLI `apply` commands named in the output) performs explicit ordered review mutations, selection-only `mark_files_viewed` diagnostics, or `append_journal` operations. `build_suggestion_patches` validates and builds ordered patches for anchored suggestions. The skills leave this policy in the printed output rather than duplicating it in prompts.

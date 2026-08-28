@@ -44,8 +44,14 @@ const iterateInputSchema = z.object({
   stallTimeoutSeconds: z.number().nonnegative().optional(),
   noAutoMarkReady: z.boolean().optional(),
   merge: z.boolean().optional(),
-  noAutoCancelActionable: z.boolean().optional(),
-  neverCancelRuns: z.array(z.string()).optional(),
+  noAutoCancelActionable: z
+    .boolean()
+    .optional()
+    .describe("Deprecated no-op; Shepherd never cancels workflow runs."),
+  neverCancelRuns: z
+    .array(z.string())
+    .optional()
+    .describe("Deprecated per-call no-op retained for compatibility."),
 });
 
 const reviewMutationsOperationSchema = z.object({
@@ -61,7 +67,7 @@ const reviewMutationsOperationSchema = z.object({
 const markFilesViewedOperationSchema = z.object({
   type: z.literal("mark_files_viewed"),
   files: z.array(z.string().min(1)).optional(),
-  tests: z.boolean().optional(),
+  tests: z.boolean().optional().describe("Select changed test files; no mutation occurs."),
   matchPatterns: z.array(z.string().min(1)).optional(),
 });
 
@@ -133,7 +139,8 @@ export function createPrShepherdMcpServer(
   server.registerTool(
     "apply",
     {
-      description: "Apply ordered review, file-view, and journal operations after prevalidation.",
+      description:
+        "Apply ordered authorized review and journal operations, or run selection-only file-view diagnostics, after prevalidation.",
       inputSchema: applyInputSchema,
       annotations: {
         readOnlyHint: false,

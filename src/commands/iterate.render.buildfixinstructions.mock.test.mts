@@ -144,7 +144,8 @@ describe("buildFixInstructions", () => {
     expect(text).toContain(
       "Read every body under `## Changes-requested reviews` and apply any warranted change.",
     );
-    expect(text).toContain("If you changed code, commit any remaining changes and push");
+    expect(text).toContain("If you changed code, commit any remaining changes");
+    expect(text).toContain("stop and hand off for a push whose authorization is established");
     // CLI no longer prescribes rebase mechanics — that is the caller's convention.
     expect(text).not.toContain("rebase onto");
     // $HEAD_SHA/$DISMISS_MESSAGE substitution stays in the CLI (unlike dismiss-ID
@@ -152,16 +153,16 @@ describe("buildFixInstructions", () => {
     // "Review-mutation mechanics" playbook) — the printed command is not independently
     // runnable without it. This fixture has no replyThreadIds, so the marker-routing
     // explanation (also CLI-side — see the buildResolveCommandInstruction docblock) is absent.
-    expect(text).toContain("Replace `$HEAD_SHA` with the pushed commit SHA");
+    expect(text).toContain("If you did not change code, replace `$HEAD_SHA`");
     expect(text).toContain("Replace `$DISMISS_MESSAGE` with one sentence");
     expect(instructions.at(-2)).toBe(
       'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',
     );
     expect(instructions.at(-1)).toBe(
-      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.",
+      "`[FIX_CODE]` is conditional: if you changed code, stop after committing and resume only after an authorized push changes the remote PR head; if you did not change code, complete the authorized review mutations and iterate again with the same options.",
     );
     expect(text).toContain(
-      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again",
+      "`[FIX_CODE]` is conditional: if you changed code, stop after committing",
     );
     expect(text).not.toContain("Stop this iteration");
     // Old prescriptive git commands gone
@@ -196,7 +197,7 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(text).toContain("Replace `$HEAD_SHA` with the pushed commit SHA");
+    expect(text).toContain("If you did not change code, replace `$HEAD_SHA`");
     expect(text).toContain("$(git rev-parse HEAD)");
     expect(text).not.toContain("Replace `$DISMISS_MESSAGE`");
     expect(text).toContain(
@@ -230,18 +231,19 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(text).toContain("If you changed code, commit any remaining changes and push");
+    expect(text).toContain("If you changed code, commit any remaining changes");
+    expect(text).toContain("stop and hand off for a push whose authorization is established");
     // CLI no longer prescribes rebase mechanics or names origin/main
     expect(text).not.toContain("rebase onto");
     expect(text).not.toContain("origin/main");
     // $HEAD_SHA substitution stays in the CLI — the printed command needs it to be valid.
-    expect(text).toContain("Replace `$HEAD_SHA` with the pushed commit SHA");
+    expect(text).toContain("If you did not change code, replace `$HEAD_SHA`");
     // No prescriptive git command lines
     expect(text).not.toContain("git add");
     expect(text).not.toContain("git fetch origin");
     expect(text).not.toContain("git push --force-with-lease");
     expect(text).toContain(
-      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.",
+      "`[FIX_CODE]` is conditional: if you changed code, stop after committing and resume only after an authorized push changes the remote PR head; if you did not change code, complete the authorized review mutations and iterate again with the same options.",
     );
   });
 
@@ -274,14 +276,15 @@ describe("buildFixInstructions", () => {
     expect(text).toContain(
       "Read every body under `## Changes-requested reviews` and apply any warranted change.",
     );
-    expect(text).toContain("If you changed code, commit any remaining changes and push");
+    expect(text).toContain("If you changed code, commit any remaining changes");
+    expect(text).toContain("stop and hand off for a push whose authorization is established");
     // No old prescriptive commands
     expect(text).not.toContain("Commit changed files:");
     expect(text).not.toContain("Rebase and push:");
     expect(text).not.toContain("git add");
     expect(text).not.toContain("git push --force-with-lease");
     expect(text).toContain(
-      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.",
+      "`[FIX_CODE]` is conditional: if you changed code, stop after committing and resume only after an authorized push changes the remote PR head; if you did not change code, complete the authorized review mutations and iterate again with the same options.",
     );
   });
 

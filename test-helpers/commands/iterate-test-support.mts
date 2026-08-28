@@ -85,10 +85,19 @@ const NOW = 1_700_000_000;
 const READY_STATE_DEFAULT = { isReady: true, shouldCancel: false, remainingSeconds: 300 };
 
 function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
-  return {
+  const report: ShepherdReport = {
     pr: 42,
     nodeId: "PR_kgDOAAA",
     repo: "owner/repo",
+    viewerAuthorization: {
+      repositoryPermission: "ADMIN",
+      viewerCanAdminister: true,
+      viewerDidAuthor: true,
+      viewerCanUpdate: true,
+      viewerCanEnableAutoMerge: true,
+      viewerCanEditFiles: true,
+      headRepositoryPermission: "ADMIN",
+    },
     status: "READY",
     baseBranch: "main",
     mergeStatus: {
@@ -135,6 +144,49 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
     branchProtection: null,
     ...overrides,
   };
+  return {
+    ...report,
+    threads: {
+      ...report.threads,
+      actionable: report.threads.actionable.map((thread) => ({
+        viewerCanReply: true,
+        viewerCanResolve: true,
+        ...thread,
+      })),
+      resolutionOnly: report.threads.resolutionOnly.map((thread) => ({
+        viewerCanReply: true,
+        viewerCanResolve: true,
+        ...thread,
+      })),
+    },
+    comments: {
+      ...report.comments,
+      actionable: report.comments.actionable.map((comment) => ({
+        viewerCanMinimize: true,
+        ...comment,
+      })),
+    },
+    changesRequestedReviews: report.changesRequestedReviews.map((review) => ({
+      viewerCanMinimize: false,
+      ...review,
+    })),
+    reviewSummaries: report.reviewSummaries.map((review) => ({
+      viewerCanMinimize: true,
+      ...review,
+    })),
+    firstLookSummaries: report.firstLookSummaries.map((review) => ({
+      viewerCanMinimize: true,
+      ...review,
+    })),
+    editedSummaries: report.editedSummaries.map((review) => ({
+      viewerCanMinimize: true,
+      ...review,
+    })),
+    approvedReviews: report.approvedReviews.map((review) => ({
+      viewerCanMinimize: true,
+      ...review,
+    })),
+  };
 }
 
 function makeOpts(overrides: Partial<IterateCommandOptions> = {}): IterateCommandOptions {
@@ -142,7 +194,7 @@ function makeOpts(overrides: Partial<IterateCommandOptions> = {}): IterateComman
 }
 
 function makeReview(id: string, author: string, body: string): Review {
-  return { id, author, authorType: "Unknown", body };
+  return { id, author, authorType: "Unknown", viewerCanMinimize: true, body };
 }
 
 function defaultConfig() {

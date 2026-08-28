@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
@@ -28,6 +29,7 @@ beforeEach(() => {
   mockGetPullRequestBody.mockResolvedValue({
     nodeId: "PR_node123",
     body: "## Summary\n\nSome content.",
+    viewerCanUpdate: true,
   });
   mockUpdatePullRequestBody.mockResolvedValue(undefined);
 });
@@ -62,7 +64,11 @@ describe("runJournal — happy path", () => {
       "",
       "Keep this section too.",
     ].join("\n");
-    mockGetPullRequestBody.mockResolvedValue({ nodeId: "PR_node123", body: originalBody });
+    mockGetPullRequestBody.mockResolvedValue({
+      nodeId: "PR_node123",
+      body: originalBody,
+      viewerCanUpdate: true,
+    });
 
     await runJournal({ prNumber: 42, rawItem: "- New entry.", dryRun: false });
 
@@ -91,6 +97,7 @@ describe("runJournal — happy path", () => {
     mockGetPullRequestBody.mockResolvedValue({
       nodeId: "PR_node123",
       body: "<details>\n<summary>Shepherd Journal</summary>\n\n- Old entry.\n</details>",
+      viewerCanUpdate: true,
     });
 
     const result = await runJournal({ prNumber: 42, rawItem: "- New entry.", dryRun: false });
@@ -101,7 +108,11 @@ describe("runJournal — happy path", () => {
   });
 
   it("treats a null/empty body the same as an empty string", async () => {
-    mockGetPullRequestBody.mockResolvedValue({ nodeId: "PR_node456", body: "" });
+    mockGetPullRequestBody.mockResolvedValue({
+      nodeId: "PR_node456",
+      body: "",
+      viewerCanUpdate: true,
+    });
 
     const result = await runJournal({ prNumber: 7, rawItem: "- Entry.", dryRun: false });
 
@@ -123,11 +134,28 @@ describe("runJournal — dry-run", () => {
   });
 });
 
+describe("runJournal — authorization", () => {
+  it("returns a structured skip and does not update when viewerCanUpdate is false", async () => {
+    mockGetPullRequestBody.mockResolvedValue({
+      nodeId: "PR_node123",
+      body: "",
+      viewerCanUpdate: false,
+    });
+
+    const result = await runJournal({ prNumber: 42, rawItem: "- Note.", dryRun: false });
+
+    expect(result.authorizationSkipped).toBe("denied-or-unverifiable");
+    expect(result.mutated).toBe(false);
+    expect(mockUpdatePullRequestBody).not.toHaveBeenCalled();
+  });
+});
+
 describe("runJournal — idempotency (dedup)", () => {
   it("returns mutated=false when item already present and does not mutate", async () => {
     mockGetPullRequestBody.mockResolvedValue({
       nodeId: "PR_node123",
       body: "<details>\n<summary>Shepherd Journal</summary>\n\n- Existing entry.\n</details>",
+      viewerCanUpdate: true,
     });
 
     const result = await runJournal({

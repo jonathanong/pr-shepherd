@@ -1,6 +1,5 @@
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
-import { rest } from "../../github/http.mts";
 import type {
   ActiveCheck,
   IterateResult,
@@ -13,12 +12,6 @@ import { getExecutionCwd } from "../../execution-context.mts";
 import { blockedReasonFromRequirements } from "../../merge-status/requirements-format.mts";
 
 const execFile = promisify(execFileCb);
-
-export {
-  buildAutoCancelRunIdsWithOptions,
-  buildInProgressRunIds,
-  buildRunProtection,
-} from "./reruns.mts";
 
 export function buildSummary(report: ShepherdReport): IterateResultSummary {
   return {
@@ -126,22 +119,6 @@ export function buildActiveChecks(report: ShepherdReport): ActiveCheck[] {
   }));
 }
 
-export async function tryCancelRun(
-  runId: string,
-  owner: string,
-  repo: string,
-): Promise<string | null> {
-  try {
-    await rest("POST", `/repos/${owner}/${repo}/actions/runs/${runId}/cancel`);
-    return runId;
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (/409|already completed|cannot cancel a workflow run that is completed/i.test(msg))
-      return null;
-    process.stderr.write(`pr-shepherd: cancel run ${runId} failed (ignored): ${msg}\n`);
-    return null;
-  }
-}
 export async function getCurrentHeadSha(): Promise<string | null> {
   try {
     const { stdout } = await execFile("git", ["rev-parse", "HEAD"], {

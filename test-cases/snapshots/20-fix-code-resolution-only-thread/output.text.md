@@ -9,7 +9,7 @@ Conversations Resolved: No [Not Required]
 
 - `threadId=PRRT_minimized` [↗](https://github.com/owner/repo/pull/42#discussion_r5) `src/helpers.ts:5` (@reviewer · User) [status: minimized]: Minor nit: trailing whitespace.
 
-## Post-fix push
+## Post-fix actions
 
 - base: `main`
 - apply review: `pr-shepherd apply review 42 --reply-thread-ids PRRT_minimized --message "$DISMISS_MESSAGE"`

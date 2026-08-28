@@ -18,7 +18,7 @@ Commands:
   [PR]                 Poll until non-WAIT or timeout. This is the default command.
   iterate              Run one iterate tick (single-tick alias).
   apply review         Apply review-state mutations after fixes.
-  apply files          Mark changed files as viewed in GitHub.
+  apply files          Select changed files; no viewed-state mutation is attempted.
   apply journal        Append a list item to the Shepherd Journal details block of a PR body.
   build-suggestion-patches
                        Convert ordered GitHub suggestion threads into patches and commit instructions.
@@ -38,7 +38,7 @@ Iterate flags:
   --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Example: 15m.
   --stall-timeout <duration>     Escalate repeated unchanged failures after this duration. Bare number = minutes. 0 disables.
   --no-auto-mark-ready           Do not convert draft PRs to ready for review.
-  --no-auto-cancel-actionable    Do not cancel in-progress runs before actionable fixes.
+  --no-auto-cancel-actionable    Legacy no-op; workflow runs are never cancelled.
 
 Polling flags:
   --interval <duration>          Delay between WAIT ticks. Bare number = seconds. Default: 60s.

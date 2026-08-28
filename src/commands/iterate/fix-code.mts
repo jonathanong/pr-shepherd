@@ -18,19 +18,13 @@ import {
   buildEscalateHumanMessage,
 } from "./escalate.mts";
 import { buildResolveCommand } from "./classify.mts";
+import { buildThreadMutationRouting } from "./thread-mutation-routing.mts";
 import { buildFixInstructions } from "./render.mts";
 import { applyStallGuard } from "./stall.mts";
-import {
-  tryCancelRun,
-  buildAutoCancelRunIdsWithOptions,
-  buildInProgressRunIds,
-  buildRunProtection,
-} from "./helpers.mts";
 import { annotationMarkerBody, checksWithActionableAnnotations } from "../check-annotations.mts";
 import { threadTranscriptBody } from "../../threads/transcript.mts";
 import { isHumanAuthor, isConfiguredBotAuthor } from "../../comments/authors.mts";
 import { loadConfig } from "../../config/load.mts";
-import { buildMergeCommandPlan } from "./merge.mts";
 import type {
   EscalateDetails,
   IterateCommandOptions,
@@ -100,10 +94,79 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const annotatedExtra = checksWithActionableAnnotations(report).filter(
     (c) => c.category !== "failing",
   );
-  const { protectedRunIds, protectedRuns } = buildRunProtection(
-    [...failingChecks, ...report.checks.inProgress],
-    opts.neverCancelRuns,
+  const allThreads = [...report.threads.actionable, ...report.threads.resolutionOnly];
+  const ruleAutoResolveIds = new Set(ruleAutoResolveThreadIds ?? []);
+  const routedThreadMutations = buildThreadMutationRouting(allThreads, botUsernames, [
+    ...ruleAutoResolveIds,
+  ]);
+  const replyIdSet = new Set(routedThreadMutations.replyThreadIds);
+  const resolveIdSet = new Set(routedThreadMutations.resolveThreadIds);
+  const unauthorizedReplies = allThreads.filter(
+    (thread) =>
+      report.viewerAuthorization !== undefined &&
+      replyIdSet.has(thread.id) &&
+      thread.viewerCanReply !== true,
   );
+  const unauthorizedResolves = allThreads.filter(
+    (thread) =>
+      report.viewerAuthorization !== undefined &&
+      resolveIdSet.has(thread.id) &&
+      thread.viewerCanResolve !== true,
+  );
+  const unauthorizedDismissals = report.changesRequestedReviews.filter(
+    (review) =>
+      report.viewerAuthorization !== undefined &&
+      (!isHumanAuthor(review) || isConfiguredBotAuthor(review, botUsernames)) &&
+      report.viewerAuthorization?.viewerCanAdminister !== true,
+  );
+  const authorization = [
+    ...(unauthorizedReplies.length > 0
+      ? [
+          {
+            action: "reply-thread" as const,
+            targetIds: unauthorizedReplies.map((thread) => thread.id),
+            reason: "denied-or-unverifiable" as const,
+          },
+        ]
+      : []),
+    ...(unauthorizedResolves.length > 0
+      ? [
+          {
+            action: "resolve-thread" as const,
+            targetIds: unauthorizedResolves.map((thread) => thread.id),
+            reason: "denied-or-unverifiable" as const,
+          },
+        ]
+      : []),
+    ...(unauthorizedDismissals.length > 0
+      ? [
+          {
+            action: "dismiss-review" as const,
+            targetIds: unauthorizedDismissals.map((review) => review.id),
+            reason: "denied-or-unverifiable" as const,
+          },
+        ]
+      : []),
+  ];
+  if (authorization.length > 0) {
+    const authorizationEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
+      triggers: ["authorization-required"],
+      unresolvedThreads: allThreads.map(toAgentThread),
+      ambiguousComments: report.comments.actionable.map(toAgentComment),
+      changesRequestedReviews: report.changesRequestedReviews,
+      authorization,
+      suggestion: buildEscalateSuggestion(["authorization-required"]),
+    };
+    return {
+      ...base,
+      action: "escalate",
+      escalate: {
+        ...authorizationEscalateBase,
+        humanMessage: buildEscalateHumanMessage(authorizationEscalateBase, prNumber),
+      },
+    };
+  }
+  const protectedRuns: [] = [];
   const stored = await readFixAttempts({ owner: repoOwner, repo: repoName, pr: prNumber });
   const { threadAttempts, threadBodyHashes } = nextFixAttempts(
     stored,
@@ -171,13 +234,9 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     { owner: repoOwner, repo: repoName, pr: prNumber },
     { headSha, threadAttempts, threadBodyHashes },
   );
-  let cancelled: string[] = [];
-  if (!opts.noAutoCancelActionable) {
-    const runIds = buildAutoCancelRunIdsWithOptions(report, { protectedRunIds });
-    const results = await Promise.all(runIds.map((id) => tryCancelRun(id, repoOwner, repoName)));
-    cancelled = results.filter((id): id is string => id !== null);
-  }
-  const cancelledSet = new Set(cancelled);
+  // GitHub does not expose a per-run viewer capability for cancellation. Fail closed:
+  // do not issue or recommend an Actions mutation based only on repository role.
+  const cancelled: string[] = [];
   const baseLookup = validateBaseBranch(report.baseBranch);
   const threads = report.threads.actionable.map(toAgentThread);
   const resolutionOnlyThreads = report.threads.resolutionOnly;
@@ -194,31 +253,26 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   // Only surface in-progress runs when a push is plausible — resolution-only and
   // summary-only iterations have no path to a push, so listing runs would prompt
   // unnecessary cancellation.
-  const pushLikely =
-    threads.length > 0 ||
-    failingAgentChecks.length > 0 ||
-    annotatedExtra.length > 0 ||
-    hasConflicts ||
-    changesRequestedReviews.length > 0 ||
-    actionableComments.length > 0;
-  const inProgressRunIds = pushLikely
-    ? buildInProgressRunIds(report, cancelledSet, {
-        suppressProtectedFreshReruns: false,
-        protectedRunIds,
-      })
-    : [];
+  const inProgressRunIds: string[] = [];
   const commentMinimizeIds = report.comments.minimizeIds ?? actionableComments.map((c) => c.id);
   const allCommentIds = [...commentMinimizeIds, ...reviewSummaryIds];
-  const { resolveCommand, resolveOnlyCommand } = buildResolveCommand(
-    threads,
-    resolutionOnlyThreads,
-    allCommentIds,
-    changesRequestedReviews,
-    failingAgentChecks,
-    prNumber,
-    botUsernames,
-    ruleAutoResolveThreadIds,
-  );
+  // Conflict resolution necessarily changes the branch head, but Shepherd cannot verify
+  // authorization for the local Git credential that would publish it. Defer review mutations
+  // until an authorized push updates the PR and a fresh iteration can rebuild SHA-safe commands.
+  const { resolveCommand, resolveOnlyCommand } = hasConflicts
+    ? buildResolveCommand([], [], [], [], [], prNumber, botUsernames, [], undefined, [])
+    : buildResolveCommand(
+        threads,
+        resolutionOnlyThreads,
+        allCommentIds,
+        changesRequestedReviews,
+        failingAgentChecks,
+        prNumber,
+        botUsernames,
+        ruleAutoResolveThreadIds,
+        report.viewerAuthorization,
+        allThreads,
+      );
   // Safety: if the base branch is unknown, escalate when a push is plausible — the agent
   // would need the correct base to rebase safely. This is a conservative guard, not a
   // prediction that the agent *will* push. Intentionally broader than `pushLikely` above:
@@ -269,28 +323,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     resolveOnlyCommand,
     behindBaseHint,
     isBehind,
+    report.viewerAuthorization?.viewerCanUpdate === true,
   );
-  const hasMergeGroupFailure = failingChecks.some((check) => check.scope === "merge_group");
-  const needsRequeue = Boolean(
-    hasMergeGroupFailure || report.mergeQueue?.inQueue || report.mergeQueue?.latestRemoval,
-  );
-  const requeue =
-    opts.merge && needsRequeue
-      ? buildMergeCommandPlan({
-          pr: report.pr,
-          repo: report.repo,
-          nodeId: report.nodeId,
-          headSha: "$HEAD_SHA",
-          queue: true,
-        })
-      : undefined;
-  if (requeue) {
-    instructions.splice(
-      Math.max(0, instructions.length - 1),
-      0,
-      "After all fixes and review mutations, replace `$HEAD_SHA` in the requeue commands with the full pushed PR-head SHA (or `$(git rev-parse HEAD)`). If GitHub no longer reports the PR in the merge queue, run the `requeue:` command shown above; if the gh CLI reports that auto-merge is disabled, run `requeue API fallback:` instead.",
-    );
-  }
   const prospectiveResult = {
     ...base,
     baseBranch: baseLookup.branch,
@@ -312,7 +346,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       firstLookComments,
       inProgressRunIds,
       protectedRuns,
-      ...(requeue && { requeue }),
     },
     cancelled,
   } as IterateResult;

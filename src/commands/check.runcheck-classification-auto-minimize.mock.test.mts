@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, it, expect, vi } from "vitest";
 import {
   registerHooks,
@@ -7,7 +8,9 @@ import {
   mockAutoMinimizeComments,
   mockAutoResolveThreads,
   mockFetchPrBatch,
+  mockLoadSeenMap,
 } from "../../test-helpers/commands/check.test-support.mts";
+import { hashBody } from "../state/seen-comments.mts";
 import { runCheck } from "./check.mts";
 import type { ClassifyItem } from "../classify/types.mts";
 
@@ -60,6 +63,18 @@ describe("runCheck — classification auto-minimize", () => {
     expect(report.comments.minimizeIds).toContain("c-bot");
   });
 
+  it("surfaces a suppressed auto-resolve pr-comment when minimization is denied", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ comments: [{ ...botComment(), viewerCanMinimize: false }] }),
+    });
+
+    const report = await runCheck({ ...BASE_OPTS, autoMinimizeSuppressed: true });
+
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
+    expect(report.comments.actionable.map((comment) => comment.id)).toContain("c-bot");
+    expect(report.comments.minimizeIds).not.toContain("c-bot");
+  });
+
   it("does not self-minimize auto-resolve-only pr-comments", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
@@ -94,6 +109,46 @@ describe("runCheck — classification auto-minimize", () => {
     expect(report.ruleAutoResolveReviewSummaryIds ?? []).not.toContain("rev-bot");
   });
 
+  it.each([false, undefined])(
+    "surfaces a suppressed auto-resolve review summary when minimization is %s",
+    async (viewerCanMinimize) => {
+      mockFetchPrBatch.mockResolvedValue({
+        data: makeBatchData({
+          reviewSummaries: [{ ...botReviewSummary(), viewerCanMinimize }],
+        }),
+      });
+
+      const report = await runCheck({ ...BASE_OPTS, autoMinimizeSuppressed: true });
+
+      expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
+      expect(report.firstLookSummaries).toEqual([
+        expect.objectContaining({ id: "rev-bot", viewerCanMinimize }),
+      ]);
+      expect(report.ruleAutoResolveReviewSummaryIds ?? []).not.toContain("rev-bot");
+    },
+  );
+
+  it("re-surfaces an edited denied auto-resolve review summary", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        reviewSummaries: [
+          { ...botReviewSummary(), body: "Updated summary", viewerCanMinimize: false },
+        ],
+      }),
+    });
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([["rev-bot", { seenAt: 1000, bodyHash: hashBody("Old summary") }]]),
+    );
+
+    const report = await runCheck({ ...BASE_OPTS, autoMinimizeSuppressed: true });
+
+    expect(report.editedSummaries).toEqual([
+      expect.objectContaining({ id: "rev-bot", body: "Updated summary" }),
+    ]);
+    expect(report.ruleAutoResolveReviewSummaryIds ?? []).not.toContain("rev-bot");
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
+  });
+
   it("self-resolves suppressed auto-resolve threads when enabled", async () => {
     mockAutoResolveThreads.mockResolvedValue({ resolved: ["t-bot"], errors: [] });
     mockFetchPrBatch.mockResolvedValue({
@@ -105,6 +160,20 @@ describe("runCheck — classification auto-minimize", () => {
     expect(mockAutoResolveThreads).toHaveBeenCalledWith(["t-bot"]);
     expect(report.threads.actionable.map((t) => t.id)).not.toContain("t-bot");
     expect(report.threads.ruleAutoResolveIds ?? []).not.toContain("t-bot");
+  });
+
+  it("surfaces a suppressed auto-resolve thread when resolve authorization is denied", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        reviewThreads: [{ ...botThread(), viewerCanResolve: false }],
+      }),
+    });
+
+    const report = await runCheck({ ...BASE_OPTS, autoMinimizeSuppressed: true });
+
+    expect(mockAutoResolveThreads).not.toHaveBeenCalled();
+    expect(report.threads.actionable.map((thread) => thread.id)).toContain("t-bot");
+    expect(report.threads.ruleAutoResolveIds).toContain("t-bot");
   });
 });
 

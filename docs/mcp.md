@@ -155,14 +155,14 @@ The server registers three canonical tools plus a deprecated singular suggestion
 
 Every MCP call requires a repository-qualified `pr`: either a GitHub PR URL such as `https://github.com/owner/repo/pull/123` or `owner/repo#123`. Bare PR numbers and omitted PRs are rejected. The referenced repository must match the repository at the server's startup working directory (or the `cwd` supplied to an embedded factory); a mismatch is rejected before the operation runs. Start a separate server from the target repository when working across repositories.
 
-| Tool                       | Purpose                                                                                                       | Side effects                                                                             |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `iterate`                  | One state-machine tick. Surfaces review items, checks, merge state, and structured review-mutation arguments. | May mark a draft ready or cancel actionable runs unless those automations are disabled.  |
-| `apply`                    | Ordered review mutations, `mark_files_viewed`, and `append_journal` under one required `pr`.                  | Writes to GitHub after prevalidation. A later failure leaves earlier operations applied. |
-| `build_suggestion_patches` | Validate ordered anchored suggestions and return checked diffs plus commit metadata.                          | None. Never edits the worktree or git history.                                           |
-| `build_suggestion_patch`   | Deprecated one-item adapter for `build_suggestion_patches`.                                                   | None. Never edits the worktree or git history.                                           |
+| Tool                       | Purpose                                                                                                       | Side effects                                                                                 |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `iterate`                  | One state-machine tick. Surfaces review items, checks, merge state, and structured review-mutation arguments. | May mark a draft ready only when GitHub reports `viewerCanUpdate: true`; never cancels runs. |
+| `apply`                    | Ordered review mutations, selection-only `mark_files_viewed`, and `append_journal` under one required `pr`.   | Authorized review/journal operations write after prevalidation; file selection does not.     |
+| `build_suggestion_patches` | Validate ordered anchored suggestions and return checked diffs plus commit metadata.                          | None. Never edits the worktree or git history.                                               |
+| `build_suggestion_patch`   | Deprecated one-item adapter for `build_suggestion_patches`.                                                   | None. Never edits the worktree or git history.                                               |
 
-Call `iterate` first. Translate its `resolveCommand` / `resolveOnlyCommand` arguments into an `apply` `review_mutations` operation. Use one `build_suggestion_patches` call for all marked suggestion threads in displayed order. Use `mark_files_viewed` and `append_journal` when the iterate output or the caller asks for those mutations.
+Call `iterate` first. Translate its `resolveCommand` / `resolveOnlyCommand` arguments into an `apply` `review_mutations` operation. Use one `build_suggestion_patches` call for all marked suggestion threads in displayed order. `mark_files_viewed` only selects files and reports the unverifiable authorization; it does not mutate viewed state. Use `append_journal` only when the caller asks for that mutation.
 
 `build_suggestion_patches` treats GitHub's anchored line range at the fetched PR head as authoritative. It accepts a clean local descendant only when the full ordered patch stream passes `git apply --check`; otherwise inspect the current source and reviewer intent manually.
 
@@ -176,9 +176,9 @@ Hosts namespace tool names with the server name (`pr-shepherd__iterate` in Grok,
 | `readyDelaySeconds`      | non-negative number             | no       | Override the ready-delay window.                                |
 | `stallTimeoutSeconds`    | non-negative number             | no       | Override the stall timeout.                                     |
 | `noAutoMarkReady`        | boolean                         | no       | Disable automatic draft → ready.                                |
-| `noAutoCancelActionable` | boolean                         | no       | Disable cancellation of stale in-progress runs.                 |
+| `noAutoCancelActionable` | boolean                         | no       | Deprecated no-op; Shepherd never cancels workflow runs.         |
 | `merge`                  | boolean                         | no       | Shepherd to readiness and emit merge/queue commands.            |
-| `neverCancelRuns`        | string array                    | no       | Extra workflow/check glob patterns Shepherd must not cancel.    |
+| `neverCancelRuns`        | string array                    | no       | Deprecated per-call no-op retained for compatibility.           |
 
 The result is an `IterateResult`. Action semantics, instruction text, and field contracts live in [actions.md](actions.md).
 
@@ -205,12 +205,12 @@ Each operation is one of:
 
 `mark_files_viewed`
 
-| Field           | Type                  | Required | Meaning                  |
-| --------------- | --------------------- | -------- | ------------------------ |
-| `type`          | `"mark_files_viewed"` | yes      |                          |
-| `files`         | string array          | no       | Exact changed-file paths |
-| `tests`         | boolean               | no       | Mark test files viewed   |
-| `matchPatterns` | string array          | no       | Glob/regex selectors     |
+| Field           | Type                  | Required | Meaning                   |
+| --------------- | --------------------- | -------- | ------------------------- |
+| `type`          | `"mark_files_viewed"` | yes      |                           |
+| `files`         | string array          | no       | Exact changed-file paths  |
+| `tests`         | boolean               | no       | Select changed test files |
+| `matchPatterns` | string array          | no       | Glob/regex selectors      |
 
 `append_journal`
 
@@ -227,7 +227,7 @@ Each operation is one of:
 | `pr`          | GitHub PR URL or `owner/repo#N` | yes      | PR for the suggestions; repository must match the server repository. |
 | `suggestions` | non-empty object array          | yes      | Ordered `{ threadId, message, description? }` suggestion requests.   |
 
-The result includes ordered `patches[]` entries with thread, path, range, author, patch, files-to-stage, and commit metadata, plus shared `postActionInstructions`. Apply and commit each patch in order, then push once. `build_suggestion_patch` remains temporarily as a deprecated adapter with its prior singular input and result.
+The result includes ordered `patches[]` entries with thread, path, range, author, patch, files-to-stage, and commit metadata, plus shared `postActionInstructions`. Apply and commit each patch in order. Shepherd does not recommend a push or review mutation from this standalone result because it cannot verify those authorizations; use the originating iterate output for authorization-checked actions. `build_suggestion_patch` remains temporarily as a deprecated adapter.
 
 ## Recurrence
 

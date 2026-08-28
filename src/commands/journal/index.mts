@@ -18,6 +18,7 @@ export interface JournalResult {
   sectionExisted: boolean;
   dryRun: boolean;
   previewBody?: string;
+  authorizationSkipped?: "denied-or-unverifiable";
 }
 
 /** @deprecated Hidden implementation for standalone `journal`; use `apply journal`. */
@@ -37,9 +38,19 @@ export async function runJournal(opts: RunJournalOptions): Promise<JournalResult
     );
   }
 
-  const { nodeId, body } = await getPullRequestBody(prNumber, owner, name);
+  const { nodeId, body, viewerCanUpdate } = await getPullRequestBody(prNumber, owner, name);
 
   const { body: newBody, mutated, sectionExisted } = appendJournalItem(body, item);
+
+  if (mutated && !opts.dryRun && viewerCanUpdate !== true) {
+    return {
+      prNumber,
+      mutated: false,
+      sectionExisted,
+      dryRun: false,
+      authorizationSkipped: "denied-or-unverifiable",
+    };
+  }
 
   if (mutated && !opts.dryRun) {
     await updatePullRequestBody(nodeId, newBody);

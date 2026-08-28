@@ -28,7 +28,7 @@ mechanics every tick. Apply the referenced playbook in full whenever a step poin
 ### Suggestion patches
 
 - Run one plural `build-suggestion-patches` command with a repeated `--thread-id … --message … [--description …]` group for every marked thread in displayed order.
-- The CLI only builds patches. Apply, stage, and commit the returned patches in order, then push once.
+- The CLI only builds patches. Apply, stage, and commit the returned patches in order. Push only when authorization has been established outside Shepherd; GitHub viewer fields cannot verify the local Git credential.
 - The command builds from the fetched PR head and accepts a clean local descendant only when the complete ordered patch stream passes `git apply --check`.
 - If the command refuses because a suggestion is unsafe or no longer applies, inspect the current source, the displayed replacement block, and reviewer intent before editing manually. Do not apply a stale numeric range blindly or retry unchanged input.
 - A returned patch was checked against the then-current worktree. If it later fails, re-inspect the worktree because it changed after validation.
@@ -40,18 +40,20 @@ Match each failure's `[conclusion: …]` tag under `## Failing checks` to a rule
 
 More specific rows win over the general "GitHub Actions failure" row — check conclusion first.
 
-| Tag / kind                                                               | Do                                                                                                                                                                                                                                                                               |
-| ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GitHub Actions failure (has a run ID, not `CANCELLED`/`STARTUP_FAILURE`) | Read the included log excerpt if one is rendered. If missing or insufficient, run a bounded command such as `gh run view <runId> --log-failed \| tail -n 200` — the unbounded form can dump excessive log output into context. Open the run URL only if that still lacks detail. |
-| Transient infrastructure failure                                         | Rerun with `gh run rerun <runId> --failed`.                                                                                                                                                                                                                                      |
-| Real test or build failure                                               | Apply a code fix — do not rerun.                                                                                                                                                                                                                                                 |
-| `[conclusion: CANCELLED]`                                                | No log excerpt is rendered for this conclusion. Run `gh run rerun <runId>` unless this tick will push new commits. Not resolved by a rerun classification — `## Cancelled runs` is a different section.                                                                          |
-| `[conclusion: STARTUP_FAILURE]`                                          | No log excerpt is rendered for this conclusion. Inspect with `gh run view <runId>`, rerun with `gh run rerun <runId>` if warranted.                                                                                                                                              |
-| `external` (no run ID, has a URL)                                        | Open its URL and inspect it.                                                                                                                                                                                                                                                     |
+| Tag / kind                                                               | Do                                                                                                                                                                                                |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GitHub Actions failure (has a run ID, not `CANCELLED`/`STARTUP_FAILURE`) | Read the included log excerpt if one is rendered. If it is missing or insufficient, hand off the displayed run ID/URL; Shepherd cannot verify authorization for another Actions read or mutation. |
+| Transient infrastructure failure                                         | Record the diagnosis. Shepherd does not recommend a rerun because GitHub exposes no exact viewer capability for that workflow-run action.                                                         |
+| Real test or build failure                                               | Apply a code fix — do not rerun.                                                                                                                                                                  |
+| `[conclusion: CANCELLED]`                                                | No log excerpt is rendered. Hand off the displayed metadata; Shepherd cannot verify authorization for another Actions read or mutation.                                                           |
+| `[conclusion: STARTUP_FAILURE]`                                          | No log excerpt is rendered. Hand off the displayed metadata; Shepherd cannot verify authorization for another Actions read or mutation.                                                           |
+| `external` (no run ID, has a URL)                                        | Preserve the URL in the handoff. Shepherd does not recommend opening it because it cannot verify the current viewer's access to the external system.                                              |
 
 ### Review-mutation mechanics
 
 Applies to every `apply review:` / `resolve-only:` command the CLI prints. Covers only what stays safe if you run the printed command **unmodified** — `$HEAD_SHA`/`$DISMISS_MESSAGE` substitution remains a separate CLI-printed step because the command is unsafe by default without those placeholders.
+
+The CLI only includes IDs whose per-object GitHub viewer capability authorizes the corresponding action, and `apply review` repeats that authorization check immediately before mutating.
 
 - Run every generated `apply review:` / `resolve-only:` command even when no code change is warranted. The command records the agent's disposition of the included review items; skipping it leaves bot threads active and can eventually trigger `fix-thrash`.
 - Never add first-look-only or check-annotation IDs to `--reply-thread-ids`, `--resolve-thread-ids`, `--dismiss-review-ids`, or `--minimize-comment-ids` — those flags are pre-populated by the CLI.

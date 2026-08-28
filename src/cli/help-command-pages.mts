@@ -6,7 +6,7 @@ export const COMMAND_USAGE = {
   default: DEFAULT_USAGE,
   apply: `pr-shepherd apply
 
-Apply a review mutation, mark changed files as viewed, or append a PR journal item.
+Apply a review mutation, select changed files for authorization diagnostics, or append a PR journal item.
 
 Usage:
   pr-shepherd apply review [PR] [review-flags]
@@ -42,7 +42,8 @@ At least one action flag is required.
 
   "apply files": `pr-shepherd apply files
 
-Mark changed files as viewed in the GitHub pull request diff.
+Select changed files and report that viewed-state authorization cannot be verified.
+No file viewed-state mutation is attempted.
 
 Usage:
   pr-shepherd apply files [PR] [files...] [--tests] [--match REGEX]
@@ -152,7 +153,8 @@ Flags:
   --message <text>                Reply/dismiss message. Required with --reply-thread-ids
                                   or --dismiss-review-ids.
   --require-sha <sha>             Wait until GitHub reports this PR head SHA before mutating.
-                                  Must be a full 40-character lowercase hex SHA. Use $(git rev-parse HEAD).
+                                  Must be a full 40-character lowercase hex SHA. Local HEAD is valid
+                                  only when it equals the current remote PR head.
   --format text|json              Output format. Default: text.
   --help, -h                      Print this help and exit before GitHub I/O.
 
@@ -189,7 +191,8 @@ Exit codes:
 
   "mark-files-as-viewed": `pr-shepherd mark-files-as-viewed
 
-Mark changed files as viewed in the GitHub pull request diff.
+Deprecated compatibility alias for selection-only file-view authorization diagnostics.
+No file viewed-state mutation is attempted.
 
 Usage:
   pr-shepherd mark-files-as-viewed [PR] [files...] [--tests] [--match REGEX]

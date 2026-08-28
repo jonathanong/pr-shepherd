@@ -22,7 +22,7 @@ describe("formatMarkFilesAsViewedResult", () => {
       unmarkedPaths: ["src/b.ts"],
     });
 
-    expect(out).toContain("# PR #42 — Mark files as viewed (1 marked)");
+    expect(out).toContain("# PR #42 — File-view selection (2 selected)");
     expect(out).toContain("## Matched files (2)");
     expect(out).toContain("## Marked viewed (1)");
     expect(out).toContain("## Already viewed (1)");
@@ -47,6 +47,17 @@ describe("formatMarkFilesAsViewedResult", () => {
     expect(out).toContain("No files matched.");
     expect(out).toContain("## Errors (1)");
     expect(out).toContain("src/a.ts: server unavailable");
+  });
+
+  it("renders an authorization skip", () => {
+    const out = formatMarkFilesAsViewedResult({
+      ...baseResult(),
+      matchedPaths: ["src/a.ts"],
+      authorizationSkipped: "unverifiable",
+    });
+
+    expect(out).toContain("## Authorization");
+    expect(out).toContain("does not expose a capability");
   });
 });
 

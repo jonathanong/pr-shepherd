@@ -60,7 +60,7 @@ describe("runIterate — fix_code agent projection", () => {
     if (result.action === "fix_code") {
       const instructionsJoined = result.fix.instructions.join("\n");
       // GitHub Actions and external (detailsUrl, no runId) failures both route through the
-      // single triage pointer — per-conclusion `gh run view`/`gh run rerun` mechanics moved
+      // single triage pointer — follow-up inspection and mutations require separate authorization
       // to the pr-shepherd skill's "CI failure triage" playbook (invariant text, not
       // re-emitted per tick).
       expect(instructionsJoined).toContain("Triage every failure under `## Failing checks`");

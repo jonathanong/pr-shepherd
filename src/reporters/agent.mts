@@ -25,6 +25,8 @@ export function toAgentThread(t: ReviewThread): AgentThread {
   const suggestion = extractSuggestion(t) ?? undefined;
   return {
     id: t.id,
+    ...(t.viewerCanReply === false && { viewerCanReply: false }),
+    ...(t.viewerCanResolve === false && { viewerCanResolve: false }),
     ...(t.reviewId !== undefined && { reviewId: t.reviewId }),
     path: t.path,
     line: t.line,
@@ -56,6 +58,7 @@ export function toAgentThread(t: ReviewThread): AgentThread {
 export function toAgentComment(c: PrComment & { edited?: boolean }): AgentComment {
   return {
     id: c.id,
+    ...(c.viewerCanMinimize === false && { viewerCanMinimize: false }),
     author: c.author,
     ...(c.authorType !== undefined && { authorType: c.authorType }),
     ...(c.authorAssociation !== undefined && { authorAssociation: c.authorAssociation }),

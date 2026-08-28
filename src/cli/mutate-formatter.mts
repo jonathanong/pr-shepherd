@@ -37,6 +37,26 @@ export function formatMutateResult(result: ResolveResult): string {
   pushIds(lines, "Skipped human minimizes", result.skippedHumanMinimizes);
   pushIds(lines, "Skipped human review dismissals", result.skippedHumanDismissals);
   pushIds(lines, "Skipped non-human/unknown thread replies", result.skippedNonHumanReplies);
+  pushIds(
+    lines,
+    "Authorization denied/unverifiable for thread replies",
+    result.skippedUnauthorizedReplies,
+  );
+  pushIds(
+    lines,
+    "Authorization denied/unverifiable for thread resolves",
+    result.skippedUnauthorizedResolves,
+  );
+  pushIds(
+    lines,
+    "Authorization denied/unverifiable for minimizes",
+    result.skippedUnauthorizedMinimizes,
+  );
+  pushIds(
+    lines,
+    "Authorization denied/unverifiable for review dismissals",
+    result.skippedUnauthorizedDismissals,
+  );
   const rateLimit = formatRateLimit(result);
   if (rateLimit) lines.push(rateLimit);
   pushIds(lines, "Not replied due to rate limit", result.unrepliedThreads);

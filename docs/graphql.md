@@ -26,7 +26,7 @@ Startup-failure workflow runs and failed-job log excerpts are check-read supplem
 
 GraphQL reads are strict. A response with any GraphQL `errors`, null `data`, invalid JSON, a malformed payload, or a null check-context node throws a `GitHubRequestError`. Error messages retain GraphQL paths when GitHub supplies them. This prevents an incomplete PR, review, or CI snapshot from driving an iterate action; `iterate` and `poll` fail immediately and exit a `sysexits.h` code derived from the HTTP status (`77` for 401/403, `75` for 429/5xx/rate-limited, `69` otherwise — see [exit-codes.md](exit-codes.md)) instead of returning zero and reaching `10`–`14`.
 
-Only mutation batches that can preserve independent per-alias successes opt in to partial data. The resolve and mark-files-as-viewed mutation paths report successful aliases and return failed aliases for retry. New read paths must not enable partial data.
+Only mutation batches that can preserve independent per-alias successes opt in to partial data. The resolve mutation path reports successful aliases and returns failed aliases for retry. New read paths must not enable partial data.
 
 ## Pagination strategy
 

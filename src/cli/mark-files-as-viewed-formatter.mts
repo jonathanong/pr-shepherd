@@ -3,10 +3,19 @@ import type { MarkFilesAsViewedResult } from "../commands/mark-files-as-viewed.m
 export function formatMarkFilesAsViewedResult(result: MarkFilesAsViewedResult): string {
   const lines: string[] = [];
   lines.push(
-    `# PR #${result.prNumber} — Mark files as viewed (${result.markedPaths.length} marked)`,
+    `# PR #${result.prNumber} — File-view selection (${result.matchedPaths.length} selected)`,
   );
   lines.push("");
   lines.push(`repo: ${result.repo}`);
+
+  if (result.authorizationSkipped) {
+    lines.push("");
+    lines.push("## Authorization");
+    lines.push("");
+    lines.push(
+      "- Not marked: GitHub does not expose a capability that confirms the current viewer may mark PR files as viewed.",
+    );
+  }
 
   appendPathSection(lines, "Matched files", result.matchedPaths);
   appendPathSection(lines, "Marked viewed", result.markedPaths);

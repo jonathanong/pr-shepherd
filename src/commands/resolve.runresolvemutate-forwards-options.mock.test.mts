@@ -15,7 +15,7 @@ import { addPrShepherdMarker } from "../comments/marker.mts";
 registerHooks();
 
 describe("runResolveMutate — forwards options", () => {
-  it("forwards all IDs and requireSha to applyResolveOptions", async () => {
+  it("does not forward IDs that the fetched PR cannot authorize", async () => {
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData() });
     await runResolveMutate({
       ...BASE_OPTS,
@@ -29,14 +29,19 @@ describe("runResolveMutate — forwards options", () => {
       42,
       { owner: "owner", name: "repo" },
       expect.objectContaining({
-        resolveThreadIds: ["t-1"],
+        resolveThreadIds: [],
         replyThreadIds: undefined,
-        minimizeCommentIds: ["c-1"],
-        dismissReviewIds: ["r-1"],
+        minimizeCommentIds: [],
+        dismissReviewIds: [],
         dismissMessage: "done",
-        requireSha: "sha-abc",
+        requireSha: undefined,
       }),
     );
+    const result = await runResolveMutate({
+      ...BASE_OPTS,
+      resolveThreadIds: ["t-unknown"],
+    });
+    expect(result.skippedUnauthorizedResolves).toEqual(["t-unknown"]);
     expect(mockFetchPrBatch).toHaveBeenCalledWith(
       42,
       { owner: "owner", name: "repo" },
@@ -49,10 +54,17 @@ describe("runResolveMutate — forwards options", () => {
   it("skips human resolve, minimize, and dismiss IDs before mutating", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
-        reviewThreads: [makeThread({ id: "t-human", authorType: "User" })],
-        comments: [makeComment({ id: "c-human", author: "alice", authorType: "User" })],
+        reviewThreads: [
+          makeThread({ id: "t-human", authorType: "User" }),
+          makeThread({ id: "t-bot", author: "bot[bot]", authorType: "Bot" }),
+        ],
+        comments: [
+          makeComment({ id: "c-human", author: "alice", authorType: "User" }),
+          makeComment({ id: "c-bot", author: "bot[bot]", authorType: "Bot" }),
+        ],
         changesRequestedReviews: [
           { id: "r-human", author: "alice", authorType: "User", body: "changes" },
+          { id: "r-bot", author: "bot[bot]", authorType: "Bot", body: "changes" },
         ],
       }),
     });

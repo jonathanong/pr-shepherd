@@ -11,7 +11,7 @@ Conversations Resolved: Yes [Not Required]
 
 > This approach might cause a race condition. Please review the locking strategy.
 
-## Post-fix push
+## Post-fix actions
 
 - base: `main`
 
@@ -20,6 +20,6 @@ Conversations Resolved: Yes [Not Required]
 1. Review each item under `## Actionable comments` and decide whether it needs a code change.
 2. Read every item marked `[edited since first look]`, including edited summaries and edited first-look bullets, before deciding whether to resolve a matching thread.
 3. Apply every warranted review fix in the relevant files.
-4. If you changed code, commit any remaining changes and push. Otherwise, do not commit or push.
+4. If you changed code, commit any remaining changes, then stop and hand off for a push whose authorization is established outside Shepherd; do not run the remaining review mutations or iterate until the remote PR head changes. Shepherd cannot verify the Git credential's push authorization. If you did not change code, do not commit and continue with the remaining steps.
 5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
 6. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.

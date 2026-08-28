@@ -16,8 +16,7 @@ flowchart TD
   S15 -->|yes| A_CAN(["action: cancel"])
   S15 -->|no| S2["2. updateReadyDelay"]
   S2 --> S3{"3. hasActionableWork?"}
-  S3 -->|yes| S3X["REST cancel failing Actions runs"]
-  S3X --> A_FIX(["action: fix_code"])
+  S3 -->|yes| A_FIX(["action: fix_code"])
   S3 -->|no| SM{"--merge state?"}
   SM -->|active queue/auto-merge| A_W(["action: wait"])
   SM -->|current removal| A_ESC(["action: escalate"])
@@ -40,8 +39,10 @@ flowchart TD
   A_ESC --> DEC
 
   DEC -->|cancel/escalate| STOP["stop"]
-  DEC -->|fix_code| FIX["inspect CI as needed<br/>edit+commit by repo convention<br/>pr-shepherd apply review"]
-  FIX --> RERUN["rerun the poll"]
+  DEC -->|fix_code| FIX["inspect included evidence<br/>edit+commit by repo convention<br/>run authorized review mutations"]
+  FIX --> REMOTE{"remote update required?"}
+  REMOTE -->|yes| STOP
+  REMOTE -->|no| RERUN["rerun the poll"]
   DEC -->|wait/mark_ready/merge| RERUN
   RERUN --> POLL
 ```
@@ -114,7 +115,7 @@ All failing checks — including timeout, cancelled, startup-failure, flaky fail
 
 CONFLICTS is included so merge conflicts and review comments can be handled in one tick. Iterate surfaces raw `**branch**` state; it does not tell the caller how to rebase.
 
-**Side-effects:** REST `POST /repos/{owner}/{repo}/actions/runs/{runId}/cancel` for unique run IDs of failing GitHub Actions checks (best-effort; already-completed runs return 409). Not `gh run cancel`. Third-party status checks without a run ID are not cancelled. Disable with `--no-auto-cancel-actionable`; protect named workflows with `actions.neverCancelRuns`.
+**Side-effects:** No workflow-run cancellation. GitHub exposes no exact viewer capability for cancel/rerun actions, so Shepherd only surfaces failure context for inspection.
 
 **Emits:** `action: 'fix_code'`. Stall guard runs inside `handleFixCode`.
 
@@ -134,7 +135,7 @@ There is no extra `mergeStateStatus === "CLEAN"` requirement. A draft that deriv
 
 ### 4.5. Active merge and queue removal
 
-An active auto-merge request or merge-queue entry emits `wait` after actionable checks are handled. This path clears stall state and does not ready-delay-cancel or stall-escalate. If `--merge` is enabled and the latest queue removal has no actionable failure, iterate emits `escalate` with the raw removal fields.
+An active auto-merge request or merge-queue entry emits `wait` after actionable checks are handled. New auto-merge commands require `viewerCanEnableAutoMerge: true`; queue enrollment has no exact capability and returns an authorization handoff. If `--merge` is enabled and the latest queue removal has no actionable failure, iterate emits `escalate` with the raw removal fields.
 
 ### 5. Wait
 

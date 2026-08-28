@@ -2,11 +2,17 @@
 # re-select every connection (GraphQL points scale with possible nodes).
 query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
   repository(owner: $owner, name: $repo) {
+    viewerPermission
+    viewerCanAdminister
     pullRequest(number: $pr) {
       id
       number
       state
       isDraft
+      viewerDidAuthor
+      viewerCanUpdate
+      viewerCanEnableAutoMerge
+      viewerCanEditFiles
       mergeable
       mergeStateStatus
       reviewDecision
@@ -14,6 +20,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
       headRefName
       headRepository {
         nameWithOwner
+        viewerPermission
       }
       baseRefName
       isInMergeQueue
@@ -146,6 +153,8 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
           id
           isResolved
           isOutdated
+          viewerCanReply
+          viewerCanResolve
           path
           line
           startLine
@@ -184,6 +193,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
         nodes {
           id
           isMinimized
+          viewerCanMinimize
           url
           authorAssociation
           author {
@@ -221,6 +231,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
         nodes {
           id
           isMinimized
+          viewerCanMinimize
           authorAssociation
           author {
             __typename
@@ -241,6 +252,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
         nodes {
           id
           isMinimized
+          viewerCanMinimize
           authorAssociation
           author {
             __typename

@@ -95,10 +95,35 @@ describe("runIterate — review summary auto-minimize", () => {
     );
 
     const result = await runIterate(makeOpts());
+    expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") return;
 
     expect(result.fix.reviewSummaryIds).toEqual([]);
     expect(result.fix.surfacedApprovals.map((r) => r.id)).toEqual(["PRR_AP_BOT", "PRR_AP_UNKNOWN"]);
+  });
+  it("surfaces an approval when minimization is authorized by policy but denied by GitHub", async () => {
+    configureApprovalMinimization("bots");
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        approvedReviews: [
+          {
+            id: "PRR_AP_DENIED",
+            author: "app",
+            authorType: "Bot",
+            body: "",
+            viewerCanMinimize: false,
+          },
+        ],
+      }),
+    );
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.reviewSummaryIds).toEqual([]);
+    expect(result.fix.surfacedApprovals.map((review) => review.id)).toEqual(["PRR_AP_DENIED"]);
+    expect(result.fix.resolveCommand.argv).not.toContain("--minimize-comment-ids");
   });
   it("summary-only PR self-minimizes in-process and does not route to fix_code (issue #313)", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary] }));

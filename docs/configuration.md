@@ -90,7 +90,7 @@ actions:
 | `merge.commandArgs`                  | `[]`                                      | Options for ordinary `gh pr merge` commands; defaults to `--merge` when no strategy is selected. Not used for merge-queue commands.                         |
 | `actions.autoMinimizeSuppressed`     | `true`                                    | Silently resolve/minimize classification-rule matches with both `suppress: true` and `autoResolve: true` before emitting `fix_code`                         |
 | `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR reaches a clean handoff state                                                                                             |
-| `actions.neverCancelRuns`            | `[]`                                      | Case-insensitive glob patterns for workflow/check names whose GitHub Actions workflow runs Shepherd must never cancel                                       |
+| `actions.neverCancelRuns`            | `[]`                                      | Legacy cancellation-named patterns; matching checks remain visible despite `ignoreChecks`, but Shepherd never cancels runs                                  |
 
 ## `botUsernames`
 
@@ -149,6 +149,8 @@ Non-human `COMMENTED` review summaries can be minimized by the `iterate` loop. H
 Opt in to also minimize `APPROVED`-state reviews (`pr approve` clicks with or without a body). Off by default because approvals are an affirmative signal you usually want to keep visible. Flip to `true` for long-running PRs where stale approvals pile up. When enabled, `iterate.minimizeComments` still filters which approval authors are minimized; approvals excluded by that policy are surfaced instead.
 
 When `false` (default), approval reviews are surfaced under `## Approvals (surfaced — not minimized)` only in iterate output that is already being emitted for other actionable work (for example, alongside a `fix_code` payload). They remain visible and are not passed to `--minimize-comment-ids`, but approvals by themselves do not cause iterate to emit that section instead of returning `wait`.
+
+When `true`, an approval that cannot be minimized because policy excludes it or GitHub does not report `viewerCanMinimize: true` produces a one-time `FIX_CODE` visibility tick. It remains absent from `--minimize-comment-ids` and is marker-gated afterward.
 
 > Perf note: when this is `false` (default), `fetchPrBatch` does not paginate beyond the first 50 approved reviews. Turn it on to fetch all approvals.
 
@@ -230,7 +232,7 @@ These flags control whether shepherd automatically performs each class of mutati
 
 ### `actions.autoMinimizeSuppressed` — default `true`
 
-When `true`, Shepherd silently applies the resolve/minimize mutation for classification-rule matches that set both `suppress: true` and `autoResolve: true`, then removes successful IDs from the agent-facing queues before `iterate` decides whether to emit `fix_code`.
+When `true`, Shepherd silently applies the resolve/minimize mutation for classification-rule matches that set both `suppress: true` and `autoResolve: true` only when GitHub reports the exact per-object capability, then removes successful IDs from the agent-facing queues before `iterate` decides whether to emit `fix_code`. Denied or unverifiable items return to the normal first-look/edit visibility gate and produce no mutation recommendation.
 
 This applies only to explicit classification-rule auto-resolve matches. Ordinary `iterate.minimizeComments` policy queues and `autoResolve: true` rules without `suppress: true` still flow through the generated `apply review` command.
 
@@ -242,7 +244,7 @@ Disable if your team uses the draft state as a deliberate gate that requires a h
 
 ### `actions.neverCancelRuns` — default `[]`
 
-Case-insensitive glob patterns for GitHub Actions workflow/check names that Shepherd must not cancel. Cancellation is workflow-run scoped in GitHub, so a match on any check/job in a run protects the entire run ID from automatic cancellation and from `## In-progress runs` prompts.
+Legacy cancellation-named compatibility key. Shepherd no longer cancels or recommends cancelling workflow runs because GitHub exposes no exact viewer capability for that action. The patterns still keep matching Actions checks visible when `ignoreChecks` would otherwise hide them.
 
 Use this for workflows where sibling jobs should be allowed to finish even after one job fails:
 
@@ -252,9 +254,7 @@ actions:
     - "Final Code Review"
 ```
 
-Protected runs still count as failing or in-progress checks. Shepherd surfaces them under `## Protected runs` in text output and `fix.protectedRuns` in JSON so the agent knows they were deliberately left running.
-
-Protection also takes precedence over `ignoreChecks` for GitHub Actions check runs from the same workflow/run: a protected check is kept visible and can block ready-delay even if its raw job name matches `ignoreChecks`.
+For backward compatibility, a matching run remains visible and can block readiness even if a raw job name also matches `ignoreChecks`.
 
 ---
 

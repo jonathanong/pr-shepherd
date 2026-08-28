@@ -66,6 +66,10 @@ describe("shepherd journal instruction helpers", () => {
       [],
       [],
       [],
+      undefined,
+      "",
+      false,
+      true,
     );
 
     const text = instructions.join("\n");
@@ -80,6 +84,18 @@ describe("shepherd journal instruction helpers", () => {
     expect(text).toContain(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
     expect(countMentions(text, "append `- <decision>` to Shepherd Journal")).toBe(1);
     expect(text).not.toContain("`## Shepherd Journal` entry");
+  });
+  it("omits Shepherd Journal recommendations when update permission is not established", () => {
+    const resolveCommand: ResolveCommand = {
+      argv: ["pr-shepherd", "resolve", "42"],
+      requiresHeadSha: false,
+      requiresDismissMessage: false,
+      hasMutations: true,
+    };
+
+    const instructions = buildFixInstructions([], [], [], [], "main", resolveCommand, false, 42, 0);
+
+    expect(instructions.join("\n")).not.toContain("pr-shepherd apply journal");
   });
   it("omits Shepherd Journal guidance when no mutations are required", () => {
     const resolveCommand: ResolveCommand = {

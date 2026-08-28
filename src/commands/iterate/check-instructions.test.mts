@@ -23,6 +23,7 @@ function check(overrides: Partial<AgentCheck>): AgentCheck {
     runId: "123",
     detailsUrl: "https://github.com/owner/repo/actions/runs/123",
     conclusion: "FAILURE",
+    logExcerpt: "tests failed",
     ...overrides,
   };
 }
@@ -80,7 +81,7 @@ describe("buildFailingCheckInstructions", () => {
     ]);
 
     expect(instructions).toEqual([
-      'Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for `gh run view` / `gh run rerun` rules.',
+      'Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for read-only inspection rules.',
       "For each `(no runId)` failure, escalate to a human because no log or URL is available.",
     ]);
   });
@@ -131,7 +132,7 @@ describe("buildResolveCommandInstruction", () => {
       ),
     ).toEqual([
       "Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked viewer-authored human thread is emitted resolve-only, not for another reply.",
-      "Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.",
+      "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, do not run this command until an authorized push updates the remote PR head; then replace `$HEAD_SHA` with that pushed commit SHA.",
       "Replace `$DISMISS_MESSAGE` with one sentence describing what changed.",
       'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',
     ]);
@@ -145,9 +146,50 @@ describe("buildFixCompletionInstruction", () => {
     );
   });
 
+  it("conditionally stops for an authorized remote update before SHA-gated mutations", () => {
+    expect(buildFixCompletionInstruction([check({})], false, true)).toBe(
+      "`[FIX_CODE]` is conditional: if you changed code, stop after committing and resume only after an authorized push changes the remote PR head; if you did not change code, complete the authorized review mutations and iterate again with the same options.",
+    );
+  });
+
   it("pauses polling when a bare check requires a human handoff", () => {
     expect(buildFixCompletionInstruction([check({ runId: null, detailsUrl: null })])).toBe(
       "`[FIX_CODE]` requires a human handoff for an uninspectable failing check. Stop polling after escalating, and resume only after human direction.",
+    );
+  });
+
+  it.each(["CANCELLED", "STARTUP_FAILURE"] as const)(
+    "pauses polling when every failure is an authorization-only %s handoff",
+    (conclusion) => {
+      expect(buildFixCompletionInstruction([check({ conclusion })])).toContain(
+        "requires a human handoff",
+      );
+    },
+  );
+
+  it("pauses polling when an actionable failure accompanies a CI-only handoff", () => {
+    expect(
+      buildFixCompletionInstruction([check({ conclusion: "CANCELLED" }), check({})]),
+    ).toContain("requires a human handoff");
+  });
+
+  it("pauses polling for an external check handoff", () => {
+    expect(
+      buildFixCompletionInstruction([
+        check({ runId: null, detailsUrl: "https://ci.example/check", logExcerpt: undefined }),
+      ]),
+    ).toContain("requires a human handoff");
+  });
+
+  it("pauses polling for a GitHub Actions failure with no included evidence", () => {
+    expect(buildFixCompletionInstruction([check({ logExcerpt: undefined })])).toContain(
+      "requires a human handoff",
+    );
+  });
+
+  it("pauses polling after conflict resolution until an authorized push updates the PR", () => {
+    expect(buildFixCompletionInstruction([], true)).toContain(
+      "requires a human handoff for an authorized push",
     );
   });
 });

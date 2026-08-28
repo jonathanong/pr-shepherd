@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { renderResolveCommand } from "../commands/iterate/render.mts";
 import { inlineCode, joinSections } from "../util/markdown.mts";
 import { renderSuggestionBlock, renderLineRange } from "./suggestion-renderer.mts";
@@ -52,8 +53,9 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     for (const c of result.fix.actionableComments) {
       const heading = c.url ? `[commentId=${c.id}](${c.url})` : `\`commentId=${c.id}\``;
       const editedMarker = c.edited ? " [edited since first look]" : "";
+      const authorizationMarker = c.viewerCanMinimize === false ? " [viewer cannot minimize]" : "";
       sections.push(
-        `### ${heading} (${renderAuthor(c.author, c.authorType, c.authorAssociation)})${editedMarker}`,
+        `### ${heading} (${renderAuthor(c.author, c.authorType, c.authorAssociation)})${authorizationMarker}${editedMarker}`,
       );
       sections.push(blockquote(c.body));
     }
@@ -110,7 +112,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     sections.push("## Review summaries (first look)");
     for (const r of result.fix.firstLookSummaries) {
       sections.push(
-        `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})`,
+        `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})${r.viewerCanMinimize === false ? " [viewer cannot minimize]" : ""}`,
       );
       sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body));
     }
@@ -122,7 +124,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     );
     for (const r of result.fix.editedSummaries) {
       sections.push(
-        `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})`,
+        `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})${r.viewerCanMinimize === false ? " [viewer cannot minimize]" : ""}`,
       );
       sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body));
     }
@@ -139,7 +141,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     sections.push("## Approvals (surfaced — not minimized)");
     for (const r of result.fix.surfacedApprovals) {
       sections.push(
-        `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})`,
+        `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})${r.viewerCanMinimize === false ? " [viewer cannot minimize]" : ""}`,
       );
       sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body));
     }
@@ -172,7 +174,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     sections.push(result.cancelled.map((id) => `- \`${id}\``).join("\n"));
   }
 
-  sections.push("## Post-fix push");
+  sections.push("## Post-fix actions");
   const postFixLines = [`- base: \`${result.baseBranch}\``];
   if (result.fix.resolveOnlyCommand?.hasMutations)
     postFixLines.push(`- resolve-only: \`${renderResolveCommand(result.fix.resolveOnlyCommand)}\``);

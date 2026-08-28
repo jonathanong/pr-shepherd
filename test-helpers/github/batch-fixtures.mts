@@ -6,12 +6,16 @@ export function makeRawPr(overrides: Record<string, unknown> = {}) {
     number: 42,
     state: "OPEN",
     isDraft: false,
+    viewerDidAuthor: true,
+    viewerCanUpdate: true,
+    viewerCanEnableAutoMerge: true,
+    viewerCanEditFiles: true,
     mergeable: "MERGEABLE",
     mergeStateStatus: "CLEAN",
     reviewDecision: "APPROVED",
     headRefOid: "abc123",
     headRefName: "feature",
-    headRepository: { nameWithOwner: "owner/repo" },
+    headRepository: { nameWithOwner: "owner/repo", viewerPermission: "ADMIN" },
     baseRefName: "main",
     reviewRequests: { nodes: [] },
     latestReviews: { nodes: [] },
@@ -33,7 +37,11 @@ export function makeRawPr(overrides: Record<string, unknown> = {}) {
 }
 
 export function makeResponse(pr: ReturnType<typeof makeRawPr> | null = makeRawPr()) {
-  return { data: { repository: { pullRequest: pr } } };
+  return {
+    data: {
+      repository: { viewerPermission: "ADMIN", viewerCanAdminister: true, pullRequest: pr },
+    },
+  };
 }
 
 export function makeContextPr(node: Record<string, unknown>) {

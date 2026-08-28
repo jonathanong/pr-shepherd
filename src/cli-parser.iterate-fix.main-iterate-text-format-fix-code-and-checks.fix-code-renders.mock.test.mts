@@ -115,6 +115,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
         author: "alice",
         authorType: "Unknown" as const,
         body: "Looks reasonable but please double-check X.",
+        viewerCanMinimize: false,
       },
     ];
     mockRunIterate.mockResolvedValue(result);
@@ -123,7 +124,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     const out = getStdout();
 
     expect(out).toContain("## Approvals (surfaced — not minimized)");
-    expect(out).toContain("### `reviewId=PRR_HUMAN` (@alice · Unknown)");
+    expect(out).toContain("### `reviewId=PRR_HUMAN` (@alice · Unknown) [viewer cannot minimize]");
     expect(out).toContain("> Looks reasonable but please double-check X.");
   });
   it("fix_code: approval with empty body renders '(no review body)' instead of bare blockquote", async () => {

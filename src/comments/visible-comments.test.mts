@@ -8,6 +8,7 @@ function makeComment(overrides: Partial<PrComment> = {}): PrComment {
   return {
     id: "c-1",
     isMinimized: false,
+    viewerCanMinimize: true,
     author: "alice",
     authorType: "User",
     body: "body",
@@ -45,6 +46,27 @@ describe("classifyVisibleComments", () => {
     expect(result.actionable).toEqual([comment]);
     expect(result.minimizeIds).toEqual(["c-bot"]);
     expect(result.toMarkSeen).toEqual([comment]);
+  });
+
+  it("surfaces an unminimizable bot comment once without recommending a hide mutation", () => {
+    const comment = makeComment({
+      id: "IC_storybook",
+      author: "github-actions[bot]",
+      authorType: "Bot",
+      body: "Automated feedback",
+      viewerCanMinimize: false,
+    });
+
+    const first = classifyVisibleComments([comment], new Map(), "all");
+    expect(first.actionable).toEqual([comment]);
+    expect(first.minimizeIds).toEqual([]);
+
+    const seen = new Map([
+      [comment.id, { seenAt: 1_700_000_000, bodyHash: hashBody(comment.body) }],
+    ]);
+    const later = classifyVisibleComments([comment], seen, "all");
+    expect(later.actionable).toEqual([]);
+    expect(later.minimizeIds).toEqual([]);
   });
 
   it("returns new non-auto-minimized comments and marks them seen", () => {

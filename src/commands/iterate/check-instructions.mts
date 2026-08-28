@@ -53,7 +53,7 @@ export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): 
   }
   if (resolveCommand.requiresHeadSha) {
     instructions.push(
-      "Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.",
+      "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, do not run this command until an authorized push updates the remote PR head; then replace `$HEAD_SHA` with that pushed commit SHA.",
     );
   }
   if (resolveCommand.requiresDismissMessage) {
@@ -65,19 +65,7 @@ export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): 
   return instructions;
 }
 
-/**
- * Build the CI-triage instruction. The per-conclusion rerun policy (GitHub Actions log
- * excerpts, `gh run view`/`gh run rerun` rules for CANCELLED/STARTUP_FAILURE/external
- * failures) is invariant text keyed on the `[conclusion: …]` tags already rendered in
- * `## Failing checks` — it lives in the pr-shepherd skill's "CI failure triage" playbook
- * instead of being re-emitted every tick. This supersedes the "CI budget rules" example in
- * CLAUDE.md's "Keep skills and loop prompts minimal" section (see that section's amendment
- * note). The `(no runId)` case stays here because it flips `buildFixCompletionInstruction`
- * to a human-handoff terminal state — that trigger, unlike the others, is CLI-decided. The
- * CLI sentence does not claim every failure has a log excerpt to read (only GitHub Actions
- * checks with a runId do — CANCELLED, STARTUP_FAILURE, and external checks may not); that
- * per-kind detail is exactly what the skill playbook table disambiguates.
- */
+/** Build the CI-triage pointer; the skill limits follow-up actions to included evidence. */
 export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   if (checks.length === 0) return [];
   const hasBare = checks.some((c) => !c.runId && !c.detailsUrl);
@@ -86,7 +74,7 @@ export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   const instructions: string[] = [];
   if (hasTriageable) {
     instructions.push(
-      'Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for `gh run view` / `gh run rerun` rules.',
+      'Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for read-only inspection rules.',
     );
   }
   if (hasBare) {
@@ -98,10 +86,30 @@ export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   return instructions;
 }
 
-export function buildFixCompletionInstruction(checks: AgentCheck[]): string {
-  const requiresHumanHandoff = checks.some((check) => !check.runId && !check.detailsUrl);
-  if (requiresHumanHandoff) {
+export function buildFixCompletionInstruction(
+  checks: AgentCheck[],
+  requiresRemoteUpdateAuthorization = false,
+  hasShaGatedReviewMutations = false,
+): string {
+  if (requiresRemoteUpdateAuthorization) {
+    return "`[FIX_CODE]` requires a human handoff for an authorized push after conflict resolution. Shepherd cannot verify the Git credential's push authorization. Stop polling after committing, and resume only after the remote PR head changes.";
+  }
+  const hasUninspectableFailure = checks.some((check) => !check.runId && !check.detailsUrl);
+  const hasCiAuthorizationHandoff = checks.some(
+    (check) =>
+      check.conclusion === "CANCELLED" ||
+      check.conclusion === "STARTUP_FAILURE" ||
+      (check.runId === null && Boolean(check.detailsUrl)) ||
+      (check.runId !== null && !check.logExcerpt?.trim()),
+  );
+  if (hasUninspectableFailure) {
     return "`[FIX_CODE]` requires a human handoff for an uninspectable failing check. Stop polling after escalating, and resume only after human direction.";
+  }
+  if (hasCiAuthorizationHandoff) {
+    return "`[FIX_CODE]` requires a human handoff for a failing check with no authorized follow-up action. Stop polling after escalating, and resume only after human direction.";
+  }
+  if (hasShaGatedReviewMutations) {
+    return "`[FIX_CODE]` is conditional: if you changed code, stop after committing and resume only after an authorized push changes the remote PR head; if you did not change code, complete the authorized review mutations and iterate again with the same options.";
   }
   return "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.";
 }

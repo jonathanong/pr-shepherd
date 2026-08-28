@@ -68,7 +68,7 @@ const mockMarkReviewInlineThreads = vi.mocked(markReviewInlineThreads);
 const BASE_OPTS = { format: "text" as const };
 
 function makeBatchData(overrides: Partial<BatchPrData> = {}): BatchPrData {
-  return {
+  const data: BatchPrData = {
     nodeId: "PR_kgDOAAA",
     number: 42,
     state: "OPEN",
@@ -79,6 +79,15 @@ function makeBatchData(overrides: Partial<BatchPrData> = {}): BatchPrData {
     headRefOid: "abc123",
     headRefName: "feature",
     headRepoWithOwner: "owner/repo",
+    viewerAuthorization: {
+      repositoryPermission: "ADMIN",
+      viewerCanAdminister: true,
+      viewerDidAuthor: true,
+      viewerCanUpdate: true,
+      viewerCanEnableAutoMerge: true,
+      viewerCanEditFiles: true,
+      headRepositoryPermission: "ADMIN",
+    },
     baseRefName: "main",
     reviewRequests: [],
     latestReviews: [],
@@ -91,6 +100,23 @@ function makeBatchData(overrides: Partial<BatchPrData> = {}): BatchPrData {
     branchProtection: null,
     ...overrides,
   };
+  return {
+    ...data,
+    reviewThreads: data.reviewThreads.map((thread) => ({
+      viewerCanReply: true,
+      viewerCanResolve: true,
+      ...thread,
+    })),
+    comments: data.comments.map((comment) => ({ viewerCanMinimize: true, ...comment })),
+    reviewSummaries: data.reviewSummaries.map((review) => ({
+      viewerCanMinimize: true,
+      ...review,
+    })),
+    approvedReviews: data.approvedReviews.map((review) => ({
+      viewerCanMinimize: true,
+      ...review,
+    })),
+  };
 }
 
 function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
@@ -99,6 +125,8 @@ function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
     isResolved: false,
     isOutdated: false,
     isMinimized: false,
+    viewerCanReply: true,
+    viewerCanResolve: true,
     path: "src/foo.ts",
     line: 1,
     startLine: null,
@@ -115,6 +143,7 @@ function makeComment(overrides: Partial<PrComment> = {}): PrComment {
   return {
     id: "c-1",
     isMinimized: false,
+    viewerCanMinimize: true,
     author: "bob",
     authorType: "Unknown" as const,
     body: "nit",

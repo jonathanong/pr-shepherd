@@ -108,14 +108,28 @@ export async function runCheck(
   const minimizedCommentCandidates = batchData.comments.filter(
     (c) => c.isMinimized && !partition.suppressedCommentIds.has(c.id),
   );
+  const deniedRuleAutoResolveCommentIds = new Set(
+    partition.ruleAutoResolveCommentIds.filter(
+      (id) => batchData.comments.find((comment) => comment.id === id)?.viewerCanMinimize !== true,
+    ),
+  );
   const visibleCommentClassification = classifyVisibleComments(
-    batchData.comments.filter((c) => !partition.suppressedCommentIds.has(c.id)),
+    batchData.comments.filter(
+      (c) => !partition.suppressedCommentIds.has(c.id) || deniedRuleAutoResolveCommentIds.has(c.id),
+    ),
     seenMap,
     config.iterate.minimizeComments,
     botUsernames,
   );
+  const deniedRuleAutoResolveThreadIds = new Set(
+    partition.ruleAutoResolveThreadIds.filter(
+      (id) => batchData.reviewThreads.find((thread) => thread.id === id)?.viewerCanResolve !== true,
+    ),
+  );
   const threadVisibility = classifyThreadVisibility(
-    batchData.reviewThreads.filter((t) => !partition.suppressedThreadIds.has(t.id)),
+    batchData.reviewThreads.filter(
+      (t) => !partition.suppressedThreadIds.has(t.id) || deniedRuleAutoResolveThreadIds.has(t.id),
+    ),
     seenMap,
     botUsernames,
   );
@@ -128,8 +142,16 @@ export async function runCheck(
   const firstLookSummaries: typeof batchData.reviewSummaries = [];
   const editedSummaries: typeof batchData.reviewSummaries = [];
   const seenSummaries: typeof batchData.reviewSummaries = [];
+  const deniedRuleAutoResolveReviewSummaryIds = new Set(
+    partition.ruleAutoResolveReviewSummaryIds.filter(
+      (id) =>
+        batchData.reviewSummaries.find((review) => review.id === id)?.viewerCanMinimize !== true,
+    ),
+  );
   const unseenReviewSummaries = batchData.reviewSummaries.filter(
-    (r) => !partition.suppressedReviewSummaryIds.has(r.id),
+    (r) =>
+      !partition.suppressedReviewSummaryIds.has(r.id) ||
+      deniedRuleAutoResolveReviewSummaryIds.has(r.id),
   );
   for (const r of unseenReviewSummaries) {
     const cls = classifyItem(r.id, r.body, seenMap);
@@ -169,7 +191,11 @@ export async function runCheck(
         .filter((t) => partition.suppressedThreadIds.has(t.id))
         .map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
       ...batchData.reviewSummaries
-        .filter((r) => partition.suppressedReviewSummaryIds.has(r.id))
+        .filter(
+          (r) =>
+            partition.suppressedReviewSummaryIds.has(r.id) &&
+            !deniedRuleAutoResolveReviewSummaryIds.has(r.id),
+        )
         .map((r) => markSeen(stateKey, r.id, r.body)),
       ...batchData.changesRequestedReviews
         .filter((r) => partition.suppressedChangesRequestedIds.has(r.id))
@@ -177,11 +203,28 @@ export async function runCheck(
     ]);
     await markReviewInlineThreadMarkers(stateKey, batchData.reviewThreads);
   }
+  const authorizedPartition: BatchPartition = {
+    ...partition,
+    ruleAutoResolveThreadIds: partition.ruleAutoResolveThreadIds.filter(
+      (id) => batchData.reviewThreads.find((thread) => thread.id === id)?.viewerCanResolve === true,
+    ),
+    ruleAutoResolveCommentIds: partition.ruleAutoResolveCommentIds.filter(
+      (id) => batchData.comments.find((comment) => comment.id === id)?.viewerCanMinimize === true,
+    ),
+    ruleAutoResolveReviewSummaryIds: partition.ruleAutoResolveReviewSummaryIds.filter(
+      (id) =>
+        batchData.reviewSummaries.find((review) => review.id === id)?.viewerCanMinimize === true,
+    ),
+  };
   const {
-    threadIds: ruleAutoResolveThreadIds,
+    threadIds: authorizedRuleAutoResolveThreadIds,
     commentIds: ruleAutoResolveCommentIds,
     reviewSummaryIds: ruleAutoResolveReviewSummaryIds,
-  } = await remainingRuleAutoResolveIds(partition, opts.autoMinimizeSuppressed);
+  } = await remainingRuleAutoResolveIds(authorizedPartition, opts.autoMinimizeSuppressed);
+  const ruleAutoResolveThreadIds = [
+    ...authorizedRuleAutoResolveThreadIds,
+    ...deniedRuleAutoResolveThreadIds,
+  ];
   const changesRequestedReviews = changesRequestedReviewVisibility.visible;
   const changesRequestedReviewCount = batchData.changesRequestedReviews.filter(
     (r) => !partition.suppressedChangesRequestedIds.has(r.id),
@@ -227,6 +270,7 @@ export async function runCheck(
     nodeId: batchData.nodeId,
     headSha: batchData.headRefOid,
     repo: `${repo.owner}/${repo.name}`,
+    ...(batchData.viewerAuthorization && { viewerAuthorization: batchData.viewerAuthorization }),
     status,
     baseBranch: batchData.baseRefName,
     mergeStatus,

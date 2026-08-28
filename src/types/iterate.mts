@@ -96,8 +96,8 @@ export interface ResolveCommand {
 }
 
 /**
- * Default fix_code variant: agent applies edits locally, commits, pushes,
- * then runs the pre-built apply command. Emitted under `## Post-fix push`.
+ * Default fix_code variant: agent applies edits locally, commits when needed,
+ * then runs the pre-built apply command. Emitted under `## Post-fix actions`.
  */
 interface FixRebaseAndPush {
   threads: AgentThread[];
@@ -121,9 +121,9 @@ interface FixRebaseAndPush {
   resolveOnlyCommand?: ResolveCommand;
   /** Ordered steps for the model to follow. */
   instructions: string[];
-  /** Run IDs of in-progress GitHub Actions checks. The agent should cancel these before pushing new commits; if it decides not to push (e.g. resolve-only), it may skip cancellation. Empty when all in-progress runs are external status checks or already cancelled. */
+  /** Reserved compatibility field. Always empty because Shepherd cannot verify workflow-cancellation authorization. */
   inProgressRunIds: string[];
-  /** Workflow runs deliberately excluded from cancellation by actions.neverCancelRuns. */
+  /** Reserved compatibility field. Always empty because Shepherd never recommends workflow cancellation. */
   protectedRuns: ProtectedRun[];
   /** Requeue command emitted after merge-group remediation. */
   requeue?: MergeCommandPlan;
@@ -166,10 +166,11 @@ export type IterateResult =
 export interface IterateCommandOptions extends GlobalOptions {
   readyDelaySeconds?: number;
   noAutoMarkReady?: boolean;
+  /** Legacy no-op retained for API compatibility; workflow runs are never cancelled. */
   noAutoCancelActionable?: boolean;
   /** Override stall timeout seconds. Defaults to config.iterate.stallTimeoutMinutes * 60. */
   stallTimeoutSeconds?: number;
-  /** Case-insensitive workflow/check glob patterns Shepherd must not cancel. */
+  /** Legacy per-invocation no-op retained for API compatibility. */
   neverCancelRuns?: string[];
   persistSeen?: boolean; // false skips seen-marker writes (poll discarded ticks)
   /** Shepherd through readiness and emit the exact merge/queue command when ready. */

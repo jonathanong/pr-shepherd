@@ -64,7 +64,7 @@ An unmarked human inline thread authored by the authenticated viewer is replied 
 | Failed job name, failed step, bounded log excerpt                                                                       | [checks.md](checks.md) — omitted for `CANCELLED` and `STARTUP_FAILURE`              |
 | Inline annotations on completed check runs (once per PR)                                                                | [checks.md](checks.md)                                                              |
 | Startup-failure CheckSuites, with REST only when that page is missing or truncated                                      | [graphql.md](graphql.md#startup-failure-checksuites-graphql--actions-rest-fallback) |
-| In-progress / protected / already-cancelled run IDs on `FIX_CODE`                                                       | [actions.md](actions.md)                                                            |
+| Reserved empty run-ID compatibility fields on `FIX_CODE` (no cancellation recommendation)                               | [actions.md](actions.md)                                                            |
 
 ## Mutations the agent is expected to run
 

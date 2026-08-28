@@ -20,7 +20,10 @@ export function classifyVisibleComments(
   const minimizeIds: string[] = [];
   const toMarkSeen: ActionableComment[] = [];
   for (const c of comments.filter((comment) => !comment.isMinimized)) {
-    if (shouldMinimizeAuthor(c.authorType, minimizeComments, c.author, botUsernames)) {
+    if (
+      c.viewerCanMinimize === true &&
+      shouldMinimizeAuthor(c.authorType, minimizeComments, c.author, botUsernames)
+    ) {
       actionable.push(c);
       minimizeIds.push(c.id);
       toMarkSeen.push(c); // prevents re-surfacing as first-look after GitHub marks it minimized

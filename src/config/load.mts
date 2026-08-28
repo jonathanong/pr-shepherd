@@ -61,7 +61,7 @@ interface PrShepherdConfig {
   actions: {
     autoMinimizeSuppressed: boolean;
     autoMarkReady: boolean;
-    /** Case-insensitive glob patterns for workflow/check names Shepherd must not cancel. */
+    /** Legacy-named patterns that keep matching Actions checks visible despite ignoreChecks. */
     neverCancelRuns: string[];
     /** @deprecated Accepted for compatibility, ignored by the loader. */
     autoResolveOutdated?: boolean;

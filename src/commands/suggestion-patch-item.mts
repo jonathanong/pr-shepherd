@@ -2,7 +2,6 @@ import { relative, resolve } from "node:path";
 
 import { getEffectiveCwd } from "../execution-context.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
-import { buildPrShepherdCommand } from "../cli/runner.mts";
 import { parseSuggestion, isCommittableSuggestion } from "../suggestions/parse.mts";
 import { buildUnifiedDiff } from "../suggestions/patch.mts";
 import { getUnsafeSuggestionRangeReason } from "../suggestions/range.mts";
@@ -93,19 +92,12 @@ export function buildSingularInstructions(
     patch.startLine === patch.endLine
       ? `line ${patch.startLine}`
       : `lines ${patch.startLine}–${patch.endLine}`;
-  const resolveCommand = buildPrShepherdCommand([
-    "apply",
-    "review",
-    String(prNumber),
-    "--resolve-thread-ids",
-    patch.threadId,
-  ]).text;
   return [
     `Apply the patch to \`${patch.path}\`: run \`git apply\` with the diff shown above, or edit the file directly using the line range (${range}).`,
     `Stage the file: \`git add -- ${quotePath(patch.path)}\``,
     `Commit: \`${buildCommitCommand(patch)}\``,
-    `Resolve the thread on GitHub: \`${resolveCommand}\``,
-    `Push when ready: \`git push\` (or \`git push --force-with-lease\` after rebasing).`,
+    `Use the originating iterate output for any authorization-checked GitHub review action for thread \`${patch.threadId}\` on PR #${prNumber}.`,
+    "Shepherd cannot verify authorization for the Git credential that would push this branch, so this output does not recommend a push.",
   ];
 }
 
