@@ -44,13 +44,17 @@ describe("toAgentChecks", () => {
   });
 
   it("keeps same-name external checks from distinct commits", () => {
-    const pr = makeCheck(null, "external");
-    const queue = {
+    const first = {
+      ...makeCheck(null, "external"),
+      scope: "merge_group" as const,
+      commitOid: "queue122",
+    };
+    const second = {
       ...makeCheck(null, "external"),
       scope: "merge_group" as const,
       commitOid: "queue123",
     };
-    expect(toAgentChecks([pr, queue])).toHaveLength(2);
+    expect(toAgentChecks([first, second])).toHaveLength(2);
   });
 
   it("handles mixed null and non-null runIds", () => {

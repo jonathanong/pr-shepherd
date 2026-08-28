@@ -176,6 +176,9 @@ export function projectIterateLean(
             result.escalate.thrashHistory.length > 0 && {
               thrashHistory: result.escalate.thrashHistory,
             }),
+          ...(result.escalate.mergeQueueRemoval && {
+            mergeQueueRemoval: result.escalate.mergeQueueRemoval,
+          }),
           suggestion: result.escalate.suggestion,
           humanMessage: result.escalate.humanMessage,
         },

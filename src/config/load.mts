@@ -176,6 +176,8 @@ const SHEPHERD_OWNED_MERGE_FLAGS = [
   "--admin",
   "--body-file",
   "-F",
+  "--help",
+  "-h",
 ];
 
 function parseMergeCommandArgs(value: unknown): string[] {

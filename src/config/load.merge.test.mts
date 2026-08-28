@@ -62,7 +62,17 @@ describe("loadConfig — merge.commandArgs", () => {
     expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain("Shepherd-owned");
   });
 
-  it.each(["--admin", "--body-file", "-F"])("rejects unsafe %s", async (flag) => {
+  it.each([
+    "--admin",
+    "--body-file",
+    "-F",
+    "--help",
+    "--help=true",
+    "--help=false",
+    "-h",
+    "-h=true",
+    "-hwat",
+  ])("rejects unsafe %s", async (flag) => {
     writeRc(`merge:\n  commandArgs:\n    - ${flag}\n    - /sensitive/path\n`);
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     const loadConfig = await freshLoadConfig();
