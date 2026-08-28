@@ -18,15 +18,17 @@ describe("main — iterate text format (fix_code and checks)", () => {
         id: "PRRT_linked",
         path: "src/x.ts",
         line: 5,
-        author: "reviewer",
-        authorType: "Unknown" as const,
+        author: "review-bot[bot]",
+        authorType: "Bot" as const,
+        authorAssociation: "NONE" as const,
         body: "nit",
         url: "https://github.com/owner/repo/pull/1#discussion_r1",
         comments: [
           {
             id: "PRRC_1",
-            author: "reviewer",
-            authorType: "Unknown" as const,
+            author: "review-bot[bot]",
+            authorType: "Bot" as const,
+            authorAssociation: "NONE" as const,
             body: "first full body\nsecond line",
             url: "https://github.com/owner/repo/pull/1#discussion_r1",
           },
@@ -34,8 +36,17 @@ describe("main — iterate text format (fix_code and checks)", () => {
             id: "PRRC_2",
             author: "maintainer",
             authorType: "User" as const,
+            authorAssociation: "OWNER" as const,
             body: "reply body",
             url: "https://github.com/owner/repo/pull/1#discussion_r2",
+          },
+          {
+            id: "PRRC_3",
+            author: "drive-by",
+            authorType: "User" as const,
+            authorAssociation: "NONE" as const,
+            body: "outsider reply",
+            url: "https://github.com/owner/repo/pull/1#discussion_r3",
           },
         ],
       },
@@ -54,16 +65,20 @@ describe("main — iterate text format (fix_code and checks)", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain(
-      "### [threadId=PRRT_linked](https://github.com/owner/repo/pull/1#discussion_r1) — `src/x.ts:5` (@reviewer · Unknown)",
+      "### [threadId=PRRT_linked](https://github.com/owner/repo/pull/1#discussion_r1) — `src/x.ts:5` (@review-bot[bot] · Bot · NONE)",
     );
     expect(out).toContain(
-      "#### [commentId=PRRC_1](https://github.com/owner/repo/pull/1#discussion_r1) (@reviewer · Unknown)",
+      "#### [commentId=PRRC_1](https://github.com/owner/repo/pull/1#discussion_r1) (@review-bot[bot] · Bot · NONE)",
     );
     expect(out).toContain("> first full body\n> second line");
     expect(out).toContain(
-      "#### [commentId=PRRC_2](https://github.com/owner/repo/pull/1#discussion_r2) (@maintainer · User)",
+      "#### [commentId=PRRC_2](https://github.com/owner/repo/pull/1#discussion_r2) (@maintainer · User · OWNER)",
     );
     expect(out).toContain("> reply body");
+    expect(out).toContain(
+      "#### [commentId=PRRC_3](https://github.com/owner/repo/pull/1#discussion_r3) (@drive-by · User · NONE)",
+    );
+    expect(out).toContain("> outsider reply");
     expect(out).toContain(
       "### [commentId=PRRC_linked](https://github.com/owner/repo/pull/1#issuecomment-1) (@bob · Unknown)",
     );
