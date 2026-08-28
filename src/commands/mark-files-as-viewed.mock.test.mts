@@ -48,6 +48,36 @@ describe("runMarkFilesAsViewed", () => {
     expect(result.authorizationSkipped).toBeUndefined();
   });
 
+  it("paginates changed files and applies match selectors", async () => {
+    mockGraphql
+      .mockResolvedValueOnce(
+        filesResponse(["src/a.ts"], { hasNextPage: true, endCursor: "cursor-1" }),
+      )
+      .mockResolvedValueOnce(filesResponse(["docs/guide.md"]));
+
+    const result = await runMarkFilesAsViewed({
+      format: "text",
+      files: [],
+      matchPatterns: ["^docs/", "^missing/"],
+    });
+
+    expect(result.matchedPaths).toEqual(["docs/guide.md"]);
+    expect(result.unmatchedSelectors).toEqual(["--match ^missing/"]);
+    expect(mockGraphql).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports a missing PR discovered during file pagination", async () => {
+    mockGraphql
+      .mockResolvedValueOnce(
+        filesResponse(["src/a.ts"], { hasNextPage: true, endCursor: "cursor-1" }),
+      )
+      .mockResolvedValueOnce({ data: { repository: { pullRequest: null } } });
+
+    await expect(runMarkFilesAsViewed({ format: "text", files: ["src/a.ts"] })).rejects.toThrow(
+      "PR #42 not found",
+    );
+  });
+
   it("errors when no PR number can be resolved", async () => {
     mockGetCurrentPrNumber.mockResolvedValueOnce(null);
     await expect(runMarkFilesAsViewed({ format: "text", files: ["src/a.ts"] })).rejects.toThrow(
@@ -62,7 +92,10 @@ describe("runMarkFilesAsViewed", () => {
   });
 });
 
-function filesResponse(files: Array<string | { path: string; viewerViewedState?: string | null }>) {
+function filesResponse(
+  files: Array<string | { path: string; viewerViewedState?: string | null }>,
+  pageInfo = { hasNextPage: false, endCursor: null as string | null },
+) {
   return {
     data: {
       repository: {
@@ -70,7 +103,7 @@ function filesResponse(files: Array<string | { path: string; viewerViewedState?:
           id: "PR_1",
           number: 42,
           files: {
-            pageInfo: { hasNextPage: false, endCursor: null },
+            pageInfo,
             nodes: files.map((file) =>
               typeof file === "string" ? { path: file, viewerViewedState: "UNVIEWED" } : file,
             ),
