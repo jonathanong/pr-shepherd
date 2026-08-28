@@ -13,10 +13,40 @@ export interface RawBranchProtectionRule {
   requiredDeploymentEnvironments?: string[] | null;
 }
 
+import type { RawContextNode } from "./batch-raw-types.mts";
+
+interface RawCheckCommit {
+  oid: string;
+  committedDate?: string;
+  parents?: { nodes: Array<{ oid: string }> };
+  statusCheckRollup: {
+    contexts: {
+      pageInfo: { hasNextPage: boolean; endCursor: string | null };
+      nodes: Array<RawContextNode | null>;
+    };
+  } | null;
+}
+
 interface RawMergeQueueEntry {
   position: number;
   state: string;
   estimatedTimeToMerge: number | null;
+  headCommit?: RawCheckCommit | null;
+  enqueuedAt?: string;
+  enqueuer?: { login: string } | null;
+}
+
+interface RawAutoMergeRequest {
+  enabledAt: string;
+  mergeMethod: string;
+  enabledBy?: { login: string } | null;
+}
+
+interface RawMergeQueueRemoval {
+  reason: string | null;
+  actor?: { login: string } | null;
+  createdAt: string;
+  beforeCommit?: RawCheckCommit | null;
 }
 
 interface RawStack {
@@ -50,6 +80,9 @@ export interface RawPrMergeFields {
   isInMergeQueue?: boolean;
   isMergeQueueEnabled?: boolean;
   mergeQueueEntry?: RawMergeQueueEntry | null;
+  autoMergeRequest?: RawAutoMergeRequest | null;
+  mergeQueueRemovals?: { nodes: RawMergeQueueRemoval[] } | null;
+  mergeQueueAdditions?: { nodes: Array<{ createdAt: string }> } | null;
   stack?: RawStack | null;
   stackEntry?: { position: number } | null;
   baseRef?: RawBaseRef | null;

@@ -13,6 +13,7 @@ describe("iterateResultToExitCode", () => {
     ["mark_ready", EXIT.MARK_READY],
     ["fix_code", EXIT.FIX_CODE],
     ["escalate", EXIT.ESCALATE],
+    ["merge", EXIT.MERGE],
   ])("%s -> %d", (action, code) => {
     expect(iterateResultToExitCode(makeIterateResult(action))).toBe(code);
   });

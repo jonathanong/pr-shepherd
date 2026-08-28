@@ -1,4 +1,4 @@
-import type { BatchPrData, CheckRun, PrComment, Review, ReviewThread } from "../types.mts";
+import type { BatchPrData, PrComment, Review, ReviewThread } from "../types.mts";
 import type {
   RawPr,
   RawThread,
@@ -10,14 +10,20 @@ import type {
 import {
   mapAuthorType,
   parseCreatedAt,
-  mapStatusContextState,
   latestApprovedLogins,
   isReviewStale,
-  mapCheckRunNode,
 } from "./batch-parser-helpers.mts";
+import { parseCheckNodes } from "./batch-parse-checks.mts";
+import { requireContextNodes } from "./batch-response.mts";
 import { buildPrActivitySummary } from "./activity.mts";
 import { parseBranchProtection } from "./branch-protection.mts";
-import { parseBranchRules, parseMergeQueueEntry, parseStack } from "./batch-parsers-rules.mts";
+import {
+  parseAutoMergeRequest,
+  parseBranchRules,
+  parseLatestMergeQueueRemoval,
+  parseMergeQueueEntry,
+  parseStack,
+} from "./batch-parsers-rules.mts";
 
 function parseReviewNode(r: RawReview | RawReviewSummary): Review {
   const base: Review = {
@@ -120,30 +126,21 @@ export function parseRawPr(
     .filter((r) => !r.isMinimized)
     .map((r) => parseReviewNode(r));
 
-  const checks = rawCheckNodes.flatMap<CheckRun>((node) => {
-    if (node.__typename === "CheckRun") {
-      return [mapCheckRunNode(node)];
-    }
-    if (node.__typename === "StatusContext") {
-      const { status, conclusion } = mapStatusContextState(node.state);
-      const summary = node.description?.trim() || undefined;
-      const createdAtUnix = node.createdAt ? parseCreatedAt(node.createdAt) : undefined;
-      return [
-        {
-          name: node.context,
-          status,
-          conclusion,
-          source: "status_context",
-          detailsUrl: node.targetUrl ?? "",
-          event: null,
-          runId: null,
-          ...(createdAtUnix !== undefined && { createdAtUnix }),
-          ...(summary !== undefined && { summary }),
-        },
-      ];
-    }
-    return [];
-  });
+  const checks = parseCheckNodes(rawCheckNodes);
+  const queueHead = raw.mergeQueueEntry?.headCommit;
+  const removedQueueHead = raw.mergeQueueRemovals?.nodes[0]?.beforeCommit;
+  const mergeQueueChecks = parseCheckNodes(
+    queueHead?.statusCheckRollup
+      ? requireContextNodes(queueHead.statusCheckRollup.contexts.nodes)
+      : undefined,
+    queueHead?.oid,
+  );
+  const removedMergeQueueChecks = parseCheckNodes(
+    removedQueueHead?.statusCheckRollup
+      ? requireContextNodes(removedQueueHead.statusCheckRollup.contexts.nodes)
+      : undefined,
+    removedQueueHead?.oid,
+  );
 
   return {
     nodeId: raw.id,
@@ -170,6 +167,16 @@ export function parseRawPr(
     isInMergeQueue: raw.isInMergeQueue ?? false,
     isMergeQueueEnabled: raw.isMergeQueueEnabled ?? false,
     mergeQueueEntry: parseMergeQueueEntry(raw.mergeQueueEntry),
+    autoMergeRequest: parseAutoMergeRequest(raw.autoMergeRequest),
+    latestMergeQueueRemoval: parseLatestMergeQueueRemoval(raw),
+    ...(mergeQueueChecks.length > 0 && { mergeQueueChecks }),
+    ...(queueHead?.statusCheckRollup?.contexts.pageInfo.hasNextPage && {
+      mergeQueueChecksIncomplete: true as const,
+    }),
+    ...(removedMergeQueueChecks.length > 0 && { removedMergeQueueChecks }),
+    ...(removedQueueHead?.statusCheckRollup?.contexts.pageInfo.hasNextPage && {
+      removedMergeQueueChecksIncomplete: true as const,
+    }),
     stack: parseStack(raw),
     activity: buildPrActivitySummary(
       raw,

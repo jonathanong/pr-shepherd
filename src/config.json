@@ -36,6 +36,9 @@
   "mergeStatus": {
     "blockingReviewerLogins": ["copilot"]
   },
+  "merge": {
+    "commandArgs": []
+  },
   "actions": {
     "autoMinimizeSuppressed": true,
     "autoMarkReady": true,

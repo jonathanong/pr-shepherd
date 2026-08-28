@@ -66,7 +66,24 @@ export async function runCheck(
     ? []
     : await fetchStartupFailureChecks(repo, batchData.headRefOid, prNumber);
   const allChecks = mergeStartupFailureChecks(batchData.checks, startupFailureChecks);
-  const classifiedChecks = classifyChecks(allChecks);
+  const classifiedPrChecks = classifyChecks(allChecks);
+  const latestRemoval = batchData.latestMergeQueueRemoval;
+  const headUpdatedAfterRemoval = Boolean(
+    latestRemoval &&
+    latestRemoval.beforeCommitParentOids &&
+    !latestRemoval.beforeCommitParentOids.includes(batchData.headRefOid),
+  );
+  const queueRawChecks = batchData.isInMergeQueue
+    ? (batchData.mergeQueueChecks ?? [])
+    : latestRemoval && !headUpdatedAfterRemoval
+      ? (batchData.removedMergeQueueChecks ?? [])
+      : [];
+  // Keep supersession grouping commit-local, but accept merge_group only for the
+  // synthetic queue-commit source.
+  const classifiedQueueChecks = classifyChecks(queueRawChecks, {
+    additionalRelevantEvents: ["merge_group"],
+  });
+  const classifiedChecks = [...classifiedPrChecks, ...classifiedQueueChecks];
   const verdict = getCiVerdict(classifiedChecks);
   const passing = classifiedChecks.filter((c) => c.category === "passed");
   const failing = classifiedChecks.filter((c) => c.category === "failing");
@@ -196,9 +213,19 @@ export async function runCheck(
     }
   }
   const blockedByFilteredCheck = isBlockedByFilteredCheck(mergeStatus, verdict);
+  const queueCommit = batchData.isInMergeQueue
+    ? batchData.mergeQueueEntry?.headCommitOid
+    : batchData.latestMergeQueueRemoval?.beforeCommitOid;
+  const hasQueueState = Boolean(
+    batchData.isMergeQueueEnabled ||
+    batchData.isInMergeQueue ||
+    batchData.autoMergeRequest ||
+    batchData.latestMergeQueueRemoval,
+  );
   return {
     pr: prNumber,
     nodeId: batchData.nodeId,
+    headSha: batchData.headRefOid,
     repo: `${repo.owner}/${repo.name}`,
     status,
     baseBranch: batchData.baseRefName,
@@ -240,6 +267,24 @@ export async function runCheck(
       : undefined),
     branchProtection: batchData.branchProtection,
     activity: batchData.activity,
+    ...(hasQueueState && {
+      mergeQueue: {
+        enabled: Boolean(batchData.isMergeQueueEnabled),
+        inQueue: Boolean(batchData.isInMergeQueue),
+        ...(batchData.autoMergeRequest && { autoMergeRequest: batchData.autoMergeRequest }),
+        ...(batchData.mergeQueueEntry && { entry: batchData.mergeQueueEntry }),
+        ...(batchData.latestMergeQueueRemoval && {
+          latestRemoval: batchData.latestMergeQueueRemoval,
+        }),
+        ...(queueCommit && { checkCommitOid: queueCommit }),
+        ...((batchData.isInMergeQueue
+          ? batchData.mergeQueueChecksIncomplete
+          : batchData.removedMergeQueueChecksIncomplete) && {
+          checksIncomplete: true as const,
+        }),
+        ...(headUpdatedAfterRemoval && { headUpdatedAfterRemoval: true as const }),
+      },
+    }),
   };
 }
 

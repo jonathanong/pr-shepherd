@@ -14,6 +14,7 @@ import { numberInstructions } from "./iterate-instructions.mts";
 import { renderCheckAnnotation, renderProtectedRun } from "./fix-formatter-extra.mts";
 import { isFailingAgentCheck } from "../checks/conclusions.mts";
 import type { IterateResultFixCode } from "../types.mts";
+import { renderMergeCommand } from "../commands/iterate/merge.mts";
 
 export function formatFixCodeResult(header: string, result: IterateResultFixCode): string {
   const sections: string[] = [header];
@@ -70,7 +71,10 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
           ? `external \`${ch.detailsUrl}\``
           : "(no runId)";
       const conclusionTag = ch.conclusion !== null ? ` [conclusion: ${ch.conclusion}]` : "";
-      const lines = [`- ${locator} — \`${workflowPrefix}${jobLabel}\`${conclusionTag}`];
+      const scopeTag = ch.scope
+        ? ` [scope: ${ch.scope}${ch.commitOid ? `, commit: ${ch.commitOid}` : ""}]`
+        : "";
+      const lines = [`- ${locator} — \`${workflowPrefix}${jobLabel}\`${conclusionTag}${scopeTag}`];
       if (ch.conclusion !== "CANCELLED") {
         if (ch.failedStep) lines.push(`  > ${ch.failedStep}`);
         if (ch.summary) lines.push(`  > ${ch.summary}`);
@@ -175,14 +179,19 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
   if (result.fix.resolveCommand.hasMutations) {
     postFixLines.push(`- apply review: \`${renderResolveCommand(result.fix.resolveCommand)}\``);
   }
+  if (result.fix.requeue) {
+    postFixLines.push(`- requeue: \`${renderMergeCommand(result.fix.requeue.command)}\``);
+    if (result.fix.requeue.queueApiFallbackCommand) {
+      postFixLines.push(
+        `- requeue API fallback: \`${renderMergeCommand(result.fix.requeue.queueApiFallbackCommand)}\``,
+      );
+    }
+  }
   sections.push(postFixLines.join("\n"));
-
   sections.push("## Instructions");
   sections.push(numberInstructions(result.fix.instructions));
-
   return joinSections(sections);
 }
-
 function indentBlockquote(body: string, indent: string): string {
   return blockquote(body)
     .split("\n")

@@ -84,6 +84,8 @@ export function buildRelevantChecks(report: ShepherdReport): RelevantCheck[] {
         runId: c.runId,
         detailsUrl: c.detailsUrl || null,
         ...(c.workflowName !== undefined && { workflowName: c.workflowName }),
+        ...(c.scope !== undefined && { scope: c.scope }),
+        ...(c.commitOid !== undefined && { commitOid: c.commitOid }),
         summary: c.summary,
       },
     ];
@@ -103,6 +105,8 @@ export function buildRelevantChecks(report: ShepherdReport): RelevantCheck[] {
         ...(c.summary !== undefined && { summary: c.summary }),
         ...(c.logExcerpt !== undefined && { logExcerpt: c.logExcerpt }),
         ...(c.annotations !== undefined && { annotations: c.annotations }),
+        ...(c.scope !== undefined && { scope: c.scope }),
+        ...(c.commitOid !== undefined && { commitOid: c.commitOid }),
       },
     ];
   });
@@ -117,10 +121,11 @@ export function buildActiveChecks(report: ShepherdReport): ActiveCheck[] {
     detailsUrl: c.detailsUrl || null,
     ...(c.workflowName !== undefined && { workflowName: c.workflowName }),
     ...(c.summary !== undefined && { summary: c.summary }),
+    ...(c.scope !== undefined && { scope: c.scope }),
+    ...(c.commitOid !== undefined && { commitOid: c.commitOid }),
   }));
 }
 
-// Best-effort: cancelling a completed run is a no-op, not an error.
 export async function tryCancelRun(
   runId: string,
   owner: string,
@@ -131,14 +136,12 @@ export async function tryCancelRun(
     return runId;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    // GitHub returns 409 when the run reached a terminal state — expected, not worth logging.
     if (/409|already completed|cannot cancel a workflow run that is completed/i.test(msg))
       return null;
     process.stderr.write(`pr-shepherd: cancel run ${runId} failed (ignored): ${msg}\n`);
     return null;
   }
 }
-
 export async function getCurrentHeadSha(): Promise<string | null> {
   try {
     const { stdout } = await execFile("git", ["rev-parse", "HEAD"], {

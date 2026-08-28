@@ -1,0 +1,58 @@
+query CommitCheckContexts($owner: String!, $repo: String!, $oid: String!, $cursor: String) {
+  repository(owner: $owner, name: $repo) {
+    object(expression: $oid) {
+      __typename
+      ... on Commit {
+        oid
+        statusCheckRollup {
+          contexts(first: 100, after: $cursor) {
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            nodes {
+              __typename
+              ... on CheckRun {
+                id
+                name
+                status
+                conclusion
+                detailsUrl
+                completedAt
+                startedAt
+                title
+                summary
+                annotations(first: 1) {
+                  nodes {
+                    message
+                  }
+                }
+                checkSuite {
+                  createdAt
+                  updatedAt
+                  workflowRun {
+                    event
+                    createdAt
+                    updatedAt
+                    workflow {
+                      name
+                      databaseId
+                    }
+                    databaseId
+                  }
+                }
+              }
+              ... on StatusContext {
+                context
+                state
+                description
+                targetUrl
+                createdAt
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

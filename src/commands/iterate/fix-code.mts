@@ -30,6 +30,7 @@ import { annotationMarkerBody, checksWithActionableAnnotations } from "../check-
 import { threadTranscriptBody } from "../../threads/transcript.mts";
 import { isHumanAuthor, isConfiguredBotAuthor } from "../../comments/authors.mts";
 import { loadConfig } from "../../config/load.mts";
+import { buildMergeCommandPlan } from "./merge.mts";
 import type {
   EscalateDetails,
   IterateCommandOptions,
@@ -269,6 +270,25 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     behindBaseHint,
     isBehind,
   );
+  const hasMergeGroupFailure = failingChecks.some((check) => check.scope === "merge_group");
+  const needsRequeue = Boolean(
+    hasMergeGroupFailure || report.mergeQueue?.inQueue || report.mergeQueue?.latestRemoval,
+  );
+  const requeue =
+    opts.merge && needsRequeue
+      ? buildMergeCommandPlan({
+          pr: report.pr,
+          repo: report.repo,
+          nodeId: report.nodeId,
+          headSha: "$HEAD_SHA",
+          queue: true,
+        })
+      : undefined;
+  if (requeue) {
+    instructions.push(
+      "After all fixes and review mutations, replace `$HEAD_SHA` in the requeue commands with the full pushed PR-head SHA (or `$(git rev-parse HEAD)`). If GitHub no longer reports the PR in the merge queue, run the `requeue:` command shown above; if the gh CLI reports that auto-merge is disabled, run `requeue API fallback:` instead.",
+    );
+  }
   const prospectiveResult = {
     ...base,
     baseBranch: baseLookup.branch,
@@ -290,6 +310,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       firstLookComments,
       inProgressRunIds,
       protectedRuns,
+      ...(requeue && { requeue }),
     },
     cancelled,
   } as IterateResult;

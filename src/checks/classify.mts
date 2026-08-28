@@ -25,9 +25,15 @@ import picomatch from "picomatch";
  * @param checks Raw check runs from the batch query.
  * @returns Classified checks. "filtered" items were excluded from the tally.
  */
-export function classifyChecks(checks: CheckRun[]): ClassifiedCheck[] {
+export function classifyChecks(
+  checks: CheckRun[],
+  opts: { additionalRelevantEvents?: string[] } = {},
+): ClassifiedCheck[] {
   const config = loadConfig();
-  const relevantEvents = new Set(config.checks.ciTriggerEvents);
+  const relevantEvents = new Set([
+    ...config.checks.ciTriggerEvents,
+    ...(opts.additionalRelevantEvents ?? []),
+  ]);
   const isIgnored = buildMatcher(config.ignoreChecks ?? []);
   const isProtected = buildMatcher(config.actions.neverCancelRuns ?? []);
   const protectedRunIds = buildProtectedRunIds(checks, isProtected);

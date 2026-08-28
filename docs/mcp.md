@@ -177,6 +177,7 @@ Hosts namespace tool names with the server name (`pr-shepherd__iterate` in Grok,
 | `stallTimeoutSeconds`    | non-negative number             | no       | Override the stall timeout.                                     |
 | `noAutoMarkReady`        | boolean                         | no       | Disable automatic draft → ready.                                |
 | `noAutoCancelActionable` | boolean                         | no       | Disable cancellation of stale in-progress runs.                 |
+| `merge`                  | boolean                         | no       | Shepherd to readiness and emit merge/queue commands.            |
 | `neverCancelRuns`        | string array                    | no       | Extra workflow/check glob patterns Shepherd must not cancel.    |
 
 The result is an `IterateResult`. Action semantics, instruction text, and field contracts live in [actions.md](actions.md).
@@ -236,7 +237,8 @@ MCP clients own polling. Do not expect a long-running poll tool. MCP `iterate` h
 2. Follow the returned `## Instructions`.
 3. For `WAIT` or `MARK_READY`, call `iterate` again when the host is ready to recheck.
 4. For `FIX_CODE`, finish the code/review work, then call `iterate` again.
-5. Stop on `CANCEL` or `ESCALATE`.
+5. For `MERGE`, run the returned command (and only the conditionally documented fallback), then call `iterate` again.
+6. Stop on `CANCEL` or `ESCALATE`.
 
 The shell command `pr-shepherd [PR]` is the bounded poll dispatcher. It is not an MCP tool. See [skills.md](skills.md).
 

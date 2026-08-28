@@ -35,4 +35,6 @@ export interface ActiveCheck {
   detailsUrl: string | null;
   workflowName?: string;
   summary?: string;
+  scope?: "merge_group";
+  commitOid?: string;
 }

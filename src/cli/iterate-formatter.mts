@@ -7,6 +7,7 @@ import {
   numberInstructions,
 } from "./iterate-instructions.mts";
 import { formatMergeRequirementLines } from "../merge-status/requirements-format.mts";
+import { appendMergeQueueHeader, formatMergeAction } from "./iterate-merge-formatter.mts";
 
 function formatActivityLine(result: IterateResult): string | null {
   const activity = result.activity ?? {
@@ -101,7 +102,6 @@ export function formatIterateResult(
 
   // Surface an explicit `--ready-delay` override (set only when the user passed the flag)
   // so the active settle window stays visible on every tick. Replaces the rerun command
-  // that previously carried the suffix in the (now removed) recheck instruction.
   if (readyDelaySuffix) {
     summaryLine += ` · **ready-delay** \`${readyDelaySuffix}\` (override)`;
   }
@@ -141,6 +141,7 @@ export function formatIterateResult(
     const names = result.supersededNames.map((n) => "`" + n + "`").join(", ");
     headerLines.push(`**superseded** ${names}`);
   }
+  appendMergeQueueHeader(headerLines, result);
   const activityLine = formatActivityLine(result);
   if (activityLine) headerLines.push(activityLine);
   const header = headerLines.join("\n");
@@ -159,6 +160,9 @@ export function formatIterateResult(
         adaptIterateLog(result.log),
         `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
       ]);
+
+    case "merge":
+      return formatMergeAction(header, result);
 
     case "cancel": {
       const cancelHeaderLines = [`${heading} — ${result.reason}`, "", baseLine, summaryLine];

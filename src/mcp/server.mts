@@ -43,6 +43,7 @@ const iterateInputSchema = z.object({
   readyDelaySeconds: z.number().nonnegative().optional(),
   stallTimeoutSeconds: z.number().nonnegative().optional(),
   noAutoMarkReady: z.boolean().optional(),
+  merge: z.boolean().optional(),
   noAutoCancelActionable: z.boolean().optional(),
   neverCancelRuns: z.array(z.string()).optional(),
 });

@@ -19,6 +19,23 @@ export interface MergeQueueEntryStatus {
   position: number;
   state: string;
   estimatedTimeToMerge: number | null;
+  headCommitOid?: string;
+  enqueuedAtUnix?: number;
+  enqueuer?: string;
+}
+
+export interface AutoMergeRequestStatus {
+  enabledAtUnix: number;
+  mergeMethod: string;
+  enabledBy?: string;
+}
+
+export interface MergeQueueRemovalStatus {
+  reason: string | null;
+  actor?: string;
+  createdAtUnix: number;
+  beforeCommitOid?: string;
+  beforeCommitParentOids?: string[];
 }
 
 export interface StackStatus {
@@ -34,6 +51,8 @@ export interface BatchPrMergeFields {
   isInMergeQueue?: boolean;
   isMergeQueueEnabled?: boolean;
   mergeQueueEntry?: MergeQueueEntryStatus | null;
+  autoMergeRequest?: AutoMergeRequestStatus | null;
+  latestMergeQueueRemoval?: MergeQueueRemovalStatus | null;
   stack?: StackStatus | null;
 }
 

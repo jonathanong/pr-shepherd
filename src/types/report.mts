@@ -11,6 +11,7 @@ import type { ClassifiedCheck, TriagedCheck } from "./check-classification.mts";
 import type { AgentThreadComment } from "./agent-thread.mts";
 import type { CheckAnnotation } from "./check-annotations.mts";
 import type { PrActivitySummary } from "./activity.mts";
+import type { MergeQueueReport } from "./merge-queue.mts";
 
 export interface FirstLookThread extends ReviewThread {
   firstLookStatus: "outdated" | "resolved" | "minimized";
@@ -39,6 +40,8 @@ export interface ShepherdReport {
   pr: number;
   /** GitHub node ID of the PR — used for mutations (e.g. markPullRequestReadyForReview). */
   nodeId: string;
+  /** GitHub PR head OID from the same batch used to decide the action. */
+  headSha?: string;
   repo: string;
   status: ShepherdStatus;
   /** PR base branch from the GraphQL batch. */
@@ -90,6 +93,7 @@ export interface ShepherdReport {
   /** Branch protection rule for the PR's base branch. Null when no rule exists or the base ref is unavailable. */
   branchProtection: import("./github.mts").BranchProtection | null;
   activity?: PrActivitySummary;
+  mergeQueue?: MergeQueueReport;
 }
 
 export interface ResolveOptions {
@@ -147,6 +151,8 @@ export interface AgentCheck {
   logExcerpt?: string;
   annotations?: CheckAnnotation[];
   annotationOnly?: true; // annotation carrier from a non-failing check bucket
+  scope?: "merge_group";
+  commitOid?: string;
 }
 
 /**
@@ -172,6 +178,8 @@ export interface RelevantCheck {
   logExcerpt?: string;
   /** Marker-gated inline annotations from this check. */
   annotations?: CheckAnnotation[];
+  scope?: "merge_group";
+  commitOid?: string;
 }
 
 export interface GlobalOptions {

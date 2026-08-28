@@ -11,6 +11,7 @@ Iterate flags:
   --stall-timeout <duration>     Escalate repeated unchanged failures after this duration. Bare number = minutes. 0 disables.
   --no-auto-mark-ready           Do not convert draft PRs to ready for review.
   --no-auto-cancel-actionable    Do not cancel in-progress runs before actionable fixes.
+  --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
   --format text|json             Output Markdown text or JSON. Default: text.
   --verbose                      Include verbose iterate fields.
   --help, -h                     Print this help and exit before GitHub, git, config, or log I/O.
@@ -23,6 +24,7 @@ Actions:
   FIX_CODE    Agent action is required; follow the instructions, then continue polling.
   CANCEL      Stop polling: merged/closed or ready-delay elapsed.
   ESCALATE    Stop polling until a human provides direction.
+  MERGE       Run the emitted merge/queue command, then continue monitoring.
 
 Exit codes:
   0   CANCEL (merged or ready-delay elapsed)
@@ -31,6 +33,7 @@ Exit codes:
   12  FIX_CODE
   13  ESCALATE
   14  CANCEL (closed without merging)
+  15  MERGE
   A command/validation/GitHub failure exits with a sysexits.h code instead (see docs/exit-codes.md).`;
 
 export const POLL_USAGE = `pr-shepherd poll
@@ -40,7 +43,7 @@ final tick to stdout.
 Poll exits as soon as iterate returns MARK_READY, CANCEL, or ESCALATE, or when timeout
 returns the last WAIT result. FIX_CODE starts a --debounce settle window (default 1m): poll keeps
 iterating at --interval, then runs one more tick after the window and returns that result.
-With --until-terminal, poll also continues through MARK_READY.
+With --until-terminal or --merge, poll also continues through MARK_READY.
 
 Usage:
   pr-shepherd poll [PR] [poll-flags] [iterate-flags]
@@ -57,6 +60,7 @@ Forwarded iterate flags:
   --stall-timeout <duration>     Escalate repeated unchanged failures after this duration. Bare number = minutes. 0 disables.
   --no-auto-mark-ready           Do not convert draft PRs to ready for review.
   --no-auto-cancel-actionable    Do not cancel in-progress runs before actionable fixes.
+  --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
   --format text|json             Output Markdown text or JSON. Default: text.
   --verbose                      Include verbose iterate fields and detailed per-tick lines.
   --help, -h                     Print this help and exit before GitHub, git, config, or log I/O.
@@ -66,7 +70,7 @@ for --interval/--timeout/--debounce, minutes for --ready-delay/--stall-timeout);
 an explicit unit (4.5m).
 Each WAIT tick writes an explicit still-running line to stderr by default; --quiet-status prints only changed WAIT snapshots, and --verbose emits detailed per-tick lines.
 FIX_CODE debounce writes a remaining-seconds line to stderr. --timeout does not cut an in-flight debounce short.
-With --until-terminal, --timeout is ignored for WAIT ticks and polling continues until FIX_CODE, CANCEL, or ESCALATE.
+With --until-terminal or --merge, --timeout is ignored for WAIT ticks and polling continues until FIX_CODE, MERGE, CANCEL, or ESCALATE.
 
 Exit codes: same as iterate (the final tick's action/reason decides the code).
   0   CANCEL (merged or ready-delay elapsed)
@@ -75,6 +79,7 @@ Exit codes: same as iterate (the final tick's action/reason decides the code).
   12  FIX_CODE
   13  ESCALATE
   14  CANCEL (closed without merging)
+  15  MERGE
   A command/validation/GitHub failure exits with a sysexits.h code instead (see docs/exit-codes.md).`;
 
 /** Public help page for the default PR polling invocation. */

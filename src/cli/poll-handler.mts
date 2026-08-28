@@ -62,11 +62,12 @@ export async function handlePoll(args: string[]): Promise<void> {
     stallTimeoutSeconds: flags.stallTimeoutSeconds,
     noAutoMarkReady: flags.noAutoMarkReady,
     noAutoCancelActionable: flags.noAutoCancelActionable,
+    merge: flags.merge,
     intervalSeconds,
     timeoutSeconds,
     debounceSeconds,
     quietStatus: hasFlag(extra, "--quiet-status"),
-    untilTerminal: hasFlag(extra, "--until-terminal"),
+    untilTerminal: hasFlag(extra, "--until-terminal") || flags.merge,
   });
 
   emitIterateResult(result, {

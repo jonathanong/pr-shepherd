@@ -13,7 +13,7 @@ import { createPrShepherd } from "pr-shepherd";
 
 const shepherd = createPrShepherd({ cwd: "/path/to/repo" });
 
-const tick = await shepherd.iterate({ pr: 42 });
+const tick = await shepherd.iterate({ pr: 42, merge: true });
 const applied = await shepherd.apply({
   pr: 42,
   operations: [

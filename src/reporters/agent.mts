@@ -75,6 +75,8 @@ export function toAgentCheck(c: TriagedCheck): AgentCheck {
     ...(c.summary !== undefined && { summary: c.summary }),
     ...(c.logExcerpt !== undefined && { logExcerpt: c.logExcerpt }),
     ...(c.annotations !== undefined && { annotations: c.annotations }),
+    ...(c.scope !== undefined && { scope: c.scope }),
+    ...(c.commitOid !== undefined && { commitOid: c.commitOid }),
   };
 }
 

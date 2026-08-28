@@ -6,7 +6,7 @@ Each `pr-shepherd iterate` invocation returns exactly one action. The default `p
 
 The default output format is Markdown — what the skill receives from the default poll dispatcher and what direct CLI users see. `--format=json` emits the same action data as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
 
-The CLI's default command accepts `--interval`/`--timeout`/`--debounce`/`--quiet-status` (e.g. `pr-shepherd <PR> --interval 60s --timeout 4.5m --quiet-status`), waits while the PR remains in `[WAIT]`, and returns on `MARK_READY`, `CANCEL`, or `ESCALATE`. Each ordinary `WAIT` tick writes an explicit still-running line to stderr; the final action remains the only stdout result. If `--timeout` expires during WAIT polling, poll returns that final `WAIT` result. `FIX_CODE` is delayed by `--debounce` (default 1m, `0` disables): poll keeps iterating at `--interval` without printing those ticks, then runs one more iterate after the window and returns that result so later review comments and CI failures batch into the same agent-facing tick. Debounce ticks set `persistSeen: false` — seen markers and first-look suppression wait for the post-window tick. `--quiet-status` keeps unchanged WAIT ticks out of agent context. MCP callers invoke one `iterate` tick at a time (no debounce) and let their host schedule the next call.
+The CLI's default command accepts `--interval`/`--timeout`/`--debounce`/`--quiet-status` (e.g. `pr-shepherd <PR> --interval 60s --timeout 4.5m --quiet-status`), waits while the PR remains in `[WAIT]`, and returns on an agent-facing action. With `--merge`, it continues through `MARK_READY` and returns `MERGE` when the ready-delay completes. Each ordinary `WAIT` tick writes an explicit still-running line to stderr; the final action remains the only stdout result. If `--timeout` expires during WAIT polling, poll returns that final `WAIT` result. `FIX_CODE` is delayed by `--debounce` (default 1m, `0` disables): poll keeps iterating at `--interval` without printing those ticks, then runs one more iterate after the window and returns that result so later review comments and CI failures batch into the same agent-facing tick. Debounce ticks set `persistSeen: false` — seen markers and first-look suppression wait for the post-window tick. `--quiet-status` keeps unchanged WAIT ticks out of agent context. MCP callers invoke one `iterate` tick at a time (no debounce) and let their host schedule the next call.
 
 Command examples call `pr-shepherd` directly everywhere a follow-up command is emitted.
 
@@ -27,6 +27,9 @@ Conversations Resolved: <Yes|No> [Required|Not Required]
 [**ignored** `<check-name>`, …]
 [**superseded** `<check-name>`, …]
 [**activity** <N> commits · <N> review rounds[ · <N> review items since latest commit][ · active: `<check>`, …]]
+[**merge queue** enabled `<bool>` · inQueue `<bool>`[ · state `<state>` · position `<N>`][ · checkCommit `<oid>`]]
+[**auto-merge** method `<method>` · enabledAtUnix `<unix>`[ · by `@<login>`]]
+[**queue removal** reason `<reason>` · createdAtUnix `<unix>`[ · actor `@<login>`][ · commit `<oid>`][ · parents `<oid,...>`]]
 
 <action-specific body>
 
@@ -61,7 +64,7 @@ Load-bearing conventions (the iterate skill depends on these):
 1. Line 1 is always an H1 heading of the form `# PR #<N> [<ACTION>]`. The action tag identifies the output for logging and validation — behavior is driven by the `## Instructions` section, not by dispatching on the tag.
 2. Lines 3–4 carry the base fields (status, merge, state, repo, summary). In lean mode, fields at their trivial default are omitted; `--verbose` restores the full scalar header/summary line in Markdown. JSON verbose mode returns the complete `IterateResult` including fields not present in Markdown (e.g. `baseBranch`, `checks` on all actions); Markdown is structurally lossy relative to JSON and `--verbose` does not close that gap.
 3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … — that tells the agent exactly what to do. `## Instructions` remains the entry point and the skill needs no dispatch table of its own. Some steps are a one-line pointer naming an invariant procedure instead of inlining it (e.g. `See "CI failure triage" in the pr-shepherd skill`). The pointed-to `## Playbooks` section in the skill is fixed reference material, not per-tick policy — following `## Instructions` and applying the named playbook when pointed to it is still the whole dispatch story.
-4. Under `[FIX_CODE]`, the `## Post-fix push` section has an `` apply review: `<command>` `` bullet (and an optional `` resolve-only: `<command>` `` bullet when bot resolve/minimize is split from replies). The instructions reference those bullets so the skill strips backticks and runs the command.
+4. Under `[FIX_CODE]`, the `## Post-fix push` section has an `` apply review: `<command>` `` bullet (and optional `resolve-only`, `requeue`, and `requeue API fallback` bullets when applicable). The instructions reference those bullets so the skill strips backticks and runs the command.
 5. Passing check counts are surfaced only via the `**summary**` line — no per-check detail is emitted for passing checks. Failing check detail appears in `## Failing checks` (within `[FIX_CODE]` output). JSON surfaces check data as `checks: RelevantCheck[]` only on `fix_code` actions in lean mode; `--format=json --verbose` includes `checks` on all actions (full IterateResult).
 
 ---
@@ -106,7 +109,7 @@ The body line (`WAIT: …`) varies with the merge state — `branch is behind ba
 
 Converts a draft PR to ready for review.
 
-**Trigger:** All of: `status === "READY"`, `isDraft === true`, `!blockingBotReviewInProgress`, `config.actions.autoMarkReady` is enabled (disable with `--no-auto-mark-ready`), and ready-delay not elapsed (`readyState.shouldCancel === false`). Once the delay elapses, the action flips to `cancel`. There is no extra `mergeStateStatus === "CLEAN"` check.
+**Trigger:** All of: `status === "READY"`, `isDraft === true`, `!blockingBotReviewInProgress`, `config.actions.autoMarkReady` is enabled (disable with `--no-auto-mark-ready`), and ready-delay not elapsed (`readyState.shouldCancel === false`). Once the delay elapses, the action flips to `merge` with `--merge`, otherwise `cancel`. There is no extra `mergeStateStatus === "CLEAN"` check.
 
 **CLI side-effects:** Calls the `markPullRequestReadyForReview` GraphQL mutation before returning.
 
@@ -133,11 +136,27 @@ MARKED READY: PR #42 converted from draft to ready for review
 
 ---
 
+## `merge`
+
+Emits an exact GitHub CLI command; Shepherd does not execute or wrap the merge operation.
+
+**Trigger:** `--merge` is enabled and the clean READY state has lasted for the configured ready-delay. `--ready-delay 0` emits it immediately.
+
+**Command modes:** Ordinary branches emit `gh pr merge <PR> --repo <owner/repo> --match-head-commit <head> --auto ...commandArgs` and a plain fallback without `--auto`. Run the plain fallback only when GitHub specifically reports that auto-merge is unavailable. A queue-required branch emits plain `gh pr merge <PR> --repo <owner/repo> --match-head-commit <head>`; that is the gh CLI operation that adds a ready PR to the queue. Because of the gh CLI auto-merge-disabled queue limitation, output also includes an exact `gh api graphql` `enqueuePullRequest` fallback.
+
+Configured `merge.commandArgs` apply only to ordinary merge commands. Queue commands omit them. Every command pins the expected PR head.
+
+**Exit code:** 15.
+
+After the caller runs the command, iteration continues. An active auto-merge request or queue entry emits `WAIT` without ready-delay cancellation or generic stall escalation. Synthetic queue-commit `merge_group` failures emit `FIX_CODE` with their run/log context and post-fix requeue commands. Queue check contexts are fully paginated. A queue removal without an actionable failure emits `ESCALATE` with GitHub's raw reason, actor, time, queue commit, and parent commit IDs. Shepherd compares the current PR head to those parents to ignore an ejection that predates a subsequent push.
+
+---
+
 ## `cancel`
 
 Stops the iterate loop — no further iterations needed.
 
-**Trigger:** Either the PR is merged or closed (`state !== "OPEN"`), or the ready-delay timer elapsed after the current sweep still verifies the PR as a READY handoff state. Candidate READY reports get a fresh mergeability read before the timer can complete, so newly detected conflicts route to `fix_code` instead of `cancel`.
+**Trigger:** Either the PR is merged or closed (`state !== "OPEN"`), or `--merge` is not enabled and the ready-delay timer elapsed after the current sweep still verifies the PR as a READY handoff state. Candidate READY reports get a fresh mergeability read before the timer can complete, so newly detected conflicts route to `fix_code` instead of `cancel`.
 
 **CLI side-effects:** Deletes any stale `ready-since.txt` marker when the PR is merged/closed or when ready-delay elapses.
 
@@ -402,6 +421,7 @@ Ambiguous state that requires human judgement — iteration stops and surfaces d
 - **`thread-missing-location`** — an actionable review thread has no file or line reference, so the code location cannot be found automatically.
 - **`base-branch-unknown`** — the GraphQL batch did not yield a usable base branch name: the derived value was empty or contained unsafe characters. Preempts any `[FIX_CODE]` that would require a push, since rebasing onto the wrong base is worse than pausing iteration.
 - **`bot-cr-not-dismissed`** — a bot/non-human `CHANGES_REQUESTED` review has remained undismissed for `config.iterate.stallTimeoutMinutes`. Bot CRs are the agent's responsibility (auto-dismissed via `--dismiss-review-ids` in the post-push `apply review:` command); a stale entry means the agent dropped that flag and the PR is silently blocked. The timer is per-review and tracked separately from the generic `stall-timeout` fingerprint (so it still fires when CI or other state is flapping). The body hash resets the timer when the bot re-issues the review with different content. `escalate.changesRequestedReviews` lists the offending reviews; their IDs are also included in `escalate.suggestion`.
+- **`merge-queue-removed`** — the latest queue removal is newer than the latest enqueue and no queue-commit failure gives the agent concrete remediation work. The result includes GitHub's raw reason, actor, timestamp, and queue commit for the human decision.
 
 **CLI side-effects:** None.
 

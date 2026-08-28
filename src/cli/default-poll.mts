@@ -18,6 +18,7 @@ const DEFAULT_POLL_BOOLEAN_FLAGS = new Set([
   "--no-auto-cancel-actionable",
   "--quiet-status",
   "--until-terminal",
+  "--merge",
 ]);
 
 export function isDefaultPollInvocation(subcommand: string | undefined): boolean {

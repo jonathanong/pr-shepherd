@@ -43,6 +43,13 @@ describe("classifyChecks — event filtering", () => {
     expect(c!.category).toBe("filtered");
   });
 
+  it("keeps merge_group checks only when explicitly allowed for a queue commit", () => {
+    const [c] = classifyChecks([makeCheck({ event: "merge_group" })], {
+      additionalRelevantEvents: ["merge_group"],
+    });
+    expect(c!.category).toBe("passed");
+  });
+
   it("filters schedule-triggered checks", () => {
     const [c] = classifyChecks([makeCheck({ event: "schedule" })]);
     expect(c!.category).toBe("filtered");

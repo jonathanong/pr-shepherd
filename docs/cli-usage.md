@@ -25,16 +25,17 @@ pr-shepherd admin log-file [--format text|json]
 
 Journal entries live in a collapsed `Shepherd Journal` details block. `apply journal` creates that canonical block when absent, appends before its closing tag, and leaves an exact duplicate unchanged. A legacy `## Shepherd Journal` section is migrated in place on the next journal operation.
 
-`pr-shepherd [PR]` is the canonical bounded poll dispatcher. It repeats `iterate` while the action is `WAIT`, then prints the first `MARK_READY`, `CANCEL`, or `ESCALATE` result. If `--timeout` expires during WAIT polling, poll returns that final `WAIT` result rather than a terminal action. `FIX_CODE` is delayed by `--debounce` (default 1m): poll keeps iterating at `--interval` for that window, then returns one later tick. Use `iterate` when the caller owns recurrence.
+`pr-shepherd [PR]` is the canonical bounded poll dispatcher. It repeats `iterate` while the action is `WAIT`, then prints the next agent-facing action. With `--merge`, it also continues through `MARK_READY` and emits `MERGE` when the ready-delay completes. If `--timeout` expires during WAIT polling, poll returns that final `WAIT` result rather than a terminal action. `FIX_CODE` is delayed by `--debounce` (default 1m): poll keeps iterating at `--interval` for that window, then returns one later tick. Use `iterate` when the caller owns recurrence.
 
 ```sh
 pr-shepherd 42 --interval 60s --timeout 4.5m --quiet-status
 pr-shepherd 42 --until-terminal --quiet-status
 pr-shepherd 42 --debounce 5m
 pr-shepherd iterate 42 --ready-delay 15m
+pr-shepherd 42 --merge
 ```
 
-The polling flags are `--interval`, `--timeout`, `--debounce`, `--quiet-status`, and `--until-terminal`. Each ordinary `WAIT` tick writes an explicit still-running line to stderr; the final action remains the only stdout result. `--debounce` (default 1m, `0` disables) is a settle window after the first `FIX_CODE`: poll keeps iterating at `--interval`, then runs one more tick after the window and returns that result so late review comments and CI failures batch into the same agent-facing tick. `--timeout` bounds `WAIT` ticks only and does not cut an in-flight debounce short. Iterate flags are `--ready-delay`, `--stall-timeout`, `--no-auto-mark-ready`, `--no-auto-cancel-actionable`, `--format`, and `--verbose`. Durations accept `s`, `m`, and `h`; bare polling durations are seconds and bare iterate durations are minutes.
+The polling flags are `--interval`, `--timeout`, `--debounce`, `--quiet-status`, and `--until-terminal`. Each ordinary `WAIT` tick writes an explicit still-running line to stderr; the final action remains the only stdout result. `--debounce` (default 1m, `0` disables) is a settle window after the first `FIX_CODE`: poll keeps iterating at `--interval`, then runs one more tick after the window and returns that result so late review comments and CI failures batch into the same agent-facing tick. `--timeout` bounds `WAIT` ticks only and does not cut an in-flight debounce short. Iterate flags are `--ready-delay`, `--stall-timeout`, `--merge`, `--no-auto-mark-ready`, `--no-auto-cancel-actionable`, `--format`, and `--verbose`. Durations accept `s`, `m`, and `h`; bare polling durations are seconds and bare iterate durations are minutes.
 
 `admin clean` removes local state and `admin log-file` prints the append-only debug log path. They are shell administration commands, not MCP tools.
 
@@ -65,4 +66,4 @@ MCP clients own polling recurrence. Do not call a long-running polling tool: cal
 
 `poll`, `resolve`, `build-suggestion-patch`, `commit-suggestion`, `mark-files-as-viewed`, `journal`, `clean`, and `log-file` are deprecated CLI aliases or adapters. Prefer MCP `iterate`, `apply`, and `build_suggestion_patches` for agent integrations.
 
-All CLI commands honor `--help`/`-h` before I/O. Iterate/poll PR outcomes use exit codes `0` and `10`–`14`; command, validation, and GitHub failures use `sysexits.h` codes. See [exit-codes.md](exit-codes.md).
+All CLI commands honor `--help`/`-h` before I/O. Iterate/poll PR outcomes use exit codes `0` and `10`–`15`; command, validation, and GitHub failures use `sysexits.h` codes. See [exit-codes.md](exit-codes.md).
