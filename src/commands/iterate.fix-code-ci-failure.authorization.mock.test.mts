@@ -100,4 +100,47 @@ describe("fix_code — GitHub Actions authorization", () => {
     ]);
     expect(result.escalate.humanMessage).not.toContain("pr-shepherd apply review");
   });
+
+  it("reports denied reply and dismissal authorization", async () => {
+    const thread = makeThread({
+      id: "thread-human",
+      author: "alice",
+      authorType: "User",
+      viewerCanReply: false,
+      viewerCanResolve: false,
+    });
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        viewerAuthorization: {
+          repositoryPermission: "WRITE",
+          viewerCanAdminister: false,
+          viewerDidAuthor: true,
+          viewerCanUpdate: true,
+          viewerCanEnableAutoMerge: true,
+          viewerCanEditFiles: true,
+          headRepositoryPermission: "WRITE",
+        },
+        threads: {
+          actionable: [thread],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
+        changesRequestedReviews: [
+          { id: "review-bot", author: "review-bot", authorType: "Bot", body: "fix" },
+        ],
+      }),
+    );
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("escalate");
+    if (result.action !== "escalate") return;
+    expect(result.escalate.authorization?.map((item) => item.action)).toEqual([
+      "reply-thread",
+      "dismiss-review",
+    ]);
+  });
 });

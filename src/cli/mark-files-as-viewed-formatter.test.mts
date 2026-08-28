@@ -48,6 +48,17 @@ describe("formatMarkFilesAsViewedResult", () => {
     expect(out).toContain("## Errors (1)");
     expect(out).toContain("src/a.ts: server unavailable");
   });
+
+  it("renders an authorization skip", () => {
+    const out = formatMarkFilesAsViewedResult({
+      ...baseResult(),
+      matchedPaths: ["src/a.ts"],
+      authorizationSkipped: "unverifiable",
+    });
+
+    expect(out).toContain("## Authorization");
+    expect(out).toContain("does not expose a capability");
+  });
 });
 
 function baseResult(): MarkFilesAsViewedResult {
