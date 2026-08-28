@@ -51,3 +51,19 @@ export function isConfiguredBotAuthor(
   if (normalized === "") return false;
   return botUsernames.has(normalized);
 }
+
+export function isViewerAuthoredHuman(
+  author: {
+    author?: string;
+    login?: string;
+    authorType?: AuthorType;
+    viewerDidAuthor?: true;
+  },
+  botUsernames: NormalizedBotUsernames = new Set(),
+): boolean {
+  return (
+    author.viewerDidAuthor === true &&
+    isHumanAuthor(author) &&
+    !isConfiguredBotAuthor(author, botUsernames)
+  );
+}

@@ -96,7 +96,7 @@ actions:
 
 Top-level list of GitHub logins that Shepherd treats as bot authors in addition to GitHub-detected bots (`authorType: Bot`) and logins containing `[bot]`.
 
-Configured bot threads are returned on every tick until resolved, even if their transcript is unchanged and already seen. Configured bot comments and reviews also follow bot minimization/routing policy when eligible. Human-authored active threads remain marker-gated so Shepherd does not repeatedly return unresolved human comments it cannot resolve automatically.
+Configured bot threads are returned on every tick until resolved, even if their transcript is unchanged and already seen. Configured bot comments and reviews also follow bot minimization/routing policy when eligible. Human-authored active threads remain marker-gated so Shepherd does not repeatedly return unchanged feedback; unmarked viewer-authored inline feedback is the narrow reply-and-resolve exception.
 
 Matching is case-insensitive and treats a trailing `[bot]` suffix as equivalent to the bare login.
 

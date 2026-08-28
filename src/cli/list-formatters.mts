@@ -9,8 +9,11 @@ export function renderAuthor(
   author: string,
   authorType?: AuthorType,
   authorAssociation?: CommentAuthorAssociation,
+  viewerDidAuthor?: boolean,
 ): string {
-  return [`@${author}`, authorType, authorAssociation].filter(Boolean).join(" · ");
+  return [`@${author}`, authorType, authorAssociation, viewerDidAuthor ? "viewer-authored" : null]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 export function renderBodyPreview(body: string): string {
@@ -50,12 +53,14 @@ interface ThreadBulletInput {
   author: string;
   authorType?: AuthorType;
   authorAssociation?: CommentAuthorAssociation;
+  viewerDidAuthor?: true;
   body: string;
   comments?: Array<{
     id: string;
     author: string;
     authorType?: AuthorType;
     authorAssociation?: CommentAuthorAssociation;
+    viewerDidAuthor?: true;
     body: string;
     url: string;
   }>;
@@ -80,7 +85,7 @@ export function renderThreadBullet(
   const editedMarker = t.edited && !opts.suppressEditedMarker ? " [edited since first look]" : "";
   const reviewMarker = t.reviewId ? ` [reviewId=${t.reviewId}]` : "";
   const statusSuffix = opts.statusTag ? ` ${opts.statusTag}` : "";
-  const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (${renderAuthor(t.author, t.authorType, t.authorAssociation)})${reviewMarker}${suggestionMarker}${editedMarker}${statusSuffix}`;
+  const bulletLine = `- \`threadId=${t.id}\`${link} ${loc} (${renderAuthor(t.author, t.authorType, t.authorAssociation, t.viewerDidAuthor)})${reviewMarker}${suggestionMarker}${editedMarker}${statusSuffix}`;
   if (!opts.noBody && (!t.comments || t.comments.length === 0)) {
     const legacyLine = `${bulletLine}: ${renderBodyPreview(t.body)}`;
     return t.suggestion && opts.renderSuggestion
@@ -103,9 +108,9 @@ export function renderThreadConversation(t: ThreadBulletInput): string {
     .map((c) => {
       const heading = c.id
         ? c.url
-          ? `#### [commentId=${c.id}](${c.url}) (${renderAuthor(c.author, c.authorType, c.authorAssociation)})`
-          : `#### \`commentId=${c.id}\` (${renderAuthor(c.author, c.authorType, c.authorAssociation)})`
-        : `#### (${renderAuthor(c.author, c.authorType, c.authorAssociation)})`;
+          ? `#### [commentId=${c.id}](${c.url}) (${renderAuthor(c.author, c.authorType, c.authorAssociation, c.viewerDidAuthor)})`
+          : `#### \`commentId=${c.id}\` (${renderAuthor(c.author, c.authorType, c.authorAssociation, c.viewerDidAuthor)})`
+        : `#### (${renderAuthor(c.author, c.authorType, c.authorAssociation, c.viewerDidAuthor)})`;
       return `${heading}\n\n${blockquote(c.body)}`;
     })
     .join("\n\n");
@@ -125,7 +130,7 @@ function renderThreadCommentBullets(t: ThreadBulletInput): string {
       const link = c.url ? ` [↗](${c.url})` : "";
       const id = c.id ? `\`commentId=${c.id}\`` : "comment";
       return [
-        `  - ${id}${link} (${renderAuthor(c.author, c.authorType, c.authorAssociation)})`,
+        `  - ${id}${link} (${renderAuthor(c.author, c.authorType, c.authorAssociation, c.viewerDidAuthor)})`,
         indentBlockquote(c.body, "    "),
       ].join("\n");
     })

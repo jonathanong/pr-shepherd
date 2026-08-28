@@ -46,15 +46,15 @@ Do not infer “must wait for an approval” from `reviewDecision`. `REVIEW_REQU
 
 ## Review context
 
-| Surface                                                                            | Spec                                                                     |
-| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Inline review threads (full transcript, path, line, suggestion fence when present) | [comments.md](comments.md)                                               |
-| Top-level PR comments                                                              | [comments.md](comments.md)                                               |
-| `COMMENTED` review summaries, `APPROVED` reviews, `CHANGES_REQUESTED` reviews      | [comments.md](comments.md)                                               |
-| First-look / edited / outdated / resolved / minimized items (seen-marker gate)     | [comments.md](comments.md#first-look-items-comment-visibility-invariant) |
-| `authorType` (`User` / `Bot` / `Unknown`) and raw GitHub `authorAssociation`       | [comments.md](comments.md#trust-and-author-provenance)                   |
+| Surface                                                                                                    | Spec                                                                     |
+| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Inline review threads (full transcript, path, line, suggestion fence when present)                         | [comments.md](comments.md)                                               |
+| Top-level PR comments                                                                                      | [comments.md](comments.md)                                               |
+| `COMMENTED` review summaries, `APPROVED` reviews, `CHANGES_REQUESTED` reviews                              | [comments.md](comments.md)                                               |
+| First-look / edited / outdated / resolved / minimized items (seen-marker gate)                             | [comments.md](comments.md#first-look-items-comment-visibility-invariant) |
+| `authorType` (`User` / `Bot` / `Unknown`), raw GitHub `authorAssociation`, and true-only `viewerDidAuthor` | [comments.md](comments.md#trust-and-author-provenance)                   |
 
-Human-authored threads are replied to, not resolved or minimized. Bot/non-human threads, comments, and eligible summaries can be resolved or minimized. Already-minimized `COMMENTED` reviews are not fetched (bodies never enter the seen-marker gate).
+An unmarked human inline thread authored by the authenticated viewer is replied to and resolved; an unmarked other-human thread remains reply-only. A leading `<!-- pr-shepherd -->` marker on the latest comment identifies an automated reply regardless of account author, so a viewer-authored marked thread is resolve-only on retry while a marked other-human thread is already acknowledged and suppressed from further mutation. `resolutionOnlyThreads` therefore includes unresolved outdated/minimized threads and active marked viewer-authored retries. Bot/non-human threads, comments, and eligible summaries can be resolved or minimized. Already-minimized `COMMENTED` reviews are not fetched (bodies never enter the seen-marker gate).
 
 ## CI context
 

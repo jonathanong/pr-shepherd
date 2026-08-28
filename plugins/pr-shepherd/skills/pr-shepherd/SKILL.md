@@ -32,7 +32,7 @@ mechanics every tick. Apply the referenced playbook in full whenever a step poin
 - The command builds from the fetched PR head and accepts a clean local descendant only when the complete ordered patch stream passes `git apply --check`.
 - If the command refuses because a suggestion is unsafe or no longer applies, inspect the current source, the displayed replacement block, and reviewer intent before editing manually. Do not apply a stale numeric range blindly or retry unchanged input.
 - A returned patch was checked against the then-current worktree. If it later fails, re-inspect the worktree because it changed after validation.
-- Keep human-authored thread IDs in `apply review:` so Shepherd replies instead of resolving them.
+- Keep the generated thread IDs and flag placement unchanged. Viewer-authored human feedback may intentionally appear in both reply and resolve flags; unmarked other-human feedback remains reply-only. Marker-ended other-human feedback is already acknowledged and has no generated mutation.
 
 ### CI failure triage
 
@@ -51,7 +51,7 @@ More specific rows win over the general "GitHub Actions failure" row — check c
 
 ### Review-mutation mechanics
 
-Applies to every `apply review:` / `resolve-only:` command the CLI prints. Covers only what stays safe if you run the printed command **unmodified** — `$HEAD_SHA`/`$DISMISS_MESSAGE` substitution and the self-reply exclusion rule are separate CLI-printed steps, not covered here, because the printed command is unsafe by default without them.
+Applies to every `apply review:` / `resolve-only:` command the CLI prints. Covers only what stays safe if you run the printed command **unmodified** — `$HEAD_SHA`/`$DISMISS_MESSAGE` substitution remains a separate CLI-printed step because the command is unsafe by default without those placeholders.
 
 - Run every generated `apply review:` / `resolve-only:` command even when no code change is warranted. The command records the agent's disposition of the included review items; skipping it leaves bot threads active and can eventually trigger `fix-thrash`.
 - Never add first-look-only or check-annotation IDs to `--reply-thread-ids`, `--resolve-thread-ids`, `--dismiss-review-ids`, or `--minimize-comment-ids` — those flags are pre-populated by the CLI.
@@ -59,7 +59,7 @@ Applies to every `apply review:` / `resolve-only:` command the CLI prints. Cover
 
 ### Review-mutation routing
 
-For threads under both `## Review threads` and `## Review threads to resolve`, evaluate every thread before running mutations. Keep bot and non-human IDs in `--resolve-thread-ids`, including when the feedback is advisory, already satisfied, or otherwise warrants no code change. Human-authored IDs use `--reply-thread-ids`; Shepherd replies instead of resolving them. Never move a human-authored ID to `--resolve-thread-ids`. Use the commands as generated — do not move an ID between flags.
+For threads under both `## Review threads` and `## Review threads to resolve`, evaluate every thread before running mutations. Keep bot and non-human IDs in `--resolve-thread-ids`, including when the feedback is advisory, already satisfied, or otherwise warrants no code change. Unmarked other-human inline-thread IDs use `--reply-thread-ids` only. When the original human inline comment has `viewerDidAuthor: true` and its latest comment is unmarked, keep that same ID in both `--reply-thread-ids` and `--resolve-thread-ids`: the reply runs before the resolve. When the latest comment begins `<!-- pr-shepherd -->`, it is an established Shepherd reply—not merely a same-account comment. A marker-ended viewer-authored thread may be resolve-only for retry; a marker-ended other-human thread is already acknowledged and has no generated mutation. Do not add an unmarked human ID to `--resolve-thread-ids` without its paired generated reply, and do not move IDs between flags.
 
 ### Shepherd Journal
 

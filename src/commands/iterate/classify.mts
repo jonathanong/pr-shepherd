@@ -13,6 +13,7 @@ import {
   type NormalizedBotUsernames,
 } from "../../comments/authors.mts";
 import type { MinimizeCommentsPolicy } from "../../config/load.mts";
+import { buildThreadMutationRouting } from "./thread-mutation-routing.mts";
 
 function dedupeIds(ids: string[]): string[] {
   const seen = new Set<string>();
@@ -95,18 +96,8 @@ export function buildResolveCommand(
   ruleAutoResolveThreadIds: string[] = [],
 ): { resolveCommand: ResolveCommand; resolveOnlyCommand?: ResolveCommand } {
   const allThreads = [...threads, ...resolutionOnlyThreads];
-  const replyThreadIds = dedupeIds(
-    allThreads
-      .filter((t) => isHumanAuthor(t) && !isConfiguredBotAuthor(t, botUsernames))
-      .map((t) => t.id),
-  );
-  // Rule-matched threads bypass the author check (human-author guard still applies in resolve-mutate).
-  const resolveThreadIds = dedupeIds([
-    ...allThreads
-      .filter((t) => !isHumanAuthor(t) || isConfiguredBotAuthor(t, botUsernames))
-      .map((t) => t.id),
-    ...ruleAutoResolveThreadIds,
-  ]);
+  const { replyThreadIds, pairedResolveThreadIds, standaloneResolveThreadIds, resolveThreadIds } =
+    buildThreadMutationRouting(allThreads, botUsernames, ruleAutoResolveThreadIds);
   // Bot/non-human CHANGES_REQUESTED reviews are auto-dismissed after the agent pushes a fix.
   // Human reviews are left for the reviewer to re-review or dismiss themselves.
   const dismissReviewIds = dedupeIds(
@@ -120,13 +111,19 @@ export function buildResolveCommand(
   // Mutations that require --message: replies (to human threads) and dismissals (of bot CR reviews).
   const hasMessageMutations = hasReply || hasDismiss;
   const hasResolveOrMinimize = resolveThreadIds.length > 0 || allCommentIds.length > 0;
+  const hasStandaloneResolveOrMinimize =
+    standaloneResolveThreadIds.length > 0 || allCommentIds.length > 0;
 
-  if (hasMessageMutations && hasResolveOrMinimize) {
-    // Split: message-bearing mutations (replies + dismissals) ride in resolveArgv;
-    // resolve/minimize mutations go in resolveOnlyArgv so they can run without SHA or message.
+  if (hasMessageMutations && hasStandaloneResolveOrMinimize) {
+    // Split: message-bearing mutations plus their paired viewer-authored resolves ride in
+    // resolveArgv; standalone resolve/minimize mutations go in resolveOnlyArgv so they can
+    // run without SHA or message.
     const resolveArgv = buildPrShepherdCommand(["apply", "review", String(prNumber)]).argv;
     if (replyThreadIds.length > 0) {
       resolveArgv.push("--reply-thread-ids", replyThreadIds.join(","));
+    }
+    if (pairedResolveThreadIds.length > 0) {
+      resolveArgv.push("--resolve-thread-ids", pairedResolveThreadIds.join(","));
     }
     resolveArgv.push("--message", "$DISMISS_MESSAGE");
     if (hasDismiss) {
@@ -140,13 +137,16 @@ export function buildResolveCommand(
       requiresHeadSha,
       requiresDismissMessage: true,
       ...(replyThreadIds.length > 0 ? { replyThreadIds } : undefined),
+      ...(pairedResolveThreadIds.length > 0
+        ? { resolveThreadIds: pairedResolveThreadIds }
+        : undefined),
       ...(hasDismiss ? { dismissReviewIds } : undefined),
       hasMutations: true,
     };
 
     const resolveOnlyArgv = buildPrShepherdCommand(["apply", "review", String(prNumber)]).argv;
-    if (resolveThreadIds.length > 0) {
-      resolveOnlyArgv.push("--resolve-thread-ids", resolveThreadIds.join(","));
+    if (standaloneResolveThreadIds.length > 0) {
+      resolveOnlyArgv.push("--resolve-thread-ids", standaloneResolveThreadIds.join(","));
     }
     if (allCommentIds.length > 0) {
       resolveOnlyArgv.push("--minimize-comment-ids", allCommentIds.join(","));
@@ -155,7 +155,9 @@ export function buildResolveCommand(
       argv: resolveOnlyArgv,
       requiresHeadSha: false,
       requiresDismissMessage: false,
-      ...(resolveThreadIds.length > 0 ? { resolveThreadIds } : undefined),
+      ...(standaloneResolveThreadIds.length > 0
+        ? { resolveThreadIds: standaloneResolveThreadIds }
+        : undefined),
       hasMutations: true,
     };
 

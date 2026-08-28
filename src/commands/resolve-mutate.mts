@@ -5,11 +5,12 @@ import { loadConfig } from "../config/load.mts";
 import {
   isConfiguredBotAuthor,
   isHumanAuthor,
+  isViewerAuthoredHuman,
   normalizeBotUsernames,
 } from "../comments/authors.mts";
 import { markReplySeen } from "../state/seen-comments.mts";
 import { threadTranscriptBody } from "../threads/transcript.mts";
-import { addPrShepherdMarker } from "../comments/marker.mts";
+import { addPrShepherdMarker, threadEndedByShepherd } from "../comments/marker.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type { ResolveOptions } from "../types.mts";
 import type { ResolveCommandOptions } from "./resolve.mts";
@@ -45,8 +46,22 @@ export async function runResolveMutate(
       .filter((r) => isHumanAuthor(r) && !isConfiguredBotAuthor(r, botUsernames))
       .map((r) => r.id),
   );
-  const resolveThreadIds = (opts.resolveThreadIds ?? []).filter((id) => !humanThreadIds.has(id));
-  const skippedHumanResolves = (opts.resolveThreadIds ?? []).filter((id) => humanThreadIds.has(id));
+  const requestedReplyIds = new Set(opts.replyThreadIds ?? []);
+  const allowedViewerHumanResolveIds = new Set(
+    data.reviewThreads
+      .filter(
+        (thread) =>
+          isViewerAuthoredHuman(thread, botUsernames) &&
+          (requestedReplyIds.has(thread.id) || threadEndedByShepherd(thread)),
+      )
+      .map((thread) => thread.id),
+  );
+  const resolveThreadIds = (opts.resolveThreadIds ?? []).filter(
+    (id) => !humanThreadIds.has(id) || allowedViewerHumanResolveIds.has(id),
+  );
+  const skippedHumanResolves = (opts.resolveThreadIds ?? []).filter(
+    (id) => humanThreadIds.has(id) && !allowedViewerHumanResolveIds.has(id),
+  );
   const replyThreadIds = opts.replyThreadIds?.filter((id) => humanThreadIds.has(id));
   const skippedNonHumanReplies = (opts.replyThreadIds ?? []).filter(
     (id) => !humanThreadIds.has(id),

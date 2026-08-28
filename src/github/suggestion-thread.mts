@@ -74,6 +74,7 @@ function parseThread(
     ...(comment?.authorAssociation !== undefined && {
       authorAssociation: comment.authorAssociation,
     }),
+    ...(comment?.viewerDidAuthor === true && { viewerDidAuthor: true as const }),
     body: comment?.body ?? "",
     url: comment?.url ?? "",
     createdAtUnix: comment?.createdAt ? parseCreatedAt(comment.createdAt) : 0,

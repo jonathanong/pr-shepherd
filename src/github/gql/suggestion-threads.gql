@@ -24,6 +24,7 @@ query SuggestionThreads($owner: String!, $repo: String!, $pr: Int!, $threadIds: 
           isMinimized
           url
           authorAssociation
+          viewerDidAuthor
           author {
             __typename
             login

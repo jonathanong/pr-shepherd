@@ -6,7 +6,7 @@ Shepherd does two jobs: **gather all context for a PR**, then **emit one determi
 
 - One GraphQL batch per tick for PR state, branch rules, merge queue/stacks, threads, comments, reviews, and check runs. Extra pages use a slim `batch-pr-page.gql` follow-up, not another full snapshot. REST supplements: job logs, mergeability fallback, and startup-failure runs only when CheckSuites are missing or truncated. See [graphql.md](graphql.md) and [context.md](context.md).
 - Surfaces inline review threads (full transcript), top-level PR comments, `COMMENTED` summaries, `APPROVED` reviews, and `CHANGES_REQUESTED` reviews. See [comments.md](comments.md).
-- Surfaces GitHub's raw `authorAssociation` and Shepherd `authorType` without deriving a trust label.
+- Surfaces GitHub's raw `authorAssociation` and true-only `viewerDidAuthor`, plus Shepherd `authorType`, without deriving a trust label.
 - First-look tracking for outdated/resolved/minimized items; edited bodies re-surface. Poll debounce ticks do not persist seen markers until the post-window tick.
 - Classifies checks (passed / failing / in_progress / skipped / filtered / ignored / superseded) with optional `failedStep`, `jobName`, and a bounded log excerpt. Excerpts are omitted for `CANCELLED` and `STARTUP_FAILURE`. See [checks.md](checks.md).
 - Reads mergeability (`CLEAN`, `BEHIND`, `CONFLICTS`, `BLOCKED`, `UNSTABLE`, `DRAFT`, `UNKNOWN`) and prints merge requirements (approvals, conversation resolution, and extra rules only when they apply). Do not infer “must wait for an approval” from `reviewDecision`. See [merge-status.md](merge-status.md).
@@ -39,7 +39,7 @@ Shepherd does two jobs: **gather all context for a PR**, then **emit one determi
 - Does not continuously rebase branches outside required conflict-resolution scenarios. `BEHIND` is reported; the agent updates the branch.
 - Does not modify files or apply suggestion patches to the working tree; it only emits what to run.
 - Does not guarantee CI rerun-versus-code-fix decisions; it surfaces failures and delegates action choice to the caller.
-- Replies to human-authored inline threads instead of resolving or minimizing them.
+- Replies to unmarked other-human inline threads without resolving or minimizing them; pairs reply-and-resolve for unmarked viewer-authored human feedback, with marker-ended viewer-authored retries resolving only. Marker-ended other-human threads are already acknowledged and receive no further mutation.
 - Does not auto-classify every surfaced thread/comment as `actionable` vs `informational`; it exposes raw structured triage data.
 - Does not automatically apply edits for threads without line/locatable references.
 - Does not minimize already-hidden/sticky comment content beyond existing CLI mutation paths. Already-minimized `COMMENTED` reviews are not fetched.

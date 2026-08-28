@@ -115,6 +115,7 @@ export interface AgentThread {
   author: string;
   authorType?: AuthorType;
   authorAssociation?: import("./github.mts").CommentAuthorAssociation;
+  viewerDidAuthor?: true;
   body: string;
   url: string;
   comments?: AgentThreadComment[];

@@ -5,6 +5,7 @@ export interface AgentThreadComment {
   author: string;
   authorType?: AuthorType;
   authorAssociation?: CommentAuthorAssociation;
+  viewerDidAuthor?: true;
   body: string;
   url: string;
 }

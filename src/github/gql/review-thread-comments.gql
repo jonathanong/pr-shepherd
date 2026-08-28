@@ -12,6 +12,7 @@ query ReviewThreadComments($threadId: ID!, $commentsCursor: String) {
           isMinimized
           url
           authorAssociation
+          viewerDidAuthor
           author {
             __typename
             login
