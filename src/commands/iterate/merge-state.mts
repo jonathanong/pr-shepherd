@@ -11,7 +11,7 @@ export function buildReadyMergeResult(
   base: IterateResultBase,
   report: ShepherdReport,
 ): IterateResult | null {
-  if (!enabled || !readyElapsed) return null;
+  if (!enabled || !readyElapsed || report.mergeStatus.isDraft) return null;
   const queue = Boolean(
     report.mergeStatus.mergeRequirements?.mergeQueue?.required ||
     report.mergeStatus.mergeRequirements?.mergeQueue?.enabled,

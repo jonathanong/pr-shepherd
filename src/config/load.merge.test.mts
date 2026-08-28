@@ -45,6 +45,17 @@ describe("loadConfig — merge.commandArgs", () => {
     expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain("Shepherd-owned");
   });
 
+  it.each(["-Rattacker/repo", "-F/sensitive/path", "--disable-auto"])(
+    "rejects attached or conflicting %s",
+    async (arg) => {
+      writeRc(`merge:\n  commandArgs:\n    - ${arg}\n`);
+      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+      const loadConfig = await freshLoadConfig();
+      expect(loadConfig().merge?.commandArgs).toEqual([]);
+      expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain("Shepherd-owned");
+    },
+  );
+
   it("rejects a non-array commandArgs value", async () => {
     writeRc("merge:\n  commandArgs: --delete-branch\n");
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);

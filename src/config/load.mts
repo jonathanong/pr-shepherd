@@ -171,6 +171,7 @@ const SHEPHERD_OWNED_MERGE_FLAGS = [
   "--repo",
   "-R",
   "--auto",
+  "--disable-auto",
   "--match-head-commit",
   "--admin",
   "--body-file",
@@ -182,7 +183,14 @@ function parseMergeCommandArgs(value: unknown): string[] {
     throw new Error("Invalid config: merge.commandArgs must be an array of strings");
   }
   for (const arg of value) {
-    if (SHEPHERD_OWNED_MERGE_FLAGS.some((flag) => arg === flag || arg.startsWith(`${flag}=`))) {
+    if (
+      SHEPHERD_OWNED_MERGE_FLAGS.some(
+        (flag) =>
+          arg === flag ||
+          arg.startsWith(`${flag}=`) ||
+          (flag.startsWith("-") && !flag.startsWith("--") && arg.startsWith(flag)),
+      )
+    ) {
       throw new Error(`Invalid config: merge.commandArgs cannot include Shepherd-owned ${arg}`);
     }
   }

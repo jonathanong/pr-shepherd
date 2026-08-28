@@ -150,6 +150,21 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
   });
   if (mergeStateResult) return mergeStateResult;
 
+  const canMarkReady =
+    report.status === "READY" &&
+    report.mergeStatus.isDraft &&
+    !report.mergeStatus.blockingBotReviewInProgress;
+
+  if (canMarkReady && !opts.noAutoMarkReady && config.actions.autoMarkReady) {
+    await graphql(MARK_PR_READY_MUTATION, { pullRequestId: report.nodeId });
+    return {
+      ...base,
+      action: "mark_ready",
+      markedReady: true,
+      log: `MARKED READY: PR #${report.pr} converted from draft to ready for review`,
+    };
+  }
+
   if (readyState.shouldCancel) {
     await clearStallState(stallKey);
     const mergeResult = buildReadyMergeResult(opts.merge, true, base, report);
@@ -160,22 +175,6 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       action: "cancel",
       reason: "ready-delay-elapsed",
       log: `CANCEL: PR #${base.pr} ${cancelNote} — ready-delay elapsed, stopping`,
-    };
-  }
-
-  const canMarkReady =
-    report.status === "READY" &&
-    report.mergeStatus.isDraft &&
-    !report.mergeStatus.blockingBotReviewInProgress &&
-    !readyState.shouldCancel;
-
-  if (canMarkReady && !opts.noAutoMarkReady && config.actions.autoMarkReady) {
-    await graphql(MARK_PR_READY_MUTATION, { pullRequestId: report.nodeId });
-    return {
-      ...base,
-      action: "mark_ready",
-      markedReady: true,
-      log: `MARKED READY: PR #${report.pr} converted from draft to ready for review`,
     };
   }
 

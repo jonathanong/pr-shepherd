@@ -11,6 +11,31 @@ import { runIterate } from "./iterate/index.mts";
 registerIterateHooks();
 
 describe("runIterate — merge queue removal", () => {
+  it("marks an eligible draft ready before an elapsed-delay merge", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        mergeStatus: {
+          status: "DRAFT",
+          state: "OPEN",
+          isDraft: true,
+          mergeable: "MERGEABLE",
+          reviewDecision: "APPROVED",
+          blockingBotReviewInProgress: false,
+          mergeStateStatus: "CLEAN",
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+
+    const result = await runIterate(makeOpts({ merge: true }));
+    expect(result.action).toBe("mark_ready");
+  });
+
   it("escalates a current ejection before a ready-delay merge", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
