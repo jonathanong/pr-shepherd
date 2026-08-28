@@ -67,7 +67,7 @@ export async function handleActiveMergeState(input: {
     action: "escalate",
     escalate: {
       ...escalateBase,
-      humanMessage: buildEscalateHumanMessage(escalateBase, report.pr),
+      humanMessage: buildEscalateHumanMessage(escalateBase, report.pr, { merge: true }),
     },
   };
 }

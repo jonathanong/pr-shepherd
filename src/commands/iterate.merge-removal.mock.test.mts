@@ -56,6 +56,7 @@ describe("runIterate — merge queue removal", () => {
     expect(result.action).toBe("escalate");
     if (result.action === "escalate") {
       expect(result.escalate.mergeQueueRemoval?.reason).toBe("MANUAL");
+      expect(result.escalate.humanMessage).toContain("pr-shepherd 42 --merge");
     }
   });
 });

@@ -92,6 +92,7 @@ export function validateBaseBranch(raw: string): BaseBranchLookup {
 export function buildEscalateHumanMessage(
   escalate: Omit<EscalateDetails, "humanMessage">,
   pr: number,
+  opts?: { merge?: boolean },
 ): string {
   const lines: string[] = [];
   lines.push("⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required");
@@ -166,7 +167,7 @@ export function buildEscalateHumanMessage(
   lines.push("---");
   lines.push("");
   lines.push(
-    `After completing manual fixes (and pushing if required), rerun \`/pr-shepherd:pr-shepherd ${pr}\` to resume.`,
+    `After completing manual fixes (and pushing if required), rerun \`/pr-shepherd:pr-shepherd ${pr}${opts?.merge ? " --merge" : ""}\` to resume.`,
   );
   return lines.join("\n");
 }
