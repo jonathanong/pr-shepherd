@@ -150,8 +150,8 @@ describe("buildFixInstructions", () => {
     // $HEAD_SHA/$DISMISS_MESSAGE substitution stays in the CLI (unlike dismiss-ID
     // retention and the ID-exclusion rules, which moved to the skill's
     // "Review-mutation mechanics" playbook) — the printed command is not independently
-    // runnable without it. This fixture has no replyThreadIds, so the self-reply exclusion
-    // step (also CLI-side — see the buildResolveCommandInstruction docblock) is absent.
+    // runnable without it. This fixture has no replyThreadIds, so the marker-routing
+    // explanation (also CLI-side — see the buildResolveCommandInstruction docblock) is absent.
     expect(text).toContain("Replace `$HEAD_SHA` with the pushed commit SHA");
     expect(text).toContain("Replace `$DISMISS_MESSAGE` with one sentence");
     expect(instructions.at(-2)).toBe(

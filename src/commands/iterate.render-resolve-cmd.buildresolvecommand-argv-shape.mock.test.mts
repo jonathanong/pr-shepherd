@@ -195,7 +195,7 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     expect(result.fix.changesRequestedReviews).toHaveLength(1);
   });
 
-  it("resolves bot threads while replying to human threads", async () => {
+  it("resolves bot threads and pairs viewer-authored human replies with resolves", async () => {
     mockLoadConfig.mockReturnValue({ ...defaultConfig(), botUsernames: ["coderabbitai"] });
     const humanThread = {
       id: "thread-human",
@@ -232,11 +232,24 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
       author: "CodeRabbitAI",
       authorType: "User" as const,
     };
+    const viewerHumanThread = {
+      ...humanThread,
+      id: "thread-viewer-human",
+      path: "src/viewer-human.mts",
+      author: "authenticated-reviewer",
+      viewerDidAuthor: true as const,
+    };
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
         threads: {
-          actionable: [humanThread, botThread, bracketBotThread, configuredBotThread],
+          actionable: [
+            humanThread,
+            viewerHumanThread,
+            botThread,
+            bracketBotThread,
+            configuredBotThread,
+          ],
           resolutionOnly: [],
           autoResolved: [],
           autoResolveErrors: [],
@@ -256,14 +269,86 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
 
     const argv = result.fix.resolveCommand.argv;
     expect(argv).toContain("--reply-thread-ids");
-    expect(argv).toContain("thread-human");
+    expect(argv).toContain("thread-human,thread-viewer-human");
+    expect(argv).toContain("--resolve-thread-ids");
+    expect(argv).toContain("thread-viewer-human");
+    expect(result.fix.resolveCommand.replyThreadIds).toEqual([
+      "thread-human",
+      "thread-viewer-human",
+    ]);
+    expect(result.fix.resolveCommand.resolveThreadIds).toEqual(["thread-viewer-human"]);
     // bot resolve IDs split to resolveOnlyCommand — not in the reply command
-    expect(argv).not.toContain("--resolve-thread-ids");
     expect(result.fix.resolveOnlyCommand?.argv).toContain("--resolve-thread-ids");
     expect(result.fix.resolveOnlyCommand?.argv).toContain(
       "thread-bot,thread-bracket-bot,thread-configured-bot",
     );
     expect(result.fix.resolveCommand.requiresDismissMessage).toBe(true);
     expect(result.fix.resolveCommand.hasMutations).toBe(true);
+  });
+
+  it("routes a marker-ended viewer-authored human thread to resolve without another reply", async () => {
+    const marked = {
+      id: "thread-viewer-marked",
+      isResolved: false,
+      isOutdated: false,
+      isMinimized: false,
+      path: "src/viewer.mts",
+      line: 10,
+      startLine: null,
+      author: "authenticated-reviewer",
+      authorType: "User" as const,
+      viewerDidAuthor: true as const,
+      body: "fix this",
+      url: "",
+      createdAtUnix: NOW - 3600,
+      comments: [
+        {
+          id: "comment-human",
+          isMinimized: false,
+          author: "authenticated-reviewer",
+          authorType: "User" as const,
+          viewerDidAuthor: true as const,
+          body: "fix this",
+          url: "",
+          createdAtUnix: NOW - 3600,
+        },
+        {
+          id: "comment-shepherd",
+          isMinimized: false,
+          author: "authenticated-reviewer",
+          authorType: "User" as const,
+          viewerDidAuthor: true as const,
+          body: "<!-- pr-shepherd -->\nfixed",
+          url: "",
+          createdAtUnix: NOW - 1800,
+        },
+      ],
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: {
+          actionable: [],
+          resolutionOnly: [marked],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+
+    expect(result.fix.resolveCommand.replyThreadIds).toBeUndefined();
+    expect(result.fix.resolveCommand.resolveThreadIds).toEqual(["thread-viewer-marked"]);
+    expect(result.fix.resolveCommand.requiresDismissMessage).toBe(false);
+    expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
   });
 });

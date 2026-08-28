@@ -95,6 +95,7 @@ export interface RawThreadComment {
   isMinimized: boolean;
   url: string;
   authorAssociation?: CommentAuthorAssociation;
+  viewerDidAuthor?: boolean;
   author: RawAuthor | null;
   pullRequestReview?: { id: string } | null;
   body: string;

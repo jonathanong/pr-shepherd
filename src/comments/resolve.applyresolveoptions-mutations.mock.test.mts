@@ -37,6 +37,36 @@ describe("applyResolveOptions — mutations", () => {
     expect(result.repliedThreads).toEqual([]);
     expect(result.errors).toEqual(["t-1: reply returned null or comment not created"]);
   });
+  it("orders a paired reply before resolve and reports both successes", async () => {
+    const result = await applyResolveOptions(1, REPO, {
+      replyThreadIds: ["t-1"],
+      resolveThreadIds: ["t-1"],
+      dismissMessage: "Addressed in the latest commit.",
+    });
+
+    expect(result.repliedThreads).toEqual(["t-1"]);
+    expect(result.resolvedThreads).toEqual(["t-1"]);
+    expect(result.errors).toEqual([]);
+    const doc = mockGraphql.mock.calls[0]?.[0] as string;
+    expect(doc.indexOf("p0: addPullRequestReviewThreadReply")).toBeLessThan(
+      doc.indexOf("r0: resolveReviewThread"),
+    );
+  });
+  it("keeps paired resolve best-effort when the reply fails", async () => {
+    mockGraphql.mockResolvedValueOnce({
+      data: { p0: null, r0: { thread: { isResolved: true } } },
+    });
+
+    const result = await applyResolveOptions(1, REPO, {
+      replyThreadIds: ["t-1"],
+      resolveThreadIds: ["t-1"],
+      dismissMessage: "Addressed in the latest commit.",
+    });
+
+    expect(result.repliedThreads).toEqual([]);
+    expect(result.resolvedThreads).toEqual(["t-1"]);
+    expect(result.errors).toEqual(["t-1: reply returned null or comment not created"]);
+  });
   it("resolves threads and populates resolvedThreads", async () => {
     const result = await applyResolveOptions(1, REPO, { resolveThreadIds: ["t-1", "t-2"] });
     expect(result.resolvedThreads).toEqual(["t-1", "t-2"]);

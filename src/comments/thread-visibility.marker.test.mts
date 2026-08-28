@@ -54,6 +54,35 @@ describe("classifyThreadVisibility — pr-shepherd marker", () => {
     expect(result.activeThreads).toEqual([]);
   });
 
+  it("routes a marker-ended viewer-authored human thread to resolution-only", () => {
+    const thread = makeThread({
+      id: "t1",
+      viewerDidAuthor: true,
+      comments: [
+        makeComment("c1", "reviewer comment", { viewerDidAuthor: true }),
+        makeComment("c2", addPrShepherdMarker("addressed"), { viewerDidAuthor: true }),
+      ],
+    });
+
+    const result = classifyThreadVisibility([thread], new Map());
+
+    expect(result.activeThreads).toEqual([]);
+    expect(result.resolutionOnlyThreads.map((t) => t.id)).toEqual(["t1"]);
+  });
+
+  it("keeps an unmarked viewer-authored human comment actionable", () => {
+    const thread = makeThread({
+      id: "t1",
+      viewerDidAuthor: true,
+      comments: [makeComment("c1", "human-authored feedback", { viewerDidAuthor: true })],
+    });
+
+    const result = classifyThreadVisibility([thread], new Map());
+
+    expect(result.activeThreads.map((t) => t.id)).toEqual(["t1"]);
+    expect(result.resolutionOnlyThreads).toEqual([]);
+  });
+
   it("surfaces active thread when a human replied after pr-shepherd", () => {
     const thread = makeThread({
       id: "t1",
@@ -130,7 +159,7 @@ describe("classifyThreadVisibility — pr-shepherd marker", () => {
     expect(result.firstLookThreads).toEqual([]);
   });
 
-  it("does not suppress resolution-only thread ending with marker", () => {
+  it("suppresses another human's resolution-only thread ending with a marker", () => {
     const thread = makeThread({
       id: "t1",
       isOutdated: true,
@@ -142,7 +171,7 @@ describe("classifyThreadVisibility — pr-shepherd marker", () => {
 
     const result = classifyThreadVisibility([thread], new Map());
 
-    expect(result.resolutionOnlyThreads.map((t) => t.id)).toEqual(["t1"]);
+    expect(result.resolutionOnlyThreads).toEqual([]);
   });
 
   it("suppresses active thread with only a body (no comments array) ending with marker", () => {

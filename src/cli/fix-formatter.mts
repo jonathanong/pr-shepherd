@@ -29,7 +29,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
       const suggestionMarker = t.suggestion ? " [suggestion]" : "";
       const editedMarker = t.edited ? " [edited since first look]" : "";
       sections.push(
-        `### ${heading} — ${loc} (${renderAuthor(t.author, t.authorType, t.authorAssociation)})${reviewMarker}${suggestionMarker}${editedMarker}`,
+        `### ${heading} — ${loc} (${renderAuthor(t.author, t.authorType, t.authorAssociation, t.viewerDidAuthor)})${reviewMarker}${suggestionMarker}${editedMarker}`,
       );
       sections.push(renderThreadConversation(t));
       if (t.suggestion) {

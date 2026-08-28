@@ -85,9 +85,9 @@ export interface ResolveCommand {
   requiresHeadSha: boolean;
   /** Whether the model must substitute $DISMISS_MESSAGE with a specific description of the fix. */
   requiresDismissMessage: boolean;
-  /** Thread IDs that should receive a reply instead of a resolve mutation. */
+  /** Thread IDs that should receive a reply. Viewer-authored human IDs may also appear in resolveThreadIds. */
   replyThreadIds?: string[];
-  /** Thread IDs that should be resolved on GitHub. Human-authored IDs must not appear here. */
+  /** Thread IDs that should be resolved on GitHub. Human IDs are allowed only for authenticated-viewer reply+resolve pairs or marker-ended retries. */
   resolveThreadIds?: string[];
   /** Bot/non-human CHANGES_REQUESTED review IDs to dismiss. Human-authored IDs must not appear here. */
   dismissReviewIds?: string[];
@@ -117,7 +117,7 @@ interface FixRebaseAndPush {
   changesRequestedReviews: Review[];
   /** Pre-built apply command. Run after committing and pushing. */
   resolveCommand: ResolveCommand;
-  /** When present, run this command first (no SHA substitution needed) to resolve bot threads and minimize comments, independent of any push. */
+  /** When present, run this command first (no SHA substitution needed) for standalone thread resolves and comment minimization, independent of any push. */
   resolveOnlyCommand?: ResolveCommand;
   /** Ordered steps for the model to follow. */
   instructions: string[];

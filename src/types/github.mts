@@ -2,9 +2,7 @@ import type { ReviewThreadComment } from "./review-thread.mts";
 import type { PrActivitySummary } from "./activity.mts";
 import type { BatchPrMergeFields, MergeRequirements } from "./merge-requirements.mts";
 
-// ---------------------------------------------------------------------------
 // GitHub primitives
-// ---------------------------------------------------------------------------
 
 export type CheckConclusion =
   | "ACTION_REQUIRED"
@@ -94,6 +92,7 @@ export interface ReviewThread {
   author: string;
   authorType: AuthorType;
   authorAssociation?: CommentAuthorAssociation;
+  viewerDidAuthor?: true;
   body: string;
   url: string;
   createdAtUnix?: number;

@@ -1,7 +1,12 @@
 import { classifyItem, type SeenMarker } from "../state/seen-comments.mts";
 import { threadTranscriptBody } from "../threads/transcript.mts";
-import { isConfiguredBotAuthor, type NormalizedBotUsernames } from "./authors.mts";
-import { hasPrShepherdMarker } from "./marker.mts";
+import {
+  isConfiguredBotAuthor,
+  isHumanAuthor,
+  isViewerAuthoredHuman,
+  type NormalizedBotUsernames,
+} from "./authors.mts";
+import { threadEndedByShepherd } from "./marker.mts";
 import type { FirstLookThread, ReviewThread } from "../types.mts";
 
 interface ThreadVisibility {
@@ -9,14 +14,6 @@ interface ThreadVisibility {
   resolutionOnlyThreads: ReviewThread[];
   firstLookThreads: FirstLookThread[];
   toMarkSeen: ReviewThread[];
-}
-
-function threadEndedByShepherd(thread: ReviewThread): boolean {
-  const comments = thread.comments;
-  if (comments && comments.length > 0) {
-    return hasPrShepherdMarker(comments[comments.length - 1]!.body);
-  }
-  return hasPrShepherdMarker(thread.body);
 }
 
 function withEdited<T extends ReviewThread>(thread: T, edited: boolean): T {
@@ -58,7 +55,14 @@ export function classifyThreadVisibility(
       return visible ? [visible] : [];
     });
   const resolutionOnlyThreads = unresolvedThreads
-    .filter((t) => t.isOutdated || t.isMinimized)
+    .filter((t) => {
+      const endedByShepherd = threadEndedByShepherd(t);
+      const ordinaryHuman = isHumanAuthor(t) && !isConfiguredBotAuthor(t, botUsernames);
+      if (endedByShepherd && ordinaryHuman) {
+        return isViewerAuthoredHuman(t, botUsernames);
+      }
+      return t.isOutdated || t.isMinimized;
+    })
     .map((t) => classifyVisibleThread(t, seenMap) ?? t);
   const firstLookThreads: FirstLookThread[] = [
     ...threads.flatMap((t) => {

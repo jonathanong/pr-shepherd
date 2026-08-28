@@ -33,11 +33,9 @@ export function buildBehindBaseHintInstruction(
  *
  * - `$HEAD_SHA`/`$DISMISS_MESSAGE` substitution: without it, the printed command has an
  *   empty `--message`/invalid `--require-sha` and `apply review` rejects the mutation.
- * - Self-reply exclusion: a human thread whose latest visible comment is already Shepherd's
- *   own prior reply still has its ID in `--reply-thread-ids` by default. Running the
- *   printed command as-is replies to Shepherd's own reply, which can re-surface the thread
- *   and produce a self-perpetuating reply loop — worse than a rejected mutation, and not
- *   something a caller can discover by inspecting the command alone.
+ * Marker-based self-reply routing is already reflected in the generated IDs. The instruction
+ * below makes that behavior explicit so an authenticated viewer's unmarked human feedback is
+ * not mistaken for an automated reply merely because the GitHub login matches.
  *
  * Contrast with what *does* stay in the skill's "Review-mutation mechanics" playbook —
  * dismiss-ID retention and the first-look/annotation ID-exclusion rules. Those only matter
@@ -50,7 +48,7 @@ export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): 
   const instructions: string[] = [];
   if ((resolveCommand.replyThreadIds?.length ?? 0) > 0) {
     instructions.push(
-      "Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.",
+      "Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked viewer-authored human thread is emitted resolve-only, not for another reply.",
     );
   }
   if (resolveCommand.requiresHeadSha) {

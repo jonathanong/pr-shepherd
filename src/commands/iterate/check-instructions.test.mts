@@ -103,20 +103,17 @@ describe("buildResolveCommandInstruction", () => {
     ]);
   });
 
-  it("puts the self-reply exclusion step first when replyThreadIds is non-empty", () => {
-    // Regression coverage for a real bug caught in review: this step must stay in the CLI,
-    // not move to the skill playbook. Unlike dismiss-ID retention (safe if the printed
-    // command is run unmodified), a self-reply ID sits in `--reply-thread-ids` by default —
-    // running the command as printed replies to Shepherd's own prior reply, which can
-    // re-surface the thread and produce a self-perpetuating reply loop. A caller without
-    // the skill loaded has no other way to learn this from the command alone.
+  it("puts the marker-routing explanation first when replyThreadIds is non-empty", () => {
+    // The generated command already excludes marker-ended replies. Keep the explanation
+    // CLI-side so callers know author equality is not the self-reply signal and must not
+    // rewrite the generated viewer-authored reply-and-resolve pairing.
     expect(buildResolveCommandInstruction(resolveCommand({ replyThreadIds: ["PRRT_1"] }))).toEqual([
-      "Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.",
+      "Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked viewer-authored human thread is emitted resolve-only, not for another reply.",
       'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',
     ]);
   });
 
-  it("omits the self-reply exclusion step when replyThreadIds is empty", () => {
+  it("omits the marker-routing explanation when replyThreadIds is empty", () => {
     const instructions = buildResolveCommandInstruction(resolveCommand({}));
     expect(instructions.some((i) => i.includes("remove any `--reply-thread-ids` entry"))).toBe(
       false,
@@ -133,7 +130,7 @@ describe("buildResolveCommandInstruction", () => {
         }),
       ),
     ).toEqual([
-      "Before `apply review:`, remove any `--reply-thread-ids` entry whose latest visible comment is your own Shepherd reply. Do not reply to yourself.",
+      "Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked viewer-authored human thread is emitted resolve-only, not for another reply.",
       "Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.",
       "Replace `$DISMISS_MESSAGE` with one sentence describing what changed.",
       'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',

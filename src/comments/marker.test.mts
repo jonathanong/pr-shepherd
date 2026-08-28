@@ -1,23 +1,32 @@
 import { describe, expect, it } from "vitest";
-import { hasPrShepherdMarker, addPrShepherdMarker } from "./marker.mts";
+import { addPrShepherdMarker, threadEndedByShepherd } from "./marker.mts";
 
 const MARKER = "<!-- pr-shepherd -->";
 
-describe("hasPrShepherdMarker", () => {
-  it("returns true when body contains the marker", () => {
-    expect(hasPrShepherdMarker(`${MARKER}\nsome reply`)).toBe(true);
+describe("threadEndedByShepherd", () => {
+  it("returns true when the top-level body begins with the marker", () => {
+    expect(threadEndedByShepherd({ body: `${MARKER}\nsome reply` })).toBe(true);
   });
 
   it("returns false when marker appears mid-body (not at start)", () => {
-    expect(hasPrShepherdMarker(`some text\n${MARKER}`)).toBe(false);
+    expect(threadEndedByShepherd({ body: `some text\n${MARKER}` })).toBe(false);
   });
 
   it("returns false when body has no marker", () => {
-    expect(hasPrShepherdMarker("just a regular comment")).toBe(false);
+    expect(threadEndedByShepherd({ body: "just a regular comment" })).toBe(false);
   });
 
   it("returns false for empty string", () => {
-    expect(hasPrShepherdMarker("")).toBe(false);
+    expect(threadEndedByShepherd({ body: "" })).toBe(false);
+  });
+
+  it("uses the latest transcript comment when comments are present", () => {
+    expect(
+      threadEndedByShepherd({
+        body: "original feedback",
+        comments: [{ body: "original feedback" }, { body: `${MARKER}\nhandled` }],
+      }),
+    ).toBe(true);
   });
 });
 
@@ -26,9 +35,9 @@ describe("addPrShepherdMarker", () => {
     expect(addPrShepherdMarker("my reply")).toBe(`${MARKER}\nmy reply`);
   });
 
-  it("resulting body contains the marker", () => {
+  it("resulting body is recognized as Shepherd-authored", () => {
     const result = addPrShepherdMarker("some text");
-    expect(hasPrShepherdMarker(result)).toBe(true);
+    expect(threadEndedByShepherd({ body: result })).toBe(true);
   });
 
   it("preserves the original message after the marker", () => {

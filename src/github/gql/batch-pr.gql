@@ -159,6 +159,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
               isMinimized
               url
               authorAssociation
+              viewerDidAuthor
               author {
                 __typename
                 login

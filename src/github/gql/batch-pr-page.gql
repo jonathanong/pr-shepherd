@@ -42,6 +42,7 @@ query BatchPrPage(
               isMinimized
               url
               authorAssociation
+              viewerDidAuthor
               author {
                 __typename
                 login

@@ -68,6 +68,7 @@ export function parseRawPr(
       author: c.author?.login ?? "unknown",
       authorType: mapAuthorType(c.author?.__typename, c.author?.login),
       ...(c.authorAssociation !== undefined && { authorAssociation: c.authorAssociation }),
+      ...(c.viewerDidAuthor === true && { viewerDidAuthor: true as const }),
       body: c.body,
       url: c.url,
       createdAtUnix: c.createdAt ? parseCreatedAt(c.createdAt) : 0,
@@ -86,6 +87,7 @@ export function parseRawPr(
       ...(comment?.authorAssociation !== undefined && {
         authorAssociation: comment.authorAssociation,
       }),
+      ...(comment?.viewerDidAuthor === true && { viewerDidAuthor: true as const }),
       body: comment?.body ?? "",
       url: comment?.url ?? "",
       createdAtUnix: comment?.createdAt ? parseCreatedAt(comment.createdAt) : 0,
