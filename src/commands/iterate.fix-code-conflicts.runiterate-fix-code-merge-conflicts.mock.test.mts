@@ -52,6 +52,8 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       expect(joined).not.toContain("git rebase --continue");
       // No actual resolve step — no threads/reviews to resolve
       expect(joined).not.toContain("Run the `resolve:` command shown above");
+      expect(joined).toContain("requires a human handoff for an authorized push");
+      expect(joined).not.toContain("iterate again");
     }
   });
 
@@ -104,20 +106,21 @@ describe("runIterate — fix_code (merge conflicts)", () => {
     if (result.action === "fix_code") {
       expect(result.fix.threads).toHaveLength(1);
       expect(result.fix.threads[0]?.id).toBe("thread-1");
+      expect(result.fix.resolveCommand.hasMutations).toBe(false);
+      expect(result.fix.resolveOnlyCommand).toBeUndefined();
       // Threads + CONFLICTS: conditional commit/rebase instruction plus resolve step.
       // No prescriptive git commands — agent decides based on conditional phrasing.
       const joined = result.fix.instructions.join("\n");
       expect(joined).not.toContain("git commit");
       expect(joined).toContain("pr-shepherd apply journal"); // shepherd journal
       expect(joined).toContain("The branch has merge conflicts (see `**branch**` above)");
-      expect(joined).toContain(
-        "Commit any remaining conflict-resolution changes before review mutations",
-      );
+      expect(joined).toContain("Commit any remaining conflict-resolution changes.");
       expect(joined).not.toContain("rebase onto");
       expect(joined).not.toContain("origin/main");
       expect(joined).not.toContain("git rebase --continue");
       expect(joined).not.toMatch(/rebase origin\/\w+ && git push/);
-      expect(joined).toContain("apply review:");
+      expect(joined).not.toContain("apply review:");
+      expect(joined).toContain("requires a human handoff for an authorized push");
     }
   });
 });

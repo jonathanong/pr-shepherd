@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, it, expect, vi } from "vitest";
 import {
   registerHooks,
@@ -7,7 +8,9 @@ import {
   mockAutoMinimizeComments,
   mockAutoResolveThreads,
   mockFetchPrBatch,
+  mockLoadSeenMap,
 } from "../../test-helpers/commands/check.test-support.mts";
+import { hashBody } from "../state/seen-comments.mts";
 import { runCheck } from "./check.mts";
 import type { ClassifyItem } from "../classify/types.mts";
 
@@ -104,6 +107,46 @@ describe("runCheck — classification auto-minimize", () => {
     expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["rev-bot"]);
     expect(report.reviewSummaries.map((r) => r.id)).not.toContain("rev-bot");
     expect(report.ruleAutoResolveReviewSummaryIds ?? []).not.toContain("rev-bot");
+  });
+
+  it.each([false, undefined])(
+    "surfaces a suppressed auto-resolve review summary when minimization is %s",
+    async (viewerCanMinimize) => {
+      mockFetchPrBatch.mockResolvedValue({
+        data: makeBatchData({
+          reviewSummaries: [{ ...botReviewSummary(), viewerCanMinimize }],
+        }),
+      });
+
+      const report = await runCheck({ ...BASE_OPTS, autoMinimizeSuppressed: true });
+
+      expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
+      expect(report.firstLookSummaries).toEqual([
+        expect.objectContaining({ id: "rev-bot", viewerCanMinimize }),
+      ]);
+      expect(report.ruleAutoResolveReviewSummaryIds ?? []).not.toContain("rev-bot");
+    },
+  );
+
+  it("re-surfaces an edited denied auto-resolve review summary", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        reviewSummaries: [
+          { ...botReviewSummary(), body: "Updated summary", viewerCanMinimize: false },
+        ],
+      }),
+    });
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([["rev-bot", { seenAt: 1000, bodyHash: hashBody("Old summary") }]]),
+    );
+
+    const report = await runCheck({ ...BASE_OPTS, autoMinimizeSuppressed: true });
+
+    expect(report.editedSummaries).toEqual([
+      expect.objectContaining({ id: "rev-bot", body: "Updated summary" }),
+    ]);
+    expect(report.ruleAutoResolveReviewSummaryIds ?? []).not.toContain("rev-bot");
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
   });
 
   it("self-resolves suppressed auto-resolve threads when enabled", async () => {

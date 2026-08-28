@@ -232,7 +232,7 @@ These flags control whether shepherd automatically performs each class of mutati
 
 ### `actions.autoMinimizeSuppressed` — default `true`
 
-When `true`, Shepherd silently applies the resolve/minimize mutation for classification-rule matches that set both `suppress: true` and `autoResolve: true`, then removes successful IDs from the agent-facing queues before `iterate` decides whether to emit `fix_code`.
+When `true`, Shepherd silently applies the resolve/minimize mutation for classification-rule matches that set both `suppress: true` and `autoResolve: true` only when GitHub reports the exact per-object capability, then removes successful IDs from the agent-facing queues before `iterate` decides whether to emit `fix_code`. Denied or unverifiable items return to the normal first-look/edit visibility gate and produce no mutation recommendation.
 
 This applies only to explicit classification-rule auto-resolve matches. Ordinary `iterate.minimizeComments` policy queues and `autoResolve: true` rules without `suppress: true` still flow through the generated `apply review` command.
 

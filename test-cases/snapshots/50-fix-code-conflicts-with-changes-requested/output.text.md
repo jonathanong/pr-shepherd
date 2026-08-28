@@ -20,4 +20,4 @@ Conversations Resolved: Yes [Not Required]
 3. Read every body under `## Changes-requested reviews` and apply any warranted change.
 4. Commit any remaining conflict-resolution changes.
 5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal 42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
-6. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.
+6. `[FIX_CODE]` requires a human handoff for an authorized push after conflict resolution. Shepherd cannot verify the Git credential's push authorization. Stop polling after committing, and resume only after the remote PR head changes.

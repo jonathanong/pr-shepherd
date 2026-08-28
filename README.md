@@ -272,7 +272,7 @@ const rule: ClassifyRule = (item) => {
 export default rule;
 ```
 
-`suppress: true` hides the item from agent output. `autoResolve: true` queues it for the minimize/resolve mutation. When both apply together, Shepherd performs that mutation silently during `iterate` by default (`actions.autoMinimizeSuppressed: true`) so repetitive bot noise does not create a `fix_code` handoff.
+`suppress: true` hides the item from agent output. `autoResolve: true` queues it for the minimize/resolve mutation. When both apply together, Shepherd performs that mutation silently during `iterate` by default (`actions.autoMinimizeSuppressed: true`) only when GitHub reports the exact per-object capability. Denied or unverifiable items return to the normal first-look/edit visibility gate and produce no mutation recommendation.
 
 TypeScript rules are loaded by the runtime's native TypeScript support; keep them to erasable syntax such as type annotations and `import type`. Runtime TypeScript features that need transpilation, such as enums, namespaces, parameter properties, and decorators, are not supported. Use `.mts` for portable ESM rules across Node, Bun, and Deno.
 

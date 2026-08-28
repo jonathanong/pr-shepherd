@@ -142,8 +142,16 @@ export async function runCheck(
   const firstLookSummaries: typeof batchData.reviewSummaries = [];
   const editedSummaries: typeof batchData.reviewSummaries = [];
   const seenSummaries: typeof batchData.reviewSummaries = [];
+  const deniedRuleAutoResolveReviewSummaryIds = new Set(
+    partition.ruleAutoResolveReviewSummaryIds.filter(
+      (id) =>
+        batchData.reviewSummaries.find((review) => review.id === id)?.viewerCanMinimize !== true,
+    ),
+  );
   const unseenReviewSummaries = batchData.reviewSummaries.filter(
-    (r) => !partition.suppressedReviewSummaryIds.has(r.id),
+    (r) =>
+      !partition.suppressedReviewSummaryIds.has(r.id) ||
+      deniedRuleAutoResolveReviewSummaryIds.has(r.id),
   );
   for (const r of unseenReviewSummaries) {
     const cls = classifyItem(r.id, r.body, seenMap);
@@ -183,7 +191,11 @@ export async function runCheck(
         .filter((t) => partition.suppressedThreadIds.has(t.id))
         .map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
       ...batchData.reviewSummaries
-        .filter((r) => partition.suppressedReviewSummaryIds.has(r.id))
+        .filter(
+          (r) =>
+            partition.suppressedReviewSummaryIds.has(r.id) &&
+            !deniedRuleAutoResolveReviewSummaryIds.has(r.id),
+        )
         .map((r) => markSeen(stateKey, r.id, r.body)),
       ...batchData.changesRequestedReviews
         .filter((r) => partition.suppressedChangesRequestedIds.has(r.id))

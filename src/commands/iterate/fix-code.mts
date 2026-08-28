@@ -256,18 +256,23 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const inProgressRunIds: string[] = [];
   const commentMinimizeIds = report.comments.minimizeIds ?? actionableComments.map((c) => c.id);
   const allCommentIds = [...commentMinimizeIds, ...reviewSummaryIds];
-  const { resolveCommand, resolveOnlyCommand } = buildResolveCommand(
-    threads,
-    resolutionOnlyThreads,
-    allCommentIds,
-    changesRequestedReviews,
-    failingAgentChecks,
-    prNumber,
-    botUsernames,
-    ruleAutoResolveThreadIds,
-    report.viewerAuthorization,
-    allThreads,
-  );
+  // Conflict resolution necessarily changes the branch head, but Shepherd cannot verify
+  // authorization for the local Git credential that would publish it. Defer review mutations
+  // until an authorized push updates the PR and a fresh iteration can rebuild SHA-safe commands.
+  const { resolveCommand, resolveOnlyCommand } = hasConflicts
+    ? buildResolveCommand([], [], [], [], [], prNumber, botUsernames, [], undefined, [])
+    : buildResolveCommand(
+        threads,
+        resolutionOnlyThreads,
+        allCommentIds,
+        changesRequestedReviews,
+        failingAgentChecks,
+        prNumber,
+        botUsernames,
+        ruleAutoResolveThreadIds,
+        report.viewerAuthorization,
+        allThreads,
+      );
   // Safety: if the base branch is unknown, escalate when a push is plausible — the agent
   // would need the correct base to rebase safely. This is a conservative guard, not a
   // prediction that the agent *will* push. Intentionally broader than `pushLikely` above:

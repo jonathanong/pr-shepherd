@@ -23,6 +23,7 @@ function check(overrides: Partial<AgentCheck>): AgentCheck {
     runId: "123",
     detailsUrl: "https://github.com/owner/repo/actions/runs/123",
     conclusion: "FAILURE",
+    logExcerpt: "tests failed",
     ...overrides,
   };
 }
@@ -160,9 +161,29 @@ describe("buildFixCompletionInstruction", () => {
     },
   );
 
-  it("continues polling when an actionable failure accompanies a CI-only handoff", () => {
+  it("pauses polling when an actionable failure accompanies a CI-only handoff", () => {
     expect(
       buildFixCompletionInstruction([check({ conclusion: "CANCELLED" }), check({})]),
-    ).toContain("non-terminal");
+    ).toContain("requires a human handoff");
+  });
+
+  it("pauses polling for an external check handoff", () => {
+    expect(
+      buildFixCompletionInstruction([
+        check({ runId: null, detailsUrl: "https://ci.example/check", logExcerpt: undefined }),
+      ]),
+    ).toContain("requires a human handoff");
+  });
+
+  it("pauses polling for a GitHub Actions failure with no included evidence", () => {
+    expect(buildFixCompletionInstruction([check({ logExcerpt: undefined })])).toContain(
+      "requires a human handoff",
+    );
+  });
+
+  it("pauses polling after conflict resolution until an authorized push updates the PR", () => {
+    expect(buildFixCompletionInstruction([], true)).toContain(
+      "requires a human handoff for an authorized push",
+    );
   });
 });

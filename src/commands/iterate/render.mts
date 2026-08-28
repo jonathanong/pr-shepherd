@@ -166,6 +166,6 @@ export function buildFixInstructions(
 
   instructions.push(...buildResolveCommandInstruction(resolveCommand));
 
-  instructions.push(buildFixCompletionInstruction(failingChecks));
+  instructions.push(buildFixCompletionInstruction(failingChecks, hasConflicts));
   return instructions;
 }

@@ -86,17 +86,25 @@ export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   return instructions;
 }
 
-export function buildFixCompletionInstruction(checks: AgentCheck[]): string {
+export function buildFixCompletionInstruction(
+  checks: AgentCheck[],
+  requiresRemoteUpdateAuthorization = false,
+): string {
+  if (requiresRemoteUpdateAuthorization) {
+    return "`[FIX_CODE]` requires a human handoff for an authorized push after conflict resolution. Shepherd cannot verify the Git credential's push authorization. Stop polling after committing, and resume only after the remote PR head changes.";
+  }
   const hasUninspectableFailure = checks.some((check) => !check.runId && !check.detailsUrl);
-  const hasOnlyCiAuthorizationHandoffs =
-    checks.length > 0 &&
-    checks.every(
-      (check) => check.conclusion === "CANCELLED" || check.conclusion === "STARTUP_FAILURE",
-    );
+  const hasCiAuthorizationHandoff = checks.some(
+    (check) =>
+      check.conclusion === "CANCELLED" ||
+      check.conclusion === "STARTUP_FAILURE" ||
+      (check.runId === null && Boolean(check.detailsUrl)) ||
+      (check.runId !== null && !check.logExcerpt?.trim()),
+  );
   if (hasUninspectableFailure) {
     return "`[FIX_CODE]` requires a human handoff for an uninspectable failing check. Stop polling after escalating, and resume only after human direction.";
   }
-  if (hasOnlyCiAuthorizationHandoffs) {
+  if (hasCiAuthorizationHandoff) {
     return "`[FIX_CODE]` requires a human handoff for a failing check with no authorized follow-up action. Stop polling after escalating, and resume only after human direction.";
   }
   return "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.";
