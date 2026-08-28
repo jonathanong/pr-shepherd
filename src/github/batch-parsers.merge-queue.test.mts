@@ -22,6 +22,23 @@ function parse(raw: ReturnType<typeof makeRawPr>) {
 }
 
 describe("parseRawPr — merge queue", () => {
+  it("parses an active auto-merge request", () => {
+    const data = parse(
+      makeRawPr({
+        autoMergeRequest: {
+          enabledAt: "2026-08-27T12:00:00Z",
+          mergeMethod: "SQUASH",
+          enabledBy: { login: "octocat" },
+        },
+      }),
+    );
+    expect(data.autoMergeRequest).toEqual({
+      enabledAtUnix: 1_787_832_000,
+      mergeMethod: "SQUASH",
+      enabledBy: "octocat",
+    });
+  });
+
   it("keeps active synthetic-commit checks and raw queue metadata", () => {
     const raw = makeRawPr({
       isInMergeQueue: true,

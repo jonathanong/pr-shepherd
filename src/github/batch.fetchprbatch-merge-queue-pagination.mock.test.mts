@@ -21,25 +21,26 @@ const check = (name: string, conclusion: string) => ({
   checkSuite: { workflowRun: { event: "merge_group", workflow: null } },
 });
 
-describe("fetchPrBatch — merge queue check pagination", () => {
-  it("fetches failures after the first 100 queue contexts before classifying them", async () => {
-    const pr = makeRawPr({
-      isInMergeQueue: true,
-      mergeQueueEntry: {
-        position: 1,
-        state: "AWAITING_CHECKS",
-        estimatedTimeToMerge: null,
-        headCommit: {
-          oid: "queue123",
-          statusCheckRollup: {
-            contexts: {
-              pageInfo: { hasNextPage: true, endCursor: "queue-cursor-1" },
-              nodes: [check("first", "SUCCESS")],
-            },
-          },
+function queuedPr(pageInfo: { hasNextPage: boolean; endCursor: string | null }) {
+  return makeRawPr({
+    isInMergeQueue: true,
+    mergeQueueEntry: {
+      position: 1,
+      state: "AWAITING_CHECKS",
+      estimatedTimeToMerge: null,
+      headCommit: {
+        oid: "queue123",
+        statusCheckRollup: {
+          contexts: { pageInfo, nodes: [check("first", "SUCCESS")] },
         },
       },
-    });
+    },
+  });
+}
+
+describe("fetchPrBatch — merge queue check pagination", () => {
+  it("fetches failures after the first 100 queue contexts before classifying them", async () => {
+    const pr = queuedPr({ hasNextPage: true, endCursor: "queue-cursor-1" });
     mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
     mockGraphql.mockResolvedValue({
       data: {
@@ -67,5 +68,59 @@ describe("fetchPrBatch — merge queue check pagination", () => {
       oid: "queue123",
       cursor: "queue-cursor-1",
     });
+  });
+
+  it("rejects a missing initial next-page cursor", async () => {
+    mockGraphqlWithRateLimit.mockResolvedValue(
+      makeResponse(queuedPr({ hasNextPage: true, endCursor: null })),
+    );
+    await expect(fetchPrBatch(42, REPO)).rejects.toThrow("omitted the next cursor");
+  });
+
+  it("rejects a changed commit during queue pagination", async () => {
+    mockGraphqlWithRateLimit.mockResolvedValue(
+      makeResponse(queuedPr({ hasNextPage: true, endCursor: "cursor" })),
+    );
+    mockGraphql.mockResolvedValue({
+      data: { repository: { object: { __typename: "Commit", oid: "other" } } },
+    });
+    await expect(fetchPrBatch(42, REPO)).rejects.toThrow("disappeared or changed");
+  });
+
+  it("rejects a disappearing rollup during queue pagination", async () => {
+    mockGraphqlWithRateLimit.mockResolvedValue(
+      makeResponse(queuedPr({ hasNextPage: true, endCursor: "cursor" })),
+    );
+    mockGraphql.mockResolvedValue({
+      data: {
+        repository: {
+          object: { __typename: "Commit", oid: "queue123", statusCheckRollup: null },
+        },
+      },
+    });
+    await expect(fetchPrBatch(42, REPO)).rejects.toThrow("statusCheckRollup disappeared");
+  });
+
+  it("rejects a missing cursor on a later queue page", async () => {
+    mockGraphqlWithRateLimit.mockResolvedValue(
+      makeResponse(queuedPr({ hasNextPage: true, endCursor: "cursor" })),
+    );
+    mockGraphql.mockResolvedValue({
+      data: {
+        repository: {
+          object: {
+            __typename: "Commit",
+            oid: "queue123",
+            statusCheckRollup: {
+              contexts: {
+                pageInfo: { hasNextPage: true, endCursor: null },
+                nodes: [check("second", "SUCCESS")],
+              },
+            },
+          },
+        },
+      },
+    });
+    await expect(fetchPrBatch(42, REPO)).rejects.toThrow("omitted the next cursor");
   });
 });

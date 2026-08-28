@@ -170,4 +170,27 @@ describe("runIterate — merge", () => {
     const result = await runIterate(makeOpts({ merge: true }));
     expect(result.action).toBe("wait");
   });
+
+  it("escalates a current ejection without actionable failures", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        mergeQueue: {
+          enabled: true,
+          inQueue: false,
+          latestRemoval: { reason: "MANUAL", createdAtUnix: 1_700_000_000 },
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: false,
+      remainingSeconds: 300,
+    });
+
+    const result = await runIterate(makeOpts({ merge: true }));
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.mergeQueueRemoval?.reason).toBe("MANUAL");
+    }
+  });
 });
