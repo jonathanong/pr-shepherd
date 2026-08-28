@@ -15,12 +15,16 @@ flowchart TD
   S1 --> S15{"1.5 state != OPEN?"}
   S15 -->|yes| A_CAN(["action: cancel"])
   S15 -->|no| S2["2. updateReadyDelay"]
-  S2 --> S2C{"shouldCancel?"}
-  S2C -->|yes| A_CAN
-  S2C -->|no| S3{"3. hasActionableWork?"}
+  S2 --> S3{"3. hasActionableWork?"}
   S3 -->|yes| S3X["REST cancel failing Actions runs"]
   S3X --> A_FIX(["action: fix_code"])
-  S3 -->|no| S4{"4. READY + isDraft<br/>+ !blockingBotReview?"}
+  S3 -->|no| SM{"--merge state?"}
+  SM -->|active queue/auto-merge| A_W(["action: wait"])
+  SM -->|current removal| A_ESC(["action: escalate"])
+  SM -->|none| S2C{"shouldCancel?"}
+  S2C -->|yes + --merge| A_MERGE(["action: merge"])
+  S2C -->|yes without --merge| A_CAN
+  S2C -->|no| S4{"4. READY + isDraft<br/>+ !blockingBotReview?"}
   S4 -->|yes| S4X["markPullRequestReadyForReview"]
   S4X --> A_MR(["action: mark_ready"])
   S4 -->|no| A_W(["action: wait"])
@@ -31,13 +35,14 @@ flowchart TD
   STALL -->|no| DEC{"Follow ## Instructions"}
 
   A_CAN --> DEC
+  A_MERGE --> DEC
   A_MR --> DEC
   A_ESC --> DEC
 
   DEC -->|cancel/escalate| STOP["stop"]
   DEC -->|fix_code| FIX["inspect CI as needed<br/>edit+commit by repo convention<br/>pr-shepherd apply review"]
   FIX --> RERUN["rerun the poll"]
-  DEC -->|wait/mark_ready| RERUN
+  DEC -->|wait/mark_ready/merge| RERUN
   RERUN --> POLL
 ```
 

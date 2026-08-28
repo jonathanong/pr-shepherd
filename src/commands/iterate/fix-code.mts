@@ -285,7 +285,9 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
         })
       : undefined;
   if (requeue) {
-    instructions.push(
+    instructions.splice(
+      Math.max(0, instructions.length - 1),
+      0,
       "After all fixes and review mutations, replace `$HEAD_SHA` in the requeue commands with the full pushed PR-head SHA (or `$(git rev-parse HEAD)`). If GitHub no longer reports the PR in the merge queue, run the `requeue:` command shown above; if the gh CLI reports that auto-merge is disabled, run `requeue API fallback:` instead.",
     );
   }

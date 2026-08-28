@@ -123,4 +123,31 @@ describe("fetchPrBatch — merge queue check pagination", () => {
     });
     await expect(fetchPrBatch(42, REPO)).rejects.toThrow("omitted the next cursor");
   });
+
+  it("does not paginate a removal older than the latest enqueue", async () => {
+    const pr = makeRawPr({
+      mergeQueueAdditions: { nodes: [{ createdAt: "2026-08-27T13:00:00Z" }] },
+      mergeQueueRemovals: {
+        nodes: [
+          {
+            reason: "CI_FAILURE",
+            createdAt: "2026-08-27T12:00:00Z",
+            beforeCommit: {
+              oid: "old-queue",
+              statusCheckRollup: {
+                contexts: {
+                  pageInfo: { hasNextPage: true, endCursor: "stale-cursor" },
+                  nodes: [check("old", "FAILURE")],
+                },
+              },
+            },
+          },
+        ],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.latestMergeQueueRemoval).toBeNull();
+    expect(mockGraphql).not.toHaveBeenCalled();
+  });
 });

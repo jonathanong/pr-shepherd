@@ -85,7 +85,7 @@ actions:
 | `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                                                                                   |
 | `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                                                            |
 | `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                                                                                  |
-| `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos)                                                                            |
+| `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR-head CI; merge-queue `merge_group` checks are included automatically                                                    |
 | `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                                                                      |
 | `merge.commandArgs`                  | `[]`                                      | Options for ordinary `gh pr merge` commands; defaults to `--merge` when no strategy is selected. Not used for merge-queue commands.                         |
 | `actions.autoMinimizeSuppressed`     | `true`                                    | Silently resolve/minimize classification-rule matches with both `suppress: true` and `autoResolve: true` before emitting `fix_code`                         |
@@ -210,7 +210,7 @@ Common additions:
 
 ## `merge`
 
-`merge.commandArgs` is appended only to ordinary auto/direct `gh pr merge` commands emitted by `--merge`. Shepherd owns the PR selector, `--repo`, `--auto`, and `--match-head-commit`; those options are rejected in config. Select at most one of `--merge`/`-m`, `--squash`/`-s`, or `--rebase`/`-r`. If none is configured, Shepherd adds `--merge`. Queue commands omit every configured option because the queue controls the merge method and does not accept branch deletion.
+`merge.commandArgs` is appended only to ordinary auto/direct `gh pr merge` commands emitted by `--merge`. Shepherd rejects the PR selector, `--repo`, `--auto`, `--match-head-commit`, privilege bypass via `--admin`, and file-reading body options (`--body-file`/`-F`). Select at most one of `--merge`/`-m`, `--squash`/`-s`, or `--rebase`/`-r`. If none is configured, Shepherd adds `--merge`. Queue commands omit every configured option because the queue controls the merge method and does not accept branch deletion.
 
 ---
 

@@ -14,8 +14,9 @@ export function renderShellCommand(argv: string[]): string {
 
 function renderShellArg(arg: string): string {
   if (/^\$[A-Z_][A-Z0-9_]*$/.test(arg)) return `"${arg}"`;
+  const assignment = /^([A-Za-z_][A-Za-z0-9_]*)=(\$[A-Z_][A-Z0-9_]*)$/.exec(arg);
+  if (assignment) return `${assignment[1]}="${assignment[2]}"`;
   if (/^[A-Za-z0-9_./:@%+=,-]+$/.test(arg)) return arg;
   if (!/["$`\\]/.test(arg)) return `"${arg}"`;
-  if (!arg.includes("'")) return `'${arg}'`;
-  throw new Error(`Unexpected character in shell arg: ${JSON.stringify(arg)}`);
+  return `'${arg.replaceAll("'", `'"'"'`)}'`;
 }

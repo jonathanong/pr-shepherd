@@ -66,7 +66,12 @@ async function hydrateCommitContexts(commit: QueueCommit, repo: RepoInfo): Promi
 /** Hydrate all status contexts for the active or most recently removed queue commit. */
 export async function hydrateMergeQueueChecks(raw: RawPr, repo: RepoInfo): Promise<void> {
   const active = raw.mergeQueueEntry?.headCommit;
-  const removed = raw.mergeQueueRemovals?.nodes[0]?.beforeCommit;
+  const removal = raw.mergeQueueRemovals?.nodes[0];
+  const addition = raw.mergeQueueAdditions?.nodes[0];
+  const removalIsCurrent = Boolean(
+    removal && (!addition || Date.parse(removal.createdAt) >= Date.parse(addition.createdAt)),
+  );
+  const removed = removalIsCurrent ? removal?.beforeCommit : undefined;
   if (active) await hydrateCommitContexts(active, repo);
   if (removed && removed.oid !== active?.oid) await hydrateCommitContexts(removed, repo);
 }

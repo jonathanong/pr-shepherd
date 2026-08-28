@@ -37,7 +37,7 @@ export async function handleActiveMergeState(input: {
   stallKey: StallKey;
 }): Promise<IterateResult | null> {
   const { enabled, active, base, report, stallKey } = input;
-  if (active) {
+  if (enabled && active) {
     await clearStallState(stallKey);
     return {
       ...base,

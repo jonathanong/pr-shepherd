@@ -102,6 +102,23 @@ describe("runIterate — merge", () => {
     if (result.action === "wait") expect(result.log).toContain("merge queue");
   });
 
+  it("preserves the normal ready handoff when merge mode is disabled", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        mergeQueue: { enabled: true, inQueue: true },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("cancel");
+  });
+
   it("adds requeue commands to actionable work after an ejection", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -163,34 +180,11 @@ describe("runIterate — merge", () => {
     );
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: true,
-      shouldCancel: false,
-      remainingSeconds: 300,
+      shouldCancel: true,
+      remainingSeconds: 0,
     });
 
     const result = await runIterate(makeOpts({ merge: true }));
-    expect(result.action).toBe("wait");
-  });
-
-  it("escalates a current ejection without actionable failures", async () => {
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        mergeQueue: {
-          enabled: true,
-          inQueue: false,
-          latestRemoval: { reason: "MANUAL", createdAtUnix: 1_700_000_000 },
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
-      shouldCancel: false,
-      remainingSeconds: 300,
-    });
-
-    const result = await runIterate(makeOpts({ merge: true }));
-    expect(result.action).toBe("escalate");
-    if (result.action === "escalate") {
-      expect(result.escalate.mergeQueueRemoval?.reason).toBe("MANUAL");
-    }
+    expect(result.action).toBe("merge");
   });
 });

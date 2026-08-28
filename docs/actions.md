@@ -144,7 +144,7 @@ Emits an exact GitHub CLI command; Shepherd does not execute or wrap the merge o
 
 **Command modes:** Ordinary branches emit `gh pr merge <PR> --repo <owner/repo> --match-head-commit <head> --auto ...commandArgs` and a plain fallback without `--auto`. Run the plain fallback only when GitHub specifically reports that auto-merge is unavailable. A queue-required branch emits plain `gh pr merge <PR> --repo <owner/repo> --match-head-commit <head>`; that is the gh CLI operation that adds a ready PR to the queue. Because of the gh CLI auto-merge-disabled queue limitation, output also includes an exact `gh api graphql` `enqueuePullRequest` fallback.
 
-Configured `merge.commandArgs` apply only to ordinary merge commands. Queue commands omit them. Every command pins the expected PR head.
+Configured `merge.commandArgs` apply only to ordinary merge commands. An enabled or required merge queue uses queue commands and omits them. Every command pins the expected PR head.
 
 **Exit code:** 15.
 

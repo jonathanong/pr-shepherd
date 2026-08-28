@@ -127,7 +127,7 @@ pr-shepherd 42 --quiet-status          # print only changed WAIT status snapshot
 pr-shepherd 42 --until-terminal        # continue through WAIT/MARK_READY until work or terminal state
 pr-shepherd 42 --debounce 5m           # wait 5m after first FIX_CODE, then return one batched tick
 pr-shepherd 42 --ready-delay 15m
-pr-shepherd 42 --merge                  # enable auto-merge or enter the required merge queue when ready
+pr-shepherd 42 --merge                  # enable auto-merge or enter an enabled/required merge queue when ready
 pr-shepherd iterate 42                 # single tick
 ```
 

@@ -167,7 +167,15 @@ function parseNeverCancelRuns(value: unknown): string[] {
 }
 
 const MERGE_STRATEGY_FLAGS = new Set(["--merge", "-m", "--squash", "-s", "--rebase", "-r"]);
-const SHEPHERD_OWNED_MERGE_FLAGS = ["--repo", "-R", "--auto", "--match-head-commit"];
+const SHEPHERD_OWNED_MERGE_FLAGS = [
+  "--repo",
+  "-R",
+  "--auto",
+  "--match-head-commit",
+  "--admin",
+  "--body-file",
+  "-F",
+];
 
 function parseMergeCommandArgs(value: unknown): string[] {
   if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
