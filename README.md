@@ -25,7 +25,7 @@ Full reference: [docs/README.md](docs/README.md). Feature matrix: [docs/features
 
 `pr-shepherd` moves deterministic PR orchestration into a local MCP server, with a CLI for shells and CI. Both interfaces fetch the same GitHub state, emit raw-enough context, and return a numbered plan for the calling agent to follow.
 
-The MCP server exposes canonical `iterate`, `apply`, and `build_suggestion_patches` tools. `apply` accepts ordered review mutations, selection-only file-view diagnostics, and journal entries; the deprecated singular suggestion tool remains temporarily as an adapter. Direct MCP calls require a repository-qualified `pr`: a GitHub PR URL or `owner/repo#N`, matching the repository where the server started. The CLI and programmatic API also retain bare-number and current-branch PR discovery. The shipped skills are thin dispatchers for those tools.
+The MCP server exposes canonical `iterate`, `apply`, and `build_suggestion_patches` tools. `apply` accepts ordered review mutations, selection-only file-view diagnostics, and journal entries; the deprecated singular suggestion tool remains temporarily as an adapter. Direct MCP calls require a repository-qualified `pr`: a GitHub PR URL or `owner/repo#N`; the explicit repository is the target for GitHub I/O, even when it differs from the local checkout. The CLI and programmatic API also retain bare-number and current-branch PR discovery. The shipped skills are thin dispatchers for those tools.
 
 Each tick returns exactly one action:
 
@@ -130,6 +130,8 @@ pr-shepherd 42 --debounce 5m           # wait 5m after first FIX_CODE, then retu
 pr-shepherd 42 --ready-delay 15m
 pr-shepherd 42 --merge                  # enable auto-merge when GitHub confirms viewer authorization
 pr-shepherd iterate 42                 # single tick
+pr-shepherd owner/repo#42              # poll a PR in an explicit repository
+pr-shepherd https://github.com/owner/repo/pull/42
 ```
 
 ### Apply Review And Journal Changes, Or Select Files

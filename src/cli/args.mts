@@ -4,6 +4,7 @@
 
 import { parseArgs } from "node:util";
 import type { GlobalOptions } from "../types.mts";
+import { parseCliPrReference, resolveParsedPrTarget } from "../pr-reference.mts";
 
 // Flags that consume the next argument as their value (used for PR-number
 // detection only — prevents a flag's value from being mistaken for a PR number).
@@ -123,7 +124,10 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
   const prIndex = args.findIndex(
     (a, index) => !skipForPrDetect.has(index) && !a.startsWith("--") && parsePrNumber(a) !== null,
   );
-  const prNumber = prIndex !== -1 ? parsePrNumber(args[prIndex]!)! : undefined;
+  const target =
+    prIndex !== -1
+      ? resolveParsedPrTarget(parseCliPrReference(args[prIndex]!)!)
+      : { prNumber: undefined };
 
   // Remove consumed global-flag indices (and the PR number itself) from extra.
   if (prIndex !== -1) {
@@ -133,19 +137,20 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
   const extra = args.filter((_, i) => !consumedIndices.has(i));
 
   return {
-    prNumber,
-    global: { format, verbose },
+    prNumber: target.prNumber,
+    global: {
+      format,
+      verbose,
+      ...(target.targetRepository !== undefined
+        ? { targetRepository: target.targetRepository }
+        : undefined),
+    },
     extra,
   };
 }
 
 export function parsePrNumber(value: string): number | null {
-  if (/^\d+$/.test(value)) return parseInt(value, 10);
-
-  const match = value.match(/^https?:\/\/github\.com\/[^/]+\/[^/]+\/pull\/(\d+)(?:[/?#].*)?$/);
-  if (match) return parseInt(match[1]!, 10);
-
-  return null;
+  return parseCliPrReference(value)?.number ?? null;
 }
 
 /** Get the value of a flag like `--flag value` or `--flag=value`. */

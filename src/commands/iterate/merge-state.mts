@@ -2,6 +2,7 @@ import { clearStallState } from "../../state/iterate-stall.mts";
 import type { IterateResult, IterateResultBase, ShepherdReport } from "../../types.mts";
 import { buildEscalateHumanMessage, buildEscalateSuggestion } from "./escalate.mts";
 import { buildMergeCommandPlan } from "./merge.mts";
+import { formatPrUrl } from "../../pr-reference.mts";
 
 type StallKey = { owner: string; repo: string; pr: number };
 
@@ -93,7 +94,9 @@ export async function handleActiveMergeState(input: {
     action: "escalate",
     escalate: {
       ...escalateBase,
-      humanMessage: buildEscalateHumanMessage(escalateBase, report.pr, { merge: true }),
+      humanMessage: buildEscalateHumanMessage(escalateBase, formatPrUrl(report.repo, report.pr), {
+        merge: true,
+      }),
     },
   };
 }

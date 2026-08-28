@@ -19,7 +19,7 @@ import type { ResolveCommandOptions } from "./resolve.mts";
 export async function runResolveMutate(
   opts: ResolveCommandOptions & ResolveOptions,
 ): Promise<import("../comments/resolve.mts").ResolveResult> {
-  const repo = await getRepoInfo();
+  const repo = opts.targetRepository ?? (await getRepoInfo());
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
   if (prNumber === null) {
     throw new ShepherdError(

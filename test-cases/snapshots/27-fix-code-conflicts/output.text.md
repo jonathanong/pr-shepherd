@@ -1,7 +1,7 @@
 # PR #42 [FIX_CODE]
 
 **status** `FAILING` · **merge** `DIRTY` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 1 passing · **branch** conflicts with `origin/main`
+**summary** 1 passing · **branch** conflicts with PR base `main`
 Approvals: None [Not Required]
 Conversations Resolved: Yes [Not Required]
 

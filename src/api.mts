@@ -12,8 +12,12 @@ import {
 } from "./commands/mark-files-as-viewed.mts";
 import { runResolveMutate } from "./commands/resolve-mutate.mts";
 import { runWithExecutionCwd } from "./execution-context.mts";
-import { getRepoInfo } from "./github/client.mts";
-import { parsePrReference, type ParsedPrReference } from "./pr-reference.mts";
+import {
+  parsePrReference,
+  resolveParsedPrTarget,
+  type ParsedPrReference,
+  type ResolvedPrTarget,
+} from "./pr-reference.mts";
 import type { ResolveResult } from "./comments/resolve.mts";
 import type {
   BuildSuggestionPatchesResult,
@@ -30,7 +34,10 @@ export interface CreatePrShepherdOptions {
 /** A positive PR number, GitHub pull-request URL, or owner/repo#number reference. */
 export type PrReference = number | string;
 
-export type IterateInput = Omit<IterateCommandOptions, "format" | "prNumber"> & {
+export type IterateInput = Omit<
+  IterateCommandOptions,
+  "format" | "prNumber" | "targetRepository"
+> & {
   pr?: PrReference;
 };
 
@@ -139,15 +146,15 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
     iterate(input: IterateInput = {}) {
       const { pr: _pr, ...options } = input;
       return runWithExecutionCwd(cwd, async () => {
-        const prNumber = await resolvePrReference(input.pr);
-        return runIterate({ ...options, prNumber, format: "json" });
+        const target = resolvePrReference(input.pr);
+        return runIterate({ ...options, ...target, format: "json" });
       });
     },
 
     apply(input: ApplyInput) {
       return runWithExecutionCwd(cwd, async () => {
         validateApplyInput(input);
-        const prNumber = await resolvePrReference(input.pr);
+        const { prNumber, targetRepository } = resolvePrReference(input.pr);
         const results: ApplyOperationResult[] = [];
 
         for (let index = 0; index < input.operations.length; index += 1) {
@@ -159,6 +166,7 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
                 const result = await runResolveMutate({
                   ...options,
                   prNumber,
+                  targetRepository,
                   dismissMessage: message,
                   format: "json",
                 });
@@ -168,6 +176,7 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
               case "mark_files_viewed": {
                 const result = await runMarkFilesAsViewed({
                   prNumber,
+                  targetRepository,
                   files: operation.files ?? [],
                   tests: operation.tests,
                   matchPatterns: operation.matchPatterns,
@@ -179,6 +188,7 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
               case "append_journal": {
                 const result = await runJournal({
                   prNumber,
+                  targetRepository,
                   rawItem: operation.item,
                   dryRun: operation.dryRun ?? false,
                 });
@@ -199,8 +209,8 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
       validateSuggestionPatchInput(input);
       const { pr: _pr, ...options } = input;
       return runWithExecutionCwd(cwd, async () => {
-        const prNumber = await resolvePrReference(input.pr);
-        return runCommitSuggestion({ ...options, prNumber, format: "json" });
+        const target = resolvePrReference(input.pr);
+        return runCommitSuggestion({ ...options, ...target, format: "json" });
       });
     },
 
@@ -208,8 +218,8 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
       validateSuggestionPatchesInput(input);
       const { pr: _pr, ...options } = input;
       return runWithExecutionCwd(cwd, async () => {
-        const prNumber = await resolvePrReference(input.pr);
-        return runSuggestionPatches({ ...options, prNumber, format: "json" });
+        const target = resolvePrReference(input.pr);
+        return runSuggestionPatches({ ...options, ...target, format: "json" });
       });
     },
   });
@@ -361,18 +371,9 @@ function validatePrReference(pr: PrReference | undefined): ParsedPrReference {
   );
 }
 
-async function resolvePrReference(pr: PrReference | undefined): Promise<number | undefined> {
+function resolvePrReference(pr: PrReference | undefined): ResolvedPrTarget {
   const parsed = validatePrReference(pr);
-  if (parsed.repository !== undefined) {
-    const repo = await getRepoInfo();
-    const currentRepository = `${repo.owner}/${repo.name}`;
-    if (parsed.repository.toLowerCase() !== currentRepository.toLowerCase()) {
-      throw new PrShepherdValidationError(
-        `PR reference repository ${parsed.repository} does not match the configured repository ${currentRepository}`,
-      );
-    }
-  }
-  return parsed.number;
+  return resolveParsedPrTarget(parsed);
 }
 
 function validateStringArray(value: string[] | undefined, label: string): void {

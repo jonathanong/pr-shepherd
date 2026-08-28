@@ -399,7 +399,7 @@ describe("buildFixInstructions", () => {
 
     const text = instructions.join("\n");
     expect(text).toContain(
-      "The branch is behind `origin/main`. rebase --force-with-lease before pushing.",
+      "The branch is behind PR base branch `main`. rebase --force-with-lease before pushing.",
     );
   });
 

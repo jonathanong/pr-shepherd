@@ -25,6 +25,7 @@ import { annotationMarkerBody, checksWithActionableAnnotations } from "../check-
 import { threadTranscriptBody } from "../../threads/transcript.mts";
 import { isHumanAuthor, isConfiguredBotAuthor } from "../../comments/authors.mts";
 import { loadConfig } from "../../config/load.mts";
+import { formatPrUrl } from "../../pr-reference.mts";
 import type {
   EscalateDetails,
   IterateCommandOptions,
@@ -90,6 +91,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     botUsernames,
     ruleAutoResolveThreadIds,
   } = ctx;
+  const prReference = formatPrUrl(report.repo, prNumber);
   const failingChecks = report.checks.failing;
   const annotatedExtra = checksWithActionableAnnotations(report).filter(
     (c) => c.category !== "failing",
@@ -162,7 +164,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       action: "escalate",
       escalate: {
         ...authorizationEscalateBase,
-        humanMessage: buildEscalateHumanMessage(authorizationEscalateBase, prNumber),
+        humanMessage: buildEscalateHumanMessage(authorizationEscalateBase, prReference),
       },
     };
   }
@@ -204,7 +206,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       action: "escalate",
       escalate: {
         ...escalateBase,
-        humanMessage: buildEscalateHumanMessage(escalateBase, prNumber),
+        humanMessage: buildEscalateHumanMessage(escalateBase, prReference),
       },
     };
   }
@@ -226,7 +228,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       action: "escalate",
       escalate: {
         ...escalateBase,
-        humanMessage: buildEscalateHumanMessage(escalateBase, prNumber),
+        humanMessage: buildEscalateHumanMessage(escalateBase, prReference),
       },
     };
   }
@@ -260,14 +262,14 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   // authorization for the local Git credential that would publish it. Defer review mutations
   // until an authorized push updates the PR and a fresh iteration can rebuild SHA-safe commands.
   const { resolveCommand, resolveOnlyCommand } = hasConflicts
-    ? buildResolveCommand([], [], [], [], [], prNumber, botUsernames, [], undefined, [])
+    ? buildResolveCommand([], [], [], [], [], prReference, botUsernames, [], undefined, [])
     : buildResolveCommand(
         threads,
         resolutionOnlyThreads,
         allCommentIds,
         changesRequestedReviews,
         failingAgentChecks,
-        prNumber,
+        prReference,
         botUsernames,
         ruleAutoResolveThreadIds,
         report.viewerAuthorization,
@@ -298,7 +300,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       action: "escalate",
       escalate: {
         ...fallbackEscalateBase,
-        humanMessage: buildEscalateHumanMessage(fallbackEscalateBase, prNumber),
+        humanMessage: buildEscalateHumanMessage(fallbackEscalateBase, prReference),
       },
     };
   }
@@ -312,7 +314,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     baseLookup.branch,
     resolveCommand,
     hasConflicts,
-    prNumber,
+    prReference,
     cancelled.length,
     firstLookThreads,
     firstLookComments,

@@ -10,10 +10,13 @@ import { buildPrShepherdCommand } from "../cli/runner.mts";
  * @param sectionName - The markdown section heading where suggestion threads appear,
  *   e.g. `"## Review threads"`.
  */
-export function buildCommitSuggestionInstruction(prNumber: number, sectionName: string): string {
+export function buildCommitSuggestionInstruction(
+  prReference: string | number,
+  sectionName: string,
+): string {
   const command = buildPrShepherdCommand([
     "build-suggestion-patches",
-    String(prNumber),
+    String(prReference),
     "--thread-id",
     "<id>",
     "--message",

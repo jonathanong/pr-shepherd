@@ -22,7 +22,7 @@ No progress detected for 60 minutes — state has not changed. This is a manual 
 
 ---
 
-After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-shepherd 42` to resume.
+After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-shepherd https://github.com/owner/repo/pull/42` to resume.
 
 ## Instructions
 

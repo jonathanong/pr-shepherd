@@ -43,7 +43,7 @@ export async function runCheck(
     persistSeen?: boolean;
   },
 ): Promise<ShepherdReport> {
-  const repo = await getRepoInfo();
+  const repo = opts.targetRepository ?? (await getRepoInfo());
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
   if (prNumber === null) {
     throw new ShepherdError(

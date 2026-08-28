@@ -43,7 +43,7 @@ const patches = await shepherd.buildSuggestionPatches({
 | `buildSuggestionPatches({ pr, suggestions })`        | MCP `build_suggestion_patches`         |
 | `buildSuggestionPatch({ pr, threadId, message, … })` | Deprecated one-item compatibility path |
 
-For the programmatic API, `pr` is an optional positive number, repository-qualified `owner/repo#N`, or GitHub pull-request URL. Omitted, Shepherd infers the current branch's open PR. Repository-qualified references must match the repository at the configured `cwd` (or process working directory when omitted). `cwd` is used for git, config, and classification-rule lookups.
+For the programmatic API, `pr` is an optional positive number, repository-qualified `owner/repo#N`, or GitHub pull-request URL. Omitted, Shepherd infers the current branch's open PR. A repository-qualified reference is authoritative for GitHub reads and mutations and may name a repository other than the configured `cwd`. `cwd` remains the source of local git state, configuration, classification-rule lookups, and per-worktree debug logging.
 
 `apply` runs `operations` in list order after validating every operation. Types: `review_mutations`, `mark_files_viewed`, `append_journal`. The compatibility-named `mark_files_viewed` operation is selection-only because GitHub exposes no exact viewer capability, so it never changes viewed state. Replies and dismissals require `message`. `requireSha` must be a full 40-character lowercase hex SHA.
 
@@ -94,7 +94,7 @@ const server = createPrShepherdMcpServer({ cwd: "/path/to/repo" });
 await runPrShepherdMcpStdio({ cwd: "/path/to/repo" });
 ```
 
-`createPrShepherdMcpServer` accepts an optional `shepherd` for tests. The public factory exposes canonical `iterate`, `apply`, and `build_suggestion_patches` tools plus the deprecated singular adapter. Unlike `createPrShepherd`, every MCP tool call requires a repository-qualified `pr` — a GitHub PR URL or `owner/repo#N` — matching the factory's `cwd`; bare and omitted PR references are rejected. Host install and tool schemas: [mcp.md](mcp.md).
+`createPrShepherdMcpServer` accepts an optional `shepherd` for tests. The public factory exposes canonical `iterate`, `apply`, and `build_suggestion_patches` tools plus the deprecated singular adapter. Unlike `createPrShepherd`, every MCP tool call requires a repository-qualified `pr` — a GitHub PR URL or `owner/repo#N`; bare and omitted PR references are rejected. Its explicit repository is the GitHub target and may differ from the factory's `cwd`, which still supplies the local git/config/rules context. Host install and tool schemas: [mcp.md](mcp.md).
 
 ## `pr-shepherd/classify`
 

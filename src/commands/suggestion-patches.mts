@@ -25,7 +25,7 @@ export async function runSuggestionPatches(
   opts: SuggestionPatchesOptions,
 ): Promise<BuildSuggestionPatchesResult> {
   validateRequests(opts.suggestions);
-  const repo = await getRepoInfo();
+  const repo = opts.targetRepository ?? (await getRepoInfo());
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
   if (prNumber === null) {
     throw new ShepherdError(

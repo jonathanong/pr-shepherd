@@ -151,19 +151,19 @@ describe("main — iterate text format", () => {
     const result = { ...makeIterateResult("wait"), mergeStatus: "BEHIND" as const };
     mockRunIterate.mockResolvedValue(result);
     await main(["node", "shepherd", "iterate", "42"]);
-    expect(getStdout()).toContain("**branch** behind `origin/main`");
+    expect(getStdout()).toContain("**branch** behind PR base `main`");
   });
   it("text verbose: branch behind shown when mergeStatus=BEHIND", async () => {
     const result = { ...makeIterateResult("wait"), mergeStatus: "BEHIND" as const };
     mockRunIterate.mockResolvedValue(result);
     await main(["node", "shepherd", "iterate", "42", "--verbose"]);
-    expect(getStdout()).toContain("**branch** behind `origin/main`");
+    expect(getStdout()).toContain("**branch** behind PR base `main`");
   });
   it("text verbose: branch conflicts shown when mergeStatus=CONFLICTS", async () => {
     const result = { ...makeIterateResult("wait"), mergeStatus: "CONFLICTS" as const };
     mockRunIterate.mockResolvedValue(result);
     await main(["node", "shepherd", "iterate", "42", "--verbose"]);
-    expect(getStdout()).toContain("**branch** conflicts with `origin/main`");
+    expect(getStdout()).toContain("**branch** conflicts with PR base `main`");
   });
   it("json lean: reviewDecision included when mergeStatus=BLOCKED from HAS_HOOKS raw", async () => {
     const result = {

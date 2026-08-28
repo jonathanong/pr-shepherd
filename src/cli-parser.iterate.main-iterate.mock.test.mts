@@ -40,6 +40,17 @@ describe("main — default (poll)", () => {
     expect(mockRunIterate).toHaveBeenCalledWith(expect.objectContaining({ prNumber: 42 }));
   });
 
+  it("defaults to poll when the first argument is an owner/repo#number reference", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
+    await main(["node", "shepherd", "fork/widgets#42"]);
+    expect(mockRunIterate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prNumber: 42,
+        targetRepository: { owner: "fork", name: "widgets" },
+      }),
+    );
+  });
+
   it("defaults to poll when the first argument is a poll/iterate flag", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
     await main(["node", "shepherd", "--ready-delay", "15m"]);

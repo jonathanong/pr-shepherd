@@ -65,18 +65,27 @@ describe("public API", () => {
     await shepherd.iterate({ pr: "openai/pr-shepherd#42" });
 
     expect(mockRunIterate).toHaveBeenCalledWith(
-      expect.objectContaining({ prNumber: 42, format: "json" }),
+      expect.objectContaining({
+        prNumber: 42,
+        targetRepository: { owner: "openai", name: "pr-shepherd" },
+        format: "json",
+      }),
     );
   });
 
-  it("rejects a mismatched owner/repo#number shorthand before running the command", async () => {
+  it("accepts a fork owner/repo#number shorthand without consulting the checkout repository", async () => {
     const shepherd = createPrShepherd();
 
-    await expect(shepherd.iterate({ pr: "other/widgets#42" })).rejects.toThrow(
-      "PR reference repository other/widgets does not match the configured repository openai/pr-shepherd",
-    );
+    await shepherd.iterate({ pr: "other/widgets#42" });
 
-    expect(mockRunIterate).not.toHaveBeenCalled();
+    expect(mockRunIterate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prNumber: 42,
+        targetRepository: { owner: "other", name: "widgets" },
+        format: "json",
+      }),
+    );
+    expect(mockGetRepoInfo).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -191,6 +200,48 @@ describe("public API", () => {
     );
   });
 
+  it("routes every API operation to a qualified fork even when the PR number collides", async () => {
+    mockRunResolveMutate.mockResolvedValue({ resolvedThreads: ["PRRT_one"] });
+    mockRunMarkFilesAsViewed.mockResolvedValue({ markedPaths: ["src/api.mts"] });
+    mockRunJournal.mockResolvedValue({ prNumber: 42, mutated: true });
+    mockRunCommitSuggestion.mockResolvedValue({ threadId: "PRRT_two" });
+    mockRunSuggestionPatches.mockResolvedValue({ patches: [{ threadId: "PRRT_two" }] });
+    const shepherd = createPrShepherd({ cwd: "." });
+    const pr = "https://github.com/fork/widgets/pull/42";
+
+    await shepherd.apply({
+      pr,
+      operations: [
+        { type: "review_mutations", resolveThreadIds: ["PRRT_one"] },
+        { type: "mark_files_viewed", files: ["src/api.mts"] },
+        { type: "append_journal", item: "- Routed to fork." },
+      ],
+    });
+    await shepherd.buildSuggestionPatch({ pr, threadId: "PRRT_two", message: "Apply it" });
+    await shepherd.buildSuggestionPatches({
+      pr,
+      suggestions: [{ threadId: "PRRT_two", message: "Apply it" }],
+    });
+
+    const target = { owner: "fork", name: "widgets" };
+    expect(mockRunResolveMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: 42, targetRepository: target }),
+    );
+    expect(mockRunMarkFilesAsViewed).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: 42, targetRepository: target }),
+    );
+    expect(mockRunJournal).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: 42, targetRepository: target }),
+    );
+    expect(mockRunCommitSuggestion).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: 42, targetRepository: target }),
+    );
+    expect(mockRunSuggestionPatches).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: 42, targetRepository: target }),
+    );
+    expect(mockGetRepoInfo).not.toHaveBeenCalled();
+  });
+
   it("rethrows a failure from the first apply operation unchanged", async () => {
     const failure = new Error("first operation failed");
     mockRunResolveMutate.mockRejectedValue(failure);
@@ -202,16 +253,19 @@ describe("public API", () => {
     ).rejects.toBe(failure);
   });
 
-  it("rejects a cross-repository PR URL before calling an operation", async () => {
+  it("accepts a cross-repository PR URL before calling an operation", async () => {
     const shepherd = createPrShepherd({ cwd: "." });
 
-    await expect(
-      shepherd.iterate({ pr: "https://github.com/other/widgets/pull/42" }),
-    ).rejects.toThrow(
-      "PR reference repository other/widgets does not match the configured repository openai/pr-shepherd",
-    );
+    await shepherd.iterate({ pr: "https://github.com/other/widgets/pull/42" });
 
-    expect(mockRunIterate).not.toHaveBeenCalled();
+    expect(mockRunIterate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prNumber: 42,
+        targetRepository: { owner: "other", name: "widgets" },
+        format: "json",
+      }),
+    );
+    expect(mockGetRepoInfo).not.toHaveBeenCalled();
   });
 
   it.each([

@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { EXIT, errorToExitCode } from "../exit-codes.mts";
 import { runJournal } from "../commands/journal/index.mts";
-import { getFlag, parsePrNumber } from "./args.mts";
+import { getFlag } from "./args.mts";
+import { parseCliPrReference, resolveParsedPrTarget } from "../pr-reference.mts";
 import { USAGE } from "./help.mts";
 import { formatJournalResult } from "./journal-formatter.mts";
 
@@ -18,7 +19,7 @@ export async function handleJournal(
     return;
   }
 
-  const { prNumber, extra } = parseJournalArgs(args);
+  const { prNumber, targetRepository, extra } = parseJournalArgs(args);
   const filePath = getFlag(args, "--file");
 
   if (filePath !== null && extra[0]) {
@@ -50,7 +51,7 @@ export async function handleJournal(
     args.some((a, i) => a === "--format" && args[i + 1] === "json");
 
   try {
-    const result = await runJournal({ prNumber, rawItem, dryRun });
+    const result = await runJournal({ prNumber, targetRepository, rawItem, dryRun });
     if (jsonOut) {
       process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     } else {
@@ -76,7 +77,11 @@ async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-function parseJournalArgs(args: string[]): { prNumber: number | undefined; extra: string[] } {
+function parseJournalArgs(args: string[]): {
+  prNumber: number | undefined;
+  targetRepository?: { owner: string; name: string };
+  extra: string[];
+} {
   const flagConsumedIndices = new Set<number>();
   for (let i = 0; i < args.length; i++) {
     const a = args[i]!;
@@ -91,6 +96,7 @@ function parseJournalArgs(args: string[]): { prNumber: number | undefined; extra
   }
 
   let prNumber: number | undefined;
+  let targetRepository: { owner: string; name: string } | undefined;
   const extra: string[] = [];
 
   for (let i = 0; i < args.length; i++) {
@@ -98,14 +104,16 @@ function parseJournalArgs(args: string[]): { prNumber: number | undefined; extra
     const a = args[i]!;
     if (a.startsWith("--")) continue;
     if (prNumber === undefined) {
-      const n = parsePrNumber(a);
-      if (n !== null) {
-        prNumber = n;
+      const parsed = parseCliPrReference(a);
+      if (parsed !== null) {
+        const target = resolveParsedPrTarget(parsed);
+        prNumber = target.prNumber;
+        targetRepository = target.targetRepository;
         continue;
       }
     }
     extra.push(a);
   }
 
-  return { prNumber, extra };
+  return { prNumber, targetRepository, extra };
 }

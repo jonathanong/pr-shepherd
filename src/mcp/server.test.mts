@@ -183,24 +183,30 @@ describe("pr-shepherd MCP server", () => {
     expect(shepherd.buildSuggestionPatch).not.toHaveBeenCalled();
   });
 
-  it("rejects a mismatched repository before the real API can append a journal", async () => {
-    const server = createPrShepherdMcpServer({ cwd: process.cwd() });
+  it("routes a colliding fork PR to the injected API without repository validation", async () => {
+    const apply = vi.fn().mockResolvedValue({
+      operations: [{ type: "append_journal", result: { prNumber: 347, mutated: true } }],
+    });
+    const server = createPrShepherdMcpServer({
+      cwd: process.cwd(),
+      shepherd: {
+        iterate: vi.fn(),
+        apply,
+        buildSuggestionPatches: vi.fn(),
+        buildSuggestionPatch: vi.fn(),
+      },
+    });
 
     const response = await registeredTools(server).apply!.handler({
       pr: "definitely-not-current/widgets#347",
-      operations: [{ type: "append_journal", item: "- Must not be written." }],
+      operations: [{ type: "append_journal", item: "- Routed to the fork." }],
     });
 
-    expect(response).toMatchObject({
-      isError: true,
-      structuredContent: {
-        code: 64,
-        message: expect.stringContaining(
-          "PR reference repository definitely-not-current/widgets does not match the configured repository",
-        ),
-        details: { validation: true },
-      },
+    expect(apply).toHaveBeenCalledWith({
+      pr: "definitely-not-current/widgets#347",
+      operations: [{ type: "append_journal", item: "- Routed to the fork." }],
     });
+    expect(response.isError).toBeUndefined();
   });
 
   it("maps typed API errors to safe coded MCP errors", async () => {

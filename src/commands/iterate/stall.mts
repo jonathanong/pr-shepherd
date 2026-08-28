@@ -6,6 +6,7 @@ import {
   formatDurationApprox,
 } from "./escalate.mts";
 import { checksWithActionableAnnotations } from "../check-annotations.mts";
+import { formatPrUrl } from "../../pr-reference.mts";
 import type {
   ClassifiedCheck,
   EscalateDetails,
@@ -68,6 +69,7 @@ export async function applyStallGuard(
   report: ShepherdReport,
   reviewSummaryIds: string[],
 ): Promise<IterateResult> {
+  const prReference = formatPrUrl(report.repo, prNumber);
   const nowSeconds = Math.floor(Date.now() / 1000);
   const stalledChecks = findCiStartStalledChecks(report.checks.inProgress, nowSeconds, {
     stallTimeoutSeconds,
@@ -90,7 +92,7 @@ export async function applyStallGuard(
       action: "escalate",
       escalate: {
         ...escalateBase,
-        humanMessage: buildEscalateHumanMessage(escalateBase, prNumber),
+        humanMessage: buildEscalateHumanMessage(escalateBase, prReference),
       },
     };
   }
@@ -129,7 +131,7 @@ export async function applyStallGuard(
         action: "escalate",
         escalate: {
           ...escalateBase,
-          humanMessage: buildEscalateHumanMessage(escalateBase, prNumber),
+          humanMessage: buildEscalateHumanMessage(escalateBase, prReference),
         },
       };
     }

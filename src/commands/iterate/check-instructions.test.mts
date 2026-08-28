@@ -31,7 +31,7 @@ function check(overrides: Partial<AgentCheck>): AgentCheck {
 describe("buildBehindBaseHintInstruction", () => {
   it("renders the hint when behind and configured", () => {
     expect(buildBehindBaseHintInstruction("main", "rebase --force-with-lease", true)).toEqual([
-      "The branch is behind `origin/main`. rebase --force-with-lease before pushing.",
+      "The branch is behind PR base branch `main`. rebase --force-with-lease before pushing.",
     ]);
   });
 
@@ -45,7 +45,7 @@ describe("buildBehindBaseHintInstruction", () => {
 
   it("trims surrounding whitespace from the configured hint", () => {
     expect(buildBehindBaseHintInstruction("main", "  rebase  ", true)).toEqual([
-      "The branch is behind `origin/main`. rebase before pushing.",
+      "The branch is behind PR base branch `main`. rebase before pushing.",
     ]);
   });
 

@@ -70,8 +70,12 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
       expect(humanMessage).toMatch(/fix-thrash/);
       expect(humanMessage).toMatch(/thread-1/);
       expect(humanMessage).toMatch(/src\/foo\.mts/);
-      expect(humanMessage).toMatch(/pr-shepherd:pr-shepherd 42/);
-      expect(humanMessage).toMatch(/pr-shepherd:pr-shepherd 42` to resume/);
+      expect(humanMessage).toMatch(
+        /pr-shepherd:pr-shepherd https:\/\/github\.com\/owner\/repo\/pull\/42/,
+      );
+      expect(humanMessage).toMatch(
+        /pr-shepherd:pr-shepherd https:\/\/github\.com\/owner\/repo\/pull\/42` to resume/,
+      );
     }
   });
 

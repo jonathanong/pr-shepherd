@@ -92,7 +92,7 @@ export function validateBaseBranch(raw: string): BaseBranchLookup {
 
 export function buildEscalateHumanMessage(
   escalate: Omit<EscalateDetails, "humanMessage">,
-  pr: number,
+  pr: string | number,
   opts?: { merge?: boolean },
 ): string {
   const lines: string[] = [];
