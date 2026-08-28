@@ -26,6 +26,8 @@ export const EXIT = Object.freeze({
   ESCALATE: 13,
   /** `cancel` + `closed` — PR closed without merging. */
   CLOSED: 14,
+  /** Agent should run the emitted merge or queue command. */
+  MERGE: 15,
 
   /** Bad/unknown flag, unknown subcommand, missing required arg, invalid duration. */
   USAGE: 64,
@@ -74,6 +76,8 @@ export function iterateResultToExitCode(result: IterateResult): number {
       return EXIT.FIX_CODE;
     case "escalate":
       return EXIT.ESCALATE;
+    case "merge":
+      return EXIT.MERGE;
   }
 }
 

@@ -14,6 +14,7 @@ interface IterateFlags {
   stallTimeoutSeconds: number;
   noAutoMarkReady: boolean;
   noAutoCancelActionable: boolean;
+  merge: boolean;
 }
 
 export function parseIterateFlags(
@@ -35,6 +36,7 @@ export function parseIterateFlags(
   );
   const noAutoMarkReady = hasFlag(extra, "--no-auto-mark-ready");
   const noAutoCancelActionable = hasFlag(extra, "--no-auto-cancel-actionable");
+  const merge = hasFlag(extra, "--merge");
   const stallTimeoutStr = getFlag(extra, "--stall-timeout");
   const stallTimeoutSuffix = validateSecondsDurationFlag(
     "pr-shepherd",
@@ -55,5 +57,6 @@ export function parseIterateFlags(
     stallTimeoutSeconds,
     noAutoMarkReady,
     noAutoCancelActionable,
+    merge,
   };
 }

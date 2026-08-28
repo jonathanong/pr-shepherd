@@ -10,6 +10,7 @@ export function buildTerminalReport(
   return {
     pr: prNumber,
     nodeId: batchData.nodeId,
+    headSha: batchData.headRefOid,
     repo: `${repo.owner}/${repo.name}`,
     status,
     baseBranch: batchData.baseRefName,

@@ -2,7 +2,7 @@
 name: pr-shepherd
 description: 'Iterate a GitHub pull request with pr-shepherd (MCP or CLI). Use for requests like "use pr-shepherd", "iterate PR #123", or "run pr-shepherd until this PR is ready".'
 user-invocable: true
-argument-hint: "[PR number or URL]"
+argument-hint: "[PR number or URL] [--merge]"
 allowed-tools: ["MCP", "Bash", "Read", "Grep", "Glob", "Edit", "Write"]
 ---
 
@@ -12,9 +12,9 @@ Thin dispatcher for iterating a PR. Poll with the CLI; use MCP `iterate` only wh
 
 ## Arguments: $ARGUMENTS
 
-1. Parse an optional PR number, repository-qualified `owner/repo#N`, or GitHub PR URL from `$ARGUMENTS`; otherwise let pr-shepherd infer the current branch PR.
+1. Parse an optional PR number, repository-qualified `owner/repo#N`, or GitHub PR URL and an optional `--merge` flag from `$ARGUMENTS`; otherwise let pr-shepherd infer the current branch PR. Reject any remaining argument. Follow the target repository's local `AGENTS.md` and `CLAUDE.md` standards while making changes.
 
-2. Before passing a supplied GitHub PR URL or `owner/repo#N` to the CLI, run `gh repo view --json nameWithOwner --jq .nameWithOwner` and verify that repository matches the reference case-insensitively. Stop on a mismatch or failed lookup; the CLI does not validate the URL repository. Convert a verified `owner/repo#N` to `https://github.com/owner/repo/pull/N`, then run the poll command `pr-shepherd` with the optional PR argument and print its full result. Do not run `pr-shepherd iterate`. If the CLI is unavailable and the `iterate` MCP tool is available, first obtain a repository-qualified reference: use a supplied GitHub PR URL or `owner/repo#N` unchanged; for a bare number, run `gh pr view <number> --json url --jq .url`; when omitted, run `gh pr view --json url --jq .url`. If that does not produce one qualified PR reference, stop and report that MCP cannot safely determine the PR. Otherwise call `iterate` with that qualified reference and print its full result.
+2. Before passing a supplied GitHub PR URL or `owner/repo#N` to the CLI, run `gh repo view --json nameWithOwner --jq .nameWithOwner` and verify that repository matches the reference case-insensitively. Stop on a mismatch or failed lookup; the CLI does not validate the URL repository. Convert a verified `owner/repo#N` to `https://github.com/owner/repo/pull/N`, then run the poll command `pr-shepherd` with the optional PR argument and forward `--merge` when supplied; print its full result. Do not run `pr-shepherd iterate`. If the CLI is unavailable and the `iterate` MCP tool is available, first obtain a repository-qualified reference: use a supplied GitHub PR URL or `owner/repo#N` unchanged; for a bare number, run `gh pr view <number> --json url --jq .url`; when omitted, run `gh pr view --json url --jq .url`. If that does not produce one qualified PR reference, stop and report that MCP cannot safely determine the PR. Otherwise call `iterate` with that qualified reference, plus `merge: true` when `--merge` was supplied, and print its full result.
 
 3. Print the full result and follow every returned `## Instructions` step exactly. For CLI output, run each printed mutation command when instructed. For MCP output, use MCP `apply` and `build_suggestion_patches` with the same qualified PR reference; do not run a shell `pr-shepherd apply` command.
 

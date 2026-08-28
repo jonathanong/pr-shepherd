@@ -52,6 +52,7 @@ export function projectIterateLean(
     ...(result.baseBranch && { baseBranch: result.baseBranch }),
     ...(result.branchProtection !== null && { branchProtection: result.branchProtection }),
     ...(result.mergeRequirements && { mergeRequirements: result.mergeRequirements }),
+    ...(result.mergeQueue && { mergeQueue: result.mergeQueue }),
     ...(hasActivity && {
       activity: {
         commitCount: activity.commitCount,
@@ -96,6 +97,12 @@ export function projectIterateLean(
         log: adaptIterateLog(result.log),
         instructions: simpleInstructions(result),
       };
+    case "merge":
+      return {
+        ...base,
+        merge: result.merge,
+        instructions: simpleInstructions(result),
+      };
     case "fix_code":
       return {
         ...base,
@@ -133,6 +140,7 @@ export function projectIterateLean(
           ...(result.fix.protectedRuns.length > 0 && {
             protectedRuns: result.fix.protectedRuns,
           }),
+          ...(result.fix.requeue && { requeue: result.fix.requeue }),
           ...(result.fix.checks.length > 0 && { checks: result.fix.checks }),
           ...(result.fix.changesRequestedReviews.length > 0 && {
             changesRequestedReviews: result.fix.changesRequestedReviews,
@@ -168,6 +176,9 @@ export function projectIterateLean(
             result.escalate.thrashHistory.length > 0 && {
               thrashHistory: result.escalate.thrashHistory,
             }),
+          ...(result.escalate.mergeQueueRemoval && {
+            mergeQueueRemoval: result.escalate.mergeQueueRemoval,
+          }),
           suggestion: result.escalate.suggestion,
           humanMessage: result.escalate.humanMessage,
         },
@@ -176,24 +187,4 @@ export function projectIterateLean(
   }
 }
 
-export function projectIterateVerbose(
-  result: IterateResult,
-  opts?: IterateProjectionOptions,
-): unknown {
-  const readyDelaySuffix = opts?.readyDelaySuffix;
-  const readyDelayOverride = readyDelaySuffix ? { readyDelayOverride: readyDelaySuffix } : {};
-  if (result.action === "fix_code") {
-    return {
-      ...result,
-      ...readyDelayOverride,
-    };
-  }
-  const log =
-    "log" in result && typeof result.log === "string" ? { log: adaptIterateLog(result.log) } : {};
-  return {
-    ...result,
-    ...log,
-    ...readyDelayOverride,
-    instructions: buildSimpleIterateInstructions(result),
-  };
-}
+export { projectIterateVerbose } from "./iterate-verbose.mts";

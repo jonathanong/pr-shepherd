@@ -110,6 +110,26 @@ describe("main — poll subcommand", () => {
     expect(process.exitCode).toBe(EXIT.OK);
   });
 
+  it("keeps --merge polling bounded by --timeout", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
+
+    const promise = main([
+      "node",
+      "shepherd",
+      "poll",
+      "42",
+      "--merge",
+      "--interval",
+      "1s",
+      "--timeout",
+      "1s",
+    ]);
+    await vi.advanceTimersByTimeAsync(1_000);
+    await promise;
+
+    expect(getStdout()).toContain("[WAIT]");
+  });
+
   it("rejects an invalid --interval value", async () => {
     await main(["node", "shepherd", "poll", "42", "--interval", "bad"]);
 

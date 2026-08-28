@@ -15,12 +15,16 @@ flowchart TD
   S1 --> S15{"1.5 state != OPEN?"}
   S15 -->|yes| A_CAN(["action: cancel"])
   S15 -->|no| S2["2. updateReadyDelay"]
-  S2 --> S2C{"shouldCancel?"}
-  S2C -->|yes| A_CAN
-  S2C -->|no| S3{"3. hasActionableWork?"}
+  S2 --> S3{"3. hasActionableWork?"}
   S3 -->|yes| S3X["REST cancel failing Actions runs"]
   S3X --> A_FIX(["action: fix_code"])
-  S3 -->|no| S4{"4. READY + isDraft<br/>+ !blockingBotReview?"}
+  S3 -->|no| SM{"--merge state?"}
+  SM -->|active queue/auto-merge| A_W(["action: wait"])
+  SM -->|current removal| A_ESC(["action: escalate"])
+  SM -->|none| S2C{"shouldCancel?"}
+  S2C -->|yes + --merge| A_MERGE(["action: merge"])
+  S2C -->|yes without --merge| A_CAN
+  S2C -->|no| S4{"4. READY + isDraft<br/>+ !blockingBotReview?"}
   S4 -->|yes| S4X["markPullRequestReadyForReview"]
   S4X --> A_MR(["action: mark_ready"])
   S4 -->|no| A_W(["action: wait"])
@@ -31,13 +35,14 @@ flowchart TD
   STALL -->|no| DEC{"Follow ## Instructions"}
 
   A_CAN --> DEC
+  A_MERGE --> DEC
   A_MR --> DEC
   A_ESC --> DEC
 
   DEC -->|cancel/escalate| STOP["stop"]
   DEC -->|fix_code| FIX["inspect CI as needed<br/>edit+commit by repo convention<br/>pr-shepherd apply review"]
   FIX --> RERUN["rerun the poll"]
-  DEC -->|wait/mark_ready| RERUN
+  DEC -->|wait/mark_ready/merge| RERUN
   RERUN --> POLL
 ```
 
@@ -75,7 +80,7 @@ A clean handoff means `status === "READY"` and `hasActionableWork` is false. Tha
 
 Before a READY sweep reaches this step, `runCheck` performs one fresh REST mergeability read unless the UNKNOWN fallback already did so. If the refreshed mergeability reports `CONFLICTING`/`DIRTY`, the sweep becomes `FAILING`/`CONFLICTS`, resets the marker, and routes to `fix_code`.
 
-If `readyState.shouldCancel`, iterate emits `action: 'cancel'` with `reason: "ready-delay-elapsed"`.
+If `readyState.shouldCancel`, iterate emits `action: 'merge'` when `--merge` is enabled; otherwise it emits `action: 'cancel'` with `reason: "ready-delay-elapsed"`.
 
 Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/ready-since.txt` (Unix timestamp, seconds). A future timestamp (clock skew) is reset to now. Default delay is 10 minutes (`watch.readyDelayMinutes` or `--ready-delay`).
 
@@ -105,7 +110,7 @@ Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/ready-since.txt` (Unix 
 - `report.mergeStatus.status === 'CONFLICTS'`
 - pending review-summary IDs, first-look summaries, or edited summaries
 
-All failing checks — including timeout, cancelled, startup-failure, and flaky failures — route here. The `fix` payload carries `conclusion` for each failing check; `workflowName`, `jobName`, `failedStep`, and `logExcerpt` are populated only when triage runs (not for cancelled or startup-failure checks).
+All failing checks — including timeout, cancelled, startup-failure, flaky failures, and `merge_group` checks from the active/latest queue commit — route here. Queue checks are classified separately from PR-head checks so supersession never crosses commit boundaries. The `fix` payload carries `conclusion` for each failing check; `workflowName`, `jobName`, `failedStep`, and `logExcerpt` are populated only when triage runs (not for cancelled or startup-failure checks).
 
 CONFLICTS is included so merge conflicts and review comments can be handled in one tick. Iterate surfaces raw `**branch**` state; it does not tell the caller how to rebase.
 
@@ -127,6 +132,10 @@ There is no extra `mergeStateStatus === "CLEAN"` requirement. A draft that deriv
 
 ---
 
+### 4.5. Active merge and queue removal
+
+An active auto-merge request or merge-queue entry emits `wait` after actionable checks are handled. This path clears stall state and does not ready-delay-cancel or stall-escalate. If `--merge` is enabled and the latest queue removal has no actionable failure, iterate emits `escalate` with the raw removal fields.
+
 ### 5. Wait
 
 **Fallthrough:** nothing actionable, no terminal state, no ready-delay elapsed, not marking ready.
@@ -137,7 +146,7 @@ There is no extra `mergeStateStatus === "CLEAN"` requirement. A draft that deriv
 
 ### Stall guard
 
-Applied to `wait` and `fix_code` after those actions are chosen — not before actionable work, and not on `cancel` / `mark_ready` / `escalate`.
+Applied to ordinary `wait` and `fix_code` after those actions are chosen — not before actionable work, and not on active merge waits, `merge`, `cancel`, `mark_ready`, or `escalate`.
 
 Fingerprint: HEAD SHA, action, `status`, `mergeStateStatus`, `state`, `isDraft`, sorted failing-check names + conclusions, sorted actionable thread/comment/review IDs, sorted review-summary minimize IDs. Stored at `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/iterate-stall.json`.
 
@@ -149,16 +158,18 @@ Fingerprint: HEAD SHA, action, `status`, `mergeStateStatus`, `state`, `isDraft`,
 
 ## Decision table
 
-Exit codes: `0`/`10`–`14` is `IterateResult` PR state; see [exit-codes.md](exit-codes.md) for `sysexits.h` codes when a step fails before reaching a row below.
+Exit codes: `0`/`10`–`15` is `IterateResult` PR state; see [exit-codes.md](exit-codes.md) for `sysexits.h` codes when a step fails before reaching a row below.
 
 | Step    | Condition                                    | Action       | Exit code |
 | ------- | -------------------------------------------- | ------------ | --------- |
 | 1.5     | `state === 'MERGED'`                         | `cancel`     | 0         |
 | 1.5     | `state === 'CLOSED'`                         | `cancel`     | 14        |
-| 2       | `shouldCancel` (ready-delay elapsed)         | `cancel`     | 0         |
+| 2       | `shouldCancel` + `--merge`                   | `merge`      | 15        |
+| 2       | `shouldCancel` without `--merge`             | `cancel`     | 0         |
 | 3       | `hasActionableWork`                          | `fix_code`   | 12        |
 | 3 stall | Same fingerprint for ≥ `stallTimeoutMinutes` | `escalate`   | 13        |
 | 3 esc.  | Same thread hit `fixAttemptsPerThread` times | `escalate`   | 13        |
 | 4       | READY + isDraft + !blockingBotReview         | `mark_ready` | 11        |
+| 4.5     | Auto-merge or merge queue active             | `wait`       | 10        |
 | 5       | Fallthrough                                  | `wait`       | 10        |
 | 5 stall | Same fingerprint for ≥ `stallTimeoutMinutes` | `escalate`   | 13        |

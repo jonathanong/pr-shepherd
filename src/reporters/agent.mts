@@ -75,6 +75,8 @@ export function toAgentCheck(c: TriagedCheck): AgentCheck {
     ...(c.summary !== undefined && { summary: c.summary }),
     ...(c.logExcerpt !== undefined && { logExcerpt: c.logExcerpt }),
     ...(c.annotations !== undefined && { annotations: c.annotations }),
+    ...(c.scope !== undefined && { scope: c.scope }),
+    ...(c.commitOid !== undefined && { commitOid: c.commitOid }),
   };
 }
 
@@ -101,12 +103,13 @@ export function toAgentStalledCheck(c: ClassifiedCheck, nowSeconds: number): Age
  * log tail, so they are all kept.
  */
 export function toAgentChecks(checks: TriagedCheck[]): AgentCheck[] {
-  const seenNames = new Set<string>();
+  const seenKeys = new Set<string>();
   const result: AgentCheck[] = [];
   for (const c of checks) {
     if (c.runId === null) {
-      if (seenNames.has(c.name)) continue;
-      seenNames.add(c.name);
+      const key = `${c.scope ?? "pr"}:${c.commitOid ?? "head"}:${c.name}`;
+      if (seenKeys.has(key)) continue;
+      seenKeys.add(key);
     }
     result.push(toAgentCheck(c));
   }

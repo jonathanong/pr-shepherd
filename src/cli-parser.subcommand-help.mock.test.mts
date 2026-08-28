@@ -119,6 +119,14 @@ describe("default poll path (pr 123 --help)", () => {
     expect(mockRunIterate).not.toHaveBeenCalled();
   });
 
+  it("documents that --merge remains bounded by --timeout", async () => {
+    await main(["node", "shepherd", "123", "--help"]);
+    const out = getStdout();
+    expect(out).toContain("With --until-terminal, --timeout is ignored");
+    expect(out).toContain("With --merge, --timeout still bounds WAIT ticks");
+    expect(out).not.toContain("With --until-terminal or --merge, --timeout is ignored");
+  });
+
   it("prints poll usage to stdout and exits 0 for '123 -h'", async () => {
     await main(["node", "shepherd", "123", "-h"]);
     const out = getStdout();

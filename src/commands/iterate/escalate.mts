@@ -92,6 +92,7 @@ export function validateBaseBranch(raw: string): BaseBranchLookup {
 export function buildEscalateHumanMessage(
   escalate: Omit<EscalateDetails, "humanMessage">,
   pr: number,
+  opts?: { merge?: boolean },
 ): string {
   const lines: string[] = [];
   lines.push("⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required");
@@ -142,6 +143,17 @@ export function buildEscalateHumanMessage(
     }
   }
 
+  if (escalate.mergeQueueRemoval) {
+    const removal = escalate.mergeQueueRemoval;
+    lines.push("");
+    lines.push("## Merge queue removal");
+    lines.push("");
+    lines.push(`- reason: \`${removal.reason ?? "not provided"}\``);
+    if (removal.actor) lines.push(`- actor: \`@${removal.actor}\``);
+    lines.push(`- createdAtUnix: \`${removal.createdAtUnix}\``);
+    if (removal.beforeCommitOid) lines.push(`- queue commit: \`${removal.beforeCommitOid}\``);
+  }
+
   if (escalate.thrashHistory && escalate.thrashHistory.length > 0) {
     lines.push("");
     lines.push("## Fix attempts");
@@ -155,12 +167,16 @@ export function buildEscalateHumanMessage(
   lines.push("---");
   lines.push("");
   lines.push(
-    `After completing manual fixes (and pushing if required), rerun \`/pr-shepherd:pr-shepherd ${pr}\` to resume.`,
+    `After completing manual fixes (and pushing if required), rerun \`/pr-shepherd:pr-shepherd ${pr}${opts?.merge ? " --merge" : ""}\` to resume.`,
   );
   return lines.join("\n");
 }
 
 export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: string): string {
+  if (triggers.includes("merge-queue-removed")) {
+    const reason = detail ? ` GitHub reason: ${detail}.` : "";
+    return `The PR left the merge queue without an actionable check failure.${reason} Confirm the removal was not intentional before adding it again.`;
+  }
   if (triggers.includes("stall-timeout")) {
     const duration = detail ?? "60 minutes";
     return `No progress detected for ${duration} — state has not changed. This is a manual checkpoint: inspect the PR and apply a manual fix before resuming.`;

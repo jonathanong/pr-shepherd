@@ -23,6 +23,7 @@ describe("default poll invocation helpers", () => {
     expect(isDefaultPollInvocation("--no-auto-mark-ready")).toBe(true);
     expect(isDefaultPollInvocation("--quiet-status")).toBe(true);
     expect(isDefaultPollInvocation("--until-terminal")).toBe(true);
+    expect(isDefaultPollInvocation("--merge")).toBe(true);
     expect(isDefaultPollInvocation("--interval=60s")).toBe(true);
     expect(isDefaultPollInvocation("--timeout=4.5m")).toBe(true);
     expect(isDefaultPollInvocation("--debounce=1m")).toBe(true);
@@ -47,6 +48,7 @@ describe("default poll invocation helpers", () => {
         "--verbose",
         "--quiet-status",
         "--until-terminal",
+        "--merge",
       ]),
     ).toBe(true);
   });

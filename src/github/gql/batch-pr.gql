@@ -18,10 +18,45 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
       baseRefName
       isInMergeQueue
       isMergeQueueEnabled
+      autoMergeRequest {
+        enabledAt
+        mergeMethod
+        enabledBy {
+          login
+        }
+      }
       mergeQueueEntry {
         position
         state
         estimatedTimeToMerge
+        enqueuedAt
+        enqueuer {
+          login
+        }
+        headCommit {
+          ...QueueCheckCommit
+        }
+      }
+      mergeQueueAdditions: timelineItems(last: 1, itemTypes: [ADDED_TO_MERGE_QUEUE_EVENT]) {
+        nodes {
+          ... on AddedToMergeQueueEvent {
+            createdAt
+          }
+        }
+      }
+      mergeQueueRemovals: timelineItems(last: 1, itemTypes: [REMOVED_FROM_MERGE_QUEUE_EVENT]) {
+        nodes {
+          ... on RemovedFromMergeQueueEvent {
+            reason
+            createdAt
+            actor {
+              login
+            }
+            beforeCommit {
+              ...QueueCheckCommit
+            }
+          }
+        }
       }
       stack {
         number
@@ -284,6 +319,63 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
               }
             }
           }
+        }
+      }
+    }
+  }
+}
+
+fragment QueueCheckCommit on Commit {
+  oid
+  committedDate
+  parents(first: 100) {
+    nodes {
+      oid
+    }
+  }
+  statusCheckRollup {
+    contexts(first: 100) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        __typename
+        ... on CheckRun {
+          id
+          name
+          status
+          conclusion
+          detailsUrl
+          completedAt
+          startedAt
+          title
+          summary
+          annotations(first: 1) {
+            nodes {
+              message
+            }
+          }
+          checkSuite {
+            createdAt
+            updatedAt
+            workflowRun {
+              event
+              createdAt
+              updatedAt
+              workflow {
+                name
+                databaseId
+              }
+            }
+          }
+        }
+        ... on StatusContext {
+          context
+          state
+          createdAt
+          targetUrl
+          description
         }
       }
     }

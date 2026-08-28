@@ -166,7 +166,11 @@ export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> 
       continue;
     }
 
-    if (untilTerminal && lastResult.action === "mark_ready" && !pastDebounce) {
+    if (
+      (untilTerminal || iterateOpts.merge) &&
+      lastResult.action === "mark_ready" &&
+      !pastDebounce
+    ) {
       debounceUntil = null;
       await sleep(intervalMs);
       continue;

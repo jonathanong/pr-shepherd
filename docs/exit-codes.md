@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-Exit codes are the process-level counterpart of the action tag in [actions.md](actions.md). `0` and `10`–`14` mean Shepherd gathered context and chose an action; `64+` means the command itself failed before that.
+Exit codes are the process-level counterpart of the action tag in [actions.md](actions.md). `0` and `10`–`15` mean Shepherd gathered context and chose an action; `64+` means the command itself failed before that.
 
 ## The rule
 
@@ -49,6 +49,7 @@ invocation) once a report was fetched successfully. The code names the
 | 12   | `fix_code`   | Agent work required — see the printed instructions |
 | 13   | `escalate`   | Human attention required                           |
 | 14   | `cancel`     | PR closed without merging (`reason: "closed"`)     |
+| 15   | `merge`      | Run the emitted merge or merge-queue command       |
 
 **`wait` (10) is not an error, and it is not a signal to give up.** It means
 "nothing actionable right now" — including when `poll --timeout` gives up

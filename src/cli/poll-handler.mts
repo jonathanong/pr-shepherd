@@ -62,6 +62,7 @@ export async function handlePoll(args: string[]): Promise<void> {
     stallTimeoutSeconds: flags.stallTimeoutSeconds,
     noAutoMarkReady: flags.noAutoMarkReady,
     noAutoCancelActionable: flags.noAutoCancelActionable,
+    merge: flags.merge,
     intervalSeconds,
     timeoutSeconds,
     debounceSeconds,

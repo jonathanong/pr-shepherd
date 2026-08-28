@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { joinSections } from "./markdown.mts";
+import { inlineCode, joinSections } from "./markdown.mts";
+
+describe("inlineCode", () => {
+  it("uses a delimiter longer than embedded backtick runs", () => {
+    expect(inlineCode("release `v1`")).toBe("`` release `v1` ``");
+    expect(inlineCode("`two``runs`")).toBe("``` `two``runs` ```");
+  });
+});
 
 describe("joinSections", () => {
   it("joins sections with double newline", () => {

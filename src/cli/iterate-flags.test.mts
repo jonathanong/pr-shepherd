@@ -50,6 +50,7 @@ describe("parseIterateFlags", () => {
     expect(flags.stallTimeoutSeconds).toBe(3600); // 60m * 60
     expect(flags.noAutoMarkReady).toBe(false);
     expect(flags.noAutoCancelActionable).toBe(false);
+    expect(flags.merge).toBe(false);
   });
 
   it("parses --ready-delay", () => {
@@ -96,6 +97,10 @@ describe("parseIterateFlags", () => {
   it("parses --no-auto-cancel-actionable", () => {
     const flags = parseIterateFlags(["--no-auto-cancel-actionable"], defaultConfig());
     expect(flags.noAutoCancelActionable).toBe(true);
+  });
+
+  it("parses --merge", () => {
+    expect(parseIterateFlags(["--merge"], defaultConfig()).merge).toBe(true);
   });
 
   it("returns null readyDelaySuffix on malformed --ready-delay", () => {

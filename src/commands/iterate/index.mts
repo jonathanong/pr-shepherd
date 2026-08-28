@@ -7,11 +7,7 @@ import { loadConfig } from "../../config/load.mts";
 import { EXIT, ShepherdError } from "../../exit-codes.mts";
 import {
   getCurrentHeadSha,
-  buildSummary,
-  buildRelevantChecks,
-  buildActiveChecks,
   buildWaitLog,
-  buildSuppressedCheckFields,
   buildTerminalCancelResult,
   blockedCancelNote,
 } from "./helpers.mts";
@@ -22,7 +18,9 @@ import { handleFixCode } from "./fix-code.mts";
 import { normalizeBotUsernames } from "../../comments/authors.mts";
 import { autoMinimizeComments } from "../../comments/resolve.mts";
 import { checksWithActionableAnnotations } from "../check-annotations.mts";
-import type { IterateCommandOptions, IterateResult, IterateResultBase } from "../../types.mts";
+import { buildReadyMergeResult, handleActiveMergeState } from "./merge-state.mts";
+import { buildIterateBase } from "./base.mts";
+import type { IterateCommandOptions, IterateResult } from "../../types.mts";
 
 export async function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
   const config = loadConfig();
@@ -107,7 +105,10 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     firstLookSummaries.length > 0 ||
     editedSummaries.length > 0;
 
-  const isCleanReadyHandoff = report.status === "READY" && !hasActionableWork;
+  const activeMerge = Boolean(
+    opts.merge && (report.mergeQueue?.inQueue || report.mergeQueue?.autoMergeRequest),
+  );
+  const isCleanReadyHandoff = report.status === "READY" && !hasActionableWork && !activeMerge;
   const readyState = await updateReadyDelay(
     report.pr,
     isCleanReadyHandoff,
@@ -116,38 +117,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     repoName,
   );
 
-  const base: IterateResultBase = {
-    pr: report.pr,
-    repo: report.repo,
-    status: report.status,
-    state: report.mergeStatus.state,
-    mergeStateStatus: report.mergeStatus.mergeStateStatus,
-    mergeStatus: report.mergeStatus.status,
-    reviewDecision: report.mergeStatus.reviewDecision,
-    blockingBotReviewInProgress: report.mergeStatus.blockingBotReviewInProgress,
-    isDraft: report.mergeStatus.isDraft,
-    shouldCancel: readyState.shouldCancel,
-    remainingSeconds: readyState.remainingSeconds,
-    summary: buildSummary(report),
-    baseBranch: report.baseBranch,
-    branchProtection: report.branchProtection,
-    mergeRequirements: report.mergeStatus.mergeRequirements,
-    checks: buildRelevantChecks(report),
-    inProgressChecks: buildActiveChecks(report),
-    ...buildSuppressedCheckFields(report),
-    activity: report.activity,
-  };
-
-  if (readyState.shouldCancel) {
-    await clearStallState(stallKey);
-    const cancelNote = blockedCancelNote(base);
-    return {
-      ...base,
-      action: "cancel",
-      reason: "ready-delay-elapsed",
-      log: `CANCEL: PR #${base.pr} ${cancelNote} — ready-delay elapsed, stopping`,
-    };
-  }
+  const base = buildIterateBase(report, readyState);
 
   const headSha = (await getCurrentHeadSha()) ?? "unknown";
 
@@ -171,11 +141,19 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
     });
   }
 
+  const mergeStateResult = await handleActiveMergeState({
+    enabled: opts.merge,
+    active: activeMerge,
+    base,
+    report,
+    stallKey,
+  });
+  if (mergeStateResult) return mergeStateResult;
+
   const canMarkReady =
     report.status === "READY" &&
     report.mergeStatus.isDraft &&
-    !report.mergeStatus.blockingBotReviewInProgress &&
-    !readyState.shouldCancel;
+    !report.mergeStatus.blockingBotReviewInProgress;
 
   if (canMarkReady && !opts.noAutoMarkReady && config.actions.autoMarkReady) {
     await graphql(MARK_PR_READY_MUTATION, { pullRequestId: report.nodeId });
@@ -184,6 +162,19 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       action: "mark_ready",
       markedReady: true,
       log: `MARKED READY: PR #${report.pr} converted from draft to ready for review`,
+    };
+  }
+
+  if (readyState.shouldCancel) {
+    await clearStallState(stallKey);
+    const mergeResult = buildReadyMergeResult(opts.merge, true, base, report);
+    if (mergeResult) return mergeResult;
+    const cancelNote = blockedCancelNote(base);
+    return {
+      ...base,
+      action: "cancel",
+      reason: "ready-delay-elapsed",
+      log: `CANCEL: PR #${base.pr} ${cancelNote} — ready-delay elapsed, stopping`,
     };
   }
 

@@ -1,4 +1,10 @@
-import type { BranchRules, MergeQueueEntryStatus, StackStatus } from "../types.mts";
+import type {
+  AutoMergeRequestStatus,
+  BranchRules,
+  MergeQueueEntryStatus,
+  MergeQueueRemovalStatus,
+  StackStatus,
+} from "../types.mts";
 import type { RawBaseRef, RawPrMergeFields, RawRepositoryRule } from "./batch-raw-rules.mts";
 import type { RawBranchProtectionRule } from "./batch-raw-rules.mts";
 
@@ -37,7 +43,44 @@ export function parseMergeQueueEntry(
     position: raw.position,
     state: raw.state,
     estimatedTimeToMerge: raw.estimatedTimeToMerge,
+    ...(raw.headCommit?.oid && { headCommitOid: raw.headCommit.oid }),
+    ...(raw.enqueuedAt && { enqueuedAtUnix: parseUnix(raw.enqueuedAt) }),
+    ...(raw.enqueuer?.login && { enqueuer: raw.enqueuer.login }),
   };
+}
+
+export function parseAutoMergeRequest(
+  raw: RawPrMergeFields["autoMergeRequest"],
+): AutoMergeRequestStatus | null {
+  if (!raw) return null;
+  return {
+    enabledAtUnix: parseUnix(raw.enabledAt),
+    mergeMethod: raw.mergeMethod,
+    ...(raw.enabledBy?.login && { enabledBy: raw.enabledBy.login }),
+  };
+}
+
+export function parseLatestMergeQueueRemoval(
+  raw: RawPrMergeFields,
+): MergeQueueRemovalStatus | null {
+  const removal = raw.mergeQueueRemovals?.nodes[0];
+  if (!removal) return null;
+  const lastAddedAt = raw.mergeQueueAdditions?.nodes[0]?.createdAt;
+  if (lastAddedAt && Date.parse(lastAddedAt) > Date.parse(removal.createdAt)) return null;
+  return {
+    reason: removal.reason,
+    createdAtUnix: parseUnix(removal.createdAt),
+    ...(removal.actor?.login && { actor: removal.actor.login }),
+    ...(removal.beforeCommit?.oid && { beforeCommitOid: removal.beforeCommit.oid }),
+    ...(removal.beforeCommit?.parents && {
+      beforeCommitParentOids: removal.beforeCommit.parents.nodes.map((parent) => parent.oid),
+    }),
+  };
+}
+
+function parseUnix(value: string): number {
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? Math.floor(ms / 1000) : 0;
 }
 
 export function parseStack(raw: RawPrMergeFields): StackStatus | null {

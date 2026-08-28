@@ -11,7 +11,6 @@ import type {
 import type { ActiveCheck, PrActivitySummary } from "./activity.mts";
 import type {
   BranchProtection,
-  CheckStatus,
   MergeStateStatus,
   Review,
   ReviewDecision,
@@ -19,42 +18,11 @@ import type {
   ShepherdMergeStatus,
 } from "./github.mts";
 import type { MergeRequirements } from "./merge-requirements.mts";
+import type { EscalateDetails } from "./escalate.mts";
+import type { MergeCommandPlan } from "./merge-action.mts";
 import type { ProtectedRun } from "./protected-run.mts";
 
-export type ShepherdAction = "wait" | "fix_code" | "mark_ready" | "cancel" | "escalate";
-
-export type EscalateTrigger =
-  | "fix-thrash"
-  | "base-branch-unknown"
-  | "stall-timeout"
-  | "thread-missing-location"
-  | "bot-cr-not-dismissed";
-
-export interface AgentStalledCheck {
-  name: string;
-  status: CheckStatus;
-  source: "check_run" | "status_context" | "startup_failure";
-  runId: string | null;
-  detailsUrl: string | null;
-  createdAtUnix?: number;
-  startedAtUnix?: number;
-  updatedAtUnix?: number;
-  ageSeconds: number;
-  summary?: string;
-}
-
-export interface EscalateDetails {
-  triggers: EscalateTrigger[];
-  unresolvedThreads: AgentThread[];
-  ambiguousComments: AgentComment[];
-  changesRequestedReviews: Review[];
-  /** Pending/unstarted CI checks that exceeded the stall timeout. */
-  stalledChecks?: AgentStalledCheck[];
-  /** Populated when fix-thrash triggered — threads that have been attempted too many times. */
-  thrashHistory?: Array<{ threadId: string; attempts: number }>;
-  suggestion: string;
-  humanMessage: string;
-}
+export type ShepherdAction = "wait" | "fix_code" | "mark_ready" | "merge" | "cancel" | "escalate";
 
 export interface IterateResultSummary {
   passing: number;
@@ -94,6 +62,7 @@ export interface IterateResultBase {
   ignoredNames?: string[]; // Suppressed by ignoreChecks config; omitted when empty.
   supersededNames?: string[]; // CANCELLED, superseded by a newer same-workflow run; omitted when empty.
   activity?: PrActivitySummary;
+  mergeQueue?: import("./merge-queue.mts").MergeQueueReport;
 }
 
 interface IterateResultWait extends IterateResultBase {
@@ -156,6 +125,8 @@ interface FixRebaseAndPush {
   inProgressRunIds: string[];
   /** Workflow runs deliberately excluded from cancellation by actions.neverCancelRuns. */
   protectedRuns: ProtectedRun[];
+  /** Requeue command emitted after merge-group remediation. */
+  requeue?: MergeCommandPlan;
   /** First-look threads — previously hidden, surfaced for acknowledgment only. */
   firstLookThreads: FirstLookThread[];
   /** First-look comments — previously hidden, surfaced for acknowledgment only. */
@@ -174,6 +145,11 @@ interface IterateResultMarkReady extends IterateResultBase {
   log: string;
 }
 
+export interface IterateResultMerge extends IterateResultBase {
+  action: "merge";
+  merge: MergeCommandPlan;
+}
+
 interface IterateResultEscalate extends IterateResultBase {
   action: "escalate";
   escalate: EscalateDetails;
@@ -184,6 +160,7 @@ export type IterateResult =
   | IterateResultCancel
   | IterateResultFixCode
   | IterateResultMarkReady
+  | IterateResultMerge
   | IterateResultEscalate;
 
 export interface IterateCommandOptions extends GlobalOptions {
@@ -195,4 +172,6 @@ export interface IterateCommandOptions extends GlobalOptions {
   /** Case-insensitive workflow/check glob patterns Shepherd must not cancel. */
   neverCancelRuns?: string[];
   persistSeen?: boolean; // false skips seen-marker writes (poll discarded ticks)
+  /** Shepherd through readiness and emit the exact merge/queue command when ready. */
+  merge?: boolean;
 }

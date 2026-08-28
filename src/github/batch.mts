@@ -6,6 +6,7 @@ import { parseCheckSuitesComplete, parseSuiteStartupFailures } from "./batch-par
 import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
 import { paginateBatchConnections } from "./batch-page.mts";
 import { requireRawPr } from "./batch-response.mts";
+import { hydrateMergeQueueChecks } from "./merge-queue-checks.mts";
 import type { RawBatchResponse } from "./batch-raw-types.mts";
 import type { BatchPrData } from "../types.mts";
 
@@ -43,6 +44,7 @@ export async function fetchPrBatch(
   });
 
   const raw = requireRawPr(result.data, pr, repo);
+  await hydrateMergeQueueChecks(raw, repo);
   const paged = await paginateBatchConnections(pr, repo, raw, opts, result.rateLimit);
   const rawThreadPages = await hydrateThreadCommentPages(paged.threads);
 

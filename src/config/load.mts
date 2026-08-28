@@ -5,6 +5,7 @@ import { homedir } from "node:os";
 import { parse } from "yaml";
 import builtins from "../config.json" with { type: "json" };
 import { getEffectiveCwd } from "../execution-context.mts";
+import { findMergeStrategies } from "./merge-command-args.mts";
 
 const MINIMIZE_COMMENTS_POLICIES = ["all", "bots", "users", "none"] as const;
 
@@ -52,6 +53,10 @@ interface PrShepherdConfig {
   };
   mergeStatus: {
     blockingReviewerLogins: string[];
+  };
+  merge?: {
+    /** Options added to ordinary `gh pr merge` commands. Queue commands never use these. */
+    commandArgs: string[];
   };
   actions: {
     autoMinimizeSuppressed: boolean;
@@ -162,6 +167,44 @@ function parseNeverCancelRuns(value: unknown): string[] {
   return value;
 }
 
+const SHEPHERD_OWNED_MERGE_FLAGS = [
+  "--repo",
+  "-R",
+  "--auto",
+  "--disable-auto",
+  "--match-head-commit",
+  "--admin",
+  "--body-file",
+  "-F",
+  "--help",
+  "-h",
+];
+
+function parseMergeCommandArgs(value: unknown): string[] {
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
+    throw new Error("Invalid config: merge.commandArgs must be an array of strings");
+  }
+  for (const arg of value) {
+    if (
+      SHEPHERD_OWNED_MERGE_FLAGS.some(
+        (flag) =>
+          arg === flag ||
+          arg.startsWith(`${flag}=`) ||
+          (flag.startsWith("-") && !flag.startsWith("--") && arg.startsWith(flag)),
+      )
+    ) {
+      throw new Error(`Invalid config: merge.commandArgs cannot include Shepherd-owned ${arg}`);
+    }
+  }
+  const strategies = findMergeStrategies(value);
+  if (strategies.length > 1) {
+    throw new Error(
+      `Invalid config: merge.commandArgs includes multiple merge strategies: ${strategies.join(", ")}`,
+    );
+  }
+  return strategies.length === 0 ? [...value, "--merge"] : [...value];
+}
+
 const KNOWN_CONFIG_KEYS = new Set([
   "classify",
   "botUsernames",
@@ -171,6 +214,7 @@ const KNOWN_CONFIG_KEYS = new Set([
   "resolve",
   "checks",
   "mergeStatus",
+  "merge",
   "actions",
 ]);
 const KNOWN_NESTED_KEYS: Record<string, ReadonlySet<string>> = {
@@ -185,6 +229,7 @@ const KNOWN_NESTED_KEYS: Record<string, ReadonlySet<string>> = {
   resolve: new Set(["shaPoll"]),
   checks: new Set(["ciTriggerEvents"]),
   mergeStatus: new Set(["blockingReviewerLogins"]),
+  merge: new Set(["commandArgs"]),
   actions: new Set([
     "autoMinimizeSuppressed",
     "autoMarkReady",
@@ -282,6 +327,7 @@ export function loadConfig(): PrShepherdConfig {
     config.botUsernames = parseBotUsernames(config.botUsernames);
     config.ignoreChecks = parseIgnoreChecks(config.ignoreChecks);
     config.actions.neverCancelRuns = parseNeverCancelRuns(config.actions.neverCancelRuns);
+    if (config.merge) config.merge.commandArgs = parseMergeCommandArgs(config.merge.commandArgs);
     config.iterate.minimizeComments = parseMinimizeCommentsPolicy(config.iterate.minimizeComments);
     configCache.set(cwd, config);
     return config;

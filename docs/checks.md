@@ -43,7 +43,7 @@ Each check run is assigned a `CheckCategory`:
 
 ### Event filter
 
-Only checks triggered by events in `checks.ciTriggerEvents` (default: `pull_request`, `pull_request_target`) count toward the CI verdict. Checks triggered by `push`, `schedule`, `merge_group`, `workflow_dispatch`, or any other event are classified as `filtered`.
+Only checks triggered by events in `checks.ciTriggerEvents` (default: `pull_request`, `pull_request_target`) count toward the PR-head CI verdict. Checks triggered by `push`, `schedule`, `merge_group`, `workflow_dispatch`, or any other event are classified as `filtered` there. When a PR is in a merge queue—or has just been removed—Shepherd separately reads the synthetic queue commit and accepts `merge_group` checks for that commit only. Queue checks retain `scope: "merge_group"` and `commitOid` so they are not confused with PR-head checks.
 
 Filtered checks appear in `report.checks.filtered` and `report.checks.filteredNames` but do not block the READY verdict. The `blockedByFilteredCheck` flag is set when the merge state is BLOCKED and the only failing checks are filtered ones — this surfaces as a hint in the reporter output.
 

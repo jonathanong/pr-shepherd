@@ -162,6 +162,7 @@ export async function handleIterate(args: string[]): Promise<void> {
     stallTimeoutSeconds: flags.stallTimeoutSeconds,
     noAutoMarkReady: flags.noAutoMarkReady,
     noAutoCancelActionable: flags.noAutoCancelActionable,
+    merge: flags.merge,
   });
 
   emitIterateResult(result, {

@@ -1,7 +1,3 @@
-// GitHub primitives, check runs, review threads, and batch PR data types.
-// Check classification types (CheckCategory/ClassifiedCheck/TriagedCheck) live in
-// check-classification.mts to stay under the file-length cap.
-
 import type { ReviewThreadComment } from "./review-thread.mts";
 import type { PrActivitySummary } from "./activity.mts";
 import type { BatchPrMergeFields, MergeRequirements } from "./merge-requirements.mts";
@@ -67,6 +63,10 @@ export interface CheckRun {
   detailsUrl: string;
   event: string | null;
   runId: string | null;
+  /** Commit scope that supplied this check. Omitted for ordinary PR-head checks. */
+  scope?: "merge_group";
+  /** Synthetic merge-group commit OID, when `scope` is `merge_group`. */
+  commitOid?: string;
   createdAtUnix?: number;
   startedAtUnix?: number;
   completedAtUnix?: number;
@@ -191,6 +191,10 @@ export interface BatchPrData extends BatchPrMergeFields {
   reviewSummaries: Review[];
   approvedReviews: Review[];
   checks: CheckRun[];
+  mergeQueueChecks?: CheckRun[];
+  mergeQueueChecksIncomplete?: true;
+  removedMergeQueueChecks?: CheckRun[];
+  removedMergeQueueChecksIncomplete?: true;
   branchProtection: BranchProtection | null;
   activity?: PrActivitySummary;
 }

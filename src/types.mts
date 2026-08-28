@@ -10,3 +10,6 @@ export * from "./types/report.mts";
 export * from "./types/suggestion-patch.mts";
 export * from "./types/iterate.mts";
 export * from "./types/merge-requirements.mts";
+export * from "./types/merge-action.mts";
+export * from "./types/escalate.mts";
+export * from "./types/merge-queue.mts";

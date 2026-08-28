@@ -1,5 +1,3 @@
-// Private raw GraphQL response types for the batch PR query.
-
 import type { CommentAuthorAssociation } from "../types/github.mts";
 import type { RawPrMergeFields } from "./batch-raw-rules.mts";
 

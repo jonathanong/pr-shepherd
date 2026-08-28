@@ -9,7 +9,7 @@ An agent finishing a PR should think about code, not reconstruct GitHub state or
 ## What it does
 
 1. **Gather all context for a PR** in one invocation: review threads, comments, replies, summaries, CI, mergeability, merge requirements, first-look / outdated / edited items, and author provenance.
-2. **Provide deterministic actions for the agent**: exactly one of `WAIT`, `MARK_READY`, `FIX_CODE`, `CANCEL`, or `ESCALATE`, plus numbered `## Instructions` and explicit `apply` / `build_suggestion_patches` operations. The agent still decides whether a comment or CI failure needs a code change. Shepherd does not classify signal vs noise and does not mutate git.
+2. **Provide deterministic actions for the agent**: exactly one of `WAIT`, `MARK_READY`, `FIX_CODE`, `MERGE`, `CANCEL`, or `ESCALATE`, plus numbered `## Instructions` and explicit commands. The agent still decides whether a comment or CI failure needs a code change. Shepherd does not classify signal vs noise and does not mutate git.
 
 Highlights:
 
@@ -32,6 +32,7 @@ Each tick returns exactly one action:
 - `WAIT` — no immediate action; continue with the next poll.
 - `MARK_READY` — the CLI converted an eligible draft PR to ready; continue polling.
 - `FIX_CODE` — agent work is required; complete it, then continue polling.
+- `MERGE` — run the emitted auto-merge or merge-queue command, then continue polling.
 - `CANCEL` — stop polling because the PR merged, closed, or completed its ready-delay.
 - `ESCALATE` — stop polling until a human provides direction.
 
@@ -76,7 +77,7 @@ Conversations Resolved: No [Not Required]
 9. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.
 ```
 
-See [docs/actions.md](docs/actions.md) for the complete output contract. Iterate/poll PR outcomes use exit codes `0` and `10`–`14`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).
+See [docs/actions.md](docs/actions.md) for the complete output contract. Iterate/poll PR outcomes use exit codes `0` and `10`–`15`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).
 
 ## Workflow Assumptions
 
@@ -126,6 +127,7 @@ pr-shepherd 42 --quiet-status          # print only changed WAIT status snapshot
 pr-shepherd 42 --until-terminal        # continue through WAIT/MARK_READY until work or terminal state
 pr-shepherd 42 --debounce 5m           # wait 5m after first FIX_CODE, then return one batched tick
 pr-shepherd 42 --ready-delay 15m
+pr-shepherd 42 --merge                  # enable auto-merge or enter an enabled/required merge queue when ready
 pr-shepherd iterate 42                 # single tick
 ```
 
@@ -236,7 +238,10 @@ checks:
   ciTriggerEvents:
     - pull_request
     - pull_request_target
-    - merge_group
+merge:
+  commandArgs:
+    - --squash
+    - --delete-branch
 actions:
   autoMinimizeSuppressed: true
   autoMarkReady: false

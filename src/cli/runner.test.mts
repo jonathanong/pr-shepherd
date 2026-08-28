@@ -20,7 +20,11 @@ describe("buildPrShepherdCommand", () => {
     expect(renderShellCommand(["--message", 'hello "$USER"'])).toBe("--message 'hello \"$USER\"'");
   });
 
-  it("throws for args that cannot be safely quoted", () => {
-    expect(() => renderShellCommand(["can't use $USER"])).toThrow("Unexpected character");
+  it("quotes arbitrary literal arguments without expanding shell syntax", () => {
+    expect(renderShellCommand(["Bob's $build"])).toBe("'Bob'\"'\"'s $build'");
+  });
+
+  it("expands an uppercase variable used as an assignment value", () => {
+    expect(renderShellCommand(["expectedHeadOid=$HEAD_SHA"])).toBe('expectedHeadOid="$HEAD_SHA"');
   });
 });

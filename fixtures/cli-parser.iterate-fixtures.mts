@@ -83,5 +83,16 @@ export function makeIterateResult(
       },
     };
   }
+  if (action === "merge") {
+    return {
+      ...base,
+      action: "merge",
+      merge: {
+        mode: "auto",
+        command: { argv: ["gh", "pr", "merge", "42", "--auto"] },
+        fallbackCommand: { argv: ["gh", "pr", "merge", "42"] },
+      },
+    };
+  }
   return { ...base, action: "wait", log: "WAIT: 0 passing, 1 in-progress" };
 }

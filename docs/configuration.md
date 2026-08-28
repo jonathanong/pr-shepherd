@@ -57,6 +57,11 @@ mergeStatus:
     - copilot
     - sonar # add other review bots here
 
+merge:
+  commandArgs:
+    - --squash
+    - --delete-branch
+
 actions:
   autoMinimizeSuppressed: true
   autoMarkReady: true
@@ -80,8 +85,9 @@ actions:
 | `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                                                                                   |
 | `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                                                            |
 | `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                                                                                  |
-| `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR CI (add `merge_group` for merge-queue repos)                                                                            |
+| `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR-head CI; merge-queue `merge_group` checks are included automatically                                                    |
 | `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                                                                      |
+| `merge.commandArgs`                  | `[]`                                      | Options for ordinary `gh pr merge` commands; defaults to `--merge` when no strategy is selected. Not used for merge-queue commands.                         |
 | `actions.autoMinimizeSuppressed`     | `true`                                    | Silently resolve/minimize classification-rule matches with both `suppress: true` and `autoResolve: true` before emitting `fix_code`                         |
 | `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR reaches a clean handoff state                                                                                             |
 | `actions.neverCancelRuns`            | `[]`                                      | Case-insensitive glob patterns for workflow/check names whose GitHub Actions workflow runs Shepherd must never cancel                                       |
@@ -194,12 +200,17 @@ Milliseconds between each poll attempt.
 
 ### `checks.ciTriggerEvents` — default `["pull_request", "pull_request_target"]`
 
-Only check runs triggered by one of these events count toward CI readiness. Runs from `push`, `schedule`, `workflow_dispatch`, `merge_group`, etc. are classified as `filtered` and do not block the READY verdict.
+Only check runs triggered by one of these events count toward PR-head CI readiness. Runs from `push`, `schedule`, `workflow_dispatch`, `merge_group`, etc. are classified as `filtered` on that commit. Merge-queue commits are a separate source: their `merge_group` checks are included automatically while queued and after an ejection.
 
 Common additions:
 
-- `merge_group` — for repos using GitHub's merge queue.
 - Remove `pull_request_target` for repos that don't use it (reduces noise).
+
+---
+
+## `merge`
+
+`merge.commandArgs` is appended only to ordinary auto/direct `gh pr merge` commands emitted by `--merge`. Shepherd rejects the PR selector, `--repo`/`-R`, auto-mode controls (`--auto`/`--disable-auto`), `--match-head-commit`, privilege bypass via `--admin`, help flags (`--help`/`-h`), and file-reading body options (`--body-file`/`-F`), including attached short-option values. Select at most one of `--merge`/`-m`, `--squash`/`-s`, or `--rebase`/`-r`; boolean assignments such as `--squash=true` and safe short boolean bundles such as `-sd` are recognized. If none is configured, Shepherd adds `--merge`. Queue commands omit every configured option because the queue controls the merge method and does not accept branch deletion.
 
 ---
 

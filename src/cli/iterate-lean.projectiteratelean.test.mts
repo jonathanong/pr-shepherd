@@ -168,4 +168,20 @@ describe("projectIterateLean", () => {
     expect(lean.log).toContain("MARKED READY");
     expect(lean.checks).toBeUndefined();
   });
+
+  it("escalate: preserves merge queue removal details", () => {
+    const result = makeIterateResult("escalate");
+    if (result.action !== "escalate") throw new Error("expected escalate fixture");
+    result.escalate.mergeQueueRemoval = {
+      reason: "CI_FAILURE",
+      createdAtUnix: 123,
+      actor: "github-merge-queue",
+      beforeCommitOid: "queue-head",
+      beforeCommitParentOids: ["base", "pr-head"],
+    };
+    const lean = projectIterateLean(result) as {
+      escalate: { mergeQueueRemoval?: unknown };
+    };
+    expect(lean.escalate.mergeQueueRemoval).toEqual(result.escalate.mergeQueueRemoval);
+  });
 });

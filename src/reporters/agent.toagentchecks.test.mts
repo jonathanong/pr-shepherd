@@ -43,6 +43,20 @@ describe("toAgentChecks", () => {
     expect(result[1]?.name).toBe("status-check-2");
   });
 
+  it("keeps same-name external checks from distinct commits", () => {
+    const first = {
+      ...makeCheck(null, "external"),
+      scope: "merge_group" as const,
+      commitOid: "queue122",
+    };
+    const second = {
+      ...makeCheck(null, "external"),
+      scope: "merge_group" as const,
+      commitOid: "queue123",
+    };
+    expect(toAgentChecks([first, second])).toHaveLength(2);
+  });
+
   it("handles mixed null and non-null runIds", () => {
     const result = toAgentChecks([
       makeCheck(null, "status"),
