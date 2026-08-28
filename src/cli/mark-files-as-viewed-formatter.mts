@@ -3,7 +3,7 @@ import type { MarkFilesAsViewedResult } from "../commands/mark-files-as-viewed.m
 export function formatMarkFilesAsViewedResult(result: MarkFilesAsViewedResult): string {
   const lines: string[] = [];
   lines.push(
-    `# PR #${result.prNumber} — Mark files as viewed (${result.markedPaths.length} marked)`,
+    `# PR #${result.prNumber} — File-view selection (${result.matchedPaths.length} selected)`,
   );
   lines.push("");
   lines.push(`repo: ${result.repo}`);

@@ -49,14 +49,14 @@ npx --yes --package pr-shepherd@<version> pr-shepherd-mcp
 
 The server exposes these tools:
 
-| Tool                       | Purpose                                                                                                                                     |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `iterate`                  | Run one state-machine tick. Optional inputs include `pr` (a number or PR URL), timing overrides, and auto-action overrides.                 |
-| `apply`                    | Apply an ordered set of review mutations, `mark_files_viewed`, or `append_journal` operations under one optional `pr` (a number or PR URL). |
-| `build_suggestion_patches` | Validate ordered anchored suggestions and return checked patches plus commit metadata.                                                      |
-| `build_suggestion_patch`   | Deprecated one-item adapter for `build_suggestion_patches`.                                                                                 |
+| Tool                       | Purpose                                                                                                                     |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `iterate`                  | Run one state-machine tick. Optional inputs include `pr` (a number or PR URL), timing overrides, and auto-action overrides. |
+| `apply`                    | Apply ordered review/journal mutations or run selection-only `mark_files_viewed` diagnostics under one optional `pr`.       |
+| `build_suggestion_patches` | Validate ordered anchored suggestions and return checked patches plus commit metadata.                                      |
+| `build_suggestion_patch`   | Deprecated one-item adapter for `build_suggestion_patches`.                                                                 |
 
-Use `iterate` first. Its result surfaces review threads, comments, checks, and the existing structured `resolveCommand`/`resolveOnlyCommand` arguments for review work. Translate those arguments into an `apply` `review_mutations` operation when making the mutation; use `mark_files_viewed` to mark selected changed files viewed; use `append_journal` for an idempotent PR-body journal entry. Use one `build_suggestion_patches` call for all marked suggestion threads in displayed order.
+Use `iterate` first. Its result surfaces review threads, comments, checks, and the existing structured `resolveCommand`/`resolveOnlyCommand` arguments for review work. Translate those arguments into an `apply` `review_mutations` operation when making the mutation; `mark_files_viewed` selects files and returns an authorization skip without changing viewed state; use `append_journal` for an idempotent PR-body journal entry. Use one `build_suggestion_patches` call for all marked suggestion threads in displayed order.
 
 `build-suggestion-patches` and `build_suggestion_patches` treat GitHub's anchored line range at the fetched PR head as authoritative. They accept a clean local descendant only when the ordered patches pass `git apply --check`; otherwise inspect the current source and reviewer intent manually.
 

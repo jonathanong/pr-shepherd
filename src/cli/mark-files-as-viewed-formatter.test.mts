@@ -22,7 +22,7 @@ describe("formatMarkFilesAsViewedResult", () => {
       unmarkedPaths: ["src/b.ts"],
     });
 
-    expect(out).toContain("# PR #42 — Mark files as viewed (1 marked)");
+    expect(out).toContain("# PR #42 — File-view selection (2 selected)");
     expect(out).toContain("## Matched files (2)");
     expect(out).toContain("## Marked viewed (1)");
     expect(out).toContain("## Already viewed (1)");

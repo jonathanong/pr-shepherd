@@ -113,4 +113,4 @@ The session owns recurrence. The skill prints the full result and follows its pl
 
 ## Operations
 
-CLI `pr-shepherd` (the poll command) or MCP `iterate` obtains the next state-machine action and returns structured review-mutation arguments. MCP `apply` (or the CLI `apply` commands named in the output) performs explicit ordered review mutations, `mark_files_viewed` file operations, or `append_journal` operations. `build_suggestion_patches` validates and builds ordered patches for anchored suggestions. The skills leave this policy in the printed output rather than duplicating it in prompts.
+CLI `pr-shepherd` (the poll command) or MCP `iterate` obtains the next state-machine action and returns structured review-mutation arguments. MCP `apply` (or the CLI `apply` commands named in the output) performs explicit ordered review mutations, selection-only `mark_files_viewed` diagnostics, or `append_journal` operations. `build_suggestion_patches` validates and builds ordered patches for anchored suggestions. The skills leave this policy in the printed output rather than duplicating it in prompts.

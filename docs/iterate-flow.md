@@ -16,8 +16,7 @@ flowchart TD
   S15 -->|yes| A_CAN(["action: cancel"])
   S15 -->|no| S2["2. updateReadyDelay"]
   S2 --> S3{"3. hasActionableWork?"}
-  S3 -->|yes| S3X["REST cancel failing Actions runs"]
-  S3X --> A_FIX(["action: fix_code"])
+  S3 -->|yes| A_FIX(["action: fix_code"])
   S3 -->|no| SM{"--merge state?"}
   SM -->|active queue/auto-merge| A_W(["action: wait"])
   SM -->|current removal| A_ESC(["action: escalate"])
@@ -40,8 +39,10 @@ flowchart TD
   A_ESC --> DEC
 
   DEC -->|cancel/escalate| STOP["stop"]
-  DEC -->|fix_code| FIX["inspect CI as needed<br/>edit+commit by repo convention<br/>pr-shepherd apply review"]
-  FIX --> RERUN["rerun the poll"]
+  DEC -->|fix_code| FIX["inspect included evidence<br/>edit+commit by repo convention<br/>run authorized review mutations"]
+  FIX --> REMOTE{"remote update required?"}
+  REMOTE -->|yes| STOP
+  REMOTE -->|no| RERUN["rerun the poll"]
   DEC -->|wait/mark_ready/merge| RERUN
   RERUN --> POLL
 ```

@@ -18,7 +18,7 @@ Commands:
   [PR]                 Poll until non-WAIT or timeout. This is the default command.
   iterate              Run one iterate tick (single-tick alias).
   apply review         Apply review-state mutations after fixes.
-  apply files          Mark changed files as viewed in GitHub.
+  apply files          Select changed files; no viewed-state mutation is attempted.
   apply journal        Append a list item to the Shepherd Journal details block of a PR body.
   build-suggestion-patches
                        Convert ordered GitHub suggestion threads into patches and commit instructions.

@@ -146,7 +146,7 @@ export function buildFixInstructions(
     instructions.push(`Commit any remaining conflict-resolution changes${mutationSuffix}.`);
   } else if (hasNonConflictHints) {
     instructions.push(
-      `If you changed code, commit any remaining changes${mutationSuffix}. Otherwise, do not commit. Shepherd cannot verify authorization for the Git credential that would push this branch, so this output does not recommend a push.`,
+      "If you changed code, commit any remaining changes, then stop and hand off for a push whose authorization is established outside Shepherd; do not run the remaining review mutations or iterate until the remote PR head changes. Shepherd cannot verify the Git credential's push authorization. If you did not change code, do not commit and continue with the remaining steps.",
     );
   }
 
@@ -166,6 +166,8 @@ export function buildFixInstructions(
 
   instructions.push(...buildResolveCommandInstruction(resolveCommand));
 
-  instructions.push(buildFixCompletionInstruction(failingChecks, hasConflicts));
+  instructions.push(
+    buildFixCompletionInstruction(failingChecks, hasConflicts, resolveCommand.requiresHeadSha),
+  );
   return instructions;
 }

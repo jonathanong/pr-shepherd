@@ -90,7 +90,7 @@ actions:
 | `merge.commandArgs`                  | `[]`                                      | Options for ordinary `gh pr merge` commands; defaults to `--merge` when no strategy is selected. Not used for merge-queue commands.                         |
 | `actions.autoMinimizeSuppressed`     | `true`                                    | Silently resolve/minimize classification-rule matches with both `suppress: true` and `autoResolve: true` before emitting `fix_code`                         |
 | `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR reaches a clean handoff state                                                                                             |
-| `actions.neverCancelRuns`            | `[]`                                      | Case-insensitive glob patterns for workflow/check names whose GitHub Actions workflow runs Shepherd must never cancel                                       |
+| `actions.neverCancelRuns`            | `[]`                                      | Legacy cancellation-named patterns; matching checks remain visible despite `ignoreChecks`, but Shepherd never cancels runs                                  |
 
 ## `botUsernames`
 
@@ -244,7 +244,7 @@ Disable if your team uses the draft state as a deliberate gate that requires a h
 
 ### `actions.neverCancelRuns` — default `[]`
 
-Legacy compatibility key. Shepherd no longer cancels or recommends cancelling workflow runs because GitHub exposes no exact viewer capability for that action. The patterns remain accepted so existing configuration files do not fail to load.
+Legacy cancellation-named compatibility key. Shepherd no longer cancels or recommends cancelling workflow runs because GitHub exposes no exact viewer capability for that action. The patterns still keep matching Actions checks visible when `ignoreChecks` would otherwise hide them.
 
 Use this for workflows where sibling jobs should be allowed to finish even after one job fails:
 

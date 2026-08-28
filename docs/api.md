@@ -45,7 +45,7 @@ const patches = await shepherd.buildSuggestionPatches({
 
 For the programmatic API, `pr` is an optional positive number, repository-qualified `owner/repo#N`, or GitHub pull-request URL. Omitted, Shepherd infers the current branch's open PR. Repository-qualified references must match the repository at the configured `cwd` (or process working directory when omitted). `cwd` is used for git, config, and classification-rule lookups.
 
-`apply` runs `operations` in list order after validating every operation. Types: `review_mutations`, `mark_files_viewed`, `append_journal`. Replies and dismissals require `message`. `requireSha` must be a full 40-character lowercase hex SHA.
+`apply` runs `operations` in list order after validating every operation. Types: `review_mutations`, `mark_files_viewed`, `append_journal`. The compatibility-named `mark_files_viewed` operation is selection-only because GitHub exposes no exact viewer capability, so it never changes viewed state. Replies and dismissals require `message`. `requireSha` must be a full 40-character lowercase hex SHA.
 
 Validation failures throw `PrShepherdValidationError` before any GitHub mutation. If a later apply operation fails after earlier ones succeeded, Shepherd throws `PartialApplyError` with `failedIndex` and `completed`.
 

@@ -37,7 +37,7 @@ Each check run is assigned a `CheckCategory`:
 
 ### Ignore/protection precedence
 
-`ignoreChecks` matches the raw check name (`CheckRun.name` or `StatusContext.context`) and removes matching checks from the CI verdict. For GitHub Actions check runs, `actions.neverCancelRuns` takes precedence when it matches the workflow name or check name for that run. This lets long-running protected workflows remain visible and continue blocking readiness even when one of their raw job names also appears in `ignoreChecks`.
+`ignoreChecks` matches the raw check name (`CheckRun.name` or `StatusContext.context`) and removes matching checks from the CI verdict. For backward compatibility, the legacy cancellation-named `actions.neverCancelRuns` key takes precedence when it matches the workflow name or check name for that run. It only keeps matching checks visible and blocking readiness; Shepherd never cancels workflow runs.
 
 `actions.neverCancelRuns` does not bypass the event filter. A protected workflow triggered by `workflow_dispatch`, `push`, or another non-PR event still needs that event listed in `checks.ciTriggerEvents` if it should count toward readiness.
 
@@ -59,7 +59,7 @@ Shepherd groups check runs by workflow — keyed on the Actions workflow's numer
 This is deliberately narrow:
 
 - Only `CANCELLED` is ever reclassified. A real `FAILURE`/`TIMED_OUT`/`STARTUP_FAILURE` on an older run is never masked, even if a newer run exists (the newer run may not re-emit that check at all, e.g. under path filtering).
-- The **newest** run for a workflow is never superseded, even if it is itself cancelled (no newer run exists to supersede it) — that case stays `failing` so the agent can decide whether to rerun.
+- The **newest** run for a workflow is never superseded, even if it is itself cancelled (no newer run exists to supersede it) — that case stays `failing` and produces a human authorization handoff rather than a rerun recommendation.
 - Checks with no workflow identity (`workflowId` and `workflowName` both absent) or no numeric `runId` — external `StatusContext` checks, and `STARTUP_FAILURE` synthetics from the Stage 0 supplement — never participate; they can neither be marked superseded nor count as evidence of a newer run.
 
 `superseded` checks are excluded from `getCiVerdict`'s `relevant` tally (same as `filtered`/`skipped`/`ignored`) and from `report.checks.failing` — they are never triaged (no jobs/logs API call) and never appear under `## Failing checks`. They are surfaced only as a `supersededNames` list for transparency.
@@ -89,7 +89,7 @@ For each failing check, triage fetches additional context from the GitHub Action
 - **`logExcerpt`** — bounded failure context from the matched failed job log, fetched from `GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs`. For aggregate jobs that print a `Job results` JSON block, Shepherd emits the non-success job results plus the exit-code/error line. Otherwise it prefers lines around errors and falls back to the final non-empty lines. The fetch is best-effort; missing or inaccessible logs leave the field omitted.
 - **`annotations`** — marker-gated inline annotations from completed `CheckRun` checks (any conclusion). The batch query probes `annotations(first: 1)` so Shepherd only paginates a CheckRun that actually has annotations. Annotation `message` and `rawDetails` fields are capped independently before text and JSON output. Each annotation is surfaced once per PR; there is no resolve/minimize mutation. The current `check` result preserves successful-check annotations as raw context and marks them seen, while `iterate` treats the successful parent conclusion as authoritative regardless of classification bucket and does not turn those annotations into `FIX_CODE`.
 
-Checks with `conclusion === "CANCELLED"` or `conclusion === "STARTUP_FAILURE"` short-circuit triage entirely — no jobs/logs API call is made, and `workflowName`/`jobName`/`failedStep`/`logExcerpt` are not populated. Cancelled output carries a `[conclusion: CANCELLED]` tag. Startup-failure output carries a `[conclusion: STARTUP_FAILURE]` tag and may include the workflow run display title as `summary`. The agent reads any included `logExcerpt` first and runs a bounded command such as `gh run view <runId> --log-failed | tail -n 200` when it needs the full log for ordinary non-cancelled failures (the unbounded form can dump excessive log output into context); startup failures use `gh run view <runId>` because failed job logs may not exist.
+Checks with `conclusion === "CANCELLED"` or `conclusion === "STARTUP_FAILURE"` short-circuit triage entirely — no jobs/logs API call is made, and `workflowName`/`jobName`/`failedStep`/`logExcerpt` are not populated. Cancelled output carries a `[conclusion: CANCELLED]` tag. Startup-failure output carries a `[conclusion: STARTUP_FAILURE]` tag and may include the workflow run display title as `summary`. Ordinary failures use only the bounded evidence included by Shepherd. When that evidence is unavailable, or for cancelled/startup failures, output stops with a human authorization handoff instead of recommending another GitHub read or rerun.
 
 ## Report output
 

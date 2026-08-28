@@ -19,6 +19,9 @@ describe("public CLI help surface", () => {
     expect(USAGE.top).toContain("--debounce");
     expect(USAGE.default).toContain("--debounce");
     expect(USAGE.poll).toContain("--debounce");
+    expect(USAGE.top).toContain("no viewed-state mutation is attempted");
+    expect(USAGE["apply files"]).toContain("No file viewed-state mutation is attempted");
+    expect(USAGE["mark-files-as-viewed"]).toContain("No file viewed-state mutation is attempted");
   });
 
   it("resolves nested help pages without doing command I/O", () => {

@@ -53,7 +53,7 @@ export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): 
   }
   if (resolveCommand.requiresHeadSha) {
     instructions.push(
-      "Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.",
+      "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, do not run this command until an authorized push updates the remote PR head; then replace `$HEAD_SHA` with that pushed commit SHA.",
     );
   }
   if (resolveCommand.requiresDismissMessage) {
@@ -89,6 +89,7 @@ export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
 export function buildFixCompletionInstruction(
   checks: AgentCheck[],
   requiresRemoteUpdateAuthorization = false,
+  hasShaGatedReviewMutations = false,
 ): string {
   if (requiresRemoteUpdateAuthorization) {
     return "`[FIX_CODE]` requires a human handoff for an authorized push after conflict resolution. Shepherd cannot verify the Git credential's push authorization. Stop polling after committing, and resume only after the remote PR head changes.";
@@ -106,6 +107,9 @@ export function buildFixCompletionInstruction(
   }
   if (hasCiAuthorizationHandoff) {
     return "`[FIX_CODE]` requires a human handoff for a failing check with no authorized follow-up action. Stop polling after escalating, and resume only after human direction.";
+  }
+  if (hasShaGatedReviewMutations) {
+    return "`[FIX_CODE]` is conditional: if you changed code, stop after committing and resume only after an authorized push changes the remote PR head; if you did not change code, complete the authorized review mutations and iterate again with the same options.";
   }
   return "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.";
 }

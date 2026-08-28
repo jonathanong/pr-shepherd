@@ -132,7 +132,7 @@ describe("buildResolveCommandInstruction", () => {
       ),
     ).toEqual([
       "Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked viewer-authored human thread is emitted resolve-only, not for another reply.",
-      "Replace `$HEAD_SHA` with the pushed commit SHA, or `$(git rev-parse HEAD)` if you did not push.",
+      "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, do not run this command until an authorized push updates the remote PR head; then replace `$HEAD_SHA` with that pushed commit SHA.",
       "Replace `$DISMISS_MESSAGE` with one sentence describing what changed.",
       'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',
     ]);
@@ -143,6 +143,12 @@ describe("buildFixCompletionInstruction", () => {
   it("hands control back to the caller for the next tick", () => {
     expect(buildFixCompletionInstruction([check({})])).toBe(
       "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.",
+    );
+  });
+
+  it("conditionally stops for an authorized remote update before SHA-gated mutations", () => {
+    expect(buildFixCompletionInstruction([check({})], false, true)).toBe(
+      "`[FIX_CODE]` is conditional: if you changed code, stop after committing and resume only after an authorized push changes the remote PR head; if you did not change code, complete the authorized review mutations and iterate again with the same options.",
     );
   });
 
