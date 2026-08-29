@@ -99,6 +99,27 @@ describe("errorToExitCode", () => {
     expect(errorToExitCode(err)).toBe(EXIT.TEMPFAIL);
   });
 
+  it("classifies extensions.code INTERNAL even when type is a different nonempty value", () => {
+    const err = new GitHubRequestError("GitHub GraphQL error (no data)", {
+      status: 200,
+      graphqlErrors: [
+        { message: "engine crash", type: "FORBIDDEN", extensions: { code: "INTERNAL" } },
+      ],
+    });
+    expect(errorToExitCode(err)).toBe(EXIT.TEMPFAIL);
+  });
+
+  it.each([null, [], "INTERNAL", { code: 1 }] as const)(
+    "does not treat non-object-code extensions %j as INTERNAL",
+    (extensions) => {
+      const err = new GitHubRequestError("GitHub GraphQL error (no data)", {
+        status: 200,
+        graphqlErrors: [{ message: "not an engine crash", extensions }],
+      });
+      expect(errorToExitCode(err)).toBe(EXIT.UNAVAILABLE);
+    },
+  );
+
   it("does not classify a GraphQL INTERNAL-looking permission error as EX_TEMPFAIL", () => {
     const err = new GitHubRequestError("GitHub GraphQL error: not accessible", {
       status: 200,

@@ -123,12 +123,18 @@ letting status-based classification guess.
 documents sometimes fail with `data: null` and
 `Something went wrong while executing your query … Please include <id> when
 reporting this issue.` The payload may also set `errors[].type` /
-`errors[].extensions.code` to `INTERNAL`. Status-only classification treated
-this as `69` (`EX_UNAVAILABLE`) even though retrying the same query often
-succeeds. `GitHubRequestError` maps those errors to `75`, and the GraphQL
-client retries them twice (500ms, then 1500ms) before surfacing the failure.
-The GraphQL layer keeps `type` and `extensions` on `graphqlErrors` so
-classification can use them instead of dropping everything but `message`.
+`errors[].extensions.code` to `INTERNAL` (checked independently — a nonempty
+non-`INTERNAL` `type` does not hide `extensions.code`). Status-only
+classification treated this as `69` (`EX_UNAVAILABLE`) even though retrying
+the same **query** often succeeds. `GitHubRequestError` maps those errors to
+`75`. The GraphQL client retries read operations twice (500ms, then 1500ms)
+before surfacing the failure. Mutations are not retried: an INTERNAL after
+GitHub applied a write (`addPullRequestReviewThreadReply`, mark-ready) would
+duplicate the side effect. If the INTERNAL response also carries
+`Retry-After` or an exhausted rate limit, the client does not use the short
+delays; it surfaces `75` immediately. The GraphQL layer keeps `type` and
+`extensions` on `graphqlErrors` so classification can use them instead of
+dropping everything but `message`.
 
 **78 (`EX_CONFIG`) is defined but not wired up.** A malformed
 `.pr-shepherdrc.yml` currently degrades gracefully: shepherd logs a

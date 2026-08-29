@@ -27,11 +27,11 @@ const BATCHPR_INTERNAL = {
   ],
 };
 
-function gqlJson(payload: unknown) {
+function gqlJson(payload: unknown, extraHeaders: Record<string, string> = {}) {
   return {
     ok: true,
     status: 200,
-    headers: new Headers({ "content-type": "application/json" }),
+    headers: new Headers({ "content-type": "application/json", ...extraHeaders }),
     json: () => Promise.resolve(payload),
   };
 }
@@ -93,5 +93,40 @@ describe("graphql — GitHub INTERNAL engine crash", () => {
         },
       ],
     });
+  });
+
+  it("does not retry INTERNAL on a mutation document", async () => {
+    mockFetch.mockResolvedValue(gqlJson(BATCHPR_INTERNAL));
+
+    await expect(graphql("mutation BulkApply { x }")).rejects.toMatchObject({
+      exitCode: EXIT.TEMPFAIL,
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not retry INTERNAL when Retry-After is present", async () => {
+    mockFetch.mockResolvedValue(gqlJson(BATCHPR_INTERNAL, { "retry-after": "30" }));
+
+    await expect(graphql("{ BatchPr }")).rejects.toMatchObject({
+      exitCode: EXIT.TEMPFAIL,
+      retryAfterSeconds: 30,
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not retry INTERNAL when the rate limit is exhausted", async () => {
+    mockFetch.mockResolvedValue(
+      gqlJson(BATCHPR_INTERNAL, {
+        "x-ratelimit-remaining": "0",
+        "x-ratelimit-limit": "5000",
+        "x-ratelimit-reset": "1700000000",
+      }),
+    );
+
+    await expect(graphql("{ BatchPr }")).rejects.toMatchObject({
+      exitCode: EXIT.TEMPFAIL,
+      rateLimit: { remaining: 0, limit: 5000, resetAt: 1700000000 },
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 });

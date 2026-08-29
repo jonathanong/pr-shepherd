@@ -18,14 +18,15 @@ export interface GitHubGraphQlError {
 const GRAPHQL_PERMISSION_ERROR = /resource not accessible/i;
 const GRAPHQL_INTERNAL_MESSAGE = /something went wrong while executing your query/i;
 
-function graphQlErrorCode(error: GitHubGraphQlError): string | undefined {
-  if (typeof error.type === "string" && error.type !== "") return error.type;
-  const extensions = error.extensions;
+function isInternalToken(value: unknown): boolean {
+  return typeof value === "string" && value.toUpperCase() === "INTERNAL";
+}
+
+function extensionsCode(extensions: unknown): unknown {
   if (typeof extensions !== "object" || extensions === null || Array.isArray(extensions)) {
     return undefined;
   }
-  const code = (extensions as Record<string, unknown>)["code"];
-  return typeof code === "string" && code !== "" ? code : undefined;
+  return (extensions as Record<string, unknown>)["code"];
 }
 
 function hasPermissionError(graphqlErrors?: GitHubGraphQlError[]): boolean {
@@ -36,8 +37,8 @@ function hasPermissionError(graphqlErrors?: GitHubGraphQlError[]): boolean {
 export function isRetryableGraphQlInternal(graphqlErrors?: GitHubGraphQlError[]): boolean {
   if (!graphqlErrors?.length) return false;
   return graphqlErrors.some((error) => {
-    const code = graphQlErrorCode(error);
-    if (code !== undefined && code.toUpperCase() === "INTERNAL") return true;
+    if (isInternalToken(error.type)) return true;
+    if (isInternalToken(extensionsCode(error.extensions))) return true;
     return GRAPHQL_INTERNAL_MESSAGE.test(error.message);
   });
 }

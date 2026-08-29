@@ -159,7 +159,9 @@ export async function graphql<T = unknown>(
   vars: Record<string, unknown> = {},
   opts: GraphQlRequestOptions = {},
 ): Promise<GraphQlResult<T>> {
-  const { data, errors } = await withGraphQlInternalRetry(() => graphqlInner<T>(query, vars, opts));
+  const { data, errors } = await withGraphQlInternalRetry(query, () =>
+    graphqlInner<T>(query, vars, opts),
+  );
   return { data, errors };
 }
 
@@ -168,7 +170,7 @@ export async function graphqlWithRateLimit<T = unknown>(
   vars: Record<string, unknown> = {},
   opts: GraphQlRequestOptions = {},
 ): Promise<GraphQlResult<T>> {
-  const { data, rateLimit, retryAfterSeconds, errors } = await withGraphQlInternalRetry(() =>
+  const { data, rateLimit, retryAfterSeconds, errors } = await withGraphQlInternalRetry(query, () =>
     graphqlInner<T>(query, vars, opts),
   );
   return { data, rateLimit: rateLimit ?? undefined, retryAfterSeconds, errors };
