@@ -1,6 +1,7 @@
 import { appendEntry, nextEntry } from "../log/log-file.mts";
 import { formatRequestEntry, formatResponseEntry } from "../log/session.mts";
 import { GitHubRequestError, type GitHubGraphQlError } from "./errors.mts";
+import { withGraphQlInternalRetry } from "./graphql-internal-retry.mts";
 import { formatGraphQlErrors, parseGraphQlPayload } from "./graphql-response.mts";
 import { makeHeaders } from "./http-auth.mts";
 import { requestWithTokenRetry } from "./http-request.mts";
@@ -158,7 +159,7 @@ export async function graphql<T = unknown>(
   vars: Record<string, unknown> = {},
   opts: GraphQlRequestOptions = {},
 ): Promise<GraphQlResult<T>> {
-  const { data, errors } = await graphqlInner<T>(query, vars, opts);
+  const { data, errors } = await withGraphQlInternalRetry(() => graphqlInner<T>(query, vars, opts));
   return { data, errors };
 }
 
@@ -167,6 +168,8 @@ export async function graphqlWithRateLimit<T = unknown>(
   vars: Record<string, unknown> = {},
   opts: GraphQlRequestOptions = {},
 ): Promise<GraphQlResult<T>> {
-  const { data, rateLimit, retryAfterSeconds, errors } = await graphqlInner<T>(query, vars, opts);
+  const { data, rateLimit, retryAfterSeconds, errors } = await withGraphQlInternalRetry(() =>
+    graphqlInner<T>(query, vars, opts),
+  );
   return { data, rateLimit: rateLimit ?? undefined, retryAfterSeconds, errors };
 }

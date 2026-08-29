@@ -68,6 +68,47 @@ describe("errorToExitCode", () => {
     expect(errorToExitCode(err)).toBe(EXIT.UNAVAILABLE);
   });
 
+  // Captured from avifenesh/glide-mq BatchPr: HTTP 200, data: null, GitHub GraphQL INTERNAL.
+  const BATCHPR_INTERNAL_MESSAGE =
+    "Something went wrong while executing your query on 2026-08-29T06:55:45Z. Please include `D8D9:242C07:434A6C:5437E7:6A928270` when reporting this issue.";
+
+  it("classifies GitHub GraphQL INTERNAL by message at HTTP 200 as EX_TEMPFAIL", () => {
+    const err = new GitHubRequestError(
+      `GitHub GraphQL error (no data): ${BATCHPR_INTERNAL_MESSAGE}`,
+      {
+        status: 200,
+        graphqlErrors: [{ message: BATCHPR_INTERNAL_MESSAGE }],
+      },
+    );
+    expect(errorToExitCode(err)).toBe(EXIT.TEMPFAIL);
+  });
+
+  it("classifies GitHub GraphQL INTERNAL by type at HTTP 200 as EX_TEMPFAIL", () => {
+    const err = new GitHubRequestError("GitHub GraphQL error (no data)", {
+      status: 200,
+      graphqlErrors: [{ message: "internal error", type: "INTERNAL" }],
+    });
+    expect(errorToExitCode(err)).toBe(EXIT.TEMPFAIL);
+  });
+
+  it("classifies GitHub GraphQL INTERNAL by extensions.code at HTTP 200 as EX_TEMPFAIL", () => {
+    const err = new GitHubRequestError("GitHub GraphQL error (no data)", {
+      status: 200,
+      graphqlErrors: [{ message: "internal error", extensions: { code: "INTERNAL" } }],
+    });
+    expect(errorToExitCode(err)).toBe(EXIT.TEMPFAIL);
+  });
+
+  it("does not classify a GraphQL INTERNAL-looking permission error as EX_TEMPFAIL", () => {
+    const err = new GitHubRequestError("GitHub GraphQL error: not accessible", {
+      status: 200,
+      graphqlErrors: [
+        { message: "Resource not accessible by personal access token", type: "FORBIDDEN" },
+      ],
+    });
+    expect(errorToExitCode(err)).toBe(EXIT.NOPERM);
+  });
+
   it("lets a retry signal win over a GraphQL permission-error message", () => {
     const err = new GitHubRequestError("secondary rate limit", {
       status: 200,

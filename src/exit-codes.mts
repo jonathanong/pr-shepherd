@@ -39,7 +39,7 @@ export const EXIT = Object.freeze({
   UNAVAILABLE: 69,
   /** Unexpected/unclassified internal error — the fallback. */
   SOFTWARE: 70,
-  /** Retryable GitHub failure: 429, 5xx, rate limit exhausted, `Retry-After` present. */
+  /** Retryable GitHub failure: 429, 5xx, rate limit exhausted, Retry-After, GraphQL INTERNAL. */
   TEMPFAIL: 75,
   /** GitHub 401/403 — missing token or insufficient PAT scopes. */
   NOPERM: 77,
