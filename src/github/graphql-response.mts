@@ -30,7 +30,7 @@ export function parseGraphQlPayload<T>(
         retryAfterSeconds,
       );
     }
-    errors = record["errors"] as GitHubGraphQlError[];
+    errors = record["errors"].map((error) => parseGraphQlError(error as Record<string, unknown>));
   }
   if (!("data" in record)) {
     if (errors?.length) return { data: null, errors };
@@ -48,6 +48,14 @@ export function parseGraphQlPayload<T>(
     );
   }
   return { data: (record["data"] as T | null) ?? null, errors };
+}
+
+function parseGraphQlError(error: Record<string, unknown>): GitHubGraphQlError {
+  const parsed: GitHubGraphQlError = { message: error["message"] as string };
+  if ("path" in error) parsed.path = error["path"];
+  if (typeof error["type"] === "string") parsed.type = error["type"];
+  if (error["extensions"] !== undefined) parsed.extensions = error["extensions"];
+  return parsed;
 }
 
 export function formatGraphQlErrors(errors: GitHubGraphQlError[] | undefined): string {

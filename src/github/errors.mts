@@ -4,6 +4,10 @@ import type { RateLimitInfo } from "./http.mts";
 export interface GitHubGraphQlError {
   message: string;
   path?: unknown;
+  /** GitHub's GraphQL `type` field — `INTERNAL` on engine crashes. */
+  type?: string;
+  /** GraphQL `extensions`; GitHub often sets `{ code: "INTERNAL" }`. */
+  extensions?: unknown;
 }
 
 // GitHub's GraphQL API reports field-level permission failures (e.g. a fine-grained
@@ -12,9 +16,31 @@ export interface GitHubGraphQlError {
 // be resolved. Status alone can't see this, so classification must also inspect the
 // GraphQL error messages themselves.
 const GRAPHQL_PERMISSION_ERROR = /resource not accessible/i;
+const GRAPHQL_INTERNAL_MESSAGE = /something went wrong while executing your query/i;
+
+function isInternalToken(value: unknown): boolean {
+  return typeof value === "string" && value.toUpperCase() === "INTERNAL";
+}
+
+function extensionsCode(extensions: unknown): unknown {
+  if (typeof extensions !== "object" || extensions === null || Array.isArray(extensions)) {
+    return undefined;
+  }
+  return (extensions as Record<string, unknown>)["code"];
+}
 
 function hasPermissionError(graphqlErrors?: GitHubGraphQlError[]): boolean {
   return graphqlErrors?.some((e) => GRAPHQL_PERMISSION_ERROR.test(e.message)) ?? false;
+}
+
+/** GitHub GraphQL engine crash: HTTP 200, `data: null`, INTERNAL type/code or message. */
+export function isRetryableGraphQlInternal(graphqlErrors?: GitHubGraphQlError[]): boolean {
+  if (!graphqlErrors?.length) return false;
+  return graphqlErrors.some((error) => {
+    if (isInternalToken(error.type)) return true;
+    if (isInternalToken(extensionsCode(error.extensions))) return true;
+    return GRAPHQL_INTERNAL_MESSAGE.test(error.message);
+  });
 }
 
 function classifyStatus(
@@ -28,7 +54,13 @@ function classifyStatus(
   // permission-denied 403 a bad/missing token produces. Treat any retry signal as
   // TEMPFAIL first so it isn't shadowed by the checks below.
   const rateLimitExhausted = rateLimit !== undefined && rateLimit.remaining <= 0;
-  if (status === 429 || status >= 500 || retryAfterSeconds !== undefined || rateLimitExhausted) {
+  if (
+    status === 429 ||
+    status >= 500 ||
+    retryAfterSeconds !== undefined ||
+    rateLimitExhausted ||
+    isRetryableGraphQlInternal(graphqlErrors)
+  ) {
     return EXIT.TEMPFAIL;
   }
   if (status === 401 || status === 403 || hasPermissionError(graphqlErrors)) return EXIT.NOPERM;

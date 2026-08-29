@@ -87,7 +87,7 @@ subcommand, not just `iterate` — this range is uniform across `apply`,
 | 66   | `EX_NOINPUT`     | `apply journal --file` path could not be read (including `--file -` for stdin)                                                                                                                                         |
 | 69   | `EX_UNAVAILABLE` | A precondition is unmet: no open PR for the current branch; a suggestion thread is resolved, outdated, minimized, unanchored, unsafe, or not applyable to the local descendant; or GitHub returned an unclassified 4xx |
 | 70   | `EX_SOFTWARE`    | Unexpected or unclassified internal failure — the fallback when nothing more specific applies                                                                                                                          |
-| 75   | `EX_TEMPFAIL`    | A **retryable** GitHub failure: HTTP 429, any 5xx, a `Retry-After` header, or an exhausted rate limit                                                                                                                  |
+| 75   | `EX_TEMPFAIL`    | A **retryable** GitHub failure: HTTP 429, any 5xx, a `Retry-After` header, an exhausted rate limit, or a GraphQL `INTERNAL` engine crash (HTTP 200 with `data: null`)                                                  |
 | 77   | `EX_NOPERM`      | GitHub 401/403 that is not a rate-limit signal — missing token or insufficient PAT scopes                                                                                                                              |
 | 78   | `EX_CONFIG`      | Reserved for `.pr-shepherdrc.yml` validation failures. **Not currently emitted** — see below.                                                                                                                          |
 
@@ -101,8 +101,8 @@ retried (there's no PR to act on, or the target thread isn't eligible).
 returns 403, with a `Retry-After` header. `GitHubRequestError` classifies
 itself at construction time (via `classifyStatus`, not `errorToExitCode` —
 `errorToExitCode` only reads back whatever code the error already carries)
-and checks for a retry signal (`Retry-After`, `429`, `5xx`, or an exhausted
-rate limit) _before_ falling back to the blanket 401/403 → `77` rule, so a
+and checks for a retry signal (`Retry-After`, `429`, `5xx`, an exhausted
+rate limit, or a GraphQL `INTERNAL` error) _before_ falling back to the blanket 401/403 → `77` rule, so a
 throttled 403 correctly resolves to `75`, not `77`.
 
 **GraphQL permission failures often arrive at HTTP 200, not 401/403.** A
@@ -118,6 +118,23 @@ null node where one is required) is a third, distinct case: it isn't a
 permission or precondition problem either, so those call sites pass an
 explicit `exitCodeOverride: EXIT.SOFTWARE` to `GitHubRequestError` rather than
 letting status-based classification guess.
+
+**GraphQL engine crashes also arrive at HTTP 200.** GitHub's `BatchPr`-sized
+documents sometimes fail with `data: null` and
+`Something went wrong while executing your query … Please include <id> when
+reporting this issue.` The payload may also set `errors[].type` /
+`errors[].extensions.code` to `INTERNAL` (checked independently — a nonempty
+non-`INTERNAL` `type` does not hide `extensions.code`). Status-only
+classification treated this as `69` (`EX_UNAVAILABLE`) even though retrying
+the same **query** often succeeds. `GitHubRequestError` maps those errors to
+`75`. The GraphQL client retries read operations twice (500ms, then 1500ms)
+before surfacing the failure. Mutations are not retried: an INTERNAL after
+GitHub applied a write (`addPullRequestReviewThreadReply`, mark-ready) would
+duplicate the side effect. If the INTERNAL response also carries
+`Retry-After` or an exhausted rate limit, the client does not use the short
+delays; it surfaces `75` immediately. The GraphQL layer keeps `type` and
+`extensions` on `graphqlErrors` so classification can use them instead of
+dropping everything but `message`.
 
 **78 (`EX_CONFIG`) is defined but not wired up.** A malformed
 `.pr-shepherdrc.yml` currently degrades gracefully: shepherd logs a
