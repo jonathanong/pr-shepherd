@@ -43,7 +43,10 @@ export function buildBehindBaseHintInstruction(
  * command run unmodified is already correct for them. The pointer below is load-bearing:
  * without it, nothing in CLI output tells the agent that playbook exists.
  */
-export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): string[] {
+export function buildResolveCommandInstruction(
+  resolveCommand: ResolveCommand,
+  pushAuthorized = false,
+): string[] {
   if (!resolveCommand.hasMutations) return [];
   const instructions: string[] = [];
   if ((resolveCommand.replyThreadIds?.length ?? 0) > 0) {
@@ -53,7 +56,9 @@ export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): 
   }
   if (resolveCommand.requiresHeadSha) {
     instructions.push(
-      "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, do not run this command until an authorized push updates the remote PR head; then replace `$HEAD_SHA` with that pushed commit SHA.",
+      pushAuthorized
+        ? "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, commit and push to the PR head branch first, then replace `$HEAD_SHA` with the pushed commit SHA."
+        : "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, do not run this command until an authorized push updates the remote PR head; then replace `$HEAD_SHA` with that pushed commit SHA.",
     );
   }
   if (resolveCommand.requiresDismissMessage) {
@@ -96,8 +101,12 @@ export function buildFixCompletionInstruction(
   checks: AgentCheck[],
   requiresRemoteUpdateAuthorization = false,
   hasShaGatedReviewMutations = false,
+  pushAuthorized = false,
 ): string {
   if (requiresRemoteUpdateAuthorization) {
+    if (pushAuthorized) {
+      return "`[FIX_CODE]` is non-terminal: resolve the conflicts, commit, push to the PR head branch, then iterate again with the same options.";
+    }
     return "`[FIX_CODE]` requires a human handoff for an authorized push after conflict resolution. Shepherd cannot verify the Git credential's push authorization. Stop polling after committing, and resume only after the remote PR head changes.";
   }
   const hasUninspectableFailure = checks.some((check) => !check.runId && !check.detailsUrl);
@@ -119,6 +128,9 @@ export function buildFixCompletionInstruction(
     return "`[FIX_CODE]` requires a human handoff for a failing check with no authorized follow-up action. Stop polling after escalating, and resume only after human direction.";
   }
   if (hasShaGatedReviewMutations) {
+    if (pushAuthorized) {
+      return "`[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run the review mutations using the pushed commit SHA and iterate again with the same options; if you did not change code, complete the authorized review mutations and iterate again with the same options.";
+    }
     return "`[FIX_CODE]` is conditional: if you changed code, stop after committing and resume only after an authorized push changes the remote PR head; if you did not change code, complete the authorized review mutations and iterate again with the same options.";
   }
   if (ciHandoffChecks.some((check) => check.rerunCommand)) {

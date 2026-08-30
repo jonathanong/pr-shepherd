@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, it, expect } from "vitest";
 import {
   registerIterateHooks,
@@ -10,8 +11,21 @@ import { runIterate } from "./iterate/index.mts";
 
 registerIterateHooks();
 
+// makeReport() defaults viewerAuthorization to full ADMIN access on both the base and
+// head repo, so canPushToHead is true unless a test overrides it — matching the common
+// case (own-repo or own-fork PR) where pr-shepherd should push and continue autonomously.
+const PUSH_DENIED_AUTH = {
+  repositoryPermission: "READ" as const,
+  viewerCanAdminister: false,
+  viewerDidAuthor: true,
+  viewerCanUpdate: true,
+  viewerCanEnableAutoMerge: false,
+  viewerCanEditFiles: false,
+  headRepositoryPermission: "READ" as const,
+};
+
 describe("runIterate — fix_code (merge conflicts)", () => {
-  it("returns action: fix_code when mergeStatus is CONFLICTS (rebase happens in fix_code handler)", async () => {
+  it("resolves conflicts and pushes autonomously when the viewer can push to the PR head", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "FAILING",
@@ -39,8 +53,8 @@ describe("runIterate — fix_code (merge conflicts)", () => {
     if (result.action === "fix_code") {
       expect(result.fix.threads).toHaveLength(0);
       expect(result.fix.checks).toHaveLength(0);
-      // CONFLICTS-only: conditional commit/rebase instruction (agent decides),
-      // no prescriptive git commands, and no resolve step (nothing to resolve).
+      // CONFLICTS-only, push authorized: commit + push + continue, no prescriptive git
+      // commands beyond that — the agent decides how to resolve.
       const joined = result.fix.instructions.join("\n");
       expect(joined).not.toContain("git commit");
       expect(joined).not.toContain("gh pr edit");
@@ -52,12 +66,62 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       expect(joined).not.toContain("git rebase --continue");
       // No actual resolve step — no threads/reviews to resolve
       expect(joined).not.toContain("Run the `resolve:` command shown above");
+      expect(joined).toContain(
+        "Commit any remaining conflict-resolution changes and push to the PR head branch.",
+      );
+      expect(joined).toContain(
+        "`[FIX_CODE]` is non-terminal: resolve the conflicts, commit, push to the PR head branch, then iterate again with the same options.",
+      );
+      expect(joined).not.toContain("requires a human handoff");
+    }
+  });
+
+  it("hands off the push after conflict resolution when the viewer cannot push to the PR head", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        viewerAuthorization: PUSH_DENIED_AUTH,
+        mergeStatus: {
+          status: "CONFLICTS",
+          state: "OPEN" as const,
+          isDraft: false,
+          mergeable: "CONFLICTING",
+          reviewDecision: null,
+          blockingBotReviewInProgress: false,
+          mergeStateStatus: "DIRTY",
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo");
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.threads).toHaveLength(0);
+      expect(result.fix.checks).toHaveLength(0);
+      const joined = result.fix.instructions.join("\n");
+      expect(joined).not.toContain("git commit");
+      expect(joined).not.toContain("gh pr edit");
+      expect(joined).not.toContain("pr-shepherd apply journal");
+      expect(joined).toContain("The branch has merge conflicts (see `**branch**` above)");
+      expect(joined).not.toContain("rebase onto");
+      expect(joined).not.toContain("origin/main");
+      expect(joined).not.toContain("git rebase --continue");
+      expect(joined).not.toContain("Run the `resolve:` command shown above");
+      expect(joined).toContain("Commit any remaining conflict-resolution changes.");
+      expect(joined).not.toContain("push to the PR head branch");
       expect(joined).toContain("requires a human handoff for an authorized push");
       expect(joined).not.toContain("iterate again");
     }
   });
 
-  it("returns fix_code with threads when CONFLICTS + actionable comments exist (one push)", async () => {
+  it("resolves conflicts, pushes, and runs review mutations when threads exist and the viewer can push", async () => {
     const thread = {
       id: "thread-1",
       isResolved: false,
@@ -106,15 +170,89 @@ describe("runIterate — fix_code (merge conflicts)", () => {
     if (result.action === "fix_code") {
       expect(result.fix.threads).toHaveLength(1);
       expect(result.fix.threads[0]?.id).toBe("thread-1");
+      // Push authorized on a conflict tick with threads: mutations are built normally
+      // (SHA-gated on the pushed commit), same as any other push-requiring tick.
+      expect(result.fix.resolveCommand.hasMutations).toBe(true);
+      expect(result.fix.resolveOnlyCommand).toBeUndefined();
+      const joined = result.fix.instructions.join("\n");
+      expect(joined).not.toContain("git commit");
+      expect(joined).toContain("pr-shepherd apply journal"); // shepherd journal
+      expect(joined).toContain("The branch has merge conflicts (see `**branch**` above)");
+      expect(joined).toContain(
+        "Commit any remaining conflict-resolution changes and push to the PR head branch before review mutations.",
+      );
+      expect(joined).not.toContain("rebase onto");
+      expect(joined).not.toContain("origin/main");
+      expect(joined).not.toContain("git rebase --continue");
+      expect(joined).not.toMatch(/rebase origin\/\w+ && git push/);
+      expect(joined).toContain("apply review:");
+      expect(joined).toContain(
+        "`[FIX_CODE]` is non-terminal: resolve the conflicts, commit, push to the PR head branch, then iterate again with the same options.",
+      );
+      expect(joined).not.toContain("requires a human handoff");
+    }
+  });
+
+  it("defers review mutations when CONFLICTS + threads exist and the viewer cannot push", async () => {
+    const thread = {
+      id: "thread-1",
+      isResolved: false,
+      isOutdated: false,
+      isMinimized: false,
+      path: "src/foo.mts",
+      line: 10,
+      startLine: null,
+      author: "reviewer",
+      authorType: "User" as const,
+      body: "Fix this",
+      url: "",
+      createdAtUnix: 1700000000,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        viewerAuthorization: PUSH_DENIED_AUTH,
+        mergeStatus: {
+          status: "CONFLICTS",
+          state: "OPEN" as const,
+          isDraft: false,
+          mergeable: "CONFLICTING",
+          reviewDecision: null,
+          blockingBotReviewInProgress: false,
+          mergeStateStatus: "DIRTY",
+        },
+        threads: {
+          actionable: [thread],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo");
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.threads).toHaveLength(1);
+      expect(result.fix.threads[0]?.id).toBe("thread-1");
       expect(result.fix.resolveCommand.hasMutations).toBe(false);
       expect(result.fix.resolveOnlyCommand).toBeUndefined();
-      // Threads + CONFLICTS: conditional commit/rebase instruction plus resolve step.
-      // No prescriptive git commands — agent decides based on conditional phrasing.
+      // Threads + CONFLICTS, push denied: conditional commit/rebase instruction plus
+      // resolve step deferred until an authorized push updates the head.
       const joined = result.fix.instructions.join("\n");
       expect(joined).not.toContain("git commit");
       expect(joined).toContain("pr-shepherd apply journal"); // shepherd journal
       expect(joined).toContain("The branch has merge conflicts (see `**branch**` above)");
       expect(joined).toContain("Commit any remaining conflict-resolution changes.");
+      expect(joined).not.toContain("push to the PR head branch");
       expect(joined).not.toContain("rebase onto");
       expect(joined).not.toContain("origin/main");
       expect(joined).not.toContain("git rebase --continue");
