@@ -7,7 +7,9 @@
         "conclusion": "FAILURE",
         "event": "pull_request",
         "detailsUrl": "https://github.com/owner/repo/actions/runs/200",
-        "runId": "200"
+        "runId": "200",
+        "workflowName": "CI",
+        "jobName": "tests"
       }
     ]
   },

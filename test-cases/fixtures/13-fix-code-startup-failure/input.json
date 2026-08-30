@@ -5,6 +5,7 @@
       "name": "CI (startup failure)",
       "status": "COMPLETED",
       "conclusion": "STARTUP_FAILURE",
+      "source": "startup_failure",
       "event": "pull_request",
       "detailsUrl": "https://github.com/owner/repo/actions/runs/999",
       "runId": "999",

@@ -26,6 +26,34 @@ describe("## Failing checks — authorized rerun rendering", () => {
     expect(output).toContain("  rerun: `gh run rerun 33295262562 -R owner/repo`");
   });
 
+  it("prints the rerun command once per distinct runId, tagging every sharing bullet", () => {
+    const result: IterateResult = { ...makeIterateResult("fix_code") };
+    if (result.action !== "fix_code") throw new Error("expected fix_code fixture");
+    result.fix.checks = [
+      {
+        name: "unit (ubuntu)",
+        runId: "999",
+        detailsUrl: "https://github.com/owner/repo/actions/runs/999",
+        conclusion: "FAILURE",
+        rerunCommand: "gh run rerun 999 -R owner/repo",
+      },
+      {
+        name: "unit (macos)",
+        runId: "999",
+        detailsUrl: "https://github.com/owner/repo/actions/runs/999",
+        conclusion: "FAILURE",
+        rerunCommand: "gh run rerun 999 -R owner/repo",
+      },
+    ];
+
+    const output = formatIterateResult(result);
+
+    expect(output.match(/\[rerun authorized\]/g)).toHaveLength(2);
+    expect(output.match(/rerun: `gh run rerun 999 -R owner\/repo`/g)).toHaveLength(1);
+    expect(output.indexOf("rerun:")).toBeGreaterThan(output.indexOf("unit (ubuntu)"));
+    expect(output.indexOf("rerun:")).toBeLessThan(output.indexOf("unit (macos)"));
+  });
+
   it("omits the tag and rerun line when rerunCommand is not set", () => {
     const result: IterateResult = { ...makeIterateResult("fix_code") };
     if (result.action !== "fix_code") throw new Error("expected fix_code fixture");

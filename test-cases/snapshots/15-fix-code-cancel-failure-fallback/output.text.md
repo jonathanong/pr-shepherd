@@ -7,7 +7,7 @@ Conversations Resolved: Yes [Not Required]
 
 ## Failing checks
 
-- `200` — `CI / tests` [conclusion: FAILURE] [rerun authorized]
+- `200` — `CI › tests` [conclusion: FAILURE] [rerun authorized]
   rerun: `gh run rerun 200 -R owner/repo`
 
 ## Post-fix actions

@@ -7,7 +7,7 @@ Conversations Resolved: Yes [Not Required]
 
 ## Failing checks
 
-- `555` — `CI / build` [conclusion: CANCELLED] [rerun authorized]
+- `555` — `CI › build` [conclusion: CANCELLED] [rerun authorized]
   rerun: `gh run rerun 555 -R owner/repo`
 
 ## Post-fix actions

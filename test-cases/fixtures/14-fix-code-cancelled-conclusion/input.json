@@ -7,7 +7,9 @@
         "conclusion": "CANCELLED",
         "event": "pull_request",
         "detailsUrl": "https://github.com/owner/repo/actions/runs/555",
-        "runId": "555"
+        "runId": "555",
+        "workflowName": "CI",
+        "jobName": "build"
       }
     ]
   },
