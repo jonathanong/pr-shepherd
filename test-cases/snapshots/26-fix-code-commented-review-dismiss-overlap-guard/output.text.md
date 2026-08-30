@@ -32,10 +32,10 @@ Conversations Resolved: No [Not Required]
 2. Review each body under `## Review summaries (first look)`. Eligible non-human IDs are already in `--minimize-comment-ids`. Record any warranted Shepherd Journal note before review mutations.
 3. Apply every warranted review fix in each file referenced above.
 4. Read every body under `## Changes-requested reviews` and apply any warranted change.
-5. If you changed code, commit any remaining changes, then stop and hand off for a push whose authorization is established outside Shepherd; do not run the remaining review mutations or iterate until the remote PR head changes. Shepherd cannot verify the Git credential's push authorization. If you did not change code, do not commit and continue with the remaining steps.
+5. If you changed code, commit and push the changes, then iterate again; do not run the remaining review mutations until the remote PR head reflects your push. If you did not change code, do not commit and continue with the remaining steps.
 6. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
 7. Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked viewer-authored human thread is emitted resolve-only, not for another reply.
-8. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, do not run this command until an authorized push updates the remote PR head; then replace `$HEAD_SHA` with that pushed commit SHA.
+8. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, push it first so the remote PR head updates; then replace `$HEAD_SHA` with that pushed commit SHA.
 9. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
 10. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.
-11. `[FIX_CODE]` is conditional: if you changed code, stop after committing and resume only after an authorized push changes the remote PR head; if you did not change code, complete the authorized review mutations and iterate again with the same options.
+11. `[FIX_CODE]` is conditional: if you changed code, commit and push it, then iterate again once the remote PR head reflects your push; if you did not change code, complete the authorized review mutations and iterate again with the same options.

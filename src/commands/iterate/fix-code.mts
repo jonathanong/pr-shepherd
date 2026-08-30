@@ -292,9 +292,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const inProgressRunIds: string[] = [];
   const commentMinimizeIds = report.comments.minimizeIds ?? actionableComments.map((c) => c.id);
   const allCommentIds = [...commentMinimizeIds, ...reviewSummaryIds];
-  // Conflict resolution necessarily changes the branch head, but Shepherd cannot verify
-  // authorization for the local Git credential that would publish it. Defer review mutations
-  // until an authorized push updates the PR and a fresh iteration can rebuild SHA-safe commands.
+  // Conflict resolution necessarily changes the branch head. Defer review mutations until
+  // the caller pushes and a fresh iteration can rebuild SHA-safe commands against the new head.
   const { resolveCommand, resolveOnlyCommand } = hasConflicts
     ? buildResolveCommand([], [], [], [], [], prReference, botUsernames, [], undefined, [])
     : buildResolveCommand(

@@ -69,12 +69,12 @@ Conversations Resolved: No [Not Required]
 1. Review each item under `## Review threads` and `## Failing checks` and decide whether it needs a code change.
 2. Apply every warranted review fix in each file referenced above.
 3. Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for read-only inspection rules.
-4. If you changed code, commit any remaining changes, then stop and hand off for a push whose authorization is established outside Shepherd; do not run review mutations or iterate until the remote PR head changes. If you did not change code, do not commit and continue.
+4. If you changed code, commit and push the changes, then iterate again; do not run review mutations until the remote PR head reflects your push. If you did not change code, do not commit and continue.
 5. Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an earlier Shepherd reply: a marked viewer-authored human thread is emitted resolve-only when authorized, while a marked other-human thread is already acknowledged and has no further mutation.
-6. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. After changed code, wait for an authorized push and use its SHA.
+6. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, push it first and use its SHA.
 7. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
 8. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.
-9. `[FIX_CODE]` is conditional: after changed code, stop until an authorized push changes the remote PR head; without code changes, complete the authorized review mutations and iterate again.
+9. `[FIX_CODE]` is conditional: after changed code, push and iterate again once the remote PR head reflects it; without code changes, complete the authorized review mutations and iterate again.
 ```
 
 See [docs/actions.md](docs/actions.md) for the complete output contract. Iterate/poll PR outcomes use exit codes `0` and `10`–`15`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).

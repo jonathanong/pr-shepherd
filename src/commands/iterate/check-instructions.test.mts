@@ -147,7 +147,7 @@ describe("buildResolveCommandInstruction", () => {
       ),
     ).toEqual([
       "Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked viewer-authored human thread is emitted resolve-only, not for another reply.",
-      "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, do not run this command until an authorized push updates the remote PR head; then replace `$HEAD_SHA` with that pushed commit SHA.",
+      "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, push it first so the remote PR head updates; then replace `$HEAD_SHA` with that pushed commit SHA.",
       "Replace `$DISMISS_MESSAGE` with one sentence describing what changed.",
       'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',
     ]);
@@ -161,9 +161,9 @@ describe("buildFixCompletionInstruction", () => {
     );
   });
 
-  it("conditionally stops for an authorized remote update before SHA-gated mutations", () => {
+  it("conditionally requires a push before SHA-gated mutations", () => {
     expect(buildFixCompletionInstruction([check({})], false, true)).toBe(
-      "`[FIX_CODE]` is conditional: if you changed code, stop after committing and resume only after an authorized push changes the remote PR head; if you did not change code, complete the authorized review mutations and iterate again with the same options.",
+      "`[FIX_CODE]` is conditional: if you changed code, commit and push it, then iterate again once the remote PR head reflects your push; if you did not change code, complete the authorized review mutations and iterate again with the same options.",
     );
   });
 
@@ -202,9 +202,9 @@ describe("buildFixCompletionInstruction", () => {
     );
   });
 
-  it("pauses polling after conflict resolution until an authorized push updates the PR", () => {
+  it("requires a push after conflict resolution before iterating again", () => {
     expect(buildFixCompletionInstruction([], true)).toContain(
-      "requires a human handoff for an authorized push",
+      "requires a push after conflict resolution",
     );
   });
 
@@ -237,6 +237,6 @@ describe("buildFixCompletionInstruction", () => {
         false,
         true,
       ),
-    ).toContain("if you changed code, stop after committing");
+    ).toContain("if you changed code, commit and push it");
   });
 });

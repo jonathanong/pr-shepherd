@@ -14,4 +14,4 @@ Conversations Resolved: Yes [Not Required]
 
 1. The branch has merge conflicts (see `**branch**` above). Resolve them before committing.
 2. Commit any remaining conflict-resolution changes.
-3. `[FIX_CODE]` requires a human handoff for an authorized push after conflict resolution. Shepherd cannot verify the Git credential's push authorization. Stop polling after committing, and resume only after the remote PR head changes.
+3. `[FIX_CODE]` requires a push after conflict resolution. Commit and push the resolved changes, then iterate again once the remote PR head reflects your push.

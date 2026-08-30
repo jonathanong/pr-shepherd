@@ -52,8 +52,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       expect(joined).not.toContain("git rebase --continue");
       // No actual resolve step — no threads/reviews to resolve
       expect(joined).not.toContain("Run the `resolve:` command shown above");
-      expect(joined).toContain("requires a human handoff for an authorized push");
-      expect(joined).not.toContain("iterate again");
+      expect(joined).toContain("requires a push after conflict resolution");
     }
   });
 
@@ -120,7 +119,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       expect(joined).not.toContain("git rebase --continue");
       expect(joined).not.toMatch(/rebase origin\/\w+ && git push/);
       expect(joined).not.toContain("apply review:");
-      expect(joined).toContain("requires a human handoff for an authorized push");
+      expect(joined).toContain("requires a push after conflict resolution");
     }
   });
 });

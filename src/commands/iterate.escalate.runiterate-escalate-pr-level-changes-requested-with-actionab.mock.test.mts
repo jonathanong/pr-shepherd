@@ -64,7 +64,7 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
       expect(result.fix.resolveOnlyCommand?.argv).toContain("--minimize-comment-ids");
       expect(result.fix.resolveOnlyCommand?.argv).toContain("comment-1");
       expect(result.fix.instructions.join("\n")).toContain(
-        "If you changed code, commit any remaining changes",
+        "If you changed code, commit and push the changes",
       );
       expect(result.fix.instructions.join("\n")).toContain(
         "Run the `apply review:` command shown above",

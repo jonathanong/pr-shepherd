@@ -53,7 +53,7 @@ export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): 
   }
   if (resolveCommand.requiresHeadSha) {
     instructions.push(
-      "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, do not run this command until an authorized push updates the remote PR head; then replace `$HEAD_SHA` with that pushed commit SHA.",
+      "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, push it first so the remote PR head updates; then replace `$HEAD_SHA` with that pushed commit SHA.",
     );
   }
   if (resolveCommand.requiresDismissMessage) {
@@ -98,7 +98,7 @@ export function buildFixCompletionInstruction(
   hasShaGatedReviewMutations = false,
 ): string {
   if (requiresRemoteUpdateAuthorization) {
-    return "`[FIX_CODE]` requires a human handoff for an authorized push after conflict resolution. Shepherd cannot verify the Git credential's push authorization. Stop polling after committing, and resume only after the remote PR head changes.";
+    return "`[FIX_CODE]` requires a push after conflict resolution. Commit and push the resolved changes, then iterate again once the remote PR head reflects your push.";
   }
   const hasUninspectableFailure = checks.some((check) => !check.runId && !check.detailsUrl);
   if (hasUninspectableFailure) {
@@ -119,7 +119,7 @@ export function buildFixCompletionInstruction(
     return "`[FIX_CODE]` requires a human handoff for a failing check with no authorized follow-up action. Stop polling after escalating, and resume only after human direction.";
   }
   if (hasShaGatedReviewMutations) {
-    return "`[FIX_CODE]` is conditional: if you changed code, stop after committing and resume only after an authorized push changes the remote PR head; if you did not change code, complete the authorized review mutations and iterate again with the same options.";
+    return "`[FIX_CODE]` is conditional: if you changed code, commit and push it, then iterate again once the remote PR head reflects your push; if you did not change code, complete the authorized review mutations and iterate again with the same options.";
   }
   if (ciHandoffChecks.some((check) => check.rerunCommand)) {
     return "`[FIX_CODE]` is non-terminal. Run any warranted reruns for `[rerun authorized]` checks (or apply code fixes for real failures), then iterate again with the same options to continue.";

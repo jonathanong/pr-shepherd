@@ -132,13 +132,13 @@ describe("attachApiUsage", () => {
   it("rewrites the no-change branch of a conditional fix-code continuation for the quota cadence", async () => {
     mockEvaluateQuotaWarning.mockResolvedValue(warning);
     const result = fixCodeResult([
-      "`[FIX_CODE]` is conditional: if you changed code, stop after committing and resume only after an authorized push changes the remote PR head; if you did not change code, complete the authorized review mutations and iterate again with the same options.",
+      "`[FIX_CODE]` is conditional: if you changed code, commit and push it, then iterate again once the remote PR head reflects your push; if you did not change code, complete the authorized review mutations and iterate again with the same options.",
     ]);
 
     const attached = await attachApiUsage(result, true);
     if (attached.action !== "fix_code") throw new Error("expected fix_code result");
     const completion = attached.fix.instructions.at(-1);
-    expect(completion).toContain("if you changed code, stop after committing");
+    expect(completion).toContain("if you changed code, commit and push it");
     expect(completion).toContain(
       "if you did not change code, complete the authorized review mutations. Continue polling",
     );
