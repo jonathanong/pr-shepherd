@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { isFailingAgentCheck } from "./conclusions.mts";
+import { isFailingAgentCheck, canRerunWorkflows } from "./conclusions.mts";
+import type { ViewerAuthorization } from "../types.mts";
 
 describe("isFailingAgentCheck", () => {
   it("treats GitHub failure conclusions as failing", () => {
@@ -20,5 +21,42 @@ describe("isFailingAgentCheck", () => {
 
   it("excludes annotation-only carriers even when the conclusion is failing", () => {
     expect(isFailingAgentCheck({ conclusion: "FAILURE", annotationOnly: true })).toBe(false);
+  });
+});
+
+function auth(repositoryPermission: ViewerAuthorization["repositoryPermission"]) {
+  const value: ViewerAuthorization = {
+    repositoryPermission,
+    viewerCanAdminister: false,
+    viewerDidAuthor: false,
+    viewerCanUpdate: false,
+    viewerCanEnableAutoMerge: false,
+    viewerCanEditFiles: false,
+    headRepositoryPermission: repositoryPermission,
+  };
+  return value;
+}
+
+describe("canRerunWorkflows", () => {
+  it.each(["WRITE", "MAINTAIN", "ADMIN"] as const)(
+    "grants rerun capability for repositoryPermission %s",
+    (permission) => {
+      expect(canRerunWorkflows(auth(permission))).toBe(true);
+    },
+  );
+
+  it.each(["NONE", "READ", "TRIAGE"] as const)(
+    "denies rerun capability for repositoryPermission %s",
+    (permission) => {
+      expect(canRerunWorkflows(auth(permission))).toBe(false);
+    },
+  );
+
+  it("denies rerun capability for a null repositoryPermission", () => {
+    expect(canRerunWorkflows(auth(null))).toBe(false);
+  });
+
+  it("denies rerun capability when authorization is unknown", () => {
+    expect(canRerunWorkflows(undefined)).toBe(false);
   });
 });

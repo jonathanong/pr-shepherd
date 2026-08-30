@@ -64,6 +64,10 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
   const failingChecks = result.fix.checks.filter((ch) => isFailingAgentCheck(ch));
   if (failingChecks.length > 0) {
     sections.push("## Failing checks");
+    // Multiple failing CheckRuns (matrix jobs, etc.) can share one runId; the rerun command is
+    // identical for all of them, so print it once — after the first bullet for that runId —
+    // instead of repeating the same shell command on every row.
+    const seenRerunRunIds = new Set<string>();
     const bullets = failingChecks.map((ch) => {
       const workflowPrefix = ch.workflowName ? `${ch.workflowName} › ` : "";
       const jobLabel = ch.jobName ? ch.jobName : ch.name;
@@ -76,11 +80,18 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
       const scopeTag = ch.scope
         ? ` [scope: ${ch.scope}${ch.commitOid ? `, commit: ${ch.commitOid}` : ""}]`
         : "";
-      const lines = [`- ${locator} — \`${workflowPrefix}${jobLabel}\`${conclusionTag}${scopeTag}`];
+      const rerunTag = ch.rerunCommand ? " [rerun authorized]" : "";
+      const lines = [
+        `- ${locator} — \`${workflowPrefix}${jobLabel}\`${conclusionTag}${scopeTag}${rerunTag}`,
+      ];
       if (ch.conclusion !== "CANCELLED") {
         if (ch.failedStep) lines.push(`  > ${ch.failedStep}`);
         if (ch.summary) lines.push(`  > ${ch.summary}`);
         if (ch.logExcerpt) lines.push(indentBlockquote(ch.logExcerpt, "  "));
+      }
+      if (ch.rerunCommand && ch.runId && !seenRerunRunIds.has(ch.runId)) {
+        seenRerunRunIds.add(ch.runId);
+        lines.push(`  rerun: \`${ch.rerunCommand}\``);
       }
       return lines.join("\n");
     });

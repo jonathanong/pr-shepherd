@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, expect, it } from "vitest";
 import {
   makeOpts,
@@ -12,11 +13,194 @@ import { makeThread } from "../../test-helpers/commands/iterate-thread-test-supp
 
 registerIterateHooks();
 
+function failingCheckReport(overrides: Partial<Parameters<typeof makeReport>[0]> = {}) {
+  return makeReport({
+    status: "FAILING",
+    checks: {
+      passing: [],
+      failing: [
+        {
+          name: "tests",
+          status: "COMPLETED",
+          conclusion: "FAILURE",
+          detailsUrl: "https://github.com/owner/repo/actions/runs/123",
+          event: "pull_request",
+          runId: "123",
+          workflowName: "CI",
+          category: "failing",
+        },
+      ],
+      inProgress: [
+        {
+          name: "lint",
+          status: "IN_PROGRESS",
+          conclusion: null,
+          detailsUrl: "https://github.com/owner/repo/actions/runs/456",
+          event: "pull_request",
+          runId: "456",
+          category: "in_progress",
+        },
+      ],
+      skipped: [],
+      filtered: [],
+      filteredNames: [],
+      blockedByFilteredCheck: false,
+    },
+    ...overrides,
+  });
+}
+
 describe("fix_code — GitHub Actions authorization", () => {
-  it("does not cancel or recommend cancelling workflow runs without an exact capability", async () => {
+  it("never cancels or recommends cancelling workflow runs, regardless of repository role", async () => {
+    // makeReport defaults to repositoryPermission: "ADMIN" — cancellation stays unrecommended
+    // even for a fully-authorized viewer; only reruns are gated on repository role.
+    mockRunCheck.mockResolvedValue(failingCheckReport());
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.cancelled).toEqual([]);
+    expect(result.fix.inProgressRunIds).toEqual([]);
+    expect(result.fix.instructions.join("\n")).not.toContain("gh run cancel");
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("recommends an authorized rerun when the viewer's repository role is WRITE+", async () => {
+    mockRunCheck.mockResolvedValue(failingCheckReport());
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.checks[0]?.rerunCommand).toBe("gh run rerun 123 -R owner/repo");
+    expect(result.fix.instructions.join("\n")).toContain("[rerun authorized]");
+    expect(result.fix.instructions.join("\n")).not.toContain("no authorized follow-up action");
+  });
+
+  it("does not recommend a rerun when the viewer's repository role is below WRITE", async () => {
     mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "FAILING",
+      failingCheckReport({
+        viewerAuthorization: {
+          repositoryPermission: "READ",
+          viewerCanAdminister: false,
+          viewerDidAuthor: false,
+          viewerCanUpdate: false,
+          viewerCanEnableAutoMerge: false,
+          viewerCanEditFiles: false,
+          headRepositoryPermission: "READ",
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
+    expect(result.fix.instructions.join("\n")).not.toContain("[rerun authorized]");
+  });
+
+  it("does not recommend a rerun when the runId has no confirmed GitHub Actions provenance", async () => {
+    // An external CI system's details URL can coincidentally match the same /runs/<digits>/
+    // pattern GitHub Actions details URLs use. Without a resolved workflowName (the same
+    // GraphQL path that produces the run's numeric ID), Shepherd cannot confirm the parsed
+    // runId actually names a GitHub Actions run, so it must not recommend rerunning it.
+    mockRunCheck.mockResolvedValue(
+      failingCheckReport({
+        checks: {
+          passing: [],
+          failing: [
+            {
+              name: "external-ci",
+              status: "COMPLETED",
+              conclusion: "FAILURE",
+              detailsUrl: "https://ci.example.com/runs/123",
+              event: "pull_request",
+              runId: "123",
+              category: "failing",
+            },
+          ],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
+  });
+
+  it("does not recommend a rerun for an ACTION_REQUIRED check", async () => {
+    // ACTION_REQUIRED means the run is paused pending manual workflow approval on GitHub;
+    // a rerun cannot grant that approval, so no rerun command applies.
+    mockRunCheck.mockResolvedValue(
+      failingCheckReport({
+        checks: {
+          passing: [],
+          failing: [
+            {
+              name: "tests",
+              status: "COMPLETED",
+              conclusion: "ACTION_REQUIRED",
+              detailsUrl: "https://github.com/owner/repo/actions/runs/123",
+              event: "pull_request",
+              runId: "123",
+              workflowName: "CI",
+              category: "failing",
+            },
+          ],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
+  });
+
+  it("does not recommend a rerun while a sibling job from the same run is still in progress", async () => {
+    // GitHub can only rerun a workflow run once it has fully completed.
+    mockRunCheck.mockResolvedValue(
+      failingCheckReport({
         checks: {
           passing: [],
           failing: [
@@ -27,6 +211,7 @@ describe("fix_code — GitHub Actions authorization", () => {
               detailsUrl: "https://github.com/owner/repo/actions/runs/123",
               event: "pull_request",
               runId: "123",
+              workflowName: "CI",
               category: "failing",
             },
           ],
@@ -35,9 +220,9 @@ describe("fix_code — GitHub Actions authorization", () => {
               name: "lint",
               status: "IN_PROGRESS",
               conclusion: null,
-              detailsUrl: "https://github.com/owner/repo/actions/runs/456",
+              detailsUrl: "https://github.com/owner/repo/actions/runs/123",
               event: "pull_request",
-              runId: "456",
+              runId: "123",
               category: "in_progress",
             },
           ],
@@ -58,10 +243,7 @@ describe("fix_code — GitHub Actions authorization", () => {
 
     expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") return;
-    expect(result.cancelled).toEqual([]);
-    expect(result.fix.inProgressRunIds).toEqual([]);
-    expect(result.fix.instructions.join("\n")).not.toContain("gh run cancel");
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
   });
 
   it("escalates a denied suppressed auto-resolve thread without recommending a mutation", async () => {

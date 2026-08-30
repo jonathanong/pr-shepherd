@@ -24,6 +24,7 @@ import { applyStallGuard } from "./stall.mts";
 import { annotationMarkerBody, checksWithActionableAnnotations } from "../check-annotations.mts";
 import { threadTranscriptBody } from "../../threads/transcript.mts";
 import { isHumanAuthor, isConfiguredBotAuthor } from "../../comments/authors.mts";
+import { canRerunWorkflows } from "../../checks/conclusions.mts";
 import { loadConfig } from "../../config/load.mts";
 import { formatPrUrl } from "../../pr-reference.mts";
 import type {
@@ -236,14 +237,47 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     { owner: repoOwner, repo: repoName, pr: prNumber },
     { headSha, threadAttempts, threadBodyHashes },
   );
-  // GitHub does not expose a per-run viewer capability for cancellation. Fail closed:
-  // do not issue or recommend an Actions mutation based only on repository role.
+  // GitHub does not expose a per-run viewer capability for cancellation, so Shepherd never
+  // issues or recommends a cancellation regardless of repository role. A rerun is different:
+  // GitHub's Actions rerun API requires actions:write, which rides with WRITE+ repo access, so
+  // repositoryPermission is a proxy for account-level rerun capability (see canRerunWorkflows) —
+  // it does not confirm the credential executing `gh` has that scope; an unauthorized rerun
+  // simply fails when the agent runs it, the same residual risk as every other CLI-recommended
+  // git/gh mutation in this codebase.
   const cancelled: string[] = [];
   const baseLookup = validateBaseBranch(report.baseBranch);
   const threads = report.threads.actionable.map(toAgentThread);
   const resolutionOnlyThreads = report.threads.resolutionOnly;
   const actionableComments = report.comments.actionable.map(toAgentComment);
-  const failingAgentChecks = toAgentChecks(failingChecks);
+  const rerunAuthorized = canRerunWorkflows(report.viewerAuthorization);
+  // A workflow run can only be rerun once it has fully completed; a runId still present among
+  // in-progress checks (a sibling job from the same run) is not yet eligible.
+  const inProgressWorkflowRunIds = new Set(
+    report.checks.inProgress.flatMap((c) => (c.runId !== null ? [c.runId] : [])),
+  );
+  // Confirmed GitHub Actions provenance for a runId: `source: "startup_failure"` checks are
+  // fetched directly from the Actions REST API (always genuine), while `source: "check_run"`
+  // checks need `workflowName` — derived from the same `checkSuite.workflowRun.workflow` GraphQL
+  // path as the run's numeric ID — because a third-party GitHub App's CheckRun can carry a
+  // details-URL-parsed runId that merely looks like an Actions run number.
+  const actionsRunIds = new Set(
+    failingChecks.flatMap((c) =>
+      c.runId !== null && (c.source === "startup_failure" || c.workflowName !== undefined)
+        ? [c.runId]
+        : [],
+    ),
+  );
+  const failingAgentChecks = toAgentChecks(failingChecks).map((c) =>
+    rerunAuthorized &&
+    c.runId &&
+    actionsRunIds.has(c.runId) &&
+    // ACTION_REQUIRED means the run is paused pending manual workflow approval; rerunning does
+    // not grant that approval, so no rerun command applies.
+    c.conclusion !== "ACTION_REQUIRED" &&
+    !inProgressWorkflowRunIds.has(c.runId)
+      ? { ...c, rerunCommand: `gh run rerun ${c.runId} -R ${report.repo}` }
+      : c,
+  );
   const checks = [
     ...failingAgentChecks,
     ...toAgentChecks(annotatedExtra).map((c) => ({ ...c, annotationOnly: true as const })),

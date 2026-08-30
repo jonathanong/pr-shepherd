@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, it, expect } from "vitest";
 import type { AgentCheck, ResolveCommand } from "../../types.mts";
 import {
@@ -89,6 +90,20 @@ describe("buildFailingCheckInstructions", () => {
   it("emits only the bare-check escalation when every failure lacks a runId and a URL", () => {
     expect(buildFailingCheckInstructions([check({ runId: null, detailsUrl: null })])).toEqual([
       "For each `(no runId)` failure, escalate to a human because no log or URL is available.",
+    ]);
+  });
+
+  it("adds a rerun pointer when a failing check carries an authorized rerun command", () => {
+    const instructions = buildFailingCheckInstructions([
+      check({
+        conclusion: "CANCELLED",
+        rerunCommand: "gh run rerun 124 -R owner/repo",
+      }),
+    ]);
+
+    expect(instructions).toEqual([
+      'Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for read-only inspection rules.',
+      'A `[rerun authorized]` check includes a `rerun:` command. See "CI failure triage" in the pr-shepherd skill for which conclusions warrant a rerun versus a code fix.',
     ]);
   });
 });
@@ -191,5 +206,37 @@ describe("buildFixCompletionInstruction", () => {
     expect(buildFixCompletionInstruction([], true)).toContain(
       "requires a human handoff for an authorized push",
     );
+  });
+
+  it.each(["CANCELLED", "STARTUP_FAILURE"] as const)(
+    "is non-terminal when a %s check carries an authorized rerun command",
+    (conclusion) => {
+      expect(
+        buildFixCompletionInstruction([
+          check({ conclusion, rerunCommand: "gh run rerun 124 -R owner/repo" }),
+        ]),
+      ).toBe(
+        "`[FIX_CODE]` is non-terminal. Run any warranted reruns for `[rerun authorized]` checks (or apply code fixes for real failures), then iterate again with the same options to continue.",
+      );
+    },
+  );
+
+  it("still pauses polling when only some CI-handoff checks carry an authorized rerun command", () => {
+    expect(
+      buildFixCompletionInstruction([
+        check({ conclusion: "CANCELLED", rerunCommand: "gh run rerun 124 -R owner/repo" }),
+        check({ conclusion: "STARTUP_FAILURE" }),
+      ]),
+    ).toContain("requires a human handoff");
+  });
+
+  it("prefers the SHA-gated instruction over an authorized rerun recommendation", () => {
+    expect(
+      buildFixCompletionInstruction(
+        [check({ conclusion: "CANCELLED", rerunCommand: "gh run rerun 124 -R owner/repo" })],
+        false,
+        true,
+      ),
+    ).toContain("if you changed code, stop after committing");
   });
 });

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type {
   AuthorType,
   ReviewThread,
@@ -159,6 +160,8 @@ export interface AgentCheck {
   /** One-line status text shown in the GitHub UI (e.g. "67.68% of diff hit (target 85.00%)"). */
   summary?: string;
   logExcerpt?: string;
+  /** `gh run rerun` command, present only when the check has a runId and the viewer's repository role grants Actions rerun capability (WRITE+). */
+  rerunCommand?: string;
   annotations?: CheckAnnotation[];
   annotationOnly?: true; // annotation carrier from a non-failing check bucket
   scope?: "merge_group";
