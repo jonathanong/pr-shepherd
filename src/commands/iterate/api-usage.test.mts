@@ -77,8 +77,7 @@ describe("attachApiUsage", () => {
   it("returns the original result when this command recorded no API telemetry", async () => {
     const result = makeIterateResult("wait");
     mockSummarizeApiTelemetry.mockReturnValue(undefined);
-
-    await expect(attachApiUsage(result, 17, true)).resolves.toBe(result);
+    await expect(attachApiUsage(result, true)).resolves.toBe(result);
     expect(mockEvaluateQuotaWarning).not.toHaveBeenCalled();
   });
 
@@ -98,8 +97,7 @@ describe("attachApiUsage", () => {
   ] as const)(
     "evaluates GraphQL quota warnings for %s only when polling may continue",
     async (_, result, shouldEvaluate) => {
-      await attachApiUsage(result, 17, false);
-
+      await attachApiUsage(result, false);
       if (shouldEvaluate) {
         expect(mockEvaluateQuotaWarning).toHaveBeenCalledOnce();
       } else {
@@ -110,11 +108,9 @@ describe("attachApiUsage", () => {
 
   it("attaches command-scoped telemetry and evaluates GraphQL quota with the repo, bands, and persistence choice", async () => {
     const result = makeIterateResult("wait");
-
-    const attached = await attachApiUsage(result, 17, true);
-
+    const attached = await attachApiUsage(result, true);
     expect(attached).toEqual({ ...result, apiUsage });
-    expect(mockSummarizeApiTelemetry).toHaveBeenCalledWith(17);
+    expect(mockSummarizeApiTelemetry).toHaveBeenCalledWith();
     expect(mockEvaluateQuotaWarning).toHaveBeenCalledWith(
       { owner: "owner", repo: "repo" },
       bands,
@@ -126,13 +122,29 @@ describe("attachApiUsage", () => {
   it("attaches the quota warning and replaces a fix-code continuation with its longer poll cadence", async () => {
     mockEvaluateQuotaWarning.mockResolvedValue(warning);
     const result = fixCodeResult();
-
-    const attached = await attachApiUsage(result, 17, true);
-
+    const attached = await attachApiUsage(result, true);
     expect(attached).toMatchObject({ apiUsage, quotaWarning: warning, action: "fix_code" });
     if (attached.action !== "fix_code") throw new Error("expected fix_code result");
     expect(attached.fix.instructions.at(-1)).toContain("no more often than every 5 minutes");
     expect(attached.fix.instructions.at(-1)).toContain("--interval 5m --timeout 10m");
+  });
+
+  it("rewrites the no-change branch of a conditional fix-code continuation for the quota cadence", async () => {
+    mockEvaluateQuotaWarning.mockResolvedValue(warning);
+    const result = fixCodeResult([
+      "`[FIX_CODE]` is conditional: if you changed code, stop after committing and resume only after an authorized push changes the remote PR head; if you did not change code, complete the authorized review mutations and iterate again with the same options.",
+    ]);
+
+    const attached = await attachApiUsage(result, true);
+    if (attached.action !== "fix_code") throw new Error("expected fix_code result");
+    const completion = attached.fix.instructions.at(-1);
+    expect(completion).toContain("if you changed code, stop after committing");
+    expect(completion).toContain(
+      "if you did not change code, complete the authorized review mutations. Continue polling",
+    );
+    expect(completion).toContain("no more often than every 5 minutes");
+    expect(completion).toContain("--interval 5m --timeout 10m");
+    expect(completion).not.toContain("iterate again with the same options");
   });
 
   it("attaches non-GraphQL telemetry without evaluating or adding a quota warning", async () => {
@@ -150,8 +162,7 @@ describe("attachApiUsage", () => {
     };
     mockSummarizeApiTelemetry.mockReturnValue(restOnlyUsage);
     const result = makeIterateResult("wait");
-
-    await expect(attachApiUsage(result, 17, true)).resolves.toEqual({
+    await expect(attachApiUsage(result, true)).resolves.toEqual({
       ...result,
       apiUsage: restOnlyUsage,
     });
@@ -160,11 +171,26 @@ describe("attachApiUsage", () => {
 
   it("keeps fix-code instructions unchanged when quota evaluation produces no warning", async () => {
     const result = fixCodeResult();
-
-    const attached = await attachApiUsage(result, 17, true);
-
+    const attached = await attachApiUsage(result, true);
     expect(attached).toEqual({ ...result, apiUsage });
     if (attached.action !== "fix_code") throw new Error("expected fix_code result");
     expect(attached.fix.instructions).toEqual(result.fix.instructions);
+  });
+
+  it("removes a deferred inner warning when the serialized outer evaluation suppresses it", async () => {
+    const result = { ...makeIterateResult("wait"), quotaWarning: warning };
+    await expect(attachApiUsage(result, true)).resolves.toEqual({
+      ...makeIterateResult("wait"),
+      apiUsage,
+    });
+  });
+
+  it("preserves a warning that an until-terminal inner tick already persisted", async () => {
+    const result = { ...makeIterateResult("wait"), quotaWarning: warning };
+    await expect(attachApiUsage(result, true, true)).resolves.toEqual({
+      ...result,
+      apiUsage,
+    });
+    expect(mockEvaluateQuotaWarning).not.toHaveBeenCalled();
   });
 });

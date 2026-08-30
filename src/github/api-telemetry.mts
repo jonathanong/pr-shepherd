@@ -1,5 +1,13 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { ApiResourceUsage, ApiUsage, GraphqlApiUsage } from "../types.mts";
+import {
+  aggregateEvents,
+  aggregateStore,
+  emptyAggregate,
+  mergeAggregate,
+  type TelemetryAggregate,
+  type TelemetryStore,
+} from "./api-telemetry-aggregate.mts";
 import type { RateLimitInfo } from "./http-utils.mts";
 
 const GRAPHQL_RATE_LIMIT_ALIAS = "_shepherdRateLimit";
@@ -20,24 +28,46 @@ interface GraphqlRateLimitPayload {
   used: number;
 }
 
-const eventStorage = new AsyncLocalStorage<ApiTelemetryEvent[]>();
+const eventStorage = new AsyncLocalStorage<TelemetryStore>();
 
-function events(): ApiTelemetryEvent[] | undefined {
+function store(): TelemetryStore | undefined {
   return eventStorage.getStore();
 }
 
 /** Isolates a top-level CLI/MCP command while allowing nested iterate ticks to aggregate. */
 export function withApiTelemetryScope<T>(fn: () => Promise<T>): Promise<T> {
-  if (eventStorage.getStore() !== undefined) return fn();
-  return eventStorage.run([], fn);
-}
-
-export function snapshotApiTelemetry(): number {
-  return events()?.length ?? 0;
+  const parent = store();
+  const child: TelemetryStore = {
+    events: [],
+    compacted: emptyAggregate(),
+    eventCount: 0,
+    clock: parent?.clock ?? { next: 0 },
+  };
+  return eventStorage.run(child, async () => {
+    try {
+      return await fn();
+    } finally {
+      mergeAggregate(child.compacted, aggregateEvents(child.events));
+      child.events = [];
+      if (parent !== undefined) {
+        mergeAggregate(parent.compacted, aggregateEvents(parent.events));
+        parent.events = [];
+        mergeAggregate(parent.compacted, child.compacted);
+        parent.eventCount += child.eventCount;
+      }
+    }
+  });
 }
 
 export function recordApiTelemetry(event: ApiTelemetryEvent): void {
-  events()?.push({ ...event, rateLimit: event.rateLimit ? { ...event.rateLimit } : undefined });
+  const active = store();
+  if (active === undefined) return;
+  active.events.push({
+    ...event,
+    rateLimit: event.rateLimit ? { ...event.rateLimit } : undefined,
+    sequence: active.clock.next++,
+  });
+  active.eventCount += 1;
 }
 
 export function mergeGraphqlRateLimit(
@@ -67,15 +97,16 @@ export function mergeGraphqlRateLimit(
   };
 }
 
-export function summarizeApiTelemetry(snapshot = 0): ApiUsage | undefined {
-  const selected = events()?.slice(snapshot);
-  if (selected === undefined) return undefined;
-  if (selected.length === 0) return undefined;
-  const credentialSources = [...new Set(selected.map((event) => event.authSource))];
-  const graphqlEvents = selected.filter((event) => event.kind === "GraphQL");
-  const restEvents = selected.filter((event) => event.kind === "REST");
-  const graphql = summarizeGraphql(graphqlEvents);
-  const rest = summarizeRest(restEvents);
+export function summarizeApiTelemetry(): ApiUsage | undefined {
+  const active = store();
+  if (active === undefined) return undefined;
+  const selected = aggregateStore(active);
+  if (selected.eventCount === 0) return undefined;
+  const credentialSources = [...selected.credentialSources.entries()]
+    .sort((left, right) => left[1] - right[1])
+    .map(([source]) => source);
+  const graphql = summarizeGraphql(selected.graphql);
+  const rest = summarizeRest(selected.rest);
   return {
     credentialSources,
     ...(graphql !== undefined && { graphql }),
@@ -83,28 +114,20 @@ export function summarizeApiTelemetry(snapshot = 0): ApiUsage | undefined {
   };
 }
 
-function summarizeGraphql(selected: ApiTelemetryEvent[]): GraphqlApiUsage | undefined {
-  const latest = [...selected].reverse().find((event) => event.rateLimit !== undefined)?.rateLimit;
-  if (latest === undefined) return undefined;
+function summarizeGraphql(selected: TelemetryAggregate["graphql"]): GraphqlApiUsage | undefined {
+  const rateLimit = selected.rateLimit;
+  if (rateLimit === undefined) return undefined;
   return {
-    ...resourceUsage(latest, selected.length, "graphql"),
-    measuredQueryCost: selected.reduce((sum, event) => sum + (event.rateLimit?.cost ?? 0), 0),
-    unmeasuredRequestCount: selected.filter((event) => event.rateLimit?.cost === undefined).length,
-    nodeCount: selected.reduce((sum, event) => sum + (event.rateLimit?.nodeCount ?? 0), 0),
+    ...resourceUsage(rateLimit, selected.requestCount, "graphql"),
+    measuredQueryCost: selected.measuredQueryCost,
+    unmeasuredRequestCount: selected.unmeasuredRequestCount,
+    nodeCount: selected.nodeCount,
   };
 }
 
-function summarizeRest(selected: ApiTelemetryEvent[]): ApiResourceUsage[] {
-  const groups = new Map<string, ApiTelemetryEvent[]>();
-  for (const event of selected) {
-    const resource = event.rateLimit?.resource ?? "unknown";
-    const group = groups.get(resource) ?? [];
-    group.push(event);
-    groups.set(resource, group);
-  }
-  return [...groups.entries()].flatMap(([resource, group]) => {
-    const latest = [...group].reverse().find((event) => event.rateLimit !== undefined)?.rateLimit;
-    return latest ? [resourceUsage(latest, group.length, resource)] : [];
+function summarizeRest(selected: TelemetryAggregate["rest"]): ApiResourceUsage[] {
+  return [...selected.entries()].flatMap(([resource, group]) => {
+    return group.rateLimit ? [resourceUsage(group.rateLimit, group.requestCount, resource)] : [];
   });
 }
 

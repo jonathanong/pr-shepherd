@@ -24,6 +24,7 @@ import {
   formatMarkFilesAsViewedResult,
   formatMutateResult,
 } from "../cli/formatters.mts";
+import { formatCliError, serializeGitHubRequestErrorDetails } from "../cli/error-format.mts";
 import { errorToExitCode, EXIT } from "../exit-codes.mts";
 
 export interface CreatePrShepherdMcpServerOptions extends CreatePrShepherdOptions {
@@ -263,17 +264,32 @@ function toolError(error: unknown) {
       : error instanceof PartialApplyError
         ? errorToExitCode(error.cause)
         : errorToExitCode(error);
+  const cause = error instanceof PartialApplyError ? error.cause : error;
+  const githubDetails = serializeGitHubRequestErrorDetails(cause);
   const details =
     error instanceof PartialApplyError
       ? { failedIndex: error.failedIndex, completed: redactValue(error.completed) }
       : error instanceof PrShepherdValidationError
         ? { validation: true }
         : {};
-  const message = redactErrorMessage(error instanceof Error ? error.message : String(error));
+  const formattedCause = formatCliError(cause);
+  const causeMessage = cause instanceof Error ? cause.message : String(cause);
+  const message = redactErrorMessage(
+    error instanceof PartialApplyError && formattedCause.startsWith(causeMessage)
+      ? `${error.message}${formattedCause.slice(causeMessage.length)}`
+      : formattedCause,
+  );
   return {
     isError: true,
     content: [{ type: "text" as const, text: `pr-shepherd error (${code}): ${message}` }],
-    structuredContent: { code, message, details },
+    structuredContent: {
+      code,
+      message,
+      details: {
+        ...details,
+        ...(githubDetails !== undefined && { github: redactValue(githubDetails) }),
+      },
+    },
   };
 }
 

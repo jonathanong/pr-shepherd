@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { GraphqlQuotaWarningBand } from "../config/load.mts";
 import type { GraphqlQuotaWarning, GraphqlApiUsage } from "../types.mts";
@@ -11,6 +11,9 @@ import {
   type GraphqlQuotaWarningState,
 } from "./graphql-quota-policy.mts";
 
+const pendingStateUpdates = new Map<string, Promise<void>>();
+const sessionStates = new Map<string, GraphqlQuotaWarningState>();
+
 export async function evaluateWorktreeGraphqlQuotaWarning(
   key: { owner: string; repo: string },
   bands: GraphqlQuotaWarningBand[],
@@ -19,17 +22,106 @@ export async function evaluateWorktreeGraphqlQuotaWarning(
 ): Promise<GraphqlQuotaWarning | undefined> {
   if (bands.length === 0) return undefined;
   const path = await warningStatePath(key);
-  const previous = await readState(path);
-  const evaluated = evaluateGraphqlQuotaWarning(bands, sample, previous);
-  if (persist) await writeState(path, evaluated.state);
-  return evaluated.warning;
+  if (path === undefined) {
+    const sessionKey = `${key.owner}/${key.repo}`;
+    if (!persist) {
+      return evaluateGraphqlQuotaWarning(bands, sample, sessionStates.get(sessionKey) ?? null)
+        .warning;
+    }
+    return serializeStateUpdate(`session:${sessionKey}`, async () => {
+      const evaluated = evaluateGraphqlQuotaWarning(
+        bands,
+        sample,
+        sessionStates.get(sessionKey) ?? null,
+      );
+      sessionStates.set(sessionKey, evaluated.state);
+      return evaluated.warning;
+    });
+  }
+  if (!persist) {
+    const previous = await readState(path);
+    return evaluateGraphqlQuotaWarning(bands, sample, previous).warning;
+  }
+
+  return serializeStateUpdate(path, async () => {
+    const previous = await readState(path);
+    const evaluated = evaluateGraphqlQuotaWarning(bands, sample, previous);
+    const warning =
+      evaluated.warning !== undefined && (await claimWarning(path, evaluated.warning))
+        ? evaluated.warning
+        : undefined;
+    await writeState(path, evaluated.state);
+    return warning;
+  });
 }
 
-async function warningStatePath(key: { owner: string; repo: string }): Promise<string> {
+async function serializeStateUpdate<T>(key: string, update: () => Promise<T>): Promise<T> {
+  const previous = pendingStateUpdates.get(key) ?? Promise.resolve();
+  const result = previous.then(update);
+  const completion = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  pendingStateUpdates.set(key, completion);
+  void completion.finally(() => {
+    if (pendingStateUpdates.get(key) === completion) {
+      pendingStateUpdates.delete(key);
+    }
+  });
+  return result;
+}
+
+async function claimWarning(path: string, warning: GraphqlQuotaWarning): Promise<boolean> {
+  const claimsDir = `${path}.claims`;
+  const claimPath = join(
+    claimsDir,
+    `${warning.resetAt}-${warning.limit}-${warning.thresholdPercent}.json`,
+  );
+  let handle: Awaited<ReturnType<typeof open>> | undefined;
+  try {
+    await mkdir(claimsDir, { recursive: true });
+    handle = await open(claimPath, "wx");
+    await handle.writeFile(
+      JSON.stringify({
+        resource: warning.resource,
+        resetAt: warning.resetAt,
+        thresholdPercent: warning.thresholdPercent,
+      }),
+      "utf8",
+    );
+    return true;
+  } catch (error) {
+    // When state storage is unavailable, surfacing the warning is safer than
+    // silently exhausting the credential. EEXIST alone means another process won.
+    return !isAlreadyExists(error);
+  } finally {
+    try {
+      await handle?.close();
+    } catch {
+      // Best-effort claim cleanup is unnecessary: existence is the claim.
+    }
+  }
+}
+
+function isAlreadyExists(error: unknown): boolean {
+  return (
+    error !== null &&
+    typeof error === "object" &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "EEXIST"
+  );
+}
+
+async function warningStatePath(key: { owner: string; repo: string }): Promise<string | undefined> {
   if (!SAFE_SEGMENT.test(key.owner) || !SAFE_SEGMENT.test(key.repo)) {
     throw new Error(`Invalid repo key segments: ${key.owner}/${key.repo}`);
   }
-  const worktreeKey = await getWorktreeKey();
+  let worktreeKey: string;
+  try {
+    worktreeKey = await getWorktreeKey();
+  } catch {
+    return undefined;
+  }
   return join(
     resolveStateBase(),
     `${key.owner}-${key.repo}`,

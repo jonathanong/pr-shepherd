@@ -108,7 +108,7 @@ function writeDebounceProgress(tick: number, elapsedMs: number, remainingMs: num
 
 /** @deprecated Hidden implementation for the legacy `poll` alias. */
 export function runPoll(opts: PollCommandOptions): Promise<IterateResult> {
-  return withPollApiUsage(() => runPollCore(opts));
+  return withPollApiUsage(() => runPollCore(opts), opts.untilTerminal === true);
 }
 
 async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
@@ -143,10 +143,14 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       ...iterateOpts,
       prNumber,
       persistSeen: debounceSeconds === 0 || pastDebounce,
-      deferQuotaWarning: true,
+      // Until-terminal must persist before deciding to return: concurrent pollers
+      // then let only the process that won the warning-state lock stop early.
+      deferQuotaWarning: !untilTerminal,
     });
     prNumber ??= lastResult.pr;
-
+    if (untilTerminal && lastResult.quotaWarning !== undefined) {
+      break;
+    }
     if (lastResult.action === "wait" && !pastDebounce) {
       debounceUntil = null;
       const elapsedMs = Date.now() - start;
@@ -155,7 +159,6 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
         if (remainingMs <= 0) break;
         if (remainingMs + TIMER_DRIFT_TOLERANCE_MS < intervalMs) break;
       }
-
       lastWaitSignature = writeWaitProgress({
         tick,
         elapsedMs,
@@ -168,7 +171,6 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       await sleep(intervalMs);
       continue;
     }
-
     if (
       (untilTerminal || iterateOpts.merge) &&
       lastResult.action === "mark_ready" &&
@@ -178,7 +180,6 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       await sleep(intervalMs);
       continue;
     }
-
     if (lastResult.action === "fix_code" && debounceSeconds > 0 && !pastDebounce) {
       debounceUntil ??= Date.now() + debounceMs;
       const remainingMs = debounceUntil - Date.now();
@@ -191,7 +192,6 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       // sees pastDebounce and persists.
       continue;
     }
-
     break;
   }
 

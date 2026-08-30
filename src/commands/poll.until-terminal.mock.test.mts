@@ -87,4 +87,57 @@ describe("runPoll — until-terminal mode", () => {
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
     expect(result.action).toBe("fix_code");
   });
+
+  it("returns a WAIT immediately when until-terminal crosses a quota warning", async () => {
+    const quotaWarning = {
+      resource: "graphql" as const,
+      thresholdPercent: 20,
+      remaining: 900,
+      limit: 5000,
+      resetAt: 1_700_000_000,
+      pollIntervalMinutes: 5,
+      pollTimeoutMinutes: 10,
+    };
+    mockRunIterate.mockResolvedValueOnce(makeWaitResult({ quotaWarning }));
+
+    const result = await runPoll({
+      prNumber: 42,
+      format: "text",
+      intervalSeconds: 30,
+      timeoutSeconds: 300,
+      untilTerminal: true,
+    });
+
+    expect(mockRunIterate).toHaveBeenCalledTimes(1);
+    expect(mockRunIterate).toHaveBeenCalledWith(
+      expect.objectContaining({ deferQuotaWarning: false }),
+    );
+    expect(result.action).toBe("wait");
+    expect(result.quotaWarning).toEqual(quotaWarning);
+  });
+
+  it("returns MARK_READY when its continued poll crosses a quota warning", async () => {
+    const quotaWarning = {
+      resource: "graphql" as const,
+      thresholdPercent: 30,
+      remaining: 1400,
+      limit: 5000,
+      resetAt: 1_700_000_000,
+      pollIntervalMinutes: 2,
+      pollTimeoutMinutes: 4,
+    };
+    mockRunIterate.mockResolvedValueOnce({ ...makeMarkReadyResult(), quotaWarning });
+
+    const result = await runPoll({
+      prNumber: 42,
+      format: "text",
+      intervalSeconds: 30,
+      timeoutSeconds: 300,
+      untilTerminal: true,
+    });
+
+    expect(mockRunIterate).toHaveBeenCalledTimes(1);
+    expect(result.action).toBe("mark_ready");
+    expect(result.quotaWarning).toEqual(quotaWarning);
+  });
 });

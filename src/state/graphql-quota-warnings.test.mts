@@ -7,14 +7,19 @@ import { evaluateWorktreeGraphqlQuotaWarning } from "./graphql-quota-warnings.mt
 import { evaluateGraphqlQuotaWarning } from "./graphql-quota-policy.mts";
 
 const testState = vi.hoisted(() => ({ base: "" }));
-const fsState = vi.hoisted(() => ({ failRename: false }));
+const fsState = vi.hoisted(() => ({ delay: false, didDelay: false, fail: false }));
+const worktreeState = vi.hoisted(() => ({ failGetWorktreeKey: false }));
 
 vi.mock("node:fs/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs/promises")>();
   return {
     ...actual,
     rename: async (...args: Parameters<typeof actual.rename>) => {
-      if (fsState.failRename) throw new Error("rename failed");
+      if (fsState.delay && !fsState.didDelay) {
+        fsState.didDelay = true;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      if (fsState.fail) throw new Error("rename failed");
       return actual.rename(...args);
     },
   };
@@ -25,7 +30,10 @@ vi.mock("./base.mts", () => ({
 }));
 
 vi.mock("../util/worktree.mts", () => ({
-  getWorktreeKey: async () => "fixture-worktree",
+  getWorktreeKey: async () =>
+    worktreeState.failGetWorktreeKey
+      ? Promise.reject(new Error("not a git worktree"))
+      : "fixture-worktree",
 }));
 
 const bands = [
@@ -35,14 +43,10 @@ const bands = [
 ];
 
 const repoKey = { owner: "acme", repo: "repo" };
+const stateFile = "fixture-worktree-graphql-quota-warnings.json";
 
 function statePath() {
-  return join(
-    testState.base,
-    "acme-repo",
-    "worktrees",
-    "fixture-worktree-graphql-quota-warnings.json",
-  );
+  return join(testState.base, "acme-repo", "worktrees", stateFile);
 }
 
 function sample(remaining: number, used = 5000 - remaining): GraphqlApiUsage {
@@ -60,7 +64,10 @@ function sample(remaining: number, used = 5000 - remaining): GraphqlApiUsage {
 }
 
 beforeEach(async () => {
-  fsState.failRename = false;
+  fsState.delay = false;
+  fsState.didDelay = false;
+  fsState.fail = false;
+  worktreeState.failGetWorktreeKey = false;
   testState.base = await mkdtemp(join(tmpdir(), "pr-shepherd-quota-warning-"));
 });
 
@@ -93,10 +100,19 @@ describe("evaluateWorktreeGraphqlQuotaWarning", () => {
     });
   });
 
+  it("keeps one-time warning state in memory when worktree discovery fails", async () => {
+    worktreeState.failGetWorktreeKey = true;
+
+    await expect(
+      evaluateWorktreeGraphqlQuotaWarning(repoKey, bands, sample(1400), true),
+    ).resolves.toMatchObject({ thresholdPercent: 30 });
+    await expect(
+      evaluateWorktreeGraphqlQuotaWarning(repoKey, bands, sample(1300), true),
+    ).resolves.toBeUndefined();
+  });
+
   it("ignores malformed persisted state", async () => {
-    await mkdir(join(testState.base, "acme-repo", "worktrees"), {
-      recursive: true,
-    });
+    await mkdir(join(testState.base, "acme-repo", "worktrees"), { recursive: true });
     await writeFile(statePath(), JSON.stringify({ resource: "graphql" }), "utf8");
 
     const warning = await evaluateWorktreeGraphqlQuotaWarning(repoKey, bands, sample(1400), false);
@@ -126,15 +142,32 @@ describe("evaluateWorktreeGraphqlQuotaWarning", () => {
   });
 
   it("removes a temporary state file when the atomic rename fails", async () => {
-    fsState.failRename = true;
+    fsState.fail = true;
 
     const warning = await evaluateWorktreeGraphqlQuotaWarning(repoKey, bands, sample(1400), true);
 
     expect(warning?.thresholdPercent).toBe(30);
     await expect(readFile(statePath(), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
   });
-});
 
+  it("serializes persistent updates for the same worktree", async () => {
+    const [first, duplicate] = await Promise.all([
+      evaluateWorktreeGraphqlQuotaWarning(repoKey, bands, sample(1400), true),
+      evaluateWorktreeGraphqlQuotaWarning(repoKey, bands, sample(1400), true),
+    ]);
+
+    expect([first?.thresholdPercent, duplicate?.thresholdPercent]).toEqual([30, undefined]);
+
+    fsState.delay = true;
+    const [next, lowest] = await Promise.all([
+      evaluateWorktreeGraphqlQuotaWarning(repoKey, bands, sample(900), true),
+      evaluateWorktreeGraphqlQuotaWarning(repoKey, bands, sample(400), true),
+    ]);
+
+    expect([next?.thresholdPercent, lowest?.thresholdPercent]).toEqual([20, 10]);
+    await expect(readFile(statePath(), "utf8")).resolves.toMatch(/"warnedThresholds":\[30,20,10\]/);
+  });
+});
 describe("evaluateGraphqlQuotaWarning", () => {
   it("emits the current band and marks skipped higher bands as crossed", () => {
     const result = evaluateGraphqlQuotaWarning(bands, sample(1250), null);
@@ -159,7 +192,6 @@ describe("evaluateGraphqlQuotaWarning", () => {
     const first = evaluateGraphqlQuotaWarning(bands, sample(1400), null);
     const repeat = evaluateGraphqlQuotaWarning(bands, sample(1300), first.state);
     const next = evaluateGraphqlQuotaWarning(bands, sample(900), repeat.state);
-
     expect(first.warning?.thresholdPercent).toBe(30);
     expect(repeat.warning).toBeUndefined();
     expect(next.warning?.thresholdPercent).toBe(20);

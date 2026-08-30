@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   mergeGraphqlRateLimit,
   recordApiTelemetry,
-  snapshotApiTelemetry,
   summarizeApiTelemetry,
   withApiTelemetryScope,
 } from "./api-telemetry.mts";
@@ -10,7 +9,6 @@ import {
 describe("API telemetry aggregation", () => {
   it("aggregates exact GraphQL query cost and reports unmeasured mutations", async () => {
     await withApiTelemetryScope(async () => {
-      const start = snapshotApiTelemetry();
       recordApiTelemetry({
         kind: "GraphQL",
         method: "POST",
@@ -38,7 +36,7 @@ describe("API telemetry aggregation", () => {
         },
       });
 
-      expect(summarizeApiTelemetry(start)).toEqual({
+      expect(summarizeApiTelemetry()).toEqual({
         credentialSources: ["gh auth token"],
         graphql: {
           resource: "graphql",
@@ -57,7 +55,6 @@ describe("API telemetry aggregation", () => {
 
   it("groups REST requests by their raw rate-limit resource", async () => {
     await withApiTelemetryScope(async () => {
-      const start = snapshotApiTelemetry();
       recordApiTelemetry({
         kind: "REST",
         method: "GET",
@@ -71,7 +68,7 @@ describe("API telemetry aggregation", () => {
         },
       });
 
-      expect(summarizeApiTelemetry(start)).toMatchObject({
+      expect(summarizeApiTelemetry()).toMatchObject({
         credentialSources: ["GH_TOKEN"],
         rest: [
           {
@@ -95,18 +92,16 @@ describe("API telemetry aggregation", () => {
   it("isolates concurrent command scopes", async () => {
     const summarize = (source: string) =>
       withApiTelemetryScope(async () => {
-        const start = snapshotApiTelemetry();
         await Promise.resolve();
         recordApiTelemetry({ kind: "GraphQL", method: "POST", authSource: source });
         await Promise.resolve();
-        return summarizeApiTelemetry(start);
+        return summarizeApiTelemetry();
       });
 
     const [left, right] = await Promise.all([summarize("left"), summarize("right")]);
     expect(left?.credentialSources).toEqual(["left"]);
     expect(right?.credentialSources).toEqual(["right"]);
   });
-
   it("ignores malformed GraphQL rate-limit payloads", () => {
     expect(
       mergeGraphqlRateLimit(null, {
