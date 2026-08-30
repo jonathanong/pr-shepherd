@@ -2,12 +2,26 @@ import { createHash } from "node:crypto";
 
 import { graphql } from "./client.mts";
 import { CHECK_RUN_ANNOTATIONS_QUERY } from "./queries.mts";
+import { loadDerived, storeDerived, type StateKey } from "../state/rest-cache.mts";
 import type { CheckAnnotation } from "../types.mts";
+
+export interface AnnotationCacheOptions {
+  stateKey: StateKey;
+  headSha?: string;
+}
 
 const ANNOTATIONS_PER_PAGE = 100;
 const MAX_ANNOTATION_PAGES = 10;
 const ANNOTATION_TEXT_MAX_CHARS = 4_000;
 const TRUNCATED_SUFFIX = "\n[truncated]";
+/**
+ * Some Checks-API publishers (e.g. SonarCloud) PATCH additional annotations
+ * onto an already-COMPLETED check run without minting a new check-run node
+ * ID, so "COMPLETED" is not a reliable immutability signal on its own. Bound
+ * the cache instead of trusting it forever, so a long-running poll session
+ * eventually revalidates.
+ */
+const ANNOTATION_CACHE_MAX_AGE_MS = 60 * 60 * 1000;
 
 interface RawCheckRunAnnotationsResponse {
   node: {
@@ -33,7 +47,23 @@ interface RawCheckAnnotation {
   } | null;
 }
 
-export async function fetchCheckRunAnnotations(checkRunId: string): Promise<CheckAnnotation[]> {
+/**
+ * Fetches all inline annotations for a check run.
+ *
+ * When `cacheOpts` is provided, the result is cached by `checkRunId` — safe
+ * because callers only pass `cacheOpts` for COMPLETED check runs (a re-run
+ * mints a new check-run node id, so a COMPLETED run's annotations are
+ * immutable once fetched).
+ */
+export async function fetchCheckRunAnnotations(
+  checkRunId: string,
+  cacheOpts?: AnnotationCacheOptions,
+): Promise<CheckAnnotation[]> {
+  const cacheName = `annotations-${checkRunId}`;
+  if (cacheOpts) {
+    const cached = await loadDerived<CheckAnnotation[]>(cacheOpts.stateKey, cacheName);
+    if (cached && Date.now() - cached.storedAt < ANNOTATION_CACHE_MAX_AGE_MS) return cached.value;
+  }
   let cursor: string | null = null;
   const nodes: RawCheckAnnotation[] = [];
   for (let page = 1; page <= MAX_ANNOTATION_PAGES; page++) {
@@ -49,7 +79,11 @@ export async function fetchCheckRunAnnotations(checkRunId: string): Promise<Chec
     }
     cursor = result.pageInfo.endCursor;
   }
-  return nodes.map((node) => toCheckAnnotation(checkRunId, node));
+  const annotations = nodes.map((node) => toCheckAnnotation(checkRunId, node));
+  if (cacheOpts) {
+    await storeDerived(cacheOpts.stateKey, cacheName, annotations, cacheOpts.headSha);
+  }
+  return annotations;
 }
 
 async function fetchAnnotationPage(checkRunId: string, cursor: string | null) {

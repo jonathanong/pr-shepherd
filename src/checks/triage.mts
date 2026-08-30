@@ -2,6 +2,7 @@
 import { restWithRateLimit, restText } from "../github/http.mts";
 import type { CheckRun, ClassifiedCheck, TriagedCheck } from "../types.mts";
 import type { RepoInfo } from "../github/client.mts";
+import { loadDerived, storeDerived, type StateKey } from "../state/rest-cache.mts";
 
 const STARTUP_FAILURE_STATUS = "startup_failure";
 const LOG_EXCERPT_CONTEXT_LINES = 16;
@@ -13,15 +14,17 @@ const ANSI_SGR_RE = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
 export function triageFailingChecks(
   failingChecks: ClassifiedCheck[],
   repo: RepoInfo,
+  stateKey?: StateKey,
 ): Promise<TriagedCheck[]> {
   const jobsCache = new Map<string, Promise<JobsResponse["jobs"] | undefined>>();
-  return Promise.all(failingChecks.map((c) => triageCheck(c, repo, jobsCache)));
+  return Promise.all(failingChecks.map((c) => triageCheck(c, repo, jobsCache, stateKey)));
 }
 
 async function triageCheck(
   check: ClassifiedCheck,
   repo: RepoInfo,
   jobsCache: Map<string, Promise<JobsResponse["jobs"] | undefined>>,
+  stateKey?: StateKey,
 ): Promise<TriagedCheck> {
   if (
     check.runId === null ||
@@ -30,9 +33,11 @@ async function triageCheck(
   ) {
     return { ...check };
   }
-  const jobs = await fetchJobs(check.runId, repo, jobsCache);
+  const jobs = await fetchJobs(check.runId, repo, jobsCache, stateKey);
   const jobInfo = jobs ? pickJobInfo(jobs, check.name) : undefined;
-  const logExcerpt = jobInfo?.jobId ? await fetchJobLogExcerpt(jobInfo.jobId, repo) : undefined;
+  const logExcerpt = jobInfo?.jobId
+    ? await fetchJobLogExcerpt(jobInfo.jobId, repo, stateKey, jobInfo.jobConclusion != null)
+    : undefined;
   return {
     ...check,
     ...(jobInfo?.workflowName !== undefined && { workflowName: jobInfo.workflowName }),
@@ -46,9 +51,10 @@ export async function fetchStartupFailureChecks(
   repo: RepoInfo,
   headSha: string,
   prNumber: number,
+  stateKey?: StateKey,
 ): Promise<CheckRun[]> {
   try {
-    return await fetchStartupFailureChecksUncached(repo, headSha, prNumber);
+    return await fetchStartupFailureChecksUncached(repo, headSha, prNumber, stateKey);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     process.stderr.write(
@@ -62,6 +68,7 @@ async function fetchStartupFailureChecksUncached(
   repo: RepoInfo,
   headSha: string,
   prNumber: number,
+  stateKey?: StateKey,
 ): Promise<CheckRun[]> {
   const { owner, name } = repo;
   const perPage = 100;
@@ -71,6 +78,16 @@ async function fetchStartupFailureChecksUncached(
     const { data, rateLimit } = await restWithRateLimit<WorkflowRunsResponse>(
       "GET",
       `/repos/${owner}/${name}/actions/runs?head_sha=${encodeURIComponent(headSha)}&status=${STARTUP_FAILURE_STATUS}&per_page=${perPage}&page=${page}`,
+      undefined,
+      stateKey
+        ? {
+            conditional: {
+              key: stateKey,
+              name: `runs-startupfailure-${headSha}-p${page}`,
+              headSha,
+            },
+          }
+        : undefined,
     );
     checks.push(
       ...data.workflow_runs
@@ -124,6 +141,8 @@ interface JobInfo {
   workflowName?: string;
   jobName?: string;
   failedStep?: string;
+  /** The matched job's raw conclusion — null while still running. Gates log-excerpt caching. */
+  jobConclusion: string | null;
 }
 
 function workflowRunToCheckRun(run: WorkflowRunsResponse["workflow_runs"][number]): CheckRun {
@@ -154,10 +173,11 @@ function fetchJobs(
   runId: string,
   repo: RepoInfo,
   cache: Map<string, Promise<JobsResponse["jobs"] | undefined>>,
+  stateKey?: StateKey,
 ): Promise<JobsResponse["jobs"] | undefined> {
   const cached = cache.get(runId);
   if (cached) return cached;
-  const promise = fetchJobsUncached(runId, repo);
+  const promise = fetchJobsUncached(runId, repo, stateKey);
   cache.set(runId, promise);
   return promise;
 }
@@ -165,6 +185,7 @@ function fetchJobs(
 async function fetchJobsUncached(
   runId: string,
   repo: RepoInfo,
+  stateKey?: StateKey,
 ): Promise<JobsResponse["jobs"] | undefined> {
   const { owner, name } = repo;
   const perPage = 100;
@@ -182,6 +203,10 @@ async function fetchJobsUncached(
       const { data, rateLimit } = await restWithRateLimit<JobsResponse>(
         "GET",
         `/repos/${owner}/${name}/actions/runs/${runId}/jobs?filter=latest&per_page=${perPage}&page=${page}`,
+        undefined,
+        stateKey
+          ? { conditional: { key: stateKey, name: `jobs-run-${runId}-p${page}` } }
+          : undefined,
       );
       allJobs.push(...data.jobs);
       if (rateLimit?.remaining === 0) {
@@ -219,13 +244,35 @@ function pickJobInfo(jobs: JobsResponse["jobs"], checkName: string): JobInfo | u
     workflowName: job.workflow_name,
     jobName: job.name,
     failedStep,
+    jobConclusion: job.conclusion,
   };
 }
 
-async function fetchJobLogExcerpt(jobId: number, repo: RepoInfo): Promise<string | undefined> {
+/**
+ * `cacheable` gates the cross-tick cache — only set once the matched job has
+ * a terminal conclusion, so an in-progress job's (possibly partial) log
+ * never gets frozen into the cache.
+ */
+async function fetchJobLogExcerpt(
+  jobId: number,
+  repo: RepoInfo,
+  stateKey?: StateKey,
+  cacheable = false,
+): Promise<string | undefined> {
+  const cacheName = `joblog-${jobId}`;
+  if (stateKey && cacheable) {
+    const cached = await loadDerived<string | null>(stateKey, cacheName);
+    if (cached) return cached.value ?? undefined;
+  }
   const { owner, name } = repo;
   try {
-    return buildLogExcerpt(await restText(`/repos/${owner}/${name}/actions/jobs/${jobId}/logs`));
+    const excerpt = buildLogExcerpt(
+      await restText(`/repos/${owner}/${name}/actions/jobs/${jobId}/logs`),
+    );
+    if (stateKey && cacheable) {
+      await storeDerived<string | null>(stateKey, cacheName, excerpt ?? null);
+    }
+    return excerpt;
   } catch {
     return undefined;
   }
