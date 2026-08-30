@@ -1,4 +1,7 @@
-import { fetchCheckRunAnnotations } from "../github/check-annotations.mts";
+import {
+  fetchCheckRunAnnotations,
+  type AnnotationCacheOptions,
+} from "../github/check-annotations.mts";
 import type { CheckAnnotation, ClassifiedCheck, ShepherdReport, TriagedCheck } from "../types.mts";
 
 function shouldFetchCheckAnnotations(check: ClassifiedCheck): boolean {
@@ -25,6 +28,7 @@ export async function attachAndMergeCheckAnnotations(
   },
   seenMap: Map<string, { seenAt: number }>,
   prNumber: number,
+  cacheOpts?: AnnotationCacheOptions,
 ): Promise<{
   passing: ClassifiedCheck[];
   failing: TriagedCheck[];
@@ -39,7 +43,7 @@ export async function attachAndMergeCheckAnnotations(
     ...buckets.filtered,
     ...buckets.ignored,
   ].filter(shouldFetchCheckAnnotations);
-  const annotated = await attachUnseenCheckAnnotations(candidates, seenMap, prNumber);
+  const annotated = await attachUnseenCheckAnnotations(candidates, seenMap, prNumber, cacheOpts);
   const byId = new Map(annotated.flatMap((c) => (c.id != null ? [[c.id, c] as const] : [])));
   const apply = <T extends ClassifiedCheck>(list: T[]): T[] =>
     list.map((c) => {
@@ -60,11 +64,12 @@ async function attachUnseenCheckAnnotations(
   checks: ClassifiedCheck[],
   seenMap: Map<string, { seenAt: number }>,
   prNumber: number,
+  cacheOpts?: AnnotationCacheOptions,
 ): Promise<TriagedCheck[]> {
   const checksWithAnnotations: TriagedCheck[] = [];
   for (const check of checks) {
     // eslint-disable-next-line no-await-in-loop
-    checksWithAnnotations.push(await attachForCheck(check, seenMap, prNumber));
+    checksWithAnnotations.push(await attachForCheck(check, seenMap, prNumber, cacheOpts));
   }
   return checksWithAnnotations;
 }
@@ -73,11 +78,12 @@ async function attachForCheck(
   check: ClassifiedCheck,
   seenMap: Map<string, { seenAt: number }>,
   prNumber: number,
+  cacheOpts?: AnnotationCacheOptions,
 ): Promise<TriagedCheck> {
   if (check.id == null) return check;
   let annotations: CheckAnnotation[];
   try {
-    annotations = await fetchCheckRunAnnotations(check.id);
+    annotations = await fetchCheckRunAnnotations(check.id, cacheOpts);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     process.stderr.write(

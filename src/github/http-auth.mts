@@ -68,7 +68,11 @@ async function resolveToken(): Promise<{ token: string; source: AuthSource }> {
   );
 }
 
-export async function makeAuthHeaders(): Promise<{
+/**
+ * `extra` lets callers layer additional headers (e.g. `If-None-Match` for
+ * conditional REST requests) on top of the standard auth/version headers.
+ */
+export async function makeAuthHeaders(extra?: Record<string, string>): Promise<{
   headers: Record<string, string>;
   source: AuthSource;
 }> {
@@ -81,6 +85,7 @@ export async function makeAuthHeaders(): Promise<{
       "X-GitHub-Api-Version": "2022-11-28",
       "User-Agent": "pr-shepherd",
       "Content-Type": "application/json",
+      ...extra,
     },
   };
 }

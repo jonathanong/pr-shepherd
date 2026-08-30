@@ -47,7 +47,10 @@ describe("runCheck — check annotations", () => {
     expect(report.checks.failing[0]?.annotations).toEqual([
       expect.objectContaining({ id: "check_annotation_123" }),
     ]);
-    expect(mockFetchCheckRunAnnotations).toHaveBeenCalledWith("CR_fail");
+    expect(mockFetchCheckRunAnnotations).toHaveBeenCalledWith("CR_fail", {
+      stateKey: { owner: "owner", repo: "repo", pr: 42 },
+      headSha: "abc123",
+    });
     expect(mockMarkSeen).not.toHaveBeenCalledWith(
       expect.any(Object),
       "check_annotation_123",
@@ -133,7 +136,10 @@ describe("runCheck — check annotations", () => {
     expect(report.checks.passing[0]?.annotations).toEqual([
       expect.objectContaining({ id: "check_annotation_lua", path: "scripts/instrument-lua.cjs" }),
     ]);
-    expect(mockFetchCheckRunAnnotations).toHaveBeenCalledWith("CR_pass");
+    expect(mockFetchCheckRunAnnotations).toHaveBeenCalledWith("CR_pass", {
+      stateKey: { owner: "owner", repo: "repo", pr: 42 },
+      headSha: "abc123",
+    });
     expect(mockMarkSeen).toHaveBeenCalledWith(
       expect.any(Object),
       "check_annotation_lua",

@@ -32,6 +32,7 @@ describe("runCheck — startup failure workflow runs", () => {
       { owner: "owner", name: "repo" },
       "abc123",
       42,
+      { owner: "owner", repo: "repo", pr: 42 },
     );
     expect(report.status).toBe("FAILING");
     expect(report.checks.failing).toEqual([
@@ -45,6 +46,7 @@ describe("runCheck — startup failure workflow runs", () => {
     expect(mockTriageFailingChecks).toHaveBeenCalledWith(
       [expect.objectContaining({ conclusion: "STARTUP_FAILURE" })],
       { owner: "owner", name: "repo" },
+      { owner: "owner", repo: "repo", pr: 42 },
     );
   });
 

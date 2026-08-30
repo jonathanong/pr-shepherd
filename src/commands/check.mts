@@ -51,6 +51,7 @@ export async function runCheck(
       EXIT.UNAVAILABLE,
     );
   }
+  const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
   const config = loadConfig();
   const paginateApprovedReviews = config.iterate.minimizeApprovals;
   const result = await fetchPrBatch(prNumber, repo, { paginateApprovedReviews });
@@ -64,7 +65,7 @@ export async function runCheck(
   }
   const startupFailureChecks = result.checkSuitesComplete
     ? []
-    : await fetchStartupFailureChecks(repo, batchData.headRefOid, prNumber);
+    : await fetchStartupFailureChecks(repo, batchData.headRefOid, prNumber, stateKey);
   const allChecks = mergeStartupFailureChecks(batchData.checks, startupFailureChecks);
   const classifiedPrChecks = classifyChecks(allChecks);
   const latestRemoval = batchData.latestMergeQueueRemoval;
@@ -92,8 +93,9 @@ export async function runCheck(
   const filtered = classifiedChecks.filter((c) => c.category === "filtered");
   const ignored = classifiedChecks.filter((c) => c.category === "ignored");
   const triagedBase =
-    failing.length > 0 && !opts.skipTriage ? await triageFailingChecks(failing, repo) : failing;
-  const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
+    failing.length > 0 && !opts.skipTriage
+      ? await triageFailingChecks(failing, repo, stateKey)
+      : failing;
   const seenMap = await loadSeenMap(stateKey);
   const botUsernames = normalizeBotUsernames(config.botUsernames);
   const ruleSet = await loadRules(discoverRuleFiles(getEffectiveCwd()));
@@ -103,6 +105,7 @@ export async function runCheck(
     { passing, failing: triagedBase, skipped, filtered, ignored },
     seenMap,
     prNumber,
+    { stateKey, headSha: batchData.headRefOid },
   );
   const ignoredAnnotated = merged.ignored.filter((c) => (c.annotations?.length ?? 0) > 0);
   const minimizedCommentCandidates = batchData.comments.filter(
