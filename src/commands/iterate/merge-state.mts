@@ -17,7 +17,10 @@ export function buildReadyMergeResult(
     report.mergeStatus.mergeRequirements?.mergeQueue?.required ||
     report.mergeStatus.mergeRequirements?.mergeQueue?.enabled,
   );
-  if (!queue && report.viewerAuthorization?.viewerCanEnableAutoMerge === true) {
+  // A merge queue is enrolled the same way auto-merge is granted: enabling
+  // auto-merge on a queue-required PR is what adds it to the queue, so
+  // viewerCanEnableAutoMerge authorizes both the plain-merge and enqueue paths.
+  if (report.viewerAuthorization?.viewerCanEnableAutoMerge === true) {
     return {
       ...base,
       action: "merge",
@@ -26,7 +29,7 @@ export function buildReadyMergeResult(
         repo: report.repo,
         nodeId: report.nodeId,
         headSha: report.headSha ?? "unknown",
-        queue: false,
+        queue,
       }),
     };
   }

@@ -155,7 +155,7 @@ Emits an exact GitHub CLI command; Shepherd does not execute or wrap the merge o
 
 **Trigger:** `--merge` is enabled and the clean READY state has lasted for the configured ready-delay. `--ready-delay 0` emits it immediately.
 
-**Command modes:** Ordinary branches emit `gh pr merge <PR> --repo <owner/repo> --match-head-commit <head> --auto ...commandArgs` only when GitHub reports `viewerCanEnableAutoMerge: true`. No plain-merge fallback is emitted because Shepherd cannot verify its authorization. GitHub exposes no exact viewer capability for queue enrollment, so a queue-required branch returns `authorization-required` instead of a queue command.
+**Command modes:** Both ordinary and queue-required branches gate on the same signal — `viewerCanEnableAutoMerge: true` — because enabling auto-merge on a queue-required PR is what enrolls it in the queue. When true, an ordinary branch emits `gh pr merge <PR> --repo <owner/repo> --match-head-commit <head> --auto ...commandArgs`; a queue-required or queue-enabled branch (`mergeRequirements.mergeQueue.required` or `.enabled`) emits `gh pr merge <PR> --repo <owner/repo> --match-head-commit <head>` (`mode: "queue"`) plus a `queueApiFallbackCommand` — a direct `enqueuePullRequest` GraphQL mutation — for the known gh CLI queue limitation. No plain-merge fallback is emitted for the ordinary branch because Shepherd cannot verify its authorization. When `viewerCanEnableAutoMerge` is not `true` (denied or unverifiable), either branch returns `authorization-required` (`escalate.authorization[0].action === "merge-or-enqueue"`) instead of a command.
 
 Configured `merge.commandArgs` apply only to authorized ordinary auto-merge commands. Every emitted command pins the expected PR head.
 

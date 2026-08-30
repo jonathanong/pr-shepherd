@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, expect, it } from "vitest";
 import {
   makeOpts,
@@ -9,6 +10,24 @@ import {
 import { runIterate } from "./iterate/index.mts";
 
 registerIterateHooks();
+
+/** Shared CLEAN mergeStatus fixture for a ready PR whose merge requirements include a required, enabled merge queue. */
+function queueReadyMergeStatus() {
+  return {
+    status: "CLEAN" as const,
+    state: "OPEN" as const,
+    isDraft: false,
+    mergeable: "MERGEABLE" as const,
+    reviewDecision: "APPROVED" as const,
+    blockingBotReviewInProgress: false,
+    mergeStateStatus: "CLEAN" as const,
+    mergeRequirements: {
+      approvals: { current: 1, requiredCount: 1 },
+      conversationsResolved: { resolved: true, unresolvedCount: 0, required: true },
+      mergeQueue: { required: true, enabled: true, inQueue: false },
+    },
+  };
+}
 
 describe("runIterate — merge", () => {
   it("emits an auto-merge plan after the ready delay", async () => {
@@ -42,26 +61,56 @@ describe("runIterate — merge", () => {
     }
   });
 
+  it("emits an enqueue plan for a merge-queue PR when the viewer can enable auto-merge", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        headSha: "def456",
+        nodeId: "PR_node",
+        mergeStatus: queueReadyMergeStatus(),
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+
+    const result = await runIterate(makeOpts({ merge: true }));
+
+    expect(result.action).toBe("merge");
+    if (result.action === "merge") {
+      expect(result.merge.mode).toBe("queue");
+      expect(result.merge.command.argv).toEqual([
+        "gh",
+        "pr",
+        "merge",
+        "42",
+        "--repo",
+        "owner/repo",
+        "--match-head-commit",
+        "def456",
+      ]);
+      expect(result.merge.queueApiFallbackCommand).toBeDefined();
+    }
+  });
+
   it("escalates queue enrollment when GitHub exposes no exact viewer capability", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "READY",
         headSha: "def456",
         nodeId: "PR_node",
-        mergeStatus: {
-          status: "CLEAN",
-          state: "OPEN",
-          isDraft: false,
-          mergeable: "MERGEABLE",
-          reviewDecision: "APPROVED",
-          blockingBotReviewInProgress: false,
-          mergeStateStatus: "CLEAN",
-          mergeRequirements: {
-            approvals: { current: 1, requiredCount: 1 },
-            conversationsResolved: { resolved: true, unresolvedCount: 0, required: true },
-            mergeQueue: { required: true, enabled: true, inQueue: false },
-          },
+        viewerAuthorization: {
+          repositoryPermission: "READ",
+          viewerCanAdminister: false,
+          viewerDidAuthor: false,
+          viewerCanUpdate: false,
+          viewerCanEnableAutoMerge: false,
+          viewerCanEditFiles: false,
+          headRepositoryPermission: null,
         },
+        mergeStatus: queueReadyMergeStatus(),
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
