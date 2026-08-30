@@ -11,6 +11,24 @@ import { runIterate } from "./iterate/index.mts";
 
 registerIterateHooks();
 
+/** Shared CLEAN mergeStatus fixture for a ready PR whose merge requirements include a required, enabled merge queue. */
+function queueReadyMergeStatus() {
+  return {
+    status: "CLEAN" as const,
+    state: "OPEN" as const,
+    isDraft: false,
+    mergeable: "MERGEABLE" as const,
+    reviewDecision: "APPROVED" as const,
+    blockingBotReviewInProgress: false,
+    mergeStateStatus: "CLEAN" as const,
+    mergeRequirements: {
+      approvals: { current: 1, requiredCount: 1 },
+      conversationsResolved: { resolved: true, unresolvedCount: 0, required: true },
+      mergeQueue: { required: true, enabled: true, inQueue: false },
+    },
+  };
+}
+
 describe("runIterate — merge", () => {
   it("emits an auto-merge plan after the ready delay", async () => {
     mockRunCheck.mockResolvedValue(
@@ -49,20 +67,7 @@ describe("runIterate — merge", () => {
         status: "READY",
         headSha: "def456",
         nodeId: "PR_node",
-        mergeStatus: {
-          status: "CLEAN",
-          state: "OPEN",
-          isDraft: false,
-          mergeable: "MERGEABLE",
-          reviewDecision: "APPROVED",
-          blockingBotReviewInProgress: false,
-          mergeStateStatus: "CLEAN",
-          mergeRequirements: {
-            approvals: { current: 1, requiredCount: 1 },
-            conversationsResolved: { resolved: true, unresolvedCount: 0, required: true },
-            mergeQueue: { required: true, enabled: true, inQueue: false },
-          },
-        },
+        mergeStatus: queueReadyMergeStatus(),
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -105,20 +110,7 @@ describe("runIterate — merge", () => {
           viewerCanEditFiles: false,
           headRepositoryPermission: null,
         },
-        mergeStatus: {
-          status: "CLEAN",
-          state: "OPEN",
-          isDraft: false,
-          mergeable: "MERGEABLE",
-          reviewDecision: "APPROVED",
-          blockingBotReviewInProgress: false,
-          mergeStateStatus: "CLEAN",
-          mergeRequirements: {
-            approvals: { current: 1, requiredCount: 1 },
-            conversationsResolved: { resolved: true, unresolvedCount: 0, required: true },
-            mergeQueue: { required: true, enabled: true, inQueue: false },
-          },
-        },
+        mergeStatus: queueReadyMergeStatus(),
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
