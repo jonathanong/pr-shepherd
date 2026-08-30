@@ -28,7 +28,7 @@ mechanics every tick. Apply the referenced playbook in full whenever a step poin
 ### Suggestion patches
 
 - Run one plural `build-suggestion-patches` command with a repeated `--thread-id … --message … [--description …]` group for every marked thread in displayed order.
-- The CLI only builds patches. Apply, stage, and commit the returned patches in order. Push only when authorization has been established outside Shepherd; GitHub viewer fields cannot verify the local Git credential.
+- The CLI only builds patches. Apply, stage, and commit the returned patches in order. This command does not itself check push authorization — follow the `iterate`/`fix_code` output's own commit/push instruction for whether to push now or hand off: it reflects whether GitHub confirms the viewer can push to the PR head branch.
 - The command builds from the fetched PR head and accepts a clean local descendant only when the complete ordered patch stream passes `git apply --check`.
 - If the command refuses because a suggestion is unsafe or no longer applies, inspect the current source, the displayed replacement block, and reviewer intent before editing manually. Do not apply a stale numeric range blindly or retry unchanged input.
 - A returned patch was checked against the then-current worktree. If it later fails, re-inspect the worktree because it changed after validation.

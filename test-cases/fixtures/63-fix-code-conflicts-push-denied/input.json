@@ -1,0 +1,31 @@
+{
+  "batchData": {
+    "mergeable": "CONFLICTING",
+    "mergeStateStatus": "DIRTY",
+    "reviewDecision": "APPROVED",
+    "viewerAuthorization": {
+      "repositoryPermission": "READ",
+      "viewerCanAdminister": false,
+      "viewerDidAuthor": true,
+      "viewerCanUpdate": true,
+      "viewerCanEnableAutoMerge": false,
+      "viewerCanEditFiles": false,
+      "headRepositoryPermission": "READ"
+    },
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  }
+}

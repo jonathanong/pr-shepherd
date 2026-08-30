@@ -69,12 +69,12 @@ Conversations Resolved: No [Not Required]
 1. Review each item under `## Review threads` and `## Failing checks` and decide whether it needs a code change.
 2. Apply every warranted review fix in each file referenced above.
 3. Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for read-only inspection rules.
-4. If you changed code, commit any remaining changes, then stop and hand off for a push whose authorization is established outside Shepherd; do not run review mutations or iterate until the remote PR head changes. If you did not change code, do not commit and continue.
+4. If you changed code, commit any remaining changes and push to the PR head branch, then run review mutations using the pushed commit SHA and iterate again with the same options. If you did not change code, do not commit and continue.
 5. Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an earlier Shepherd reply: a marked viewer-authored human thread is emitted resolve-only when authorized, while a marked other-human thread is already acknowledged and has no further mutation.
-6. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. After changed code, wait for an authorized push and use its SHA.
+6. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, commit and push to the PR head branch first, then replace `$HEAD_SHA` with the pushed commit SHA.
 7. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
 8. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.
-9. `[FIX_CODE]` is conditional: after changed code, stop until an authorized push changes the remote PR head; without code changes, complete the authorized review mutations and iterate again.
+9. `[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run review mutations using the pushed commit SHA and iterate again with the same options; without code changes, complete the authorized review mutations and iterate again.
 ```
 
 See [docs/actions.md](docs/actions.md) for the complete output contract. Iterate/poll PR outcomes use exit codes `0` and `10`–`15`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).
@@ -88,7 +88,7 @@ This system is opinionated and works best with PRs that use required status chec
 - Shepherd identifies its own latest reply only when that comment begins `<!-- pr-shepherd -->`, not from author equality. A marked viewer-authored thread can be resolved without another reply as a retry.
 - Every review thread/comment/review summary is surfaced at least once, even if already outdated, resolved, or minimized; edited items re-surface through seen markers.
 - Draft PRs can be marked ready automatically when clean; disable with `actions.autoMarkReady: false` or `--no-auto-mark-ready`.
-- The CLI never performs git mutations. It may emit local commit guidance, but it does not recommend a push because GitHub viewer fields cannot verify the local Git credential.
+- The CLI never performs git mutations itself — it only emits commit/push instructions for the agent to run. It recommends pushing autonomously (own-repo PRs, and fork PRs where the viewer has push access to the fork) unless GitHub's viewer fields affirmatively report no head-branch push access, in which case it hands the push off to a human instead.
 - Every GitHub mutation is permission-aware. Shepherd uses raw viewer capability fields, omits unauthorized commands, and repeats authorization checks in direct `apply` commands. Missing capability data fails closed.
 - `build_suggestion_patches` turns one or more ordered GitHub suggestion threads into checked patches and commit metadata, but never edits the working tree or git history. Local HEAD may be ahead when the live PR head is its ancestor.
 

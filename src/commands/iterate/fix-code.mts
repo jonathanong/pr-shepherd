@@ -24,7 +24,7 @@ import { applyStallGuard } from "./stall.mts";
 import { annotationMarkerBody, checksWithActionableAnnotations } from "../check-annotations.mts";
 import { threadTranscriptBody } from "../../threads/transcript.mts";
 import { isHumanAuthor, isConfiguredBotAuthor } from "../../comments/authors.mts";
-import { canRerunWorkflows } from "../../checks/conclusions.mts";
+import { canRerunWorkflows, canPushToHead } from "../../checks/conclusions.mts";
 import { loadConfig } from "../../config/load.mts";
 import { formatPrUrl } from "../../pr-reference.mts";
 import type {
@@ -286,29 +286,38 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
   const isBehind = report.mergeStatus.status === "BEHIND";
   const { behindBaseHint } = loadConfig().iterate;
+  // Whether GitHub reports the viewer can push to the PR head branch (own-repo write
+  // access, or a fork with viewerCanEditFiles/head-repo write for a fork PR). Drives
+  // whether the fix instructions push autonomously or hand off for an authorized push —
+  // see canPushToHead.
+  const pushAuthorized = canPushToHead(report.viewerAuthorization);
   // Only surface in-progress runs when a push is plausible — resolution-only and
   // summary-only iterations have no path to a push, so listing runs would prompt
   // unnecessary cancellation.
   const inProgressRunIds: string[] = [];
   const commentMinimizeIds = report.comments.minimizeIds ?? actionableComments.map((c) => c.id);
   const allCommentIds = [...commentMinimizeIds, ...reviewSummaryIds];
-  // Conflict resolution necessarily changes the branch head, but Shepherd cannot verify
-  // authorization for the local Git credential that would publish it. Defer review mutations
-  // until an authorized push updates the PR and a fresh iteration can rebuild SHA-safe commands.
-  const { resolveCommand, resolveOnlyCommand } = hasConflicts
-    ? buildResolveCommand([], [], [], [], [], prReference, botUsernames, [], undefined, [])
-    : buildResolveCommand(
-        threads,
-        resolutionOnlyThreads,
-        allCommentIds,
-        changesRequestedReviews,
-        failingAgentChecks,
-        prReference,
-        botUsernames,
-        ruleAutoResolveThreadIds,
-        report.viewerAuthorization,
-        allThreads,
-      );
+  // Conflict resolution necessarily changes the branch head. When the viewer cannot push,
+  // Shepherd cannot verify authorization for the local Git credential that would publish
+  // it, so review mutations are deferred until an authorized push updates the PR and a
+  // fresh iteration can rebuild SHA-safe commands. When the viewer can push, the agent
+  // pushes as part of this fix_code tick, so mutations can be built normally (SHA-gated
+  // like any other push-requiring tick).
+  const { resolveCommand, resolveOnlyCommand } =
+    hasConflicts && !pushAuthorized
+      ? buildResolveCommand([], [], [], [], [], prReference, botUsernames, [], undefined, [])
+      : buildResolveCommand(
+          threads,
+          resolutionOnlyThreads,
+          allCommentIds,
+          changesRequestedReviews,
+          failingAgentChecks,
+          prReference,
+          botUsernames,
+          ruleAutoResolveThreadIds,
+          report.viewerAuthorization,
+          allThreads,
+        );
   // Safety: if the base branch is unknown, escalate when a push is plausible — the agent
   // would need the correct base to rebase safely. This is a conservative guard, not a
   // prediction that the agent *will* push. Intentionally broader than `pushLikely` above:
@@ -360,6 +369,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     behindBaseHint,
     isBehind,
     report.viewerAuthorization?.viewerCanUpdate === true,
+    pushAuthorized,
   );
   const prospectiveResult = {
     ...base,
