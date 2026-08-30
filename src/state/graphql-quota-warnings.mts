@@ -50,7 +50,8 @@ export async function evaluateWorktreeGraphqlQuotaWarning(
     const previous = await readState(path);
     const evaluated = evaluateGraphqlQuotaWarning(bands, sample, previous, now);
     const warning =
-      evaluated.warning !== undefined && (await claimWarning(path, evaluated.warning, now))
+      evaluated.warning !== undefined &&
+      (await claimWarning(path, evaluated.warning, now, evaluated.state.rearmEpoch))
         ? evaluated.warning
         : undefined;
     await writeState(path, evaluated.state);

@@ -43,6 +43,7 @@ describe("evaluateGraphqlQuotaWarning reset detection", () => {
 
     expect(freshWindow.warning?.thresholdPercent).toBe(30);
     expect(freshWindow.state.warnedThresholds).toEqual([30]);
+    expect(freshWindow.state.rearmEpoch).toBe(1);
   });
 
   it("re-arms on a remaining increase when the prior sample omitted used", () => {
@@ -57,6 +58,26 @@ describe("evaluateGraphqlQuotaWarning reset detection", () => {
 
     expect(freshWindow.warning?.thresholdPercent).toBe(30);
     expect(freshWindow.state.warnedThresholds).toEqual([30]);
+    expect(freshWindow.state.rearmEpoch).toBe(1);
+  });
+
+  it("advances the re-arm epoch on a same-window credential switch so a claim from the prior epoch cannot suppress it", () => {
+    const prior: GraphqlQuotaWarningState = {
+      resource: "graphql",
+      limit: 5000,
+      lastUsed: 4500,
+      lastRemaining: 500,
+      resetAt: 1_700_000_000,
+      warnedThresholds: [30],
+      rearmEpoch: 1,
+    };
+    // resetAt is unchanged, but used dropped (a different credential
+    // sharing the same hourly window) — the policy re-arms without a
+    // window rollover.
+    const rearmed = evaluateGraphqlQuotaWarning(bands, sample(1400, 3600), prior);
+
+    expect(rearmed.warning?.thresholdPercent).toBe(30);
+    expect(rearmed.state.rearmEpoch).toBe(2);
   });
 
   it("does not re-arm for a resetAt-only adjustment", () => {
@@ -77,6 +98,7 @@ describe("evaluateGraphqlQuotaWarning reset detection", () => {
 
     expect(movedReset.warning).toBeUndefined();
     expect(movedReset.state.warnedThresholds).toEqual([30]);
+    expect(movedReset.state.rearmEpoch).toBe(0);
   });
 
   it("re-arms after the prior reset deadline even when shared usage increases", () => {
@@ -97,5 +119,6 @@ describe("evaluateGraphqlQuotaWarning reset detection", () => {
 
     expect(nextWindow.warning?.thresholdPercent).toBe(30);
     expect(nextWindow.state.warnedThresholds).toEqual([30]);
+    expect(nextWindow.state.rearmEpoch).toBe(1);
   });
 });
