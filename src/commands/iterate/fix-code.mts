@@ -24,6 +24,7 @@ import { applyStallGuard } from "./stall.mts";
 import { annotationMarkerBody, checksWithActionableAnnotations } from "../check-annotations.mts";
 import { threadTranscriptBody } from "../../threads/transcript.mts";
 import { isHumanAuthor, isConfiguredBotAuthor } from "../../comments/authors.mts";
+import { canRerunWorkflows } from "../../checks/conclusions.mts";
 import { loadConfig } from "../../config/load.mts";
 import { formatPrUrl } from "../../pr-reference.mts";
 import type {
@@ -236,14 +237,21 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     { owner: repoOwner, repo: repoName, pr: prNumber },
     { headSha, threadAttempts, threadBodyHashes },
   );
-  // GitHub does not expose a per-run viewer capability for cancellation. Fail closed:
-  // do not issue or recommend an Actions mutation based only on repository role.
+  // GitHub does not expose a per-run viewer capability for cancellation, so Shepherd never
+  // issues or recommends a cancellation regardless of repository role. A rerun is different:
+  // GitHub's Actions rerun API requires actions:write, which rides with WRITE+ repo access, so
+  // repositoryPermission is an exact proxy for rerun capability (see canRerunWorkflows).
   const cancelled: string[] = [];
   const baseLookup = validateBaseBranch(report.baseBranch);
   const threads = report.threads.actionable.map(toAgentThread);
   const resolutionOnlyThreads = report.threads.resolutionOnly;
   const actionableComments = report.comments.actionable.map(toAgentComment);
-  const failingAgentChecks = toAgentChecks(failingChecks);
+  const rerunAuthorized = canRerunWorkflows(report.viewerAuthorization);
+  const failingAgentChecks = toAgentChecks(failingChecks).map((c) =>
+    rerunAuthorized && c.runId
+      ? { ...c, rerunCommand: `gh run rerun ${c.runId} -R ${report.repo}` }
+      : c,
+  );
   const checks = [
     ...failingAgentChecks,
     ...toAgentChecks(annotatedExtra).map((c) => ({ ...c, annotationOnly: true as const })),

@@ -76,12 +76,16 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
       const scopeTag = ch.scope
         ? ` [scope: ${ch.scope}${ch.commitOid ? `, commit: ${ch.commitOid}` : ""}]`
         : "";
-      const lines = [`- ${locator} — \`${workflowPrefix}${jobLabel}\`${conclusionTag}${scopeTag}`];
+      const rerunTag = ch.rerunCommand ? " [rerun authorized]" : "";
+      const lines = [
+        `- ${locator} — \`${workflowPrefix}${jobLabel}\`${conclusionTag}${scopeTag}${rerunTag}`,
+      ];
       if (ch.conclusion !== "CANCELLED") {
         if (ch.failedStep) lines.push(`  > ${ch.failedStep}`);
         if (ch.summary) lines.push(`  > ${ch.summary}`);
         if (ch.logExcerpt) lines.push(indentBlockquote(ch.logExcerpt, "  "));
       }
+      if (ch.rerunCommand) lines.push(`  rerun: \`${ch.rerunCommand}\``);
       return lines.join("\n");
     });
     sections.push(bullets.join("\n\n"));
