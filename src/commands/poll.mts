@@ -1,8 +1,9 @@
 import { runIterate } from "./iterate/index.mts";
 import type { IterateCommandOptions, IterateResult } from "../types.mts";
 import { sleep } from "../util/sleep.mts";
+import { withPollApiUsage } from "./poll-run.mts";
 
-interface PollCommandOptions extends IterateCommandOptions {
+export interface PollCommandOptions extends IterateCommandOptions {
   intervalSeconds: number;
   timeoutSeconds: number;
   /** Settle window after first FIX_CODE before returning. Default 60. 0 disables. */
@@ -106,7 +107,11 @@ function writeDebounceProgress(tick: number, elapsedMs: number, remainingMs: num
 }
 
 /** @deprecated Hidden implementation for the legacy `poll` alias. */
-export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> {
+export function runPoll(opts: PollCommandOptions): Promise<IterateResult> {
+  return withPollApiUsage(() => runPollCore(opts));
+}
+
+async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
   const {
     intervalSeconds,
     timeoutSeconds,
@@ -126,11 +131,8 @@ export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> 
   const quietStatus = quietStatusOpt === true;
   const untilTerminal = untilTerminalOpt === true;
   let lastWaitSignature: string | null = null;
-  // When prNumber is omitted, iterateOpts.prNumber starts undefined and each tick would otherwise
-  // re-infer the PR from the current branch. That inference query only matches OPEN PRs, so once
-  // the monitored PR merges it returns nothing and runIterate throws instead of reporting the
-  // terminal CANCEL/merged result. Pin the PR resolved by the first tick so later ticks target it
-  // directly and never re-run branch discovery.
+  // Pin the PR resolved by the first tick. Branch inference only matches OPEN PRs, so repeating
+  // it after merge would throw instead of reporting the terminal result.
   let prNumber = opts.prNumber;
   let debounceUntil: number | null = null;
 
@@ -141,6 +143,7 @@ export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> 
       ...iterateOpts,
       prNumber,
       persistSeen: debounceSeconds === 0 || pastDebounce,
+      deferQuotaWarning: true,
     });
     prNumber ??= lastResult.pr;
 

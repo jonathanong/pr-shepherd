@@ -31,7 +31,7 @@ describe("runResolveMutate — configured bot threads", () => {
         minimizeComments: "all",
         behindBaseHint: "",
       },
-      watch: { readyDelayMinutes: 10 },
+      watch: { readyDelayMinutes: 10, graphqlQuotaWarnings: [] },
       checks: { ciTriggerEvents: ["pull_request", "pull_request_target"] },
       mergeStatus: { blockingReviewerLogins: ["copilot"] },
     });

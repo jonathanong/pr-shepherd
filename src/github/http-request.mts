@@ -2,7 +2,7 @@ import { clearTokenCache, hasCachedToken } from "./http-auth.mts";
 import { isTransportError } from "./http-utils.mts";
 import { sleep } from "../util/sleep.mts";
 
-type RetryLogFn = (status: number, durationMs: number) => void;
+type RetryLogFn = (response: Response, durationMs: number) => void;
 
 const TRANSPORT_RETRY_DELAYS = [250, 500];
 
@@ -29,7 +29,7 @@ export async function requestWithTokenRetry(
 ): Promise<{ res: Response; attempt: number; retryT0: number }> {
   const res = await fetchWithTransportRetry(fn);
   if (res.status === 401 && hasCachedToken()) {
-    onIntermediate?.(401, Math.round(performance.now() - t0));
+    onIntermediate?.(res, Math.round(performance.now() - t0));
     try {
       await res.arrayBuffer();
     } catch {}

@@ -8,12 +8,14 @@ function formatRateLimit(result: ResolveResult): string | null {
   const rateLimit = result.rateLimit;
   if (rateLimit) {
     const details = [
+      typeof rateLimit.resource === "string" ? `resource ${rateLimit.resource}` : null,
       typeof rateLimit.retryAfterSeconds === "number"
         ? `retry after ${rateLimit.retryAfterSeconds}s`
         : null,
       typeof rateLimit.remaining === "number" && typeof rateLimit.limit === "number"
         ? `remaining ${rateLimit.remaining}/${rateLimit.limit}`
         : null,
+      typeof rateLimit.used === "number" ? `used ${rateLimit.used}` : null,
       typeof rateLimit.resetAt === "number"
         ? `reset at ${new Date(rateLimit.resetAt * 1000).toISOString()}`
         : null,

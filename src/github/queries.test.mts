@@ -4,6 +4,8 @@ import {
   BATCH_PR_PAGE_QUERY,
   GET_PR_HEAD_SHA_QUERY,
   GET_PR_BODY_QUERY,
+  PR_NUMBER_BY_BRANCH_QUERY,
+  CHECK_RUN_ANNOTATIONS_QUERY,
   REVIEW_THREAD_COMMENTS_QUERY,
   SUGGESTION_THREADS_QUERY,
 } from "./queries.mts";
@@ -53,5 +55,21 @@ describe("queries — GQL constants load at import time", () => {
     expect(SUGGESTION_THREADS_QUERY).toContain("nodes(ids: $threadIds)");
     expect(SUGGESTION_THREADS_QUERY).toContain("headRefOid");
     expect(SUGGESTION_THREADS_QUERY).toContain("pullRequest");
+  });
+
+  it("selects exact GraphQL query cost telemetry on static query documents", () => {
+    for (const query of [
+      BATCH_PR_QUERY,
+      BATCH_PR_PAGE_QUERY,
+      GET_PR_HEAD_SHA_QUERY,
+      GET_PR_BODY_QUERY,
+      PR_NUMBER_BY_BRANCH_QUERY,
+      CHECK_RUN_ANNOTATIONS_QUERY,
+      REVIEW_THREAD_COMMENTS_QUERY,
+      SUGGESTION_THREADS_QUERY,
+    ]) {
+      expect(query).toContain("_shepherdRateLimit: rateLimit");
+      expect(query).toContain("nodeCount");
+    }
   });
 });

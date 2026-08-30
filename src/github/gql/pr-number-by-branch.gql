@@ -1,4 +1,12 @@
 query PrNumberByBranch($owner: String!, $repo: String!, $branch: String!) {
+  _shepherdRateLimit: rateLimit {
+    cost
+    limit
+    nodeCount
+    remaining
+    resetAt
+    used
+  }
   repository(owner: $owner, name: $repo) {
     pullRequests(headRefName: $branch, states: OPEN, first: 1) {
       nodes {

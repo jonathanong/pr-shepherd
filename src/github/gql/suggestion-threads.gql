@@ -1,4 +1,12 @@
 query SuggestionThreads($owner: String!, $repo: String!, $pr: Int!, $threadIds: [ID!]!) {
+  _shepherdRateLimit: rateLimit {
+    cost
+    limit
+    nodeCount
+    remaining
+    resetAt
+    used
+  }
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
       headRefOid

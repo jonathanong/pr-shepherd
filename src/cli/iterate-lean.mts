@@ -74,6 +74,7 @@ export function projectIterateLean(
     ...((result.supersededNames?.length ?? 0) > 0 && {
       supersededNames: result.supersededNames,
     }),
+    ...(result.quotaWarning && { quotaWarning: result.quotaWarning }),
   };
 
   switch (result.action) {

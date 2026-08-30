@@ -5,9 +5,17 @@ import { EXIT, ShepherdError } from "../exit-codes.mts";
 const execFile = promisify(execFileCb);
 
 let _token: string | undefined;
+let _tokenSource: AuthSource | undefined;
+
+export type AuthSource =
+  | "GH_TOKEN"
+  | "GITHUB_TOKEN"
+  | "gh auth token"
+  | "GITHUB_PERSONAL_ACCESS_TOKEN";
 
 export function _resetTokenCache(): void {
   _token = undefined;
+  _tokenSource = undefined;
 }
 
 export function hasCachedToken(): boolean {
@@ -16,15 +24,23 @@ export function hasCachedToken(): boolean {
 
 export function clearTokenCache(): void {
   _token = undefined;
+  _tokenSource = undefined;
 }
 
-async function resolveToken(): Promise<string> {
-  if (_token) return _token;
+async function resolveToken(): Promise<{ token: string; source: AuthSource }> {
+  if (_token && _tokenSource) return { token: _token, source: _tokenSource };
 
-  const envToken = process.env["GH_TOKEN"] ?? process.env["GITHUB_TOKEN"];
-  if (envToken) {
-    _token = envToken;
-    return _token;
+  const ghToken = process.env["GH_TOKEN"];
+  if (ghToken) {
+    _token = ghToken;
+    _tokenSource = "GH_TOKEN";
+    return { token: _token, source: _tokenSource };
+  }
+  const githubToken = process.env["GITHUB_TOKEN"];
+  if (githubToken) {
+    _token = githubToken;
+    _tokenSource = "GITHUB_TOKEN";
+    return { token: _token, source: _tokenSource };
   }
 
   try {
@@ -32,7 +48,8 @@ async function resolveToken(): Promise<string> {
     const token = stdout.trim();
     if (token) {
       _token = token;
-      return _token;
+      _tokenSource = "gh auth token";
+      return { token: _token, source: _tokenSource };
     }
   } catch {
     // fall through to error
@@ -41,7 +58,8 @@ async function resolveToken(): Promise<string> {
   const codexToken = process.env["GITHUB_PERSONAL_ACCESS_TOKEN"];
   if (codexToken) {
     _token = codexToken;
-    return _token;
+    _tokenSource = "GITHUB_PERSONAL_ACCESS_TOKEN";
+    return { token: _token, source: _tokenSource };
   }
 
   throw new ShepherdError(
@@ -50,12 +68,19 @@ async function resolveToken(): Promise<string> {
   );
 }
 
-export async function makeHeaders(): Promise<Record<string, string>> {
+export async function makeAuthHeaders(): Promise<{
+  headers: Record<string, string>;
+  source: AuthSource;
+}> {
+  const { token, source } = await resolveToken();
   return {
-    Authorization: `Bearer ${await resolveToken()}`,
-    Accept: "application/vnd.github+json",
-    "X-GitHub-Api-Version": "2022-11-28",
-    "User-Agent": "pr-shepherd",
-    "Content-Type": "application/json",
+    source,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      "User-Agent": "pr-shepherd",
+      "Content-Type": "application/json",
+    },
   };
 }

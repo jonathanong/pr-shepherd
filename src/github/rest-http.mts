@@ -1,7 +1,7 @@
 import { appendEntry, nextEntry } from "../log/log-file.mts";
 import { formatRequestEntry, formatResponseEntry } from "../log/session.mts";
 import { GitHubRequestError } from "./errors.mts";
-import { makeHeaders } from "./http-auth.mts";
+import { makeAuthHeaders } from "./http-auth.mts";
 import { requestWithTokenRetry } from "./http-request.mts";
 import {
   parseRateLimit,
@@ -10,6 +10,8 @@ import {
   sanitizeBody,
   type RateLimitInfo,
 } from "./http-utils.mts";
+import { recordApiTelemetry } from "./api-telemetry.mts";
+import { recordIntermediateResponse } from "./http-intermediate.mts";
 
 const BASE_URL = "https://api.github.com";
 const SAFE_GITHUB_REST_PATH = /^\/[A-Za-z0-9._~!$&'()*+,;=:@%/?-]*$/;
@@ -48,22 +50,35 @@ export async function restWithRateLimit<T = unknown>(
   const n = nextEntry();
   appendEntry(formatRequestEntry({ n, kind: "REST", method, url, body }));
   const t0 = performance.now();
+  let authSource = "unknown";
 
   const { res, attempt, retryT0 } = await requestWithTokenRetry(
-    async () =>
-      fetch(url, {
+    async () => {
+      const auth = await makeAuthHeaders();
+      authSource = auth.source;
+      return fetch(url, {
         method,
-        headers: await makeHeaders(),
+        headers: auth.headers,
         body: body !== undefined ? JSON.stringify(body) : undefined,
-      }),
+      });
+    },
     t0,
-    (status, durationMs) =>
-      appendEntry(formatResponseEntry({ n, kind: "REST", method, url, status, durationMs })),
+    (response, durationMs) =>
+      recordIntermediateResponse({
+        n,
+        kind: "REST",
+        method,
+        url,
+        response,
+        durationMs,
+        authSource,
+      }),
   );
 
   const durationMs = Math.round(performance.now() - retryT0);
   const ct = res.headers.get("content-type") ?? "";
   const rateLimit = parseRateLimit(res.headers) ?? undefined;
+  const retryAfterSeconds = parseRetryAfter(res.headers);
 
   if (!res.ok) {
     const text = await res.text();
@@ -77,14 +92,19 @@ export async function restWithRateLimit<T = unknown>(
         durationMs,
         textBody: redactToken(text),
         attempt: attempt > 1 ? attempt : undefined,
+        authSource,
+        rateLimit,
+        retryAfterSeconds,
       }),
     );
+    recordApiTelemetry({ kind: "REST", method, authSource, rateLimit });
     throw new GitHubRequestError(
       `GitHub REST ${method} ${path} failed: ${res.status} ${sanitizeBody(text)}`,
       {
         status: res.status,
         rateLimit,
-        retryAfterSeconds: parseRetryAfter(res.headers),
+        retryAfterSeconds,
+        authSource,
       },
     );
   }
@@ -102,8 +122,12 @@ export async function restWithRateLimit<T = unknown>(
         contentType: ct,
         body: json,
         attempt: attempt > 1 ? attempt : undefined,
+        authSource,
+        rateLimit,
+        retryAfterSeconds,
       }),
     );
+    recordApiTelemetry({ kind: "REST", method, authSource, rateLimit });
     return { data: json, rateLimit };
   }
   appendEntry(
@@ -116,7 +140,11 @@ export async function restWithRateLimit<T = unknown>(
       durationMs,
       contentType: ct || undefined,
       attempt: attempt > 1 ? attempt : undefined,
+      authSource,
+      rateLimit,
+      retryAfterSeconds,
     }),
   );
+  recordApiTelemetry({ kind: "REST", method, authSource, rateLimit });
   return { data: undefined as T, rateLimit };
 }

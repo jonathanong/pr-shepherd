@@ -23,6 +23,12 @@ export interface RateLimitInfo {
   remaining: number;
   limit: number;
   resetAt: number;
+  used?: number;
+  resource?: string;
+  /** Exact GraphQL query cost when the operation selected rateLimit.cost. */
+  cost?: number;
+  /** Exact GraphQL node count when the operation selected rateLimit.nodeCount. */
+  nodeCount?: number;
 }
 
 export function sanitizeBody(body: string): string {
@@ -51,7 +57,16 @@ export function parseRateLimit(headers: Headers): RateLimitInfo | null {
   const limit = Number(lRaw);
   const resetAt = Number(tRaw);
   if (Number.isFinite(remaining) && Number.isFinite(limit) && Number.isFinite(resetAt)) {
-    return { remaining, limit, resetAt };
+    const usedRaw = headers.get("x-ratelimit-used");
+    const used = usedRaw === null ? undefined : Number(usedRaw);
+    const resource = headers.get("x-ratelimit-resource") ?? undefined;
+    return {
+      remaining,
+      limit,
+      resetAt,
+      ...(Number.isFinite(used) && { used }),
+      ...(resource !== undefined && resource !== "" && { resource }),
+    };
   }
   return null;
 }

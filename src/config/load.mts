@@ -11,7 +11,12 @@ const MINIMIZE_COMMENTS_POLICIES = ["all", "bots", "users", "none"] as const;
 
 export type MinimizeCommentsPolicy = (typeof MINIMIZE_COMMENTS_POLICIES)[number];
 
-interface PrShepherdConfig {
+export interface GraphqlQuotaWarningBand {
+  remainingPercent: number;
+  pollIntervalMinutes: number;
+}
+
+export interface PrShepherdConfig {
   /** Optional user classification configuration; preserved for rule consumers. */
   classify?: unknown;
   /** GitHub logins that should be treated as bots even when GitHub reports User/Unknown. */
@@ -41,6 +46,7 @@ interface PrShepherdConfig {
   };
   watch: {
     readyDelayMinutes: number;
+    graphqlQuotaWarnings: GraphqlQuotaWarningBand[];
   };
   resolve: {
     shaPoll: {
@@ -205,6 +211,48 @@ function parseMergeCommandArgs(value: unknown): string[] {
   return strategies.length === 0 ? [...value, "--merge"] : [...value];
 }
 
+function parseGraphqlQuotaWarnings(value: unknown): GraphqlQuotaWarningBand[] {
+  if (!Array.isArray(value)) {
+    throw new Error("Invalid config: watch.graphqlQuotaWarnings must be an array");
+  }
+  const seen = new Set<number>();
+  const parsed = value.map((item, index) => {
+    if (item === null || typeof item !== "object" || Array.isArray(item)) {
+      throw new Error(`Invalid config: watch.graphqlQuotaWarnings[${index}] must be an object`);
+    }
+    const record = item as Record<string, unknown>;
+    const remainingPercent = record["remainingPercent"];
+    const pollIntervalMinutes = record["pollIntervalMinutes"];
+    if (
+      typeof remainingPercent !== "number" ||
+      !Number.isInteger(remainingPercent) ||
+      remainingPercent < 1 ||
+      remainingPercent > 100
+    ) {
+      throw new Error(
+        `Invalid config: watch.graphqlQuotaWarnings[${index}].remainingPercent must be an integer from 1 to 100`,
+      );
+    }
+    if (
+      typeof pollIntervalMinutes !== "number" ||
+      !Number.isFinite(pollIntervalMinutes) ||
+      pollIntervalMinutes <= 0
+    ) {
+      throw new Error(
+        `Invalid config: watch.graphqlQuotaWarnings[${index}].pollIntervalMinutes must be a positive number`,
+      );
+    }
+    if (seen.has(remainingPercent)) {
+      throw new Error(
+        `Invalid config: watch.graphqlQuotaWarnings has duplicate remainingPercent ${remainingPercent}`,
+      );
+    }
+    seen.add(remainingPercent);
+    return { remainingPercent, pollIntervalMinutes };
+  });
+  return parsed.sort((left, right) => right.remainingPercent - left.remainingPercent);
+}
+
 const KNOWN_CONFIG_KEYS = new Set([
   "classify",
   "botUsernames",
@@ -225,7 +273,7 @@ const KNOWN_NESTED_KEYS: Record<string, ReadonlySet<string>> = {
     "minimizeComments",
     "behindBaseHint",
   ]),
-  watch: new Set(["readyDelayMinutes"]),
+  watch: new Set(["readyDelayMinutes", "graphqlQuotaWarnings"]),
   resolve: new Set(["shaPoll"]),
   checks: new Set(["ciTriggerEvents"]),
   mergeStatus: new Set(["blockingReviewerLogins"]),
@@ -328,6 +376,9 @@ export function loadConfig(): PrShepherdConfig {
     config.ignoreChecks = parseIgnoreChecks(config.ignoreChecks);
     config.actions.neverCancelRuns = parseNeverCancelRuns(config.actions.neverCancelRuns);
     if (config.merge) config.merge.commandArgs = parseMergeCommandArgs(config.merge.commandArgs);
+    config.watch.graphqlQuotaWarnings = parseGraphqlQuotaWarnings(
+      config.watch.graphqlQuotaWarnings,
+    );
     config.iterate.minimizeComments = parseMinimizeCommentsPolicy(config.iterate.minimizeComments);
     configCache.set(cwd, config);
     return config;

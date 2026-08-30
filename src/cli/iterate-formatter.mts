@@ -8,37 +8,8 @@ import {
 } from "./iterate-instructions.mts";
 import { formatMergeRequirementLines } from "../merge-status/requirements-format.mts";
 import { appendMergeQueueHeader, formatMergeAction } from "./iterate-merge-formatter.mts";
-
-function formatActivityLine(result: IterateResult): string | null {
-  const activity = result.activity ?? {
-    commitCount: 0,
-    reviewRoundCount: 0,
-    latestCommitCommittedAtUnix: null,
-    reviewItemsSinceLatestCommit: [],
-  };
-  const hasActiveChecks = (result.inProgressChecks?.length ?? 0) > 0;
-  if (
-    activity.commitCount === 0 &&
-    activity.reviewRoundCount === 0 &&
-    activity.reviewItemsSinceLatestCommit.length === 0 &&
-    !hasActiveChecks
-  ) {
-    return null;
-  }
-  const parts = [`${activity.commitCount} commits`, `${activity.reviewRoundCount} review rounds`];
-  if (activity.reviewItemsSinceLatestCommit.length > 0) {
-    parts.push(`${activity.reviewItemsSinceLatestCommit.length} review items since latest commit`);
-  }
-  if (hasActiveChecks) {
-    parts.push(
-      `active: ${result
-        .inProgressChecks!.slice(0, 5)
-        .map((c) => `\`${c.name}\``)
-        .join(", ")}`,
-    );
-  }
-  return `**activity** ${parts.join(" · ")}`;
-}
+import { formatApiUsage, formatQuotaWarning } from "./api-usage-formatter.mts";
+import { formatActivityLine } from "./iterate-activity-formatter.mts";
 
 /**
  * Format an IterateResult as human-readable Markdown.
@@ -145,11 +116,15 @@ export function formatIterateResult(
   const activityLine = formatActivityLine(result);
   if (activityLine) headerLines.push(activityLine);
   const header = headerLines.join("\n");
+  const quotaWarning = formatQuotaWarning(result.quotaWarning);
+  const apiUsage = verbose ? formatApiUsage(result.apiUsage) : null;
+  const telemetrySections = [quotaWarning, apiUsage];
 
   switch (result.action) {
     case "wait":
       return joinSections([
         header,
+        ...telemetrySections,
         adaptIterateLog(result.log),
         `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
       ]);
@@ -157,6 +132,7 @@ export function formatIterateResult(
     case "mark_ready":
       return joinSections([
         header,
+        ...telemetrySections,
         adaptIterateLog(result.log),
         `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
       ]);
@@ -182,6 +158,7 @@ export function formatIterateResult(
       if (activityLine) cancelHeaderLines.push(activityLine);
       return joinSections([
         cancelHeaderLines.join("\n"),
+        ...(apiUsage ? [apiUsage] : []),
         adaptIterateLog(result.log),
         `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
       ]);
@@ -190,11 +167,12 @@ export function formatIterateResult(
     case "escalate":
       return joinSections([
         header,
+        ...(apiUsage ? [apiUsage] : []),
         result.escalate.humanMessage,
         `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
       ]);
 
     case "fix_code":
-      return formatFixCodeResult(header, result);
+      return formatFixCodeResult(joinSections([header, ...telemetrySections]), result);
   }
 }

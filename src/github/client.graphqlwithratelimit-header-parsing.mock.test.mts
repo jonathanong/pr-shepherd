@@ -22,7 +22,12 @@ describe("graphqlWithRateLimit — header parsing", () => {
       json: () => Promise.resolve({ data: {} }),
     });
     const result = await graphqlWithRateLimit("{ q }");
-    expect(result.rateLimit).toEqual({ remaining: 50, limit: 5000, resetAt: 1700000000 });
+    expect(result.rateLimit).toEqual({
+      resource: "graphql",
+      remaining: 50,
+      limit: 5000,
+      resetAt: 1700000000,
+    });
   });
 
   it("returns rateLimit: undefined when no rate-limit headers present", async () => {

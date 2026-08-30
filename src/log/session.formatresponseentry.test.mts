@@ -16,6 +16,32 @@ describe("formatResponseEntry", () => {
     expect(out).toContain('"login":"alice"');
   });
 
+  it("formats authoritative quota metadata and credential provenance", () => {
+    const out = formatResponseEntry({
+      n: 7,
+      kind: "GraphQL",
+      method: "POST",
+      url: "https://api.github.com/graphql",
+      status: 200,
+      durationMs: 50,
+      authSource: "gh auth token",
+      rateLimit: {
+        resource: "graphql",
+        limit: 5000,
+        used: 5002,
+        remaining: 0,
+        resetAt: 1_700_000_000,
+        cost: 8,
+        nodeCount: 42,
+      },
+      body: { data: null },
+    });
+
+    expect(out).toContain("auth-source: `gh auth token`");
+    expect(out).toContain("rate-limit: `graphql` · remaining 0/5000 · used 5002");
+    expect(out).toContain("graphql-query: cost 8 · nodes 42");
+  });
+
   it("formats a failed GraphQL response with textBody", () => {
     const out = formatResponseEntry({
       n: 2,

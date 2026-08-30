@@ -47,6 +47,14 @@ interface PullRequestFilesResponse {
 }
 
 const FILES_QUERY = `query PullRequestFiles($owner: String!, $repo: String!, $pr: Int!, $filesCursor: String) {
+  _shepherdRateLimit: rateLimit {
+    cost
+    limit
+    nodeCount
+    remaining
+    resetAt
+    used
+  }
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
       id

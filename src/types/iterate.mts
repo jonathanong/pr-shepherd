@@ -21,6 +21,7 @@ import type { MergeRequirements } from "./merge-requirements.mts";
 import type { EscalateDetails } from "./escalate.mts";
 import type { MergeCommandPlan } from "./merge-action.mts";
 import type { ProtectedRun } from "./protected-run.mts";
+import type { ApiUsage, GraphqlQuotaWarning } from "./api-usage.mts";
 
 export type ShepherdAction = "wait" | "fix_code" | "mark_ready" | "merge" | "cancel" | "escalate";
 
@@ -63,6 +64,8 @@ export interface IterateResultBase {
   supersededNames?: string[]; // CANCELLED, superseded by a newer same-workflow run; omitted when empty.
   activity?: PrActivitySummary;
   mergeQueue?: import("./merge-queue.mts").MergeQueueReport;
+  apiUsage?: ApiUsage;
+  quotaWarning?: GraphqlQuotaWarning;
 }
 
 interface IterateResultWait extends IterateResultBase {
@@ -168,11 +171,11 @@ export interface IterateCommandOptions extends GlobalOptions {
   noAutoMarkReady?: boolean;
   /** Legacy no-op retained for API compatibility; workflow runs are never cancelled. */
   noAutoCancelActionable?: boolean;
-  /** Override stall timeout seconds. Defaults to config.iterate.stallTimeoutMinutes * 60. */
   stallTimeoutSeconds?: number;
   /** Legacy per-invocation no-op retained for API compatibility. */
   neverCancelRuns?: string[];
   persistSeen?: boolean; // false skips seen-marker writes (poll discarded ticks)
   /** Shepherd through readiness and emit the exact merge/queue command when ready. */
   merge?: boolean;
+  deferQuotaWarning?: boolean;
 }
