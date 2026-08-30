@@ -53,7 +53,12 @@ describe("iterate instruction polling contract", () => {
     const text = formatIterateResult(result);
     expect(text).toContain("## GitHub API quota warning");
     expect(text).toContain("Recommended poll interval: 5 minutes");
+    expect(text).toContain("Recommendation: prefer non-GraphQL `gh` CLI commands");
     expect(textInstructions(result)).toEqual(jsonInstructions(result));
+    expect(textInstructions(result)[0]).toContain("non-GraphQL `gh` CLI commands");
+    expect(textInstructions(result)[0]).toContain(
+      "Resume pr-shepherd after the GraphQL quota resets at 2026-08-30T05:12:29.000Z",
+    );
     expect(textInstructions(result)[0]).toContain(
       "replace any existing interval and timeout flags",
     );
@@ -117,8 +122,13 @@ describe("iterate instruction polling contract", () => {
 
     const output = formatIterateResult(result, { verbose: true });
     expect(output).toContain("## GitHub API quota warning");
+    expect(output).toContain("Recommendation: prefer non-GraphQL `gh` CLI commands");
     expect(output).toContain("## GitHub API usage");
     expect(textInstructions(result)).toEqual(jsonInstructions(result));
+    expect(textInstructions(result).at(-1)).toContain("non-GraphQL `gh` CLI commands");
+    expect(textInstructions(result).at(-1)).toContain(
+      "Resume pr-shepherd after the GraphQL quota resets at 2026-08-30T05:12:29.000Z",
+    );
     expect(textInstructions(result).at(-1)).toContain("no more often than every 2 minutes");
   });
 
@@ -138,6 +148,10 @@ describe("iterate instruction polling contract", () => {
 
     expect(textInstructions(result)).toEqual(jsonInstructions(result));
     expect(textInstructions(result)[0]).toContain("The CLI marked the PR ready for review");
+    expect(textInstructions(result)[0]).toContain("non-GraphQL `gh` CLI commands");
+    expect(textInstructions(result)[0]).toContain(
+      "Resume pr-shepherd after the GraphQL quota resets at 2026-08-30T05:12:29.000Z",
+    );
     expect(textInstructions(result)[0]).toContain("no more often than every 10 minutes");
   });
 });
