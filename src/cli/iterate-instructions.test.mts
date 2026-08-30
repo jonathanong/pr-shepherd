@@ -119,4 +119,23 @@ describe("iterate instruction polling contract", () => {
     expect(textInstructions(result)).toEqual(jsonInstructions(result));
     expect(textInstructions(result).at(-1)).toContain("no more often than every 2 minutes");
   });
+
+  it("applies quota-aware continuation after marking a PR ready", () => {
+    const result: IterateResult = {
+      ...makeIterateResult("mark_ready"),
+      quotaWarning: {
+        resource: "graphql",
+        thresholdPercent: 10,
+        remaining: 400,
+        limit: 5000,
+        resetAt: 1_788_066_749,
+        pollIntervalMinutes: 10,
+        pollTimeoutMinutes: 20,
+      },
+    };
+
+    expect(textInstructions(result)).toEqual(jsonInstructions(result));
+    expect(textInstructions(result)[0]).toContain("The CLI marked the PR ready for review");
+    expect(textInstructions(result)[0]).toContain("no more often than every 10 minutes");
+  });
 });

@@ -19,4 +19,13 @@ describe("formatCliError", () => {
       "GitHub GraphQL error (resource graphql; remaining 0/5000; used 5002; reset 2026-08-30T05:12:29.000Z; credential gh auth token)",
     );
   });
+
+  it("surfaces retry guidance without quota metadata", () => {
+    const error = new GitHubRequestError("GitHub REST error", {
+      status: 429,
+      retryAfterSeconds: 60,
+    });
+
+    expect(formatCliError(error)).toBe("GitHub REST error (retry after 60s)");
+  });
 });

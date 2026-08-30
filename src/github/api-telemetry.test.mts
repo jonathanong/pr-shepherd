@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  mergeGraphqlRateLimit,
   recordApiTelemetry,
   snapshotApiTelemetry,
   summarizeApiTelemetry,
@@ -104,5 +105,19 @@ describe("API telemetry aggregation", () => {
     const [left, right] = await Promise.all([summarize("left"), summarize("right")]);
     expect(left?.credentialSources).toEqual(["left"]);
     expect(right?.credentialSources).toEqual(["right"]);
+  });
+
+  it("ignores malformed GraphQL rate-limit payloads", () => {
+    expect(
+      mergeGraphqlRateLimit(null, {
+        _shepherdRateLimit: {
+          cost: 1,
+          limit: 5000,
+          nodeCount: 1,
+          remaining: 4999,
+          resetAt: "2026-08-30T06:00:00Z",
+        },
+      }),
+    ).toBeNull();
   });
 });

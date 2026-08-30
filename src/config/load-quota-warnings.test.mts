@@ -27,4 +27,24 @@ describe("loadConfig — GraphQL quota warnings", () => {
     const loadConfig = await freshLoadConfig();
     expect(loadConfig().watch.graphqlQuotaWarnings).toEqual([]);
   });
+
+  it.each([
+    ["non-array value", "disabled"],
+    ["non-object band", "\n    - disabled"],
+    ["remaining percent", "\n    - remainingPercent: 0\n      pollIntervalMinutes: 2"],
+    ["poll interval", "\n    - remainingPercent: 20\n      pollIntervalMinutes: 0"],
+    [
+      "duplicate threshold",
+      "\n    - remainingPercent: 20\n      pollIntervalMinutes: 2\n    - remainingPercent: 20\n      pollIntervalMinutes: 5",
+    ],
+  ])("falls back to defaults for an invalid %s", async (_label, bands) => {
+    writeRc(`watch:\n  graphqlQuotaWarnings:${bands.startsWith("\n") ? "" : " "}${bands}\n`);
+    const loadConfig = await freshLoadConfig();
+
+    expect(loadConfig().watch.graphqlQuotaWarnings).toEqual([
+      { remainingPercent: 30, pollIntervalMinutes: 2 },
+      { remainingPercent: 20, pollIntervalMinutes: 5 },
+      { remainingPercent: 10, pollIntervalMinutes: 10 },
+    ]);
+  });
 });
