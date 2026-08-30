@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, expect, it } from "vitest";
 import {
   makeOpts,
@@ -42,12 +43,68 @@ describe("runIterate — merge", () => {
     }
   });
 
+  it("emits an enqueue plan for a merge-queue PR when the viewer can enable auto-merge", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        headSha: "def456",
+        nodeId: "PR_node",
+        mergeStatus: {
+          status: "CLEAN",
+          state: "OPEN",
+          isDraft: false,
+          mergeable: "MERGEABLE",
+          reviewDecision: "APPROVED",
+          blockingBotReviewInProgress: false,
+          mergeStateStatus: "CLEAN",
+          mergeRequirements: {
+            approvals: { current: 1, requiredCount: 1 },
+            conversationsResolved: { resolved: true, unresolvedCount: 0, required: true },
+            mergeQueue: { required: true, enabled: true, inQueue: false },
+          },
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+
+    const result = await runIterate(makeOpts({ merge: true }));
+
+    expect(result.action).toBe("merge");
+    if (result.action === "merge") {
+      expect(result.merge.mode).toBe("queue");
+      expect(result.merge.command.argv).toEqual([
+        "gh",
+        "pr",
+        "merge",
+        "42",
+        "--repo",
+        "owner/repo",
+        "--match-head-commit",
+        "def456",
+      ]);
+      expect(result.merge.queueApiFallbackCommand).toBeDefined();
+    }
+  });
+
   it("escalates queue enrollment when GitHub exposes no exact viewer capability", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "READY",
         headSha: "def456",
         nodeId: "PR_node",
+        viewerAuthorization: {
+          repositoryPermission: "READ",
+          viewerCanAdminister: false,
+          viewerDidAuthor: false,
+          viewerCanUpdate: false,
+          viewerCanEnableAutoMerge: false,
+          viewerCanEditFiles: false,
+          headRepositoryPermission: null,
+        },
         mergeStatus: {
           status: "CLEAN",
           state: "OPEN",
