@@ -22,7 +22,7 @@ function jsonInstructions(result: IterateResult): string[] {
 }
 
 describe("iterate instruction polling contract", () => {
-  it.each(["wait", "mark_ready", "cancel", "escalate"] as const)(
+  it.each(["wait", "mark_ready", "merge", "cancel", "escalate"] as const)(
     "%s text instructions equal the JSON instruction array",
     (action) => {
       const result = makeIterateResult(action);
@@ -84,5 +84,39 @@ describe("iterate instruction polling contract", () => {
     const verbose = formatIterateResult(result, { verbose: true });
     expect(verbose).toContain("## GitHub API usage");
     expect(verbose).toContain("GraphQL measured cost: 2 · unmeasured requests: 1");
+  });
+
+  it("applies quota-aware continuation and verbose usage to merge results", () => {
+    const result: IterateResult = {
+      ...makeIterateResult("merge"),
+      quotaWarning: {
+        resource: "graphql",
+        thresholdPercent: 30,
+        remaining: 1400,
+        limit: 5000,
+        resetAt: 1_788_066_749,
+        pollIntervalMinutes: 2,
+        pollTimeoutMinutes: 4,
+      },
+      apiUsage: {
+        credentialSources: ["GH_TOKEN"],
+        graphql: {
+          resource: "graphql",
+          requestCount: 1,
+          limit: 5000,
+          remaining: 1400,
+          resetAt: 1_788_066_749,
+          measuredQueryCost: 1,
+          unmeasuredRequestCount: 0,
+          nodeCount: 10,
+        },
+      },
+    };
+
+    const output = formatIterateResult(result, { verbose: true });
+    expect(output).toContain("## GitHub API quota warning");
+    expect(output).toContain("## GitHub API usage");
+    expect(textInstructions(result)).toEqual(jsonInstructions(result));
+    expect(textInstructions(result).at(-1)).toContain("no more often than every 2 minutes");
   });
 });

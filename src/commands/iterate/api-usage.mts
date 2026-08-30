@@ -5,7 +5,7 @@ import type { IterateResult } from "../../types.mts";
 import { buildQuotaAwareContinuation } from "../../quota-warning.mts";
 
 function shouldWarn(result: IterateResult): boolean {
-  if (result.action === "wait" || result.action === "mark_ready") return true;
+  if (["wait", "mark_ready", "merge"].includes(result.action)) return true;
   if (result.action !== "fix_code") return false;
   return !result.fix.instructions.some((instruction) =>
     /stop polling|human direction/i.test(instruction),

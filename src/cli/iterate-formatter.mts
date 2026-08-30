@@ -138,7 +138,7 @@ export function formatIterateResult(
       ]);
 
     case "merge":
-      return formatMergeAction(header, result);
+      return formatMergeAction(joinSections([header, ...telemetrySections]), result);
 
     case "cancel": {
       const cancelHeaderLines = [`${heading} — ${result.reason}`, "", baseLine, summaryLine];

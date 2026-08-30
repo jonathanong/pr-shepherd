@@ -14,11 +14,15 @@ export function evaluateGraphqlQuotaWarning(
   bands: GraphqlQuotaWarningBand[],
   sample: Pick<GraphqlApiUsage, "resource" | "limit" | "used" | "remaining" | "resetAt">,
   previous: GraphqlQuotaWarningState | null,
+  observedAt = Date.now() / 1000,
 ): { warning?: GraphqlQuotaWarning; state: GraphqlQuotaWarningState } {
+  const windowRolled =
+    previous !== null && sample.resetAt > previous.resetAt && observedAt >= previous.resetAt;
   const rearm =
     previous === null ||
     previous.resource !== sample.resource ||
     previous.limit !== sample.limit ||
+    windowRolled ||
     (sample.used !== undefined && previous.lastUsed !== undefined
       ? sample.used < previous.lastUsed
       : sample.remaining > previous.lastRemaining);

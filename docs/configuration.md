@@ -194,7 +194,7 @@ Configures low-GraphQL-quota warning bands. Each entry maps a remaining percenta
 
 Shepherd evaluates the authoritative GraphQL response headers without making an extra rate-limit request. When a band is crossed, the next non-terminal agent-visible result includes the raw quota state and transport-specific continuation guidance. Bounded CLI guidance uses a timeout twice the configured interval; MCP and single-tick callers are told how long to wait before the next call. Shepherd does not automatically sleep, retry, or alter the active command.
 
-Each band warns once per worktree and quota window. A new window is detected when GitHub's used count falls or remaining count rises; a changed reset timestamp alone does not re-arm warnings. If the first observed response is already below multiple bands, Shepherd emits only the lowest applicable band and records the higher bands as crossed.
+Each band warns once per worktree and quota window. A new window is detected when GitHub's used count falls, remaining count rises, or GitHub advances the reset timestamp after the prior reset deadline has passed. A reset-time adjustment before the prior deadline does not re-arm warnings. If the first observed response is already below multiple bands, Shepherd emits only the lowest applicable band and records the higher bands as crossed.
 
 ---
 

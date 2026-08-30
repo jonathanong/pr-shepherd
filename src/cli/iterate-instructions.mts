@@ -45,7 +45,9 @@ export function buildSimpleIterateInstructions(
         );
       }
       instructions.push(
-        "Then iterate again with the same options to monitor until the PR merges or needs work.",
+        result.quotaWarning
+          ? buildQuotaAwareContinuation(result.quotaWarning, "After running the merge command.")
+          : "Then iterate again with the same options to monitor until the PR merges or needs work.",
       );
       return instructions;
     }

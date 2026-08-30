@@ -96,9 +96,30 @@ describe("evaluateGraphqlQuotaWarning", () => {
       bands,
       { ...sample(1300, 3700), resetAt: 1_700_000_600 },
       prior,
+      1_699_999_900,
     );
 
     expect(movedReset.warning).toBeUndefined();
     expect(movedReset.state.warnedThresholds).toEqual([30]);
+  });
+
+  it("re-arms after the prior reset deadline even when shared usage increases", () => {
+    const prior: GraphqlQuotaWarningState = {
+      resource: "graphql",
+      limit: 5000,
+      lastUsed: 3600,
+      lastRemaining: 1400,
+      resetAt: 1_700_000_000,
+      warnedThresholds: [30],
+    };
+    const nextWindow = evaluateGraphqlQuotaWarning(
+      bands,
+      { ...sample(1300, 3700), resetAt: 1_700_003_600 },
+      prior,
+      1_700_000_001,
+    );
+
+    expect(nextWindow.warning?.thresholdPercent).toBe(30);
+    expect(nextWindow.state.warnedThresholds).toEqual([30]);
   });
 });

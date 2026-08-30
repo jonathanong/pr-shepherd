@@ -21,10 +21,9 @@ interface GraphqlRateLimitPayload {
 }
 
 const eventStorage = new AsyncLocalStorage<ApiTelemetryEvent[]>();
-const fallbackEvents: ApiTelemetryEvent[] = [];
 
-function events(): ApiTelemetryEvent[] {
-  return eventStorage.getStore() ?? fallbackEvents;
+function events(): ApiTelemetryEvent[] | undefined {
+  return eventStorage.getStore();
 }
 
 /** Isolates a top-level CLI/MCP command while allowing nested iterate ticks to aggregate. */
@@ -34,11 +33,11 @@ export function withApiTelemetryScope<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 export function snapshotApiTelemetry(): number {
-  return events().length;
+  return events()?.length ?? 0;
 }
 
 export function recordApiTelemetry(event: ApiTelemetryEvent): void {
-  events().push({ ...event, rateLimit: event.rateLimit ? { ...event.rateLimit } : undefined });
+  events()?.push({ ...event, rateLimit: event.rateLimit ? { ...event.rateLimit } : undefined });
 }
 
 export function mergeGraphqlRateLimit(
@@ -69,7 +68,8 @@ export function mergeGraphqlRateLimit(
 }
 
 export function summarizeApiTelemetry(snapshot = 0): ApiUsage | undefined {
-  const selected = events().slice(snapshot);
+  const selected = events()?.slice(snapshot);
+  if (selected === undefined) return undefined;
   if (selected.length === 0) return undefined;
   const credentialSources = [...new Set(selected.map((event) => event.authSource))];
   const graphqlEvents = selected.filter((event) => event.kind === "GraphQL");
