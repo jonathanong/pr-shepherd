@@ -96,4 +96,28 @@ describe("restWithRateLimit — conditional requests", () => {
     const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect((init.headers as Record<string, string>)["If-None-Match"]).toBeUndefined();
   });
+
+  it("returns the cached body on a 304 reached after a 401 token-refresh retry", async () => {
+    mockFetch.mockResolvedValueOnce(jsonOkWithEtag({ jobs: [1] }, 'W/"v1"'));
+    await restWithRateLimit("GET", "/repos/o/r/actions/runs/1/jobs", undefined, {
+      conditional: { key: stateKey, name: "jobs-run-1-p1" },
+    });
+
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        headers: new Headers(),
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+        text: () => Promise.resolve("Unauthorized"),
+      })
+      .mockResolvedValueOnce(notModified());
+
+    const result = await restWithRateLimit("GET", "/repos/o/r/actions/runs/1/jobs", undefined, {
+      conditional: { key: stateKey, name: "jobs-run-1-p1" },
+    });
+
+    expect(result.data).toEqual({ jobs: [1] });
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
 });

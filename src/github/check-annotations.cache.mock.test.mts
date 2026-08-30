@@ -73,4 +73,25 @@ describe("fetchCheckRunAnnotations — cross-tick cache", () => {
     await fetchCheckRunAnnotations("CR_1");
     expect(mockGraphql).toHaveBeenCalledTimes(2);
   });
+
+  it("revalidates after the cache TTL elapses, so a publisher that later PATCHes new annotations onto a COMPLETED check run is eventually re-fetched", async () => {
+    vi.useFakeTimers();
+    try {
+      mockPage([rawAnnotation]);
+      await fetchCheckRunAnnotations("CR_1", { stateKey, headSha: "sha1" });
+      expect(mockGraphql).toHaveBeenCalledTimes(1);
+
+      vi.advanceTimersByTime(59 * 60 * 1000);
+      await fetchCheckRunAnnotations("CR_1", { stateKey, headSha: "sha1" });
+      expect(mockGraphql).toHaveBeenCalledTimes(1);
+
+      vi.advanceTimersByTime(2 * 60 * 1000);
+      mockPage([{ ...rawAnnotation, fullDatabaseId: "2" }]);
+      const result = await fetchCheckRunAnnotations("CR_1", { stateKey, headSha: "sha1" });
+      expect(mockGraphql).toHaveBeenCalledTimes(2);
+      expect(result[0]?.id).toBe("check_annotation_2");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

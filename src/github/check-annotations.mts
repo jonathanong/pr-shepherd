@@ -14,6 +14,14 @@ const ANNOTATIONS_PER_PAGE = 100;
 const MAX_ANNOTATION_PAGES = 10;
 const ANNOTATION_TEXT_MAX_CHARS = 4_000;
 const TRUNCATED_SUFFIX = "\n[truncated]";
+/**
+ * Some Checks-API publishers (e.g. SonarCloud) PATCH additional annotations
+ * onto an already-COMPLETED check run without minting a new check-run node
+ * ID, so "COMPLETED" is not a reliable immutability signal on its own. Bound
+ * the cache instead of trusting it forever, so a long-running poll session
+ * eventually revalidates.
+ */
+const ANNOTATION_CACHE_MAX_AGE_MS = 60 * 60 * 1000;
 
 interface RawCheckRunAnnotationsResponse {
   node: {
@@ -54,7 +62,7 @@ export async function fetchCheckRunAnnotations(
   const cacheName = `annotations-${checkRunId}`;
   if (cacheOpts) {
     const cached = await loadDerived<CheckAnnotation[]>(cacheOpts.stateKey, cacheName);
-    if (cached) return cached.value;
+    if (cached && Date.now() - cached.storedAt < ANNOTATION_CACHE_MAX_AGE_MS) return cached.value;
   }
   let cursor: string | null = null;
   const nodes: RawCheckAnnotation[] = [];

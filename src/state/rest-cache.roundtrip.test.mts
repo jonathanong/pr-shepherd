@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { randomBytes } from "node:crypto";
-import { rm } from "node:fs/promises";
+import { randomBytes, createHash } from "node:crypto";
+import { mkdir, readdir, rm } from "node:fs/promises";
 import { loadEtagEntry, storeEtagEntry, loadDerived, storeDerived } from "./rest-cache.mts";
 
 let testStateDir: string;
@@ -55,6 +55,20 @@ describe("rest-cache — etag entries", () => {
     const [file] = await readdir(dir);
     await writeFile(`${dir}/${file}`, "not json", "utf8");
     expect(await loadEtagEntry(testKey, "jobs-run-1-p1")).toBeNull();
+  });
+
+  it("cleans up the temp file when rename fails (directory at destination)", async () => {
+    // Place a directory at the hash-based cache path so rename(tmp, path) throws EISDIR.
+    const dir = `${testStateDir}/test-owner-test-repo/123/rest-cache`;
+    const hash = createHash("sha256").update("jobs-run-1-p1", "utf8").digest("hex");
+    await mkdir(`${dir}/${hash}.json`, { recursive: true });
+
+    await expect(
+      storeEtagEntry(testKey, "jobs-run-1-p1", { etag: 'W/"a"', body: "a" }),
+    ).resolves.toBeUndefined();
+
+    const remaining = await readdir(dir);
+    expect(remaining.filter((f) => f.endsWith(".tmp"))).toHaveLength(0);
   });
 });
 
