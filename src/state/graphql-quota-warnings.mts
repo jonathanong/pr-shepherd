@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, open, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { GraphqlQuotaWarningBand } from "../config/load.mts";
 import type { GraphqlQuotaWarning, GraphqlApiUsage } from "../types.mts";
 import { resolveStateBase } from "./base.mts";
 import { SAFE_SEGMENT } from "../util/path-segment.mts";
 import { getWorktreeKey } from "../util/worktree.mts";
+import { claimWarning } from "./graphql-quota-claims.mts";
 import {
   evaluateGraphqlQuotaWarning,
   type GraphqlQuotaWarningState,
@@ -19,13 +20,14 @@ export async function evaluateWorktreeGraphqlQuotaWarning(
   bands: GraphqlQuotaWarningBand[],
   sample: GraphqlApiUsage,
   persist: boolean,
+  now = Date.now() / 1000,
 ): Promise<GraphqlQuotaWarning | undefined> {
   if (bands.length === 0) return undefined;
   const path = await warningStatePath(key);
   if (path === undefined) {
     const sessionKey = `${key.owner}/${key.repo}`;
     if (!persist) {
-      return evaluateGraphqlQuotaWarning(bands, sample, sessionStates.get(sessionKey) ?? null)
+      return evaluateGraphqlQuotaWarning(bands, sample, sessionStates.get(sessionKey) ?? null, now)
         .warning;
     }
     return serializeStateUpdate(`session:${sessionKey}`, async () => {
@@ -33,6 +35,7 @@ export async function evaluateWorktreeGraphqlQuotaWarning(
         bands,
         sample,
         sessionStates.get(sessionKey) ?? null,
+        now,
       );
       sessionStates.set(sessionKey, evaluated.state);
       return evaluated.warning;
@@ -40,14 +43,15 @@ export async function evaluateWorktreeGraphqlQuotaWarning(
   }
   if (!persist) {
     const previous = await readState(path);
-    return evaluateGraphqlQuotaWarning(bands, sample, previous).warning;
+    return evaluateGraphqlQuotaWarning(bands, sample, previous, now).warning;
   }
 
   return serializeStateUpdate(path, async () => {
     const previous = await readState(path);
-    const evaluated = evaluateGraphqlQuotaWarning(bands, sample, previous);
+    const evaluated = evaluateGraphqlQuotaWarning(bands, sample, previous, now);
     const warning =
-      evaluated.warning !== undefined && (await claimWarning(path, evaluated.warning))
+      evaluated.warning !== undefined &&
+      (await claimWarning(path, evaluated.warning, now, evaluated.state.rearmEpoch))
         ? evaluated.warning
         : undefined;
     await writeState(path, evaluated.state);
@@ -69,47 +73,6 @@ async function serializeStateUpdate<T>(key: string, update: () => Promise<T>): P
     }
   });
   return result;
-}
-
-async function claimWarning(path: string, warning: GraphqlQuotaWarning): Promise<boolean> {
-  const claimsDir = `${path}.claims`;
-  const claimPath = join(
-    claimsDir,
-    `${warning.resetAt}-${warning.limit}-${warning.thresholdPercent}.json`,
-  );
-  let handle: Awaited<ReturnType<typeof open>> | undefined;
-  try {
-    await mkdir(claimsDir, { recursive: true });
-    handle = await open(claimPath, "wx");
-    await handle.writeFile(
-      JSON.stringify({
-        resource: warning.resource,
-        resetAt: warning.resetAt,
-        thresholdPercent: warning.thresholdPercent,
-      }),
-      "utf8",
-    );
-    return true;
-  } catch (error) {
-    // When state storage is unavailable, surfacing the warning is safer than
-    // silently exhausting the credential. EEXIST alone means another process won.
-    return !isAlreadyExists(error);
-  } finally {
-    try {
-      await handle?.close();
-    } catch {
-      // Best-effort claim cleanup is unnecessary: existence is the claim.
-    }
-  }
-}
-
-function isAlreadyExists(error: unknown): boolean {
-  return (
-    error !== null &&
-    typeof error === "object" &&
-    "code" in error &&
-    (error as { code?: unknown }).code === "EEXIST"
-  );
 }
 
 async function warningStatePath(key: { owner: string; repo: string }): Promise<string | undefined> {
