@@ -57,7 +57,9 @@ describe("iterate instruction polling contract", () => {
     expect(textInstructions(result)[0]).toContain(
       "replace any existing interval and timeout flags",
     );
-    expect(textInstructions(result)[0]).toContain("MCP or single-tick iteration");
+    expect(textInstructions(result)[0]).toContain("With a polling CLI command");
+    expect(textInstructions(result)[0]).toContain("With a single-tick CLI, API, or MCP call");
+    expect(textInstructions(result)[0]).toContain("wait at least 5 minutes before the next tick");
     expect(projectIterateLean(result)).toMatchObject({ quotaWarning: result.quotaWarning });
   });
 

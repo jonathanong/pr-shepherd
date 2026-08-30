@@ -8,7 +8,6 @@ import {
   registerPollHooks,
 } from "../../test-helpers/commands/poll.test-support.mts";
 import { runPoll } from "./poll.mts";
-
 registerPollHooks();
 
 describe("runPoll — until-terminal mode", () => {

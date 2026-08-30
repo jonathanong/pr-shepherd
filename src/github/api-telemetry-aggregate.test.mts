@@ -20,8 +20,7 @@ describe("API telemetry bounded aggregation", () => {
           resetAt: 1_700_000_000,
         },
       });
-      // Responses can complete out of order. The newer reset window wins,
-      // and within that window the lowest remaining value is authoritative.
+      // Newest reset wins; within it, lowest remaining is authoritative.
       recordApiTelemetry({
         kind: "GraphQL",
         method: "POST",
@@ -46,7 +45,6 @@ describe("API telemetry bounded aggregation", () => {
           resetAt: 1_700_000_100,
         },
       });
-
       expect(summarizeApiTelemetry()).toMatchObject({
         graphql: { used: 250, remaining: 4750, resetAt: 1_700_000_100 },
       });
@@ -102,7 +100,7 @@ describe("API telemetry bounded aggregation", () => {
     });
   });
 
-  it("keeps the newest REST observation when parent and child scopes overlap", async () => {
+  it("keeps the newest REST quota window when parent and child scopes overlap", async () => {
     await withApiTelemetryScope(async () => {
       let releaseChild!: () => void;
       const childCanFinish = new Promise<void>((resolve) => {
@@ -121,7 +119,8 @@ describe("API telemetry bounded aggregation", () => {
             resource: "core",
             limit: 5000,
             remaining: 4900,
-            resetAt: 1_700_000_000,
+            used: 100,
+            resetAt: 1_700_000_100,
           },
         });
         childRecorded();
@@ -135,7 +134,8 @@ describe("API telemetry bounded aggregation", () => {
         rateLimit: {
           resource: "core",
           limit: 5000,
-          remaining: 4800,
+          remaining: 0,
+          used: 5000,
           resetAt: 1_700_000_000,
         },
       });
@@ -143,11 +143,41 @@ describe("API telemetry bounded aggregation", () => {
       await child;
 
       expect(summarizeApiTelemetry()).toMatchObject({
-        rest: [{ resource: "core", requestCount: 2, remaining: 4800 }],
+        rest: [
+          {
+            resource: "core",
+            requestCount: 2,
+            remaining: 4900,
+            used: 100,
+            resetAt: 1_700_000_100,
+          },
+        ],
       });
     });
   });
 
+  it("uses the lowest remaining, then highest used, within a REST quota window", async () => {
+    await withApiTelemetryScope(async () => {
+      for (const used of [200, 150, 100]) {
+        recordApiTelemetry({
+          kind: "REST",
+          method: "GET",
+          authSource: "token",
+          rateLimit: {
+            resource: "core",
+            limit: 5000,
+            used,
+            remaining: used === 100 ? 4900 : 4800,
+            resetAt: 1_700_000_000,
+          },
+        });
+      }
+
+      expect(summarizeApiTelemetry()).toMatchObject({
+        rest: [{ resource: "core", requestCount: 3, remaining: 4800, used: 200 }],
+      });
+    });
+  });
   it("uses highest used when remaining and reset window tie", async () => {
     await withApiTelemetryScope(async () => {
       for (const used of [undefined, 10, undefined, 5]) {
@@ -164,7 +194,6 @@ describe("API telemetry bounded aggregation", () => {
           },
         });
       }
-
       expect(summarizeApiTelemetry()).toMatchObject({ graphql: { used: 10, remaining: 4990 } });
     });
   });

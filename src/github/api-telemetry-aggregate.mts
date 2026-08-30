@@ -11,10 +11,7 @@ export interface TelemetryAggregate {
     nodeCount: number;
     rateLimit?: RateLimitInfo;
   };
-  rest: Map<
-    string,
-    { requestCount: number; rateLimit?: RateLimitInfo; rateLimitSequence?: number }
-  >;
+  rest: Map<string, { requestCount: number; rateLimit?: RateLimitInfo }>;
 }
 
 export interface SequencedApiTelemetryEvent extends ApiTelemetryEvent {
@@ -61,8 +58,7 @@ export function aggregateEvents(events: SequencedApiTelemetryEvent[]): Telemetry
     const group = aggregate.rest.get(resource) ?? { requestCount: 0 };
     group.requestCount += 1;
     if (event.rateLimit !== undefined) {
-      group.rateLimit = { ...event.rateLimit };
-      group.rateLimitSequence = event.sequence;
+      group.rateLimit = selectAuthoritativeRateLimit(group.rateLimit, event.rateLimit);
     }
     aggregate.rest.set(resource, group);
   }
@@ -90,13 +86,11 @@ export function mergeAggregate(target: TelemetryAggregate, source: TelemetryAggr
   for (const [resource, sourceGroup] of source.rest) {
     const targetGroup = target.rest.get(resource) ?? { requestCount: 0 };
     targetGroup.requestCount += sourceGroup.requestCount;
-    if (
-      sourceGroup.rateLimit !== undefined &&
-      (targetGroup.rateLimitSequence === undefined ||
-        (sourceGroup.rateLimitSequence ?? -1) > targetGroup.rateLimitSequence)
-    ) {
-      targetGroup.rateLimit = { ...sourceGroup.rateLimit };
-      targetGroup.rateLimitSequence = sourceGroup.rateLimitSequence;
+    if (sourceGroup.rateLimit !== undefined) {
+      targetGroup.rateLimit = selectAuthoritativeRateLimit(
+        targetGroup.rateLimit,
+        sourceGroup.rateLimit,
+      );
     }
     target.rest.set(resource, targetGroup);
   }

@@ -37,7 +37,12 @@ Conversations Resolved: <Yes|No> [Required|Not Required]
 
 [## GitHub API quota warning
 
-- Resource, remaining/limit, used count, reset time, crossed threshold, and recommended polling cadence]
+- Resource: `<resource>`
+- Remaining: <remaining>/<limit> [· used <used>]
+- Crossed threshold: <percent>% remaining
+- Reset: <time>
+- Recommended poll interval: <minutes> minutes
+- Recommended bounded CLI timeout: <minutes> minutes]
 
 ## Instructions
 
@@ -73,7 +78,7 @@ Load-bearing conventions (the iterate skill depends on these):
 4. Under `[FIX_CODE]`, the `## Post-fix actions` section has an `` apply review: `<command>` `` bullet when GitHub's viewer capabilities authorize at least one review mutation (and an optional `resolve-only` bullet when applicable). The instructions reference those bullets so the skill strips backticks and runs the command.
 5. Passing check counts are surfaced only via the `**summary**` line — no per-check detail is emitted for passing checks. Failing check detail appears in `## Failing checks` (within `[FIX_CODE]` output). JSON surfaces check data as `checks: RelevantCheck[]` only on `fix_code` actions in lean mode; `--format=json --verbose` includes `checks` on all actions (full IterateResult).
 
-When a configured GraphQL quota threshold is crossed on a non-terminal result, lean Markdown and JSON include a `GitHub API quota warning` / `quotaWarning` block. The final instruction replaces the ordinary immediate continuation with a minimum poll interval, tells CLI callers to replace existing `--interval` and `--timeout` flags, and gives MCP/single-tick callers the equivalent wait. The warning is emitted once per worktree (or process session when no worktree is available) and quota window. It does not alter an active poll's timer; an unbounded `--until-terminal` poll returns the warning so its caller can restart with the recommended cadence. Terminal `cancel`/`escalate` and human-handoff `fix_code` results do not warn because no automated continuation is actionable.
+When a configured GraphQL quota threshold is crossed on a non-terminal result, lean Markdown and JSON include a `GitHub API quota warning` / `quotaWarning` block. The Markdown block includes both `Recommended poll interval` and `Recommended bounded CLI timeout`. The final instruction replaces the ordinary immediate continuation with a minimum poll interval. A polling CLI command replaces existing `--interval` and `--timeout` flags; a single-tick CLI, API, or MCP caller waits before its next tick instead. The warning is emitted once per worktree (or process session when no worktree is available) and quota window. It does not alter an active poll's timer; an unbounded `--until-terminal` poll returns the warning so its caller can restart with the recommended cadence. Terminal `cancel`/`escalate` and human-handoff `fix_code` results do not warn because no automated continuation is actionable.
 
 ---
 
