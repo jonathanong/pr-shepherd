@@ -52,6 +52,8 @@ const warning: GraphqlQuotaWarning = {
   pollIntervalMinutes: 5,
   pollTimeoutMinutes: 10,
 };
+const QUOTA_RESUME_TEXT =
+  "Resume pr-shepherd after the GraphQL quota resets at 2026-08-30T05:12:29.000Z";
 
 type FixCodeResult = Extract<IterateResult, { action: "fix_code" }>;
 
@@ -125,6 +127,7 @@ describe("attachApiUsage", () => {
     const attached = await attachApiUsage(result, true);
     expect(attached).toMatchObject({ apiUsage, quotaWarning: warning, action: "fix_code" });
     if (attached.action !== "fix_code") throw new Error("expected fix_code result");
+    expect(attached.fix.instructions.at(-1)).toContain(QUOTA_RESUME_TEXT);
     expect(attached.fix.instructions.at(-1)).toContain("no more often than every 5 minutes");
     expect(attached.fix.instructions.at(-1)).toContain("--interval 5m --timeout 10m");
   });
@@ -140,8 +143,9 @@ describe("attachApiUsage", () => {
     const completion = attached.fix.instructions.at(-1);
     expect(completion).toContain("if you changed code, stop after committing");
     expect(completion).toContain(
-      "if you did not change code, complete the authorized review mutations. Continue polling",
+      "if you did not change code, complete the authorized review mutations. GitHub's GraphQL API quota is low",
     );
+    expect(completion).toContain(QUOTA_RESUME_TEXT);
     expect(completion).toContain("no more often than every 5 minutes");
     expect(completion).toContain("--interval 5m --timeout 10m");
     expect(completion).not.toContain("iterate again with the same options");
