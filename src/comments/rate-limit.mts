@@ -2,8 +2,10 @@ export interface ResolveRateLimitStop {
   message: string;
   retryAfterSeconds?: number;
   limit?: number;
+  used?: number;
   remaining?: number;
   resetAt?: number;
+  resource?: string;
 }
 
 export function rateLimitFromError(
@@ -12,7 +14,13 @@ export function rateLimitFromError(
 ): ResolveRateLimitStop | null {
   const maybe = err as {
     status?: unknown;
-    rateLimit?: { remaining?: unknown; limit?: unknown; resetAt?: unknown };
+    rateLimit?: {
+      remaining?: unknown;
+      limit?: unknown;
+      used?: unknown;
+      resetAt?: unknown;
+      resource?: unknown;
+    };
     retryAfterSeconds?: unknown;
   };
   const message = err instanceof Error ? err.message : fallbackMessage;
@@ -33,7 +41,13 @@ export function rateLimitFromError(
 export function rateLimitFromGraphQlResult(
   messages: string[],
   meta: {
-    rateLimit?: { remaining?: unknown; limit?: unknown; resetAt?: unknown };
+    rateLimit?: {
+      remaining?: unknown;
+      limit?: unknown;
+      used?: unknown;
+      resetAt?: unknown;
+      resource?: unknown;
+    };
     retryAfterSeconds?: unknown;
     stopOnZeroRemaining?: boolean;
   },
@@ -49,7 +63,13 @@ export function rateLimitFromGraphQlResult(
 function buildRateLimitStop(
   message: string,
   meta: {
-    rateLimit?: { remaining?: unknown; limit?: unknown; resetAt?: unknown };
+    rateLimit?: {
+      remaining?: unknown;
+      limit?: unknown;
+      used?: unknown;
+      resetAt?: unknown;
+      resource?: unknown;
+    };
     retryAfterSeconds?: unknown;
   },
 ): ResolveRateLimitStop {
@@ -57,11 +77,16 @@ function buildRateLimitStop(
   const retryAfterSeconds = finiteNumber(meta.retryAfterSeconds);
   const remaining = finiteNumber(meta.rateLimit?.remaining);
   const limit = finiteNumber(meta.rateLimit?.limit);
+  const used = finiteNumber(meta.rateLimit?.used);
   const resetAt = finiteNumber(meta.rateLimit?.resetAt);
+  const resource =
+    typeof meta.rateLimit?.resource === "string" ? meta.rateLimit.resource : undefined;
   if (retryAfterSeconds !== undefined) stop.retryAfterSeconds = retryAfterSeconds;
   if (limit !== undefined) stop.limit = limit;
+  if (used !== undefined) stop.used = used;
   if (remaining !== undefined) stop.remaining = remaining;
   if (resetAt !== undefined) stop.resetAt = resetAt;
+  if (resource !== undefined) stop.resource = resource;
   return stop;
 }
 

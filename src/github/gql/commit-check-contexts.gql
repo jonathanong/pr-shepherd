@@ -1,4 +1,12 @@
 query CommitCheckContexts($owner: String!, $repo: String!, $oid: String!, $cursor: String) {
+  _shepherdRateLimit: rateLimit {
+    cost
+    limit
+    nodeCount
+    remaining
+    resetAt
+    used
+  }
   repository(owner: $owner, name: $repo) {
     object(expression: $oid) {
       __typename

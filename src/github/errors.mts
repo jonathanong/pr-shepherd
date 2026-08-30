@@ -72,6 +72,7 @@ export class GitHubRequestError extends ShepherdError {
   readonly rateLimit?: RateLimitInfo;
   readonly retryAfterSeconds?: number;
   readonly graphqlErrors?: GitHubGraphQlError[];
+  readonly authSource?: string;
 
   constructor(
     message: string,
@@ -80,6 +81,7 @@ export class GitHubRequestError extends ShepherdError {
       rateLimit?: RateLimitInfo;
       retryAfterSeconds?: number;
       graphqlErrors?: GitHubGraphQlError[];
+      authSource?: string;
       /**
        * Bypasses status-based classification entirely — for callers that already
        * know the failure kind better than the HTTP status can express (e.g. a
@@ -99,5 +101,6 @@ export class GitHubRequestError extends ShepherdError {
     this.rateLimit = opts.rateLimit;
     this.retryAfterSeconds = opts.retryAfterSeconds;
     this.graphqlErrors = opts.graphqlErrors;
+    this.authSource = opts.authSource;
   }
 }

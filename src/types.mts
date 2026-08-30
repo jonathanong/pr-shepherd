@@ -13,3 +13,4 @@ export * from "./types/merge-requirements.mts";
 export * from "./types/merge-action.mts";
 export * from "./types/escalate.mts";
 export * from "./types/merge-queue.mts";
+export * from "./types/api-usage.mts";

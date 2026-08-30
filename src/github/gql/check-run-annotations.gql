@@ -1,4 +1,12 @@
 query CheckRunAnnotations($id: ID!, $cursor: String) {
+  _shepherdRateLimit: rateLimit {
+    cost
+    limit
+    nodeCount
+    remaining
+    resetAt
+    used
+  }
   node(id: $id) {
     __typename
     ... on CheckRun {

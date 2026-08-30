@@ -1,6 +1,14 @@
 # First page only. Extra pages use batch-pr-page.gql so follow-ups do not
 # re-select every connection (GraphQL points scale with possible nodes).
 query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
+  _shepherdRateLimit: rateLimit {
+    cost
+    limit
+    nodeCount
+    remaining
+    resetAt
+    used
+  }
   repository(owner: $owner, name: $repo) {
     viewerPermission
     viewerCanAdminister

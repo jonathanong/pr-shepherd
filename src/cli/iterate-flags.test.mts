@@ -13,7 +13,7 @@ function defaultConfig(): PrShepherdConfig {
   return {
     botUsernames: [],
     ignoreChecks: [],
-    watch: { readyDelayMinutes: 10 },
+    watch: { readyDelayMinutes: 10, graphqlQuotaWarnings: [] },
     iterate: {
       fixAttemptsPerThread: 3,
       stallTimeoutMinutes: 60,

@@ -8,11 +8,11 @@ CLI `PR` accepts a positive number, `owner/repo#N`, or a GitHub pull-request URL
 
 The default output format is Markdown — what the skill receives from the default poll dispatcher and what direct CLI users see. `--format=json` emits the same action data as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
 
-The CLI's default command accepts `--interval`/`--timeout`/`--debounce`/`--quiet-status` (e.g. `pr-shepherd <PR> --interval 60s --timeout 4.5m --quiet-status`), waits while the PR remains in `[WAIT]`, and returns on an agent-facing action. With `--merge`, it continues through `MARK_READY` and returns `MERGE` when the ready-delay completes. Each ordinary `WAIT` tick writes an explicit still-running line to stderr; the final action remains the only stdout result. If `--timeout` expires during WAIT polling, poll returns that final `WAIT` result. `FIX_CODE` is delayed by `--debounce` (default 1m, `0` disables): poll keeps iterating at `--interval` without printing those ticks, then runs one more iterate after the window and returns that result so later review comments and CI failures batch into the same agent-facing tick. Debounce ticks set `persistSeen: false` — seen markers and first-look suppression wait for the post-window tick. `--quiet-status` keeps unchanged WAIT ticks out of agent context. MCP callers invoke one `iterate` tick at a time (no debounce) and let their host schedule the next call.
+The CLI's default command accepts `--interval`/`--timeout`/`--debounce`/`--quiet-status` (e.g. `pr-shepherd <PR> --interval 60s --timeout 4.5m --quiet-status`), waits while the PR remains in `[WAIT]`, and returns on an agent-facing action. With `--merge`, it continues through `MARK_READY` and returns `MERGE` when the ready-delay completes. Each ordinary `WAIT` tick writes an explicit still-running line to stderr; the final action remains the only stdout result. If `--timeout` expires during WAIT polling, poll returns that final `WAIT` result. An `--until-terminal` poll also returns immediately when a non-terminal tick crosses a configured quota-warning band, allowing the caller to restart at the recommended slower interval instead of exhausting the credential. `FIX_CODE` is delayed by `--debounce` (default 1m, `0` disables): poll keeps iterating at `--interval` without printing those ticks, then runs one more iterate after the window and returns that result so later review comments and CI failures batch into the same agent-facing tick. Debounce ticks set `persistSeen: false` — seen markers and first-look suppression wait for the post-window tick. `--quiet-status` keeps unchanged WAIT ticks out of agent context. MCP callers invoke one `iterate` tick at a time (no debounce) and let their host schedule the next call.
 
 Command examples call `pr-shepherd` directly everywhere a follow-up command is emitted.
 
-Pass `--verbose` to get more debug state. In JSON mode, the output starts from the full `IterateResult` shape (all fields, including `baseBranch`, `checks`, `shouldCancel`) and then applies the same instruction projection as lean JSON: non-`fix_code` actions get a top-level `instructions` array, and `fix.instructions` may be rewritten. In Markdown mode, `--verbose` restores the full header summary line (all four counts, `remainingSeconds`, `blockingBotReviewInProgress`, `isDraft`, `shouldCancel` always shown) — but Markdown is structurally different from JSON and does not guarantee field-for-field parity (array fields like `baseBranch` or `checks` are not added to Markdown for actions that do not normally render them). Lean mode is the default because most fields are `false`/`0`/`[]` on a typical healthy tick and add context noise without value.
+Pass `--verbose` to get more debug state. In JSON mode, the output starts from the full `IterateResult` shape (all fields, including `baseBranch`, `checks`, `shouldCancel`, and command-scoped `apiUsage`) and then applies the same instruction projection as lean JSON: non-`fix_code` actions get a top-level `instructions` array, and `fix.instructions` may be rewritten. In Markdown mode, `--verbose` restores the full header summary line and adds `## GitHub API usage`, including credential source labels, request counts, the latest authoritative quota state by resource, and exact measured GraphQL query cost. GraphQL mutations remain counted as unmeasured because GitHub exposes `rateLimit` only on the query root. Markdown is structurally different from JSON and does not guarantee field-for-field parity for unrelated action fields. Lean mode is the default because most fields are `false`/`0`/`[]` on a typical healthy tick and add context noise without value.
 
 **Output shape (every action, default lean format):**
 
@@ -34,6 +34,15 @@ Conversations Resolved: <Yes|No> [Required|Not Required]
 [**queue removal** reason `<reason>` · createdAtUnix `<unix>`[ · actor `@<login>`][ · commit `<oid>`][ · parents `<oid,...>`]]
 
 <action-specific body>
+
+[## GitHub API quota warning
+
+- Resource: `<resource>`
+- Remaining: <remaining>/<limit> [· used <used>]
+- Crossed threshold: <percent>% remaining
+- Reset: <time>
+- Recommended poll interval: <minutes> minutes
+- Recommended bounded CLI timeout: <minutes> minutes]
 
 ## Instructions
 
@@ -68,6 +77,8 @@ Load-bearing conventions (the iterate skill depends on these):
 3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … — that tells the agent exactly what to do. `## Instructions` remains the entry point and the skill needs no dispatch table of its own. Some steps are a one-line pointer naming an invariant procedure instead of inlining it (e.g. `See "CI failure triage" in the pr-shepherd skill`). The pointed-to `## Playbooks` section in the skill is fixed reference material, not per-tick policy — following `## Instructions` and applying the named playbook when pointed to it is still the whole dispatch story.
 4. Under `[FIX_CODE]`, the `## Post-fix actions` section has an `` apply review: `<command>` `` bullet when GitHub's viewer capabilities authorize at least one review mutation (and an optional `resolve-only` bullet when applicable). The instructions reference those bullets so the skill strips backticks and runs the command.
 5. Passing check counts are surfaced only via the `**summary**` line — no per-check detail is emitted for passing checks. Failing check detail appears in `## Failing checks` (within `[FIX_CODE]` output). JSON surfaces check data as `checks: RelevantCheck[]` only on `fix_code` actions in lean mode; `--format=json --verbose` includes `checks` on all actions (full IterateResult).
+
+When a configured GraphQL quota threshold is crossed on a non-terminal result, lean Markdown and JSON include a `GitHub API quota warning` / `quotaWarning` block. The Markdown block includes both `Recommended poll interval` and `Recommended bounded CLI timeout`. The final instruction replaces the ordinary immediate continuation with a minimum poll interval. A polling CLI command replaces existing `--interval` and `--timeout` flags; a single-tick CLI, API, or MCP caller waits before its next tick instead. The warning is emitted once per worktree (or process session when no worktree is available) and quota window. It does not alter an active poll's timer; an unbounded `--until-terminal` poll returns the warning so its caller can restart with the recommended cadence. Terminal `cancel`/`escalate` and human-handoff `fix_code` results do not warn because no automated continuation is actionable.
 
 ---
 

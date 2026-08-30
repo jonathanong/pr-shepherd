@@ -1,9 +1,10 @@
+/* eslint-disable max-lines */
 import { appendEntry, nextEntry } from "../log/log-file.mts";
 import { formatRequestEntry, formatResponseEntry } from "../log/session.mts";
 import { GitHubRequestError, type GitHubGraphQlError } from "./errors.mts";
 import { withGraphQlInternalRetry } from "./graphql-internal-retry.mts";
 import { formatGraphQlErrors, parseGraphQlPayload } from "./graphql-response.mts";
-import { makeHeaders } from "./http-auth.mts";
+import { makeAuthHeaders } from "./http-auth.mts";
 import { requestWithTokenRetry } from "./http-request.mts";
 import {
   parseRateLimit,
@@ -12,6 +13,8 @@ import {
   sanitizeBody,
   type RateLimitInfo,
 } from "./http-utils.mts";
+import { mergeGraphqlRateLimit, recordApiTelemetry } from "./api-telemetry.mts";
+import { recordIntermediateResponse } from "./http-intermediate.mts";
 
 const BASE_URL = "https://api.github.com";
 
@@ -53,23 +56,33 @@ async function graphqlInner<T>(
     }),
   );
   const t0 = performance.now();
+  let authSource = "unknown";
 
   const { res, attempt, retryT0 } = await requestWithTokenRetry(
-    async () =>
-      fetch(url, {
+    async () => {
+      const auth = await makeAuthHeaders();
+      authSource = auth.source;
+      return fetch(url, {
         method: "POST",
-        headers: await makeHeaders(),
+        headers: auth.headers,
         body: JSON.stringify({ query, variables: vars }),
-      }),
+      });
+    },
     t0,
-    (status, durationMs) =>
-      appendEntry(
-        formatResponseEntry({ n, kind: "GraphQL", method: "POST", url, status, durationMs }),
-      ),
+    (response, durationMs) =>
+      recordIntermediateResponse({
+        n,
+        kind: "GraphQL",
+        method: "POST",
+        url,
+        response,
+        durationMs,
+        authSource,
+      }),
   );
 
   const durationMs = Math.round(performance.now() - retryT0);
-  const rateLimit = parseRateLimit(res.headers);
+  const headerRateLimit = parseRateLimit(res.headers);
   const retryAfterSeconds = parseRetryAfter(res.headers);
 
   if (!res.ok) {
@@ -84,11 +97,25 @@ async function graphqlInner<T>(
         durationMs,
         textBody: redactToken(body),
         attempt: attempt > 1 ? attempt : undefined,
+        authSource,
+        rateLimit: headerRateLimit ?? undefined,
+        retryAfterSeconds,
       }),
     );
+    recordApiTelemetry({
+      kind: "GraphQL",
+      method: "POST",
+      authSource,
+      rateLimit: headerRateLimit ?? undefined,
+    });
     throw new GitHubRequestError(
       `GitHub GraphQL request failed: ${res.status} ${sanitizeBody(body)}`,
-      { status: res.status, rateLimit: rateLimit ?? undefined, retryAfterSeconds },
+      {
+        status: res.status,
+        rateLimit: headerRateLimit ?? undefined,
+        retryAfterSeconds,
+        authSource,
+      },
     );
   }
 
@@ -107,14 +134,29 @@ async function graphqlInner<T>(
         durationMs,
         textBody: `Invalid JSON response${detail}`,
         attempt: attempt > 1 ? attempt : undefined,
+        authSource,
+        rateLimit: headerRateLimit ?? undefined,
+        retryAfterSeconds,
       }),
     );
+    recordApiTelemetry({
+      kind: "GraphQL",
+      method: "POST",
+      authSource,
+      rateLimit: headerRateLimit ?? undefined,
+    });
     throw new GitHubRequestError(`GitHub GraphQL response was not valid JSON${detail}`, {
       status: res.status,
-      rateLimit: rateLimit ?? undefined,
+      rateLimit: headerRateLimit ?? undefined,
       retryAfterSeconds,
+      authSource,
     });
   }
+  const parsedData =
+    parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)["data"]
+      : undefined;
+  const rateLimit = mergeGraphqlRateLimit(headerRateLimit, parsedData);
   appendEntry(
     formatResponseEntry({
       n,
@@ -125,8 +167,17 @@ async function graphqlInner<T>(
       durationMs,
       body: parsed,
       attempt: attempt > 1 ? attempt : undefined,
+      authSource,
+      rateLimit: rateLimit ?? undefined,
+      retryAfterSeconds,
     }),
   );
+  recordApiTelemetry({
+    kind: "GraphQL",
+    method: "POST",
+    authSource,
+    rateLimit: rateLimit ?? undefined,
+  });
 
   const payload = parseGraphQlPayload<T>(parsed, res.status, rateLimit, retryAfterSeconds);
   if (payload.data == null) {
@@ -136,6 +187,7 @@ async function graphqlInner<T>(
       rateLimit: rateLimit ?? undefined,
       retryAfterSeconds,
       graphqlErrors: payload.errors,
+      authSource,
     });
   }
   if (payload.errors?.length && !opts.allowPartialData) {
@@ -144,6 +196,7 @@ async function graphqlInner<T>(
       rateLimit: rateLimit ?? undefined,
       retryAfterSeconds,
       graphqlErrors: payload.errors,
+      authSource,
     });
   }
   if (payload.errors?.length) {

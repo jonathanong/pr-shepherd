@@ -1,16 +1,33 @@
 import type { IterateResult } from "../types.mts";
 import { renderMergeCommand } from "../commands/iterate/merge.mts";
 import { inlineCode } from "../util/markdown.mts";
+import { buildQuotaAwareContinuation } from "../quota-warning.mts";
 
 export function buildSimpleIterateInstructions(
   result: Exclude<IterateResult, { action: "fix_code" }>,
 ): string[] {
   switch (result.action) {
     case "wait":
+      if (result.quotaWarning) {
+        return [
+          buildQuotaAwareContinuation(
+            result.quotaWarning,
+            "Non-terminal — no action needed this tick.",
+          ),
+        ];
+      }
       return [
         "Non-terminal — no action needed this tick. Iterate again with the same options to continue.",
       ];
     case "mark_ready":
+      if (result.quotaWarning) {
+        return [
+          buildQuotaAwareContinuation(
+            result.quotaWarning,
+            "The CLI marked the PR ready for review.",
+          ),
+        ];
+      }
       return [
         "The CLI marked the PR ready for review. Iterate again with the same options to continue.",
       ];
@@ -28,7 +45,9 @@ export function buildSimpleIterateInstructions(
         );
       }
       instructions.push(
-        "Then iterate again with the same options to monitor until the PR merges or needs work.",
+        result.quotaWarning
+          ? buildQuotaAwareContinuation(result.quotaWarning, "After running the merge command.")
+          : "Then iterate again with the same options to monitor until the PR merges or needs work.",
       );
       return instructions;
     }

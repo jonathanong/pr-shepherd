@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { PartialApplyError, PrShepherdValidationError } from "../api.mts";
+import { GitHubRequestError } from "../github/errors.mts";
 import { createPrShepherdMcpServer } from "./server.mts";
 
 interface RegisteredTool {
@@ -232,6 +233,57 @@ describe("pr-shepherd MCP server", () => {
       },
     });
     expect(response.content?.[0]?.text).toBe("pr-shepherd error (64): bad input");
+  });
+
+  it("surfaces redacted GitHub quota, retry, and credential details for fatal tool errors", async () => {
+    const error = new GitHubRequestError("GitHub GraphQL error: ghp_supersecret", {
+      status: 429,
+      authSource: "GH_TOKEN",
+      retryAfterSeconds: 60,
+      rateLimit: {
+        resource: "graphql",
+        limit: 5_000,
+        used: 5_002,
+        remaining: 0,
+        resetAt: 1_788_066_749,
+      },
+    });
+    const server = createPrShepherdMcpServer({
+      shepherd: {
+        iterate: vi.fn().mockRejectedValue(error),
+        apply: vi.fn(),
+        buildSuggestionPatches: vi.fn(),
+        buildSuggestionPatch: vi.fn(),
+      },
+    });
+
+    const response = await registeredTools(server).iterate!.handler({
+      pr: "openai/pr-shepherd#3",
+    });
+
+    expect(response).toMatchObject({
+      isError: true,
+      structuredContent: {
+        code: 75,
+        message:
+          "GitHub GraphQL error: [redacted] (resource graphql; remaining 0/5000; used 5002; reset 2026-08-30T05:12:29.000Z; retry after 60s; credential GH_TOKEN)",
+        details: {
+          github: {
+            rateLimit: {
+              resource: "graphql",
+              limit: 5000,
+              used: 5002,
+              remaining: 0,
+              resetAt: 1_788_066_749,
+            },
+            retryAfterSeconds: 60,
+            credential: "GH_TOKEN",
+          },
+        },
+      },
+    });
+    expect(response.content?.[0]?.text).toContain("retry after 60s");
+    expect(JSON.stringify(response)).not.toContain("ghp_supersecret");
   });
 
   it("formats all ordered apply results and suggestion patches", async () => {

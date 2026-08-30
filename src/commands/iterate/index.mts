@@ -20,8 +20,13 @@ import { buildReadyMergeResult, handleActiveMergeState } from "./merge-state.mts
 import { buildIterateBase } from "./base.mts";
 import { markReadyIfAuthorized } from "./mark-ready.mts";
 import type { IterateCommandOptions, IterateResult } from "../../types.mts";
+import { withIterateApiUsage } from "./run.mts";
 
-export async function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
+export function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
+  return withIterateApiUsage(opts, () => runIterateCore(opts));
+}
+
+async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResult> {
   const config = loadConfig();
   const botUsernames = normalizeBotUsernames(config.botUsernames);
   const readyDelaySeconds = opts.readyDelaySeconds ?? config.watch.readyDelayMinutes * 60;
@@ -75,8 +80,7 @@ export async function runIterate(opts: IterateCommandOptions): Promise<IterateRe
       [...report.threads.actionable, ...report.threads.resolutionOnly],
       report.ruleAutoResolveReviewSummaryIds,
     );
-  // Already-seen review summaries have no new content to surface — minimize them
-  // in-process so they never register as agent-facing actionable work (#313).
+  // Minimize already-seen review summaries in-process so they never become agent-facing work.
   // GitHub can still return a null/error/rate-limit result per ID without
   // throwing (autoMinimizeComments reports this via `errors`, not a rejection);
   // any ID it did not confirm minimized falls back into the agent-facing set so

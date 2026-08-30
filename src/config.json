@@ -22,7 +22,12 @@
     "behindBaseHint": ""
   },
   "watch": {
-    "readyDelayMinutes": 10
+    "readyDelayMinutes": 10,
+    "graphqlQuotaWarnings": [
+      { "remainingPercent": 30, "pollIntervalMinutes": 2 },
+      { "remainingPercent": 20, "pollIntervalMinutes": 5 },
+      { "remainingPercent": 10, "pollIntervalMinutes": 10 }
+    ]
   },
   "resolve": {
     "shaPoll": {

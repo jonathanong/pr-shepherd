@@ -11,6 +11,8 @@ pr-shepherd accepts a GitHub personal access token (PAT) from the environment or
 3. `gh auth token`
 4. `GITHUB_PERSONAL_ACCESS_TOKEN`
 
+Verbose API telemetry and GitHub request failures report the selected source label, never the token value. GraphQL and REST requests in one process use the same resolved credential. GitHub meters GraphQL separately from REST `core`, while multiple credentials belonging to the same user may still share the user's quota.
+
 Fine-grained PATs are recommended. Select the repository that contains the pull request and grant these repository permissions for the complete pr-shepherd workflow:
 
 | Permission      | Access         | Used for                                                                                                                                                                                                      |

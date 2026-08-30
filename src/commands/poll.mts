@@ -1,8 +1,8 @@
 import { runIterate } from "./iterate/index.mts";
 import type { IterateCommandOptions, IterateResult } from "../types.mts";
 import { sleep } from "../util/sleep.mts";
-
-interface PollCommandOptions extends IterateCommandOptions {
+import { withPollApiUsage } from "./poll-run.mts";
+export interface PollCommandOptions extends IterateCommandOptions {
   intervalSeconds: number;
   timeoutSeconds: number;
   /** Settle window after first FIX_CODE before returning. Default 60. 0 disables. */
@@ -10,9 +10,7 @@ interface PollCommandOptions extends IterateCommandOptions {
   quietStatus?: boolean;
   untilTerminal?: boolean;
 }
-
 const DEFAULT_POLL_DEBOUNCE_SECONDS = 60;
-
 function writeTickProgress(
   tick: number,
   elapsedSeconds: number,
@@ -29,7 +27,6 @@ function writeTickProgress(
     );
   }
 }
-
 function waitSignature(result: IterateResult): string {
   const activity = result.activity ?? {
     commitCount: 0,
@@ -49,7 +46,6 @@ function waitSignature(result: IterateResult): string {
     reviewItemsSinceLatestCommit: activity.reviewItemsSinceLatestCommit.length,
   });
 }
-
 function writeQuietStatus(
   tick: number,
   elapsedSeconds: number,
@@ -69,7 +65,6 @@ function writeQuietStatus(
     `[poll tick ${tick} / +${elapsedSeconds}s] WAIT ${result.status}/${result.mergeStateStatus}/${result.reviewDecision ?? "NO_REVIEW_DECISION"}${active}${commitSeg}${reviewRoundSeg}${reviewSeg} — sleeping ${sleepSeconds}s\n`,
   );
 }
-
 const MAX_TIMER_MS = 2 ** 31 - 1;
 const TIMER_DRIFT_TOLERANCE_MS = 500;
 
@@ -84,19 +79,16 @@ function writeWaitProgress(opts: {
 }): string | null {
   const elapsedSeconds = Math.round(opts.elapsedMs / 1000);
   const sleepSeconds = Math.round(opts.sleepMs / 1000);
-
   if (!opts.quietStatus) {
     writeTickProgress(opts.tick, elapsedSeconds, sleepSeconds, opts.verbose);
     return opts.lastWaitSignature;
   }
-
   const signature = waitSignature(opts.result);
   if (signature !== opts.lastWaitSignature) {
     writeQuietStatus(opts.tick, elapsedSeconds, sleepSeconds, opts.result);
   }
   return signature;
 }
-
 function writeDebounceProgress(tick: number, elapsedMs: number, remainingMs: number): void {
   const elapsedSeconds = Math.round(elapsedMs / 1000);
   const remainingSeconds = Math.round(remainingMs / 1000);
@@ -104,9 +96,11 @@ function writeDebounceProgress(tick: number, elapsedMs: number, remainingMs: num
     `[poll tick ${tick} / +${elapsedSeconds}s] FIX_CODE — debounce ${remainingSeconds}s remaining\n`,
   );
 }
-
 /** @deprecated Hidden implementation for the legacy `poll` alias. */
-export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> {
+export function runPoll(opts: PollCommandOptions): Promise<IterateResult> {
+  return withPollApiUsage(() => runPollCore(opts), opts.untilTerminal === true);
+}
+async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
   const {
     intervalSeconds,
     timeoutSeconds,
@@ -126,14 +120,10 @@ export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> 
   const quietStatus = quietStatusOpt === true;
   const untilTerminal = untilTerminalOpt === true;
   let lastWaitSignature: string | null = null;
-  // When prNumber is omitted, iterateOpts.prNumber starts undefined and each tick would otherwise
-  // re-infer the PR from the current branch. That inference query only matches OPEN PRs, so once
-  // the monitored PR merges it returns nothing and runIterate throws instead of reporting the
-  // terminal CANCEL/merged result. Pin the PR resolved by the first tick so later ticks target it
-  // directly and never re-run branch discovery.
+  let pendingQuotaWarning: IterateResult["quotaWarning"];
+  // Pin the PR resolved by the first tick; branch inference only matches OPEN PRs.
   let prNumber = opts.prNumber;
   let debounceUntil: number | null = null;
-
   while (true) {
     tick += 1;
     const pastDebounce = debounceUntil !== null && Date.now() >= debounceUntil;
@@ -141,18 +131,39 @@ export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> 
       ...iterateOpts,
       prNumber,
       persistSeen: debounceSeconds === 0 || pastDebounce,
+      // Until-terminal must persist before deciding to return.
+      deferQuotaWarning: !untilTerminal,
     });
     prNumber ??= lastResult.pr;
-
+    if (lastResult.quotaWarning !== undefined) pendingQuotaWarning = lastResult.quotaWarning;
+    if (
+      untilTerminal &&
+      pendingQuotaWarning !== undefined &&
+      !(lastResult.action === "fix_code" && debounceSeconds > 0 && !pastDebounce) &&
+      !(debounceUntil !== null && !pastDebounce)
+    ) {
+      const terminalOrHandoff =
+        ["cancel", "escalate"].includes(lastResult.action) ||
+        (lastResult.action === "fix_code" &&
+          lastResult.fix.instructions.some((instruction) =>
+            /stop polling|human direction/i.test(instruction),
+          ));
+      if (terminalOrHandoff) {
+        const { quotaWarning: _quotaWarning, ...withoutQuotaWarning } = lastResult;
+        lastResult = withoutQuotaWarning;
+      } else if (lastResult.quotaWarning === undefined) {
+        lastResult = { ...lastResult, quotaWarning: pendingQuotaWarning };
+      }
+      break;
+    }
     if (lastResult.action === "wait" && !pastDebounce) {
-      debounceUntil = null;
+      if (pendingQuotaWarning === undefined) debounceUntil = null;
       const elapsedMs = Date.now() - start;
       if (!untilTerminal) {
         const remainingMs = timeoutMs - elapsedMs;
         if (remainingMs <= 0) break;
         if (remainingMs + TIMER_DRIFT_TOLERANCE_MS < intervalMs) break;
       }
-
       lastWaitSignature = writeWaitProgress({
         tick,
         elapsedMs,
@@ -165,7 +176,6 @@ export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> 
       await sleep(intervalMs);
       continue;
     }
-
     if (
       (untilTerminal || iterateOpts.merge) &&
       lastResult.action === "mark_ready" &&
@@ -175,7 +185,6 @@ export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> 
       await sleep(intervalMs);
       continue;
     }
-
     if (lastResult.action === "fix_code" && debounceSeconds > 0 && !pastDebounce) {
       debounceUntil ??= Date.now() + debounceMs;
       const remainingMs = debounceUntil - Date.now();
@@ -183,14 +192,9 @@ export async function runPoll(opts: PollCommandOptions): Promise<IterateResult> 
         writeDebounceProgress(tick, Date.now() - start, remainingMs);
         await sleep(Math.min(intervalMs, remainingMs));
       }
-      // Always continue so a tick that *started* before debounceUntil but *finished*
-      // after it cannot return with persistSeen: false. The next loop iteration
-      // sees pastDebounce and persists.
       continue;
     }
-
     break;
   }
-
   return lastResult!;
 }

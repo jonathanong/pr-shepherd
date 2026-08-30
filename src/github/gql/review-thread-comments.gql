@@ -1,4 +1,12 @@
 query ReviewThreadComments($threadId: ID!, $commentsCursor: String) {
+  _shepherdRateLimit: rateLimit {
+    cost
+    limit
+    nodeCount
+    remaining
+    resetAt
+    used
+  }
   node(id: $threadId) {
     __typename
     ... on PullRequestReviewThread {

@@ -84,13 +84,15 @@ rm $TMPDIR/pr-shepherd-state/acme-myrepo/42/ready-since.txt
 
 **Symptom:** Shepherd errors with `API rate limit exceeded` or `secondary rate limit`.
 
-**Cause:** Too many API calls. Common when non-terminal ticks are scheduled too aggressively or many large PRs are being watched at once.
+**Cause:** GitHub maintains separate primary resources, including GraphQL and REST `core`. Shepherd's normal PR snapshot is GraphQL; Actions jobs/logs and the mergeability fallback are the permitted REST paths. Exhausting one resource does not imply that the other is exhausted.
 
 **Fix options:**
 
-1. Pause or cancel the monitor loop if API budget is tight, or increase `poll --interval` / reduce `poll --timeout` / `--debounce` for explicit poll sessions.
-2. Check rate-limit metadata in JSON output or the per-worktree log.
-3. For `resolve` mutate output, retry only the IDs listed under `Not resolved`,
+1. Read the fatal error's resource, remaining/limit, reset time, and credential source. Response headers are authoritative; no extra `/rate_limit` request is needed.
+2. Use `--verbose` for command-scoped API usage, or inspect the per-worktree log for every response's quota headers and credential source.
+3. Follow a `quotaWarning` interval when present. Configure the bands with `watch.graphqlQuotaWarnings`; Shepherd recommends but does not automatically change polling.
+4. Pause the monitor loop if the resource is exhausted.
+5. For `resolve` mutate output, retry only the IDs listed under `Not resolved`,
    `Not minimized`, or `Not dismissed`; IDs listed as completed already succeeded.
 
 ---

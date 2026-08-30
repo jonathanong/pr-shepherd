@@ -41,6 +41,13 @@ iterate:
 
 watch:
   readyDelayMinutes: 10 # settle window after PR first becomes READY
+  graphqlQuotaWarnings:
+    - remainingPercent: 30
+      pollIntervalMinutes: 2
+    - remainingPercent: 20
+      pollIntervalMinutes: 5
+    - remainingPercent: 10
+      pollIntervalMinutes: 10
 
 resolve:
   shaPoll:
@@ -83,6 +90,7 @@ actions:
 | `iterate.minimizeComments`           | `"all"`                                   | Which non-human GitHub author classes to minimize for PR comments and review summaries: `all`, `bots`, or `none`; humans are never minimized.               |
 | `iterate.behindBaseHint`             | `""`                                      | One-liner shown on the `fix_code` push step when the branch is behind its base; empty omits the hint entirely                                               |
 | `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                                                                                   |
+| `watch.graphqlQuotaWarnings`         | `30% → 2m, 20% → 5m, 10% → 10m`           | One-time per-worktree GraphQL quota warnings and their recommended minimum poll intervals; `[]` disables                                                    |
 | `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                                                            |
 | `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                                                                                  |
 | `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR-head CI; merge-queue `merge_group` checks are included automatically                                                    |
@@ -179,6 +187,14 @@ Empty (default) omits the hint entirely.
 After the PR first reaches a clean READY handoff (checks green, no Shepherd-visible work, no blocking bot review pending), shepherd continues to loop for this many minutes before cancelling. This settle window gives reviewers time to request changes or for a configured blocking reviewer to finish.
 
 The ready-delay countdown resets if the PR drops out of that handoff state at any tick. Lifecycle: [iterate-flow.md](iterate-flow.md#2-ready-delay).
+
+### `watch.graphqlQuotaWarnings`
+
+Configures low-GraphQL-quota warning bands. Each entry maps a remaining percentage to a recommended minimum polling interval in minutes. Defaults are 30% → 2 minutes, 20% → 5 minutes, and 10% → 10 minutes. Set the array to `[]` to disable warnings.
+
+Shepherd evaluates the authoritative GraphQL response headers without making an extra rate-limit request. When a band is crossed, the next non-terminal agent-visible result includes the raw quota state and transport-specific continuation guidance. Bounded CLI guidance uses a timeout twice the configured interval; MCP and single-tick callers are told how long to wait before the next call. Shepherd does not automatically sleep, retry, or alter the active command.
+
+Each band warns once per worktree and quota window. A new window is detected when GitHub's used count falls, remaining count rises, or GitHub advances the reset timestamp after the prior reset deadline has passed. A reset-time adjustment before the prior deadline does not re-arm warnings. If the first observed response is already below multiple bands, Shepherd emits only the lowest applicable band and records the higher bands as crossed.
 
 ---
 

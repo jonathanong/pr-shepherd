@@ -39,6 +39,17 @@ interface HttpResponseEntry {
   contentLength?: number;
   /** Set on 401-retry invocations. */
   attempt?: number;
+  authSource?: string;
+  rateLimit?: {
+    resource?: string;
+    limit: number;
+    used?: number;
+    remaining: number;
+    resetAt: number;
+    cost?: number;
+    nodeCount?: number;
+  };
+  retryAfterSeconds?: number;
 }
 
 const _maxBodyRaw = Number(process.env["PR_SHEPHERD_LOG_MAX_BODY"]);
@@ -106,6 +117,30 @@ export function formatResponseEntry(entry: HttpResponseEntry): string {
         : `REST response — ${entry.status}${attempt} · ${entry.durationMs}ms`;
 
   let out = `### #${entry.n} ${label} · ${ts}\n\n`;
+
+  if (entry.authSource !== undefined) out += `auth-source: \`${entry.authSource}\`\n`;
+  if (entry.rateLimit !== undefined) {
+    const used = entry.rateLimit.used !== undefined ? ` · used ${entry.rateLimit.used}` : "";
+    const resource = entry.rateLimit.resource ?? "unknown";
+    out += `rate-limit: \`${resource}\` · remaining ${entry.rateLimit.remaining}/${entry.rateLimit.limit}${used} · reset ${new Date(entry.rateLimit.resetAt * 1000).toISOString()}\n`;
+    if (entry.rateLimit.cost !== undefined || entry.rateLimit.nodeCount !== undefined) {
+      const parts = [
+        entry.rateLimit.cost !== undefined ? `cost ${entry.rateLimit.cost}` : null,
+        entry.rateLimit.nodeCount !== undefined ? `nodes ${entry.rateLimit.nodeCount}` : null,
+      ].filter(Boolean);
+      out += `graphql-query: ${parts.join(" · ")}\n`;
+    }
+  }
+  if (entry.retryAfterSeconds !== undefined) {
+    out += `retry-after: ${entry.retryAfterSeconds}s\n`;
+  }
+  if (
+    entry.authSource !== undefined ||
+    entry.rateLimit !== undefined ||
+    entry.retryAfterSeconds !== undefined
+  ) {
+    out += "\n";
+  }
 
   if (entry.kind === "restText") {
     if (entry.contentLength !== undefined) {
