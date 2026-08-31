@@ -71,7 +71,7 @@ The shipped skill runs the **poll** command `pr-shepherd`, not `pr-shepherd iter
 
 **What:** `updateReadyDelay(pr, isCleanReadyState, readyDelaySeconds, owner, repo)` reads/writes `ready-since.txt`.
 
-A clean ready state means `status === "READY"` and `hasActionableWork` is false. That includes BLOCKED/UNSTABLE states where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending).
+A clean ready state means `status === "READY"`, `hasActionableWork` is false, and no active auto-merge or merge-queue state is being handled. That includes BLOCKED/UNSTABLE states where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending).
 
 - On the first clean ready sweep: creates the file with the current timestamp.
 - On subsequent clean ready sweeps: checks if `now − readySince >= readyDelaySeconds`. If so, `shouldCancel: true`.
