@@ -115,7 +115,7 @@ CONFLICTS is included so merge conflicts and review comments can be handled in o
 
 **Side-effects:** No workflow-run cancellation. GitHub exposes no exact viewer capability for cancel/rerun actions, so Shepherd only surfaces failure context for inspection.
 
-**Emits:** `action: 'fix_code'`. If every remaining failing check lacks both included evidence and an authorized rerun, and no other autonomous work remains, `handleFixCode` instead emits `action: 'escalate'` with trigger `check-follow-up-unavailable` and the raw check context. Every emitted `fix_code` is non-terminal and runs through the stall guard.
+**Emits:** `action: 'fix_code'`. A non-empty external check URL counts as an autonomous investigation path and remains `fix_code`. If no other autonomous work remains and every failing check instead requires a human-only action or lacks a usable locator/evidence and an authorized rerun, `handleFixCode` emits `action: 'escalate'` with trigger `check-follow-up-unavailable` and the raw check context. Every emitted `fix_code` is non-terminal and runs through the stall guard.
 
 ---
 

@@ -58,7 +58,7 @@ When several bullets share one runId (matrix jobs from the same run), the `rerun
 | `[conclusion: CANCELLED]`                                                | No log excerpt is rendered. Run the printed `rerun:` command, then iterate again once it completes. Without a command, complete any other work and iterate; Shepherd escalates when this remains the only blocker.                                |
 | `[conclusion: STARTUP_FAILURE]`                                          | No log excerpt is rendered. Run the printed `rerun:` command, then iterate again once it completes. Without a command, complete any other work and iterate; Shepherd escalates when this remains the only blocker.                                |
 | `[conclusion: ACTION_REQUIRED]`                                          | This appears in `[FIX_CODE]` only alongside other autonomous work. Complete that work and iterate; Shepherd returns `[ESCALATE]` if manual workflow approval remains necessary.                                                                   |
-| `external` (no run ID, has a URL)                                        | Preserve the URL, complete any other surfaced work, and iterate. Shepherd returns `[ESCALATE]` when the external check remains the only blocker.                                                                                                  |
+| `external` (no run ID, has a URL)                                        | Treat the URL as an autonomous investigation path: inspect the provider or reproduce the failure locally, apply any warranted fix, and iterate. A non-empty external URL does not trigger `[ESCALATE]` by itself.                                 |
 
 ### Review-mutation mechanics
 

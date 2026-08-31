@@ -63,7 +63,10 @@ function checkRequiresHumanFollowUp(check: AgentCheck): boolean {
     check.conclusion === "STARTUP_FAILURE"
   )
     return true;
-  if (check.runId === null) return true;
+  // An external check's direct URL is actionable evidence: the agent can inspect the
+  // provider and/or reproduce the reported failure locally. Only a truly bare check
+  // has no autonomous investigation path.
+  if (check.runId === null) return !check.detailsUrl?.trim();
   return !check.logExcerpt?.trim();
 }
 

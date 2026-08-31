@@ -99,6 +99,7 @@ describe("escalate message helpers", () => {
             failedStep: "Approve deployment",
             summary: "Waiting for approval",
             logExcerpt: "manual approval required",
+            scope: "merge_group",
             annotations: [
               {
                 id: "annotation-1",
@@ -126,6 +127,7 @@ describe("escalate message helpers", () => {
     expect(message).toContain("ACTION_REQUIRED");
     expect(message).toContain("Approve deployment");
     expect(message).toContain("manual approval required");
+    expect(message).toContain("scope `merge_group`");
     expect(message).toContain("annotation-1");
     expect(message).toContain("src/a.ts:4-5");
     expect(message).toContain("environment: production");

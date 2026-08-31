@@ -22,8 +22,8 @@ function makeActionableCheck(runId: string, name = "typecheck") {
   };
 }
 
-describe("runIterate — mixed check escalation", () => {
-  it("preserves every check when all variants require human follow-up", async () => {
+describe("runIterate — mixed check follow-up", () => {
+  it("keeps all checks in FIX_CODE when an external URL is actionable", async () => {
     const ghActionsCheck = makeActionableCheck("run-77", "lint");
     const externalCheck = {
       name: "codecov/patch",
@@ -65,13 +65,15 @@ describe("runIterate — mixed check escalation", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("escalate");
-    if (result.action === "escalate") {
-      expect(result.escalate.triggers).toEqual(["check-follow-up-unavailable"]);
-      expect(result.escalate.checks).toHaveLength(3);
-      expect(result.escalate.humanMessage).toContain("run-77");
-      expect(result.escalate.humanMessage).toContain("https://app.codecov.io/...");
-      expect(result.escalate.humanMessage).toContain("no run ID or URL");
-    }
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.checks).toHaveLength(3);
+    expect(result.fix.checks.map((check) => check.name)).toEqual([
+      "lint",
+      "codecov/patch",
+      "mystery",
+    ]);
+    expect(result.fix.checks[1]?.detailsUrl).toBe("https://app.codecov.io/...");
+    expect(result.fix.checks[2]).toMatchObject({ runId: null, detailsUrl: "" });
   });
 });
