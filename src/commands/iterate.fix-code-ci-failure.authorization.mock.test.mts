@@ -198,6 +198,10 @@ describe("fix_code — GitHub Actions authorization", () => {
     const result = await runIterate(makeOpts());
 
     expectCheckFollowUpUnavailable(result);
+    if (result.action !== "escalate") return;
+    expect(result.escalate.changesRequestedReviews).toEqual([
+      expect.objectContaining({ id: "stale-human-review" }),
+    ]);
   });
 
   it("escalates when a runId has no confirmed GitHub Actions provenance or evidence", async () => {
@@ -237,7 +241,7 @@ describe("fix_code — GitHub Actions authorization", () => {
     expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
   });
 
-  it("escalates when a sibling job prevents rerunning the only failing run", async () => {
+  it("waits when a sibling job prevents rerunning the only failing run", async () => {
     // GitHub can only rerun a workflow run once it has fully completed.
     prepareManualCheck({
       checks: checkSet(undefined, [
@@ -255,9 +259,9 @@ describe("fix_code — GitHub Actions authorization", () => {
 
     const result = await runIterate(makeOpts());
 
-    expectCheckFollowUpUnavailable(result);
-    if (result.action !== "escalate") return;
-    expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
   });
 
   it("surfaces a denied suppressed auto-resolve thread once without escalating", async () => {

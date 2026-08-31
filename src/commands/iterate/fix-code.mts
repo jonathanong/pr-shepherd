@@ -279,7 +279,11 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const inProgressRunIds: string[] = [];
   const commentMinimizeIds = report.comments.minimizeIds ?? actionableComments.map((c) => c.id);
   const allCommentIds = [...commentMinimizeIds, ...reviewSummaryIds];
-  const manualFollowUpChecks = failingAgentChecks.filter(checkRequiresHumanFollowUp);
+  const belongsToActiveWorkflowRun = (check: AgentCheck): boolean =>
+    check.runId !== null && inProgressWorkflowRunIds.has(check.runId);
+  const manualFollowUpChecks = failingAgentChecks.filter(
+    (check) => !belongsToActiveWorkflowRun(check) && checkRequiresHumanFollowUp(check),
+  );
   const hasAutonomousWork =
     hasConflicts ||
     threads.length > 0 ||
@@ -293,13 +297,15 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     report.threads.firstLook.length > 0 ||
     report.comments.firstLook.length > 0 ||
     checks.some((check) => (check.annotations?.length ?? 0) > 0) ||
-    failingAgentChecks.some((check) => !checkRequiresHumanFollowUp(check));
+    failingAgentChecks.some(
+      (check) => belongsToActiveWorkflowRun(check) || !checkRequiresHumanFollowUp(check),
+    );
   if (manualFollowUpChecks.length > 0 && !hasAutonomousWork) {
     const checkEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: ["check-follow-up-unavailable"],
       unresolvedThreads: [],
       ambiguousComments: [],
-      changesRequestedReviews: [],
+      changesRequestedReviews,
       checks: manualFollowUpChecks,
       suggestion: buildEscalateSuggestion(["check-follow-up-unavailable"]),
     };
