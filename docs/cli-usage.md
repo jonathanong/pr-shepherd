@@ -14,6 +14,7 @@ pr-shepherd apply files [PR] [files...] [--tests] [--match REGEX]
 pr-shepherd apply journal [PR] <item> [--dry-run] [--format text|json]
 pr-shepherd apply journal [PR] --file <path> [--dry-run] [--format text|json]
 pr-shepherd apply journal [PR] --file - [--dry-run] [--format text|json]
+pr-shepherd journal extract --body-file <path>
 pr-shepherd build-suggestion-patches [PR] --thread-id ID --message MSG [groups...]
 pr-shepherd admin clean <pr|branch|current|repo|all> [value] [--dry-run] [--format text|json]
 pr-shepherd admin log-file [--format text|json]
@@ -24,6 +25,12 @@ pr-shepherd admin log-file [--format text|json]
 `apply journal --file <path>` reads the journal item from a file; `--file -` reads stdin. Provide either a positional `<item>` or `--file`, not both.
 
 Journal entries live in a collapsed `Shepherd Journal` details block. `apply journal` creates that canonical block when absent, appends before its closing tag, and leaves an exact duplicate unchanged. A legacy `## Shepherd Journal` section is migrated in place on the next journal operation.
+
+`journal extract --body-file <path>` reads a local PR-body file and prints exactly one JSON line from
+the typed journal extractor. It makes no GitHub, configuration, or log I/O. On POSIX, the final path
+entry is opened without following symlinks and must resolve to a regular file in a trusted parent
+directory; symlinks, FIFOs, devices, unreadable paths, and missing files exit 66. Unsupported platforms
+fail closed with exit 66. A malformed or unrecognized journal remains a successful typed JSON result.
 
 `pr-shepherd [PR]` is the canonical bounded poll dispatcher. It repeats `iterate` while the action is `WAIT`, then prints the next agent-facing action. With `--merge`, it also continues through `MARK_READY` and emits `MERGE` when the ready-delay completes. If `--timeout` expires during WAIT polling, poll returns that final `WAIT` result rather than a terminal action. `FIX_CODE` is delayed by `--debounce` (default 1m): poll keeps iterating at `--interval` for that window, then returns one later tick. Use `iterate` when the caller owns recurrence.
 

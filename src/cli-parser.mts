@@ -18,6 +18,7 @@ import {
   handleMarkFilesAsViewed,
 } from "./cli/handlers.mts";
 import { handleJournal } from "./cli/journal-handler.mts";
+import { handleJournalExtract } from "./cli/journal-extract-handler.mts";
 import { handlePoll } from "./cli/poll-handler.mts";
 import {
   warnPrrcThreadIds,
@@ -48,6 +49,13 @@ export async function main(argv: string[]): Promise<void> {
   // log-file must run before the stdout tee and log init to avoid recursion.
   if (subcommand === "log-file") {
     await handleLogFile(args.slice(1));
+    return;
+  }
+
+  // Extraction deliberately precedes legacy warnings and logging: it is a local,
+  // GitHub/config/log-free read path for automation that already has a PR body.
+  if (subcommand === "journal" && args[1] === "extract") {
+    await handleJournalExtract(args.slice(2));
     return;
   }
 
