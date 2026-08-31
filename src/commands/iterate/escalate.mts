@@ -16,9 +16,10 @@ function renderEscalateAuthor(item: {
 }
 
 function renderCheckTarget(check: AgentCheck): string {
-  if (check.runId) return `run \`${check.runId}\``;
-  if (check.detailsUrl) return `external \`${check.detailsUrl}\``;
-  return "no run ID or URL";
+  const parts: string[] = [];
+  if (check.runId) parts.push(`run \`${check.runId}\``);
+  if (check.detailsUrl) parts.push(`URL \`${check.detailsUrl}\``);
+  return parts.length > 0 ? parts.join(", ") : "no run ID or URL";
 }
 
 function renderCheckScope(check: AgentCheck): string {

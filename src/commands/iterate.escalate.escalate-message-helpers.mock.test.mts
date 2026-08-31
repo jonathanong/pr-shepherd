@@ -121,6 +121,7 @@ describe("escalate message helpers", () => {
 
     expect(message).toContain("check-follow-up-unavailable");
     expect(message).toContain("run `123`");
+    expect(message).toContain("URL `https://github.com/owner/repo/actions/runs/123`");
     expect(message).toContain("CI › tests (linux)");
     expect(message).toContain("ACTION_REQUIRED");
     expect(message).toContain("Approve deployment");
