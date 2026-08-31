@@ -305,6 +305,12 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     ...toAgentChecks(annotatedExtra).map((c) => ({ ...c, annotationOnly: true as const })),
   ];
   const { changesRequestedReviews } = report;
+  const actionableChangesRequestedReviews = changesRequestedReviews.filter(
+    (review) =>
+      review.staleReview !== true ||
+      !isHumanAuthor(review) ||
+      isConfiguredBotAuthor(review, botUsernames),
+  );
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
   const isBehind = report.mergeStatus.status === "BEHIND";
   const { behindBaseHint } = loadConfig().iterate;
@@ -321,7 +327,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     resolutionOnlyThreads.length > 0 ||
     actionableComments.length > 0 ||
     commentMinimizeIds.length > 0 ||
-    changesRequestedReviews.length > 0 ||
+    actionableChangesRequestedReviews.length > 0 ||
     reviewSummaryIds.length > 0 ||
     firstLookSummaries.length > 0 ||
     editedSummaries.length > 0 ||

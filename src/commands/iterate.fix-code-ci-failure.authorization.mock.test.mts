@@ -210,6 +210,42 @@ describe("fix_code — GitHub Actions authorization", () => {
     expect(result.fix.resolveCommand.argv).toContain("comment-to-minimize");
   });
 
+  it("does not treat a stale human review as autonomous work", async () => {
+    mockRunCheck.mockResolvedValue(
+      failingCheckReport({
+        viewerAuthorization: {
+          repositoryPermission: "READ",
+          viewerCanAdminister: false,
+          viewerDidAuthor: false,
+          viewerCanUpdate: false,
+          viewerCanEnableAutoMerge: false,
+          viewerCanEditFiles: false,
+          headRepositoryPermission: "READ",
+        },
+        changesRequestedReviews: [
+          {
+            id: "stale-human-review",
+            author: "reviewer",
+            authorType: "User",
+            body: "Changes requested on an older commit",
+            staleReview: true,
+          },
+        ],
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("escalate");
+    if (result.action !== "escalate") return;
+    expect(result.escalate.triggers).toContain("check-follow-up-unavailable");
+  });
+
   it("escalates when a runId has no confirmed GitHub Actions provenance or evidence", async () => {
     // An external CI system's details URL can coincidentally match the same /runs/<digits>/
     // pattern GitHub Actions details URLs use. Without a resolved workflowName (the same
