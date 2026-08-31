@@ -22,8 +22,8 @@ function makeActionableCheck(runId: string, name = "typecheck") {
   };
 }
 
-describe("runIterate — fix_code agent projection", () => {
-  it("external status check (runId=null) — instructions split by runId presence", async () => {
+describe("runIterate — check follow-up escalation", () => {
+  it("escalates when every failing check lacks autonomous follow-up", async () => {
     const externalCheck = {
       name: "codecov/patch",
       status: "COMPLETED" as const,
@@ -56,20 +56,16 @@ describe("runIterate — fix_code agent projection", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
-      const instructionsJoined = result.fix.instructions.join("\n");
-      // GitHub Actions and external (detailsUrl, no runId) failures both route through the
-      // single triage pointer — follow-up inspection and mutations require separate authorization
-      // to the pr-shepherd skill's "CI failure triage" playbook (invariant text, not
-      // re-emitted per tick).
-      expect(instructionsJoined).toContain("Triage every failure under `## Failing checks`");
-      expect(instructionsJoined).toContain('"CI failure triage" in the pr-shepherd skill');
-      // No bare-check bullets in this test, so the `(no runId)` instruction is omitted.
-      expect(instructionsJoined).not.toContain("(no runId)");
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toEqual(["check-follow-up-unavailable"]);
+      expect(result.escalate.checks).toHaveLength(2);
+      expect(result.escalate.checks?.map((check) => check.name)).toEqual(["codecov/patch", "lint"]);
+      expect(result.escalate.humanMessage).toContain("https://app.codecov.io/...");
+      expect(result.escalate.humanMessage).toContain("run-77");
     }
   });
-  it("bare check (runId=null, no detailsUrl) — emits escalate-to-human instruction", async () => {
+  it("escalates a bare check and preserves its raw metadata", async () => {
     const bareCheck = {
       name: "mystery",
       status: "COMPLETED" as const,
@@ -101,17 +97,18 @@ describe("runIterate — fix_code agent projection", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
-      const instructionsJoined = result.fix.instructions.join("\n");
-      expect(instructionsJoined).toContain("(no runId)");
-      expect(instructionsJoined).toMatch(/escalate/i);
-      expect(result.fix.instructions.at(-1)).toBe(
-        "`[FIX_CODE]` requires a human handoff for an uninspectable failing check. Stop polling after escalating, and resume only after human direction.",
-      );
-      expect(instructionsJoined).not.toContain("`[FIX_CODE]` is non-terminal");
-      // external-check instruction is gated separately and must NOT appear for a bare check.
-      expect(instructionsJoined).not.toContain("external status check");
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toEqual(["check-follow-up-unavailable"]);
+      expect(result.escalate.checks).toEqual([
+        expect.objectContaining({
+          name: "mystery",
+          runId: null,
+          detailsUrl: "",
+          conclusion: "FAILURE",
+        }),
+      ]);
+      expect(result.escalate.humanMessage).toContain("no run ID or URL");
     }
   });
 });

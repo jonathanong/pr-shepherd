@@ -106,7 +106,7 @@ describe("runIterate — fix_code agent projection", () => {
     }
   });
   it("emits AgentCheck shape — has conclusion; no failureKind/category/logTail on fix.checks", async () => {
-    const check = makeActionableCheck("run-55");
+    const check = { ...makeActionableCheck("run-55"), logExcerpt: "typecheck failed" };
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "FAILING",

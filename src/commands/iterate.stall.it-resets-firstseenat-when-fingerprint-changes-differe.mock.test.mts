@@ -84,6 +84,7 @@ describe("runIterate — stall-timeout guard", () => {
               detailsUrl: "https://github.com/owner/repo/actions/runs/99",
               event: "pull_request",
               runId: "run-99",
+              logExcerpt: "unit tests failed",
               category: "failing",
             },
           ],

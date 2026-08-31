@@ -22,16 +22,8 @@ function makeActionableCheck(runId: string, name = "typecheck") {
   };
 }
 
-describe("runIterate — fix_code agent projection", () => {
-  it("combined runId + external + bare checks — the triage pointer and bare-check escalation coexist", async () => {
-    // Guards against a filter-predicate drift between buildFixInstructions
-    // (which buckets checks by truthiness) and the CLI formatter (which emits
-    // bullets by the same truthiness). If either side stops agreeing, an
-    // emitted bullet shape would have no matching instruction. runId and external
-    // (URL, no runId) checks now share one triage pointer — see "CI failure
-    // triage" in the pr-shepherd skill for the per-conclusion mechanics; only the
-    // bare (no runId, no URL) case still gets its own CLI-side instruction, since
-    // it flips completion to a human-handoff terminal state.
+describe("runIterate — mixed check escalation", () => {
+  it("preserves every check when all variants require human follow-up", async () => {
     const ghActionsCheck = makeActionableCheck("run-77", "lint");
     const externalCheck = {
       name: "codecov/patch",
@@ -73,16 +65,13 @@ describe("runIterate — fix_code agent projection", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
-      expect(result.fix.checks).toHaveLength(3);
-      const joined = result.fix.instructions.join("\n");
-      // The runId and external (URL, no runId) variants share one triage pointer; the
-      // bare (no runId, no URL) variant still gets its own instruction.
-      expect(joined).toContain("Triage every failure under `## Failing checks`");
-      expect(joined).toContain("(no runId)");
-      expect(joined.match(/Triage every failure under `## Failing checks`/g)).toHaveLength(1);
-      expect(joined.match(/\(no runId\)/g)).toHaveLength(1);
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toEqual(["check-follow-up-unavailable"]);
+      expect(result.escalate.checks).toHaveLength(3);
+      expect(result.escalate.humanMessage).toContain("run-77");
+      expect(result.escalate.humanMessage).toContain("https://app.codecov.io/...");
+      expect(result.escalate.humanMessage).toContain("no run ID or URL");
     }
   });
 });

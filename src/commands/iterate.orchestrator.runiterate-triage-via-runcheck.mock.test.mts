@@ -120,6 +120,7 @@ describe("runIterate — triage via runCheck", () => {
       detailsUrl: "https://github.com/owner/repo/actions/runs/3",
       event: "pull_request",
       runId: "run-3",
+      logExcerpt: "typecheck failed",
       category: "failing" as const,
     };
     mockRunCheck.mockResolvedValue(

@@ -101,6 +101,7 @@ describe("runIterate — prescriptive fields: log strings", () => {
       detailsUrl: "https://github.com/owner/repo/actions/runs/99",
       event: "pull_request",
       runId: "run-99",
+      logExcerpt: "test timed out",
       category: "failing" as const,
     };
     mockRunCheck.mockResolvedValue(

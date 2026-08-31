@@ -43,10 +43,7 @@ export function buildBehindBaseHintInstruction(
  * command run unmodified is already correct for them. The pointer below is load-bearing:
  * without it, nothing in CLI output tells the agent that playbook exists.
  */
-export function buildResolveCommandInstruction(
-  resolveCommand: ResolveCommand,
-  pushAuthorized = false,
-): string[] {
+export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): string[] {
   if (!resolveCommand.hasMutations) return [];
   const instructions: string[] = [];
   if ((resolveCommand.replyThreadIds?.length ?? 0) > 0) {
@@ -56,9 +53,7 @@ export function buildResolveCommandInstruction(
   }
   if (resolveCommand.requiresHeadSha) {
     instructions.push(
-      pushAuthorized
-        ? "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, commit and push to the PR head branch first, then replace `$HEAD_SHA` with the pushed commit SHA."
-        : "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, do not run this command until an authorized push updates the remote PR head; then replace `$HEAD_SHA` with that pushed commit SHA.",
+      "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, commit and push to the PR head branch first, then replace `$HEAD_SHA` with the pushed commit SHA.",
     );
   }
   if (resolveCommand.requiresDismissMessage) {
@@ -90,7 +85,7 @@ export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   }
   if (hasBare) {
     instructions.push(
-      "For each `(no runId)` failure, escalate to a human because no log or URL is available.",
+      "For each `(no runId)` failure, preserve the displayed metadata; Shepherd will escalate when no other autonomous work remains.",
     );
   }
 
@@ -99,41 +94,15 @@ export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
 
 export function buildFixCompletionInstruction(
   checks: AgentCheck[],
-  requiresRemoteUpdateAuthorization = false,
+  hasConflicts = false,
   hasShaGatedReviewMutations = false,
-  pushAuthorized = false,
 ): string {
-  if (requiresRemoteUpdateAuthorization) {
-    if (pushAuthorized) {
-      return "`[FIX_CODE]` is non-terminal: resolve the conflicts, commit, push to the PR head branch, then iterate again with the same options.";
-    }
-    return "`[FIX_CODE]` requires a human handoff for an authorized push after conflict resolution. Shepherd cannot verify the Git credential's push authorization. Stop polling after committing, and resume only after the remote PR head changes.";
-  }
-  const hasUninspectableFailure = checks.some((check) => !check.runId && !check.detailsUrl);
-  if (hasUninspectableFailure) {
-    return "`[FIX_CODE]` requires a human handoff for an uninspectable failing check. Stop polling after escalating, and resume only after human direction.";
-  }
-  // Checks that would otherwise need a workflow-run mutation (rerun) to move forward.
-  // `rerunCommand` is only populated when the viewer's repository role grants Actions
-  // rerun capability (see canRerunWorkflows) — unauthorized checks stay a terminal handoff.
-  const ciHandoffChecks = checks.filter(
-    (check) =>
-      check.conclusion === "CANCELLED" ||
-      check.conclusion === "STARTUP_FAILURE" ||
-      (check.runId === null && Boolean(check.detailsUrl)) ||
-      (check.runId !== null && !check.logExcerpt?.trim()),
-  );
-  const hasUnauthorizedCiHandoff = ciHandoffChecks.some((check) => !check.rerunCommand);
-  if (hasUnauthorizedCiHandoff) {
-    return "`[FIX_CODE]` requires a human handoff for a failing check with no authorized follow-up action. Stop polling after escalating, and resume only after human direction.";
-  }
+  if (hasConflicts)
+    return "`[FIX_CODE]` is non-terminal: resolve the conflicts, commit, push to the PR head branch, then iterate again with the same options.";
   if (hasShaGatedReviewMutations) {
-    if (pushAuthorized) {
-      return "`[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run the review mutations using the pushed commit SHA and iterate again with the same options; if you did not change code, complete the authorized review mutations and iterate again with the same options.";
-    }
-    return "`[FIX_CODE]` is conditional: if you changed code, stop after committing and resume only after an authorized push changes the remote PR head; if you did not change code, complete the authorized review mutations and iterate again with the same options.";
+    return "`[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run the review mutations using the pushed commit SHA and iterate again with the same options; if you did not change code, complete the authorized review mutations and iterate again with the same options.";
   }
-  if (ciHandoffChecks.some((check) => check.rerunCommand)) {
+  if (checks.some((check) => check.rerunCommand)) {
     return "`[FIX_CODE]` is non-terminal. Run any warranted reruns for `[rerun authorized]` checks (or apply code fixes for real failures), then iterate again with the same options to continue.";
   }
   return "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.";

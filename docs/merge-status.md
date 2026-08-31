@@ -67,7 +67,7 @@ These are two different signals for the same underlying condition (merge conflic
 
 Both map to `CONFLICTS` in shepherd's derived status.
 
-`runCheck` also refreshes mergeability for candidate READY handoffs. This catches short-lived GraphQL lag where the batch query still reports `CLEAN` but the REST pull-request endpoint already reports `DIRTY`; in that case the refreshed value maps to `CONFLICTS` before iterate can complete ready-delay. The same already-required REST response refreshes the PR state, so a merge or close that races the initial GraphQL snapshot cancels the tick without adding another API request.
+`runCheck` also refreshes mergeability for candidate READY states. This catches short-lived GraphQL lag where the batch query still reports `CLEAN` but the REST pull-request endpoint already reports `DIRTY`; in that case the refreshed value maps to `CONFLICTS` before iterate can complete ready-delay. The same already-required REST response refreshes the PR state, so a merge or close that races the initial GraphQL snapshot cancels the tick without adding another API request.
 
 ### Terminal PRs use state, not mergeability
 
@@ -88,14 +88,14 @@ GitHub sometimes updates `mergeStateStatus` to `'DRAFT'` before the `isDraft` bo
 `deriveMergeStatus` sets `status: "BLOCKED"` whenever `mergeStateStatus` is `BLOCKED`. However, `computeStatus` in `src/commands/check-status.mts` overrides this to `ShepherdStatus: "READY"` when all of the following are true:
 
 - `verdict.allPassed` — no failing or in-progress CI checks.
-- Relevant passing checks exist: `verdict.hasChecks`, **or** `mergeStatus.status === "UNSTABLE"` with at least one ignored check. The UNSTABLE+ignored case is a safe handoff even with no other checks, because UNSTABLE means only non-required checks are pending/failing. BLOCKED is excluded from that ignored-names extension: BLOCKED can mean required checks have not started.
+- Relevant passing checks exist: `verdict.hasChecks`, **or** `mergeStatus.status === "UNSTABLE"` with at least one ignored check. The UNSTABLE+ignored case is a safe READY state even with no other checks, because UNSTABLE means only non-required checks are pending/failing. BLOCKED is excluded from that ignored-names extension: BLOCKED can mean required checks have not started.
 - No unresolved threads, comments, or changes-requested reviews. This includes outdated/minimized threads that still have `isResolved === false`; those are routed as resolution-only work instead of being treated as ready.
 - `mergeStatus.status === "BLOCKED"` or `"UNSTABLE"`.
-- `mergeStatus.blockingBotReviewInProgress === false` — a bot review still pending is shepherd's problem, not a hand-off case.
+- `mergeStatus.blockingBotReviewInProgress === false` — a bot review still pending is Shepherd work, not a READY case.
 
 In this case `mergeStatus.status` in the report is still `BLOCKED` or `UNSTABLE` (truthful about the GitHub merge state), but the top-level `ShepherdStatus` is `READY`, signalling that shepherd has nothing more to do. The ready-delay timer starts, and `action: cancel` is emitted after it elapses.
 
-A `BLOCKED` case that does not satisfy the above (blocking bot review in progress, unresolved threads, or failing CI) maps to `ShepherdStatus: "PENDING"`. The same applies to `BEHIND` (head branch is out of date) when it is not a READY handoff. `FAILING` is reserved for red CI checks (`verdict.anyFailing`) and merge conflicts (`CONFLICTS`).
+A `BLOCKED` case that does not satisfy the above (blocking bot review in progress, unresolved threads, or failing CI) maps to `ShepherdStatus: "PENDING"`. The same applies to `BEHIND` (head branch is out of date) when it is not a READY state. `FAILING` is reserved for red CI checks (`verdict.anyFailing`) and merge conflicts (`CONFLICTS`).
 
 ## Blocking-bot review detection
 

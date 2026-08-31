@@ -29,7 +29,7 @@ function makeBlockedReadyReport(reviewDecision: "REVIEW_REQUIRED" | "APPROVED" |
   });
 }
 
-describe("runIterate — BLOCKED + clean (hand off to humans via ready-delay)", () => {
+describe("runIterate — BLOCKED + clean ready-delay state", () => {
   it.each([
     ["REVIEW_REQUIRED", "REVIEW_REQUIRED" as const],
     ["APPROVED (insufficient approvals)", "APPROVED" as const],

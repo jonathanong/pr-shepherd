@@ -19,6 +19,7 @@ describe("runIterate — cancelled + BEHIND", () => {
       detailsUrl: "https://github.com/owner/repo/actions/runs/30",
       event: "pull_request",
       runId: "run-30",
+      workflowName: "CI",
       category: "failing" as const,
     };
     mockRunCheck.mockResolvedValue(

@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import type { EscalateDetails, EscalateTrigger, ReviewThread } from "../../types.mts";
+import type { AgentCheck, EscalateDetails, EscalateTrigger, ReviewThread } from "../../types.mts";
 import { loadConfig } from "../../config/load.mts";
 
 interface EscalateCheck {
@@ -13,6 +13,48 @@ function renderEscalateAuthor(item: {
   authorAssociation?: string;
 }): string {
   return [`@${item.author}`, item.authorType, item.authorAssociation].filter(Boolean).join(" · ");
+}
+
+function renderEscalateCheck(check: AgentCheck): string[] {
+  const target = check.runId
+    ? `run \`${check.runId}\``
+    : check.detailsUrl
+      ? `external \`${check.detailsUrl}\``
+      : "no run ID or URL";
+  const workflowPrefix = check.workflowName ? `${check.workflowName} › ` : "";
+  const jobLabel = check.jobName ?? check.name;
+  const conclusion = check.conclusion === null ? "UNKNOWN" : check.conclusion;
+  const scope = check.scope
+    ? `, scope \`${check.scope}\`${check.commitOid ? ` at \`${check.commitOid}\`` : ""}`
+    : "";
+  const lines = [
+    `- ${target} — \`${workflowPrefix}${jobLabel}\` [conclusion: ${conclusion}]${scope}`,
+  ];
+  if (check.failedStep) lines.push(`  > failed step: ${check.failedStep}`);
+  if (check.summary) lines.push(`  > ${check.summary}`);
+  if (check.logExcerpt) {
+    for (const line of check.logExcerpt.split("\n")) lines.push(`  > ${line}`);
+  }
+  if (check.rerunCommand) lines.push(`  rerun: \`${check.rerunCommand}\``);
+  for (const annotation of check.annotations ?? []) {
+    const start = annotation.startLine ?? annotation.endLine ?? "?";
+    const end = annotation.endLine ?? annotation.startLine ?? "?";
+    const range = start === end ? String(start) : `${start}-${end}`;
+    const columns =
+      annotation.startColumn == null && annotation.endColumn == null
+        ? ""
+        : `, columns ${annotation.startColumn ?? "?"}-${annotation.endColumn ?? "?"}`;
+    const title = annotation.title ? ` — ${annotation.title}` : "";
+    const link = annotation.blobUrl ? ` [source](${annotation.blobUrl})` : "";
+    lines.push(
+      `  - annotation \`${annotation.id}\`${link} — \`${annotation.path}:${range}\` [${annotation.level}${columns}]${title}`,
+    );
+    for (const line of annotation.message.split("\n")) lines.push(`    > ${line}`);
+    if (annotation.rawDetails) {
+      for (const line of annotation.rawDetails.split("\n")) lines.push(`    > ${line}`);
+    }
+  }
+  return lines;
 }
 
 export function checkEscalateTriggers(
@@ -106,6 +148,7 @@ export function buildEscalateHumanMessage(
     escalate.unresolvedThreads.length > 0 ||
     escalate.changesRequestedReviews.length > 0 ||
     escalate.ambiguousComments.length > 0 ||
+    (escalate.checks?.length ?? 0) > 0 ||
     (escalate.stalledChecks?.length ?? 0) > 0;
   if (hasItems) {
     lines.push("");
@@ -123,6 +166,10 @@ export function buildEscalateHumanMessage(
       if (c.summary) lines.push(`  > ${c.summary}`);
     }
     if ((escalate.stalledChecks?.length ?? 0) > 0) lines.push("");
+    for (const check of escalate.checks ?? []) {
+      lines.push(...renderEscalateCheck(check));
+      lines.push("");
+    }
     for (const t of escalate.unresolvedThreads) {
       const loc = t.path ? `\`${t.path}:${t.line ?? "?"}\`` : "(no location)";
       lines.push(`- thread \`${t.id}\` — ${loc} (${renderEscalateAuthor(t)}):`);
@@ -185,6 +232,9 @@ export function buildEscalateHumanMessage(
 }
 
 export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: string): string {
+  if (triggers.includes("check-follow-up-unavailable")) {
+    return "One or more failing checks have no autonomous follow-up available. Use the displayed conclusion, run or URL, and included evidence to handle them manually.";
+  }
   if (triggers.includes("authorization-required")) {
     return "GitHub did not confirm that the current viewer may perform one or more required actions. Ask a repository maintainer to handle the listed items; Shepherd will not recommend commands that would be denied.";
   }

@@ -88,7 +88,7 @@ describe("fix_code — GitHub Actions authorization", () => {
     expect(result.fix.instructions.join("\n")).not.toContain("no authorized follow-up action");
   });
 
-  it("does not recommend a rerun when the viewer's repository role is below WRITE", async () => {
+  it("escalates when the viewer's repository role cannot authorize the only follow-up", async () => {
     mockRunCheck.mockResolvedValue(
       failingCheckReport({
         viewerAuthorization: {
@@ -110,13 +110,13 @@ describe("fix_code — GitHub Actions authorization", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
-    expect(result.fix.instructions.join("\n")).not.toContain("[rerun authorized]");
+    expect(result.action).toBe("escalate");
+    if (result.action !== "escalate") return;
+    expect(result.escalate.triggers).toContain("check-follow-up-unavailable");
+    expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
   });
 
-  it("does not recommend a rerun when the runId has no confirmed GitHub Actions provenance", async () => {
+  it("escalates when a runId has no confirmed GitHub Actions provenance or evidence", async () => {
     // An external CI system's details URL can coincidentally match the same /runs/<digits>/
     // pattern GitHub Actions details URLs use. Without a resolved workflowName (the same
     // GraphQL path that produces the run's numeric ID), Shepherd cannot confirm the parsed
@@ -152,12 +152,13 @@ describe("fix_code — GitHub Actions authorization", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
+    expect(result.action).toBe("escalate");
+    if (result.action !== "escalate") return;
+    expect(result.escalate.triggers).toContain("check-follow-up-unavailable");
+    expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
   });
 
-  it("does not recommend a rerun for an ACTION_REQUIRED check", async () => {
+  it("escalates an ACTION_REQUIRED check for manual workflow approval", async () => {
     // ACTION_REQUIRED means the run is paused pending manual workflow approval on GitHub;
     // a rerun cannot grant that approval, so no rerun command applies.
     mockRunCheck.mockResolvedValue(
@@ -192,12 +193,14 @@ describe("fix_code — GitHub Actions authorization", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
+    expect(result.action).toBe("escalate");
+    if (result.action !== "escalate") return;
+    expect(result.escalate.triggers).toContain("check-follow-up-unavailable");
+    expect(result.escalate.checks?.[0]).toMatchObject({ conclusion: "ACTION_REQUIRED" });
+    expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
   });
 
-  it("does not recommend a rerun while a sibling job from the same run is still in progress", async () => {
+  it("escalates when a sibling job prevents rerunning the only failing run", async () => {
     // GitHub can only rerun a workflow run once it has fully completed.
     mockRunCheck.mockResolvedValue(
       failingCheckReport({
@@ -241,9 +244,10 @@ describe("fix_code — GitHub Actions authorization", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
+    expect(result.action).toBe("escalate");
+    if (result.action !== "escalate") return;
+    expect(result.escalate.triggers).toContain("check-follow-up-unavailable");
+    expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
   });
 
   it("escalates a denied suppressed auto-resolve thread without recommending a mutation", async () => {

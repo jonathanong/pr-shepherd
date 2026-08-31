@@ -1,23 +1,26 @@
-# PR #42 [FIX_CODE]
+# PR #42 [ESCALATE]
 
 **status** `FAILING` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
 **summary** 0 passing
 Approvals: None [Not Required]
 Conversations Resolved: Yes [Not Required]
 
-## Failing checks
+⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required
+
+**Triggers:** `check-follow-up-unavailable`
+
+One or more failing checks have no autonomous follow-up available. Use the displayed conclusion, run or URL, and included evidence to handle them manually.
+
+## Items needing attention
 
 - external `https://checks.example/code-quality` — `Code Quality` [conclusion: FAILURE]
   > 1 annotation
 
-## Post-fix actions
 
-- base: `main`
+---
+
+After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-shepherd https://github.com/owner/repo/pull/42` to resume.
 
 ## Instructions
 
-1. Review each item under `## Failing checks` and decide whether it needs a code change.
-2. Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for read-only inspection rules.
-3. If you changed code, commit any remaining changes and push to the PR head branch, then run the remaining review mutations using the pushed commit SHA and iterate again with the same options. If you did not change code, do not commit and continue with the remaining steps.
-4. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
-5. `[FIX_CODE]` requires a human handoff for a failing check with no authorized follow-up action. Stop polling after escalating, and resume only after human direction.
+1. Stop — human direction is required before automated polling can resume.

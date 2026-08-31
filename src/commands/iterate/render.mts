@@ -50,7 +50,6 @@ export function buildFixInstructions(
   behindBaseHint = "", // iterate.behindBaseHint — see buildBehindBaseHintInstruction
   isBehind = false,
   viewerCanUpdate = false,
-  pushAuthorized = false,
 ): string[] {
   const instructions: string[] = [];
 
@@ -145,15 +144,11 @@ export function buildFixInstructions(
   const mutationSuffix = hasReviewMutations ? " before review mutations" : "";
   if (hasConflicts) {
     instructions.push(
-      pushAuthorized
-        ? `Commit any remaining conflict-resolution changes and push to the PR head branch${mutationSuffix}.`
-        : `Commit any remaining conflict-resolution changes${mutationSuffix}.`,
+      `Commit any remaining conflict-resolution changes and push to the PR head branch${mutationSuffix}.`,
     );
   } else if (hasNonConflictHints) {
     instructions.push(
-      pushAuthorized
-        ? "If you changed code, commit any remaining changes and push to the PR head branch, then run the remaining review mutations using the pushed commit SHA and iterate again with the same options. If you did not change code, do not commit and continue with the remaining steps."
-        : "If you changed code, commit any remaining changes, then stop and hand off for a push whose authorization is established outside Shepherd; do not run the remaining review mutations or iterate until the remote PR head changes. Shepherd cannot verify the Git credential's push authorization. If you did not change code, do not commit and continue with the remaining steps.",
+      "If you changed code, commit any remaining changes and push to the PR head branch, then run the remaining review mutations using the pushed commit SHA and iterate again with the same options. If you did not change code, do not commit and continue with the remaining steps.",
     );
   }
 
@@ -171,15 +166,10 @@ export function buildFixInstructions(
   if (resolveOnlyCommand?.hasMutations)
     instructions.push("Run the `resolve-only:` command shown above.");
 
-  instructions.push(...buildResolveCommandInstruction(resolveCommand, pushAuthorized));
+  instructions.push(...buildResolveCommandInstruction(resolveCommand));
 
   instructions.push(
-    buildFixCompletionInstruction(
-      failingChecks,
-      hasConflicts,
-      resolveCommand.requiresHeadSha,
-      pushAuthorized,
-    ),
+    buildFixCompletionInstruction(failingChecks, hasConflicts, resolveCommand.requiresHeadSha),
   );
   return instructions;
 }

@@ -24,6 +24,7 @@ const FAILING_CHECK: ClassifiedCheck = {
   detailsUrl: "https://github.com/owner/repo/actions/runs/99",
   event: "pull_request",
   runId: "run-99",
+  workflowName: "CI",
   category: "failing",
 };
 

@@ -31,8 +31,8 @@ Each tick returns exactly one action:
 
 - `WAIT` — no immediate action; continue with the next poll.
 - `MARK_READY` — the CLI converted an eligible draft PR to ready; continue polling.
-- `FIX_CODE` — agent work is required; complete it, then continue polling.
-- `MERGE` — run the emitted auto-merge command only when GitHub reports `viewerCanEnableAutoMerge`; queue enrollment otherwise hands off for authorization.
+- `FIX_CODE` — agent work is required; complete it, push when needed, then continue polling. Push access to the PR head branch is a usage precondition.
+- `MERGE` — run the emitted auto-merge command only when GitHub reports `viewerCanEnableAutoMerge`; missing authorization returns `ESCALATE`.
 - `CANCEL` — stop polling because the PR merged, closed, or completed its ready-delay.
 - `ESCALATE` — stop polling until a human provides direction.
 

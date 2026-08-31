@@ -77,3 +77,16 @@ describe("CLI instruction pointers name real pr-shepherd skill playbooks", () =>
     }
   });
 });
+
+describe("pr-shepherd skill recurrence contract", () => {
+  const skill = readFileSync(
+    new URL("plugins/pr-shepherd/skills/pr-shepherd/SKILL.md", rootUrl),
+    "utf8",
+  );
+
+  it("reserves human hand-off for ESCALATE", () => {
+    expect(skill).toContain("`[FIX_CODE]` is always non-terminal");
+    expect(skill).toContain("Only `[ESCALATE]` hands work to a human");
+    expect(skill).not.toContain("instructions require a human handoff");
+  });
+});

@@ -21,7 +21,7 @@ Shepherd does two jobs: **gather all context for a PR**, then **emit one determi
 - Permission-aware ordered `apply` operations: review mutations are preflighted against raw viewer capability fields and batched in groups of 10; Shepherd Journal updates require `viewerCanUpdate`. File-view selection fails closed without a mutation because GitHub exposes no exact capability for `markFileAsViewed`.
 - `build_suggestion_patches` emits an ordered, apply-checked patch list plus per-patch commit metadata. It does not write patch files or mutate git.
 - Surfaces GitHub Actions failure context without recommending cancel/rerun operations, whose viewer authorization GitHub does not expose exactly.
-- Optional `mark_ready` for eligible draft PRs. Ready-delay then `CANCEL` on a clean handoff.
+- Optional `mark_ready` for eligible draft PRs. Ready-delay then `CANCEL` from a clean ready state.
 - Process exit codes `0` / `10`–`15` for PR-state actions; `64`–`78` for command/GitHub failures. See [exit-codes.md](exit-codes.md).
 
 ## Configuration

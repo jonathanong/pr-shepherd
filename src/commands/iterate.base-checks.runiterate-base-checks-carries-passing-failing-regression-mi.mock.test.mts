@@ -23,6 +23,7 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
       detailsUrl: "https://github.com/owner/repo/actions/runs/50",
       event: "pull_request",
       runId: "run-50",
+      workflowName: "CI",
       category: "failing" as const,
       failedStep: undefined,
     };
@@ -76,6 +77,7 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
       detailsUrl: "https://github.com/owner/repo/actions/runs/60",
       event: "pull_request",
       runId: "run-60",
+      workflowName: "CI",
       category: "failing" as const,
     };
     mockRunCheck.mockResolvedValue(

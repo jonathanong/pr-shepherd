@@ -58,7 +58,7 @@ export function resolveParsedPrTarget(parsed: ParsedPrReference): ResolvedPrTarg
   };
 }
 
-/** Canonical collision-safe PR reference for generated commands and handoffs. */
+/** Canonical collision-safe PR reference for generated commands and escalation messages. */
 export function formatPrUrl(repository: string, prNumber: number): string {
   return `https://github.com/${repository}/pull/${prNumber}`;
 }

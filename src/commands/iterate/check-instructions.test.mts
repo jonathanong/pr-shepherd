@@ -66,13 +66,13 @@ describe("buildFailingCheckInstructions", () => {
     expect(buildFailingCheckInstructions([])).toEqual([]);
   });
 
-  it("emits a single triage pointer for any GitHub Actions / external failure, plus the bare-check escalation", () => {
+  it("emits a single triage pointer for any GitHub Actions / external failure, plus bare-check preservation", () => {
     // Per-conclusion rerun mechanics (gh run view/rerun rules for CANCELLED,
     // STARTUP_FAILURE, external) are invariant text now covered by the pr-shepherd
     // skill's "CI failure triage" playbook — see the collision note on
     // buildFailingCheckInstructions in check-instructions.mts. Only the `(no runId)`
-    // bare-check escalation stays here, because it flips buildFixCompletionInstruction
-    // to a human-handoff terminal state.
+    // bare-check preservation stays here for mixed FIX_CODE ticks; when it is the only
+    // blocker, handleFixCode promotes the whole result to ESCALATE.
     const instructions = buildFailingCheckInstructions([
       check({}),
       check({ runId: "124", conclusion: "CANCELLED" }),
@@ -83,13 +83,13 @@ describe("buildFailingCheckInstructions", () => {
 
     expect(instructions).toEqual([
       'Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for read-only inspection rules.',
-      "For each `(no runId)` failure, escalate to a human because no log or URL is available.",
+      "For each `(no runId)` failure, preserve the displayed metadata; Shepherd will escalate when no other autonomous work remains.",
     ]);
   });
 
-  it("emits only the bare-check escalation when every failure lacks a runId and a URL", () => {
+  it("emits only the bare-check preservation when every failure lacks a runId and a URL", () => {
     expect(buildFailingCheckInstructions([check({ runId: null, detailsUrl: null })])).toEqual([
-      "For each `(no runId)` failure, escalate to a human because no log or URL is available.",
+      "For each `(no runId)` failure, preserve the displayed metadata; Shepherd will escalate when no other autonomous work remains.",
     ]);
   });
 
@@ -147,7 +147,7 @@ describe("buildResolveCommandInstruction", () => {
       ),
     ).toEqual([
       "Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked viewer-authored human thread is emitted resolve-only, not for another reply.",
-      "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, do not run this command until an authorized push updates the remote PR head; then replace `$HEAD_SHA` with that pushed commit SHA.",
+      "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, commit and push to the PR head branch first, then replace `$HEAD_SHA` with the pushed commit SHA.",
       "Replace `$DISMISS_MESSAGE` with one sentence describing what changed.",
       'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',
     ]);
@@ -161,50 +161,15 @@ describe("buildFixCompletionInstruction", () => {
     );
   });
 
-  it("conditionally stops for an authorized remote update before SHA-gated mutations", () => {
+  it("continues through a push before SHA-gated mutations", () => {
     expect(buildFixCompletionInstruction([check({})], false, true)).toBe(
-      "`[FIX_CODE]` is conditional: if you changed code, stop after committing and resume only after an authorized push changes the remote PR head; if you did not change code, complete the authorized review mutations and iterate again with the same options.",
+      "`[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run the review mutations using the pushed commit SHA and iterate again with the same options; if you did not change code, complete the authorized review mutations and iterate again with the same options.",
     );
   });
 
-  it("pauses polling when a bare check requires a human handoff", () => {
-    expect(buildFixCompletionInstruction([check({ runId: null, detailsUrl: null })])).toBe(
-      "`[FIX_CODE]` requires a human handoff for an uninspectable failing check. Stop polling after escalating, and resume only after human direction.",
-    );
-  });
-
-  it.each(["CANCELLED", "STARTUP_FAILURE"] as const)(
-    "pauses polling when every failure is an authorization-only %s handoff",
-    (conclusion) => {
-      expect(buildFixCompletionInstruction([check({ conclusion })])).toContain(
-        "requires a human handoff",
-      );
-    },
-  );
-
-  it("pauses polling when an actionable failure accompanies a CI-only handoff", () => {
-    expect(
-      buildFixCompletionInstruction([check({ conclusion: "CANCELLED" }), check({})]),
-    ).toContain("requires a human handoff");
-  });
-
-  it("pauses polling for an external check handoff", () => {
-    expect(
-      buildFixCompletionInstruction([
-        check({ runId: null, detailsUrl: "https://ci.example/check", logExcerpt: undefined }),
-      ]),
-    ).toContain("requires a human handoff");
-  });
-
-  it("pauses polling for a GitHub Actions failure with no included evidence", () => {
-    expect(buildFixCompletionInstruction([check({ logExcerpt: undefined })])).toContain(
-      "requires a human handoff",
-    );
-  });
-
-  it("pauses polling after conflict resolution until an authorized push updates the PR", () => {
-    expect(buildFixCompletionInstruction([], true)).toContain(
-      "requires a human handoff for an authorized push",
+  it("continues after conflict resolution and push", () => {
+    expect(buildFixCompletionInstruction([], true)).toBe(
+      "`[FIX_CODE]` is non-terminal: resolve the conflicts, commit, push to the PR head branch, then iterate again with the same options.",
     );
   });
 
@@ -221,15 +186,6 @@ describe("buildFixCompletionInstruction", () => {
     },
   );
 
-  it("still pauses polling when only some CI-handoff checks carry an authorized rerun command", () => {
-    expect(
-      buildFixCompletionInstruction([
-        check({ conclusion: "CANCELLED", rerunCommand: "gh run rerun 124 -R owner/repo" }),
-        check({ conclusion: "STARTUP_FAILURE" }),
-      ]),
-    ).toContain("requires a human handoff");
-  });
-
   it("prefers the SHA-gated instruction over an authorized rerun recommendation", () => {
     expect(
       buildFixCompletionInstruction(
@@ -237,6 +193,16 @@ describe("buildFixCompletionInstruction", () => {
         false,
         true,
       ),
-    ).toContain("if you changed code, stop after committing");
+    ).toContain("if you changed code, commit and push");
+  });
+
+  it.each([
+    check({ runId: null, detailsUrl: null }),
+    check({ conclusion: "ACTION_REQUIRED", logExcerpt: undefined }),
+    check({ conclusion: "STARTUP_FAILURE", logExcerpt: undefined }),
+  ])("never emits terminal handoff wording for a FIX_CODE completion", (value) => {
+    const completion = buildFixCompletionInstruction([value]);
+    expect(completion).toContain("`[FIX_CODE]` is non-terminal");
+    expect(completion).not.toMatch(/hand[- ]?off|stop polling|human direction/i);
   });
 });
