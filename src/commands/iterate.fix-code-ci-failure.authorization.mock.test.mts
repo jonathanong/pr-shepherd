@@ -50,6 +50,27 @@ function failingCheckReport(overrides: Partial<Parameters<typeof makeReport>[0]>
   });
 }
 
+const readOnlyAuthorization = {
+  repositoryPermission: "READ" as const,
+  viewerCanAdminister: false,
+  viewerDidAuthor: false,
+  viewerCanUpdate: false,
+  viewerCanEnableAutoMerge: false,
+  viewerCanEditFiles: false,
+  headRepositoryPermission: "READ" as const,
+};
+
+function prepareManualCheck(overrides: Partial<Parameters<typeof makeReport>[0]> = {}) {
+  mockRunCheck.mockResolvedValue(
+    failingCheckReport({ viewerAuthorization: readOnlyAuthorization, ...overrides }),
+  );
+  mockUpdateReadyDelay.mockResolvedValue({
+    isReady: false,
+    shouldCancel: false,
+    remainingSeconds: 600,
+  });
+}
+
 describe("fix_code — GitHub Actions authorization", () => {
   it("never cancels or recommends cancelling workflow runs, regardless of repository role", async () => {
     // makeReport defaults to repositoryPermission: "ADMIN" — cancellation stays unrecommended
@@ -89,24 +110,7 @@ describe("fix_code — GitHub Actions authorization", () => {
   });
 
   it("escalates when the viewer's repository role cannot authorize the only follow-up", async () => {
-    mockRunCheck.mockResolvedValue(
-      failingCheckReport({
-        viewerAuthorization: {
-          repositoryPermission: "READ",
-          viewerCanAdminister: false,
-          viewerDidAuthor: false,
-          viewerCanUpdate: false,
-          viewerCanEnableAutoMerge: false,
-          viewerCanEditFiles: false,
-          headRepositoryPermission: "READ",
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
+    prepareManualCheck();
 
     const result = await runIterate(makeOpts());
 
@@ -117,24 +121,7 @@ describe("fix_code — GitHub Actions authorization", () => {
   });
 
   it("preserves merge mode in the resume command for a manual check hand-off", async () => {
-    mockRunCheck.mockResolvedValue(
-      failingCheckReport({
-        viewerAuthorization: {
-          repositoryPermission: "READ",
-          viewerCanAdminister: false,
-          viewerDidAuthor: false,
-          viewerCanUpdate: false,
-          viewerCanEnableAutoMerge: false,
-          viewerCanEditFiles: false,
-          headRepositoryPermission: "READ",
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
+    prepareManualCheck();
 
     const result = await runIterate(makeOpts({ merge: true }));
 
@@ -147,31 +134,15 @@ describe("fix_code — GitHub Actions authorization", () => {
   });
 
   it("does not let a surfaced approval postpone a manual-only check escalation", async () => {
-    mockRunCheck.mockResolvedValue(
-      failingCheckReport({
-        viewerAuthorization: {
-          repositoryPermission: "READ",
-          viewerCanAdminister: false,
-          viewerDidAuthor: false,
-          viewerCanUpdate: false,
-          viewerCanEnableAutoMerge: false,
-          viewerCanEditFiles: false,
-          headRepositoryPermission: "READ",
+    prepareManualCheck({
+      approvedReviews: [
+        {
+          id: "approval-1",
+          author: "reviewer",
+          authorType: "User",
+          body: "Looks good",
         },
-        approvedReviews: [
-          {
-            id: "approval-1",
-            author: "reviewer",
-            authorType: "User",
-            body: "Looks good",
-          },
-        ],
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
+      ],
     });
 
     const result = await runIterate(makeOpts());
@@ -183,24 +154,8 @@ describe("fix_code — GitHub Actions authorization", () => {
   });
 
   it("completes a pending comment minimization before escalating a manual-only check", async () => {
-    mockRunCheck.mockResolvedValue(
-      failingCheckReport({
-        viewerAuthorization: {
-          repositoryPermission: "READ",
-          viewerCanAdminister: false,
-          viewerDidAuthor: false,
-          viewerCanUpdate: false,
-          viewerCanEnableAutoMerge: false,
-          viewerCanEditFiles: false,
-          headRepositoryPermission: "READ",
-        },
-        comments: { actionable: [], firstLook: [], minimizeIds: ["comment-to-minimize"] },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
+    prepareManualCheck({
+      comments: { actionable: [], firstLook: [], minimizeIds: ["comment-to-minimize"] },
     });
 
     const result = await runIterate(makeOpts());
@@ -211,32 +166,16 @@ describe("fix_code — GitHub Actions authorization", () => {
   });
 
   it("does not treat a stale human review as autonomous work", async () => {
-    mockRunCheck.mockResolvedValue(
-      failingCheckReport({
-        viewerAuthorization: {
-          repositoryPermission: "READ",
-          viewerCanAdminister: false,
-          viewerDidAuthor: false,
-          viewerCanUpdate: false,
-          viewerCanEnableAutoMerge: false,
-          viewerCanEditFiles: false,
-          headRepositoryPermission: "READ",
+    prepareManualCheck({
+      changesRequestedReviews: [
+        {
+          id: "stale-human-review",
+          author: "reviewer",
+          authorType: "User",
+          body: "Changes requested on an older commit",
+          staleReview: true,
         },
-        changesRequestedReviews: [
-          {
-            id: "stale-human-review",
-            author: "reviewer",
-            authorType: "User",
-            body: "Changes requested on an older commit",
-            staleReview: true,
-          },
-        ],
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
+      ],
     });
 
     const result = await runIterate(makeOpts());
