@@ -82,6 +82,15 @@ function prepareManualCheck(overrides: Partial<Parameters<typeof makeReport>[0]>
   });
 }
 
+function expectCheckFollowUpUnavailable(result: Awaited<ReturnType<typeof runIterate>>) {
+  expect(result).toMatchObject({
+    action: "escalate",
+    escalate: {
+      triggers: expect.arrayContaining(["check-follow-up-unavailable"]),
+    },
+  });
+}
+
 describe("fix_code — GitHub Actions authorization", () => {
   it("never cancels or recommends cancelling workflow runs, regardless of repository role", async () => {
     // makeReport defaults to repositoryPermission: "ADMIN" — cancellation stays unrecommended
@@ -125,9 +134,8 @@ describe("fix_code — GitHub Actions authorization", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("escalate");
+    expectCheckFollowUpUnavailable(result);
     if (result.action !== "escalate") return;
-    expect(result.escalate.triggers).toContain("check-follow-up-unavailable");
     expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
   });
 
@@ -136,9 +144,8 @@ describe("fix_code — GitHub Actions authorization", () => {
 
     const result = await runIterate(makeOpts({ merge: true }));
 
-    expect(result.action).toBe("escalate");
+    expectCheckFollowUpUnavailable(result);
     if (result.action !== "escalate") return;
-    expect(result.escalate.triggers).toContain("check-follow-up-unavailable");
     expect(result.escalate.humanMessage).toContain(
       "/pr-shepherd:pr-shepherd https://github.com/owner/repo/pull/42 --merge",
     );
@@ -158,9 +165,8 @@ describe("fix_code — GitHub Actions authorization", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("escalate");
+    expectCheckFollowUpUnavailable(result);
     if (result.action !== "escalate") return;
-    expect(result.escalate.triggers).toContain("check-follow-up-unavailable");
     expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
   });
 
@@ -191,9 +197,7 @@ describe("fix_code — GitHub Actions authorization", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("escalate");
-    if (result.action !== "escalate") return;
-    expect(result.escalate.triggers).toContain("check-follow-up-unavailable");
+    expectCheckFollowUpUnavailable(result);
   });
 
   it("escalates when a runId has no confirmed GitHub Actions provenance or evidence", async () => {
@@ -201,82 +205,58 @@ describe("fix_code — GitHub Actions authorization", () => {
     // pattern GitHub Actions details URLs use. Without a resolved workflowName (the same
     // GraphQL path that produces the run's numeric ID), Shepherd cannot confirm the parsed
     // runId actually names a GitHub Actions run, so it must not recommend rerunning it.
-    mockRunCheck.mockResolvedValue(
-      failingCheckReport({
-        checks: checkSet([
-          failingCheck({
-            name: "external-ci",
-            detailsUrl: "https://ci.example.com/runs/123",
-            workflowName: undefined,
-          }),
-        ]),
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
+    prepareManualCheck({
+      checks: checkSet([
+        failingCheck({
+          name: "external-ci",
+          detailsUrl: "https://ci.example.com/runs/123",
+          workflowName: undefined,
+        }),
+      ]),
     });
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("escalate");
+    expectCheckFollowUpUnavailable(result);
     if (result.action !== "escalate") return;
-    expect(result.escalate.triggers).toContain("check-follow-up-unavailable");
     expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
   });
 
   it("escalates an ACTION_REQUIRED check for manual workflow approval", async () => {
     // ACTION_REQUIRED means the run is paused pending manual workflow approval on GitHub;
     // a rerun cannot grant that approval, so no rerun command applies.
-    mockRunCheck.mockResolvedValue(
-      failingCheckReport({
-        checks: checkSet([failingCheck({ conclusion: "ACTION_REQUIRED" })]),
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
+    prepareManualCheck({
+      checks: checkSet([failingCheck({ conclusion: "ACTION_REQUIRED" })]),
     });
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("escalate");
+    expectCheckFollowUpUnavailable(result);
     if (result.action !== "escalate") return;
-    expect(result.escalate.triggers).toContain("check-follow-up-unavailable");
     expect(result.escalate.checks?.[0]).toMatchObject({ conclusion: "ACTION_REQUIRED" });
     expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
   });
 
   it("escalates when a sibling job prevents rerunning the only failing run", async () => {
     // GitHub can only rerun a workflow run once it has fully completed.
-    mockRunCheck.mockResolvedValue(
-      failingCheckReport({
-        checks: checkSet(undefined, [
-          {
-            name: "lint",
-            status: "IN_PROGRESS",
-            conclusion: null,
-            detailsUrl: "https://github.com/owner/repo/actions/runs/123",
-            event: "pull_request",
-            runId: "123",
-            category: "in_progress",
-          },
-        ]),
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
+    prepareManualCheck({
+      checks: checkSet(undefined, [
+        {
+          name: "lint",
+          status: "IN_PROGRESS",
+          conclusion: null,
+          detailsUrl: "https://github.com/owner/repo/actions/runs/123",
+          event: "pull_request",
+          runId: "123",
+          category: "in_progress",
+        },
+      ]),
     });
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("escalate");
+    expectCheckFollowUpUnavailable(result);
     if (result.action !== "escalate") return;
-    expect(result.escalate.triggers).toContain("check-follow-up-unavailable");
     expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
   });
 
