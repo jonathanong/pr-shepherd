@@ -20,9 +20,10 @@ import { renderMergeCommand } from "../commands/iterate/merge.mts";
 export function formatFixCodeResult(header: string, result: IterateResultFixCode): string {
   const sections: string[] = [header];
 
-  if (result.fix.threads.length > 0) {
-    sections.push("## Review threads");
-    for (const t of result.fix.threads) {
+  const renderThreads = (heading: string, threads: typeof result.fix.threads): void => {
+    if (threads.length === 0) return;
+    sections.push(heading);
+    for (const t of threads) {
       const lineLabel = renderLineRange(t.startLine, t.line);
       const loc = t.path ? `\`${t.path}:${lineLabel}\`` : "(no location)";
       const heading = t.url ? `[threadId=${t.id}](${t.url})` : `\`threadId=${t.id}\``;
@@ -37,7 +38,15 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
         sections.push(renderSuggestionBlock(t.suggestion, ""));
       }
     }
-  }
+  };
+  const locatedThreads = result.fix.threads.filter(
+    (thread) => thread.path !== null && thread.line !== null,
+  );
+  const unlocatedThreads = result.fix.threads.filter(
+    (thread) => thread.path === null || thread.line === null,
+  );
+  renderThreads("## Review threads", locatedThreads);
+  renderThreads("## Unlocated review threads (logged once — no mutation)", unlocatedThreads);
 
   if (result.fix.resolutionOnlyThreads.length > 0) {
     sections.push("## Review threads to resolve");

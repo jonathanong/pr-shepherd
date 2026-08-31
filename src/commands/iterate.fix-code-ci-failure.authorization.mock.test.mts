@@ -10,43 +10,84 @@ import {
 } from "../../test-helpers/commands/iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
 import { makeThread } from "../../test-helpers/commands/iterate-thread-test-support.mts";
+import type { ClassifiedCheck } from "../types.mts";
 
 registerIterateHooks();
+
+function failingCheck(overrides: Partial<ClassifiedCheck> = {}): ClassifiedCheck {
+  return {
+    name: "tests",
+    status: "COMPLETED",
+    conclusion: "FAILURE",
+    detailsUrl: "https://github.com/owner/repo/actions/runs/123",
+    event: "pull_request",
+    runId: "123",
+    workflowName: "CI",
+    category: "failing",
+    ...overrides,
+  };
+}
+
+function checkSet(
+  failing: ClassifiedCheck[] = [failingCheck()],
+  inProgress: ClassifiedCheck[] = [],
+) {
+  return {
+    passing: [],
+    failing,
+    inProgress,
+    skipped: [],
+    filtered: [],
+    filteredNames: [],
+    blockedByFilteredCheck: false,
+  };
+}
 
 function failingCheckReport(overrides: Partial<Parameters<typeof makeReport>[0]> = {}) {
   return makeReport({
     status: "FAILING",
-    checks: {
-      passing: [],
-      failing: [
-        {
-          name: "tests",
-          status: "COMPLETED",
-          conclusion: "FAILURE",
-          detailsUrl: "https://github.com/owner/repo/actions/runs/123",
-          event: "pull_request",
-          runId: "123",
-          workflowName: "CI",
-          category: "failing",
-        },
-      ],
-      inProgress: [
-        {
-          name: "lint",
-          status: "IN_PROGRESS",
-          conclusion: null,
-          detailsUrl: "https://github.com/owner/repo/actions/runs/456",
-          event: "pull_request",
-          runId: "456",
-          category: "in_progress",
-        },
-      ],
-      skipped: [],
-      filtered: [],
-      filteredNames: [],
-      blockedByFilteredCheck: false,
-    },
+    checks: checkSet(undefined, [
+      {
+        name: "lint",
+        status: "IN_PROGRESS",
+        conclusion: null,
+        detailsUrl: "https://github.com/owner/repo/actions/runs/456",
+        event: "pull_request",
+        runId: "456",
+        category: "in_progress",
+      },
+    ]),
     ...overrides,
+  });
+}
+
+const readOnlyAuthorization = {
+  repositoryPermission: "READ" as const,
+  viewerCanAdminister: false,
+  viewerDidAuthor: false,
+  viewerCanUpdate: false,
+  viewerCanEnableAutoMerge: false,
+  viewerCanEditFiles: false,
+  headRepositoryPermission: "READ" as const,
+};
+
+function prepareManualCheck(overrides: Partial<Parameters<typeof makeReport>[0]> = {}) {
+  mockRunCheck.mockResolvedValue(
+    failingCheckReport({ viewerAuthorization: readOnlyAuthorization, ...overrides }),
+  );
+  mockUpdateReadyDelay.mockResolvedValue({
+    isReady: false,
+    shouldCancel: false,
+    remainingSeconds: 600,
+  });
+}
+
+function expectCheckFollowUpUnavailable(result: Awaited<ReturnType<typeof runIterate>>) {
+  expect(result).toMatchObject({
+    action: "escalate",
+    escalate: {
+      triggers: expect.arrayContaining(["check-follow-up-unavailable"]),
+    },
   });
 }
 
@@ -88,155 +129,132 @@ describe("fix_code — GitHub Actions authorization", () => {
     expect(result.fix.instructions.join("\n")).not.toContain("no authorized follow-up action");
   });
 
-  it("does not recommend a rerun when the viewer's repository role is below WRITE", async () => {
-    mockRunCheck.mockResolvedValue(
-      failingCheckReport({
-        viewerAuthorization: {
-          repositoryPermission: "READ",
-          viewerCanAdminister: false,
-          viewerDidAuthor: false,
-          viewerCanUpdate: false,
-          viewerCanEnableAutoMerge: false,
-          viewerCanEditFiles: false,
-          headRepositoryPermission: "READ",
-        },
-      }),
+  it("escalates when the viewer's repository role cannot authorize the only follow-up", async () => {
+    prepareManualCheck();
+
+    const result = await runIterate(makeOpts());
+
+    expectCheckFollowUpUnavailable(result);
+    if (result.action !== "escalate") return;
+    expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
+  });
+
+  it("preserves merge mode in the resume command for a manual check hand-off", async () => {
+    prepareManualCheck();
+
+    const result = await runIterate(makeOpts({ merge: true }));
+
+    expectCheckFollowUpUnavailable(result);
+    if (result.action !== "escalate") return;
+    expect(result.escalate.humanMessage).toContain(
+      "/pr-shepherd:pr-shepherd https://github.com/owner/repo/pull/42 --merge",
     );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
+  });
+
+  it("does not let a surfaced approval postpone a manual-only check escalation", async () => {
+    prepareManualCheck({
+      approvedReviews: [
+        {
+          id: "approval-1",
+          author: "reviewer",
+          authorType: "User",
+          body: "Looks good",
+        },
+      ],
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expectCheckFollowUpUnavailable(result);
+    if (result.action !== "escalate") return;
+    expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
+  });
+
+  it("completes a pending comment minimization before escalating a manual-only check", async () => {
+    prepareManualCheck({
+      comments: { actionable: [], firstLook: [], minimizeIds: ["comment-to-minimize"] },
     });
 
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") return;
-    expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
-    expect(result.fix.instructions.join("\n")).not.toContain("[rerun authorized]");
+    expect(result.fix.resolveCommand.argv).toContain("comment-to-minimize");
   });
 
-  it("does not recommend a rerun when the runId has no confirmed GitHub Actions provenance", async () => {
+  it("does not treat a stale human review as autonomous work", async () => {
+    prepareManualCheck({
+      changesRequestedReviews: [
+        {
+          id: "stale-human-review",
+          author: "reviewer",
+          authorType: "User",
+          body: "Changes requested on an older commit",
+          staleReview: true,
+        },
+      ],
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expectCheckFollowUpUnavailable(result);
+    if (result.action !== "escalate") return;
+    expect(result.escalate.changesRequestedReviews).toEqual([
+      expect.objectContaining({ id: "stale-human-review" }),
+    ]);
+  });
+
+  it("escalates when a runId has no confirmed GitHub Actions provenance or evidence", async () => {
     // An external CI system's details URL can coincidentally match the same /runs/<digits>/
     // pattern GitHub Actions details URLs use. Without a resolved workflowName (the same
     // GraphQL path that produces the run's numeric ID), Shepherd cannot confirm the parsed
     // runId actually names a GitHub Actions run, so it must not recommend rerunning it.
-    mockRunCheck.mockResolvedValue(
-      failingCheckReport({
-        checks: {
-          passing: [],
-          failing: [
-            {
-              name: "external-ci",
-              status: "COMPLETED",
-              conclusion: "FAILURE",
-              detailsUrl: "https://ci.example.com/runs/123",
-              event: "pull_request",
-              runId: "123",
-              category: "failing",
-            },
-          ],
-          inProgress: [],
-          skipped: [],
-          filtered: [],
-          filteredNames: [],
-          blockedByFilteredCheck: false,
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
+    prepareManualCheck({
+      checks: checkSet([
+        failingCheck({
+          name: "external-ci",
+          detailsUrl: "https://ci.example.com/runs/123",
+          workflowName: undefined,
+        }),
+      ]),
     });
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
+    expectCheckFollowUpUnavailable(result);
+    if (result.action !== "escalate") return;
+    expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
   });
 
-  it("does not recommend a rerun for an ACTION_REQUIRED check", async () => {
+  it("escalates an ACTION_REQUIRED check for manual workflow approval", async () => {
     // ACTION_REQUIRED means the run is paused pending manual workflow approval on GitHub;
     // a rerun cannot grant that approval, so no rerun command applies.
-    mockRunCheck.mockResolvedValue(
-      failingCheckReport({
-        checks: {
-          passing: [],
-          failing: [
-            {
-              name: "tests",
-              status: "COMPLETED",
-              conclusion: "ACTION_REQUIRED",
-              detailsUrl: "https://github.com/owner/repo/actions/runs/123",
-              event: "pull_request",
-              runId: "123",
-              workflowName: "CI",
-              category: "failing",
-            },
-          ],
-          inProgress: [],
-          skipped: [],
-          filtered: [],
-          filteredNames: [],
-          blockedByFilteredCheck: false,
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
+    prepareManualCheck({
+      checks: checkSet([failingCheck({ conclusion: "ACTION_REQUIRED" })]),
     });
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
+    expectCheckFollowUpUnavailable(result);
+    if (result.action !== "escalate") return;
+    expect(result.escalate.checks?.[0]).toMatchObject({ conclusion: "ACTION_REQUIRED" });
+    expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
   });
 
-  it("does not recommend a rerun while a sibling job from the same run is still in progress", async () => {
+  it("waits when a sibling job prevents rerunning the only failing run", async () => {
     // GitHub can only rerun a workflow run once it has fully completed.
-    mockRunCheck.mockResolvedValue(
-      failingCheckReport({
-        checks: {
-          passing: [],
-          failing: [
-            {
-              name: "tests",
-              status: "COMPLETED",
-              conclusion: "FAILURE",
-              detailsUrl: "https://github.com/owner/repo/actions/runs/123",
-              event: "pull_request",
-              runId: "123",
-              workflowName: "CI",
-              category: "failing",
-            },
-          ],
-          inProgress: [
-            {
-              name: "lint",
-              status: "IN_PROGRESS",
-              conclusion: null,
-              detailsUrl: "https://github.com/owner/repo/actions/runs/123",
-              event: "pull_request",
-              runId: "123",
-              category: "in_progress",
-            },
-          ],
-          skipped: [],
-          filtered: [],
-          filteredNames: [],
-          blockedByFilteredCheck: false,
+    prepareManualCheck({
+      checks: checkSet(undefined, [
+        {
+          name: "lint",
+          status: "IN_PROGRESS",
+          conclusion: null,
+          detailsUrl: "https://github.com/owner/repo/actions/runs/123",
+          event: "pull_request",
+          runId: "123",
+          category: "in_progress",
         },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
+      ]),
     });
 
     const result = await runIterate(makeOpts());
@@ -246,7 +264,7 @@ describe("fix_code — GitHub Actions authorization", () => {
     expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
   });
 
-  it("escalates a denied suppressed auto-resolve thread without recommending a mutation", async () => {
+  it("surfaces a denied suppressed auto-resolve thread once without escalating", async () => {
     const thread = makeThread({
       id: "thread-denied",
       author: "review-bot",
@@ -270,20 +288,13 @@ describe("fix_code — GitHub Actions authorization", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("escalate");
-    if (result.action !== "escalate") return;
-    expect(result.escalate.triggers).toContain("authorization-required");
-    expect(result.escalate.authorization).toEqual([
-      {
-        action: "resolve-thread",
-        targetIds: [thread.id],
-        reason: "denied-or-unverifiable",
-      },
-    ]);
-    expect(result.escalate.humanMessage).not.toContain("pr-shepherd apply review");
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.threads).toEqual([expect.objectContaining({ id: thread.id })]);
+    expect(result.fix.resolveCommand.hasMutations).toBe(false);
   });
 
-  it("reports denied reply and dismissal authorization", async () => {
+  it("surfaces denied reply and dismissal items without escalating or mutating", async () => {
     const thread = makeThread({
       id: "thread-human",
       author: "alice",
@@ -318,15 +329,16 @@ describe("fix_code — GitHub Actions authorization", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("escalate");
-    if (result.action !== "escalate") return;
-    expect(result.escalate.authorization?.map((item) => item.action)).toEqual([
-      "reply-thread",
-      "dismiss-review",
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.threads).toEqual([expect.objectContaining({ id: thread.id })]);
+    expect(result.fix.changesRequestedReviews).toEqual([
+      expect.objectContaining({ id: "review-bot" }),
     ]);
+    expect(result.fix.resolveCommand.hasMutations).toBe(false);
   });
 
-  it("escalates when a paired viewer-authored reply is allowed but its resolve is denied", async () => {
+  it("skips a paired viewer-authored mutation when resolve authorization is denied", async () => {
     const thread = makeThread({
       id: "thread-viewer",
       author: "viewer",
@@ -350,14 +362,8 @@ describe("fix_code — GitHub Actions authorization", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("escalate");
-    if (result.action !== "escalate") return;
-    expect(result.escalate.authorization).toEqual([
-      {
-        action: "resolve-thread",
-        targetIds: [thread.id],
-        reason: "denied-or-unverifiable",
-      },
-    ]);
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.resolveCommand.hasMutations).toBe(false);
   });
 });

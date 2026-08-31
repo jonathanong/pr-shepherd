@@ -21,7 +21,7 @@ describe("escalate message helpers", () => {
   it("includes ambiguous comments and fallback suggestions", () => {
     const message = buildEscalateHumanMessage(
       {
-        triggers: ["thread-missing-location"],
+        triggers: ["fix-thrash"],
         unresolvedThreads: [],
         ambiguousComments: [
           {
@@ -79,6 +79,58 @@ describe("escalate message helpers", () => {
     expect(buildEscalateSuggestion(["stall-timeout"], "1 minute")).toContain("1 minute —");
     expect(buildEscalateSuggestion(["stall-timeout"])).toContain("60 minutes —");
     expect(buildEscalateSuggestion(["base-branch-unknown"])).toContain("base branch");
+  });
+
+  it("renders complete failing-check evidence for a check escalation", () => {
+    const message = buildEscalateHumanMessage(
+      {
+        triggers: ["check-follow-up-unavailable"],
+        unresolvedThreads: [],
+        ambiguousComments: [],
+        changesRequestedReviews: [],
+        checks: [
+          {
+            name: "tests",
+            runId: "123",
+            detailsUrl: "https://github.com/owner/repo/actions/runs/123",
+            conclusion: "ACTION_REQUIRED",
+            workflowName: "CI",
+            jobName: "tests (linux)",
+            failedStep: "Approve deployment",
+            summary: "Waiting for approval",
+            logExcerpt: "manual approval required",
+            scope: "merge_group",
+            annotations: [
+              {
+                id: "annotation-1",
+                path: "src/a.ts",
+                startLine: 4,
+                endLine: 5,
+                level: "failure",
+                title: "Blocked",
+                message: "approval is required",
+                rawDetails: "environment: production",
+                blobUrl: "https://github.com/owner/repo/blob/abc/src/a.ts#L4-L5",
+              },
+            ],
+          },
+        ],
+        suggestion: buildEscalateSuggestion(["check-follow-up-unavailable"]),
+      },
+      42,
+    );
+
+    expect(message).toContain("check-follow-up-unavailable");
+    expect(message).toContain("run `123`");
+    expect(message).toContain("URL `https://github.com/owner/repo/actions/runs/123`");
+    expect(message).toContain("CI › tests (linux)");
+    expect(message).toContain("ACTION_REQUIRED");
+    expect(message).toContain("Approve deployment");
+    expect(message).toContain("manual approval required");
+    expect(message).toContain("scope `merge_group`");
+    expect(message).toContain("annotation-1");
+    expect(message).toContain("src/a.ts:4-5");
+    expect(message).toContain("environment: production");
   });
 
   it("formats sub-minute durations as seconds and everything else as whole minutes", () => {

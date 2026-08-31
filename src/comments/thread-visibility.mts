@@ -44,13 +44,16 @@ export function classifyThreadVisibility(
   threads: ReviewThread[],
   seenMap: Map<string, SeenMarker>,
   botUsernames: NormalizedBotUsernames = new Set(),
+  repeatableThreadIds?: ReadonlySet<string>,
 ): ThreadVisibility {
+  const shouldRepeat = (thread: ReviewThread): boolean =>
+    repeatableThreadIds?.has(thread.id) ?? true;
   const unresolvedThreads = threads.filter((t) => !t.isResolved);
   const activeThreads = unresolvedThreads
     .filter((t) => !t.isOutdated && !t.isMinimized)
     .flatMap((t) => {
       if (threadEndedByShepherd(t)) return [];
-      if (isConfiguredBotAuthor(t, botUsernames)) return [t];
+      if (isConfiguredBotAuthor(t, botUsernames) && shouldRepeat(t)) return [t];
       const visible = classifyVisibleThread(t, seenMap);
       return visible ? [visible] : [];
     });
@@ -63,7 +66,11 @@ export function classifyThreadVisibility(
       }
       return t.isOutdated || t.isMinimized;
     })
-    .map((t) => classifyVisibleThread(t, seenMap) ?? t);
+    .flatMap((t) => {
+      const visible = classifyVisibleThread(t, seenMap);
+      if (visible) return [visible];
+      return shouldRepeat(t) ? [t] : [];
+    });
   const firstLookThreads: FirstLookThread[] = [
     ...threads.flatMap((t) => {
       if (!t.isOutdated) return [];

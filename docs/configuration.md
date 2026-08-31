@@ -97,7 +97,7 @@ actions:
 | `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                                                                      |
 | `merge.commandArgs`                  | `[]`                                      | Options for ordinary `gh pr merge` commands; defaults to `--merge` when no strategy is selected. Not used for merge-queue commands.                         |
 | `actions.autoMinimizeSuppressed`     | `true`                                    | Silently resolve/minimize classification-rule matches with both `suppress: true` and `autoResolve: true` before emitting `fix_code`                         |
-| `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR reaches a clean handoff state                                                                                             |
+| `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR reaches a clean ready state                                                                                               |
 | `actions.neverCancelRuns`            | `[]`                                      | Legacy cancellation-named patterns; matching checks remain visible despite `ignoreChecks`, but Shepherd never cancels runs                                  |
 
 ## `botUsernames`
@@ -184,9 +184,9 @@ Empty (default) omits the hint entirely.
 
 ### `watch.readyDelayMinutes` — default `10`
 
-After the PR first reaches a clean READY handoff (checks green, no Shepherd-visible work, no blocking bot review pending), shepherd continues to loop for this many minutes before cancelling. This settle window gives reviewers time to request changes or for a configured blocking reviewer to finish.
+After the PR first reaches a clean READY state (checks green, no Shepherd-visible work, no blocking bot review pending), Shepherd continues to loop for this many minutes before cancelling. This settle window gives reviewers time to request changes or for a configured blocking reviewer to finish.
 
-The ready-delay countdown resets if the PR drops out of that handoff state at any tick. Lifecycle: [iterate-flow.md](iterate-flow.md#2-ready-delay).
+The ready-delay countdown resets if the PR drops out of that ready state at any tick. Lifecycle: [iterate-flow.md](iterate-flow.md#2-ready-delay).
 
 ### `watch.graphqlQuotaWarnings`
 

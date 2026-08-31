@@ -25,6 +25,7 @@ describe("runIterate — prescriptive fields: log strings", () => {
               detailsUrl: "https://github.com/owner/repo/actions/runs/25406234225",
               event: "pull_request",
               runId: "25406234225",
+              source: "startup_failure",
               category: "failing",
               summary: "ci: skip secret-backed jobs for dependency bots",
             },

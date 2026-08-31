@@ -15,15 +15,15 @@ export function computeStatus(
   // These merge-blocking states become PENDING (not FAILING) once CI is resolved.
   if (verdict.anyFailing) return "FAILING";
   if (verdict.anyInProgress) return "IN_PROGRESS";
-  // BLOCKED with no remaining shepherd work — hand off via ready-delay regardless of why GitHub
+  // BLOCKED with no remaining shepherd work — enter ready-delay regardless of why GitHub
   // is BLOCKED (review pending, insufficient approvals, branch-protection rule, etc.).
   // Requires hasChecks so that a PR with zero relevant checks (CI never started, or all
   // filtered/skipped) doesn't prematurely trigger READY before any check has reported.
   // Exception: UNSTABLE with ignored checks — UNSTABLE means only non-required checks are
-  // pending/failing, and if those are all ignored the handoff is safe even with no other checks.
+  // pending/failing, and if those are all ignored the ready state is safe even with no other checks.
   // BLOCKED is excluded from the ignoredNames extension: BLOCKED can mean required checks haven't
-  // started, and handing off prematurely there risks a broken merge attempt.
-  // blockingBotReviewInProgress is still excluded — a bot review is shepherd's problem, not a hand-off.
+  // started, and entering READY prematurely there risks a broken merge attempt.
+  // blockingBotReviewInProgress is still excluded — a bot review is Shepherd work, not a READY state.
   const hasRelevantPassingChecks =
     verdict.hasChecks || (mergeStatus.status === "UNSTABLE" && verdict.ignoredNames.length > 0);
   if (

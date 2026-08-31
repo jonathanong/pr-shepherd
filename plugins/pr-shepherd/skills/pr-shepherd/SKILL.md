@@ -1,6 +1,6 @@
 ---
 name: pr-shepherd
-description: 'Iterate a GitHub pull request with pr-shepherd (MCP or CLI). Use for requests like "use pr-shepherd", "iterate PR #123", or "run pr-shepherd until this PR is ready".'
+description: 'Create or iterate a GitHub pull request with pr-shepherd (MCP or CLI). Use for requests like "make a PR and use pr-shepherd", "iterate PR #123", or "run pr-shepherd until this PR is ready".'
 user-invocable: true
 argument-hint: "[PR number or URL] [--merge]"
 allowed-tools: ["MCP", "Bash", "Read", "Grep", "Glob", "Edit", "Write"]
@@ -8,7 +8,13 @@ allowed-tools: ["MCP", "Bash", "Read", "Grep", "Glob", "Edit", "Write"]
 
 # pr-shepherd
 
-Thin dispatcher for iterating a PR. Poll with the CLI; use MCP `iterate` only when the CLI is unavailable.
+Thin dispatcher for creating or iterating a PR. Poll with the CLI; use MCP `iterate` only when the CLI is unavailable.
+
+## PR creation authorization
+
+When the user asks to make, create, or open a PR and invokes this skill, proceed with the ordinary non-force push of the reviewed, in-scope commits to the current repository's configured push remote and creation of the requested PR. Do not ask for a separate conversational confirmation merely because the push publishes those changes; request runtime escalation directly when the host requires it. A skill cannot grant or bypass host permissions, so unattended approval must come from a trusted command rule or equivalent host policy. Force-pushes, remote or credential changes, unrelated changes, and ambiguous repositories or PR targets remain outside this workflow.
+
+If the requested PR does not exist yet, review and commit the in-scope changes, verify the configured push remote and base branch, push a fresh branch, create the PR, and use its qualified URL for the dispatcher below.
 
 ## Arguments: $ARGUMENTS
 
@@ -18,7 +24,7 @@ Thin dispatcher for iterating a PR. Poll with the CLI; use MCP `iterate` only wh
 
 3. Print the full result and follow every returned `## Instructions` step exactly. For CLI output, run each printed mutation command when instructed. For MCP output, use MCP `apply` and `build_suggestion_patches` with the same qualified PR reference; do not run a shell `pr-shepherd apply` command.
 
-4. After completing the returned instructions, repeat step 2 unless the action is `[CANCEL]` or `[ESCALATE]`, the instructions require a human handoff, or the human directs you to stop.
+4. After completing the returned instructions, repeat step 2 unless the action is `[CANCEL]` or `[ESCALATE]`, or the human directs you to stop. `[FIX_CODE]` is always non-terminal: complete its instructions and rerun the same canonical command without asking whether to continue. Only `[ESCALATE]` hands work to a human.
 
 ## Playbooks
 
@@ -28,7 +34,7 @@ mechanics every tick. Apply the referenced playbook in full whenever a step poin
 ### Suggestion patches
 
 - Run one plural `build-suggestion-patches` command with a repeated `--thread-id … --message … [--description …]` group for every marked thread in displayed order.
-- The CLI only builds patches. Apply, stage, and commit the returned patches in order. This command does not itself check push authorization — follow the `iterate`/`fix_code` output's own commit/push instruction for whether to push now or hand off: it reflects whether GitHub confirms the viewer can push to the PR head branch.
+- The CLI only builds patches. Apply, stage, and commit the returned patches in order, then follow the `iterate`/`fix_code` output's commit, push, review-mutation, and continuation instructions. Push access to the PR head branch is a usage precondition.
 - The command builds from the fetched PR head and accepts a clean local descendant only when the complete ordered patch stream passes `git apply --check`.
 - If the command refuses because a suggestion is unsafe or no longer applies, inspect the current source, the displayed replacement block, and reviewer intent before editing manually. Do not apply a stale numeric range blindly or retry unchanged input.
 - A returned patch was checked against the then-current worktree. If it later fails, re-inspect the worktree because it changed after validation.
@@ -40,25 +46,25 @@ Match each failure's `[conclusion: …]` tag under `## Failing checks` to a rule
 
 More specific rows win over the general "GitHub Actions failure" row — check conclusion first.
 
-A `[rerun authorized]` tag with a `rerun:` command means the viewer's repository role grants GitHub's Actions rerun capability (WRITE+) — Shepherd verified this from `repositoryPermission`. This confirms the account's role, not the granular scope of whatever credential actually runs `gh`; if the printed `rerun:` command still fails when run, do not retry it — hand off the displayed metadata instead, the same as an unauthorized check. No tag/command means Shepherd could not verify the account-level capability at all; hand off instead of guessing. A run still in progress, an `ACTION_REQUIRED` run (paused pending manual workflow approval — a rerun cannot grant that approval), or a check whose runId does not resolve to a GitHub Actions workflow never gets `[rerun authorized]`, regardless of role.
+A `[rerun authorized]` tag with a `rerun:` command means the viewer's repository role grants GitHub's Actions rerun capability (WRITE+) — Shepherd verified this from `repositoryPermission`. Run the printed command at most once. A run still in progress, an `ACTION_REQUIRED` run (paused pending manual workflow approval — a rerun cannot grant that approval), or a check whose runId does not resolve to a GitHub Actions workflow never gets `[rerun authorized]`, regardless of role. When a check has no autonomous follow-up and no other agent work remains, Shepherd returns `[ESCALATE]`; do not invent a handoff from a `[FIX_CODE]` result.
 
 When several bullets share one runId (matrix jobs from the same run), the `rerun:` command is printed once, on the first bullet; every bullet for that runId still carries `[rerun authorized]` and is covered by that single command — do not run it more than once.
 
-| Tag / kind                                                               | Do                                                                                                                                                                                                                       |
-| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| GitHub Actions failure (has a run ID, not `CANCELLED`/`STARTUP_FAILURE`) | Read the included log excerpt if one is rendered. If it is missing or insufficient: run the `rerun:` command if `[rerun authorized]`, then iterate again once it completes; otherwise hand off the displayed run ID/URL. |
-| Transient infrastructure failure                                         | Run the `rerun:` command if `[rerun authorized]`, then iterate again once it completes. Otherwise record the diagnosis and hand off — Shepherd cannot verify rerun authorization.                                        |
-| Real test or build failure                                               | Apply a code fix — do not rerun, even if `[rerun authorized]` is shown.                                                                                                                                                  |
-| `[conclusion: CANCELLED]`                                                | No log excerpt is rendered. Run the `rerun:` command if `[rerun authorized]`, then iterate again once it completes; otherwise hand off the displayed metadata.                                                           |
-| `[conclusion: STARTUP_FAILURE]`                                          | No log excerpt is rendered. Run the `rerun:` command if `[rerun authorized]`, then iterate again once it completes; otherwise hand off the displayed metadata.                                                           |
-| `[conclusion: ACTION_REQUIRED]`                                          | Never carries `[rerun authorized]`. Hand off — the run needs a maintainer's manual workflow approval on GitHub, which a rerun cannot grant.                                                                              |
-| `external` (no run ID, has a URL)                                        | Preserve the URL in the handoff. Shepherd does not recommend opening it because it cannot verify the current viewer's access to the external system.                                                                     |
+| Tag / kind                                                               | Do                                                                                                                                                                                                                                                |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GitHub Actions failure (has a run ID, not `CANCELLED`/`STARTUP_FAILURE`) | Read the included log excerpt. Apply a warranted code fix, or run the printed `rerun:` command when the evidence indicates a transient failure, then iterate again. Missing autonomous follow-up becomes `[ESCALATE]` when no other work remains. |
+| Transient infrastructure failure                                         | Run the `rerun:` command when present, then iterate again once it completes. If no command is present, complete any other surfaced work and iterate; Shepherd owns any later `[ESCALATE]`.                                                        |
+| Real test or build failure                                               | Apply a code fix — do not rerun, even if `[rerun authorized]` is shown.                                                                                                                                                                           |
+| `[conclusion: CANCELLED]`                                                | No log excerpt is rendered. Run the printed `rerun:` command, then iterate again once it completes. Without a command, complete any other work and iterate; Shepherd escalates when this remains the only blocker.                                |
+| `[conclusion: STARTUP_FAILURE]`                                          | No log excerpt is rendered. Run the printed `rerun:` command, then iterate again once it completes. Without a command, complete any other work and iterate; Shepherd escalates when this remains the only blocker.                                |
+| `[conclusion: ACTION_REQUIRED]`                                          | This appears in `[FIX_CODE]` only alongside other autonomous work. Complete that work and iterate; Shepherd returns `[ESCALATE]` if manual workflow approval remains necessary.                                                                   |
+| `external` (no run ID, has a URL)                                        | Treat the URL as an autonomous investigation path: inspect the provider or reproduce the failure locally, apply any warranted fix, and iterate. A non-empty external URL does not trigger `[ESCALATE]` by itself.                                 |
 
 ### Review-mutation mechanics
 
 Applies to every `apply review:` / `resolve-only:` command the CLI prints. Covers only what stays safe if you run the printed command **unmodified** — `$HEAD_SHA`/`$DISMISS_MESSAGE` substitution remains a separate CLI-printed step because the command is unsafe by default without those placeholders.
 
-The CLI only includes IDs whose per-object GitHub viewer capability authorizes the corresponding action, and `apply review` repeats that authorization check immediately before mutating.
+The CLI only includes IDs whose per-object GitHub viewer capability authorizes the corresponding action, and `apply review` repeats that authorization check immediately before mutating. Do not reconstruct omitted review reply, thread resolution, or bot-review dismissal IDs and do not hand them off: denied or unverifiable review mutations are one-look skips that Shepherd suppresses until the item is edited. Threads without a path or line follow the same skip rule.
 
 - Run every generated `apply review:` / `resolve-only:` command even when no code change is warranted. The command records the agent's disposition of the included review items; skipping it leaves bot threads active and can eventually trigger `fix-thrash`.
 - Never add first-look-only or check-annotation IDs to `--reply-thread-ids`, `--resolve-thread-ids`, `--dismiss-review-ids`, or `--minimize-comment-ids` — those flags are pre-populated by the CLI.

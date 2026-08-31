@@ -23,7 +23,12 @@ import {
 } from "../comments/review-visibility.mts";
 import { autoMinimizeComments, autoResolveThreads } from "../comments/resolve.mts";
 import { markReviewInlineThreadMarkers } from "../comments/review-thread-markers.mts";
-import { normalizeBotUsernames } from "../comments/authors.mts";
+import {
+  isConfiguredBotAuthor,
+  isHumanAuthor,
+  normalizeBotUsernames,
+} from "../comments/authors.mts";
+import { buildThreadMutationRouting } from "./iterate/thread-mutation-routing.mts";
 import { discoverRuleFiles, loadRules } from "../classify/loader.mts";
 import { buildClassifyIndex, partitionBatch, type BatchPartition } from "../classify/apply.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
@@ -129,12 +134,32 @@ export async function runCheck(
       (id) => batchData.reviewThreads.find((thread) => thread.id === id)?.viewerCanResolve !== true,
     ),
   );
+  const visibleThreadCandidates = batchData.reviewThreads.filter(
+    (t) => !partition.suppressedThreadIds.has(t.id) || deniedRuleAutoResolveThreadIds.has(t.id),
+  );
+  const threadMutationRouting = buildThreadMutationRouting(
+    visibleThreadCandidates,
+    botUsernames,
+    partition.ruleAutoResolveThreadIds,
+  );
+  const replyThreadIds = new Set(threadMutationRouting.replyThreadIds);
+  const resolveThreadIds = new Set(threadMutationRouting.resolveThreadIds);
+  const repeatableThreadIds = new Set(
+    visibleThreadCandidates
+      .filter(
+        (thread) =>
+          thread.path !== null &&
+          thread.line !== null &&
+          (!replyThreadIds.has(thread.id) || thread.viewerCanReply === true) &&
+          (!resolveThreadIds.has(thread.id) || thread.viewerCanResolve === true),
+      )
+      .map((thread) => thread.id),
+  );
   const threadVisibility = classifyThreadVisibility(
-    batchData.reviewThreads.filter(
-      (t) => !partition.suppressedThreadIds.has(t.id) || deniedRuleAutoResolveThreadIds.has(t.id),
-    ),
+    visibleThreadCandidates,
     seenMap,
     botUsernames,
+    repeatableThreadIds,
   );
   const firstLookComments: FirstLookComment[] = minimizedCommentCandidates.flatMap((c) => {
     const cls = classifyItem(c.id, c.body, seenMap);
@@ -168,6 +193,7 @@ export async function runCheck(
     ),
     seenMap,
     botUsernames,
+    batchData.viewerAuthorization?.viewerCanAdminister === true,
   );
   const approvedReviewVisibility = classifyReviewsForDisplay(batchData.approvedReviews, seenMap);
   if (opts.persistSeen !== false) {
@@ -224,14 +250,26 @@ export async function runCheck(
     commentIds: ruleAutoResolveCommentIds,
     reviewSummaryIds: ruleAutoResolveReviewSummaryIds,
   } = await remainingRuleAutoResolveIds(authorizedPartition, opts.autoMinimizeSuppressed);
+  const visibleMutationThreadIds = new Set(
+    [...threadVisibility.activeThreads, ...threadVisibility.resolutionOnlyThreads].map(
+      (thread) => thread.id,
+    ),
+  );
   const ruleAutoResolveThreadIds = [
     ...authorizedRuleAutoResolveThreadIds,
-    ...deniedRuleAutoResolveThreadIds,
+    ...[...deniedRuleAutoResolveThreadIds].filter((id) => visibleMutationThreadIds.has(id)),
   ];
   const changesRequestedReviews = changesRequestedReviewVisibility.visible;
-  const changesRequestedReviewCount = batchData.changesRequestedReviews.filter(
-    (r) => !partition.suppressedChangesRequestedIds.has(r.id),
-  ).length;
+  const visibleChangesRequestedIds = new Set(changesRequestedReviews.map((review) => review.id));
+  const changesRequestedReviewCount = batchData.changesRequestedReviews.filter((review) => {
+    if (partition.suppressedChangesRequestedIds.has(review.id)) return false;
+    const isBot = !isHumanAuthor(review) || isConfiguredBotAuthor(review, botUsernames);
+    return (
+      !isBot ||
+      batchData.viewerAuthorization?.viewerCanAdminister === true ||
+      visibleChangesRequestedIds.has(review.id)
+    );
+  }).length;
   const approvedReviews = approvedReviewVisibility.visible;
   let status = computeStatus(
     verdict,

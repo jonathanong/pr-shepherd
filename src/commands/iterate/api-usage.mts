@@ -5,11 +5,7 @@ import type { IterateResult } from "../../types.mts";
 import { buildQuotaAwareContinuation } from "../../quota-warning.mts";
 
 function shouldWarn(result: IterateResult): boolean {
-  if (["wait", "mark_ready", "merge"].includes(result.action)) return true;
-  if (result.action !== "fix_code") return false;
-  return !result.fix.instructions.some((instruction) =>
-    /stop polling|human direction/i.test(instruction),
-  );
+  return ["wait", "mark_ready", "merge", "fix_code"].includes(result.action);
 }
 
 export async function attachApiUsage(
@@ -48,12 +44,6 @@ export async function attachApiUsage(
       instructions[instructions.length - 1] = buildQuotaAwareContinuation(
         quotaWarning,
         "`[FIX_CODE]` is non-terminal. After completing these steps,",
-      );
-    } else if (/\[FIX_CODE\].*is conditional:.*if you did not change code,/i.test(completion)) {
-      instructions[instructions.length - 1] = completion.replace(
-        /if you did not change code,(.*?)\s+and iterate again with the same options\./i,
-        (_, before: string) =>
-          `if you did not change code,${before.trimEnd()}. ${buildQuotaAwareContinuation(quotaWarning, "").trimStart()}`,
       );
     }
   }

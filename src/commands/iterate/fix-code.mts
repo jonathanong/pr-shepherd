@@ -24,10 +24,11 @@ import { applyStallGuard } from "./stall.mts";
 import { annotationMarkerBody, checksWithActionableAnnotations } from "../check-annotations.mts";
 import { threadTranscriptBody } from "../../threads/transcript.mts";
 import { isHumanAuthor, isConfiguredBotAuthor } from "../../comments/authors.mts";
-import { canRerunWorkflows, canPushToHead } from "../../checks/conclusions.mts";
+import { canRerunWorkflows } from "../../checks/conclusions.mts";
 import { loadConfig } from "../../config/load.mts";
 import { formatPrUrl } from "../../pr-reference.mts";
 import type {
+  AgentCheck,
   EscalateDetails,
   IterateCommandOptions,
   IterateResult,
@@ -52,6 +53,21 @@ interface HandleFixCodeContext {
   surfacedApprovals: Review[];
   botUsernames: NormalizedBotUsernames;
   ruleAutoResolveThreadIds?: string[];
+}
+
+function checkRequiresHumanFollowUp(check: AgentCheck): boolean {
+  if (check.rerunCommand) return false;
+  if (
+    check.conclusion === "ACTION_REQUIRED" ||
+    check.conclusion === "CANCELLED" ||
+    check.conclusion === "STARTUP_FAILURE"
+  )
+    return true;
+  // An external check's direct URL is actionable evidence: the agent can inspect the
+  // provider and/or reproduce the reported failure locally. Only a truly bare check
+  // has no autonomous investigation path.
+  if (check.runId === null) return !check.detailsUrl?.trim();
+  return !check.logExcerpt?.trim();
 }
 
 function nextFixAttempts(
@@ -105,80 +121,34 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const replyIdSet = new Set(routedThreadMutations.replyThreadIds);
   const resolveIdSet = new Set(routedThreadMutations.resolveThreadIds);
   const unauthorizedReplies = allThreads.filter(
-    (thread) =>
-      report.viewerAuthorization !== undefined &&
-      replyIdSet.has(thread.id) &&
-      thread.viewerCanReply !== true,
+    (thread) => replyIdSet.has(thread.id) && thread.viewerCanReply !== true,
   );
   const unauthorizedResolves = allThreads.filter(
-    (thread) =>
-      report.viewerAuthorization !== undefined &&
-      resolveIdSet.has(thread.id) &&
-      thread.viewerCanResolve !== true,
+    (thread) => resolveIdSet.has(thread.id) && thread.viewerCanResolve !== true,
   );
   const unauthorizedDismissals = report.changesRequestedReviews.filter(
     (review) =>
-      report.viewerAuthorization !== undefined &&
       (!isHumanAuthor(review) || isConfiguredBotAuthor(review, botUsernames)) &&
       report.viewerAuthorization?.viewerCanAdminister !== true,
   );
-  const authorization = [
-    ...(unauthorizedReplies.length > 0
-      ? [
-          {
-            action: "reply-thread" as const,
-            targetIds: unauthorizedReplies.map((thread) => thread.id),
-            reason: "denied-or-unverifiable" as const,
-          },
-        ]
-      : []),
-    ...(unauthorizedResolves.length > 0
-      ? [
-          {
-            action: "resolve-thread" as const,
-            targetIds: unauthorizedResolves.map((thread) => thread.id),
-            reason: "denied-or-unverifiable" as const,
-          },
-        ]
-      : []),
-    ...(unauthorizedDismissals.length > 0
-      ? [
-          {
-            action: "dismiss-review" as const,
-            targetIds: unauthorizedDismissals.map((review) => review.id),
-            reason: "denied-or-unverifiable" as const,
-          },
-        ]
-      : []),
-  ];
-  if (authorization.length > 0) {
-    const authorizationEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
-      triggers: ["authorization-required"],
-      unresolvedThreads: allThreads.map(toAgentThread),
-      ambiguousComments: report.comments.actionable.map(toAgentComment),
-      changesRequestedReviews: report.changesRequestedReviews,
-      authorization,
-      suggestion: buildEscalateSuggestion(["authorization-required"]),
-    };
-    return {
-      ...base,
-      action: "escalate",
-      escalate: {
-        ...authorizationEscalateBase,
-        humanMessage: buildEscalateHumanMessage(authorizationEscalateBase, prReference),
-      },
-    };
-  }
+  const skippedThreadIds = new Set(
+    [...unauthorizedReplies, ...unauthorizedResolves].map((thread) => thread.id),
+  );
+  const retryableActionableThreads = report.threads.actionable.filter(
+    (thread) => !skippedThreadIds.has(thread.id) && thread.path !== null && thread.line !== null,
+  );
   const protectedRuns: [] = [];
   const stored = await readFixAttempts({ owner: repoOwner, repo: repoName, pr: prNumber });
   const { threadAttempts, threadBodyHashes } = nextFixAttempts(
     stored,
     headSha,
-    report.threads.actionable,
+    retryableActionableThreads,
   );
 
   const botCrReviews = report.changesRequestedReviews.filter(
-    (r) => !isHumanAuthor(r) || isConfiguredBotAuthor(r, botUsernames),
+    (r) =>
+      (!isHumanAuthor(r) || isConfiguredBotAuthor(r, botUsernames)) &&
+      report.viewerAuthorization?.viewerCanAdminister === true,
   );
   const botCrStateKey = { owner: repoOwner, repo: repoName, pr: prNumber };
   const previousBotCrState = await readBotCrSeenState(botCrStateKey);
@@ -207,12 +177,14 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       action: "escalate",
       escalate: {
         ...escalateBase,
-        humanMessage: buildEscalateHumanMessage(escalateBase, prReference),
+        humanMessage: buildEscalateHumanMessage(escalateBase, prReference, {
+          merge: opts.merge,
+        }),
       },
     };
   }
 
-  const escalateTriggers = checkEscalateTriggers(report.threads.actionable, threadAttempts);
+  const escalateTriggers = checkEscalateTriggers(retryableActionableThreads, threadAttempts);
   if (escalateTriggers.triggers.length > 0) {
     const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: escalateTriggers.triggers,
@@ -229,7 +201,9 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       action: "escalate",
       escalate: {
         ...escalateBase,
-        humanMessage: buildEscalateHumanMessage(escalateBase, prReference),
+        humanMessage: buildEscalateHumanMessage(escalateBase, prReference, {
+          merge: opts.merge,
+        }),
       },
     };
   }
@@ -283,53 +257,97 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     ...toAgentChecks(annotatedExtra).map((c) => ({ ...c, annotationOnly: true as const })),
   ];
   const { changesRequestedReviews } = report;
+  const actionableChangesRequestedReviews = changesRequestedReviews.filter(
+    (review) =>
+      review.staleReview !== true ||
+      !isHumanAuthor(review) ||
+      isConfiguredBotAuthor(review, botUsernames),
+  );
+  const skippedDismissalIds = new Set(unauthorizedDismissals.map((review) => review.id));
+  const changesRequestedReviewsForWork = actionableChangesRequestedReviews.filter(
+    (review) => !skippedDismissalIds.has(review.id),
+  );
+  const resolutionOnlyThreadsForWork = resolutionOnlyThreads.filter(
+    (thread) => !skippedThreadIds.has(thread.id) && thread.path !== null && thread.line !== null,
+  );
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
   const isBehind = report.mergeStatus.status === "BEHIND";
   const { behindBaseHint } = loadConfig().iterate;
-  // Whether GitHub reports the viewer can push to the PR head branch (own-repo write
-  // access, or a fork with viewerCanEditFiles/head-repo write for a fork PR). Drives
-  // whether the fix instructions push autonomously or hand off for an authorized push —
-  // see canPushToHead.
-  const pushAuthorized = canPushToHead(report.viewerAuthorization);
   // Only surface in-progress runs when a push is plausible — resolution-only and
   // summary-only iterations have no path to a push, so listing runs would prompt
   // unnecessary cancellation.
   const inProgressRunIds: string[] = [];
   const commentMinimizeIds = report.comments.minimizeIds ?? actionableComments.map((c) => c.id);
   const allCommentIds = [...commentMinimizeIds, ...reviewSummaryIds];
-  // Conflict resolution necessarily changes the branch head. When the viewer cannot push,
-  // Shepherd cannot verify authorization for the local Git credential that would publish
-  // it, so review mutations are deferred until an authorized push updates the PR and a
-  // fresh iteration can rebuild SHA-safe commands. When the viewer can push, the agent
-  // pushes as part of this fix_code tick, so mutations can be built normally (SHA-gated
-  // like any other push-requiring tick).
-  const { resolveCommand, resolveOnlyCommand } =
-    hasConflicts && !pushAuthorized
-      ? buildResolveCommand([], [], [], [], [], prReference, botUsernames, [], undefined, [])
-      : buildResolveCommand(
-          threads,
-          resolutionOnlyThreads,
-          allCommentIds,
-          changesRequestedReviews,
-          failingAgentChecks,
-          prReference,
-          botUsernames,
-          ruleAutoResolveThreadIds,
-          report.viewerAuthorization,
-          allThreads,
-        );
+  const belongsToActiveWorkflowRun = (check: AgentCheck): boolean =>
+    check.runId !== null && inProgressWorkflowRunIds.has(check.runId);
+  const manualFollowUpChecks = failingAgentChecks.filter(
+    (check) => !belongsToActiveWorkflowRun(check) && checkRequiresHumanFollowUp(check),
+  );
+  const hasAutonomousWork =
+    hasConflicts ||
+    threads.length > 0 ||
+    resolutionOnlyThreads.length > 0 ||
+    actionableComments.length > 0 ||
+    commentMinimizeIds.length > 0 ||
+    actionableChangesRequestedReviews.length > 0 ||
+    reviewSummaryIds.length > 0 ||
+    firstLookSummaries.length > 0 ||
+    editedSummaries.length > 0 ||
+    report.threads.firstLook.length > 0 ||
+    report.comments.firstLook.length > 0 ||
+    checks.some((check) => (check.annotations?.length ?? 0) > 0) ||
+    failingAgentChecks.some(
+      (check) => belongsToActiveWorkflowRun(check) || !checkRequiresHumanFollowUp(check),
+    );
+  if (manualFollowUpChecks.length > 0 && !hasAutonomousWork) {
+    const checkEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
+      triggers: ["check-follow-up-unavailable"],
+      unresolvedThreads: [],
+      ambiguousComments: [],
+      changesRequestedReviews,
+      checks: manualFollowUpChecks,
+      suggestion: buildEscalateSuggestion(["check-follow-up-unavailable"]),
+    };
+    return {
+      ...base,
+      action: "escalate",
+      escalate: {
+        ...checkEscalateBase,
+        humanMessage: buildEscalateHumanMessage(checkEscalateBase, prReference, {
+          merge: opts.merge,
+        }),
+      },
+    };
+  }
+  // Push access to the PR head branch is a usage precondition. Build review mutations for
+  // conflict ticks normally so the caller can push and complete the same fix_code cycle.
+  const retryableActionableIds = new Set(retryableActionableThreads.map((thread) => thread.id));
+  const retryableAgentThreads = threads.filter((thread) => retryableActionableIds.has(thread.id));
+  const { resolveCommand, resolveOnlyCommand } = buildResolveCommand(
+    retryableAgentThreads,
+    resolutionOnlyThreadsForWork,
+    allCommentIds,
+    changesRequestedReviewsForWork,
+    failingAgentChecks,
+    prReference,
+    botUsernames,
+    ruleAutoResolveThreadIds,
+    report.viewerAuthorization,
+    allThreads,
+  );
   // Safety: if the base branch is unknown, escalate when a push is plausible — the agent
   // would need the correct base to rebase safely. This is a conservative guard, not a
   // prediction that the agent *will* push. Intentionally broader than `pushLikely` above:
   // resolution-only threads also need a known base in case the agent does push.
   const pushIsPlausible =
-    threads.length > 0 ||
+    retryableActionableThreads.length > 0 ||
     failingAgentChecks.length > 0 ||
     annotatedExtra.length > 0 ||
     hasConflicts ||
-    changesRequestedReviews.length > 0 ||
+    changesRequestedReviewsForWork.length > 0 ||
     actionableComments.length > 0 ||
-    resolutionOnlyThreads.length > 0;
+    resolutionOnlyThreadsForWork.length > 0;
   if (baseLookup.isFallback && pushIsPlausible) {
     const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: ["base-branch-unknown"],
@@ -343,7 +361,9 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       action: "escalate",
       escalate: {
         ...fallbackEscalateBase,
-        humanMessage: buildEscalateHumanMessage(fallbackEscalateBase, prReference),
+        humanMessage: buildEscalateHumanMessage(fallbackEscalateBase, prReference, {
+          merge: opts.merge,
+        }),
       },
     };
   }
@@ -369,7 +389,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     behindBaseHint,
     isBehind,
     report.viewerAuthorization?.viewerCanUpdate === true,
-    pushAuthorized,
   );
   const prospectiveResult = {
     ...base,

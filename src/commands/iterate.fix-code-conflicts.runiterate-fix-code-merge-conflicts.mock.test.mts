@@ -11,9 +11,8 @@ import type { ShepherdReport } from "../types.mts";
 
 registerIterateHooks();
 
-// makeReport() defaults viewerAuthorization to full ADMIN access on both the base and
-// head repo, so canPushToHead is true unless a test overrides it — matching the common
-// case (own-repo or own-fork PR) where pr-shepherd should push and continue autonomously.
+// Push access is a caller precondition. This denied authorization fixture verifies that
+// GitHub viewer fields do not create a second terminal path inside FIX_CODE.
 const PUSH_DENIED_AUTH = {
   repositoryPermission: "READ" as const,
   viewerCanAdminister: false,
@@ -115,7 +114,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
     }
   });
 
-  it("hands off the push after conflict resolution when the viewer cannot push to the PR head", async () => {
+  it("keeps conflict resolution autonomous when viewer fields deny head access", async () => {
     mockRunCheck.mockResolvedValue(makeConflictReport({ viewerAuthorization: PUSH_DENIED_AUTH }));
 
     const result = await runConflictIterate();
@@ -129,10 +128,12 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       expect(joined).not.toContain("pr-shepherd apply journal");
       expect(joined).toContain("The branch has merge conflicts (see `**branch**` above)");
       expect(joined).not.toContain("Run the `resolve:` command shown above");
-      expect(joined).toContain("Commit any remaining conflict-resolution changes.");
-      expect(joined).not.toContain("push to the PR head branch");
-      expect(joined).toContain("requires a human handoff for an authorized push");
-      expect(joined).not.toContain("iterate again");
+      expect(joined).toContain(
+        "Commit any remaining conflict-resolution changes and push to the PR head branch.",
+      );
+      expect(joined).toContain("`[FIX_CODE]` is non-terminal");
+      expect(joined).toContain("iterate again");
+      expect(joined).not.toMatch(/hand[- ]?off|stop polling|human direction/i);
     }
   });
 
@@ -164,7 +165,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
     }
   });
 
-  it("defers review mutations when CONFLICTS + threads exist and the viewer cannot push", async () => {
+  it("builds review mutations for CONFLICTS + threads despite denied head-access fields", async () => {
     mockRunCheck.mockResolvedValue(
       makeConflictReport({ withThread: true, viewerAuthorization: PUSH_DENIED_AUTH }),
     );
@@ -175,18 +176,18 @@ describe("runIterate — fix_code (merge conflicts)", () => {
     if (result.action === "fix_code") {
       expect(result.fix.threads).toHaveLength(1);
       expect(result.fix.threads[0]?.id).toBe("thread-1");
-      expect(result.fix.resolveCommand.hasMutations).toBe(false);
+      expect(result.fix.resolveCommand.hasMutations).toBe(true);
       expect(result.fix.resolveOnlyCommand).toBeUndefined();
-      // Threads + CONFLICTS, push denied: conditional commit/rebase instruction plus
-      // resolve step deferred until an authorized push updates the head.
       const joined = result.fix.instructions.join("\n");
       expect(joined).not.toContain("git commit");
       expect(joined).toContain("pr-shepherd apply journal"); // shepherd journal
       expect(joined).toContain("The branch has merge conflicts (see `**branch**` above)");
-      expect(joined).toContain("Commit any remaining conflict-resolution changes.");
-      expect(joined).not.toContain("push to the PR head branch");
-      expect(joined).not.toContain("apply review:");
-      expect(joined).toContain("requires a human handoff for an authorized push");
+      expect(joined).toContain(
+        "Commit any remaining conflict-resolution changes and push to the PR head branch before review mutations.",
+      );
+      expect(joined).toContain("apply review:");
+      expect(joined).toContain("`[FIX_CODE]` is non-terminal");
+      expect(joined).not.toMatch(/hand[- ]?off|stop polling|human direction/i);
     }
   });
 });

@@ -112,10 +112,10 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
   const activeMerge = Boolean(
     opts.merge && (report.mergeQueue?.inQueue || report.mergeQueue?.autoMergeRequest),
   );
-  const isCleanReadyHandoff = report.status === "READY" && !hasActionableWork && !activeMerge;
+  const isCleanReadyState = report.status === "READY" && !hasActionableWork && !activeMerge;
   const readyState = await updateReadyDelay(
     report.pr,
-    isCleanReadyHandoff,
+    isCleanReadyState,
     readyDelaySeconds,
     repoOwner,
     repoName,

@@ -68,7 +68,7 @@ describe("main — default (poll)", () => {
     expect(process.exitCode).toBe(EXIT.OK);
   });
 
-  it("returns fix_code from the default path with an explicit next-poll handoff", async () => {
+  it("returns fix_code from the default path with an explicit next-poll instruction", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("fix_code"));
 
     await main(["node", "shepherd", "42", "--debounce", "0"]);

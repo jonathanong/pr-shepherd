@@ -142,13 +142,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       !(lastResult.action === "fix_code" && debounceSeconds > 0 && !pastDebounce) &&
       !(debounceUntil !== null && !pastDebounce)
     ) {
-      const terminalOrHandoff =
-        ["cancel", "escalate"].includes(lastResult.action) ||
-        (lastResult.action === "fix_code" &&
-          lastResult.fix.instructions.some((instruction) =>
-            /stop polling|human direction/i.test(instruction),
-          ));
-      if (terminalOrHandoff) {
+      if (["cancel", "escalate"].includes(lastResult.action)) {
         const { quotaWarning: _quotaWarning, ...withoutQuotaWarning } = lastResult;
         lastResult = withoutQuotaWarning;
       } else if (lastResult.quotaWarning === undefined) {

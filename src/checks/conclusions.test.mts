@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isFailingAgentCheck, canRerunWorkflows, canPushToHead } from "./conclusions.mts";
+import { isFailingAgentCheck, canRerunWorkflows } from "./conclusions.mts";
 import type { ViewerAuthorization } from "../types.mts";
 
 describe("isFailingAgentCheck", () => {
@@ -59,57 +59,4 @@ describe("canRerunWorkflows", () => {
   it("denies rerun capability when authorization is unknown", () => {
     expect(canRerunWorkflows(undefined)).toBe(false);
   });
-});
-
-function pushAuth(
-  overrides: Partial<Pick<ViewerAuthorization, "viewerCanEditFiles" | "headRepositoryPermission">>,
-): ViewerAuthorization {
-  return {
-    repositoryPermission: null,
-    viewerCanAdminister: false,
-    viewerDidAuthor: false,
-    viewerCanUpdate: false,
-    viewerCanEnableAutoMerge: false,
-    viewerCanEditFiles: false,
-    headRepositoryPermission: null,
-    ...overrides,
-  };
-}
-
-describe("canPushToHead", () => {
-  it("allows push when authorization is unknown (undefined)", () => {
-    expect(canPushToHead(undefined)).toBe(true);
-  });
-
-  it("allows push for a fork author (own fork reports ADMIN on the head repo)", () => {
-    expect(canPushToHead(pushAuth({ headRepositoryPermission: "ADMIN" }))).toBe(true);
-  });
-
-  it.each(["WRITE", "MAINTAIN", "ADMIN"] as const)(
-    "allows push for headRepositoryPermission %s",
-    (permission) => {
-      expect(canPushToHead(pushAuth({ headRepositoryPermission: permission }))).toBe(true);
-    },
-  );
-
-  it("allows push when viewerCanEditFiles is true regardless of headRepositoryPermission", () => {
-    expect(
-      canPushToHead(pushAuth({ viewerCanEditFiles: true, headRepositoryPermission: "READ" })),
-    ).toBe(true);
-  });
-
-  it("allows push when headRepositoryPermission is unknown (null)", () => {
-    expect(canPushToHead(pushAuth({ headRepositoryPermission: null }))).toBe(true);
-  });
-
-  it.each(["NONE", "READ", "TRIAGE"] as const)(
-    "denies push when viewerCanEditFiles is false and headRepositoryPermission is %s",
-    (permission) => {
-      expect(
-        canPushToHead(
-          pushAuth({ viewerCanEditFiles: false, headRepositoryPermission: permission }),
-        ),
-      ).toBe(false);
-    },
-  );
 });

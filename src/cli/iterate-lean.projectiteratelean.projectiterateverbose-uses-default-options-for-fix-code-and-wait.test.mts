@@ -32,6 +32,7 @@ describe("projectIterateLean", () => {
     expect(esc.unresolvedThreads).toBeUndefined();
     expect(esc.ambiguousComments).toBeUndefined();
     expect(esc.changesRequestedReviews).toBeUndefined();
+    expect(esc.checks).toBeUndefined();
     expect(esc.thrashHistory).toBeUndefined();
     expect(esc.suggestion).toBe("check manually");
     expect(esc.humanMessage).toBeDefined();
@@ -50,6 +51,15 @@ describe("projectIterateLean", () => {
       { id: "rv1", author: "a", authorType: "Unknown" as const, body: "" },
     ];
     result.escalate.thrashHistory = [{ threadId: "t1", attempts: 3 }];
+    result.escalate.checks = [
+      {
+        name: "external-ci",
+        runId: null,
+        detailsUrl: "https://ci.example/check",
+        conclusion: "FAILURE",
+        summary: "manual follow-up required",
+      },
+    ];
 
     const lean = projectIterateLean(result) as Record<string, unknown>;
     const esc = lean.escalate as Record<string, unknown>;
@@ -57,6 +67,7 @@ describe("projectIterateLean", () => {
     expect((esc.unresolvedThreads as unknown[]).length).toBe(1);
     expect((esc.ambiguousComments as unknown[]).length).toBe(1);
     expect((esc.changesRequestedReviews as unknown[]).length).toBe(1);
+    expect(esc.checks as unknown[]).toHaveLength(1);
     expect((esc.thrashHistory as unknown[]).length).toBe(1);
   });
 });

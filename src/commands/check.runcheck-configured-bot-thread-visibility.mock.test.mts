@@ -34,4 +34,47 @@ describe("runCheck — configured bot thread visibility", () => {
 
     expect(report.threads.actionable.map((t) => t.id)).toEqual(["t-bot"]);
   });
+
+  it("skips an already-seen configured bot thread when resolution is unauthorized", async () => {
+    const cfg = defaultConfig();
+    cfg.botUsernames = ["coderabbitai"];
+    mockLoadConfig.mockReturnValue(cfg);
+    const active = makeThread({
+      id: "t-bot",
+      author: "CodeRabbitAI",
+      authorType: "User",
+      body: "active feedback",
+      viewerCanResolve: false,
+    });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [active] }) });
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([["t-bot", { seenAt: 1000, bodyHash: hashBody("active feedback") }]]),
+    );
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.threads.actionable).toEqual([]);
+  });
+
+  it("skips an already-seen configured bot thread without a source location", async () => {
+    const cfg = defaultConfig();
+    cfg.botUsernames = ["coderabbitai"];
+    mockLoadConfig.mockReturnValue(cfg);
+    const active = makeThread({
+      id: "t-bot",
+      author: "CodeRabbitAI",
+      authorType: "User",
+      body: "active feedback",
+      path: null,
+      line: null,
+    });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [active] }) });
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([["t-bot", { seenAt: 1000, bodyHash: hashBody("active feedback") }]]),
+    );
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.threads.actionable).toEqual([]);
+  });
 });

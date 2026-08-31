@@ -88,12 +88,7 @@ describe("attachApiUsage", () => {
     ["mark_ready", makeIterateResult("mark_ready"), true],
     ["merge", makeIterateResult("merge"), true],
     ["ordinary fix_code", fixCodeResult(), true],
-    ["stop-polling fix_code", fixCodeResult(["Stop polling until CI is fixed."]), false],
-    [
-      "human-direction fix_code",
-      fixCodeResult(["Wait for human direction before retrying."]),
-      false,
-    ],
+    ["fix_code wording does not alter recurrence", fixCodeResult(["arbitrary text"]), true],
     ["cancel", makeIterateResult("cancel"), false],
     ["escalate", makeIterateResult("escalate"), false],
   ] as const)(
@@ -130,25 +125,6 @@ describe("attachApiUsage", () => {
     expect(attached.fix.instructions.at(-1)).toContain(QUOTA_RESUME_TEXT);
     expect(attached.fix.instructions.at(-1)).toContain("no more often than every 5 minutes");
     expect(attached.fix.instructions.at(-1)).toContain("--interval 5m --timeout 10m");
-  });
-
-  it("rewrites the no-change branch of a conditional fix-code continuation for the quota cadence", async () => {
-    mockEvaluateQuotaWarning.mockResolvedValue(warning);
-    const result = fixCodeResult([
-      "`[FIX_CODE]` is conditional: if you changed code, stop after committing and resume only after an authorized push changes the remote PR head; if you did not change code, complete the authorized review mutations and iterate again with the same options.",
-    ]);
-
-    const attached = await attachApiUsage(result, true);
-    if (attached.action !== "fix_code") throw new Error("expected fix_code result");
-    const completion = attached.fix.instructions.at(-1);
-    expect(completion).toContain("if you changed code, stop after committing");
-    expect(completion).toContain(
-      "if you did not change code, complete the authorized review mutations. GitHub's GraphQL API quota is low",
-    );
-    expect(completion).toContain(QUOTA_RESUME_TEXT);
-    expect(completion).toContain("no more often than every 5 minutes");
-    expect(completion).toContain("--interval 5m --timeout 10m");
-    expect(completion).not.toContain("iterate again with the same options");
   });
 
   it("attaches non-GraphQL telemetry without evaluating or adding a quota warning", async () => {

@@ -19,6 +19,7 @@ describe("runIterate — timeout/cancelled failures route to fix_code", () => {
       detailsUrl: "https://github.com/owner/repo/actions/runs/10",
       event: "pull_request",
       runId: "run-10",
+      workflowName: "CI",
       category: "failing" as const,
     };
     const timeoutCheck2 = {
@@ -28,6 +29,7 @@ describe("runIterate — timeout/cancelled failures route to fix_code", () => {
       detailsUrl: "https://github.com/owner/repo/actions/runs/11",
       event: "pull_request",
       runId: "run-11",
+      workflowName: "CI",
       category: "failing" as const,
     };
     mockRunCheck.mockResolvedValue(
@@ -73,6 +75,7 @@ describe("runIterate — timeout/cancelled failures route to fix_code", () => {
       detailsUrl: "https://github.com/owner/repo/actions/runs/20",
       event: "pull_request",
       runId: "run-20",
+      workflowName: "CI",
       category: "failing" as const,
     };
     const check2 = {
@@ -82,6 +85,7 @@ describe("runIterate — timeout/cancelled failures route to fix_code", () => {
       detailsUrl: "https://github.com/owner/repo/actions/runs/20",
       event: "pull_request",
       runId: "run-20",
+      workflowName: "CI",
       category: "failing" as const,
     };
     mockRunCheck.mockResolvedValue(

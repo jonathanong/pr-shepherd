@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import type { EscalateDetails, EscalateTrigger, ReviewThread } from "../../types.mts";
+import type { AgentCheck, EscalateDetails, EscalateTrigger, ReviewThread } from "../../types.mts";
 import { loadConfig } from "../../config/load.mts";
 
 interface EscalateCheck {
@@ -15,6 +15,62 @@ function renderEscalateAuthor(item: {
   return [`@${item.author}`, item.authorType, item.authorAssociation].filter(Boolean).join(" · ");
 }
 
+function renderCheckTarget(check: AgentCheck): string {
+  const parts: string[] = [];
+  if (check.runId) parts.push(`run \`${check.runId}\``);
+  if (check.detailsUrl) parts.push(`URL \`${check.detailsUrl}\``);
+  return parts.length > 0 ? parts.join(", ") : "no run ID or URL";
+}
+
+function renderCheckScope(check: AgentCheck): string {
+  if (!check.scope) return "";
+  const commit = check.commitOid ? ` at \`${check.commitOid}\`` : "";
+  return `, scope \`${check.scope}\`${commit}`;
+}
+
+function renderBlockquoteLines(value: string, indent: string): string[] {
+  return value.split("\n").map((line) => `${indent}> ${line}`);
+}
+
+type AgentCheckAnnotation = NonNullable<AgentCheck["annotations"]>[number];
+
+function renderEscalateAnnotation(annotation: AgentCheckAnnotation): string[] {
+  const start = annotation.startLine ?? annotation.endLine ?? "?";
+  const end = annotation.endLine ?? annotation.startLine ?? "?";
+  const range = start === end ? String(start) : `${start}-${end}`;
+  const columns =
+    annotation.startColumn == null && annotation.endColumn == null
+      ? ""
+      : `, columns ${annotation.startColumn ?? "?"}-${annotation.endColumn ?? "?"}`;
+  const title = annotation.title ? ` — ${annotation.title}` : "";
+  const link = annotation.blobUrl ? ` [source](${annotation.blobUrl})` : "";
+  const lines = [
+    `  - annotation \`${annotation.id}\`${link} — \`${annotation.path}:${range}\` [${annotation.level}${columns}]${title}`,
+    ...renderBlockquoteLines(annotation.message, "    "),
+  ];
+  if (annotation.rawDetails) {
+    lines.push(...renderBlockquoteLines(annotation.rawDetails, "    "));
+  }
+  return lines;
+}
+
+function renderEscalateCheck(check: AgentCheck): string[] {
+  const workflowPrefix = check.workflowName ? `${check.workflowName} › ` : "";
+  const jobLabel = check.jobName ?? check.name;
+  const conclusion = check.conclusion ?? "UNKNOWN";
+  const lines = [
+    `- ${renderCheckTarget(check)} — \`${workflowPrefix}${jobLabel}\` [conclusion: ${conclusion}]${renderCheckScope(check)}`,
+  ];
+  if (check.failedStep) lines.push(`  > failed step: ${check.failedStep}`);
+  if (check.summary) lines.push(`  > ${check.summary}`);
+  if (check.logExcerpt) lines.push(...renderBlockquoteLines(check.logExcerpt, "  "));
+  if (check.rerunCommand) lines.push(`  rerun: \`${check.rerunCommand}\``);
+  for (const annotation of check.annotations ?? []) {
+    lines.push(...renderEscalateAnnotation(annotation));
+  }
+  return lines;
+}
+
 export function checkEscalateTriggers(
   actionableThreads: ReviewThread[],
   threadAttempts: Record<string, number>,
@@ -26,12 +82,6 @@ export function checkEscalateTriggers(
   const thrashThreads = actionableThreads.filter((t) => (threadAttempts[t.id] ?? 0) >= maxAttempts);
   if (thrashThreads.length > 0) {
     triggers.push("fix-thrash");
-  }
-
-  // Trigger 2: actionable thread has no file/line — cannot locate code to edit.
-  const unlocatable = actionableThreads.filter((t) => t.path === null || t.line === null);
-  if (unlocatable.length > 0) {
-    triggers.push("thread-missing-location");
   }
 
   return {
@@ -106,6 +156,7 @@ export function buildEscalateHumanMessage(
     escalate.unresolvedThreads.length > 0 ||
     escalate.changesRequestedReviews.length > 0 ||
     escalate.ambiguousComments.length > 0 ||
+    (escalate.checks?.length ?? 0) > 0 ||
     (escalate.stalledChecks?.length ?? 0) > 0;
   if (hasItems) {
     lines.push("");
@@ -123,6 +174,9 @@ export function buildEscalateHumanMessage(
       if (c.summary) lines.push(`  > ${c.summary}`);
     }
     if ((escalate.stalledChecks?.length ?? 0) > 0) lines.push("");
+    for (const check of escalate.checks ?? []) {
+      lines.push(...renderEscalateCheck(check), "");
+    }
     for (const t of escalate.unresolvedThreads) {
       const loc = t.path ? `\`${t.path}:${t.line ?? "?"}\`` : "(no location)";
       lines.push(`- thread \`${t.id}\` — ${loc} (${renderEscalateAuthor(t)}):`);
@@ -185,8 +239,11 @@ export function buildEscalateHumanMessage(
 }
 
 export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: string): string {
+  if (triggers.includes("check-follow-up-unavailable")) {
+    return "One or more failing checks have no autonomous follow-up available. Use the displayed conclusion, run or URL, and included evidence to handle them manually.";
+  }
   if (triggers.includes("authorization-required")) {
-    return "GitHub did not confirm that the current viewer may perform one or more required actions. Ask a repository maintainer to handle the listed items; Shepherd will not recommend commands that would be denied.";
+    return "GitHub did not confirm that the current viewer may perform the requested mark-ready or merge/enqueue operation. Ask a repository maintainer to perform that state change; Shepherd will not recommend a command that would be denied.";
   }
   if (triggers.includes("merge-queue-removed")) {
     const reason = detail ? ` GitHub reason: ${detail}.` : "";
@@ -202,9 +259,6 @@ export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: st
   }
   if (triggers.includes("fix-thrash")) {
     return "Same thread(s) reached the automated attempt limit — treat this as a manual handoff. Apply the fix by hand.";
-  }
-  if (triggers.includes("thread-missing-location")) {
-    return "Review thread has no file/line reference — automated location routing failed and manual handling is required.";
   }
   if (triggers.includes("bot-cr-not-dismissed")) {
     const ids = detail ? ` (review IDs: ${detail})` : "";

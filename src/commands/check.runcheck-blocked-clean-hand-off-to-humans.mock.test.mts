@@ -13,7 +13,7 @@ import { runCheck } from "./check.mts";
 
 registerHooks();
 
-describe("runCheck — BLOCKED + clean (hand off to humans)", () => {
+describe("runCheck — BLOCKED + clean ready state", () => {
   it("returns READY when CI passed and only human approval is missing", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({ mergeStateStatus: "BLOCKED", reviewDecision: "REVIEW_REQUIRED" }),
@@ -115,7 +115,7 @@ describe("runCheck — BLOCKED + clean (hand off to humans)", () => {
     expect(report.status).toBe("PENDING");
   });
 
-  it("returns READY when BLOCKED with reviewDecision null (other branch protection — still hand off)", async () => {
+  it("returns READY when BLOCKED with reviewDecision null (other branch protection — still ready)", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({ mergeStateStatus: "BLOCKED", reviewDecision: null }),
     });

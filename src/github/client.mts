@@ -134,7 +134,7 @@ export async function updatePullRequestBody(pullRequestId: string, body: string)
  * Fetches PR state, `mergeable`, and `mergeStateStatus` via the REST API.
  *
  * Used when the GraphQL API returns `UNKNOWN` for mergeability or before a
- * READY handoff. The same response carries state so a concurrent merge or
+ * READY state. The same response carries state so a concurrent merge or
  * close can supersede the earlier GraphQL snapshot without another request.
  */
 export async function getMergeableState(

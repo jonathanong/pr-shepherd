@@ -150,7 +150,7 @@ describe("runIterate — merge", () => {
     if (result.action === "wait") expect(result.log).toContain("merge queue");
   });
 
-  it("preserves the normal ready handoff when merge mode is disabled", async () => {
+  it("preserves the normal ready state when merge mode is disabled", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "READY",
@@ -187,9 +187,10 @@ describe("runIterate — merge", () => {
               name: "tests",
               status: "COMPLETED",
               conclusion: "FAILURE",
-              detailsUrl: "https://example.test/check",
+              detailsUrl: "https://github.com/owner/repo/actions/runs/123",
               event: "pull_request",
-              runId: null,
+              runId: "123",
+              workflowName: "CI",
               category: "failing",
             },
           ],

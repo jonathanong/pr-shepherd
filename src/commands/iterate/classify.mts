@@ -115,7 +115,10 @@ export function buildResolveCommand(
       .filter((thread) => thread.viewerCanResolve === true)
       .map((thread) => thread.id),
   );
-  const replyThreadIds = routed.replyThreadIds.filter((id) => canReply.has(id));
+  const pairedResolveIds = new Set(routed.pairedResolveThreadIds);
+  const replyThreadIds = routed.replyThreadIds.filter(
+    (id) => canReply.has(id) && (!pairedResolveIds.has(id) || canResolve.has(id)),
+  );
   // Viewer-authored human resolves stay paired with an authorized reply. Marker-ended
   // viewer-authored retries and bot/non-human resolves need only resolve authorization.
   const pairedResolveThreadIds = routed.pairedResolveThreadIds.filter(

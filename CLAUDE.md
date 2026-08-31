@@ -44,6 +44,16 @@ All git invocations from the CLI must be read-only (`status`, `rev-parse`, `log`
 
 Instead, emit a suggestion: build the patch / commit message / file list and return it in the result, with a `## Instructions` block telling the caller what to run. The canonical example is `commit-suggestion` — it produces the patch and suggested git commands; the agent executes them.
 
+### Push access is a usage precondition
+
+`pr-shepherd` assumes the calling agent can push to the pull request's head branch. Do not use it to iterate a PR whose head branch the caller cannot update. GitHub viewer fields such as `viewerCanEditFiles` and `headRepositoryPermission` remain raw context; they must not gate normal `FIX_CODE` push instructions or create a separate push-authorization handoff.
+
+A user request to make, create, or open a PR tells the caller to proceed with the ordinary non-force push of the reviewed, in-scope commits to this repository's configured push remote and creation of that PR. Do not ask for a separate conversational confirmation solely because the push publishes those changes; request runtime escalation directly when the host requires it. Skills and repository instructions cannot grant or bypass host permissions, so unattended approval belongs in a trusted command rule or equivalent host policy. Force-pushes, remote or credential changes, unrelated changes, and ambiguous targets remain outside this workflow.
+
+`FIX_CODE` is always non-terminal: the caller completes the work, commits and pushes when needed, runs authorized review mutations, and invokes Shepherd again. Only `ESCALATE` hands work to a human; `CANCEL` ends polling without a handoff.
+
+Denied or unverifiable review replies, thread resolutions, and bot-review dismissals are one-look skips, not handoffs: Shepherd surfaces/logs the item once, omits the mutation, excludes it from fix-attempt accounting, and suppresses it until edited. Threads without a path or line follow the same rule. `authorization-required` is reserved for attempted mark-ready and merge/enqueue state changes; the finite trigger list is documented in [`docs/escalations.md`](docs/escalations.md).
+
 ## Dogfooding
 
 During development, run the CLI from this repository root with `npx pr-shepherd` (after the source checkout's package-manager install command and build; currently `npm install && npm run build`).

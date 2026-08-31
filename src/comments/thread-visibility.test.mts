@@ -55,6 +55,15 @@ describe("classifyThreadVisibility", () => {
     expect(result.activeThreads.map((t) => t.id)).toEqual(["bot"]);
   });
 
+  it("suppresses a seen bot thread when its mutation is not repeatable", () => {
+    const bot = makeThread({ id: "bot", authorType: "Bot", body: "cannot resolve" });
+    const seenMap = new Map([["bot", { seenAt: 1000, bodyHash: hashBody("cannot resolve") }]]);
+
+    const result = classifyThreadVisibility([bot], seenMap, new Set(), new Set());
+
+    expect(result.activeThreads).toEqual([]);
+  });
+
   it("keeps unchanged outdated threads in resolutionOnly while suppressing first-look display", () => {
     const outdated = makeThread({ id: "outdated", isOutdated: true, body: "already seen" });
     const seenMap = new Map([["outdated", { seenAt: 1000, bodyHash: hashBody("already seen") }]]);
@@ -63,6 +72,15 @@ describe("classifyThreadVisibility", () => {
 
     expect(result.firstLookThreads).toEqual([]);
     expect(result.resolutionOnlyThreads.map((t) => t.id)).toEqual(["outdated"]);
+  });
+
+  it("suppresses a seen resolution-only thread when its mutation is not repeatable", () => {
+    const outdated = makeThread({ id: "outdated", isOutdated: true, body: "cannot resolve" });
+    const seenMap = new Map([["outdated", { seenAt: 1000, bodyHash: hashBody("cannot resolve") }]]);
+
+    const result = classifyThreadVisibility([outdated], seenMap, new Set(), new Set());
+
+    expect(result.resolutionOnlyThreads).toEqual([]);
   });
 
   it("keeps returning configured reviewer bot threads reported as User", () => {

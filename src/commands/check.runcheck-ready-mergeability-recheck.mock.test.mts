@@ -29,7 +29,7 @@ describe("runCheck — READY mergeability recheck", () => {
     expect(report.mergeStatus.mergeStateStatus).toBe("DIRTY");
   });
 
-  it("keeps READY when the refresh reports a human handoff state", async () => {
+  it("keeps READY when the refresh reports a clean ready state", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" }),
     });

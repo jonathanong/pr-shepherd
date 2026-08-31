@@ -1,4 +1,4 @@
-import type { AgentComment, AgentThread } from "./report.mts";
+import type { AgentCheck, AgentComment, AgentThread } from "./report.mts";
 import type { CheckStatus, Review } from "./github.mts";
 import type { MergeQueueRemovalStatus } from "./merge-requirements.mts";
 
@@ -6,7 +6,7 @@ export type EscalateTrigger =
   | "fix-thrash"
   | "base-branch-unknown"
   | "stall-timeout"
-  | "thread-missing-location"
+  | "check-follow-up-unavailable"
   | "authorization-required"
   | "bot-cr-not-dismissed"
   | "merge-queue-removed";
@@ -29,18 +29,15 @@ export interface EscalateDetails {
   unresolvedThreads: AgentThread[];
   ambiguousComments: AgentComment[];
   changesRequestedReviews: Review[];
+  /** Failing checks whose next step requires human attention. */
+  checks?: AgentCheck[];
   stalledChecks?: AgentStalledCheck[];
   thrashHistory?: Array<{ threadId: string; attempts: number }>;
   suggestion: string;
   humanMessage: string;
   mergeQueueRemoval?: MergeQueueRemovalStatus;
   authorization?: Array<{
-    action:
-      | "reply-thread"
-      | "resolve-thread"
-      | "dismiss-review"
-      | "mark-ready"
-      | "merge-or-enqueue";
+    action: "mark-ready" | "merge-or-enqueue";
     targetIds: string[];
     reason: "denied-or-unverifiable";
   }>;

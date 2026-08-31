@@ -40,9 +40,7 @@ flowchart TD
 
   DEC -->|cancel/escalate| STOP["stop"]
   DEC -->|fix_code| FIX["inspect included evidence<br/>edit+commit by repo convention<br/>run authorized review mutations"]
-  FIX --> REMOTE{"remote update required?"}
-  REMOTE -->|yes| STOP
-  REMOTE -->|no| RERUN["rerun the poll"]
+  FIX --> RERUN["rerun the poll"]
   DEC -->|wait/mark_ready/merge| RERUN
   RERUN --> POLL
 ```
@@ -71,12 +69,12 @@ The shipped skill runs the **poll** command `pr-shepherd`, not `pr-shepherd iter
 
 ### 2. Ready-delay
 
-**What:** `updateReadyDelay(pr, isCleanReadyHandoff, readyDelaySeconds, owner, repo)` reads/writes `ready-since.txt`.
+**What:** `updateReadyDelay(pr, isCleanReadyState, readyDelaySeconds, owner, repo)` reads/writes `ready-since.txt`.
 
-A clean handoff means `status === "READY"` and `hasActionableWork` is false. That includes BLOCKED/UNSTABLE handoffs where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending).
+A clean ready state means `status === "READY"`, `hasActionableWork` is false, and no active auto-merge or merge-queue state is being handled. That includes BLOCKED/UNSTABLE states where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending).
 
-- On first clean handoff sweep: creates the file with the current timestamp.
-- On subsequent clean handoff sweeps: checks if `now − readySince >= readyDelaySeconds`. If so, `shouldCancel: true`.
+- On the first clean ready sweep: creates the file with the current timestamp.
+- On subsequent clean ready sweeps: checks if `now − readySince >= readyDelaySeconds`. If so, `shouldCancel: true`.
 - On any unclean sweep: deletes the file (resets the countdown). This includes non-READY status, failing CI, conflicts, unresolved comments, review-summary minimization, and first-look items.
 
 Before a READY sweep reaches this step, `runCheck` performs one fresh REST mergeability read unless the UNKNOWN fallback already did so. If the refreshed mergeability reports `CONFLICTING`/`DIRTY`, the sweep becomes `FAILING`/`CONFLICTS`, resets the marker, and routes to `fix_code`.
@@ -85,13 +83,13 @@ If `readyState.shouldCancel`, iterate emits `action: 'merge'` when `--merge` is 
 
 Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/ready-since.txt` (Unix timestamp, seconds). A future timestamp (clock skew) is reset to now. Default delay is 10 minutes (`watch.readyDelayMinutes` or `--ready-delay`).
 
-| Event                                        | Effect on `ready-since.txt`          |
-| -------------------------------------------- | ------------------------------------ |
-| First clean handoff sweep                    | Created with current timestamp       |
-| Subsequent clean handoff (delay not elapsed) | Read; `remainingSeconds` decremented |
-| Clean handoff, delay elapsed                 | `shouldCancel: true`; file deleted   |
-| Non-READY, or READY with actionable work     | Deleted (countdown resets)           |
-| PR merged/closed (step 1.5)                  | Deleted before `cancel`              |
+| Event                                       | Effect on `ready-since.txt`          |
+| ------------------------------------------- | ------------------------------------ |
+| First clean ready sweep                     | Created with current timestamp       |
+| Subsequent clean ready sweep (delay active) | Read; `remainingSeconds` decremented |
+| Clean ready state, delay elapsed            | `shouldCancel: true`; file deleted   |
+| Non-READY, or READY with actionable work    | Deleted (countdown resets)           |
+| PR merged/closed (step 1.5)                 | Deleted before `cancel`              |
 
 ---
 
@@ -117,7 +115,7 @@ CONFLICTS is included so merge conflicts and review comments can be handled in o
 
 **Side-effects:** No workflow-run cancellation. GitHub exposes no exact viewer capability for cancel/rerun actions, so Shepherd only surfaces failure context for inspection.
 
-**Emits:** `action: 'fix_code'`. Stall guard runs inside `handleFixCode`.
+**Emits:** `action: 'fix_code'`. A non-empty external check URL counts as an autonomous investigation path and remains `fix_code`. If no other autonomous work remains and every failing check instead requires a human-only action or lacks a usable locator/evidence and an authorized rerun, `handleFixCode` emits `action: 'escalate'` with trigger `check-follow-up-unavailable` and the raw check context. Every emitted `fix_code` is non-terminal and runs through the stall guard.
 
 ---
 
@@ -135,7 +133,7 @@ There is no extra `mergeStateStatus === "CLEAN"` requirement. A draft that deriv
 
 ### 4.5. Active merge and queue removal
 
-An active auto-merge request or merge-queue entry emits `wait` after actionable checks are handled. Both new auto-merge commands and queue enrollment require `viewerCanEnableAutoMerge: true` — enabling auto-merge on a queue-required PR is what enrolls it in the queue, so the same capability authorizes both; when it is not `true` (denied or unverifiable), either path returns an authorization handoff instead. If `--merge` is enabled and the latest queue removal has no actionable failure, iterate emits `escalate` with the raw removal fields.
+An active auto-merge request or merge-queue entry emits `wait` after actionable checks are handled. Both new auto-merge commands and queue enrollment require `viewerCanEnableAutoMerge: true` — enabling auto-merge on a queue-required PR is what enrolls it in the queue, so the same capability authorizes both; when it is not `true` (denied or unverifiable), either path returns `escalate` with trigger `authorization-required`. If `--merge` is enabled and the latest queue removal has no actionable failure, iterate emits `escalate` with the raw removal fields.
 
 ### 5. Wait
 
@@ -168,6 +166,7 @@ Exit codes: `0`/`10`–`15` is `IterateResult` PR state; see [exit-codes.md](exi
 | 2       | `shouldCancel` + `--merge`                   | `merge`      | 15        |
 | 2       | `shouldCancel` without `--merge`             | `cancel`     | 0         |
 | 3       | `hasActionableWork`                          | `fix_code`   | 12        |
+| 3 check | Only checks without autonomous follow-up     | `escalate`   | 13        |
 | 3 stall | Same fingerprint for ≥ `stallTimeoutMinutes` | `escalate`   | 13        |
 | 3 esc.  | Same thread hit `fixAttemptsPerThread` times | `escalate`   | 13        |
 | 4       | READY + isDraft + !blockingBotReview         | `mark_ready` | 11        |

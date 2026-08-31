@@ -50,9 +50,10 @@ export function buildFixInstructions(
   behindBaseHint = "", // iterate.behindBaseHint — see buildBehindBaseHintInstruction
   isBehind = false,
   viewerCanUpdate = false,
-  pushAuthorized = false,
 ): string[] {
   const instructions: string[] = [];
+  const locatedThreads = threads.filter((thread) => thread.path !== null && thread.line !== null);
+  const unlocatedThreads = threads.filter((thread) => thread.path === null || thread.line === null);
 
   const failingChecks = checks.filter((c) => isFailingAgentCheck(c));
   const hasAnnotations = checks.some((c) => (c.annotations?.length ?? 0) > 0);
@@ -66,7 +67,9 @@ export function buildFixInstructions(
   // Start with interpretation. The agent decides what raw feedback warrants a code change.
   if (hasNonConflictHints) {
     const actionableSections: string[] = [];
-    if (threads.length > 0) actionableSections.push("`## Review threads`");
+    if (locatedThreads.length > 0) actionableSections.push("`## Review threads`");
+    if (unlocatedThreads.length > 0)
+      actionableSections.push("`## Unlocated review threads (logged once — no mutation)`");
     if (actionableComments.length > 0) actionableSections.push("`## Actionable comments`");
     if (failingChecks.length > 0) actionableSections.push("`## Failing checks`");
     if (hasAnnotations) {
@@ -100,20 +103,26 @@ export function buildFixInstructions(
       "Read every item marked `[edited since first look]`, including edited summaries and edited first-look bullets, before deciding whether to resolve a matching thread.",
     );
   }
+  if (unlocatedThreads.length > 0) {
+    instructions.push(
+      "Acknowledge each item under `## Unlocated review threads (logged once — no mutation)`. Shepherd cannot route a code fix or review mutation without a path and line; the unchanged item will be skipped on later ticks.",
+    );
+  }
 
   // GitHub exposes no exact viewer capability for workflow-run cancellation, so the
   // informational run lists never produce a cancellation recommendation.
   void inProgressRunIds;
   void cancelledCount;
 
-  const hasSuggestions = threads.some((t) => t.suggestion);
+  const hasSuggestions = locatedThreads.some((t) => t.suggestion);
   if (hasSuggestions)
     instructions.push(buildCommitSuggestionInstruction(prReference, "## Review threads"));
 
-  if (threads.length > 0 || actionableComments.length > 0) {
+  if (locatedThreads.length > 0 || actionableComments.length > 0) {
     // Actionable comments carry no file/line location (unlike threads), so "referenced above"
     // is only accurate when threads are present.
-    const filesRef = threads.length > 0 ? "each file referenced above" : "the relevant files";
+    const filesRef =
+      locatedThreads.length > 0 ? "each file referenced above" : "the relevant files";
     instructions.push(`Apply every warranted review fix in ${filesRef}.`);
   }
 
@@ -145,15 +154,11 @@ export function buildFixInstructions(
   const mutationSuffix = hasReviewMutations ? " before review mutations" : "";
   if (hasConflicts) {
     instructions.push(
-      pushAuthorized
-        ? `Commit any remaining conflict-resolution changes and push to the PR head branch${mutationSuffix}.`
-        : `Commit any remaining conflict-resolution changes${mutationSuffix}.`,
+      `Commit any remaining conflict-resolution changes and push to the PR head branch${mutationSuffix}.`,
     );
   } else if (hasNonConflictHints) {
     instructions.push(
-      pushAuthorized
-        ? "If you changed code, commit any remaining changes and push to the PR head branch, then run the remaining review mutations using the pushed commit SHA and iterate again with the same options. If you did not change code, do not commit and continue with the remaining steps."
-        : "If you changed code, commit any remaining changes, then stop and hand off for a push whose authorization is established outside Shepherd; do not run the remaining review mutations or iterate until the remote PR head changes. Shepherd cannot verify the Git credential's push authorization. If you did not change code, do not commit and continue with the remaining steps.",
+      "If you changed code, commit any remaining changes and push to the PR head branch, then run the remaining review mutations using the pushed commit SHA and iterate again with the same options. If you did not change code, do not commit and continue with the remaining steps.",
     );
   }
 
@@ -171,15 +176,10 @@ export function buildFixInstructions(
   if (resolveOnlyCommand?.hasMutations)
     instructions.push("Run the `resolve-only:` command shown above.");
 
-  instructions.push(...buildResolveCommandInstruction(resolveCommand, pushAuthorized));
+  instructions.push(...buildResolveCommandInstruction(resolveCommand));
 
   instructions.push(
-    buildFixCompletionInstruction(
-      failingChecks,
-      hasConflicts,
-      resolveCommand.requiresHeadSha,
-      pushAuthorized,
-    ),
+    buildFixCompletionInstruction(failingChecks, hasConflicts, resolveCommand.requiresHeadSha),
   );
   return instructions;
 }

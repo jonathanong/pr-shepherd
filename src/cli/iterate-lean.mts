@@ -169,6 +169,10 @@ export function projectIterateLean(
           ...(result.escalate.changesRequestedReviews.length > 0 && {
             changesRequestedReviews: result.escalate.changesRequestedReviews,
           }),
+          ...(result.escalate.checks &&
+            result.escalate.checks.length > 0 && {
+              checks: result.escalate.checks,
+            }),
           ...(result.escalate.stalledChecks &&
             result.escalate.stalledChecks.length > 0 && {
               stalledChecks: result.escalate.stalledChecks,
