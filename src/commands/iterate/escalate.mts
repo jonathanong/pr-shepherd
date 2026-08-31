@@ -15,44 +15,57 @@ function renderEscalateAuthor(item: {
   return [`@${item.author}`, item.authorType, item.authorAssociation].filter(Boolean).join(" · ");
 }
 
+function renderCheckTarget(check: AgentCheck): string {
+  if (check.runId) return `run \`${check.runId}\``;
+  if (check.detailsUrl) return `external \`${check.detailsUrl}\``;
+  return "no run ID or URL";
+}
+
+function renderCheckScope(check: AgentCheck): string {
+  if (!check.scope) return "";
+  const commit = check.commitOid ? ` at \`${check.commitOid}\`` : "";
+  return `, scope \`${check.scope}\`${commit}`;
+}
+
+function renderBlockquoteLines(value: string, indent: string): string[] {
+  return value.split("\n").map((line) => `${indent}> ${line}`);
+}
+
+type AgentCheckAnnotation = NonNullable<AgentCheck["annotations"]>[number];
+
+function renderEscalateAnnotation(annotation: AgentCheckAnnotation): string[] {
+  const start = annotation.startLine ?? annotation.endLine ?? "?";
+  const end = annotation.endLine ?? annotation.startLine ?? "?";
+  const range = start === end ? String(start) : `${start}-${end}`;
+  const columns =
+    annotation.startColumn == null && annotation.endColumn == null
+      ? ""
+      : `, columns ${annotation.startColumn ?? "?"}-${annotation.endColumn ?? "?"}`;
+  const title = annotation.title ? ` — ${annotation.title}` : "";
+  const link = annotation.blobUrl ? ` [source](${annotation.blobUrl})` : "";
+  const lines = [
+    `  - annotation \`${annotation.id}\`${link} — \`${annotation.path}:${range}\` [${annotation.level}${columns}]${title}`,
+    ...renderBlockquoteLines(annotation.message, "    "),
+  ];
+  if (annotation.rawDetails) {
+    lines.push(...renderBlockquoteLines(annotation.rawDetails, "    "));
+  }
+  return lines;
+}
+
 function renderEscalateCheck(check: AgentCheck): string[] {
-  const target = check.runId
-    ? `run \`${check.runId}\``
-    : check.detailsUrl
-      ? `external \`${check.detailsUrl}\``
-      : "no run ID or URL";
   const workflowPrefix = check.workflowName ? `${check.workflowName} › ` : "";
   const jobLabel = check.jobName ?? check.name;
-  const conclusion = check.conclusion === null ? "UNKNOWN" : check.conclusion;
-  const scope = check.scope
-    ? `, scope \`${check.scope}\`${check.commitOid ? ` at \`${check.commitOid}\`` : ""}`
-    : "";
+  const conclusion = check.conclusion ?? "UNKNOWN";
   const lines = [
-    `- ${target} — \`${workflowPrefix}${jobLabel}\` [conclusion: ${conclusion}]${scope}`,
+    `- ${renderCheckTarget(check)} — \`${workflowPrefix}${jobLabel}\` [conclusion: ${conclusion}]${renderCheckScope(check)}`,
   ];
   if (check.failedStep) lines.push(`  > failed step: ${check.failedStep}`);
   if (check.summary) lines.push(`  > ${check.summary}`);
-  if (check.logExcerpt) {
-    for (const line of check.logExcerpt.split("\n")) lines.push(`  > ${line}`);
-  }
+  if (check.logExcerpt) lines.push(...renderBlockquoteLines(check.logExcerpt, "  "));
   if (check.rerunCommand) lines.push(`  rerun: \`${check.rerunCommand}\``);
   for (const annotation of check.annotations ?? []) {
-    const start = annotation.startLine ?? annotation.endLine ?? "?";
-    const end = annotation.endLine ?? annotation.startLine ?? "?";
-    const range = start === end ? String(start) : `${start}-${end}`;
-    const columns =
-      annotation.startColumn == null && annotation.endColumn == null
-        ? ""
-        : `, columns ${annotation.startColumn ?? "?"}-${annotation.endColumn ?? "?"}`;
-    const title = annotation.title ? ` — ${annotation.title}` : "";
-    const link = annotation.blobUrl ? ` [source](${annotation.blobUrl})` : "";
-    lines.push(
-      `  - annotation \`${annotation.id}\`${link} — \`${annotation.path}:${range}\` [${annotation.level}${columns}]${title}`,
-    );
-    for (const line of annotation.message.split("\n")) lines.push(`    > ${line}`);
-    if (annotation.rawDetails) {
-      for (const line of annotation.rawDetails.split("\n")) lines.push(`    > ${line}`);
-    }
+    lines.push(...renderEscalateAnnotation(annotation));
   }
   return lines;
 }
@@ -167,8 +180,7 @@ export function buildEscalateHumanMessage(
     }
     if ((escalate.stalledChecks?.length ?? 0) > 0) lines.push("");
     for (const check of escalate.checks ?? []) {
-      lines.push(...renderEscalateCheck(check));
-      lines.push("");
+      lines.push(...renderEscalateCheck(check), "");
     }
     for (const t of escalate.unresolvedThreads) {
       const loc = t.path ? `\`${t.path}:${t.line ?? "?"}\`` : "(no location)";

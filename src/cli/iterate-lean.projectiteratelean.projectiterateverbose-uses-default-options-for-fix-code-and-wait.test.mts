@@ -67,7 +67,7 @@ describe("projectIterateLean", () => {
     expect((esc.unresolvedThreads as unknown[]).length).toBe(1);
     expect((esc.ambiguousComments as unknown[]).length).toBe(1);
     expect((esc.changesRequestedReviews as unknown[]).length).toBe(1);
-    expect((esc.checks as unknown[]).length).toBe(1);
+    expect(esc.checks as unknown[]).toHaveLength(1);
     expect((esc.thrashHistory as unknown[]).length).toBe(1);
   });
 });
