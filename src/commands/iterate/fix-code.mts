@@ -315,7 +315,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     reviewSummaryIds.length > 0 ||
     firstLookSummaries.length > 0 ||
     editedSummaries.length > 0 ||
-    surfacedApprovals.length > 0 ||
     report.threads.firstLook.length > 0 ||
     report.comments.firstLook.length > 0 ||
     checks.some((check) => (check.annotations?.length ?? 0) > 0) ||
