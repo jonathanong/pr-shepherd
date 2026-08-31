@@ -260,7 +260,7 @@ describe("fix_code — GitHub Actions authorization", () => {
     expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
   });
 
-  it("escalates a denied suppressed auto-resolve thread without recommending a mutation", async () => {
+  it("surfaces a denied suppressed auto-resolve thread once without escalating", async () => {
     const thread = makeThread({
       id: "thread-denied",
       author: "review-bot",
@@ -284,20 +284,13 @@ describe("fix_code — GitHub Actions authorization", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("escalate");
-    if (result.action !== "escalate") return;
-    expect(result.escalate.triggers).toContain("authorization-required");
-    expect(result.escalate.authorization).toEqual([
-      {
-        action: "resolve-thread",
-        targetIds: [thread.id],
-        reason: "denied-or-unverifiable",
-      },
-    ]);
-    expect(result.escalate.humanMessage).not.toContain("pr-shepherd apply review");
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.threads).toEqual([expect.objectContaining({ id: thread.id })]);
+    expect(result.fix.resolveCommand.hasMutations).toBe(false);
   });
 
-  it("reports denied reply and dismissal authorization", async () => {
+  it("surfaces denied reply and dismissal items without escalating or mutating", async () => {
     const thread = makeThread({
       id: "thread-human",
       author: "alice",
@@ -332,15 +325,16 @@ describe("fix_code — GitHub Actions authorization", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("escalate");
-    if (result.action !== "escalate") return;
-    expect(result.escalate.authorization?.map((item) => item.action)).toEqual([
-      "reply-thread",
-      "dismiss-review",
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.threads).toEqual([expect.objectContaining({ id: thread.id })]);
+    expect(result.fix.changesRequestedReviews).toEqual([
+      expect.objectContaining({ id: "review-bot" }),
     ]);
+    expect(result.fix.resolveCommand.hasMutations).toBe(false);
   });
 
-  it("escalates when a paired viewer-authored reply is allowed but its resolve is denied", async () => {
+  it("skips a paired viewer-authored mutation when resolve authorization is denied", async () => {
     const thread = makeThread({
       id: "thread-viewer",
       author: "viewer",
@@ -364,14 +358,8 @@ describe("fix_code — GitHub Actions authorization", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("escalate");
-    if (result.action !== "escalate") return;
-    expect(result.escalate.authorization).toEqual([
-      {
-        action: "resolve-thread",
-        targetIds: [thread.id],
-        reason: "denied-or-unverifiable",
-      },
-    ]);
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.resolveCommand.hasMutations).toBe(false);
   });
 });

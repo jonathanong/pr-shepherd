@@ -21,7 +21,7 @@ describe("escalate message helpers", () => {
   it("includes ambiguous comments and fallback suggestions", () => {
     const message = buildEscalateHumanMessage(
       {
-        triggers: ["thread-missing-location"],
+        triggers: ["fix-thrash"],
         unresolvedThreads: [],
         ambiguousComments: [
           {

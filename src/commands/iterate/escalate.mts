@@ -84,12 +84,6 @@ export function checkEscalateTriggers(
     triggers.push("fix-thrash");
   }
 
-  // Trigger 2: actionable thread has no file/line — cannot locate code to edit.
-  const unlocatable = actionableThreads.filter((t) => t.path === null || t.line === null);
-  if (unlocatable.length > 0) {
-    triggers.push("thread-missing-location");
-  }
-
   return {
     triggers,
     thrashHistory:
@@ -249,7 +243,7 @@ export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: st
     return "One or more failing checks have no autonomous follow-up available. Use the displayed conclusion, run or URL, and included evidence to handle them manually.";
   }
   if (triggers.includes("authorization-required")) {
-    return "GitHub did not confirm that the current viewer may perform one or more required actions. Ask a repository maintainer to handle the listed items; Shepherd will not recommend commands that would be denied.";
+    return "GitHub did not confirm that the current viewer may perform the requested mark-ready or merge/enqueue operation. Ask a repository maintainer to perform that state change; Shepherd will not recommend a command that would be denied.";
   }
   if (triggers.includes("merge-queue-removed")) {
     const reason = detail ? ` GitHub reason: ${detail}.` : "";
@@ -265,9 +259,6 @@ export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: st
   }
   if (triggers.includes("fix-thrash")) {
     return "Same thread(s) reached the automated attempt limit — treat this as a manual handoff. Apply the fix by hand.";
-  }
-  if (triggers.includes("thread-missing-location")) {
-    return "Review thread has no file/line reference — automated location routing failed and manual handling is required.";
   }
   if (triggers.includes("bot-cr-not-dismissed")) {
     const ids = detail ? ` (review IDs: ${detail})` : "";

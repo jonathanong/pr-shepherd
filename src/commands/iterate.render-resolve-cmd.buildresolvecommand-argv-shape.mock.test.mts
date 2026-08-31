@@ -123,7 +123,7 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
       result.fix.resolveCommand.argv[
         result.fix.resolveCommand.argv.indexOf("--reply-thread-ids") + 1
       ];
-    expect(replyThreadArg).toBe("thread-1,res-thread-1");
+    expect(replyThreadArg).toBe("thread-1");
     // minimize IDs split to resolveOnlyCommand — not in the reply command
     expect(result.fix.resolveCommand.argv).not.toContain("--minimize-comment-ids");
     expect(result.fix.resolveOnlyCommand?.argv).toContain("--minimize-comment-ids");

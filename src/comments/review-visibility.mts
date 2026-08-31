@@ -45,6 +45,7 @@ export function classifyChangesRequestedReviewsForDisplay(
   reviews: Review[],
   seenMap: Map<string, SeenMarker>,
   botUsernames: NormalizedBotUsernames,
+  repeatBotReviews = true,
 ): ReviewVisibility {
   const visible: Review[] = [];
   const toMarkSeen: Review[] = [];
@@ -53,7 +54,7 @@ export function classifyChangesRequestedReviewsForDisplay(
     const cls = classifyItem(review.id, review.body, seenMap);
     if (isBot) {
       if (cls === "unchanged") {
-        visible.push({ ...review, staleBotCr: true });
+        if (repeatBotReviews) visible.push({ ...review, staleBotCr: true });
       } else if (cls === "edited") {
         visible.push({ ...review, edited: true });
         toMarkSeen.push(review);

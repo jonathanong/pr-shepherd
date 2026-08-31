@@ -93,9 +93,9 @@ describe("runIterate — CHANGES_REQUESTED review with no inline threads routes 
 
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
-      expect(result.fix.resolveCommand.argv).toContain("--reply-thread-ids");
-      expect(result.fix.resolveCommand.argv).toContain("thread-resolution-only");
-      // Non-human CR review is dismissed in the same command as the reply.
+      expect(result.fix.resolveCommand.argv).not.toContain("--reply-thread-ids");
+      expect(result.fix.resolveCommand.argv).not.toContain("thread-resolution-only");
+      // The authorized non-human CR dismissal remains actionable on its own.
       expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
       expect(result.fix.resolveCommand.argv).toContain("review-1");
     }

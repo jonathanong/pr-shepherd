@@ -77,18 +77,18 @@ Conversations Resolved: No [Not Required]
 9. `[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run review mutations using the pushed commit SHA and iterate again with the same options; without code changes, complete the authorized review mutations and iterate again.
 ```
 
-See [docs/actions.md](docs/actions.md) for the complete output contract. Iterate/poll PR outcomes use exit codes `0` and `10`–`15`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).
+See [docs/actions.md](docs/actions.md) for the complete output contract and [docs/escalations.md](docs/escalations.md) for the exact finite human-handoff boundary. Iterate/poll PR outcomes use exit codes `0` and `10`–`15`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).
 
 ## Workflow Assumptions
 
 This system is opinionated and works best with PRs that use required status checks and conversation resolution.
 
 - A human inline thread whose original comment has `viewerDidAuthor: true` is replied to and resolved when its latest comment is unmarked. An unmarked other-human inline thread remains reply-only; a marker-ended other-human thread is already acknowledged and receives no further mutation. Human items are never minimized.
-- Detected bots and configured `botUsernames` review threads are returned until resolved; bot/non-human threads, PR comments, and review summaries can be resolved or minimized when eligible. Review summaries are not minimized while known inline child threads from that review remain unresolved.
+- Detected bots and configured `botUsernames` review threads are returned until resolved when the required mutation is authorized and the thread has a source location. Unauthorized or unlocated items are surfaced once and then marker-gated until edited. Bot/non-human threads, PR comments, and review summaries can be resolved or minimized when eligible. Review summaries are not minimized while known inline child threads from that review remain unresolved.
 - Shepherd identifies its own latest reply only when that comment begins `<!-- pr-shepherd -->`, not from author equality. A marked viewer-authored thread can be resolved without another reply as a retry.
 - Every review thread/comment/review summary is surfaced at least once, even if already outdated, resolved, or minimized; edited items re-surface through seen markers.
 - Draft PRs can be marked ready automatically when clean; disable with `actions.autoMarkReady: false` or `--no-auto-mark-ready`.
-- The CLI never performs git mutations itself — it only emits commit/push instructions for the agent to run. It recommends pushing autonomously (own-repo PRs, and fork PRs where the viewer has push access to the fork) unless GitHub's viewer fields affirmatively report no head-branch push access, in which case it hands the push off to a human instead.
+- The CLI never performs git mutations itself — it only emits commit/push instructions for the agent to run. Push access to the PR head is a usage precondition; GitHub viewer fields do not create a separate push-authorization handoff.
 - Every GitHub mutation is permission-aware. Shepherd uses raw viewer capability fields, omits unauthorized commands, and repeats authorization checks in direct `apply` commands. Missing capability data fails closed.
 - `build_suggestion_patches` turns one or more ordered GitHub suggestion threads into checked patches and commit metadata, but never edits the working tree or git history. Local HEAD may be ahead when the live PR head is its ancestor.
 

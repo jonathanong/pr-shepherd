@@ -6,7 +6,6 @@ export type EscalateTrigger =
   | "fix-thrash"
   | "base-branch-unknown"
   | "stall-timeout"
-  | "thread-missing-location"
   | "check-follow-up-unavailable"
   | "authorization-required"
   | "bot-cr-not-dismissed"
@@ -38,12 +37,7 @@ export interface EscalateDetails {
   humanMessage: string;
   mergeQueueRemoval?: MergeQueueRemovalStatus;
   authorization?: Array<{
-    action:
-      | "reply-thread"
-      | "resolve-thread"
-      | "dismiss-review"
-      | "mark-ready"
-      | "merge-or-enqueue";
+    action: "mark-ready" | "merge-or-enqueue";
     targetIds: string[];
     reason: "denied-or-unverifiable";
   }>;

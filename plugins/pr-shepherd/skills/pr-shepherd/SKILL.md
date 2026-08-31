@@ -64,7 +64,7 @@ When several bullets share one runId (matrix jobs from the same run), the `rerun
 
 Applies to every `apply review:` / `resolve-only:` command the CLI prints. Covers only what stays safe if you run the printed command **unmodified** — `$HEAD_SHA`/`$DISMISS_MESSAGE` substitution remains a separate CLI-printed step because the command is unsafe by default without those placeholders.
 
-The CLI only includes IDs whose per-object GitHub viewer capability authorizes the corresponding action, and `apply review` repeats that authorization check immediately before mutating.
+The CLI only includes IDs whose per-object GitHub viewer capability authorizes the corresponding action, and `apply review` repeats that authorization check immediately before mutating. Do not reconstruct omitted review reply, thread resolution, or bot-review dismissal IDs and do not hand them off: denied or unverifiable review mutations are one-look skips that Shepherd suppresses until the item is edited. Threads without a path or line follow the same skip rule.
 
 - Run every generated `apply review:` / `resolve-only:` command even when no code change is warranted. The command records the agent's disposition of the included review items; skipping it leaves bot threads active and can eventually trigger `fix-thrash`.
 - Never add first-look-only or check-annotation IDs to `--reply-thread-ids`, `--resolve-thread-ids`, `--dismiss-review-ids`, or `--minimize-comment-ids` — those flags are pre-populated by the CLI.

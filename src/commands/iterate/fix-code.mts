@@ -121,82 +121,34 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const replyIdSet = new Set(routedThreadMutations.replyThreadIds);
   const resolveIdSet = new Set(routedThreadMutations.resolveThreadIds);
   const unauthorizedReplies = allThreads.filter(
-    (thread) =>
-      report.viewerAuthorization !== undefined &&
-      replyIdSet.has(thread.id) &&
-      thread.viewerCanReply !== true,
+    (thread) => replyIdSet.has(thread.id) && thread.viewerCanReply !== true,
   );
   const unauthorizedResolves = allThreads.filter(
-    (thread) =>
-      report.viewerAuthorization !== undefined &&
-      resolveIdSet.has(thread.id) &&
-      thread.viewerCanResolve !== true,
+    (thread) => resolveIdSet.has(thread.id) && thread.viewerCanResolve !== true,
   );
   const unauthorizedDismissals = report.changesRequestedReviews.filter(
     (review) =>
-      report.viewerAuthorization !== undefined &&
       (!isHumanAuthor(review) || isConfiguredBotAuthor(review, botUsernames)) &&
       report.viewerAuthorization?.viewerCanAdminister !== true,
   );
-  const authorization = [
-    ...(unauthorizedReplies.length > 0
-      ? [
-          {
-            action: "reply-thread" as const,
-            targetIds: unauthorizedReplies.map((thread) => thread.id),
-            reason: "denied-or-unverifiable" as const,
-          },
-        ]
-      : []),
-    ...(unauthorizedResolves.length > 0
-      ? [
-          {
-            action: "resolve-thread" as const,
-            targetIds: unauthorizedResolves.map((thread) => thread.id),
-            reason: "denied-or-unverifiable" as const,
-          },
-        ]
-      : []),
-    ...(unauthorizedDismissals.length > 0
-      ? [
-          {
-            action: "dismiss-review" as const,
-            targetIds: unauthorizedDismissals.map((review) => review.id),
-            reason: "denied-or-unverifiable" as const,
-          },
-        ]
-      : []),
-  ];
-  if (authorization.length > 0) {
-    const authorizationEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
-      triggers: ["authorization-required"],
-      unresolvedThreads: allThreads.map(toAgentThread),
-      ambiguousComments: report.comments.actionable.map(toAgentComment),
-      changesRequestedReviews: report.changesRequestedReviews,
-      authorization,
-      suggestion: buildEscalateSuggestion(["authorization-required"]),
-    };
-    return {
-      ...base,
-      action: "escalate",
-      escalate: {
-        ...authorizationEscalateBase,
-        humanMessage: buildEscalateHumanMessage(authorizationEscalateBase, prReference, {
-          merge: opts.merge,
-        }),
-      },
-    };
-  }
+  const skippedThreadIds = new Set(
+    [...unauthorizedReplies, ...unauthorizedResolves].map((thread) => thread.id),
+  );
+  const retryableActionableThreads = report.threads.actionable.filter(
+    (thread) => !skippedThreadIds.has(thread.id) && thread.path !== null && thread.line !== null,
+  );
   const protectedRuns: [] = [];
   const stored = await readFixAttempts({ owner: repoOwner, repo: repoName, pr: prNumber });
   const { threadAttempts, threadBodyHashes } = nextFixAttempts(
     stored,
     headSha,
-    report.threads.actionable,
+    retryableActionableThreads,
   );
 
   const botCrReviews = report.changesRequestedReviews.filter(
-    (r) => !isHumanAuthor(r) || isConfiguredBotAuthor(r, botUsernames),
+    (r) =>
+      (!isHumanAuthor(r) || isConfiguredBotAuthor(r, botUsernames)) &&
+      report.viewerAuthorization?.viewerCanAdminister === true,
   );
   const botCrStateKey = { owner: repoOwner, repo: repoName, pr: prNumber };
   const previousBotCrState = await readBotCrSeenState(botCrStateKey);
@@ -232,7 +184,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     };
   }
 
-  const escalateTriggers = checkEscalateTriggers(report.threads.actionable, threadAttempts);
+  const escalateTriggers = checkEscalateTriggers(retryableActionableThreads, threadAttempts);
   if (escalateTriggers.triggers.length > 0) {
     const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: escalateTriggers.triggers,
@@ -311,6 +263,13 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       !isHumanAuthor(review) ||
       isConfiguredBotAuthor(review, botUsernames),
   );
+  const skippedDismissalIds = new Set(unauthorizedDismissals.map((review) => review.id));
+  const changesRequestedReviewsForWork = actionableChangesRequestedReviews.filter(
+    (review) => !skippedDismissalIds.has(review.id),
+  );
+  const resolutionOnlyThreadsForWork = resolutionOnlyThreads.filter(
+    (thread) => !skippedThreadIds.has(thread.id) && thread.path !== null && thread.line !== null,
+  );
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
   const isBehind = report.mergeStatus.status === "BEHIND";
   const { behindBaseHint } = loadConfig().iterate;
@@ -357,11 +316,13 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   }
   // Push access to the PR head branch is a usage precondition. Build review mutations for
   // conflict ticks normally so the caller can push and complete the same fix_code cycle.
+  const retryableActionableIds = new Set(retryableActionableThreads.map((thread) => thread.id));
+  const retryableAgentThreads = threads.filter((thread) => retryableActionableIds.has(thread.id));
   const { resolveCommand, resolveOnlyCommand } = buildResolveCommand(
-    threads,
-    resolutionOnlyThreads,
+    retryableAgentThreads,
+    resolutionOnlyThreadsForWork,
     allCommentIds,
-    changesRequestedReviews,
+    changesRequestedReviewsForWork,
     failingAgentChecks,
     prReference,
     botUsernames,
@@ -374,13 +335,13 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   // prediction that the agent *will* push. Intentionally broader than `pushLikely` above:
   // resolution-only threads also need a known base in case the agent does push.
   const pushIsPlausible =
-    threads.length > 0 ||
+    retryableActionableThreads.length > 0 ||
     failingAgentChecks.length > 0 ||
     annotatedExtra.length > 0 ||
     hasConflicts ||
-    changesRequestedReviews.length > 0 ||
+    changesRequestedReviewsForWork.length > 0 ||
     actionableComments.length > 0 ||
-    resolutionOnlyThreads.length > 0;
+    resolutionOnlyThreadsForWork.length > 0;
   if (baseLookup.isFallback && pushIsPlausible) {
     const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: ["base-branch-unknown"],

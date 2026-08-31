@@ -26,6 +26,7 @@ Quick start: [`../README.md`](../README.md).
 | Document                           | What it covers                                                  |
 | ---------------------------------- | --------------------------------------------------------------- |
 | [actions.md](actions.md)           | Every action: trigger, side-effects, prescriptive output fields |
+| [escalations.md](escalations.md)   | The finite escalation list, exact predicates, and non-cases     |
 | [iterate-flow.md](iterate-flow.md) | Dispatch order, mermaid, ready-delay, stall                     |
 | [exit-codes.md](exit-codes.md)     | Process exit codes: PR-state `0`/`10`–`14`, `sysexits.h` errors |
 

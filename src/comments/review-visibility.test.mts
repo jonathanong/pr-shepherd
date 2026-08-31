@@ -47,6 +47,30 @@ describe("classifyChangesRequestedReviewsForDisplay", () => {
     expect(toMarkSeen).toEqual([]);
   });
 
+  it("suppresses a seen bot CR when dismissal is not repeatable", () => {
+    const review = mkBot("PRR_a", "body");
+    const { visible, toMarkSeen } = classifyChangesRequestedReviewsForDisplay(
+      [review],
+      seenMap([["PRR_a", "body"]]),
+      bots,
+      false,
+    );
+    expect(visible).toEqual([]);
+    expect(toMarkSeen).toEqual([]);
+  });
+
+  it("still surfaces an unseen bot CR once when dismissal is not repeatable", () => {
+    const review = mkBot("PRR_a", "body");
+    const { visible, toMarkSeen } = classifyChangesRequestedReviewsForDisplay(
+      [review],
+      seenMap([]),
+      bots,
+      false,
+    );
+    expect(visible).toEqual([review]);
+    expect(toMarkSeen).toEqual([review]);
+  });
+
   it("renders an edited bot CR with edited:true and re-marks seen", () => {
     const review = mkBot("PRR_a", "new body");
     const { visible, toMarkSeen } = classifyChangesRequestedReviewsForDisplay(
