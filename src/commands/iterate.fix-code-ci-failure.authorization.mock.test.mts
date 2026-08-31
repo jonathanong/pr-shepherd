@@ -10,42 +10,53 @@ import {
 } from "../../test-helpers/commands/iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
 import { makeThread } from "../../test-helpers/commands/iterate-thread-test-support.mts";
+import type { ClassifiedCheck } from "../types.mts";
 
 registerIterateHooks();
+
+function failingCheck(overrides: Partial<ClassifiedCheck> = {}): ClassifiedCheck {
+  return {
+    name: "tests",
+    status: "COMPLETED",
+    conclusion: "FAILURE",
+    detailsUrl: "https://github.com/owner/repo/actions/runs/123",
+    event: "pull_request",
+    runId: "123",
+    workflowName: "CI",
+    category: "failing",
+    ...overrides,
+  };
+}
+
+function checkSet(
+  failing: ClassifiedCheck[] = [failingCheck()],
+  inProgress: ClassifiedCheck[] = [],
+) {
+  return {
+    passing: [],
+    failing,
+    inProgress,
+    skipped: [],
+    filtered: [],
+    filteredNames: [],
+    blockedByFilteredCheck: false,
+  };
+}
 
 function failingCheckReport(overrides: Partial<Parameters<typeof makeReport>[0]> = {}) {
   return makeReport({
     status: "FAILING",
-    checks: {
-      passing: [],
-      failing: [
-        {
-          name: "tests",
-          status: "COMPLETED",
-          conclusion: "FAILURE",
-          detailsUrl: "https://github.com/owner/repo/actions/runs/123",
-          event: "pull_request",
-          runId: "123",
-          workflowName: "CI",
-          category: "failing",
-        },
-      ],
-      inProgress: [
-        {
-          name: "lint",
-          status: "IN_PROGRESS",
-          conclusion: null,
-          detailsUrl: "https://github.com/owner/repo/actions/runs/456",
-          event: "pull_request",
-          runId: "456",
-          category: "in_progress",
-        },
-      ],
-      skipped: [],
-      filtered: [],
-      filteredNames: [],
-      blockedByFilteredCheck: false,
-    },
+    checks: checkSet(undefined, [
+      {
+        name: "lint",
+        status: "IN_PROGRESS",
+        conclusion: null,
+        detailsUrl: "https://github.com/owner/repo/actions/runs/456",
+        event: "pull_request",
+        runId: "456",
+        category: "in_progress",
+      },
+    ]),
     ...overrides,
   });
 }
@@ -192,25 +203,13 @@ describe("fix_code — GitHub Actions authorization", () => {
     // runId actually names a GitHub Actions run, so it must not recommend rerunning it.
     mockRunCheck.mockResolvedValue(
       failingCheckReport({
-        checks: {
-          passing: [],
-          failing: [
-            {
-              name: "external-ci",
-              status: "COMPLETED",
-              conclusion: "FAILURE",
-              detailsUrl: "https://ci.example.com/runs/123",
-              event: "pull_request",
-              runId: "123",
-              category: "failing",
-            },
-          ],
-          inProgress: [],
-          skipped: [],
-          filtered: [],
-          filteredNames: [],
-          blockedByFilteredCheck: false,
-        },
+        checks: checkSet([
+          failingCheck({
+            name: "external-ci",
+            detailsUrl: "https://ci.example.com/runs/123",
+            workflowName: undefined,
+          }),
+        ]),
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -232,26 +231,7 @@ describe("fix_code — GitHub Actions authorization", () => {
     // a rerun cannot grant that approval, so no rerun command applies.
     mockRunCheck.mockResolvedValue(
       failingCheckReport({
-        checks: {
-          passing: [],
-          failing: [
-            {
-              name: "tests",
-              status: "COMPLETED",
-              conclusion: "ACTION_REQUIRED",
-              detailsUrl: "https://github.com/owner/repo/actions/runs/123",
-              event: "pull_request",
-              runId: "123",
-              workflowName: "CI",
-              category: "failing",
-            },
-          ],
-          inProgress: [],
-          skipped: [],
-          filtered: [],
-          filteredNames: [],
-          blockedByFilteredCheck: false,
-        },
+        checks: checkSet([failingCheck({ conclusion: "ACTION_REQUIRED" })]),
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
@@ -273,36 +253,17 @@ describe("fix_code — GitHub Actions authorization", () => {
     // GitHub can only rerun a workflow run once it has fully completed.
     mockRunCheck.mockResolvedValue(
       failingCheckReport({
-        checks: {
-          passing: [],
-          failing: [
-            {
-              name: "tests",
-              status: "COMPLETED",
-              conclusion: "FAILURE",
-              detailsUrl: "https://github.com/owner/repo/actions/runs/123",
-              event: "pull_request",
-              runId: "123",
-              workflowName: "CI",
-              category: "failing",
-            },
-          ],
-          inProgress: [
-            {
-              name: "lint",
-              status: "IN_PROGRESS",
-              conclusion: null,
-              detailsUrl: "https://github.com/owner/repo/actions/runs/123",
-              event: "pull_request",
-              runId: "123",
-              category: "in_progress",
-            },
-          ],
-          skipped: [],
-          filtered: [],
-          filteredNames: [],
-          blockedByFilteredCheck: false,
-        },
+        checks: checkSet(undefined, [
+          {
+            name: "lint",
+            status: "IN_PROGRESS",
+            conclusion: null,
+            detailsUrl: "https://github.com/owner/repo/actions/runs/123",
+            event: "pull_request",
+            runId: "123",
+            category: "in_progress",
+          },
+        ]),
       }),
     );
     mockUpdateReadyDelay.mockResolvedValue({
