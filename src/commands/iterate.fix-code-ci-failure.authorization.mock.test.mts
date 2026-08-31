@@ -182,6 +182,34 @@ describe("fix_code — GitHub Actions authorization", () => {
     expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
   });
 
+  it("completes a pending comment minimization before escalating a manual-only check", async () => {
+    mockRunCheck.mockResolvedValue(
+      failingCheckReport({
+        viewerAuthorization: {
+          repositoryPermission: "READ",
+          viewerCanAdminister: false,
+          viewerDidAuthor: false,
+          viewerCanUpdate: false,
+          viewerCanEnableAutoMerge: false,
+          viewerCanEditFiles: false,
+          headRepositoryPermission: "READ",
+        },
+        comments: { actionable: [], firstLook: [], minimizeIds: ["comment-to-minimize"] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.resolveCommand.argv).toContain("comment-to-minimize");
+  });
+
   it("escalates when a runId has no confirmed GitHub Actions provenance or evidence", async () => {
     // An external CI system's details URL can coincidentally match the same /runs/<digits>/
     // pattern GitHub Actions details URLs use. Without a resolved workflowName (the same

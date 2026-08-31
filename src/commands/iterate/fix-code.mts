@@ -320,6 +320,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     threads.length > 0 ||
     resolutionOnlyThreads.length > 0 ||
     actionableComments.length > 0 ||
+    commentMinimizeIds.length > 0 ||
     changesRequestedReviews.length > 0 ||
     reviewSummaryIds.length > 0 ||
     firstLookSummaries.length > 0 ||
