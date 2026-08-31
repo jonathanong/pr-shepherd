@@ -23,6 +23,7 @@
     "scripts/**/*.mjs",
     ".github/scripts/**/*.mjs",
   ],
+  "ignoreBinaries": ["mkfifo"],
   "ignoreDependencies": ["husky"],
   "ignoreIssues": {
     "test-helpers/**/*.mts": ["exports", "types"],

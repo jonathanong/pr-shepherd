@@ -156,6 +156,17 @@ complete Markdown list item with LF line endings. It fails closed for malformed 
 containers and ignores journal-shaped examples hidden in Markdown constructs. The full journal API,
 including append and reconciliation helpers, is documented in [docs/api.md](docs/api.md).
 
+For shell automation that already has a PR body, use the equivalent local-only command:
+
+```sh
+pr-shepherd journal extract --body-file pr-body.md
+```
+
+It writes one JSON line containing the typed extraction result. It never reads GitHub credentials,
+configuration, or Shepherd logs. On POSIX, its final body-file path entry must be a readable regular
+file in a trusted parent directory; symlinks, FIFOs, and devices are rejected with exit code 66.
+Unsupported platforms fail closed with that same exit code.
+
 ### Clean Local State
 
 `pr-shepherd` stores seen markers, fix-attempt counters, stall fingerprints, ready-delay markers, and logs under `$PR_SHEPHERD_STATE_DIR` (default `$TMPDIR/pr-shepherd-state`).

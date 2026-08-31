@@ -266,5 +266,19 @@ Flags:
 
 Exit code: 0 on success (including no-change no-op); nonzero on failure (sysexits.h — see docs/exit-codes.md).`,
 
+  "journal extract": `pr-shepherd journal extract
+
+Extract one visible, structurally valid Shepherd Journal from a local PR-body file.
+This command performs no GitHub, configuration, or log I/O.
+
+Usage:
+  pr-shepherd journal extract --body-file <path>
+
+The output is exactly one JSON line: the typed result from extractShepherdJournal.
+Malformed or unrecognized journal content is returned as {"ok":false,...} with exit code 0.
+On POSIX, the final body-file path entry must be a readable regular file in a trusted parent directory;
+symlinks, FIFOs, devices, and unreadable paths exit 66. Unsupported platforms fail closed with exit 66.
+--help, -h                      Print this help and exit before any I/O.`,
+
   "log-file": LOG_FILE_USAGE,
 } as const;
