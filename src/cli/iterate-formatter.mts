@@ -1,5 +1,6 @@
 import type { IterateResult } from "../types.mts";
 import { formatFixCodeResult } from "./fix-formatter.mts";
+import { formatRelevantChecks } from "./iterate-checks-formatter.mts";
 import { joinSections } from "../util/markdown.mts";
 import {
   adaptIterateLog,
@@ -40,7 +41,9 @@ export function formatIterateResult(
     result.mergeStatus === "BLOCKED" && result.reviewDecision
       ? ` · **reviewDecision** \`${result.reviewDecision}\``
       : "";
-  const baseLine = `**status** \`${result.status}\` · **merge** \`${result.mergeStateStatus}\`${reviewDecisionSeg} · **state** \`${result.state}\` · **repo** \`${result.repo}\``;
+  const baseBranchSeg =
+    verbose && result.baseBranch ? ` · **baseBranch** \`${result.baseBranch}\`` : "";
+  const baseLine = `**status** \`${result.status}\` · **merge** \`${result.mergeStateStatus}\`${reviewDecisionSeg} · **state** \`${result.state}\` · **repo** \`${result.repo}\`${baseBranchSeg}`;
 
   let summaryLine: string;
   if (verbose) {
@@ -118,7 +121,8 @@ export function formatIterateResult(
   const header = headerLines.join("\n");
   const quotaWarning = formatQuotaWarning(result.quotaWarning);
   const apiUsage = verbose ? formatApiUsage(result.apiUsage) : null;
-  const telemetrySections = [quotaWarning, apiUsage];
+  const verboseChecks = verbose ? formatRelevantChecks(result.checks) : null;
+  const telemetrySections = [quotaWarning, apiUsage, verboseChecks];
 
   switch (result.action) {
     case "wait":
@@ -159,6 +163,7 @@ export function formatIterateResult(
       return joinSections([
         cancelHeaderLines.join("\n"),
         ...(apiUsage ? [apiUsage] : []),
+        ...(verboseChecks ? [verboseChecks] : []),
         adaptIterateLog(result.log),
         `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
       ]);
@@ -168,6 +173,7 @@ export function formatIterateResult(
       return joinSections([
         header,
         ...(apiUsage ? [apiUsage] : []),
+        ...(verboseChecks ? [verboseChecks] : []),
         result.escalate.humanMessage,
         `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
       ]);

@@ -13,7 +13,7 @@ One or more failing checks have no autonomous follow-up available. Use the displ
 
 ## Items needing attention
 
-- external `https://external.ci/builds/42` — `external-status` [conclusion: FAILURE]
+- URL `https://external.ci/builds/42` — `external-status` [conclusion: FAILURE]
 
 
 ---

@@ -116,6 +116,36 @@ describe("fix_code — GitHub Actions authorization", () => {
     expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
   });
 
+  it("preserves merge mode in the resume command for a manual check hand-off", async () => {
+    mockRunCheck.mockResolvedValue(
+      failingCheckReport({
+        viewerAuthorization: {
+          repositoryPermission: "READ",
+          viewerCanAdminister: false,
+          viewerDidAuthor: false,
+          viewerCanUpdate: false,
+          viewerCanEnableAutoMerge: false,
+          viewerCanEditFiles: false,
+          headRepositoryPermission: "READ",
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts({ merge: true }));
+
+    expect(result.action).toBe("escalate");
+    if (result.action !== "escalate") return;
+    expect(result.escalate.triggers).toContain("check-follow-up-unavailable");
+    expect(result.escalate.humanMessage).toContain(
+      "/pr-shepherd:pr-shepherd https://github.com/owner/repo/pull/42 --merge",
+    );
+  });
+
   it("does not let a surfaced approval postpone a manual-only check escalation", async () => {
     mockRunCheck.mockResolvedValue(
       failingCheckReport({

@@ -178,7 +178,9 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       action: "escalate",
       escalate: {
         ...authorizationEscalateBase,
-        humanMessage: buildEscalateHumanMessage(authorizationEscalateBase, prReference),
+        humanMessage: buildEscalateHumanMessage(authorizationEscalateBase, prReference, {
+          merge: opts.merge,
+        }),
       },
     };
   }
@@ -220,7 +222,9 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       action: "escalate",
       escalate: {
         ...escalateBase,
-        humanMessage: buildEscalateHumanMessage(escalateBase, prReference),
+        humanMessage: buildEscalateHumanMessage(escalateBase, prReference, {
+          merge: opts.merge,
+        }),
       },
     };
   }
@@ -242,7 +246,9 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       action: "escalate",
       escalate: {
         ...escalateBase,
-        humanMessage: buildEscalateHumanMessage(escalateBase, prReference),
+        humanMessage: buildEscalateHumanMessage(escalateBase, prReference, {
+          merge: opts.merge,
+        }),
       },
     };
   }
@@ -333,7 +339,9 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       action: "escalate",
       escalate: {
         ...checkEscalateBase,
-        humanMessage: buildEscalateHumanMessage(checkEscalateBase, prReference),
+        humanMessage: buildEscalateHumanMessage(checkEscalateBase, prReference, {
+          merge: opts.merge,
+        }),
       },
     };
   }
@@ -376,7 +384,9 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       action: "escalate",
       escalate: {
         ...fallbackEscalateBase,
-        humanMessage: buildEscalateHumanMessage(fallbackEscalateBase, prReference),
+        humanMessage: buildEscalateHumanMessage(fallbackEscalateBase, prReference, {
+          merge: opts.merge,
+        }),
       },
     };
   }

@@ -13,7 +13,7 @@ One or more failing checks have no autonomous follow-up available. Use the displ
 
 ## Items needing attention
 
-- external `https://checks.example/code-quality` — `Code Quality` [conclusion: FAILURE]
+- URL `https://checks.example/code-quality` — `Code Quality` [conclusion: FAILURE]
   > 1 annotation
 
 

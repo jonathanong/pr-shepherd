@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, it, expect } from "vitest";
 import {
   registerHooks,
@@ -80,7 +81,37 @@ describe("main — iterate text format", () => {
     expect(text).toContain("active: `CI`");
   });
   it("format parity (verbose): text output surfaces every scalar base field that JSON carries", async () => {
-    const result = makeIterateResult("wait");
+    const result = {
+      ...makeIterateResult("wait"),
+      checks: [
+        {
+          name: "coverage",
+          conclusion: "FAILURE" as const,
+          runId: "123",
+          detailsUrl: "https://example.test/runs/123",
+          workflowName: "CI",
+          jobName: "coverage job",
+          failedStep: "Upload coverage",
+          summary: "Patch coverage is below target",
+          logExcerpt: "coverage failed",
+          scope: "merge_group" as const,
+          commitOid: "abc123",
+          annotations: [
+            {
+              id: "check-annotation-1",
+              path: "src/index.mts",
+              startLine: 12,
+              endLine: 12,
+              level: "failure",
+              title: "Uncovered line",
+              message: "Add a test.",
+              rawDetails: "Branch not covered.",
+              blobUrl: "https://example.test/blob/src/index.mts#L12",
+            },
+          ],
+        },
+      ],
+    };
     mockRunIterate.mockResolvedValue(result);
     await main(["node", "shepherd", "iterate", "42", "--verbose"]);
     const text = getStdout();
@@ -91,6 +122,17 @@ describe("main — iterate text format", () => {
     expect(text).toContain(`${result.summary.passing} passing`);
     expect(text).toContain(`${result.summary.inProgress} inProgress`);
     expect(text).toContain(`**remainingSeconds** ${result.remainingSeconds}`);
+    expect(text).toContain(`**baseBranch** \`${result.baseBranch}\``);
+    expect(text).toContain("## Checks");
+    expect(text).toContain("`CI › coverage job` [conclusion: FAILURE]");
+    expect(text).toContain("run: `123`");
+    expect(text).toContain("URL: `https://example.test/runs/123`");
+    expect(text).toContain("scope: `merge_group`");
+    expect(text).toContain("commit: `abc123`");
+    expect(text).toContain("failed step: Upload coverage");
+    expect(text).toContain("summary: Patch coverage is below target");
+    expect(text).toContain("coverage failed");
+    expect(text).toContain("`check-annotation-1`");
   });
   it("json lean: omits shouldCancel, false booleans, and remainingSeconds when status != READY", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("wait"));
