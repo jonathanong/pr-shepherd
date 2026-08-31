@@ -24,7 +24,7 @@ function parseBodyFile(args: string[]): string | null {
     const arg = args[index]!;
     if (arg === "--body-file") {
       const value = args[++index];
-      if (value === undefined || value.startsWith("--") || bodyFile !== undefined) {
+      if (value === undefined || bodyFile !== undefined) {
         return printUsage();
       }
       bodyFile = value;

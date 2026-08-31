@@ -70,6 +70,24 @@ describe("main — journal extract", () => {
     expect(mockSetupLog).not.toHaveBeenCalled();
   });
 
+  it("accepts a separate option-looking body-file name", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "pr-shepherd-journal-extract-"));
+    const bodyFile = join(directory, "--body.md");
+    const previousCwd = process.cwd();
+    writeFileSync(bodyFile, "No Shepherd Journal here.\n");
+    try {
+      process.chdir(directory);
+      await main(["node", "shepherd", "journal", "extract", "--body-file", "--body.md"]);
+    } finally {
+      process.chdir(previousCwd);
+      rmSync(directory, { recursive: true, force: true });
+    }
+    expect(stdout()).toBe('{"journal":null,"ok":true}\n');
+    expect(stderr()).toBe("");
+    expect(process.exitCode).toBeUndefined();
+    expect(mockSetupLog).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["missing flag", []],
     ["missing path", ["--body-file"]],
