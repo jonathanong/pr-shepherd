@@ -7,16 +7,15 @@ export function formatMarkFilesAsViewedResult(result: MarkFilesAsViewedResult): 
   );
   lines.push("");
   lines.push(`repo: ${result.repo}`);
+  lines.push(`pullRequestId: ${result.pullRequestId}`);
 
-  if (result.authorizationSkipped) {
-    lines.push("");
-    lines.push("## Authorization");
-    lines.push("");
-    lines.push(
-      "- Not marked: GitHub does not expose a capability that confirms the current viewer may mark PR files as viewed.",
-    );
-  }
-
+  appendPathSection(lines, "Requested exact paths", result.requestedPaths);
+  if (result.testSelector) appendTextSection(lines, "Selectors", ["--tests"]);
+  appendTextSection(
+    lines,
+    "Match selectors",
+    result.matchPatterns.map((pattern) => `--match ${pattern}`),
+  );
   appendPathSection(lines, "Matched files", result.matchedPaths);
   appendPathSection(lines, "Marked viewed", result.markedPaths);
   appendPathSection(lines, "Already viewed", result.alreadyViewedPaths);
@@ -31,9 +30,11 @@ export function formatMarkFilesAsViewedResult(result: MarkFilesAsViewedResult): 
       result.rateLimit.remaining !== undefined && result.rateLimit.limit !== undefined
         ? `remaining ${result.rateLimit.remaining}/${result.rateLimit.limit}`
         : null,
+      result.rateLimit.used !== undefined ? `used ${result.rateLimit.used}` : null,
       result.rateLimit.resetAt !== undefined
         ? `reset at ${new Date(result.rateLimit.resetAt * 1000).toISOString()}`
         : null,
+      result.rateLimit.resource !== undefined ? `resource ${result.rateLimit.resource}` : null,
     ]
       .filter(Boolean)
       .join(", ");

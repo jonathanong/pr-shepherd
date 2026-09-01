@@ -15,9 +15,9 @@ import { addPrShepherdMarker } from "../comments/marker.mts";
 registerHooks();
 
 describe("runResolveMutate — forwards options", () => {
-  it("does not forward IDs that the fetched PR cannot authorize", async () => {
+  it("forwards requested IDs without rechecking authorization", async () => {
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData() });
-    await runResolveMutate({
+    const firstResult = await runResolveMutate({
       ...BASE_OPTS,
       resolveThreadIds: ["t-1"],
       minimizeCommentIds: ["c-1"],
@@ -29,19 +29,20 @@ describe("runResolveMutate — forwards options", () => {
       42,
       { owner: "owner", name: "repo" },
       expect.objectContaining({
-        resolveThreadIds: [],
+        resolveThreadIds: ["t-1"],
         replyThreadIds: undefined,
-        minimizeCommentIds: [],
+        minimizeCommentIds: ["c-1"],
         dismissReviewIds: [],
         dismissMessage: "done",
-        requireSha: undefined,
+        requireSha: "sha-abc",
       }),
     );
     const result = await runResolveMutate({
       ...BASE_OPTS,
       resolveThreadIds: ["t-unknown"],
     });
-    expect(result.skippedUnauthorizedResolves).toEqual(["t-unknown"]);
+    expect(result.skippedUnauthorizedResolves).toBeUndefined();
+    expect(firstResult.skippedDismissals).toEqual(["r-1"]);
     expect(mockFetchPrBatch).toHaveBeenCalledWith(
       42,
       { owner: "owner", name: "repo" },
@@ -51,7 +52,7 @@ describe("runResolveMutate — forwards options", () => {
     );
   });
 
-  it("skips human resolve, minimize, and dismiss IDs before mutating", async () => {
+  it("keeps human-content policy while dropping authorization preflights", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
         reviewThreads: [

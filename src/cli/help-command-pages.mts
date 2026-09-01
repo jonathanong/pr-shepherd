@@ -6,7 +6,7 @@ export const COMMAND_USAGE = {
   default: DEFAULT_USAGE,
   apply: `pr-shepherd apply
 
-Apply a review mutation, select changed files for authorization diagnostics, or append a PR journal item.
+Apply review mutations, mark selected changed files as viewed, or append a PR journal item.
 
 Usage:
   pr-shepherd apply review [PR] [review-flags]
@@ -42,8 +42,7 @@ At least one action flag is required.
 
   "apply files": `pr-shepherd apply files
 
-Select changed files and report that viewed-state authorization cannot be verified.
-No file viewed-state mutation is attempted.
+Mark selected changed files as viewed.
 
 Usage:
   pr-shepherd apply files [PR] [files...] [--tests] [--match REGEX]
@@ -191,8 +190,7 @@ Exit codes:
 
   "mark-files-as-viewed": `pr-shepherd mark-files-as-viewed
 
-Deprecated compatibility alias for selection-only file-view authorization diagnostics.
-No file viewed-state mutation is attempted.
+Deprecated compatibility alias for marking selected PR files as viewed.
 
 Usage:
   pr-shepherd mark-files-as-viewed [PR] [files...] [--tests] [--match REGEX]

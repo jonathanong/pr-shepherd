@@ -1,8 +1,18 @@
 /* eslint-disable max-lines */
-import { graphql, getCurrentPrNumber, getRepoInfo } from "../github/client.mts";
+import {
+  graphql,
+  graphqlWithRateLimit,
+  getCurrentPrNumber,
+  getRepoInfo,
+} from "../github/client.mts";
 import { paginateForward, type Connection } from "../github/pagination.mts";
 import type { RepoInfo } from "../github/client.mts";
-import type { ResolveRateLimitStop } from "../comments/rate-limit.mts";
+import {
+  isRateLimitMessage,
+  rateLimitFromError,
+  rateLimitFromGraphQlResult,
+  type ResolveRateLimitStop,
+} from "../comments/rate-limit.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type { GlobalOptions } from "../types.mts";
 
@@ -33,7 +43,19 @@ export interface MarkFilesAsViewedResult {
   errors: string[];
   rateLimit?: ResolveRateLimitStop;
   unmarkedPaths?: string[];
+  /** @deprecated Explicit file-view requests are attempted; GitHub authorizes the mutation. */
   authorizationSkipped?: "unverifiable";
+}
+
+interface GraphQlErrorLike {
+  message: string;
+  path?: unknown;
+}
+
+interface MarkFileErrorClassification {
+  aliasesWithNonRateErrors: Set<number>;
+  aliasesWithRateLimitErrors: Set<number>;
+  unscopedNonRateMessages: string[];
 }
 
 interface PullRequestFilesResponse {
@@ -76,6 +98,9 @@ const FILES_QUERY = `query PullRequestFiles($owner: String!, $repo: String!, $pr
 const TEST_FILE_RE =
   /(^|\/)(tests?|__tests__|spec)(\/|$)|\.(test|spec)\.[cm]?[jt]sx?$|_tests?\.rs$|(^|\/)tests?\.rs$/i;
 
+// Keep mutation batches small so rate-limit stops leave an ordered pending list.
+const MARK_FILES_CHUNK_SIZE = 10;
+
 /** @deprecated Hidden implementation for `mark-files-as-viewed`; use `apply files`. */
 export async function runMarkFilesAsViewed(
   opts: MarkFilesAsViewedOptions,
@@ -112,12 +137,166 @@ export async function runMarkFilesAsViewed(
     missingPaths: selected.missingPaths,
     unmatchedSelectors: selected.unmatchedSelectors,
     errors: [],
-    ...(selected.pathsToMark.length > 0 && { authorizationSkipped: "unverifiable" as const }),
   };
 
-  // GitHub exposes no exact viewer capability for markFileAsViewed. Repository role and
-  // viewerCanEditFiles describe different operations, so this command fails closed.
+  await markFilesAsViewed(fetched.pullRequestId, selected.pathsToMark, result);
   return result;
+}
+
+async function markFilesAsViewed(
+  pullRequestId: string,
+  paths: string[],
+  result: MarkFilesAsViewedResult,
+): Promise<void> {
+  for (let offset = 0; offset < paths.length; offset += MARK_FILES_CHUNK_SIZE) {
+    const chunk = paths.slice(offset, offset + MARK_FILES_CHUNK_SIZE);
+    // eslint-disable-next-line no-await-in-loop
+    const pendingPaths = await markFilesChunk(
+      pullRequestId,
+      chunk,
+      result,
+      offset + MARK_FILES_CHUNK_SIZE < paths.length,
+    );
+    if (pendingPaths === null) continue;
+    const unmarkedPaths = [...pendingPaths, ...paths.slice(offset + chunk.length)];
+    if (unmarkedPaths.length > 0) result.unmarkedPaths = unmarkedPaths;
+    return;
+  }
+}
+
+/** Returns pending paths when a rate limit stops further mutation batches. */
+async function markFilesChunk(
+  pullRequestId: string,
+  paths: string[],
+  result: MarkFilesAsViewedResult,
+  hasPendingAfter: boolean,
+): Promise<string[] | null> {
+  try {
+    const response = await graphqlWithRateLimit<Record<string, unknown>>(
+      buildMarkFilesMutation(pullRequestId, paths),
+      {},
+      { allowPartialData: true },
+    );
+    const errors = (response.errors ?? []) as GraphQlErrorLike[];
+    const rateLimit = rateLimitFromGraphQlResult(
+      errors.map((error) => error.message),
+      {
+        rateLimit: response.rateLimit,
+        retryAfterSeconds: response.retryAfterSeconds,
+        stopOnZeroRemaining: hasPendingAfter,
+      },
+    );
+    const classifiedErrors = classifyMarkFileErrors(errors, paths.length);
+    const pendingPaths = recordMarkFileResults(
+      paths,
+      response.data,
+      errors,
+      classifiedErrors,
+      rateLimit,
+      result,
+    );
+    return completeMarkFilesChunk(rateLimit, pendingPaths, result);
+  } catch (error) {
+    return recordMarkFilesTransportError(error, paths, result);
+  }
+}
+
+function classifyMarkFileErrors(
+  errors: GraphQlErrorLike[],
+  pathCount: number,
+): MarkFileErrorClassification {
+  const aliasesWithNonRateErrors = new Set<number>();
+  const aliasesWithRateLimitErrors = new Set<number>();
+  const unscopedNonRateMessages: string[] = [];
+  for (const error of errors) {
+    const aliasIndex = markFileErrorAliasIndex(error);
+    if (aliasIndex === undefined || aliasIndex >= pathCount) {
+      if (!isRateLimitMessage(error.message)) unscopedNonRateMessages.push(error.message);
+      continue;
+    }
+    if (isRateLimitMessage(error.message)) aliasesWithRateLimitErrors.add(aliasIndex);
+    else aliasesWithNonRateErrors.add(aliasIndex);
+  }
+  return { aliasesWithNonRateErrors, aliasesWithRateLimitErrors, unscopedNonRateMessages };
+}
+
+function recordMarkFileResults(
+  paths: string[],
+  data: Record<string, unknown>,
+  errors: GraphQlErrorLike[],
+  classifiedErrors: MarkFileErrorClassification,
+  rateLimit: ResolveRateLimitStop | undefined,
+  result: MarkFilesAsViewedResult,
+): string[] {
+  const pendingPaths: string[] = [];
+  for (let index = 0; index < paths.length; index += 1) {
+    const path = paths[index]!;
+    if (data[`f${index}`] != null) {
+      result.markedPaths.push(path);
+      continue;
+    }
+    const messages = errorsForMarkFileAlias(errors, index);
+    const hasRateLimitError = classifiedErrors.aliasesWithRateLimitErrors.has(index);
+    const nonRateMessages = classifiedErrors.aliasesWithNonRateErrors.has(index)
+      ? messages.filter((message) => !isRateLimitMessage(message))
+      : classifiedErrors.unscopedNonRateMessages;
+    if (nonRateMessages.length > 0) {
+      for (const message of nonRateMessages) result.errors.push(`${path}: ${message}`);
+    } else if (!rateLimit) {
+      result.errors.push(`${path}: ${messages[0] ?? "mark returned null"}`);
+    }
+    if (rateLimit && (hasRateLimitError || nonRateMessages.length === 0)) pendingPaths.push(path);
+  }
+  return pendingPaths;
+}
+
+function completeMarkFilesChunk(
+  rateLimit: ResolveRateLimitStop | undefined,
+  pendingPaths: string[],
+  result: MarkFilesAsViewedResult,
+): string[] | null {
+  if (!rateLimit) return null;
+  result.errors.push(`rate limit: ${rateLimit.message}`);
+  result.rateLimit = rateLimit;
+  return pendingPaths;
+}
+
+function recordMarkFilesTransportError(
+  error: unknown,
+  paths: string[],
+  result: MarkFilesAsViewedResult,
+): string[] | null {
+  const message = error instanceof Error ? error.message : String(error);
+  const stop = rateLimitFromError(error, message);
+  if (stop) {
+    result.errors.push(`rate limit: ${stop.message}`);
+    result.rateLimit = stop;
+    return paths;
+  }
+  for (const path of paths) result.errors.push(`${path}: ${message}`);
+  return null;
+}
+
+function buildMarkFilesMutation(pullRequestId: string, paths: string[]): string {
+  const operations = paths.map(
+    (path, index) =>
+      `  f${index}: markFileAsViewed(input: { pullRequestId: ${JSON.stringify(pullRequestId)}, path: ${JSON.stringify(path)} }) { clientMutationId }`,
+  );
+  return `mutation MarkFilesAsViewed {\n${operations.join("\n")}\n}`;
+}
+
+function markFileErrorAliasIndex(error: GraphQlErrorLike): number | undefined {
+  if (!Array.isArray(error.path)) return undefined;
+  const alias = error.path.find((part) => typeof part === "string" && /^f\d+$/.test(part));
+  if (typeof alias !== "string") return undefined;
+  const index = Number.parseInt(alias.slice(1), 10);
+  return Number.isNaN(index) ? undefined : index;
+}
+
+function errorsForMarkFileAlias(errors: GraphQlErrorLike[], index: number): string[] {
+  return errors
+    .filter((error) => markFileErrorAliasIndex(error) === index)
+    .map((error) => error.message);
 }
 
 async function fetchPullRequestFiles(

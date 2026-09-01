@@ -17,45 +17,16 @@ export function buildReadyMergeResult(
     report.mergeStatus.mergeRequirements?.mergeQueue?.required ||
     report.mergeStatus.mergeRequirements?.mergeQueue?.enabled,
   );
-  // A merge queue is enrolled the same way auto-merge is granted: enabling
-  // auto-merge on a queue-required PR is what adds it to the queue, so
-  // viewerCanEnableAutoMerge authorizes both the plain-merge and enqueue paths.
-  if (report.viewerAuthorization?.viewerCanEnableAutoMerge === true) {
-    return {
-      ...base,
-      action: "merge",
-      merge: buildMergeCommandPlan({
-        pr: report.pr,
-        repo: report.repo,
-        nodeId: report.nodeId,
-        headSha: report.headSha ?? "unknown",
-        queue,
-      }),
-    };
-  }
-  const authorizationEscalateBase = {
-    triggers: ["authorization-required" as const],
-    unresolvedThreads: [],
-    ambiguousComments: [],
-    changesRequestedReviews: [],
-    authorization: [
-      {
-        action: "merge-or-enqueue" as const,
-        targetIds: [report.nodeId],
-        reason: "denied-or-unverifiable" as const,
-      },
-    ],
-    suggestion: buildEscalateSuggestion(["authorization-required"]),
-  };
   return {
     ...base,
-    action: "escalate",
-    escalate: {
-      ...authorizationEscalateBase,
-      humanMessage: buildEscalateHumanMessage(authorizationEscalateBase, report.pr, {
-        merge: true,
-      }),
-    },
+    action: "merge",
+    merge: buildMergeCommandPlan({
+      pr: report.pr,
+      repo: report.repo,
+      nodeId: report.nodeId,
+      headSha: report.headSha ?? "unknown",
+      queue,
+    }),
   };
 }
 

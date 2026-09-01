@@ -51,6 +51,7 @@ export function buildMergeCommandPlan(input: MergePlanInput): MergeCommandPlan {
   return {
     mode: "auto",
     command: { argv: [...base, "--auto", ...commandArgs] },
+    fallbackCommand: { argv: [...base, ...commandArgs] },
   };
 }
 

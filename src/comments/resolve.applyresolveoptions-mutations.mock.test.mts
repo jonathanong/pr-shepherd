@@ -37,6 +37,19 @@ describe("applyResolveOptions — mutations", () => {
     expect(result.repliedThreads).toEqual([]);
     expect(result.errors).toEqual(["t-1: reply returned null or comment not created"]);
   });
+  it("surfaces GitHub's exact error for a requested mutation", async () => {
+    mockGraphql.mockResolvedValueOnce({
+      data: { p0: null },
+      errors: [{ message: "Resource not accessible by integration", path: ["p0"] }],
+    });
+
+    const result = await applyResolveOptions(1, REPO, {
+      replyThreadIds: ["t-1"],
+      dismissMessage: "Addressed in the latest commit.",
+    });
+
+    expect(result.errors).toEqual(["t-1: Resource not accessible by integration"]);
+  });
   it("orders a paired reply before resolve and reports both successes", async () => {
     const result = await applyResolveOptions(1, REPO, {
       replyThreadIds: ["t-1"],
@@ -164,7 +177,7 @@ describe("applyResolveOptions — mutations", () => {
 
     expect(result.dismissedReviews).toEqual([]);
     expect(result.errors).toEqual([
-      "PRR_1: dismiss returned null",
+      "PRR_1: Invalid review state for dismissal",
       "Not dismissed: PRR_2 is a COMMENTED review. Use --minimize-comment-ids instead; --dismiss-review-ids is only for CHANGES_REQUESTED reviews.",
     ]);
   });

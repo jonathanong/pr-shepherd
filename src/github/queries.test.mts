@@ -49,7 +49,7 @@ describe("queries — GQL constants load at import time", () => {
     expect(BATCH_PR_PAGE_QUERY).toContain("viewerCanReply");
     expect(BATCH_PR_PAGE_QUERY).toContain("viewerCanResolve");
     expect(BATCH_PR_PAGE_QUERY).toContain("viewerCanMinimize");
-    expect(GET_PR_BODY_QUERY).toContain("viewerCanUpdate");
+    expect(GET_PR_BODY_QUERY).not.toContain("viewerCanUpdate");
   });
 
   it("SUGGESTION_THREADS_QUERY selects nodes(ids) plus PR head fields", () => {

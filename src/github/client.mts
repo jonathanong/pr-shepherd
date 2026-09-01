@@ -103,10 +103,10 @@ export async function getPullRequestBody(
   pr: number,
   owner: string,
   name: string,
-): Promise<{ nodeId: string; body: string; viewerCanUpdate?: boolean }> {
+): Promise<{ nodeId: string; body: string }> {
   const result = await httpGraphql<{
     repository: {
-      pullRequest: { id: string; body: string | null; viewerCanUpdate?: boolean } | null;
+      pullRequest: { id: string; body: string | null } | null;
     } | null;
   }>(GET_PR_BODY_QUERY, { owner, repo: name, pr });
   const pullRequest = result.data.repository?.pullRequest;
@@ -119,9 +119,6 @@ export async function getPullRequestBody(
   return {
     nodeId: pullRequest.id,
     body: pullRequest.body ?? "",
-    ...(pullRequest.viewerCanUpdate !== undefined && {
-      viewerCanUpdate: pullRequest.viewerCanUpdate,
-    }),
   };
 }
 

@@ -2,26 +2,25 @@
 
 `ESCALATE` is the only Shepherd action that hands the pull request to a human. The trigger type is a closed union with exactly seven values. If none of the seven conditions below is true, Shepherd must not return `ESCALATE`.
 
-| Trigger                       | Exact condition                                                                                                                                                                                                                                                       |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `authorization-required`      | Shepherd is about to mark a draft ready and `viewerCanUpdate !== true`, or merge/enqueue mode reached its execution point and `viewerCanEnableAutoMerge !== true`. These operations are explicit user-requested state changes that the current viewer cannot perform. |
-| `check-follow-up-unavailable` | At least one remaining failing check has no autonomous follow-up, and no other autonomous work remains in the tick.                                                                                                                                                   |
-| `fix-thrash`                  | A retryable, located review thread reaches `iterate.fixAttemptsPerThread` attempts across distinct pushed HEADs while its body remains unchanged.                                                                                                                     |
-| `bot-cr-not-dismissed`        | An authorized bot/non-human `CHANGES_REQUESTED` dismissal was emitted, but the same review body remains undismissed for at least the enabled stall timeout.                                                                                                           |
-| `base-branch-unknown`         | The GraphQL base branch is empty or unsafe and the current tick has work that could require a push, so Shepherd cannot name a safe rebase target.                                                                                                                     |
-| `merge-queue-removed`         | Merge mode is enabled, GitHub reports a queue removal, the head has not changed since removal, no queue/auto-merge state remains, and no earlier branch found an actionable failure or concrete fix.                                                                  |
-| `stall-timeout`               | An enabled timeout expires for CI that never starts or for an unchanged `WAIT`/`FIX_CODE` state fingerprint.                                                                                                                                                          |
+| Trigger                       | Exact condition                                                                                                                                                                                      |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `authorization-required`      | Shepherd is about to automatically mark a draft ready and `viewerCanUpdate !== true`. Explicit merge/enqueue requests are attempted and surface GitHub's actual error instead.                       |
+| `check-follow-up-unavailable` | At least one remaining failing check has no autonomous follow-up, and no other autonomous work remains in the tick.                                                                                  |
+| `fix-thrash`                  | A retryable, located review thread reaches `iterate.fixAttemptsPerThread` attempts across distinct pushed HEADs while its body remains unchanged.                                                    |
+| `bot-cr-not-dismissed`        | An authorized bot/non-human `CHANGES_REQUESTED` dismissal was emitted, but the same review body remains undismissed for at least the enabled stall timeout.                                          |
+| `base-branch-unknown`         | The GraphQL base branch is empty or unsafe and the current tick has work that could require a push, so Shepherd cannot name a safe rebase target.                                                    |
+| `merge-queue-removed`         | Merge mode is enabled, GitHub reports a queue removal, the head has not changed since removal, no queue/auto-merge state remains, and no earlier branch found an actionable failure or concrete fix. |
+| `stall-timeout`               | An enabled timeout expires for CI that never starts or for an unchanged `WAIT`/`FIX_CODE` state fingerprint.                                                                                         |
 
 ## Complete predicates
 
 ### `authorization-required`
 
-This trigger has only two operation families:
+This trigger covers one operation family:
 
 1. Mark ready: automatic mark-ready was selected for an otherwise-ready draft PR, but `viewerCanUpdate !== true`.
-2. Merge or enqueue: merge mode is enabled, the ready delay elapsed, the PR is not a draft, but `viewerCanEnableAutoMerge !== true`.
 
-Denied or unverifiable review replies, thread resolutions, and bot-review dismissals do not escalate. Shepherd surfaces the affected item once, omits the unauthorized mutation, records that first-look output in its normal debug log, and suppresses the unchanged item on later ticks. It re-surfaces only if the body changes. These skipped items are excluded from fix-attempt and stall accounting. Push access is also not an escalation trigger; it is a precondition for using Shepherd on the PR.
+Denied or unverifiable generated review replies, thread resolutions, bot-review dismissals, and automatic cleanup do not escalate. Shepherd surfaces the affected item once, omits the generated mutation, records that first-look output in its normal debug log, and suppresses the unchanged item on later ticks. Explicit `apply` review, journal, file-view, and merge/enqueue operations are attempted; GitHub's response is authoritative. Push access is also not an escalation trigger; it is a precondition for using Shepherd on the PR.
 
 ### `check-follow-up-unavailable`
 

@@ -304,6 +304,10 @@ describe("pr-shepherd MCP server", () => {
           result: {
             prNumber: 3,
             repo: "acme/widgets",
+            pullRequestId: "PR_3",
+            requestedPaths: [],
+            testSelector: true,
+            matchPatterns: [],
             matchedPaths: ["src/api.mts"],
             markedPaths: ["src/api.mts"],
             alreadyViewedPaths: [],

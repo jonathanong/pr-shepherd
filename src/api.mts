@@ -53,7 +53,7 @@ export interface ReviewMutationsOperation {
 }
 
 export interface MarkFilesViewedOperation {
-  /** Compatibility-named selection only; always skips mutation because authorization is unverifiable. */
+  /** Marks selected changed files as viewed. GitHub authorizes the requested mutation. */
   type: "mark_files_viewed";
   files?: string[];
   tests?: boolean;
@@ -66,7 +66,7 @@ export interface AppendJournalOperation {
   dryRun?: boolean;
 }
 
-/** Operations run in this exact list order after validation; file-view selection is non-mutating. */
+/** Operations run in this exact list order after validation. */
 export type ApplyOperation =
   | ReviewMutationsOperation
   | MarkFilesViewedOperation
