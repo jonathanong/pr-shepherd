@@ -18,7 +18,10 @@ import {
   buildEscalateHumanMessage,
 } from "./escalate.mts";
 import { buildResolveCommand } from "./classify.mts";
-import { buildThreadMutationRouting } from "./thread-mutation-routing.mts";
+import {
+  buildThreadMutationRouting,
+  canResolveOutdatedBotWithoutLocation,
+} from "./thread-mutation-routing.mts";
 import { buildFixInstructions } from "./render.mts";
 import { applyStallGuard } from "./stall.mts";
 import { annotationMarkerBody, checksWithActionableAnnotations } from "../check-annotations.mts";
@@ -268,7 +271,10 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     (review) => !skippedDismissalIds.has(review.id),
   );
   const resolutionOnlyThreadsForWork = resolutionOnlyThreads.filter(
-    (thread) => !skippedThreadIds.has(thread.id) && thread.path !== null && thread.line !== null,
+    (thread) =>
+      !skippedThreadIds.has(thread.id) &&
+      ((thread.path !== null && thread.line !== null) ||
+        canResolveOutdatedBotWithoutLocation(thread, botUsernames)),
   );
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
   const isBehind = report.mergeStatus.status === "BEHIND";
@@ -338,8 +344,11 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   );
   // Safety: if the base branch is unknown, escalate when a push is plausible — the agent
   // would need the correct base to rebase safely. This is a conservative guard, not a
-  // prediction that the agent *will* push. Intentionally broader than `pushLikely` above:
-  // resolution-only threads also need a known base in case the agent does push.
+  // prediction that the agent *will* push. Located resolution-only threads retain that guard;
+  // an outdated bot thread resolved only by ID has no code or push path.
+  const locatedResolutionOnlyThreadsForWork = resolutionOnlyThreadsForWork.filter(
+    (thread) => thread.path !== null && thread.line !== null,
+  );
   const pushIsPlausible =
     retryableActionableThreads.length > 0 ||
     failingAgentChecks.length > 0 ||
@@ -347,7 +356,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     hasConflicts ||
     changesRequestedReviewsForWork.length > 0 ||
     actionableComments.length > 0 ||
-    resolutionOnlyThreadsForWork.length > 0;
+    locatedResolutionOnlyThreadsForWork.length > 0;
   if (baseLookup.isFallback && pushIsPlausible) {
     const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: ["base-branch-unknown"],

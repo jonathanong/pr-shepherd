@@ -27,6 +27,50 @@ const THREAD = {
 };
 
 describe("runIterate — unlocated review threads", () => {
+  it("emits a no-SHA resolve mutation for an outdated bot thread without a line", async () => {
+    const outdatedBot = {
+      ...THREAD,
+      id: "thread-outdated-bot",
+      isOutdated: true,
+      author: "chatgpt-codex-connector",
+      authorType: "Bot" as const,
+      path: "src/old.mts",
+      line: null,
+      viewerCanResolve: true,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        baseBranch: "",
+        status: "PENDING",
+        mergeStatus: {
+          ...makeReport().mergeStatus,
+          status: "BLOCKED",
+          mergeStateStatus: "BLOCKED",
+        },
+        threads: { ...makeReport().threads, resolutionOnly: [outdatedBot] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.resolutionOnlyThreads).toEqual([
+      expect.objectContaining({ id: "thread-outdated-bot" }),
+    ]);
+    expect(result.fix.resolveCommand.resolveThreadIds).toEqual(["thread-outdated-bot"]);
+    expect(result.fix.resolveCommand.argv).toContain("--resolve-thread-ids");
+    expect(result.fix.resolveCommand.argv).toContain("thread-outdated-bot");
+    expect(result.fix.resolveCommand.argv).not.toContain("--reply-thread-ids");
+    expect(result.fix.resolveCommand.argv).not.toContain("--message");
+    expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
+  });
+
   it("surfaces a thread with no file/line without escalating or recommending a mutation", async () => {
     const threadNoPath = { ...THREAD, id: "thread-noloc", path: null, line: null };
     mockRunCheck.mockResolvedValue(

@@ -18,6 +18,19 @@ export interface ThreadMutationRouting {
   resolveThreadIds: string[];
 }
 
+export function canResolveOutdatedBotWithoutLocation(
+  thread: ReviewThread,
+  botUsernames: NormalizedBotUsernames,
+): boolean {
+  return (
+    !thread.isResolved &&
+    thread.isOutdated &&
+    (thread.path === null || thread.line === null) &&
+    isConfiguredBotAuthor(thread, botUsernames) &&
+    thread.viewerCanResolve === true
+  );
+}
+
 export function buildThreadMutationRouting(
   threads: Array<AgentThread | ReviewThread>,
   botUsernames: NormalizedBotUsernames,
