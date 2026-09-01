@@ -30,13 +30,13 @@ These fields are optional provenance, not an authentication or safety verdict. L
 
 ## `isOutdated` flag
 
-GitHub sets `isOutdated: true` on a review thread when the commit the comment was originally attached to has been superseded by a newer push. Outdated threads are no longer blocking — the code they commented on no longer exists in the current state of the PR.
+GitHub sets `isOutdated: true` on a review thread when the commit the comment was originally attached to has been superseded by a newer push. The code they commented on no longer exists in the current state of the PR, but an unresolved outdated thread can still block a repository that requires all review conversations to be resolved.
 
 Shepherd does not auto-resolve outdated threads during the sweep.
 
 ## Outdated-thread path
 
-Outdated threads are fetched from `batch.mts` and normally surface under `report.threads.resolutionOnly` until GitHub reports `isResolved: true`. Seen markers suppress repeated first-look/body display, but they do not suppress unresolved outdated/minimized threads from resolution routing. `resolutionOnly` also includes an active marker-ended viewer-authored human thread so a prior reply can be resolved on retry. A viewer-authored human thread whose latest comment is unmarked is paired in `--reply-thread-ids` and `--resolve-thread-ids`; an already-marked viewer-authored thread is resolve-only for retry. An unmarked other-human thread remains reply-only, while a marker-ended other-human thread is already acknowledged and is suppressed from further mutation. Bot/non-human outdated threads are routed to `--resolve-thread-ids` on every run until GitHub reports them resolved.
+Outdated threads are fetched from `batch.mts` and normally surface under `report.threads.resolutionOnly` until GitHub reports `isResolved: true`. Seen markers suppress repeated first-look/body display, but they do not suppress unresolved outdated/minimized threads from resolution routing. `resolutionOnly` also includes an active marker-ended viewer-authored human thread so a prior reply can be resolved on retry. A viewer-authored human thread whose latest comment is unmarked is paired in `--reply-thread-ids` and `--resolve-thread-ids`; an already-marked viewer-authored thread is resolve-only for retry. An unmarked other-human thread remains reply-only, while a marker-ended other-human thread is already acknowledged and is suppressed from further mutation. Detected or configured bot outdated threads with `viewerCanResolve: true` are routed to `--resolve-thread-ids` on every run until GitHub reports them resolved, including when GitHub has cleared their obsolete path or line.
 
 Outdated threads are surfaced and routed according to their current author and resolution state; no separate automatic-resolution setting controls them.
 

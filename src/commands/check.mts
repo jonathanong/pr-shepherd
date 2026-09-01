@@ -28,7 +28,10 @@ import {
   isHumanAuthor,
   normalizeBotUsernames,
 } from "../comments/authors.mts";
-import { buildThreadMutationRouting } from "./iterate/thread-mutation-routing.mts";
+import {
+  buildThreadMutationRouting,
+  canResolveOutdatedBotWithoutLocation,
+} from "./iterate/thread-mutation-routing.mts";
 import { discoverRuleFiles, loadRules } from "../classify/loader.mts";
 import { buildClassifyIndex, partitionBatch, type BatchPartition } from "../classify/apply.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
@@ -148,10 +151,11 @@ export async function runCheck(
     visibleThreadCandidates
       .filter(
         (thread) =>
-          thread.path !== null &&
-          thread.line !== null &&
-          (!replyThreadIds.has(thread.id) || thread.viewerCanReply === true) &&
-          (!resolveThreadIds.has(thread.id) || thread.viewerCanResolve === true),
+          (thread.path !== null &&
+            thread.line !== null &&
+            (!replyThreadIds.has(thread.id) || thread.viewerCanReply === true) &&
+            (!resolveThreadIds.has(thread.id) || thread.viewerCanResolve === true)) ||
+          canResolveOutdatedBotWithoutLocation(thread, botUsernames),
       )
       .map((thread) => thread.id),
   );

@@ -30,7 +30,7 @@ At least one remaining failing check has no `rerunCommand` and is one of:
 - a check with `runId === null` and an empty or whitespace-only `detailsUrl`; or
 - a check with a non-null run ID but no nonblank included `logExcerpt`.
 
-The trigger fires only when no autonomous work or newly surfaced one-look item remains: no conflicts, currently surfaced actionable or resolution-only threads, actionable comments, pending comment minimizations, actionable changes-requested reviews, queued/first-look/edited review summaries, first-look threads/comments, actionable annotations, another failing check with an autonomous path, or a failed job whose workflow run still has an in-progress job. An unauthorized or unlocated review item can therefore postpone this escalation for its one visibility tick; after its seen marker suppresses it, the manual-only check may escalate on the next tick. A stale human `CHANGES_REQUESTED` review does not postpone the handoff, but it is preserved in the escalation payload so the human sees every remaining blocker.
+The trigger fires only when no autonomous work or newly surfaced one-look item remains: no conflicts, currently surfaced actionable or resolution-only threads, actionable comments, pending comment minimizations, actionable changes-requested reviews, queued/first-look/edited review summaries, first-look threads/comments, actionable annotations, another failing check with an autonomous path, or a failed job whose workflow run still has an in-progress job. An unauthorized or unlocated active review item can therefore postpone this escalation for its one visibility tick; after its seen marker suppresses it, the manual-only check may escalate on the next tick. An authorized outdated bot thread is instead repeatable resolution-only work even without a source location. A stale human `CHANGES_REQUESTED` review does not postpone the handoff, but it is preserved in the escalation payload so the human sees every remaining blocker.
 
 A failing external check with `runId === null` and a non-empty `detailsUrl` stays `FIX_CODE`. Codecov is the regression case: its URL is an autonomous investigation path even without a GitHub Actions run ID.
 
@@ -38,7 +38,7 @@ A failing external check with `runId === null` and a non-empty `detailsUrl` stay
 
 The thread must be retryable: it has a non-null path and line and every required review mutation is authorized. Attempts advance across distinct pushed HEADs while the thread body hash is unchanged. Editing the body resets that thread's attempt count.
 
-Threads without a source location do not escalate. Shepherd surfaces and logs them once, then suppresses the unchanged item. Threads whose required reply or resolution is unauthorized follow the same skip path. Neither category contributes to `fix-thrash`.
+Active threads without a source location do not escalate. Shepherd surfaces and logs them once, then suppresses the unchanged item. Threads whose required reply or resolution is unauthorized follow the same skip path. An authorized outdated detected/configured-bot thread is the narrow exception: Shepherd repeatedly emits its thread ID for standalone resolution, without counting it toward `fix-thrash`.
 
 ### `bot-cr-not-dismissed`
 
