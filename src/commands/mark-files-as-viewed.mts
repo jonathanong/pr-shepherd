@@ -52,6 +52,12 @@ interface GraphQlErrorLike {
   path?: unknown;
 }
 
+interface MarkFileErrorClassification {
+  aliasesWithNonRateErrors: Set<number>;
+  aliasesWithRateLimitErrors: Set<number>;
+  unscopedNonRateMessages: string[];
+}
+
 interface PullRequestFilesResponse {
   repository: {
     pullRequest: {
@@ -165,18 +171,14 @@ async function markFilesChunk(
   result: MarkFilesAsViewedResult,
   hasPendingAfter: boolean,
 ): Promise<string[] | null> {
-  let data: Record<string, unknown> = {};
-  let errors: GraphQlErrorLike[] = [];
-  let rateLimit: ResolveRateLimitStop | undefined;
   try {
     const response = await graphqlWithRateLimit<Record<string, unknown>>(
       buildMarkFilesMutation(pullRequestId, paths),
       {},
       { allowPartialData: true },
     );
-    data = response.data;
-    errors = (response.errors ?? []) as GraphQlErrorLike[];
-    rateLimit = rateLimitFromGraphQlResult(
+    const errors = (response.errors ?? []) as GraphQlErrorLike[];
+    const rateLimit = rateLimitFromGraphQlResult(
       errors.map((error) => error.message),
       {
         rateLimit: response.rateLimit,
@@ -184,31 +186,48 @@ async function markFilesChunk(
         stopOnZeroRemaining: hasPendingAfter,
       },
     );
+    const classifiedErrors = classifyMarkFileErrors(errors, paths.length);
+    const pendingPaths = recordMarkFileResults(
+      paths,
+      response.data,
+      errors,
+      classifiedErrors,
+      rateLimit,
+      result,
+    );
+    return completeMarkFilesChunk(rateLimit, pendingPaths, result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const stop = rateLimitFromError(error, message);
-    if (stop) {
-      result.errors.push(`rate limit: ${stop.message}`);
-      result.rateLimit = stop;
-      return paths;
-    }
-    for (const path of paths) result.errors.push(`${path}: ${message}`);
-    return null;
+    return recordMarkFilesTransportError(error, paths, result);
   }
+}
 
+function classifyMarkFileErrors(
+  errors: GraphQlErrorLike[],
+  pathCount: number,
+): MarkFileErrorClassification {
   const aliasesWithNonRateErrors = new Set<number>();
   const aliasesWithRateLimitErrors = new Set<number>();
   const unscopedNonRateMessages: string[] = [];
   for (const error of errors) {
     const aliasIndex = markFileErrorAliasIndex(error);
-    if (aliasIndex === undefined || aliasIndex >= paths.length) {
+    if (aliasIndex === undefined || aliasIndex >= pathCount) {
       if (!isRateLimitMessage(error.message)) unscopedNonRateMessages.push(error.message);
       continue;
     }
     if (isRateLimitMessage(error.message)) aliasesWithRateLimitErrors.add(aliasIndex);
     else aliasesWithNonRateErrors.add(aliasIndex);
   }
+  return { aliasesWithNonRateErrors, aliasesWithRateLimitErrors, unscopedNonRateMessages };
+}
 
+function recordMarkFileResults(
+  paths: string[],
+  data: Record<string, unknown>,
+  errors: GraphQlErrorLike[],
+  classifiedErrors: MarkFileErrorClassification,
+  rateLimit: ResolveRateLimitStop | undefined,
+  result: MarkFilesAsViewedResult,
+): string[] {
   const pendingPaths: string[] = [];
   for (let index = 0; index < paths.length; index += 1) {
     const path = paths[index]!;
@@ -217,10 +236,10 @@ async function markFilesChunk(
       continue;
     }
     const messages = errorsForMarkFileAlias(errors, index);
-    const hasRateLimitError = aliasesWithRateLimitErrors.has(index);
-    const nonRateMessages = aliasesWithNonRateErrors.has(index)
+    const hasRateLimitError = classifiedErrors.aliasesWithRateLimitErrors.has(index);
+    const nonRateMessages = classifiedErrors.aliasesWithNonRateErrors.has(index)
       ? messages.filter((message) => !isRateLimitMessage(message))
-      : unscopedNonRateMessages;
+      : classifiedErrors.unscopedNonRateMessages;
     if (nonRateMessages.length > 0) {
       for (const message of nonRateMessages) result.errors.push(`${path}: ${message}`);
     } else if (!rateLimit) {
@@ -228,11 +247,34 @@ async function markFilesChunk(
     }
     if (rateLimit && (hasRateLimitError || nonRateMessages.length === 0)) pendingPaths.push(path);
   }
+  return pendingPaths;
+}
 
+function completeMarkFilesChunk(
+  rateLimit: ResolveRateLimitStop | undefined,
+  pendingPaths: string[],
+  result: MarkFilesAsViewedResult,
+): string[] | null {
   if (!rateLimit) return null;
   result.errors.push(`rate limit: ${rateLimit.message}`);
   result.rateLimit = rateLimit;
   return pendingPaths;
+}
+
+function recordMarkFilesTransportError(
+  error: unknown,
+  paths: string[],
+  result: MarkFilesAsViewedResult,
+): string[] | null {
+  const message = error instanceof Error ? error.message : String(error);
+  const stop = rateLimitFromError(error, message);
+  if (stop) {
+    result.errors.push(`rate limit: ${stop.message}`);
+    result.rateLimit = stop;
+    return paths;
+  }
+  for (const path of paths) result.errors.push(`${path}: ${message}`);
+  return null;
 }
 
 function buildMarkFilesMutation(pullRequestId: string, paths: string[]): string {

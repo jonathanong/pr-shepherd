@@ -56,12 +56,12 @@ npx --yes --package pr-shepherd@<version> pr-shepherd-mcp
 
 The server exposes these tools:
 
-| Tool                       | Purpose                                                                                                                          |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `iterate`                  | Run one state-machine tick. `pr` is required and must be a GitHub PR URL or `owner/repo#N`; its repository is the GitHub target. |
-| `apply`                    | Apply ordered review/journal/file-view mutations under one required qualified `pr`; GitHub returns operation results and errors. |
-| `build_suggestion_patches` | Validate ordered anchored suggestions and return checked patches plus commit metadata.                                           |
-| `build_suggestion_patch`   | Deprecated one-item adapter for `build_suggestion_patches`.                                                                      |
+| Tool                       | Purpose                                                                                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `iterate`                  | Run one state-machine tick. `pr` is required and must be a GitHub PR URL or `owner/repo#N`; its repository is the GitHub target.            |
+| `apply`                    | Apply ordered review/journal/file-view mutations under one required repository-qualified `pr`; GitHub returns operation results and errors. |
+| `build_suggestion_patches` | Validate ordered anchored suggestions and return checked patches plus commit metadata.                                                      |
+| `build_suggestion_patch`   | Deprecated one-item adapter for `build_suggestion_patches`.                                                                                 |
 
 Use `iterate` first. Its result surfaces review threads, comments, checks, and the existing structured `resolveCommand`/`resolveOnlyCommand` arguments for review work. Translate those arguments into an `apply` `review_mutations` operation when making the mutation; `mark_files_viewed` attempts `markFileAsViewed` for selected files and reports GitHub's results; use `append_journal` for an idempotent PR-body journal entry. Explicit apply operations honor caller intent and surface GitHub errors. Use one `build_suggestion_patches` call for all marked suggestion threads in displayed order.
 
