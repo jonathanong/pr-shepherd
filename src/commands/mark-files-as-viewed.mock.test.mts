@@ -150,6 +150,42 @@ describe("runMarkFilesAsViewed", () => {
     expect(mockGraphqlWithRateLimit).toHaveBeenCalledTimes(1);
   });
 
+  it("reports transport rate limits and leaves the selected paths pending", async () => {
+    mockGraphql.mockResolvedValueOnce(filesResponse(["src/a.ts", "src/b.ts"]));
+    mockGraphqlWithRateLimit.mockRejectedValueOnce(new Error("secondary rate limit"));
+
+    const result = await runMarkFilesAsViewed({
+      format: "text",
+      files: ["src/a.ts", "src/b.ts"],
+    });
+
+    expect(result.errors).toEqual(["rate limit: secondary rate limit"]);
+    expect(result.rateLimit).toEqual({ message: "secondary rate limit" });
+    expect(result.unmarkedPaths).toEqual(["src/a.ts", "src/b.ts"]);
+  });
+
+  it("reports ordinary transport failures for every selected path", async () => {
+    mockGraphql.mockResolvedValueOnce(filesResponse(["src/a.ts", "src/b.ts"]));
+    mockGraphqlWithRateLimit.mockRejectedValueOnce(new Error("connection reset"));
+
+    const result = await runMarkFilesAsViewed({
+      format: "text",
+      files: ["src/a.ts", "src/b.ts"],
+    });
+
+    expect(result.errors).toEqual(["src/a.ts: connection reset", "src/b.ts: connection reset"]);
+    expect(result.unmarkedPaths).toBeUndefined();
+  });
+
+  it("reports a null mutation payload without a GraphQL error", async () => {
+    mockGraphqlWithRateLimit.mockResolvedValueOnce({ data: { f0: null } });
+
+    const result = await runMarkFilesAsViewed({ format: "text", files: ["src/a.ts"] });
+
+    expect(result.errors).toEqual(["src/a.ts: mark returned null"]);
+    expect(result.unmarkedPaths).toBeUndefined();
+  });
+
   it("reports a missing PR discovered during file pagination", async () => {
     mockGraphql
       .mockResolvedValueOnce(
