@@ -25,14 +25,14 @@ Full reference: [docs/README.md](docs/README.md). Feature matrix: [docs/features
 
 `pr-shepherd` moves deterministic PR orchestration into a local MCP server, with a CLI for shells and CI. Both interfaces fetch the same GitHub state, emit raw-enough context, and return a numbered plan for the calling agent to follow.
 
-The MCP server exposes canonical `iterate`, `apply`, and `build_suggestion_patches` tools. `apply` accepts ordered review mutations, selection-only file-view diagnostics, and journal entries; the deprecated singular suggestion tool remains temporarily as an adapter. Direct MCP calls require a repository-qualified `pr`: a GitHub PR URL or `owner/repo#N`; the explicit repository is the target for GitHub I/O, even when it differs from the local checkout. The CLI and programmatic API also retain bare-number and current-branch PR discovery. The shipped skills are thin dispatchers for those tools.
+The MCP server exposes canonical `iterate`, `apply`, and `build_suggestion_patches` tools. `apply` accepts ordered review mutations, file-view mutations, and journal entries; the deprecated singular suggestion tool remains temporarily as an adapter. Direct MCP calls require a repository-qualified `pr`: a GitHub PR URL or `owner/repo#N`; the explicit repository is the target for GitHub I/O, even when it differs from the local checkout. The CLI and programmatic API also retain bare-number and current-branch PR discovery. The shipped skills are thin dispatchers for those tools.
 
 Each tick returns exactly one action:
 
 - `WAIT` — no immediate action; continue with the next poll.
 - `MARK_READY` — the CLI converted an eligible draft PR to ready; continue polling.
 - `FIX_CODE` — agent work is required; complete it, push when needed, then continue polling. Push access to the PR head branch is a usage precondition.
-- `MERGE` — run the emitted auto-merge command only when GitHub reports `viewerCanEnableAutoMerge`; missing authorization returns `ESCALATE`.
+- `MERGE` — run the emitted head-pinned auto-merge or queue command. Ordinary merges include a plain-merge fallback; queue merges include a GraphQL enqueue fallback. GitHub is authoritative for the result and reports any authorization failure.
 - `CANCEL` — stop polling because the PR merged, closed, or completed its ready-delay.
 - `ESCALATE` — stop polling until a human provides direction.
 
@@ -89,7 +89,7 @@ This system is opinionated and works best with PRs that use required status chec
 - Every review thread/comment/review summary is surfaced at least once, even if already outdated, resolved, or minimized; edited items re-surface through seen markers.
 - Draft PRs can be marked ready automatically when clean; disable with `actions.autoMarkReady: false` or `--no-auto-mark-ready`.
 - The CLI never performs git mutations itself — it only emits commit/push instructions for the agent to run. Push access to the PR head is a usage precondition; GitHub viewer fields do not create a separate push-authorization handoff.
-- Every GitHub mutation is permission-aware. Shepherd uses raw viewer capability fields, omits unauthorized commands, and repeats authorization checks in direct `apply` commands. Missing capability data fails closed.
+- Generated iterate mutations and automatic actions are capability-aware and omit unauthorized commands. Explicit `apply` operations honor the caller's intent and surface GitHub's result; semantic human-content protections still apply.
 - `build_suggestion_patches` turns one or more ordered GitHub suggestion threads into checked patches and commit metadata, but never edits the working tree or git history. Local HEAD may be ahead when the live PR head is its ancestor.
 
 ## Usage
@@ -128,7 +128,7 @@ pr-shepherd 42 --quiet-status          # print only changed WAIT status snapshot
 pr-shepherd 42 --until-terminal        # continue through WAIT/MARK_READY until work or terminal state
 pr-shepherd 42 --debounce 5m           # wait 5m after first FIX_CODE, then return one batched tick
 pr-shepherd 42 --ready-delay 15m
-pr-shepherd 42 --merge                  # enable auto-merge when GitHub confirms viewer authorization
+pr-shepherd 42 --merge                  # request head-pinned auto-merge/queue; GitHub reports the result
 pr-shepherd iterate 42                 # single tick
 pr-shepherd owner/repo#42              # poll a PR in an explicit repository
 pr-shepherd https://github.com/owner/repo/pull/42
@@ -136,7 +136,7 @@ pr-shepherd https://github.com/owner/repo/pull/42
 
 ### Apply Review And Journal Changes, Or Select Files
 
-Use `apply` with ordered operations to reply/resolve/minimize/dismiss review items, select changed files for viewed-state authorization diagnostics, or append an idempotent Shepherd Journal item. File-view selection never mutates viewed state because GitHub exposes no exact viewer capability. Use `build_suggestion_patches` to turn ordered review suggestions into checked patches and commit metadata; it never changes the worktree or git history.
+Use `apply` with ordered operations to reply/resolve/minimize/dismiss review items, mark selected changed files as viewed, or append an idempotent Shepherd Journal item. Explicit operations are attempted and surface GitHub's per-operation results; generated iterate guidance remains capability-filtered. Use `build_suggestion_patches` to turn ordered review suggestions into checked patches and commit metadata; it never changes the worktree or git history.
 
 ### Extract Shepherd Journal Entries
 

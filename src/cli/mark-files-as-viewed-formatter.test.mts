@@ -12,17 +12,26 @@ describe("formatMarkFilesAsViewedResult", () => {
       missingPaths: ["src/missing.ts"],
       unmatchedSelectors: ["--match docs"],
       errors: ["rate limit: API rate limit exceeded", "src/b.ts: mark returned null"],
+      requestedPaths: ["src/a.ts"],
+      testSelector: true,
+      matchPatterns: ["docs"],
       rateLimit: {
         message: "API rate limit exceeded",
         retryAfterSeconds: 60,
         remaining: 0,
         limit: 5000,
+        used: 5000,
         resetAt: 1700000000,
+        resource: "graphql",
       },
       unmarkedPaths: ["src/b.ts"],
     });
 
     expect(out).toContain("# PR #42 — File-view selection (2 selected)");
+    expect(out).toContain("pullRequestId: PR_1");
+    expect(out).toContain("## Requested exact paths (1)");
+    expect(out).toContain("## Selectors (1)");
+    expect(out).toContain("## Match selectors (1)");
     expect(out).toContain("## Matched files (2)");
     expect(out).toContain("## Marked viewed (1)");
     expect(out).toContain("## Already viewed (1)");
@@ -31,7 +40,9 @@ describe("formatMarkFilesAsViewedResult", () => {
     expect(out).toContain("Stopped: GitHub rate limit hit");
     expect(out).toContain("retry after 60s");
     expect(out).toContain("remaining 0/5000");
+    expect(out).toContain("used 5000");
     expect(out).toContain("reset at 2023-11-14T22:13:20.000Z");
+    expect(out).toContain("resource graphql");
     expect(out).toContain("## Not marked due to rate limit (1)");
     expect(out).toContain("## Errors (1)");
     expect(out).toContain("src/b.ts: mark returned null");
@@ -49,15 +60,14 @@ describe("formatMarkFilesAsViewedResult", () => {
     expect(out).toContain("src/a.ts: server unavailable");
   });
 
-  it("renders an authorization skip", () => {
+  it("does not render a deprecated authorization skip", () => {
     const out = formatMarkFilesAsViewedResult({
       ...baseResult(),
       matchedPaths: ["src/a.ts"],
       authorizationSkipped: "unverifiable",
     });
 
-    expect(out).toContain("## Authorization");
-    expect(out).toContain("does not expose a capability");
+    expect(out).not.toContain("## Authorization");
   });
 });
 

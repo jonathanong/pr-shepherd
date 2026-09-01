@@ -243,7 +243,7 @@ export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: st
     return "One or more failing checks have no autonomous follow-up available. Use the displayed conclusion, run or URL, and included evidence to handle them manually.";
   }
   if (triggers.includes("authorization-required")) {
-    return "GitHub did not confirm that the current viewer may perform the requested mark-ready or merge/enqueue operation. Ask a repository maintainer to perform that state change; Shepherd will not recommend a command that would be denied.";
+    return "GitHub did not confirm that the current viewer may perform the automatic mark-ready operation. Ask a repository maintainer to mark the pull request ready before resuming Shepherd.";
   }
   if (triggers.includes("merge-queue-removed")) {
     const reason = detail ? ` GitHub reason: ${detail}.` : "";

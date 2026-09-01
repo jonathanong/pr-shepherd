@@ -57,8 +57,61 @@ describe("runIterate — merge", () => {
         "--auto",
         "--merge",
       ]);
-      expect(result.merge.fallbackCommand).toBeUndefined();
+      expect(result.merge.fallbackCommand?.argv).toEqual([
+        "gh",
+        "pr",
+        "merge",
+        "42",
+        "--repo",
+        "owner/repo",
+        "--match-head-commit",
+        "abc123",
+        "--merge",
+      ]);
     }
+  });
+
+  it("emits the requested ordinary merge plan when the capability snapshot is false", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        headSha: "abc123",
+        viewerAuthorization: {
+          repositoryPermission: "READ",
+          viewerCanAdminister: false,
+          viewerDidAuthor: false,
+          viewerCanUpdate: false,
+          viewerCanEnableAutoMerge: false,
+          viewerCanEditFiles: false,
+          headRepositoryPermission: null,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+
+    const result = await runIterate(makeOpts({ merge: true }));
+
+    expect(result.action).toBe("merge");
+    if (result.action === "merge") expect(result.merge.fallbackCommand).toBeDefined();
+  });
+
+  it("emits the requested ordinary merge plan when capability data is missing", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({ status: "READY", headSha: "abc123", viewerAuthorization: undefined }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+
+    const result = await runIterate(makeOpts({ merge: true }));
+
+    expect(result.action).toBe("merge");
   });
 
   it("emits an enqueue plan for a merge-queue PR when the viewer can enable auto-merge", async () => {
@@ -95,7 +148,7 @@ describe("runIterate — merge", () => {
     }
   });
 
-  it("escalates queue enrollment when GitHub exposes no exact viewer capability", async () => {
+  it("emits the requested queue plan when GitHub exposes no exact viewer capability", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "READY",
@@ -121,10 +174,10 @@ describe("runIterate — merge", () => {
 
     const result = await runIterate(makeOpts({ merge: true }));
 
-    expect(result.action).toBe("escalate");
-    if (result.action === "escalate") {
-      expect(result.escalate.triggers).toContain("authorization-required");
-      expect(result.escalate.authorization?.[0]?.action).toBe("merge-or-enqueue");
+    expect(result.action).toBe("merge");
+    if (result.action === "merge") {
+      expect(result.merge.mode).toBe("queue");
+      expect(result.merge.queueApiFallbackCommand).toBeDefined();
     }
   });
 

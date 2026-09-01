@@ -22,9 +22,13 @@ export interface ResolveResult {
   skippedHumanMinimizes?: string[];
   skippedHumanDismissals?: string[];
   skippedNonHumanReplies?: string[];
+  /** @deprecated Direct apply requests now rely on GitHub's mutation response. */
   skippedUnauthorizedReplies?: string[];
+  /** @deprecated Direct apply requests now rely on GitHub's mutation response. */
   skippedUnauthorizedResolves?: string[];
+  /** @deprecated Direct apply requests now rely on GitHub's mutation response. */
   skippedUnauthorizedMinimizes?: string[];
+  /** @deprecated Direct apply requests now rely on GitHub's mutation response. */
   skippedUnauthorizedDismissals?: string[];
   rateLimit?: ResolveRateLimitStop;
   unrepliedThreads?: string[];
@@ -59,6 +63,13 @@ function isCommentedDismissError(message: string): boolean {
 
 function dismissReviewNonDismissibleMessage(id: string): string {
   return `Not dismissed: ${id} is a COMMENTED review. Use --minimize-comment-ids instead; --dismiss-review-ids is only for CHANGES_REQUESTED reviews.`;
+}
+
+function mutationErrorMessage(errors: GraphQlErrorLike[], alias: string): string | undefined {
+  const messages = errors
+    .filter((error) => Array.isArray(error.path) && error.path.includes(alias))
+    .map((error) => error.message);
+  return messages.length > 0 ? messages.join("; ") : undefined;
 }
 
 export async function applyResolveOptions(
@@ -275,21 +286,27 @@ async function bulkApplyChunk(
     const p = data[`p${i}`] as { comment?: { id?: string } } | null | undefined;
     if (p?.comment?.id) result.repliedThreads.push(id);
     else if (!suppressCurrentChunkErrors)
-      result.errors.push(`${id}: reply returned null or comment not created`);
+      result.errors.push(
+        `${id}: ${mutationErrorMessage(graphQlErrors, `p${i}`) ?? "reply returned null or comment not created"}`,
+      );
   }
 
   for (let i = 0; i < resolveIds.length; i++) {
     const r = data[`r${i}`] as { thread?: { isResolved?: boolean } } | null | undefined;
     if (r?.thread?.isResolved === true) result.resolvedThreads.push(resolveIds[i]!);
     else if (!suppressCurrentChunkErrors)
-      result.errors.push(`${resolveIds[i]}: resolve returned null or thread not resolved`);
+      result.errors.push(
+        `${resolveIds[i]}: ${mutationErrorMessage(graphQlErrors, `r${i}`) ?? "resolve returned null or thread not resolved"}`,
+      );
   }
 
   for (let i = 0; i < minimizeIds.length; i++) {
     const m = data[`m${i}`] as { minimizedComment?: { isMinimized?: boolean } } | null | undefined;
     if (m?.minimizedComment?.isMinimized === true) result.minimizedComments.push(minimizeIds[i]!);
     else if (!suppressCurrentChunkErrors)
-      result.errors.push(`${minimizeIds[i]}: minimize returned null or comment not minimized`);
+      result.errors.push(
+        `${minimizeIds[i]}: ${mutationErrorMessage(graphQlErrors, `m${i}`) ?? "minimize returned null or comment not minimized"}`,
+      );
   }
 
   const singleDismiss = dismissIds.length === 1;
@@ -312,7 +329,7 @@ async function bulkApplyChunk(
       result.errors.push(
         commentedDismissErrorIndexes.has(i) || (singleDismiss && hasUnmappedCommentedDismissError)
           ? dismissReviewNonDismissibleMessage(dismissIds[i]!)
-          : `${dismissIds[i]}: dismiss returned null`,
+          : `${dismissIds[i]}: ${mutationErrorMessage(graphQlErrors, `d${i}`) ?? "dismiss returned null"}`,
       );
   }
 

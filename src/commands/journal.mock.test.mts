@@ -29,7 +29,6 @@ beforeEach(() => {
   mockGetPullRequestBody.mockResolvedValue({
     nodeId: "PR_node123",
     body: "## Summary\n\nSome content.",
-    viewerCanUpdate: true,
   });
   mockUpdatePullRequestBody.mockResolvedValue(undefined);
 });
@@ -67,7 +66,6 @@ describe("runJournal — happy path", () => {
     mockGetPullRequestBody.mockResolvedValue({
       nodeId: "PR_node123",
       body: originalBody,
-      viewerCanUpdate: true,
     });
 
     await runJournal({ prNumber: 42, rawItem: "- New entry.", dryRun: false });
@@ -97,7 +95,6 @@ describe("runJournal — happy path", () => {
     mockGetPullRequestBody.mockResolvedValue({
       nodeId: "PR_node123",
       body: "<details>\n<summary>Shepherd Journal</summary>\n\n- Old entry.\n</details>",
-      viewerCanUpdate: true,
     });
 
     const result = await runJournal({ prNumber: 42, rawItem: "- New entry.", dryRun: false });
@@ -111,7 +108,6 @@ describe("runJournal — happy path", () => {
     mockGetPullRequestBody.mockResolvedValue({
       nodeId: "PR_node456",
       body: "",
-      viewerCanUpdate: true,
     });
 
     const result = await runJournal({ prNumber: 7, rawItem: "- Entry.", dryRun: false });
@@ -134,19 +130,18 @@ describe("runJournal — dry-run", () => {
   });
 });
 
-describe("runJournal — authorization", () => {
-  it("returns a structured skip and does not update when viewerCanUpdate is false", async () => {
+describe("runJournal — explicit intent", () => {
+  it("attempts the requested update without fetching a capability preflight", async () => {
     mockGetPullRequestBody.mockResolvedValue({
       nodeId: "PR_node123",
       body: "",
-      viewerCanUpdate: false,
     });
 
     const result = await runJournal({ prNumber: 42, rawItem: "- Note.", dryRun: false });
 
-    expect(result.authorizationSkipped).toBe("denied-or-unverifiable");
-    expect(result.mutated).toBe(false);
-    expect(mockUpdatePullRequestBody).not.toHaveBeenCalled();
+    expect(result.authorizationSkipped).toBeUndefined();
+    expect(result.mutated).toBe(true);
+    expect(mockUpdatePullRequestBody).toHaveBeenCalledOnce();
   });
 });
 
@@ -155,7 +150,6 @@ describe("runJournal — idempotency (dedup)", () => {
     mockGetPullRequestBody.mockResolvedValue({
       nodeId: "PR_node123",
       body: "<details>\n<summary>Shepherd Journal</summary>\n\n- Existing entry.\n</details>",
-      viewerCanUpdate: true,
     });
 
     const result = await runJournal({

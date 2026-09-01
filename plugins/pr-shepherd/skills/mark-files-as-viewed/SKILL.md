@@ -1,6 +1,6 @@
 ---
 name: mark-files-as-viewed
-description: "Select changed pull-request files and report viewed-state authorization diagnostics with pr-shepherd (MCP or CLI)."
+description: "Mark selected changed pull-request files as viewed with pr-shepherd (MCP or CLI)."
 user-invocable: true
 argument-hint: "[PR number or URL] [files|tests|--tests|--match REGEX]"
 allowed-tools: ["MCP", "Bash", "Read", "Grep", "Glob"]
@@ -8,7 +8,7 @@ allowed-tools: ["MCP", "Bash", "Read", "Grep", "Glob"]
 
 # mark-files-as-viewed
 
-Thin dispatcher for selection-only file-view authorization diagnostics. GitHub exposes no exact viewer capability for marking a PR file viewed, so this operation never recommends or attempts that mutation. Use the MCP server when it is available; otherwise use the CLI.
+Thin dispatcher for explicit file-view mutations. The operation attempts `markFileAsViewed` for selected files and surfaces GitHub's per-file results. Use the MCP server when it is available; otherwise use the CLI.
 
 ## Arguments: $ARGUMENTS
 

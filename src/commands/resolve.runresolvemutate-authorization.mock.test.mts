@@ -11,8 +11,8 @@ import { runResolveMutate } from "./resolve.mts";
 
 registerHooks();
 
-describe("runResolveMutate — authorization", () => {
-  it("authorizes minimization for fetched review summaries and approvals only", async () => {
+describe("runResolveMutate — explicit intent", () => {
+  it("forwards minimization for fetched review summaries and approvals", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
         reviewSummaries: [
@@ -48,19 +48,30 @@ describe("runResolveMutate — authorization", () => {
     );
   });
 
-  it("reports an unauthorized human reply", async () => {
+  it("forwards a requested human reply without rechecking authorization", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
-        reviewThreads: [makeThread({ id: "t-denied", authorType: "User", viewerCanReply: false })],
+        reviewThreads: [
+          makeThread({
+            id: "t-denied",
+            authorType: "User",
+            viewerDidAuthor: true,
+            viewerCanReply: false,
+          }),
+        ],
       }),
     });
 
-    const result = await runResolveMutate({
+    await runResolveMutate({
       ...BASE_OPTS,
       replyThreadIds: ["t-denied"],
       dismissMessage: "done",
     });
 
-    expect(result.skippedUnauthorizedReplies).toEqual(["t-denied"]);
+    expect(mockApplyResolveOptions).toHaveBeenCalledWith(
+      42,
+      { owner: "owner", name: "repo" },
+      expect.objectContaining({ replyThreadIds: ["t-denied"] }),
+    );
   });
 });

@@ -70,7 +70,7 @@ const reviewMutationsOperationSchema = z.object({
 const markFilesViewedOperationSchema = z.object({
   type: z.literal("mark_files_viewed"),
   files: z.array(z.string().min(1)).optional(),
-  tests: z.boolean().optional().describe("Select changed test files; no mutation occurs."),
+  tests: z.boolean().optional().describe("Select changed test files to mark as viewed."),
   matchPatterns: z.array(z.string().min(1)).optional(),
 });
 
@@ -143,7 +143,7 @@ export function createPrShepherdMcpServer(
     "apply",
     {
       description:
-        "Apply ordered authorized review and journal operations, or run selection-only file-view diagnostics, after prevalidation.",
+        "Apply ordered review, journal, and file-view operations after prevalidation; explicit requests rely on GitHub's mutation response.",
       inputSchema: applyInputSchema,
       annotations: {
         readOnlyHint: false,

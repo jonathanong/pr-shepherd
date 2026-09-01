@@ -133,7 +133,7 @@ There is no extra `mergeStateStatus === "CLEAN"` requirement. A draft that deriv
 
 ### 4.5. Active merge and queue removal
 
-An active auto-merge request or merge-queue entry emits `wait` after actionable checks are handled. Both new auto-merge commands and queue enrollment require `viewerCanEnableAutoMerge: true` — enabling auto-merge on a queue-required PR is what enrolls it in the queue, so the same capability authorizes both; when it is not `true` (denied or unverifiable), either path returns `escalate` with trigger `authorization-required`. If `--merge` is enabled and the latest queue removal has no actionable failure, iterate emits `escalate` with the raw removal fields.
+An active auto-merge request or merge-queue entry emits `wait` after actionable checks are handled. When `--merge` reaches its execution point, iterate emits a head-pinned ordinary auto-merge command plus a plain-merge fallback, or a queue command plus a GraphQL enqueue fallback; it does not gate these explicit requests on `viewerCanEnableAutoMerge`. GitHub reports any authorization or policy failure. If `--merge` is enabled and the latest queue removal has no actionable failure, iterate emits `escalate` with the raw removal fields.
 
 ### 5. Wait
 
