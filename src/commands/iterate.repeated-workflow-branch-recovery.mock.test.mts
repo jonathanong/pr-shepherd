@@ -57,40 +57,39 @@ function repeatedFailureReport(status: "BEHIND" | "CONFLICTS", baseBranch: strin
   });
 }
 
+async function runBranchRecovery(status: "BEHIND" | "CONFLICTS", baseBranch: string) {
+  mockRunCheck.mockResolvedValue(repeatedFailureReport(status, baseBranch));
+
+  const result = await runIterate(makeOpts());
+
+  expect(result.action).toBe("fix_code");
+  if (result.action !== "fix_code") throw new Error("expected fix_code branch recovery");
+  expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
+  return result.fix.instructions;
+}
+
 describe("runIterate — repeated workflow branch recovery", () => {
   it("refreshes a behind branch before escalating", async () => {
-    mockRunCheck.mockResolvedValue(repeatedFailureReport("BEHIND", "release/next"));
+    const instructions = await runBranchRecovery("BEHIND", "release/next");
 
-    const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
-    expect(result.fix.instructions).toContain(
+    expect(instructions).toContain(
       "The workflow rerun still fails while the branch is behind PR base branch `release/next`. Inspect the current base branch for an existing fix before choosing a remediation.",
     );
-    expect(result.fix.instructions).toContain(
+    expect(instructions).toContain(
       "Rebase or otherwise update the PR branch from `release/next` according to repository conventions.",
     );
-    expect(result.fix.instructions).toContain(
-      "Push the updated PR head branch before iterating again.",
-    );
+    expect(instructions).toContain("Push the updated PR head branch before iterating again.");
   });
 
   it("checks the base branch while resolving conflicts", async () => {
-    mockRunCheck.mockResolvedValue(repeatedFailureReport("CONFLICTS", "main"));
+    const instructions = await runBranchRecovery("CONFLICTS", "main");
 
-    const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
-    expect(result.fix.instructions).toContain(
+    expect(instructions).toContain(
       "The workflow rerun still fails while the branch conflicts with PR base branch `main`. Inspect the current base branch for an existing fix before choosing a remediation.",
     );
-    expect(result.fix.instructions).toContain(
+    expect(instructions).toContain(
       "Rebase or otherwise update the PR branch from `main` according to repository conventions, resolving conflicts as part of that update.",
     );
-    expect(result.fix.instructions.join("\n")).toContain("push to the PR head branch");
+    expect(instructions.join("\n")).toContain("push to the PR head branch");
   });
 });
