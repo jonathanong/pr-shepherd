@@ -151,4 +151,29 @@ describe("runCheck — startup failure workflow runs", () => {
 
     expect(mockFetchStartupFailureChecks).not.toHaveBeenCalled();
   });
+
+  it("enriches a complete GraphQL startup failure when its run attempt is missing", async () => {
+    const startupFailure = makeCheck({
+      name: "CI",
+      source: "startup_failure",
+      conclusion: "STARTUP_FAILURE",
+      runId: "25406234225",
+      detailsUrl: "https://github.com/owner/repo/actions/runs/25406234225",
+      category: "failing",
+    });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ checks: [startupFailure] }),
+      checkSuitesComplete: true,
+    });
+    mockFetchStartupFailureChecks.mockResolvedValue([{ ...startupFailure, runAttempt: 1 }]);
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(mockFetchStartupFailureChecks).toHaveBeenCalledOnce();
+    expect(report.checks.failing[0]).toMatchObject({
+      runId: "25406234225",
+      runAttempt: 1,
+      conclusion: "STARTUP_FAILURE",
+    });
+  });
 });
