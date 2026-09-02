@@ -84,9 +84,27 @@ describe("pr-shepherd skill recurrence contract", () => {
     "utf8",
   );
 
+  it("injects --until-terminal into the canonical CLI poll dispatcher", () => {
+    const cliDispatcher = skill.match(/^2\..*?(?=^3\.)/ms)?.[0];
+
+    expect(cliDispatcher).toBeDefined();
+    expect(cliDispatcher).toMatch(
+      /canonical poll command `pr-shepherd(?: \[PR\])? --until-terminal`/,
+    );
+  });
+
+  it("repeats the dispatcher until CANCEL or ESCALATE", () => {
+    const recurrence = skill.match(/^4\..*?(?=^\d+\.|^## )/ms)?.[0];
+
+    expect(recurrence).toBeDefined();
+    expect(recurrence).toMatch(/repeat step 2/i);
+    expect(recurrence).toContain("[CANCEL]");
+    expect(recurrence).toContain("[ESCALATE]");
+  });
+
   it("reserves human hand-off for ESCALATE", () => {
     expect(skill).toContain("`[FIX_CODE]` is always non-terminal");
-    expect(skill).toContain("Only `[ESCALATE]` hands work to a human");
+    expect(skill).toMatch(/only `\[ESCALATE\]` hands work to a human/i);
     expect(skill).not.toContain("instructions require a human handoff");
   });
 });
