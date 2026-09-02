@@ -21,6 +21,7 @@ describe("fetchStartupFailureChecks", () => {
           conclusion: "startup_failure",
           html_url: "https://github.com/owner/repo/actions/runs/25406234225",
           display_title: "ci: skip secret-backed jobs for dependency bots",
+          run_attempt: 2,
           pull_requests: [{ number: 42, head: { sha: "abc123" } }],
         },
       ]),
@@ -37,6 +38,7 @@ describe("fetchStartupFailureChecks", () => {
         detailsUrl: "https://github.com/owner/repo/actions/runs/25406234225",
         event: "pull_request",
         runId: "25406234225",
+        runAttempt: 2,
         summary: "ci: skip secret-backed jobs for dependency bots",
       },
     ]);

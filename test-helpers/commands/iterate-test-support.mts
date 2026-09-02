@@ -144,8 +144,25 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
     branchProtection: null,
     ...overrides,
   };
+  const stampInitialRunAttempt = <T extends { runId: string | null; runAttempt?: number }>(
+    checks: T[],
+  ): T[] =>
+    checks.map((check) =>
+      check.runId !== null && check.runAttempt === undefined ? { ...check, runAttempt: 1 } : check,
+    );
   return {
     ...report,
+    checks: {
+      ...report.checks,
+      passing: stampInitialRunAttempt(report.checks.passing),
+      failing: stampInitialRunAttempt(report.checks.failing),
+      inProgress: stampInitialRunAttempt(report.checks.inProgress),
+      skipped: stampInitialRunAttempt(report.checks.skipped),
+      filtered: stampInitialRunAttempt(report.checks.filtered),
+      ...(report.checks.ignored !== undefined && {
+        ignored: stampInitialRunAttempt(report.checks.ignored),
+      }),
+    },
     threads: {
       ...report.threads,
       actionable: report.threads.actionable.map((thread) => ({

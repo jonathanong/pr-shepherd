@@ -26,20 +26,19 @@ async function triageCheck(
   jobsCache: Map<string, Promise<JobsResponse["jobs"] | undefined>>,
   stateKey?: StateKey,
 ): Promise<TriagedCheck> {
-  if (
-    check.runId === null ||
-    check.conclusion === "CANCELLED" ||
-    check.conclusion === "STARTUP_FAILURE"
-  ) {
+  if (check.runId === null || check.conclusion === "STARTUP_FAILURE") {
     return { ...check };
   }
   const jobs = await fetchJobs(check.runId, repo, jobsCache, stateKey);
   const jobInfo = jobs ? pickJobInfo(jobs, check.name) : undefined;
-  const logExcerpt = jobInfo?.jobId
-    ? await fetchJobLogExcerpt(jobInfo.jobId, repo, stateKey, jobInfo.jobConclusion != null)
-    : undefined;
+  const runAttempt = jobs ? pickRunAttempt(jobs) : undefined;
+  const logExcerpt =
+    check.conclusion !== "CANCELLED" && jobInfo?.jobId
+      ? await fetchJobLogExcerpt(jobInfo.jobId, repo, stateKey, jobInfo.jobConclusion != null)
+      : undefined;
   return {
     ...check,
+    ...(runAttempt !== undefined && { runAttempt }),
     ...(jobInfo?.workflowName !== undefined && { workflowName: jobInfo.workflowName }),
     ...(jobInfo?.jobName !== undefined && { jobName: jobInfo.jobName }),
     ...(jobInfo?.failedStep !== undefined && { failedStep: jobInfo.failedStep }),
@@ -116,6 +115,7 @@ interface JobsResponse {
     name: string;
     workflow_name?: string;
     conclusion: string | null;
+    run_attempt?: number;
     steps?: Array<{ name: string; number: number; conclusion: string | null }>;
   }>;
 }
@@ -129,6 +129,7 @@ interface WorkflowRunsResponse {
     conclusion: string | null;
     html_url: string;
     display_title?: string | null;
+    run_attempt?: number;
     pull_requests?: Array<{
       number?: number | null;
       head?: { sha?: string | null } | null;
@@ -147,6 +148,7 @@ interface JobInfo {
 
 function workflowRunToCheckRun(run: WorkflowRunsResponse["workflow_runs"][number]): CheckRun {
   const summary = run.display_title?.trim() || undefined;
+  const runAttempt = normalizeRunAttempt(run.run_attempt);
   return {
     name: run.name?.trim() || `workflow run ${run.id}`,
     status: "COMPLETED",
@@ -155,8 +157,21 @@ function workflowRunToCheckRun(run: WorkflowRunsResponse["workflow_runs"][number
     detailsUrl: run.html_url,
     event: run.event,
     runId: String(run.id),
+    ...(runAttempt !== undefined && { runAttempt }),
     ...(summary !== undefined && { summary }),
   };
+}
+
+function normalizeRunAttempt(value: number | undefined): number | undefined {
+  return Number.isSafeInteger(value) && (value ?? 0) > 0 ? value : undefined;
+}
+
+function pickRunAttempt(jobs: JobsResponse["jobs"]): number | undefined {
+  for (const job of jobs) {
+    const attempt = normalizeRunAttempt(job.run_attempt);
+    if (attempt !== undefined) return attempt;
+  }
+  return undefined;
 }
 
 function runBelongsToPr(

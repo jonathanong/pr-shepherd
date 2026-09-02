@@ -3,20 +3,24 @@ import {
   registerHooks,
   REPO,
   makeCheck,
+  makeJobsResponse,
   mockFetch,
   triageFailingChecks,
 } from "../../test-helpers/checks/triage.test-support.mts";
 
 registerHooks();
 
-describe("triageFailingChecks — CANCELLED short-circuits", () => {
-  it("CANCELLED with runId: skips jobs fetch, returns only base check fields", async () => {
+describe("triageFailingChecks — CANCELLED attempt metadata", () => {
+  it("fetches the run attempt without fetching a log excerpt", async () => {
+    mockFetch.mockResolvedValueOnce(
+      makeJobsResponse([{ id: 10, name: "tests", conclusion: "cancelled", run_attempt: 2 }]),
+    );
     const check = makeCheck({ conclusion: "CANCELLED" });
     const [result] = await triageFailingChecks([check], REPO);
     expect(result!.conclusion).toBe("CANCELLED");
-    expect(result!.workflowName).toBeUndefined();
-    expect(result!.jobName).toBeUndefined();
+    expect(result!.runAttempt).toBe(2);
     expect(result!.failedStep).toBeUndefined();
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(result!.logExcerpt).toBeUndefined();
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 });

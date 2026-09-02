@@ -63,6 +63,7 @@ describe("## Failing checks — authorized rerun rendering", () => {
         runId: "33295262562",
         detailsUrl: "https://github.com/owner/repo/actions/runs/33295262562",
         conclusion: "CANCELLED",
+        runAttempt: 2,
       },
     ];
 
@@ -70,5 +71,6 @@ describe("## Failing checks — authorized rerun rendering", () => {
 
     expect(output).not.toContain("[rerun authorized]");
     expect(output).not.toContain("rerun:");
+    expect(output).toContain("[attempt: 2]");
   });
 });

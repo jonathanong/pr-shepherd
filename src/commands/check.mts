@@ -71,9 +71,13 @@ export async function runCheck(
   if (mergeStatus.state === "MERGED" || mergeStatus.state === "CLOSED") {
     return buildTerminalReport(prNumber, repo, batchData, mergeStatus, mergeStatus.state);
   }
-  const startupFailureChecks = result.checkSuitesComplete
-    ? []
-    : await fetchStartupFailureChecks(repo, batchData.headRefOid, prNumber, stateKey);
+  const startupFailuresNeedAttempt = batchData.checks.some(
+    (check) => check.source === "startup_failure" && check.runAttempt === undefined,
+  );
+  const startupFailureChecks =
+    result.checkSuitesComplete && !startupFailuresNeedAttempt
+      ? []
+      : await fetchStartupFailureChecks(repo, batchData.headRefOid, prNumber, stateKey);
   const allChecks = mergeStartupFailureChecks(batchData.checks, startupFailureChecks);
   const classifiedPrChecks = classifyChecks(allChecks);
   const latestRemoval = batchData.latestMergeQueueRemoval;

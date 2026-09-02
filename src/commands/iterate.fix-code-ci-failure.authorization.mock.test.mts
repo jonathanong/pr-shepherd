@@ -10,11 +10,11 @@ import {
 } from "../../test-helpers/commands/iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
 import { makeThread } from "../../test-helpers/commands/iterate-thread-test-support.mts";
-import type { ClassifiedCheck } from "../types.mts";
+import type { ClassifiedCheck, TriagedCheck } from "../types.mts";
 
 registerIterateHooks();
 
-function failingCheck(overrides: Partial<ClassifiedCheck> = {}): ClassifiedCheck {
+function failingCheck(overrides: Partial<TriagedCheck> = {}): TriagedCheck {
   return {
     name: "tests",
     status: "COMPLETED",
@@ -22,6 +22,7 @@ function failingCheck(overrides: Partial<ClassifiedCheck> = {}): ClassifiedCheck
     detailsUrl: "https://github.com/owner/repo/actions/runs/123",
     event: "pull_request",
     runId: "123",
+    runAttempt: 1,
     workflowName: "CI",
     category: "failing",
     ...overrides,
@@ -127,6 +128,39 @@ describe("fix_code — GitHub Actions authorization", () => {
     expect(result.fix.checks[0]?.rerunCommand).toBe("gh run rerun 123 -R owner/repo");
     expect(result.fix.instructions.join("\n")).toContain("[rerun authorized]");
     expect(result.fix.instructions.join("\n")).not.toContain("no authorized follow-up action");
+  });
+
+  it("escalates instead of recommending a second rerun after attempt 1 was consumed", async () => {
+    mockRunCheck.mockResolvedValue(
+      failingCheckReport({
+        checks: checkSet([
+          failingCheck({ runAttempt: 2, logExcerpt: "Runner queue request timed out" }),
+        ]),
+      }),
+    );
+
+    const result = await runIterate(makeOpts());
+
+    expectCheckFollowUpUnavailable(result);
+    if (result.action !== "escalate") return;
+    expect(result.escalate.checks?.[0]).toMatchObject({ runAttempt: 2 });
+    expect(result.escalate.checks?.[0]?.logExcerpt).toContain("queue request timed out");
+    expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
+    expect(result.escalate.suggestion).toContain("single rerun allowance is exhausted");
+    expect(result.escalate.humanMessage).toContain("[attempt: 2]");
+    expect(result.escalate.humanMessage).not.toContain("gh run rerun");
+  });
+
+  it("denies reruns conservatively when GitHub omits run-attempt metadata", async () => {
+    const report = failingCheckReport();
+    delete report.checks.failing[0]?.runAttempt;
+    mockRunCheck.mockResolvedValue(report);
+
+    const result = await runIterate(makeOpts());
+
+    expectCheckFollowUpUnavailable(result);
+    if (result.action !== "escalate") return;
+    expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
   });
 
   it("escalates when the viewer's repository role cannot authorize the only follow-up", async () => {

@@ -23,7 +23,10 @@ function computeStallFingerprint(
   reviewSummaryIds: string[],
 ): string {
   const checks = [
-    ...report.checks.failing.map((f) => `failing:${f.name}:${f.conclusion}`),
+    ...report.checks.failing.map(
+      (f) =>
+        `failing:${f.name}:${f.conclusion}:${f.runId ?? "no-run"}:${f.runAttempt ?? "unknown"}`,
+    ),
     ...report.checks.inProgress.map((p) => `inProgress:${p.name}`),
   ].sort();
   const threads = report.threads.actionable.map((t) => t.id).sort();
