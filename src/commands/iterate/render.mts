@@ -140,8 +140,10 @@ export function buildFixInstructions(
     );
   }
 
-  instructions.push(...buildFailingCheckInstructions(failingChecks));
-  instructions.push(...repeatedWorkflowBranchRecoveryInstructions);
+  instructions.push(
+    ...buildFailingCheckInstructions(failingChecks),
+    ...repeatedWorkflowBranchRecoveryInstructions,
+  );
 
   if (hasAnnotations) {
     instructions.push(
