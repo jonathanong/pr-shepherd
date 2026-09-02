@@ -401,6 +401,53 @@ describe("buildFixInstructions", () => {
     );
   });
 
+  it("keeps the configured behind-base hint alongside repeated-workflow recovery", () => {
+    const instructions = buildFixInstructions(
+      [],
+      [],
+      [
+        {
+          name: "tests",
+          runId: "123",
+          detailsUrl: "https://github.com/owner/repo/actions/runs/123",
+          conclusion: "FAILURE",
+          runAttempt: 2,
+          workflowName: "CI",
+          logExcerpt: "Runner queue request timed out",
+        },
+      ],
+      [],
+      "release/next",
+      {
+        argv: ["pr-shepherd", "resolve", "42"],
+        requiresHeadSha: false,
+        requiresDismissMessage: false,
+        hasMutations: false,
+      },
+      false,
+      42,
+      0,
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      undefined,
+      "follow the repository rebase playbook",
+      true,
+      false,
+      true,
+    );
+
+    expect(instructions).toContain(
+      "The workflow rerun still fails while the branch is behind PR base branch `release/next`. Inspect the current base branch for an existing fix before choosing a remediation.",
+    );
+    expect(instructions).toContain(
+      "The branch is behind PR base branch `release/next`. follow the repository rebase playbook before pushing.",
+    );
+  });
+
   it("omits the behind-base hint when no hint is configured (default)", () => {
     const instructions = buildFixInstructions(
       [],

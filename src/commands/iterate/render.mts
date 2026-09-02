@@ -13,6 +13,7 @@ import {
   buildFailingCheckInstructions,
   buildCrStaleClause,
   buildBehindBaseHintInstruction,
+  buildRepeatedWorkflowBranchRecoveryInstructions,
   buildResolveCommandInstruction,
   buildFixCompletionInstruction,
 } from "./check-instructions.mts";
@@ -50,12 +51,19 @@ export function buildFixInstructions(
   behindBaseHint = "", // iterate.behindBaseHint — see buildBehindBaseHintInstruction
   isBehind = false,
   viewerCanUpdate = false,
+  hasExhaustedWorkflowRerun = false,
 ): string[] {
   const instructions: string[] = [];
   const locatedThreads = threads.filter((thread) => thread.path !== null && thread.line !== null);
   const unlocatedThreads = threads.filter((thread) => thread.path === null || thread.line === null);
 
   const failingChecks = checks.filter((c) => isFailingAgentCheck(c));
+  const repeatedWorkflowBranchRecoveryInstructions =
+    buildRepeatedWorkflowBranchRecoveryInstructions(baseBranch, hasExhaustedWorkflowRerun, {
+      isBehind,
+      hasConflicts,
+    });
+  const hasRepeatedWorkflowBranchRecovery = repeatedWorkflowBranchRecoveryInstructions.length > 0;
   const hasAnnotations = checks.some((c) => (c.annotations?.length ?? 0) > 0);
   const hasNonConflictHints =
     threads.length > 0 ||
@@ -81,7 +89,7 @@ export function buildFixInstructions(
       actionableSections.length > 0 ? `under ${actionableSections.join(", ")}` : "above";
     instructions.push(`Review each item ${sectionRef} and decide whether it needs a code change.`);
   }
-  if (hasConflicts) {
+  if (hasConflicts && !hasRepeatedWorkflowBranchRecovery) {
     instructions.push(
       "The branch has merge conflicts (see `**branch**` above). Resolve them before committing.",
     );
@@ -133,6 +141,7 @@ export function buildFixInstructions(
   }
 
   instructions.push(...buildFailingCheckInstructions(failingChecks));
+  instructions.push(...repeatedWorkflowBranchRecoveryInstructions);
 
   if (hasAnnotations) {
     instructions.push(
@@ -156,6 +165,8 @@ export function buildFixInstructions(
     instructions.push(
       `Commit any remaining conflict-resolution changes and push to the PR head branch${mutationSuffix}.`,
     );
+  } else if (hasRepeatedWorkflowBranchRecovery) {
+    instructions.push("Push the updated PR head branch before iterating again.");
   } else if (hasNonConflictHints) {
     instructions.push(
       "If you changed code, commit any remaining changes and push to the PR head branch, then run the remaining review mutations using the pushed commit SHA and iterate again with the same options. If you did not change code, do not commit and continue with the remaining steps.",

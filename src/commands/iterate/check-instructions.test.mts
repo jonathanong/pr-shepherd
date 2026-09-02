@@ -5,6 +5,7 @@ import {
   buildBehindBaseHintInstruction,
   buildFailingCheckInstructions,
   buildFixCompletionInstruction,
+  buildRepeatedWorkflowBranchRecoveryInstructions,
   buildResolveCommandInstruction,
 } from "./check-instructions.mts";
 
@@ -58,6 +59,41 @@ describe("buildBehindBaseHintInstruction", () => {
     // yaml parsing does not enforce the TS type at runtime (e.g. `behindBaseHint: true`).
     const malformed = true as unknown as string;
     expect(buildBehindBaseHintInstruction("main", malformed, true)).toEqual([]);
+  });
+});
+
+describe("buildRepeatedWorkflowBranchRecoveryInstructions", () => {
+  it("omits recovery guidance before a workflow rerun", () => {
+    expect(
+      buildRepeatedWorkflowBranchRecoveryInstructions("main", false, {
+        isBehind: true,
+        hasConflicts: false,
+      }),
+    ).toEqual([]);
+  });
+
+  it("builds behind-base recovery guidance for a later workflow attempt", () => {
+    expect(
+      buildRepeatedWorkflowBranchRecoveryInstructions("release/next", true, {
+        isBehind: true,
+        hasConflicts: false,
+      }),
+    ).toEqual([
+      "The workflow rerun still fails while the branch is behind PR base branch `release/next`. Inspect the current base branch for an existing fix before choosing a remediation.",
+      "Rebase or otherwise update the PR branch from `release/next` according to repository conventions.",
+    ]);
+  });
+
+  it("builds conflict recovery guidance for a later workflow attempt", () => {
+    expect(
+      buildRepeatedWorkflowBranchRecoveryInstructions("main", true, {
+        isBehind: false,
+        hasConflicts: true,
+      }),
+    ).toEqual([
+      "The workflow rerun still fails while the branch conflicts with PR base branch `main`. Inspect the current base branch for an existing fix before choosing a remediation.",
+      "Rebase or otherwise update the PR branch from `main` according to repository conventions, resolving conflicts as part of that update.",
+    ]);
   });
 });
 
