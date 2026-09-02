@@ -35,6 +35,7 @@ type JobStub = {
   name: string;
   workflow_name?: string;
   conclusion: string;
+  run_attempt?: number;
   steps?: Array<{ name: string; number: number; conclusion: string | null }>;
 };
 

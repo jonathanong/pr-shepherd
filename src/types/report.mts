@@ -162,6 +162,8 @@ export interface AgentCheck {
   logExcerpt?: string;
   /** `gh run rerun` command, present only when the check has a runId and the viewer's repository role grants Actions rerun capability (WRITE+). */
   rerunCommand?: string;
+  /** Workflow-run attempt number, surfaced only after the initial attempt. */
+  runAttempt?: number;
   annotations?: CheckAnnotation[];
   annotationOnly?: true; // annotation carrier from a non-failing check bucket
   scope?: "merge_group";

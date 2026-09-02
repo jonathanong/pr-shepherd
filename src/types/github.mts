@@ -75,6 +75,8 @@ export interface CheckRun {
   detailsUrl: string;
   event: string | null;
   runId: string | null;
+  /** GitHub Actions workflow-run attempt number. Omitted for non-Actions or unavailable metadata. */
+  runAttempt?: number;
   /** Commit scope that supplied this check. Omitted for ordinary PR-head checks. */
   scope?: "merge_group";
   /** Synthetic merge-group commit OID, when `scope` is `merge_group`. */

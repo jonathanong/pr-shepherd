@@ -86,12 +86,13 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
           ? `external \`${ch.detailsUrl}\``
           : "(no runId)";
       const conclusionTag = ch.conclusion !== null ? ` [conclusion: ${ch.conclusion}]` : "";
+      const attemptTag = ch.runAttempt !== undefined ? ` [attempt: ${ch.runAttempt}]` : "";
       const scopeTag = ch.scope
         ? ` [scope: ${ch.scope}${ch.commitOid ? `, commit: ${ch.commitOid}` : ""}]`
         : "";
       const rerunTag = ch.rerunCommand ? " [rerun authorized]" : "";
       const lines = [
-        `- ${locator} — \`${workflowPrefix}${jobLabel}\`${conclusionTag}${scopeTag}${rerunTag}`,
+        `- ${locator} — \`${workflowPrefix}${jobLabel}\`${conclusionTag}${attemptTag}${scopeTag}${rerunTag}`,
       ];
       if (ch.conclusion !== "CANCELLED") {
         if (ch.failedStep) lines.push(`  > ${ch.failedStep}`);

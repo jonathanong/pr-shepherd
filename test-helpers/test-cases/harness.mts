@@ -285,6 +285,21 @@ function stampAnnotationProbe<T>(checks: T[], annotationCheckIds: Set<string>): 
   });
 }
 
+function stampInitialRunAttempt(checks: unknown[]): unknown[] {
+  return checks.map((check) => {
+    if (
+      check !== null &&
+      typeof check === "object" &&
+      "runId" in check &&
+      check.runId !== null &&
+      !("runAttempt" in check)
+    ) {
+      return { ...check, runAttempt: 1 };
+    }
+    return check;
+  });
+}
+
 export function applyFixture(fixture: Fixture): void {
   const baseCfg = defaultConfig() as unknown as Record<string, unknown>;
   const overlayCfg: Record<string, unknown> = {};
@@ -338,13 +353,17 @@ export function applyFixture(fixture: Fixture): void {
 
   if (fixture.triagedChecks !== undefined) {
     mockTriageFailingChecks.mockResolvedValue(
-      stampAnnotationProbe(fixture.triagedChecks, annotationCheckIds),
+      stampInitialRunAttempt(stampAnnotationProbe(fixture.triagedChecks, annotationCheckIds)),
     );
   } else {
-    mockTriageFailingChecks.mockImplementation((checks) => Promise.resolve(checks));
+    mockTriageFailingChecks.mockImplementation((checks) =>
+      Promise.resolve(stampInitialRunAttempt(checks)),
+    );
   }
 
-  mockFetchStartupFailureChecks.mockResolvedValue(fixture.startupFailureChecks ?? []);
+  mockFetchStartupFailureChecks.mockResolvedValue(
+    stampInitialRunAttempt(fixture.startupFailureChecks ?? []),
+  );
   mockFetchCheckRunAnnotations.mockImplementation((checkRunId) =>
     Promise.resolve(fixture.checkAnnotationsByCheckId?.[checkRunId] ?? []),
   );

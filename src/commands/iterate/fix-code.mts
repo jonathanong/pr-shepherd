@@ -244,10 +244,16 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
         : [],
     ),
   );
+  const initialAttemptRunIds = new Set(
+    failingChecks.flatMap((c) => (c.runId !== null && c.runAttempt === 1 ? [c.runId] : [])),
+  );
   const failingAgentChecks = toAgentChecks(failingChecks).map((c) =>
     rerunAuthorized &&
     c.runId &&
     actionsRunIds.has(c.runId) &&
+    // GitHub increments run_attempt after every rerun. Recommend at most one rerun by limiting
+    // the command to the original attempt; missing attempt metadata is denied conservatively.
+    initialAttemptRunIds.has(c.runId) &&
     // ACTION_REQUIRED means the run is paused pending manual workflow approval; rerunning does
     // not grant that approval, so no rerun command applies.
     c.conclusion !== "ACTION_REQUIRED" &&

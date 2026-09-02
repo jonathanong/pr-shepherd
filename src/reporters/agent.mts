@@ -74,6 +74,7 @@ export function toAgentCheck(c: TriagedCheck): AgentCheck {
     runId: c.runId,
     detailsUrl: c.detailsUrl,
     conclusion: c.conclusion,
+    ...(c.runAttempt !== undefined && c.runAttempt > 1 && { runAttempt: c.runAttempt }),
     ...(c.workflowName !== undefined && { workflowName: c.workflowName }),
     ...(c.jobName !== undefined && { jobName: c.jobName }),
     ...(c.failedStep !== undefined && { failedStep: c.failedStep }),

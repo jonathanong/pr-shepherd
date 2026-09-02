@@ -12,16 +12,21 @@ import type { ClassifiedCheck } from "../../test-helpers/checks/triage.test-supp
 registerHooks();
 
 describe("triageFailingChecks — batch", () => {
-  it("CANCELLED check skips jobs fetch; FAILURE check fetches jobs", async () => {
-    mockFetch.mockResolvedValueOnce(
-      makeJobsResponse([
-        {
-          name: "tests",
-          conclusion: "failure",
-          steps: [{ name: "Run tests", number: 1, conclusion: "failure" }],
-        },
-      ]),
-    );
+  it("fetches jobs for FAILURE and CANCELLED checks", async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        makeJobsResponse([
+          {
+            name: "tests",
+            conclusion: "failure",
+            run_attempt: 1,
+            steps: [{ name: "Run tests", number: 1, conclusion: "failure" }],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        makeJobsResponse([{ name: "build", conclusion: "cancelled", run_attempt: 2 }]),
+      );
 
     const checks: ClassifiedCheck[] = [
       makeCheck({ name: "tests", runId: "run-1", conclusion: "FAILURE" }),
@@ -31,11 +36,12 @@ describe("triageFailingChecks — batch", () => {
     expect(results).toHaveLength(2);
     expect(results[0]!.failedStep).toBe("Run tests");
     expect(results[1]!.failedStep).toBeUndefined();
-    // Only one jobs fetch — for the FAILURE check; the CANCELLED check short-circuits
+    expect(results[0]!.runAttempt).toBe(1);
+    expect(results[1]!.runAttempt).toBe(2);
     const jobsFetchCalls = (mockFetch.mock.calls as Array<[string]>).filter(([url]) =>
       url.includes("/jobs?filter=latest"),
     );
-    expect(jobsFetchCalls).toHaveLength(1);
+    expect(jobsFetchCalls).toHaveLength(2);
   });
 
   it("fetches jobs once per runId when multiple checks share the same run", async () => {
