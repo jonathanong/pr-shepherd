@@ -300,8 +300,13 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const manualFollowUpChecks = failingAgentChecks.filter(
     (check) => !belongsToActiveWorkflowRun(check) && checkRequiresHumanFollowUp(check),
   );
+  const exhaustedAttempts = manualFollowUpChecks.filter(
+    (check) => check.runAttempt !== undefined && check.runAttempt > 1,
+  );
+  const hasBehindBaseRecovery = isBehind && exhaustedAttempts.length > 0;
   const hasAutonomousWork =
     hasConflicts ||
+    hasBehindBaseRecovery ||
     threads.length > 0 ||
     resolutionOnlyThreads.length > 0 ||
     actionableComments.length > 0 ||
@@ -317,9 +322,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       (check) => belongsToActiveWorkflowRun(check) || !checkRequiresHumanFollowUp(check),
     );
   if (manualFollowUpChecks.length > 0 && !hasAutonomousWork) {
-    const exhaustedAttempts = manualFollowUpChecks.filter(
-      (check) => check.runAttempt !== undefined && check.runAttempt > 1,
-    );
     const checkSuggestion =
       exhaustedAttempts.length > 0
         ? `GitHub reports a later workflow attempt (${exhaustedAttempts
@@ -419,6 +421,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     behindBaseHint,
     isBehind,
     report.viewerAuthorization?.viewerCanUpdate === true,
+    exhaustedAttempts.length > 0,
   );
   const prospectiveResult = {
     ...base,

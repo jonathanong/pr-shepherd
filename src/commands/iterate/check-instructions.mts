@@ -28,6 +28,30 @@ export function buildBehindBaseHintInstruction(
 }
 
 /**
+ * Give one branch-refresh recovery path after Shepherd's single workflow rerun has failed.
+ * The fetched PR base branch is raw context; the caller still owns repository-specific git
+ * mechanics and decides whether the base contains a relevant fix.
+ */
+export function buildRepeatedWorkflowBranchRecoveryInstructions(
+  baseBranch: string,
+  hasExhaustedWorkflowRerun: boolean,
+  branch: { isBehind: boolean; hasConflicts: boolean },
+): string[] {
+  if (!hasExhaustedWorkflowRerun || (!branch.isBehind && !branch.hasConflicts)) return [];
+
+  const state = branch.hasConflicts ? "conflicts with" : "is behind";
+  const instructions = [
+    `The workflow rerun still fails while the branch ${state} PR base branch \`${baseBranch}\`. Inspect the current base branch for an existing fix before choosing a remediation.`,
+  ];
+  instructions.push(
+    branch.hasConflicts
+      ? `Rebase or otherwise update the PR branch from \`${baseBranch}\` according to repository conventions, resolving conflicts as part of that update.`
+      : `Rebase or otherwise update the PR branch from \`${baseBranch}\` according to repository conventions.`,
+  );
+  return instructions;
+}
+
+/**
  * Build the `Run the apply review: command` instruction. Steps stay here (not in the skill)
  * whenever the *unmodified, as-printed* command is unsafe without them:
  *
