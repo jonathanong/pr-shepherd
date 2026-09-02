@@ -4,31 +4,33 @@
 
 Two skills are shipped for Claude Code, Codex, and Grok. They are thin dispatchers: parse arguments, call the CLI or MCP, print the full result, and follow `## Instructions`. Policy lives in that output, not in the skill prompt.
 
-- `pr-shepherd` can create a requested PR before running the poll command `pr-shepherd` (not `pr-shepherd iterate`). On a combined request to make/create/open a PR and invoke the skill, the agent proceeds with the ordinary non-force push of the reviewed, in-scope commits to the current repository's configured push remote and creation of that PR; it does not ask for a redundant conversational confirmation solely because the push publishes those changes. Skills cannot grant host permissions, so unattended execution requires a trusted command rule or equivalent host policy. Force-pushes, remote or credential changes, unrelated changes, and ambiguous targets remain outside this workflow. For iteration, the skill accepts a bare number, `owner/repo#N`, or a GitHub PR URL; qualified references can target a fork or upstream repository from the same checkout. If the CLI is unavailable, it calls MCP `iterate` and must use MCP `apply` / `build_suggestion_patches` for the returned operations (there is no `pr-shepherd apply` shell command in that setup). After a CLI poll it runs the printed apply command.
+- `pr-shepherd` can create a requested PR before running the until-terminal poll command `pr-shepherd [PR] --until-terminal` (not `pr-shepherd iterate`). On a combined request to make/create/open a PR and invoke the skill, the agent proceeds with the ordinary non-force push of the reviewed, in-scope commits to the current repository's configured push remote and creation of that PR; it does not ask for a redundant conversational confirmation solely because the push publishes those changes. Skills cannot grant host permissions, so unattended execution requires a trusted command rule or equivalent host policy. Force-pushes, remote or credential changes, unrelated changes, and ambiguous targets remain outside this workflow. For iteration, the skill accepts a bare number, `owner/repo#N`, or a GitHub PR URL; qualified references can target a fork or upstream repository from the same checkout. If the CLI is unavailable, it calls MCP `iterate` and must use MCP `apply` / `build_suggestion_patches` for the returned operations (there is no `pr-shepherd apply` shell command in that setup). After a CLI poll it runs the printed apply command.
 - `mark-files-as-viewed` calls MCP `apply` with a `mark_files_viewed` operation, or runs `pr-shepherd apply files`; the operation performs `markFileAsViewed` mutations and reports GitHub's per-file results.
 
 Install the plugin (skills plus the version-matched MCP server) or register `pr-shepherd-mcp` yourself. See [mcp.md](mcp.md). The CLI path needs `pr-shepherd` on `PATH`.
 
 ## Recurrence
 
-The skill's default fetch is the bounded poll command `pr-shepherd [PR]`, which sleeps through `WAIT`. After the first `FIX_CODE`, poll waits `--debounce` (default 1m) while still iterating at `--interval`, then returns the post-window tick. That settle window batches late review comments and CI failures into one agent-facing result. MCP `iterate` is the fallback when the CLI is unavailable; it has no debounce, and the host chooses when to recheck.
+The shipped skill's canonical CLI command is `pr-shepherd [PR] --until-terminal`. It continues internally through ordinary `WAIT` and `MARK_READY` actions. It returns agent-facing `FIX_CODE` (after its `--debounce` settle window), `MERGE`, and any non-terminal action carrying a quota warning, as well as terminal `CANCEL` or `ESCALATE`. The settle window defaults to 1m and batches late review comments and CI failures into one agent-facing `FIX_CODE` result. The bare CLI form `pr-shepherd [PR]` remains the bounded poll command for direct shell use. MCP `iterate` is the fallback when the CLI is unavailable; it has no debounce and returns a single tick.
 
-Each non-terminal action is followed by another poll (or another `iterate` call when only MCP is available). `[FIX_CODE]` is always non-terminal: handle its work and rerun the same canonical command without asking whether to continue. An emitted `[MERGE]` command must also run before the next tick. `[CANCEL]` ends polling normally; only `[ESCALATE]` hands work to a human. Pass `--merge` to the skill to forward the opt-in to CLI or MCP. The MCP server does not run an unbounded polling loop.
+After following a returned result's `## Instructions`, the skill re-invokes the same canonical command unless the action is `[CANCEL]` or `[ESCALATE]`, or the human directs it to stop. `[FIX_CODE]` is always non-terminal; an emitted `[MERGE]` command must also run before the next invocation. A quota warning can return `WAIT` or `MARK_READY` to adjust cadence, which is likewise non-terminal. `[CANCEL]` ends polling normally; only `[ESCALATE]` hands work to a human. Pass `--merge` to the skill to forward the opt-in to CLI or MCP. The MCP fallback repeats single `iterate` ticks; it does not run an unbounded polling loop.
 
 ```
 User                    Active Goal             pr-shepherd
  |                          |                        |
  |-- /goal /pr-shepherd --> |                        |
- |                          |-- pr-shepherd <PR> --> |
+ |                          |-- pr-shepherd <PR> --until-terminal --> |
  |                          |                        |-- GraphQL fetch
  |                          |                        |-- classify
  |                          |                        |-- dispatch
  |                          |<-- action + data
  |                          |                        |
- |  [if wait/mark_ready]    |-- pr-shepherd <PR> --> |
+ |  [ordinary wait/ready]   |   CLI continues polling |
  |  [if fix_code]           |-- fix, commit, push    |
  |                          |-- apply review         |
- |                          |-- pr-shepherd <PR> --> |
+ |                          |-- pr-shepherd <PR> --until-terminal --> |
+ |  [if merge/quota warning]|-- follow instructions  |
+ |                          |-- pr-shepherd <PR> --until-terminal --> |
  |  [if cancel/escalate]    |   goal ends            |
 ```
 

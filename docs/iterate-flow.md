@@ -8,7 +8,7 @@
 
 ```mermaid
 flowchart TD
-  U(["pr-shepherd skill"]) --> POLL["pr-shepherd PR<br/>bounded poll"]
+  U(["pr-shepherd skill"]) --> POLL["pr-shepherd [PR]<br/>--until-terminal"]
 
   POLL --> S1["1. runCheck<br/>batch GraphQL<br/>classify + deriveMergeStatus"]
 
@@ -31,21 +31,23 @@ flowchart TD
   A_FIX --> STALL{"stall timeout?"}
   A_W --> STALL
   STALL -->|yes| A_ESC(["action: escalate"])
-  STALL -->|no| DEC{"Follow ## Instructions"}
+  STALL -->|no| RESULT{"Return to skill?"}
 
-  A_CAN --> DEC
-  A_MERGE --> DEC
-  A_MR --> DEC
-  A_ESC --> DEC
+  A_CAN --> RESULT
+  A_MERGE --> RESULT
+  A_MR --> RESULT
+  A_ESC --> RESULT
 
-  DEC -->|cancel/escalate| STOP["stop"]
+  RESULT -->|ordinary wait/mark_ready| POLL
+  RESULT -->|cancel/escalate| STOP["stop"]
+  RESULT -->|fix_code/merge/quota warning| DEC["Follow ## Instructions"]
   DEC -->|fix_code| FIX["inspect included evidence<br/>edit+commit by repo convention<br/>run authorized review mutations"]
   FIX --> RERUN["rerun the poll"]
-  DEC -->|wait/mark_ready/merge| RERUN
+  DEC -->|merge/quota warning| RERUN
   RERUN --> POLL
 ```
 
-The shipped skill runs the **poll** command `pr-shepherd`, not `pr-shepherd iterate`. After the first `FIX_CODE`, poll holds `--debounce` (default 1m) while still iterating at `--interval`, then returns one later tick. MCP `iterate` has no debounce; the client owns recurrence.
+The shipped skill runs `pr-shepherd [PR] --until-terminal`, not `pr-shepherd iterate`. That until-terminal poll continues through ordinary `WAIT` and `MARK_READY` actions; it returns agent-facing `FIX_CODE` (after its `--debounce` settle window), `MERGE`, and any non-terminal quota-warning result, plus terminal `CANCEL` or `ESCALATE`. After following a returned result's `## Instructions`, the skill re-invokes the same command unless it received `CANCEL` or `ESCALATE`. The bare `pr-shepherd [PR]` command remains bounded for direct CLI users. MCP `iterate` has no debounce and returns one tick; its caller owns recurrence.
 
 ## Steps
 
