@@ -10,11 +10,11 @@ import {
 } from "../../test-helpers/commands/iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
 import { makeThread } from "../../test-helpers/commands/iterate-thread-test-support.mts";
-import type { ClassifiedCheck } from "../types.mts";
+import type { ClassifiedCheck, TriagedCheck } from "../types.mts";
 
 registerIterateHooks();
 
-function failingCheck(overrides: Partial<ClassifiedCheck> = {}): ClassifiedCheck {
+function failingCheck(overrides: Partial<TriagedCheck> = {}): TriagedCheck {
   return {
     name: "tests",
     status: "COMPLETED",
@@ -132,7 +132,11 @@ describe("fix_code — GitHub Actions authorization", () => {
 
   it("escalates instead of recommending a second rerun after attempt 1 was consumed", async () => {
     mockRunCheck.mockResolvedValue(
-      failingCheckReport({ checks: checkSet([failingCheck({ runAttempt: 2 })]) }),
+      failingCheckReport({
+        checks: checkSet([
+          failingCheck({ runAttempt: 2, logExcerpt: "Runner queue request timed out" }),
+        ]),
+      }),
     );
 
     const result = await runIterate(makeOpts());
@@ -140,7 +144,9 @@ describe("fix_code — GitHub Actions authorization", () => {
     expectCheckFollowUpUnavailable(result);
     if (result.action !== "escalate") return;
     expect(result.escalate.checks?.[0]).toMatchObject({ runAttempt: 2 });
+    expect(result.escalate.checks?.[0]?.logExcerpt).toContain("queue request timed out");
     expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
+    expect(result.escalate.suggestion).toContain("single rerun allowance is exhausted");
     expect(result.escalate.humanMessage).toContain("[attempt: 2]");
     expect(result.escalate.humanMessage).not.toContain("gh run rerun");
   });

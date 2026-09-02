@@ -26,6 +26,7 @@ Denied or unverifiable generated review replies, thread resolutions, bot-review 
 
 At least one remaining failing check has no `rerunCommand` and is one of:
 
+- a GitHub Actions check whose `runAttempt` is greater than 1, meaning Shepherd's single rerun allowance is exhausted (this is a handoff even when a log excerpt exists);
 - `ACTION_REQUIRED`, `CANCELLED`, or `STARTUP_FAILURE`;
 - a check with `runId === null` and an empty or whitespace-only `detailsUrl`; or
 - a check with a non-null run ID but no nonblank included `logExcerpt`.
