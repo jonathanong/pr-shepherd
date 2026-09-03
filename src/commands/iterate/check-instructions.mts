@@ -122,12 +122,12 @@ export function buildFixCompletionInstruction(
   hasShaGatedReviewMutations = false,
 ): string {
   if (hasConflicts)
-    return "`[FIX_CODE]` is non-terminal: resolve the conflicts, commit, push to the PR head branch, then iterate again with the same options.";
+    return "`[FIX_CODE]` is non-terminal: resolve the conflicts, commit, push to the PR head branch, then iterate immediately with the same options.";
   if (hasShaGatedReviewMutations) {
-    return "`[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run the review mutations using the pushed commit SHA and iterate again with the same options; if you did not change code, complete the authorized review mutations and iterate again with the same options.";
+    return "`[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run the review mutations using the pushed commit SHA and iterate immediately with the same options; if you did not change code, complete the authorized review mutations and iterate immediately with the same options.";
   }
   if (checks.some((check) => check.rerunCommand)) {
-    return "`[FIX_CODE]` is non-terminal. Run any warranted reruns for `[rerun authorized]` checks (or apply code fixes for real failures), then iterate again with the same options to continue.";
+    return "`[FIX_CODE]` is non-terminal. Run any warranted reruns for `[rerun authorized]` checks (or apply code fixes for real failures), then iterate immediately with the same options to continue.";
   }
-  return "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.";
+  return "`[FIX_CODE]` is non-terminal. After completing these steps, iterate immediately with the same options to continue.";
 }

@@ -168,10 +168,10 @@ export function buildFixInstructions(
       `Commit any remaining conflict-resolution changes and push to the PR head branch${mutationSuffix}.`,
     );
   } else if (hasRepeatedWorkflowBranchRecovery) {
-    instructions.push("Push the updated PR head branch before iterating again.");
+    instructions.push("Push the updated PR head branch before iterating immediately.");
   } else if (hasNonConflictHints) {
     instructions.push(
-      "If you changed code, commit any remaining changes and push to the PR head branch, then run the remaining review mutations using the pushed commit SHA and iterate again with the same options. If you did not change code, do not commit and continue with the remaining steps.",
+      "If you changed code, commit any remaining changes and push to the PR head branch, then run the remaining review mutations using the pushed commit SHA and iterate immediately with the same options. If you did not change code, do not commit and continue with the remaining steps.",
     );
   }
 

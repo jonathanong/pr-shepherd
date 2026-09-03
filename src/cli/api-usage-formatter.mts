@@ -21,7 +21,7 @@ export function formatQuotaWarning(warning: GraphqlQuotaWarning | undefined): st
     `- Reset: ${resetTime(warning.resetAt)}`,
     `- Recommended poll interval: ${warning.pollIntervalMinutes} minutes`,
     `- Recommended bounded CLI timeout: ${warning.pollTimeoutMinutes} minutes`,
-    "- Recommendation: prefer non-GraphQL `gh` CLI commands for PR operations until the reset above, then resume pr-shepherd",
+    "- Recommendation: keep polling pr-shepherd at the cadence above; for incidental PR operations prefer REST `gh` (`gh pr view`, `gh pr review`, `gh api`); do not substitute `gh pr checks`/`gh pr watch`",
   ].join("\n");
 }
 

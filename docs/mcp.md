@@ -235,9 +235,9 @@ MCP clients own polling. Do not expect a long-running poll tool. MCP `iterate` h
 
 1. Call `iterate` with a repository-qualified `pr`.
 2. Follow the returned `## Instructions`.
-3. For `WAIT` or `MARK_READY`, call `iterate` again when the host is ready to recheck.
-4. For `FIX_CODE`, finish the code/review work, then call `iterate` again.
-5. For `MERGE`, run the returned command (and only the conditionally documented fallback), then call `iterate` again.
+3. For `WAIT` or `MARK_READY`, call `iterate` again when the host is ready to recheck. Do not wait for CI with `gh pr checks`, `gh pr watch`, `gh run watch`, or equivalent GitHub MCP check waiters; fetching check logs is fine.
+4. For `FIX_CODE`, finish the code/review work, then call `iterate` immediately. Do not wait for CI to finish first.
+5. For `MERGE`, run the returned command (and only the conditionally documented fallback), then call `iterate` immediately.
 6. Stop on `CANCEL` or `ESCALATE`.
 
 The shell command `pr-shepherd [PR]` is the bounded poll dispatcher. It is not an MCP tool. See [skills.md](skills.md).

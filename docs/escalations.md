@@ -80,7 +80,7 @@ A changed fingerprint resets the timer. Disabling the timeout refreshes state an
 
 ## Non-escalating outcomes
 
-- `FIX_CODE` is always non-terminal: perform the emitted work and iterate again.
+- `FIX_CODE` is always non-terminal: perform the emitted work and iterate immediately.
 - Closed or merged PRs return `CANCEL`, not `ESCALATE`.
 - Ordinary non-force pushes do not produce `authorization-required`.
 - Missing-location threads and unauthorized review mutations are surfaced/logged once and skipped.

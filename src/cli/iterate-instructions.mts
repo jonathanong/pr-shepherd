@@ -17,7 +17,7 @@ export function buildSimpleIterateInstructions(
         ];
       }
       return [
-        "Non-terminal — no action needed this tick. Iterate again with the same options to continue.",
+        "Non-terminal — no action needed this tick. Iterate immediately with the same options to continue.",
       ];
     case "mark_ready":
       if (result.quotaWarning) {
@@ -29,7 +29,7 @@ export function buildSimpleIterateInstructions(
         ];
       }
       return [
-        "The CLI marked the PR ready for review. Iterate again with the same options to continue.",
+        "The CLI marked the PR ready for review. Iterate immediately with the same options to continue.",
       ];
     case "merge": {
       const instructions = [
@@ -47,7 +47,7 @@ export function buildSimpleIterateInstructions(
       instructions.push(
         result.quotaWarning
           ? buildQuotaAwareContinuation(result.quotaWarning, "After running the merge command.")
-          : "Then iterate again with the same options to monitor until the PR merges or needs work.",
+          : "Then iterate immediately with the same options to monitor until the PR merges or needs work.",
       );
       return instructions;
     }
