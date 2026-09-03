@@ -78,7 +78,7 @@ describe("runIterate — repeated workflow branch recovery", () => {
     expect(instructions).toContain(
       "Rebase or otherwise update the PR branch from `release/next` according to repository conventions.",
     );
-    expect(instructions).toContain("Push the updated PR head branch before iterating again.");
+    expect(instructions).toContain("Push the updated PR head branch before iterating immediately.");
   });
 
   it("checks the base branch while resolving conflicts", async () => {

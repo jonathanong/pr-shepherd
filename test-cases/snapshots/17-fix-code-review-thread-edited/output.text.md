@@ -27,4 +27,4 @@ Conversations Resolved: No [Not Required]
 5. Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked viewer-authored human thread is emitted resolve-only, not for another reply.
 6. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
 7. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.
-8. `[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.
+8. `[FIX_CODE]` is non-terminal. After completing these steps, iterate immediately with the same options to continue.

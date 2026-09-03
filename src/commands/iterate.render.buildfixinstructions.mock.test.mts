@@ -26,7 +26,7 @@ describe("buildFixInstructions", () => {
     );
 
     expect(instructions).toEqual([
-      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate again with the same options to continue.",
+      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate immediately with the same options to continue.",
     ]);
   });
 
@@ -159,7 +159,7 @@ describe("buildFixInstructions", () => {
       'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',
     );
     expect(instructions.at(-1)).toBe(
-      "`[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run the review mutations using the pushed commit SHA and iterate again with the same options; if you did not change code, complete the authorized review mutations and iterate again with the same options.",
+      "`[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run the review mutations using the pushed commit SHA and iterate immediately with the same options; if you did not change code, complete the authorized review mutations and iterate immediately with the same options.",
     );
     expect(text).toContain("`[FIX_CODE]` is non-terminal: if you changed code, commit and push");
     expect(text).not.toContain("Stop this iteration");
@@ -241,7 +241,7 @@ describe("buildFixInstructions", () => {
     expect(text).not.toContain("git fetch origin");
     expect(text).not.toContain("git push --force-with-lease");
     expect(text).toContain(
-      "`[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run the review mutations using the pushed commit SHA and iterate again with the same options; if you did not change code, complete the authorized review mutations and iterate again with the same options.",
+      "`[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run the review mutations using the pushed commit SHA and iterate immediately with the same options; if you did not change code, complete the authorized review mutations and iterate immediately with the same options.",
     );
   });
 
@@ -282,7 +282,7 @@ describe("buildFixInstructions", () => {
     expect(text).not.toContain("git add");
     expect(text).not.toContain("git push --force-with-lease");
     expect(text).toContain(
-      "`[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run the review mutations using the pushed commit SHA and iterate again with the same options; if you did not change code, complete the authorized review mutations and iterate again with the same options.",
+      "`[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run the review mutations using the pushed commit SHA and iterate immediately with the same options; if you did not change code, complete the authorized review mutations and iterate immediately with the same options.",
     );
   });
 

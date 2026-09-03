@@ -97,9 +97,17 @@ describe("pr-shepherd skill recurrence contract", () => {
     const recurrence = skill.match(/^4\..*?(?=^\d+\.|^## )/ms)?.[0];
 
     expect(recurrence).toBeDefined();
-    expect(recurrence).toMatch(/repeat step 2/i);
+    expect(recurrence).toMatch(/immediately repeat step 2/i);
     expect(recurrence).toContain("[CANCEL]");
     expect(recurrence).toContain("[ESCALATE]");
+  });
+
+  it("forbids waiting for CI with gh pr checks or gh pr watch", () => {
+    expect(skill).toContain("gh pr checks");
+    expect(skill).toContain("gh pr watch");
+    expect(skill).toContain("fetching check logs is fine");
+    expect(skill).toMatch(/Do not wait for CI to finish/i);
+    expect(skill).not.toContain("once it completes");
   });
 
   it("reserves human hand-off for ESCALATE", () => {

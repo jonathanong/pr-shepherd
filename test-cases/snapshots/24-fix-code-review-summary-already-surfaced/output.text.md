@@ -9,4 +9,4 @@ WAIT: 1 passing, 0 in-progress
 
 ## Instructions
 
-1. Non-terminal — no action needed this tick. Iterate again with the same options to continue.
+1. Non-terminal — no action needed this tick. Iterate immediately with the same options to continue.

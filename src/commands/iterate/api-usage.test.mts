@@ -53,7 +53,7 @@ const warning: GraphqlQuotaWarning = {
   pollTimeoutMinutes: 10,
 };
 const QUOTA_RESUME_TEXT =
-  "Resume pr-shepherd after the GraphQL quota resets at 2026-08-30T05:12:29.000Z";
+  "Resume full-cadence pr-shepherd after the GraphQL quota resets at 2026-08-30T05:12:29.000Z";
 
 type FixCodeResult = Extract<IterateResult, { action: "fix_code" }>;
 

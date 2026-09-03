@@ -108,7 +108,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
         "Commit any remaining conflict-resolution changes and push to the PR head branch.",
       );
       expect(joined).toContain(
-        "`[FIX_CODE]` is non-terminal: resolve the conflicts, commit, push to the PR head branch, then iterate again with the same options.",
+        "`[FIX_CODE]` is non-terminal: resolve the conflicts, commit, push to the PR head branch, then iterate immediately with the same options.",
       );
       expect(joined).not.toContain("requires a human handoff");
     }
@@ -132,7 +132,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
         "Commit any remaining conflict-resolution changes and push to the PR head branch.",
       );
       expect(joined).toContain("`[FIX_CODE]` is non-terminal");
-      expect(joined).toContain("iterate again");
+      expect(joined).toContain("iterate immediately");
       expect(joined).not.toMatch(/hand[- ]?off|stop polling|human direction/i);
     }
   });
@@ -159,7 +159,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       );
       expect(joined).toContain("apply review:");
       expect(joined).toContain(
-        "`[FIX_CODE]` is non-terminal: resolve the conflicts, commit, push to the PR head branch, then iterate again with the same options.",
+        "`[FIX_CODE]` is non-terminal: resolve the conflicts, commit, push to the PR head branch, then iterate immediately with the same options.",
       );
       expect(joined).not.toContain("requires a human handoff");
     }
