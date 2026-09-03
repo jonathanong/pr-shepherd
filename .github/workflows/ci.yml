@@ -5,10 +5,16 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   ci:
     name: lint / typecheck / test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       matrix:
         node-version: ['22.x', '24.x']
@@ -24,17 +30,15 @@ jobs:
       - run: npm run format:check
       - run: npm run typecheck
       - run: npm run test:coverage
-      - id: token-check
-        run: echo "has_codecov=${{ secrets.CODECOV_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
       - name: Upload test results to Codecov
-        if: ${{ always() && !cancelled() && steps.token-check.outputs.has_codecov == 'true' }}
+        if: ${{ always() && !cancelled() }}
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
           report_type: test_results
           files: ./test-results/junit.xml
       - name: Upload coverage to Codecov
-        if: ${{ always() && !cancelled() && steps.token-check.outputs.has_codecov == 'true' }}
+        if: ${{ always() && !cancelled() }}
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
