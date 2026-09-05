@@ -4,6 +4,8 @@ import {
   NOW,
   makeOpts,
   makeReport,
+  defaultConfig,
+  mockLoadConfig,
   mockRunCheck,
   mockUpdateReadyDelay,
 } from "../../test-helpers/commands/iterate-test-support.mts";
@@ -64,15 +66,54 @@ describe("runIterate — unlocated review threads", () => {
       expect.objectContaining({ id: "thread-outdated-bot" }),
     ]);
     expect(result.fix.resolveCommand.resolveThreadIds).toEqual(["thread-outdated-bot"]);
+    expect(result.fix.resolveCommand.replyThreadIds).toEqual(["thread-outdated-bot"]);
     expect(result.fix.resolveCommand.argv).toContain("--resolve-thread-ids");
     expect(result.fix.resolveCommand.argv).toContain("thread-outdated-bot");
-    expect(result.fix.resolveCommand.argv).not.toContain("--reply-thread-ids");
-    expect(result.fix.resolveCommand.argv).not.toContain("--message");
+    expect(result.fix.resolveCommand.argv).toContain("--reply-thread-ids");
+    expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
+    expect(result.fix.resolveCommand.requiresDismissMessage).toBe(true);
+  });
+
+  it("emits reply-and-resolve for an outdated unlocated viewer-authored thread", async () => {
+    const outdatedOwn = {
+      ...THREAD,
+      id: "thread-outdated-own",
+      isOutdated: true,
+      author: "alice",
+      authorType: "User" as const,
+      viewerDidAuthor: true as const,
+      path: "src/old.mts",
+      line: null,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { ...makeReport().threads, resolutionOnly: [outdatedOwn] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.resolveCommand.replyThreadIds).toEqual(["thread-outdated-own"]);
+    expect(result.fix.resolveCommand.resolveThreadIds).toEqual(["thread-outdated-own"]);
     expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
   });
 
-  it("surfaces a thread with no file/line without escalating or recommending a mutation", async () => {
-    const threadNoPath = { ...THREAD, id: "thread-noloc", path: null, line: null };
+  it("replies to an unlocated other-human thread without resolving it", async () => {
+    const threadNoPath = {
+      ...THREAD,
+      id: "thread-noloc",
+      path: null,
+      line: null,
+      authorType: "User" as const,
+    };
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
@@ -90,7 +131,9 @@ describe("runIterate — unlocated review threads", () => {
     expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") return;
     expect(result.fix.threads).toEqual([expect.objectContaining({ id: "thread-noloc" })]);
-    expect(result.fix.resolveCommand.hasMutations).toBe(false);
+    expect(result.fix.resolveCommand.replyThreadIds).toEqual(["thread-noloc"]);
+    expect(result.fix.resolveCommand.resolveThreadIds).toBeUndefined();
+    expect(result.fix.resolveCommand.hasMutations).toBe(true);
   });
 
   it("does not count a path-only thread toward fix thrash", async () => {
@@ -113,5 +156,37 @@ describe("runIterate — unlocated review threads", () => {
       const result = await runIterate(makeOpts());
       expect(result.action).toBe("fix_code");
     }
+  });
+
+  it("resolves an outdated unlocated other-human thread when the enum is outdated", async () => {
+    mockLoadConfig.mockReturnValue({
+      ...defaultConfig(),
+      iterate: { ...defaultConfig().iterate, resolveOtherHumanThreads: "outdated" },
+    });
+    const outdated = {
+      ...THREAD,
+      id: "thread-outdated-human",
+      isOutdated: true,
+      authorType: "User" as const,
+      path: "src/old.mts",
+      line: null,
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: { ...makeReport().threads, resolutionOnly: [outdated] },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.resolveCommand.replyThreadIds).toEqual(["thread-outdated-human"]);
+    expect(result.fix.resolveCommand.resolveThreadIds).toEqual(["thread-outdated-human"]);
   });
 });

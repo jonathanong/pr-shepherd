@@ -120,29 +120,4 @@ describe("runResolveMutate — viewer-authored human threads", () => {
     );
     expect(result.skippedHumanResolves).toBeUndefined();
   });
-
-  it("does not extend the paired exception to another human's thread", async () => {
-    mockFetchPrBatch.mockResolvedValue({
-      data: makeBatchData({
-        reviewThreads: [makeThread({ id: "t-other", author: "bob", authorType: "User" })],
-      }),
-    });
-
-    const result = await runResolveMutate({
-      ...BASE_OPTS,
-      replyThreadIds: ["t-other"],
-      resolveThreadIds: ["t-other"],
-      dismissMessage: "done",
-    });
-
-    expect(mockApplyResolveOptions).toHaveBeenCalledWith(
-      42,
-      { owner: "owner", name: "repo" },
-      expect.objectContaining({
-        replyThreadIds: ["t-other"],
-        resolveThreadIds: [],
-      }),
-    );
-    expect(result.skippedHumanResolves).toEqual(["t-other"]);
-  });
 });

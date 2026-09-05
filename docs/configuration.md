@@ -38,6 +38,7 @@ iterate:
   minimizeApprovals: false # set true to also minimize APPROVED-state reviews
   minimizeComments: all # all | bots | none
   behindBaseHint: "rebase --force-with-lease" # one-liner shown on the fix_code push step when behind base
+  resolveOtherHumanThreads: none # none | outdated | always
 
 watch:
   readyDelayMinutes: 10 # settle window after PR first becomes READY
@@ -90,6 +91,7 @@ actions:
 | `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination).                                                                      |
 | `iterate.minimizeComments`           | `"all"`                                   | Which non-human GitHub author classes to minimize for PR comments and review summaries: `all`, `bots`, or `none`; humans are never minimized.               |
 | `iterate.behindBaseHint`             | `""`                                      | One-liner shown on the `fix_code` push step when the branch is behind its base; empty omits the hint entirely                                               |
+| `iterate.resolveOtherHumanThreads`   | `"none"`                                  | When to resolve other-human inline threads after a reply: `none` (reply-only), `outdated` (also resolve when GitHub reports outdated), or `always`          |
 | `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                                                                                   |
 | `watch.graphqlQuotaWarnings`         | `30% → 2m, 20% → 5m, 10% → 10m`           | One-time per-worktree GraphQL quota warnings and their recommended minimum poll intervals; `[]` disables                                                    |
 | `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                                                            |
@@ -107,7 +109,7 @@ actions:
 
 Top-level list of GitHub logins that Shepherd treats as bot authors in addition to GitHub-detected bots (`authorType: Bot`) and logins containing `[bot]`.
 
-Configured bot threads are returned on every tick until resolved, even if their transcript is unchanged and already seen. Configured bot comments and reviews also follow bot minimization/routing policy when eligible. Human-authored active threads remain marker-gated so Shepherd does not repeatedly return unchanged feedback; unmarked viewer-authored inline feedback is the narrow reply-and-resolve exception.
+Configured bot threads are returned on every tick until resolved, even if their transcript is unchanged and already seen. Configured bot comments and reviews also follow bot minimization/routing policy when eligible. Viewer-authored human threads also stay visible until resolved. Other-human active threads remain marker-gated so Shepherd does not repeatedly return unchanged feedback unless `iterate.resolveOtherHumanThreads` is `always`.
 
 Matching is case-insensitive and treats a trailing `[bot]` suffix as equivalent to the bare login.
 
@@ -180,6 +182,19 @@ Items excluded by this policy still go through seen markers: Shepherd surfaces t
 One-liner appended to the `fix_code` push instruction when the branch is behind its base (`mergeStatus: "BEHIND"`) — e.g. `"rebase --force-with-lease"`, `"merge the main branch"`, or `"see .agents/skills/agent-workflow/git-and-prs.md"`. Shepherd never decides the convention itself (see [`docs/actions.md`](actions.md) on why rebase/merge mechanics are intentionally left to the caller) — it only echoes back whatever pointer you configure here.
 
 Empty (default) omits the hint entirely.
+
+### `iterate.resolveOtherHumanThreads` — default `"none"`
+
+Controls when Shepherd resolves **other-human** inline threads (User authors that are not in `botUsernames`) after it replies. Bot/non-human threads and viewer-authored human threads always reply-and-resolve, including when GitHub has cleared the source line.
+
+- `"none"` (default) — other humans stay reply-only. A marker-ended other-human thread is already acknowledged and has no further mutation.
+- `"outdated"` — other humans still always get a reply when unmarked; Shepherd also resolves when GitHub reports `isOutdated: true`. Marker-ended outdated other-human threads become resolve-only retries.
+- `"always"` — other humans use the same reply-and-resolve pairing as own comments, including marker-ended resolve-only retries.
+
+```yaml
+iterate:
+  resolveOtherHumanThreads: outdated
+```
 
 ---
 

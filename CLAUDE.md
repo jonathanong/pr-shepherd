@@ -54,7 +54,7 @@ A user request to make, create, or open a PR tells the caller to proceed with th
 
 `FIX_CODE` is always non-terminal: the caller completes the work, commits and pushes when needed, runs authorized review mutations, and invokes Shepherd again. Only `ESCALATE` hands work to a human; `CANCEL` ends polling without a handoff.
 
-Denied or unverifiable review replies, thread resolutions, and bot-review dismissals are one-look skips, not handoffs: Shepherd surfaces/logs the item once, omits the mutation, excludes it from fix-attempt accounting, and suppresses it until edited. Active threads without a path or line follow the same rule. An unresolved outdated detected/configured-bot thread with `viewerCanResolve: true` is the narrow exception: it remains resolution-only work and is resolved by thread ID even after GitHub clears its source location. `authorization-required` is reserved for attempted mark-ready and merge/enqueue state changes; the finite trigger list is documented in [`docs/escalations.md`](docs/escalations.md).
+Denied or unverifiable review replies, thread resolutions, and bot-review dismissals are one-look skips, not handoffs: Shepherd surfaces/logs the item once, omits the mutation, excludes it from fix-attempt accounting, and suppresses it until edited. Active threads without a path or line follow the same skip only when no authorized mutation remains. Authorized reply/resolve mutations still run by thread ID after GitHub clears the source location, and unlocated threads do not count toward `fix-thrash`. `authorization-required` is reserved for attempted mark-ready and merge/enqueue state changes; the finite trigger list is documented in [`docs/escalations.md`](docs/escalations.md).
 
 ## Dogfooding
 

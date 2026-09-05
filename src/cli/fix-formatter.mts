@@ -49,10 +49,19 @@ export function formatFixCodeResult(
   const locatedThreads = result.fix.threads.filter(
     (thread) => thread.path !== null && thread.line !== null,
   );
-  const unlocatedThreads = result.fix.threads.filter(
-    (thread) => thread.path === null || thread.line === null,
+  const mutatedThreadIds = new Set([
+    ...(result.fix.resolveCommand.replyThreadIds ?? []),
+    ...(result.fix.resolveCommand.resolveThreadIds ?? []),
+    ...(result.fix.resolveOnlyCommand?.replyThreadIds ?? []),
+    ...(result.fix.resolveOnlyCommand?.resolveThreadIds ?? []),
+  ]);
+  const unlocatedMutatedThreads = result.fix.threads.filter(
+    (thread) => (thread.path === null || thread.line === null) && mutatedThreadIds.has(thread.id),
   );
-  renderThreads("## Review threads", locatedThreads);
+  const unlocatedThreads = result.fix.threads.filter(
+    (thread) => (thread.path === null || thread.line === null) && !mutatedThreadIds.has(thread.id),
+  );
+  renderThreads("## Review threads", [...locatedThreads, ...unlocatedMutatedThreads]);
   renderThreads("## Unlocated review threads (logged once — no mutation)", unlocatedThreads);
 
   if (result.fix.resolutionOnlyThreads.length > 0) {

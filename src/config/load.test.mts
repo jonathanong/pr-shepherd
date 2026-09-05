@@ -32,6 +32,28 @@ describe("loadConfig — no rc file", () => {
     expect(result.iterate.minimizeComments).toBe("all");
   });
 
+  it("defaults iterate.resolveOtherHumanThreads to none", async () => {
+    const loadConfig = await freshLoadConfig();
+    const result = loadConfig();
+    expect(result.iterate.resolveOtherHumanThreads).toBe("none");
+  });
+
+  it("overrides iterate.resolveOtherHumanThreads when set in rc file", async () => {
+    writeRc("iterate:\n  resolveOtherHumanThreads: outdated\n");
+    const loadConfig = await freshLoadConfig();
+    expect(loadConfig().iterate.resolveOtherHumanThreads).toBe("outdated");
+  });
+
+  it("rejects invalid iterate.resolveOtherHumanThreads values and falls back to defaults", async () => {
+    writeRc("iterate:\n  resolveOtherHumanThreads: sometimes\n");
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const loadConfig = await freshLoadConfig();
+    const result = loadConfig();
+    expect(result.iterate.resolveOtherHumanThreads).toBe("none");
+    const output = stderrSpy.mock.calls.map((c) => c[0]).join("");
+    expect(output).toContain("iterate.resolveOtherHumanThreads");
+  });
+
   it("defaults actions.autoMinimizeSuppressed to true", async () => {
     const loadConfig = await freshLoadConfig();
     const result = loadConfig();

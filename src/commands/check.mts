@@ -34,7 +34,7 @@ import {
 } from "../comments/authors.mts";
 import {
   buildThreadMutationRouting,
-  canResolveOutdatedBotWithoutLocation,
+  threadHasAuthorizedMutation,
 } from "./iterate/thread-mutation-routing.mts";
 import { discoverRuleFiles, loadRules } from "../classify/loader.mts";
 import { buildClassifyIndex, partitionBatch, type BatchPartition } from "../classify/apply.mts";
@@ -156,23 +156,18 @@ export async function runCheck(
   const visibleThreadCandidates = batchData.reviewThreads.filter(
     (t) => !partition.suppressedThreadIds.has(t.id) || deniedRuleAutoResolveThreadIds.has(t.id),
   );
+  const resolveOtherHumanThreads = config.iterate.resolveOtherHumanThreads ?? "none";
   const threadMutationRouting = buildThreadMutationRouting(
     visibleThreadCandidates,
     botUsernames,
     partition.ruleAutoResolveThreadIds,
+    resolveOtherHumanThreads,
   );
   const replyThreadIds = new Set(threadMutationRouting.replyThreadIds);
   const resolveThreadIds = new Set(threadMutationRouting.resolveThreadIds);
   const repeatableThreadIds = new Set(
     visibleThreadCandidates
-      .filter(
-        (thread) =>
-          (thread.path !== null &&
-            thread.line !== null &&
-            (!replyThreadIds.has(thread.id) || thread.viewerCanReply === true) &&
-            (!resolveThreadIds.has(thread.id) || thread.viewerCanResolve === true)) ||
-          canResolveOutdatedBotWithoutLocation(thread, botUsernames),
-      )
+      .filter((thread) => threadHasAuthorizedMutation(thread, replyThreadIds, resolveThreadIds))
       .map((thread) => thread.id),
   );
   const threadVisibility = classifyThreadVisibility(
@@ -180,6 +175,7 @@ export async function runCheck(
     seenMap,
     botUsernames,
     repeatableThreadIds,
+    resolveOtherHumanThreads,
   );
   const firstLookComments: FirstLookComment[] = minimizedCommentCandidates.flatMap((c) => {
     const cls = classifyItem(c.id, c.body, seenMap);

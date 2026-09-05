@@ -72,7 +72,7 @@ export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): 
   const instructions: string[] = [];
   if ((resolveCommand.replyThreadIds?.length ?? 0) > 0) {
     instructions.push(
-      "Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked viewer-authored human thread is emitted resolve-only, not for another reply.",
+      "Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked thread that is still being resolved is emitted resolve-only, not for another reply.",
     );
   }
   if (resolveCommand.requiresHeadSha) {

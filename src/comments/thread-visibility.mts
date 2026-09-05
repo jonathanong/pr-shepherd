@@ -7,6 +7,8 @@ import {
   type NormalizedBotUsernames,
 } from "./authors.mts";
 import { threadEndedByShepherd } from "./marker.mts";
+import type { ResolveOtherHumanThreads } from "../config/load.mts";
+import { shouldResolveOtherHumanThread } from "./thread-resolve-policy.mts";
 import type { FirstLookThread, ReviewThread } from "../types.mts";
 
 interface ThreadVisibility {
@@ -45,24 +47,33 @@ export function classifyThreadVisibility(
   seenMap: Map<string, SeenMarker>,
   botUsernames: NormalizedBotUsernames = new Set(),
   repeatableThreadIds?: ReadonlySet<string>,
+  resolveOtherHumanThreads: ResolveOtherHumanThreads = "none",
 ): ThreadVisibility {
   const shouldRepeat = (thread: ReviewThread): boolean =>
     repeatableThreadIds?.has(thread.id) ?? true;
+  const isOrdinaryHuman = (thread: ReviewThread): boolean =>
+    isHumanAuthor(thread) && !isConfiguredBotAuthor(thread, botUsernames);
   const unresolvedThreads = threads.filter((t) => !t.isResolved);
   const activeThreads = unresolvedThreads
     .filter((t) => !t.isOutdated && !t.isMinimized)
     .flatMap((t) => {
       if (threadEndedByShepherd(t)) return [];
-      if (isConfiguredBotAuthor(t, botUsernames) && shouldRepeat(t)) return [t];
+      const repeatAuthor =
+        isConfiguredBotAuthor(t, botUsernames) ||
+        isViewerAuthoredHuman(t, botUsernames) ||
+        (isOrdinaryHuman(t) && resolveOtherHumanThreads === "always");
+      if (repeatAuthor && shouldRepeat(t)) return [t];
       const visible = classifyVisibleThread(t, seenMap);
       return visible ? [visible] : [];
     });
   const resolutionOnlyThreads = unresolvedThreads
     .filter((t) => {
       const endedByShepherd = threadEndedByShepherd(t);
-      const ordinaryHuman = isHumanAuthor(t) && !isConfiguredBotAuthor(t, botUsernames);
-      if (endedByShepherd && ordinaryHuman) {
-        return isViewerAuthoredHuman(t, botUsernames);
+      if (endedByShepherd && isOrdinaryHuman(t)) {
+        return (
+          isViewerAuthoredHuman(t, botUsernames) ||
+          shouldResolveOtherHumanThread(t, resolveOtherHumanThreads)
+        );
       }
       return t.isOutdated || t.isMinimized;
     })

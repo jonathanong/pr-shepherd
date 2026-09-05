@@ -20,7 +20,7 @@ import {
 import { buildResolveCommand } from "./classify.mts";
 import {
   buildThreadMutationRouting,
-  canResolveOutdatedBotWithoutLocation,
+  threadHasAuthorizedMutation,
 } from "./thread-mutation-routing.mts";
 import { buildFixInstructions } from "./render.mts";
 import { applyStallGuard } from "./stall.mts";
@@ -122,9 +122,13 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   );
   const allThreads = [...report.threads.actionable, ...report.threads.resolutionOnly];
   const ruleAutoResolveIds = new Set(ruleAutoResolveThreadIds ?? []);
-  const routedThreadMutations = buildThreadMutationRouting(allThreads, botUsernames, [
-    ...ruleAutoResolveIds,
-  ]);
+  const resolveOtherHumanThreads = loadConfig().iterate.resolveOtherHumanThreads ?? "none";
+  const routedThreadMutations = buildThreadMutationRouting(
+    allThreads,
+    botUsernames,
+    [...ruleAutoResolveIds],
+    resolveOtherHumanThreads,
+  );
   const replyIdSet = new Set(routedThreadMutations.replyThreadIds);
   const resolveIdSet = new Set(routedThreadMutations.resolveThreadIds);
   const unauthorizedReplies = allThreads.filter(
@@ -141,8 +145,14 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const skippedThreadIds = new Set(
     [...unauthorizedReplies, ...unauthorizedResolves].map((thread) => thread.id),
   );
-  const retryableActionableThreads = report.threads.actionable.filter(
-    (thread) => !skippedThreadIds.has(thread.id) && thread.path !== null && thread.line !== null,
+  const mutationActionableThreads = report.threads.actionable.filter(
+    (thread) =>
+      !skippedThreadIds.has(thread.id) &&
+      ((thread.path !== null && thread.line !== null) ||
+        threadHasAuthorizedMutation(thread, replyIdSet, resolveIdSet)),
+  );
+  const retryableActionableThreads = mutationActionableThreads.filter(
+    (thread) => thread.path !== null && thread.line !== null,
   );
   const protectedRuns: [] = [];
   const stored = await readFixAttempts({ owner: repoOwner, repo: repoName, pr: prNumber });
@@ -284,7 +294,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     (thread) =>
       !skippedThreadIds.has(thread.id) &&
       ((thread.path !== null && thread.line !== null) ||
-        canResolveOutdatedBotWithoutLocation(thread, botUsernames)),
+        threadHasAuthorizedMutation(thread, replyIdSet, resolveIdSet)),
   );
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
   const isBehind = report.mergeStatus.status === "BEHIND";
@@ -351,10 +361,10 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   }
   // Push access to the PR head branch is a usage precondition. Build review mutations for
   // conflict ticks normally so the caller can push and complete the same fix_code cycle.
-  const retryableActionableIds = new Set(retryableActionableThreads.map((thread) => thread.id));
-  const retryableAgentThreads = threads.filter((thread) => retryableActionableIds.has(thread.id));
+  const mutationActionableIds = new Set(mutationActionableThreads.map((thread) => thread.id));
+  const mutationAgentThreads = threads.filter((thread) => mutationActionableIds.has(thread.id));
   const { resolveCommand, resolveOnlyCommand } = buildResolveCommand(
-    retryableAgentThreads,
+    mutationAgentThreads,
     resolutionOnlyThreadsForWork,
     allCommentIds,
     changesRequestedReviewsForWork,
@@ -364,6 +374,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     ruleAutoResolveThreadIds,
     report.viewerAuthorization,
     allThreads,
+    resolveOtherHumanThreads,
   );
   // Safety: if the base branch is unknown, escalate when a push is plausible — the agent
   // would need the correct base to rebase safely. This is a conservative guard, not a

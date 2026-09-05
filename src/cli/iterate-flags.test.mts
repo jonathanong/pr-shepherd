@@ -20,6 +20,7 @@ function defaultConfig(): PrShepherdConfig {
       minimizeApprovals: false,
       minimizeComments: "bots",
       behindBaseHint: "",
+      resolveOtherHumanThreads: "none",
     },
     resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 } },
     checks: { ciTriggerEvents: ["pull_request"], ignoreLogLines: [] },
