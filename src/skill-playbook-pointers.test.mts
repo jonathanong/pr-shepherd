@@ -82,6 +82,12 @@ describe("CLI instruction pointers name real pr-shepherd skill playbooks", () =>
         `SKILL.md playbook "${heading}" is never pointed to from any snapshot`,
       ).toBe(true);
     }
+    for (const heading of ALWAYS_ON_PLAYBOOKS) {
+      expect(
+        foundNames.has(heading),
+        `always-on playbook "${heading}" must not be pointed to from snapshots`,
+      ).toBe(false);
+    }
   });
 
   it("declares every always-on playbook as a ### heading", () => {
