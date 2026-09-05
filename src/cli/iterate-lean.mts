@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type { IterateResult } from "../types.mts";
 import { adaptIterateLog, buildSimpleIterateInstructions } from "./iterate-instructions.mts";
 interface IterateProjectionOptions {
