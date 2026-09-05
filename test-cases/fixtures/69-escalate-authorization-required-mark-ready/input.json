@@ -1,0 +1,32 @@
+{
+  "description": "Same clean/draft/ready state as 07-mark-ready-draft-clean, but viewerCanUpdate is false. markReadyIfAuthorized refuses to run the mark-ready mutation and instead escalates with authorization-required, naming the mark-ready operation and the PR node ID.",
+  "batchData": {
+    "isDraft": true,
+    "mergeStateStatus": "CLEAN",
+    "viewerAuthorization": {
+      "repositoryPermission": "READ",
+      "viewerCanAdminister": false,
+      "viewerDidAuthor": true,
+      "viewerCanUpdate": false,
+      "viewerCanEnableAutoMerge": false,
+      "viewerCanEditFiles": true,
+      "headRepositoryPermission": "READ"
+    },
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": true,
+    "shouldCancel": false,
+    "remainingSeconds": 300
+  },
+  "expectedExitCode": 13
+}

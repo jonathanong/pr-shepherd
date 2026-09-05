@@ -1,0 +1,33 @@
+{
+  "description": "Same BEHIND + thread state as 72, but the repository configured iterate.behindBaseHint. The push instruction should gain one extra line echoing the configured hint verbatim — Shepherd never prescribes rebase/merge mechanics itself, it only echoes the caller's own pointer.",
+  "batchData": {
+    "mergeStateStatus": "BEHIND",
+    "reviewThreads": [
+      {
+        "id": "PRRT_behind_hint",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/index.ts",
+        "line": 42,
+        "startLine": null,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Please rename this variable to be more descriptive.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r1",
+        "createdAtUnix": 1715700000
+      }
+    ]
+  },
+  "config": {
+    "iterate": {
+      "behindBaseHint": "rebase --force-with-lease"
+    }
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

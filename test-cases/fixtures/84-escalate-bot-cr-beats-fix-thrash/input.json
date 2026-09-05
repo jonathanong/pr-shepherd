@@ -1,0 +1,61 @@
+{
+  "description": "Combines 60-escalate-bot-cr-not-dismissed (an authorized bot CHANGES_REQUESTED dismissal emitted but overdue past stallTimeoutMinutes) with 31-escalate-fix-thrash (a retryable thread that has already hit fixAttemptsPerThread). handleFixCode checks staleBotCrIds before checkEscalateTriggers (fix-thrash), so bot-cr-not-dismissed wins even though both conditions are independently satisfied.",
+  "batchData": {
+    "mergeStateStatus": "BLOCKED",
+    "reviewDecision": "CHANGES_REQUESTED",
+    "changesRequestedReviews": [
+      {
+        "id": "PRR_bot_overdue_84",
+        "author": "claude",
+        "authorType": "Bot",
+        "body": "## Summary\n\nHere are some blockers I found:\n\n1. **Missing input validation.** The `processPayment` function at `src/payments.mts:42` does not validate the amount field before passing it to the charge API."
+      }
+    ],
+    "reviewThreads": [
+      {
+        "id": "PRRT_thrash_84",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/auth.ts",
+        "line": 88,
+        "startLine": null,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "This authentication logic is too complex, please simplify.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r10",
+        "createdAtUnix": 1715700000
+      }
+    ]
+  },
+  "seenMap": {
+    "PRR_bot_overdue_84": {
+      "seenAt": 1715798100,
+      "bodyHash": "eb8f2478a94d999d"
+    }
+  },
+  "botCrSeen": {
+    "reviews": {
+      "PRR_bot_overdue_84": {
+        "firstSeenAt": 1715798100,
+        "bodyHash": "eb8f2478a94d999d"
+      }
+    }
+  },
+  "fixAttempts": {
+    "headSha": "oldhash123",
+    "threadAttempts": {
+      "PRRT_thrash_84": 2
+    },
+    "threadBodyHashes": {
+      "PRRT_thrash_84": "aa97f5d40ebed9f1"
+    }
+  },
+  "stallTimeoutMinutes": 30,
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 13
+}

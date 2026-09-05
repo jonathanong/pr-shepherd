@@ -1,0 +1,22 @@
+{
+  "description": "--merge is enabled, the PR is clean and ready, and the ready-delay timer has elapsed. Not in a merge queue and not draft, so iterate emits an ordinary head-pinned auto-merge command plus a plain-merge fallback instead of cancelling.",
+  "args": ["--merge"],
+  "batchData": {
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": true,
+    "shouldCancel": true,
+    "remainingSeconds": 0
+  },
+  "expectedExitCode": 15
+}

@@ -1,0 +1,23 @@
+{
+  "description": "Two-tick stall scenario like 30-escalate-stall-timeout, but the caller passes --stall-timeout 0 to disable the escalation. Tick 2 sees the same fingerprint at a far-past firstSeenAt (same as 30), but applyStallGuard treats stallTimeoutSeconds <= 0 as 'disabled: refresh and never escalate' — it stays wait instead of escalating.",
+  "args": ["--stall-timeout", "0"],
+  "stallMode": "two-tick",
+  "batchData": {
+    "checks": [
+      {
+        "name": "CI / build",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/222",
+        "runId": "222"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 10
+}

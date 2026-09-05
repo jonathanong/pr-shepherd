@@ -1,0 +1,23 @@
+{
+  "description": "A single ACTION_REQUIRED failing check with confirmed Actions provenance (workflowName resolved) and no other actionable work. Unlike CANCELLED (see 14-fix-code-cancelled-conclusion), ACTION_REQUIRED explicitly disqualifies the rerun grant because a rerun cannot satisfy a paused manual-approval gate. No autonomous work remains, so iterate escalates with check-follow-up-unavailable instead of staying fix_code.",
+  "batchData": {
+    "checks": [
+      {
+        "name": "Deploy / approve",
+        "status": "COMPLETED",
+        "conclusion": "ACTION_REQUIRED",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/700",
+        "runId": "700",
+        "workflowName": "Deploy",
+        "jobName": "approve"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 13
+}

@@ -1,0 +1,36 @@
+{
+  "description": "Same shape as 75, but the approval explicitly denies minimize capability (viewerCanMinimize: false). Under the default minimizeApprovals: false policy every approval is surfaced regardless, so this renders under '## Approvals (surfaced — not minimized)' with an explicit [viewer cannot minimize] tag and no minimize-command flag for that ID.",
+  "batchData": {
+    "reviewThreads": [
+      {
+        "id": "PRRT_with_denied_approval",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/index.ts",
+        "line": 11,
+        "startLine": null,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "One more nit before this merges.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r11",
+        "createdAtUnix": 1715700000
+      }
+    ],
+    "approvedReviews": [
+      {
+        "id": "PRR_bot_approval_denied",
+        "author": "coderabbitai",
+        "authorType": "Bot",
+        "body": "LGTM! Nice cleanup.",
+        "viewerCanMinimize": false
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

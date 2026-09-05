@@ -1,0 +1,29 @@
+{
+  "description": "--merge is enabled and the PR is already in the merge queue. handleActiveMergeState treats this as an active merge and returns wait ('is in the merge queue') without touching the ready-delay timer or generic stall escalation.",
+  "args": ["--merge"],
+  "batchData": {
+    "isInMergeQueue": true,
+    "mergeQueueEntry": {
+      "position": 2,
+      "state": "QUEUED",
+      "estimatedTimeToMerge": null,
+      "headCommitOid": "queue-head-1"
+    },
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 10
+}

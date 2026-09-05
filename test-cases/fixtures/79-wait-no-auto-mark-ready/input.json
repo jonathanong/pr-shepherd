@@ -1,0 +1,24 @@
+{
+  "description": "Same clean/draft/ready state as 07-mark-ready-draft-clean, but the caller passed --no-auto-mark-ready. canMarkReady is still true, but opts.noAutoMarkReady short-circuits markReadyIfAuthorized, so iterate falls through to the ready-delay check and, since the timer has not elapsed, to an ordinary wait instead of mark_ready.",
+  "args": ["--no-auto-mark-ready"],
+  "batchData": {
+    "isDraft": true,
+    "mergeStateStatus": "CLEAN",
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": true,
+    "shouldCancel": false,
+    "remainingSeconds": 300
+  },
+  "expectedExitCode": 10
+}

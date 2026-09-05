@@ -1,0 +1,35 @@
+{
+  "description": "A non-human APPROVED review alongside an ordinary unresolved thread (the thread is what makes this tick fix_code; iterate.minimizeApprovals defaults to false, so the approval by itself would not be actionable work). With minimizeApprovals off, every approval is surfaced rather than minimized, regardless of author or viewerCanMinimize — this exercises the zero-coverage '## Approvals (surfaced — not minimized)' section.",
+  "batchData": {
+    "reviewThreads": [
+      {
+        "id": "PRRT_with_approval",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/index.ts",
+        "line": 10,
+        "startLine": null,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "One more nit before this merges.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r10",
+        "createdAtUnix": 1715700000
+      }
+    ],
+    "approvedReviews": [
+      {
+        "id": "PRR_bot_approval",
+        "author": "coderabbitai",
+        "authorType": "Bot",
+        "body": "LGTM! Nice cleanup."
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

@@ -1,0 +1,25 @@
+{
+  "description": "Mirror of 71-escalate-check-follow-up-later-attempt, but the branch is BEHIND its base instead of clean. A later workflow attempt still gets no rerun command, but a BEHIND (or CONFLICTS) branch supplies a concrete branch-refresh path, so this stays fix_code instead of escalating: iterate names the real PR base branch and tells the agent to inspect it for an existing fix before rebasing and pushing.",
+  "batchData": {
+    "mergeStateStatus": "BEHIND",
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/801",
+        "runId": "801",
+        "runAttempt": 2,
+        "workflowName": "CI",
+        "jobName": "tests"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

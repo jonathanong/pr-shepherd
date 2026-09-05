@@ -1,0 +1,27 @@
+{
+  "description": "--merge is enabled and GitHub's own auto-merge is already active on the PR (autoMergeRequest). handleActiveMergeState treats this as an active merge and returns wait ('has auto-merge enabled').",
+  "args": ["--merge"],
+  "batchData": {
+    "autoMergeRequest": {
+      "enabledAtUnix": 1715790000,
+      "mergeMethod": "SQUASH",
+      "enabledBy": "alice"
+    },
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 10
+}
