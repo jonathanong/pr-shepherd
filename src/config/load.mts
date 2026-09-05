@@ -56,6 +56,8 @@ export interface PrShepherdConfig {
   };
   checks: {
     ciTriggerEvents: string[];
+    /** Regex patterns matched against each raw log line; matching lines are dropped from log excerpts. Empty by default — no lines are stripped unless configured. */
+    ignoreLogLines: string[];
   };
   mergeStatus: {
     blockingReviewerLogins: string[];
@@ -173,6 +175,22 @@ function parseNeverCancelRuns(value: unknown): string[] {
   return value;
 }
 
+function parseIgnoreLogLines(value: unknown): string[] {
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
+    throw new Error(`Invalid config: checks.ignoreLogLines must be an array of strings`);
+  }
+  for (const pattern of value) {
+    try {
+      new RegExp(pattern);
+    } catch {
+      throw new Error(
+        `Invalid config: checks.ignoreLogLines contains an invalid regular expression: ${pattern}`,
+      );
+    }
+  }
+  return value;
+}
+
 const SHEPHERD_OWNED_MERGE_FLAGS = [
   "--repo",
   "-R",
@@ -275,7 +293,7 @@ const KNOWN_NESTED_KEYS: Record<string, ReadonlySet<string>> = {
   ]),
   watch: new Set(["readyDelayMinutes", "graphqlQuotaWarnings"]),
   resolve: new Set(["shaPoll"]),
-  checks: new Set(["ciTriggerEvents"]),
+  checks: new Set(["ciTriggerEvents", "ignoreLogLines"]),
   mergeStatus: new Set(["blockingReviewerLogins"]),
   merge: new Set(["commandArgs"]),
   actions: new Set([
@@ -380,6 +398,7 @@ export function loadConfig(): PrShepherdConfig {
       config.watch.graphqlQuotaWarnings,
     );
     config.iterate.minimizeComments = parseMinimizeCommentsPolicy(config.iterate.minimizeComments);
+    config.checks.ignoreLogLines = parseIgnoreLogLines(config.checks.ignoreLogLines);
     configCache.set(cwd, config);
     return config;
   } catch (err) {

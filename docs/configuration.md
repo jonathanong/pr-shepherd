@@ -94,6 +94,7 @@ actions:
 | `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                                                            |
 | `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                                                                                  |
 | `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR-head CI; merge-queue `merge_group` checks are included automatically                                                    |
+| `checks.ignoreLogLines`              | `[]`                                      | Regex patterns matched against each raw CI log line; matching lines are dropped from `## Failing checks` log excerpts and from check-annotation dedup       |
 | `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                                                                      |
 | `merge.commandArgs`                  | `[]`                                      | Options for ordinary `gh pr merge` commands; defaults to `--merge` when no strategy is selected. Not used for merge-queue commands.                         |
 | `actions.autoMinimizeSuppressed`     | `true`                                    | Silently resolve/minimize classification-rule matches with both `suppress: true` and `autoResolve: true` before emitting `fix_code`                         |
@@ -223,6 +224,20 @@ Only check runs triggered by one of these events count toward PR-head CI readine
 Common additions:
 
 - Remove `pull_request_target` for repos that don't use it (reduces noise).
+
+### `checks.ignoreLogLines` — default `[]`
+
+Regex patterns (source strings) matched against each raw CI log line after ANSI/timestamp/group-marker cleanup, before Shepherd picks a bounded excerpt around the failure. A matching line is dropped from `## Failing checks` log excerpts and consequently is not available for check-annotation deduplication either. Empty by default — Shepherd ships no built-in noise patterns, since what counts as noise is specific to each project's CI toolchain (test runner, build system).
+
+```yaml
+checks:
+  ignoreLogLines:
+    - "^\\[vitest-teardown\\]"
+    - "^blob report written to"
+    - "^Duration\\s+[\\d.]+m?s\\b"
+```
+
+An invalid regex anywhere in the list falls back to the previous/default config for the whole file, with a warning to stderr — the same behavior as every other validated config key.
 
 ---
 

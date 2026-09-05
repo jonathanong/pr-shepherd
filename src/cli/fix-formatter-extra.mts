@@ -8,7 +8,8 @@ const TRIVIAL_EXIT_CODE_RE = /^Process completed with exit code \d+\.?$/;
 /** Returns null when the annotation adds nothing beyond the check's own conclusion tag. */
 export function renderCheckAnnotation(a: CheckAnnotation, logExcerpt?: string): string | null {
   const hasRawDetails = a.rawDetails !== undefined && a.rawDetails.trim() !== "";
-  if (TRIVIAL_EXIT_CODE_RE.test(a.message.trim()) && !hasRawDetails) return null;
+  const hasTitle = a.title !== undefined && a.title.trim() !== "";
+  if (TRIVIAL_EXIT_CODE_RE.test(a.message.trim()) && !hasRawDetails && !hasTitle) return null;
 
   const loc = `${a.path}:${renderAnnotationRange(a)}`;
   const link = a.blobUrl ? ` [↗](${a.blobUrl})` : "";

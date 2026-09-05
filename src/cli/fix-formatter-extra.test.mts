@@ -51,6 +51,23 @@ describe("renderCheckAnnotation", () => {
     expect(renderCheckAnnotation(annotation)).toBeNull();
   });
 
+  it("keeps a titled exit-code annotation instead of dropping it entirely", () => {
+    const annotation: CheckAnnotation = {
+      id: "ann-title",
+      path: ".github",
+      startLine: 18,
+      endLine: 18,
+      level: "FAILURE",
+      title: "Build step failed",
+      message: "Process completed with exit code 1.",
+    };
+
+    const output = renderCheckAnnotation(annotation);
+
+    expect(output).not.toBeNull();
+    expect(output).toContain("— Build step failed");
+  });
+
   it("keeps an exit-code message alongside real raw details", () => {
     const annotation: CheckAnnotation = {
       id: "ann-4",

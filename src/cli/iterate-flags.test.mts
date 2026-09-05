@@ -22,7 +22,7 @@ function defaultConfig(): PrShepherdConfig {
       behindBaseHint: "",
     },
     resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 } },
-    checks: { ciTriggerEvents: ["pull_request"] },
+    checks: { ciTriggerEvents: ["pull_request"], ignoreLogLines: [] },
     mergeStatus: { blockingReviewerLogins: [] },
     actions: {
       autoMinimizeSuppressed: false,

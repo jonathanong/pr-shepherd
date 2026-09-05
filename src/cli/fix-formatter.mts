@@ -18,7 +18,13 @@ import { isFailingAgentCheck } from "../checks/conclusions.mts";
 import type { IterateResultFixCode } from "../types.mts";
 import { renderMergeCommand } from "../commands/iterate/merge.mts";
 
-export function formatFixCodeResult(header: string, result: IterateResultFixCode): string {
+export function formatFixCodeResult(
+  header: string,
+  result: IterateResultFixCode,
+  opts: { verbose?: boolean } = {},
+): string {
+  const verbose = opts.verbose ?? false;
+  const topCap = verbose ? undefined : BODY_TRUNCATE_MAX_CHARS;
   const sections: string[] = [header];
 
   const renderThreads = (heading: string, threads: typeof result.fix.threads): void => {
@@ -34,7 +40,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
       sections.push(
         `### ${heading} — ${loc} (${renderAuthor(t.author, t.authorType, t.authorAssociation, t.viewerDidAuthor)})${reviewMarker}${suggestionMarker}${editedMarker}`,
       );
-      sections.push(renderThreadConversation(t));
+      sections.push(renderThreadConversation(t, verbose));
       if (t.suggestion) {
         sections.push(renderSuggestionBlock(t.suggestion, ""));
       }
@@ -53,7 +59,9 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     sections.push("## Review threads to resolve");
     sections.push(
       result.fix.resolutionOnlyThreads
-        .map((t) => renderThreadBullet(t, { statusTag: renderThreadResolutionStatusTag(t) }))
+        .map((t) =>
+          renderThreadBullet(t, { statusTag: renderThreadResolutionStatusTag(t), verbose }),
+        )
         .join("\n"),
     );
   }
@@ -67,7 +75,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
       sections.push(
         `### ${heading} (${renderAuthor(c.author, c.authorType, c.authorAssociation)})${authorizationMarker}${editedMarker}`,
       );
-      sections.push(blockquote(c.body, BODY_TRUNCATE_MAX_CHARS, c.url));
+      sections.push(blockquote(c.body, topCap, c.url));
     }
   }
 
@@ -143,9 +151,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
       sections.push(
         `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})${r.viewerCanMinimize === false ? " [viewer cannot minimize]" : ""}`,
       );
-      sections.push(
-        r.body.trim() === "" ? "(no review body)" : blockquote(r.body, BODY_TRUNCATE_MAX_CHARS),
-      );
+      sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body, topCap));
     }
   }
 
@@ -157,9 +163,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
       sections.push(
         `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})${r.viewerCanMinimize === false ? " [viewer cannot minimize]" : ""}`,
       );
-      sections.push(
-        r.body.trim() === "" ? "(no review body)" : blockquote(r.body, BODY_TRUNCATE_MAX_CHARS),
-      );
+      sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body, topCap));
     }
   }
 
@@ -176,9 +180,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
       sections.push(
         `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})${r.viewerCanMinimize === false ? " [viewer cannot minimize]" : ""}`,
       );
-      sections.push(
-        r.body.trim() === "" ? "(no review body)" : blockquote(r.body, BODY_TRUNCATE_MAX_CHARS),
-      );
+      sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body, topCap));
     }
   }
 
@@ -191,6 +193,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
         result.fix.firstLookThreads,
         resolutionOnlyIds,
         result.fix.firstLookComments,
+        verbose,
       ).join("\n"),
     );
   }

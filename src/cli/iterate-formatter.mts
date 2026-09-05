@@ -179,6 +179,6 @@ export function formatIterateResult(
       ]);
 
     case "fix_code":
-      return formatFixCodeResult(joinSections([header, ...telemetrySections]), result);
+      return formatFixCodeResult(joinSections([header, ...telemetrySections]), result, { verbose });
   }
 }

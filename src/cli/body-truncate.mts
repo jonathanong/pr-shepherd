@@ -3,25 +3,36 @@ const HEAD_FRACTION = 0.7;
 export const BODY_TRUNCATE_MAX_CHARS = 1200;
 export const NESTED_BODY_TRUNCATE_MAX_CHARS = 600;
 
+interface FenceOpener {
+  char: string;
+  len: number;
+}
+
+function fenceOpener(trimmed: string): FenceOpener | null {
+  const char = trimmed[0];
+  if (char !== "`" && char !== "~") return null;
+  let len = 0;
+  while (trimmed[len] === char) len++;
+  return len >= 3 ? { char, len } : null;
+}
+
+function isFenceCloser(trimmed: string, fence: FenceOpener): boolean {
+  return trimmed.length >= fence.len && [...trimmed].every((c) => c === fence.char);
+}
+
+// Backtick and tilde fences close only against their own kind — a run of one
+// character never closes a fence opened with the other (CommonMark semantics).
 function fenceStatesAfterEachLine(lines: string[]): boolean[] {
   const states: boolean[] = [];
-  let inFence = false;
-  let fenceLen = 0;
+  let fence: FenceOpener | null = null;
   for (const line of lines) {
     const trimmed = line.trim();
-    if (inFence) {
-      if (/^`+$/.test(trimmed) && trimmed.length >= fenceLen) {
-        inFence = false;
-        fenceLen = 0;
-      }
+    if (fence) {
+      if (isFenceCloser(trimmed, fence)) fence = null;
     } else {
-      const opener = /^(`{3,})/.exec(trimmed);
-      if (opener) {
-        inFence = true;
-        fenceLen = opener[1].length;
-      }
+      fence = fenceOpener(trimmed);
     }
-    states.push(inFence);
+    states.push(fence !== null);
   }
   return states;
 }
@@ -61,17 +72,41 @@ function findTailStart(states: boolean[], cumLens: number[], budget: number): nu
   return start;
 }
 
-function elisionMarker(lineCount: number, url?: string): string {
-  return url ? `[…${lineCount} lines elided — full text: ${url}]` : `[…${lineCount} lines elided]`;
+const REVIEW_COMMENT_URL_RE =
+  /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/pull\/\d+#discussion_r(\d+)$/;
+const ISSUE_COMMENT_URL_RE =
+  /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/(?:pull|issues)\/\d+#issuecomment-(\d+)$/;
+
+// An agent can run this directly — no browser round-trip — to read the full body.
+function commentViewCommand(url: string): string | undefined {
+  const review = REVIEW_COMMENT_URL_RE.exec(url);
+  if (review) {
+    const [, owner, repo, id] = review;
+    return `gh api repos/${owner}/${repo}/pulls/comments/${id}`;
+  }
+  const issue = ISSUE_COMMENT_URL_RE.exec(url);
+  if (issue) {
+    const [, owner, repo, id] = issue;
+    return `gh api repos/${owner}/${repo}/issues/comments/${id}`;
+  }
+  return undefined;
+}
+
+function elisionMarker(charCount: number, url?: string): string {
+  const pointer = url ? (commentViewCommand(url) ?? url) : undefined;
+  return pointer
+    ? `[…${charCount} chars elided — full text: ${pointer}]`
+    : `[…${charCount} chars elided]`;
 }
 
 /**
  * Truncates `body` to roughly `maxChars`, keeping a head and tail portion so an
  * opening question and a trailing summary both survive. Never cuts inside a
- * ``` fence: the cut points snap outward to the nearest fence-safe line
- * boundary, and truncation is skipped entirely when no safe boundary exists
- * (e.g. a single unterminated fence spanning the whole body) — an unbalanced
- * fence here would swallow every section rendered after it in the same tick.
+ * ``` or ~~~ fence: the cut points snap outward to the nearest fence-safe line
+ * boundary — an unbalanced fence here would swallow every section rendered
+ * after it in the same tick. A single line too long to fit a budget on its own
+ * (headEnd stays -1, or no line fits from the tail) falls back to a
+ * character-level slice of that line rather than dropping it entirely.
  */
 export function truncateBody(body: string, maxChars: number, url?: string): string {
   if (body.length <= maxChars) return body;
@@ -85,8 +120,16 @@ export function truncateBody(body: string, maxChars: number, url?: string): stri
   const tailStart = findTailStart(states, cumLens, tailBudget);
   if (tailStart <= headEnd + 1) return body;
 
-  const head = lines.slice(0, headEnd + 1).join("\n");
-  const tail = lines.slice(tailStart).join("\n");
-  const marker = elisionMarker(tailStart - (headEnd + 1), url);
-  return [head, marker, tail].join("\n\n");
+  const head =
+    headEnd >= 0 ? lines.slice(0, headEnd + 1).join("\n") : lines[0]!.slice(0, headBudget);
+  const tail =
+    tailStart < lines.length
+      ? lines.slice(tailStart).join("\n")
+      : tailBudget > 0
+        ? lines[lines.length - 1]!.slice(-tailBudget)
+        : "";
+
+  const elidedChars = body.length - head.length - tail.length;
+  if (elidedChars <= 0) return body;
+  return [head, elisionMarker(elidedChars, url), tail].join("\n\n");
 }

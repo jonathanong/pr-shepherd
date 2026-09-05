@@ -3,6 +3,7 @@ import { restWithRateLimit, restText } from "../github/http.mts";
 import type { CheckRun, ClassifiedCheck, TriagedCheck } from "../types.mts";
 import type { RepoInfo } from "../github/client.mts";
 import { loadDerived, storeDerived, type StateKey } from "../state/rest-cache.mts";
+import { loadConfig } from "../config/load.mts";
 
 const STARTUP_FAILURE_STATUS = "startup_failure";
 const LOG_EXCERPT_CONTEXT_LINES = 16;
@@ -10,15 +11,6 @@ const LOG_EXCERPT_TAIL_LINES = 28;
 const LOG_EXCERPT_MAX_CHARS = 4_000;
 const TRUNCATED_SUFFIX = "\n[truncated]";
 const ANSI_SGR_RE = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
-// Test-runner chrome that carries no information beyond what the surrounding
-// error text already states — dropped so the excerpt budget goes to signal.
-const NOISE_LINE_PATTERNS = [
-  /^\[vitest-teardown\]/,
-  /^blob report written to/,
-  /^JUNIT report written to/,
-  /^(Duration|Start at)\s/,
-  /⎯{3,}/,
-];
 
 export function triageFailingChecks(
   failingChecks: ClassifiedCheck[],
@@ -303,10 +295,11 @@ async function fetchJobLogExcerpt(
 }
 
 function buildLogExcerpt(raw: string): string | undefined {
+  const ignorePatterns = compileIgnoreLogLinePatterns();
   const lines = raw
     .split(/\r?\n/)
     .map(cleanLogLine)
-    .filter((line) => line.trim() !== "" && !isNoiseLine(line));
+    .filter((line) => line.trim() !== "" && !isNoiseLine(line, ignorePatterns));
   if (lines.length === 0) return undefined;
 
   const aggregateExcerpt = buildAggregateJobResultsExcerpt(lines);
@@ -400,8 +393,15 @@ function truncateAnchoredExcerpt(lines: string[], anchorIndex: number): string {
   return truncateLogExcerpt(`${TRUNCATED_SUFFIX.trim()}\n${lines.slice(anchorIndex).join("\n")}`);
 }
 
-function isNoiseLine(line: string): boolean {
-  return NOISE_LINE_PATTERNS.some((re) => re.test(line));
+// User-configured via `checks.ignoreLogLines` (regex source strings) — empty by
+// default. What counts as noise varies by CI toolchain, so Shepherd ships no
+// built-in patterns; a project opts in via `.pr-shepherdrc.yml`.
+function compileIgnoreLogLinePatterns(): RegExp[] {
+  return loadConfig().checks.ignoreLogLines.map((pattern) => new RegExp(pattern));
+}
+
+function isNoiseLine(line: string, patterns: RegExp[]): boolean {
+  return patterns.some((re) => re.test(line));
 }
 
 function cleanLogLine(line: string): string {
