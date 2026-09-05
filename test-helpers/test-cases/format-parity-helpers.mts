@@ -12,10 +12,6 @@
 export const TEXT_LOSSY_PATHS = new Map<string, string>([
   ["action", "text uses the uppercase `[ACTION]` heading tag, not the lowercase JSON enum value"],
   [
-    "baseBranch",
-    "only rendered under --verbose (`**baseBranch**`) or fix_code's `base:` bullet — omitted from lean text for every other action",
-  ],
-  [
     "mergeStatus",
     "the raw enum discriminator is JSON-only; text instead renders the derived `**branch** behind/conflicts with PR base` phrasing or the `**reviewDecision**`/BLOCKED header segment (docs/actions.md, 'Note on mergeStatus in JSON lean mode')",
   ],
@@ -89,6 +85,37 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
     "only appended to the header when the derived mergeStatus is BLOCKED (docs/actions.md); the raw GitHub field is otherwise JSON-only",
   ],
 ]);
+
+/**
+ * A path-level entry in TEXT_LOSSY_PATHS is unconditional: any miss at that path is exempt,
+ * regardless of context. Some legitimate omissions only hold under a specific condition (a
+ * sibling field, or the top-level action) — encoding those as an unconditional path entry would
+ * hide a real regression on every OTHER value at that same path. isExempt receives the leaf's
+ * immediate containing object and the full parsed JSON so it can check either.
+ */
+export interface ConditionalLossyPath {
+  path: string;
+  description: string;
+  isExempt: (container: unknown, json: unknown) => boolean;
+}
+
+export const CONDITIONAL_LOSSY_PATHS: ConditionalLossyPath[] = [
+  {
+    path: "fix.changesRequestedReviews[].body",
+    description:
+      "a stale bot CR (staleBotCr: true) keeps its full body in JSON for API consumers, but text intentionally renders only a terse one-line dismissal reminder on resurfacing ticks (fix-formatter.mts) — every other review (human, or a bot CR's first emission) must render its full body",
+    isExempt: (container) =>
+      typeof container === "object" &&
+      container !== null &&
+      (container as { staleBotCr?: boolean }).staleBotCr === true,
+  },
+  {
+    path: "baseBranch",
+    description:
+      "rendered under --verbose (`**baseBranch**`) or fix_code's unconditional `- base:` bullet — omitted from lean text for every other action, which is the only case this exemption may cover",
+    isExempt: (_container, json) => (json as { action?: string }).action !== "fix_code",
+  },
+];
 
 export function normalizeText(text: string): string {
   // Strip Markdown blockquote markers regardless of nesting indent (e.g. "  > line" inside a

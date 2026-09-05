@@ -5,7 +5,8 @@
  * every string/number leaf of each fixture's lean JSON output and asserts it appears somewhere
  * in the corresponding text output — the two formats were built from the same IterateResult, so
  * a JSON value with no textual trace is either a real gap or a documented, intentional
- * reformatting/omission (see TEXT_LOSSY_PATHS in format-parity-helpers.mts).
+ * reformatting/omission (see TEXT_LOSSY_PATHS / CONDITIONAL_LOSSY_PATHS in
+ * format-parity-helpers.mts).
  *
  * Boolean leaves are excluded: "true"/"false" are common enough as substrings that a literal
  * match is not a meaningful signal (and lean JSON already omits most boolean fields at their
@@ -22,6 +23,7 @@ import {
 } from "../test-helpers/test-cases/harness.mts";
 import {
   TEXT_LOSSY_PATHS,
+  CONDITIONAL_LOSSY_PATHS,
   normalizeText,
   walkLeaves,
 } from "../test-helpers/test-cases/format-parity-helpers.mts";
@@ -29,7 +31,7 @@ import {
 registerHarnessBefore();
 
 const usedAllowlistPaths = new Set<string>();
-let staleBotCrEscapeHatchUsed = false;
+const usedConditionalPaths = new Set<string>();
 
 describe("text/json output parity", () => {
   for (const name of listFixtureNames()) {
@@ -45,22 +47,18 @@ describe("text/json output parity", () => {
       for (const [path, value, container] of walkLeaves(json, "")) {
         if (value.length === 0) continue;
         if (text.includes(value)) continue;
-        // A stale bot CR (staleBotCr: true) keeps its full body in JSON for API consumers, but
-        // text intentionally renders only a terse one-line dismissal reminder on resurfacing
-        // ticks (fix-formatter.mts). Scoped to that specific review, not the whole path — a
-        // human or first-look bot review missing its body here is the exact regression this
-        // test exists to catch, not an allowlisted gap.
-        if (path === "fix.changesRequestedReviews[].body") {
-          const isStaleBotCr =
-            typeof container === "object" &&
-            container !== null &&
-            (container as { staleBotCr?: boolean }).staleBotCr === true;
-          if (isStaleBotCr) {
-            staleBotCrEscapeHatchUsed = true;
+        // A path-level allowlist entry that ignores context would hide a real regression on
+        // every OTHER value at that path — check the conditional list first, and only fall
+        // through to the unconditional TEXT_LOSSY_PATHS allowlist when no conditional entry
+        // claims this path.
+        const conditional = CONDITIONAL_LOSSY_PATHS.find((c) => c.path === path);
+        if (conditional) {
+          if (conditional.isExempt(container, json)) {
+            usedConditionalPaths.add(path);
             continue;
           }
           failures.push(
-            `${path} = ${JSON.stringify(value)} (missing from text, and this review is not staleBotCr — its full body must render)`,
+            `${path} = ${JSON.stringify(value)} (missing from text, and exemption condition not met: ${conditional.description})`,
           );
           continue;
         }
@@ -91,9 +89,12 @@ describe("text/json output parity", () => {
       unused,
       `TEXT_LOSSY_PATHS entries no fixture ever needed — remove them, they no longer document a real gap:\n${unused.join("\n")}`,
     ).toEqual([]);
+    const unusedConditional = CONDITIONAL_LOSSY_PATHS.map((c) => c.path).filter(
+      (p) => !usedConditionalPaths.has(p),
+    );
     expect(
-      staleBotCrEscapeHatchUsed,
-      "no fixture ever exercised the fix.changesRequestedReviews[].body staleBotCr escape hatch — add one (or remove the special case) so it stays a real, tested gap",
-    ).toBe(true);
+      unusedConditional,
+      `CONDITIONAL_LOSSY_PATHS entries no fixture ever exercised — add one that meets the exemption condition, or remove the entry:\n${unusedConditional.join("\n")}`,
+    ).toEqual([]);
   });
 });
