@@ -14,7 +14,7 @@ import {
   isHumanAuthor,
   type NormalizedBotUsernames,
 } from "../../comments/authors.mts";
-import type { MinimizeCommentsPolicy } from "../../config/load.mts";
+import type { MinimizeCommentsPolicy, ResolveOtherHumanThreads } from "../../config/load.mts";
 import { buildThreadMutationRouting } from "./thread-mutation-routing.mts";
 
 function dedupeIds(ids: string[]): string[] {
@@ -102,9 +102,15 @@ export function buildResolveCommand(
   ruleAutoResolveThreadIds: string[] = [],
   viewerAuthorization?: ViewerAuthorization,
   authorizationThreads: ReviewThread[] = [],
+  resolveOtherHumanThreads: ResolveOtherHumanThreads = "none",
 ): { resolveCommand: ResolveCommand; resolveOnlyCommand?: ResolveCommand } {
   const allThreads = [...threads, ...resolutionOnlyThreads];
-  const routed = buildThreadMutationRouting(allThreads, botUsernames, ruleAutoResolveThreadIds);
+  const routed = buildThreadMutationRouting(
+    allThreads,
+    botUsernames,
+    ruleAutoResolveThreadIds,
+    resolveOtherHumanThreads,
+  );
   const canReply = new Set(
     authorizationThreads
       .filter((thread) => thread.viewerCanReply === true)

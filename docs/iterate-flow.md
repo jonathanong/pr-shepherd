@@ -55,7 +55,7 @@ The shipped skill runs `pr-shepherd [PR] --until-terminal`, not `pr-shepherd ite
 
 **What:** `runCheck({ autoResolve: true })` fires one GraphQL batch query (CI checks + review threads + PR comments + merge state + branch rules). If the PR is already merged or closed, it returns a terminal report immediately; otherwise it surfaces outdated threads without resolving them. Eligible already-seen `COMMENTED` review summaries are minimized in-process here.
 
-**Why:** Human-authored threads must remain visible. Shepherd later pairs reply-and-resolve only for unmarked human inline feedback authored by the authenticated viewer; unmarked other-human threads remain reply-only, while marker-ended other-human threads are already acknowledged and suppressed from further mutation. `resolutionOnly` also carries active marker-ended viewer-authored retry threads.
+**Why:** Human-authored threads must remain visible. Shepherd later pairs reply-and-resolve for unmarked bot/non-human threads and unmarked viewer-authored human feedback; unmarked other-human threads remain reply-only unless `iterate.resolveOtherHumanThreads` allows resolve. `resolutionOnly` also carries active marker-ended retry threads that are still being resolved.
 
 ---
 

@@ -8,6 +8,7 @@ import {
   isViewerAuthoredHuman,
   normalizeBotUsernames,
 } from "../comments/authors.mts";
+import { shouldResolveOtherHumanThread } from "./iterate/thread-mutation-routing.mts";
 import { markReplySeen } from "../state/seen-comments.mts";
 import { threadTranscriptBody } from "../threads/transcript.mts";
 import { addPrShepherdMarker, threadEndedByShepherd } from "../comments/marker.mts";
@@ -50,24 +51,28 @@ export async function runResolveMutate(
   // print. Once a caller explicitly runs apply, GitHub's mutation response is
   // authoritative and this path must not second-guess that intent.
   const requestedReplyIds = new Set(opts.replyThreadIds ?? []);
-  const allowedViewerHumanResolveIds = new Set(
+  const policy = config.iterate?.resolveOtherHumanThreads ?? "none";
+  const allowedHumanResolveIds = new Set(
     data.reviewThreads
-      .filter(
-        (thread) =>
-          isViewerAuthoredHuman(thread, botUsernames) &&
-          (requestedReplyIds.has(thread.id) || threadEndedByShepherd(thread)),
-      )
+      .filter((thread) => {
+        if (!humanThreadIds.has(thread.id)) return false;
+        const paired = requestedReplyIds.has(thread.id) || threadEndedByShepherd(thread);
+        if (!paired) return false;
+        if (isViewerAuthoredHuman(thread, botUsernames)) return true;
+        return shouldResolveOtherHumanThread(thread, policy);
+      })
       .map((thread) => thread.id),
   );
   const resolveThreadIds = (opts.resolveThreadIds ?? []).filter(
-    (id) => !humanThreadIds.has(id) || allowedViewerHumanResolveIds.has(id),
+    (id) => !humanThreadIds.has(id) || allowedHumanResolveIds.has(id),
   );
   const skippedHumanResolves = (opts.resolveThreadIds ?? []).filter(
-    (id) => humanThreadIds.has(id) && !allowedViewerHumanResolveIds.has(id),
+    (id) => humanThreadIds.has(id) && !allowedHumanResolveIds.has(id),
   );
-  const replyThreadIds = opts.replyThreadIds?.filter((id) => humanThreadIds.has(id));
+  const knownThreadIds = new Set(data.reviewThreads.map((thread) => thread.id));
+  const replyThreadIds = opts.replyThreadIds?.filter((id) => knownThreadIds.has(id));
   const skippedNonHumanReplies = (opts.replyThreadIds ?? []).filter(
-    (id) => !humanThreadIds.has(id),
+    (id) => !knownThreadIds.has(id),
   );
   const minimizeCommentIds = (opts.minimizeCommentIds ?? []).filter(
     (id) => !humanCommentIds.has(id) && !humanReviewIds.has(id),

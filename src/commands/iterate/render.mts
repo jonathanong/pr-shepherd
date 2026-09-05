@@ -23,6 +23,7 @@ import {
 } from "../shepherd-journal.mts";
 import { isFailingAgentCheck } from "../../checks/conclusions.mts";
 import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
+import { partitionFixThreads, reviewSectionRefs } from "./fix-instruction-threads.mts";
 
 /** Render a resolve command as a shell snippet. Appends `--require-sha "$HEAD_SHA"` when set. */
 export function renderResolveCommand(rc: ResolveCommand): string {
@@ -40,12 +41,12 @@ export function buildFixInstructions(
   resolveCommand: ResolveCommand,
   hasConflicts: boolean,
   prReference: string | number,
-  cancelledCount: number,
+  _cancelledCount: number,
   firstLookThreads: FirstLookThread[] = [],
   firstLookComments: FirstLookComment[] = [],
   firstLookSummaries: Review[] = [],
   editedSummaries: Review[] = [],
-  inProgressRunIds: string[] = [],
+  _inProgressRunIds: string[] = [],
   resolutionOnlyThreads: ReviewThread[] = [],
   resolveOnlyCommand?: ResolveCommand,
   behindBaseHint = "", // iterate.behindBaseHint — see buildBehindBaseHintInstruction
@@ -54,8 +55,11 @@ export function buildFixInstructions(
   hasExhaustedWorkflowRerun = false,
 ): string[] {
   const instructions: string[] = [];
-  const locatedThreads = threads.filter((thread) => thread.path !== null && thread.line !== null);
-  const unlocatedThreads = threads.filter((thread) => thread.path === null || thread.line === null);
+  const { locatedThreads, unlocatedMutatedThreads, unlocatedThreads } = partitionFixThreads(
+    threads,
+    resolveCommand,
+    resolveOnlyCommand,
+  );
 
   const failingChecks = checks.filter((c) => isFailingAgentCheck(c));
   const repeatedWorkflowBranchRecoveryInstructions =
@@ -74,17 +78,14 @@ export function buildFixInstructions(
 
   // Start with interpretation. The agent decides what raw feedback warrants a code change.
   if (hasNonConflictHints) {
-    const actionableSections: string[] = [];
-    if (locatedThreads.length > 0) actionableSections.push("`## Review threads`");
-    if (unlocatedThreads.length > 0)
-      actionableSections.push("`## Unlocated review threads (logged once — no mutation)`");
-    if (actionableComments.length > 0) actionableSections.push("`## Actionable comments`");
-    if (failingChecks.length > 0) actionableSections.push("`## Failing checks`");
-    if (hasAnnotations) {
-      actionableSections.push("`## Check annotations`");
-    }
-    if (changesRequestedReviews.length > 0)
-      actionableSections.push("`## Changes-requested reviews`");
+    const actionableSections = reviewSectionRefs({
+      hasReviewThreads: locatedThreads.length > 0 || unlocatedMutatedThreads.length > 0,
+      hasUnlocatedSkipThreads: unlocatedThreads.length > 0,
+      hasActionableComments: actionableComments.length > 0,
+      hasFailingChecks: failingChecks.length > 0,
+      hasAnnotations,
+      hasChangesRequested: changesRequestedReviews.length > 0,
+    });
     const sectionRef =
       actionableSections.length > 0 ? `under ${actionableSections.join(", ")}` : "above";
     instructions.push(`Review each item ${sectionRef} and decide whether it needs a code change.`);
@@ -116,11 +117,6 @@ export function buildFixInstructions(
       "Acknowledge each item under `## Unlocated review threads (logged once — no mutation)`. Shepherd cannot route a code fix or review mutation without a path and line; the unchanged item will be skipped on later ticks.",
     );
   }
-
-  // GitHub exposes no exact viewer capability for workflow-run cancellation, so the
-  // informational run lists never produce a cancellation recommendation.
-  void inProgressRunIds;
-  void cancelledCount;
 
   const hasSuggestions = locatedThreads.some((t) => t.suggestion);
   if (hasSuggestions)
@@ -189,9 +185,8 @@ export function buildFixInstructions(
   if (resolveOnlyCommand?.hasMutations)
     instructions.push("Run the `resolve-only:` command shown above.");
 
-  instructions.push(...buildResolveCommandInstruction(resolveCommand));
-
   instructions.push(
+    ...buildResolveCommandInstruction(resolveCommand),
     buildFixCompletionInstruction(failingChecks, hasConflicts, resolveCommand.requiresHeadSha),
   );
   return instructions;

@@ -56,7 +56,7 @@ describe("runCheck — configured bot thread visibility", () => {
     expect(report.threads.actionable).toEqual([]);
   });
 
-  it("skips an already-seen active configured bot thread without a source location", async () => {
+  it("keeps an already-seen active configured bot thread without a source location", async () => {
     const cfg = defaultConfig();
     cfg.botUsernames = ["coderabbitai"];
     mockLoadConfig.mockReturnValue(cfg);
@@ -75,79 +75,6 @@ describe("runCheck — configured bot thread visibility", () => {
 
     const report = await runCheck(BASE_OPTS);
 
-    expect(report.threads.actionable).toEqual([]);
-    expect(report.threads.resolutionOnly).toEqual([]);
+    expect(report.threads.actionable.map((t) => t.id)).toEqual(["t-bot"]);
   });
-
-  it.each([
-    ["human", "reviewer", "User" as const, true],
-    ["unauthorized bot", "chatgpt-codex-connector", "Bot" as const, false],
-  ])(
-    "skips an already-seen outdated unlocated %s thread",
-    async (_kind, author, authorType, viewerCanResolve) => {
-      mockLoadConfig.mockReturnValue(defaultConfig());
-      const outdated = makeThread({
-        id: "t-outdated-skipped",
-        isOutdated: true,
-        author,
-        authorType,
-        body: "addressed feedback",
-        path: "src/old.mts",
-        line: null,
-        viewerCanResolve,
-      });
-      mockFetchPrBatch.mockResolvedValue({
-        data: makeBatchData({ reviewThreads: [outdated] }),
-      });
-      mockLoadSeenMap.mockResolvedValue(
-        new Map([
-          ["t-outdated-skipped", { seenAt: 1000, bodyHash: hashBody("addressed feedback") }],
-        ]),
-      );
-
-      const report = await runCheck(BASE_OPTS);
-
-      expect(report.threads.actionable).toEqual([]);
-      expect(report.threads.firstLook).toEqual([]);
-      expect(report.threads.resolutionOnly).toEqual([]);
-    },
-  );
-
-  it.each([
-    ["detected", "chatgpt-codex-connector", "Bot" as const, []],
-    ["configured", "CodeRabbitAI", "User" as const, ["coderabbitai"]],
-  ])(
-    "keeps an already-seen outdated %s bot thread as resolution-only work without a line",
-    async (_kind, author, authorType, botUsernames) => {
-      const cfg = defaultConfig();
-      cfg.botUsernames = botUsernames;
-      mockLoadConfig.mockReturnValue(cfg);
-      const outdated = makeThread({
-        id: "t-outdated-bot",
-        isOutdated: true,
-        author,
-        authorType,
-        body: "addressed feedback",
-        path: "src/old.mts",
-        line: null,
-        viewerCanResolve: true,
-      });
-      mockFetchPrBatch.mockResolvedValue({
-        data: makeBatchData({
-          mergeStateStatus: "BLOCKED",
-          reviewThreads: [outdated],
-        }),
-      });
-      mockLoadSeenMap.mockResolvedValue(
-        new Map([["t-outdated-bot", { seenAt: 1000, bodyHash: hashBody("addressed feedback") }]]),
-      );
-
-      const report = await runCheck(BASE_OPTS);
-
-      expect(report.status).toBe("PENDING");
-      expect(report.threads.actionable).toEqual([]);
-      expect(report.threads.firstLook).toEqual([]);
-      expect(report.threads.resolutionOnly.map((thread) => thread.id)).toEqual(["t-outdated-bot"]);
-    },
-  );
 });

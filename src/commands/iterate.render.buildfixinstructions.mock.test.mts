@@ -531,4 +531,37 @@ describe("buildFixInstructions", () => {
     const text = instructions.join("\n");
     expect(text).not.toContain("behind");
   });
+
+  it("acknowledges unlocated threads that have no generated mutation", () => {
+    const instructions = buildFixInstructions(
+      [
+        {
+          id: "t-skip",
+          path: null,
+          line: null,
+          author: "reviewer",
+          authorType: "User",
+          body: "no location",
+          url: "",
+        },
+      ],
+      [],
+      [],
+      [],
+      "main",
+      {
+        argv: ["pr-shepherd", "apply", "review", "42"],
+        requiresHeadSha: false,
+        requiresDismissMessage: false,
+        hasMutations: false,
+      },
+      false,
+      42,
+      0,
+    );
+
+    expect(instructions.join("\n")).toContain(
+      "## Unlocated review threads (logged once — no mutation)",
+    );
+  });
 });

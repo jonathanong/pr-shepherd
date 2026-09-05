@@ -99,7 +99,7 @@ describe("runResolveMutate — forwards options", () => {
     expect(result.skippedHumanDismissals).toEqual(["r-human"]);
   });
 
-  it("only replies to fetched human thread IDs", async () => {
+  it("replies to fetched human and bot thread IDs", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
         reviewThreads: [
@@ -132,10 +132,10 @@ describe("runResolveMutate — forwards options", () => {
       42,
       { owner: "owner", name: "repo" },
       expect.objectContaining({
-        replyThreadIds: ["t-human"],
+        replyThreadIds: ["t-human", "t-bot"],
       }),
     );
-    expect(result.skippedNonHumanReplies).toEqual(["t-bot", "t-typo"]);
+    expect(result.skippedNonHumanReplies).toEqual(["t-typo"]);
   });
 
   it("updates the seen marker after successfully replying to a human thread", async () => {

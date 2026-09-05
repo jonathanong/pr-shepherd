@@ -39,7 +39,7 @@ Shepherd does two jobs: **gather all context for a PR**, then **emit one determi
 - Does not continuously rebase branches outside required conflict-resolution scenarios. `BEHIND` is reported; the agent updates the branch.
 - Does not modify files or apply suggestion patches to the working tree; it only emits what to run.
 - Does not guarantee CI rerun-versus-code-fix decisions; it surfaces failures and delegates action choice to the caller.
-- Replies to unmarked other-human inline threads without resolving or minimizing them; pairs reply-and-resolve for unmarked viewer-authored human feedback, with marker-ended viewer-authored retries resolving only. Marker-ended other-human threads are already acknowledged and receive no further mutation.
+- Replies to unmarked other-human inline threads without resolving or minimizing them unless `iterate.resolveOtherHumanThreads` is `outdated` or `always`; pairs reply-and-resolve for unmarked bot/non-human and viewer-authored human feedback, with marker-ended retries resolving only. Marker-ended other-human threads are already acknowledged at the default `none` setting.
 - Does not auto-classify every surfaced thread/comment as `actionable` vs `informational`; it exposes raw structured triage data.
 - Does not automatically apply edits for threads without line/locatable references.
 - Does not minimize already-hidden/sticky comment content beyond existing CLI mutation paths. Already-minimized `COMMENTED` reviews are not fetched.

@@ -31,6 +31,7 @@ describe("runResolveMutate — configured bot threads", () => {
         minimizeApprovals: false,
         minimizeComments: "all",
         behindBaseHint: "",
+        resolveOtherHumanThreads: "none",
       },
       watch: { readyDelayMinutes: 10, graphqlQuotaWarnings: [] },
       checks: { ciTriggerEvents: ["pull_request", "pull_request_target"], ignoreLogLines: [] },
@@ -73,11 +74,11 @@ describe("runResolveMutate — configured bot threads", () => {
       { owner: "owner", name: "repo" },
       expect.objectContaining({
         resolveThreadIds: ["t-coderabbit"],
-        replyThreadIds: [],
+        replyThreadIds: ["t-coderabbit"],
         minimizeCommentIds: ["c-coderabbit"],
         dismissReviewIds: ["r-coderabbit"],
       }),
     );
-    expect(result.skippedNonHumanReplies).toEqual(["t-coderabbit"]);
+    expect(result.skippedNonHumanReplies).toBeUndefined();
   });
 });

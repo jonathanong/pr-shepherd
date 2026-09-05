@@ -11,6 +11,10 @@ const MINIMIZE_COMMENTS_POLICIES = ["all", "bots", "users", "none"] as const;
 
 export type MinimizeCommentsPolicy = (typeof MINIMIZE_COMMENTS_POLICIES)[number];
 
+const RESOLVE_OTHER_HUMAN_THREADS = ["none", "outdated", "always"] as const;
+
+export type ResolveOtherHumanThreads = (typeof RESOLVE_OTHER_HUMAN_THREADS)[number];
+
 export interface GraphqlQuotaWarningBand {
   remainingPercent: number;
   pollIntervalMinutes: number;
@@ -43,6 +47,12 @@ export interface PrShepherdConfig {
      * (default) omits the hint entirely; the CLI never prescribes rebase/merge mechanics itself.
      */
     behindBaseHint: string;
+    /**
+     * When to resolve other-human inline threads after Shepherd replies. Own and bot threads
+     * always reply-and-resolve. `none` (default) keeps other humans reply-only; `outdated`
+     * also resolves when GitHub reports `isOutdated`; `always` pairs reply-and-resolve.
+     */
+    resolveOtherHumanThreads: ResolveOtherHumanThreads;
   };
   watch: {
     readyDelayMinutes: number;
@@ -159,6 +169,18 @@ function parseMinimizeCommentsPolicy(value: unknown): MinimizeCommentsPolicy {
   if (isMinimizeCommentsPolicy(value)) return value;
   throw new Error(
     `Invalid config: iterate.minimizeComments must be one of "all", "bots", "users", or "none", got ${JSON.stringify(value)}`,
+  );
+}
+
+function parseResolveOtherHumanThreads(value: unknown): ResolveOtherHumanThreads {
+  if (
+    typeof value === "string" &&
+    (RESOLVE_OTHER_HUMAN_THREADS as readonly string[]).includes(value)
+  ) {
+    return value as ResolveOtherHumanThreads;
+  }
+  throw new Error(
+    `Invalid config: iterate.resolveOtherHumanThreads must be one of "none", "outdated", or "always", got ${JSON.stringify(value)}`,
   );
 }
 
@@ -298,6 +320,7 @@ const KNOWN_NESTED_KEYS: Record<string, ReadonlySet<string>> = {
     "minimizeApprovals",
     "minimizeComments",
     "behindBaseHint",
+    "resolveOtherHumanThreads",
   ]),
   watch: new Set(["readyDelayMinutes", "graphqlQuotaWarnings"]),
   resolve: new Set(["shaPoll"]),
@@ -407,6 +430,9 @@ export function loadConfig(): PrShepherdConfig {
       config.watch.graphqlQuotaWarnings,
     );
     config.iterate.minimizeComments = parseMinimizeCommentsPolicy(config.iterate.minimizeComments);
+    config.iterate.resolveOtherHumanThreads = parseResolveOtherHumanThreads(
+      config.iterate.resolveOtherHumanThreads,
+    );
     config.checks.ignoreLogLines = parseIgnoreLogLines(config.checks.ignoreLogLines);
     configCache.set(cwd, config);
     return config;

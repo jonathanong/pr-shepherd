@@ -12,7 +12,7 @@ import { runIterate } from "./iterate/index.mts";
 registerIterateHooks();
 
 describe("runIterate — fix_code (actionable threads)", () => {
-  it("surfaces an unlocated resolution-only thread without routing a mutation", async () => {
+  it("surfaces an unlocated other-human resolution-only thread as reply-only", async () => {
     const outdated = {
       id: "thread-outdated",
       isResolved: false,
@@ -51,11 +51,13 @@ describe("runIterate — fix_code (actionable threads)", () => {
     if (result.action === "fix_code") {
       expect(result.fix.threads).toHaveLength(0);
       expect(result.fix.resolutionOnlyThreads.map((t) => t.id)).toEqual(["thread-outdated"]);
-      expect(result.fix.resolveCommand.argv).not.toContain("--reply-thread-ids");
-      expect(result.fix.resolveCommand.argv).not.toContain("thread-outdated");
+      expect(result.fix.resolveCommand.replyThreadIds).toEqual(["thread-outdated"]);
+      expect(result.fix.resolveCommand.resolveThreadIds).toBeUndefined();
+      expect(result.fix.resolveCommand.argv).toContain("--reply-thread-ids");
+      expect(result.fix.resolveCommand.argv).toContain("thread-outdated");
       expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
-      expect(result.fix.resolveCommand.requiresDismissMessage).toBe(false);
-      expect(result.fix.resolveCommand.hasMutations).toBe(false);
+      expect(result.fix.resolveCommand.requiresDismissMessage).toBe(true);
+      expect(result.fix.resolveCommand.hasMutations).toBe(true);
       expect(result.fix.instructions.join("\n")).not.toContain("Rebase and push");
     }
   });

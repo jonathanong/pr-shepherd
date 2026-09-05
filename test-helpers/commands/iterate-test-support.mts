@@ -223,6 +223,8 @@ function defaultConfig() {
       stallTimeoutMinutes: 60,
       minimizeApprovals: false,
       minimizeComments: "all" as "all" | "bots" | "users" | "none",
+      behindBaseHint: "",
+      resolveOtherHumanThreads: "none" as const,
     },
     watch: { readyDelayMinutes: 10 },
     resolve: {

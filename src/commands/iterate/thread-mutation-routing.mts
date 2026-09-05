@@ -5,7 +5,13 @@ import {
   type NormalizedBotUsernames,
 } from "../../comments/authors.mts";
 import { threadEndedByShepherd } from "../../comments/marker.mts";
+import { shouldResolveOtherHumanThread } from "../../comments/thread-resolve-policy.mts";
+import type { ResolveOtherHumanThreads } from "../../config/load.mts";
 import type { AgentThread, ReviewThread } from "../../types.mts";
+
+export { shouldResolveOtherHumanThread };
+
+export type RoutableThread = AgentThread | ReviewThread;
 
 function dedupeIds(ids: string[]): string[] {
   return [...new Set(ids)];
@@ -18,35 +24,47 @@ export interface ThreadMutationRouting {
   resolveThreadIds: string[];
 }
 
-export function canResolveOutdatedBotWithoutLocation(
-  thread: ReviewThread,
+function isOrdinaryHuman(thread: RoutableThread, botUsernames: NormalizedBotUsernames): boolean {
+  return isHumanAuthor(thread) && !isConfiguredBotAuthor(thread, botUsernames);
+}
+
+function shouldPairResolve(
+  thread: RoutableThread,
   botUsernames: NormalizedBotUsernames,
+  policy: ResolveOtherHumanThreads = "none",
 ): boolean {
-  return (
-    !thread.isResolved &&
-    thread.isOutdated &&
-    (thread.path === null || thread.line === null) &&
-    isConfiguredBotAuthor(thread, botUsernames) &&
-    thread.viewerCanResolve === true
-  );
+  if (!isOrdinaryHuman(thread, botUsernames)) return true;
+  if (isViewerAuthoredHuman(thread, botUsernames)) return true;
+  return shouldResolveOtherHumanThread(thread, policy);
+}
+
+export function threadHasAuthorizedMutation(
+  thread: { id: string; viewerCanReply?: boolean; viewerCanResolve?: boolean },
+  replyThreadIds: ReadonlySet<string>,
+  resolveThreadIds: ReadonlySet<string>,
+): boolean {
+  const inReply = replyThreadIds.has(thread.id);
+  const inResolve = resolveThreadIds.has(thread.id);
+  if (!inReply && !inResolve) return false;
+  if (inReply && thread.viewerCanReply !== true) return false;
+  if (inResolve && thread.viewerCanResolve !== true) return false;
+  return true;
 }
 
 export function buildThreadMutationRouting(
-  threads: Array<AgentThread | ReviewThread>,
+  threads: RoutableThread[],
   botUsernames: NormalizedBotUsernames,
   ruleAutoResolveThreadIds: string[],
+  policy: ResolveOtherHumanThreads = "none",
 ): ThreadMutationRouting {
-  const isOrdinaryHuman = (thread: AgentThread | ReviewThread): boolean =>
-    isHumanAuthor(thread) && !isConfiguredBotAuthor(thread, botUsernames);
   const replyThreadIds = dedupeIds(
-    threads
-      .filter((thread) => isOrdinaryHuman(thread) && !threadEndedByShepherd(thread))
-      .map((thread) => thread.id),
+    threads.filter((thread) => !threadEndedByShepherd(thread)).map((thread) => thread.id),
   );
   const pairedResolveThreadIds = dedupeIds(
     threads
       .filter(
-        (thread) => isViewerAuthoredHuman(thread, botUsernames) && !threadEndedByShepherd(thread),
+        (thread) =>
+          shouldPairResolve(thread, botUsernames, policy) && !threadEndedByShepherd(thread),
       )
       .map((thread) => thread.id),
   );
@@ -56,8 +74,7 @@ export function buildThreadMutationRouting(
     ...threads
       .filter(
         (thread) =>
-          !isOrdinaryHuman(thread) ||
-          (isViewerAuthoredHuman(thread, botUsernames) && threadEndedByShepherd(thread)),
+          shouldPairResolve(thread, botUsernames, policy) && threadEndedByShepherd(thread),
       )
       .map((thread) => thread.id),
     ...ruleAutoResolveThreadIds,

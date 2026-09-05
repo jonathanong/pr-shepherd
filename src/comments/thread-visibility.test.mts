@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { classifyThreadVisibility } from "./thread-visibility.mts";
 import { hashBody } from "../state/seen-comments.mts";
 import { normalizeBotUsernames } from "./authors.mts";
+import { addPrShepherdMarker } from "./marker.mts";
 import type { ReviewThread } from "../types.mts";
 
 function makeThread(overrides: Partial<ReviewThread> = {}): ReviewThread {
@@ -101,6 +102,39 @@ describe("classifyThreadVisibility", () => {
     );
 
     expect(result.activeThreads.map((t) => t.id)).toEqual(["configured-bot"]);
+  });
+
+  it("routes a marker-ended active bot thread to resolution-only for retry", () => {
+    const bot = makeThread({
+      id: "bot",
+      authorType: "Bot",
+      body: "still unresolved",
+      comments: [
+        {
+          id: "c1",
+          isMinimized: false,
+          author: "copilot-pull-request-reviewer",
+          authorType: "Bot",
+          body: "still unresolved",
+          url: "",
+          createdAtUnix: 1,
+        },
+        {
+          id: "c2",
+          isMinimized: false,
+          author: "shepherd",
+          authorType: "User",
+          body: addPrShepherdMarker("addressed"),
+          url: "",
+          createdAtUnix: 2,
+        },
+      ],
+    });
+
+    const result = classifyThreadVisibility([bot], new Map());
+
+    expect(result.activeThreads).toEqual([]);
+    expect(result.resolutionOnlyThreads.map((t) => t.id)).toEqual(["bot"]);
   });
 
   it("does not keep returning resolved bot threads after first look", () => {

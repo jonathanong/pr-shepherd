@@ -19,7 +19,8 @@
     "stallTimeoutMinutes": 60,
     "minimizeApprovals": false,
     "minimizeComments": "all",
-    "behindBaseHint": ""
+    "behindBaseHint": "",
+    "resolveOtherHumanThreads": "none"
   },
   "watch": {
     "readyDelayMinutes": 10,
