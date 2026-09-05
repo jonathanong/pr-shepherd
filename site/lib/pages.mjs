@@ -23,7 +23,7 @@ function walk(dir) {
 }
 
 function routeForFile(contentDir, file) {
-  const rel = relative(contentDir, file).replace(/\\/g, "/");
+  const rel = relative(contentDir, file).replaceAll("\\", "/");
   const withoutExt = rel.replace(/\.md$/, "");
   if (withoutExt === "index") return "";
   if (withoutExt.endsWith("/index")) return withoutExt.slice(0, -"/index".length);

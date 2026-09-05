@@ -37,6 +37,7 @@
   --code-fg: #e7efe9;
   --link: #0a6b3d;
   --shadow: 0 12px 32px rgba(16, 34, 26, 0.08);
+  color-scheme: light;
 }
 
 * {
@@ -45,9 +46,6 @@
 
 html {
   color-scheme: dark;
-}
-:root[data-theme="light"] {
-  color-scheme: light;
 }
 
 body {

@@ -85,7 +85,10 @@ function resolveDocsHref(href, { sourceFile, repoRoot, headingsForDoc }) {
 
 // Matches `[text](href)`, `![alt](href)`, and `[text](href "title")` — the only link
 // forms used in this site's content (no reference-style links, no bare autolinks).
-const MARKDOWN_LINK_RE = /(!?\[[^\]]*\])\(([^)\s]+)(\s+"[^"]*")?\)/g;
+// Single quantified group over "not )" — the href/title split happens in the callback,
+// not in the regex, so there's no optional trailing group for the engine to backtrack
+// into against the primary group's boundary.
+const MARKDOWN_LINK_RE = /(!?\[[^\]]*\])\(([^)]*)\)/g;
 
 /**
  * Rewrite every link target in raw markdown through `resolveHref`, so the agent-facing
@@ -100,11 +103,12 @@ const MARKDOWN_LINK_RE = /(!?\[[^\]]*\])\(([^)\s]+)(\s+"[^"]*")?\)/g;
  * @param {(href: string, ctx: object) => string} resolveHref
  */
 export function rewriteMarkdownLinks(body, ctx, resolveHref) {
-  return body.replace(
-    MARKDOWN_LINK_RE,
-    (_match, textPart, href, titlePart = "") =>
-      `${textPart}(${resolveHref(href, ctx)}${titlePart})`,
-  );
+  return body.replace(MARKDOWN_LINK_RE, (_match, textPart, inner) => {
+    const spaceAt = inner.search(/\s/);
+    const href = spaceAt === -1 ? inner : inner.slice(0, spaceAt);
+    const titlePart = spaceAt === -1 ? "" : inner.slice(spaceAt);
+    return `${textPart}(${resolveHref(href, ctx)}${titlePart})`;
+  });
 }
 
 /**

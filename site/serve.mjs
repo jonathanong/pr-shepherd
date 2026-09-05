@@ -3,8 +3,8 @@
 // Usage: npm run site:build && npm run site:serve
 
 import { createServer } from "node:http";
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { dirname, extname, isAbsolute, join, relative as relativeToDir } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const distDir = join(dirname(fileURLToPath(import.meta.url)), "dist");
@@ -21,31 +21,39 @@ const MIME = {
   ".txt": "text/plain; charset=utf-8",
 };
 
-/** Join `requestPath` under distDir, refusing anything that would resolve outside it —
- *  checked before any filesystem call touches the request-derived path. */
-function safeDistPath(requestPath) {
-  const target = join(distDir, requestPath);
-  const rel = relativeToDir(distDir, target);
-  return rel.startsWith("..") || isAbsolute(rel) ? null : target;
+/**
+ * Walk distDir once at startup and build a fixed url-path -> absolute-file-path map.
+ * Every request is then a plain Map lookup — no request-derived string is ever passed
+ * to a filesystem call, which closes the path-injection/traversal class of finding
+ * entirely rather than validating a request-derived path after the fact.
+ */
+function buildFileMap(dir, baseUrl, map) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    const url = `${baseUrl}/${entry.name}`;
+    if (entry.isDirectory()) {
+      buildFileMap(full, url, map);
+      continue;
+    }
+    map.set(url, full);
+    if (entry.name === "index.html") {
+      map.set(`${baseUrl}/`, full);
+      map.set(baseUrl === "" ? "/" : baseUrl, full);
+    }
+  }
+  return map;
 }
 
+const FILES = buildFileMap(distDir, "", new Map());
+
 function resolveFile(urlPath) {
-  let clean;
   try {
-    clean = decodeURIComponent(urlPath.split("?")[0]);
+    return FILES.get(decodeURIComponent(urlPath.split("?")[0])) ?? null;
   } catch {
     // Malformed percent-escape (e.g. a trailing "/%") — treat as not found rather than
     // letting the URIError crash the whole preview server.
     return null;
   }
-  const candidate = clean.endsWith("/") ? `${clean}index.html` : clean;
-  const full = safeDistPath(candidate);
-  if (!full) return null;
-  if (existsSync(full) && statSync(full).isDirectory()) {
-    const indexFile = safeDistPath(`${candidate}/index.html`);
-    return indexFile && existsSync(indexFile) ? indexFile : null;
-  }
-  return existsSync(full) && !statSync(full).isDirectory() ? full : null;
 }
 
 const server = createServer((req, res) => {

@@ -19,7 +19,7 @@ const ASSETS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "assets")
 const INLINE_LOGO_SVG = readFileSync(join(ASSETS_DIR, "logo.svg"), "utf8").trim();
 
 function escapeAttr(value) {
-  return String(value).replace(/"/g, "&quot;");
+  return String(value).replaceAll('"', "&quot;");
 }
 
 function jsonLd(page, siteMeta) {
