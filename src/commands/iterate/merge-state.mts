@@ -19,6 +19,32 @@ export function buildReadyMergeResult(
   report: ShepherdReport,
 ): IterateResult | null {
   if (!enabled || !readyElapsed || report.mergeStatus.isDraft) return null;
+  const stack = report.mergeStatus.mergeRequirements?.stack;
+  if (stack) {
+    // Every stack position is blocked uniformly, including position 1: `--auto` is
+    // rejected server-side on stacked PRs regardless of position, and letting position 1
+    // bypass stack tooling would corrupt the remaining layers' stack metadata.
+    const escalateBase = {
+      triggers: ["stack-merge-blocked" as const],
+      unresolvedThreads: [],
+      ambiguousComments: [],
+      changesRequestedReviews: [],
+      suggestion: buildEscalateSuggestion(
+        ["stack-merge-blocked"],
+        `position ${stack.position} of ${stack.size}, base \`${stack.baseRefName}\``,
+      ),
+    };
+    return {
+      ...base,
+      action: "escalate",
+      escalate: {
+        ...escalateBase,
+        humanMessage: buildEscalateHumanMessage(escalateBase, formatPrUrl(report.repo, report.pr), {
+          merge: true,
+        }),
+      },
+    };
+  }
   const queue = Boolean(
     report.mergeStatus.mergeRequirements?.mergeQueue?.required ||
     report.mergeStatus.mergeRequirements?.mergeQueue?.enabled,

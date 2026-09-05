@@ -9,7 +9,8 @@ export type EscalateTrigger =
   | "check-follow-up-unavailable"
   | "authorization-required"
   | "bot-cr-not-dismissed"
-  | "merge-queue-removed";
+  | "merge-queue-removed"
+  | "stack-merge-blocked";
 
 export interface AgentStalledCheck {
   name: string;

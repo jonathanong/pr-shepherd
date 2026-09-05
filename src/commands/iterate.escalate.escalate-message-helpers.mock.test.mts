@@ -79,6 +79,12 @@ describe("escalate message helpers", () => {
     expect(buildEscalateSuggestion(["stall-timeout"], "1 minute")).toContain("1 minute —");
     expect(buildEscalateSuggestion(["stall-timeout"])).toContain("60 minutes —");
     expect(buildEscalateSuggestion(["base-branch-unknown"])).toContain("base branch");
+    expect(buildEscalateSuggestion(["stack-merge-blocked"])).toBe(
+      "This PR is part of a native GitHub stack — a plain `gh pr merge` could land it into an unmerged parent branch, and `--auto` is rejected server-side on stacked pull requests. Merge it with stack-aware tooling (for example `gh stack merge`, if the `github/gh-stack` extension is installed) instead of an ordinary merge command.",
+    );
+    expect(
+      buildEscalateSuggestion(["stack-merge-blocked"], "position 2 of 3, base `main`"),
+    ).toContain("(position 2 of 3, base `main`)");
   });
 
   it("renders complete failing-check evidence for a check escalation", () => {

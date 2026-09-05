@@ -29,6 +29,29 @@ function queueReadyMergeStatus() {
   };
 }
 
+/** Shared CLEAN mergeStatus fixture for a ready PR that is part of a native GitHub stack. */
+function stackedReadyMergeStatus(stack: {
+  number: number;
+  size: number;
+  position: number;
+  baseRefName: string;
+}) {
+  return {
+    status: "CLEAN" as const,
+    state: "OPEN" as const,
+    isDraft: false,
+    mergeable: "MERGEABLE" as const,
+    reviewDecision: "APPROVED" as const,
+    blockingBotReviewInProgress: false,
+    mergeStateStatus: "CLEAN" as const,
+    mergeRequirements: {
+      approvals: { current: 1, requiredCount: 1 },
+      conversationsResolved: { resolved: true, unresolvedCount: 0, required: true },
+      stack,
+    },
+  };
+}
+
 describe("runIterate — merge", () => {
   it("emits an auto-merge plan after the ready delay", async () => {
     mockRunCheck.mockResolvedValue(
@@ -265,6 +288,66 @@ describe("runIterate — merge", () => {
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       expect(result.fix.requeue).toBeUndefined();
+    }
+  });
+
+  it("declines to plan a merge for a PR stacked at position 1, escalating instead", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        headSha: "abc123",
+        nodeId: "PR_node",
+        mergeStatus: stackedReadyMergeStatus({
+          number: 7,
+          size: 3,
+          position: 1,
+          baseRefName: "main",
+        }),
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+
+    const result = await runIterate(makeOpts({ merge: true }));
+
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toEqual(["stack-merge-blocked"]);
+      expect(result.escalate.humanMessage).toContain("position 1 of 3, base `main`");
+      expect(result.escalate.humanMessage).toContain("gh stack merge");
+    }
+  });
+
+  it("declines to plan a merge for a PR stacked mid-stack with an unmerged parent, escalating instead", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        headSha: "def456",
+        nodeId: "PR_node",
+        mergeStatus: stackedReadyMergeStatus({
+          number: 7,
+          size: 3,
+          position: 2,
+          baseRefName: "stack/7/1",
+        }),
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+
+    const result = await runIterate(makeOpts({ merge: true }));
+
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.triggers).toEqual(["stack-merge-blocked"]);
+      expect(result.escalate.humanMessage).toContain("position 2 of 3, base `stack/7/1`");
+      expect(result.escalate.humanMessage).toContain("--merge");
     }
   });
 

@@ -1,16 +1,17 @@
 # Escalation boundary
 
-`ESCALATE` is the only Shepherd action that hands the pull request to a human. The trigger type is a closed union with exactly seven values. If none of the seven conditions below is true, Shepherd must not return `ESCALATE`.
+`ESCALATE` is the only Shepherd action that hands the pull request to a human. The trigger type is a closed union with exactly eight values. If none of the eight conditions below is true, Shepherd must not return `ESCALATE`.
 
-| Trigger                       | Exact condition                                                                                                                                                                                      |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `authorization-required`      | Shepherd is about to automatically mark a draft ready and `viewerCanUpdate !== true`. Explicit merge/enqueue requests are attempted and surface GitHub's actual error instead.                       |
-| `check-follow-up-unavailable` | At least one remaining failing check has no autonomous follow-up, and no other autonomous work remains in the tick.                                                                                  |
-| `fix-thrash`                  | A retryable, located review thread reaches `iterate.fixAttemptsPerThread` attempts across distinct pushed HEADs while its body remains unchanged.                                                    |
-| `bot-cr-not-dismissed`        | An authorized bot/non-human `CHANGES_REQUESTED` dismissal was emitted, but the same review body remains undismissed for at least the enabled stall timeout.                                          |
-| `base-branch-unknown`         | The GraphQL base branch is empty or unsafe and the current tick has work that could require a push, so Shepherd cannot name a safe rebase target.                                                    |
-| `merge-queue-removed`         | Merge mode is enabled, GitHub reports a queue removal, the head has not changed since removal, no queue/auto-merge state remains, and no earlier branch found an actionable failure or concrete fix. |
-| `stall-timeout`               | An enabled timeout expires for CI that never starts or for an unchanged `WAIT`/`FIX_CODE` state fingerprint.                                                                                         |
+| Trigger                       | Exact condition                                                                                                                                                                                                                                      |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `authorization-required`      | Shepherd is about to automatically mark a draft ready and `viewerCanUpdate !== true`. Explicit merge/enqueue requests are attempted and surface GitHub's actual error instead.                                                                       |
+| `check-follow-up-unavailable` | At least one remaining failing check has no autonomous follow-up, and no other autonomous work remains in the tick.                                                                                                                                  |
+| `fix-thrash`                  | A retryable, located review thread reaches `iterate.fixAttemptsPerThread` attempts across distinct pushed HEADs while its body remains unchanged.                                                                                                    |
+| `bot-cr-not-dismissed`        | An authorized bot/non-human `CHANGES_REQUESTED` dismissal was emitted, but the same review body remains undismissed for at least the enabled stall timeout.                                                                                          |
+| `base-branch-unknown`         | The GraphQL base branch is empty or unsafe and the current tick has work that could require a push, so Shepherd cannot name a safe rebase target.                                                                                                    |
+| `merge-queue-removed`         | Merge mode is enabled, GitHub reports a queue removal, the head has not changed since removal, no queue/auto-merge state remains, and no earlier branch found an actionable failure or concrete fix.                                                 |
+| `stack-merge-blocked`         | Merge mode is enabled, the clean READY state has lasted for the configured ready-delay (the same gate as [`## merge`](actions.md#merge)), and GitHub's batch query reports the PR is part of a native stack (at any position, including position 1). |
+| `stall-timeout`               | An enabled timeout expires for CI that never starts or for an unchanged `WAIT`/`FIX_CODE` state fingerprint.                                                                                                                                         |
 
 ## Complete predicates
 
@@ -68,6 +69,14 @@ All of the following are true:
 - no earlier actionable-work branch supplied a concrete fix.
 
 Failing queue CI is actionable and therefore stays `FIX_CODE`; it does not trigger `merge-queue-removed`. The escalation preserves GitHub's raw removal reason, actor, timestamp, queue commit, and parent OIDs when available.
+
+### `stack-merge-blocked`
+
+Merge mode is enabled, the clean READY state has lasted for the configured ready-delay — the same trigger as [`## merge`](actions.md#merge), which this escalation replaces — and the batch query's `stack` field is present. This applies uniformly to **every** stack position, including position 1: `--auto` is rejected server-side on any stacked PR regardless of position, and letting position 1 fall through to an ordinary merge would corrupt the remaining layers' stack metadata. A mid-stack PR's GraphQL base branch is its still-unmerged parent branch, so the plain `gh pr merge` fallback used for non-stacked PRs would silently land it there instead of the stack's trunk ref.
+
+Shepherd does not emit any merge command for a stacked PR — see [`## merge`](actions.md#merge) for the invariant this preserves. The escalation names the PR's position, stack size, and base ref, and suggests stack-aware tooling (for example the `github/gh-stack` `gh` extension) instead.
+
+**Detection caveat:** GitHub's stack field is a public-preview API and can be absent even for a genuinely stacked PR — for example when Stacked PRs are disabled on the repository. An absent `stack` field is therefore not proof the PR isn't stacked; it only means Shepherd has no signal either way. Shepherd has no other reliable signal to distinguish an ordinary feature branch from an undetectable stacked PR (comparing the base branch to the repository's default branch false-positives on any PR that targets a non-default branch for ordinary reasons), so it does not attempt to infer stackedness beyond this field. This is a known gap, not a silently accepted risk: absence of the field only means the ordinary merge path proceeds, it does not confirm the PR is safe to merge with a plain `gh pr merge --auto`.
 
 ### `stall-timeout`
 
