@@ -17,7 +17,7 @@ import { handleFixCode } from "./fix-code.mts";
 import { normalizeBotUsernames } from "../../comments/authors.mts";
 import { autoMinimizeComments } from "../../comments/resolve.mts";
 import { hasCheckDrivenActionableWork } from "../check-annotations.mts";
-import { buildReadyMergeResult, handleActiveMergeState } from "./merge-state.mts";
+import { buildReadyMergeOutcome, handleActiveMergeState } from "./merge-state.mts";
 import { buildIterateBase } from "./base.mts";
 import { markReadyIfAuthorized } from "./mark-ready.mts";
 import type { IterateCommandOptions, IterateResult } from "../../types.mts";
@@ -186,7 +186,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
 
   if (readyState.shouldCancel) {
     await clearStallState(stallKey);
-    const mergeResult = buildReadyMergeResult(opts.merge, true, base, report);
+    const mergeResult = buildReadyMergeOutcome(opts.merge, true, base, report);
     if (mergeResult) return mergeResult;
     const cancelNote = blockedCancelNote(base);
     return {

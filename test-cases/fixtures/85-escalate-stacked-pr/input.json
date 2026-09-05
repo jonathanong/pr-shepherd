@@ -1,0 +1,23 @@
+{
+  "description": "Same clean/ready/elapsed state as 64, but the PR is a mid-stack member of a native GitHub stack (position 2 of 3, base is the unmerged parent branch). buildReadyMergeOutcome reads mergeRequirements.stack and preempts the merge with a stacked-pr escalation naming the layer, stack size, and stack base instead of emitting any gh pr merge command.",
+  "args": ["--merge"],
+  "batchData": {
+    "stack": { "number": 7, "size": 3, "position": 2, "baseRefName": "stack/7/1" },
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": true,
+    "shouldCancel": true,
+    "remainingSeconds": 0
+  },
+  "expectedExitCode": 13
+}

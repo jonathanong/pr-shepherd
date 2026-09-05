@@ -6,13 +6,41 @@ import type {
   Review,
   ShepherdReport,
 } from "../../types.mts";
+import type { StackStatus } from "../../types/merge-requirements.mts";
 import { buildEscalateHumanMessage, buildEscalateSuggestion } from "./escalate.mts";
 import { buildMergeCommandPlan } from "./merge.mts";
 import { formatPrUrl } from "../../pr-reference.mts";
 
 type StallKey = { owner: string; repo: string; pr: number };
 
-export function buildReadyMergeResult(
+/** A stacked PR's merge is human-only: `gh pr merge` targets the PR's own base, which for a
+ * mid-stack layer is an unmerged parent branch, and auto-merge is unsupported on stacks. */
+function buildStackedEscalateResult(
+  base: IterateResultBase,
+  report: ShepherdReport,
+  stack: StackStatus,
+): IterateResult {
+  const escalateBase = {
+    triggers: ["stacked-pr" as const],
+    unresolvedThreads: [],
+    ambiguousComments: [],
+    changesRequestedReviews: [],
+    stack,
+    suggestion: buildEscalateSuggestion(["stacked-pr"], String(report.pr)),
+  };
+  return {
+    ...base,
+    action: "escalate",
+    escalate: {
+      ...escalateBase,
+      humanMessage: buildEscalateHumanMessage(escalateBase, formatPrUrl(report.repo, report.pr), {
+        merge: true,
+      }),
+    },
+  };
+}
+
+export function buildReadyMergeOutcome(
   enabled: boolean | undefined,
   readyElapsed: boolean,
   base: IterateResultBase,
@@ -20,31 +48,7 @@ export function buildReadyMergeResult(
 ): IterateResult | null {
   if (!enabled || !readyElapsed || report.mergeStatus.isDraft) return null;
   const stack = report.mergeStatus.mergeRequirements?.stack;
-  if (stack) {
-    // Every stack position is blocked uniformly, including position 1: `--auto` is
-    // rejected server-side on stacked PRs regardless of position, and letting position 1
-    // bypass stack tooling would corrupt the remaining layers' stack metadata.
-    const escalateBase = {
-      triggers: ["stack-merge-blocked" as const],
-      unresolvedThreads: [],
-      ambiguousComments: [],
-      changesRequestedReviews: [],
-      suggestion: buildEscalateSuggestion(
-        ["stack-merge-blocked"],
-        `position ${stack.position} of ${stack.size}, base \`${stack.baseRefName}\``,
-      ),
-    };
-    return {
-      ...base,
-      action: "escalate",
-      escalate: {
-        ...escalateBase,
-        humanMessage: buildEscalateHumanMessage(escalateBase, formatPrUrl(report.repo, report.pr), {
-          merge: true,
-        }),
-      },
-    };
-  }
+  if (stack) return buildStackedEscalateResult(base, report, stack);
   const queue = Boolean(
     report.mergeStatus.mergeRequirements?.mergeQueue?.required ||
     report.mergeStatus.mergeRequirements?.mergeQueue?.enabled,

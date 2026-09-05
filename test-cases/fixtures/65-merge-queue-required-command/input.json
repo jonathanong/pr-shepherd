@@ -1,5 +1,5 @@
 {
-  "description": "Same clean/ready/elapsed state as 64, but the repository requires a merge queue (isMergeQueueEnabled) and the PR is not in it yet. buildReadyMergeResult reads mergeRequirements.mergeQueue.required and emits a queue-mode command plus a GraphQL enqueue fallback instead of an ordinary auto-merge command.",
+  "description": "Same clean/ready/elapsed state as 64, but the repository requires a merge queue (isMergeQueueEnabled) and the PR is not in it yet. buildReadyMergeOutcome reads mergeRequirements.mergeQueue.required and emits a queue-mode command plus a GraphQL enqueue fallback instead of an ordinary auto-merge command.",
   "args": ["--merge"],
   "batchData": {
     "isMergeQueueEnabled": true,
