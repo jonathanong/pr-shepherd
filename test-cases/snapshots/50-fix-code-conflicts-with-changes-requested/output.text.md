@@ -7,7 +7,9 @@ Conversations Resolved: Yes [Not Required]
 
 ## Changes-requested reviews
 
-- `reviewId=PRR_cr_conflict` (@reviewer · User)
+### `reviewId=PRR_cr_conflict` (@reviewer · User)
+
+> Please rebase and address the threading concerns raised in review.
 
 ## Post-fix actions
 

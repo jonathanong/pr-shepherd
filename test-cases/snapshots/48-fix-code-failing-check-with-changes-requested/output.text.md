@@ -13,7 +13,9 @@ Conversations Resolved: Yes [Not Required]
 
 ## Changes-requested reviews
 
-- `reviewId=PRR_cr_with_check` (@reviewer · User)
+### `reviewId=PRR_cr_with_check` (@reviewer · User)
+
+> The failing test points at a real bug — please fix the off-by-one in the loop.
 
 ## Post-fix actions
 

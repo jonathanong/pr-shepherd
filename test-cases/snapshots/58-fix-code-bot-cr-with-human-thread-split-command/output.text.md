@@ -15,7 +15,11 @@ Conversations Resolved: No [Not Required]
 
 ## Changes-requested reviews
 
-- `reviewId=PRR_bot_cr_2` (@claude · Bot)
+### `reviewId=PRR_bot_cr_2` (@claude · Bot)
+
+> ## Blockers
+>
+> 1. **Unchecked error.** `src/handler.mts:55` ignores the return value of `writeFile`. Add error handling.
 
 ## Post-fix actions
 

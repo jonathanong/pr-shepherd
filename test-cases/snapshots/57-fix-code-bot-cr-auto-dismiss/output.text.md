@@ -7,7 +7,14 @@ Conversations Resolved: Yes [Not Required]
 
 ## Changes-requested reviews
 
-- `reviewId=PRR_bot_cr` (@claude · Bot)
+### `reviewId=PRR_bot_cr` (@claude · Bot)
+
+> ## Summary
+>
+> Here are some blockers I found:
+>
+> 1. **Missing input validation.** The `processPayment` function at `src/payments.mts:42` does not validate the amount field before passing it to the charge API.
+> 2. **Race condition.** `src/queue.mts:88` reads and writes the job counter without a lock.
 
 ## Post-fix actions
 
