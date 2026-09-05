@@ -137,7 +137,8 @@ describe("formatMergeRequirementLines", () => {
     );
     const lines = formatMergeRequirementLines(req);
     expect(lines).toContain("Merge queue: position 1 QUEUED [Required]");
-    expect(lines).toContain("Stack: #9 1/2 (base main)");
+    expect(lines).toContain("Stack: 9 (layer 1/2, base main)");
+    expect(lines.find((line) => line.startsWith("Stack:"))).not.toMatch(/#9\b/);
   });
 
   it("formats merge queue as No when required but not in queue", () => {

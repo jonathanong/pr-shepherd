@@ -36,19 +36,19 @@ Always printed:
 
 Printed only when they apply:
 
-| Text                                    | JSON field                         | When                                                                                      |
-| --------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------- |
-| `Code owner review: [Required]`         | `codeOwnerReview`                  | `requiresCodeOwnerReviews`                                                                |
-| `Last-push approval: [Required]`        | `lastPushApproval`                 | `requiresLastPushApproval`                                                                |
-| `Signed commits: [Required]`            | `signedCommits`                    | `requiresCommitSignatures`                                                                |
-| `Linear history: [Required]`            | `linearHistory`                    | `requiresLinearHistory`                                                                   |
-| `Branch up to date: Yes\|No [Required]` | `branchUpToDate`                   | **Only** when `requiresStrictStatusChecks`. `current` is `mergeStateStatus !== "BEHIND"`. |
-| `Required status checks: N [Required]`  | `requiredStatusChecks.contexts`    | Non-empty required contexts                                                               |
-| `Required deployments: … [Required]`    | `requiredDeployments.environments` | Non-empty environments                                                                    |
-| `Required workflows: [Required]`        | `requiredWorkflows`                | `requiresWorkflows`                                                                       |
-| `Code scanning: [Required]`             | `codeScanning`                     | `requiresCodeScanning`                                                                    |
-| `Merge queue: …`                        | `mergeQueue`                       | Required, enabled, or already in queue                                                    |
-| `Stack: #<n> <pos>/<size> (base <ref>)` | `stack`                            | GitHub stack membership                                                                   |
+| Text                                          | JSON field                         | When                                                                                      |
+| --------------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------- |
+| `Code owner review: [Required]`               | `codeOwnerReview`                  | `requiresCodeOwnerReviews`                                                                |
+| `Last-push approval: [Required]`              | `lastPushApproval`                 | `requiresLastPushApproval`                                                                |
+| `Signed commits: [Required]`                  | `signedCommits`                    | `requiresCommitSignatures`                                                                |
+| `Linear history: [Required]`                  | `linearHistory`                    | `requiresLinearHistory`                                                                   |
+| `Branch up to date: Yes\|No [Required]`       | `branchUpToDate`                   | **Only** when `requiresStrictStatusChecks`. `current` is `mergeStateStatus !== "BEHIND"`. |
+| `Required status checks: N [Required]`        | `requiredStatusChecks.contexts`    | Non-empty required contexts                                                               |
+| `Required deployments: … [Required]`          | `requiredDeployments.environments` | Non-empty environments                                                                    |
+| `Required workflows: [Required]`              | `requiredWorkflows`                | `requiresWorkflows`                                                                       |
+| `Code scanning: [Required]`                   | `codeScanning`                     | `requiresCodeScanning`                                                                    |
+| `Merge queue: …`                              | `mergeQueue`                       | Required, enabled, or already in queue                                                    |
+| `Stack: <n> (layer <pos>/<size>, base <ref>)` | `stack`                            | GitHub stack membership                                                                   |
 
 The agent should read these lines instead of inferring a required review from `reviewDecision`. `REVIEW_REQUIRED` with `Approvals: None [Not Required]` means GitHub is not waiting on an approval.
 
