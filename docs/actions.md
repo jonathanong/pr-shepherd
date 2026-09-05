@@ -164,6 +164,8 @@ Emits an exact GitHub CLI command; Shepherd does not execute or wrap the merge o
 
 Configured `merge.commandArgs` apply only to ordinary auto-merge commands. Every emitted command pins the expected PR head.
 
+**Native stacks:** When GitHub's batch query reports the PR is part of a native stack, Shepherd builds neither command mode above, for any stack position including position 1. `--auto` is rejected server-side on stacked PRs, and the plain-merge fallback would land a mid-stack PR into its still-unmerged parent branch instead of the stack's trunk ref. Shepherd returns `ESCALATE` (`stack-merge-blocked`) naming the PR's position, stack size, and base ref instead of emitting an unsafe command — see [`stack-merge-blocked`](escalations.md#stack-merge-blocked). This is a normal escalation, not an exception to "Shepherd does not execute or wrap the merge operation": declining to plan a command is still not executing one.
+
 **Exit code:** 15.
 
 **Markdown output:**

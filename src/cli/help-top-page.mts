@@ -41,6 +41,7 @@ Iterate flags:
   --stall-timeout <duration>     Escalate repeated unchanged failures after this duration. Bare number = minutes. 0 disables.
   --no-auto-mark-ready           Do not convert draft PRs to ready for review.
   --no-auto-cancel-actionable    Legacy no-op; workflow runs are never cancelled.
+  --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
 
 Polling flags:
   --interval <duration>          Delay between WAIT ticks. Bare number = seconds. Default: 60s.
@@ -63,6 +64,7 @@ Exit codes: 0 done, 10-19 PR state, 64-78 shepherd failed (sysexits.h).
   12  FIX_CODE
   13  ESCALATE
   14  CANCEL (closed without merging)
+  15  MERGE
 See docs/exit-codes.md for the full sysexits.h error-code table.
 
 Duration examples: 30s, 4.5m, 1h. A bare number uses each flag's default unit (see above); decimals are allowed with an explicit unit (4.5m).

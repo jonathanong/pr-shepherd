@@ -265,5 +265,9 @@ export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: st
     const ids = detail ? ` (review IDs: ${detail})` : "";
     return `Bot CHANGES_REQUESTED review(s) remained undismissed past the stall window${ids}. The agent likely dropped \`--dismiss-review-ids\` from a prior apply command. Dismiss the review(s) manually (or re-run \`pr-shepherd apply review\` with the IDs) to unblock the PR.`;
   }
+  if (triggers.includes("stack-merge-blocked")) {
+    const context = detail ? ` (${detail})` : "";
+    return `This PR is part of a native GitHub stack${context} — a plain \`gh pr merge\` could land it into an unmerged parent branch, and \`--auto\` is rejected server-side on stacked pull requests. Merge it with stack-aware tooling (for example \`gh stack merge\`, if the \`github/gh-stack\` extension is installed) instead of an ordinary merge command.`;
+  }
   return "Ambiguous state — automated handling cannot proceed safely. Inspect the PR and act manually.";
 }

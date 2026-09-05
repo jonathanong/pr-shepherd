@@ -23,6 +23,8 @@ describe("public CLI help surface", () => {
     expect(USAGE.top).toContain("Mark selected changed files as viewed");
     expect(USAGE["apply files"]).toContain("Mark selected changed files as viewed");
     expect(USAGE["mark-files-as-viewed"]).toContain("marking selected PR files as viewed");
+    expect(USAGE.top).toContain("--merge");
+    expect(USAGE.top).toContain("15  MERGE");
   });
 
   it("resolves nested help pages without doing command I/O", () => {
