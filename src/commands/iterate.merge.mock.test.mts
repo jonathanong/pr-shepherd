@@ -7,6 +7,7 @@ import {
   mockUpdateReadyDelay,
   registerIterateHooks,
 } from "../../test-helpers/commands/iterate-test-support.mts";
+import type { IterateResult } from "../types.mts";
 import { runIterate } from "./iterate/index.mts";
 
 registerIterateHooks();
@@ -70,6 +71,24 @@ function mockStackedReady(
     shouldCancel: true,
     remainingSeconds: 0,
   });
+}
+
+/** Asserts a stacked PR was escalated with the given layer's details instead of planning a merge. */
+function expectStackedEscalate(
+  result: IterateResult,
+  layer: { position: number; size: number; number: number; base: string },
+) {
+  expect(result.action).toBe("escalate");
+  expect("merge" in result).toBe(false);
+  if (result.action === "escalate") {
+    expect(result.escalate.triggers).toEqual(["stacked-pr"]);
+    expect(result.escalate.humanMessage).toContain(
+      `layer: \`${layer.position}\` of \`${layer.size}\` in stack \`${layer.number}\``,
+    );
+    expect(result.escalate.humanMessage).toContain(`stack base: \`${layer.base}\``);
+    expect(result.escalate.humanMessage).toContain("gh stack merge --squash 42");
+  }
+  expect(JSON.stringify(result)).not.toContain("--auto");
 }
 
 describe("runIterate — merge", () => {
@@ -316,15 +335,7 @@ describe("runIterate — merge", () => {
 
     const result = await runIterate(makeOpts({ merge: true }));
 
-    expect(result.action).toBe("escalate");
-    expect("merge" in result).toBe(false);
-    if (result.action === "escalate") {
-      expect(result.escalate.triggers).toEqual(["stacked-pr"]);
-      expect(result.escalate.humanMessage).toContain("layer: `1` of `3` in stack `7`");
-      expect(result.escalate.humanMessage).toContain("stack base: `main`");
-      expect(result.escalate.humanMessage).toContain("gh stack merge --squash 42");
-    }
-    expect(JSON.stringify(result)).not.toContain("--auto");
+    expectStackedEscalate(result, { position: 1, size: 3, number: 7, base: "main" });
   });
 
   it("declines to plan a merge for a PR stacked mid-stack with an unmerged parent, escalating instead", async () => {
@@ -332,15 +343,7 @@ describe("runIterate — merge", () => {
 
     const result = await runIterate(makeOpts({ merge: true }));
 
-    expect(result.action).toBe("escalate");
-    expect("merge" in result).toBe(false);
-    if (result.action === "escalate") {
-      expect(result.escalate.triggers).toEqual(["stacked-pr"]);
-      expect(result.escalate.humanMessage).toContain("layer: `2` of `3` in stack `7`");
-      expect(result.escalate.humanMessage).toContain("stack base: `stack/7/1`");
-      expect(result.escalate.humanMessage).toContain("gh stack merge --squash 42");
-    }
-    expect(JSON.stringify(result)).not.toContain("--auto");
+    expectStackedEscalate(result, { position: 2, size: 3, number: 7, base: "stack/7/1" });
   });
 
   it("falls through to cancel for a stacked PR when merge mode is not enabled", async () => {
