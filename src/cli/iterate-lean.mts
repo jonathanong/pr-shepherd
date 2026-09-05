@@ -33,6 +33,7 @@ export function projectIterateLean(
     status: result.status,
     state: result.state,
     mergeStateStatus: result.mergeStateStatus,
+    ...(result.mergeStatus !== "CLEAN" && { mergeStatus: result.mergeStatus }), // mergeStateStatus alone can't always reconstruct this
     ...(readyDelaySuffix && { readyDelayOverride: readyDelaySuffix }),
     ...(result.mergeStatus === "BLOCKED" &&
       result.reviewDecision !== null && { reviewDecision: result.reviewDecision }),

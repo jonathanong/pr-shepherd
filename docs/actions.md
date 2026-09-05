@@ -71,7 +71,7 @@ The agent should read the Approvals / Conversations Resolved lines instead of in
 
 `--verbose` restores the full summary line: all five counts, `remainingSeconds`, `blockingBotReviewInProgress`, `isDraft`, and `shouldCancel` always present.
 
-**Note on `mergeStatus` in JSON lean mode.** The lean JSON projection (`--format=json`, default) emits `mergeStateStatus` (the raw GitHub value) but **omits the derived `mergeStatus` discriminator** (`CLEAN | BEHIND | CONFLICTS | BLOCKED | UNSTABLE | DRAFT | UNKNOWN`). Scripts that branch on `mergeStatus` must use `--verbose` to get the full `IterateResult`. `mergeStateStatus` is always present in both modes.
+**Note on `mergeStatus` in JSON lean mode.** The lean JSON projection (`--format=json`, default) always emits `mergeStateStatus` (the raw GitHub value), and now also emits the derived `mergeStatus` discriminator (`CLEAN | BEHIND | CONFLICTS | BLOCKED | UNSTABLE | DRAFT | UNKNOWN`) whenever it isn't the healthy `CLEAN` default — mirroring the `**branch**` segment above, since `mergeStateStatus` alone can't always reconstruct `mergeStatus` (for example, a conflicting `mergeable` value can produce `CONFLICTS` while `mergeStateStatus` reports something else). `--verbose` still returns the full `IterateResult` unconditionally, including `mergeStatus: "CLEAN"`.
 
 Load-bearing conventions (the iterate skill depends on these):
 

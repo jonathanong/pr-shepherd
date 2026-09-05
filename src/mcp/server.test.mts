@@ -82,10 +82,10 @@ describe("pr-shepherd MCP server", () => {
 
     expect(iterate).toHaveBeenCalledWith({ pr: "openai/pr-shepherd#3" });
     // structuredContent is the lean projection (matching CLI --format=json), not the
-    // raw result — trivial-default fields (mergeStatus, reviewDecision,
-    // blockingBotReviewInProgress, isDraft, shouldCancel, remainingSeconds,
-    // branchProtection, checks) are dropped and a computed `instructions` array is
-    // added. Update alongside src/cli/iterate-lean.mts if that projection changes.
+    // raw result — trivial-default fields (reviewDecision, blockingBotReviewInProgress,
+    // isDraft, shouldCancel, remainingSeconds, branchProtection, checks) are dropped,
+    // mergeStatus is kept because it's non-CLEAN, and a computed `instructions` array
+    // is added. Update alongside src/cli/iterate-lean.mts if that projection changes.
     expect(response.structuredContent).toEqual({
       action: "wait",
       pr: 3,
@@ -93,6 +93,7 @@ describe("pr-shepherd MCP server", () => {
       status: "PENDING",
       state: "OPEN",
       mergeStateStatus: "UNKNOWN",
+      mergeStatus: "UNSTABLE",
       summary: { passing: 0, inProgress: 1 },
       baseBranch: "main",
       log: "waiting",
@@ -111,7 +112,7 @@ describe("pr-shepherd MCP server", () => {
       status: "MERGED" as const,
       state: "MERGED" as const,
       mergeStateStatus: "UNKNOWN" as const,
-      mergeStatus: "MERGEABLE" as const,
+      mergeStatus: "CLEAN" as const,
       reviewDecision: null,
       blockingBotReviewInProgress: false,
       isDraft: false,
@@ -145,6 +146,9 @@ describe("pr-shepherd MCP server", () => {
       readyDelayOverride: "900s",
       instructions: ["Stop — the PR loop is complete. No further polling is needed."],
     });
+    // mergeStatus: "CLEAN" is the healthy default and stays omitted, unlike the
+    // non-CLEAN case covered above.
+    expect(response.structuredContent).not.toHaveProperty("mergeStatus");
     expect(response.content?.[0]?.text).toContain("**ready-delay** `900s` (override)");
   });
 
