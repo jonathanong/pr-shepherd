@@ -173,7 +173,10 @@ function parseMinimizeCommentsPolicy(value: unknown): MinimizeCommentsPolicy {
 }
 
 function parseResolveOtherHumanThreads(value: unknown): ResolveOtherHumanThreads {
-  if (RESOLVE_OTHER_HUMAN_THREADS.some((policy) => policy === value)) {
+  if (
+    typeof value === "string" &&
+    (RESOLVE_OTHER_HUMAN_THREADS as readonly string[]).includes(value)
+  ) {
     return value as ResolveOtherHumanThreads;
   }
   throw new Error(

@@ -33,3 +33,22 @@ export function partitionFixThreads(
     ),
   };
 }
+
+export function reviewSectionRefs(input: {
+  hasReviewThreads: boolean;
+  hasUnlocatedSkipThreads: boolean;
+  hasActionableComments: boolean;
+  hasFailingChecks: boolean;
+  hasAnnotations: boolean;
+  hasChangesRequested: boolean;
+}): string[] {
+  const sections: string[] = [];
+  if (input.hasReviewThreads) sections.push("`## Review threads`");
+  if (input.hasUnlocatedSkipThreads)
+    sections.push("`## Unlocated review threads (logged once — no mutation)`");
+  if (input.hasActionableComments) sections.push("`## Actionable comments`");
+  if (input.hasFailingChecks) sections.push("`## Failing checks`");
+  if (input.hasAnnotations) sections.push("`## Check annotations`");
+  if (input.hasChangesRequested) sections.push("`## Changes-requested reviews`");
+  return sections;
+}
