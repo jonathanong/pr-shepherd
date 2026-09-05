@@ -2,6 +2,11 @@ import type { AuthorType, CommentAuthorAssociation, SuggestionBlock } from "../t
 import type { FirstLookThread, FirstLookComment } from "../types/report.mts";
 import { renderLineRange, renderSuggestionBlock } from "./suggestion-renderer.mts";
 import { threadComments } from "../threads/transcript.mts";
+import {
+  truncateBody,
+  BODY_TRUNCATE_MAX_CHARS,
+  NESTED_BODY_TRUNCATE_MAX_CHARS,
+} from "./body-truncate.mts";
 
 const BODY_PREVIEW_MAX = 100;
 
@@ -103,7 +108,9 @@ export function renderThreadBullet(
 }
 
 export function renderThreadConversation(t: ThreadBulletInput): string {
-  if (!t.comments || t.comments.length === 0) return blockquote(t.body);
+  if (!t.comments || t.comments.length === 0) {
+    return blockquote(t.body, BODY_TRUNCATE_MAX_CHARS, t.url);
+  }
   return threadComments(t)
     .map((c) => {
       const heading = c.id
@@ -111,13 +118,14 @@ export function renderThreadConversation(t: ThreadBulletInput): string {
           ? `#### [commentId=${c.id}](${c.url}) (${renderAuthor(c.author, c.authorType, c.authorAssociation, c.viewerDidAuthor)})`
           : `#### \`commentId=${c.id}\` (${renderAuthor(c.author, c.authorType, c.authorAssociation, c.viewerDidAuthor)})`
         : `#### (${renderAuthor(c.author, c.authorType, c.authorAssociation, c.viewerDidAuthor)})`;
-      return `${heading}\n\n${blockquote(c.body)}`;
+      return `${heading}\n\n${blockquote(c.body, NESTED_BODY_TRUNCATE_MAX_CHARS, c.url)}`;
     })
     .join("\n\n");
 }
 
-export function blockquote(body: string): string {
-  return body
+export function blockquote(body: string, maxChars?: number, url?: string): string {
+  const text = maxChars === undefined ? body : truncateBody(body, maxChars, url);
+  return text
     .replace(/\r\n/g, "\n")
     .split("\n")
     .map((line) => (line === "" ? ">" : `> ${line}`))
@@ -131,14 +139,14 @@ function renderThreadCommentBullets(t: ThreadBulletInput): string {
       const id = c.id ? `\`commentId=${c.id}\`` : "comment";
       return [
         `  - ${id}${link} (${renderAuthor(c.author, c.authorType, c.authorAssociation, c.viewerDidAuthor)})`,
-        indentBlockquote(c.body, "    "),
+        indentBlockquote(c.body, "    ", NESTED_BODY_TRUNCATE_MAX_CHARS, c.url),
       ].join("\n");
     })
     .join("\n");
 }
 
-function indentBlockquote(body: string, indent: string): string {
-  return blockquote(body)
+function indentBlockquote(body: string, indent: string, maxChars?: number, url?: string): string {
+  return blockquote(body, maxChars, url)
     .split("\n")
     .map((line) => `${indent}${line}`)
     .join("\n");

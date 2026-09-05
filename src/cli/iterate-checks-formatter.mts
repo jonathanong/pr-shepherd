@@ -16,7 +16,7 @@ function formatRelevantCheck(check: RelevantCheck): string[] {
   const lines = [`- \`${workflow}${job}\` [conclusion: ${check.conclusion}]`];
   appendCheckFields(lines, check);
   appendLogExcerpt(lines, check.logExcerpt);
-  appendAnnotations(lines, check.annotations);
+  appendAnnotations(lines, check.annotations, check.logExcerpt);
   return lines;
 }
 
@@ -44,12 +44,17 @@ function appendLogExcerpt(lines: string[], logExcerpt: string | undefined): void
   for (const line of logExcerpt.split("\n")) lines.push(`  > ${line}`);
 }
 
-function appendAnnotations(lines: string[], annotations: RelevantCheck["annotations"]): void {
-  if (!annotations || annotations.length === 0) return;
+function appendAnnotations(
+  lines: string[],
+  annotations: RelevantCheck["annotations"],
+  logExcerpt: string | undefined,
+): void {
+  const rendered = (annotations ?? [])
+    .map((a) => renderCheckAnnotation(a, logExcerpt))
+    .filter((s): s is string => s !== null);
+  if (rendered.length === 0) return;
   lines.push("  - annotations:");
-  for (const annotation of annotations) {
-    for (const line of renderCheckAnnotation(annotation).split("\n")) {
-      lines.push(`    ${line}`);
-    }
+  for (const text of rendered) {
+    for (const line of text.split("\n")) lines.push(`    ${line}`);
   }
 }

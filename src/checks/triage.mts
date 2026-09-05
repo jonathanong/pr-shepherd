@@ -10,6 +10,15 @@ const LOG_EXCERPT_TAIL_LINES = 28;
 const LOG_EXCERPT_MAX_CHARS = 4_000;
 const TRUNCATED_SUFFIX = "\n[truncated]";
 const ANSI_SGR_RE = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
+// Test-runner chrome that carries no information beyond what the surrounding
+// error text already states — dropped so the excerpt budget goes to signal.
+const NOISE_LINE_PATTERNS = [
+  /^\[vitest-teardown\]/,
+  /^blob report written to/,
+  /^JUNIT report written to/,
+  /^(Duration|Start at)\s/,
+  /⎯{3,}/,
+];
 
 export function triageFailingChecks(
   failingChecks: ClassifiedCheck[],
@@ -297,7 +306,7 @@ function buildLogExcerpt(raw: string): string | undefined {
   const lines = raw
     .split(/\r?\n/)
     .map(cleanLogLine)
-    .filter((line) => line.trim() !== "");
+    .filter((line) => line.trim() !== "" && !isNoiseLine(line));
   if (lines.length === 0) return undefined;
 
   const aggregateExcerpt = buildAggregateJobResultsExcerpt(lines);
@@ -389,6 +398,10 @@ function truncateAnchoredExcerpt(lines: string[], anchorIndex: number): string {
   const text = lines.join("\n");
   if (text.length <= LOG_EXCERPT_MAX_CHARS) return text;
   return truncateLogExcerpt(`${TRUNCATED_SUFFIX.trim()}\n${lines.slice(anchorIndex).join("\n")}`);
+}
+
+function isNoiseLine(line: string): boolean {
+  return NOISE_LINE_PATTERNS.some((re) => re.test(line));
 }
 
 function cleanLogLine(line: string): string {
