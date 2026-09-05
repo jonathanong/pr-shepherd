@@ -52,6 +52,28 @@ function stackedReadyMergeStatus(stack: {
   };
 }
 
+/** Mocks a ready, mergeable PR stacked at position 1 of 3 with base `main`. */
+function mockStackedPosition1Ready() {
+  mockRunCheck.mockResolvedValue(
+    makeReport({
+      status: "READY",
+      headSha: "abc123",
+      nodeId: "PR_node",
+      mergeStatus: stackedReadyMergeStatus({
+        number: 7,
+        size: 3,
+        position: 1,
+        baseRefName: "main",
+      }),
+    }),
+  );
+  mockUpdateReadyDelay.mockResolvedValue({
+    isReady: true,
+    shouldCancel: true,
+    remainingSeconds: 0,
+  });
+}
+
 describe("runIterate — merge", () => {
   it("emits an auto-merge plan after the ready delay", async () => {
     mockRunCheck.mockResolvedValue(
@@ -292,24 +314,7 @@ describe("runIterate — merge", () => {
   });
 
   it("declines to plan a merge for a PR stacked at position 1, escalating instead", async () => {
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "READY",
-        headSha: "abc123",
-        nodeId: "PR_node",
-        mergeStatus: stackedReadyMergeStatus({
-          number: 7,
-          size: 3,
-          position: 1,
-          baseRefName: "main",
-        }),
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
-      shouldCancel: true,
-      remainingSeconds: 0,
-    });
+    mockStackedPosition1Ready();
 
     const result = await runIterate(makeOpts({ merge: true }));
 
@@ -358,24 +363,7 @@ describe("runIterate — merge", () => {
   });
 
   it("falls through to cancel for a stacked PR when merge mode is not enabled", async () => {
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "READY",
-        headSha: "abc123",
-        nodeId: "PR_node",
-        mergeStatus: stackedReadyMergeStatus({
-          number: 7,
-          size: 3,
-          position: 1,
-          baseRefName: "main",
-        }),
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
-      shouldCancel: true,
-      remainingSeconds: 0,
-    });
+    mockStackedPosition1Ready();
 
     const result = await runIterate(makeOpts({ merge: false }));
 
