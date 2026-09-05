@@ -187,6 +187,9 @@ export function projectIterateLean(
           ...(result.escalate.mergeQueueRemoval && {
             mergeQueueRemoval: result.escalate.mergeQueueRemoval,
           }),
+          ...(result.escalate.stack && {
+            stack: result.escalate.stack,
+          }),
           ...(result.escalate.authorization &&
             result.escalate.authorization.length > 0 && {
               authorization: result.escalate.authorization,

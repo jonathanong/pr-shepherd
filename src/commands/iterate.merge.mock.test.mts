@@ -352,7 +352,7 @@ describe("runIterate — merge", () => {
       expect(result.escalate.triggers).toEqual(["stacked-pr"]);
       expect(result.escalate.humanMessage).toContain("layer: `2` of `3` in stack `7`");
       expect(result.escalate.humanMessage).toContain("stack base: `stack/7/1`");
-      expect(result.escalate.humanMessage).toContain("--merge");
+      expect(result.escalate.humanMessage).toContain("gh stack merge --squash 42");
     }
     expect(JSON.stringify(result)).not.toContain("--auto");
   });
