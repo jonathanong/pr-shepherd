@@ -216,6 +216,49 @@ export async function runCheck(
     batchData.viewerAuthorization?.viewerCanAdminister === true,
   );
   const approvedReviewVisibility = classifyReviewsForDisplay(batchData.approvedReviews, seenMap);
+  const changesRequestedReviews = changesRequestedReviewVisibility.visible;
+  const visibleChangesRequestedIds = new Set(changesRequestedReviews.map((review) => review.id));
+  const changesRequestedReviewCount = batchData.changesRequestedReviews.filter((review) => {
+    if (partition.suppressedChangesRequestedIds.has(review.id)) return false;
+    const isBot = !isHumanAuthor(review) || isConfiguredBotAuthor(review, botUsernames);
+    return (
+      !isBot ||
+      batchData.viewerAuthorization?.viewerCanAdminister === true ||
+      visibleChangesRequestedIds.has(review.id)
+    );
+  }).length;
+  const approvedReviews = approvedReviewVisibility.visible;
+  let status = computeStatus(
+    verdict,
+    threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
+    visibleCommentClassification.actionable.length,
+    mergeStatus,
+    changesRequestedReviewCount,
+  );
+
+  // Resolve any pending mergeability refresh (and the resulting MERGED/CLOSED short-circuit)
+  // before deciding what to persist below — deferWhileQueued must see the same final,
+  // possibly-refreshed mergeStatus that commands/iterate/index.mts acts on, not the pre-refresh
+  // snapshot. A conflict newly discovered by this REST read is exactly the kind of check-driven
+  // signal that keeps a queued PR out of the deferral path.
+  if (status === "READY" && !didRefreshMergeability) {
+    const refreshed = await refreshReadyMergeability(
+      prNumber,
+      repo,
+      batchData,
+      verdict,
+      threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
+      visibleCommentClassification.actionable.length,
+      changesRequestedReviewCount,
+    );
+    batchData = refreshed.batchData;
+    mergeStatus = refreshed.mergeStatus;
+    status = refreshed.status;
+    if (mergeStatus.state === "MERGED" || mergeStatus.state === "CLOSED") {
+      return buildTerminalReport(prNumber, repo, batchData, mergeStatus, mergeStatus.state);
+    }
+  }
+
   // Mirrors the deferral gate in commands/iterate/index.mts exactly (via the shared
   // hasCheckDrivenActionableWork helper, so the two can't drift): when this tick's non-CI
   // actionable work (threads/comments/review summaries/changes-requested) will be held back
@@ -268,10 +311,16 @@ export async function runCheck(
       ...successfulAnnotations.map((a) => markSeen(stateKey, a.id, annotationMarkerBody(a))),
       ...deferredMarkSeen,
       ...batchData.comments
-        .filter((c) => partition.suppressedCommentIds.has(c.id))
+        .filter(
+          (c) =>
+            partition.suppressedCommentIds.has(c.id) && !deniedRuleAutoResolveCommentIds.has(c.id),
+        )
         .map((c) => markSeen(stateKey, c.id, c.body)),
       ...batchData.reviewThreads
-        .filter((t) => partition.suppressedThreadIds.has(t.id))
+        .filter(
+          (t) =>
+            partition.suppressedThreadIds.has(t.id) && !deniedRuleAutoResolveThreadIds.has(t.id),
+        )
         .map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
       ...batchData.reviewSummaries
         .filter(
@@ -313,43 +362,6 @@ export async function runCheck(
     ...authorizedRuleAutoResolveThreadIds,
     ...[...deniedRuleAutoResolveThreadIds].filter((id) => visibleMutationThreadIds.has(id)),
   ];
-  const changesRequestedReviews = changesRequestedReviewVisibility.visible;
-  const visibleChangesRequestedIds = new Set(changesRequestedReviews.map((review) => review.id));
-  const changesRequestedReviewCount = batchData.changesRequestedReviews.filter((review) => {
-    if (partition.suppressedChangesRequestedIds.has(review.id)) return false;
-    const isBot = !isHumanAuthor(review) || isConfiguredBotAuthor(review, botUsernames);
-    return (
-      !isBot ||
-      batchData.viewerAuthorization?.viewerCanAdminister === true ||
-      visibleChangesRequestedIds.has(review.id)
-    );
-  }).length;
-  const approvedReviews = approvedReviewVisibility.visible;
-  let status = computeStatus(
-    verdict,
-    threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
-    visibleCommentClassification.actionable.length,
-    mergeStatus,
-    changesRequestedReviewCount,
-  );
-
-  if (status === "READY" && !didRefreshMergeability) {
-    const refreshed = await refreshReadyMergeability(
-      prNumber,
-      repo,
-      batchData,
-      verdict,
-      threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
-      visibleCommentClassification.actionable.length,
-      changesRequestedReviewCount,
-    );
-    batchData = refreshed.batchData;
-    mergeStatus = refreshed.mergeStatus;
-    status = refreshed.status;
-    if (mergeStatus.state === "MERGED" || mergeStatus.state === "CLOSED") {
-      return buildTerminalReport(prNumber, repo, batchData, mergeStatus, mergeStatus.state);
-    }
-  }
   const blockedByFilteredCheck = isBlockedByFilteredCheck(mergeStatus, verdict);
   const queueCommit = batchData.isInMergeQueue
     ? batchData.mergeQueueEntry?.headCommitOid
