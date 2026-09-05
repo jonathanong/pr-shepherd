@@ -32,7 +32,7 @@ describe("runResolveMutate — configured bot threads", () => {
         behindBaseHint: "",
       },
       watch: { readyDelayMinutes: 10, graphqlQuotaWarnings: [] },
-      checks: { ciTriggerEvents: ["pull_request", "pull_request_target"] },
+      checks: { ciTriggerEvents: ["pull_request", "pull_request_target"], ignoreLogLines: [] },
       mergeStatus: { blockingReviewerLogins: ["copilot"] },
     });
     mockFetchPrBatch.mockResolvedValue({

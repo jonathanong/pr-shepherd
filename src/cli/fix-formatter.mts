@@ -11,13 +11,20 @@ import {
   renderThreadConversation,
   blockquote,
 } from "./list-formatters.mts";
+import { BODY_TRUNCATE_MAX_CHARS } from "./body-truncate.mts";
 import { numberInstructions } from "./iterate-instructions.mts";
 import { renderCheckAnnotation, renderProtectedRun } from "./fix-formatter-extra.mts";
 import { isFailingAgentCheck } from "../checks/conclusions.mts";
 import type { IterateResultFixCode } from "../types.mts";
 import { renderMergeCommand } from "../commands/iterate/merge.mts";
 
-export function formatFixCodeResult(header: string, result: IterateResultFixCode): string {
+export function formatFixCodeResult(
+  header: string,
+  result: IterateResultFixCode,
+  opts: { verbose?: boolean } = {},
+): string {
+  const verbose = opts.verbose ?? false;
+  const topCap = verbose ? undefined : BODY_TRUNCATE_MAX_CHARS;
   const sections: string[] = [header];
 
   const renderThreads = (heading: string, threads: typeof result.fix.threads): void => {
@@ -33,7 +40,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
       sections.push(
         `### ${heading} — ${loc} (${renderAuthor(t.author, t.authorType, t.authorAssociation, t.viewerDidAuthor)})${reviewMarker}${suggestionMarker}${editedMarker}`,
       );
-      sections.push(renderThreadConversation(t));
+      sections.push(renderThreadConversation(t, verbose));
       if (t.suggestion) {
         sections.push(renderSuggestionBlock(t.suggestion, ""));
       }
@@ -52,7 +59,9 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     sections.push("## Review threads to resolve");
     sections.push(
       result.fix.resolutionOnlyThreads
-        .map((t) => renderThreadBullet(t, { statusTag: renderThreadResolutionStatusTag(t) }))
+        .map((t) =>
+          renderThreadBullet(t, { statusTag: renderThreadResolutionStatusTag(t), verbose }),
+        )
         .join("\n"),
     );
   }
@@ -66,7 +75,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
       sections.push(
         `### ${heading} (${renderAuthor(c.author, c.authorType, c.authorAssociation)})${authorizationMarker}${editedMarker}`,
       );
-      sections.push(blockquote(c.body));
+      sections.push(blockquote(c.body, topCap, c.url));
     }
   }
 
@@ -108,10 +117,17 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
     sections.push(bullets.join("\n\n"));
   }
 
-  const checksWithAnnotations = result.fix.checks.filter((ch) => (ch.annotations?.length ?? 0) > 0);
-  if (checksWithAnnotations.length > 0) {
+  const annotatedChecks = result.fix.checks
+    .map((ch) => ({
+      ch,
+      rendered: (ch.annotations ?? [])
+        .map((a) => renderCheckAnnotation(a, ch.logExcerpt))
+        .filter((s): s is string => s !== null),
+    }))
+    .filter(({ rendered }) => rendered.length > 0);
+  if (annotatedChecks.length > 0) {
     sections.push("## Check annotations");
-    for (const ch of checksWithAnnotations) {
+    for (const { ch, rendered } of annotatedChecks) {
       const workflowPrefix = ch.workflowName ? `${ch.workflowName} › ` : "";
       const jobLabel = ch.jobName ? ch.jobName : ch.name;
       const locator = ch.runId
@@ -120,7 +136,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
           ? `external \`${ch.detailsUrl}\``
           : "(no runId)";
       sections.push(`### ${locator} — \`${workflowPrefix}${jobLabel}\``);
-      sections.push(ch.annotations!.map(renderCheckAnnotation).join("\n\n"));
+      sections.push(rendered.join("\n\n"));
     }
   }
 
@@ -135,7 +151,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
       sections.push(
         `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})${r.viewerCanMinimize === false ? " [viewer cannot minimize]" : ""}`,
       );
-      sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body));
+      sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body, topCap));
     }
   }
 
@@ -147,7 +163,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
       sections.push(
         `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})${r.viewerCanMinimize === false ? " [viewer cannot minimize]" : ""}`,
       );
-      sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body));
+      sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body, topCap));
     }
   }
 
@@ -164,7 +180,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
       sections.push(
         `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})${r.viewerCanMinimize === false ? " [viewer cannot minimize]" : ""}`,
       );
-      sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body));
+      sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body, topCap));
     }
   }
 
@@ -177,6 +193,7 @@ export function formatFixCodeResult(header: string, result: IterateResultFixCode
         result.fix.firstLookThreads,
         resolutionOnlyIds,
         result.fix.firstLookComments,
+        verbose,
       ).join("\n"),
     );
   }

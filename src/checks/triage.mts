@@ -3,6 +3,7 @@ import { restWithRateLimit, restText } from "../github/http.mts";
 import type { CheckRun, ClassifiedCheck, TriagedCheck } from "../types.mts";
 import type { RepoInfo } from "../github/client.mts";
 import { loadDerived, storeDerived, type StateKey } from "../state/rest-cache.mts";
+import { loadConfig } from "../config/load.mts";
 
 const STARTUP_FAILURE_STATUS = "startup_failure";
 const LOG_EXCERPT_CONTEXT_LINES = 16;
@@ -294,10 +295,11 @@ async function fetchJobLogExcerpt(
 }
 
 function buildLogExcerpt(raw: string): string | undefined {
+  const ignorePatterns = compileIgnoreLogLinePatterns();
   const lines = raw
     .split(/\r?\n/)
     .map(cleanLogLine)
-    .filter((line) => line.trim() !== "");
+    .filter((line) => line.trim() !== "" && !isNoiseLine(line, ignorePatterns));
   if (lines.length === 0) return undefined;
 
   const aggregateExcerpt = buildAggregateJobResultsExcerpt(lines);
@@ -389,6 +391,17 @@ function truncateAnchoredExcerpt(lines: string[], anchorIndex: number): string {
   const text = lines.join("\n");
   if (text.length <= LOG_EXCERPT_MAX_CHARS) return text;
   return truncateLogExcerpt(`${TRUNCATED_SUFFIX.trim()}\n${lines.slice(anchorIndex).join("\n")}`);
+}
+
+// User-configured via `checks.ignoreLogLines` (regex source strings) — empty by
+// default. What counts as noise varies by CI toolchain, so Shepherd ships no
+// built-in patterns; a project opts in via `.pr-shepherdrc.yml`.
+function compileIgnoreLogLinePatterns(): RegExp[] {
+  return loadConfig().checks.ignoreLogLines.map((pattern) => new RegExp(pattern));
+}
+
+function isNoiseLine(line: string, patterns: RegExp[]): boolean {
+  return patterns.some((re) => re.test(line));
 }
 
 function cleanLogLine(line: string): string {

@@ -2,6 +2,11 @@ import type { AuthorType, CommentAuthorAssociation, SuggestionBlock } from "../t
 import type { FirstLookThread, FirstLookComment } from "../types/report.mts";
 import { renderLineRange, renderSuggestionBlock } from "./suggestion-renderer.mts";
 import { threadComments } from "../threads/transcript.mts";
+import {
+  truncateBody,
+  BODY_TRUNCATE_MAX_CHARS,
+  NESTED_BODY_TRUNCATE_MAX_CHARS,
+} from "./body-truncate.mts";
 
 const BODY_PREVIEW_MAX = 100;
 
@@ -75,6 +80,7 @@ export function renderThreadBullet(
     renderSuggestion?: boolean;
     noBody?: boolean;
     suppressEditedMarker?: boolean;
+    verbose?: boolean;
   } = {},
 ): string {
   const link = t.url ? ` [↗](${t.url})` : "";
@@ -94,7 +100,7 @@ export function renderThreadBullet(
   }
   const parts = [bulletLine];
   if (!opts.noBody) {
-    parts.push(renderThreadCommentBullets(t));
+    parts.push(renderThreadCommentBullets(t, opts.verbose));
   }
   if (t.suggestion && opts.renderSuggestion) {
     parts.push(renderSuggestionBlock(t.suggestion));
@@ -102,43 +108,50 @@ export function renderThreadBullet(
   return parts.join("\n");
 }
 
-export function renderThreadConversation(t: ThreadBulletInput): string {
-  if (!t.comments || t.comments.length === 0) return blockquote(t.body);
+export function renderThreadConversation(t: ThreadBulletInput, verbose = false): string {
+  const topCap = verbose ? undefined : BODY_TRUNCATE_MAX_CHARS;
+  if (!t.comments || t.comments.length === 0) {
+    return blockquote(t.body, topCap, t.url);
+  }
+  const nestedCap = verbose ? undefined : NESTED_BODY_TRUNCATE_MAX_CHARS;
   return threadComments(t)
-    .map((c) => {
+    .map((c, i) => {
       const heading = c.id
         ? c.url
           ? `#### [commentId=${c.id}](${c.url}) (${renderAuthor(c.author, c.authorType, c.authorAssociation, c.viewerDidAuthor)})`
           : `#### \`commentId=${c.id}\` (${renderAuthor(c.author, c.authorType, c.authorAssociation, c.viewerDidAuthor)})`
         : `#### (${renderAuthor(c.author, c.authorType, c.authorAssociation, c.viewerDidAuthor)})`;
-      return `${heading}\n\n${blockquote(c.body)}`;
+      return `${heading}\n\n${blockquote(c.body, i === 0 ? topCap : nestedCap, c.url)}`;
     })
     .join("\n\n");
 }
 
-export function blockquote(body: string): string {
-  return body
+export function blockquote(body: string, maxChars?: number, url?: string): string {
+  const text = maxChars === undefined ? body : truncateBody(body, maxChars, url);
+  return text
     .replace(/\r\n/g, "\n")
     .split("\n")
     .map((line) => (line === "" ? ">" : `> ${line}`))
     .join("\n");
 }
 
-function renderThreadCommentBullets(t: ThreadBulletInput): string {
+function renderThreadCommentBullets(t: ThreadBulletInput, verbose = false): string {
+  const topCap = verbose ? undefined : BODY_TRUNCATE_MAX_CHARS;
+  const nestedCap = verbose ? undefined : NESTED_BODY_TRUNCATE_MAX_CHARS;
   return threadComments(t)
-    .map((c) => {
+    .map((c, i) => {
       const link = c.url ? ` [↗](${c.url})` : "";
       const id = c.id ? `\`commentId=${c.id}\`` : "comment";
       return [
         `  - ${id}${link} (${renderAuthor(c.author, c.authorType, c.authorAssociation, c.viewerDidAuthor)})`,
-        indentBlockquote(c.body, "    "),
+        indentBlockquote(c.body, "    ", i === 0 ? topCap : nestedCap, c.url),
       ].join("\n");
     })
     .join("\n");
 }
 
-function indentBlockquote(body: string, indent: string): string {
-  return blockquote(body)
+function indentBlockquote(body: string, indent: string, maxChars?: number, url?: string): string {
+  return blockquote(body, maxChars, url)
     .split("\n")
     .map((line) => `${indent}${line}`)
     .join("\n");
@@ -213,6 +226,7 @@ export function buildFirstLookBullets(
   firstLookThreads: FirstLookThread[],
   resolutionOnlyIds: Set<string>,
   firstLookComments: FirstLookComment[],
+  verbose = false,
 ): string[] {
   const bullets: string[] = [];
   for (const t of firstLookThreads) {
@@ -221,6 +235,7 @@ export function buildFirstLookBullets(
         statusTag: renderFirstLookStatusTag(t),
         noBody: resolutionOnlyIds.has(t.id),
         suppressEditedMarker: true,
+        verbose,
       }),
     );
   }
