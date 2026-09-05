@@ -49,6 +49,7 @@ export async function runCheck(
     autoMinimizeSuppressed?: boolean;
     skipTriage?: boolean;
     persistSeen?: boolean;
+    merge?: boolean;
   },
 ): Promise<ShepherdReport> {
   const repo = opts.targetRepository ?? (await getRepoInfo());
@@ -211,6 +212,17 @@ export async function runCheck(
     batchData.viewerAuthorization?.viewerCanAdminister === true,
   );
   const approvedReviewVisibility = classifyReviewsForDisplay(batchData.approvedReviews, seenMap);
+  // Mirrors the deferral gate in commands/iterate/index.mts: when this tick's non-CI actionable
+  // work (threads/comments/review summaries/changes-requested) will be held back because the PR
+  // is queued, none of it was actually shown to the agent this tick — persisting seen markers for
+  // it now would make it silently vanish from every later tick once it's no longer "new" or
+  // "edited", even after the PR leaves the queue. Checks/annotations are never deferred, so their
+  // seen-marking (and rule-auto-resolve suppression marking, unaffected by visibility) proceeds
+  // unconditionally.
+  const deferWhileQueued =
+    opts.merge === true &&
+    batchData.isInMergeQueue === true &&
+    config.actions.workWhileQueued !== true;
   if (opts.persistSeen !== false) {
     const successfulAnnotations = [
       ...merged.passing,
@@ -220,14 +232,25 @@ export async function runCheck(
     ]
       .filter((check) => check.conclusion === "SUCCESS")
       .flatMap((check) => check.annotations ?? []);
+    const deferredMarkSeen = deferWhileQueued
+      ? []
+      : [
+          ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
+          ...threadVisibility.toMarkSeen.map((t) =>
+            markSeen(stateKey, t.id, threadTranscriptBody(t)),
+          ),
+          ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
+          ...[...firstLookSummaries, ...editedSummaries].map((r) =>
+            markSeen(stateKey, r.id, r.body),
+          ),
+          ...changesRequestedReviewVisibility.toMarkSeen.map((r) =>
+            markSeen(stateKey, r.id, r.body),
+          ),
+          ...approvedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
+        ];
     await Promise.allSettled([
       ...successfulAnnotations.map((a) => markSeen(stateKey, a.id, annotationMarkerBody(a))),
-      ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
-      ...threadVisibility.toMarkSeen.map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
-      ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
-      ...[...firstLookSummaries, ...editedSummaries].map((r) => markSeen(stateKey, r.id, r.body)),
-      ...changesRequestedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
-      ...approvedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
+      ...deferredMarkSeen,
       ...batchData.comments
         .filter((c) => partition.suppressedCommentIds.has(c.id))
         .map((c) => markSeen(stateKey, c.id, c.body)),

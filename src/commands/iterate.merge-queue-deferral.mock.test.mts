@@ -5,6 +5,7 @@ import {
   registerIterateHooks,
   makeOpts,
   makeReport,
+  makeReview,
   mockLoadConfig,
   mockReadFixAttempts,
   mockRunCheck,
@@ -270,6 +271,67 @@ describe("runIterate — merge-queue work deferral", () => {
     const result = await runIterate(makeOpts({ merge: true }));
 
     expect(result.action).toBe("fix_code");
+  });
+
+  it("dedupes overlapping thread/comment/summary buckets by ID instead of double-counting", async () => {
+    // Real classification buckets are not disjoint (e.g. classifyThreadVisibility returns an
+    // unresolved outdated thread in both resolutionOnly and firstLook; a minimize-eligible
+    // comment/summary appears in both its actionable/first-look bucket and the minimize-ID list).
+    mockRunCheck.mockResolvedValue(
+      queuedReport({
+        threads: {
+          actionable: [],
+          resolutionOnly: [THREAD],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [{ ...THREAD, firstLookStatus: "outdated" }],
+        },
+        comments: {
+          actionable: [
+            {
+              id: "c1",
+              author: "bot",
+              authorType: "Bot",
+              body: "noise",
+              createdAtUnix: 0,
+              url: "",
+              isMinimized: false,
+            },
+          ],
+          minimizeIds: ["c1"],
+          firstLook: [
+            {
+              id: "c2",
+              author: "bot",
+              authorType: "Bot",
+              body: "minimized noise",
+              createdAtUnix: 0,
+              url: "",
+              isMinimized: true,
+              firstLookStatus: "minimized",
+            },
+          ],
+        },
+        // Eligible for minimize ("all" policy + viewerCanMinimize) → also collapses into the
+        // minimize-ID set, exercising the same overlap for review summaries.
+        firstLookSummaries: [makeReview("sum1", "reviewer", "first look")],
+        editedSummaries: [makeReview("sum2", "reviewer", "edited")],
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts({ merge: true }));
+
+    expect(result.action).toBe("wait");
+    if (result.action === "wait") {
+      expect(result.deferredWork?.threads).toBe(1);
+      expect(result.deferredWork?.comments).toBe(2);
+      expect(result.deferredWork?.reviewSummaries).toBe(2);
+    }
   });
 
   it("omits deferredWork when queued with no actionable work at all", async () => {

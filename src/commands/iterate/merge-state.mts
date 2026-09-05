@@ -53,22 +53,31 @@ function buildDeferredWork(input: {
     surfacedApprovals,
     minimizeApprovals,
   } = input;
+  // These buckets are not disjoint (e.g. an unresolved outdated thread is both
+  // `resolutionOnly` and `firstLook`; an eligible-to-minimize comment/summary is both
+  // `actionable`/`firstLook` and queued in `minimizeIds`/`reviewSummaryIds`) — dedupe by ID.
+  const threadIds = new Set([
+    ...report.threads.actionable.map((t) => t.id),
+    ...report.threads.resolutionOnly.map((t) => t.id),
+    ...report.threads.firstLook.map((t) => t.id),
+    ...(report.threads.ruleAutoResolveIds ?? []),
+  ]);
+  const commentIds = new Set([
+    ...report.comments.actionable.map((c) => c.id),
+    ...(report.comments.minimizeIds ?? []),
+    ...report.comments.firstLook.map((c) => c.id),
+  ]);
+  const reviewSummaryIdSet = new Set([
+    ...reviewSummaryIds,
+    ...firstLookSummaries.map((r) => r.id),
+    ...editedSummaries.map((r) => r.id),
+    ...(minimizeApprovals ? surfacedApprovals.map((r) => r.id) : []),
+  ]);
   const deferredWork: IterateDeferredWork = {
-    threads:
-      report.threads.actionable.length +
-      report.threads.resolutionOnly.length +
-      report.threads.firstLook.length +
-      (report.threads.ruleAutoResolveIds?.length ?? 0),
-    comments:
-      report.comments.actionable.length +
-      (report.comments.minimizeIds?.length ?? 0) +
-      report.comments.firstLook.length,
+    threads: threadIds.size,
+    comments: commentIds.size,
     changesRequestedReviews: report.changesRequestedReviews.length,
-    reviewSummaries:
-      reviewSummaryIds.length +
-      firstLookSummaries.length +
-      editedSummaries.length +
-      (minimizeApprovals ? surfacedApprovals.length : 0),
+    reviewSummaries: reviewSummaryIdSet.size,
   };
   const total =
     deferredWork.threads +

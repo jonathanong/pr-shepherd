@@ -25,11 +25,11 @@ export interface MergeQueueReport {
  * `fix_code` immediately regardless of queue membership.
  */
 export interface IterateDeferredWork {
-  /** Actionable + resolution-only + first-look review threads, plus rule-auto-resolve thread IDs. */
+  /** Unique review threads across actionable, resolution-only, first-look, and rule-auto-resolve. */
   threads: number;
-  /** Actionable + minimize-queued + first-look PR comments. */
+  /** Unique PR comments across actionable, minimize-queued, and first-look. */
   comments: number;
   changesRequestedReviews: number;
-  /** Review-summary IDs to minimize, plus first-look/edited/(if opted in) surfaced-approval summaries. */
+  /** Unique review summaries across the minimize queue, first-look, edited, and (if opted in) surfaced approvals. */
   reviewSummaries: number;
 }
