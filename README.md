@@ -2,7 +2,7 @@
 
 Autonomous PR CI monitor and review-comment resolver for agentic coding tools, including Claude Code and Codex.
 
-**[jonathanong.github.io/pr-shepherd](https://jonathanong.github.io/pr-shepherd/)** — the why, the principles, and a feature-by-feature tour, for humans and agents.
+**[jongleberry.com/pr-shepherd](https://jongleberry.com/pr-shepherd/)** — the why, the principles, and a feature-by-feature tour, for humans and agents.
 
 ## Why
 

@@ -15,7 +15,10 @@ function getBasePath() {
 }
 
 function getOrigin() {
-  return process.env.SITE_ORIGIN ?? "https://jonathanong.github.io";
+  // jonathanong.github.io permanently 301s every project-page URL to jongleberry.com
+  // (the account's verified custom domain on its user Pages site), so canonical/OG/
+  // sitemap URLs point straight at the domain that actually serves the content.
+  return process.env.SITE_ORIGIN ?? "https://jongleberry.com";
 }
 
 /** @param {string} path an absolute site path, e.g. "/principles/" or "/style.css" */

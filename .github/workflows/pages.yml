@@ -30,6 +30,7 @@ jobs:
       - run: node site/build.mjs
         env:
           SITE_BASE: /pr-shepherd
+          SITE_ORIGIN: https://jongleberry.com
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
