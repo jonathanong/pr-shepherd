@@ -82,6 +82,18 @@ describe("projectIterateLean", () => {
     expect(summary.filtered).toBe(3);
     expect(summary.inProgress).toBeUndefined();
   });
+  it("omits mergeStatus when CLEAN", () => {
+    const result = { ...makeIterateResult("wait"), mergeStatus: "CLEAN" as const };
+    const lean = projectIterateLean(result) as Record<string, unknown>;
+    expect(lean.mergeStatus).toBeUndefined();
+  });
+  it("includes mergeStatus when BEHIND, CONFLICTS, or BLOCKED", () => {
+    for (const status of ["BEHIND", "CONFLICTS", "BLOCKED"] as const) {
+      const result = { ...makeIterateResult("wait"), mergeStatus: status };
+      const lean = projectIterateLean(result) as Record<string, unknown>;
+      expect(lean.mergeStatus).toBe(status);
+    }
+  });
   it("omits reviewDecision when mergeStatus is not BLOCKED", () => {
     const result = {
       ...makeIterateResult("wait"),

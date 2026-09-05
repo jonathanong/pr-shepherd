@@ -151,7 +151,7 @@ Replace `/path/to/pr-shepherd` with this checkout's absolute path. Do not use a 
 
 ## Tools
 
-The server registers three canonical tools plus a deprecated singular suggestion adapter. Each result includes Markdown `content` (the same text the CLI would print) and `structuredContent` (the JSON object).
+The server registers three canonical tools plus a deprecated singular suggestion adapter. Each result includes Markdown `content` (the same text the CLI would print) and `structuredContent`. For `iterate`, `structuredContent` is the same lean JSON projection the CLI emits for `--format=json` — the same computed top-level `instructions` array and `readyDelayOverride`, and the same trivial-default fields omitted (see the `iterate` section below). For `apply`, `build_suggestion_patches`, and `build_suggestion_patch`, `structuredContent` is the raw result object, matching what their CLI counterparts print as JSON.
 
 Every MCP call requires a repository-qualified `pr`: either a GitHub PR URL such as `https://github.com/owner/repo/pull/123` or `owner/repo#123`. Bare PR numbers and omitted PRs are rejected. The named repository is the GitHub target and may differ from the server's startup working directory (or the `cwd` supplied to an embedded factory), which remains the local git/configuration/rules context.
 
@@ -180,7 +180,7 @@ Hosts namespace tool names with the server name (`pr-shepherd__iterate` in Grok,
 | `merge`                  | boolean                         | no       | Shepherd to readiness and emit merge/queue commands.      |
 | `neverCancelRuns`        | string array                    | no       | Deprecated per-call no-op retained for compatibility.     |
 
-The result is an `IterateResult`. Action semantics, instruction text, and field contracts live in [actions.md](actions.md).
+The result's Markdown `content` is the CLI's default (lean) rendering, and `structuredContent` is the matching lean JSON projection of the `IterateResult` — not the raw result object. This means `structuredContent` omits fields that are the trivial default (`shouldCancel`, `apiUsage`, `mergeStatus` when it's the healthy `CLEAN` value, `reviewDecision` unless the PR is blocked, `remainingSeconds` unless the ready-delay countdown is active, `checks` outside `fix_code`, and more — see [actions.md](actions.md)) and adds `readyDelayOverride` when `readyDelaySeconds` was supplied. For every action except `fix_code`, it also adds a computed top-level `instructions` array; for `fix_code`, the equivalent steps are under `fix.instructions` instead. Action semantics, instruction text, and the full field contract live in [actions.md](actions.md).
 
 ### `apply`
 
@@ -232,6 +232,10 @@ The result includes ordered `patches[]` entries with thread, path, range, author
 ## Recurrence
 
 MCP clients own polling. Do not expect a long-running poll tool. MCP `iterate` has no `--debounce`; late comments and CI failures are not batched the way the shell poll dispatcher batches them.
+
+This isn't a stated preference — it's a client-side constraint a locally-run MCP server cannot get around. The MCP TypeScript SDK's client enforces a default per-request timeout of 60 seconds (`DEFAULT_REQUEST_TIMEOUT_MSEC`). The protocol lets a server send `notifications/progress` to keep a long call alive, but resetting the timeout on progress (`resetTimeoutOnProgress`) is a client call-site option — the host decides whether to ask for it when it calls the tool, not the server. Claude Code has an open, unresolved issue (`anthropics/claude-code#58687`) where the client times out long tool calls even when the server sends correct progress notifications, so the spec-compliant keepalive path isn't reliable there today; no stable, documented environment variable gives a guaranteed longer client-side timeout (`MCP_TIMEOUT` covers server _startup_ only, and `MCP_TOOL_TIMEOUT` support has been inconsistent across Claude Code versions). Codex CLI shares the same 60-second default but exposes a `tool_timeout_sec` config knob a user can raise. Grok CLI's own host-side MCP timeout is unconfirmed as of this writing.
+
+A poll tool that blocks or sleeps across ticks would risk hitting this ceiling on at least two of the three plugin hosts, with no reliable way for this server to prevent it — hence no poll tool. This is what distinguishes the existing tools: none of them intentionally poll or sleep. `iterate` and `build_suggestion_patches` are each one GraphQL batch. `apply` doesn't sleep either, but it awaits its `operations` sequentially and each one performs GitHub I/O — a large multi-operation request against a slow GitHub response could still approach the timeout, and a failure partway through leaves earlier mutations already applied without the client seeing a response (`PartialApplyError`'s `completed` list is the recovery path). None of this makes any of the three tools immune to the timeout; it means they don't compound it the way a sleeping poll loop would.
 
 1. Call `iterate` with a repository-qualified `pr`.
 2. Follow the returned `## Instructions`.

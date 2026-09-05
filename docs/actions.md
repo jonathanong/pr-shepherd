@@ -6,7 +6,7 @@ Each `pr-shepherd iterate` invocation returns exactly one action. The bare `pr-s
 
 CLI `PR` accepts a positive number, `owner/repo#N`, or a GitHub pull-request URL. A qualified reference selects its repository for GitHub I/O; the current working directory remains the local git, configuration, classification-rule, and debug-log context. Direct MCP calls still require a qualified reference, but it can name any accessible repository.
 
-The default output format is Markdown — what the skill receives from its until-terminal poll dispatcher and what direct CLI users see. `--format=json` emits the same action data as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format.
+The default output format is Markdown — what the skill receives from its until-terminal poll dispatcher and what direct CLI users see. `--format=json` emits the same action data as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format. MCP `iterate`'s `structuredContent` uses this same lean JSON shape (see [mcp.md](mcp.md)); MCP has no verbose equivalent.
 
 The bare CLI command accepts `--interval`/`--timeout`/`--debounce`/`--quiet-status` (e.g. `pr-shepherd <PR> --interval 60s --timeout 4.5m --quiet-status`), waits while the PR remains in `[WAIT]`, and returns on an agent-facing action. With `--merge`, it also continues through `MARK_READY` and returns `MERGE` when the ready-delay completes. Each ordinary `WAIT` tick writes an explicit still-running line to stderr; the final action remains the only stdout result. If `--timeout` expires during WAIT polling, the bounded command returns that final `WAIT` result.
 
@@ -71,7 +71,7 @@ The agent should read the Approvals / Conversations Resolved lines instead of in
 
 `--verbose` restores the full summary line: all five counts, `remainingSeconds`, `blockingBotReviewInProgress`, `isDraft`, and `shouldCancel` always present.
 
-**Note on `mergeStatus` in JSON lean mode.** The lean JSON projection (`--format=json`, default) emits `mergeStateStatus` (the raw GitHub value) but **omits the derived `mergeStatus` discriminator** (`CLEAN | BEHIND | CONFLICTS | BLOCKED | UNSTABLE | DRAFT | UNKNOWN`). Scripts that branch on `mergeStatus` must use `--verbose` to get the full `IterateResult`. `mergeStateStatus` is always present in both modes.
+**Note on `mergeStatus` in JSON lean mode.** The lean JSON projection (`--format=json`, default) always emits `mergeStateStatus` (the raw GitHub value), and now also emits the derived `mergeStatus` discriminator (`CLEAN | BEHIND | CONFLICTS | BLOCKED | UNSTABLE | DRAFT | UNKNOWN`) whenever it isn't the healthy `CLEAN` default — mirroring the `**branch**` segment above, since `mergeStateStatus` alone can't always reconstruct `mergeStatus` (for example, a conflicting `mergeable` value can produce `CONFLICTS` while `mergeStateStatus` reports something else). `--verbose` still returns the full `IterateResult` unconditionally, including `mergeStatus: "CLEAN"`.
 
 Load-bearing conventions (the iterate skill depends on these):
 

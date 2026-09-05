@@ -81,7 +81,75 @@ describe("pr-shepherd MCP server", () => {
     const response = await tools.iterate!.handler({ pr: "openai/pr-shepherd#3" });
 
     expect(iterate).toHaveBeenCalledWith({ pr: "openai/pr-shepherd#3" });
-    expect(response.structuredContent).toBe(result);
+    // structuredContent is the lean projection (matching CLI --format=json), not the
+    // raw result — trivial-default fields (reviewDecision, blockingBotReviewInProgress,
+    // isDraft, shouldCancel, remainingSeconds, branchProtection, checks) are dropped,
+    // mergeStatus is kept because it's non-CLEAN, and a computed `instructions` array
+    // is added. Update alongside src/cli/iterate-lean.mts if that projection changes.
+    expect(response.structuredContent).toEqual({
+      action: "wait",
+      pr: 3,
+      repo: "openai/pr-shepherd",
+      status: "PENDING",
+      state: "OPEN",
+      mergeStateStatus: "UNKNOWN",
+      mergeStatus: "UNSTABLE",
+      summary: { passing: 0, inProgress: 1 },
+      baseBranch: "main",
+      log: "waiting",
+      instructions: [
+        "Non-terminal — no action needed this tick. Iterate immediately with the same options to continue.",
+      ],
+    });
+  });
+
+  it("projects structuredContent for a non-wait action and derives readyDelayOverride from readyDelaySeconds", async () => {
+    const result = {
+      action: "cancel" as const,
+      reason: "merged" as const,
+      pr: 3,
+      repo: "openai/pr-shepherd",
+      status: "MERGED" as const,
+      state: "MERGED" as const,
+      mergeStateStatus: "UNKNOWN" as const,
+      mergeStatus: "CLEAN" as const,
+      reviewDecision: null,
+      blockingBotReviewInProgress: false,
+      isDraft: false,
+      shouldCancel: true,
+      remainingSeconds: 0,
+      summary: { passing: 1, skipped: 0, filtered: 0, inProgress: 0, superseded: 0 },
+      baseBranch: "main",
+      branchProtection: null,
+      checks: [],
+      log: "merged",
+    };
+    const iterate = vi.fn().mockResolvedValue(result);
+    const server = createPrShepherdMcpServer({
+      shepherd: {
+        iterate,
+        apply: vi.fn(),
+        buildSuggestionPatches: vi.fn(),
+        buildSuggestionPatch: vi.fn(),
+      },
+    });
+    const tools = registeredTools(server);
+
+    const response = await tools.iterate!.handler({
+      pr: "openai/pr-shepherd#3",
+      readyDelaySeconds: 900,
+    });
+
+    expect(response.structuredContent).toMatchObject({
+      action: "cancel",
+      reason: "merged",
+      readyDelayOverride: "900s",
+      instructions: ["Stop — the PR loop is complete. No further polling is needed."],
+    });
+    // mergeStatus: "CLEAN" is the healthy default and stays omitted, unlike the
+    // non-CLEAN case covered above.
+    expect(response.structuredContent).not.toHaveProperty("mergeStatus");
+    expect(response.content?.[0]?.text).toContain("**ready-delay** `900s` (override)");
   });
 
   it("requires a repository-qualified PR string in every tool schema and handler", async () => {

@@ -23,6 +23,7 @@ import {
   formatIterateResult,
   formatMarkFilesAsViewedResult,
   formatMutateResult,
+  projectIterateLean,
 } from "../cli/formatters.mts";
 import { formatCliError, serializeGitHubRequestErrorDetails } from "../cli/error-format.mts";
 import { errorToExitCode, EXIT } from "../exit-codes.mts";
@@ -132,11 +133,18 @@ export function createPrShepherdMcpServer(
         openWorldHint: true,
       },
     },
-    async (input) =>
-      runTool(
+    async (input) => {
+      // One options object feeds both channels so JSON and Markdown cannot drift.
+      const opts = {
+        readyDelaySuffix:
+          input.readyDelaySeconds === undefined ? undefined : `${input.readyDelaySeconds}s`,
+      };
+      return runTool(
         () => shepherd.iterate(requireRepositoryQualifiedPr(input) as IterateInput),
-        formatIterateResult,
-      ),
+        (result) => formatIterateResult(result, opts),
+        (result) => projectIterateLean(result, opts),
+      );
+    },
   );
 
   server.registerTool(
@@ -222,20 +230,27 @@ function readPackageVersion(): string {
   return packageJson.version;
 }
 
-function toolResult(result: object, text: string) {
+function toolResult(structured: unknown, text: string) {
   return {
     content: [{ type: "text" as const, text }],
-    structuredContent: result as Record<string, unknown>,
+    structuredContent: structured as Record<string, unknown>,
   };
 }
 
+/**
+ * `project` mirrors the CLI's `--format=json` treatment of the same result. Tools
+ * whose CLI JSON is the raw result object (apply, build_suggestion_patch(es) — see
+ * handlers.mts and cli-parser.mts, which JSON.stringify the result directly) omit
+ * `project` and return the result unchanged, matching their own CLI JSON output.
+ */
 async function runTool<Result extends object>(
   work: () => Promise<Result>,
   format: (result: Result) => string,
+  project?: (result: Result) => unknown,
 ) {
   try {
     const result = await work();
-    return toolResult(result, format(result));
+    return toolResult(project ? project(result) : result, format(result));
   } catch (error) {
     return toolError(error);
   }
