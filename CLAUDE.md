@@ -26,6 +26,8 @@ npm install
 
 `--format=json` and `--format=text` (default) must surface equivalent information. Every field exposed in JSON output should have a corresponding representation in text output, and vice versa. Do not add data to one format without updating the other.
 
+The invariant extends to MCP: a tool's `structuredContent` and its Markdown `content` must be produced from the same projection options, so the two channels surface equivalent information. Tools whose CLI counterpart prints the raw result as JSON (`apply`, `build_suggestion_patches`) return that raw result unprojected in `structuredContent`.
+
 ## GitHub API
 
 All GitHub I/O uses GraphQL by default. The only permitted REST call sites are:
