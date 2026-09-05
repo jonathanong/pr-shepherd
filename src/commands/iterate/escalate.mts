@@ -1,6 +1,7 @@
 /* eslint-disable max-lines */
 import type { AgentCheck, EscalateDetails, EscalateTrigger, ReviewThread } from "../../types.mts";
 import { loadConfig } from "../../config/load.mts";
+import { inlineCode } from "../../util/markdown.mts";
 
 interface EscalateCheck {
   triggers: EscalateTrigger[];
@@ -217,7 +218,7 @@ export function buildEscalateHumanMessage(
       "## GitHub stack",
       "",
       `- layer: \`${s.position}\` of \`${s.size}\` in stack \`${s.number}\``,
-      `- stack base: \`${s.baseRefName}\``,
+      `- stack base: ${inlineCode(s.baseRefName)}`,
     );
   }
 
@@ -253,7 +254,7 @@ export function buildEscalateHumanMessage(
 export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: string): string {
   if (triggers.includes("stacked-pr")) {
     const selector = detail ?? "<pr>";
-    return `This PR belongs to a GitHub stack, so Shepherd will not emit a merge command. \`gh pr merge\` targets the PR's own base branch — for a mid-stack layer that is the unmerged parent branch, not the stack's base — and auto-merge is unsupported on stacked PRs. Merge from the GitHub stack UI, or run \`gh stack merge --squash ${selector}\`, which lands this PR and every unmerged layer below it.`;
+    return `This PR belongs to a GitHub stack, so Shepherd will not emit a merge command. \`gh pr merge\` targets the PR's own base branch — for a mid-stack layer that is the unmerged parent branch, not the stack's base — and auto-merge is unsupported on stacked PRs. Merge from the GitHub stack UI, or run \`gh stack merge --squash ${selector}\` (requires the \`github/gh-stack\` extension — run \`gh extension install github/gh-stack\` first if it's not installed), which lands this PR and every unmerged layer below it.`;
   }
   if (triggers.includes("check-follow-up-unavailable")) {
     return "One or more failing checks have no autonomous follow-up available. Use the displayed conclusion, run or URL, and included evidence to handle them manually.";

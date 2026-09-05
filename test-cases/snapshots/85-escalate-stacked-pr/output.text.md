@@ -10,7 +10,7 @@ Stack: #7 2/3 (base stack/7/1)
 
 **Triggers:** `stacked-pr`
 
-This PR belongs to a GitHub stack, so Shepherd will not emit a merge command. `gh pr merge` targets the PR's own base branch — for a mid-stack layer that is the unmerged parent branch, not the stack's base — and auto-merge is unsupported on stacked PRs. Merge from the GitHub stack UI, or run `gh stack merge --squash 42`, which lands this PR and every unmerged layer below it.
+This PR belongs to a GitHub stack, so Shepherd will not emit a merge command. `gh pr merge` targets the PR's own base branch — for a mid-stack layer that is the unmerged parent branch, not the stack's base — and auto-merge is unsupported on stacked PRs. Merge from the GitHub stack UI, or run `gh stack merge --squash 42` (requires the `github/gh-stack` extension — run `gh extension install github/gh-stack` first if it's not installed), which lands this PR and every unmerged layer below it.
 
 ## GitHub stack
 
