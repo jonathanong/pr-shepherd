@@ -37,11 +37,15 @@ or re-fetch what it was hiding.
 
 ## What this looks like in the output
 
-- CI failures carry the failed job name, the failed step, and a bounded log excerpt — not
-  a `"transient" | "real"` verdict. The agent reads the log excerpt and decides.
-- Review threads and comments carry the raw `authorAssociation` and a true-only
-  `viewerDidAuthor`, plus Shepherd's own `authorType` (`User`/`Bot`/`Unknown`) — never a
-  derived trust label.
+- CI failures carry the failed job name, the failed step, and a bounded log excerpt when
+  triage can fetch them — not a `"transient" | "real"` verdict. The agent reads the log
+  excerpt and decides. (External checks, `CANCELLED`, `STARTUP_FAILURE`, and a few
+  fetch-failure edge cases don't have a job or log to attach.)
+- Review threads and their inline comments carry the raw `authorAssociation` and a
+  true-only `viewerDidAuthor`, plus Shepherd's own `authorType` (`User`/`Bot`/`Unknown`)
+  — never a derived trust label. Top-level PR comments carry `authorAssociation` and
+  `authorType` the same way, but GitHub's schema has no `viewerDidAuthor` field for that
+  comment type, so it isn't part of that provenance there.
 - Merge-blocking state is a set of raw requirement rows (`Approvals: 1/2 [Required]`,
   `Conversations Resolved: No [Required]`), not a single "why is this blocked" sentence.
 

@@ -22,9 +22,15 @@ labor: **Shepherd owns the state transition, the agent owns the judgment call.**
 
 ## What "deterministic" actually means here
 
-Not a vibe — a checkable property. Given the same PR snapshot, `iterate` always produces
-the same action, because the dispatch order is a fixed sequence of conditions, evaluated
-first-match-wins:
+Not a vibe — a checkable property. Given the same complete input — the PR snapshot *and*
+local state (seen markers, the ready-delay timer, stall and fix-attempt tracking) *and*
+the current time — `iterate` always produces the same action, because the dispatch order
+is a fixed sequence of conditions, evaluated first-match-wins. An unchanged PR snapshot
+can still move to a different action as any of those other inputs change: a ready-delay
+timer elapsing turns `WAIT` into `CANCEL` or `MERGE`, a first-look item becomes seen, and
+accumulated stall or fix-attempt state can turn a repeat `FIX_CODE` into `ESCALATE`. None
+of that is nondeterminism — it's the same fixed table over a larger, and equally
+inspectable, input.
 
 1. Sweep and check terminal state (merged/closed → `cancel`).
 2. Ready-delay bookkeeping for a clean, ready PR.

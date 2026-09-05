@@ -30,7 +30,14 @@ function safeDistPath(requestPath) {
 }
 
 function resolveFile(urlPath) {
-  const clean = decodeURIComponent(urlPath.split("?")[0]);
+  let clean;
+  try {
+    clean = decodeURIComponent(urlPath.split("?")[0]);
+  } catch {
+    // Malformed percent-escape (e.g. a trailing "/%") — treat as not found rather than
+    // letting the URIError crash the whole preview server.
+    return null;
+  }
   const candidate = clean.endsWith("/") ? `${clean}index.html` : clean;
   const full = safeDistPath(candidate);
   if (!full) return null;
