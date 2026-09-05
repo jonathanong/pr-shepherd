@@ -83,6 +83,30 @@ function resolveDocsHref(href, { sourceFile, repoRoot, headingsForDoc }) {
   return docsBlobUrl(file, anchor);
 }
 
+// Matches `[text](href)`, `![alt](href)`, and `[text](href "title")` — the only link
+// forms used in this site's content (no reference-style links, no bare autolinks).
+const MARKDOWN_LINK_RE = /(!?\[[^\]]*\])\(([^)\s]+)(\s+"[^"]*")?\)/g;
+
+/**
+ * Rewrite every link target in raw markdown through `resolveHref`, so the agent-facing
+ * `.md` twins and `llms-full.txt` carry the same base-path-aware, docs-blob-rewritten
+ * hrefs as the rendered HTML — not the raw, context-free targets as written in content.
+ * Without this, a root-relative link like `/principles/` is correct in HTML (resolved
+ * through `withBase`) but wrong when copied verbatim into a `.md` file served under a
+ * base path: resolved against that document's own URL, a leading `/` lands at the
+ * domain root, not the deployed subpath.
+ * @param {string} body
+ * @param {{ sourceFile: string, route: string }} ctx
+ * @param {(href: string, ctx: object) => string} resolveHref
+ */
+export function rewriteMarkdownLinks(body, ctx, resolveHref) {
+  return body.replace(
+    MARKDOWN_LINK_RE,
+    (_match, textPart, href, titlePart = "") =>
+      `${textPart}(${resolveHref(href, ctx)}${titlePart})`,
+  );
+}
+
 /**
  * @param {object} opts
  * @param {Set<string>} opts.routes valid page routes ("" included for the root)

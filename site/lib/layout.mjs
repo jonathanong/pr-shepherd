@@ -2,11 +2,21 @@
 // header nav, the rendered article, a "Canonical spec" footer linking into docs/, and the
 // site footer. One function in, one HTML string out.
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { absoluteUrl, routePath, withBase } from "./links.mjs";
 
 const NO_FOUC_THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("theme");
 if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);
 }catch(e){}})();`;
+
+// Inlined (not loaded via <img src>) so its `stroke="currentColor"` / `fill="currentColor"`
+// resolve against this page's own color, not an external SVG document's default black —
+// an <img>-referenced SVG renders in an isolated document with nothing to inherit from,
+// which made the mark nearly invisible on the dark theme.
+const ASSETS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "assets");
+const INLINE_LOGO_SVG = readFileSync(join(ASSETS_DIR, "logo.svg"), "utf8").trim();
 
 function escapeAttr(value) {
   return String(value).replace(/"/g, "&quot;");
@@ -104,7 +114,7 @@ export function renderLayout({ page, contentHtml, docsLinks, nav, siteMeta }) {
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site-header">
   <a class="brand" href="${withBase("/")}">
-    <img src="${withBase("/assets/logo.svg")}" alt="" width="28" height="28">
+    <span class="brand-mark">${INLINE_LOGO_SVG}</span>
     <span>pr-shepherd</span>
   </a>
   <nav class="site-nav">${renderNav(nav, page)}</nav>

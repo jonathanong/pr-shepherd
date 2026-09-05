@@ -33,8 +33,10 @@
     gap: 16px;
     margin-bottom: 48px;
   }
-  .brand img {
+  .brand svg {
     display: block;
+    width: 48px;
+    height: 48px;
   }
   .brand span {
     font-size: 28px;
@@ -64,7 +66,17 @@
 <body>
 <div class="wrap">
   <div class="brand">
-    <img src="./logo.svg" width="48" height="48" alt="">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="pr-shepherd">
+      <g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M30,22 Q30,10 41,10 Q47,10 47,16 Q47,23 37,23" />
+        <path d="M30,20 L30,86" />
+        <path d="M30,24 Q64,36 30,50" />
+        <path d="M56,24 L52,86" />
+        <path d="M56,25 Q82,34 55,52" />
+        <path d="M53,64 L78,86" />
+      </g>
+      <circle cx="56" cy="15" r="7" fill="currentColor" />
+    </svg>
     <span>pr-shepherd</span>
   </div>
   <p class="kicker">for agents finishing pull requests</p>

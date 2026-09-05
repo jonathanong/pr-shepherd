@@ -106,8 +106,15 @@ img {
   color: var(--fg);
   white-space: nowrap;
 }
-.brand img {
+.brand-mark {
   display: block;
+  width: 28px;
+  height: 28px;
+}
+.brand-mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .site-nav {

@@ -52,12 +52,15 @@ export function buildLlmsTxt(pages) {
   return lines.join("\n");
 }
 
-export function buildLlmsFullTxt(pages) {
+/** @param {Map<string, string>} rewrittenBodies route -> body with hrefs rewritten
+ *  through the link resolver (see rewriteMarkdownLinks) — not the raw content bodies. */
+export function buildLlmsFullTxt(pages, rewrittenBodies) {
   const ordered = [...pages].sort((a, b) => a.route.localeCompare(b.route));
   return ordered
     .map((page) => {
       const url = absoluteUrl(routePath(page.route));
-      return `# ${page.title}\n\nSource: ${url}\n\n${page.body.trim()}\n`;
+      const body = (rewrittenBodies.get(page.route) ?? page.body).trim();
+      return `# ${page.title}\n\nSource: ${url}\n\n${body}\n`;
     })
     .join("\n---\n\n");
 }

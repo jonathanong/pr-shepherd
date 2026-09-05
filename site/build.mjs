@@ -11,7 +11,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildLlmsFullTxt, buildLlmsTxt } from "./lib/agents.mjs";
-import { createLinkResolver } from "./lib/links.mjs";
+import { createLinkResolver, rewriteMarkdownLinks } from "./lib/links.mjs";
 import { renderLayout } from "./lib/layout.mjs";
 import { renderMarkdown } from "./lib/markdown.mjs";
 import { loadPages, topLevelSections } from "./lib/pages.mjs";
@@ -58,20 +58,25 @@ function createWriter(distDir) {
   };
 }
 
-function buildPage(page, { resolveHref, nav, siteMeta }, writeDist) {
+function buildPage(page, { resolveHref, nav, siteMeta }, writeDist, rewrittenBodies) {
   const ctx = { route: page.route, sourceFile: page.file, resolveHref };
   const contentHtml = renderMarkdown(page.body, ctx);
   const docsLinks = page.docs.map((d) => ({ href: resolveHref(d.path, ctx), label: d.label }));
   const html = renderLayout({ page, contentHtml, docsLinks, nav, siteMeta });
 
+  // The .md twins and llms-full.txt need the same base-path-aware, docs-blob-rewritten
+  // hrefs as the HTML — not the raw targets as written in content. See rewriteMarkdownLinks.
+  const markdownBody = rewriteMarkdownLinks(page.body, ctx, resolveHref);
+  rewrittenBodies.set(page.route, markdownBody);
+
   if (page.route === "") {
     writeDist("index.html", html);
-    writeDist("index.md", page.body);
+    writeDist("index.md", markdownBody);
     return;
   }
   writeDist(`${page.route}/index.html`, html);
-  writeDist(`${page.route}/index.md`, page.body);
-  writeDist(`${page.route}.md`, page.body);
+  writeDist(`${page.route}/index.md`, markdownBody);
+  writeDist(`${page.route}.md`, markdownBody);
 }
 
 function main() {
@@ -87,12 +92,15 @@ function main() {
   const nav = topLevelSections(pages);
   const siteMeta = { version: readVersion() };
   const writeDist = createWriter(distDir);
+  const rewrittenBodies = new Map();
 
-  for (const page of pages) buildPage(page, { resolveHref, nav, siteMeta }, writeDist);
+  for (const page of pages) {
+    buildPage(page, { resolveHref, nav, siteMeta }, writeDist, rewrittenBodies);
+  }
 
   copyAssets(assetsDir, join(distDir, "assets"));
   writeDist("llms.txt", buildLlmsTxt(pages));
-  writeDist("llms-full.txt", buildLlmsFullTxt(pages));
+  writeDist("llms-full.txt", buildLlmsFullTxt(pages, rewrittenBodies));
   writeDist("sitemap.xml", buildSitemap(pages));
   writeDist("robots.txt", buildRobotsTxt());
   writeDist(".nojekyll", "");
