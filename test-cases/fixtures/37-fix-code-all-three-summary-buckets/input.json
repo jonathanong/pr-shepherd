@@ -49,12 +49,19 @@
     ]
   },
   "seenMap": {
-    "PRR_edited": { "seenAt": 1715000000, "bodyHash": "984453e31788d96f" },
-    "PRR_seen": { "seenAt": 1715000000, "bodyHash": "ac6d8b69317607e4" }
+    "PRR_edited": {
+      "seenAt": 1715000000,
+      "bodyHash": "984453e31788d96f"
+    },
+    "PRR_seen": {
+      "seenAt": 1715000000,
+      "bodyHash": "ac6d8b69317607e4"
+    }
   },
   "readyDelayState": {
     "isReady": false,
     "shouldCancel": false,
     "remainingSeconds": 600
-  }
+  },
+  "expectedExitCode": 12
 }

@@ -21,7 +21,9 @@
     ]
   },
   "config": {
-    "ignoreChecks": ["Kilo Code Review"]
+    "ignoreChecks": [
+      "Kilo Code Review"
+    ]
   },
   "readyDelayState": {
     "isReady": false,
@@ -31,5 +33,6 @@
   "mergeableFallback": {
     "mergeable": "MERGEABLE",
     "mergeStateStatus": "UNSTABLE"
-  }
+  },
+  "expectedExitCode": 10
 }

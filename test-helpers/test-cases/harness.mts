@@ -10,6 +10,7 @@ import { vi, beforeEach, afterEach } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import builtinConfig from "../../src/config.json" with { type: "json" };
 
 // ---------------------------------------------------------------------------
 // Global stubs (evaluated before imports)
@@ -135,8 +136,6 @@ export interface Fixture {
   checkAnnotationsByCheckId?: Record<string, unknown[]>;
   /** Return value of loadSeenMap() — keys are item IDs. */
   seenMap?: Record<string, { seenAt: number; bodyHash: string }>;
-  /** Return value of autoResolveOutdated(). */
-  autoResolveResult?: { resolved: string[]; errors: Array<{ id: string; error: string }> };
   /** Deep-merged on top of defaultConfig(). */
   config?: Record<string, unknown>;
   /** Return value of updateReadyDelay(). */
@@ -166,6 +165,13 @@ export interface Fixture {
   cancelRunsFail?: boolean;
   /** Extra CLI args appended after "42". */
   args?: string[];
+  /** Freeform note about the scenario. Not read by the harness; documentation only. */
+  description?: string;
+  /**
+   * Expected process exit code for this tick — see docs/exit-codes.md. Required so every
+   * fixture pins the documented 0/10-15 contract, not just its Markdown/JSON body.
+   */
+  expectedExitCode: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -203,29 +209,14 @@ const DEFAULT_BATCH = {
   checks: [],
 };
 
+/**
+ * Deep clone of the shipped built-in defaults (src/config.json) — the same object
+ * src/config/load.mts falls back to when no .pr-shepherdrc.yml is found. Cloning the real
+ * defaults (rather than hand-copying them) means the harness cannot silently drift from
+ * production, as it previously did (see test-cases/README.md).
+ */
 export function defaultConfig() {
-  return {
-    botUsernames: ["coderabbitai"],
-    iterate: {
-      fixAttemptsPerThread: 3,
-      stallTimeoutMinutes: 30,
-      minimizeApprovals: false,
-      minimizeComments: "all",
-    },
-    watch: { readyDelayMinutes: 10 },
-    resolve: {
-      shaPoll: { intervalMs: 2000, maxAttempts: 10 },
-    },
-    checks: { ciTriggerEvents: ["pull_request", "pull_request_target"] },
-    mergeStatus: { blockingReviewerLogins: ["copilot"] },
-    actions: {
-      autoResolveOutdated: true,
-      autoMinimizeSuppressed: true,
-      autoMarkReady: true,
-      commitSuggestions: true,
-      neverCancelRuns: [],
-    },
-  };
+  return structuredClone(builtinConfig);
 }
 
 const DEFAULT_READY_STATE = { isReady: false, shouldCancel: false, remainingSeconds: 600 };
@@ -302,12 +293,15 @@ function stampInitialRunAttempt(checks: unknown[]): unknown[] {
 
 export function applyFixture(fixture: Fixture): void {
   const baseCfg = defaultConfig() as unknown as Record<string, unknown>;
-  const overlayCfg: Record<string, unknown> = {};
+  let overlayCfg: Record<string, unknown> = {};
   if (fixture.stallTimeoutMinutes !== undefined) {
     overlayCfg.iterate = { stallTimeoutMinutes: fixture.stallTimeoutMinutes };
   }
   if (fixture.config) {
-    Object.assign(overlayCfg, fixture.config);
+    // deepMerge, not Object.assign: a plain assign would let fixture.config.iterate replace
+    // (rather than merge with) the stallTimeoutMinutes shortcut set above, silently dropping it
+    // whenever a fixture used both knobs.
+    overlayCfg = deepMerge(overlayCfg, fixture.config);
   }
   const cfg = Object.keys(overlayCfg).length > 0 ? deepMerge(baseCfg, overlayCfg) : baseCfg;
   mockLoadConfig.mockReturnValue(cfg);
@@ -375,9 +369,7 @@ export function applyFixture(fixture: Fixture): void {
   }
   mockMarkSeen.mockResolvedValue(undefined);
 
-  mockAutoResolveOutdated.mockResolvedValue(
-    fixture.autoResolveResult ?? { resolved: [], errors: [] },
-  );
+  mockAutoResolveOutdated.mockResolvedValue({ resolved: [], errors: [] });
 
   mockUpdateReadyDelay.mockResolvedValue(fixture.readyDelayState ?? DEFAULT_READY_STATE);
 
@@ -427,7 +419,10 @@ export function applyFixture(fixture: Fixture): void {
 export interface RunResult {
   textOut: string;
   jsonOut: string;
+  /** Exit code from the text-format run. */
   exitCode: number | undefined;
+  /** Exit code from the --format=json run — must equal `exitCode`; see index.test.mts. */
+  jsonExitCode: number | undefined;
 }
 
 async function runMain(args: string[]): Promise<{ out: string; exitCode: number | undefined }> {
@@ -452,8 +447,8 @@ async function runMain(args: string[]): Promise<{ out: string; exitCode: number 
 export async function captureRun(fixture: Fixture): Promise<RunResult> {
   const args = ["iterate", "42", ...(fixture.args ?? [])];
   const { out: textOut, exitCode } = await runMain(args);
-  const { out: jsonOut } = await runMain([...args, "--format=json"]);
-  return { textOut, jsonOut, exitCode };
+  const { out: jsonOut, exitCode: jsonExitCode } = await runMain([...args, "--format=json"]);
+  return { textOut, jsonOut, exitCode, jsonExitCode };
 }
 
 /**
@@ -478,9 +473,9 @@ export async function captureTwoTickStallRun(fixture: Fixture): Promise<RunResul
   mockReadStallState.mockResolvedValue({ fingerprint, firstSeenAt: NOW - 9999 });
   const { out: textOut, exitCode } = await runMain(args);
   mockReadStallState.mockResolvedValue({ fingerprint, firstSeenAt: NOW - 9999 });
-  const { out: jsonOut } = await runMain([...args, "--format=json"]);
+  const { out: jsonOut, exitCode: jsonExitCode } = await runMain([...args, "--format=json"]);
 
-  return { textOut, jsonOut, exitCode };
+  return { textOut, jsonOut, exitCode, jsonExitCode };
 }
 
 // ---------------------------------------------------------------------------

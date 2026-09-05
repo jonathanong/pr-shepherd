@@ -48,7 +48,9 @@ describe("CLI instruction pointers name real pr-shepherd skill playbooks", () =>
     // regenerates the snapshots — but the corpus-equality test in test-cases/index.test.mts
     // fails on that same stale snapshot in the same run, so the gap is covered in practice.
     const snapshotsDir = new URL("test-cases/snapshots/", rootUrl);
-    const dirs = readdirSync(snapshotsDir, { withFileTypes: true }).filter((d) => d.isDirectory());
+    const dirs = readdirSync(snapshotsDir, { withFileTypes: true }).filter(
+      (d) => d.isDirectory() && !d.name.startsWith("."),
+    );
     expect(dirs.length).toBeGreaterThan(0);
 
     const foundNames = new Set<string>();

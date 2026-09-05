@@ -26,9 +26,11 @@
       }
     }
   },
+  "stallTimeoutMinutes": 30,
   "readyDelayState": {
     "isReady": false,
     "shouldCancel": false,
     "remainingSeconds": 600
-  }
+  },
+  "expectedExitCode": 13
 }
