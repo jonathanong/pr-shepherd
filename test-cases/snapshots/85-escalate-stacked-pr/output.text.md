@@ -4,7 +4,7 @@
 **summary** 1 passing
 Approvals: None [Not Required]
 Conversations Resolved: Yes [Not Required]
-Stack: #7 2/3 (base stack/7/1)
+Stack: 7 (layer 2/3, base stack/7/1)
 
 ⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required
 

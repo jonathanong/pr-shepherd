@@ -29,7 +29,7 @@ export function formatMergeRequirementLines(req: MergeRequirements): string[] {
   if (req.mergeQueue) lines.push(formatMergeQueue(req.mergeQueue));
   if (req.stack) {
     const { number, position, size, baseRefName } = req.stack;
-    lines.push(`Stack: #${number} ${position}/${size} (base ${baseRefName})`);
+    lines.push(`Stack: ${number} (layer ${position}/${size}, base ${baseRefName})`);
   }
   return lines;
 }

@@ -100,6 +100,7 @@ describe("escalate message helpers", () => {
     expect(message).toContain("## GitHub stack");
     expect(message).toContain("layer: `2` of `3` in stack `7`");
     expect(message).toContain("stack base: `stack/7/1`");
+    expect(message).not.toContain("#7");
   });
 
   it("renders complete failing-check evidence for a check escalation", () => {
