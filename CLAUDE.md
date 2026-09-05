@@ -191,6 +191,6 @@ Every subcommand (and the top-level CLI) must honor `--help` and `-h`:
 
 - The flag short-circuits before any I/O, work, or validation.
 - It prints the command's usage string to stdout and exits 0.
-- Usage strings live in `src/cli/help.mts` (one per command). Adding a new subcommand requires adding its usage entry and an early `if (maybePrintHelp(args, "<key>")) return;` line in its handler.
+- Usage strings live in `src/cli/help-top-page.mts` (the top-level page), `src/cli/help-command-pages.mts` (the `COMMAND_USAGE` map), `src/cli/help-iterate-poll-pages.mts` (`iterate`, `poll`, and the derived default `pr-shepherd [PR]` page), and `src/cli/help-log-file-page.mts`. `src/cli/help.mts` merges them into `USAGE` and exposes `helpKeyForArgs` / `maybePrintHelp`. Adding a new subcommand requires adding its `COMMAND_USAGE` entry and an early `if (maybePrintHelp(args, "<key>")) return;` line in its handler.
 - Top-level `pr-shepherd --help` / `-h` is intercepted in `main()` in `src/cli-parser.mts` before `setupLog`, matching the `--version` precedent.
-- The default-iterate path (`pr-shepherd [PR] [flags]`) also honors `--help`/`-h` anywhere in the arg list via `validateDefaultIterateArgs` in `src/cli/default-iterate.mts`.
+- The default poll path (`pr-shepherd [PR] [flags]`) also honors `--help`/`-h` anywhere in the arg list: `main()` in `src/cli-parser.mts` intercepts the flag before `setupLog` and prints `USAGE.default` when `isDefaultPollInvocation` (from `src/cli/default-poll.mts`) matches. `validateDefaultPollArgs`, in the same file, runs only after that short-circuit and rejects unknown flags and subcommands.
