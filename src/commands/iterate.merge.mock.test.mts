@@ -314,11 +314,14 @@ describe("runIterate — merge", () => {
     const result = await runIterate(makeOpts({ merge: true }));
 
     expect(result.action).toBe("escalate");
+    expect("merge" in result).toBe(false);
     if (result.action === "escalate") {
-      expect(result.escalate.triggers).toEqual(["stack-merge-blocked"]);
-      expect(result.escalate.humanMessage).toContain("position 1 of 3, base `main`");
-      expect(result.escalate.humanMessage).toContain("gh stack merge");
+      expect(result.escalate.triggers).toEqual(["stacked-pr"]);
+      expect(result.escalate.humanMessage).toContain("layer: `1` of `3` in stack `7`");
+      expect(result.escalate.humanMessage).toContain("stack base: `main`");
+      expect(result.escalate.humanMessage).toContain("gh stack merge --squash 42");
     }
+    expect(JSON.stringify(result)).not.toContain("--auto");
   });
 
   it("declines to plan a merge for a PR stacked mid-stack with an unmerged parent, escalating instead", async () => {
@@ -344,11 +347,39 @@ describe("runIterate — merge", () => {
     const result = await runIterate(makeOpts({ merge: true }));
 
     expect(result.action).toBe("escalate");
+    expect("merge" in result).toBe(false);
     if (result.action === "escalate") {
-      expect(result.escalate.triggers).toEqual(["stack-merge-blocked"]);
-      expect(result.escalate.humanMessage).toContain("position 2 of 3, base `stack/7/1`");
+      expect(result.escalate.triggers).toEqual(["stacked-pr"]);
+      expect(result.escalate.humanMessage).toContain("layer: `2` of `3` in stack `7`");
+      expect(result.escalate.humanMessage).toContain("stack base: `stack/7/1`");
       expect(result.escalate.humanMessage).toContain("--merge");
     }
+    expect(JSON.stringify(result)).not.toContain("--auto");
+  });
+
+  it("falls through to cancel for a stacked PR when merge mode is not enabled", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        headSha: "abc123",
+        nodeId: "PR_node",
+        mergeStatus: stackedReadyMergeStatus({
+          number: 7,
+          size: 3,
+          position: 1,
+          baseRefName: "main",
+        }),
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+
+    const result = await runIterate(makeOpts({ merge: false }));
+
+    expect(result.action).toBe("cancel");
   });
 
   it("does not escalate an old ejection after the PR head was updated", async () => {

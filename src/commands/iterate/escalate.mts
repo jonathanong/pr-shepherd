@@ -210,6 +210,15 @@ export function buildEscalateHumanMessage(
     if (removal.beforeCommitOid) lines.push(`- queue commit: \`${removal.beforeCommitOid}\``);
   }
 
+  if (escalate.stack) {
+    const s = escalate.stack;
+    lines.push("");
+    lines.push("## GitHub stack");
+    lines.push("");
+    lines.push(`- layer: \`${s.position}\` of \`${s.size}\` in stack \`${s.number}\``);
+    lines.push(`- stack base: \`${s.baseRefName}\``);
+  }
+
   if (escalate.authorization && escalate.authorization.length > 0) {
     lines.push("");
     lines.push("## Authorization");
@@ -240,6 +249,10 @@ export function buildEscalateHumanMessage(
 }
 
 export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: string): string {
+  if (triggers.includes("stacked-pr")) {
+    const selector = detail ?? "<pr>";
+    return `This PR belongs to a GitHub stack, so Shepherd will not emit a merge command. \`gh pr merge\` targets the PR's own base branch — for a mid-stack layer that is the unmerged parent branch, not the stack's base — and auto-merge is unsupported on stacked PRs. Merge from the GitHub stack UI, or run \`gh stack merge --squash ${selector}\`, which lands this PR and every unmerged layer below it.`;
+  }
   if (triggers.includes("check-follow-up-unavailable")) {
     return "One or more failing checks have no autonomous follow-up available. Use the displayed conclusion, run or URL, and included evidence to handle them manually.";
   }
@@ -264,10 +277,6 @@ export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: st
   if (triggers.includes("bot-cr-not-dismissed")) {
     const ids = detail ? ` (review IDs: ${detail})` : "";
     return `Bot CHANGES_REQUESTED review(s) remained undismissed past the stall window${ids}. The agent likely dropped \`--dismiss-review-ids\` from a prior apply command. Dismiss the review(s) manually (or re-run \`pr-shepherd apply review\` with the IDs) to unblock the PR.`;
-  }
-  if (triggers.includes("stack-merge-blocked")) {
-    const context = detail ? ` (${detail})` : "";
-    return `This PR is part of a native GitHub stack${context} — a plain \`gh pr merge\` could land it into an unmerged parent branch, and \`--auto\` is rejected server-side on stacked pull requests. Merge it with stack-aware tooling (for example \`gh stack merge\`, if the \`github/gh-stack\` extension is installed) instead of an ordinary merge command.`;
   }
   return "Ambiguous state — automated handling cannot proceed safely. Inspect the PR and act manually.";
 }

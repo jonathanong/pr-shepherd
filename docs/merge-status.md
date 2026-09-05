@@ -52,7 +52,7 @@ Printed only when they apply:
 
 The agent should read these lines instead of inferring a required review from `reviewDecision`. `REVIEW_REQUIRED` with `Approvals: None [Not Required]` means GitHub is not waiting on an approval.
 
-`stack` is not display-only: when `--merge` is enabled and the clean READY state has lasted for the configured ready-delay, a present `stack` field diverts that tick to `ESCALATE` (`stack-merge-blocked`) instead of a merge command, at every stack position including 1 — see [escalations.md#stack-merge-blocked](escalations.md#stack-merge-blocked). GitHub's stack field is public preview and can be absent for a genuinely stacked PR; an absent field means Shepherd has no signal, not that the PR is confirmed unstacked.
+`stack` is not display-only: when `--merge` is enabled and the clean READY state has lasted for the configured ready-delay, a present `stack` field diverts that tick to `ESCALATE` (`stacked-pr`) instead of a merge command, at every stack position including 1 — see [escalations.md#stacked-pr](escalations.md#stacked-pr). GitHub's stack field is public preview and can be absent for a genuinely stacked PR; an absent field means Shepherd has no signal, not that the PR is confirmed unstacked.
 
 `reviewDecision` is **not** used for ShepherdStatus derivation. Iterate still prints why merge is blocked: cancel notes use `blockedReasonFromRequirements` (awaiting N approvals, unresolved conversations, branch behind base, merge queue) rather than guessing from `reviewDecision` alone.
 

@@ -1,6 +1,6 @@
 import type { AgentCheck, AgentComment, AgentThread } from "./report.mts";
 import type { CheckStatus, Review } from "./github.mts";
-import type { MergeQueueRemovalStatus } from "./merge-requirements.mts";
+import type { MergeQueueRemovalStatus, StackStatus } from "./merge-requirements.mts";
 
 export type EscalateTrigger =
   | "fix-thrash"
@@ -10,7 +10,7 @@ export type EscalateTrigger =
   | "authorization-required"
   | "bot-cr-not-dismissed"
   | "merge-queue-removed"
-  | "stack-merge-blocked";
+  | "stacked-pr";
 
 export interface AgentStalledCheck {
   name: string;
@@ -37,6 +37,7 @@ export interface EscalateDetails {
   suggestion: string;
   humanMessage: string;
   mergeQueueRemoval?: MergeQueueRemovalStatus;
+  stack?: StackStatus;
   authorization?: Array<{
     action: "mark-ready" | "merge-or-enqueue";
     targetIds: string[];

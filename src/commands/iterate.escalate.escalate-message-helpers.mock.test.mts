@@ -79,12 +79,27 @@ describe("escalate message helpers", () => {
     expect(buildEscalateSuggestion(["stall-timeout"], "1 minute")).toContain("1 minute —");
     expect(buildEscalateSuggestion(["stall-timeout"])).toContain("60 minutes —");
     expect(buildEscalateSuggestion(["base-branch-unknown"])).toContain("base branch");
-    expect(buildEscalateSuggestion(["stack-merge-blocked"])).toBe(
-      "This PR is part of a native GitHub stack — a plain `gh pr merge` could land it into an unmerged parent branch, and `--auto` is rejected server-side on stacked pull requests. Merge it with stack-aware tooling (for example `gh stack merge`, if the `github/gh-stack` extension is installed) instead of an ordinary merge command.",
+    expect(buildEscalateSuggestion(["stacked-pr"])).toContain("gh stack merge --squash <pr>");
+    expect(buildEscalateSuggestion(["stacked-pr"], "42")).toContain("gh stack merge --squash 42");
+    expect(buildEscalateSuggestion(["stacked-pr"])).not.toMatch(/gh stack merge(?! --squash)/);
+  });
+
+  it("renders a GitHub stack section with the PR's layer, stack size, and stack base", () => {
+    const message = buildEscalateHumanMessage(
+      {
+        triggers: ["stacked-pr"],
+        unresolvedThreads: [],
+        ambiguousComments: [],
+        changesRequestedReviews: [],
+        stack: { number: 7, size: 3, position: 2, baseRefName: "stack/7/1" },
+        suggestion: buildEscalateSuggestion(["stacked-pr"], "42"),
+      },
+      42,
     );
-    expect(
-      buildEscalateSuggestion(["stack-merge-blocked"], "position 2 of 3, base `main`"),
-    ).toContain("(position 2 of 3, base `main`)");
+
+    expect(message).toContain("## GitHub stack");
+    expect(message).toContain("layer: `2` of `3` in stack `7`");
+    expect(message).toContain("stack base: `stack/7/1`");
   });
 
   it("renders complete failing-check evidence for a check escalation", () => {
