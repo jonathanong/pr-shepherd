@@ -15,10 +15,10 @@ flowchart TD
   S1 --> S15{"1.5 state != OPEN?"}
   S15 -->|yes| A_CAN(["action: cancel"])
   S15 -->|no| S2["2. updateReadyDelay"]
-  S2 --> S3{"3. hasActionableWork?"}
-  S3 -->|yes| A_FIX(["action: fix_code"])
-  S3 -->|no| SM{"--merge state?"}
-  SM -->|active queue/auto-merge| A_W(["action: wait"])
+  S2 --> S3{"3. hasActionableWork?<br/>(non-CI work deferred if queued)"}
+  S3 -->|yes, not deferred| A_FIX(["action: fix_code"])
+  S3 -->|no, or deferred while queued| SM{"--merge state?"}
+  SM -->|active queue/auto-merge<br/>+ any deferred work counts| A_W(["action: wait"])
   SM -->|current removal| A_ESC(["action: escalate"])
   SM -->|none| S2C{"shouldCancel?"}
   S2C -->|yes + --merge| A_MERGE(["action: merge"])
@@ -115,6 +115,8 @@ All failing checks — including timeout, cancelled, startup-failure, flaky fail
 
 CONFLICTS is included so merge conflicts and review comments can be handled in one tick. Iterate surfaces raw `**branch**` state; it does not tell the caller how to rebase.
 
+**Deferred while queued:** with `--merge` enabled, the PR currently in the merge queue, and `actions.workWhileQueued` not `true`, everything in the bullet list above **except** `checks.failing` and `mergeStatus.status === 'CONFLICTS'` (and check-run annotations) does not count toward this step — a Shepherd-initiated push right now would eject the PR from the queue. That work falls through to step 4.5 instead, which reports it as `deferredWork` counts on the `wait` result. Checks and conflicts are never deferred; they always route here regardless of queue state.
+
 **Side-effects:** No workflow-run cancellation. GitHub exposes no exact viewer capability for cancel/rerun actions, so Shepherd only surfaces failure context for inspection.
 
 **Emits:** `action: 'fix_code'`. A non-empty external check URL counts as an autonomous investigation path and remains `fix_code`. If no other autonomous work remains and every failing check instead requires a human-only action or lacks a usable locator/evidence and an authorized rerun, `handleFixCode` emits `action: 'escalate'` with trigger `check-follow-up-unavailable` and the raw check context. Every emitted `fix_code` is non-terminal and runs through the stall guard.
@@ -135,7 +137,7 @@ There is no extra `mergeStateStatus === "CLEAN"` requirement. A draft that deriv
 
 ### 4.5. Active merge and queue removal
 
-An active auto-merge request or merge-queue entry emits `wait` after actionable checks are handled. When `--merge` reaches its execution point, iterate emits a head-pinned ordinary auto-merge command plus a plain-merge fallback, or a queue command plus a GraphQL enqueue fallback; it does not gate these explicit requests on `viewerCanEnableAutoMerge`. GitHub reports any authorization or policy failure. If `--merge` is enabled and the latest queue removal has no actionable failure, iterate emits `escalate` with the raw removal fields.
+An active auto-merge request or merge-queue entry emits `wait` after actionable checks are handled. When the PR is in the merge queue and non-CI work was deferred at step 3 (see above), that `wait` result also carries raw `deferredWork` counts (threads/comments/changes-requested-reviews/review-summaries) — omitted when nothing was held back. Plain active auto-merge (no queue membership) never defers anything and never carries `deferredWork`. When `--merge` reaches its execution point, iterate emits a head-pinned ordinary auto-merge command plus a plain-merge fallback, or a queue command plus a GraphQL enqueue fallback; it does not gate these explicit requests on `viewerCanEnableAutoMerge`. GitHub reports any authorization or policy failure. If `--merge` is enabled and the latest queue removal has no actionable failure, iterate emits `escalate` with the raw removal fields. A removal whose freshness GitHub can no longer verify (the removed queue commit is unavailable) is treated as stale and does not escalate.
 
 ### 5. Wait
 
@@ -161,17 +163,18 @@ Fingerprint: HEAD SHA, action, `status`, `mergeStateStatus`, `state`, `isDraft`,
 
 Exit codes: `0`/`10`–`15` is `IterateResult` PR state; see [exit-codes.md](exit-codes.md) for `sysexits.h` codes when a step fails before reaching a row below.
 
-| Step    | Condition                                    | Action       | Exit code |
-| ------- | -------------------------------------------- | ------------ | --------- |
-| 1.5     | `state === 'MERGED'`                         | `cancel`     | 0         |
-| 1.5     | `state === 'CLOSED'`                         | `cancel`     | 14        |
-| 2       | `shouldCancel` + `--merge`                   | `merge`      | 15        |
-| 2       | `shouldCancel` without `--merge`             | `cancel`     | 0         |
-| 3       | `hasActionableWork`                          | `fix_code`   | 12        |
-| 3 check | Only checks without autonomous follow-up     | `escalate`   | 13        |
-| 3 stall | Same fingerprint for ≥ `stallTimeoutMinutes` | `escalate`   | 13        |
-| 3 esc.  | Same thread hit `fixAttemptsPerThread` times | `escalate`   | 13        |
-| 4       | READY + isDraft + !blockingBotReview         | `mark_ready` | 11        |
-| 4.5     | Auto-merge or merge queue active             | `wait`       | 10        |
-| 5       | Fallthrough                                  | `wait`       | 10        |
-| 5 stall | Same fingerprint for ≥ `stallTimeoutMinutes` | `escalate`   | 13        |
+| Step    | Condition                                                                                        | Action                            | Exit code |
+| ------- | ------------------------------------------------------------------------------------------------ | --------------------------------- | --------- |
+| 1.5     | `state === 'MERGED'`                                                                             | `cancel`                          | 0         |
+| 1.5     | `state === 'CLOSED'`                                                                             | `cancel`                          | 14        |
+| 2       | `shouldCancel` + `--merge`                                                                       | `merge`                           | 15        |
+| 2       | `shouldCancel` without `--merge`                                                                 | `cancel`                          | 0         |
+| 3       | `hasActionableWork`                                                                              | `fix_code`                        | 12        |
+| 3       | `hasActionableWork`, but only non-CI work while queued (`--merge`, in queue, `!workWhileQueued`) | `wait` (4.5, with `deferredWork`) | 10        |
+| 3 check | Only checks without autonomous follow-up                                                         | `escalate`                        | 13        |
+| 3 stall | Same fingerprint for ≥ `stallTimeoutMinutes`                                                     | `escalate`                        | 13        |
+| 3 esc.  | Same thread hit `fixAttemptsPerThread` times                                                     | `escalate`                        | 13        |
+| 4       | READY + isDraft + !blockingBotReview                                                             | `mark_ready`                      | 11        |
+| 4.5     | Auto-merge or merge queue active                                                                 | `wait`                            | 10        |
+| 5       | Fallthrough                                                                                      | `wait`                            | 10        |
+| 5 stall | Same fingerprint for ≥ `stallTimeoutMinutes`                                                     | `escalate`                        | 13        |

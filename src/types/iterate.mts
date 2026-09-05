@@ -68,9 +68,27 @@ export interface IterateResultBase {
   quotaWarning?: GraphqlQuotaWarning;
 }
 
+/**
+ * Raw counts of actionable work held back while the PR sits in the merge queue
+ * (`actions.workWhileQueued` is `false`, the default) — a Shepherd-initiated push
+ * or mutation right now would eject the PR. Omitted entirely once every count is
+ * zero. Not emitted for checks/annotations/conflicts: those always surface via
+ * `fix_code` immediately regardless of queue membership.
+ */
+export interface IterateDeferredWork {
+  /** Actionable + resolution-only + first-look review threads, plus rule-auto-resolve thread IDs. */
+  threads: number;
+  /** Actionable + minimize-queued + first-look PR comments. */
+  comments: number;
+  changesRequestedReviews: number;
+  /** Review-summary IDs to minimize, plus first-look/edited/(if opted in) surfaced-approval summaries. */
+  reviewSummaries: number;
+}
+
 interface IterateResultWait extends IterateResultBase {
   action: "wait";
   log: string;
+  deferredWork?: IterateDeferredWork;
 }
 
 export type CancelReason = "merged" | "closed" | "ready-delay-elapsed";

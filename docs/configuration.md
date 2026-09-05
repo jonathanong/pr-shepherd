@@ -74,6 +74,7 @@ actions:
   autoMarkReady: true
   neverCancelRuns:
     - "Final Code Review"
+  workWhileQueued: false # set true to act on non-CI work immediately instead of waiting until the PR leaves the merge queue
 ```
 
 ---
@@ -99,6 +100,7 @@ actions:
 | `actions.autoMinimizeSuppressed`     | `true`                                    | Silently resolve/minimize classification-rule matches with both `suppress: true` and `autoResolve: true` before emitting `fix_code`                         |
 | `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR reaches a clean ready state                                                                                               |
 | `actions.neverCancelRuns`            | `[]`                                      | Legacy cancellation-named patterns; matching checks remain visible despite `ignoreChecks`, but Shepherd never cancels runs                                  |
+| `actions.workWhileQueued`            | `false`                                   | When `true`, act on non-CI actionable work immediately even while the PR is in the merge queue, instead of deferring it until the PR leaves the queue       |
 
 ## `botUsernames`
 
@@ -271,6 +273,17 @@ actions:
 ```
 
 For backward compatibility, a matching run remains visible and can block readiness even if a raw job name also matches `ignoreChecks`.
+
+### `actions.workWhileQueued` — default `false`
+
+When `false` (default), `iterate --merge` defers non-CI actionable work — review threads, PR comments, `CHANGES_REQUESTED` reviews, and review summaries — while the PR sits in the merge queue, since a Shepherd-initiated push right now would eject it from the queue. The tick emits `WAIT` with raw counts of what is held back (see [`docs/actions.md`](actions.md#wait)). Failing checks, unseen check-run annotations, and merge conflicts are never deferred — they always route to `fix_code` immediately regardless of this setting, since GitHub is already acting on the queue for those.
+
+Set to `true` to restore the pre-existing behavior: actionable work is handled immediately even while the PR is queued.
+
+```yaml
+actions:
+  workWhileQueued: true
+```
 
 ---
 

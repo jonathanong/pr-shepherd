@@ -23,6 +23,7 @@ describe("runResolveMutate — configured bot threads", () => {
         autoMinimizeSuppressed: true,
         autoMarkReady: true,
         neverCancelRuns: [],
+        workWhileQueued: false,
       },
       iterate: {
         fixAttemptsPerThread: 3,

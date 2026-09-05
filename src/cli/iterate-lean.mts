@@ -82,6 +82,7 @@ export function projectIterateLean(
     case "wait":
       return {
         ...base,
+        ...(result.deferredWork && { deferredWork: result.deferredWork }),
         log: adaptIterateLog(result.log),
         instructions: simpleInstructions(result),
       };

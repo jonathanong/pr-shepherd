@@ -81,10 +81,17 @@ export async function runCheck(
   const allChecks = mergeStartupFailureChecks(batchData.checks, startupFailureChecks);
   const classifiedPrChecks = classifyChecks(allChecks);
   const latestRemoval = batchData.latestMergeQueueRemoval;
+  // `timelineItems(last: 1, ...)` returns the single most recent removal regardless of age, so
+  // a PR removed from the queue once, long ago, and never re-added keeps returning that same
+  // historical event forever. When GitHub omits the removed queue commit for that old event
+  // (e.g. after the synthetic commit is garbage collected), freshness is unverifiable — treat
+  // it as stale/updated rather than as still current, so Shepherd doesn't escalate
+  // `merge-queue-removed` permanently on data it can no longer check. The raw removal fields
+  // still render in the merge-queue header regardless of this flag.
   const headUpdatedAfterRemoval = Boolean(
     latestRemoval &&
-    latestRemoval.beforeCommitParentOids &&
-    !latestRemoval.beforeCommitParentOids.includes(batchData.headRefOid),
+    (!latestRemoval.beforeCommitParentOids ||
+      !latestRemoval.beforeCommitParentOids.includes(batchData.headRefOid)),
   );
   const queueRawChecks = batchData.isInMergeQueue
     ? (batchData.mergeQueueChecks ?? [])

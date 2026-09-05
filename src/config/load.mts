@@ -69,6 +69,14 @@ export interface PrShepherdConfig {
     autoMarkReady: boolean;
     /** Legacy-named patterns that keep matching Actions checks visible despite ignoreChecks. */
     neverCancelRuns: string[];
+    /**
+     * When `false` (default), `iterate --merge` defers non-CI actionable work
+     * (review threads, comments, changes-requested reviews, review summaries)
+     * while the PR sits in the merge queue, since a Shepherd-initiated push
+     * would eject it. When `true`, restores pre-existing behavior: actionable
+     * work is handled immediately regardless of queue membership.
+     */
+    workWhileQueued: boolean;
     /** @deprecated Accepted for compatibility, ignored by the loader. */
     autoResolveOutdated?: boolean;
     /** @deprecated Accepted for compatibility, ignored by the loader. */
@@ -282,6 +290,7 @@ const KNOWN_NESTED_KEYS: Record<string, ReadonlySet<string>> = {
     "autoMinimizeSuppressed",
     "autoMarkReady",
     "neverCancelRuns",
+    "workWhileQueued",
     "autoResolveOutdated",
     "commitSuggestions",
   ]),
