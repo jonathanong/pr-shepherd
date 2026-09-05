@@ -35,6 +35,10 @@ const TEXT_LOSSY_PATHS = new Map<string, string>([
     "baseBranch",
     "only rendered under --verbose (`**baseBranch**`) or fix_code's `base:` bullet — omitted from lean text for every other action",
   ],
+  [
+    "mergeStatus",
+    "the raw enum discriminator is JSON-only; text instead renders the derived `**branch** behind/conflicts with PR base` phrasing or the `**reviewDecision**`/BLOCKED header segment (docs/actions.md, 'Note on mergeStatus in JSON lean mode')",
+  ],
   ["mergeRequirements.approvals.current", "rendered as `None` when 0, not the digit"],
   [
     "mergeRequirements.approvals.requiredCount",
