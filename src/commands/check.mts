@@ -7,7 +7,11 @@ import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
 import { classifyVisibleComments } from "../comments/visible-comments.mts";
 import { computeStatus } from "./check-status.mts";
-import { annotationMarkerBody, attachAndMergeCheckAnnotations } from "./check-annotations.mts";
+import {
+  annotationMarkerBody,
+  attachAndMergeCheckAnnotations,
+  hasCheckDrivenActionableWork,
+} from "./check-annotations.mts";
 import { buildTerminalReport } from "./check-terminal-report.mts";
 import {
   isBlockedByFilteredCheck,
@@ -212,17 +216,29 @@ export async function runCheck(
     batchData.viewerAuthorization?.viewerCanAdminister === true,
   );
   const approvedReviewVisibility = classifyReviewsForDisplay(batchData.approvedReviews, seenMap);
-  // Mirrors the deferral gate in commands/iterate/index.mts: when this tick's non-CI actionable
-  // work (threads/comments/review summaries/changes-requested) will be held back because the PR
-  // is queued, none of it was actually shown to the agent this tick — persisting seen markers for
-  // it now would make it silently vanish from every later tick once it's no longer "new" or
-  // "edited", even after the PR leaves the queue. Checks/annotations are never deferred, so their
-  // seen-marking (and rule-auto-resolve suppression marking, unaffected by visibility) proceeds
-  // unconditionally.
+  // Mirrors the deferral gate in commands/iterate/index.mts exactly (via the shared
+  // hasCheckDrivenActionableWork helper, so the two can't drift): when this tick's non-CI
+  // actionable work (threads/comments/review summaries/changes-requested) will be held back
+  // because the PR is queued, none of it was actually shown to the agent this tick —
+  // persisting seen markers for it now would make it silently vanish from every later tick
+  // once it's no longer "new" or "edited", even after the PR leaves the queue. A queued PR
+  // that also has check-driven work (failing checks, actionable annotations, conflicts) is
+  // NOT deferred — index.mts still renders these items via fix_code — so this must stay false
+  // in that case too, or their seen markers would be suppressed while actually being shown.
   const deferWhileQueued =
     opts.merge === true &&
     batchData.isInMergeQueue === true &&
-    config.actions.workWhileQueued !== true;
+    config.actions.workWhileQueued !== true &&
+    !hasCheckDrivenActionableWork(
+      {
+        failing: merged.failing,
+        passing: merged.passing,
+        skipped: merged.skipped,
+        filtered: merged.filtered,
+        ignored: merged.ignored,
+      },
+      mergeStatus.status,
+    );
   if (opts.persistSeen !== false) {
     const successfulAnnotations = [
       ...merged.passing,

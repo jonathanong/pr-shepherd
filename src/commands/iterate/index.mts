@@ -16,7 +16,7 @@ import { clearStallState } from "../../state/iterate-stall.mts";
 import { handleFixCode } from "./fix-code.mts";
 import { normalizeBotUsernames } from "../../comments/authors.mts";
 import { autoMinimizeComments } from "../../comments/resolve.mts";
-import { checksWithActionableAnnotations } from "../check-annotations.mts";
+import { hasCheckDrivenActionableWork } from "../check-annotations.mts";
 import { buildReadyMergeResult, handleActiveMergeState } from "./merge-state.mts";
 import { buildIterateBase } from "./base.mts";
 import { markReadyIfAuthorized } from "./mark-ready.mts";
@@ -102,9 +102,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     (report.comments.minimizeIds?.length ?? 0) > 0 ||
     report.comments.firstLook.length > 0 ||
     report.changesRequestedReviews.length > 0 ||
-    report.checks.failing.length > 0 ||
-    checksWithActionableAnnotations(report).length > 0 ||
-    report.mergeStatus.status === "CONFLICTS" ||
+    hasCheckDrivenActionableWork(report.checks, report.mergeStatus.status) ||
     reviewSummaryIds.length > 0 ||
     firstLookSummaries.length > 0 ||
     editedSummaries.length > 0 ||
@@ -131,10 +129,10 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
   // what Shepherd does, so they always surface immediately. Only review threads/comments/
   // changes-requested reviews/review summaries — the categories that would otherwise cause a
   // Shepherd-initiated push while the PR sits safely in the queue — are eligible for deferral.
-  const checkDrivenActionableWork =
-    report.checks.failing.length > 0 ||
-    checksWithActionableAnnotations(report).length > 0 ||
-    report.mergeStatus.status === "CONFLICTS";
+  const checkDrivenActionableWork = hasCheckDrivenActionableWork(
+    report.checks,
+    report.mergeStatus.status,
+  );
   const deferWhileQueued =
     opts.merge === true &&
     report.mergeQueue?.inQueue === true &&

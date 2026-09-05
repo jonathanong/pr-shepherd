@@ -4,6 +4,7 @@ import {
   BASE_OPTS,
   defaultConfig,
   makeBatchData,
+  makeCheck,
   makeThread,
   mockFetchPrBatch,
   mockLoadConfig,
@@ -44,6 +45,25 @@ describe("runCheck — merge-queue deferred seen markers", () => {
 
     await runCheck({ ...BASE_OPTS, merge: true });
 
+    expect(mockMarkSeen).toHaveBeenCalledWith(expect.anything(), "t-new", expect.anything());
+  });
+
+  it("marks a new thread seen while queued when a failing check also makes this tick non-deferred", async () => {
+    // A queued PR with a failing check is NOT deferred (index.mts still renders review items
+    // via fix_code for it), so its seen markers must not be suppressed just because the PR
+    // happens to be queued.
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        isInMergeQueue: true,
+        isMergeQueueEnabled: true,
+        checks: [makeCheck({ conclusion: "FAILURE", category: "failing" })],
+        reviewThreads: [makeThread({ id: "t-new", author: "reviewer", authorType: "User" })],
+      }),
+    });
+
+    const report = await runCheck({ ...BASE_OPTS, merge: true });
+
+    expect(report.checks.failing.length).toBeGreaterThan(0);
     expect(mockMarkSeen).toHaveBeenCalledWith(expect.anything(), "t-new", expect.anything());
   });
 
