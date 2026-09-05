@@ -7,7 +7,9 @@ Conversations Resolved: Yes [Not Required]
 
 ## Changes-requested reviews
 
-- `reviewId=PRR_prlevel` (@architect · User)
+### `reviewId=PRR_prlevel` (@architect · User)
+
+> The overall architecture needs to be reconsidered before merging.
 
 ## Post-fix actions
 

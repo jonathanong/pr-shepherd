@@ -25,7 +25,9 @@ Conversations Resolved: No [Not Required]
 
 ## Changes-requested reviews
 
-- `reviewId=PRR_multi_cr` (@reviewer · User)
+### `reviewId=PRR_multi_cr` (@reviewer · User)
+
+> Blocking until the failing test and the inline notes are addressed.
 
 ## Post-fix actions
 

@@ -1,0 +1,24 @@
+{
+  "description": "iterate.minimizeApprovals is turned on and a non-human APPROVED review is eligible for minimization (viewerCanMinimize defaults to true, author policy 'all' matches Bot). classifyReviewSummaries routes its ID into the same minimizeIds list used for review summaries; since it is not a first-look summary body, it surfaces only as a bare ID in '## Review IDs to minimize queue' rather than as a rendered approval or summary section. The approval alone (via reviewSummaryIds) makes this tick fix_code.",
+  "batchData": {
+    "approvedReviews": [
+      {
+        "id": "PRR_bot_approval_minimize",
+        "author": "coderabbitai",
+        "authorType": "Bot",
+        "body": "LGTM! Nice cleanup."
+      }
+    ]
+  },
+  "config": {
+    "iterate": {
+      "minimizeApprovals": true
+    }
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

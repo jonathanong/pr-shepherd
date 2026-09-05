@@ -142,7 +142,25 @@ export function formatFixCodeResult(
 
   if (result.fix.changesRequestedReviews.length > 0) {
     sections.push("## Changes-requested reviews");
-    sections.push(result.fix.changesRequestedReviews.map((r) => renderReviewBullet(r)).join("\n"));
+    for (const r of result.fix.changesRequestedReviews) {
+      // A stale bot CR that already had its full body surfaced on a prior tick stays a terse
+      // one-line reminder (renderReviewBullet's staleBotCr branch) — repeating the full body
+      // every tick would be noise, not new content. Every other review (a bot CR's first
+      // emission, or any human CR) gets the same H3 + blockquote shape as the sibling
+      // review-summary/approval sections below, so the agent actually has a body to read —
+      // the bare bullet this replaced only ever rendered the reviewId, never the body.
+      if (r.staleBotCr) {
+        sections.push(renderReviewBullet(r));
+        continue;
+      }
+      const staleTag = r.staleReview
+        ? " [stale — review is on an old commit, all threads resolved; ask reviewer to re-review or dismiss]"
+        : "";
+      sections.push(
+        `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})${staleTag}`,
+      );
+      sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body, topCap));
+    }
   }
 
   if (result.fix.firstLookSummaries.length > 0) {

@@ -13,7 +13,9 @@ Conversations Resolved: No [Not Required]
 
 ## Changes-requested reviews
 
-- `reviewId=PRR_cr` (@reviewer · User)
+### `reviewId=PRR_cr` (@reviewer · User)
+
+> Please address the performance concerns I mentioned in the inline comments.
 
 ## Post-fix actions
 

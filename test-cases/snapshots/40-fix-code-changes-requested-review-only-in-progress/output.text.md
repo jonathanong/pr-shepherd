@@ -8,7 +8,9 @@ Conversations Resolved: Yes [Not Required]
 
 ## Changes-requested reviews
 
-- `reviewId=PRR_no_threads` (@architect · User)
+### `reviewId=PRR_no_threads` (@architect · User)
+
+> The overall design needs to be reconsidered. Please see my comments in the review summary above.
 
 ## Post-fix actions
 

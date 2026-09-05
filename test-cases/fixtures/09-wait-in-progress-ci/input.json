@@ -37,5 +37,6 @@
     "isReady": false,
     "shouldCancel": false,
     "remainingSeconds": 600
-  }
+  },
+  "expectedExitCode": 10
 }

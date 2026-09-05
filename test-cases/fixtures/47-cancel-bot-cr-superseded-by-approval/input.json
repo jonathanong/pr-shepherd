@@ -1,6 +1,11 @@
 {
   "batchData": {
-    "latestReviews": [{ "login": "coderabbitai[bot]", "state": "APPROVED" }],
+    "latestReviews": [
+      {
+        "login": "coderabbitai[bot]",
+        "state": "APPROVED"
+      }
+    ],
     "changesRequestedReviews": [],
     "checks": [
       {
@@ -17,5 +22,6 @@
     "isReady": true,
     "shouldCancel": true,
     "remainingSeconds": 0
-  }
+  },
+  "expectedExitCode": 0
 }

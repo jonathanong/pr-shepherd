@@ -14,7 +14,9 @@ Conversations Resolved: No [Not Required]
 
 ## Changes-requested reviews
 
-- `reviewId=PRR_changes_only` (@reviewer · User)
+### `reviewId=PRR_changes_only` (@reviewer · User)
+
+> High-level design issue — please discuss in a follow-up PR.
 
 ## Post-fix actions
 

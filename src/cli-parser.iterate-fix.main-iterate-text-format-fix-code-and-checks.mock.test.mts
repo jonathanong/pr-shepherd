@@ -136,8 +136,10 @@ describe("main — iterate text format (fix_code and checks)", () => {
     // Failing checks — GitHub Actions and external (no failureKind label).
     expect(out).toContain("- `run-42` — `lint`");
     expect(out).toContain("- external `https://app.codecov.io` — `codecov/patch`");
-    // Reviews
-    expect(out).toContain("- `reviewId=REV_1` (@reviewer · Unknown)");
+    // Reviews — H3 heading + full-body blockquote (bare bullet with a body preview and no
+    // heading was a bug: it never rendered anything the agent could act on).
+    expect(out).toContain("### `reviewId=REV_1` (@reviewer · Unknown)");
+    expect(out).toContain("> please rework this");
     // Cancelled runs
     expect(out).toContain("`run-99`");
     // Post-fix actions use a backticked base + resolve command with --require-sha appended.

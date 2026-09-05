@@ -1,0 +1,24 @@
+{
+  "description": "A failing GitHub Actions check on its second run attempt (runAttempt: 2) with an otherwise clean branch (not BEHIND or CONFLICTS) and no other actionable work. Shepherd's single rerun allowance was already consumed by attempt 1, and a clean branch offers no branch-refresh path either, so this is the bespoke 'single rerun allowance exhausted' escalate variant rather than the ordinary check-follow-up-unavailable text.",
+  "batchData": {
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/800",
+        "runId": "800",
+        "runAttempt": 2,
+        "workflowName": "CI",
+        "jobName": "tests"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 13
+}

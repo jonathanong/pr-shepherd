@@ -1,0 +1,36 @@
+{
+  "description": "--merge is enabled and the ready-delay timer has already elapsed (shouldCancel: true) — the same trigger fixture 64 uses to emit merge — but this PR also has a failing check. hasActionableWork is checked before the merge/ready-delay branches in runIterateCore, so a failing check always wins: this stays fix_code instead of emitting a merge command.",
+  "args": ["--merge"],
+  "batchData": {
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/901",
+        "runId": "901"
+      }
+    ]
+  },
+  "triagedChecks": [
+    {
+      "name": "CI / tests",
+      "status": "COMPLETED",
+      "conclusion": "FAILURE",
+      "event": "pull_request",
+      "detailsUrl": "https://github.com/owner/repo/actions/runs/901",
+      "runId": "901",
+      "category": "failing",
+      "workflowName": "CI",
+      "jobName": "tests",
+      "failedStep": "Run tests"
+    }
+  ],
+  "readyDelayState": {
+    "isReady": true,
+    "shouldCancel": true,
+    "remainingSeconds": 0
+  },
+  "expectedExitCode": 12
+}

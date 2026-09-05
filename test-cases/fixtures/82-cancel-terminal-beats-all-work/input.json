@@ -1,0 +1,40 @@
+{
+  "description": "The PR is MERGED while also carrying an unresolved thread, a conflicting merge state, and a failing check — all independently sufficient to trigger fix_code. runIterateCore checks report.mergeStatus.state !== 'OPEN' first (step 1.5) and returns cancel/merged before any actionable-work check runs, regardless of what else the batch contains.",
+  "batchData": {
+    "state": "MERGED",
+    "mergeable": "CONFLICTING",
+    "mergeStateStatus": "DIRTY",
+    "reviewThreads": [
+      {
+        "id": "PRRT_merged_thread",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/index.ts",
+        "line": 1,
+        "startLine": null,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "This should never be surfaced — the PR is already merged.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r900",
+        "createdAtUnix": 1715700000
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/900",
+        "runId": "900"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 0
+}

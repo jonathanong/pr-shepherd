@@ -15,5 +15,6 @@
     "isReady": true,
     "shouldCancel": true,
     "remainingSeconds": 0
-  }
+  },
+  "expectedExitCode": 0
 }

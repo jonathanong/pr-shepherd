@@ -1,0 +1,19 @@
+{
+  "description": "--merge is enabled and GitHub reports the PR was removed from the merge queue. The head has not moved since removal (beforeCommitParentOids includes the current headRefOid) and there is no other actionable work, so iterate escalates with merge-queue-removed and preserves GitHub's raw reason/actor/commit for the human.",
+  "args": ["--merge"],
+  "batchData": {
+    "latestMergeQueueRemoval": {
+      "reason": "MERGE_QUEUE_POLICY_CHECK_FAILURE",
+      "actor": "github-actions",
+      "createdAtUnix": 1715799000,
+      "beforeCommitOid": "queue-commit-1",
+      "beforeCommitParentOids": ["abc123"]
+    }
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 13
+}
