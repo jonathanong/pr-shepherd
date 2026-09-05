@@ -58,6 +58,15 @@ function createWriter(distDir) {
   };
 }
 
+/** Frontmatter `docs:` links exist only as HTML footer input (see renderLayout's
+ *  "Canonical spec" aside) unless also appended to the markdown twin — otherwise an agent
+ *  reading the `.md` output loses the page's canonical sources entirely. */
+function canonicalSpecMarkdown(docsLinks) {
+  if (docsLinks.length === 0) return "";
+  const items = docsLinks.map((d) => `- [${d.label}](${d.href})`).join("\n");
+  return `\n\n## Canonical spec\n\n${items}\n`;
+}
+
 function buildPage(page, { resolveHref, nav, siteMeta }, writeDist, rewrittenBodies) {
   const ctx = { route: page.route, sourceFile: page.file, resolveHref };
   const contentHtml = renderMarkdown(page.body, ctx);
@@ -66,7 +75,8 @@ function buildPage(page, { resolveHref, nav, siteMeta }, writeDist, rewrittenBod
 
   // The .md twins and llms-full.txt need the same base-path-aware, docs-blob-rewritten
   // hrefs as the HTML — not the raw targets as written in content. See rewriteMarkdownLinks.
-  const markdownBody = rewriteMarkdownLinks(page.body, ctx, resolveHref);
+  const markdownBody =
+    rewriteMarkdownLinks(page.body, ctx, resolveHref) + canonicalSpecMarkdown(docsLinks);
   rewrittenBodies.set(page.route, markdownBody);
 
   if (page.route === "") {

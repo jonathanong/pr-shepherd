@@ -41,9 +41,10 @@ inspectable, input.
 6. Fallthrough → `wait`.
 
 That table is exhaustive and published — see `iterate-flow.md` in the canonical spec
-below. So is the escalation list: `ESCALATE` fires on a *finite*, named set of triggers
-(stall timeout, a thread stuck past its fix-attempt budget, a check with no autonomous
-follow-up, an unexplained merge-queue removal), not on a fuzzy "this seems stuck" model.
+below. So is the escalation list: `ESCALATE` fires on a *finite*, named set of seven
+triggers — for example a stall timeout, a thread stuck past its fix-attempt budget, a
+check with no autonomous follow-up, or an unexplained merge-queue removal — not on a
+fuzzy "this seems stuck" model. The full seven are enumerated in `escalations.md` below.
 
 ## Where judgment stays with the agent
 

@@ -5,7 +5,7 @@
 
 import { marked } from "marked";
 import { githubSlug } from "./slug.mjs";
-import { withBase } from "./links.mjs";
+import { resolveImageSrc } from "./links.mjs";
 
 /**
  * @param {string} body raw markdown for one page
@@ -46,7 +46,7 @@ export function renderMarkdown(body, ctx) {
   };
 
   renderer.image = function image({ href, title, text }) {
-    const src = href.startsWith("/") ? withBase(href) : href;
+    const src = resolveImageSrc(href);
     const titleAttr = title ? ` title="${title}"` : "";
     return `<img src="${src}" alt="${text}"${titleAttr} loading="lazy">`;
   };

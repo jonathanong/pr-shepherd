@@ -67,9 +67,11 @@ these. There is no seventh action and no "it depends."
 <li>ESCALATE</li>
 </ul>
 
-`FIX_CODE` is the only non-terminal action that hands work back to the agent; only
-`ESCALATE` hands the PR to a human. `CANCEL` just stops polling — merged, closed, or a
-clean PR that settled through its ready-delay.
+`FIX_CODE` is the only action that means a code change is needed. `MERGE` also hands work
+back — it emits a head-pinned merge or enqueue command for the agent to run, rather than
+merging itself — so iteration continues after both. Only `ESCALATE` hands the PR to a
+human; `CANCEL` just stops polling — merged, closed, or a clean PR that settled through its
+ready-delay.
 
 ## Install
 
@@ -93,6 +95,9 @@ claude /plugin install pr-shepherd
 ```bash
 codex plugin marketplace add jonathanong/pr-shepherd
 ```
+
+Then install/enable `pr-shepherd` from Codex — adding the marketplace alone doesn't
+install the plugin.
 
 </div>
 

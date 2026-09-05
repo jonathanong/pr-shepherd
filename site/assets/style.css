@@ -404,7 +404,7 @@ hr {
   margin: 1.5rem 0;
   align-items: start;
 }
-.install-method p {
+.install-method p:first-child {
   font-family: var(--mono);
   font-weight: 600;
   margin: 0 0 0.5rem;
@@ -413,6 +413,11 @@ hr {
 .install-method pre {
   margin: 0;
   font-size: 0.78rem;
+}
+.install-method pre + p {
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+  color: var(--fg-muted);
 }
 
 /* ---------- footer ---------- */

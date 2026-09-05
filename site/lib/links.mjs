@@ -32,6 +32,14 @@ export function absoluteUrl(path) {
   return `${getOrigin()}${withBase(path)}`;
 }
 
+/** Root-relative image src ("/assets/logo.svg") is base-path-rewritten directly, without
+ *  route validation — image targets aren't part of the page route table, so routing them
+ *  through `resolveHref` would wrongly classify "/assets/…" as a broken internal link.
+ *  External URLs pass through unchanged. */
+export function resolveImageSrc(href) {
+  return href.startsWith("/") ? withBase(href) : href;
+}
+
 /** @param {string} route "" for the site root, otherwise e.g. "principles/never-mutate-git" */
 export function routePath(route) {
   return route === "" ? "/" : `/${route}/`;
@@ -107,7 +115,10 @@ export function rewriteMarkdownLinks(body, ctx, resolveHref) {
     const spaceAt = inner.search(/\s/);
     const href = spaceAt === -1 ? inner : inner.slice(0, spaceAt);
     const titlePart = spaceAt === -1 ? "" : inner.slice(spaceAt);
-    return `${textPart}(${resolveHref(href, ctx)}${titlePart})`;
+    // An image token (`![alt](...)`) is not a link: its target is base-path-rewritten
+    // like markdown.mjs's HTML image renderer, not validated against the route table.
+    const resolved = textPart.startsWith("!") ? resolveImageSrc(href) : resolveHref(href, ctx);
+    return `${textPart}(${resolved}${titlePart})`;
   });
 }
 
