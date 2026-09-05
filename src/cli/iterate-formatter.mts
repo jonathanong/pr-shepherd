@@ -8,7 +8,11 @@ import {
   numberInstructions,
 } from "./iterate-instructions.mts";
 import { formatMergeRequirementLines } from "../merge-status/requirements-format.mts";
-import { appendMergeQueueHeader, formatMergeAction } from "./iterate-merge-formatter.mts";
+import {
+  appendMergeQueueHeader,
+  formatDeferredWorkLine,
+  formatMergeAction,
+} from "./iterate-merge-formatter.mts";
 import { formatApiUsage, formatQuotaWarning } from "./api-usage-formatter.mts";
 import { formatActivityLine } from "./iterate-activity-formatter.mts";
 
@@ -125,13 +129,14 @@ export function formatIterateResult(
   const telemetrySections = [quotaWarning, apiUsage, verboseChecks];
 
   switch (result.action) {
-    case "wait":
-      return joinSections([
-        header,
-        ...telemetrySections,
-        adaptIterateLog(result.log),
+    case "wait": {
+      const waitLines = [header, ...telemetrySections, adaptIterateLog(result.log)];
+      if (result.deferredWork) waitLines.push(formatDeferredWorkLine(result.deferredWork));
+      waitLines.push(
         `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
-      ]);
+      );
+      return joinSections(waitLines);
+    }
 
     case "mark_ready":
       return joinSections([
@@ -159,6 +164,7 @@ export function formatIterateResult(
         const supersededStr = result.supersededNames.map((n) => "`" + n + "`").join(", ");
         cancelHeaderLines.push(`**superseded** ${supersededStr}`);
       }
+      appendMergeQueueHeader(cancelHeaderLines, result);
       if (activityLine) cancelHeaderLines.push(activityLine);
       return joinSections([
         cancelHeaderLines.join("\n"),

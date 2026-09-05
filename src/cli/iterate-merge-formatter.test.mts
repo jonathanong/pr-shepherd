@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { IterateResult, IterateResultMerge } from "../types.mts";
-import { makeFixCodeResult } from "../../test-helpers/commands/poll.test-support.mts";
+import {
+  makeCancelResult,
+  makeFixCodeResult,
+  makeWaitResult,
+} from "../../test-helpers/commands/poll.test-support.mts";
 import { formatFixCodeResult } from "./fix-formatter.mts";
 import { formatIterateResult } from "./iterate-formatter.mts";
 import { projectIterateLean } from "./iterate-lean.mts";
@@ -107,6 +111,42 @@ describe("iterate merge formatting", () => {
     const output = formatMergeAction("header", result);
     expect(output).toContain("``gh pr merge 42 --subject 'release `v1`'``");
     expect(output).toContain("command: ``gh pr merge 42 --merge --subject 'release `v1`'``.");
+  });
+
+  it("renders the deferred-work line on a wait result while queued", () => {
+    const result = {
+      ...makeWaitResult({
+        deferredWork: { threads: 1, comments: 2, changesRequestedReviews: 1, reviewSummaries: 2 },
+      } as Partial<IterateResult>),
+      mergeQueue: { enabled: true, inQueue: true },
+    } as IterateResult;
+
+    const output = formatIterateResult(result);
+    expect(output).toContain(
+      "**deferred (in merge queue)** 1 thread, 2 comments, 1 changes-requested review, 2 review summaries",
+    );
+  });
+
+  it("omits the deferred-work line on a wait result with no deferred work", () => {
+    const result = {
+      ...makeWaitResult(),
+      mergeQueue: { enabled: true, inQueue: true },
+    } as IterateResult;
+
+    expect(formatIterateResult(result)).not.toContain("**deferred");
+  });
+
+  it("includes the merge-queue header on a cancel result (output-format parity with JSON)", () => {
+    const result = {
+      ...makeCancelResult(),
+      state: "OPEN",
+      reason: "ready-delay-elapsed",
+      mergeQueue: { enabled: true, inQueue: true },
+    } as IterateResult;
+
+    const output = formatIterateResult(result);
+    expect(output).toContain("**merge queue** enabled `true` · inQueue `true`");
+    expect(projectIterateLean(result)).toMatchObject({ mergeQueue: { inQueue: true } });
   });
 
   it("renders post-fix requeue commands", () => {

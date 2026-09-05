@@ -64,7 +64,7 @@ All of the following are true:
 - merge mode is enabled;
 - no queue or auto-merge state is active;
 - GitHub reports a latest merge-queue removal;
-- the PR head was not updated after that removal; and
+- the PR head was not updated after that removal, **and this is verifiable** — GitHub's `timelineItems(last: 1, ...)` keeps returning the single most recent removal event regardless of age, so a PR removed from the queue once and never re-added would otherwise re-trigger this escalation forever. When GitHub omits the removed queue commit for that event (for example after it is garbage collected), freshness cannot be checked; Shepherd treats that as stale/updated and does not escalate. The raw removal fields still render in the merge-queue header on every tick regardless of this check; and
 - no earlier actionable-work branch supplied a concrete fix.
 
 Failing queue CI is actionable and therefore stays `FIX_CODE`; it does not trigger `merge-queue-removed`. The escalation preserves GitHub's raw removal reason, actor, timestamp, queue commit, and parent OIDs when available.

@@ -8,6 +8,10 @@ function shouldFetchCheckAnnotations(check: ClassifiedCheck): boolean {
   return check.id != null && check.status === "COMPLETED" && check.hasAnnotations === true;
 }
 
+function hasActionableAnnotation(check: TriagedCheck): boolean {
+  return check.conclusion !== "SUCCESS" && (check.annotations?.length ?? 0) > 0;
+}
+
 export function checksWithActionableAnnotations(report: ShepherdReport): TriagedCheck[] {
   return [
     ...report.checks.failing,
@@ -15,7 +19,38 @@ export function checksWithActionableAnnotations(report: ShepherdReport): Triaged
     ...report.checks.skipped,
     ...report.checks.filtered,
     ...(report.checks.ignored ?? []),
-  ].filter((c) => c.conclusion !== "SUCCESS" && (c.annotations?.length ?? 0) > 0);
+  ].filter(hasActionableAnnotation);
+}
+
+/**
+ * True when GitHub itself is already acting on this PR regardless of Shepherd (a failing
+ * check, an unseen check-run annotation, or a hard merge conflict) — the categories that
+ * `commands/iterate/index.mts` never defers while a PR is queued. Shared with `check.mts` so
+ * the seen-marker suppression gate there can't drift from the actual iterate dispatch
+ * decision (a queued PR with a failing check still renders review items via `fix_code`; their
+ * seen markers must not be suppressed just because the PR happens to be queued).
+ */
+export function hasCheckDrivenActionableWork(
+  checks: {
+    failing: TriagedCheck[];
+    passing: ClassifiedCheck[];
+    skipped: ClassifiedCheck[];
+    filtered: ClassifiedCheck[];
+    ignored?: TriagedCheck[];
+  },
+  mergeStatusValue: string,
+): boolean {
+  return (
+    checks.failing.length > 0 ||
+    [
+      ...checks.failing,
+      ...checks.passing,
+      ...checks.skipped,
+      ...checks.filtered,
+      ...(checks.ignored ?? []),
+    ].some(hasActionableAnnotation) ||
+    mergeStatusValue === "CONFLICTS"
+  );
 }
 
 export async function attachAndMergeCheckAnnotations(

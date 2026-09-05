@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, it, expect, vi } from "vitest";
 import { mkdirSync } from "node:fs";
 import {
@@ -42,6 +43,11 @@ describe("loadConfig — no rc file", () => {
     expect(loadConfig().actions.neverCancelRuns).toEqual([]);
   });
 
+  it("defaults actions.workWhileQueued to false", async () => {
+    const loadConfig = await freshLoadConfig();
+    expect(loadConfig().actions.workWhileQueued).toBe(false);
+  });
+
   it("overrides iterate.minimizeApprovals when set in rc file", async () => {
     writeRc("iterate:\n  minimizeApprovals: true\n");
     const loadConfig = await freshLoadConfig();
@@ -67,6 +73,12 @@ describe("loadConfig — no rc file", () => {
     writeRc('actions:\n  neverCancelRuns:\n    - "Final Code Review"\n');
     const loadConfig = await freshLoadConfig();
     expect(loadConfig().actions.neverCancelRuns).toEqual(["Final Code Review"]);
+  });
+
+  it("overrides actions.workWhileQueued when set in rc file", async () => {
+    writeRc("actions:\n  workWhileQueued: true\n");
+    const loadConfig = await freshLoadConfig();
+    expect(loadConfig().actions.workWhileQueued).toBe(true);
   });
 
   it("overrides top-level botUsernames when set in rc file", async () => {

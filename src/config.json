@@ -48,6 +48,7 @@
   "actions": {
     "autoMinimizeSuppressed": true,
     "autoMarkReady": true,
-    "neverCancelRuns": []
+    "neverCancelRuns": [],
+    "workWhileQueued": false
   }
 }

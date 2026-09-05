@@ -1,5 +1,11 @@
 import { clearStallState } from "../../state/iterate-stall.mts";
-import type { IterateResult, IterateResultBase, ShepherdReport } from "../../types.mts";
+import type {
+  IterateDeferredWork,
+  IterateResult,
+  IterateResultBase,
+  Review,
+  ShepherdReport,
+} from "../../types.mts";
 import { buildEscalateHumanMessage, buildEscalateSuggestion } from "./escalate.mts";
 import { buildMergeCommandPlan } from "./merge.mts";
 import { formatPrUrl } from "../../pr-reference.mts";
@@ -30,20 +36,82 @@ export function buildReadyMergeResult(
   };
 }
 
+/** Raw counts of non-CI actionable work held back for one queued-PR wait tick. Omitted (all zero) when empty. */
+function buildDeferredWork(input: {
+  report: ShepherdReport;
+  reviewSummaryIds: string[];
+  firstLookSummaries: Review[];
+  editedSummaries: Review[];
+  surfacedApprovals: Review[];
+  minimizeApprovals: boolean;
+}): IterateDeferredWork | undefined {
+  const {
+    report,
+    reviewSummaryIds,
+    firstLookSummaries,
+    editedSummaries,
+    surfacedApprovals,
+    minimizeApprovals,
+  } = input;
+  // These buckets are not disjoint (e.g. an unresolved outdated thread is both
+  // `resolutionOnly` and `firstLook`; an eligible-to-minimize comment/summary is both
+  // `actionable`/`firstLook` and queued in `minimizeIds`/`reviewSummaryIds`) — dedupe by ID.
+  const threadIds = new Set([
+    ...report.threads.actionable.map((t) => t.id),
+    ...report.threads.resolutionOnly.map((t) => t.id),
+    ...report.threads.firstLook.map((t) => t.id),
+    ...(report.threads.ruleAutoResolveIds ?? []),
+  ]);
+  const commentIds = new Set([
+    ...report.comments.actionable.map((c) => c.id),
+    ...(report.comments.minimizeIds ?? []),
+    ...report.comments.firstLook.map((c) => c.id),
+  ]);
+  const reviewSummaryIdSet = new Set([
+    ...reviewSummaryIds,
+    ...firstLookSummaries.map((r) => r.id),
+    ...editedSummaries.map((r) => r.id),
+    ...(minimizeApprovals ? surfacedApprovals.map((r) => r.id) : []),
+  ]);
+  const deferredWork: IterateDeferredWork = {
+    threads: threadIds.size,
+    comments: commentIds.size,
+    changesRequestedReviews: report.changesRequestedReviews.length,
+    reviewSummaries: reviewSummaryIdSet.size,
+  };
+  const total =
+    deferredWork.threads +
+    deferredWork.comments +
+    deferredWork.changesRequestedReviews +
+    deferredWork.reviewSummaries;
+  return total > 0 ? deferredWork : undefined;
+}
+
 export async function handleActiveMergeState(input: {
   enabled: boolean | undefined;
   active: boolean;
   base: IterateResultBase;
   report: ShepherdReport;
   stallKey: StallKey;
+  reviewSummaryIds: string[];
+  firstLookSummaries: Review[];
+  editedSummaries: Review[];
+  surfacedApprovals: Review[];
+  minimizeApprovals: boolean;
 }): Promise<IterateResult | null> {
   const { enabled, active, base, report, stallKey } = input;
+  const inQueue = report.mergeQueue?.inQueue === true;
   if (enabled && active) {
     await clearStallState(stallKey);
+    // Only the queued case ever holds back non-CI actionable work (see the `deferWhileQueued`
+    // gate in index.mts, which requires `inQueue === true`); an ordinary active auto-merge
+    // request with no queue membership never defers anything, so it never carries counts here.
+    const deferredWork = inQueue ? buildDeferredWork(input) : undefined;
     return {
       ...base,
       action: "wait",
-      log: report.mergeQueue?.inQueue
+      ...(deferredWork && { deferredWork }),
+      log: inQueue
         ? `WAIT: PR #${report.pr} is in the merge queue`
         : `WAIT: PR #${report.pr} has auto-merge enabled`,
     };

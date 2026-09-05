@@ -117,6 +117,8 @@ The bare CLI command owns its bounded `--interval`/`--timeout` waits. A final `W
 
 The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, unmet merge requirements (approvals, conversations, merge queue, …), `PR is a draft`, or `some checks are unstable`. After a sweep, iterate also prints current-vs-required merge rules so the agent can see _why_ GitHub is not mergeable (for example `Approvals: None [Not Required]` vs `Approvals: None [Required]`). Merge-queue and GitHub-stack membership appear as extra lines when they apply (`Merge queue: position 2 QUEUED [Required]`, `Stack: #7 2/3 (base main)`); they are omitted when the PR is not in a queue or stack and merge queue is not required.
 
+**Deferred work while queued:** with `--merge` enabled and the PR currently in the merge queue (`mergeQueue.inQueue`), review threads, PR comments, `CHANGES_REQUESTED` reviews, and review summaries do not trigger `fix_code` — a Shepherd-initiated push right now would eject the PR from the queue. Instead this tick emits `WAIT` and raw counts of what is being held back appear as `deferredWork` (JSON) / a `**deferred (in merge queue)** N threads, N comments, …` line (Markdown), omitted entirely when there is nothing deferred. Failing checks (including merge-queue synthetic-commit `merge_group` failures), unseen check-run annotations, and merge conflicts are never deferred — GitHub is already acting on the queue for those regardless, so they still route to `fix_code` immediately. Set [`actions.workWhileQueued: true`](configuration.md#actionsworkwhilequeued--default-false) to restore pre-existing behavior and act on this work immediately even while queued. Once the PR leaves the queue (merged or ejected), the deferred work is picked up on the very next tick exactly as if `workWhileQueued` were `true` — deferred items are never marked seen while held back, so nothing is silently lost (see the Comment visibility invariant in [`CLAUDE.md`](../CLAUDE.md)).
+
 **What the skill does:** Ordinary `WAIT` actions remain inside its `--until-terminal` poll. If a quota-warning `WAIT` is returned, follow `## Instructions`, adjust cadence, and re-invoke the canonical command. Direct MCP/`iterate` callers must reschedule themselves.
 
 ---
@@ -198,6 +200,8 @@ CANCEL: PR #42 is merged — stopping
 Other heading variants: `# PR #42 [CANCEL] — closed`, `# PR #42 [CANCEL] — ready-delay-elapsed`.
 
 Merged and closed PRs surface terminal top-level statuses (`MERGED` or `CLOSED`) because `runCheck` short-circuits before CI/comment processing. Other body-line variants: `CANCEL: PR #42 is closed — stopping`, `CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping`. When merge is still `BLOCKED` after the delay, the body uses a specific unmet-requirement note when one is known (`awaiting 1 approval`, `in merge queue position 2`, …) and otherwise `is awaiting human review or branch protection resolution` — it does not guess from `reviewDecision` alone.
+
+A `ready-delay-elapsed` cancel carries the same `**merge queue** …` header line (raw enabled/inQueue/entry/removal fields, see the header block above) as every other action when `mergeQueue` is present, matching JSON output.
 
 **What the skill does:** Follow `## Instructions` — stop.
 

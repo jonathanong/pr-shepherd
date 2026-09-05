@@ -237,6 +237,7 @@ function defaultConfig() {
       autoMarkReady: true,
       commitSuggestions: true,
       neverCancelRuns: [] as string[],
+      workWhileQueued: false,
     },
   };
 }

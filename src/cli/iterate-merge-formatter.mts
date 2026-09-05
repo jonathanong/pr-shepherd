@@ -1,7 +1,23 @@
-import type { IterateResult, IterateResultMerge } from "../types.mts";
+import type { IterateDeferredWork, IterateResult, IterateResultMerge } from "../types.mts";
 import { renderMergeCommand } from "../commands/iterate/merge.mts";
 import { inlineCode, joinSections } from "../util/markdown.mts";
 import { buildSimpleIterateInstructions, numberInstructions } from "./iterate-instructions.mts";
+
+/** One inline rollup line of the non-CI work held back while the PR sits in the merge queue. */
+export function formatDeferredWorkLine(dw: IterateDeferredWork): string {
+  const parts: string[] = [];
+  if (dw.threads > 0) parts.push(`${dw.threads} thread${dw.threads === 1 ? "" : "s"}`);
+  if (dw.comments > 0) parts.push(`${dw.comments} comment${dw.comments === 1 ? "" : "s"}`);
+  if (dw.changesRequestedReviews > 0) {
+    parts.push(
+      `${dw.changesRequestedReviews} changes-requested review${dw.changesRequestedReviews === 1 ? "" : "s"}`,
+    );
+  }
+  if (dw.reviewSummaries > 0) {
+    parts.push(`${dw.reviewSummaries} review summar${dw.reviewSummaries === 1 ? "y" : "ies"}`);
+  }
+  return `**deferred (in merge queue)** ${parts.join(", ")}`;
+}
 
 export function appendMergeQueueHeader(lines: string[], result: IterateResult): void {
   const queue = result.mergeQueue;

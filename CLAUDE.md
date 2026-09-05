@@ -157,6 +157,19 @@ Implementation lives in `src/state/seen-comments.mts`. The call sites are
 `## First-look items`) and `src/commands/check.mts` (surfaced in iterate's
 `fix_code` output under `## Review summaries (first look — to be minimized)`).
 
+**Merge-queue deferral exception:** when `iterate` defers non-CI actionable
+work because the PR is queued (`actions.workWhileQueued` is `false`, the
+default — see the merge-queue deferral note under `## wait` in
+[`docs/actions.md`](docs/actions.md)), the deferred item was never actually
+shown to the agent this tick — only its raw count appears in `deferredWork`.
+`check.mts` skips persisting seen markers for exactly those deferred
+categories (threads, comments, changes-requested reviews, review summaries)
+on that tick; checks/annotations/rule-auto-resolve suppression marking are
+unaffected since they are never deferred. Without this, an item would be
+marked seen while hidden, then silently and permanently excluded from
+`actionable`/`firstLook` once its body stops changing — even after the PR
+leaves the queue.
+
 ## Keep skills and loop prompts minimal
 
 Skills (`plugins/pr-shepherd/skills/*/SKILL.md`) and `/loop` prompts should be thin dispatchers with this shape:

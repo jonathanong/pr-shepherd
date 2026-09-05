@@ -28,6 +28,7 @@ function defaultConfig(): PrShepherdConfig {
       autoMinimizeSuppressed: false,
       autoMarkReady: false,
       neverCancelRuns: [],
+      workWhileQueued: false,
     },
   };
 }

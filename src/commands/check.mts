@@ -7,7 +7,11 @@ import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
 import { classifyVisibleComments } from "../comments/visible-comments.mts";
 import { computeStatus } from "./check-status.mts";
-import { annotationMarkerBody, attachAndMergeCheckAnnotations } from "./check-annotations.mts";
+import {
+  annotationMarkerBody,
+  attachAndMergeCheckAnnotations,
+  hasCheckDrivenActionableWork,
+} from "./check-annotations.mts";
 import { buildTerminalReport } from "./check-terminal-report.mts";
 import {
   isBlockedByFilteredCheck,
@@ -49,6 +53,7 @@ export async function runCheck(
     autoMinimizeSuppressed?: boolean;
     skipTriage?: boolean;
     persistSeen?: boolean;
+    merge?: boolean;
   },
 ): Promise<ShepherdReport> {
   const repo = opts.targetRepository ?? (await getRepoInfo());
@@ -81,10 +86,17 @@ export async function runCheck(
   const allChecks = mergeStartupFailureChecks(batchData.checks, startupFailureChecks);
   const classifiedPrChecks = classifyChecks(allChecks);
   const latestRemoval = batchData.latestMergeQueueRemoval;
+  // `timelineItems(last: 1, ...)` returns the single most recent removal regardless of age, so
+  // a PR removed from the queue once, long ago, and never re-added keeps returning that same
+  // historical event forever. When GitHub omits the removed queue commit for that old event
+  // (e.g. after the synthetic commit is garbage collected), freshness is unverifiable — treat
+  // it as stale/updated rather than as still current, so Shepherd doesn't escalate
+  // `merge-queue-removed` permanently on data it can no longer check. The raw removal fields
+  // still render in the merge-queue header regardless of this flag.
   const headUpdatedAfterRemoval = Boolean(
     latestRemoval &&
-    latestRemoval.beforeCommitParentOids &&
-    !latestRemoval.beforeCommitParentOids.includes(batchData.headRefOid),
+    (!latestRemoval.beforeCommitParentOids ||
+      !latestRemoval.beforeCommitParentOids.includes(batchData.headRefOid)),
   );
   const queueRawChecks = batchData.isInMergeQueue
     ? (batchData.mergeQueueChecks ?? [])
@@ -204,6 +216,72 @@ export async function runCheck(
     batchData.viewerAuthorization?.viewerCanAdminister === true,
   );
   const approvedReviewVisibility = classifyReviewsForDisplay(batchData.approvedReviews, seenMap);
+  const changesRequestedReviews = changesRequestedReviewVisibility.visible;
+  const visibleChangesRequestedIds = new Set(changesRequestedReviews.map((review) => review.id));
+  const changesRequestedReviewCount = batchData.changesRequestedReviews.filter((review) => {
+    if (partition.suppressedChangesRequestedIds.has(review.id)) return false;
+    const isBot = !isHumanAuthor(review) || isConfiguredBotAuthor(review, botUsernames);
+    return (
+      !isBot ||
+      batchData.viewerAuthorization?.viewerCanAdminister === true ||
+      visibleChangesRequestedIds.has(review.id)
+    );
+  }).length;
+  const approvedReviews = approvedReviewVisibility.visible;
+  let status = computeStatus(
+    verdict,
+    threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
+    visibleCommentClassification.actionable.length,
+    mergeStatus,
+    changesRequestedReviewCount,
+  );
+
+  // Resolve any pending mergeability refresh (and the resulting MERGED/CLOSED short-circuit)
+  // before deciding what to persist below — deferWhileQueued must see the same final,
+  // possibly-refreshed mergeStatus that commands/iterate/index.mts acts on, not the pre-refresh
+  // snapshot. A conflict newly discovered by this REST read is exactly the kind of check-driven
+  // signal that keeps a queued PR out of the deferral path.
+  if (status === "READY" && !didRefreshMergeability) {
+    const refreshed = await refreshReadyMergeability(
+      prNumber,
+      repo,
+      batchData,
+      verdict,
+      threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
+      visibleCommentClassification.actionable.length,
+      changesRequestedReviewCount,
+    );
+    batchData = refreshed.batchData;
+    mergeStatus = refreshed.mergeStatus;
+    status = refreshed.status;
+    if (mergeStatus.state === "MERGED" || mergeStatus.state === "CLOSED") {
+      return buildTerminalReport(prNumber, repo, batchData, mergeStatus, mergeStatus.state);
+    }
+  }
+
+  // Mirrors the deferral gate in commands/iterate/index.mts exactly (via the shared
+  // hasCheckDrivenActionableWork helper, so the two can't drift): when this tick's non-CI
+  // actionable work (threads/comments/review summaries/changes-requested) will be held back
+  // because the PR is queued, none of it was actually shown to the agent this tick —
+  // persisting seen markers for it now would make it silently vanish from every later tick
+  // once it's no longer "new" or "edited", even after the PR leaves the queue. A queued PR
+  // that also has check-driven work (failing checks, actionable annotations, conflicts) is
+  // NOT deferred — index.mts still renders these items via fix_code — so this must stay false
+  // in that case too, or their seen markers would be suppressed while actually being shown.
+  const deferWhileQueued =
+    opts.merge === true &&
+    batchData.isInMergeQueue === true &&
+    config.actions.workWhileQueued !== true &&
+    !hasCheckDrivenActionableWork(
+      {
+        failing: merged.failing,
+        passing: merged.passing,
+        skipped: merged.skipped,
+        filtered: merged.filtered,
+        ignored: merged.ignored,
+      },
+      mergeStatus.status,
+    );
   if (opts.persistSeen !== false) {
     const successfulAnnotations = [
       ...merged.passing,
@@ -213,19 +291,36 @@ export async function runCheck(
     ]
       .filter((check) => check.conclusion === "SUCCESS")
       .flatMap((check) => check.annotations ?? []);
+    const deferredMarkSeen = deferWhileQueued
+      ? []
+      : [
+          ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
+          ...threadVisibility.toMarkSeen.map((t) =>
+            markSeen(stateKey, t.id, threadTranscriptBody(t)),
+          ),
+          ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
+          ...[...firstLookSummaries, ...editedSummaries].map((r) =>
+            markSeen(stateKey, r.id, r.body),
+          ),
+          ...changesRequestedReviewVisibility.toMarkSeen.map((r) =>
+            markSeen(stateKey, r.id, r.body),
+          ),
+          ...approvedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
+        ];
     await Promise.allSettled([
       ...successfulAnnotations.map((a) => markSeen(stateKey, a.id, annotationMarkerBody(a))),
-      ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
-      ...threadVisibility.toMarkSeen.map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
-      ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
-      ...[...firstLookSummaries, ...editedSummaries].map((r) => markSeen(stateKey, r.id, r.body)),
-      ...changesRequestedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
-      ...approvedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
+      ...deferredMarkSeen,
       ...batchData.comments
-        .filter((c) => partition.suppressedCommentIds.has(c.id))
+        .filter(
+          (c) =>
+            partition.suppressedCommentIds.has(c.id) && !deniedRuleAutoResolveCommentIds.has(c.id),
+        )
         .map((c) => markSeen(stateKey, c.id, c.body)),
       ...batchData.reviewThreads
-        .filter((t) => partition.suppressedThreadIds.has(t.id))
+        .filter(
+          (t) =>
+            partition.suppressedThreadIds.has(t.id) && !deniedRuleAutoResolveThreadIds.has(t.id),
+        )
         .map((t) => markSeen(stateKey, t.id, threadTranscriptBody(t))),
       ...batchData.reviewSummaries
         .filter(
@@ -267,43 +362,6 @@ export async function runCheck(
     ...authorizedRuleAutoResolveThreadIds,
     ...[...deniedRuleAutoResolveThreadIds].filter((id) => visibleMutationThreadIds.has(id)),
   ];
-  const changesRequestedReviews = changesRequestedReviewVisibility.visible;
-  const visibleChangesRequestedIds = new Set(changesRequestedReviews.map((review) => review.id));
-  const changesRequestedReviewCount = batchData.changesRequestedReviews.filter((review) => {
-    if (partition.suppressedChangesRequestedIds.has(review.id)) return false;
-    const isBot = !isHumanAuthor(review) || isConfiguredBotAuthor(review, botUsernames);
-    return (
-      !isBot ||
-      batchData.viewerAuthorization?.viewerCanAdminister === true ||
-      visibleChangesRequestedIds.has(review.id)
-    );
-  }).length;
-  const approvedReviews = approvedReviewVisibility.visible;
-  let status = computeStatus(
-    verdict,
-    threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
-    visibleCommentClassification.actionable.length,
-    mergeStatus,
-    changesRequestedReviewCount,
-  );
-
-  if (status === "READY" && !didRefreshMergeability) {
-    const refreshed = await refreshReadyMergeability(
-      prNumber,
-      repo,
-      batchData,
-      verdict,
-      threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
-      visibleCommentClassification.actionable.length,
-      changesRequestedReviewCount,
-    );
-    batchData = refreshed.batchData;
-    mergeStatus = refreshed.mergeStatus;
-    status = refreshed.status;
-    if (mergeStatus.state === "MERGED" || mergeStatus.state === "CLOSED") {
-      return buildTerminalReport(prNumber, repo, batchData, mergeStatus, mergeStatus.state);
-    }
-  }
   const blockedByFilteredCheck = isBlockedByFilteredCheck(mergeStatus, verdict);
   const queueCommit = batchData.isInMergeQueue
     ? batchData.mergeQueueEntry?.headCommitOid

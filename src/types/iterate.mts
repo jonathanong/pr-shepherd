@@ -71,6 +71,7 @@ export interface IterateResultBase {
 interface IterateResultWait extends IterateResultBase {
   action: "wait";
   log: string;
+  deferredWork?: import("./merge-queue.mts").IterateDeferredWork;
 }
 
 export type CancelReason = "merged" | "closed" | "ready-delay-elapsed";

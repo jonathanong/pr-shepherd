@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { runCheck } from "../check.mts";
 import { updateReadyDelay } from "../ready-delay.mts";
 import { getCurrentPrNumber } from "../../github/client.mts";
@@ -15,7 +16,7 @@ import { clearStallState } from "../../state/iterate-stall.mts";
 import { handleFixCode } from "./fix-code.mts";
 import { normalizeBotUsernames } from "../../comments/authors.mts";
 import { autoMinimizeComments } from "../../comments/resolve.mts";
-import { checksWithActionableAnnotations } from "../check-annotations.mts";
+import { hasCheckDrivenActionableWork } from "../check-annotations.mts";
 import { buildReadyMergeResult, handleActiveMergeState } from "./merge-state.mts";
 import { buildIterateBase } from "./base.mts";
 import { markReadyIfAuthorized } from "./mark-ready.mts";
@@ -101,9 +102,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     (report.comments.minimizeIds?.length ?? 0) > 0 ||
     report.comments.firstLook.length > 0 ||
     report.changesRequestedReviews.length > 0 ||
-    report.checks.failing.length > 0 ||
-    checksWithActionableAnnotations(report).length > 0 ||
-    report.mergeStatus.status === "CONFLICTS" ||
+    hasCheckDrivenActionableWork(report.checks, report.mergeStatus.status) ||
     reviewSummaryIds.length > 0 ||
     firstLookSummaries.length > 0 ||
     editedSummaries.length > 0 ||
@@ -125,7 +124,21 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
 
   const headSha = (await getCurrentHeadSha()) ?? "unknown";
 
-  if (hasActionableWork) {
+  // Checks (including merge-queue synthetic-commit checks) and hard conflicts are signals
+  // GitHub itself is already acting on — the queue will eject the PR for these regardless of
+  // what Shepherd does, so they always surface immediately. Only review threads/comments/
+  // changes-requested reviews/review summaries — the categories that would otherwise cause a
+  // Shepherd-initiated push while the PR sits safely in the queue — are eligible for deferral.
+  const checkDrivenActionableWork = hasCheckDrivenActionableWork(
+    report.checks,
+    report.mergeStatus.status,
+  );
+  const deferWhileQueued =
+    opts.merge === true &&
+    report.mergeQueue?.inQueue === true &&
+    config.actions.workWhileQueued !== true;
+
+  if (hasActionableWork && !(deferWhileQueued && !checkDrivenActionableWork)) {
     return handleFixCode({
       base,
       report,
@@ -151,6 +164,11 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     base,
     report,
     stallKey,
+    reviewSummaryIds,
+    firstLookSummaries,
+    editedSummaries,
+    surfacedApprovals,
+    minimizeApprovals: config.iterate.minimizeApprovals,
   });
   if (mergeStateResult) return mergeStateResult;
 

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type { IterateResult } from "../types.mts";
 import { adaptIterateLog, buildSimpleIterateInstructions } from "./iterate-instructions.mts";
 interface IterateProjectionOptions {
@@ -82,6 +83,7 @@ export function projectIterateLean(
     case "wait":
       return {
         ...base,
+        ...(result.deferredWork && { deferredWork: result.deferredWork }),
         log: adaptIterateLog(result.log),
         instructions: simpleInstructions(result),
       };
