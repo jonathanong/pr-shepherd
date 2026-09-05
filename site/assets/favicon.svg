@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="pr-shepherd">
+  <g fill="none" stroke="#0a0d0c" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M30,14 L30,88" />
+    <path d="M58,22 L53,88" />
+    <path d="M31,28 L58,25" />
+    <path d="M58,27 L83,40" />
+    <path d="M54,66 L79,88" />
+  </g>
+  <circle cx="58" cy="14" r="10" fill="#0a0d0c" />
+</svg>

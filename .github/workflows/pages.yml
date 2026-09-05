@@ -1,0 +1,52 @@
+name: pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - site/**
+      - package.json
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-slim
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node site/build.mjs
+        env:
+          SITE_BASE: /pr-shepherd
+          SITE_ORIGIN: https://jongleberry.com
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-slim
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

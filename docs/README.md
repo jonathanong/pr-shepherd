@@ -2,7 +2,9 @@
 
 Shepherd does two jobs: **gather all context for a PR**, then **emit one deterministic action** for the calling agent. The README states that framing; this index is the map.
 
-Quick start: [`../README.md`](../README.md).
+Quick start: [`../README.md`](../README.md). Narrative site (why, principles):
+[jongleberry.com/pr-shepherd](https://jongleberry.com/pr-shepherd/) — that site links back
+into these files for every claim it makes; this remains the canonical spec.
 
 ## Why and overview
 
