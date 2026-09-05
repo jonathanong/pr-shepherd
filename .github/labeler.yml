@@ -30,3 +30,7 @@ config:
           - 'tsconfig.json'
           - 'vitest.config.*'
           - '.oxlintrc.json'
+
+site:
+  - changed-files:
+      - any-glob-to-any-file: 'site/**'

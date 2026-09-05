@@ -12,7 +12,7 @@
     "github",
     "pull-request"
   ],
-  "homepage": "https://github.com/jonathanong/pr-shepherd",
+  "homepage": "https://jonathanong.github.io/pr-shepherd/",
   "bugs": {
     "url": "https://github.com/jonathanong/pr-shepherd/issues"
   },
@@ -67,12 +67,14 @@
     "knip": "knip",
     "knip:production": "knip --production",
     "lint:dead-code": "npm run --silent knip && npm run --silent knip:production",
-    "lint": "oxlint src/ test-helpers/ fixtures/*.mts test-cases/ plugins/ .agents/plugins/ && npm run --silent lint:dead-code",
-    "format": "oxfmt src/ test-helpers/ fixtures/*.mts test-cases/*.mts plugins/ .agents/plugins/ docs/ README.md",
-    "format:check": "oxfmt --check src/ test-helpers/ fixtures/*.mts test-cases/*.mts plugins/ .agents/plugins/ docs/ README.md",
+    "lint": "oxlint src/ test-helpers/ fixtures/*.mts test-cases/ plugins/ .agents/plugins/ site/build.mjs site/serve.mjs site/lib/ && npm run --silent lint:dead-code",
+    "format": "oxfmt src/ test-helpers/ fixtures/*.mts test-cases/*.mts plugins/ .agents/plugins/ docs/ README.md site/build.mjs site/serve.mjs site/lib/",
+    "format:check": "oxfmt --check src/ test-helpers/ fixtures/*.mts test-cases/*.mts plugins/ .agents/plugins/ docs/ README.md site/build.mjs site/serve.mjs site/lib/",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage && node scripts/strip-lcov-branches.mjs",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "site:build": "node site/build.mjs",
+    "site:serve": "node site/serve.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
@@ -86,6 +88,7 @@
     "@vitest/coverage-v8": "^4.1.4",
     "husky": "^9.1.7",
     "knip": "^6.14.1",
+    "marked": "^18.0.11",
     "oxfmt": "^0.64.0",
     "oxlint": "^1.60.0",
     "typescript": "^7.0.2",

@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face {
+    font-family: "mono-fallback";
+  }
+  html, body {
+    margin: 0;
+    width: 1200px;
+    height: 630px;
+    background: #0a0d0c;
+    color: #e7efe9;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  .wrap {
+    width: 1200px;
+    height: 630px;
+    box-sizing: border-box;
+    padding: 80px 90px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background:
+      radial-gradient(circle at 85% 10%, rgba(52, 214, 127, 0.18), transparent 45%),
+      #0a0d0c;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+  .brand img {
+    display: block;
+  }
+  .brand span {
+    font-size: 28px;
+    font-weight: 600;
+  }
+  .kicker {
+    color: #34d67f;
+    font-size: 22px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  h1 {
+    font-size: 58px;
+    line-height: 1.2;
+    margin: 0 0 26px;
+  }
+  p {
+    font-size: 26px;
+    color: #93a39a;
+    max-width: 860px;
+    margin: 0;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <img src="./logo.svg" width="48" height="48" alt="">
+    <span>pr-shepherd</span>
+  </div>
+  <p class="kicker">for agents finishing pull requests</p>
+  <h1>Deterministic Draft &rarr; Merged<br>PRs for agents</h1>
+  <p>Gather all PR context in one poll. Get back exactly one next action:
+  WAIT, MARK_READY, FIX_CODE, MERGE, CANCEL, or ESCALATE.</p>
+</div>
+</body>
+</html>

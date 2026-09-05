@@ -10,6 +10,8 @@
     "scripts/install-husky.mjs",
     "scripts/strip-lcov-branches.mjs",
     ".github/scripts/sync-plugin-version.mjs",
+    "site/build.mjs",
+    "site/serve.mjs",
   ],
   "project": [
     "src/**/*.mts!",
@@ -22,6 +24,7 @@
     "!test-cases/**/*.mts!",
     "scripts/**/*.mjs",
     ".github/scripts/**/*.mjs",
+    "site/**/*.mjs",
   ],
   "ignoreBinaries": ["mkfifo"],
   "ignoreDependencies": ["husky"],

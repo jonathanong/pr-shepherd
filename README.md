@@ -2,6 +2,8 @@
 
 Autonomous PR CI monitor and review-comment resolver for agentic coding tools, including Claude Code and Codex.
 
+**[jonathanong.github.io/pr-shepherd](https://jonathanong.github.io/pr-shepherd/)** — the why, the principles, and a feature-by-feature tour, for humans and agents.
+
 ## Why
 
 An agent finishing a PR should think about code, not reconstruct GitHub state or invent a next-step policy each tick. Without Shepherd it fans out across GitHub MCP, `gh`, and GraphQL, then guesses what to do with the result.
