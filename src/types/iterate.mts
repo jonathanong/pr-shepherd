@@ -174,8 +174,17 @@ export interface IterateCommandOptions extends GlobalOptions {
   stallTimeoutSeconds?: number;
   /** Legacy per-invocation no-op retained for API compatibility. */
   neverCancelRuns?: string[];
-  persistSeen?: boolean; // false skips seen-marker writes (poll discarded ticks)
+  /**
+   * Internal. `false` skips seen-marker writes (poll's discarded debounce ticks). Set
+   * only by `runPollCore`; excluded from the public `IterateInput` in api.mts.
+   */
+  persistSeen?: boolean;
   /** Shepherd through readiness and emit the exact merge/queue command when ready. */
   merge?: boolean;
+  /**
+   * Internal. Defers attaching a quota warning until an until-terminal poll actually
+   * breaks. Set only by `runPollCore`; excluded from the public `IterateInput` in
+   * api.mts.
+   */
   deferQuotaWarning?: boolean;
 }

@@ -36,7 +36,7 @@ export type PrReference = number | string;
 
 export type IterateInput = Omit<
   IterateCommandOptions,
-  "format" | "prNumber" | "targetRepository"
+  "format" | "prNumber" | "targetRepository" | "persistSeen" | "deferQuotaWarning"
 > & {
   pr?: PrReference;
 };
