@@ -29,5 +29,6 @@
     "shouldCancel": false,
     "remainingSeconds": 600
   },
-  "args": ["--merge"]
+  "args": ["--merge"],
+  "expectedExitCode": 10
 }
