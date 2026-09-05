@@ -17,6 +17,7 @@ import { renderCheckAnnotation, renderProtectedRun } from "./fix-formatter-extra
 import { isFailingAgentCheck } from "../checks/conclusions.mts";
 import type { IterateResultFixCode } from "../types.mts";
 import { renderMergeCommand } from "../commands/iterate/merge.mts";
+import { partitionFixThreads } from "../commands/iterate/fix-instruction-threads.mts";
 
 export function formatFixCodeResult(
   header: string,
@@ -46,20 +47,10 @@ export function formatFixCodeResult(
       }
     }
   };
-  const locatedThreads = result.fix.threads.filter(
-    (thread) => thread.path !== null && thread.line !== null,
-  );
-  const mutatedThreadIds = new Set([
-    ...(result.fix.resolveCommand.replyThreadIds ?? []),
-    ...(result.fix.resolveCommand.resolveThreadIds ?? []),
-    ...(result.fix.resolveOnlyCommand?.replyThreadIds ?? []),
-    ...(result.fix.resolveOnlyCommand?.resolveThreadIds ?? []),
-  ]);
-  const unlocatedMutatedThreads = result.fix.threads.filter(
-    (thread) => (thread.path === null || thread.line === null) && mutatedThreadIds.has(thread.id),
-  );
-  const unlocatedThreads = result.fix.threads.filter(
-    (thread) => (thread.path === null || thread.line === null) && !mutatedThreadIds.has(thread.id),
+  const { locatedThreads, unlocatedMutatedThreads, unlocatedThreads } = partitionFixThreads(
+    result.fix.threads,
+    result.fix.resolveCommand,
+    result.fix.resolveOnlyCommand,
   );
   renderThreads("## Review threads", [...locatedThreads, ...unlocatedMutatedThreads]);
   renderThreads("## Unlocated review threads (logged once — no mutation)", unlocatedThreads);

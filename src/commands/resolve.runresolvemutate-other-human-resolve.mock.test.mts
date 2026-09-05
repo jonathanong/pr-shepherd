@@ -10,6 +10,7 @@ import {
 } from "../../test-helpers/commands/resolve.test-support.mts";
 import { runResolveMutate } from "./resolve.mts";
 import { addPrShepherdMarker } from "../comments/marker.mts";
+import type { ReviewThread } from "../types.mts";
 
 function withOtherHumanResolve(policy: "none" | "outdated" | "always") {
   mockLoadConfig.mockReturnValue({
@@ -36,152 +37,80 @@ function withOtherHumanResolve(policy: "none" | "outdated" | "always") {
   });
 }
 
+async function mutateOtherHuman(
+  thread: ReviewThread,
+  opts: { policy?: "none" | "outdated" | "always"; reply?: boolean } = {},
+) {
+  if (opts.policy) withOtherHumanResolve(opts.policy);
+  mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [thread] }) });
+  const reply = opts.reply !== false;
+  return runResolveMutate({
+    ...BASE_OPTS,
+    resolveThreadIds: [thread.id],
+    ...(reply ? { replyThreadIds: [thread.id], dismissMessage: "done" } : {}),
+  });
+}
+
+function expectOtherHumanResolve(result: { skippedHumanResolves?: string[] }, resolved: boolean) {
+  expect(mockApplyResolveOptions).toHaveBeenCalledWith(
+    42,
+    { owner: "owner", name: "repo" },
+    expect.objectContaining({ resolveThreadIds: resolved ? ["t-other"] : [] }),
+  );
+  expect(result.skippedHumanResolves).toEqual(resolved ? undefined : ["t-other"]);
+}
+
 registerHooks();
 
 describe("runResolveMutate — other-human resolve policy", () => {
+  const other = (overrides: Partial<ReviewThread> = {}) =>
+    makeThread({ id: "t-other", author: "bob", authorType: "User", ...overrides });
+
   it("does not extend the paired exception to another human's thread", async () => {
-    mockFetchPrBatch.mockResolvedValue({
-      data: makeBatchData({
-        reviewThreads: [makeThread({ id: "t-other", author: "bob", authorType: "User" })],
-      }),
-    });
-
-    const result = await runResolveMutate({
-      ...BASE_OPTS,
-      replyThreadIds: ["t-other"],
-      resolveThreadIds: ["t-other"],
-      dismissMessage: "done",
-    });
-
-    expect(mockApplyResolveOptions).toHaveBeenCalledWith(
-      42,
-      { owner: "owner", name: "repo" },
-      expect.objectContaining({
-        replyThreadIds: ["t-other"],
-        resolveThreadIds: [],
-      }),
-    );
-    expect(result.skippedHumanResolves).toEqual(["t-other"]);
+    expectOtherHumanResolve(await mutateOtherHuman(other()), false);
   });
 
   it("resolves another human's thread when iterate.resolveOtherHumanThreads is always", async () => {
-    withOtherHumanResolve("always");
-    mockFetchPrBatch.mockResolvedValue({
-      data: makeBatchData({
-        reviewThreads: [makeThread({ id: "t-other", author: "bob", authorType: "User" })],
-      }),
-    });
-
-    const result = await runResolveMutate({
-      ...BASE_OPTS,
-      replyThreadIds: ["t-other"],
-      resolveThreadIds: ["t-other"],
-      dismissMessage: "done",
-    });
-
-    expect(mockApplyResolveOptions).toHaveBeenCalledWith(
-      42,
-      { owner: "owner", name: "repo" },
-      expect.objectContaining({
-        replyThreadIds: ["t-other"],
-        resolveThreadIds: ["t-other"],
-      }),
-    );
-    expect(result.skippedHumanResolves).toBeUndefined();
+    expectOtherHumanResolve(await mutateOtherHuman(other(), { policy: "always" }), true);
   });
 
   it("resolves an outdated other-human thread when the enum is outdated", async () => {
-    withOtherHumanResolve("outdated");
-    mockFetchPrBatch.mockResolvedValue({
-      data: makeBatchData({
-        reviewThreads: [
-          makeThread({ id: "t-other", author: "bob", authorType: "User", isOutdated: true }),
-        ],
-      }),
-    });
-
-    const result = await runResolveMutate({
-      ...BASE_OPTS,
-      replyThreadIds: ["t-other"],
-      resolveThreadIds: ["t-other"],
-      dismissMessage: "done",
-    });
-
-    expect(mockApplyResolveOptions).toHaveBeenCalledWith(
-      42,
-      { owner: "owner", name: "repo" },
-      expect.objectContaining({ resolveThreadIds: ["t-other"] }),
+    expectOtherHumanResolve(
+      await mutateOtherHuman(other({ isOutdated: true }), { policy: "outdated" }),
+      true,
     );
-    expect(result.skippedHumanResolves).toBeUndefined();
   });
 
   it("skips an active other-human resolve when the enum is outdated", async () => {
-    withOtherHumanResolve("outdated");
-    mockFetchPrBatch.mockResolvedValue({
-      data: makeBatchData({
-        reviewThreads: [makeThread({ id: "t-other", author: "bob", authorType: "User" })],
-      }),
-    });
-
-    const result = await runResolveMutate({
-      ...BASE_OPTS,
-      replyThreadIds: ["t-other"],
-      resolveThreadIds: ["t-other"],
-      dismissMessage: "done",
-    });
-
-    expect(mockApplyResolveOptions).toHaveBeenCalledWith(
-      42,
-      { owner: "owner", name: "repo" },
-      expect.objectContaining({ resolveThreadIds: [] }),
-    );
-    expect(result.skippedHumanResolves).toEqual(["t-other"]);
+    expectOtherHumanResolve(await mutateOtherHuman(other(), { policy: "outdated" }), false);
   });
 
   it("allows a marker-ended other-human resolve without another reply when always", async () => {
-    withOtherHumanResolve("always");
-    mockFetchPrBatch.mockResolvedValue({
-      data: makeBatchData({
-        reviewThreads: [
-          makeThread({
-            id: "t-other",
-            author: "bob",
-            authorType: "User",
-            comments: [
-              {
-                id: "c-human",
-                isMinimized: false,
-                author: "bob",
-                authorType: "User",
-                body: "please fix",
-                url: "",
-                createdAtUnix: 1,
-              },
-              {
-                id: "c-shepherd",
-                isMinimized: false,
-                author: "alice",
-                authorType: "User",
-                body: addPrShepherdMarker("done"),
-                url: "",
-                createdAtUnix: 2,
-              },
-            ],
-          }),
-        ],
-      }),
+    const marked = other({
+      comments: [
+        {
+          id: "c-bob",
+          isMinimized: false,
+          author: "bob",
+          authorType: "User",
+          body: "please fix this",
+          url: "https://example.test/c-bob",
+          createdAtUnix: 10,
+        },
+        {
+          id: "c-retry",
+          isMinimized: false,
+          author: "alice",
+          authorType: "User",
+          body: addPrShepherdMarker("retrying resolve"),
+          url: "https://example.test/c-retry",
+          createdAtUnix: 20,
+        },
+      ],
     });
-
-    const result = await runResolveMutate({
-      ...BASE_OPTS,
-      resolveThreadIds: ["t-other"],
-    });
-
-    expect(mockApplyResolveOptions).toHaveBeenCalledWith(
-      42,
-      { owner: "owner", name: "repo" },
-      expect.objectContaining({ resolveThreadIds: ["t-other"] }),
+    expectOtherHumanResolve(
+      await mutateOtherHuman(marked, { policy: "always", reply: false }),
+      true,
     );
-    expect(result.skippedHumanResolves).toBeUndefined();
   });
 });
