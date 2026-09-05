@@ -159,7 +159,7 @@ export function formatFixCodeResult(
       sections.push(
         `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})${staleTag}`,
       );
-      sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body));
+      sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body, topCap));
     }
   }
 
