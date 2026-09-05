@@ -8,9 +8,9 @@ into these files for every claim it makes; this remains the canonical spec.
 
 ## Why and overview
 
-| Document                       | What it covers                                               |
-| ------------------------------ | ------------------------------------------------------------ |
-| [features.md](features.md)     | Context gathered, actions emitted, and what is not supported |
+| Document                       | What it covers                                                                                              |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| [features.md](features.md)     | Context gathered, actions emitted, and what is not supported                                                |
 | [comparison.md](comparison.md) | Named alternatives (including Cursor `/autopilot` and Copilot `/pr auto`), tradeoffs, and best-fit guidance |
 
 ## Job 1 — Context gathered
