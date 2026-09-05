@@ -4,8 +4,7 @@
 
 import { createServer } from "node:http";
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { extname, join } from "node:path";
-import { dirname } from "node:path";
+import { dirname, extname, isAbsolute, join, relative as relativeToDir } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const distDir = join(dirname(fileURLToPath(import.meta.url)), "dist");
@@ -22,12 +21,22 @@ const MIME = {
   ".txt": "text/plain; charset=utf-8",
 };
 
+/** Join `requestPath` under distDir, refusing anything that would resolve outside it —
+ *  checked before any filesystem call touches the request-derived path. */
+function safeDistPath(requestPath) {
+  const target = join(distDir, requestPath);
+  const rel = relativeToDir(distDir, target);
+  return rel.startsWith("..") || isAbsolute(rel) ? null : target;
+}
+
 function resolveFile(urlPath) {
   const clean = decodeURIComponent(urlPath.split("?")[0]);
-  let full = join(distDir, clean);
-  if (!full.startsWith(distDir)) return null;
-  if (clean.endsWith("/") || (existsSync(full) && statSync(full).isDirectory())) {
-    full = join(full, "index.html");
+  const candidate = clean.endsWith("/") ? `${clean}index.html` : clean;
+  const full = safeDistPath(candidate);
+  if (!full) return null;
+  if (existsSync(full) && statSync(full).isDirectory()) {
+    const indexFile = safeDistPath(`${candidate}/index.html`);
+    return indexFile && existsSync(indexFile) ? indexFile : null;
   }
   return existsSync(full) && !statSync(full).isDirectory() ? full : null;
 }

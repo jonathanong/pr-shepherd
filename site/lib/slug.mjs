@@ -36,10 +36,15 @@ export function extractHeadings(markdown) {
   const headings = [];
 
   for (const line of markdown.split("\n")) {
-    const match = /^(#{1,6})\s+(.+?)\s*#*$/.exec(line);
+    // Two anchored, non-overlapping passes (rather than one regex mixing a lazy `.+?`
+    // with a trailing `#*$`) avoid the catastrophic-backtracking shape entirely.
+    const match = /^(#{1,6})\s+(.*)$/.exec(line);
     if (!match) continue;
     const depth = match[1].length;
-    const text = match[2].replace(/[`*_]/g, "").trim();
+    const text = match[2]
+      .replace(/\s+#+\s*$/, "")
+      .replace(/[`*_]/g, "")
+      .trim();
     headings.push({ depth, text, slug: githubSlug(text, seen) });
   }
 

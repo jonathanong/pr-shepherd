@@ -42,6 +42,47 @@ function docsBlobUrl(file, anchor) {
   return anchor ? `${url}#${anchor}` : url;
 }
 
+const DOCS_LINK_RE = /^(README\.md|CLAUDE\.md|docs\/[\w.-]+\.md)(?:#([\w-]+))?$/;
+
+/** `#anchor` on the current page — checked against that page's own headings. */
+function resolveAnchorHref(href, { route, sourceFile, headingsByRoute }) {
+  const anchor = href.slice(1);
+  const ownHeadings = headingsByRoute.get(route) ?? [];
+  if (!ownHeadings.some((h) => h.slug === anchor)) {
+    throw new Error(`${sourceFile}: broken same-page anchor "${href}"`);
+  }
+  return href;
+}
+
+/** `/route/` or `/route/#anchor` — checked against the site's own route table. */
+function resolveInternalHref(href, { sourceFile, routes, headingsByRoute }) {
+  const [routePart, anchor] = href.slice(1).split("#");
+  const route = routePart.replace(/\/$/, "");
+  if (!routes.has(route)) {
+    throw new Error(`${sourceFile}: broken internal link "${href}" (no such page)`);
+  }
+  if (anchor && !(headingsByRoute.get(route) ?? []).some((h) => h.slug === anchor)) {
+    throw new Error(`${sourceFile}: broken internal anchor "${href}"`);
+  }
+  return withBase(routePath(route)) + (anchor ? `#${anchor}` : "");
+}
+
+/** `docs/<file>.md`, `README.md`, or `CLAUDE.md`, optionally `#anchor` — rewritten to a
+ *  canonical GitHub blob URL. Returns `null` when `href` doesn't match this shape at all. */
+function resolveDocsHref(href, { sourceFile, repoRoot, headingsForDoc }) {
+  const docsMatch = DOCS_LINK_RE.exec(href);
+  if (!docsMatch) return null;
+
+  const [, file, anchor] = docsMatch;
+  if (!existsSync(join(repoRoot, file))) {
+    throw new Error(`${sourceFile}: broken docs link "${href}" (${file} does not exist)`);
+  }
+  if (anchor && !headingsForDoc(file).some((h) => h.slug === anchor)) {
+    throw new Error(`${sourceFile}: broken docs anchor "${href}" in ${file}`);
+  }
+  return docsBlobUrl(file, anchor);
+}
+
 /**
  * @param {object} opts
  * @param {Set<string>} opts.routes valid page routes ("" included for the root)
@@ -65,42 +106,11 @@ export function createLinkResolver({ routes, headingsByRoute, repoRoot }) {
    */
   return function resolveHref(href, ctx) {
     if (/^(https?:|mailto:)/.test(href)) return href;
+    if (href.startsWith("#")) return resolveAnchorHref(href, { ...ctx, headingsByRoute });
+    if (href.startsWith("/")) return resolveInternalHref(href, { ...ctx, routes, headingsByRoute });
 
-    if (href.startsWith("#")) {
-      const anchor = href.slice(1);
-      const ownHeadings = headingsByRoute.get(ctx.route) ?? [];
-      if (!ownHeadings.some((h) => h.slug === anchor)) {
-        throw new Error(`${ctx.sourceFile}: broken same-page anchor "${href}"`);
-      }
-      return href;
-    }
-
-    if (href.startsWith("/")) {
-      const [routePart, anchor] = href.slice(1).split("#");
-      const route = routePart.replace(/\/$/, "");
-      if (!routes.has(route)) {
-        throw new Error(`${ctx.sourceFile}: broken internal link "${href}" (no such page)`);
-      }
-      if (anchor) {
-        const targetHeadings = headingsByRoute.get(route) ?? [];
-        if (!targetHeadings.some((h) => h.slug === anchor)) {
-          throw new Error(`${ctx.sourceFile}: broken internal anchor "${href}"`);
-        }
-      }
-      return withBase(routePath(route)) + (anchor ? `#${anchor}` : "");
-    }
-
-    const docsMatch = /^(README\.md|CLAUDE\.md|docs\/[\w.-]+\.md)(?:#([\w-]+))?$/.exec(href);
-    if (docsMatch) {
-      const [, file, anchor] = docsMatch;
-      if (!existsSync(join(repoRoot, file))) {
-        throw new Error(`${ctx.sourceFile}: broken docs link "${href}" (${file} does not exist)`);
-      }
-      if (anchor && !headingsForDoc(file).some((h) => h.slug === anchor)) {
-        throw new Error(`${ctx.sourceFile}: broken docs anchor "${href}" in ${file}`);
-      }
-      return docsBlobUrl(file, anchor);
-    }
+    const docsHref = resolveDocsHref(href, { ...ctx, repoRoot, headingsForDoc });
+    if (docsHref !== null) return docsHref;
 
     throw new Error(
       `${ctx.sourceFile}: unrecognized link target "${href}" — use "/route/", "#anchor", ` +

@@ -20,22 +20,25 @@ export function buildLlmsTxt(pages) {
   const lines = ["# pr-shepherd", "", `> ${SUMMARY}`, ""];
 
   if (root) {
-    lines.push("## Start here", "");
-    lines.push(`- [${root.title}](${absoluteUrl(routePath(""))}): ${root.description}`);
-    lines.push("");
+    lines.push(
+      "## Start here",
+      "",
+      `- [${root.title}](${absoluteUrl(routePath(""))}): ${root.description}`,
+      "",
+    );
   }
 
   for (const section of topLevelSections(pages)) {
-    lines.push(`## ${sectionLabel(section)}`, "");
-    lines.push(
-      `- [${section.title}](${absoluteUrl(routePath(section.route))}): ${section.description}`,
+    const childLines = pagesInSection(pages, section.route).map(
+      (child) => `- [${child.title}](${absoluteUrl(routePath(child.route))}): ${child.description}`,
     );
-    for (const child of pagesInSection(pages, section.route)) {
-      lines.push(
-        `- [${child.title}](${absoluteUrl(routePath(child.route))}): ${child.description}`,
-      );
-    }
-    lines.push("");
+    lines.push(
+      `## ${sectionLabel(section)}`,
+      "",
+      `- [${section.title}](${absoluteUrl(routePath(section.route))}): ${section.description}`,
+      ...childLines,
+      "",
+    );
   }
 
   lines.push(
