@@ -69,7 +69,8 @@ export function classifyThreadVisibility(
   const resolutionOnlyThreads = unresolvedThreads
     .filter((t) => {
       const endedByShepherd = threadEndedByShepherd(t);
-      if (endedByShepherd && isOrdinaryHuman(t)) {
+      if (endedByShepherd) {
+        if (!isOrdinaryHuman(t)) return true;
         return (
           isViewerAuthoredHuman(t, botUsernames) ||
           shouldResolveOtherHumanThread(t, resolveOtherHumanThreads)
