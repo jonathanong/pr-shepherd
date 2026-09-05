@@ -212,11 +212,13 @@ export function buildEscalateHumanMessage(
 
   if (escalate.stack) {
     const s = escalate.stack;
-    lines.push("");
-    lines.push("## GitHub stack");
-    lines.push("");
-    lines.push(`- layer: \`${s.position}\` of \`${s.size}\` in stack \`${s.number}\``);
-    lines.push(`- stack base: \`${s.baseRefName}\``);
+    lines.push(
+      "",
+      "## GitHub stack",
+      "",
+      `- layer: \`${s.position}\` of \`${s.size}\` in stack \`${s.number}\``,
+      `- stack base: \`${s.baseRefName}\``,
+    );
   }
 
   if (escalate.authorization && escalate.authorization.length > 0) {
