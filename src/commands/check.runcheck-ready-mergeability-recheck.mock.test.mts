@@ -7,6 +7,7 @@ import {
   mockGetMergeableState,
 } from "../../test-helpers/commands/check.test-support.mts";
 import { runCheck } from "./check.mts";
+import { testFingerprint } from "../../test-helpers/github/fingerprint-fixture.mts";
 
 registerHooks();
 
@@ -63,6 +64,7 @@ describe("runCheck — READY mergeability recheck", () => {
   it("honors merged state returned by the existing READY refresh without another request", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" }),
+      fingerprint: testFingerprint(),
     });
     mockGetMergeableState.mockResolvedValue({
       mergeable: "UNKNOWN",
