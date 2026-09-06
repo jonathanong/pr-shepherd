@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { randomBytes } from "node:crypto";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { resolvePrStatePath } from "./base.mts";
 import {
@@ -74,6 +74,16 @@ describe("pr-fingerprint state", () => {
       storePrFingerprint(key, testFingerprint(), report, config),
     ).resolves.toBeUndefined();
     await rm(blocker, { force: true });
+  });
+
+  it("swallows tmp cleanup failures after a failed write", async () => {
+    await storePrFingerprint(key, testFingerprint(), report, config);
+    const dir = dirname(resolvePrStatePath(key, "fingerprint.json"));
+    await chmod(dir, 0o555);
+    await expect(
+      storePrFingerprint(key, testFingerprint(), report, config),
+    ).resolves.toBeUndefined();
+    await chmod(dir, 0o755);
   });
 
   it("returns null for invalid JSON or a mismatched version", async () => {
