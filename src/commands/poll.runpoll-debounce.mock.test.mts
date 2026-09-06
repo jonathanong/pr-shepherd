@@ -65,6 +65,15 @@ describe("runPoll — FIX_CODE debounce", () => {
     expect(mockRunIterate).toHaveBeenCalledTimes(6);
     for (let i = 0; i < 5; i += 1) expect(persistSeenAt(i)).toBe(false);
     expect(persistSeenAt(5)).toBe(true);
+    expect(
+      (mockRunIterate.mock.calls[0]?.[0] as { fingerprintCache?: boolean }).fingerprintCache,
+    ).toBe(true);
+    expect(
+      (mockRunIterate.mock.calls[1]?.[0] as { fingerprintCache?: boolean }).fingerprintCache,
+    ).toBe(false);
+    expect(
+      (mockRunIterate.mock.calls[5]?.[0] as { fingerprintCache?: boolean }).fingerprintCache,
+    ).toBe(true);
   });
 
   it("returns the first FIX_CODE immediately when debounce is 0", async () => {

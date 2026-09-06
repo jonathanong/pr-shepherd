@@ -72,4 +72,17 @@ describe("runPoll — GraphQL quota throttle", () => {
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
     expect(result.action).toBe("cancel");
   });
+
+  it("does not oversleep MARK_READY past the bounded timeout", async () => {
+    mockRunIterate.mockResolvedValue(makeMarkReadyResult({ apiUsage: lowGraphqlUsage }));
+    const result = await runPoll({
+      prNumber: 42,
+      format: "text",
+      intervalSeconds: 30,
+      timeoutSeconds: 40,
+      merge: true,
+    });
+    expect(result.action).toBe("mark_ready");
+    expect(mockRunIterate).toHaveBeenCalledTimes(1);
+  });
 });

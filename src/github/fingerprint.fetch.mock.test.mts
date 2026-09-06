@@ -52,6 +52,42 @@ describe("fetchPrFingerprint", () => {
     });
   });
 
+  it("maps empty connections and startup-failure suites", async () => {
+    mockFetch.mockResolvedValue(
+      gqlOk({
+        repository: {
+          viewerPermission: "WRITE",
+          pullRequest: {
+            ...pullRequest,
+            viewerCanUpdate: false,
+            comments: { totalCount: 0, nodes: [] },
+            reviewThreads: { totalCount: 0, nodes: [] },
+            reviews: { totalCount: 0, nodes: [] },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    oid: "abc123",
+                    statusCheckRollup: { state: "FAILURE" },
+                    checkSuites: { nodes: [{ conclusion: "STARTUP_FAILURE" }] },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      }),
+    );
+    await expect(fetchPrFingerprint(7, { owner: "owner", name: "repo" })).resolves.toMatchObject({
+      latestCommentId: null,
+      latestThreadId: null,
+      latestReviewId: null,
+      checkSuiteConclusions: "STARTUP_FAILURE",
+      viewerCanUpdate: false,
+      viewerPermission: "WRITE",
+    });
+  });
+
   it("throws when the repository is missing", async () => {
     mockFetch.mockResolvedValue(gqlOk({ repository: null }));
     await expect(fetchPrFingerprint(42, { owner: "owner", name: "repo" })).rejects.toThrow(

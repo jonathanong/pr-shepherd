@@ -61,4 +61,25 @@ describe("fingerprintFromRaw", () => {
     expect(fingerprint.commentCount).toBe(3);
     expect(fingerprint.latestCommentId).toBe("newest");
   });
+
+  it("treats missing allReviews and null suite conclusions as empty", () => {
+    const raw = makeRawPr({
+      allReviews: undefined,
+      commits: {
+        nodes: [
+          {
+            commit: {
+              oid: "abc123",
+              statusCheckRollup: { state: "FAILURE" },
+              checkSuites: { nodes: [{ conclusion: null }] },
+            },
+          },
+        ],
+      },
+    });
+    const fingerprint = fingerprintFromRaw(raw as never, "WRITE");
+    expect(fingerprint.reviewCount).toBe(0);
+    expect(fingerprint.checkSuiteConclusions).toBe("");
+    expect(fingerprint.viewerPermission).toBe("WRITE");
+  });
 });
