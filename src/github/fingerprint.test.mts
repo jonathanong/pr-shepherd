@@ -31,6 +31,15 @@ describe("fingerprintsEqual", () => {
     expect(fingerprintsEqual(sample(), sample())).toBe(true);
   });
 
+  it("is false when check-suite conclusions change with the same rollup state", () => {
+    expect(
+      fingerprintsEqual(
+        sample({ checkRollupState: "FAILURE", checkSuiteConclusions: "FAILURE" }),
+        sample({ checkRollupState: "FAILURE", checkSuiteConclusions: "STARTUP_FAILURE" }),
+      ),
+    ).toBe(false);
+  });
+
   it("is false when a comment arrives", () => {
     expect(fingerprintsEqual(sample(), sample({ commentCount: 2, latestCommentId: "c2" }))).toBe(
       false,

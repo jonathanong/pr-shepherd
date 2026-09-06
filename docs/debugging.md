@@ -91,7 +91,7 @@ rm $TMPDIR/pr-shepherd-state/acme-myrepo/42/ready-since.txt
 1. Read the fatal error's resource, remaining/limit, reset time, and credential source. Response headers are authoritative; no extra `/rate_limit` request is needed.
 2. Use `--verbose` for command-scoped API usage, or inspect the per-worktree log for every response's quota headers and credential source. See [graphql.md](graphql.md) for the operation catalog and how to tell primary quota exhaustion from a secondary-limit `Retry-After`.
 3. Follow a `quotaWarning` interval when present. Configure the bands with `watch.graphqlQuotaWarnings`. The poll dispatcher applies those intervals on `WAIT` / `MARK_READY` sleeps; single-tick `iterate` / MCP still only recommend.
-4. Prefer a dedicated PAT or GitHub App token for Shepherd so the agent's GitHub MCP / `gh api graphql` does not share the GraphQL pool ([authentication.md](authentication.md)).
+4. For quota isolation, use a GitHub App installation access token or a different GitHub user — same-user PATs share the user's GraphQL pool with GitHub MCP / `gh api graphql` ([authentication.md](authentication.md)).
 5. Pause the monitor loop if the resource is exhausted.
 6. For `resolve` mutate output, retry only the IDs listed under `Not resolved`,
    `Not minimized`, or `Not dismissed`; IDs listed as completed already succeeded.

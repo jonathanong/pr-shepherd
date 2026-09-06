@@ -11,7 +11,7 @@ pr-shepherd accepts a GitHub personal access token (PAT) from the environment or
 3. `gh auth token`
 4. `GITHUB_PERSONAL_ACCESS_TOKEN`
 
-Verbose API telemetry and GitHub request failures report the selected source label, never the token value. GraphQL and REST requests in one process use the same resolved credential. GitHub meters GraphQL separately from REST `core`, while multiple credentials belonging to the same user may still share the user's quota. Give Shepherd its own fine-grained PAT or GitHub App installation token when the calling agent also uses GitHub MCP, Copilot, or `gh api graphql` — those tools draw from the same GraphQL point budget. Operation catalog and quota behavior: [graphql.md](graphql.md).
+Verbose API telemetry and GitHub request failures report the selected source label, never the token value. GraphQL and REST requests in one process use the same resolved credential. GitHub meters GraphQL separately from REST `core`. User access tokens, including PATs, share that GitHub **user's** GraphQL point budget even when they are separate tokens — a second PAT for Shepherd does not isolate quota from GitHub MCP or `gh api graphql` if both belong to the same user. A GitHub App **installation** access token uses installation-scoped accounting (GitHub App _user_ access tokens do not). Use an installation token or a different GitHub user when quota isolation is required; a dedicated PAT is still useful for least-privilege and audit. Operation catalog and quota behavior: [graphql.md](graphql.md).
 
 Fine-grained PATs are recommended. Select the repository that contains the pull request and grant these repository permissions for the complete pr-shepherd workflow:
 

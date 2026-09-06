@@ -66,6 +66,16 @@ describe("pr-fingerprint state", () => {
     });
   });
 
+  it("swallows fingerprint write failures", async () => {
+    const blocker = `${testStateDir}-file`;
+    await writeFile(blocker, "not-a-directory", "utf8");
+    process.env["PR_SHEPHERD_STATE_DIR"] = blocker;
+    await expect(
+      storePrFingerprint(key, testFingerprint(), report, config),
+    ).resolves.toBeUndefined();
+    await rm(blocker, { force: true });
+  });
+
   it("returns null for invalid JSON or a mismatched version", async () => {
     const path = resolvePrStatePath(key, "fingerprint.json");
     await mkdir(dirname(path), { recursive: true });

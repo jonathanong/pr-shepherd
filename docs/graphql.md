@@ -19,11 +19,11 @@ Example: `reviewThreads(last: 100) { comments(first: 100) }` is 1 (threads from 
 
 Other limits that are not the hourly point budget:
 
-| Limit                 | What it is                                                                                                        | How Shepherd sees it                                                                   |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Node cap              | A single query may not request more than **500,000** potential nodes (`first`/`last` multiplied through the tree) | Query rejected; not a quota warning                                                    |
-| Primary GraphQL quota | `x-ratelimit-remaining` / `rateLimit.remaining` on resource `graphql`                                             | `apiUsage.graphql`, `quotaWarning`, pagination abort at remaining 0                    |
-| Secondary rate limit  | Burst / concurrency / mutation abuse. **Does not** decrement remaining                                            | HTTP 403 with `Retry-After` and a `secondary rate limit` message; `EXIT.TEMPFAIL` (75) |
+| Limit                 | What it is                                                                                                        | How Shepherd sees it                                                                                                           |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Node cap              | A single query may not request more than **500,000** potential nodes (`first`/`last` multiplied through the tree) | Query rejected; not a quota warning                                                                                            |
+| Primary GraphQL quota | `x-ratelimit-remaining` / `rateLimit.remaining` on resource `graphql`                                             | `apiUsage.graphql`, `quotaWarning`, pagination abort at remaining 0                                                            |
+| Secondary rate limit  | Burst / concurrency / mutation abuse. **Does not** decrement remaining                                            | HTTP 200 with GraphQL errors, or HTTP 403, often with `Retry-After` and a `secondary rate limit` message; `EXIT.TEMPFAIL` (75) |
 
 Mutations cannot select `rateLimit { cost }` (that field lives on the Query root). Shepherd records them as `unmeasuredRequestCount` and still reads remaining/limit from response headers.
 
@@ -183,7 +183,7 @@ Each iterate tick used to fetch a fresh full snapshot — there is no body cache
 
 ### Operational advice
 
-- **Give Shepherd its own credential.** The agent’s GitHub MCP, Copilot, and `gh api graphql` share the GraphQL pool with whatever token they use. A dedicated fine-grained PAT (or GitHub App installation token) for `pr-shepherd` is the highest-leverage fix that needs no code. Tokens that still belong to the **same GitHub user** may share that user’s quota — see [authentication.md](authentication.md).
+- **Give Shepherd its own credential when you need isolation.** The agent’s GitHub MCP, Copilot, and `gh api graphql` share the GraphQL pool with whatever token they use. A second PAT for the **same GitHub user** does not isolate quota. Use a GitHub App **installation** access token or a different GitHub user for a separate point budget; a dedicated PAT still helps with least-privilege and audit. See [authentication.md](authentication.md).
 - **Always pass the PR number** (or URL / `owner/repo#N`) so Shepherd does not run `PrNumberByBranch`.
 - **Do not also poll with GitHub MCP GraphQL** or `gh pr checks` / `gh pr watch`. Incidental one-off reads should use REST `gh` (`gh pr view`, `gh pr review`, `gh api` REST).
 - When a `quotaWarning` is returned, follow `## Instructions`: keep using pr-shepherd at the printed cadence. For `--until-terminal`, pass `--interval` from the warning and omit `--timeout`. Resume full cadence after the printed reset time.
