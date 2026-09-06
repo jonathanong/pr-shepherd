@@ -2,6 +2,17 @@ import { vi, beforeEach, afterEach } from "vitest";
 import type { IterateResult } from "../../src/types.mts";
 
 vi.mock("../../src/commands/iterate/index.mts", () => ({ runIterate: vi.fn() }));
+vi.mock("../../src/config/load.mts", () => ({
+  loadConfig: () => ({
+    watch: {
+      graphqlQuotaWarnings: [
+        { remainingPercent: 30, pollIntervalMinutes: 2 },
+        { remainingPercent: 20, pollIntervalMinutes: 5 },
+        { remainingPercent: 10, pollIntervalMinutes: 10 },
+      ],
+    },
+  }),
+}));
 
 import { runIterate } from "../../src/commands/iterate/index.mts";
 

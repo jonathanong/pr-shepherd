@@ -1,0 +1,51 @@
+# Cheap preflight. Cost is 1. Used to skip BatchPr when GitHub state is unchanged.
+query PrFingerprint($owner: String!, $repo: String!, $pr: Int!) {
+  _shepherdRateLimit: rateLimit {
+    cost
+    limit
+    nodeCount
+    remaining
+    resetAt
+    used
+  }
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $pr) {
+      updatedAt
+      state
+      isDraft
+      headRefOid
+      mergeable
+      mergeStateStatus
+      reviewDecision
+      isInMergeQueue
+      comments(last: 1) {
+        totalCount
+        nodes {
+          id
+        }
+      }
+      reviewThreads(last: 1) {
+        totalCount
+        nodes {
+          id
+        }
+      }
+      reviews(last: 1) {
+        totalCount
+        nodes {
+          id
+        }
+      }
+      commits(last: 1) {
+        nodes {
+          commit {
+            oid
+            statusCheckRollup {
+              state
+            }
+          }
+        }
+      }
+    }
+  }
+}

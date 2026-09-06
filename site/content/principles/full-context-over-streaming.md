@@ -6,7 +6,7 @@ docs:
   - path: "docs/context.md"
     label: "context.md — everything one iterate tick surfaces"
   - path: "docs/graphql.md"
-    label: "graphql.md — batch query, pagination, REST supplements"
+    label: "graphql.md — batch query, cost, quota, REST supplements"
   - path: "docs/skills.md#recurrence"
     label: "skills.md — why CI-only waiters are the wrong tool"
 ---

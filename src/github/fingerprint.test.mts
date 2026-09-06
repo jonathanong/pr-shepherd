@@ -1,0 +1,52 @@
+import { describe, expect, it } from "vitest";
+import { fingerprintFromRaw, fingerprintsEqual, type PrFingerprint } from "./fingerprint.mts";
+import { makeRawPr } from "../../test-helpers/github/batch-fixtures.mts";
+
+function sample(overrides: Partial<PrFingerprint> = {}): PrFingerprint {
+  return {
+    headRefOid: "abc",
+    updatedAt: "2026-09-06T00:00:00Z",
+    state: "OPEN",
+    isDraft: false,
+    mergeable: "MERGEABLE",
+    mergeStateStatus: "CLEAN",
+    reviewDecision: null,
+    isInMergeQueue: false,
+    commentCount: 1,
+    threadCount: 0,
+    reviewCount: 0,
+    latestCommentId: "c1",
+    latestThreadId: null,
+    latestReviewId: null,
+    checkRollupState: "SUCCESS",
+    ...overrides,
+  };
+}
+
+describe("fingerprintsEqual", () => {
+  it("is true for identical snapshots", () => {
+    expect(fingerprintsEqual(sample(), sample())).toBe(true);
+  });
+
+  it("is false when a comment arrives", () => {
+    expect(fingerprintsEqual(sample(), sample({ commentCount: 2, latestCommentId: "c2" }))).toBe(
+      false,
+    );
+  });
+});
+
+describe("fingerprintFromRaw", () => {
+  it("uses connection totalCount and the newest last:N node", () => {
+    const raw = makeRawPr({
+      updatedAt: "2026-09-06T00:00:00Z",
+      comments: {
+        totalCount: 3,
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: [{ id: "older" }, { id: "newest" }],
+      },
+    });
+    const fingerprint = fingerprintFromRaw(raw as never);
+    expect(fingerprint.commentCount).toBe(3);
+    expect(fingerprint.latestCommentId).toBe("newest");
+  });
+});

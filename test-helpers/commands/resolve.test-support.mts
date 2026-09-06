@@ -19,6 +19,10 @@ vi.mock("../../src/state/seen-comments.mts", async (importOriginal) => {
 vi.mock("../../src/github/batch.mts", () => ({
   fetchPrBatch: vi.fn(),
 }));
+vi.mock("../../src/state/pr-fingerprint.mts", () => ({
+  loadPrFingerprint: vi.fn().mockResolvedValue(null),
+  storePrFingerprint: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock("../../src/comments/resolve.mts", () => ({
   autoResolveOutdated: vi.fn(),
@@ -156,7 +160,26 @@ function makeComment(overrides: Partial<PrComment> = {}): PrComment {
 export function registerHooks(): void {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData() });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData(),
+      fingerprint: {
+        headRefOid: "abc123",
+        updatedAt: "",
+        state: "OPEN",
+        isDraft: false,
+        mergeable: "MERGEABLE",
+        mergeStateStatus: "CLEAN",
+        reviewDecision: null,
+        isInMergeQueue: false,
+        commentCount: 0,
+        threadCount: 0,
+        reviewCount: 0,
+        latestCommentId: null,
+        latestThreadId: null,
+        latestReviewId: null,
+        checkRollupState: null,
+      },
+    });
     mockAutoResolveOutdated.mockResolvedValue({ resolved: [], errors: [] });
     mockApplyResolveOptions.mockResolvedValue({
       repliedThreads: [],

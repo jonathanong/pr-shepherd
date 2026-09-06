@@ -19,7 +19,7 @@ interface RawCheckCommit {
   oid: string;
   committedDate?: string;
   parents?: { nodes: Array<{ oid: string }> };
-  statusCheckRollup: {
+  statusCheckRollup?: {
     contexts: {
       pageInfo: { hasNextPage: boolean; endCursor: string | null };
       nodes: Array<RawContextNode | null>;

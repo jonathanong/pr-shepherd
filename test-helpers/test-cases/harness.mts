@@ -37,6 +37,10 @@ vi.mock("node:child_process", () => ({
 }));
 
 vi.mock("../../src/github/batch.mts", () => ({ fetchPrBatch: vi.fn() }));
+vi.mock("../../src/state/pr-fingerprint.mts", () => ({
+  loadPrFingerprint: vi.fn().mockResolvedValue(null),
+  storePrFingerprint: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("../../src/github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
@@ -337,7 +341,26 @@ export function applyFixture(fixture: Fixture): void {
       annotationCheckIds,
     );
   }
-  mockFetchPrBatch.mockResolvedValue({ data: batchData });
+  mockFetchPrBatch.mockResolvedValue({
+    data: batchData,
+    fingerprint: {
+      headRefOid: typeof batchData.headRefOid === "string" ? batchData.headRefOid : "abc123",
+      updatedAt: "",
+      state: "OPEN",
+      isDraft: false,
+      mergeable: "MERGEABLE",
+      mergeStateStatus: "CLEAN",
+      reviewDecision: null,
+      isInMergeQueue: false,
+      commentCount: 0,
+      threadCount: 0,
+      reviewCount: 0,
+      latestCommentId: null,
+      latestThreadId: null,
+      latestReviewId: null,
+      checkRollupState: null,
+    },
+  });
 
   const mergeableFallback = fixture.mergeableFallback ?? {
     mergeable: "MERGEABLE",

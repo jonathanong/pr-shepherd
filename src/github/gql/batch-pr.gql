@@ -15,6 +15,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
     pullRequest(number: $pr) {
       id
       number
+      updatedAt
       state
       isDraft
       viewerDidAuthor
@@ -49,7 +50,8 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
           login
         }
         headCommit {
-          ...QueueCheckCommit
+          oid
+          committedDate
         }
       }
       mergeQueueAdditions: timelineItems(last: 1, itemTypes: [ADDED_TO_MERGE_QUEUE_EVENT]) {
@@ -68,7 +70,13 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
               login
             }
             beforeCommit {
-              ...QueueCheckCommit
+              oid
+              committedDate
+              parents(first: 100) {
+                nodes {
+                  oid
+                }
+              }
             }
           }
         }
@@ -153,6 +161,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
         }
       }
       reviewThreads(last: 100) {
+        totalCount
         pageInfo {
           hasPreviousPage
           startCursor
@@ -194,6 +203,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
         }
       }
       comments(last: 100) {
+        totalCount
         pageInfo {
           hasPreviousPage
           startCursor
@@ -251,6 +261,9 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
       }
       allReviews: reviews(last: 1) {
         totalCount
+        nodes {
+          id
+        }
       }
       approvedReviews: reviews(states: APPROVED, last: 50) {
         pageInfo {
@@ -293,6 +306,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
               }
             }
             statusCheckRollup {
+              state
               contexts(first: 100) {
                 pageInfo {
                   hasNextPage
@@ -340,63 +354,6 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
               }
             }
           }
-        }
-      }
-    }
-  }
-}
-
-fragment QueueCheckCommit on Commit {
-  oid
-  committedDate
-  parents(first: 100) {
-    nodes {
-      oid
-    }
-  }
-  statusCheckRollup {
-    contexts(first: 100) {
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      nodes {
-        __typename
-        ... on CheckRun {
-          id
-          name
-          status
-          conclusion
-          detailsUrl
-          completedAt
-          startedAt
-          title
-          summary
-          annotations(first: 1) {
-            nodes {
-              message
-            }
-          }
-          checkSuite {
-            createdAt
-            updatedAt
-            workflowRun {
-              event
-              createdAt
-              updatedAt
-              workflow {
-                name
-                databaseId
-              }
-            }
-          }
-        }
-        ... on StatusContext {
-          context
-          state
-          createdAt
-          targetUrl
-          description
         }
       }
     }

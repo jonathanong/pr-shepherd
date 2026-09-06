@@ -21,7 +21,7 @@ into these files for every claim it makes; this remains the canonical spec.
 | [comments.md](comments.md)         | Threads, comments, summaries, seen markers, mutations        |
 | [checks.md](checks.md)             | Classify → triage → `failedStep`, `jobName`, event filtering |
 | [merge-status.md](merge-status.md) | `deriveMergeStatus` plus printed merge requirements          |
-| [graphql.md](graphql.md)           | Batch query, pagination, REST supplements                    |
+| [graphql.md](graphql.md)           | Batch query, operation catalog, cost, quota, REST supplements |
 
 ## Job 2 — Actions emitted
 

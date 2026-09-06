@@ -2,6 +2,10 @@
 import { vi, beforeEach } from "vitest";
 
 vi.mock("../../src/github/batch.mts", () => ({ fetchPrBatch: vi.fn() }));
+vi.mock("../../src/state/pr-fingerprint.mts", () => ({
+  loadPrFingerprint: vi.fn().mockResolvedValue(null),
+  storePrFingerprint: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("../../src/github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
@@ -189,7 +193,26 @@ export function registerHooks(): void {
   beforeEach(() => {
     vi.clearAllMocks();
     mockLoadConfig.mockReturnValue(defaultConfig());
-    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData() });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData(),
+      fingerprint: {
+        headRefOid: "abc123",
+        updatedAt: "",
+        state: "OPEN",
+        isDraft: false,
+        mergeable: "MERGEABLE",
+        mergeStateStatus: "CLEAN",
+        reviewDecision: "APPROVED",
+        isInMergeQueue: false,
+        commentCount: 0,
+        threadCount: 0,
+        reviewCount: 0,
+        latestCommentId: null,
+        latestThreadId: null,
+        latestReviewId: null,
+        checkRollupState: null,
+      },
+    });
     mockGetMergeableState.mockResolvedValue({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" });
     mockFetchStartupFailureChecks.mockResolvedValue([]);
     mockFetchCheckRunAnnotations.mockResolvedValue([]);

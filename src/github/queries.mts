@@ -19,6 +19,9 @@ export const BATCH_PR_QUERY = gql("batch-pr.gql");
 /** Slim @include follow-up for outstanding batch-query connections. */
 export const BATCH_PR_PAGE_QUERY = gql("batch-pr-page.gql");
 
+/** Cheap PR fingerprint used to skip an unchanged BatchPr snapshot. */
+export const PR_FINGERPRINT_QUERY = gql("pr-fingerprint.gql");
+
 /** PR head fields plus a single review thread for `commit-suggestion`. */
 export const SUGGESTION_THREADS_QUERY = gql("suggestion-threads.gql");
 

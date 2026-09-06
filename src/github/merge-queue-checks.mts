@@ -19,26 +19,38 @@ interface CommitContextsResponse {
   } | null;
 }
 
-type QueueCommit = NonNullable<NonNullable<RawPr["mergeQueueEntry"]>["headCommit"]>;
+type QueueCommit = {
+  oid: string;
+  statusCheckRollup?: {
+    contexts: {
+      pageInfo: { hasNextPage: boolean; endCursor: string | null };
+      nodes: Array<RawContextNode | null>;
+    };
+  } | null;
+};
 
 async function hydrateCommitContexts(commit: QueueCommit, repo: RepoInfo): Promise<void> {
-  const contexts = commit.statusCheckRollup?.contexts;
-  if (!contexts) return;
-  contexts.nodes = requireContextNodes(contexts.nodes);
-  if (contexts.pageInfo.hasNextPage && !contexts.pageInfo.endCursor) {
-    throw new Error(
-      `Merge queue check pagination interrupted: GitHub omitted the next cursor for ${commit.oid}. Retry.`,
-    );
+  const existing = commit.statusCheckRollup?.contexts;
+  const nodes: RawContextNode[] = existing ? [...requireContextNodes(existing.nodes)] : [];
+  let cursor: string | null | undefined;
+  if (!existing) {
+    cursor = null;
+  } else if (existing.pageInfo.hasNextPage) {
+    if (!existing.pageInfo.endCursor) {
+      throw new Error(
+        `Merge queue check pagination interrupted: GitHub omitted the next cursor for ${commit.oid}. Retry.`,
+      );
+    }
+    cursor = existing.pageInfo.endCursor;
   }
-  let cursor = contexts.pageInfo.hasNextPage ? contexts.pageInfo.endCursor : null;
 
-  while (cursor) {
+  while (cursor !== undefined) {
     // eslint-disable-next-line no-await-in-loop
     const result = await graphql<CommitContextsResponse>(COMMIT_CHECK_CONTEXTS_QUERY, {
       owner: repo.owner,
       repo: repo.name,
       oid: commit.oid,
-      cursor,
+      ...(cursor !== null && { cursor }),
     });
     const object = result.data.repository?.object;
     if (object?.__typename !== "Commit" || object.oid !== commit.oid) {
@@ -52,15 +64,18 @@ async function hydrateCommitContexts(commit: QueueCommit, repo: RepoInfo): Promi
         `Merge queue check pagination interrupted: statusCheckRollup disappeared for ${commit.oid}. Retry.`,
       );
     }
-    contexts.nodes.push(...requireContextNodes(next.nodes));
-    contexts.pageInfo = next.pageInfo;
-    cursor = next.pageInfo.hasNextPage ? next.pageInfo.endCursor : null;
+    nodes.push(...requireContextNodes(next.nodes));
+    cursor = next.pageInfo.hasNextPage ? next.pageInfo.endCursor : undefined;
     if (next.pageInfo.hasNextPage && !cursor) {
       throw new Error(
         `Merge queue check pagination interrupted: GitHub omitted the next cursor for ${commit.oid}. Retry.`,
       );
     }
   }
+
+  commit.statusCheckRollup = {
+    contexts: { pageInfo: { hasNextPage: false, endCursor: null }, nodes },
+  };
 }
 
 /** Hydrate all status contexts for the active or most recently removed queue commit. */

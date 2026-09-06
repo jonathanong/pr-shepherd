@@ -39,6 +39,46 @@ function queuedPr(pageInfo: { hasNextPage: boolean; endCursor: string | null }) 
 }
 
 describe("fetchPrBatch — merge queue check pagination", () => {
+  it("loads queue check contexts when the batch omits the rollup", async () => {
+    mockGraphqlWithRateLimit.mockResolvedValue(
+      makeResponse(
+        makeRawPr({
+          isInMergeQueue: true,
+          mergeQueueEntry: {
+            position: 1,
+            state: "AWAITING_CHECKS",
+            estimatedTimeToMerge: null,
+            headCommit: { oid: "queue123" },
+          },
+        }),
+      ),
+    );
+    mockGraphql.mockResolvedValue({
+      data: {
+        repository: {
+          object: {
+            __typename: "Commit",
+            oid: "queue123",
+            statusCheckRollup: {
+              contexts: {
+                pageInfo: { hasNextPage: false, endCursor: null },
+                nodes: [check("queue-ci", "FAILURE")],
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.mergeQueueChecks?.map((item) => item.name)).toEqual(["queue-ci"]);
+    expect(mockGraphql).toHaveBeenCalledWith(expect.any(String), {
+      owner: "owner",
+      repo: "repo",
+      oid: "queue123",
+    });
+  });
+
   it("fetches failures after the first 100 queue contexts before classifying them", async () => {
     const pr = queuedPr({ hasNextPage: true, endCursor: "queue-cursor-1" });
     mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
