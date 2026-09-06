@@ -4,7 +4,7 @@ import { loadPrFingerprint } from "../state/pr-fingerprint.mts";
 import { hasCheckDrivenActionableWork } from "./check-annotations.mts";
 import type { ShepherdReport } from "../types.mts";
 
-export function reportAllowsFingerprintSkip(report: ShepherdReport): boolean {
+function reportAllowsFingerprintSkip(report: ShepherdReport): boolean {
   if (report.mergeStatus.state !== "OPEN") return false;
   return (
     report.threads.actionable.length === 0 &&
