@@ -63,7 +63,7 @@ export async function fetchPrBatch(
   data.checks = mergeStartupFailureChecks(data.checks, parseSuiteStartupFailures(raw));
   return {
     data,
-    fingerprint: fingerprintFromRaw(raw),
+    fingerprint: fingerprintFromRaw(raw, result.data.repository?.viewerPermission ?? null),
     rateLimit: paged.rateLimit ?? result.rateLimit,
     ...(parseCheckSuitesComplete(raw) && { checkSuitesComplete: true }),
   };

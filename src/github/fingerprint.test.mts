@@ -19,6 +19,9 @@ function sample(overrides: Partial<PrFingerprint> = {}): PrFingerprint {
     latestThreadId: null,
     latestReviewId: null,
     checkRollupState: "SUCCESS",
+    checkSuiteConclusions: "",
+    viewerCanUpdate: true,
+    viewerPermission: "ADMIN",
     ...overrides,
   };
 }

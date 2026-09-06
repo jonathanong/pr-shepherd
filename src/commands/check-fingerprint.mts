@@ -1,11 +1,13 @@
 import { getMergeableState, type RepoInfo } from "../github/client.mts";
 import { fetchPrFingerprint, fingerprintsEqual } from "../github/fingerprint.mts";
-import { loadPrFingerprint } from "../state/pr-fingerprint.mts";
+import { fingerprintInputDigest, loadPrFingerprint } from "../state/pr-fingerprint.mts";
+import type { PrShepherdConfig } from "../config/load.mts";
 import { hasCheckDrivenActionableWork } from "./check-annotations.mts";
 import type { ShepherdReport } from "../types.mts";
 
 function reportAllowsFingerprintSkip(report: ShepherdReport): boolean {
   if (report.mergeStatus.state !== "OPEN") return false;
+  if (report.mergeQueue?.inQueue === true) return false;
   return (
     report.threads.actionable.length === 0 &&
     report.threads.resolutionOnly.length === 0 &&
@@ -15,6 +17,7 @@ function reportAllowsFingerprintSkip(report: ShepherdReport): boolean {
     (report.comments.minimizeIds?.length ?? 0) === 0 &&
     report.comments.firstLook.length === 0 &&
     report.changesRequestedReviews.length === 0 &&
+    report.approvedReviews.length === 0 &&
     report.firstLookSummaries.length === 0 &&
     report.editedSummaries.length === 0 &&
     (report.ruleAutoResolveReviewSummaryIds?.length ?? 0) === 0 &&
@@ -26,10 +29,13 @@ export async function tryReuseFingerprintReport(
   prNumber: number,
   repo: RepoInfo,
   stateKey: { owner: string; repo: string; pr: number },
+  config: PrShepherdConfig,
 ): Promise<ShepherdReport | null> {
   const cached = await loadPrFingerprint(stateKey);
-  if (cached === null || !reportAllowsFingerprintSkip(cached.report)) return null;
+  if (cached === null || cached.inputDigest !== fingerprintInputDigest(config)) return null;
+  if (!reportAllowsFingerprintSkip(cached.report)) return null;
   const live = await fetchPrFingerprint(prNumber, repo);
+  if (live.isInMergeQueue || cached.fingerprint.isInMergeQueue) return null;
   if (!fingerprintsEqual(cached.fingerprint, live)) return null;
   if (!(await cachedReportSurvivesMergeabilityRefresh(prNumber, repo, cached.report))) {
     return null;

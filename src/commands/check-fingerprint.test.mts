@@ -1,8 +1,10 @@
+/* eslint-disable max-lines */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../state/pr-fingerprint.mts", () => ({
-  loadPrFingerprint: vi.fn(),
-}));
+vi.mock("../state/pr-fingerprint.mts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../state/pr-fingerprint.mts")>();
+  return { ...actual, loadPrFingerprint: vi.fn() };
+});
 vi.mock("../github/fingerprint.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../github/fingerprint.mts")>();
   return { ...actual, fetchPrFingerprint: vi.fn() };
@@ -11,7 +13,8 @@ vi.mock("../github/client.mts", () => ({
   getMergeableState: vi.fn(),
 }));
 
-import { loadPrFingerprint } from "../state/pr-fingerprint.mts";
+import { fingerprintInputDigest, loadPrFingerprint } from "../state/pr-fingerprint.mts";
+import type { PrShepherdConfig } from "../config/load.mts";
 import { fetchPrFingerprint } from "../github/fingerprint.mts";
 import { getMergeableState } from "../github/client.mts";
 import { tryReuseFingerprintReport } from "./check-fingerprint.mts";
@@ -24,6 +27,37 @@ const mockMergeable = vi.mocked(getMergeableState);
 const REPO = { owner: "owner", name: "repo" };
 const KEY = { owner: "owner", repo: "repo", pr: 42 };
 const FP = testFingerprint();
+const CONFIG = {
+  botUsernames: ["coderabbitai"],
+  ignoreChecks: [],
+  iterate: {
+    fixAttemptsPerThread: 3,
+    stallTimeoutMinutes: 60,
+    minimizeApprovals: false,
+    minimizeComments: "all",
+    behindBaseHint: "",
+    resolveOtherHumanThreads: "none",
+  },
+  watch: { readyDelayMinutes: 10, graphqlQuotaWarnings: [] },
+  resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 } },
+  checks: { ciTriggerEvents: ["pull_request"], ignoreLogLines: [] },
+  mergeStatus: { blockingReviewerLogins: [] },
+  actions: {
+    autoMinimizeSuppressed: true,
+    autoMarkReady: true,
+    neverCancelRuns: [],
+    workWhileQueued: false,
+  },
+} as PrShepherdConfig;
+
+function stored(report: ShepherdReport) {
+  return {
+    version: 2 as const,
+    inputDigest: fingerprintInputDigest(CONFIG),
+    fingerprint: FP,
+    report,
+  };
+}
 
 function waitReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
   return {
@@ -76,87 +110,102 @@ describe("tryReuseFingerprintReport", () => {
 
   it("returns the cached WAIT-shaped report when the live fingerprint matches", async () => {
     const report = waitReport();
-    mockLoad.mockResolvedValue({ version: 1, fingerprint: FP, report });
-    await expect(tryReuseFingerprintReport(42, REPO, KEY)).resolves.toEqual(report);
+    mockLoad.mockResolvedValue(stored(report));
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toEqual(report);
     expect(mockFetch).toHaveBeenCalledWith(42, REPO);
   });
 
   it("does not skip when the cached report has first-look threads", async () => {
-    mockLoad.mockResolvedValue({
-      version: 1,
-      fingerprint: FP,
-      report: waitReport({
-        threads: {
-          actionable: [],
-          resolutionOnly: [],
-          autoResolved: [],
-          autoResolveErrors: [],
-          firstLook: [{ id: "t1" } as ShepherdReport["threads"]["firstLook"][number]],
-        },
-      }),
-    });
-    await expect(tryReuseFingerprintReport(42, REPO, KEY)).resolves.toBeNull();
+    mockLoad.mockResolvedValue(
+      stored(
+        waitReport({
+          threads: {
+            actionable: [],
+            resolutionOnly: [],
+            autoResolved: [],
+            autoResolveErrors: [],
+            firstLook: [{ id: "t1" } as ShepherdReport["threads"]["firstLook"][number]],
+          },
+        }),
+      ),
+    );
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it("does not skip when the cached report has failing checks", async () => {
-    mockLoad.mockResolvedValue({
-      version: 1,
-      fingerprint: FP,
-      report: waitReport({
-        checks: {
-          passing: [],
-          failing: [{ name: "CI" } as ShepherdReport["checks"]["failing"][number]],
-          inProgress: [],
-          skipped: [],
-          filtered: [],
-          filteredNames: [],
-          blockedByFilteredCheck: false,
-        },
-      }),
-    });
-    await expect(tryReuseFingerprintReport(42, REPO, KEY)).resolves.toBeNull();
+    mockLoad.mockResolvedValue(
+      stored(
+        waitReport({
+          checks: {
+            passing: [],
+            failing: [{ name: "CI" } as ShepherdReport["checks"]["failing"][number]],
+            inProgress: [],
+            skipped: [],
+            filtered: [],
+            filteredNames: [],
+            blockedByFilteredCheck: false,
+          },
+        }),
+      ),
+    );
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("does not skip when the PR is in the merge queue", async () => {
+    mockLoad.mockResolvedValue(
+      stored(waitReport({ mergeQueue: { enabled: true, inQueue: true } })),
+    );
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("does not skip when classification inputs change", async () => {
+    const report = waitReport();
+    mockLoad.mockResolvedValue({ ...stored(report), inputDigest: "stale" });
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it("does not skip when the live fingerprint differs", async () => {
     const report = waitReport();
-    mockLoad.mockResolvedValue({ version: 1, fingerprint: FP, report });
+    mockLoad.mockResolvedValue(stored(report));
     mockFetch.mockResolvedValueOnce(testFingerprint({ commentCount: 9, latestCommentId: "c9" }));
-    await expect(tryReuseFingerprintReport(42, REPO, KEY)).resolves.toBeNull();
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
   });
 
   it("does not skip a READY report when REST mergeability is DIRTY", async () => {
     const report = waitReport({ status: "READY" });
-    mockLoad.mockResolvedValue({ version: 1, fingerprint: FP, report });
+    mockLoad.mockResolvedValue(stored(report));
     mockMergeable.mockResolvedValue({
       mergeable: "CONFLICTING",
       mergeStateStatus: "DIRTY",
       state: "OPEN",
     });
-    await expect(tryReuseFingerprintReport(42, REPO, KEY)).resolves.toBeNull();
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
     expect(mockFetch).toHaveBeenCalledWith(42, REPO);
   });
 
   it("does not skip when REST reports the PR merged", async () => {
     const report = waitReport({ status: "READY" });
-    mockLoad.mockResolvedValue({ version: 1, fingerprint: FP, report });
+    mockLoad.mockResolvedValue(stored(report));
     mockMergeable.mockResolvedValue({
       mergeable: "UNKNOWN",
       mergeStateStatus: "UNKNOWN",
       state: "MERGED",
     });
-    await expect(tryReuseFingerprintReport(42, REPO, KEY)).resolves.toBeNull();
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
   });
 
   it("skips a READY report when REST mergeability stays OPEN and CLEAN", async () => {
     const report = waitReport({ status: "READY" });
-    mockLoad.mockResolvedValue({ version: 1, fingerprint: FP, report });
+    mockLoad.mockResolvedValue(stored(report));
     mockMergeable.mockResolvedValue({
       mergeable: "MERGEABLE",
       mergeStateStatus: "CLEAN",
       state: "OPEN",
     });
-    await expect(tryReuseFingerprintReport(42, REPO, KEY)).resolves.toEqual(report);
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toEqual(report);
   });
 });

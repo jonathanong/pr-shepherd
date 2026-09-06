@@ -21,14 +21,19 @@ export interface PrFingerprint {
   latestThreadId: string | null;
   latestReviewId: string | null;
   checkRollupState: string | null;
+  checkSuiteConclusions: string;
+  viewerCanUpdate: boolean;
+  viewerPermission: string | null;
 }
 
 interface RawFingerprintResponse {
   repository: {
+    viewerPermission: string | null;
     pullRequest: {
       updatedAt: string;
       state: string;
       isDraft: boolean;
+      viewerCanUpdate: boolean;
       headRefOid: string;
       mergeable: string;
       mergeStateStatus: string;
@@ -42,6 +47,7 @@ interface RawFingerprintResponse {
           commit: {
             oid: string;
             statusCheckRollup: { state: string | null } | null;
+            checkSuites?: { nodes: Array<{ conclusion: string | null }> };
           };
         }>;
       };
@@ -49,7 +55,14 @@ interface RawFingerprintResponse {
   } | null;
 }
 
-export function fingerprintFromRaw(raw: RawPr): PrFingerprint {
+function suiteConclusions(nodes: Array<{ conclusion: string | null }> | undefined): string {
+  return (nodes ?? []).map((node) => node.conclusion ?? "").join(",");
+}
+
+export function fingerprintFromRaw(
+  raw: RawPr,
+  viewerPermission: string | null = null,
+): PrFingerprint {
   return {
     headRefOid: raw.headRefOid,
     updatedAt: raw.updatedAt ?? "",
@@ -66,6 +79,9 @@ export function fingerprintFromRaw(raw: RawPr): PrFingerprint {
     latestThreadId: raw.reviewThreads.nodes.at(-1)?.id ?? null,
     latestReviewId: raw.allReviews?.nodes?.at(-1)?.id ?? null,
     checkRollupState: raw.commits.nodes[0]?.commit.statusCheckRollup?.state ?? null,
+    checkSuiteConclusions: suiteConclusions(raw.commits.nodes[0]?.commit.checkSuites?.nodes),
+    viewerCanUpdate: raw.viewerCanUpdate === true,
+    viewerPermission,
   };
 }
 
@@ -85,7 +101,10 @@ export function fingerprintsEqual(left: PrFingerprint, right: PrFingerprint): bo
     left.latestCommentId === right.latestCommentId &&
     left.latestThreadId === right.latestThreadId &&
     left.latestReviewId === right.latestReviewId &&
-    left.checkRollupState === right.checkRollupState
+    left.checkRollupState === right.checkRollupState &&
+    left.checkSuiteConclusions === right.checkSuiteConclusions &&
+    left.viewerCanUpdate === right.viewerCanUpdate &&
+    left.viewerPermission === right.viewerPermission
   );
 }
 
@@ -122,5 +141,8 @@ export async function fetchPrFingerprint(pr: number, repo: RepoInfo): Promise<Pr
     latestThreadId: threads.nodes.at(-1)?.id ?? null,
     latestReviewId: reviews.nodes.at(-1)?.id ?? null,
     checkRollupState: raw.commits.nodes[0]?.commit.statusCheckRollup?.state ?? null,
+    checkSuiteConclusions: suiteConclusions(raw.commits.nodes[0]?.commit.checkSuites?.nodes),
+    viewerCanUpdate: raw.viewerCanUpdate === true,
+    viewerPermission: result.data.repository.viewerPermission,
   };
 }

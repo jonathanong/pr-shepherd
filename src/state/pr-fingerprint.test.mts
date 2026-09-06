@@ -3,12 +3,39 @@ import { randomBytes } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { resolvePrStatePath } from "./base.mts";
-import { loadPrFingerprint, storePrFingerprint } from "./pr-fingerprint.mts";
+import {
+  fingerprintInputDigest,
+  loadPrFingerprint,
+  storePrFingerprint,
+} from "./pr-fingerprint.mts";
+import type { PrShepherdConfig } from "../config/load.mts";
 import { testFingerprint } from "../../test-helpers/github/fingerprint-fixture.mts";
 import type { ShepherdReport } from "../types.mts";
 
 const key = { owner: "owner", repo: "repo", pr: 42 };
 const report = { pr: 42, status: "IN_PROGRESS", repo: "owner/repo" } as ShepherdReport;
+const config = {
+  botUsernames: [],
+  ignoreChecks: [],
+  iterate: {
+    fixAttemptsPerThread: 3,
+    stallTimeoutMinutes: 60,
+    minimizeApprovals: false,
+    minimizeComments: "all",
+    behindBaseHint: "",
+    resolveOtherHumanThreads: "none",
+  },
+  watch: { readyDelayMinutes: 10, graphqlQuotaWarnings: [] },
+  resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 } },
+  checks: { ciTriggerEvents: ["pull_request"], ignoreLogLines: [] },
+  mergeStatus: { blockingReviewerLogins: [] },
+  actions: {
+    autoMinimizeSuppressed: true,
+    autoMarkReady: true,
+    neverCancelRuns: [],
+    workWhileQueued: false,
+  },
+} as PrShepherdConfig;
 
 let testStateDir: string;
 
@@ -30,9 +57,10 @@ describe("pr-fingerprint state", () => {
 
   it("round-trips a stored fingerprint and report", async () => {
     const fingerprint = testFingerprint({ headRefOid: "deadbeef" });
-    await storePrFingerprint(key, fingerprint, report);
+    await storePrFingerprint(key, fingerprint, report, config);
     await expect(loadPrFingerprint(key)).resolves.toEqual({
-      version: 1,
+      version: 2,
+      inputDigest: fingerprintInputDigest(config),
       fingerprint,
       report,
     });

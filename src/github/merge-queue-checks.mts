@@ -60,6 +60,10 @@ async function hydrateCommitContexts(commit: QueueCommit, repo: RepoInfo): Promi
     }
     const next = object.statusCheckRollup?.contexts;
     if (!next) {
+      if (cursor === null) {
+        cursor = undefined;
+        continue;
+      }
       throw new Error(
         `Merge queue check pagination interrupted: statusCheckRollup disappeared for ${commit.oid}. Retry.`,
       );

@@ -192,6 +192,31 @@ describe("fetchPrBatch — merge queue check pagination", () => {
     expect(mockGraphql).not.toHaveBeenCalled();
   });
 
+  it("treats a null rollup on the initial queue follow-up as empty", async () => {
+    mockGraphqlWithRateLimit.mockResolvedValue(
+      makeResponse(
+        makeRawPr({
+          isInMergeQueue: true,
+          mergeQueueEntry: {
+            position: 1,
+            state: "AWAITING_CHECKS",
+            estimatedTimeToMerge: null,
+            headCommit: { oid: "queue123" },
+          },
+        }),
+      ),
+    );
+    mockGraphql.mockResolvedValue({
+      data: {
+        repository: {
+          object: { __typename: "Commit", oid: "queue123", statusCheckRollup: null },
+        },
+      },
+    });
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.mergeQueueChecks).toBeUndefined();
+  });
+
   it("skips queue-check hydration when mergeQueueEntry has no head commit", async () => {
     mockGraphqlWithRateLimit.mockResolvedValue(
       makeResponse(

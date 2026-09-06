@@ -13,6 +13,7 @@ const pullRequest = {
   updatedAt: "2026-09-06T00:00:00Z",
   state: "OPEN",
   isDraft: false,
+  viewerCanUpdate: true,
   headRefOid: "abc123",
   mergeable: "MERGEABLE",
   mergeStateStatus: "CLEAN",
@@ -28,7 +29,7 @@ const pullRequest = {
 
 describe("fetchPrFingerprint", () => {
   it("maps the cheap preflight query into a comparable fingerprint", async () => {
-    mockFetch.mockResolvedValue(gqlOk({ repository: { pullRequest } }));
+    mockFetch.mockResolvedValue(gqlOk({ repository: { viewerPermission: "ADMIN", pullRequest } }));
     await expect(fetchPrFingerprint(42, { owner: "owner", name: "repo" })).resolves.toEqual({
       headRefOid: "abc123",
       updatedAt: "2026-09-06T00:00:00Z",
@@ -45,6 +46,9 @@ describe("fetchPrFingerprint", () => {
       latestThreadId: "t1",
       latestReviewId: "r3",
       checkRollupState: "SUCCESS",
+      checkSuiteConclusions: "",
+      viewerCanUpdate: true,
+      viewerPermission: "ADMIN",
     });
   });
 

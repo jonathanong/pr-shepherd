@@ -27,14 +27,14 @@ describe("runCheck — fingerprint reuse", () => {
     expect(mockFetchPrBatch).not.toHaveBeenCalled();
   });
 
-  it("fetches BatchPr when persistSeen is false", async () => {
+  it("fetches BatchPr when fingerprintCache is false", async () => {
     mockReuse.mockResolvedValueOnce({
       pr: 99,
       status: "IN_PROGRESS",
       repo: "owner/repo",
     } as ShepherdReport);
     mockFetchPrBatch.mockResolvedValueOnce({ data: makeBatchData() });
-    const report = await runCheck({ ...BASE_OPTS, persistSeen: false });
+    const report = await runCheck({ ...BASE_OPTS, persistSeen: false, fingerprintCache: false });
     expect(mockFetchPrBatch).toHaveBeenCalled();
     expect(report.pr).toBe(42);
     expect(mockReuse).not.toHaveBeenCalled();

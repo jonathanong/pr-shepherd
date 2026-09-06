@@ -17,6 +17,9 @@ export function testFingerprint(overrides: Partial<PrFingerprint> = {}): PrFinge
     latestThreadId: null,
     latestReviewId: null,
     checkRollupState: null,
+    checkSuiteConclusions: "",
+    viewerCanUpdate: true,
+    viewerPermission: "ADMIN",
     ...overrides,
   };
 }

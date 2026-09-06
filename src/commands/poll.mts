@@ -55,6 +55,8 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
         ...iterateOpts,
         prNumber,
         persistSeen: debounceSeconds === 0 || pastDebounce,
+        // WAIT ticks keep the fingerprint cache; FIX_CODE debounce must not.
+        fingerprintCache: debounceUntil === null || pastDebounce,
         // Until-terminal must persist before deciding to return.
         deferQuotaWarning: !untilTerminal,
       });
@@ -119,14 +121,19 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       !pastDebounce
     ) {
       debounceUntil = null;
-      await sleep(
-        graphqlQuotaPollIntervalMs(
-          quotaBands,
-          lastResult.apiUsage?.graphql,
-          intervalMs,
-          MAX_TIMER_MS,
-        ),
+      const elapsedMs = Date.now() - start;
+      const sleepMs = graphqlQuotaPollIntervalMs(
+        quotaBands,
+        lastResult.apiUsage?.graphql,
+        intervalMs,
+        MAX_TIMER_MS,
       );
+      if (!untilTerminal) {
+        const remainingMs = timeoutMs - elapsedMs;
+        if (remainingMs <= 0) break;
+        if (remainingMs + TIMER_DRIFT_TOLERANCE_MS < sleepMs) break;
+      }
+      await sleep(sleepMs);
       continue;
     }
     if (lastResult.action === "fix_code" && debounceSeconds > 0 && !pastDebounce) {

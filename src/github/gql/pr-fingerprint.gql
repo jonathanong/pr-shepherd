@@ -9,10 +9,12 @@ query PrFingerprint($owner: String!, $repo: String!, $pr: Int!) {
     used
   }
   repository(owner: $owner, name: $repo) {
+    viewerPermission
     pullRequest(number: $pr) {
       updatedAt
       state
       isDraft
+      viewerCanUpdate
       headRefOid
       mergeable
       mergeStateStatus
@@ -42,6 +44,11 @@ query PrFingerprint($owner: String!, $repo: String!, $pr: Int!) {
             oid
             statusCheckRollup {
               state
+            }
+            checkSuites(first: 50) {
+              nodes {
+                conclusion
+              }
             }
           }
         }

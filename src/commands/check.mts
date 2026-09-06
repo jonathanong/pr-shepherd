@@ -55,6 +55,7 @@ export async function runCheck(
     autoMinimizeSuppressed?: boolean;
     skipTriage?: boolean;
     persistSeen?: boolean;
+    fingerprintCache?: boolean;
     merge?: boolean;
   },
 ): Promise<ShepherdReport> {
@@ -68,8 +69,9 @@ export async function runCheck(
   }
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
   const config = loadConfig();
-  if (opts.persistSeen !== false) {
-    const cached = await tryReuseFingerprintReport(prNumber, repo, stateKey);
+  const useFingerprintCache = opts.fingerprintCache !== false;
+  if (useFingerprintCache) {
+    const cached = await tryReuseFingerprintReport(prNumber, repo, stateKey, config);
     if (cached) return cached;
   }
   const paginateApprovedReviews = config.iterate.minimizeApprovals;
@@ -81,8 +83,8 @@ export async function runCheck(
   let mergeStatus = deriveMergeStatus(batchData);
   if (mergeStatus.state === "MERGED" || mergeStatus.state === "CLOSED") {
     const terminal = buildTerminalReport(prNumber, repo, batchData, mergeStatus, mergeStatus.state);
-    if (opts.persistSeen !== false && result.fingerprint) {
-      await storePrFingerprint(stateKey, result.fingerprint, terminal);
+    if (useFingerprintCache && result.fingerprint) {
+      await storePrFingerprint(stateKey, result.fingerprint, terminal, config);
     }
     return terminal;
   }
@@ -268,8 +270,8 @@ export async function runCheck(
         mergeStatus,
         mergeStatus.state,
       );
-      if (opts.persistSeen !== false && result.fingerprint) {
-        await storePrFingerprint(stateKey, result.fingerprint, terminal);
+      if (useFingerprintCache && result.fingerprint) {
+        await storePrFingerprint(stateKey, result.fingerprint, terminal, config);
       }
       return terminal;
     }
@@ -453,8 +455,8 @@ export async function runCheck(
       },
     }),
   };
-  if (opts.persistSeen !== false && result.fingerprint) {
-    await storePrFingerprint(stateKey, result.fingerprint, report);
+  if (useFingerprintCache && result.fingerprint) {
+    await storePrFingerprint(stateKey, result.fingerprint, report, config);
   }
   return report;
 }
