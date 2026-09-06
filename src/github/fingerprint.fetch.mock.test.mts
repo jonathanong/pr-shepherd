@@ -68,7 +68,7 @@ describe("fetchPrFingerprint", () => {
                 {
                   commit: {
                     oid: "abc123",
-                    statusCheckRollup: { state: "FAILURE" },
+                    statusCheckRollup: null,
                     checkSuites: { nodes: [{ conclusion: "STARTUP_FAILURE" }] },
                   },
                 },

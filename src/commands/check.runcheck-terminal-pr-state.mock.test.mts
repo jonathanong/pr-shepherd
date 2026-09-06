@@ -14,6 +14,7 @@ import {
   makeThread,
   makeComment,
 } from "../../test-helpers/commands/check.test-support.mts";
+import { testFingerprint } from "../../test-helpers/github/fingerprint-fixture.mts";
 import { runCheck } from "./check.mts";
 
 registerHooks();
@@ -30,6 +31,7 @@ describe("runCheck — terminal PR state", () => {
         reviewThreads: [makeThread({ id: "t-outdated", isOutdated: true })],
         comments: [makeComment({ id: "c-min", isMinimized: true })],
       }),
+      fingerprint: testFingerprint(),
     });
 
     const report = await runCheck({ ...BASE_OPTS, autoResolve: true });
