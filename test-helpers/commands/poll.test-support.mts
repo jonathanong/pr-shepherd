@@ -78,7 +78,7 @@ function makeCancelResult(): IterateResult {
   } as unknown as IterateResult;
 }
 
-function makeMarkReadyResult(): IterateResult {
+function makeMarkReadyResult(overrides: Partial<IterateResult> = {}): IterateResult {
   return {
     action: "mark_ready",
     pr: 42,
@@ -105,6 +105,7 @@ function makeMarkReadyResult(): IterateResult {
     },
     markedReady: true,
     log: "MARKED READY: PR #42 converted from draft to ready for review",
+    ...overrides,
   } as unknown as IterateResult;
 }
 

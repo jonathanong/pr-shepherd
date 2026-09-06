@@ -35,6 +35,26 @@ describe("runPoll — GraphQL Retry-After", () => {
     expect(result.action).toBe("cancel");
   });
 
+  it("throws after a second until-terminal rate-limit failure", async () => {
+    const err = new GitHubRequestError("You have exceeded a secondary rate limit", {
+      status: 403,
+      retryAfterSeconds: 5,
+    });
+    mockRunIterate.mockRejectedValue(err);
+
+    const pollPromise = runPoll({
+      prNumber: 42,
+      format: "text",
+      intervalSeconds: 30,
+      timeoutSeconds: 300,
+      untilTerminal: true,
+    });
+    const assertion = expect(pollPromise).rejects.toMatchObject({ status: 403 });
+    await vi.advanceTimersByTimeAsync(5_000);
+    await assertion;
+    expect(mockRunIterate).toHaveBeenCalledTimes(2);
+  });
+
   it("does not retry on a bounded poll", async () => {
     mockRunIterate.mockRejectedValueOnce(
       new GitHubRequestError("You have exceeded a secondary rate limit", {

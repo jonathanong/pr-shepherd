@@ -72,4 +72,12 @@ describe("pollGraphQlRetryAfterMs", () => {
       60_000,
     );
   });
+
+  it("clamps a zero Retry-After to zero milliseconds", () => {
+    expect(
+      pollGraphQlRetryAfterMs(
+        new GitHubRequestError("secondary rate limit", { status: 403, retryAfterSeconds: 0 }),
+      ),
+    ).toBe(0);
+  });
 });
