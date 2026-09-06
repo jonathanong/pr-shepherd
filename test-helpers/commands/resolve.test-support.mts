@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { vi, beforeEach } from "vitest";
 
 vi.mock("../../src/github/client.mts", () => ({
@@ -48,6 +49,7 @@ vi.mock("../../src/config/load.mts", () => ({
 import { runResolveMutate } from "../../src/commands/resolve.mts";
 import { getCurrentPrNumber } from "../../src/github/client.mts";
 import { fetchPrBatch } from "../../src/github/batch.mts";
+import { testFingerprint } from "../github/fingerprint-fixture.mts";
 import { autoResolveOutdated, applyResolveOptions } from "../../src/comments/resolve.mts";
 import { loadConfig } from "../../src/config/load.mts";
 import {
@@ -162,23 +164,7 @@ export function registerHooks(): void {
     vi.clearAllMocks();
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData(),
-      fingerprint: {
-        headRefOid: "abc123",
-        updatedAt: "",
-        state: "OPEN",
-        isDraft: false,
-        mergeable: "MERGEABLE",
-        mergeStateStatus: "CLEAN",
-        reviewDecision: null,
-        isInMergeQueue: false,
-        commentCount: 0,
-        threadCount: 0,
-        reviewCount: 0,
-        latestCommentId: null,
-        latestThreadId: null,
-        latestReviewId: null,
-        checkRollupState: null,
-      },
+      fingerprint: testFingerprint(),
     });
     mockAutoResolveOutdated.mockResolvedValue({ resolved: [], errors: [] });
     mockApplyResolveOptions.mockResolvedValue({

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type { CommentAuthorAssociation } from "../types/github.mts";
 import type { RawPrMergeFields } from "./batch-raw-rules.mts";
 

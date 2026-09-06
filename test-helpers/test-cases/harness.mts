@@ -11,6 +11,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import builtinConfig from "../../src/config.json" with { type: "json" };
+import { testFingerprint } from "../github/fingerprint-fixture.mts";
 
 // ---------------------------------------------------------------------------
 // Global stubs (evaluated before imports)
@@ -343,23 +344,9 @@ export function applyFixture(fixture: Fixture): void {
   }
   mockFetchPrBatch.mockResolvedValue({
     data: batchData,
-    fingerprint: {
+    fingerprint: testFingerprint({
       headRefOid: typeof batchData.headRefOid === "string" ? batchData.headRefOid : "abc123",
-      updatedAt: "",
-      state: "OPEN",
-      isDraft: false,
-      mergeable: "MERGEABLE",
-      mergeStateStatus: "CLEAN",
-      reviewDecision: null,
-      isInMergeQueue: false,
-      commentCount: 0,
-      threadCount: 0,
-      reviewCount: 0,
-      latestCommentId: null,
-      latestThreadId: null,
-      latestReviewId: null,
-      checkRollupState: null,
-    },
+    }),
   });
 
   const mergeableFallback = fixture.mergeableFallback ?? {
