@@ -234,16 +234,18 @@ describe("fetchPrBatch — merge queue check pagination", () => {
         }),
       ),
     );
-    mockGraphql.mockImplementation(async (_doc, vars: { oid?: string }) => ({
+    mockGraphql.mockImplementation(async (_doc, vars: Record<string, unknown> = {}) => ({
       data: {
         repository: {
           object: {
             __typename: "Commit",
-            oid: vars.oid,
+            oid: vars["oid"],
             statusCheckRollup: {
               contexts: {
                 pageInfo: { hasNextPage: false, endCursor: null },
-                nodes: [check(vars.oid === "removed-queue" ? "removed-ci" : "queue-ci", "FAILURE")],
+                nodes: [
+                  check(vars["oid"] === "removed-queue" ? "removed-ci" : "queue-ci", "FAILURE"),
+                ],
               },
             },
           },
