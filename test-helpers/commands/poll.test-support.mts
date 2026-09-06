@@ -179,7 +179,6 @@ function makeFixCodeResult(): IterateResult {
     cancelled: [],
   } as unknown as IterateResult;
 }
-
 function registerPollHooks(): void {
   beforeEach(() => {
     vi.clearAllMocks();
