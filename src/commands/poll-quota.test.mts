@@ -21,12 +21,12 @@ describe("graphqlQuotaPollIntervalMs", () => {
     expect(
       graphqlQuotaPollIntervalMs(BANDS, { remaining: 1200, limit: 5000 }, 60_000, MAX_MS),
     ).toBe(120_000);
-    expect(
-      graphqlQuotaPollIntervalMs(BANDS, { remaining: 900, limit: 5000 }, 60_000, MAX_MS),
-    ).toBe(300_000);
-    expect(
-      graphqlQuotaPollIntervalMs(BANDS, { remaining: 400, limit: 5000 }, 60_000, MAX_MS),
-    ).toBe(600_000);
+    expect(graphqlQuotaPollIntervalMs(BANDS, { remaining: 900, limit: 5000 }, 60_000, MAX_MS)).toBe(
+      300_000,
+    );
+    expect(graphqlQuotaPollIntervalMs(BANDS, { remaining: 400, limit: 5000 }, 60_000, MAX_MS)).toBe(
+      600_000,
+    );
   });
 
   it("does not shrink an already-longer --interval", () => {
@@ -37,12 +37,12 @@ describe("graphqlQuotaPollIntervalMs", () => {
 
   it("ignores missing usage, empty bands, and a zero limit", () => {
     expect(graphqlQuotaPollIntervalMs(BANDS, undefined, 60_000, MAX_MS)).toBe(60_000);
-    expect(
-      graphqlQuotaPollIntervalMs([], { remaining: 1, limit: 5000 }, 60_000, MAX_MS),
-    ).toBe(60_000);
-    expect(
-      graphqlQuotaPollIntervalMs(BANDS, { remaining: 1, limit: 0 }, 60_000, MAX_MS),
-    ).toBe(60_000);
+    expect(graphqlQuotaPollIntervalMs([], { remaining: 1, limit: 5000 }, 60_000, MAX_MS)).toBe(
+      60_000,
+    );
+    expect(graphqlQuotaPollIntervalMs(BANDS, { remaining: 1, limit: 0 }, 60_000, MAX_MS)).toBe(
+      60_000,
+    );
   });
 });
 

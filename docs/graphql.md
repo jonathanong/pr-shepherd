@@ -19,11 +19,11 @@ Example: `reviewThreads(last: 100) { comments(first: 100) }` is 1 (threads from 
 
 Other limits that are not the hourly point budget:
 
-| Limit | What it is | How Shepherd sees it |
-| --- | --- | --- |
-| Node cap | A single query may not request more than **500,000** potential nodes (`first`/`last` multiplied through the tree) | Query rejected; not a quota warning |
-| Primary GraphQL quota | `x-ratelimit-remaining` / `rateLimit.remaining` on resource `graphql` | `apiUsage.graphql`, `quotaWarning`, pagination abort at remaining 0 |
-| Secondary rate limit | Burst / concurrency / mutation abuse. **Does not** decrement remaining | HTTP 403 with `Retry-After` and a `secondary rate limit` message; `EXIT.TEMPFAIL` (75) |
+| Limit                 | What it is                                                                                                        | How Shepherd sees it                                                                   |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Node cap              | A single query may not request more than **500,000** potential nodes (`first`/`last` multiplied through the tree) | Query rejected; not a quota warning                                                    |
+| Primary GraphQL quota | `x-ratelimit-remaining` / `rateLimit.remaining` on resource `graphql`                                             | `apiUsage.graphql`, `quotaWarning`, pagination abort at remaining 0                    |
+| Secondary rate limit  | Burst / concurrency / mutation abuse. **Does not** decrement remaining                                            | HTTP 403 with `Retry-After` and a `secondary rate limit` message; `EXIT.TEMPFAIL` (75) |
 
 Mutations cannot select `rateLimit { cost }` (that field lives on the Query root). Shepherd records them as `unmeasuredRequestCount` and still reads remaining/limit from response headers.
 
@@ -89,37 +89,37 @@ The generic paginator is in `github/pagination.mts`. It accepts a `direction` pa
 
 Static documents live in [`src/github/gql/`](../src/github/gql/) and are loaded from [`src/github/queries.mts`](../src/github/queries.mts). Dynamic mutation documents are built at runtime (they cannot be expressed as a single static file).
 
-| Operation | Document | When it runs | Selects `rateLimit.cost` |
-| --- | --- | --- | --- |
-| `BatchPr` | `batch-pr.gql` | Every full `runCheck` / iterate tick that does not hit a fingerprint skip | yes |
-| `PrFingerprint` | `pr-fingerprint.gql` | Every iterate tick after the first stored fingerprint, to decide whether the full batch is needed | yes |
-| `BatchPrPage` | `batch-pr-page.gql` | Extra connection pages; combined cursors | yes |
-| `ReviewThreadComments` | `review-thread-comments.gql` | A thread whose nested `comments` connection has another page | yes |
-| `CommitCheckContexts` | `commit-check-contexts.gql` | Merge-queue (or current-removal) commit check rollup, including page 1 | yes |
-| `CheckRunAnnotations` | `check-run-annotations.gql` | Completed check whose batch probe found at least one annotation (1h derived cache) | yes |
-| `SuggestionThreads` | `suggestion-threads.gql` | `build-suggestion-patches` | yes |
-| `GetPrHeadSha` | `get-pr-head-sha.gql` | `--require-sha` poll (`resolve.shaPoll`, default 2s × 10) | yes |
-| `PrNumberByBranch` | `pr-number-by-branch.gql` | No PR number passed (avoid this — pass the number) | yes |
-| `GetPrBody` | `get-pr-body.gql` | Journal apply, before the body mutation | yes |
-| `UpdatePrBody` | `update-pr-body.gql` | Journal apply | no (mutation) |
-| `MarkPrReady` | `mark-pr-ready.gql` | `mark_ready` when `viewerCanUpdate` | no (mutation) |
-| `PullRequestFiles` | inline in `mark-files-as-viewed.mts` | `apply files` | yes |
-| `BulkApply` | runtime aliases in `comments/resolve.mts` | reply / resolve / minimize / dismiss, chunks of 10 | no (mutation) |
-| `markFileAsViewed` | runtime aliases, chunks of 10 | `apply files` | no (mutation) |
+| Operation              | Document                                  | When it runs                                                                                      | Selects `rateLimit.cost` |
+| ---------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------ |
+| `BatchPr`              | `batch-pr.gql`                            | Every full `runCheck` / iterate tick that does not hit a fingerprint skip                         | yes                      |
+| `PrFingerprint`        | `pr-fingerprint.gql`                      | Every iterate tick after the first stored fingerprint, to decide whether the full batch is needed | yes                      |
+| `BatchPrPage`          | `batch-pr-page.gql`                       | Extra connection pages; combined cursors                                                          | yes                      |
+| `ReviewThreadComments` | `review-thread-comments.gql`              | A thread whose nested `comments` connection has another page                                      | yes                      |
+| `CommitCheckContexts`  | `commit-check-contexts.gql`               | Merge-queue (or current-removal) commit check rollup, including page 1                            | yes                      |
+| `CheckRunAnnotations`  | `check-run-annotations.gql`               | Completed check whose batch probe found at least one annotation (1h derived cache)                | yes                      |
+| `SuggestionThreads`    | `suggestion-threads.gql`                  | `build-suggestion-patches`                                                                        | yes                      |
+| `GetPrHeadSha`         | `get-pr-head-sha.gql`                     | `--require-sha` poll (`resolve.shaPoll`, default 2s × 10)                                         | yes                      |
+| `PrNumberByBranch`     | `pr-number-by-branch.gql`                 | No PR number passed (avoid this — pass the number)                                                | yes                      |
+| `GetPrBody`            | `get-pr-body.gql`                         | Journal apply, before the body mutation                                                           | yes                      |
+| `UpdatePrBody`         | `update-pr-body.gql`                      | Journal apply                                                                                     | no (mutation)            |
+| `MarkPrReady`          | `mark-pr-ready.gql`                       | `mark_ready` when `viewerCanUpdate`                                                               | no (mutation)            |
+| `PullRequestFiles`     | inline in `mark-files-as-viewed.mts`      | `apply files`                                                                                     | yes                      |
+| `BulkApply`            | runtime aliases in `comments/resolve.mts` | reply / resolve / minimize / dismiss, chunks of 10                                                | no (mutation)            |
+| `markFileAsViewed`     | runtime aliases, chunks of 10             | `apply files`                                                                                     | no (mutation)            |
 
 ## Per-tick budget
 
 Default poll interval is **60s**. Ready-delay is **10 minutes**. Repeating a “cheap” 4–8 point batch every minute is what burns the hourly budget, not a single snapshot.
 
-| Situation | GraphQL | REST |
-| --- | --- | --- |
-| Green `WAIT`, PR number passed, fingerprint **hit** | 1× `PrFingerprint` (cost 1) | READY-candidate mergeability refresh only |
-| Green `WAIT`, cold start or fingerprint **miss**, no extra pages, mergeable known, CheckSuites complete | 1× `BatchPr` (and `PrFingerprint` on a miss after the first tick) | none |
-| CI failing (one workflow run) | those plus annotation pages for probe-positive completed checks | 1 jobs list (more if >100 jobs) + optional log excerpt |
-| Large review PR | 1 batch + N slim page queries (combined cursors), not N full snapshots; plus thread-comment pages at concurrency 4 | as above |
-| PR in merge queue | batch metadata + `CommitCheckContexts` for the synthetic commit | as above |
-| First-look minimize / classification auto-resolve | plus `BulkApply` mutation chunks (unmeasured) | none |
-| `--require-sha` on apply | plus up to 10× `GetPrHeadSha` | none |
+| Situation                                                                                               | GraphQL                                                                                                            | REST                                                   |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| Green `WAIT`, PR number passed, fingerprint **hit**                                                     | 1× `PrFingerprint` (cost 1)                                                                                        | READY-candidate mergeability refresh only              |
+| Green `WAIT`, cold start or fingerprint **miss**, no extra pages, mergeable known, CheckSuites complete | 1× `BatchPr` (and `PrFingerprint` on a miss after the first tick)                                                  | none                                                   |
+| CI failing (one workflow run)                                                                           | those plus annotation pages for probe-positive completed checks                                                    | 1 jobs list (more if >100 jobs) + optional log excerpt |
+| Large review PR                                                                                         | 1 batch + N slim page queries (combined cursors), not N full snapshots; plus thread-comment pages at concurrency 4 | as above                                               |
+| PR in merge queue                                                                                       | batch metadata + `CommitCheckContexts` for the synthetic commit                                                    | as above                                               |
+| First-look minimize / classification auto-resolve                                                       | plus `BulkApply` mutation chunks (unmeasured)                                                                      | none                                                   |
+| `--require-sha` on apply                                                                                | plus up to 10× `GetPrHeadSha`                                                                                      | none                                                   |
 
 Each iterate tick used to fetch a fresh full snapshot — there is no body cache across ticks. Unchanged ticks now skip the full snapshot when [`pr-fingerprint.gql`](../src/github/gql/pr-fingerprint.gql) matches the stored fingerprint (head SHA, `updatedAt`, comment/thread/review counts, latest comment/review ids, check-rollup state, merge/queue flags). New or edited review items change those fields and force a full fetch so the [comment visibility invariant](comments.md#first-look-items-comment-visibility-invariant) still holds.
 

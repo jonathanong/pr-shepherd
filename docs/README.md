@@ -15,12 +15,12 @@ into these files for every claim it makes; this remains the canonical spec.
 
 ## Job 1 — Context gathered
 
-| Document                           | What it covers                                               |
-| ---------------------------------- | ------------------------------------------------------------ |
-| [context.md](context.md)           | Inventory of what one `iterate`/poll surfaces                |
-| [comments.md](comments.md)         | Threads, comments, summaries, seen markers, mutations        |
-| [checks.md](checks.md)             | Classify → triage → `failedStep`, `jobName`, event filtering |
-| [merge-status.md](merge-status.md) | `deriveMergeStatus` plus printed merge requirements          |
+| Document                           | What it covers                                                |
+| ---------------------------------- | ------------------------------------------------------------- |
+| [context.md](context.md)           | Inventory of what one `iterate`/poll surfaces                 |
+| [comments.md](comments.md)         | Threads, comments, summaries, seen markers, mutations         |
+| [checks.md](checks.md)             | Classify → triage → `failedStep`, `jobName`, event filtering  |
+| [merge-status.md](merge-status.md) | `deriveMergeStatus` plus printed merge requirements           |
 | [graphql.md](graphql.md)           | Batch query, operation catalog, cost, quota, REST supplements |
 
 ## Job 2 — Actions emitted

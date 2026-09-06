@@ -261,7 +261,13 @@ export async function runCheck(
     mergeStatus = refreshed.mergeStatus;
     status = refreshed.status;
     if (mergeStatus.state === "MERGED" || mergeStatus.state === "CLOSED") {
-      const terminal = buildTerminalReport(prNumber, repo, batchData, mergeStatus, mergeStatus.state);
+      const terminal = buildTerminalReport(
+        prNumber,
+        repo,
+        batchData,
+        mergeStatus,
+        mergeStatus.state,
+      );
       if (opts.persistSeen !== false && result.fingerprint) {
         await storePrFingerprint(stateKey, result.fingerprint, terminal);
       }
