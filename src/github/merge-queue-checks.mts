@@ -29,36 +29,58 @@ type QueueCommit = {
   } | null;
 };
 
+type QueueContexts = NonNullable<NonNullable<QueueCommit["statusCheckRollup"]>["contexts"]>;
+
+function omittedCursorError(oid: string): Error {
+  return new Error(
+    `Merge queue check pagination interrupted: GitHub omitted the next cursor for ${oid}. Retry.`,
+  );
+}
+
+function initialQueueCursor(
+  existing: QueueContexts | undefined,
+  oid: string,
+): string | null | undefined {
+  if (!existing) return null;
+  if (!existing.pageInfo.hasNextPage) return undefined;
+  if (!existing.pageInfo.endCursor) throw omittedCursorError(oid);
+  return existing.pageInfo.endCursor;
+}
+
+function followingQueueCursor(next: QueueContexts, oid: string): string | undefined {
+  if (!next.pageInfo.hasNextPage) return undefined;
+  if (!next.pageInfo.endCursor) throw omittedCursorError(oid);
+  return next.pageInfo.endCursor;
+}
+
+async function fetchQueuePage(
+  oid: string,
+  repo: RepoInfo,
+  cursor: string | null,
+): Promise<QueueContexts | null> {
+  const result = await graphql<CommitContextsResponse>(COMMIT_CHECK_CONTEXTS_QUERY, {
+    owner: repo.owner,
+    repo: repo.name,
+    oid,
+    ...(cursor !== null && { cursor }),
+  });
+  const object = result.data.repository?.object;
+  if (object?.__typename !== "Commit" || object.oid !== oid) {
+    throw new Error(
+      `Merge queue check pagination interrupted: commit ${oid} disappeared or changed. Retry.`,
+    );
+  }
+  return object.statusCheckRollup?.contexts ?? null;
+}
+
 async function hydrateCommitContexts(commit: QueueCommit, repo: RepoInfo): Promise<void> {
   const existing = commit.statusCheckRollup?.contexts;
   const nodes: RawContextNode[] = existing ? [...requireContextNodes(existing.nodes)] : [];
-  let cursor: string | null | undefined;
-  if (!existing) {
-    cursor = null;
-  } else if (existing.pageInfo.hasNextPage) {
-    if (!existing.pageInfo.endCursor) {
-      throw new Error(
-        `Merge queue check pagination interrupted: GitHub omitted the next cursor for ${commit.oid}. Retry.`,
-      );
-    }
-    cursor = existing.pageInfo.endCursor;
-  }
+  let cursor = initialQueueCursor(existing, commit.oid);
 
   while (cursor !== undefined) {
     // eslint-disable-next-line no-await-in-loop
-    const result = await graphql<CommitContextsResponse>(COMMIT_CHECK_CONTEXTS_QUERY, {
-      owner: repo.owner,
-      repo: repo.name,
-      oid: commit.oid,
-      ...(cursor !== null && { cursor }),
-    });
-    const object = result.data.repository?.object;
-    if (object?.__typename !== "Commit" || object.oid !== commit.oid) {
-      throw new Error(
-        `Merge queue check pagination interrupted: commit ${commit.oid} disappeared or changed. Retry.`,
-      );
-    }
-    const next = object.statusCheckRollup?.contexts;
+    const next = await fetchQueuePage(commit.oid, repo, cursor);
     if (!next) {
       if (cursor === null) {
         cursor = undefined;
@@ -69,12 +91,7 @@ async function hydrateCommitContexts(commit: QueueCommit, repo: RepoInfo): Promi
       );
     }
     nodes.push(...requireContextNodes(next.nodes));
-    cursor = next.pageInfo.hasNextPage ? next.pageInfo.endCursor : undefined;
-    if (next.pageInfo.hasNextPage && !cursor) {
-      throw new Error(
-        `Merge queue check pagination interrupted: GitHub omitted the next cursor for ${commit.oid}. Retry.`,
-      );
-    }
+    cursor = followingQueueCursor(next, commit.oid);
   }
 
   commit.statusCheckRollup = {
