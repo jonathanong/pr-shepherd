@@ -125,7 +125,7 @@ Each iterate tick used to fetch a fresh full snapshot — there is no body cache
 
 Fingerprint skip is refused — the tick runs `BatchPr` — when any of these hold:
 
-- The cached report is not WAIT-shaped (first-look items, failing checks, visible approvals, merge-queue membership, and similar).
+- The cached report is not WAIT-shaped (first-look items, failing checks, actionable check annotations, visible approvals, merge-queue membership, and similar).
 - The live `checkSuites(first: 50)` page is truncated (`hasNextPage`), so a later startup-failure suite would be invisible.
 - Merge policy cannot be read (`mergePolicy` empty) and the cached report is `READY`.
 - REST mergeability differs from the cached report. GraphQL can stay `UNKNOWN` after REST returns `CLEAN`; REST `BEHIND` must not keep a cached `READY` ready-delay.
@@ -187,7 +187,7 @@ Fingerprint skip is refused — the tick runs `BatchPr` — when any of these ho
 1. Pass `--verbose` on iterate or poll. Markdown adds `## GitHub API usage`; JSON includes `apiUsage`.
 2. `npx pr-shepherd log-file` — each GraphQL response line carries quota headers, cost, and credential source.
 3. A `quotaWarning` / `## GitHub API quota warning` block is the primary remaining% crossing a configured band. It is **not** emitted for secondary limits.
-4. HTTP 75 with `Retry-After` and a `secondary rate limit` message is a burst throttle, not an empty hourly bucket. Back off; do not assume REST is also exhausted.
+4. Exit code 75 with `Retry-After` and a `secondary rate limit` message is a burst throttle, not an empty hourly bucket. Back off; do not assume REST is also exhausted.
 
 ### Operational advice
 
