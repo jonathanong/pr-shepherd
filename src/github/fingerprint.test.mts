@@ -114,6 +114,26 @@ describe("fingerprintFromRaw", () => {
     expect(fingerprint.checkSuitesComplete).toBe(true);
   });
 
+  it("uses an empty suite identity when id and workflow run are missing", () => {
+    const raw = makeRawPr({
+      commits: {
+        nodes: [
+          {
+            commit: {
+              oid: "abc123",
+              statusCheckRollup: { state: "FAILURE" },
+              checkSuites: {
+                pageInfo: { hasNextPage: false },
+                nodes: [{ conclusion: "FAILURE" }],
+              },
+            },
+          },
+        ],
+      },
+    });
+    expect(fingerprintFromRaw(raw as never).checkSuiteConclusions).toBe(":FAILURE");
+  });
+
   it("falls back to workflow run id when a suite has no node id", () => {
     const raw = makeRawPr({
       commits: {

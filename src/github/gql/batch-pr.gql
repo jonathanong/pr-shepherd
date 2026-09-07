@@ -33,7 +33,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
       }
       baseRefName
       isInMergeQueue
-      isMergeQueueEnabled
+      ...PrMergePolicy
       autoMergeRequest {
         enabledAt
         mergeMethod
@@ -88,49 +88,6 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
       }
       stackEntry {
         position
-      }
-      baseRef {
-        branchProtectionRule {
-          requiresApprovingReviews
-          requiredApprovingReviewCount
-          requiresConversationResolution
-          requiresCodeOwnerReviews
-          requireLastPushApproval
-          requiresCommitSignatures
-          requiresLinearHistory
-          requiresStatusChecks
-          requiredStatusCheckContexts
-          requiresStrictStatusChecks
-          requiresDeployments
-          requiredDeploymentEnvironments
-        }
-        rules(first: 100) {
-          nodes {
-            type
-            parameters {
-              ... on PullRequestParameters {
-                requiredApprovingReviewCount
-                requiredReviewThreadResolution
-                requireCodeOwnerReview
-                requireLastPushApproval
-              }
-              ... on RequiredStatusChecksParameters {
-                strictRequiredStatusChecksPolicy
-                requiredStatusChecks {
-                  context
-                }
-              }
-              ... on RequiredDeploymentsParameters {
-                requiredDeploymentEnvironments
-              }
-              ... on CodeScanningParameters {
-                codeScanningTools {
-                  tool
-                }
-              }
-            }
-          }
-        }
       }
       # Not paginated — capped at 50; PRs with more pending reviewers truncate silently.
       reviewRequests(last: 50) {

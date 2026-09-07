@@ -20,50 +20,7 @@ query PrFingerprint($owner: String!, $repo: String!, $pr: Int!) {
       mergeStateStatus
       reviewDecision
       isInMergeQueue
-      isMergeQueueEnabled
-      baseRef {
-        branchProtectionRule {
-          requiresApprovingReviews
-          requiredApprovingReviewCount
-          requiresConversationResolution
-          requiresCodeOwnerReviews
-          requireLastPushApproval
-          requiresCommitSignatures
-          requiresLinearHistory
-          requiresStatusChecks
-          requiredStatusCheckContexts
-          requiresStrictStatusChecks
-          requiresDeployments
-          requiredDeploymentEnvironments
-        }
-        rules(first: 100) {
-          nodes {
-            type
-            parameters {
-              ... on PullRequestParameters {
-                requiredApprovingReviewCount
-                requiredReviewThreadResolution
-                requireCodeOwnerReview
-                requireLastPushApproval
-              }
-              ... on RequiredStatusChecksParameters {
-                strictRequiredStatusChecksPolicy
-                requiredStatusChecks {
-                  context
-                }
-              }
-              ... on RequiredDeploymentsParameters {
-                requiredDeploymentEnvironments
-              }
-              ... on CodeScanningParameters {
-                codeScanningTools {
-                  tool
-                }
-              }
-            }
-          }
-        }
-      }
+      ...PrMergePolicy
       comments(last: 1) {
         totalCount
         nodes {

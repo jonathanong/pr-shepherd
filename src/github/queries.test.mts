@@ -40,11 +40,14 @@ describe("queries — GQL constants load at import time", () => {
   });
 
   it("fingerprint preflight selects merge policy and check-suite completeness", () => {
+    expect(PR_FINGERPRINT_QUERY).toContain("fragment PrMergePolicy on PullRequest");
+    expect(PR_FINGERPRINT_QUERY).toContain("...PrMergePolicy");
     expect(PR_FINGERPRINT_QUERY).toContain("isMergeQueueEnabled");
     expect(PR_FINGERPRINT_QUERY).toContain("branchProtectionRule");
     expect(PR_FINGERPRINT_QUERY).toContain("requiredApprovingReviewCount");
     expect(PR_FINGERPRINT_QUERY).toContain("pageInfo");
     expect(PR_FINGERPRINT_QUERY).toContain("hasNextPage");
+    expect(BATCH_PR_QUERY).toContain("...PrMergePolicy");
     expect(BATCH_PR_QUERY).toContain("checkSuites");
   });
 

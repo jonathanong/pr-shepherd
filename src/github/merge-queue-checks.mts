@@ -37,20 +37,18 @@ function omittedCursorError(oid: string): Error {
   );
 }
 
+function nextPageCursor(contexts: QueueContexts, oid: string): string | undefined {
+  if (!contexts.pageInfo.hasNextPage) return undefined;
+  if (!contexts.pageInfo.endCursor) throw omittedCursorError(oid);
+  return contexts.pageInfo.endCursor;
+}
+
 function initialQueueCursor(
   existing: QueueContexts | undefined,
   oid: string,
 ): string | null | undefined {
   if (!existing) return null;
-  if (!existing.pageInfo.hasNextPage) return undefined;
-  if (!existing.pageInfo.endCursor) throw omittedCursorError(oid);
-  return existing.pageInfo.endCursor;
-}
-
-function followingQueueCursor(next: QueueContexts, oid: string): string | undefined {
-  if (!next.pageInfo.hasNextPage) return undefined;
-  if (!next.pageInfo.endCursor) throw omittedCursorError(oid);
-  return next.pageInfo.endCursor;
+  return nextPageCursor(existing, oid);
 }
 
 async function fetchQueuePage(
@@ -91,7 +89,7 @@ async function hydrateCommitContexts(commit: QueueCommit, repo: RepoInfo): Promi
       );
     }
     nodes.push(...requireContextNodes(next.nodes));
-    cursor = followingQueueCursor(next, commit.oid);
+    cursor = nextPageCursor(next, commit.oid);
   }
 
   commit.statusCheckRollup = {

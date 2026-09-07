@@ -124,5 +124,7 @@ describe("pr-fingerprint state", () => {
     expect(await loadPrFingerprint(key)).toBeNull();
     await writeFile(path, JSON.stringify({ version: 99, fingerprint: {}, report: {} }), "utf8");
     expect(await loadPrFingerprint(key)).toBeNull();
+    await writeFile(path, "[]\n", "utf8");
+    expect(await loadPrFingerprint(key)).toBeNull();
   });
 });
