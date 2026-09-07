@@ -79,6 +79,17 @@ describe("pollGraphQlRetryAfterMs", () => {
     ).toBeGreaterThan(170_000);
   });
 
+  it("retries GraphQL error payloads that mention a secondary limit", () => {
+    expect(
+      pollGraphQlRetryAfterMs(
+        new GitHubRequestError("ok", {
+          status: 200,
+          graphqlErrors: [{ message: "secondary rate limit" }],
+        }),
+      ),
+    ).toBe(60_000);
+  });
+
   it("defaults to 60s for a 429 without Retry-After", () => {
     expect(pollGraphQlRetryAfterMs(new GitHubRequestError("rate limit", { status: 429 }))).toBe(
       60_000,

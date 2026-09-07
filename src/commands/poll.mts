@@ -89,7 +89,6 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
     const refreshIfReturning = async (): Promise<void> => {
       if (lastResult?.fingerprintReused !== true) return;
       lastResult = await runTick(false);
-      prNumber ??= lastResult.pr;
       if (lastResult.quotaWarning !== undefined) pendingQuotaWarning = lastResult.quotaWarning;
     };
     if (
