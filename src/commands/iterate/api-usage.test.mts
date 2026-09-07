@@ -116,6 +116,18 @@ describe("attachApiUsage", () => {
     );
   });
 
+  it("does not recommend polling faster than the active polling command", async () => {
+    const result = makeIterateResult("wait");
+    await attachApiUsage(result, true, false, 15);
+
+    expect(mockEvaluateQuotaWarning).toHaveBeenCalledWith(
+      { owner: "owner", repo: "repo" },
+      bands.map((band) => ({ ...band, pollIntervalMinutes: 15 })),
+      graphqlUsage,
+      true,
+    );
+  });
+
   it("attaches the quota warning and replaces a fix-code continuation with its longer poll cadence", async () => {
     mockEvaluateQuotaWarning.mockResolvedValue(warning);
     const result = fixCodeResult();

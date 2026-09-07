@@ -44,10 +44,11 @@ Iterate flags:
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
 
 Polling flags:
-  --interval <duration>          Delay between WAIT ticks. Bare number = seconds. Default: 60s.
-  --timeout <duration>           Poll wall-clock cap for WAIT ticks. Bare number = seconds. Default: 4.5m.
-  --debounce <duration>          Settle window after first FIX_CODE before returning. Bare number = seconds. Default: 60s. 0 disables.
-  --quiet-status                 During WAIT polling, print only changed status snapshots.
+  --interval <duration>          Delay between WAIT ticks. Bare number = seconds. Default: poll.intervalSeconds (built-in 60s).
+  --timeout <duration>           Poll wall-clock cap for WAIT ticks. Bare number = seconds. Default: poll.timeoutSeconds (built-in 4.5m).
+  --debounce <duration>          Settle window after first FIX_CODE before returning. Bare number = seconds. Default: poll.debounceSeconds (built-in 60s). 0 disables.
+  --quiet-status                 Print only changed WAIT snapshots. Overrides poll.quietStatus.
+  --no-quiet-status              Print every WAIT snapshot. Overrides poll.quietStatus.
   --until-terminal               Continue through WAIT/MARK_READY until FIX_CODE/CANCEL/ESCALATE.
 
 Clean variants:

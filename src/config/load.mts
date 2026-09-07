@@ -20,6 +20,13 @@ export interface GraphqlQuotaWarningBand {
   pollIntervalMinutes: number;
 }
 
+interface PollConfig {
+  intervalSeconds: number;
+  timeoutSeconds: number;
+  debounceSeconds: number;
+  quietStatus: boolean;
+}
+
 export interface PrShepherdConfig {
   /** Optional user classification configuration; preserved for rule consumers. */
   classify?: unknown;
@@ -54,6 +61,7 @@ export interface PrShepherdConfig {
      */
     resolveOtherHumanThreads: ResolveOtherHumanThreads;
   };
+  poll: PollConfig;
   watch: {
     readyDelayMinutes: number;
     graphqlQuotaWarnings: GraphqlQuotaWarningBand[];
@@ -259,7 +267,41 @@ function parseMergeCommandArgs(value: unknown): string[] {
   return strategies.length === 0 ? [...value, "--merge"] : [...value];
 }
 
-function parseGraphqlQuotaWarnings(value: unknown): GraphqlQuotaWarningBand[] {
+function parsePollConfig(value: unknown): PollConfig {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Invalid config: poll must be a plain object");
+  }
+  const record = value as Record<string, unknown>;
+  const intervalSeconds = parsePollDuration(record["intervalSeconds"], "intervalSeconds");
+  const timeoutSeconds = parsePollDuration(record["timeoutSeconds"], "timeoutSeconds");
+  const debounceSeconds = parsePollDuration(record["debounceSeconds"], "debounceSeconds", true);
+  const quietStatus = record["quietStatus"];
+  if (typeof quietStatus !== "boolean") {
+    throw new Error(
+      `Invalid config: poll.quietStatus must be a boolean, got ${JSON.stringify(quietStatus)}`,
+    );
+  }
+  return { intervalSeconds, timeoutSeconds, debounceSeconds, quietStatus };
+}
+
+function parsePollDuration(value: unknown, key: string, allowZero = false): number {
+  if (
+    typeof value !== "number" ||
+    !Number.isFinite(value) ||
+    (allowZero ? value < 0 : value <= 0)
+  ) {
+    const range = allowZero ? "a non-negative" : "a positive";
+    throw new Error(
+      `Invalid config: poll.${key} must be ${range} finite number, got ${JSON.stringify(value)}`,
+    );
+  }
+  return value;
+}
+
+function parseGraphqlQuotaWarnings(
+  value: unknown,
+  pollIntervalSeconds: number,
+): GraphqlQuotaWarningBand[] {
   if (!Array.isArray(value)) {
     throw new Error("Invalid config: watch.graphqlQuotaWarnings must be an array");
   }
@@ -271,6 +313,7 @@ function parseGraphqlQuotaWarnings(value: unknown): GraphqlQuotaWarningBand[] {
     const record = item as Record<string, unknown>;
     const remainingPercent = record["remainingPercent"];
     const pollIntervalMinutes = record["pollIntervalMinutes"];
+    const pollIntervalFactor = record["pollIntervalFactor"];
     if (
       typeof remainingPercent !== "number" ||
       !Number.isInteger(remainingPercent) ||
@@ -281,13 +324,29 @@ function parseGraphqlQuotaWarnings(value: unknown): GraphqlQuotaWarningBand[] {
         `Invalid config: watch.graphqlQuotaWarnings[${index}].remainingPercent must be an integer from 1 to 100`,
       );
     }
+    if (pollIntervalMinutes === undefined && pollIntervalFactor === undefined) {
+      throw new Error(
+        `Invalid config: watch.graphqlQuotaWarnings[${index}] must define pollIntervalMinutes, pollIntervalFactor, or both`,
+      );
+    }
     if (
-      typeof pollIntervalMinutes !== "number" ||
-      !Number.isFinite(pollIntervalMinutes) ||
-      pollIntervalMinutes <= 0
+      pollIntervalMinutes !== undefined &&
+      (typeof pollIntervalMinutes !== "number" ||
+        !Number.isFinite(pollIntervalMinutes) ||
+        pollIntervalMinutes <= 0)
     ) {
       throw new Error(
         `Invalid config: watch.graphqlQuotaWarnings[${index}].pollIntervalMinutes must be a positive number`,
+      );
+    }
+    if (
+      pollIntervalFactor !== undefined &&
+      (typeof pollIntervalFactor !== "number" ||
+        !Number.isFinite(pollIntervalFactor) ||
+        pollIntervalFactor < 1)
+    ) {
+      throw new Error(
+        `Invalid config: watch.graphqlQuotaWarnings[${index}].pollIntervalFactor must be a number greater than or equal to 1`,
       );
     }
     if (seen.has(remainingPercent)) {
@@ -296,7 +355,19 @@ function parseGraphqlQuotaWarnings(value: unknown): GraphqlQuotaWarningBand[] {
       );
     }
     seen.add(remainingPercent);
-    return { remainingPercent, pollIntervalMinutes };
+    const factorMinutes =
+      typeof pollIntervalFactor === "number" ? (pollIntervalSeconds * pollIntervalFactor) / 60 : 0;
+    const absoluteMinutes = typeof pollIntervalMinutes === "number" ? pollIntervalMinutes : 0;
+    const resolvedPollIntervalMinutes = Math.max(absoluteMinutes, factorMinutes);
+    if (!Number.isFinite(resolvedPollIntervalMinutes)) {
+      throw new Error(
+        `Invalid config: watch.graphqlQuotaWarnings[${index}] resolves to a non-finite poll interval`,
+      );
+    }
+    return {
+      remainingPercent,
+      pollIntervalMinutes: resolvedPollIntervalMinutes,
+    };
   });
   parsed.sort((left, right) => right.remainingPercent - left.remainingPercent);
   for (let index = 1; index < parsed.length; index += 1) {
@@ -320,6 +391,7 @@ const KNOWN_CONFIG_KEYS = new Set([
   "botUsernames",
   "ignoreChecks",
   "iterate",
+  "poll",
   "watch",
   "resolve",
   "checks",
@@ -336,6 +408,7 @@ const KNOWN_NESTED_KEYS: Record<string, ReadonlySet<string>> = {
     "behindBaseHint",
     "resolveOtherHumanThreads",
   ]),
+  poll: new Set(["intervalSeconds", "timeoutSeconds", "debounceSeconds", "quietStatus"]),
   watch: new Set(["readyDelayMinutes", "graphqlQuotaWarnings"]),
   resolve: new Set(["shaPoll"]),
   checks: new Set(["ciTriggerEvents", "ignoreLogLines"]),
@@ -377,7 +450,30 @@ function warnUnknownConfigKeys(config: Record<string, unknown>): void {
   }
 }
 
-const defaults = builtins as PrShepherdConfig;
+const rawDefaults = builtins as unknown as Record<string, unknown>;
+
+function parseConfig(value: Record<string, unknown>, normalizeMergeArgs = true): PrShepherdConfig {
+  const config = value as unknown as PrShepherdConfig;
+  config.botUsernames = parseBotUsernames(config.botUsernames);
+  config.ignoreChecks = parseIgnoreChecks(config.ignoreChecks);
+  config.actions.neverCancelRuns = parseNeverCancelRuns(config.actions.neverCancelRuns);
+  if (config.merge && normalizeMergeArgs) {
+    config.merge.commandArgs = parseMergeCommandArgs(config.merge.commandArgs);
+  }
+  config.poll = parsePollConfig(config.poll);
+  config.watch.graphqlQuotaWarnings = parseGraphqlQuotaWarnings(
+    config.watch.graphqlQuotaWarnings,
+    config.poll.intervalSeconds,
+  );
+  config.iterate.minimizeComments = parseMinimizeCommentsPolicy(config.iterate.minimizeComments);
+  config.iterate.resolveOtherHumanThreads = parseResolveOtherHumanThreads(
+    config.iterate.resolveOtherHumanThreads,
+  );
+  config.checks.ignoreLogLines = parseIgnoreLogLines(config.checks.ignoreLogLines);
+  return config;
+}
+
+const defaults = parseConfig(structuredClone(rawDefaults), false);
 
 const configCache = new Map<string, PrShepherdConfig>();
 
@@ -432,31 +528,15 @@ export function loadConfig(): PrShepherdConfig {
       configCache.set(cwd, defaults);
       return defaults;
     }
-    const config = deepMerge(
-      structuredClone(defaults) as unknown as Record<string, unknown>,
-      overlay,
-    ) as unknown as PrShepherdConfig;
-    config.botUsernames = parseBotUsernames(config.botUsernames);
-    config.ignoreChecks = parseIgnoreChecks(config.ignoreChecks);
-    config.actions.neverCancelRuns = parseNeverCancelRuns(config.actions.neverCancelRuns);
-    if (config.merge) config.merge.commandArgs = parseMergeCommandArgs(config.merge.commandArgs);
-    config.watch.graphqlQuotaWarnings = parseGraphqlQuotaWarnings(
-      config.watch.graphqlQuotaWarnings,
-    );
-    config.iterate.minimizeComments = parseMinimizeCommentsPolicy(config.iterate.minimizeComments);
-    config.iterate.resolveOtherHumanThreads = parseResolveOtherHumanThreads(
-      config.iterate.resolveOtherHumanThreads,
-    );
-    config.checks.ignoreLogLines = parseIgnoreLogLines(config.checks.ignoreLogLines);
+    const config = parseConfig(deepMerge(structuredClone(rawDefaults), overlay));
     configCache.set(cwd, config);
     return config;
   } catch (err) {
     process.stderr.write(
       `pr-shepherd: failed to parse ${rcPaths[0]}: ${err instanceof Error ? err.message : String(err)}\n`,
     );
-    const fallback = { ...defaults };
-    configCache.set(cwd, fallback);
-    return fallback;
+    configCache.set(cwd, defaults);
+    return defaults;
   }
 }
 

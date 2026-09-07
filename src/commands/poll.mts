@@ -19,7 +19,11 @@ const MAX_TIMER_MS = 2 ** 31 - 1;
 const TIMER_DRIFT_TOLERANCE_MS = 500;
 /** @deprecated Hidden implementation for the legacy `poll` alias. */
 export function runPoll(opts: PollCommandOptions): Promise<IterateResult> {
-  return withPollApiUsage(() => runPollCore(opts), opts.untilTerminal === true);
+  return withPollApiUsage(
+    () => runPollCore(opts),
+    opts.untilTerminal === true,
+    opts.intervalSeconds / 60,
+  );
 }
 async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
   const {
@@ -64,6 +68,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
         persistSeen: debounceSeconds === 0 || pastDebounce,
         fingerprintCache,
         deferQuotaWarning: !untilTerminal,
+        quotaWarningMinimumPollIntervalMinutes: intervalSeconds / 60,
       });
     const runTick = async (fingerprintCache: boolean): Promise<IterateResult> => {
       try {
