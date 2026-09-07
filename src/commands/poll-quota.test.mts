@@ -67,6 +67,18 @@ describe("pollGraphQlRetryAfterMs", () => {
     ).toBe(500_000);
   });
 
+  it("waits until GraphQL remaining resets when Retry-After is absent", () => {
+    const resetAt = Math.floor(Date.now() / 1000) + 180;
+    expect(
+      pollGraphQlRetryAfterMs(
+        new GitHubRequestError("API rate limit exceeded", {
+          status: 403,
+          rateLimit: { remaining: 0, limit: 5000, resetAt },
+        }),
+      ),
+    ).toBeGreaterThan(170_000);
+  });
+
   it("defaults to 60s for a 429 without Retry-After", () => {
     expect(pollGraphQlRetryAfterMs(new GitHubRequestError("rate limit", { status: 429 }))).toBe(
       60_000,

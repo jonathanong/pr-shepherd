@@ -8,6 +8,7 @@ import {
   rulesComplete,
   stackKey,
   suiteFingerprint,
+  hasMultiCommentThreads,
   threadCommentRevisions,
   type FingerprintComment,
   type FingerprintSuites,
@@ -44,6 +45,7 @@ export interface PrFingerprint {
   stackKey: string;
   threadCommentRevisions: string;
   rulesComplete: boolean;
+  hasMultiCommentThreads: boolean;
 }
 
 interface FingerprintSource {
@@ -65,7 +67,7 @@ interface FingerprintSource {
     totalCount?: number;
     nodes: Array<{
       id: string;
-      comments?: { nodes: Array<{ id: string; updatedAt?: string }> };
+      comments?: { totalCount?: number; nodes: Array<{ id: string; updatedAt?: string }> };
     }>;
   };
   commits: {
@@ -129,6 +131,7 @@ function coreFingerprint(
     stackKey: stackKey(raw),
     threadCommentRevisions: threadCommentRevisions(raw.reviewThreads.nodes),
     rulesComplete: rulesComplete(raw.baseRef),
+    hasMultiCommentThreads: hasMultiCommentThreads(raw.reviewThreads.nodes),
   };
 }
 

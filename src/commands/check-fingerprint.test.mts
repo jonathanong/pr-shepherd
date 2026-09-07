@@ -89,6 +89,13 @@ describe("tryReuseFingerprintReport", () => {
     mockFetch.mockResolvedValue(FP);
   });
 
+  it("does not skip when a thread has more than one comment", async () => {
+    const report = waitReport();
+    mockLoad.mockResolvedValue(stored(report));
+    mockFetch.mockResolvedValueOnce(testFingerprint({ hasMultiCommentThreads: true }));
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+  });
+
   it("does not skip when more than 20 review threads exist", async () => {
     const report = waitReport();
     mockLoad.mockResolvedValue(stored(report));

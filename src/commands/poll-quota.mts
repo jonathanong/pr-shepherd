@@ -33,8 +33,12 @@ export function pollGraphQlRetryAfterMs(err: unknown): number | null {
     err.status === 429 ||
     err.retryAfterSeconds !== undefined ||
     isRateLimitMessage(err.message) ||
-    (err.graphqlErrors?.some((error) => isRateLimitMessage(error.message)) ?? false);
+    (err.graphqlErrors?.some((error) => isRateLimitMessage(error.message)) ?? false) ||
+    (err.rateLimit !== undefined && err.rateLimit.remaining <= 0);
   if (!retryable) return null;
-  if (err.retryAfterSeconds === undefined) return GRAPHQL_RETRY_AFTER_DEFAULT_MS;
-  return Math.max(err.retryAfterSeconds, 0) * 1000;
+  if (err.retryAfterSeconds !== undefined) return Math.max(err.retryAfterSeconds, 0) * 1000;
+  if (err.rateLimit !== undefined && err.rateLimit.remaining <= 0) {
+    return Math.max(err.rateLimit.resetAt * 1000 - Date.now(), 0);
+  }
+  return GRAPHQL_RETRY_AFTER_DEFAULT_MS;
 }

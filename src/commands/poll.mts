@@ -99,6 +99,15 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       !(debounceUntil !== null && !pastDebounce)
     ) {
       await refreshIfReturning();
+      if (lastResult.action === "fix_code" && debounceSeconds > 0 && !pastDebounce) {
+        debounceUntil ??= Date.now() + debounceMs;
+        const remainingMs = debounceUntil - Date.now();
+        if (remainingMs > 0) {
+          writeDebounceProgress(tick, Date.now() - start, remainingMs);
+          await sleep(Math.min(intervalMs, remainingMs));
+        }
+        continue;
+      }
       if (["cancel", "escalate"].includes(lastResult.action)) {
         const { quotaWarning: _quotaWarning, ...withoutQuotaWarning } = lastResult;
         lastResult = withoutQuotaWarning;

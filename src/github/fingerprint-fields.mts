@@ -45,7 +45,7 @@ export function commentRevisions(nodes: FingerprintComment[]): string {
 export function threadCommentRevisions(
   nodes: Array<{
     id: string;
-    comments?: { nodes: Array<{ id: string; updatedAt?: string }> };
+    comments?: { totalCount?: number; nodes: Array<{ id: string; updatedAt?: string }> };
   }>,
 ): string {
   return nodes
@@ -54,6 +54,12 @@ export function threadCommentRevisions(
       return `${thread.id}:${last?.id ?? ""}:${last?.updatedAt ?? ""}`;
     })
     .join(",");
+}
+
+export function hasMultiCommentThreads(
+  nodes: Array<{ comments?: { totalCount?: number } }>,
+): boolean {
+  return nodes.some((thread) => (thread.comments?.totalCount ?? 0) > 1);
 }
 
 export function rulesComplete(

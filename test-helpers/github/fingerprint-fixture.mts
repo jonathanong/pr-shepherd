@@ -56,6 +56,7 @@ export function testFingerprint(overrides: Partial<PrFingerprint> = {}): PrFinge
     stackKey: "",
     threadCommentRevisions: "",
     rulesComplete: true,
+    hasMultiCommentThreads: false,
     ...overrides,
   };
 }

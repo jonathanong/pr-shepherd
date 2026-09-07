@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { rulesComplete, stackKey, threadCommentRevisions } from "./fingerprint-fields.mts";
+import {
+  hasMultiCommentThreads,
+  rulesComplete,
+  stackKey,
+  threadCommentRevisions,
+} from "./fingerprint-fields.mts";
 
 describe("fingerprint-fields", () => {
   it("encodes stack identity and treats missing stacks as empty", () => {
@@ -30,5 +35,10 @@ describe("fingerprint-fields", () => {
         },
       ]),
     ).toBe("t1:c1:2026-09-06T00:00:00Z");
+  });
+
+  it("detects threads with more than one comment", () => {
+    expect(hasMultiCommentThreads([{ comments: { totalCount: 1 } }])).toBe(false);
+    expect(hasMultiCommentThreads([{ comments: { totalCount: 2 } }])).toBe(true);
   });
 });

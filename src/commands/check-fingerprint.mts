@@ -43,6 +43,7 @@ export async function tryReuseFingerprintReport(
   if (live.commentCount > 100 || cached.fingerprint.commentCount > 100) return null;
   if (live.reviewCount > 100 || cached.fingerprint.reviewCount > 100) return null;
   if (live.threadCount > 20 || cached.fingerprint.threadCount > 20) return null;
+  if (live.hasMultiCommentThreads || cached.fingerprint.hasMultiCommentThreads) return null;
   if (!live.rulesComplete || !cached.fingerprint.rulesComplete) return null;
   if (
     cached.report.status === "READY" &&

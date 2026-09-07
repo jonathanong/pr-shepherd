@@ -129,7 +129,7 @@ Fingerprint skip is also refused — the tick runs `BatchPr` — when any of the
 
 - The cached report is `READY` (mark-ready / merge / ready-delay expiry must see a live snapshot).
 - The cached report is not WAIT-shaped (first-look items, failing checks, actionable check annotations, visible approvals, merge-queue membership, and similar).
-- More than 100 PR comments or reviews, or more than 20 review threads, exist, so `updatedAt` revisions on the preflight windows cannot cover an older in-place edit.
+- More than 100 PR comments or reviews, more than 20 review threads, or any fingerprinted thread with more than one comment, exist, so `updatedAt` revisions on the preflight windows cannot cover an older in-place edit.
 - `baseRef.rules` is truncated (`hasNextPage`), so merge-policy classification may be incomplete.
 - The live `checkSuites(first: 50)` page is truncated (`hasNextPage`), so a later startup-failure suite would be invisible.
 - Merge policy cannot be read (`mergePolicy` empty) and the cached report is `READY`.

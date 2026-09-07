@@ -44,6 +44,7 @@ query PrFingerprint($owner: String!, $repo: String!, $pr: Int!) {
         nodes {
           id
           comments(last: 1) {
+            totalCount
             nodes {
               id
               updatedAt

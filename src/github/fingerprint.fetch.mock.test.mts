@@ -76,6 +76,7 @@ describe("fetchPrFingerprint", () => {
       stackKey: "",
       threadCommentRevisions: "t1::",
       rulesComplete: true,
+      hasMultiCommentThreads: false,
     });
   });
 

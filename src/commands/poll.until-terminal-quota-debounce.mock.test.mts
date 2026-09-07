@@ -84,6 +84,22 @@ describe("runPoll — until-terminal quota warnings during debounce", () => {
     await expect(pollPromise).resolves.toMatchObject({ quotaWarning: stricterWarning });
   });
 
+  it("debounces FIX_CODE discovered while refreshing a quota-warning WAIT", async () => {
+    mockRunIterate
+      .mockResolvedValueOnce({
+        ...makeWaitResult({ quotaWarning }),
+        fingerprintReused: true as const,
+      })
+      .mockResolvedValue(makeFixCodeResult());
+
+    const pollPromise = runUntilTerminalPoll();
+    await vi.advanceTimersByTimeAsync(60_000);
+    const result = await pollPromise;
+
+    expect(result.action).toBe("fix_code");
+    expect(mockRunIterate.mock.calls.at(-1)?.[0]).toMatchObject({ persistSeen: true });
+  });
+
   it("lets a terminal result win without a pending fix warning", async () => {
     mockRunIterate
       .mockResolvedValueOnce({ ...makeFixCodeResult(), quotaWarning })
