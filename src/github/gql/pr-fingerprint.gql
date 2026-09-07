@@ -8,6 +8,9 @@ query PrFingerprint($owner: String!, $repo: String!, $pr: Int!) {
     resetAt
     used
   }
+  viewer {
+    login
+  }
   repository(owner: $owner, name: $repo) {
     viewerPermission
     pullRequest(number: $pr) {
@@ -21,10 +24,11 @@ query PrFingerprint($owner: String!, $repo: String!, $pr: Int!) {
       reviewDecision
       isInMergeQueue
       ...PrMergePolicy
-      comments(last: 1) {
+      comments(last: 100) {
         totalCount
         nodes {
           id
+          updatedAt
         }
       }
       reviewThreads(last: 1) {

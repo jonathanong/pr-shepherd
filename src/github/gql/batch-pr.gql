@@ -9,6 +9,9 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
     resetAt
     used
   }
+  viewer {
+    login
+  }
   repository(owner: $owner, name: $repo) {
     viewerPermission
     viewerCanAdminister
@@ -177,6 +180,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
           }
           body
           createdAt
+          updatedAt
         }
       }
       changesRequestedReviews: reviews(states: CHANGES_REQUESTED, last: 50) {

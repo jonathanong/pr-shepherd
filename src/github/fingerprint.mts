@@ -2,7 +2,13 @@ import { graphqlWithRateLimit } from "./client.mts";
 import { PR_FINGERPRINT_QUERY } from "./queries.mts";
 import { GitHubRequestError } from "./errors.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
-import { parseBranchRules } from "./batch-parsers-rules.mts";
+import {
+  commentRevisions,
+  mergePolicyFingerprint,
+  suiteFingerprint,
+  type FingerprintComment,
+  type FingerprintSuites,
+} from "./fingerprint-fields.mts";
 import type { RepoInfo } from "./client.mts";
 import type { RawPr } from "./batch-raw-types.mts";
 import type { RawBaseRef } from "./batch-raw-rules.mts";
@@ -19,6 +25,7 @@ export interface PrFingerprint {
   isMergeQueueEnabled: boolean;
   mergePolicy: string;
   commentCount: number;
+  commentRevisions: string;
   threadCount: number;
   reviewCount: number;
   latestCommentId: string | null;
@@ -29,15 +36,7 @@ export interface PrFingerprint {
   checkSuitesComplete: boolean;
   viewerCanUpdate: boolean;
   viewerPermission: string | null;
-}
-
-interface FingerprintSuites {
-  pageInfo?: { hasNextPage: boolean };
-  nodes?: Array<{
-    id?: string;
-    conclusion: string | null;
-    workflowRun?: { databaseId: number | null } | null;
-  }>;
+  viewerLogin: string | null;
 }
 
 interface FingerprintSource {
@@ -52,7 +51,7 @@ interface FingerprintSource {
   isMergeQueueEnabled?: boolean;
   viewerCanUpdate?: boolean;
   baseRef?: RawBaseRef | null;
-  comments: { totalCount?: number; nodes: Array<{ id: string }> };
+  comments: { totalCount?: number; nodes: FingerprintComment[] };
   reviewThreads: { totalCount?: number; nodes: Array<{ id: string }> };
   commits: {
     nodes: Array<{
@@ -65,6 +64,7 @@ interface FingerprintSource {
 }
 
 interface RawFingerprintResponse {
+  viewer?: { login: string | null } | null;
   repository: {
     viewerPermission: string | null;
     pullRequest:
@@ -73,7 +73,7 @@ interface RawFingerprintResponse {
           isInMergeQueue: boolean;
           isMergeQueueEnabled: boolean;
           viewerCanUpdate: boolean;
-          comments: { totalCount: number; nodes: Array<{ id: string }> };
+          comments: { totalCount: number; nodes: FingerprintComment[] };
           reviewThreads: { totalCount: number; nodes: Array<{ id: string }> };
           reviews: { totalCount: number; nodes: Array<{ id: string }> };
           baseRef: RawBaseRef | null;
@@ -82,33 +82,10 @@ interface RawFingerprintResponse {
   } | null;
 }
 
-function suiteFingerprint(suites: FingerprintSuites | undefined): {
-  checkSuiteConclusions: string;
-  checkSuitesComplete: boolean;
-} {
-  if (suites === undefined) return { checkSuiteConclusions: "", checkSuitesComplete: false };
-  return {
-    checkSuiteConclusions: (suites.nodes ?? [])
-      .map((node) => `${node.id ?? node.workflowRun?.databaseId ?? ""}:${node.conclusion ?? ""}`)
-      .join(","),
-    checkSuitesComplete: suites.pageInfo?.hasNextPage === false,
-  };
-}
-
-function mergePolicyFingerprint(raw: {
-  isMergeQueueEnabled?: boolean;
-  baseRef?: RawBaseRef | null;
-}): string {
-  return JSON.stringify({
-    isMergeQueueEnabled: Boolean(raw.isMergeQueueEnabled),
-    rules: parseBranchRules(raw.baseRef),
-  });
-}
-
 function coreFingerprint(
   raw: FingerprintSource,
   counts: { reviewCount: number; latestReviewId: string | null },
-  viewerPermission: string | null,
+  viewer: { permission: string | null; login: string | null },
 ): PrFingerprint {
   return {
     headRefOid: raw.headRefOid,
@@ -122,6 +99,7 @@ function coreFingerprint(
     isMergeQueueEnabled: Boolean(raw.isMergeQueueEnabled),
     mergePolicy: mergePolicyFingerprint(raw),
     commentCount: raw.comments.totalCount ?? raw.comments.nodes.length,
+    commentRevisions: commentRevisions(raw.comments.nodes),
     threadCount: raw.reviewThreads.totalCount ?? raw.reviewThreads.nodes.length,
     reviewCount: counts.reviewCount,
     latestCommentId: raw.comments.nodes.at(-1)?.id ?? null,
@@ -130,13 +108,15 @@ function coreFingerprint(
     checkRollupState: raw.commits.nodes[0]?.commit.statusCheckRollup?.state ?? null,
     ...suiteFingerprint(raw.commits.nodes[0]?.commit.checkSuites),
     viewerCanUpdate: raw.viewerCanUpdate === true,
-    viewerPermission,
+    viewerPermission: viewer.permission,
+    viewerLogin: viewer.login,
   };
 }
 
 export function fingerprintFromRaw(
   raw: RawPr,
   viewerPermission: string | null = null,
+  viewerLogin: string | null = null,
 ): PrFingerprint {
   return coreFingerprint(
     raw,
@@ -144,7 +124,7 @@ export function fingerprintFromRaw(
       reviewCount: raw.allReviews?.totalCount ?? 0,
       latestReviewId: raw.allReviews?.nodes?.at(-1)?.id ?? null,
     },
-    viewerPermission,
+    { permission: viewerPermission, login: viewerLogin },
   );
 }
 
@@ -161,6 +141,7 @@ export function fingerprintsEqual(left: PrFingerprint, right: PrFingerprint): bo
     left.isMergeQueueEnabled === right.isMergeQueueEnabled &&
     left.mergePolicy === right.mergePolicy &&
     left.commentCount === right.commentCount &&
+    left.commentRevisions === right.commentRevisions &&
     left.threadCount === right.threadCount &&
     left.reviewCount === right.reviewCount &&
     left.latestCommentId === right.latestCommentId &&
@@ -170,7 +151,8 @@ export function fingerprintsEqual(left: PrFingerprint, right: PrFingerprint): bo
     left.checkSuiteConclusions === right.checkSuiteConclusions &&
     left.checkSuitesComplete === right.checkSuitesComplete &&
     left.viewerCanUpdate === right.viewerCanUpdate &&
-    left.viewerPermission === right.viewerPermission
+    left.viewerPermission === right.viewerPermission &&
+    left.viewerLogin === right.viewerLogin
   );
 }
 
@@ -194,6 +176,9 @@ export async function fetchPrFingerprint(pr: number, repo: RepoInfo): Promise<Pr
       reviewCount: raw.reviews.totalCount,
       latestReviewId: raw.reviews.nodes.at(-1)?.id ?? null,
     },
-    result.data.repository.viewerPermission,
+    {
+      permission: result.data.repository.viewerPermission,
+      login: result.data.viewer?.login ?? null,
+    },
   );
 }

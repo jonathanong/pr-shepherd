@@ -64,6 +64,7 @@ async function fetchQueuePage(
   });
   const object = result.data.repository?.object;
   if (object?.__typename !== "Commit" || object.oid !== oid) {
+    if (cursor === null) return null;
     throw new Error(
       `Merge queue check pagination interrupted: commit ${oid} disappeared or changed. Retry.`,
     );

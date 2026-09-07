@@ -40,6 +40,7 @@ export function testFingerprint(overrides: Partial<PrFingerprint> = {}): PrFinge
     isMergeQueueEnabled: false,
     mergePolicy: '{"isMergeQueueEnabled":false}',
     commentCount: 0,
+    commentRevisions: "",
     threadCount: 0,
     reviewCount: 0,
     latestCommentId: null,
@@ -50,6 +51,7 @@ export function testFingerprint(overrides: Partial<PrFingerprint> = {}): PrFinge
     checkSuitesComplete: true,
     viewerCanUpdate: true,
     viewerPermission: "ADMIN",
+    viewerLogin: "owner",
     ...overrides,
   };
 }

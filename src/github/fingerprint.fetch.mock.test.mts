@@ -27,7 +27,7 @@ const pullRequest = {
   isInMergeQueue: false,
   isMergeQueueEnabled: false,
   baseRef: null,
-  comments: { totalCount: 2, nodes: [{ id: "c2" }] },
+  comments: { totalCount: 2, nodes: [{ id: "c2", updatedAt: "2026-09-06T01:00:00Z" }] },
   reviewThreads: { totalCount: 1, nodes: [{ id: "t1" }] },
   reviews: { totalCount: 3, nodes: [{ id: "r3" }] },
   commits: {
@@ -45,7 +45,9 @@ const pullRequest = {
 
 describe("fetchPrFingerprint", () => {
   it("maps the cheap preflight query into a comparable fingerprint", async () => {
-    mockFetch.mockResolvedValue(gqlOk({ repository: { viewerPermission: "ADMIN", pullRequest } }));
+    mockFetch.mockResolvedValue(
+      gqlOk({ viewer: { login: "alice" }, repository: { viewerPermission: "ADMIN", pullRequest } }),
+    );
     await expect(fetchPrFingerprint(42, { owner: "owner", name: "repo" })).resolves.toEqual({
       headRefOid: "abc123",
       updatedAt: "2026-09-06T00:00:00Z",
@@ -58,6 +60,7 @@ describe("fetchPrFingerprint", () => {
       isMergeQueueEnabled: false,
       mergePolicy: emptyMergePolicy,
       commentCount: 2,
+      commentRevisions: "c2:2026-09-06T01:00:00Z",
       threadCount: 1,
       reviewCount: 3,
       latestCommentId: "c2",
@@ -68,6 +71,7 @@ describe("fetchPrFingerprint", () => {
       checkSuitesComplete: true,
       viewerCanUpdate: true,
       viewerPermission: "ADMIN",
+      viewerLogin: "alice",
     });
   });
 

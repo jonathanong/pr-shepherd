@@ -34,6 +34,13 @@ describe("fingerprintsEqual", () => {
     );
   });
 
+  it("is false when a comment is edited in place or the viewer changes", () => {
+    expect(
+      fingerprintsEqual(sample(), sample({ commentRevisions: "c1:2026-09-06T02:00:00Z" })),
+    ).toBe(false);
+    expect(fingerprintsEqual(sample(), sample({ viewerLogin: "other" }))).toBe(false);
+  });
+
   it("is false when merge-queue enablement or policy changes", () => {
     expect(fingerprintsEqual(sample(), sample({ isMergeQueueEnabled: true }))).toBe(false);
     expect(fingerprintsEqual(sample(), sample({ mergePolicy: '{"required":1}' }))).toBe(false);
@@ -47,12 +54,22 @@ describe("fingerprintFromRaw", () => {
       comments: {
         totalCount: 3,
         pageInfo: { hasPreviousPage: false, startCursor: null },
-        nodes: [{ id: "older" }, { id: "newest" }],
+        nodes: [
+          { id: "older", updatedAt: "2026-09-01T00:00:00Z" },
+          { id: "newest", updatedAt: "2026-09-06T00:00:00Z" },
+        ],
       },
     });
     const fingerprint = fingerprintFromRaw(raw as never);
     expect(fingerprint.commentCount).toBe(3);
     expect(fingerprint.latestCommentId).toBe("newest");
+    expect(fingerprint.commentRevisions).toBe(
+      "older:2026-09-01T00:00:00Z,newest:2026-09-06T00:00:00Z",
+    );
+    expect(
+      fingerprintFromRaw(makeRawPr({ comments: { nodes: [{ id: "c1" }] } }) as never)
+        .commentRevisions,
+    ).toBe("c1:");
   });
 
   it("treats missing allReviews and null suite conclusions as empty", () => {

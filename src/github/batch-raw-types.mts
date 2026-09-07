@@ -3,6 +3,7 @@ import type { CommentAuthorAssociation } from "../types/github.mts";
 import type { RawPrMergeFields } from "./batch-raw-rules.mts";
 
 export interface RawBatchResponse {
+  viewer?: { login: string | null } | null;
   repository: {
     viewerPermission: string | null;
     viewerCanAdminister: boolean;
@@ -152,6 +153,7 @@ export interface RawComment {
   author: RawAuthor | null;
   body: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface RawReview {
