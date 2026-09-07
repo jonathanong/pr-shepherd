@@ -10,33 +10,15 @@ import {
   storePrFingerprint,
 } from "./pr-fingerprint.mts";
 import type { PrShepherdConfig } from "../config/load.mts";
-import { testFingerprint } from "../../test-helpers/github/fingerprint-fixture.mts";
+import {
+  testFingerprint,
+  testShepherdConfig,
+} from "../../test-helpers/github/fingerprint-fixture.mts";
 import type { ShepherdReport } from "../types.mts";
 
 const key = { owner: "owner", repo: "repo", pr: 42 };
 const report = { pr: 42, status: "IN_PROGRESS", repo: "owner/repo" } as ShepherdReport;
-const config = {
-  botUsernames: [],
-  ignoreChecks: [],
-  iterate: {
-    fixAttemptsPerThread: 3,
-    stallTimeoutMinutes: 60,
-    minimizeApprovals: false,
-    minimizeComments: "all",
-    behindBaseHint: "",
-    resolveOtherHumanThreads: "none",
-  },
-  watch: { readyDelayMinutes: 10, graphqlQuotaWarnings: [] },
-  resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 } },
-  checks: { ciTriggerEvents: ["pull_request"], ignoreLogLines: [] },
-  mergeStatus: { blockingReviewerLogins: [] },
-  actions: {
-    autoMinimizeSuppressed: true,
-    autoMarkReady: true,
-    neverCancelRuns: [],
-    workWhileQueued: false,
-  },
-} as PrShepherdConfig;
+const config = testShepherdConfig();
 
 let testStateDir: string;
 

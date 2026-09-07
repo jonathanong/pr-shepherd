@@ -14,11 +14,13 @@ vi.mock("../github/client.mts", () => ({
 }));
 
 import { fingerprintInputDigest, loadPrFingerprint } from "../state/pr-fingerprint.mts";
-import type { PrShepherdConfig } from "../config/load.mts";
 import { fetchPrFingerprint } from "../github/fingerprint.mts";
 import { getMergeableState } from "../github/client.mts";
 import { tryReuseFingerprintReport } from "./check-fingerprint.mts";
-import { testFingerprint } from "../../test-helpers/github/fingerprint-fixture.mts";
+import {
+  testFingerprint,
+  testShepherdConfig,
+} from "../../test-helpers/github/fingerprint-fixture.mts";
 import type { ShepherdReport } from "../types.mts";
 
 const mockLoad = vi.mocked(loadPrFingerprint);
@@ -27,28 +29,7 @@ const mockMergeable = vi.mocked(getMergeableState);
 const REPO = { owner: "owner", name: "repo" };
 const KEY = { owner: "owner", repo: "repo", pr: 42 };
 const FP = testFingerprint();
-const CONFIG = {
-  botUsernames: ["coderabbitai"],
-  ignoreChecks: [],
-  iterate: {
-    fixAttemptsPerThread: 3,
-    stallTimeoutMinutes: 60,
-    minimizeApprovals: false,
-    minimizeComments: "all",
-    behindBaseHint: "",
-    resolveOtherHumanThreads: "none",
-  },
-  watch: { readyDelayMinutes: 10, graphqlQuotaWarnings: [] },
-  resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 } },
-  checks: { ciTriggerEvents: ["pull_request"], ignoreLogLines: [] },
-  mergeStatus: { blockingReviewerLogins: [] },
-  actions: {
-    autoMinimizeSuppressed: true,
-    autoMarkReady: true,
-    neverCancelRuns: [],
-    workWhileQueued: false,
-  },
-} as PrShepherdConfig;
+const CONFIG = testShepherdConfig({ botUsernames: ["coderabbitai"] });
 
 function stored(report: ShepherdReport) {
   return {

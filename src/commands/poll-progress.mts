@@ -1,19 +1,7 @@
 import type { IterateResult } from "../types.mts";
 
-function writeVerboseTickProgress(
-  tick: number,
-  elapsedSeconds: number,
-  sleepSeconds: number,
-): void {
-  process.stderr.write(
-    `[poll tick ${tick} / +${elapsedSeconds}s] WAIT — sleeping ${sleepSeconds}s\n`,
-  );
-}
-
-function writePlainTickProgress(tick: number, elapsedSeconds: number, sleepSeconds: number): void {
-  process.stderr.write(
-    `[poll tick ${tick} / +${elapsedSeconds}s] WAIT — still running; next tick in ${sleepSeconds}s\n`,
-  );
+function writeTickProgress(tick: number, elapsedSeconds: number, detail: string): void {
+  process.stderr.write(`[poll tick ${tick} / +${elapsedSeconds}s] WAIT — ${detail}\n`);
 }
 
 function waitSignature(result: IterateResult): string {
@@ -68,8 +56,11 @@ export function writeWaitProgress(opts: {
   const elapsedSeconds = Math.round(opts.elapsedMs / 1000);
   const sleepSeconds = Math.round(opts.sleepMs / 1000);
   if (!opts.quietStatus) {
-    if (opts.verbose) writeVerboseTickProgress(opts.tick, elapsedSeconds, sleepSeconds);
-    else writePlainTickProgress(opts.tick, elapsedSeconds, sleepSeconds);
+    writeTickProgress(
+      opts.tick,
+      elapsedSeconds,
+      opts.verbose ? `sleeping ${sleepSeconds}s` : `still running; next tick in ${sleepSeconds}s`,
+    );
     return opts.lastWaitSignature;
   }
   const signature = waitSignature(opts.result);

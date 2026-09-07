@@ -1,32 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { fingerprintFromRaw, fingerprintsEqual, type PrFingerprint } from "./fingerprint.mts";
+import { fingerprintFromRaw, fingerprintsEqual } from "./fingerprint.mts";
 import { makeRawPr } from "../../test-helpers/github/batch-fixtures.mts";
+import { testFingerprint } from "../../test-helpers/github/fingerprint-fixture.mts";
 
-function sample(overrides: Partial<PrFingerprint> = {}): PrFingerprint {
-  return {
+function sample(overrides: Parameters<typeof testFingerprint>[0] = {}) {
+  return testFingerprint({
     headRefOid: "abc",
     updatedAt: "2026-09-06T00:00:00Z",
-    state: "OPEN",
-    isDraft: false,
-    mergeable: "MERGEABLE",
-    mergeStateStatus: "CLEAN",
-    reviewDecision: null,
-    isInMergeQueue: false,
-    isMergeQueueEnabled: false,
-    mergePolicy: '{"isMergeQueueEnabled":false}',
     commentCount: 1,
-    threadCount: 0,
-    reviewCount: 0,
     latestCommentId: "c1",
-    latestThreadId: null,
-    latestReviewId: null,
     checkRollupState: "SUCCESS",
-    checkSuiteConclusions: "",
-    checkSuitesComplete: true,
-    viewerCanUpdate: true,
-    viewerPermission: "ADMIN",
     ...overrides,
-  };
+  });
 }
 
 describe("fingerprintsEqual", () => {
