@@ -121,11 +121,14 @@ Default poll interval is **60s**. Ready-delay is **10 minutes**. Repeating a “
 | First-look minimize / classification auto-resolve                                                       | plus `BulkApply` mutation chunks (unmeasured)                                                                      | none                                                   |
 | `--require-sha` on apply                                                                                | plus up to 10× `GetPrHeadSha`                                                                                      | none                                                   |
 
-Each iterate tick used to fetch a fresh full snapshot — there is no body cache across ticks. Unchanged ticks now skip the full snapshot when [`pr-fingerprint.gql`](../src/github/gql/pr-fingerprint.gql) matches the stored fingerprint (head SHA, `updatedAt`, comment/thread/review counts and comment `updatedAt` revisions, latest comment/review ids, check-rollup state, check-suite identity and completeness, merge/queue flags, merge policy, viewer login). New or edited review items change those fields and force a full fetch so the [comment visibility invariant](comments.md#first-look-items-comment-visibility-invariant) still holds. A different GitHub viewer login is a miss, so two tokens cannot reuse each other's classified report.
+Each iterate tick used to fetch a fresh full snapshot — there is no body cache across ticks. Unchanged **poll continuation** ticks now skip the full snapshot when [`pr-fingerprint.gql`](../src/github/gql/pr-fingerprint.gql) matches the stored fingerprint (head SHA, `updatedAt`, comment/thread/review counts and comment `updatedAt` revisions, latest comment/review ids, check-rollup state, check-suite identity and completeness, merge/queue flags, merge policy, viewer login). New or edited review items change those fields and force a full fetch so the [comment visibility invariant](comments.md#first-look-items-comment-visibility-invariant) still holds. A different GitHub viewer login is a miss, so two tokens cannot reuse each other's classified report.
 
-Fingerprint skip is refused — the tick runs `BatchPr` — when any of these hold:
+Fingerprint reuse is **opt-in and internal to poll**. The tick returned to the caller always runs `BatchPr`: last bounded-poll tick (timeout remaining smaller than the next sleep), FIX_CODE debounce ticks, the post-debounce return tick, and every single-tick `iterate` / MCP call. A full fetch still **writes** the fingerprint so the next poll can skip.
+
+Fingerprint skip is also refused — the tick runs `BatchPr` — when any of these hold:
 
 - The cached report is not WAIT-shaped (first-look items, failing checks, actionable check annotations, visible approvals, merge-queue membership, and similar).
+- More than 100 PR comments exist, so comment `updatedAt` revisions on `comments(last: 100)` cannot cover an older in-place edit.
 - The live `checkSuites(first: 50)` page is truncated (`hasNextPage`), so a later startup-failure suite would be invisible.
 - Merge policy cannot be read (`mergePolicy` empty) and the cached report is `READY`.
 - REST mergeability differs from the cached report. GraphQL can stay `UNKNOWN` after REST returns `CLEAN`; REST `BEHIND` must not keep a cached `READY` ready-delay.

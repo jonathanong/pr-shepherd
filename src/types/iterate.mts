@@ -181,9 +181,11 @@ export interface IterateCommandOptions extends GlobalOptions {
    */
   persistSeen?: boolean;
   /**
-   * Internal. `false` skips fingerprint cache reads/writes (poll's FIX_CODE debounce
-   * ticks). Independent of `persistSeen` so ordinary WAIT ticks can still skip BatchPr.
-   * Set only by `runPollCore`; excluded from the public `IterateInput` in api.mts.
+   * Internal. `true` allows fingerprint reuse of a previous WAIT-shaped report.
+   * Poll sets this only for internal WAIT/MARK_READY continuation ticks — never the
+   * tick returned to the caller, never FIX_CODE debounce, never single-tick iterate.
+   * Writes still happen after a full fetch so the next poll can skip. Excluded from
+   * the public `IterateInput` in api.mts.
    */
   fingerprintCache?: boolean;
   /** Shepherd through readiness and emit the exact merge/queue command when ready. */

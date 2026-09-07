@@ -20,6 +20,7 @@ describe("runPoll — stops on mark_ready", () => {
     });
 
     expect(result.action).toBe("mark_ready");
-    expect(mockRunIterate).toHaveBeenCalledTimes(1);
+    expect(mockRunIterate).toHaveBeenCalledTimes(2);
+    expect(mockRunIterate.mock.calls[1]?.[0]).toMatchObject({ fingerprintCache: false });
   });
 });

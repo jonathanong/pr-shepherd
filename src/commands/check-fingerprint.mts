@@ -39,6 +39,7 @@ export async function tryReuseFingerprintReport(
   const live = await fetchPrFingerprint(prNumber, repo);
   if (live.isInMergeQueue || cached.fingerprint.isInMergeQueue) return null;
   if (!live.checkSuitesComplete || !cached.fingerprint.checkSuitesComplete) return null;
+  if (live.commentCount > 100 || cached.fingerprint.commentCount > 100) return null;
   if (
     cached.report.status === "READY" &&
     (live.mergePolicy === "" || cached.fingerprint.mergePolicy === "")

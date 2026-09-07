@@ -67,7 +67,26 @@ describe("runPoll — FIX_CODE debounce", () => {
     expect(persistSeenAt(5)).toBe(true);
     expect(mockRunIterate.mock.calls[0]?.[0]).toMatchObject({ fingerprintCache: true });
     expect(mockRunIterate.mock.calls[1]?.[0]).toMatchObject({ fingerprintCache: false });
-    expect(mockRunIterate.mock.calls[5]?.[0]).toMatchObject({ fingerprintCache: true });
+    expect(mockRunIterate.mock.calls[5]?.[0]).toMatchObject({ fingerprintCache: false });
+  });
+
+  it("does not reuse a fingerprint on the last bounded WAIT tick", async () => {
+    mockRunIterate.mockResolvedValue(makeWaitResult());
+    const result = await runPoll(pollOpts({ intervalSeconds: 60, timeoutSeconds: 10 }));
+    expect(result.action).toBe("wait");
+    expect(mockRunIterate).toHaveBeenCalledTimes(1);
+    expect(mockRunIterate.mock.calls[0]?.[0]).toMatchObject({ fingerprintCache: false });
+  });
+
+  it("refetches without cache before returning the last WAIT tick", async () => {
+    mockRunIterate.mockResolvedValue(makeWaitResult());
+    const pollPromise = runPoll(pollOpts({ intervalSeconds: 30, timeoutSeconds: 50 }));
+    await vi.advanceTimersByTimeAsync(30_000);
+    const result = await pollPromise;
+    expect(result.action).toBe("wait");
+    expect(mockRunIterate).toHaveBeenCalledTimes(2);
+    expect(mockRunIterate.mock.calls[0]?.[0]).toMatchObject({ fingerprintCache: true });
+    expect(mockRunIterate.mock.calls[1]?.[0]).toMatchObject({ fingerprintCache: false });
   });
 
   it("returns the first FIX_CODE immediately when debounce is 0", async () => {

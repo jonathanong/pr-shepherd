@@ -12,9 +12,7 @@ registerPollHooks();
 
 describe("runPoll — until-terminal mode", () => {
   it("stops on MARK_READY without --until-terminal", async () => {
-    mockRunIterate
-      .mockResolvedValueOnce(makeMarkReadyResult())
-      .mockResolvedValue(makeCancelResult());
+    mockRunIterate.mockResolvedValue(makeMarkReadyResult());
 
     const result = await runPoll({
       prNumber: 42,
@@ -23,7 +21,8 @@ describe("runPoll — until-terminal mode", () => {
       timeoutSeconds: 300,
     });
 
-    expect(mockRunIterate).toHaveBeenCalledTimes(1);
+    expect(mockRunIterate).toHaveBeenCalledTimes(2);
+    expect(mockRunIterate.mock.calls[1]?.[0]).toMatchObject({ fingerprintCache: false });
     expect(result.action).toBe("mark_ready");
   });
 
@@ -97,7 +96,7 @@ describe("runPoll — until-terminal mode", () => {
       pollIntervalMinutes: 5,
       pollTimeoutMinutes: 10,
     };
-    mockRunIterate.mockResolvedValueOnce(makeWaitResult({ quotaWarning }));
+    mockRunIterate.mockResolvedValue(makeWaitResult({ quotaWarning }));
 
     const result = await runPoll({
       prNumber: 42,
@@ -107,7 +106,8 @@ describe("runPoll — until-terminal mode", () => {
       untilTerminal: true,
     });
 
-    expect(mockRunIterate).toHaveBeenCalledTimes(1);
+    expect(mockRunIterate).toHaveBeenCalledTimes(2);
+    expect(mockRunIterate.mock.calls[1]?.[0]).toMatchObject({ fingerprintCache: false });
     expect(mockRunIterate).toHaveBeenCalledWith(
       expect.objectContaining({ deferQuotaWarning: false }),
     );
@@ -125,7 +125,7 @@ describe("runPoll — until-terminal mode", () => {
       pollIntervalMinutes: 2,
       pollTimeoutMinutes: 4,
     };
-    mockRunIterate.mockResolvedValueOnce({ ...makeMarkReadyResult(), quotaWarning });
+    mockRunIterate.mockResolvedValue({ ...makeMarkReadyResult(), quotaWarning });
 
     const result = await runPoll({
       prNumber: 42,
@@ -135,7 +135,7 @@ describe("runPoll — until-terminal mode", () => {
       untilTerminal: true,
     });
 
-    expect(mockRunIterate).toHaveBeenCalledTimes(1);
+    expect(mockRunIterate).toHaveBeenCalledTimes(2);
     expect(result.action).toBe("mark_ready");
     expect(result.quotaWarning).toEqual(quotaWarning);
   });

@@ -69,8 +69,8 @@ export async function runCheck(
   }
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
   const config = loadConfig();
-  const useFingerprintCache = opts.fingerprintCache !== false;
-  if (useFingerprintCache) {
+  const reuseFingerprint = opts.fingerprintCache === true;
+  if (reuseFingerprint) {
     const cached = await tryReuseFingerprintReport(prNumber, repo, stateKey, config);
     if (cached) return cached;
   }
@@ -83,7 +83,7 @@ export async function runCheck(
   let mergeStatus = deriveMergeStatus(batchData);
   if (mergeStatus.state === "MERGED" || mergeStatus.state === "CLOSED") {
     const terminal = buildTerminalReport(prNumber, repo, batchData, mergeStatus, mergeStatus.state);
-    if (useFingerprintCache && result.fingerprint) {
+    if (result.fingerprint) {
       await storePrFingerprint(stateKey, result.fingerprint, terminal, config);
     }
     return terminal;
@@ -270,7 +270,7 @@ export async function runCheck(
         mergeStatus,
         mergeStatus.state,
       );
-      if (useFingerprintCache && result.fingerprint) {
+      if (result.fingerprint) {
         await storePrFingerprint(stateKey, result.fingerprint, terminal, config);
       }
       return terminal;
@@ -455,7 +455,7 @@ export async function runCheck(
       },
     }),
   };
-  if (useFingerprintCache && result.fingerprint) {
+  if (result.fingerprint) {
     await storePrFingerprint(stateKey, result.fingerprint, report, config);
   }
   return report;

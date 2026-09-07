@@ -22,9 +22,22 @@ describe("runCheck — fingerprint reuse", () => {
   it("returns a cached WAIT report without fetching BatchPr", async () => {
     const cached = { pr: 42, status: "IN_PROGRESS", repo: "owner/repo" } as ShepherdReport;
     mockReuse.mockResolvedValueOnce(cached);
-    const report = await runCheck({ ...BASE_OPTS });
+    const report = await runCheck({ ...BASE_OPTS, fingerprintCache: true });
     expect(report).toBe(cached);
     expect(mockFetchPrBatch).not.toHaveBeenCalled();
+  });
+
+  it("does not reuse a cached report on a single-tick iterate", async () => {
+    mockReuse.mockResolvedValueOnce({
+      pr: 99,
+      status: "IN_PROGRESS",
+      repo: "owner/repo",
+    } as ShepherdReport);
+    mockFetchPrBatch.mockResolvedValueOnce({ data: makeBatchData() });
+    const report = await runCheck({ ...BASE_OPTS });
+    expect(mockFetchPrBatch).toHaveBeenCalled();
+    expect(report.pr).toBe(42);
+    expect(mockReuse).not.toHaveBeenCalled();
   });
 
   it("fetches BatchPr when fingerprintCache is false", async () => {

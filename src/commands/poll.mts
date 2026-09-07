@@ -50,16 +50,23 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
   while (true) {
     tick += 1;
     const pastDebounce = debounceUntil !== null && Date.now() >= debounceUntil;
-    try {
-      lastResult = await runIterate({
+    const remainingBefore = untilTerminal
+      ? Number.POSITIVE_INFINITY
+      : timeoutMs - (Date.now() - start);
+    // Cache only internal continuation ticks. Last bounded tick, FIX_CODE debounce,
+    // and any tick we return to the caller must fetch BatchPr.
+    const allowCache =
+      debounceUntil === null && remainingBefore + TIMER_DRIFT_TOLERANCE_MS >= intervalMs;
+    const iterateTick = (fingerprintCache: boolean) =>
+      runIterate({
         ...iterateOpts,
         prNumber,
         persistSeen: debounceSeconds === 0 || pastDebounce,
-        // WAIT ticks keep the fingerprint cache; FIX_CODE debounce must not.
-        fingerprintCache: debounceUntil === null || pastDebounce,
-        // Until-terminal must persist before deciding to return.
+        fingerprintCache,
         deferQuotaWarning: !untilTerminal,
       });
+    try {
+      lastResult = await iterateTick(allowCache);
       rateLimitRetries = 0;
     } catch (err) {
       const retryMs = untilTerminal ? pollGraphQlRetryAfterMs(err) : null;
@@ -75,12 +82,20 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
     }
     prNumber ??= lastResult.pr;
     if (lastResult.quotaWarning !== undefined) pendingQuotaWarning = lastResult.quotaWarning;
+    const refreshIfReturning = async (): Promise<void> => {
+      if (!allowCache || lastResult === undefined) return;
+      if (lastResult.action !== "wait" && lastResult.action !== "mark_ready") return;
+      lastResult = await iterateTick(false);
+      prNumber ??= lastResult.pr;
+      if (lastResult.quotaWarning !== undefined) pendingQuotaWarning = lastResult.quotaWarning;
+    };
     if (
       untilTerminal &&
       pendingQuotaWarning !== undefined &&
       !(lastResult.action === "fix_code" && debounceSeconds > 0 && !pastDebounce) &&
       !(debounceUntil !== null && !pastDebounce)
     ) {
+      await refreshIfReturning();
       if (["cancel", "escalate"].includes(lastResult.action)) {
         const { quotaWarning: _quotaWarning, ...withoutQuotaWarning } = lastResult;
         lastResult = withoutQuotaWarning;
@@ -100,8 +115,10 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       );
       if (!untilTerminal) {
         const remainingMs = timeoutMs - elapsedMs;
-        if (remainingMs <= 0) break;
-        if (remainingMs + TIMER_DRIFT_TOLERANCE_MS < sleepMs) break;
+        if (remainingMs <= 0 || remainingMs + TIMER_DRIFT_TOLERANCE_MS < sleepMs) {
+          await refreshIfReturning();
+          break;
+        }
       }
       lastWaitSignature = writeWaitProgress({
         tick,
@@ -130,8 +147,10 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       );
       if (!untilTerminal) {
         const remainingMs = timeoutMs - elapsedMs;
-        if (remainingMs <= 0) break;
-        if (remainingMs + TIMER_DRIFT_TOLERANCE_MS < sleepMs) break;
+        if (remainingMs <= 0 || remainingMs + TIMER_DRIFT_TOLERANCE_MS < sleepMs) {
+          await refreshIfReturning();
+          break;
+        }
       }
       await sleep(sleepMs);
       continue;
@@ -145,6 +164,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       }
       continue;
     }
+    await refreshIfReturning();
     break;
   }
   return lastResult!;
