@@ -79,6 +79,29 @@ describe("pollGraphQlRetryAfterMs", () => {
     ).toBeGreaterThan(170_000);
   });
 
+  it("waits until resetAt when remaining is 0 without a rate-limit message", () => {
+    const resetAt = Math.floor(Date.now() / 1000) + 180;
+    expect(
+      pollGraphQlRetryAfterMs(
+        new GitHubRequestError("forbidden", {
+          status: 403,
+          rateLimit: { remaining: 0, limit: 5000, resetAt },
+        }),
+      ),
+    ).toBeGreaterThan(170_000);
+  });
+
+  it("does not wait on an already-elapsed GraphQL resetAt", () => {
+    expect(
+      pollGraphQlRetryAfterMs(
+        new GitHubRequestError("forbidden", {
+          status: 403,
+          rateLimit: { remaining: 0, limit: 5000, resetAt: 0 },
+        }),
+      ),
+    ).toBe(0);
+  });
+
   it("retries GraphQL error payloads that mention a secondary limit", () => {
     expect(
       pollGraphQlRetryAfterMs(

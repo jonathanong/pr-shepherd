@@ -40,6 +40,21 @@ function stored(report: ShepherdReport) {
   };
 }
 
+function unknownMerge(
+  overrides: Partial<ShepherdReport["mergeStatus"]> = {},
+): ShepherdReport["mergeStatus"] {
+  return {
+    status: "UNKNOWN",
+    mergeable: "UNKNOWN",
+    mergeStateStatus: "UNKNOWN",
+    state: "OPEN",
+    isDraft: false,
+    reviewDecision: null,
+    blockingBotReviewInProgress: false,
+    ...overrides,
+  };
+}
+
 function waitReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
   return {
     pr: 42,
@@ -186,6 +201,28 @@ describe("tryReuseFingerprintReport", () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
+  it("does not skip when the cached report is not OPEN", async () => {
+    mockLoad.mockResolvedValue(
+      stored(waitReport({ mergeStatus: { ...waitReport().mergeStatus, state: "MERGED" } })),
+    );
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("does not skip when the live fingerprint is in the merge queue", async () => {
+    mockLoad.mockResolvedValue(stored(waitReport()));
+    mockFetch.mockResolvedValueOnce(testFingerprint({ isInMergeQueue: true }));
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+  });
+
+  it("does not skip when the stored fingerprint is in the merge queue", async () => {
+    mockLoad.mockResolvedValue({
+      ...stored(waitReport()),
+      fingerprint: testFingerprint({ isInMergeQueue: true }),
+    });
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+  });
+
   it("does not skip when classification inputs change", async () => {
     const report = waitReport();
     mockLoad.mockResolvedValue({ ...stored(report), inputDigest: "stale" });
@@ -218,15 +255,7 @@ describe("tryReuseFingerprintReport", () => {
   it("does not skip when REST mergeability is CLEAN but the cached report is UNKNOWN", async () => {
     const report = waitReport({
       status: "UNKNOWN",
-      mergeStatus: {
-        status: "UNKNOWN",
-        mergeable: "UNKNOWN",
-        mergeStateStatus: "UNKNOWN",
-        state: "OPEN",
-        isDraft: false,
-        reviewDecision: null,
-        blockingBotReviewInProgress: false,
-      },
+      mergeStatus: unknownMerge(),
     });
     mockLoad.mockResolvedValue(stored(report));
     mockMergeable.mockResolvedValue({
@@ -235,6 +264,54 @@ describe("tryReuseFingerprintReport", () => {
       state: "OPEN",
     });
     await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+  });
+
+  it("does not skip when REST reports the PR merged or closed", async () => {
+    const report = waitReport({ status: "UNKNOWN", mergeStatus: unknownMerge() });
+    mockLoad.mockResolvedValue(stored(report));
+    mockMergeable.mockResolvedValueOnce({
+      mergeable: "UNKNOWN",
+      mergeStateStatus: "UNKNOWN",
+      state: "MERGED",
+    });
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+    mockMergeable.mockResolvedValueOnce({
+      mergeable: "UNKNOWN",
+      mergeStateStatus: "UNKNOWN",
+      state: "CLOSED",
+    });
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+  });
+
+  it("does not skip when REST mergeStateStatus changed but mergeable did not", async () => {
+    const report = waitReport({
+      status: "UNKNOWN",
+      mergeStatus: unknownMerge({ mergeable: "MERGEABLE", mergeStateStatus: "UNKNOWN" }),
+    });
+    mockLoad.mockResolvedValue(stored(report));
+    mockMergeable.mockResolvedValue({
+      mergeable: "MERGEABLE",
+      mergeStateStatus: "CLEAN",
+      state: "OPEN",
+    });
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+  });
+
+  it("reuses an UNKNOWN report when REST mergeability still matches", async () => {
+    const report = waitReport({
+      status: "UNKNOWN",
+      mergeStatus: unknownMerge({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" }),
+    });
+    mockLoad.mockResolvedValue(stored(report));
+    mockMergeable.mockResolvedValue({
+      mergeable: "MERGEABLE",
+      mergeStateStatus: "CLEAN",
+      state: "OPEN",
+    });
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toEqual({
+      ...report,
+      fingerprintReused: true,
+    });
   });
 
   it("does not skip a READY report when REST mergeability is BEHIND", async () => {

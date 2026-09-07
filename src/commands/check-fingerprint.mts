@@ -45,12 +45,6 @@ export async function tryReuseFingerprintReport(
   if (live.threadCount > 20 || cached.fingerprint.threadCount > 20) return null;
   if (live.hasMultiCommentThreads || cached.fingerprint.hasMultiCommentThreads) return null;
   if (!live.rulesComplete || !cached.fingerprint.rulesComplete) return null;
-  if (
-    cached.report.status === "READY" &&
-    (live.mergePolicy === "" || cached.fingerprint.mergePolicy === "")
-  ) {
-    return null;
-  }
   if (!fingerprintsEqual(cached.fingerprint, live)) return null;
   if (!(await cachedReportSurvivesMergeabilityRefresh(prNumber, repo, cached.report))) {
     return null;
