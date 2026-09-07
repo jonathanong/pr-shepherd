@@ -2,6 +2,17 @@ import { vi, beforeEach, afterEach } from "vitest";
 import type { IterateResult } from "../../src/types.mts";
 
 vi.mock("../../src/commands/iterate/index.mts", () => ({ runIterate: vi.fn() }));
+vi.mock("../../src/config/load.mts", () => ({
+  loadConfig: () => ({
+    watch: {
+      graphqlQuotaWarnings: [
+        { remainingPercent: 30, pollIntervalMinutes: 2 },
+        { remainingPercent: 20, pollIntervalMinutes: 5 },
+        { remainingPercent: 10, pollIntervalMinutes: 10 },
+      ],
+    },
+  }),
+}));
 
 import { runIterate } from "../../src/commands/iterate/index.mts";
 
@@ -67,7 +78,7 @@ function makeCancelResult(): IterateResult {
   } as unknown as IterateResult;
 }
 
-function makeMarkReadyResult(): IterateResult {
+function makeMarkReadyResult(overrides: Partial<IterateResult> = {}): IterateResult {
   return {
     action: "mark_ready",
     pr: 42,
@@ -94,6 +105,7 @@ function makeMarkReadyResult(): IterateResult {
     },
     markedReady: true,
     log: "MARKED READY: PR #42 converted from draft to ready for review",
+    ...overrides,
   } as unknown as IterateResult;
 }
 
@@ -167,7 +179,6 @@ function makeFixCodeResult(): IterateResult {
     cancelled: [],
   } as unknown as IterateResult;
 }
-
 function registerPollHooks(): void {
   beforeEach(() => {
     vi.clearAllMocks();

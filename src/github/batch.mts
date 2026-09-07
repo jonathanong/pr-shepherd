@@ -9,9 +9,11 @@ import { requireRawPr } from "./batch-response.mts";
 import { hydrateMergeQueueChecks } from "./merge-queue-checks.mts";
 import type { RawBatchResponse } from "./batch-raw-types.mts";
 import type { BatchPrData } from "../types.mts";
+import { fingerprintFromRaw, type PrFingerprint } from "./fingerprint.mts";
 
 interface BatchResult {
   data: BatchPrData;
+  fingerprint?: PrFingerprint;
   rateLimit?: RateLimitInfo;
   /** True when GraphQL returned a complete CheckSuite page; skip REST startup-failure fetch. */
   checkSuitesComplete?: boolean;
@@ -61,6 +63,11 @@ export async function fetchPrBatch(
   data.checks = mergeStartupFailureChecks(data.checks, parseSuiteStartupFailures(raw));
   return {
     data,
+    fingerprint: fingerprintFromRaw(
+      raw,
+      result.data.repository?.viewerPermission ?? null,
+      result.data.viewer?.login ?? null,
+    ),
     rateLimit: paged.rateLimit ?? result.rateLimit,
     ...(parseCheckSuitesComplete(raw) && { checkSuitesComplete: true }),
   };

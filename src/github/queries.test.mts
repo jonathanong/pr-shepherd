@@ -9,6 +9,7 @@ import {
   COMMIT_CHECK_CONTEXTS_QUERY,
   REVIEW_THREAD_COMMENTS_QUERY,
   SUGGESTION_THREADS_QUERY,
+  PR_FINGERPRINT_QUERY,
 } from "./queries.mts";
 
 describe("queries — GQL constants load at import time", () => {
@@ -36,6 +37,30 @@ describe("queries — GQL constants load at import time", () => {
     expect(BATCH_PR_PAGE_QUERY).toContain("@include(if: $includeChecks)");
     expect(BATCH_PR_QUERY).not.toContain("$threadsCursor");
     expect(BATCH_PR_QUERY).toContain("checkSuites");
+  });
+
+  it("fingerprint preflight selects merge policy and check-suite completeness", () => {
+    expect(PR_FINGERPRINT_QUERY).toContain("fragment PrMergePolicy on PullRequest");
+    expect(PR_FINGERPRINT_QUERY).toContain("...PrMergePolicy");
+    expect(PR_FINGERPRINT_QUERY).toContain("stackEntry");
+    expect(PR_FINGERPRINT_QUERY).toContain("isMergeQueueEnabled");
+    expect(PR_FINGERPRINT_QUERY).toContain("branchProtectionRule");
+    expect(PR_FINGERPRINT_QUERY).toContain("requiredApprovingReviewCount");
+    expect(PR_FINGERPRINT_QUERY).toContain("viewer {");
+    expect(PR_FINGERPRINT_QUERY).toContain("updatedAt");
+    expect(PR_FINGERPRINT_QUERY).toContain("pageInfo");
+    expect(PR_FINGERPRINT_QUERY).toContain("hasNextPage");
+    expect(BATCH_PR_QUERY).toContain("...PrMergePolicy");
+    expect(PR_FINGERPRINT_QUERY).toContain("...CommitCheckSuites");
+    expect(BATCH_PR_QUERY).toContain("...CommitCheckSuites");
+    expect(BATCH_PR_QUERY).toContain("checkSuites");
+  });
+
+  it("keeps merge-queue metadata in BatchPr without nested queue check trees", () => {
+    expect(BATCH_PR_QUERY).toContain("isInMergeQueue");
+    expect(BATCH_PR_QUERY).toContain("mergeQueueEntry");
+    expect(BATCH_PR_QUERY).not.toContain("QueueCheckCommit");
+    expect(BATCH_PR_QUERY).not.toContain("...QueueCheckCommit");
   });
 
   it("selects raw viewer authorization fields for every generated GitHub action", () => {
@@ -69,6 +94,7 @@ describe("queries — GQL constants load at import time", () => {
       COMMIT_CHECK_CONTEXTS_QUERY,
       REVIEW_THREAD_COMMENTS_QUERY,
       SUGGESTION_THREADS_QUERY,
+      PR_FINGERPRINT_QUERY,
     ]) {
       expect(query).toContain("_shepherdRateLimit: rateLimit");
       expect(query).toContain("nodeCount");

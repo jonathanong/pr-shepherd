@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { vi, beforeEach } from "vitest";
 
 vi.mock("../../src/github/client.mts", () => ({
@@ -18,6 +19,11 @@ vi.mock("../../src/state/seen-comments.mts", async (importOriginal) => {
 
 vi.mock("../../src/github/batch.mts", () => ({
   fetchPrBatch: vi.fn(),
+}));
+vi.mock("../../src/state/pr-fingerprint.mts", () => ({
+  loadPrFingerprint: vi.fn().mockResolvedValue(null),
+  storePrFingerprint: vi.fn().mockResolvedValue(undefined),
+  fingerprintInputDigest: vi.fn().mockReturnValue("digest"),
 }));
 
 vi.mock("../../src/comments/resolve.mts", () => ({
@@ -44,6 +50,7 @@ vi.mock("../../src/config/load.mts", () => ({
 import { runResolveMutate } from "../../src/commands/resolve.mts";
 import { getCurrentPrNumber } from "../../src/github/client.mts";
 import { fetchPrBatch } from "../../src/github/batch.mts";
+import { testFingerprint } from "../github/fingerprint-fixture.mts";
 import { autoResolveOutdated, applyResolveOptions } from "../../src/comments/resolve.mts";
 import { loadConfig } from "../../src/config/load.mts";
 import {
@@ -156,7 +163,10 @@ function makeComment(overrides: Partial<PrComment> = {}): PrComment {
 export function registerHooks(): void {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData() });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData(),
+      fingerprint: testFingerprint(),
+    });
     mockAutoResolveOutdated.mockResolvedValue({ resolved: [], errors: [] });
     mockApplyResolveOptions.mockResolvedValue({
       repliedThreads: [],

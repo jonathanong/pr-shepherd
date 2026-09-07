@@ -2,6 +2,10 @@ import { runIterate } from "./iterate/index.mts";
 import type { IterateCommandOptions, IterateResult } from "../types.mts";
 import { sleep } from "../util/sleep.mts";
 import { withPollApiUsage } from "./poll-run.mts";
+import { loadConfig } from "../config/load.mts";
+import { graphqlQuotaPollIntervalMs, pollGraphQlRetryAfterMs } from "./poll-quota.mts";
+import { writeDebounceProgress, writeWaitProgress } from "./poll-progress.mts";
+
 export interface PollCommandOptions extends IterateCommandOptions {
   intervalSeconds: number;
   timeoutSeconds: number;
@@ -11,91 +15,8 @@ export interface PollCommandOptions extends IterateCommandOptions {
   untilTerminal?: boolean;
 }
 const DEFAULT_POLL_DEBOUNCE_SECONDS = 60;
-function writeTickProgress(
-  tick: number,
-  elapsedSeconds: number,
-  sleepSeconds: number,
-  verbose: boolean,
-): void {
-  if (verbose) {
-    process.stderr.write(
-      `[poll tick ${tick} / +${elapsedSeconds}s] WAIT — sleeping ${sleepSeconds}s\n`,
-    );
-  } else {
-    process.stderr.write(
-      `[poll tick ${tick} / +${elapsedSeconds}s] WAIT — still running; next tick in ${sleepSeconds}s\n`,
-    );
-  }
-}
-function waitSignature(result: IterateResult): string {
-  const activity = result.activity ?? {
-    commitCount: 0,
-    reviewRoundCount: 0,
-    latestCommitCommittedAtUnix: null,
-    reviewItemsSinceLatestCommit: [],
-  };
-  return JSON.stringify({
-    status: result.status,
-    mergeStateStatus: result.mergeStateStatus,
-    reviewDecision: result.reviewDecision,
-    state: result.state,
-    active: (result.inProgressChecks ?? []).map((c) => [c.name, c.status, c.runId]),
-    commitCount: activity.commitCount,
-    latestCommitCommittedAtUnix: activity.latestCommitCommittedAtUnix,
-    reviewRoundCount: activity.reviewRoundCount,
-    reviewItemsSinceLatestCommit: activity.reviewItemsSinceLatestCommit.length,
-  });
-}
-function writeQuietStatus(
-  tick: number,
-  elapsedSeconds: number,
-  sleepSeconds: number,
-  result: IterateResult,
-): void {
-  const activeChecks = result.inProgressChecks ?? [];
-  const activeCheckText = activeChecks.map((c) => `${c.name} (${c.status})`).join(", ");
-  const active = activeChecks.length > 0 ? ` · active: ${activeCheckText}` : "";
-  const commitCount = result.activity?.commitCount ?? 0;
-  const reviewItems = result.activity?.reviewItemsSinceLatestCommit.length ?? 0;
-  const reviewRounds = result.activity?.reviewRoundCount ?? 0;
-  const commitSeg = commitCount > 0 ? ` · ${commitCount} commits` : "";
-  const reviewRoundSeg = reviewRounds > 0 ? ` · ${reviewRounds} review rounds` : "";
-  const reviewSeg = reviewItems > 0 ? ` · ${reviewItems} review items since latest commit` : "";
-  process.stderr.write(
-    `[poll tick ${tick} / +${elapsedSeconds}s] WAIT ${result.status}/${result.mergeStateStatus}/${result.reviewDecision ?? "NO_REVIEW_DECISION"}${active}${commitSeg}${reviewRoundSeg}${reviewSeg} — sleeping ${sleepSeconds}s\n`,
-  );
-}
 const MAX_TIMER_MS = 2 ** 31 - 1;
 const TIMER_DRIFT_TOLERANCE_MS = 500;
-
-function writeWaitProgress(opts: {
-  tick: number;
-  elapsedMs: number;
-  sleepMs: number;
-  result: IterateResult;
-  quietStatus: boolean;
-  verbose: boolean;
-  lastWaitSignature: string | null;
-}): string | null {
-  const elapsedSeconds = Math.round(opts.elapsedMs / 1000);
-  const sleepSeconds = Math.round(opts.sleepMs / 1000);
-  if (!opts.quietStatus) {
-    writeTickProgress(opts.tick, elapsedSeconds, sleepSeconds, opts.verbose);
-    return opts.lastWaitSignature;
-  }
-  const signature = waitSignature(opts.result);
-  if (signature !== opts.lastWaitSignature) {
-    writeQuietStatus(opts.tick, elapsedSeconds, sleepSeconds, opts.result);
-  }
-  return signature;
-}
-function writeDebounceProgress(tick: number, elapsedMs: number, remainingMs: number): void {
-  const elapsedSeconds = Math.round(elapsedMs / 1000);
-  const remainingSeconds = Math.round(remainingMs / 1000);
-  process.stderr.write(
-    `[poll tick ${tick} / +${elapsedSeconds}s] FIX_CODE — debounce ${remainingSeconds}s remaining\n`,
-  );
-}
 /** @deprecated Hidden implementation for the legacy `poll` alias. */
 export function runPoll(opts: PollCommandOptions): Promise<IterateResult> {
   return withPollApiUsage(() => runPollCore(opts), opts.untilTerminal === true);
@@ -113,6 +34,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
   const timeoutMs = Math.min(timeoutSeconds * 1000, MAX_TIMER_MS);
   const debounceSeconds = debounceSecondsOpt ?? DEFAULT_POLL_DEBOUNCE_SECONDS;
   const debounceMs = Math.min(debounceSeconds * 1000, MAX_TIMER_MS);
+  const quotaBands = loadConfig().watch.graphqlQuotaWarnings;
   const start = Date.now();
   let tick = 0;
   let lastResult: IterateResult | undefined;
@@ -124,24 +46,65 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
   // Pin the PR resolved by the first tick; branch inference only matches OPEN PRs.
   let prNumber = opts.prNumber;
   let debounceUntil: number | null = null;
+  let rateLimitRetries = 0;
   while (true) {
     tick += 1;
     const pastDebounce = debounceUntil !== null && Date.now() >= debounceUntil;
-    lastResult = await runIterate({
-      ...iterateOpts,
-      prNumber,
-      persistSeen: debounceSeconds === 0 || pastDebounce,
-      // Until-terminal must persist before deciding to return.
-      deferQuotaWarning: !untilTerminal,
-    });
+    const remainingBefore = untilTerminal
+      ? Number.POSITIVE_INFINITY
+      : timeoutMs - (Date.now() - start);
+    // Cache only internal continuation ticks. Last bounded tick, FIX_CODE debounce,
+    // and any tick we return to the caller must fetch BatchPr.
+    const allowCache =
+      debounceUntil === null && remainingBefore + TIMER_DRIFT_TOLERANCE_MS >= intervalMs;
+    const iterateTick = (fingerprintCache: boolean) =>
+      runIterate({
+        ...iterateOpts,
+        prNumber,
+        persistSeen: debounceSeconds === 0 || pastDebounce,
+        fingerprintCache,
+        deferQuotaWarning: !untilTerminal,
+      });
+    const runTick = async (fingerprintCache: boolean): Promise<IterateResult> => {
+      try {
+        const result = await iterateTick(fingerprintCache);
+        rateLimitRetries = 0;
+        return result;
+      } catch (err) {
+        const retryMs = untilTerminal ? pollGraphQlRetryAfterMs(err) : null;
+        if (retryMs === null || rateLimitRetries >= 1) throw err;
+        rateLimitRetries += 1;
+        process.stderr.write(
+          `[poll tick ${tick} / +${Math.round((Date.now() - start) / 1000)}s] GraphQL rate limit — retrying in ${Math.round(retryMs / 1000)}s\n`,
+        );
+        await sleep(retryMs);
+        const result = await iterateTick(fingerprintCache);
+        rateLimitRetries = 0;
+        return result;
+      }
+    };
+    lastResult = await runTick(allowCache);
     prNumber ??= lastResult.pr;
     if (lastResult.quotaWarning !== undefined) pendingQuotaWarning = lastResult.quotaWarning;
+    const refreshIfReturning = async (): Promise<void> => {
+      if (lastResult?.fingerprintReused !== true) return;
+      lastResult = await runTick(false);
+      if (lastResult.quotaWarning !== undefined) pendingQuotaWarning = lastResult.quotaWarning;
+    };
     if (
       untilTerminal &&
       pendingQuotaWarning !== undefined &&
       !(lastResult.action === "fix_code" && debounceSeconds > 0 && !pastDebounce) &&
       !(debounceUntil !== null && !pastDebounce)
     ) {
+      await refreshIfReturning();
+      if (lastResult.action === "fix_code" && debounceSeconds > 0 && !pastDebounce) {
+        debounceUntil ??= Date.now() + debounceMs;
+        const remainingMs = Math.max(debounceUntil - Date.now(), 0);
+        writeDebounceProgress(tick, Date.now() - start, remainingMs);
+        await sleep(Math.min(intervalMs, remainingMs));
+        continue;
+      }
       if (["cancel", "escalate"].includes(lastResult.action)) {
         const { quotaWarning: _quotaWarning, ...withoutQuotaWarning } = lastResult;
         lastResult = withoutQuotaWarning;
@@ -153,21 +116,29 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
     if (lastResult.action === "wait" && !pastDebounce) {
       if (pendingQuotaWarning === undefined) debounceUntil = null;
       const elapsedMs = Date.now() - start;
+      const sleepMs = graphqlQuotaPollIntervalMs(
+        quotaBands,
+        lastResult.apiUsage?.graphql,
+        intervalMs,
+        MAX_TIMER_MS,
+      );
       if (!untilTerminal) {
         const remainingMs = timeoutMs - elapsedMs;
-        if (remainingMs <= 0) break;
-        if (remainingMs + TIMER_DRIFT_TOLERANCE_MS < intervalMs) break;
+        if (remainingMs <= 0 || remainingMs + TIMER_DRIFT_TOLERANCE_MS < sleepMs) {
+          await refreshIfReturning();
+          break;
+        }
       }
       lastWaitSignature = writeWaitProgress({
         tick,
         elapsedMs,
-        sleepMs: intervalMs,
+        sleepMs,
         result: lastResult,
         quietStatus,
         verbose,
         lastWaitSignature,
       });
-      await sleep(intervalMs);
+      await sleep(sleepMs);
       continue;
     }
     if (
@@ -176,7 +147,21 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       !pastDebounce
     ) {
       debounceUntil = null;
-      await sleep(intervalMs);
+      const elapsedMs = Date.now() - start;
+      const sleepMs = graphqlQuotaPollIntervalMs(
+        quotaBands,
+        lastResult.apiUsage?.graphql,
+        intervalMs,
+        MAX_TIMER_MS,
+      );
+      if (!untilTerminal) {
+        const remainingMs = timeoutMs - elapsedMs;
+        if (remainingMs <= 0 || remainingMs + TIMER_DRIFT_TOLERANCE_MS < sleepMs) {
+          await refreshIfReturning();
+          break;
+        }
+      }
+      await sleep(sleepMs);
       continue;
     }
     if (lastResult.action === "fix_code" && debounceSeconds > 0 && !pastDebounce) {
@@ -188,6 +173,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       }
       continue;
     }
+    await refreshIfReturning();
     break;
   }
   return lastResult!;

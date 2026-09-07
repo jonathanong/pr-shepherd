@@ -2,7 +2,45 @@
 
 [← README](../README.md) | [context.md](context.md)
 
-This page is **how context is fetched**. A typical green tick is one GraphQL batch. Extra pages use a slim follow-up query. REST supplements run only where GraphQL cannot return the data.
+This page is **how GitHub data is fetched**, **what each GraphQL operation costs**, and **how to keep a poll from exhausting the GraphQL quota**. A typical green tick is one GraphQL batch. Extra pages use a slim follow-up query. REST supplements run only where GraphQL cannot return the data.
+
+Related: [authentication.md](authentication.md) (token pools), [configuration.md](configuration.md) (`watch.graphqlQuotaWarnings`), [debugging.md](debugging.md) (rate-limit exhaustion), [actions.md](actions.md) (quota-warning output).
+
+## GitHub metering
+
+GitHub meters GraphQL in **points per hour**, not HTTP requests. A typical user PAT is **5,000 points / hour**. GitHub App installation tokens can be higher. REST `core` is a **separate** pool; exhausting GraphQL does not exhaust REST, and vice versa.
+
+[GitHub's cost formula](https://docs.github.com/en/graphql/overview/rate-limits-and-query-limits-for-the-graphql-api):
+
+1. Count the connection-requests implied by the query AST. Nested `first`/`last` multiply by the parent connection size. Assume every connection fills its limit.
+2. Divide by 100 and round to the nearest integer. Minimum cost is 1.
+
+Example: `reviewThreads(last: 100) { comments(first: 100) }` is 1 (threads from the PR) + 100 (comments from each thread) = 101 connection-requests → cost 1 by itself. Combined with check-run annotation probes and merge-queue commit trees, a full `BatchPr` first page typically lands around **cost 4–8**. `--verbose` `GraphQL measured cost` is authoritative; do not guess from this page.
+
+Other limits that are not the hourly point budget:
+
+| Limit                 | What it is                                                                                                        | How Shepherd sees it                                                                                                           |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Node cap              | A single query may not request more than **500,000** potential nodes (`first`/`last` multiplied through the tree) | Query rejected; not a quota warning                                                                                            |
+| Primary GraphQL quota | `x-ratelimit-remaining` / `rateLimit.remaining` on resource `graphql`                                             | `apiUsage.graphql`, `quotaWarning`, pagination abort at remaining 0                                                            |
+| Secondary rate limit  | Burst / concurrency / mutation abuse. **Does not** decrement remaining                                            | HTTP 200 with GraphQL errors, or HTTP 403, often with `Retry-After` and a `secondary rate limit` message; `EXIT.TEMPFAIL` (75) |
+
+Mutations cannot select `rateLimit { cost }` (that field lives on the Query root). Shepherd records them as `unmeasuredRequestCount` and still reads remaining/limit from response headers.
+
+Queries select this sibling so cost is exact:
+
+```graphql
+_shepherdRateLimit: rateLimit {
+  cost
+  limit
+  nodeCount
+  remaining
+  resetAt
+  used
+}
+```
+
+The alias is merged with `x-ratelimit-*` headers in `github/api-telemetry.mts`. There is no extra `/rate_limit` REST call.
 
 ## The batch query
 
@@ -19,6 +57,8 @@ A single GraphQL query fetches everything shepherd needs per PR on the first pag
 - CI check runs (paginated forward, see below) and `checkSuites` (first 50, used for startup-failure detection). Each `CheckRun` includes an `annotations(first: 1)` probe so later annotation pagination runs only for checks that have at least one annotation.
 
 `latestReviews` is capped at 100 and `reviewRequests` at 50; extra pages are not fetched. Copilot-in-progress detection can miss reviewers beyond those caps.
+
+Merge-queue **check rollups** are not part of the always-on first page. The batch keeps queue metadata (`position`, `state`, head/removal commit OIDs and parents). When the PR is in the queue, or the latest removal is still current, [`src/github/merge-queue-checks.mts`](../src/github/merge-queue-checks.mts) loads that commit's `statusCheckRollup` via [`commit-check-contexts.gql`](../src/github/gql/commit-check-contexts.gql). Non-queued ticks do not pay two nested annotation-probe trees.
 
 Startup-failure workflow runs and failed-job log excerpts are check-read supplements. GraphQL `statusCheckRollup` can omit workflow runs that fail before job/check contexts exist. The batch query reads `commit.checkSuites` and merges suites whose `conclusion` is `STARTUP_FAILURE` into the check list. REST `GET /actions/runs?status=startup_failure` runs only when that CheckSuite page is missing or truncated (`hasNextPage`). For ordinary failing Actions jobs, Shepherd also fetches a bounded raw log excerpt from the matched job after classification/triage.
 
@@ -44,6 +84,56 @@ Approved-review extra pages are opt-in (`paginateApprovedReviews`) so monitor ti
 If `x-ratelimit-remaining` is 0 before a follow-up page, pagination throws rather than returning a silently truncated thread list (every thread must be surfaced at least once). Nested thread-comment extra pages (`review-thread-comments.gql`) run with a concurrency cap of 4 and likewise stop when remaining is 0.
 
 The generic paginator is in `github/pagination.mts`. It accepts a `direction` parameter and handles cursor tracking.
+
+## Operation catalog
+
+Static documents live in [`src/github/gql/`](../src/github/gql/) and are loaded from [`src/github/queries.mts`](../src/github/queries.mts). Dynamic mutation documents are built at runtime (they cannot be expressed as a single static file).
+
+| Operation              | Document                                  | When it runs                                                                                      | Selects `rateLimit.cost` |
+| ---------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------ |
+| `BatchPr`              | `batch-pr.gql`                            | Every full `runCheck` / iterate tick that does not hit a fingerprint skip                         | yes                      |
+| `PrFingerprint`        | `pr-fingerprint.gql`                      | Every iterate tick after the first stored fingerprint, to decide whether the full batch is needed | yes                      |
+| `BatchPrPage`          | `batch-pr-page.gql`                       | Extra connection pages; combined cursors                                                          | yes                      |
+| `ReviewThreadComments` | `review-thread-comments.gql`              | A thread whose nested `comments` connection has another page                                      | yes                      |
+| `CommitCheckContexts`  | `commit-check-contexts.gql`               | Merge-queue (or current-removal) commit check rollup, including page 1                            | yes                      |
+| `CheckRunAnnotations`  | `check-run-annotations.gql`               | Completed check whose batch probe found at least one annotation (1h derived cache)                | yes                      |
+| `SuggestionThreads`    | `suggestion-threads.gql`                  | `build-suggestion-patches`                                                                        | yes                      |
+| `GetPrHeadSha`         | `get-pr-head-sha.gql`                     | `--require-sha` poll (`resolve.shaPoll`, default 2s × 10)                                         | yes                      |
+| `PrNumberByBranch`     | `pr-number-by-branch.gql`                 | No PR number passed (avoid this — pass the number)                                                | yes                      |
+| `GetPrBody`            | `get-pr-body.gql`                         | Journal apply, before the body mutation                                                           | yes                      |
+| `UpdatePrBody`         | `update-pr-body.gql`                      | Journal apply                                                                                     | no (mutation)            |
+| `MarkPrReady`          | `mark-pr-ready.gql`                       | `mark_ready` when `viewerCanUpdate`                                                               | no (mutation)            |
+| `PullRequestFiles`     | inline in `mark-files-as-viewed.mts`      | `apply files`                                                                                     | yes                      |
+| `BulkApply`            | runtime aliases in `comments/resolve.mts` | reply / resolve / minimize / dismiss, chunks of 10                                                | no (mutation)            |
+| `markFileAsViewed`     | runtime aliases, chunks of 10             | `apply files`                                                                                     | no (mutation)            |
+
+## Per-tick budget
+
+Default poll interval is **60s**. Ready-delay is **10 minutes**. Repeating a “cheap” 4–8 point batch every minute is what burns the hourly budget, not a single snapshot.
+
+| Situation                                                                                               | GraphQL                                                                                                            | REST                                                   |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| Green `WAIT`, PR number passed, fingerprint **hit**                                                     | 1× `PrFingerprint` (cost 1)                                                                                        | READY-candidate mergeability refresh only              |
+| Green `WAIT`, cold start or fingerprint **miss**, no extra pages, mergeable known, CheckSuites complete | 1× `BatchPr` (and `PrFingerprint` on a miss after the first tick)                                                  | none                                                   |
+| CI failing (one workflow run)                                                                           | those plus annotation pages for probe-positive completed checks                                                    | 1 jobs list (more if >100 jobs) + optional log excerpt |
+| Large review PR                                                                                         | 1 batch + N slim page queries (combined cursors), not N full snapshots; plus thread-comment pages at concurrency 4 | as above                                               |
+| PR in merge queue                                                                                       | batch metadata + `CommitCheckContexts` for the synthetic commit                                                    | as above                                               |
+| First-look minimize / classification auto-resolve                                                       | plus `BulkApply` mutation chunks (unmeasured)                                                                      | none                                                   |
+| `--require-sha` on apply                                                                                | plus up to 10× `GetPrHeadSha`                                                                                      | none                                                   |
+
+Each iterate tick used to fetch a fresh full snapshot — there is no body cache across ticks. Unchanged **poll continuation** ticks now skip the full snapshot when [`pr-fingerprint.gql`](../src/github/gql/pr-fingerprint.gql) matches the stored fingerprint (head SHA, `updatedAt`, comment/thread/review counts, comment and review `updatedAt` revisions, latest thread-comment revisions, latest comment/review ids, check-rollup state, check-suite identity and completeness, merge/queue flags, merge policy, stack membership, viewer login). New or edited review items change those fields and force a full fetch so the [comment visibility invariant](comments.md#first-look-items-comment-visibility-invariant) still holds. A different GitHub viewer login is a miss, so two tokens cannot reuse each other's classified report.
+
+Fingerprint reuse is **opt-in and internal to poll**. The tick returned to the caller always runs `BatchPr`: last bounded-poll tick (timeout remaining smaller than the next sleep), FIX_CODE debounce ticks, the post-debounce return tick, and every single-tick `iterate` / MCP call. A full fetch still **writes** the fingerprint so the next poll can skip.
+
+Fingerprint skip is also refused — the tick runs `BatchPr` — when any of these hold:
+
+- The cached report is `READY` (mark-ready / merge / ready-delay expiry must see a live snapshot).
+- The cached report is not WAIT-shaped (first-look items, failing checks, actionable check annotations, visible approvals, merge-queue membership, and similar).
+- More than 100 PR comments or reviews, more than 20 review threads, or any fingerprinted thread with more than one comment, exist, so `updatedAt` revisions on the preflight windows cannot cover an older in-place edit.
+- `baseRef.rules` is truncated (`hasNextPage`), so merge-policy classification may be incomplete.
+- The live `checkSuites(first: 50)` page is truncated (`hasNextPage`), so a later startup-failure suite would be invisible.
+- REST mergeability differs from the cached report, including reports whose mergeability fields already diverged from the GraphQL fingerprint (a prior REST refresh turned GraphQL `UNKNOWN` into `BEHIND` / `PENDING`). GraphQL can stay `UNKNOWN` after REST returns `CLEAN`; a later REST `CLEAN` must not keep a cached `PENDING` forever.
+- Classification inputs changed: `inputDigest` hashes report-shaping config (`ignoreChecks`, `botUsernames`, `iterate.*`, `watch.readyDelayMinutes`, `checks.*`, `mergeStatus.blockingReviewerLogins`, `actions.autoMinimizeSuppressed` / `autoMarkReady` / `neverCancelRuns` / `workWhileQueued`) plus **classification rule file contents**, not just paths.
 
 ## REST fallbacks
 
@@ -83,10 +173,43 @@ The generic paginator is in `github/pagination.mts`. It accepts a `direction` pa
 
 `graphqlWithRateLimit` (in `github/graphql-http.mts`, re-exported from `http.mts` / `client.mts`) and `restWithRateLimit` parse `x-ratelimit-remaining` / `x-ratelimit-limit` / `x-ratelimit-reset` (and `Retry-After` when present). Failed REST calls throw `GitHubRequestError` with that metadata.
 
-Typical green wait tick (PR number passed, no extra pages, mergeable known, CheckSuites complete): **1 GraphQL batch**, no startup-failure REST.
+### What Shepherd already does
 
-CI failing (one workflow run): those plus 1 REST jobs list (more if the run has >100 jobs) and an optional log excerpt.
+- One batch query per full tick; extra pages are slim `@include` documents with combined cursors.
+- Merge-queue check rollups load only when the PR is queued or has a current removal whose parents still contain HEAD.
+- Approved-review extra pages are opt-in (`iterate.minimizeApprovals`).
+- Annotation bodies are cached for 1 hour per completed check-run id.
+- Pagination and nested thread-comment hydration abort when remaining is 0 rather than returning a truncated thread list.
+- `--verbose` prints command-scoped `apiUsage` (credential source, request count, measured query cost, node count, remaining/limit/reset).
+- `watch.graphqlQuotaWarnings` (default 30% → 2m, 20% → 5m, 10% → 10m) emits a one-shot-per-worktree-per-window `quotaWarning` on non-terminal results. The skill / MCP caller is told to slow down and to prefer REST `gh` for incidental work.
+- The **poll dispatcher** (`pr-shepherd [PR]`, including `--until-terminal`) also **applies** those bands: `WAIT` / `MARK_READY` sleeps use `max(--interval, active band interval)` from the latest `apiUsage.graphql` remaining percent, every tick, even after the one-shot warning has already been claimed. The active band is the crossed entry with the lowest `remainingPercent`, matching `quotaWarning`. Single-tick `iterate` and MCP `iterate` stay advisory — those callers own recurrence.
+- Unchanged ticks skip `BatchPr` when the fingerprint matches, CheckSuites are complete, and REST mergeability still agrees with the cached report, including reports whose mergeability was previously filled in by REST.
+- `--until-terminal` retries a tick once after a GraphQL 429 / secondary-limit `Retry-After` instead of exiting 75 immediately. An explicit `Retry-After` header is honored in full. Single-tick iterate still fails with 75.
 
-Large review PR: 1 batch + N slim page queries (combined cursors), not N full snapshots.
+### How to read spend
 
-Each iterate tick fetches fresh data from the GitHub GraphQL API — there is no local cache.
+1. Pass `--verbose` on iterate or poll. Markdown adds `## GitHub API usage`; JSON includes `apiUsage`.
+2. `npx pr-shepherd log-file` — each GraphQL response line carries quota headers, cost, and credential source.
+3. A `quotaWarning` / `## GitHub API quota warning` block is the primary remaining% crossing a configured band. It is **not** emitted for secondary limits.
+4. Exit code 75 with `Retry-After` and a `secondary rate limit` message is a burst throttle, not an empty hourly bucket. Back off; do not assume REST is also exhausted.
+
+### Operational advice
+
+- **Give Shepherd its own credential when you need isolation.** The agent’s GitHub MCP, Copilot, and `gh api graphql` share the GraphQL pool with whatever token they use. A second PAT for the **same GitHub user** does not isolate quota. Use a GitHub App **installation** access token or a different GitHub user for a separate point budget; a dedicated PAT still helps with least-privilege and audit. See [authentication.md](authentication.md).
+- **Always pass the PR number** (or URL / `owner/repo#N`) so Shepherd does not run `PrNumberByBranch`.
+- **Do not also poll with GitHub MCP GraphQL** or `gh pr checks` / `gh pr watch`. Incidental one-off reads should use REST `gh` (`gh pr view`, `gh pr review`, `gh api` REST).
+- When a `quotaWarning` is returned, follow `## Instructions`: keep using pr-shepherd at the printed cadence. For `--until-terminal`, pass `--interval` from the warning and omit `--timeout`. Resume full cadence after the printed reset time.
+
+### Optimization backlog
+
+Landed in this spec’s matching code:
+
+- Poll applies quota-band intervals (not only prints them).
+- Fingerprint skip on unchanged ticks.
+- Merge-queue check trees are follow-up-only.
+- `--until-terminal` honors GraphQL `Retry-After` once.
+
+Further work, if spend is still high:
+
+- Token-scoped quota state so two worktrees sharing one credential share warned bands (today warnings are per worktree).
+- Shrink `reviewThreads.comments(first: 100)` if `nodeCount` approaches 500,000 on huge PRs (point cost is mostly parent connections, not this `first`).

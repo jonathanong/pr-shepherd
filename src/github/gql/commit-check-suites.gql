@@ -1,0 +1,19 @@
+fragment CommitCheckSuites on Commit {
+  checkSuites(first: 50) {
+    pageInfo {
+      hasNextPage
+    }
+    nodes {
+      id
+      conclusion
+      workflowRun {
+        databaseId
+        event
+        url
+        workflow {
+          name
+        }
+      }
+    }
+  }
+}

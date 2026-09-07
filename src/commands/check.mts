@@ -1,4 +1,6 @@
 import { fetchPrBatch } from "../github/batch.mts";
+import { storePrFingerprint } from "../state/pr-fingerprint.mts";
+import { tryReuseFingerprintReport } from "./check-fingerprint.mts";
 import { getRepoInfo, getCurrentPrNumber } from "../github/client.mts";
 import { classifyChecks, getCiVerdict } from "../checks/classify.mts";
 import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
@@ -53,6 +55,7 @@ export async function runCheck(
     autoMinimizeSuppressed?: boolean;
     skipTriage?: boolean;
     persistSeen?: boolean;
+    fingerprintCache?: boolean;
     merge?: boolean;
   },
 ): Promise<ShepherdReport> {
@@ -66,6 +69,11 @@ export async function runCheck(
   }
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
   const config = loadConfig();
+  const reuseFingerprint = opts.fingerprintCache === true;
+  if (reuseFingerprint) {
+    const cached = await tryReuseFingerprintReport(prNumber, repo, stateKey, config);
+    if (cached) return cached;
+  }
   const paginateApprovedReviews = config.iterate.minimizeApprovals;
   const result = await fetchPrBatch(prNumber, repo, { paginateApprovedReviews });
   let batchData = result.data;
@@ -74,7 +82,11 @@ export async function runCheck(
   const didRefreshMergeability = unknownRefresh.didRefresh;
   let mergeStatus = deriveMergeStatus(batchData);
   if (mergeStatus.state === "MERGED" || mergeStatus.state === "CLOSED") {
-    return buildTerminalReport(prNumber, repo, batchData, mergeStatus, mergeStatus.state);
+    const terminal = buildTerminalReport(prNumber, repo, batchData, mergeStatus, mergeStatus.state);
+    if (result.fingerprint) {
+      await storePrFingerprint(stateKey, result.fingerprint, terminal, config);
+    }
+    return terminal;
   }
   const startupFailuresNeedAttempt = batchData.checks.some(
     (check) => check.source === "startup_failure" && check.runAttempt === undefined,
@@ -251,7 +263,17 @@ export async function runCheck(
     mergeStatus = refreshed.mergeStatus;
     status = refreshed.status;
     if (mergeStatus.state === "MERGED" || mergeStatus.state === "CLOSED") {
-      return buildTerminalReport(prNumber, repo, batchData, mergeStatus, mergeStatus.state);
+      const terminal = buildTerminalReport(
+        prNumber,
+        repo,
+        batchData,
+        mergeStatus,
+        mergeStatus.state,
+      );
+      if (result.fingerprint) {
+        await storePrFingerprint(stateKey, result.fingerprint, terminal, config);
+      }
+      return terminal;
     }
   }
 
@@ -368,7 +390,7 @@ export async function runCheck(
     batchData.autoMergeRequest ||
     batchData.latestMergeQueueRemoval,
   );
-  return {
+  const report = {
     pr: prNumber,
     nodeId: batchData.nodeId,
     headSha: batchData.headRefOid,
@@ -433,6 +455,10 @@ export async function runCheck(
       },
     }),
   };
+  if (result.fingerprint) {
+    await storePrFingerprint(stateKey, result.fingerprint, report, config);
+  }
+  return report;
 }
 
 interface RuleAutoResolveIds {

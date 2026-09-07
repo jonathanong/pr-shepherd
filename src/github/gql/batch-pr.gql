@@ -9,12 +9,16 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
     resetAt
     used
   }
+  viewer {
+    login
+  }
   repository(owner: $owner, name: $repo) {
     viewerPermission
     viewerCanAdminister
     pullRequest(number: $pr) {
       id
       number
+      updatedAt
       state
       isDraft
       viewerDidAuthor
@@ -32,7 +36,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
       }
       baseRefName
       isInMergeQueue
-      isMergeQueueEnabled
+      ...PrMergePolicy
       autoMergeRequest {
         enabledAt
         mergeMethod
@@ -49,7 +53,8 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
           login
         }
         headCommit {
-          ...QueueCheckCommit
+          oid
+          committedDate
         }
       }
       mergeQueueAdditions: timelineItems(last: 1, itemTypes: [ADDED_TO_MERGE_QUEUE_EVENT]) {
@@ -68,7 +73,13 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
               login
             }
             beforeCommit {
-              ...QueueCheckCommit
+              oid
+              committedDate
+              parents(first: 100) {
+                nodes {
+                  oid
+                }
+              }
             }
           }
         }
@@ -80,49 +91,6 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
       }
       stackEntry {
         position
-      }
-      baseRef {
-        branchProtectionRule {
-          requiresApprovingReviews
-          requiredApprovingReviewCount
-          requiresConversationResolution
-          requiresCodeOwnerReviews
-          requireLastPushApproval
-          requiresCommitSignatures
-          requiresLinearHistory
-          requiresStatusChecks
-          requiredStatusCheckContexts
-          requiresStrictStatusChecks
-          requiresDeployments
-          requiredDeploymentEnvironments
-        }
-        rules(first: 100) {
-          nodes {
-            type
-            parameters {
-              ... on PullRequestParameters {
-                requiredApprovingReviewCount
-                requiredReviewThreadResolution
-                requireCodeOwnerReview
-                requireLastPushApproval
-              }
-              ... on RequiredStatusChecksParameters {
-                strictRequiredStatusChecksPolicy
-                requiredStatusChecks {
-                  context
-                }
-              }
-              ... on RequiredDeploymentsParameters {
-                requiredDeploymentEnvironments
-              }
-              ... on CodeScanningParameters {
-                codeScanningTools {
-                  tool
-                }
-              }
-            }
-          }
-        }
       }
       # Not paginated — capped at 50; PRs with more pending reviewers truncate silently.
       reviewRequests(last: 50) {
@@ -153,6 +121,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
         }
       }
       reviewThreads(last: 100) {
+        totalCount
         pageInfo {
           hasPreviousPage
           startCursor
@@ -189,11 +158,13 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
               line
               startLine
               createdAt
+              updatedAt
             }
           }
         }
       }
       comments(last: 100) {
+        totalCount
         pageInfo {
           hasPreviousPage
           startCursor
@@ -210,6 +181,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
           }
           body
           createdAt
+          updatedAt
         }
       }
       changesRequestedReviews: reviews(states: CHANGES_REQUESTED, last: 50) {
@@ -249,8 +221,12 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
           createdAt
         }
       }
-      allReviews: reviews(last: 1) {
+      allReviews: reviews(last: 100) {
         totalCount
+        nodes {
+          id
+          updatedAt
+        }
       }
       approvedReviews: reviews(states: APPROVED, last: 50) {
         pageInfo {
@@ -276,23 +252,9 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
           commit {
             oid
             committedDate
-            checkSuites(first: 50) {
-              pageInfo {
-                hasNextPage
-              }
-              nodes {
-                conclusion
-                workflowRun {
-                  databaseId
-                  event
-                  url
-                  workflow {
-                    name
-                  }
-                }
-              }
-            }
+            ...CommitCheckSuites
             statusCheckRollup {
+              state
               contexts(first: 100) {
                 pageInfo {
                   hasNextPage
@@ -340,63 +302,6 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
               }
             }
           }
-        }
-      }
-    }
-  }
-}
-
-fragment QueueCheckCommit on Commit {
-  oid
-  committedDate
-  parents(first: 100) {
-    nodes {
-      oid
-    }
-  }
-  statusCheckRollup {
-    contexts(first: 100) {
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      nodes {
-        __typename
-        ... on CheckRun {
-          id
-          name
-          status
-          conclusion
-          detailsUrl
-          completedAt
-          startedAt
-          title
-          summary
-          annotations(first: 1) {
-            nodes {
-              message
-            }
-          }
-          checkSuite {
-            createdAt
-            updatedAt
-            workflowRun {
-              event
-              createdAt
-              updatedAt
-              workflow {
-                name
-                databaseId
-              }
-            }
-          }
-        }
-        ... on StatusContext {
-          context
-          state
-          createdAt
-          targetUrl
-          description
         }
       }
     }

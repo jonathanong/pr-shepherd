@@ -19,7 +19,7 @@ interface RawCheckCommit {
   oid: string;
   committedDate?: string;
   parents?: { nodes: Array<{ oid: string }> };
-  statusCheckRollup: {
+  statusCheckRollup?: {
     contexts: {
       pageInfo: { hasNextPage: boolean; endCursor: string | null };
       nodes: Array<RawContextNode | null>;
@@ -73,7 +73,7 @@ interface RawRuleParameters {
 
 export interface RawBaseRef {
   branchProtectionRule: RawBranchProtectionRule | null;
-  rules: { nodes: RawRepositoryRule[] } | null;
+  rules: { pageInfo?: { hasNextPage: boolean }; nodes: RawRepositoryRule[] } | null;
 }
 
 export interface RawPrMergeFields {

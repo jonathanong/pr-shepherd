@@ -2,6 +2,11 @@
 import { vi, beforeEach } from "vitest";
 
 vi.mock("../../src/github/batch.mts", () => ({ fetchPrBatch: vi.fn() }));
+vi.mock("../../src/state/pr-fingerprint.mts", () => ({
+  loadPrFingerprint: vi.fn().mockResolvedValue(null),
+  storePrFingerprint: vi.fn().mockResolvedValue(undefined),
+  fingerprintInputDigest: vi.fn().mockReturnValue("digest"),
+}));
 vi.mock("../../src/github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
@@ -43,6 +48,7 @@ import {
   autoMinimizeComments,
 } from "../../src/comments/resolve.mts";
 import type { BatchPrData, ClassifiedCheck, ReviewThread, PrComment } from "../../src/types.mts";
+import { testFingerprint } from "../github/fingerprint-fixture.mts";
 
 const mockFetchPrBatch = vi.mocked(fetchPrBatch);
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
@@ -189,7 +195,10 @@ export function registerHooks(): void {
   beforeEach(() => {
     vi.clearAllMocks();
     mockLoadConfig.mockReturnValue(defaultConfig());
-    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData() });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData(),
+      fingerprint: testFingerprint({ reviewDecision: "APPROVED" }),
+    });
     mockGetMergeableState.mockResolvedValue({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" });
     mockFetchStartupFailureChecks.mockResolvedValue([]);
     mockFetchCheckRunAnnotations.mockResolvedValue([]);

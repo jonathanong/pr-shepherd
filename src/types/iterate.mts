@@ -66,6 +66,7 @@ export interface IterateResultBase {
   mergeQueue?: import("./merge-queue.mts").MergeQueueReport;
   apiUsage?: ApiUsage;
   quotaWarning?: GraphqlQuotaWarning;
+  fingerprintReused?: true;
 }
 
 interface IterateResultWait extends IterateResultBase {
@@ -180,6 +181,14 @@ export interface IterateCommandOptions extends GlobalOptions {
    * only by `runPollCore`; excluded from the public `IterateInput` in api.mts.
    */
   persistSeen?: boolean;
+  /**
+   * Internal. `true` allows fingerprint reuse of a previous WAIT-shaped report.
+   * Poll sets this only for internal WAIT/MARK_READY continuation ticks — never the
+   * tick returned to the caller, never FIX_CODE debounce, never single-tick iterate.
+   * Writes still happen after a full fetch so the next poll can skip. Excluded from
+   * the public `IterateInput` in api.mts.
+   */
+  fingerprintCache?: boolean;
   /** Shepherd through readiness and emit the exact merge/queue command when ready. */
   merge?: boolean;
   /**

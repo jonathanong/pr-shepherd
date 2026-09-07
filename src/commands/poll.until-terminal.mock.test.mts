@@ -12,9 +12,7 @@ registerPollHooks();
 
 describe("runPoll — until-terminal mode", () => {
   it("stops on MARK_READY without --until-terminal", async () => {
-    mockRunIterate
-      .mockResolvedValueOnce(makeMarkReadyResult())
-      .mockResolvedValue(makeCancelResult());
+    mockRunIterate.mockResolvedValue(makeMarkReadyResult());
 
     const result = await runPoll({
       prNumber: 42,
@@ -97,7 +95,7 @@ describe("runPoll — until-terminal mode", () => {
       pollIntervalMinutes: 5,
       pollTimeoutMinutes: 10,
     };
-    mockRunIterate.mockResolvedValueOnce(makeWaitResult({ quotaWarning }));
+    mockRunIterate.mockResolvedValue(makeWaitResult({ quotaWarning }));
 
     const result = await runPoll({
       prNumber: 42,
@@ -125,7 +123,7 @@ describe("runPoll — until-terminal mode", () => {
       pollIntervalMinutes: 2,
       pollTimeoutMinutes: 4,
     };
-    mockRunIterate.mockResolvedValueOnce({ ...makeMarkReadyResult(), quotaWarning });
+    mockRunIterate.mockResolvedValue({ ...makeMarkReadyResult(), quotaWarning });
 
     const result = await runPoll({
       prNumber: 42,
@@ -138,5 +136,62 @@ describe("runPoll — until-terminal mode", () => {
     expect(mockRunIterate).toHaveBeenCalledTimes(1);
     expect(result.action).toBe("mark_ready");
     expect(result.quotaWarning).toEqual(quotaWarning);
+  });
+
+  it("strips quota warnings from a reused cancel after refresh", async () => {
+    const quotaWarning = {
+      resource: "graphql" as const,
+      thresholdPercent: 20,
+      remaining: 900,
+      limit: 5000,
+      resetAt: 1_700_000_000,
+      pollIntervalMinutes: 5,
+      pollTimeoutMinutes: 10,
+    };
+    mockRunIterate
+      .mockResolvedValueOnce({
+        ...makeCancelResult(),
+        fingerprintReused: true as const,
+        quotaWarning,
+      })
+      .mockResolvedValue(makeCancelResult());
+    const result = await runPoll({
+      prNumber: 42,
+      format: "text",
+      intervalSeconds: 30,
+      timeoutSeconds: 300,
+      untilTerminal: true,
+    });
+    expect(result.action).toBe("cancel");
+    expect(result.quotaWarning).toBeUndefined();
+    expect(mockRunIterate).toHaveBeenCalledTimes(2);
+  });
+
+  it("reattaches a pending quota warning after refreshing a reused WAIT", async () => {
+    const quotaWarning = {
+      resource: "graphql" as const,
+      thresholdPercent: 20,
+      remaining: 900,
+      limit: 5000,
+      resetAt: 1_700_000_000,
+      pollIntervalMinutes: 5,
+      pollTimeoutMinutes: 10,
+    };
+    mockRunIterate
+      .mockResolvedValueOnce({
+        ...makeWaitResult({ quotaWarning }),
+        fingerprintReused: true as const,
+      })
+      .mockResolvedValue(makeWaitResult());
+    const result = await runPoll({
+      prNumber: 42,
+      format: "text",
+      intervalSeconds: 30,
+      timeoutSeconds: 300,
+      untilTerminal: true,
+    });
+    expect(result.action).toBe("wait");
+    expect(result.quotaWarning).toEqual(quotaWarning);
+    expect(mockRunIterate.mock.calls[1]?.[0]).toMatchObject({ fingerprintCache: false });
   });
 });

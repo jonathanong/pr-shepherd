@@ -1,0 +1,49 @@
+fragment PrMergePolicy on PullRequest {
+  isMergeQueueEnabled
+  baseRef {
+    branchProtectionRule {
+      requiresApprovingReviews
+      requiredApprovingReviewCount
+      requiresConversationResolution
+      requiresCodeOwnerReviews
+      requireLastPushApproval
+      requiresCommitSignatures
+      requiresLinearHistory
+      requiresStatusChecks
+      requiredStatusCheckContexts
+      requiresStrictStatusChecks
+      requiresDeployments
+      requiredDeploymentEnvironments
+    }
+    rules(first: 100) {
+      pageInfo {
+        hasNextPage
+      }
+      nodes {
+        type
+        parameters {
+          ... on PullRequestParameters {
+            requiredApprovingReviewCount
+            requiredReviewThreadResolution
+            requireCodeOwnerReview
+            requireLastPushApproval
+          }
+          ... on RequiredStatusChecksParameters {
+            strictRequiredStatusChecksPolicy
+            requiredStatusChecks {
+              context
+            }
+          }
+          ... on RequiredDeploymentsParameters {
+            requiredDeploymentEnvironments
+          }
+          ... on CodeScanningParameters {
+            codeScanningTools {
+              tool
+            }
+          }
+        }
+      }
+    }
+  }
+}

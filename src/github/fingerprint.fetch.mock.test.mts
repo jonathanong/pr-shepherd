@@ -1,0 +1,136 @@
+import { describe, expect, it } from "vitest";
+import {
+  gqlOk,
+  mockFetch,
+  registerClientHooks,
+} from "../../test-helpers/github/client.test-support.mts";
+import { fetchPrFingerprint } from "./fingerprint.mts";
+import { EMPTY_BRANCH_RULES } from "./batch-parsers-rules.mts";
+import { EXIT } from "../exit-codes.mts";
+
+const emptyMergePolicy = JSON.stringify({
+  isMergeQueueEnabled: false,
+  rules: EMPTY_BRANCH_RULES,
+});
+
+registerClientHooks();
+
+const pullRequest = {
+  updatedAt: "2026-09-06T00:00:00Z",
+  state: "OPEN",
+  isDraft: false,
+  viewerCanUpdate: true,
+  headRefOid: "abc123",
+  mergeable: "MERGEABLE",
+  mergeStateStatus: "CLEAN",
+  reviewDecision: null,
+  isInMergeQueue: false,
+  isMergeQueueEnabled: false,
+  baseRef: null,
+  comments: { totalCount: 2, nodes: [{ id: "c2", updatedAt: "2026-09-06T01:00:00Z" }] },
+  reviewThreads: { totalCount: 1, nodes: [{ id: "t1" }] },
+  reviews: { totalCount: 3, nodes: [{ id: "r3", updatedAt: "2026-09-06T01:00:00Z" }] },
+  commits: {
+    nodes: [
+      {
+        commit: {
+          oid: "abc123",
+          statusCheckRollup: { state: "SUCCESS" },
+          checkSuites: { pageInfo: { hasNextPage: false }, nodes: [] },
+        },
+      },
+    ],
+  },
+};
+
+describe("fetchPrFingerprint", () => {
+  it("maps the cheap preflight query into a comparable fingerprint", async () => {
+    mockFetch.mockResolvedValue(
+      gqlOk({ viewer: { login: "alice" }, repository: { viewerPermission: "ADMIN", pullRequest } }),
+    );
+    await expect(fetchPrFingerprint(42, { owner: "owner", name: "repo" })).resolves.toEqual({
+      headRefOid: "abc123",
+      updatedAt: "2026-09-06T00:00:00Z",
+      state: "OPEN",
+      isDraft: false,
+      mergeable: "MERGEABLE",
+      mergeStateStatus: "CLEAN",
+      reviewDecision: null,
+      isInMergeQueue: false,
+      isMergeQueueEnabled: false,
+      mergePolicy: emptyMergePolicy,
+      commentCount: 2,
+      commentRevisions: "c2:2026-09-06T01:00:00Z",
+      threadCount: 1,
+      reviewCount: 3,
+      reviewRevisions: "r3:2026-09-06T01:00:00Z",
+      latestCommentId: "c2",
+      latestThreadId: "t1",
+      latestReviewId: "r3",
+      checkRollupState: "SUCCESS",
+      checkSuiteConclusions: "",
+      checkSuitesComplete: true,
+      viewerCanUpdate: true,
+      viewerPermission: "ADMIN",
+      viewerLogin: "alice",
+      stackKey: "",
+      threadCommentRevisions: "t1::",
+      rulesComplete: true,
+      hasMultiCommentThreads: false,
+    });
+  });
+
+  it("maps empty connections and startup-failure suites", async () => {
+    mockFetch.mockResolvedValue(
+      gqlOk({
+        repository: {
+          viewerPermission: "WRITE",
+          pullRequest: {
+            ...pullRequest,
+            viewerCanUpdate: false,
+            comments: { totalCount: 0, nodes: [] },
+            reviewThreads: { totalCount: 0, nodes: [] },
+            reviews: { totalCount: 0, nodes: [] },
+            commits: {
+              nodes: [
+                {
+                  commit: {
+                    oid: "abc123",
+                    statusCheckRollup: null,
+                    checkSuites: {
+                      pageInfo: { hasNextPage: false },
+                      nodes: [{ id: "CS_1", conclusion: "STARTUP_FAILURE" }],
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      }),
+    );
+    await expect(fetchPrFingerprint(7, { owner: "owner", name: "repo" })).resolves.toMatchObject({
+      latestCommentId: null,
+      latestThreadId: null,
+      latestReviewId: null,
+      checkSuiteConclusions: "CS_1:STARTUP_FAILURE",
+      checkSuitesComplete: true,
+      viewerCanUpdate: false,
+      viewerPermission: "WRITE",
+    });
+  });
+
+  it("throws when the repository is missing", async () => {
+    mockFetch.mockResolvedValue(gqlOk({ repository: null }));
+    await expect(fetchPrFingerprint(42, { owner: "owner", name: "repo" })).rejects.toThrow(
+      "did not include repository owner/repo",
+    );
+  });
+
+  it("throws when the pull request is missing", async () => {
+    mockFetch.mockResolvedValue(gqlOk({ repository: { pullRequest: null } }));
+    await expect(fetchPrFingerprint(42, { owner: "owner", name: "repo" })).rejects.toMatchObject({
+      exitCode: EXIT.UNAVAILABLE,
+    });
+  });
+});

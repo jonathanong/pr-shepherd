@@ -1,7 +1,9 @@
+/* eslint-disable max-lines */
 import type { CommentAuthorAssociation } from "../types/github.mts";
 import type { RawPrMergeFields } from "./batch-raw-rules.mts";
 
 export interface RawBatchResponse {
+  viewer?: { login: string | null } | null;
   repository: {
     viewerPermission: string | null;
     viewerCanAdminister: boolean;
@@ -12,6 +14,7 @@ export interface RawBatchResponse {
 export interface RawPr extends RawPrMergeFields {
   id: string;
   number: number;
+  updatedAt?: string;
   state: string;
   isDraft: boolean;
   viewerDidAuthor: boolean;
@@ -38,10 +41,12 @@ export interface RawPr extends RawPrMergeFields {
     }>;
   };
   reviewThreads: {
+    totalCount?: number;
     pageInfo: { hasPreviousPage: boolean; startCursor: string | null };
     nodes: RawThread[];
   };
   comments: {
+    totalCount?: number;
     pageInfo: { hasPreviousPage: boolean; startCursor: string | null };
     nodes: RawComment[];
   };
@@ -55,6 +60,7 @@ export interface RawPr extends RawPrMergeFields {
   };
   allReviews?: {
     totalCount: number;
+    nodes?: Array<{ id: string; updatedAt?: string }>;
   };
   approvedReviews: {
     pageInfo: { hasPreviousPage: boolean; startCursor: string | null };
@@ -68,6 +74,7 @@ export interface RawPr extends RawPrMergeFields {
         committedDate?: string;
         checkSuites?: RawCheckSuites;
         statusCheckRollup: {
+          state?: string | null;
           contexts: {
             pageInfo: { hasNextPage: boolean; endCursor: string | null };
             nodes: Array<RawContextNode | null>;
@@ -81,6 +88,7 @@ export interface RawPr extends RawPrMergeFields {
 interface RawCheckSuites {
   pageInfo: { hasNextPage: boolean };
   nodes: Array<{
+    id?: string;
     conclusion: string | null;
     workflowRun: {
       databaseId: number | null;
@@ -109,6 +117,7 @@ export interface RawThreadComment {
   line: number | null;
   startLine: number | null;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface RawThread {
@@ -145,6 +154,7 @@ export interface RawComment {
   author: RawAuthor | null;
   body: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface RawReview {

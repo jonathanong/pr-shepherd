@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, expect, it } from "vitest";
 import {
   makeRawPr,
@@ -39,6 +40,46 @@ function queuedPr(pageInfo: { hasNextPage: boolean; endCursor: string | null }) 
 }
 
 describe("fetchPrBatch — merge queue check pagination", () => {
+  it("loads queue check contexts when the batch omits the rollup", async () => {
+    mockGraphqlWithRateLimit.mockResolvedValue(
+      makeResponse(
+        makeRawPr({
+          isInMergeQueue: true,
+          mergeQueueEntry: {
+            position: 1,
+            state: "AWAITING_CHECKS",
+            estimatedTimeToMerge: null,
+            headCommit: { oid: "queue123" },
+          },
+        }),
+      ),
+    );
+    mockGraphql.mockResolvedValue({
+      data: {
+        repository: {
+          object: {
+            __typename: "Commit",
+            oid: "queue123",
+            statusCheckRollup: {
+              contexts: {
+                pageInfo: { hasNextPage: false, endCursor: null },
+                nodes: [check("queue-ci", "FAILURE")],
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.mergeQueueChecks?.map((item) => item.name)).toEqual(["queue-ci"]);
+    expect(mockGraphql).toHaveBeenCalledWith(expect.any(String), {
+      owner: "owner",
+      repo: "repo",
+      oid: "queue123",
+    });
+  });
+
   it("fetches failures after the first 100 queue contexts before classifying them", async () => {
     const pr = queuedPr({ hasNextPage: true, endCursor: "queue-cursor-1" });
     mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
@@ -67,6 +108,53 @@ describe("fetchPrBatch — merge queue check pagination", () => {
       repo: "repo",
       oid: "queue123",
       cursor: "queue-cursor-1",
+    });
+  });
+
+  it("follows a later queue page when the follow-up still has a next cursor", async () => {
+    const pr = queuedPr({ hasNextPage: true, endCursor: "queue-cursor-1" });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+    mockGraphql
+      .mockResolvedValueOnce({
+        data: {
+          repository: {
+            object: {
+              __typename: "Commit",
+              oid: "queue123",
+              statusCheckRollup: {
+                contexts: {
+                  pageInfo: { hasNextPage: true, endCursor: "queue-cursor-2" },
+                  nodes: [check("second", "SUCCESS")],
+                },
+              },
+            },
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          repository: {
+            object: {
+              __typename: "Commit",
+              oid: "queue123",
+              statusCheckRollup: {
+                contexts: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [check("third", "SUCCESS")],
+                },
+              },
+            },
+          },
+        },
+      });
+
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.mergeQueueChecks?.map((item) => item.name)).toEqual(["first", "second", "third"]);
+    expect(mockGraphql).toHaveBeenNthCalledWith(2, expect.any(String), {
+      owner: "owner",
+      repo: "repo",
+      oid: "queue123",
+      cursor: "queue-cursor-2",
     });
   });
 
@@ -148,6 +236,146 @@ describe("fetchPrBatch — merge queue check pagination", () => {
     mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
     const { data } = await fetchPrBatch(42, REPO);
     expect(data.latestMergeQueueRemoval).toBeNull();
+    expect(mockGraphql).not.toHaveBeenCalled();
+  });
+
+  it("treats a disappeared initial queue commit as empty instead of throwing", async () => {
+    mockGraphqlWithRateLimit.mockResolvedValue(
+      makeResponse(
+        makeRawPr({
+          isInMergeQueue: true,
+          mergeQueueEntry: {
+            position: 1,
+            state: "AWAITING_CHECKS",
+            estimatedTimeToMerge: null,
+            headCommit: { oid: "queue123" },
+          },
+        }),
+      ),
+    );
+    mockGraphql.mockResolvedValue({
+      data: { repository: { object: { __typename: "Commit", oid: "other" } } },
+    });
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.mergeQueueChecks).toBeUndefined();
+  });
+
+  it("treats a null rollup on the initial queue follow-up as empty", async () => {
+    mockGraphqlWithRateLimit.mockResolvedValue(
+      makeResponse(
+        makeRawPr({
+          isInMergeQueue: true,
+          mergeQueueEntry: {
+            position: 1,
+            state: "AWAITING_CHECKS",
+            estimatedTimeToMerge: null,
+            headCommit: { oid: "queue123" },
+          },
+        }),
+      ),
+    );
+    mockGraphql.mockResolvedValue({
+      data: {
+        repository: {
+          object: { __typename: "Commit", oid: "queue123", statusCheckRollup: null },
+        },
+      },
+    });
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.mergeQueueChecks).toBeUndefined();
+  });
+
+  it("skips queue-check hydration when mergeQueueEntry has no head commit", async () => {
+    mockGraphqlWithRateLimit.mockResolvedValue(
+      makeResponse(
+        makeRawPr({
+          isInMergeQueue: true,
+          mergeQueueEntry: {
+            position: 1,
+            state: "QUEUED",
+            estimatedTimeToMerge: null,
+          },
+        }),
+      ),
+    );
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.mergeQueueChecks).toBeUndefined();
+    expect(mockGraphql).not.toHaveBeenCalled();
+  });
+
+  it("hydrates a current removal commit when it differs from the active queue head", async () => {
+    mockGraphqlWithRateLimit.mockResolvedValue(
+      makeResponse(
+        makeRawPr({
+          isInMergeQueue: true,
+          mergeQueueAdditions: { nodes: [{ createdAt: "2026-08-27T12:00:00Z" }] },
+          mergeQueueRemovals: {
+            nodes: [
+              {
+                reason: "CI_FAILURE",
+                createdAt: "2026-08-27T13:00:00Z",
+                beforeCommit: {
+                  oid: "removed-queue",
+                  parents: { nodes: [{ oid: "abc123" }] },
+                },
+              },
+            ],
+          },
+          mergeQueueEntry: {
+            position: 1,
+            state: "AWAITING_CHECKS",
+            estimatedTimeToMerge: null,
+            headCommit: { oid: "queue123" },
+          },
+        }),
+      ),
+    );
+    mockGraphql.mockImplementation(async (_doc, vars: Record<string, unknown> = {}) => ({
+      data: {
+        repository: {
+          object: {
+            __typename: "Commit",
+            oid: vars["oid"],
+            statusCheckRollup: {
+              contexts: {
+                pageInfo: { hasNextPage: false, endCursor: null },
+                nodes: [
+                  check(vars["oid"] === "removed-queue" ? "removed-ci" : "queue-ci", "FAILURE"),
+                ],
+              },
+            },
+          },
+        },
+      },
+    }));
+
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.mergeQueueChecks?.map((item) => item.name)).toEqual(["queue-ci"]);
+    expect(data.removedMergeQueueChecks?.map((item) => item.name)).toEqual(["removed-ci"]);
+    expect(mockGraphql).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not hydrate a removal whose parents no longer contain HEAD", async () => {
+    mockGraphqlWithRateLimit.mockResolvedValue(
+      makeResponse(
+        makeRawPr({
+          mergeQueueRemovals: {
+            nodes: [
+              {
+                reason: "MANUALLY_DEQUEUED",
+                createdAt: "2026-08-27T13:00:00Z",
+                beforeCommit: {
+                  oid: "removed-queue",
+                  parents: { nodes: [{ oid: "old-head" }] },
+                },
+              },
+            ],
+          },
+        }),
+      ),
+    );
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.removedMergeQueueChecks).toBeUndefined();
     expect(mockGraphql).not.toHaveBeenCalled();
   });
 });

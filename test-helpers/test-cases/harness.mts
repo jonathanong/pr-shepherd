@@ -11,6 +11,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import builtinConfig from "../../src/config.json" with { type: "json" };
+import { testFingerprint } from "../github/fingerprint-fixture.mts";
 
 // ---------------------------------------------------------------------------
 // Global stubs (evaluated before imports)
@@ -37,6 +38,11 @@ vi.mock("node:child_process", () => ({
 }));
 
 vi.mock("../../src/github/batch.mts", () => ({ fetchPrBatch: vi.fn() }));
+vi.mock("../../src/state/pr-fingerprint.mts", () => ({
+  loadPrFingerprint: vi.fn().mockResolvedValue(null),
+  storePrFingerprint: vi.fn().mockResolvedValue(undefined),
+  fingerprintInputDigest: vi.fn().mockReturnValue("digest"),
+}));
 vi.mock("../../src/github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
@@ -337,7 +343,12 @@ export function applyFixture(fixture: Fixture): void {
       annotationCheckIds,
     );
   }
-  mockFetchPrBatch.mockResolvedValue({ data: batchData });
+  mockFetchPrBatch.mockResolvedValue({
+    data: batchData,
+    fingerprint: testFingerprint({
+      headRefOid: typeof batchData.headRefOid === "string" ? batchData.headRefOid : "abc123",
+    }),
+  });
 
   const mergeableFallback = fixture.mergeableFallback ?? {
     mergeable: "MERGEABLE",
