@@ -29,7 +29,7 @@ const pullRequest = {
   baseRef: null,
   comments: { totalCount: 2, nodes: [{ id: "c2", updatedAt: "2026-09-06T01:00:00Z" }] },
   reviewThreads: { totalCount: 1, nodes: [{ id: "t1" }] },
-  reviews: { totalCount: 3, nodes: [{ id: "r3" }] },
+  reviews: { totalCount: 3, nodes: [{ id: "r3", updatedAt: "2026-09-06T01:00:00Z" }] },
   commits: {
     nodes: [
       {
@@ -63,6 +63,7 @@ describe("fetchPrFingerprint", () => {
       commentRevisions: "c2:2026-09-06T01:00:00Z",
       threadCount: 1,
       reviewCount: 3,
+      reviewRevisions: "r3:2026-09-06T01:00:00Z",
       latestCommentId: "c2",
       latestThreadId: "t1",
       latestReviewId: "r3",

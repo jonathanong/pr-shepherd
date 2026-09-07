@@ -3,7 +3,6 @@ import { GitHubRequestError } from "../github/errors.mts";
 import { isRateLimitMessage } from "../comments/rate-limit.mts";
 import type { GraphqlApiUsage } from "../types.mts";
 
-const GRAPHQL_RETRY_AFTER_CAP_MS = 120_000;
 const GRAPHQL_RETRY_AFTER_DEFAULT_MS = 60_000;
 
 /** Sleep at least `--interval`, and at least the tightest crossed quota band. */
@@ -37,5 +36,5 @@ export function pollGraphQlRetryAfterMs(err: unknown): number | null {
     (err.graphqlErrors?.some((error) => isRateLimitMessage(error.message)) ?? false);
   if (!retryable) return null;
   if (err.retryAfterSeconds === undefined) return GRAPHQL_RETRY_AFTER_DEFAULT_MS;
-  return Math.min(Math.max(err.retryAfterSeconds, 0) * 1000, GRAPHQL_RETRY_AFTER_CAP_MS);
+  return Math.max(err.retryAfterSeconds, 0) * 1000;
 }

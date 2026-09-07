@@ -220,10 +220,11 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
           createdAt
         }
       }
-      allReviews: reviews(last: 1) {
+      allReviews: reviews(last: 100) {
         totalCount
         nodes {
           id
+          updatedAt
         }
       }
       approvedReviews: reviews(states: APPROVED, last: 50) {

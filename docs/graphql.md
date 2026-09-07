@@ -128,7 +128,7 @@ Fingerprint reuse is **opt-in and internal to poll**. The tick returned to the c
 Fingerprint skip is also refused — the tick runs `BatchPr` — when any of these hold:
 
 - The cached report is not WAIT-shaped (first-look items, failing checks, actionable check annotations, visible approvals, merge-queue membership, and similar).
-- More than 100 PR comments exist, so comment `updatedAt` revisions on `comments(last: 100)` cannot cover an older in-place edit.
+- More than 100 PR comments or reviews exist, so `updatedAt` revisions on `last: 100` cannot cover an older in-place edit.
 - The live `checkSuites(first: 50)` page is truncated (`hasNextPage`), so a later startup-failure suite would be invisible.
 - Merge policy cannot be read (`mergePolicy` empty) and the cached report is `READY`.
 - REST mergeability differs from the cached report. GraphQL can stay `UNKNOWN` after REST returns `CLEAN`; REST `BEHIND` must not keep a cached `READY` ready-delay.
@@ -183,7 +183,7 @@ Fingerprint skip is also refused — the tick runs `BatchPr` — when any of the
 - `watch.graphqlQuotaWarnings` (default 30% → 2m, 20% → 5m, 10% → 10m) emits a one-shot-per-worktree-per-window `quotaWarning` on non-terminal results. The skill / MCP caller is told to slow down and to prefer REST `gh` for incidental work.
 - The **poll dispatcher** (`pr-shepherd [PR]`, including `--until-terminal`) also **applies** those bands: `WAIT` / `MARK_READY` sleeps use `max(--interval, band interval)` from the latest `apiUsage.graphql` remaining percent, every tick, even after the one-shot warning has already been claimed. Single-tick `iterate` and MCP `iterate` stay advisory — those callers own recurrence.
 - Unchanged ticks skip `BatchPr` when the fingerprint matches, CheckSuites are complete, merge policy is present for `READY` reports, and REST mergeability agrees with the cached report.
-- `--until-terminal` retries a tick once after a GraphQL 429 / secondary-limit `Retry-After` (capped at 2 minutes) instead of exiting 75 immediately. Single-tick iterate still fails with 75.
+- `--until-terminal` retries a tick once after a GraphQL 429 / secondary-limit `Retry-After` instead of exiting 75 immediately. An explicit `Retry-After` header is honored in full. Single-tick iterate still fails with 75.
 
 ### How to read spend
 

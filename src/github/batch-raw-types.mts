@@ -60,7 +60,7 @@ export interface RawPr extends RawPrMergeFields {
   };
   allReviews?: {
     totalCount: number;
-    nodes?: Array<{ id: string }>;
+    nodes?: Array<{ id: string; updatedAt?: string }>;
   };
   approvedReviews: {
     pageInfo: { hasPreviousPage: boolean; startCursor: string | null };

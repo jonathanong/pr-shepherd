@@ -54,7 +54,7 @@ describe("pollGraphQlRetryAfterMs", () => {
     ).toBeNull();
   });
 
-  it("honors Retry-After and caps at two minutes", () => {
+  it("honors Retry-After without shortening an explicit delay", () => {
     expect(
       pollGraphQlRetryAfterMs(
         new GitHubRequestError("secondary rate limit", { status: 403, retryAfterSeconds: 15 }),
@@ -64,7 +64,7 @@ describe("pollGraphQlRetryAfterMs", () => {
       pollGraphQlRetryAfterMs(
         new GitHubRequestError("secondary rate limit", { status: 403, retryAfterSeconds: 500 }),
       ),
-    ).toBe(120_000);
+    ).toBe(500_000);
   });
 
   it("defaults to 60s for a 429 without Retry-After", () => {

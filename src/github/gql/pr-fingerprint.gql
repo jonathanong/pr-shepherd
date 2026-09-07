@@ -37,10 +37,11 @@ query PrFingerprint($owner: String!, $repo: String!, $pr: Int!) {
           id
         }
       }
-      reviews(last: 1) {
+      reviews(last: 100) {
         totalCount
         nodes {
           id
+          updatedAt
         }
       }
       commits(last: 1) {

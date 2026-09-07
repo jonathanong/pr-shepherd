@@ -89,6 +89,13 @@ describe("tryReuseFingerprintReport", () => {
     mockFetch.mockResolvedValue(FP);
   });
 
+  it("does not skip when more than 100 reviews exist", async () => {
+    const report = waitReport();
+    mockLoad.mockResolvedValue(stored(report));
+    mockFetch.mockResolvedValueOnce(testFingerprint({ reviewCount: 101 }));
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+  });
+
   it("does not skip when more than 100 comments exist", async () => {
     const report = waitReport();
     mockLoad.mockResolvedValue(stored(report));

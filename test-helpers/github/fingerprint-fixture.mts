@@ -43,6 +43,7 @@ export function testFingerprint(overrides: Partial<PrFingerprint> = {}): PrFinge
     commentRevisions: "",
     threadCount: 0,
     reviewCount: 0,
+    reviewRevisions: "",
     latestCommentId: null,
     latestThreadId: null,
     latestReviewId: null,

@@ -28,6 +28,7 @@ export interface PrFingerprint {
   commentRevisions: string;
   threadCount: number;
   reviewCount: number;
+  reviewRevisions: string;
   latestCommentId: string | null;
   latestThreadId: string | null;
   latestReviewId: string | null;
@@ -75,7 +76,7 @@ interface RawFingerprintResponse {
           viewerCanUpdate: boolean;
           comments: { totalCount: number; nodes: FingerprintComment[] };
           reviewThreads: { totalCount: number; nodes: Array<{ id: string }> };
-          reviews: { totalCount: number; nodes: Array<{ id: string }> };
+          reviews: { totalCount: number; nodes: FingerprintComment[] };
           baseRef: RawBaseRef | null;
         })
       | null;
@@ -84,7 +85,7 @@ interface RawFingerprintResponse {
 
 function coreFingerprint(
   raw: FingerprintSource,
-  counts: { reviewCount: number; latestReviewId: string | null },
+  counts: { reviewCount: number; latestReviewId: string | null; reviewRevisions: string },
   viewer: { permission: string | null; login: string | null },
 ): PrFingerprint {
   return {
@@ -102,6 +103,7 @@ function coreFingerprint(
     commentRevisions: commentRevisions(raw.comments.nodes),
     threadCount: raw.reviewThreads.totalCount ?? raw.reviewThreads.nodes.length,
     reviewCount: counts.reviewCount,
+    reviewRevisions: counts.reviewRevisions,
     latestCommentId: raw.comments.nodes.at(-1)?.id ?? null,
     latestThreadId: raw.reviewThreads.nodes.at(-1)?.id ?? null,
     latestReviewId: counts.latestReviewId,
@@ -123,6 +125,7 @@ export function fingerprintFromRaw(
     {
       reviewCount: raw.allReviews?.totalCount ?? 0,
       latestReviewId: raw.allReviews?.nodes?.at(-1)?.id ?? null,
+      reviewRevisions: commentRevisions(raw.allReviews?.nodes ?? []),
     },
     { permission: viewerPermission, login: viewerLogin },
   );
@@ -144,6 +147,7 @@ export function fingerprintsEqual(left: PrFingerprint, right: PrFingerprint): bo
     left.commentRevisions === right.commentRevisions &&
     left.threadCount === right.threadCount &&
     left.reviewCount === right.reviewCount &&
+    left.reviewRevisions === right.reviewRevisions &&
     left.latestCommentId === right.latestCommentId &&
     left.latestThreadId === right.latestThreadId &&
     left.latestReviewId === right.latestReviewId &&
@@ -175,6 +179,7 @@ export async function fetchPrFingerprint(pr: number, repo: RepoInfo): Promise<Pr
     {
       reviewCount: raw.reviews.totalCount,
       latestReviewId: raw.reviews.nodes.at(-1)?.id ?? null,
+      reviewRevisions: commentRevisions(raw.reviews.nodes),
     },
     {
       permission: result.data.repository.viewerPermission,

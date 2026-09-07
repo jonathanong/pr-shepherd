@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, expect, it } from "vitest";
 import { fingerprintFromRaw, fingerprintsEqual } from "./fingerprint.mts";
 import { makeRawPr } from "../../test-helpers/github/batch-fixtures.mts";
@@ -32,6 +33,12 @@ describe("fingerprintsEqual", () => {
     expect(fingerprintsEqual(sample(), sample({ commentCount: 2, latestCommentId: "c2" }))).toBe(
       false,
     );
+  });
+
+  it("is false when a review is edited in place", () => {
+    expect(
+      fingerprintsEqual(sample(), sample({ reviewRevisions: "r1:2026-09-06T02:00:00Z" })),
+    ).toBe(false);
   });
 
   it("is false when a comment is edited in place or the viewer changes", () => {
