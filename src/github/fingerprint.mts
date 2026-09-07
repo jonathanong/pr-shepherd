@@ -5,6 +5,7 @@ import { EXIT, ShepherdError } from "../exit-codes.mts";
 import {
   commentRevisions,
   mergePolicyFingerprint,
+  stackKey,
   suiteFingerprint,
   type FingerprintComment,
   type FingerprintSuites,
@@ -38,6 +39,7 @@ export interface PrFingerprint {
   viewerCanUpdate: boolean;
   viewerPermission: string | null;
   viewerLogin: string | null;
+  stackKey: string;
 }
 
 interface FingerprintSource {
@@ -50,6 +52,8 @@ interface FingerprintSource {
   reviewDecision: string | null;
   isInMergeQueue?: boolean;
   isMergeQueueEnabled?: boolean;
+  stack?: { number: number; size: number; baseRefName: string } | null;
+  stackEntry?: { position: number } | null;
   viewerCanUpdate?: boolean;
   baseRef?: RawBaseRef | null;
   comments: { totalCount?: number; nodes: FingerprintComment[] };
@@ -112,6 +116,7 @@ function coreFingerprint(
     viewerCanUpdate: raw.viewerCanUpdate === true,
     viewerPermission: viewer.permission,
     viewerLogin: viewer.login,
+    stackKey: stackKey(raw),
   };
 }
 
@@ -156,7 +161,8 @@ export function fingerprintsEqual(left: PrFingerprint, right: PrFingerprint): bo
     left.checkSuitesComplete === right.checkSuitesComplete &&
     left.viewerCanUpdate === right.viewerCanUpdate &&
     left.viewerPermission === right.viewerPermission &&
-    left.viewerLogin === right.viewerLogin
+    left.viewerLogin === right.viewerLogin &&
+    left.stackKey === right.stackKey
   );
 }
 

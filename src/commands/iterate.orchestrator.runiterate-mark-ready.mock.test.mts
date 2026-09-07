@@ -47,6 +47,37 @@ describe("runIterate — mark_ready", () => {
     expect(graphqlCalls).toHaveLength(1);
   });
 
+  it("does not convert a draft when the READY report was fingerprint-reused", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        fingerprintReused: true,
+        mergeStatus: {
+          status: "CLEAN",
+          state: "OPEN" as const,
+          isDraft: true,
+          mergeable: "MERGEABLE",
+          reviewDecision: "APPROVED",
+          blockingBotReviewInProgress: false,
+          mergeStateStatus: "CLEAN",
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: false,
+      remainingSeconds: 0,
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("mark_ready");
+    if (result.action === "mark_ready") expect(result.markedReady).toBe(false);
+    const graphqlCalls = (mockFetch.mock.calls as Array<[string, RequestInit]>).filter(([url]) =>
+      url.endsWith("/graphql"),
+    );
+    expect(graphqlCalls).toHaveLength(0);
+  });
+
   it("does NOT mark ready when blockingBotReviewInProgress", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({

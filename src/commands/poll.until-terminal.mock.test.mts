@@ -21,8 +21,7 @@ describe("runPoll — until-terminal mode", () => {
       timeoutSeconds: 300,
     });
 
-    expect(mockRunIterate).toHaveBeenCalledTimes(2);
-    expect(mockRunIterate.mock.calls[1]?.[0]).toMatchObject({ fingerprintCache: false });
+    expect(mockRunIterate).toHaveBeenCalledTimes(1);
     expect(result.action).toBe("mark_ready");
   });
 
@@ -106,8 +105,7 @@ describe("runPoll — until-terminal mode", () => {
       untilTerminal: true,
     });
 
-    expect(mockRunIterate).toHaveBeenCalledTimes(2);
-    expect(mockRunIterate.mock.calls[1]?.[0]).toMatchObject({ fingerprintCache: false });
+    expect(mockRunIterate).toHaveBeenCalledTimes(1);
     expect(mockRunIterate).toHaveBeenCalledWith(
       expect.objectContaining({ deferQuotaWarning: false }),
     );
@@ -135,7 +133,7 @@ describe("runPoll — until-terminal mode", () => {
       untilTerminal: true,
     });
 
-    expect(mockRunIterate).toHaveBeenCalledTimes(2);
+    expect(mockRunIterate).toHaveBeenCalledTimes(1);
     expect(result.action).toBe("mark_ready");
     expect(result.quotaWarning).toEqual(quotaWarning);
   });

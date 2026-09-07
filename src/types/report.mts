@@ -44,6 +44,8 @@ export interface ShepherdReport {
   nodeId: string;
   /** GitHub PR head OID from the same batch used to decide the action. */
   headSha?: string;
+  /** Internal. True when this report was reused from the fingerprint cache. */
+  fingerprintReused?: true;
   repo: string;
   /** Raw GitHub viewer fields used to decide which remote actions may be offered. */
   viewerAuthorization?: ViewerAuthorization;

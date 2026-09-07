@@ -6,6 +6,7 @@ import { hasCheckDrivenActionableWork } from "./check-annotations.mts";
 import type { ShepherdReport } from "../types.mts";
 
 function reportAllowsFingerprintSkip(report: ShepherdReport): boolean {
+  if (report.status === "READY") return false;
   if (report.mergeStatus.state !== "OPEN") return false;
   if (report.mergeQueue?.inQueue === true) return false;
   return (
@@ -51,7 +52,7 @@ export async function tryReuseFingerprintReport(
   if (!(await cachedReportSurvivesMergeabilityRefresh(prNumber, repo, cached.report))) {
     return null;
   }
-  return cached.report;
+  return { ...cached.report, fingerprintReused: true };
 }
 
 async function cachedReportSurvivesMergeabilityRefresh(

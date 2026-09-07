@@ -48,6 +48,10 @@ describe("fingerprintsEqual", () => {
     expect(fingerprintsEqual(sample(), sample({ viewerLogin: "other" }))).toBe(false);
   });
 
+  it("is false when GitHub stack membership changes", () => {
+    expect(fingerprintsEqual(sample(), sample({ stackKey: "7:3:2:stack/7/1" }))).toBe(false);
+  });
+
   it("is false when merge-queue enablement or policy changes", () => {
     expect(fingerprintsEqual(sample(), sample({ isMergeQueueEnabled: true }))).toBe(false);
     expect(fingerprintsEqual(sample(), sample({ mergePolicy: '{"required":1}' }))).toBe(false);

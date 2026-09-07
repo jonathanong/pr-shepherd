@@ -127,6 +127,7 @@ Fingerprint reuse is **opt-in and internal to poll**. The tick returned to the c
 
 Fingerprint skip is also refused — the tick runs `BatchPr` — when any of these hold:
 
+- The cached report is `READY` (mark-ready / merge / ready-delay expiry must see a live snapshot).
 - The cached report is not WAIT-shaped (first-look items, failing checks, actionable check annotations, visible approvals, merge-queue membership, and similar).
 - More than 100 PR comments or reviews exist, so `updatedAt` revisions on `last: 100` cannot cover an older in-place edit.
 - The live `checkSuites(first: 50)` page is truncated (`hasNextPage`), so a later startup-failure suite would be invisible.

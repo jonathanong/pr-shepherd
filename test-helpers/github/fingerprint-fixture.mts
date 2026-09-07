@@ -53,6 +53,7 @@ export function testFingerprint(overrides: Partial<PrFingerprint> = {}): PrFinge
     viewerCanUpdate: true,
     viewerPermission: "ADMIN",
     viewerLogin: "owner",
+    stackKey: "",
     ...overrides,
   };
 }

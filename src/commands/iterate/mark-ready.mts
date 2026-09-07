@@ -9,6 +9,14 @@ export async function markReadyIfAuthorized(
   report: ShepherdReport,
 ): Promise<IterateResult | null> {
   if (!enabled) return null;
+  if (report.fingerprintReused === true) {
+    return {
+      ...base,
+      action: "mark_ready",
+      markedReady: false,
+      log: `READY: PR #${report.pr} is ready to mark; refresh required before converting draft`,
+    };
+  }
 
   if (report.viewerAuthorization?.viewerCanUpdate === true) {
     await graphql(MARK_PR_READY_MUTATION, { pullRequestId: report.nodeId });

@@ -73,6 +73,7 @@ describe("fetchPrFingerprint", () => {
       viewerCanUpdate: true,
       viewerPermission: "ADMIN",
       viewerLogin: "alice",
+      stackKey: "",
     });
   });
 

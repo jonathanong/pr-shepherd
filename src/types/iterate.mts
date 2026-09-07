@@ -66,6 +66,8 @@ export interface IterateResultBase {
   mergeQueue?: import("./merge-queue.mts").MergeQueueReport;
   apiUsage?: ApiUsage;
   quotaWarning?: GraphqlQuotaWarning;
+  /** Internal. True when check reused a fingerprint-cached report. */
+  fingerprintReused?: true;
 }
 
 interface IterateResultWait extends IterateResultBase {

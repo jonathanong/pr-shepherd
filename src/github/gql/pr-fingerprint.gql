@@ -23,6 +23,14 @@ query PrFingerprint($owner: String!, $repo: String!, $pr: Int!) {
       mergeStateStatus
       reviewDecision
       isInMergeQueue
+      stack {
+        number
+        size
+        baseRefName
+      }
+      stackEntry {
+        position
+      }
       ...PrMergePolicy
       comments(last: 100) {
         totalCount

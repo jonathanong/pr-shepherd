@@ -41,3 +41,11 @@ export function mergePolicyFingerprint(raw: {
 export function commentRevisions(nodes: FingerprintComment[]): string {
   return nodes.map((node) => `${node.id}:${node.updatedAt ?? ""}`).join(",");
 }
+
+export function stackKey(raw: {
+  stack?: { number: number; size: number; baseRefName: string } | null;
+  stackEntry?: { position: number } | null;
+}): string {
+  if (!raw.stack) return "";
+  return `${raw.stack.number}:${raw.stack.size}:${raw.stackEntry?.position ?? 0}:${raw.stack.baseRefName}`;
+}

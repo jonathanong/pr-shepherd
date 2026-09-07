@@ -31,5 +31,6 @@ export function buildIterateBase(
     ...buildSuppressedCheckFields(report),
     activity: report.activity,
     mergeQueue: report.mergeQueue,
+    ...(report.fingerprintReused === true && { fingerprintReused: true as const }),
   };
 }

@@ -79,6 +79,17 @@ describe("runPoll — FIX_CODE debounce", () => {
     expect(mockRunIterate.mock.calls[0]?.[0]).toMatchObject({ fingerprintCache: false });
   });
 
+  it("refetches a fingerprint-reused WAIT before returning it", async () => {
+    mockRunIterate
+      .mockResolvedValueOnce({ ...makeWaitResult(), fingerprintReused: true as const })
+      .mockResolvedValue(makeWaitResult());
+    const result = await runPoll(pollOpts({ intervalSeconds: 60, timeoutSeconds: 10 }));
+    expect(result.action).toBe("wait");
+    expect(result.fingerprintReused).toBeUndefined();
+    expect(mockRunIterate).toHaveBeenCalledTimes(2);
+    expect(mockRunIterate.mock.calls[1]?.[0]).toMatchObject({ fingerprintCache: false });
+  });
+
   it("refetches without cache before returning the last WAIT tick", async () => {
     mockRunIterate.mockResolvedValue(makeWaitResult());
     const pollPromise = runPoll(pollOpts({ intervalSeconds: 30, timeoutSeconds: 50 }));
