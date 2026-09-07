@@ -42,6 +42,28 @@ export function commentRevisions(nodes: FingerprintComment[]): string {
   return nodes.map((node) => `${node.id}:${node.updatedAt ?? ""}`).join(",");
 }
 
+export function threadCommentRevisions(
+  nodes: Array<{
+    id: string;
+    comments?: { nodes: Array<{ id: string; updatedAt?: string }> };
+  }>,
+): string {
+  return nodes
+    .map((thread) => {
+      const last = thread.comments?.nodes.at(-1);
+      return `${thread.id}:${last?.id ?? ""}:${last?.updatedAt ?? ""}`;
+    })
+    .join(",");
+}
+
+export function rulesComplete(
+  baseRef?: {
+    rules?: { pageInfo?: { hasNextPage: boolean } } | null;
+  } | null,
+): boolean {
+  return baseRef?.rules?.pageInfo?.hasNextPage !== true;
+}
+
 export function stackKey(raw: {
   stack?: { number: number; size: number; baseRefName: string } | null;
   stackEntry?: { position: number } | null;

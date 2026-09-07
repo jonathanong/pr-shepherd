@@ -5,8 +5,10 @@ import { EXIT, ShepherdError } from "../exit-codes.mts";
 import {
   commentRevisions,
   mergePolicyFingerprint,
+  rulesComplete,
   stackKey,
   suiteFingerprint,
+  threadCommentRevisions,
   type FingerprintComment,
   type FingerprintSuites,
 } from "./fingerprint-fields.mts";
@@ -40,6 +42,8 @@ export interface PrFingerprint {
   viewerPermission: string | null;
   viewerLogin: string | null;
   stackKey: string;
+  threadCommentRevisions: string;
+  rulesComplete: boolean;
 }
 
 interface FingerprintSource {
@@ -57,7 +61,13 @@ interface FingerprintSource {
   viewerCanUpdate?: boolean;
   baseRef?: RawBaseRef | null;
   comments: { totalCount?: number; nodes: FingerprintComment[] };
-  reviewThreads: { totalCount?: number; nodes: Array<{ id: string }> };
+  reviewThreads: {
+    totalCount?: number;
+    nodes: Array<{
+      id: string;
+      comments?: { nodes: Array<{ id: string; updatedAt?: string }> };
+    }>;
+  };
   commits: {
     nodes: Array<{
       commit: {
@@ -117,6 +127,8 @@ function coreFingerprint(
     viewerPermission: viewer.permission,
     viewerLogin: viewer.login,
     stackKey: stackKey(raw),
+    threadCommentRevisions: threadCommentRevisions(raw.reviewThreads.nodes),
+    rulesComplete: rulesComplete(raw.baseRef),
   };
 }
 
@@ -137,33 +149,7 @@ export function fingerprintFromRaw(
 }
 
 export function fingerprintsEqual(left: PrFingerprint, right: PrFingerprint): boolean {
-  return (
-    left.headRefOid === right.headRefOid &&
-    left.updatedAt === right.updatedAt &&
-    left.state === right.state &&
-    left.isDraft === right.isDraft &&
-    left.mergeable === right.mergeable &&
-    left.mergeStateStatus === right.mergeStateStatus &&
-    left.reviewDecision === right.reviewDecision &&
-    left.isInMergeQueue === right.isInMergeQueue &&
-    left.isMergeQueueEnabled === right.isMergeQueueEnabled &&
-    left.mergePolicy === right.mergePolicy &&
-    left.commentCount === right.commentCount &&
-    left.commentRevisions === right.commentRevisions &&
-    left.threadCount === right.threadCount &&
-    left.reviewCount === right.reviewCount &&
-    left.reviewRevisions === right.reviewRevisions &&
-    left.latestCommentId === right.latestCommentId &&
-    left.latestThreadId === right.latestThreadId &&
-    left.latestReviewId === right.latestReviewId &&
-    left.checkRollupState === right.checkRollupState &&
-    left.checkSuiteConclusions === right.checkSuiteConclusions &&
-    left.checkSuitesComplete === right.checkSuitesComplete &&
-    left.viewerCanUpdate === right.viewerCanUpdate &&
-    left.viewerPermission === right.viewerPermission &&
-    left.viewerLogin === right.viewerLogin &&
-    left.stackKey === right.stackKey
-  );
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 export async function fetchPrFingerprint(pr: number, repo: RepoInfo): Promise<PrFingerprint> {

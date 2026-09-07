@@ -73,7 +73,7 @@ interface RawRuleParameters {
 
 export interface RawBaseRef {
   branchProtectionRule: RawBranchProtectionRule | null;
-  rules: { nodes: RawRepositoryRule[] } | null;
+  rules: { pageInfo?: { hasNextPage: boolean }; nodes: RawRepositoryRule[] } | null;
 }
 
 export interface RawPrMergeFields {

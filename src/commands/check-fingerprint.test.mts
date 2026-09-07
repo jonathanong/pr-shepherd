@@ -89,6 +89,20 @@ describe("tryReuseFingerprintReport", () => {
     mockFetch.mockResolvedValue(FP);
   });
 
+  it("does not skip when more than 20 review threads exist", async () => {
+    const report = waitReport();
+    mockLoad.mockResolvedValue(stored(report));
+    mockFetch.mockResolvedValueOnce(testFingerprint({ threadCount: 21 }));
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+  });
+
+  it("does not skip when merge-policy rules are truncated", async () => {
+    const report = waitReport();
+    mockLoad.mockResolvedValue(stored(report));
+    mockFetch.mockResolvedValueOnce(testFingerprint({ rulesComplete: false }));
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+  });
+
   it("does not skip when more than 100 reviews exist", async () => {
     const report = waitReport();
     mockLoad.mockResolvedValue(stored(report));

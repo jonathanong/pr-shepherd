@@ -74,6 +74,8 @@ describe("fetchPrFingerprint", () => {
       viewerPermission: "ADMIN",
       viewerLogin: "alice",
       stackKey: "",
+      threadCommentRevisions: "t1::",
+      rulesComplete: true,
     });
   });
 

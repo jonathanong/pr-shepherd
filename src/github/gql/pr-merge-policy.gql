@@ -16,6 +16,9 @@ fragment PrMergePolicy on PullRequest {
       requiredDeploymentEnvironments
     }
     rules(first: 100) {
+      pageInfo {
+        hasNextPage
+      }
       nodes {
         type
         parameters {

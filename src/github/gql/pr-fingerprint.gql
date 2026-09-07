@@ -39,10 +39,16 @@ query PrFingerprint($owner: String!, $repo: String!, $pr: Int!) {
           updatedAt
         }
       }
-      reviewThreads(last: 1) {
+      reviewThreads(last: 20) {
         totalCount
         nodes {
           id
+          comments(last: 1) {
+            nodes {
+              id
+              updatedAt
+            }
+          }
         }
       }
       reviews(last: 100) {

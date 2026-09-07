@@ -65,26 +65,30 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
         fingerprintCache,
         deferQuotaWarning: !untilTerminal,
       });
-    try {
-      lastResult = await iterateTick(allowCache);
-      rateLimitRetries = 0;
-    } catch (err) {
-      const retryMs = untilTerminal ? pollGraphQlRetryAfterMs(err) : null;
-      if (retryMs !== null && rateLimitRetries < 1) {
+    const runTick = async (fingerprintCache: boolean): Promise<IterateResult> => {
+      try {
+        const result = await iterateTick(fingerprintCache);
+        rateLimitRetries = 0;
+        return result;
+      } catch (err) {
+        const retryMs = untilTerminal ? pollGraphQlRetryAfterMs(err) : null;
+        if (retryMs === null || rateLimitRetries >= 1) throw err;
         rateLimitRetries += 1;
         process.stderr.write(
           `[poll tick ${tick} / +${Math.round((Date.now() - start) / 1000)}s] GraphQL rate limit — retrying in ${Math.round(retryMs / 1000)}s\n`,
         );
         await sleep(retryMs);
-        continue;
+        const result = await iterateTick(fingerprintCache);
+        rateLimitRetries = 0;
+        return result;
       }
-      throw err;
-    }
+    };
+    lastResult = await runTick(allowCache);
     prNumber ??= lastResult.pr;
     if (lastResult.quotaWarning !== undefined) pendingQuotaWarning = lastResult.quotaWarning;
     const refreshIfReturning = async (): Promise<void> => {
       if (lastResult?.fingerprintReused !== true) return;
-      lastResult = await iterateTick(false);
+      lastResult = await runTick(false);
       prNumber ??= lastResult.pr;
       if (lastResult.quotaWarning !== undefined) pendingQuotaWarning = lastResult.quotaWarning;
     };

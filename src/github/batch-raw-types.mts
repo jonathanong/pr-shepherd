@@ -117,6 +117,7 @@ export interface RawThreadComment {
   line: number | null;
   startLine: number | null;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface RawThread {

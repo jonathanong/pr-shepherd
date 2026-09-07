@@ -42,6 +42,8 @@ export async function tryReuseFingerprintReport(
   if (!live.checkSuitesComplete || !cached.fingerprint.checkSuitesComplete) return null;
   if (live.commentCount > 100 || cached.fingerprint.commentCount > 100) return null;
   if (live.reviewCount > 100 || cached.fingerprint.reviewCount > 100) return null;
+  if (live.threadCount > 20 || cached.fingerprint.threadCount > 20) return null;
+  if (!live.rulesComplete || !cached.fingerprint.rulesComplete) return null;
   if (
     cached.report.status === "READY" &&
     (live.mergePolicy === "" || cached.fingerprint.mergePolicy === "")

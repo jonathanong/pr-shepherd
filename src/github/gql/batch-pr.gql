@@ -158,6 +158,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
               line
               startLine
               createdAt
+              updatedAt
             }
           }
         }

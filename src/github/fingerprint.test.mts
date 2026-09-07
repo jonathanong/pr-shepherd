@@ -48,6 +48,12 @@ describe("fingerprintsEqual", () => {
     expect(fingerprintsEqual(sample(), sample({ viewerLogin: "other" }))).toBe(false);
   });
 
+  it("is false when a thread comment is edited", () => {
+    expect(
+      fingerprintsEqual(sample(), sample({ threadCommentRevisions: "t1:c9:2026-09-06T02:00:00Z" })),
+    ).toBe(false);
+  });
+
   it("is false when GitHub stack membership changes", () => {
     expect(fingerprintsEqual(sample(), sample({ stackKey: "7:3:2:stack/7/1" }))).toBe(false);
   });
