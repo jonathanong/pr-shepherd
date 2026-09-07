@@ -246,23 +246,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
           commit {
             oid
             committedDate
-            checkSuites(first: 50) {
-              pageInfo {
-                hasNextPage
-              }
-              nodes {
-                id
-                conclusion
-                workflowRun {
-                  databaseId
-                  event
-                  url
-                  workflow {
-                    name
-                  }
-                }
-              }
-            }
+            ...CommitCheckSuites
             statusCheckRollup {
               state
               contexts(first: 100) {

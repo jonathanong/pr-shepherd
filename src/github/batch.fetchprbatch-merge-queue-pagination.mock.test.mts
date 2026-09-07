@@ -293,7 +293,10 @@ describe("fetchPrBatch — merge queue check pagination", () => {
               {
                 reason: "CI_FAILURE",
                 createdAt: "2026-08-27T13:00:00Z",
-                beforeCommit: { oid: "removed-queue" },
+                beforeCommit: {
+                  oid: "removed-queue",
+                  parents: { nodes: [{ oid: "abc123" }] },
+                },
               },
             ],
           },
@@ -329,5 +332,29 @@ describe("fetchPrBatch — merge queue check pagination", () => {
     expect(data.mergeQueueChecks?.map((item) => item.name)).toEqual(["queue-ci"]);
     expect(data.removedMergeQueueChecks?.map((item) => item.name)).toEqual(["removed-ci"]);
     expect(mockGraphql).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not hydrate a removal whose parents no longer contain HEAD", async () => {
+    mockGraphqlWithRateLimit.mockResolvedValue(
+      makeResponse(
+        makeRawPr({
+          mergeQueueRemovals: {
+            nodes: [
+              {
+                reason: "MANUALLY_DEQUEUED",
+                createdAt: "2026-08-27T13:00:00Z",
+                beforeCommit: {
+                  oid: "removed-queue",
+                  parents: { nodes: [{ oid: "old-head" }] },
+                },
+              },
+            ],
+          },
+        }),
+      ),
+    );
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.removedMergeQueueChecks).toBeUndefined();
+    expect(mockGraphql).not.toHaveBeenCalled();
   });
 });

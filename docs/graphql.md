@@ -172,7 +172,7 @@ Fingerprint skip is refused — the tick runs `BatchPr` — when any of these ho
 ### What Shepherd already does
 
 - One batch query per full tick; extra pages are slim `@include` documents with combined cursors.
-- Merge-queue check rollups load only when the PR is queued or has a current removal.
+- Merge-queue check rollups load only when the PR is queued or has a current removal whose parents still contain HEAD.
 - Approved-review extra pages are opt-in (`iterate.minimizeApprovals`).
 - Annotation bodies are cached for 1 hour per completed check-run id.
 - Pagination and nested thread-comment hydration abort when remaining is 0 rather than returning a truncated thread list.

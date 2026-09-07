@@ -48,6 +48,8 @@ describe("queries — GQL constants load at import time", () => {
     expect(PR_FINGERPRINT_QUERY).toContain("pageInfo");
     expect(PR_FINGERPRINT_QUERY).toContain("hasNextPage");
     expect(BATCH_PR_QUERY).toContain("...PrMergePolicy");
+    expect(PR_FINGERPRINT_QUERY).toContain("...CommitCheckSuites");
+    expect(BATCH_PR_QUERY).toContain("...CommitCheckSuites");
     expect(BATCH_PR_QUERY).toContain("checkSuites");
   });
 

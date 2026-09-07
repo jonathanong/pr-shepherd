@@ -97,15 +97,20 @@ async function hydrateCommitContexts(commit: QueueCommit, repo: RepoInfo): Promi
   };
 }
 
+function currentRemovalCommit(raw: RawPr): QueueCommit | undefined {
+  const removal = raw.mergeQueueRemovals?.nodes[0];
+  const addition = raw.mergeQueueAdditions?.nodes[0];
+  if (!removal?.beforeCommit) return undefined;
+  if (addition && Date.parse(removal.createdAt) < Date.parse(addition.createdAt)) return undefined;
+  const parentOids = removal.beforeCommit.parents?.nodes.map((node) => node.oid);
+  if (!parentOids?.includes(raw.headRefOid)) return undefined;
+  return removal.beforeCommit;
+}
+
 /** Hydrate all status contexts for the active or most recently removed queue commit. */
 export async function hydrateMergeQueueChecks(raw: RawPr, repo: RepoInfo): Promise<void> {
   const active = raw.mergeQueueEntry?.headCommit;
-  const removal = raw.mergeQueueRemovals?.nodes[0];
-  const addition = raw.mergeQueueAdditions?.nodes[0];
-  const removalIsCurrent = Boolean(
-    removal && (!addition || Date.parse(removal.createdAt) >= Date.parse(addition.createdAt)),
-  );
-  const removed = removalIsCurrent ? removal?.beforeCommit : undefined;
+  const removed = currentRemovalCommit(raw);
   if (active) await hydrateCommitContexts(active, repo);
   if (removed && removed.oid !== active?.oid) await hydrateCommitContexts(removed, repo);
 }

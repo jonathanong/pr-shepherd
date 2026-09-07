@@ -13,16 +13,17 @@ import { join } from "node:path";
 const gql = (name: string): string =>
   readFileSync(join((import.meta as { dirname: string }).dirname, "gql", name), "utf8");
 
-const withMergePolicy = (query: string): string => `${gql("pr-merge-policy.gql")}\n${query}`;
+const withSharedFragments = (query: string): string =>
+  `${gql("pr-merge-policy.gql")}\n${gql("commit-check-suites.gql")}\n${query}`;
 
 /** The primary batch query that fetches CI + comments + merge status in one round-trip. */
-export const BATCH_PR_QUERY = withMergePolicy(gql("batch-pr.gql"));
+export const BATCH_PR_QUERY = withSharedFragments(gql("batch-pr.gql"));
 
 /** Slim @include follow-up for outstanding batch-query connections. */
 export const BATCH_PR_PAGE_QUERY = gql("batch-pr-page.gql");
 
 /** Cheap PR fingerprint used to skip an unchanged BatchPr snapshot. */
-export const PR_FINGERPRINT_QUERY = withMergePolicy(gql("pr-fingerprint.gql"));
+export const PR_FINGERPRINT_QUERY = withSharedFragments(gql("pr-fingerprint.gql"));
 
 /** PR head fields plus a single review thread for `commit-suggestion`. */
 export const SUGGESTION_THREADS_QUERY = gql("suggestion-threads.gql");

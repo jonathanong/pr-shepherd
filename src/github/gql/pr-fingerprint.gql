@@ -46,18 +46,7 @@ query PrFingerprint($owner: String!, $repo: String!, $pr: Int!) {
             statusCheckRollup {
               state
             }
-            checkSuites(first: 50) {
-              pageInfo {
-                hasNextPage
-              }
-              nodes {
-                id
-                conclusion
-                workflowRun {
-                  databaseId
-                }
-              }
-            }
+            ...CommitCheckSuites
           }
         }
       }
