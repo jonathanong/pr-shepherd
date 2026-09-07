@@ -98,4 +98,23 @@ describe("runPoll — GraphQL quota throttle", () => {
     expect(result.action).toBe("mark_ready");
     expect(mockRunIterate).toHaveBeenCalledTimes(1);
   });
+
+  it("refreshes a reused MARK_READY before returning at the bounded timeout", async () => {
+    mockRunIterate
+      .mockResolvedValueOnce({
+        ...makeMarkReadyResult({ apiUsage: lowGraphqlUsage }),
+        fingerprintReused: true as const,
+      })
+      .mockResolvedValue(makeMarkReadyResult({ apiUsage: lowGraphqlUsage }));
+    const result = await runPoll({
+      prNumber: 42,
+      format: "text",
+      intervalSeconds: 30,
+      timeoutSeconds: 0,
+      merge: true,
+    });
+    expect(result.action).toBe("mark_ready");
+    expect(mockRunIterate).toHaveBeenCalledTimes(2);
+    expect(mockRunIterate.mock.calls[1]?.[0]).toMatchObject({ fingerprintCache: false });
+  });
 });
