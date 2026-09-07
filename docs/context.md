@@ -6,7 +6,7 @@ This is the context counterpart to [actions.md](actions.md). One `iterate` tick 
 
 How the data is fetched: [graphql.md](graphql.md). How it becomes an action: [iterate-flow.md](iterate-flow.md).
 
-Debounce ticks in the poll dispatcher (`pr-shepherd [PR] --debounce`, default 1m) run `iterate` with `persistSeen: false`. Seen markers and first-look suppression are deferred until the post-window tick, so late comments are not marked seen before the agent-facing result.
+Debounce ticks in the poll dispatcher (`pr-shepherd [PR] --debounce`, default: `poll.debounceSeconds`; built-in 1m) run `iterate` with `persistSeen: false`. Seen markers and first-look suppression are deferred until the post-window tick, so late comments are not marked seen before the agent-facing result.
 
 ## Header
 

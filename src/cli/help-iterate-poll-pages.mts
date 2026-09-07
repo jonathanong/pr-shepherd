@@ -41,7 +41,8 @@ export const POLL_USAGE = `pr-shepherd poll
 Run iterate repeatedly for WAIT ticks and during the FIX_CODE debounce window. Print only the
 final tick to stdout.
 Poll exits as soon as iterate returns MARK_READY, CANCEL, or ESCALATE, or when timeout
-returns the last WAIT result. FIX_CODE starts a --debounce settle window (default 1m): poll keeps
+returns the last WAIT result. FIX_CODE starts a --debounce settle window (default:
+poll.debounceSeconds; built-in 1m): poll keeps
 iterating at --interval, then runs one more tick after the window and returns that result.
 With --until-terminal or --merge, poll also continues through MARK_READY.
 

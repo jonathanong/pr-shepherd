@@ -16,7 +16,7 @@ Shepherd does two jobs: **gather all context for a PR**, then **emit one determi
 
 - Exactly one action per tick: `WAIT`, `MARK_READY`, `MERGE`, `CANCEL`, `ESCALATE`, or `FIX_CODE`. See [actions.md](actions.md) and [iterate-flow.md](iterate-flow.md).
 - Canonical local stdio MCP tools: `iterate`, `apply`, and `build_suggestion_patches`, plus a deprecated singular suggestion adapter. Shell: `pr-shepherd [PR]` (bounded poll) and `pr-shepherd iterate [PR]` (one tick). See [mcp.md](mcp.md) and [cli-usage.md](cli-usage.md).
-- Poll `--debounce` (default 1m) so `FIX_CODE` waits a settle window, still iterating at `--interval`, then returns one batched tick. MCP `iterate` has no debounce.
+- Poll `--debounce` (default: `poll.debounceSeconds`; built-in 1m) so `FIX_CODE` waits a settle window, still iterating at `--interval`, then returns one batched tick. MCP `iterate` has no debounce.
 - `--format text|json`, `--verbose` (poll and iterate), `--version`/`-v`, `--ready-delay`, `--stall-timeout`, `--merge`, `--no-auto-mark-ready`. The legacy `--no-auto-cancel-actionable` flag remains accepted but is a no-op because Shepherd does not cancel workflow runs.
 - Capability-aware generated iterate actions: review IDs and automatic cleanup are filtered using raw viewer capability fields and batched in groups of 10. Explicit `apply` review/journal/file-view operations are attempted and surface GitHub's results; file-view requests invoke `markFileAsViewed`.
 - `build_suggestion_patches` emits an ordered, apply-checked patch list plus per-patch commit metadata. It does not write patch files or mutate git.
