@@ -23,6 +23,7 @@ vi.mock("../../src/github/batch.mts", () => ({
 vi.mock("../../src/state/pr-fingerprint.mts", () => ({
   loadPrFingerprint: vi.fn().mockResolvedValue(null),
   storePrFingerprint: vi.fn().mockResolvedValue(undefined),
+  fingerprintInputDigest: vi.fn().mockReturnValue("digest"),
 }));
 
 vi.mock("../../src/comments/resolve.mts", () => ({

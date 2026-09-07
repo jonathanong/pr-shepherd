@@ -41,6 +41,7 @@ vi.mock("../../src/github/batch.mts", () => ({ fetchPrBatch: vi.fn() }));
 vi.mock("../../src/state/pr-fingerprint.mts", () => ({
   loadPrFingerprint: vi.fn().mockResolvedValue(null),
   storePrFingerprint: vi.fn().mockResolvedValue(undefined),
+  fingerprintInputDigest: vi.fn().mockReturnValue("digest"),
 }));
 vi.mock("../../src/github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),

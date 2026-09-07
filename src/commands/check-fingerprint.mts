@@ -32,7 +32,9 @@ export async function tryReuseFingerprintReport(
   config: PrShepherdConfig,
 ): Promise<ShepherdReport | null> {
   const cached = await loadPrFingerprint(stateKey);
-  if (cached?.inputDigest !== fingerprintInputDigest(config)) return null;
+  if (cached?.inputDigest == null || cached.inputDigest !== fingerprintInputDigest(config)) {
+    return null;
+  }
   if (!reportAllowsFingerprintSkip(cached.report)) return null;
   const live = await fetchPrFingerprint(prNumber, repo);
   if (live.isInMergeQueue || cached.fingerprint.isInMergeQueue) return null;

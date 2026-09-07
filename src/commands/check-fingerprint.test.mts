@@ -108,6 +108,12 @@ describe("tryReuseFingerprintReport", () => {
     mockFetch.mockResolvedValue(FP);
   });
 
+  it("does not skip when no fingerprint is stored", async () => {
+    mockLoad.mockResolvedValue(null);
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
   it("returns the cached WAIT-shaped report when the live fingerprint matches", async () => {
     const report = waitReport();
     mockLoad.mockResolvedValue(stored(report));
