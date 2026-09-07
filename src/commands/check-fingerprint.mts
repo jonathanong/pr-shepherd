@@ -1,5 +1,9 @@
 import { getMergeableState, type RepoInfo } from "../github/client.mts";
-import { fetchPrFingerprint, fingerprintsEqual } from "../github/fingerprint.mts";
+import {
+  fetchPrFingerprint,
+  fingerprintsEqual,
+  type PrFingerprint,
+} from "../github/fingerprint.mts";
 import { fingerprintInputDigest, loadPrFingerprint } from "../state/pr-fingerprint.mts";
 import type { PrShepherdConfig } from "../config/load.mts";
 import { hasCheckDrivenActionableWork } from "./check-annotations.mts";
@@ -46,7 +50,14 @@ export async function tryReuseFingerprintReport(
   if (live.hasMultiCommentThreads || cached.fingerprint.hasMultiCommentThreads) return null;
   if (!live.rulesComplete || !cached.fingerprint.rulesComplete) return null;
   if (!fingerprintsEqual(cached.fingerprint, live)) return null;
-  if (!(await cachedReportSurvivesMergeabilityRefresh(prNumber, repo, cached.report))) {
+  if (
+    !(await cachedReportSurvivesMergeabilityRefresh(
+      prNumber,
+      repo,
+      cached.report,
+      cached.fingerprint,
+    ))
+  ) {
     return null;
   }
   return { ...cached.report, fingerprintReused: true };
@@ -56,8 +67,14 @@ async function cachedReportSurvivesMergeabilityRefresh(
   prNumber: number,
   repo: RepoInfo,
   report: ShepherdReport,
+  fingerprint: PrFingerprint,
 ): Promise<boolean> {
-  if (report.status !== "READY" && report.mergeStatus.status !== "UNKNOWN") return true;
+  const restDerived =
+    fingerprint.mergeable !== report.mergeStatus.mergeable ||
+    fingerprint.mergeStateStatus !== report.mergeStatus.mergeStateStatus;
+  if (report.status !== "READY" && report.mergeStatus.status !== "UNKNOWN" && !restDerived) {
+    return true;
+  }
   const rest = await getMergeableState(prNumber, repo.owner, repo.name);
   if (rest.state === "MERGED" || rest.state === "CLOSED") return false;
   if (rest.mergeable !== report.mergeStatus.mergeable) return false;

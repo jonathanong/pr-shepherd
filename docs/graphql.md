@@ -132,8 +132,7 @@ Fingerprint skip is also refused — the tick runs `BatchPr` — when any of the
 - More than 100 PR comments or reviews, more than 20 review threads, or any fingerprinted thread with more than one comment, exist, so `updatedAt` revisions on the preflight windows cannot cover an older in-place edit.
 - `baseRef.rules` is truncated (`hasNextPage`), so merge-policy classification may be incomplete.
 - The live `checkSuites(first: 50)` page is truncated (`hasNextPage`), so a later startup-failure suite would be invisible.
-- Merge policy cannot be read (`mergePolicy` empty) and the cached report is `READY`.
-- REST mergeability differs from the cached report. GraphQL can stay `UNKNOWN` after REST returns `CLEAN`; REST `BEHIND` must not keep a cached `READY` ready-delay.
+- REST mergeability differs from the cached report, including reports whose mergeability fields already diverged from the GraphQL fingerprint (a prior REST refresh turned GraphQL `UNKNOWN` into `BEHIND` / `PENDING`). GraphQL can stay `UNKNOWN` after REST returns `CLEAN`; a later REST `CLEAN` must not keep a cached `PENDING` forever.
 - Classification inputs changed: `inputDigest` hashes report-shaping config (`ignoreChecks`, `botUsernames`, `iterate.*`, `watch.readyDelayMinutes`, `checks.*`, `mergeStatus.blockingReviewerLogins`, `actions.autoMinimizeSuppressed` / `autoMarkReady` / `neverCancelRuns` / `workWhileQueued`) plus **classification rule file contents**, not just paths.
 
 ## REST fallbacks
@@ -183,8 +182,8 @@ Fingerprint skip is also refused — the tick runs `BatchPr` — when any of the
 - Pagination and nested thread-comment hydration abort when remaining is 0 rather than returning a truncated thread list.
 - `--verbose` prints command-scoped `apiUsage` (credential source, request count, measured query cost, node count, remaining/limit/reset).
 - `watch.graphqlQuotaWarnings` (default 30% → 2m, 20% → 5m, 10% → 10m) emits a one-shot-per-worktree-per-window `quotaWarning` on non-terminal results. The skill / MCP caller is told to slow down and to prefer REST `gh` for incidental work.
-- The **poll dispatcher** (`pr-shepherd [PR]`, including `--until-terminal`) also **applies** those bands: `WAIT` / `MARK_READY` sleeps use `max(--interval, band interval)` from the latest `apiUsage.graphql` remaining percent, every tick, even after the one-shot warning has already been claimed. Single-tick `iterate` and MCP `iterate` stay advisory — those callers own recurrence.
-- Unchanged ticks skip `BatchPr` when the fingerprint matches, CheckSuites are complete, merge policy is present for `READY` reports, and REST mergeability agrees with the cached report.
+- The **poll dispatcher** (`pr-shepherd [PR]`, including `--until-terminal`) also **applies** those bands: `WAIT` / `MARK_READY` sleeps use `max(--interval, active band interval)` from the latest `apiUsage.graphql` remaining percent, every tick, even after the one-shot warning has already been claimed. The active band is the crossed entry with the lowest `remainingPercent`, matching `quotaWarning`. Single-tick `iterate` and MCP `iterate` stay advisory — those callers own recurrence.
+- Unchanged ticks skip `BatchPr` when the fingerprint matches, CheckSuites are complete, and REST mergeability still agrees with the cached report, including reports whose mergeability was previously filled in by REST.
 - `--until-terminal` retries a tick once after a GraphQL 429 / secondary-limit `Retry-After` instead of exiting 75 immediately. An explicit `Retry-After` header is honored in full. Single-tick iterate still fails with 75.
 
 ### How to read spend

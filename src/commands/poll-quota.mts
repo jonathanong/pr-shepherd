@@ -5,7 +5,7 @@ import type { GraphqlApiUsage } from "../types.mts";
 
 const GRAPHQL_RETRY_AFTER_DEFAULT_MS = 60_000;
 
-/** Sleep at least `--interval`, and at least the tightest crossed quota band. */
+/** Sleep at least `--interval`, and at least the active crossed quota band. */
 export function graphqlQuotaPollIntervalMs(
   bands: GraphqlQuotaWarningBand[],
   usage: Pick<GraphqlApiUsage, "remaining" | "limit"> | undefined,
@@ -19,7 +19,10 @@ export function graphqlQuotaPollIntervalMs(
     (band) => usage.remaining * 100 <= usage.limit * band.remainingPercent,
   );
   if (crossed.length === 0) return Math.min(fallbackMs, maxMs);
-  const bandMs = Math.max(...crossed.map((band) => band.pollIntervalMinutes)) * 60_000;
+  const active = crossed.reduce((lowest, band) =>
+    band.remainingPercent < lowest.remainingPercent ? band : lowest,
+  );
+  const bandMs = active.pollIntervalMinutes * 60_000;
   return Math.min(Math.max(fallbackMs, bandMs), maxMs);
 }
 

@@ -29,6 +29,29 @@ describe("graphqlQuotaPollIntervalMs", () => {
     );
   });
 
+  it("uses the lowest remainingPercent band when crossed intervals are not monotonic", () => {
+    const bands = [
+      { remainingPercent: 40, pollIntervalMinutes: 20 },
+      { remainingPercent: 5, pollIntervalMinutes: 1 },
+    ];
+    expect(graphqlQuotaPollIntervalMs(bands, { remaining: 200, limit: 5000 }, 60_000, MAX_MS)).toBe(
+      60_000,
+    );
+    expect(
+      graphqlQuotaPollIntervalMs(bands, { remaining: 1500, limit: 5000 }, 60_000, MAX_MS),
+    ).toBe(1_200_000);
+  });
+
+  it("picks the lowest remainingPercent even when bands are unsorted", () => {
+    const bands = [
+      { remainingPercent: 10, pollIntervalMinutes: 10 },
+      { remainingPercent: 30, pollIntervalMinutes: 2 },
+    ];
+    expect(graphqlQuotaPollIntervalMs(bands, { remaining: 400, limit: 5000 }, 60_000, MAX_MS)).toBe(
+      600_000,
+    );
+  });
+
   it("does not shrink an already-longer --interval", () => {
     expect(
       graphqlQuotaPollIntervalMs(BANDS, { remaining: 1200, limit: 5000 }, 180_000, MAX_MS),

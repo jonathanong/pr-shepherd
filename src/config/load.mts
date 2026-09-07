@@ -298,7 +298,21 @@ function parseGraphqlQuotaWarnings(value: unknown): GraphqlQuotaWarningBand[] {
     seen.add(remainingPercent);
     return { remainingPercent, pollIntervalMinutes };
   });
-  return parsed.sort((left, right) => right.remainingPercent - left.remainingPercent);
+  parsed.sort((left, right) => right.remainingPercent - left.remainingPercent);
+  for (let index = 1; index < parsed.length; index += 1) {
+    const previous = parsed[index - 1];
+    const current = parsed[index];
+    if (
+      previous !== undefined &&
+      current !== undefined &&
+      current.pollIntervalMinutes < previous.pollIntervalMinutes
+    ) {
+      throw new Error(
+        "Invalid config: watch.graphqlQuotaWarnings pollIntervalMinutes must not decrease as remainingPercent decreases",
+      );
+    }
+  }
+  return parsed;
 }
 
 const KNOWN_CONFIG_KEYS = new Set([

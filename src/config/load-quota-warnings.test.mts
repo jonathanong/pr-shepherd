@@ -37,6 +37,10 @@ describe("loadConfig — GraphQL quota warnings", () => {
       "duplicate threshold",
       "\n    - remainingPercent: 20\n      pollIntervalMinutes: 2\n    - remainingPercent: 20\n      pollIntervalMinutes: 5",
     ],
+    [
+      "decreasing interval",
+      "\n    - remainingPercent: 40\n      pollIntervalMinutes: 20\n    - remainingPercent: 5\n      pollIntervalMinutes: 1",
+    ],
   ])("falls back to defaults for an invalid %s", async (_label, bands) => {
     writeRc(`watch:\n  graphqlQuotaWarnings:${bands.startsWith("\n") ? "" : " "}${bands}\n`);
     const loadConfig = await freshLoadConfig();
