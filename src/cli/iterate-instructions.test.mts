@@ -62,9 +62,8 @@ describe("iterate instruction polling contract", () => {
     expect(textInstructions(result)[0]).toContain(
       "Resume full-cadence pr-shepherd after the GraphQL quota resets at 2026-08-30T05:12:29.000Z",
     );
-    expect(textInstructions(result)[0]).toContain(
-      "replace any existing interval and timeout flags",
-    );
+    expect(textInstructions(result)[0]).toContain("raise any shorter interval and timeout flags");
+    expect(textInstructions(result)[0]).toContain("keep any longer cadence");
     expect(textInstructions(result)[0]).toContain("With a polling CLI command");
     expect(textInstructions(result)[0]).toContain("With a single-tick CLI, API, or MCP call");
     expect(textInstructions(result)[0]).toContain("wait at least 5 minutes before the next tick");

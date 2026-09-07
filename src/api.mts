@@ -42,6 +42,7 @@ export type IterateInput = Omit<
   | "persistSeen"
   | "fingerprintCache"
   | "deferQuotaWarning"
+  | "quotaWarningMinimumPollIntervalMinutes"
 > & {
   pr?: PrReference;
 };

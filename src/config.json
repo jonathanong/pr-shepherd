@@ -22,12 +22,18 @@
     "behindBaseHint": "",
     "resolveOtherHumanThreads": "none"
   },
+  "poll": {
+    "intervalSeconds": 60,
+    "timeoutSeconds": 270,
+    "debounceSeconds": 60,
+    "quietStatus": false
+  },
   "watch": {
     "readyDelayMinutes": 10,
     "graphqlQuotaWarnings": [
-      { "remainingPercent": 30, "pollIntervalMinutes": 2 },
-      { "remainingPercent": 20, "pollIntervalMinutes": 5 },
-      { "remainingPercent": 10, "pollIntervalMinutes": 10 }
+      { "remainingPercent": 30, "pollIntervalFactor": 2 },
+      { "remainingPercent": 20, "pollIntervalFactor": 5 },
+      { "remainingPercent": 10, "pollIntervalFactor": 10 }
     ]
   },
   "resolve": {

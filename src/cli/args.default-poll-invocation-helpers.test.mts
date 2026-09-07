@@ -23,6 +23,7 @@ describe("default poll invocation helpers", () => {
     expect(isDefaultPollInvocation("--format=json")).toBe(true);
     expect(isDefaultPollInvocation("--no-auto-mark-ready")).toBe(true);
     expect(isDefaultPollInvocation("--quiet-status")).toBe(true);
+    expect(isDefaultPollInvocation("--no-quiet-status")).toBe(true);
     expect(isDefaultPollInvocation("--until-terminal")).toBe(true);
     expect(isDefaultPollInvocation("--merge")).toBe(true);
     expect(isDefaultPollInvocation("--interval=60s")).toBe(true);
@@ -52,6 +53,7 @@ describe("default poll invocation helpers", () => {
         "--merge",
       ]),
     ).toBe(true);
+    expect(validateDefaultPollArgs(["42", "--no-quiet-status"])).toBe(true);
     expect(validateDefaultPollArgs(["fork/widgets#42", "--merge"])).toBe(true);
   });
 

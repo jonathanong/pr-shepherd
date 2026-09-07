@@ -137,6 +137,8 @@ pr-shepherd owner/repo#42              # poll a PR in an explicit repository
 pr-shepherd https://github.com/owner/repo/pull/42
 ```
 
+Polling defaults can be set under `poll` in `.pr-shepherdrc.yml`: `intervalSeconds`, `timeoutSeconds`, `debounceSeconds`, and `quietStatus`. Explicit flags override configuration, including `--no-quiet-status` when a shared config enables quiet output. Quiet status remains off by default.
+
 ### Apply Review And Journal Changes, Or Select Files
 
 Use `apply` with ordered operations to reply/resolve/minimize/dismiss review items, mark selected changed files as viewed, or append an idempotent Shepherd Journal item. Explicit operations are attempted and surface GitHub's per-operation results; generated iterate guidance remains capability-filtered. Use `build_suggestion_patches` to turn ordered review suggestions into checked patches and commit metadata; it never changes the worktree or git history.

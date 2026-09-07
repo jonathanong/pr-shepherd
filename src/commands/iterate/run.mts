@@ -8,6 +8,11 @@ export function withIterateApiUsage(
 ): Promise<IterateResult> {
   return withApiTelemetryScope(async () => {
     const result = await runCore();
-    return attachApiUsage(result, opts.deferQuotaWarning !== true);
+    return attachApiUsage(
+      result,
+      opts.deferQuotaWarning !== true,
+      false,
+      opts.quotaWarningMinimumPollIntervalMinutes,
+    );
   });
 }

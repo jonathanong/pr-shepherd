@@ -12,6 +12,7 @@ export async function attachApiUsage(
   result: IterateResult,
   persistWarning: boolean,
   preservePersistedWarning = false,
+  minimumPollIntervalMinutes = 0,
 ): Promise<IterateResult> {
   const apiUsage = summarizeApiTelemetry();
   if (apiUsage === undefined) return result;
@@ -20,9 +21,13 @@ export async function attachApiUsage(
   if (quotaWarning === undefined && apiUsage.graphql !== undefined && shouldWarn(result)) {
     const [owner, repo] = result.repo.split("/");
     if (owner && repo) {
+      const bands = loadConfig().watch.graphqlQuotaWarnings.map((band) => ({
+        ...band,
+        pollIntervalMinutes: Math.max(band.pollIntervalMinutes, minimumPollIntervalMinutes),
+      }));
       quotaWarning = await evaluateWorktreeGraphqlQuotaWarning(
         { owner, repo },
-        loadConfig().watch.graphqlQuotaWarnings,
+        bands,
         apiUsage.graphql,
         persistWarning,
       );

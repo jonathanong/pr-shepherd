@@ -47,7 +47,10 @@ describe("runPoll — GraphQL quota throttle", () => {
 
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
     expect(result.action).toBe("cancel");
-    expect(mockRunIterate.mock.calls[0]?.[0]).toMatchObject({ fingerprintCache: true });
+    expect(mockRunIterate.mock.calls[0]?.[0]).toMatchObject({
+      fingerprintCache: true,
+      quotaWarningMinimumPollIntervalMinutes: 0.5,
+    });
   });
 
   it("lengthens MARK_READY sleeps to the crossed quota band", async () => {

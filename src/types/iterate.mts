@@ -192,9 +192,9 @@ export interface IterateCommandOptions extends GlobalOptions {
   /** Shepherd through readiness and emit the exact merge/queue command when ready. */
   merge?: boolean;
   /**
-   * Internal. Defers attaching a quota warning until an until-terminal poll actually
-   * breaks. Set only by `runPollCore`; excluded from the public `IterateInput` in
-   * api.mts.
+   * Internal. Defers quota warnings until an until-terminal poll breaks. Set only by
+   * `runPollCore`; excluded from the public `IterateInput` in api.mts.
    */
   deferQuotaWarning?: boolean;
+  quotaWarningMinimumPollIntervalMinutes?: number;
 }

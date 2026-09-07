@@ -5,9 +5,10 @@ import { attachApiUsage } from "./iterate/api-usage.mts";
 export function withPollApiUsage(
   runCore: () => Promise<IterateResult>,
   preservePersistedWarning: boolean,
+  minimumPollIntervalMinutes: number,
 ): Promise<IterateResult> {
   return withApiTelemetryScope(async () => {
     const result = await runCore();
-    return attachApiUsage(result, true, preservePersistedWarning);
+    return attachApiUsage(result, true, preservePersistedWarning, minimumPollIntervalMinutes);
   });
 }

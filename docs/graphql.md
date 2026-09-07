@@ -109,7 +109,7 @@ Static documents live in [`src/github/gql/`](../src/github/gql/) and are loaded 
 
 ## Per-tick budget
 
-Default poll interval is **60s**. Ready-delay is **10 minutes**. Repeating a “cheap” 4–8 point batch every minute is what burns the hourly budget, not a single snapshot.
+The built-in poll interval is **60s** and can be changed with `poll.intervalSeconds`; an explicit `--interval` overrides it. Ready-delay is **10 minutes**. Repeating a “cheap” 4–8 point batch every minute is what burns the hourly budget, not a single snapshot.
 
 | Situation                                                                                               | GraphQL                                                                                                            | REST                                                   |
 | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
@@ -181,8 +181,8 @@ Fingerprint skip is also refused — the tick runs `BatchPr` — when any of the
 - Annotation bodies are cached for 1 hour per completed check-run id.
 - Pagination and nested thread-comment hydration abort when remaining is 0 rather than returning a truncated thread list.
 - `--verbose` prints command-scoped `apiUsage` (credential source, request count, measured query cost, node count, remaining/limit/reset).
-- `watch.graphqlQuotaWarnings` (default 30% → 2m, 20% → 5m, 10% → 10m) emits a one-shot-per-worktree-per-window `quotaWarning` on non-terminal results. The skill / MCP caller is told to slow down and to prefer REST `gh` for incidental work.
-- The **poll dispatcher** (`pr-shepherd [PR]`, including `--until-terminal`) also **applies** those bands: `WAIT` / `MARK_READY` sleeps use `max(--interval, active band interval)` from the latest `apiUsage.graphql` remaining percent, every tick, even after the one-shot warning has already been claimed. The active band is the crossed entry with the lowest `remainingPercent`, matching `quotaWarning`. Single-tick `iterate` and MCP `iterate` stay advisory — those callers own recurrence.
+- `watch.graphqlQuotaWarnings` (default 30% → 2x, 20% → 5x, 10% → 10x the configured `poll.intervalSeconds`) emits a one-shot-per-worktree-per-window `quotaWarning` on non-terminal results. Bands can instead use absolute `pollIntervalMinutes`, or specify both and take the slower result. The skill / MCP caller is told to slow down and to prefer REST `gh` for incidental work.
+- The **poll dispatcher** (`pr-shepherd [PR]`, including `--until-terminal`) also **applies** those bands: `WAIT` / `MARK_READY` sleeps use `max(effective interval, active band interval)` from the latest `apiUsage.graphql` remaining percent, every tick, even after the one-shot warning has already been claimed. Factors always use the configured base rather than an explicit flag, preventing compounding; a slower explicit interval remains in force. The active band is the crossed entry with the lowest `remainingPercent`, matching `quotaWarning`. Single-tick `iterate` and MCP `iterate` stay advisory — those callers own recurrence.
 - Unchanged ticks skip `BatchPr` when the fingerprint matches, CheckSuites are complete, and REST mergeability still agrees with the cached report, including reports whose mergeability was previously filled in by REST.
 - `--until-terminal` retries a tick once after a GraphQL 429 / secondary-limit `Retry-After` instead of exiting 75 immediately. An explicit `Retry-After` header is honored in full. Single-tick iterate still fails with 75.
 

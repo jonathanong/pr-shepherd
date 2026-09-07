@@ -5,10 +5,7 @@ import { parseDurationToSeconds } from "./duration.mts";
 import { validateSecondsDurationFlag } from "./duration-flag.mts";
 import { parseIterateFlags } from "./iterate-flags.mts";
 import { emitIterateResult } from "./iterate-emitter.mts";
-
-const DEFAULT_POLL_INTERVAL_SECONDS = 60;
-const DEFAULT_POLL_TIMEOUT_SECONDS = 270;
-const DEFAULT_POLL_DEBOUNCE_SECONDS = 60;
+import { EXIT } from "../exit-codes.mts";
 
 export async function handlePoll(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
@@ -25,10 +22,7 @@ export async function handlePoll(args: string[]): Promise<void> {
     hasFlag(extra, "--interval"),
   );
   if (intervalSuffix === null) return;
-  const intervalSeconds = parseDurationToSeconds(
-    intervalSuffix ?? "",
-    DEFAULT_POLL_INTERVAL_SECONDS,
-  );
+  const intervalSeconds = parseDurationToSeconds(intervalSuffix ?? "", cfg.poll.intervalSeconds);
 
   const timeoutStr = getFlag(extra, "--timeout");
   const timeoutSuffix = validateSecondsDurationFlag(
@@ -38,7 +32,7 @@ export async function handlePoll(args: string[]): Promise<void> {
     hasFlag(extra, "--timeout"),
   );
   if (timeoutSuffix === null) return;
-  const timeoutSeconds = parseDurationToSeconds(timeoutSuffix ?? "", DEFAULT_POLL_TIMEOUT_SECONDS);
+  const timeoutSeconds = parseDurationToSeconds(timeoutSuffix ?? "", cfg.poll.timeoutSeconds);
 
   const debounceStr = getFlag(extra, "--debounce");
   const debounceSuffix = validateSecondsDurationFlag(
@@ -49,11 +43,20 @@ export async function handlePoll(args: string[]): Promise<void> {
     { allowZero: true },
   );
   if (debounceSuffix === null) return;
-  const debounceSeconds = parseDurationToSeconds(
-    debounceSuffix ?? "",
-    DEFAULT_POLL_DEBOUNCE_SECONDS,
-    { allowZero: true },
-  );
+  const debounceSeconds = parseDurationToSeconds(debounceSuffix ?? "", cfg.poll.debounceSeconds, {
+    allowZero: true,
+  });
+
+  const quietStatusFlag = hasFlag(extra, "--quiet-status");
+  const noQuietStatusFlag = hasFlag(extra, "--no-quiet-status");
+  if (quietStatusFlag && noQuietStatusFlag) {
+    process.stderr.write(
+      "pr-shepherd: --quiet-status and --no-quiet-status cannot be used together\n",
+    );
+    process.exitCode = EXIT.USAGE;
+    return;
+  }
+  const quietStatus = quietStatusFlag || (!noQuietStatusFlag && cfg.poll.quietStatus);
 
   const result = await runPoll({
     ...globalOpts,
@@ -66,7 +69,7 @@ export async function handlePoll(args: string[]): Promise<void> {
     intervalSeconds,
     timeoutSeconds,
     debounceSeconds,
-    quietStatus: hasFlag(extra, "--quiet-status"),
+    quietStatus,
     untilTerminal: hasFlag(extra, "--until-terminal"),
   });
 

@@ -16,6 +16,7 @@ function withOtherHumanResolve(policy: "none" | "outdated" | "always") {
   mockLoadConfig.mockReturnValue({
     botUsernames: ["coderabbitai"],
     ignoreChecks: [],
+    poll: { intervalSeconds: 60, timeoutSeconds: 270, debounceSeconds: 60, quietStatus: false },
     iterate: {
       fixAttemptsPerThread: 3,
       stallTimeoutMinutes: 60,

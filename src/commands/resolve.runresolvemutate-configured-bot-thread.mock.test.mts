@@ -18,6 +18,7 @@ describe("runResolveMutate — configured bot threads", () => {
     mockLoadConfig.mockReturnValue({
       botUsernames: ["coderabbitai"],
       ignoreChecks: [],
+      poll: { intervalSeconds: 60, timeoutSeconds: 270, debounceSeconds: 60, quietStatus: false },
       resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 } },
       actions: {
         autoMinimizeSuppressed: true,
