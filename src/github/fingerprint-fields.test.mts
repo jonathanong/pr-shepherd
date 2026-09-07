@@ -15,9 +15,9 @@ describe("fingerprint-fields", () => {
 
   it("treats extra merge-policy rule pages as incomplete", () => {
     expect(rulesComplete(null)).toBe(true);
-    expect(rulesComplete({ rules: { nodes: [] } })).toBe(true);
-    expect(rulesComplete({ rules: { pageInfo: { hasNextPage: false }, nodes: [] } })).toBe(true);
-    expect(rulesComplete({ rules: { pageInfo: { hasNextPage: true }, nodes: [] } })).toBe(false);
+    expect(rulesComplete({ rules: {} })).toBe(true);
+    expect(rulesComplete({ rules: { pageInfo: { hasNextPage: false } } })).toBe(true);
+    expect(rulesComplete({ rules: { pageInfo: { hasNextPage: true } } })).toBe(false);
   });
 
   it("fingerprints the latest thread comment revision", () => {
