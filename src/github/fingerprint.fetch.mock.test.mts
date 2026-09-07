@@ -5,7 +5,13 @@ import {
   registerClientHooks,
 } from "../../test-helpers/github/client.test-support.mts";
 import { fetchPrFingerprint } from "./fingerprint.mts";
+import { EMPTY_BRANCH_RULES } from "./batch-parsers-rules.mts";
 import { EXIT } from "../exit-codes.mts";
+
+const emptyMergePolicy = JSON.stringify({
+  isMergeQueueEnabled: false,
+  rules: EMPTY_BRANCH_RULES,
+});
 
 registerClientHooks();
 
@@ -19,11 +25,21 @@ const pullRequest = {
   mergeStateStatus: "CLEAN",
   reviewDecision: null,
   isInMergeQueue: false,
+  isMergeQueueEnabled: false,
+  baseRef: null,
   comments: { totalCount: 2, nodes: [{ id: "c2" }] },
   reviewThreads: { totalCount: 1, nodes: [{ id: "t1" }] },
   reviews: { totalCount: 3, nodes: [{ id: "r3" }] },
   commits: {
-    nodes: [{ commit: { oid: "abc123", statusCheckRollup: { state: "SUCCESS" } } }],
+    nodes: [
+      {
+        commit: {
+          oid: "abc123",
+          statusCheckRollup: { state: "SUCCESS" },
+          checkSuites: { pageInfo: { hasNextPage: false }, nodes: [] },
+        },
+      },
+    ],
   },
 };
 
@@ -39,6 +55,8 @@ describe("fetchPrFingerprint", () => {
       mergeStateStatus: "CLEAN",
       reviewDecision: null,
       isInMergeQueue: false,
+      isMergeQueueEnabled: false,
+      mergePolicy: emptyMergePolicy,
       commentCount: 2,
       threadCount: 1,
       reviewCount: 3,
@@ -47,6 +65,7 @@ describe("fetchPrFingerprint", () => {
       latestReviewId: "r3",
       checkRollupState: "SUCCESS",
       checkSuiteConclusions: "",
+      checkSuitesComplete: true,
       viewerCanUpdate: true,
       viewerPermission: "ADMIN",
     });
@@ -69,7 +88,10 @@ describe("fetchPrFingerprint", () => {
                   commit: {
                     oid: "abc123",
                     statusCheckRollup: null,
-                    checkSuites: { nodes: [{ conclusion: "STARTUP_FAILURE" }] },
+                    checkSuites: {
+                      pageInfo: { hasNextPage: false },
+                      nodes: [{ id: "CS_1", conclusion: "STARTUP_FAILURE" }],
+                    },
                   },
                 },
               ],
@@ -82,7 +104,8 @@ describe("fetchPrFingerprint", () => {
       latestCommentId: null,
       latestThreadId: null,
       latestReviewId: null,
-      checkSuiteConclusions: "STARTUP_FAILURE",
+      checkSuiteConclusions: "CS_1:STARTUP_FAILURE",
+      checkSuitesComplete: true,
       viewerCanUpdate: false,
       viewerPermission: "WRITE",
     });

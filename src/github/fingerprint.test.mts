@@ -12,6 +12,8 @@ function sample(overrides: Partial<PrFingerprint> = {}): PrFingerprint {
     mergeStateStatus: "CLEAN",
     reviewDecision: null,
     isInMergeQueue: false,
+    isMergeQueueEnabled: false,
+    mergePolicy: '{"isMergeQueueEnabled":false}',
     commentCount: 1,
     threadCount: 0,
     reviewCount: 0,
@@ -20,6 +22,7 @@ function sample(overrides: Partial<PrFingerprint> = {}): PrFingerprint {
     latestReviewId: null,
     checkRollupState: "SUCCESS",
     checkSuiteConclusions: "",
+    checkSuitesComplete: true,
     viewerCanUpdate: true,
     viewerPermission: "ADMIN",
     ...overrides,
@@ -44,6 +47,11 @@ describe("fingerprintsEqual", () => {
     expect(fingerprintsEqual(sample(), sample({ commentCount: 2, latestCommentId: "c2" }))).toBe(
       false,
     );
+  });
+
+  it("is false when merge-queue enablement or policy changes", () => {
+    expect(fingerprintsEqual(sample(), sample({ isMergeQueueEnabled: true }))).toBe(false);
+    expect(fingerprintsEqual(sample(), sample({ mergePolicy: '{"required":1}' }))).toBe(false);
   });
 });
 
@@ -71,7 +79,10 @@ describe("fingerprintFromRaw", () => {
             commit: {
               oid: "abc123",
               statusCheckRollup: { state: "FAILURE" },
-              checkSuites: { nodes: [{ conclusion: null }] },
+              checkSuites: {
+                pageInfo: { hasNextPage: false },
+                nodes: [{ id: "CS_1", conclusion: null }],
+              },
             },
           },
         ],
@@ -79,7 +90,87 @@ describe("fingerprintFromRaw", () => {
     });
     const fingerprint = fingerprintFromRaw(raw as never, "WRITE");
     expect(fingerprint.reviewCount).toBe(0);
-    expect(fingerprint.checkSuiteConclusions).toBe("");
+    expect(fingerprint.checkSuiteConclusions).toBe("CS_1:");
+    expect(fingerprint.checkSuitesComplete).toBe(true);
     expect(fingerprint.viewerPermission).toBe("WRITE");
+  });
+
+  it("treats a complete suite page with no nodes as empty", () => {
+    const raw = makeRawPr({
+      commits: {
+        nodes: [
+          {
+            commit: {
+              oid: "abc123",
+              statusCheckRollup: { state: "SUCCESS" },
+              checkSuites: { pageInfo: { hasNextPage: false } },
+            },
+          },
+        ],
+      },
+    });
+    const fingerprint = fingerprintFromRaw(raw as never);
+    expect(fingerprint.checkSuiteConclusions).toBe("");
+    expect(fingerprint.checkSuitesComplete).toBe(true);
+  });
+
+  it("falls back to workflow run id when a suite has no node id", () => {
+    const raw = makeRawPr({
+      commits: {
+        nodes: [
+          {
+            commit: {
+              oid: "abc123",
+              statusCheckRollup: { state: "SUCCESS" },
+              checkSuites: {
+                pageInfo: { hasNextPage: false },
+                nodes: [{ conclusion: "SUCCESS", workflowRun: { databaseId: 9 } }],
+              },
+            },
+          },
+        ],
+      },
+    });
+    expect(fingerprintFromRaw(raw as never).checkSuiteConclusions).toBe("9:SUCCESS");
+  });
+
+  it("does not treat a truncated check-suite page as complete", () => {
+    const raw = makeRawPr({
+      commits: {
+        nodes: [
+          {
+            commit: {
+              oid: "abc123",
+              statusCheckRollup: { state: "SUCCESS" },
+              checkSuites: {
+                pageInfo: { hasNextPage: true },
+                nodes: [{ id: "CS_1", conclusion: "SUCCESS" }],
+              },
+            },
+          },
+        ],
+      },
+    });
+    expect(fingerprintFromRaw(raw as never).checkSuitesComplete).toBe(false);
+  });
+
+  it("encodes merge-queue enablement and branch rules into mergePolicy", () => {
+    const raw = makeRawPr({
+      isMergeQueueEnabled: true,
+      baseRef: {
+        branchProtectionRule: {
+          requiresApprovingReviews: true,
+          requiredApprovingReviewCount: 2,
+          requiresConversationResolution: true,
+          requiresStatusChecks: false,
+          requiredStatusCheckContexts: null,
+        },
+        rules: { nodes: [] },
+      },
+    });
+    const fingerprint = fingerprintFromRaw(raw as never);
+    expect(fingerprint.isMergeQueueEnabled).toBe(true);
+    expect(fingerprint.mergePolicy).toContain('"isMergeQueueEnabled":true');
+    expect(fingerprint.mergePolicy).toContain('"requiredApprovingReviewCount":2');
   });
 });

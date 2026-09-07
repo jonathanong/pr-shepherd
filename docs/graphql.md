@@ -121,7 +121,15 @@ Default poll interval is **60s**. Ready-delay is **10 minutes**. Repeating a “
 | First-look minimize / classification auto-resolve                                                       | plus `BulkApply` mutation chunks (unmeasured)                                                                      | none                                                   |
 | `--require-sha` on apply                                                                                | plus up to 10× `GetPrHeadSha`                                                                                      | none                                                   |
 
-Each iterate tick used to fetch a fresh full snapshot — there is no body cache across ticks. Unchanged ticks now skip the full snapshot when [`pr-fingerprint.gql`](../src/github/gql/pr-fingerprint.gql) matches the stored fingerprint (head SHA, `updatedAt`, comment/thread/review counts, latest comment/review ids, check-rollup state, merge/queue flags). New or edited review items change those fields and force a full fetch so the [comment visibility invariant](comments.md#first-look-items-comment-visibility-invariant) still holds.
+Each iterate tick used to fetch a fresh full snapshot — there is no body cache across ticks. Unchanged ticks now skip the full snapshot when [`pr-fingerprint.gql`](../src/github/gql/pr-fingerprint.gql) matches the stored fingerprint (head SHA, `updatedAt`, comment/thread/review counts, latest comment/review ids, check-rollup state, check-suite identity and completeness, merge/queue flags, merge policy). New or edited review items change those fields and force a full fetch so the [comment visibility invariant](comments.md#first-look-items-comment-visibility-invariant) still holds.
+
+Fingerprint skip is refused — the tick runs `BatchPr` — when any of these hold:
+
+- The cached report is not WAIT-shaped (first-look items, failing checks, visible approvals, merge-queue membership, and similar).
+- The live `checkSuites(first: 50)` page is truncated (`hasNextPage`), so a later startup-failure suite would be invisible.
+- Merge policy cannot be read (`mergePolicy` empty) and the cached report is `READY`.
+- REST mergeability differs from the cached report. GraphQL can stay `UNKNOWN` after REST returns `CLEAN`; REST `BEHIND` must not keep a cached `READY` ready-delay.
+- Classification inputs changed: `inputDigest` hashes report-shaping config (`ignoreChecks`, `botUsernames`, `iterate.*`, `watch.readyDelayMinutes`, `checks.*`, `mergeStatus.blockingReviewerLogins`, `actions.autoMinimizeSuppressed` / `autoMarkReady` / `neverCancelRuns` / `workWhileQueued`) plus **classification rule file contents**, not just paths.
 
 ## REST fallbacks
 
@@ -171,7 +179,7 @@ Each iterate tick used to fetch a fresh full snapshot — there is no body cache
 - `--verbose` prints command-scoped `apiUsage` (credential source, request count, measured query cost, node count, remaining/limit/reset).
 - `watch.graphqlQuotaWarnings` (default 30% → 2m, 20% → 5m, 10% → 10m) emits a one-shot-per-worktree-per-window `quotaWarning` on non-terminal results. The skill / MCP caller is told to slow down and to prefer REST `gh` for incidental work.
 - The **poll dispatcher** (`pr-shepherd [PR]`, including `--until-terminal`) also **applies** those bands: `WAIT` / `MARK_READY` sleeps use `max(--interval, band interval)` from the latest `apiUsage.graphql` remaining percent, every tick, even after the one-shot warning has already been claimed. Single-tick `iterate` and MCP `iterate` stay advisory — those callers own recurrence.
-- Unchanged ticks skip `BatchPr` when the fingerprint matches.
+- Unchanged ticks skip `BatchPr` when the fingerprint matches, CheckSuites are complete, merge policy is present for `READY` reports, and REST mergeability agrees with the cached report.
 - `--until-terminal` retries a tick once after a GraphQL 429 / secondary-limit `Retry-After` (capped at 2 minutes) instead of exiting 75 immediately. Single-tick iterate still fails with 75.
 
 ### How to read spend

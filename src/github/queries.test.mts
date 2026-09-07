@@ -39,6 +39,15 @@ describe("queries — GQL constants load at import time", () => {
     expect(BATCH_PR_QUERY).toContain("checkSuites");
   });
 
+  it("fingerprint preflight selects merge policy and check-suite completeness", () => {
+    expect(PR_FINGERPRINT_QUERY).toContain("isMergeQueueEnabled");
+    expect(PR_FINGERPRINT_QUERY).toContain("branchProtectionRule");
+    expect(PR_FINGERPRINT_QUERY).toContain("requiredApprovingReviewCount");
+    expect(PR_FINGERPRINT_QUERY).toContain("pageInfo");
+    expect(PR_FINGERPRINT_QUERY).toContain("hasNextPage");
+    expect(BATCH_PR_QUERY).toContain("checkSuites");
+  });
+
   it("keeps merge-queue metadata in BatchPr without nested queue check trees", () => {
     expect(BATCH_PR_QUERY).toContain("isInMergeQueue");
     expect(BATCH_PR_QUERY).toContain("mergeQueueEntry");

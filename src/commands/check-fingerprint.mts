@@ -36,6 +36,13 @@ export async function tryReuseFingerprintReport(
   if (!reportAllowsFingerprintSkip(cached.report)) return null;
   const live = await fetchPrFingerprint(prNumber, repo);
   if (live.isInMergeQueue || cached.fingerprint.isInMergeQueue) return null;
+  if (!live.checkSuitesComplete || !cached.fingerprint.checkSuitesComplete) return null;
+  if (
+    cached.report.status === "READY" &&
+    (live.mergePolicy === "" || cached.fingerprint.mergePolicy === "")
+  ) {
+    return null;
+  }
   if (!fingerprintsEqual(cached.fingerprint, live)) return null;
   if (!(await cachedReportSurvivesMergeabilityRefresh(prNumber, repo, cached.report))) {
     return null;
@@ -51,6 +58,7 @@ async function cachedReportSurvivesMergeabilityRefresh(
   if (report.status !== "READY" && report.mergeStatus.status !== "UNKNOWN") return true;
   const rest = await getMergeableState(prNumber, repo.owner, repo.name);
   if (rest.state === "MERGED" || rest.state === "CLOSED") return false;
-  if (rest.mergeable === "CONFLICTING" || rest.mergeStateStatus === "DIRTY") return false;
+  if (rest.mergeable !== report.mergeStatus.mergeable) return false;
+  if (rest.mergeStateStatus !== report.mergeStatus.mergeStateStatus) return false;
   return true;
 }

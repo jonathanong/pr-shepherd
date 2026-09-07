@@ -87,6 +87,7 @@ export interface RawPr extends RawPrMergeFields {
 interface RawCheckSuites {
   pageInfo: { hasNextPage: boolean };
   nodes: Array<{
+    id?: string;
     conclusion: string | null;
     workflowRun: {
       databaseId: number | null;

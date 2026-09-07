@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { randomBytes } from "node:crypto";
-import { chmod, mkdir, rm, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { chmod, mkdir, rm, symlink, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { runWithExecutionCwd } from "../execution-context.mts";
 import { resolvePrStatePath } from "./base.mts";
 import {
   fingerprintInputDigest,
@@ -59,7 +60,7 @@ describe("pr-fingerprint state", () => {
     const fingerprint = testFingerprint({ headRefOid: "deadbeef" });
     await storePrFingerprint(key, fingerprint, report, config);
     await expect(loadPrFingerprint(key)).resolves.toEqual({
-      version: 2,
+      version: 3,
       inputDigest: fingerprintInputDigest(config),
       fingerprint,
       report,
@@ -84,6 +85,36 @@ describe("pr-fingerprint state", () => {
       storePrFingerprint(key, testFingerprint(), report, config),
     ).resolves.toBeUndefined();
     await chmod(dir, 0o755);
+  });
+
+  it("changes digest when report-shaping config changes", () => {
+    const other = {
+      ...config,
+      checks: { ...config.checks, ciTriggerEvents: ["push"] },
+      actions: { ...config.actions, neverCancelRuns: ["lint"] },
+      mergeStatus: { blockingReviewerLogins: ["coderabbit"] },
+    } as PrShepherdConfig;
+    expect(fingerprintInputDigest(other)).not.toBe(fingerprintInputDigest(config));
+  });
+
+  it("changes digest when classification rule file contents change", async () => {
+    const rulesDir = join(testStateDir, ".pr-shepherd", "classification");
+    await mkdir(rulesDir, { recursive: true });
+    const rulePath = join(rulesDir, "example.mjs");
+    await writeFile(rulePath, "export default () => ({ skip: true });\n", "utf8");
+    const before = runWithExecutionCwd(testStateDir, () => fingerprintInputDigest(config));
+    await writeFile(rulePath, "export default () => ({ skip: false });\n", "utf8");
+    const after = runWithExecutionCwd(testStateDir, () => fingerprintInputDigest(config));
+    expect(after).not.toBe(before);
+  });
+
+  it("treats unreadable classification rule files as digest input", async () => {
+    const rulesDir = join(testStateDir, ".pr-shepherd", "classification");
+    await mkdir(rulesDir, { recursive: true });
+    await symlink("/no-such-pr-shepherd-rule", join(rulesDir, "gone.mjs"));
+    expect(runWithExecutionCwd(testStateDir, () => fingerprintInputDigest(config))).toEqual(
+      expect.any(String),
+    );
   });
 
   it("returns null for invalid JSON or a mismatched version", async () => {

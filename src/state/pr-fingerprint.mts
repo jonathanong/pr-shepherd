@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { resolvePrStatePath } from "./base.mts";
@@ -8,7 +9,7 @@ import type { PrFingerprint } from "../github/fingerprint.mts";
 import type { PrShepherdConfig } from "../config/load.mts";
 import type { ShepherdReport } from "../types.mts";
 
-const VERSION = 2;
+const VERSION = 3;
 
 export interface StoredPrFingerprint {
   version: number;
@@ -18,19 +19,34 @@ export interface StoredPrFingerprint {
 }
 
 export function fingerprintInputDigest(config: PrShepherdConfig): string {
-  return createHash("sha256")
-    .update(
-      JSON.stringify({
-        ignoreChecks: config.ignoreChecks,
-        botUsernames: config.botUsernames,
-        minimizeApprovals: config.iterate.minimizeApprovals,
-        minimizeComments: config.iterate.minimizeComments,
-        resolveOtherHumanThreads: config.iterate.resolveOtherHumanThreads,
-        rules: discoverRuleFiles(getEffectiveCwd()),
-      }),
-    )
-    .digest("hex")
-    .slice(0, 16);
+  const hash = createHash("sha256");
+  hash.update(
+    JSON.stringify({
+      ignoreChecks: config.ignoreChecks,
+      botUsernames: config.botUsernames,
+      iterate: config.iterate,
+      watch: { readyDelayMinutes: config.watch.readyDelayMinutes },
+      checks: config.checks,
+      mergeStatus: config.mergeStatus,
+      actions: {
+        autoMinimizeSuppressed: config.actions.autoMinimizeSuppressed,
+        autoMarkReady: config.actions.autoMarkReady,
+        neverCancelRuns: config.actions.neverCancelRuns,
+        workWhileQueued: config.actions.workWhileQueued,
+      },
+    }),
+  );
+  for (const file of discoverRuleFiles(getEffectiveCwd())) {
+    hash.update("\0");
+    hash.update(file);
+    hash.update("\0");
+    try {
+      hash.update(readFileSync(file));
+    } catch {
+      hash.update("missing");
+    }
+  }
+  return hash.digest("hex").slice(0, 16);
 }
 
 export async function loadPrFingerprint(key: {

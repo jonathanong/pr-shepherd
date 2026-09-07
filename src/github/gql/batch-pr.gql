@@ -294,6 +294,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
                 hasNextPage
               }
               nodes {
+                id
                 conclusion
                 workflowRun {
                   databaseId
