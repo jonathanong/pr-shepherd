@@ -89,23 +89,25 @@ The generic paginator is in `github/pagination.mts`. It accepts a `direction` pa
 
 Static documents live in [`src/github/gql/`](../src/github/gql/) and are loaded from [`src/github/queries.mts`](../src/github/queries.mts). Dynamic mutation documents are built at runtime (they cannot be expressed as a single static file).
 
-| Operation              | Document                                  | When it runs                                                                                      | Selects `rateLimit.cost` |
-| ---------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------ |
-| `BatchPr`              | `batch-pr.gql`                            | Every full `runCheck` / iterate tick that does not hit a fingerprint skip                         | yes                      |
-| `PrFingerprint`        | `pr-fingerprint.gql`                      | Every iterate tick after the first stored fingerprint, to decide whether the full batch is needed | yes                      |
-| `BatchPrPage`          | `batch-pr-page.gql`                       | Extra connection pages; combined cursors                                                          | yes                      |
-| `ReviewThreadComments` | `review-thread-comments.gql`              | A thread whose nested `comments` connection has another page                                      | yes                      |
-| `CommitCheckContexts`  | `commit-check-contexts.gql`               | Merge-queue (or current-removal) commit check rollup, including page 1                            | yes                      |
-| `CheckRunAnnotations`  | `check-run-annotations.gql`               | Completed check whose batch probe found at least one annotation (1h derived cache)                | yes                      |
-| `SuggestionThreads`    | `suggestion-threads.gql`                  | `build-suggestion-patches`                                                                        | yes                      |
-| `GetPrHeadSha`         | `get-pr-head-sha.gql`                     | `--require-sha` poll (`resolve.shaPoll`, default 2s × 10)                                         | yes                      |
-| `PrNumberByBranch`     | `pr-number-by-branch.gql`                 | No PR number passed (avoid this — pass the number)                                                | yes                      |
-| `GetPrBody`            | `get-pr-body.gql`                         | Journal apply, before the body mutation                                                           | yes                      |
-| `UpdatePrBody`         | `update-pr-body.gql`                      | Journal apply                                                                                     | no (mutation)            |
-| `MarkPrReady`          | `mark-pr-ready.gql`                       | `mark_ready` when `viewerCanUpdate`                                                               | no (mutation)            |
-| `PullRequestFiles`     | inline in `mark-files-as-viewed.mts`      | `apply files`                                                                                     | yes                      |
-| `BulkApply`            | runtime aliases in `comments/resolve.mts` | reply / resolve / minimize / dismiss, chunks of 10                                                | no (mutation)            |
-| `markFileAsViewed`     | runtime aliases, chunks of 10             | `apply files`                                                                                     | no (mutation)            |
+| Operation              | Document                                      | When it runs                                                                                      | Selects `rateLimit.cost` |
+| ---------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------ |
+| `BatchPr`              | `batch-pr.gql`                                | Every full `runCheck` / iterate tick that does not hit a fingerprint skip                         | yes                      |
+| `PollSummary`          | dynamic aliases + `poll-summary-fragment.gql` | Explicit multi-PR summary, in chunks of 50                                                        | yes                      |
+| `PollStackSummary`     | `poll-stack-summary.gql`                      | Native-stack summary and 50-entry membership pages                                                | yes                      |
+| `PrFingerprint`        | `pr-fingerprint.gql`                          | Every iterate tick after the first stored fingerprint, to decide whether the full batch is needed | yes                      |
+| `BatchPrPage`          | `batch-pr-page.gql`                           | Extra connection pages; combined cursors                                                          | yes                      |
+| `ReviewThreadComments` | `review-thread-comments.gql`                  | A thread whose nested `comments` connection has another page                                      | yes                      |
+| `CommitCheckContexts`  | `commit-check-contexts.gql`                   | Merge-queue (or current-removal) commit check rollup, including page 1                            | yes                      |
+| `CheckRunAnnotations`  | `check-run-annotations.gql`                   | Completed check whose batch probe found at least one annotation (1h derived cache)                | yes                      |
+| `SuggestionThreads`    | `suggestion-threads.gql`                      | `build-suggestion-patches`                                                                        | yes                      |
+| `GetPrHeadSha`         | `get-pr-head-sha.gql`                         | `--require-sha` poll (`resolve.shaPoll`, default 2s × 10)                                         | yes                      |
+| `PrNumberByBranch`     | `pr-number-by-branch.gql`                     | No PR number passed (avoid this — pass the number)                                                | yes                      |
+| `GetPrBody`            | `get-pr-body.gql`                             | Journal apply, before the body mutation                                                           | yes                      |
+| `UpdatePrBody`         | `update-pr-body.gql`                          | Journal apply                                                                                     | no (mutation)            |
+| `MarkPrReady`          | `mark-pr-ready.gql`                           | `mark_ready` when `viewerCanUpdate`                                                               | no (mutation)            |
+| `PullRequestFiles`     | inline in `mark-files-as-viewed.mts`          | `apply files`                                                                                     | yes                      |
+| `BulkApply`            | runtime aliases in `comments/resolve.mts`     | reply / resolve / minimize / dismiss, chunks of 10                                                | no (mutation)            |
+| `markFileAsViewed`     | runtime aliases, chunks of 10                 | `apply files`                                                                                     | no (mutation)            |
 
 ## Per-tick budget
 

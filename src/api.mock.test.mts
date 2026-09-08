@@ -9,6 +9,7 @@ const {
   mockRunMarkFilesAsViewed,
   mockRunResolveMutate,
   mockGetRepoInfo,
+  mockRunPollSummary,
 } = vi.hoisted(() => ({
   mockRunCommitSuggestion: vi.fn(),
   mockRunSuggestionPatches: vi.fn(),
@@ -17,6 +18,7 @@ const {
   mockRunMarkFilesAsViewed: vi.fn(),
   mockRunResolveMutate: vi.fn(),
   mockGetRepoInfo: vi.fn(),
+  mockRunPollSummary: vi.fn(),
 }));
 
 vi.mock("./commands/commit-suggestion.mts", () => ({
@@ -26,6 +28,7 @@ vi.mock("./commands/suggestion-patches.mts", () => ({
   runSuggestionPatches: mockRunSuggestionPatches,
 }));
 vi.mock("./commands/iterate/index.mts", () => ({ runIterate: mockRunIterate }));
+vi.mock("./commands/poll-summary.mts", () => ({ runPollSummary: mockRunPollSummary }));
 vi.mock("./commands/journal/index.mts", () => ({ runJournal: mockRunJournal }));
 vi.mock("./commands/mark-files-as-viewed.mts", () => ({
   runMarkFilesAsViewed: mockRunMarkFilesAsViewed,
@@ -71,6 +74,33 @@ describe("public API", () => {
         format: "json",
       }),
     );
+  });
+
+  it("routes plural and native-stack iterate inputs to one read-only summary tick", async () => {
+    mockRunPollSummary.mockResolvedValue({ mode: "summary", prs: [] });
+    const shepherd = createPrShepherd();
+
+    await shepherd.iterate({ prs: ["openai/pr-shepherd#42", "openai/pr-shepherd#43"] });
+    expect(mockRunPollSummary).toHaveBeenLastCalledWith({
+      prNumbers: [42, 43],
+      targetRepository: { owner: "openai", name: "pr-shepherd" },
+    });
+
+    await shepherd.iterate({ stack: "openai/pr-shepherd#43", merge: true });
+    expect(mockRunPollSummary).toHaveBeenLastCalledWith({
+      stackPrNumber: 43,
+      targetRepository: { owner: "openai", name: "pr-shepherd" },
+      merge: true,
+    });
+    expect(mockRunIterate).not.toHaveBeenCalled();
+  });
+
+  it("rejects cross-repository aggregate iterate input", async () => {
+    const shepherd = createPrShepherd();
+    await expect(
+      shepherd.iterate({ prs: ["openai/pr-shepherd#42", "other/widgets#43"] }),
+    ).rejects.toThrow("one repository");
+    expect(mockRunPollSummary).not.toHaveBeenCalled();
   });
 
   it("accepts a fork owner/repo#number shorthand without consulting the checkout repository", async () => {

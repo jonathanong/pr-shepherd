@@ -4,13 +4,24 @@
 
 Each `pr-shepherd iterate` invocation returns exactly one action. The bare `pr-shepherd <PR>` command runs the bounded poll dispatcher and prints the final iterate action. The shipped skill instead uses `pr-shepherd [PR] --until-terminal`. See [iterate-flow.md](iterate-flow.md) for the decision order and [context.md](context.md) for what the header and body gather.
 
-CLI `PR` accepts a positive number, `owner/repo#N`, or a GitHub pull-request URL. A qualified reference selects its repository for GitHub I/O; the current working directory remains the local git, configuration, classification-rule, and debug-log context. Direct MCP calls still require a qualified reference, but it can name any accessible repository.
+CLI `PR` accepts a positive number, `owner/repo#N`, or a GitHub pull-request URL. A qualified reference selects its repository for GitHub I/O; the current working directory remains the local git, configuration, classification-rule, and debug-log context. Multiple PR arguments select an exact same-repository set; `--stack PR` selects its complete native GitHub stack. Direct MCP calls still require qualified references, but they can name any accessible repository.
 
 The default output format is Markdown — what the skill receives from its until-terminal poll dispatcher and what direct CLI users see. `--format=json` emits the same action data as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format. MCP `iterate`'s `structuredContent` uses this same lean JSON shape (see [mcp.md](mcp.md)); MCP has no verbose equivalent.
 
 The bare CLI command accepts `--interval`/`--timeout`/`--debounce`/`--quiet-status`/`--no-quiet-status` (e.g. `pr-shepherd <PR> --interval 60s --timeout 4.5m --quiet-status`), waits while the PR remains in `[WAIT]`, and returns on an agent-facing action. Polling defaults come from the `poll` configuration group; explicit flags override them. With `--merge`, it also continues through `MARK_READY` and returns `MERGE` when the ready-delay completes. Each ordinary `WAIT` tick writes an explicit still-running line to stderr unless quiet status is enabled; the final action remains the only stdout result. If `--timeout` expires during WAIT polling, the bounded command returns that final `WAIT` result.
 
 The shipped skill invokes `pr-shepherd [PR] --until-terminal`. That command continues through ordinary `WAIT` and `MARK_READY` actions, then returns `FIX_CODE` (after `--debounce`, default: `poll.debounceSeconds`; built-in 1m and `0` disables), `MERGE`, any non-terminal quota-warning result, or terminal `CANCEL`/`ESCALATE`. A quota warning returns immediately so the skill can follow its cadence instructions and re-invoke the command without a `--timeout`. After every returned non-terminal result, the skill follows `## Instructions` and invokes the same canonical command again. Debounce ticks set `persistSeen: false` — seen markers and first-look suppression wait for the post-window tick. `--quiet-status` keeps unchanged WAIT ticks out of agent context. MCP callers invoke one `iterate` tick at a time (no debounce) and let their host schedule the next call.
+
+Explicit multi-PR and `--stack` selectors use a separate compact, read-only summary path. A CLI
+aggregate returns when any row has an agent-facing action, every row is terminal, or its bounded
+timeout expires; completed rows do not stop polling while another row remains `WAIT`. Stack entries
+are fetched completely and ordered bottom-to-top. Each row surfaces the same fields in Markdown and
+JSON: repository, title/URL, raw PR/merge/review/head/base/stack state, bounded check and review
+counts plus incomplete flags, and a conservative action with reasons. Each actionable row also has
+an exact repository-qualified single-PR `pollCommand`. One final `## Instructions` section directs the caller to process independent
+actionable rows and rerun the aggregate selector. Aggregate API and MCP calls return one summary tick
+without recurrence. The summary path never mutates GitHub or writes seen markers; the selected
+single-PR commands remain authoritative for state changes and full review context.
 
 Command examples call `pr-shepherd` directly everywhere a follow-up command is emitted.
 

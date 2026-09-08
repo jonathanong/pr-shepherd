@@ -7,7 +7,8 @@ pr-shepherd has one workflow model and two transports: the local stdio MCP serve
 ## Canonical shell commands
 
 ```text
-pr-shepherd [PR] [poll-flags] [iterate-flags]
+pr-shepherd [PR ...] [poll-flags] [iterate-flags]
+pr-shepherd --stack PR [poll-flags] [iterate-flags]
 pr-shepherd iterate [PR] [iterate-flags]
 pr-shepherd apply review [PR] [review-flags]
 pr-shepherd apply files [PR] [files...] [--tests] [--match REGEX]
@@ -20,7 +21,9 @@ pr-shepherd admin clean <pr|branch|current|repo|all> [value] [--dry-run] [--form
 pr-shepherd admin log-file [--format text|json]
 ```
 
-`PR` may be a number or GitHub pull request URL. When omitted, Shepherd infers the current branch's open PR.
+`PR` may be a number, `owner/repo#N`, or GitHub pull request URL. Multiple explicit PRs must resolve
+to one repository. `--stack PR` selects the complete native GitHub stack containing that PR and
+orders its entries bottom-to-top. When omitted, Shepherd infers the current branch's open PR.
 
 `apply journal --file <path>` reads the journal item from a file; `--file -` reads stdin. Provide either a positional `<item>` or `--file`, not both.
 
@@ -40,7 +43,17 @@ pr-shepherd 42 --until-terminal --quiet-status
 pr-shepherd 42 --debounce 5m
 pr-shepherd iterate 42 --ready-delay 15m
 pr-shepherd 42 --merge
+pr-shepherd 42 43 44
+pr-shepherd --stack 43
 ```
+
+Explicit PR sets and native stacks use a compact read-only summary rather than running the
+stateful one-PR iterator for every row. Aggregate polling continues while all non-terminal rows are
+`WAIT`; it returns when a row needs work, every row is terminal, or timeout expires. Its Markdown,
+JSON, API, and MCP result contains one row per PR with raw state, bounded check/review counts, a
+conservative action routing hint and reasons. Each actionable row includes an exact one-PR
+`pollCommand`. Follow independently actionable commands, then run the aggregate selector again. Aggregate mode never writes seen
+markers or performs GitHub mutations.
 
 The polling flags are `--interval`, `--timeout`, `--debounce`, `--quiet-status`, `--no-quiet-status`, and `--until-terminal`. Their defaults come from `poll.intervalSeconds` (built-in 60), `poll.timeoutSeconds` (270), `poll.debounceSeconds` (60), and `poll.quietStatus` (`false`) in `.pr-shepherdrc.yml`; explicit flags override configuration. Each ordinary `WAIT` tick writes an explicit still-running line to stderr unless quiet status is enabled; the final action remains the only stdout result. `--debounce` (`0` disables) is a settle window after the first `FIX_CODE`. Iterate flags are `--ready-delay`, `--stall-timeout`, `--merge`, `--no-auto-mark-ready`, `--format`, and `--verbose`. The legacy `--no-auto-cancel-actionable` flag remains accepted as a no-op. Durations accept `s`, `m`, and `h`; bare polling durations are seconds and bare iterate durations are minutes.
 

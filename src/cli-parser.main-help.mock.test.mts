@@ -14,7 +14,8 @@ describe("main — top-level help", () => {
     await main(["node", "shepherd", "--help"]);
     const out = getStdout();
     expect(out).toContain("Usage:");
-    expect(out).toContain("pr-shepherd [PR]");
+    expect(out).toContain("pr-shepherd [PR ...]");
+    expect(out).toContain("pr-shepherd --stack PR");
     expect(out).toContain("pr-shepherd iterate");
     expect(out).toContain("pr-shepherd apply review");
     expect(out).toContain("pr-shepherd apply files");

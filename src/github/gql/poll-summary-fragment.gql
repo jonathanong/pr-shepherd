@@ -1,0 +1,104 @@
+fragment PollSummaryPr on PullRequest {
+  number
+  title
+  url
+  state
+  isDraft
+  viewerCanUpdate
+  headRefName
+  headRefOid
+  baseRefName
+  mergeable
+  mergeStateStatus
+  reviewDecision
+  isInMergeQueue
+  stack {
+    number
+    size
+    baseRefName
+  }
+  stackEntry {
+    position
+  }
+  comments(last: 100) {
+    totalCount
+    pageInfo {
+      hasPreviousPage
+    }
+    nodes {
+      id
+      body
+      isMinimized
+    }
+  }
+  reviews(last: 100) {
+    totalCount
+    pageInfo {
+      hasPreviousPage
+    }
+    nodes {
+      id
+      body
+      state
+      isMinimized
+      author {
+        __typename
+        login
+      }
+    }
+  }
+  reviewThreads(last: 20) {
+    totalCount
+    pageInfo {
+      hasPreviousPage
+    }
+    nodes {
+      id
+      isResolved
+      isOutdated
+      comments(last: 5) {
+        totalCount
+        pageInfo {
+          hasPreviousPage
+        }
+        nodes {
+          body
+          viewerDidAuthor
+          author {
+            __typename
+            login
+          }
+        }
+      }
+    }
+  }
+  commits(last: 1) {
+    nodes {
+      commit {
+        statusCheckRollup {
+          contexts(last: 100) {
+            totalCount
+            pageInfo {
+              hasPreviousPage
+            }
+            nodes {
+              __typename
+              ... on CheckRun {
+                status
+                conclusion
+                checkSuite {
+                  workflowRun {
+                    event
+                  }
+                }
+              }
+              ... on StatusContext {
+                state
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

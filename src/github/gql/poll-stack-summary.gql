@@ -1,0 +1,32 @@
+query PollStackSummary($owner: String!, $repo: String!, $anchor: Int!, $after: String) {
+  _shepherdRateLimit: rateLimit {
+    cost
+    limit
+    nodeCount
+    remaining
+    resetAt
+    used
+  }
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $anchor) {
+      stack {
+        id
+        number
+        size
+        baseRefName
+        entries(first: 50, after: $after) {
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          nodes {
+            position
+            pullRequest {
+              ...PollSummaryPr
+            }
+          }
+        }
+      }
+    }
+  }
+}

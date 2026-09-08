@@ -42,6 +42,10 @@ Emitted by `iterate` and `poll` (including the default `pr-shepherd [PR]`
 invocation) once a report was fetched successfully. The code names the
 `action` field of the `IterateResult`.
 
+Aggregate polling uses the highest-priority row outcome: `escalate`, `fix_code`, `merge`,
+`mark_ready`, `wait`, closed-only `cancel`, then successful terminal `cancel`. The full row list
+remains in the output regardless of which one determines the process exit code.
+
 | Code | Action       | Meaning                                            |
 | ---- | ------------ | -------------------------------------------------- |
 | 10   | `wait`       | Nothing to do yet; CI still in progress            |

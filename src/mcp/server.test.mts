@@ -152,6 +152,56 @@ describe("pr-shepherd MCP server", () => {
     expect(response.content?.[0]?.text).toContain("**ready-delay** `900s` (override)");
   });
 
+  it("returns equivalent compact aggregate Markdown and structured content", async () => {
+    const result = {
+      mode: "summary" as const,
+      repo: "openai/pr-shepherd",
+      selection: { kind: "prs" as const, requested: [3, 4] },
+      reason: "actionable" as const,
+      prs: [
+        {
+          pr: 3,
+          repo: "openai/pr-shepherd",
+          title: "Fix widgets",
+          url: "https://github.com/openai/pr-shepherd/pull/3",
+          action: "fix_code" as const,
+          reasons: ["failing-checks"],
+          state: "OPEN" as const,
+          mergeable: "MERGEABLE" as const,
+          mergeStateStatus: "UNSTABLE" as const,
+          headRefName: "fix-widgets",
+          headRefOid: "a".repeat(40),
+          baseRefName: "main",
+          checks: { passing: 1, failing: 1 },
+          pollCommand:
+            "npx pr-shepherd https://github.com/openai/pr-shepherd/pull/3 --until-terminal",
+        },
+      ],
+    };
+    const iterate = vi.fn().mockResolvedValue(result);
+    const tools = registeredTools(
+      createPrShepherdMcpServer({
+        shepherd: {
+          iterate,
+          apply: vi.fn(),
+          buildSuggestionPatches: vi.fn(),
+          buildSuggestionPatch: vi.fn(),
+        },
+      }),
+    );
+
+    const response = await tools.iterate!.handler({
+      prs: ["openai/pr-shepherd#3", "openai/pr-shepherd#4"],
+    });
+
+    expect(response.structuredContent).toBe(result);
+    expect(response.content?.[0]?.text).toContain("# Poll summary [ACTIONABLE]");
+    expect(response.content?.[0]?.text).toContain("PR #3: Fix widgets");
+    expect(iterate).toHaveBeenCalledWith({
+      prs: ["openai/pr-shepherd#3", "openai/pr-shepherd#4"],
+    });
+  });
+
   it("requires a repository-qualified PR string in every tool schema and handler", async () => {
     const shepherd = {
       iterate: vi.fn(),
@@ -169,6 +219,9 @@ describe("pr-shepherd MCP server", () => {
         { pr: "openai/pr-shepherd#0" },
         { pr: "openai#3" },
         { pr: "https://example.com/openai/pr-shepherd/pull/3" },
+        { prs: [] },
+        { prs: ["openai/pr-shepherd#3", "other/widgets#4"] },
+        { pr: "openai/pr-shepherd#3", stack: "openai/pr-shepherd#3" },
       ],
       apply: [
         {},
@@ -245,6 +298,14 @@ describe("pr-shepherd MCP server", () => {
     for (const [name, input] of Object.entries(validByTool)) {
       expect(tools[name]!.inputSchema.safeParse(input).success).toBe(true);
     }
+    expect(
+      tools.iterate!.inputSchema.safeParse({
+        prs: ["openai/pr-shepherd#3", "openai/pr-shepherd#4"],
+      }).success,
+    ).toBe(true);
+    expect(tools.iterate!.inputSchema.safeParse({ stack: "openai/pr-shepherd#3" }).success).toBe(
+      true,
+    );
 
     expect(shepherd.iterate).not.toHaveBeenCalled();
     expect(shepherd.apply).not.toHaveBeenCalled();

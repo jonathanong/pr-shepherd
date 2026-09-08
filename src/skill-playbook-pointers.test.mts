@@ -107,9 +107,7 @@ describe("pr-shepherd skill recurrence contract", () => {
     const cliDispatcher = skill.match(/^2\..*?(?=^3\.)/ms)?.[0];
 
     expect(cliDispatcher).toBeDefined();
-    expect(cliDispatcher).toMatch(
-      /canonical poll command `pr-shepherd(?: \[PR\])? --until-terminal`/,
-    );
+    expect(cliDispatcher).toMatch(/run `pr-shepherd(?: \[PR \.\.\.\])? --until-terminal`/);
   });
 
   it("repeats the dispatcher until CANCEL or ESCALATE", () => {

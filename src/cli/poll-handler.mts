@@ -6,9 +6,18 @@ import { validateSecondsDurationFlag } from "./duration-flag.mts";
 import { parseIterateFlags } from "./iterate-flags.mts";
 import { emitIterateResult } from "./iterate-emitter.mts";
 import { EXIT } from "../exit-codes.mts";
+import { runAggregatePoll } from "../commands/poll-summary.mts";
+import { emitPollSummaryResult } from "./poll-summary-emitter.mts";
+import { parsePollTargets, resolvePollTargets } from "./poll-targets.mts";
 
 export async function handlePoll(args: string[]): Promise<void> {
-  const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
+  const parsedTargets = parsePollTargets(args);
+  if (!parsedTargets) return;
+  const isAggregate = parsedTargets.stack !== undefined || parsedTargets.refs.length > 1;
+  const resolvedTargets = isAggregate ? await resolvePollTargets(parsedTargets) : { prNumbers: [] };
+  const { prNumber, global: commonGlobalOpts, extra: commonExtra } = parseCommonArgs(args);
+  const globalOpts = isAggregate ? parsedTargets.global : commonGlobalOpts;
+  const extra = isAggregate ? parsedTargets.extra : commonExtra;
   const cfg = loadConfig();
 
   const flags = parseIterateFlags(extra, cfg);
@@ -58,9 +67,8 @@ export async function handlePoll(args: string[]): Promise<void> {
   }
   const quietStatus = quietStatusFlag || (!noQuietStatusFlag && cfg.poll.quietStatus);
 
-  const result = await runPoll({
+  const shared = {
     ...globalOpts,
-    prNumber,
     readyDelaySeconds: flags.readyDelaySeconds,
     stallTimeoutSeconds: flags.stallTimeoutSeconds,
     noAutoMarkReady: flags.noAutoMarkReady,
@@ -71,7 +79,18 @@ export async function handlePoll(args: string[]): Promise<void> {
     debounceSeconds,
     quietStatus,
     untilTerminal: hasFlag(extra, "--until-terminal"),
-  });
+  };
+
+  if (isAggregate) {
+    const result = await runAggregatePoll({
+      ...shared,
+      ...resolvedTargets,
+    });
+    emitPollSummaryResult(result, { format: globalOpts.format });
+    return;
+  }
+
+  const result = await runPoll({ ...shared, prNumber });
 
   emitIterateResult(result, {
     format: globalOpts.format,

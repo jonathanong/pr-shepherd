@@ -170,15 +170,22 @@ Hosts namespace tool names with the server name (`pr-shepherd__iterate` in Grok,
 
 ### `iterate`
 
-| Input                    | Type                            | Required | Meaning                                                   |
-| ------------------------ | ------------------------------- | -------- | --------------------------------------------------------- |
-| `pr`                     | GitHub PR URL or `owner/repo#N` | yes      | PR to inspect; its named repository is the GitHub target. |
-| `readyDelaySeconds`      | non-negative number             | no       | Override the ready-delay window.                          |
-| `stallTimeoutSeconds`    | non-negative number             | no       | Override the stall timeout.                               |
-| `noAutoMarkReady`        | boolean                         | no       | Disable automatic draft → ready.                          |
-| `noAutoCancelActionable` | boolean                         | no       | Deprecated no-op; Shepherd never cancels workflow runs.   |
-| `merge`                  | boolean                         | no       | Shepherd to readiness and emit merge/queue commands.      |
-| `neverCancelRuns`        | string array                    | no       | Deprecated per-call no-op retained for compatibility.     |
+| Input                    | Type                            | Required | Meaning                                                 |
+| ------------------------ | ------------------------------- | -------- | ------------------------------------------------------- |
+| `pr`                     | GitHub PR URL or `owner/repo#N` | selector | One PR to inspect; its named repository is the target.  |
+| `prs`                    | qualified PR array              | selector | Non-empty explicit set from one repository.             |
+| `stack`                  | GitHub PR URL or `owner/repo#N` | selector | Anchor selecting its complete native GitHub stack.      |
+| `readyDelaySeconds`      | non-negative number             | no       | Override the ready-delay window.                        |
+| `stallTimeoutSeconds`    | non-negative number             | no       | Override the stall timeout.                             |
+| `noAutoMarkReady`        | boolean                         | no       | Disable automatic draft → ready.                        |
+| `noAutoCancelActionable` | boolean                         | no       | Deprecated no-op; Shepherd never cancels workflow runs. |
+| `merge`                  | boolean                         | no       | Shepherd to readiness and emit merge/queue commands.    |
+| `neverCancelRuns`        | string array                    | no       | Deprecated per-call no-op retained for compatibility.   |
+
+Supply exactly one of `pr`, `prs`, or `stack`. `prs` is a non-empty list of qualified references
+from one repository; `stack` is one qualified anchor whose complete native GitHub stack is selected.
+Aggregate selectors return one compact, read-only summary tick. Markdown and `structuredContent`
+surface equivalent per-PR raw state, bounded check/review counts, routing hints, and `pollCommand`s.
 
 The result's Markdown `content` is the CLI's default (lean) rendering, and `structuredContent` is the matching lean JSON projection of the `IterateResult` — not the raw result object. This means `structuredContent` omits fields that are the trivial default (`shouldCancel`, `apiUsage`, `mergeStatus` when it's the healthy `CLEAN` value, `reviewDecision` unless the PR is blocked, `remainingSeconds` unless the ready-delay countdown is active, `checks` outside `fix_code`, and more — see [actions.md](actions.md)) and adds `readyDelayOverride` when `readyDelaySeconds` was supplied. For every action except `fix_code`, it also adds a computed top-level `instructions` array; for `fix_code`, the equivalent steps are under `fix.instructions` instead. Action semantics, instruction text, and the full field contract live in [actions.md](actions.md).
 

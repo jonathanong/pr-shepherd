@@ -13,10 +13,14 @@ describe("public CLI help surface", () => {
     for (const legacy of ["pr-shepherd poll", "pr-shepherd resolve", "pr-shepherd journal [PR]"]) {
       expect(USAGE.top).not.toContain(legacy);
     }
-    expect(USAGE.default).toContain("Usage:\n  pr-shepherd [PR] [poll-flags] [iterate-flags]");
+    expect(USAGE.default).toContain("Usage:\n  pr-shepherd [PR ...] [poll-flags] [iterate-flags]");
+    expect(USAGE.default).toContain("pr-shepherd --stack PR");
     expect(USAGE.default).not.toContain("[PR] [PR]");
     expect(USAGE.default).not.toContain("pr-shepherd poll");
-    expect(USAGE.poll).toContain("Usage:\n  pr-shepherd poll [PR] [poll-flags] [iterate-flags]");
+    expect(USAGE.poll).toContain(
+      "Usage:\n  pr-shepherd poll [PR ...] [poll-flags] [iterate-flags]",
+    );
+    expect(USAGE.poll).toContain("pr-shepherd poll --stack PR");
     expect(USAGE.top).toContain("--debounce");
     expect(USAGE.default).toContain("--debounce");
     expect(USAGE.poll).toContain("--debounce");

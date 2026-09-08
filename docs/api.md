@@ -14,6 +14,8 @@ import { createPrShepherd } from "pr-shepherd";
 const shepherd = createPrShepherd({ cwd: "/path/to/repo" });
 
 const tick = await shepherd.iterate({ pr: 42, merge: true });
+const group = await shepherd.iterate({ prs: [42, 43] });
+const stack = await shepherd.iterate({ stack: 43 });
 const applied = await shepherd.apply({
   pr: 42,
   operations: [
@@ -44,6 +46,11 @@ const patches = await shepherd.buildSuggestionPatches({
 | `buildSuggestionPatch({ pr, threadId, message, … })` | Deprecated one-item compatibility path |
 
 For the programmatic API, `pr` is an optional positive number, repository-qualified `owner/repo#N`, or GitHub pull-request URL. Omitted, Shepherd infers the current branch's open PR. A repository-qualified reference is authoritative for GitHub reads and mutations and may name a repository other than the configured `cwd`. `cwd` remains the source of local git state, configuration, classification-rule lookups, and per-worktree debug logging.
+
+`iterate` also accepts exactly one aggregate selector: non-empty `prs` or `stack`. Every selected
+reference must resolve to one repository. Aggregate calls perform one compact, read-only summary
+tick and return `PollSummaryResult`; they do not mark review items seen or perform mutations. The
+caller owns recurrence and follows each actionable row's repository-qualified `pollCommand`.
 
 `apply` runs `operations` in list order after validating every operation. Types: `review_mutations`, `mark_files_viewed`, `append_journal`. `mark_files_viewed` performs the requested `markFileAsViewed` mutations and surfaces GitHub's per-file results. Direct review and journal operations honor explicit caller intent; review operations still enforce semantic human-content protections, and GitHub is authoritative for authorization and other mutation errors. Replies and dismissals require `message`. `requireSha` must be a full 40-character lowercase hex SHA.
 
