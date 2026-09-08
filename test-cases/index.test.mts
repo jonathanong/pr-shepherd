@@ -53,10 +53,19 @@ for (const name of listFixtureNames()) {
       expect(result.exitCode, "exit code must match docs/exit-codes.md").toBe(
         fixture.expectedExitCode,
       );
-      const actualAction = (JSON.parse(result.jsonOut) as { action: string }).action;
-      expect(actualAction, `fixture name must match the emitted action`).toBe(
-        actionFromFixtureName(name),
-      );
+      const json = JSON.parse(result.jsonOut) as {
+        action?: string;
+        mode?: string;
+        reason?: string;
+      };
+      if (fixture.mode === "aggregate") {
+        expect(json.mode).toBe("summary");
+        expect(json.reason).toBe(fixture.expectedReason);
+      } else {
+        expect(json.action, `fixture name must match the emitted action`).toBe(
+          actionFromFixtureName(name),
+        );
+      }
 
       await expect(result.textOut).toMatchFileSnapshot(
         join(fixturesDir, "snapshots", name, "output.text.md"),

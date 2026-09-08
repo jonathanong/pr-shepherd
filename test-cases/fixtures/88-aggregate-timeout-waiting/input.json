@@ -1,0 +1,42 @@
+{
+  "mode": "aggregate",
+  "description": "A bounded explicit poll returns timeout while every remaining row waits.",
+  "args": ["42", "43", "--timeout", "1s", "--interval", "2s"],
+  "expectedReason": "timeout",
+  "expectedExitCode": 10,
+  "aggregateSummary": {
+    "selection": { "kind": "prs", "requested": [42, 43] },
+    "prs": [
+      {
+        "pr": 42,
+        "repo": "owner/repo",
+        "title": "CI running",
+        "url": "https://github.com/owner/repo/pull/42",
+        "action": "wait",
+        "reasons": ["pending-or-unknown"],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "ci-running",
+        "headRefOid": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "baseRefName": "main",
+        "checks": { "inProgress": 1 }
+      },
+      {
+        "pr": 43,
+        "repo": "owner/repo",
+        "title": "Ready countdown",
+        "url": "https://github.com/owner/repo/pull/43",
+        "action": "wait",
+        "reasons": ["ready-delay"],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "ready-countdown",
+        "headRefOid": "ffffffffffffffffffffffffffffffffffffffff",
+        "baseRefName": "main",
+        "remainingSeconds": 300
+      }
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 # test-cases/
 
-End-to-end scenario fixtures for `shepherd iterate`. Each fixture drives the
-real argument parser (`main()`), the full `runIterate` state machine, and
+End-to-end scenario fixtures for `shepherd iterate` and aggregate polling. Each fixture drives the
+real argument parser (`main()`), the full `runIterate` state machine or aggregate coordinator, and
 **both** formatters (text + JSON), then snapshots the result. This is the only
 place in the repo that exercises the whole pipeline together — everywhere else
 under `src/**` is unit-level.
@@ -29,6 +29,11 @@ their names during development (see git history for
 `24-wait-review-summary-already-surfaced`,
 `32-fix-code-pr-level-changes-requested`,
 `44-fix-code-seen-bot-thread-resurfaced`) with nothing catching it.
+
+Aggregate fixtures set `"mode": "aggregate"`, provide `aggregateSummary`, `expectedReason`, and
+the exact bare-poll `args`. Their directory name need not encode a singular action because aggregate
+rows can mix actions; the runner instead pins `mode: "summary"`, `reason`, exit-code parity, and both
+snapshots. Use these fixtures for parser-to-formatter coverage of explicit PR sets and native stacks.
 
 Fixture numbers are not unique today (`42`, `43`, `46`, `47` each have more than
 one entry, and `36` is skipped) — this is harmless (directories are addressed

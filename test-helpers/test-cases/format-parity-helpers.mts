@@ -11,6 +11,9 @@
  */
 export const TEXT_LOSSY_PATHS = new Map<string, string>([
   ["action", "text uses the uppercase `[ACTION]` heading tag, not the lowercase JSON enum value"],
+  ["prs[].action", "aggregate text uses uppercase per-row action tags"],
+  ["reason", "aggregate text uses the uppercase reason in its heading"],
+  ["selection.kind", "aggregate text renders the selector as human-readable PR or stack text"],
   [
     "mergeStatus",
     "the raw enum discriminator is JSON-only; text instead renders the derived `**branch** behind/conflicts with PR base` phrasing or the `**reviewDecision**`/BLOCKED header segment (docs/actions.md, 'Note on mergeStatus in JSON lean mode')",
@@ -100,6 +103,16 @@ export interface ConditionalLossyPath {
 }
 
 export const CONDITIONAL_LOSSY_PATHS: ConditionalLossyPath[] = [
+  {
+    path: "prs[].title",
+    description: "aggregate Markdown safely HTML-escapes externally supplied PR title text",
+    isExempt: (container) =>
+      typeof container === "object" &&
+      container !== null &&
+      "title" in container &&
+      typeof container.title === "string" &&
+      /[&<>]/.test(container.title),
+  },
   {
     path: "fix.changesRequestedReviews[].body",
     description:
