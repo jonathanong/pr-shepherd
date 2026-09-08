@@ -108,10 +108,31 @@ describe("public API", () => {
     expect(mockRunPollSummary).not.toHaveBeenCalled();
   });
 
+  it("accepts aggregate repository references with different casing", async () => {
+    const shepherd = createPrShepherd();
+    await shepherd.iterate({ prs: ["OpenAI/Pr-Shepherd#42", "openai/pr-shepherd#43"] });
+    expect(mockRunPollSummary).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumbers: [42, 43] }),
+    );
+  });
+
+  it("rejects conflicting runtime selectors", async () => {
+    const shepherd = createPrShepherd();
+    await expect(shepherd.iterate({ pr: 42, prs: [43] } as never)).rejects.toThrow(
+      "mutually exclusive",
+    );
+    await expect(shepherd.iterate({ prs: [42], stack: 43 } as never)).rejects.toThrow(
+      "mutually exclusive",
+    );
+    expect(mockRunPollSummary).not.toHaveBeenCalled();
+    expect(mockRunIterate).not.toHaveBeenCalled();
+  });
+
   it("rejects empty and malformed aggregate selectors", async () => {
     const shepherd = createPrShepherd();
     await expect(shepherd.iterate({ prs: [] })).rejects.toThrow("at least one");
     await expect(shepherd.iterate({ prs: ["bad"] })).rejects.toThrow("Invalid PR reference");
+    expect(mockGetRepoInfo).not.toHaveBeenCalled();
     expect(mockRunPollSummary).not.toHaveBeenCalled();
   });
 

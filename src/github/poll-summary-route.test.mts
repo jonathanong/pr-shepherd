@@ -41,6 +41,7 @@ describe("routePollSummary", () => {
     [{ mergeable: "UNKNOWN" }, {}, {}, {}, "wait", "pending-or-unknown"],
     [{ mergeStateStatus: "BEHIND" }, {}, {}, { merge: true }, "wait", "pending-or-unknown"],
     [{}, {}, { actionable: 1 }, {}, "fix_code", "review-work"],
+    [{}, { inProgress: 1 }, { actionable: 1 }, {}, "fix_code", "review-work"],
     [
       { isInMergeQueue: true },
       {},

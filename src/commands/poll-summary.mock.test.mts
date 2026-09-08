@@ -108,6 +108,24 @@ describe("aggregate poll recurrence", () => {
     expect(stderr).toHaveBeenCalledTimes(1);
   });
 
+  it("does not let timeout cut an active fix debounce short", async () => {
+    let now = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    mockSleep.mockImplementation(async (milliseconds) => {
+      now += milliseconds;
+    });
+    mockFetch.mockResolvedValue({
+      selection: { kind: "prs", requested: [42] },
+      prs: [row(42, "fix_code")],
+    });
+
+    await expect(
+      runAggregatePoll({ ...opts, timeoutSeconds: 1, debounceSeconds: 60 }),
+    ).resolves.toMatchObject({ reason: "actionable" });
+    expect(mockSleep).toHaveBeenCalledWith(60_000);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
   it("prints changed waiting snapshots but suppresses unchanged quiet ticks", async () => {
     let now = 0;
     vi.spyOn(Date, "now").mockImplementation(() => now);

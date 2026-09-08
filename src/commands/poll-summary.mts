@@ -104,7 +104,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
           intervalMs,
           MAX_TIMER_MS,
         );
-    if (!opts.untilTerminal) {
+    if (!opts.untilTerminal && debounceUntil === null) {
       const remainingMs = timeoutMs - elapsedMs;
       if (remainingMs <= 0 || remainingMs + TIMER_DRIFT_TOLERANCE_MS < sleepMs) {
         return attachUsage({ ...last, reason: "timeout" });

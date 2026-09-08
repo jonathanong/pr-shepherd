@@ -25,6 +25,12 @@ export function routePollSummary(
   if (checks.incomplete || review.incomplete) {
     return { action: "fix_code", reasons: ["incomplete-summary-data"] };
   }
+  if ((review.actionable ?? 0) > 0) {
+    if (opts.merge && raw.isInMergeQueue && actions.workWhileQueued !== true) {
+      return { action: "wait", reasons: ["review-work-deferred-while-queued"] };
+    }
+    return { action: "fix_code", reasons: ["review-work"] };
+  }
   if (
     (checks.inProgress ?? 0) > 0 ||
     raw.mergeable === "UNKNOWN" ||
@@ -32,12 +38,6 @@ export function routePollSummary(
     raw.mergeStateStatus === "BEHIND"
   ) {
     return { action: "wait", reasons: ["pending-or-unknown"] };
-  }
-  if ((review.actionable ?? 0) > 0) {
-    if (opts.merge && raw.isInMergeQueue && actions.workWhileQueued !== true) {
-      return { action: "wait", reasons: ["review-work-deferred-while-queued"] };
-    }
-    return { action: "fix_code", reasons: ["review-work"] };
   }
   if (raw.isDraft) {
     if (opts.noAutoMarkReady || actions.autoMarkReady === false) {

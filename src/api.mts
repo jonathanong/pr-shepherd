@@ -170,6 +170,7 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
   function iterate(input: IterateInput): Promise<IterateResult | PollSummaryResult>;
   function iterate(input: IterateInput = {}): Promise<IterateResult | PollSummaryResult> {
     return runWithExecutionCwd(cwd, async () => {
+      validateIterateSelectors(input);
       if ("prs" in input || "stack" in input) {
         const target = await resolveAggregateIterateInput(input as AggregateIterateInput);
         return runPollSummary(target);
@@ -265,31 +266,48 @@ async function resolveAggregateIterateInput(
     throw new PrShepherdValidationError("iterate.prs must contain at least one PR reference");
   }
   const parsedRefs = refs.map((ref) => ({ ref, parsed: parsePrReference(ref) }));
+  for (const { ref, parsed } of parsedRefs) {
+    if (!parsed?.number) {
+      throw new PrShepherdValidationError(`Invalid PR reference: ${String(ref)}`);
+    }
+  }
   const checkout = parsedRefs.some(({ parsed }) => parsed?.repository === undefined)
     ? await getRepoInfo()
     : undefined;
   let repository: { owner: string; name: string } | undefined;
   const numbers: number[] = [];
   for (const { ref, parsed } of parsedRefs) {
-    if (!parsed?.number)
+    const prNumber = parsed?.number;
+    if (!parsed || !prNumber) {
       throw new PrShepherdValidationError(`Invalid PR reference: ${String(ref)}`);
+    }
     const target = resolveParsedPrTarget(parsed);
     const nextRepository = target.targetRepository ?? checkout!;
     if (
       repository &&
-      (repository.owner !== nextRepository.owner || repository.name !== nextRepository.name)
+      (repository.owner.toLowerCase() !== nextRepository.owner.toLowerCase() ||
+        repository.name.toLowerCase() !== nextRepository.name.toLowerCase())
     ) {
       throw new PrShepherdValidationError(
         "aggregate iterate only supports PRs from one repository",
       );
     }
     repository = nextRepository;
-    if (!numbers.includes(parsed.number)) numbers.push(parsed.number);
+    if (!numbers.includes(prNumber)) numbers.push(prNumber);
   }
   const { pr: _pr, prs: _prs, stack: _stack, ...options } = input;
   return "prs" in input
     ? { ...options, prNumbers: numbers, targetRepository: repository }
     : { ...options, stackPrNumber: numbers[0], targetRepository: repository };
+}
+
+function validateIterateSelectors(input: IterateInput): void {
+  const selectorCount = ["pr", "prs", "stack"].filter((key) => key in input).length;
+  if (selectorCount > 1) {
+    throw new PrShepherdValidationError(
+      "iterate pr, prs, and stack selectors are mutually exclusive",
+    );
+  }
 }
 
 function validateApplyInput(input: ApplyInput): void {
