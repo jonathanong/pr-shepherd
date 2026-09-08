@@ -243,8 +243,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   );
   await writeBotCrSeenState(botCrStateKey, nextBotCrState);
   if (staleBotCrIds.length > 0) {
-    const staleSet = new Set(staleBotCrIds);
-    const staleReviews = botCrReviews.filter((r) => staleSet.has(r.id));
     const { resolveCommand, resolveOnlyCommand } = buildReviewCommands(
       toAgentChecks(failingChecks),
     );
@@ -255,7 +253,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
         toAgentThread,
       ),
       ambiguousComments: report.comments.actionable.map(toAgentComment),
-      changesRequestedReviews: staleReviews,
+      changesRequestedReviews: report.changesRequestedReviews,
       ...(firstLookSummaries.length > 0 && { firstLookSummaries }),
       ...(editedSummaries.length > 0 && { editedSummaries }),
       ...(pending && { pendingReviewCommands: pending }),
