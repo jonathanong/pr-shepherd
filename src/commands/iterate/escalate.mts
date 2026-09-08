@@ -159,6 +159,8 @@ export function buildEscalateHumanMessage(
     escalate.unresolvedThreads.length > 0 ||
     escalate.changesRequestedReviews.length > 0 ||
     escalate.ambiguousComments.length > 0 ||
+    (escalate.firstLookSummaries?.length ?? 0) > 0 ||
+    (escalate.editedSummaries?.length ?? 0) > 0 ||
     (escalate.checks?.length ?? 0) > 0 ||
     (escalate.stalledChecks?.length ?? 0) > 0;
   if (hasItems) {
@@ -192,6 +194,18 @@ export function buildEscalateHumanMessage(
       lines.push("");
       for (const bodyLine of r.body.split("\n")) lines.push(`  > ${bodyLine}`);
       lines.push("");
+    }
+    for (const [heading, summaries] of [
+      ["Review summaries (first look)", escalate.firstLookSummaries ?? []],
+      ["Review summaries (edited since first look)", escalate.editedSummaries ?? []],
+    ] as const) {
+      if (summaries.length === 0) continue;
+      lines.push(`### ${heading}`, "");
+      for (const summary of summaries) {
+        lines.push(`- review \`${summary.id}\` (${renderEscalateAuthor(summary)}):`, "");
+        for (const bodyLine of summary.body.split("\n")) lines.push(`  > ${bodyLine}`);
+        lines.push("");
+      }
     }
     for (const c of escalate.ambiguousComments) {
       lines.push(`- comment \`${c.id}\` (${renderEscalateAuthor(c)}):`);

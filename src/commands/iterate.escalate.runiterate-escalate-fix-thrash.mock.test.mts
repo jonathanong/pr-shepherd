@@ -89,6 +89,45 @@ describe("runIterate — escalate (fix-thrash)", () => {
       expect(result.escalate.pendingReviewCommands?.resolveCommand?.hasMutations).toBe(true);
     }
   });
+  it("surfaces a first-look review summary before retaining its minimize mutation", async () => {
+    mockReadFixAttempts.mockResolvedValue({
+      headSha: "abc123",
+      threadAttempts: { "thread-1": 3 },
+      threadBodyHashes: { "thread-1": hashBody(THREAD.body) },
+    });
+    const summary = {
+      id: "summary-1",
+      author: "coderabbitai",
+      authorType: "Bot" as const,
+      body: "Read this summary before minimizing it.",
+    };
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: {
+          actionable: [THREAD],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
+        firstLookSummaries: [summary],
+      }),
+    );
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("escalate");
+    if (result.action === "escalate") {
+      expect(result.escalate.firstLookSummaries).toEqual([{ ...summary, viewerCanMinimize: true }]);
+      const pendingArgv = [
+        ...(result.escalate.pendingReviewCommands?.resolveOnlyCommand?.argv ?? []),
+        ...(result.escalate.pendingReviewCommands?.resolveCommand?.argv ?? []),
+      ];
+      expect(pendingArgv).toContain(summary.id);
+      expect(result.escalate.humanMessage).toContain(summary.body);
+    }
+  });
   it("does NOT escalate immediately when legacy attempt state has no body hash and HEAD changed", async () => {
     mockReadFixAttempts.mockResolvedValue({
       headSha: "old-sha",

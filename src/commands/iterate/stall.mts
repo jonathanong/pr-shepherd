@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { readStallState, writeStallState } from "../../state/iterate-stall.mts";
 import { toAgentThread, toAgentComment, toAgentStalledCheck } from "../../reporters/agent.mts";
 import {
@@ -26,6 +27,20 @@ function pendingReviewCommandsFromResult(
     ...(result.fix.resolveCommand.hasMutations && { resolveCommand: result.fix.resolveCommand }),
   };
   return Object.keys(pending).length > 0 ? pending : undefined;
+}
+
+function surfacedSummariesFromResult(
+  result: IterateResult,
+): Pick<EscalateDetails, "firstLookSummaries" | "editedSummaries"> {
+  if (result.action !== "fix_code") return {};
+  return {
+    ...(result.fix.firstLookSummaries.length > 0 && {
+      firstLookSummaries: result.fix.firstLookSummaries,
+    }),
+    ...(result.fix.editedSummaries.length > 0 && {
+      editedSummaries: result.fix.editedSummaries,
+    }),
+  };
 }
 
 function computeStallFingerprint(
@@ -101,6 +116,7 @@ export async function applyStallGuard(
       unresolvedThreads: [],
       ambiguousComments: [],
       changesRequestedReviews: [],
+      ...surfacedSummariesFromResult(prospectiveResult),
       stalledChecks,
       ...(pending && { pendingReviewCommands: pending }),
       suggestion: buildEscalateSuggestion(["stall-timeout"], stalledDuration),
@@ -143,6 +159,7 @@ export async function applyStallGuard(
         ),
         ambiguousComments: report.comments.actionable.map(toAgentComment),
         changesRequestedReviews: report.changesRequestedReviews,
+        ...surfacedSummariesFromResult(prospectiveResult),
         ...(pending && { pendingReviewCommands: pending }),
         suggestion: buildEscalateSuggestion(["stall-timeout"], stalledDuration),
       };

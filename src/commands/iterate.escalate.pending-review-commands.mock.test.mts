@@ -12,6 +12,14 @@ describe("escalate pending review commands", () => {
         unresolvedThreads: [],
         ambiguousComments: [],
         changesRequestedReviews: [],
+        firstLookSummaries: [
+          {
+            id: "review-1",
+            author: "review-bot",
+            authorType: "Bot",
+            body: "Summary body that must be read before minimization.",
+          },
+        ],
         pendingReviewCommands: {
           resolveOnlyCommand: {
             argv: ["pr-shepherd", "apply", "review", "42", "--resolve-thread-ids", "t-1"],
@@ -28,5 +36,7 @@ describe("escalate pending review commands", () => {
     expect(message).toContain("## Pending review commands");
     expect(message).toContain("resolve-only:");
     expect(message).toContain("t-1");
+    expect(message).toContain("### Review summaries (first look)");
+    expect(message).toContain("Summary body that must be read before minimization.");
   });
 });
