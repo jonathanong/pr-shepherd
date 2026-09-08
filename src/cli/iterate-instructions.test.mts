@@ -50,11 +50,12 @@ describe("iterate instruction polling contract", () => {
 
     const text = textInstructions(result);
     expect(text).toEqual(jsonInstructions(result));
-    expect(text[0]).toContain("Stop — human direction is required");
+    expect(text).toHaveLength(3);
+    expect(text[0]).toContain("Pause automated polling");
     expect(text.join(" ")).toContain("$HEAD_SHA");
     expect(text.join(" ")).toContain("$DISMISS_MESSAGE");
-    expect(text.join(" ")).toContain("apply review");
-    expect(text.at(-1)).toContain("human-directed recovery");
+    expect(text.join(" ")).toContain("pending review mutations");
+    expect(text.at(-1)).toContain("directed recovery");
   });
 
   it("renders a low-quota warning with transport-aware continuation in text and JSON", () => {

@@ -548,9 +548,9 @@ After completing manual fixes, resume only after every required remote update ha
 
 ## Instructions
 
-1. Stop — human direction is required before automated polling can resume.
-2. After the human decides how to handle the escalation, replace `$HEAD_SHA` and `$DISMISS_MESSAGE` as instructed and run the pending `apply review:` command.
-3. Rerun Shepherd with the same options after the manual work and pending review mutations are complete.
+1. Pause automated polling and ask the user how to handle this escalation.
+2. If directed to complete the pending review mutations, substitute any `$HEAD_SHA` with the current pushed PR-head SHA and any `$DISMISS_MESSAGE` with one specific sentence, then run the commands shown above.
+3. After completing the directed recovery, rerun Shepherd with the same options.
 ```
 
 The block after the base-fields line (separated by a blank line) is `escalate.humanMessage` in JSON — ready to print verbatim.

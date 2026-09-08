@@ -28,9 +28,6 @@ After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-
 
 ## Instructions
 
-1. Stop — human direction is required before automated polling can resume.
-2. Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked thread that is still being resolved is emitted resolve-only, not for another reply.
-3. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, commit and push to the PR head branch first, then replace `$HEAD_SHA` with the pushed commit SHA.
-4. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
-5. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.
-6. After completing the human-directed recovery and any pending review commands, rerun the Shepherd command with the same options.
+1. Pause automated polling and ask the user how to handle this escalation.
+2. If directed to complete the pending review mutations, substitute any `$HEAD_SHA` with the current pushed PR-head SHA and any `$DISMISS_MESSAGE` with one specific sentence, then run the commands shown above.
+3. After completing the directed recovery, rerun Shepherd with the same options.
