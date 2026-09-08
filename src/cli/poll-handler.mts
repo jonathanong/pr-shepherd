@@ -13,8 +13,12 @@ import { parsePollTargets, resolvePollTargets } from "./poll-targets.mts";
 export async function handlePoll(args: string[]): Promise<void> {
   const parsedTargets = parsePollTargets(args);
   if (!parsedTargets) return;
-  const isAggregate = parsedTargets.stack !== undefined || parsedTargets.refs.length > 1;
-  const resolvedTargets = isAggregate ? await resolvePollTargets(parsedTargets) : { prNumbers: [] };
+  const needsResolution = parsedTargets.stack !== undefined || parsedTargets.refs.length > 1;
+  const resolvedTargets = needsResolution
+    ? await resolvePollTargets(parsedTargets)
+    : { prNumbers: [] };
+  const isAggregate =
+    resolvedTargets.stackPrNumber !== undefined || resolvedTargets.prNumbers.length > 1;
   const { prNumber, global: commonGlobalOpts, extra: commonExtra } = parseCommonArgs(args);
   const globalOpts = isAggregate ? parsedTargets.global : commonGlobalOpts;
   const extra = isAggregate ? parsedTargets.extra : commonExtra;

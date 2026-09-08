@@ -45,7 +45,7 @@ const patches = await shepherd.buildSuggestionPatches({
 | `buildSuggestionPatches({ pr, suggestions })`        | MCP `build_suggestion_patches`         |
 | `buildSuggestionPatch({ pr, threadId, message, … })` | Deprecated one-item compatibility path |
 
-For the programmatic API, `pr` is an optional positive number, repository-qualified `owner/repo#N`, or GitHub pull-request URL. Omitted, Shepherd infers the current branch's open PR. A repository-qualified reference is authoritative for GitHub reads and mutations and may name a repository other than the configured `cwd`. `cwd` remains the source of local git state, configuration, classification-rule lookups, and per-worktree debug logging.
+For a singular programmatic API call, `pr` is an optional positive number, repository-qualified `owner/repo#N`, or GitHub pull-request URL. Omitted, Shepherd infers the current branch's open PR. A repository-qualified reference is authoritative for GitHub reads and mutations and may name a repository other than the configured `cwd`. `cwd` remains the source of local git state, configuration, classification-rule lookups, and per-worktree debug logging.
 
 `iterate` also accepts exactly one aggregate selector: non-empty `prs` or `stack`. Every selected
 reference must resolve to one repository. Aggregate calls perform one compact, read-only summary
@@ -101,9 +101,9 @@ const server = createPrShepherdMcpServer({ cwd: "/path/to/repo" });
 await runPrShepherdMcpStdio({ cwd: "/path/to/repo" });
 ```
 
-`createPrShepherdMcpServer` accepts an optional `shepherd` for tests. The public factory exposes canonical `iterate`, `apply`, and `build_suggestion_patches` tools plus the deprecated singular adapter. Unlike `createPrShepherd`, every MCP tool call requires a repository-qualified `pr` — a GitHub PR URL or `owner/repo#N`; bare and omitted PR references are rejected. Its explicit repository is the GitHub target and may differ from the factory's `cwd`, which still supplies the local git/config/rules context. Host install and tool schemas: [mcp.md](mcp.md).
+`createPrShepherdMcpServer` accepts an optional `shepherd` for tests. The public factory exposes canonical `iterate`, `apply`, and `build_suggestion_patches` tools plus the deprecated singular adapter. Unlike `createPrShepherd`, every MCP PR reference must be repository-qualified; `iterate` accepts exactly one of `pr`, `prs`, or `stack`, while the other tools require `pr`. Bare and omitted references are rejected. The explicit repository is the GitHub target and may differ from the factory's `cwd`, which still supplies the local git/config/rules context. Host install and tool schemas: [mcp.md](mcp.md).
 
-`createPrShepherd().iterate()` returns the raw `IterateResult`. MCP `iterate`'s `structuredContent` is not the same shape — it is the lean JSON projection described in [mcp.md](mcp.md), matching CLI `--format=json`. Don't assume the two payloads are interchangeable.
+`createPrShepherd().iterate()` returns the raw `IterateResult` for a singular selector and a raw `PollSummaryResult` for aggregate `prs` or `stack` selectors. For singular MCP `iterate`, `structuredContent` is instead the lean JSON projection described in [mcp.md](mcp.md), matching CLI `--format=json`; aggregate MCP `structuredContent` remains the raw `PollSummaryResult`.
 
 ## `pr-shepherd/classify`
 

@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
+vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
 import type { PollSummaryChecks, PollSummaryReview } from "../types.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
@@ -27,12 +30,16 @@ function route(
 }
 
 describe("routePollSummary", () => {
+  beforeEach(() => {
+    mockLoadConfig.mockReturnValue({ actions: { autoMarkReady: true, workWhileQueued: false } });
+  });
   it.each([
     [{ state: "CLOSED" }, {}, {}, {}, "cancel", "closed"],
     [{ mergeable: "CONFLICTING" }, {}, {}, {}, "fix_code", "merge-conflicts"],
     [{}, { failing: 1 }, {}, {}, "fix_code", "failing-checks"],
     [{}, { incomplete: true }, {}, {}, "fix_code", "incomplete-summary-data"],
     [{ mergeable: "UNKNOWN" }, {}, {}, {}, "wait", "pending-or-unknown"],
+    [{ mergeStateStatus: "BEHIND" }, {}, {}, { merge: true }, "wait", "pending-or-unknown"],
     [{}, {}, { actionable: 1 }, {}, "fix_code", "review-work"],
     [
       { isInMergeQueue: true },
@@ -75,5 +82,13 @@ describe("routePollSummary", () => {
 
   it("normalizes unrecognized PR states", () => {
     expect(normalizePollSummaryState("FUTURE")).toBe("UNKNOWN");
+  });
+
+  it("honors configured auto-mark-ready disablement", () => {
+    mockLoadConfig.mockReturnValue({ actions: { autoMarkReady: false, workWhileQueued: false } });
+    expect(route({ isDraft: true })).toEqual({
+      action: "wait",
+      reasons: ["draft-auto-mark-ready-disabled"],
+    });
   });
 });

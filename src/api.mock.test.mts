@@ -36,7 +36,12 @@ vi.mock("./commands/mark-files-as-viewed.mts", () => ({
 vi.mock("./commands/resolve-mutate.mts", () => ({ runResolveMutate: mockRunResolveMutate }));
 vi.mock("./github/client.mts", () => ({ getRepoInfo: mockGetRepoInfo }));
 
-import { createPrShepherd, PartialApplyError, PrShepherdValidationError } from "./api.mts";
+import {
+  createPrShepherd,
+  type IterateInput,
+  PartialApplyError,
+  PrShepherdValidationError,
+} from "./api.mts";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -108,6 +113,13 @@ describe("public API", () => {
     await expect(shepherd.iterate({ prs: [] })).rejects.toThrow("at least one");
     await expect(shepherd.iterate({ prs: ["bad"] })).rejects.toThrow("Invalid PR reference");
     expect(mockRunPollSummary).not.toHaveBeenCalled();
+  });
+
+  it("accepts a caller variable typed as the iterate selector union", async () => {
+    const shepherd = createPrShepherd();
+    const input: IterateInput = { prs: [42, 43] };
+    await shepherd.iterate(input);
+    expect(mockRunPollSummary).toHaveBeenCalled();
   });
 
   it("accepts a fork owner/repo#number shorthand without consulting the checkout repository", async () => {

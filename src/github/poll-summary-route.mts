@@ -13,6 +13,7 @@ export function routePollSummary(
   review: PollSummaryReview,
   opts: PollSummaryCommandOptions,
 ): Pick<PollSummaryItem, "action" | "reasons"> {
+  const actions = loadConfig().actions;
   const state = normalizePollSummaryState(raw.state);
   if (state === "MERGED" || state === "CLOSED") {
     return { action: "cancel", reasons: [state.toLowerCase()] };
@@ -27,18 +28,19 @@ export function routePollSummary(
   if (
     (checks.inProgress ?? 0) > 0 ||
     raw.mergeable === "UNKNOWN" ||
-    raw.mergeStateStatus === "UNKNOWN"
+    raw.mergeStateStatus === "UNKNOWN" ||
+    raw.mergeStateStatus === "BEHIND"
   ) {
     return { action: "wait", reasons: ["pending-or-unknown"] };
   }
   if ((review.actionable ?? 0) > 0) {
-    if (opts.merge && raw.isInMergeQueue && loadConfig().actions.workWhileQueued !== true) {
+    if (opts.merge && raw.isInMergeQueue && actions.workWhileQueued !== true) {
       return { action: "wait", reasons: ["review-work-deferred-while-queued"] };
     }
     return { action: "fix_code", reasons: ["review-work"] };
   }
   if (raw.isDraft) {
-    if (opts.noAutoMarkReady) {
+    if (opts.noAutoMarkReady || actions.autoMarkReady === false) {
       return { action: "wait", reasons: ["draft-auto-mark-ready-disabled"] };
     }
     return raw.viewerCanUpdate

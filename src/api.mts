@@ -129,6 +129,7 @@ export interface BuildSuggestionPatchesInput {
 export interface PrShepherd {
   iterate(input?: SingleIterateInput): Promise<IterateResult>;
   iterate(input: AggregateIterateInput): Promise<PollSummaryResult>;
+  iterate(input: IterateInput): Promise<IterateResult | PollSummaryResult>;
   apply(input: ApplyInput): Promise<ApplyResult>;
   buildSuggestionPatches(input: BuildSuggestionPatchesInput): Promise<BuildSuggestionPatchesResult>;
   /** Compatibility adapter; prefer buildSuggestionPatches. */
@@ -166,6 +167,7 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
 
   function iterate(input?: SingleIterateInput): Promise<IterateResult>;
   function iterate(input: AggregateIterateInput): Promise<PollSummaryResult>;
+  function iterate(input: IterateInput): Promise<IterateResult | PollSummaryResult>;
   function iterate(input: IterateInput = {}): Promise<IterateResult | PollSummaryResult> {
     return runWithExecutionCwd(cwd, async () => {
       if ("prs" in input || "stack" in input) {

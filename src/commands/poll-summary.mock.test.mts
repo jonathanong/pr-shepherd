@@ -100,10 +100,33 @@ describe("aggregate poll recurrence", () => {
       selection: { kind: "prs", requested: [42] },
       prs: [row(42, "fix_code")],
     });
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     await expect(
-      runAggregatePoll({ ...opts, timeoutSeconds: 120, debounceSeconds: 60 }),
+      runAggregatePoll({ ...opts, timeoutSeconds: 120, debounceSeconds: 60, quietStatus: true }),
     ).resolves.toMatchObject({ reason: "actionable" });
     expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(stderr).toHaveBeenCalledTimes(1);
+  });
+
+  it("prints changed waiting snapshots but suppresses unchanged quiet ticks", async () => {
+    let now = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    mockSleep.mockImplementation(async (milliseconds) => {
+      now += milliseconds;
+    });
+    const changed = { ...row(42, "wait"), checks: { inProgress: 1 } };
+    mockFetch
+      .mockResolvedValueOnce({
+        selection: { kind: "prs", requested: [42] },
+        prs: [row(42, "wait")],
+      })
+      .mockResolvedValue({
+        selection: { kind: "prs", requested: [42] },
+        prs: [changed],
+      });
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    await runAggregatePoll({ ...opts, timeoutSeconds: 180, quietStatus: true });
+    expect(stderr).toHaveBeenCalledTimes(2);
   });
 
   it("retries one GraphQL throttle during an until-terminal run", async () => {

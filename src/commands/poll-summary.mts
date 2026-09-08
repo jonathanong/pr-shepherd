@@ -51,6 +51,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
   let tick = 0;
   let debounceUntil: number | null = null;
   let last: PollSummaryResult | undefined;
+  let lastStatusSignature: string | null = null;
   let rateLimitRetries = 0;
 
   while (true) {
@@ -109,15 +110,32 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
         return attachUsage({ ...last, reason: "timeout" });
       }
     }
-    if (!opts.quietStatus) {
+    const statusSignature = summaryStatusSignature(last);
+    if (!opts.quietStatus || hasFix || statusSignature !== lastStatusSignature) {
       process.stderr.write(
         `[aggregate poll tick ${tick} / +${Math.round(elapsedMs / 1000)}s] ${last.prs
           .map((item) => `#${item.pr} ${item.action.toUpperCase()}`)
           .join(", ")}\n`,
       );
     }
+    lastStatusSignature = statusSignature;
     await sleep(sleepMs);
   }
+}
+
+function summaryStatusSignature(result: PollSummaryResult): string {
+  return JSON.stringify(
+    result.prs.map((item) => ({
+      pr: item.pr,
+      action: item.action,
+      state: item.state,
+      mergeable: item.mergeable,
+      mergeStateStatus: item.mergeStateStatus,
+      reviewDecision: item.reviewDecision,
+      checks: item.checks,
+      review: item.review,
+    })),
+  );
 }
 
 function isMissingStack(error: unknown): boolean {

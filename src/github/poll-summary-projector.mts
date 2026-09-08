@@ -1,6 +1,7 @@
 import { normalizeBotUsernames } from "../comments/authors.mts";
 import { loadConfig } from "../config/load.mts";
 import { formatPrUrl } from "../pr-reference.mts";
+import { buildPrShepherdCommand } from "../cli/runner.mts";
 import { classifyItem, loadSeenMap } from "../state/seen-comments.mts";
 import type {
   MergeStateStatus,
@@ -152,7 +153,7 @@ function latestReviewsByAuthor<T extends { author: RawAuthor | null }>(reviews: 
 }
 
 function buildPollCommand(repo: string, pr: number, opts: PollSummaryCommandOptions): string {
-  const args = ["npx", "pr-shepherd", formatPrUrl(repo, pr), "--until-terminal"];
+  const args = [formatPrUrl(repo, pr), "--until-terminal"];
   if (opts.merge) args.push("--merge");
   if (opts.readyDelaySeconds !== undefined)
     args.push("--ready-delay", `${opts.readyDelaySeconds}s`);
@@ -160,5 +161,5 @@ function buildPollCommand(repo: string, pr: number, opts: PollSummaryCommandOpti
     args.push("--stall-timeout", `${opts.stallTimeoutSeconds}s`);
   }
   if (opts.noAutoMarkReady) args.push("--no-auto-mark-ready");
-  return args.join(" ");
+  return buildPrShepherdCommand(args).text;
 }
