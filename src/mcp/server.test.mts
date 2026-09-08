@@ -191,14 +191,14 @@ describe("pr-shepherd MCP server", () => {
     );
 
     const response = await tools.iterate!.handler({
-      prs: ["openai/pr-shepherd#3", "openai/pr-shepherd#4"],
+      prs: ["OpenAI/Pr-Shepherd#3", "openai/pr-shepherd#4"],
     });
 
     expect(response.structuredContent).toBe(result);
     expect(response.content?.[0]?.text).toContain("# Poll summary [ACTIONABLE]");
     expect(response.content?.[0]?.text).toContain("PR #3: Fix widgets");
     expect(iterate).toHaveBeenCalledWith({
-      prs: ["openai/pr-shepherd#3", "openai/pr-shepherd#4"],
+      prs: ["OpenAI/Pr-Shepherd#3", "openai/pr-shepherd#4"],
     });
   });
 

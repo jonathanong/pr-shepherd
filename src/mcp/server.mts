@@ -17,7 +17,11 @@ import {
   type PrShepherd,
   PrShepherdValidationError,
 } from "../api.mts";
-import { isRepositoryQualifiedPrReference, parsePrReference } from "../pr-reference.mts";
+import {
+  isRepositoryQualifiedPrReference,
+  normalizeRepositoryIdentity,
+  parsePrReference,
+} from "../pr-reference.mts";
 import { formatJournalResult } from "../cli/journal-formatter.mts";
 import {
   formatCommitSuggestionResult,
@@ -73,7 +77,12 @@ const iterateInputSchema = z
   )
   .refine(
     (input) =>
-      !input.prs || new Set(input.prs.map((ref) => parsePrReference(ref)?.repository)).size === 1,
+      !input.prs ||
+      new Set(
+        input.prs.map((ref) =>
+          normalizeRepositoryIdentity(parsePrReference(ref)?.repository ?? ""),
+        ),
+      ).size === 1,
     { message: "all prs must belong to the same repository" },
   );
 
@@ -259,7 +268,11 @@ function requireRepositoryQualifiedIterate(input: {
   if (refs.length === 0 || refs.some((ref) => !isRepositoryQualifiedPrReference(ref))) {
     throw new PrShepherdValidationError(QUALIFIED_PR_ERROR);
   }
-  const repositories = new Set(refs.map((ref) => parsePrReference(ref as string)?.repository));
+  const repositories = new Set(
+    refs.map((ref) =>
+      normalizeRepositoryIdentity(parsePrReference(ref as string)?.repository ?? ""),
+    ),
+  );
   if (repositories.size !== 1) {
     throw new PrShepherdValidationError("all prs must belong to the same repository");
   }

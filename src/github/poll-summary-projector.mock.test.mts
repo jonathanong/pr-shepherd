@@ -169,4 +169,27 @@ describe("summarizePollSummaryPr", () => {
       reviewDecision: "CHANGES_REQUESTED",
     });
   });
+
+  it("does not count empty COMMENTED review summaries as actionable", async () => {
+    const item = await summarizePollSummaryPr(
+      raw({
+        reviews: {
+          totalCount: 1,
+          pageInfo: { hasPreviousPage: false },
+          nodes: [
+            {
+              id: "empty-review",
+              body: "  ",
+              state: "COMMENTED",
+              isMinimized: false,
+              author: { login: "human" },
+            },
+          ],
+        },
+      }),
+      repo,
+      {},
+    );
+    expect(item.review).toEqual({ reviews: 1 });
+  });
 });

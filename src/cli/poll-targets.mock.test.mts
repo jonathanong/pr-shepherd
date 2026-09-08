@@ -45,6 +45,11 @@ describe("poll target parsing", () => {
     await expect(resolvePollTargets(parsed)).rejects.toThrow("one repository");
   });
 
+  it("accepts repository references that differ only in case", async () => {
+    const parsed = parsePollTargets(["Acme/Widgets#42", "acme/widgets#43"])!;
+    await expect(resolvePollTargets(parsed)).resolves.toMatchObject({ prNumbers: [42, 43] });
+  });
+
   it("validates separate and inline stack selectors", () => {
     expect(parsePollTargets(["--stack"])).toBeNull();
     expect(parsePollTargets(["--stack=bad"])).toBeNull();

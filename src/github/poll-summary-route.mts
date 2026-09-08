@@ -50,6 +50,9 @@ export function routePollSummary(
   if ((checks.passing ?? 0) === 0) {
     return { action: "fix_code", reasons: ["no-complete-checks"] };
   }
+  if (opts.merge && raw.isInMergeQueue) {
+    return { action: "wait", reasons: ["already-in-merge-queue"] };
+  }
   if (opts.merge && !raw.stack) return { action: "merge", reasons: ["appears-ready"] };
   return { action: "fix_code", reasons: ["authoritative-poll-required"] };
 }

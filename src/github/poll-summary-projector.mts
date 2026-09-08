@@ -109,6 +109,7 @@ function summarizeReview(
       (review.state === "CHANGES_REQUESTED" &&
         (isBot || classifyItem(review.id, review.body, seen) !== "unchanged")) ||
       (review.state === "COMMENTED" &&
+        review.body.trim().length > 0 &&
         !review.isMinimized &&
         classifyItem(review.id, review.body, seen) !== "unchanged")
     ) {

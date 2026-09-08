@@ -15,6 +15,7 @@ import { runResolveMutate } from "./commands/resolve-mutate.mts";
 import { runWithExecutionCwd } from "./execution-context.mts";
 import {
   parsePrReference,
+  normalizeRepositoryIdentity,
   resolveParsedPrTarget,
   type ParsedPrReference,
   type ResolvedPrTarget,
@@ -283,8 +284,8 @@ async function resolveAggregateIterateInput(
     const nextRepository = target.targetRepository ?? checkout!;
     if (
       repository &&
-      (repository.owner.toLowerCase() !== nextRepository.owner.toLowerCase() ||
-        repository.name.toLowerCase() !== nextRepository.name.toLowerCase())
+      normalizeRepositoryIdentity(`${repository.owner}/${repository.name}`) !==
+        normalizeRepositoryIdentity(`${nextRepository.owner}/${nextRepository.name}`)
     ) {
       throw new PrShepherdValidationError(
         "aggregate iterate only supports PRs from one repository",

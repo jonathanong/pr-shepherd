@@ -3,6 +3,7 @@ import { EXIT, ShepherdError } from "../exit-codes.mts";
 import { getRepoInfo, type RepoInfo } from "../github/client.mts";
 import {
   parseCliPrReference,
+  normalizeRepositoryIdentity,
   resolveParsedPrTarget,
   type ParsedPrReference,
 } from "../pr-reference.mts";
@@ -100,7 +101,11 @@ export async function resolvePollTargets(parsed: ParsedPollTargets): Promise<{
     const target = resolveParsedPrTarget(ref);
     if (target.prNumber === undefined) return usageThrow("PR number is required");
     const repo = target.targetRepository ?? checkoutRepo!;
-    if (selectedRepo && (selectedRepo.owner !== repo.owner || selectedRepo.name !== repo.name)) {
+    if (
+      selectedRepo &&
+      normalizeRepositoryIdentity(`${selectedRepo.owner}/${selectedRepo.name}`) !==
+        normalizeRepositoryIdentity(`${repo.owner}/${repo.name}`)
+    ) {
       return usageThrow("aggregate poll only supports PRs from one repository");
     }
     selectedRepo = repo;

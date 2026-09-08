@@ -70,6 +70,14 @@ describe("routePollSummary", () => {
     [{}, {}, {}, {}, "fix_code", "no-complete-checks"],
     [{}, { passing: 1 }, {}, { merge: true }, "merge", "appears-ready"],
     [
+      { isInMergeQueue: true },
+      { passing: 1 },
+      {},
+      { merge: true },
+      "wait",
+      "already-in-merge-queue",
+    ],
+    [
       { stack: { number: 1 } },
       { passing: 1 },
       {},
