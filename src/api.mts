@@ -265,22 +265,20 @@ async function resolveAggregateIterateInput(
   if (!refs || refs.length === 0) {
     throw new PrShepherdValidationError("iterate.prs must contain at least one PR reference");
   }
-  const parsedRefs = refs.map((ref) => ({ ref, parsed: parsePrReference(ref) }));
-  for (const { ref, parsed } of parsedRefs) {
-    if (!parsed?.number) {
+  const parsedRefs = refs.map((ref) => {
+    const parsed = parsePrReference(ref);
+    const prNumber = parsed?.number;
+    if (!parsed || !prNumber) {
       throw new PrShepherdValidationError(`Invalid PR reference: ${String(ref)}`);
     }
-  }
+    return { parsed, prNumber };
+  });
   const checkout = parsedRefs.some(({ parsed }) => parsed?.repository === undefined)
     ? await getRepoInfo()
     : undefined;
   let repository: { owner: string; name: string } | undefined;
   const numbers: number[] = [];
-  for (const { ref, parsed } of parsedRefs) {
-    const prNumber = parsed?.number;
-    if (!parsed || !prNumber) {
-      throw new PrShepherdValidationError(`Invalid PR reference: ${String(ref)}`);
-    }
+  for (const { parsed, prNumber } of parsedRefs) {
     const target = resolveParsedPrTarget(parsed);
     const nextRepository = target.targetRepository ?? checkout!;
     if (
