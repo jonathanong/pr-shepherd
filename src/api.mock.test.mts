@@ -103,6 +103,13 @@ describe("public API", () => {
     expect(mockRunPollSummary).not.toHaveBeenCalled();
   });
 
+  it("rejects empty and malformed aggregate selectors", async () => {
+    const shepherd = createPrShepherd();
+    await expect(shepherd.iterate({ prs: [] })).rejects.toThrow("at least one");
+    await expect(shepherd.iterate({ prs: ["bad"] })).rejects.toThrow("Invalid PR reference");
+    expect(mockRunPollSummary).not.toHaveBeenCalled();
+  });
+
   it("accepts a fork owner/repo#number shorthand without consulting the checkout repository", async () => {
     const shepherd = createPrShepherd();
 

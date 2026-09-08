@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../github/poll-summary.mts", () => ({ fetchPollSummary: vi.fn() }));
 vi.mock("../github/client.mts", () => ({ getRepoInfo: vi.fn() }));
@@ -9,11 +9,16 @@ vi.mock("../github/api-telemetry.mts", () => ({
 vi.mock("../util/sleep.mts", () => ({ sleep: vi.fn() }));
 
 import { fetchPollSummary } from "../github/poll-summary.mts";
+import { getRepoInfo } from "../github/client.mts";
+import { GitHubRequestError } from "../github/errors.mts";
+import { sleep } from "../util/sleep.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type { PollSummaryItem } from "../types.mts";
 import { runAggregatePoll, runPollSummary } from "./poll-summary.mts";
 
 const mockFetch = vi.mocked(fetchPollSummary);
+const mockGetRepoInfo = vi.mocked(getRepoInfo);
+const mockSleep = vi.mocked(sleep);
 
 function row(pr: number, action: PollSummaryItem["action"]): PollSummaryItem {
   return {
@@ -45,6 +50,7 @@ const opts = {
 };
 
 beforeEach(() => vi.clearAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe("aggregate poll recurrence", () => {
   it("uses waiting for a one-shot API summary with no actionable rows", async () => {
@@ -56,6 +62,17 @@ describe("aggregate poll recurrence", () => {
     await expect(runPollSummary(opts)).resolves.toMatchObject({ reason: "waiting" });
   });
 
+  it("resolves the checkout repository when the caller does not supply one", async () => {
+    mockGetRepoInfo.mockResolvedValue({ owner: "acme", name: "widgets" });
+    mockFetch.mockResolvedValue({
+      selection: { kind: "prs", requested: [42] },
+      prs: [row(42, "cancel")],
+    });
+    await expect(runPollSummary({ prNumbers: [42] })).resolves.toMatchObject({
+      reason: "all_terminal",
+    });
+  });
+
   it("returns actionable as soon as any row needs work", async () => {
     mockFetch.mockResolvedValue({
       selection: { kind: "prs", requested: [42, 43] },
@@ -63,6 +80,45 @@ describe("aggregate poll recurrence", () => {
     });
 
     await expect(runAggregatePoll(opts)).resolves.toMatchObject({ reason: "actionable" });
+  });
+
+  it("returns immediate mark-ready work without debouncing", async () => {
+    mockFetch.mockResolvedValue({
+      selection: { kind: "prs", requested: [42] },
+      prs: [row(42, "mark_ready")],
+    });
+    await expect(runAggregatePoll(opts)).resolves.toMatchObject({ reason: "actionable" });
+  });
+
+  it("waits through the configured fix debounce", async () => {
+    let now = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    mockSleep.mockImplementation(async (milliseconds) => {
+      now += milliseconds;
+    });
+    mockFetch.mockResolvedValue({
+      selection: { kind: "prs", requested: [42] },
+      prs: [row(42, "fix_code")],
+    });
+    await expect(
+      runAggregatePoll({ ...opts, timeoutSeconds: 120, debounceSeconds: 60 }),
+    ).resolves.toMatchObject({ reason: "actionable" });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries one GraphQL throttle during an until-terminal run", async () => {
+    mockFetch
+      .mockRejectedValueOnce(
+        new GitHubRequestError("throttled", { status: 429, retryAfterSeconds: 1 }),
+      )
+      .mockResolvedValueOnce({
+        selection: { kind: "prs", requested: [42] },
+        prs: [row(42, "cancel")],
+      });
+    await expect(runAggregatePoll({ ...opts, untilTerminal: true })).resolves.toMatchObject({
+      reason: "all_terminal",
+    });
+    expect(mockSleep).toHaveBeenCalledWith(1_000);
   });
 
   it("keeps completed rows alongside waiting rows until timeout", async () => {

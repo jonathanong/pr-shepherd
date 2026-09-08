@@ -44,4 +44,18 @@ describe("poll target parsing", () => {
     const parsed = parsePollTargets(["acme/widgets#42", "other/widgets#43"])!;
     await expect(resolvePollTargets(parsed)).rejects.toThrow("one repository");
   });
+
+  it("validates separate and inline stack selectors", () => {
+    expect(parsePollTargets(["--stack"])).toBeNull();
+    expect(parsePollTargets(["--stack=bad"])).toBeNull();
+    expect(parsePollTargets(["--stack=42", "--stack=43"])).toBeNull();
+    expect(parsePollTargets(["--stack", "42", "--stack", "43"])).toBeNull();
+    expect(process.exitCode).toBe(EXIT.USAGE);
+  });
+
+  it("consumes verbose and resolves an empty selector without repository I/O", async () => {
+    const parsed = parsePollTargets(["--verbose"])!;
+    expect(parsed.extra).toEqual([]);
+    await expect(resolvePollTargets(parsed)).resolves.toEqual({ prNumbers: [] });
+  });
 });
