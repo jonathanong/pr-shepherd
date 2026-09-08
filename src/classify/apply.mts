@@ -18,7 +18,7 @@ export interface BatchPartition {
   ruleAutoResolveReviewSummaryIds: string[];
 }
 
-function applyRules(rules: LoadedRule[], item: ClassifyItem): ClassifyAction {
+export function applyRules(rules: LoadedRule[], item: ClassifyItem): ClassifyAction {
   let autoResolve = false;
   let suppress = false;
   for (const { rule, name } of rules) {

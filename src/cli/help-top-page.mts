@@ -5,7 +5,8 @@ Autonomous PR CI monitor and review-comment resolver for agentic coding tools.
 Usage:
   pr-shepherd --version | -v
   pr-shepherd --help | -h
-  pr-shepherd [PR] [poll-flags] [iterate-flags]
+  pr-shepherd [PR ...] [poll-flags] [iterate-flags]
+  pr-shepherd --stack PR [poll-flags] [iterate-flags]
   pr-shepherd iterate [PR] [iterate-flags]
   pr-shepherd apply review [PR] [review-flags]
   pr-shepherd apply files [PR] [files...] [--tests] [--match REGEX]
@@ -16,7 +17,7 @@ Usage:
   pr-shepherd admin log-file [--format text|json]
 
 Commands:
-  [PR]                 Poll until non-WAIT or timeout. This is the default command.
+  [PR ...]             Poll one PR, an explicit same-repository set, or a native stack.
   iterate              Run one iterate tick (single-tick alias).
   apply review         Apply review-state mutations after fixes.
   apply files          Mark selected changed files as viewed.
@@ -28,7 +29,8 @@ Commands:
   admin log-file       Print the per-worktree debug log path.
 
 PR argument:
-  PR may be a number such as 42 or a GitHub pull request URL.
+  PR may be a number, owner/repo#number, or a GitHub pull request URL.
+  Multiple PRs must name one repository. --stack PR selects every entry in PR's native stack.
   When omitted, pr-shepherd infers the current branch's pull request.
 
 Common flags:

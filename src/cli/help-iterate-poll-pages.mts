@@ -38,8 +38,8 @@ Exit codes:
 
 export const POLL_USAGE = `pr-shepherd poll
 
-Run iterate repeatedly for WAIT ticks and during the FIX_CODE debounce window. Print only the
-final tick to stdout.
+Run iterate repeatedly for one PR, or read compact summaries for an explicit PR set or native
+GitHub stack. Aggregate mode returns when any row needs work, every row is terminal, or timeout.
 Poll exits as soon as iterate returns MARK_READY, CANCEL, or ESCALATE, or when timeout
 returns the last WAIT result. FIX_CODE starts a --debounce settle window (default:
 poll.debounceSeconds; built-in 1m): poll keeps
@@ -47,9 +47,11 @@ iterating at --interval, then runs one more tick after the window and returns th
 With --until-terminal or --merge, poll also continues through MARK_READY.
 
 Usage:
-  pr-shepherd poll [PR] [poll-flags] [iterate-flags]
+  pr-shepherd poll [PR ...] [poll-flags] [iterate-flags]
+  pr-shepherd poll --stack PR [poll-flags] [iterate-flags]
 
 Poll flags:
+  --stack PR                    Select all entries in PR's native GitHub stack, bottom to top.
   --interval <duration>          Sleep between WAIT ticks. Bare number = seconds. Default: poll.intervalSeconds (built-in 60s).
   --timeout <duration>           Maximum wall-clock wait for WAIT ticks. Bare number = seconds. Default: poll.timeoutSeconds (built-in 4.5m).
   --debounce <duration>          Settle window after first FIX_CODE before returning. Bare number = seconds. Default: poll.debounceSeconds (built-in 60s). 0 disables.
@@ -85,7 +87,6 @@ Exit codes: same as iterate (the final tick's action/reason decides the code).
   A command/validation/GitHub failure exits with a sysexits.h code instead (see docs/exit-codes.md).`;
 
 /** Public help page for the default PR polling invocation. */
-export const DEFAULT_USAGE = POLL_USAGE.replace(/^pr-shepherd poll$/m, "pr-shepherd [PR]").replace(
-  /^ {2}pr-shepherd poll \[PR\]/m,
-  "  pr-shepherd [PR]",
-);
+export const DEFAULT_USAGE = POLL_USAGE.replace(/^pr-shepherd poll$/m, "pr-shepherd [PR]")
+  .replace(/^ {2}pr-shepherd poll \[PR \.\.\.\]/m, "  pr-shepherd [PR ...]")
+  .replace(/^ {2}pr-shepherd poll --stack/m, "  pr-shepherd --stack");

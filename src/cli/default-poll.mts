@@ -10,6 +10,7 @@ const DEFAULT_POLL_FLAGS_WITH_VALUES = new Set([
   "--interval",
   "--timeout",
   "--debounce",
+  "--stack",
 ]);
 
 const DEFAULT_POLL_BOOLEAN_FLAGS = new Set([

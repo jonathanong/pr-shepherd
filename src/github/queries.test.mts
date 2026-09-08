@@ -10,6 +10,8 @@ import {
   REVIEW_THREAD_COMMENTS_QUERY,
   SUGGESTION_THREADS_QUERY,
   PR_FINGERPRINT_QUERY,
+  POLL_SUMMARY_FRAGMENT,
+  POLL_STACK_SUMMARY_QUERY,
 } from "./queries.mts";
 
 describe("queries — GQL constants load at import time", () => {
@@ -56,6 +58,15 @@ describe("queries — GQL constants load at import time", () => {
     expect(BATCH_PR_QUERY).toContain("checkSuites");
   });
 
+  it("loads compact aggregate and native-stack summary documents", () => {
+    expect(POLL_SUMMARY_FRAGMENT).toContain("fragment PollSummaryPr on PullRequest");
+    expect(POLL_STACK_SUMMARY_QUERY).toContain("entries(first: 50, after: $after)");
+    expect(POLL_STACK_SUMMARY_QUERY).toContain("...PollSummaryPr");
+    expect(POLL_SUMMARY_FRAGMENT).toContain("mergeQueueEntry");
+    expect(POLL_SUMMARY_FRAGMENT).toContain("headCommit");
+    expect(POLL_SUMMARY_FRAGMENT).toContain("name");
+  });
+
   it("keeps merge-queue metadata in BatchPr without nested queue check trees", () => {
     expect(BATCH_PR_QUERY).toContain("isInMergeQueue");
     expect(BATCH_PR_QUERY).toContain("mergeQueueEntry");
@@ -95,6 +106,7 @@ describe("queries — GQL constants load at import time", () => {
       REVIEW_THREAD_COMMENTS_QUERY,
       SUGGESTION_THREADS_QUERY,
       PR_FINGERPRINT_QUERY,
+      POLL_STACK_SUMMARY_QUERY,
     ]) {
       expect(query).toContain("_shepherdRateLimit: rateLimit");
       expect(query).toContain("nodeCount");

@@ -1,0 +1,42 @@
+{
+  "mode": "aggregate",
+  "description": "A complete native stack whose rows are merged returns all-terminal in bottom-to-top order.",
+  "args": ["--stack", "44"],
+  "expectedReason": "all_terminal",
+  "expectedExitCode": 0,
+  "aggregateSummary": {
+    "selection": { "kind": "stack", "anchor": 44, "stackNumber": 7, "stackSize": 2 },
+    "prs": [
+      {
+        "pr": 43,
+        "repo": "owner/repo",
+        "title": "Stack base",
+        "url": "https://github.com/owner/repo/pull/43",
+        "action": "cancel",
+        "reasons": ["merged"],
+        "state": "MERGED",
+        "mergeable": "UNKNOWN",
+        "mergeStateStatus": "UNKNOWN",
+        "headRefName": "stack-base",
+        "headRefOid": "cccccccccccccccccccccccccccccccccccccccc",
+        "baseRefName": "main",
+        "stack": { "number": 7, "size": 2, "position": 1, "baseRefName": "main" }
+      },
+      {
+        "pr": 44,
+        "repo": "owner/repo",
+        "title": "Stack tip",
+        "url": "https://github.com/owner/repo/pull/44",
+        "action": "cancel",
+        "reasons": ["merged"],
+        "state": "MERGED",
+        "mergeable": "UNKNOWN",
+        "mergeStateStatus": "UNKNOWN",
+        "headRefName": "stack-tip",
+        "headRefOid": "dddddddddddddddddddddddddddddddddddddddd",
+        "baseRefName": "stack-base",
+        "stack": { "number": 7, "size": 2, "position": 2, "baseRefName": "main" }
+      }
+    ]
+  }
+}

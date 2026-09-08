@@ -135,7 +135,19 @@ pr-shepherd 42 --merge                  # request head-pinned auto-merge/queue; 
 pr-shepherd iterate 42                 # single tick
 pr-shepherd owner/repo#42              # poll a PR in an explicit repository
 pr-shepherd https://github.com/owner/repo/pull/42
+pr-shepherd 42 43 44                   # summarize an explicit same-repository set
+pr-shepherd --stack 43                 # summarize every PR in a native GitHub stack
 ```
+
+Multi-PR and `--stack` polling use compact, read-only GraphQL summaries. They return when any row
+needs agent work, all rows are terminal, the bounded timeout expires, or `--until-terminal` crosses
+a configured GraphQL quota-warning band. Check counts use the same ignored, protected-run,
+superseded-run, and event rules as singular iteration and include active merge-queue commit checks.
+Bounded review/check overflow remains visible without permanently forcing work, and clean rows use
+the configured ready-delay before becoming terminal. Each actionable row includes
+an exact single-PR `pollCommand`; run independent actionable rows, then invoke the aggregate selector again.
+Stack rows are ordered bottom-to-top. API and MCP aggregate calls perform one summary tick and leave
+recurrence to the caller.
 
 Polling defaults can be set under `poll` in `.pr-shepherdrc.yml`: `intervalSeconds`, `timeoutSeconds`, `debounceSeconds`, and `quietStatus`. Explicit flags override configuration, including `--no-quiet-status` when a shared config enables quiet output. Quiet status remains off by default.
 

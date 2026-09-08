@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { runCommitSuggestion } from "./commands/commit-suggestion.mts";
 import { runSuggestionPatches } from "./commands/suggestion-patches.mts";
 import { runIterate } from "./commands/iterate/index.mts";
+import { runPollSummary } from "./commands/poll-summary.mts";
 import { runJournal, type JournalResult } from "./commands/journal/index.mts";
 import { validateJournalItem } from "./commands/journal/transform.mts";
 import {
@@ -14,6 +15,7 @@ import { runResolveMutate } from "./commands/resolve-mutate.mts";
 import { runWithExecutionCwd } from "./execution-context.mts";
 import {
   parsePrReference,
+  normalizeRepositoryIdentity,
   resolveParsedPrTarget,
   type ParsedPrReference,
   type ResolvedPrTarget,
@@ -24,7 +26,9 @@ import type {
   CommitSuggestionResult,
   IterateCommandOptions,
   IterateResult,
+  PollSummaryResult,
 } from "./types.mts";
+import { getRepoInfo } from "./github/client.mts";
 
 export interface CreatePrShepherdOptions {
   /** Working directory used for git, config, and classification-rule lookups. */
@@ -34,7 +38,7 @@ export interface CreatePrShepherdOptions {
 /** A positive PR number, GitHub pull-request URL, or owner/repo#number reference. */
 export type PrReference = number | string;
 
-export type IterateInput = Omit<
+type IterateOptions = Omit<
   IterateCommandOptions,
   | "format"
   | "prNumber"
@@ -43,9 +47,21 @@ export type IterateInput = Omit<
   | "fingerprintCache"
   | "deferQuotaWarning"
   | "quotaWarningMinimumPollIntervalMinutes"
-> & {
+>;
+
+export type SingleIterateInput = IterateOptions & {
   pr?: PrReference;
+  prs?: never;
+  stack?: never;
 };
+
+export type AggregateIterateInput = IterateOptions &
+  (
+    | { prs: PrReference[]; pr?: never; stack?: never }
+    | { stack: PrReference; pr?: never; prs?: never }
+  );
+
+export type IterateInput = SingleIterateInput | AggregateIterateInput;
 
 export interface ReviewMutationsOperation {
   type: "review_mutations";
@@ -112,7 +128,9 @@ export interface BuildSuggestionPatchesInput {
 }
 
 export interface PrShepherd {
-  iterate(input?: IterateInput): Promise<IterateResult>;
+  iterate(input?: SingleIterateInput): Promise<IterateResult>;
+  iterate(input: AggregateIterateInput): Promise<PollSummaryResult>;
+  iterate(input: IterateInput): Promise<IterateResult | PollSummaryResult>;
   apply(input: ApplyInput): Promise<ApplyResult>;
   buildSuggestionPatches(input: BuildSuggestionPatchesInput): Promise<BuildSuggestionPatchesResult>;
   /** Compatibility adapter; prefer buildSuggestionPatches. */
@@ -148,14 +166,24 @@ export class PartialApplyError extends Error {
 export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrShepherd {
   const cwd = options.cwd === undefined ? undefined : resolve(options.cwd);
 
+  function iterate(input?: SingleIterateInput): Promise<IterateResult>;
+  function iterate(input: AggregateIterateInput): Promise<PollSummaryResult>;
+  function iterate(input: IterateInput): Promise<IterateResult | PollSummaryResult>;
+  function iterate(input: IterateInput = {}): Promise<IterateResult | PollSummaryResult> {
+    return runWithExecutionCwd(cwd, async () => {
+      validateIterateSelectors(input);
+      if ("prs" in input || "stack" in input) {
+        const target = await resolveAggregateIterateInput(input as AggregateIterateInput);
+        return runPollSummary(target);
+      }
+      const { pr: _pr, ...iterateOptions } = input;
+      const target = resolvePrReference(input.pr);
+      return runIterate({ ...iterateOptions, ...target, format: "json" });
+    });
+  }
+
   return Object.freeze({
-    iterate(input: IterateInput = {}) {
-      const { pr: _pr, ...options } = input;
-      return runWithExecutionCwd(cwd, async () => {
-        const target = resolvePrReference(input.pr);
-        return runIterate({ ...options, ...target, format: "json" });
-      });
-    },
+    iterate,
 
     apply(input: ApplyInput) {
       return runWithExecutionCwd(cwd, async () => {
@@ -229,6 +257,56 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
       });
     },
   });
+}
+
+async function resolveAggregateIterateInput(
+  input: AggregateIterateInput,
+): Promise<import("./types.mts").PollSummaryCommandOptions> {
+  const refs = "prs" in input ? input.prs : [input.stack];
+  if (!refs || refs.length === 0) {
+    throw new PrShepherdValidationError("iterate.prs must contain at least one PR reference");
+  }
+  const parsedRefs = refs.map((ref) => {
+    const parsed = parsePrReference(ref);
+    const prNumber = parsed?.number;
+    if (!parsed || !prNumber) {
+      throw new PrShepherdValidationError(`Invalid PR reference: ${String(ref)}`);
+    }
+    return { parsed, prNumber };
+  });
+  const checkout = parsedRefs.some(({ parsed }) => parsed?.repository === undefined)
+    ? await getRepoInfo()
+    : undefined;
+  let repository: { owner: string; name: string } | undefined;
+  const numbers: number[] = [];
+  for (const { parsed, prNumber } of parsedRefs) {
+    const target = resolveParsedPrTarget(parsed);
+    const nextRepository = target.targetRepository ?? checkout!;
+    if (
+      repository &&
+      normalizeRepositoryIdentity(`${repository.owner}/${repository.name}`) !==
+        normalizeRepositoryIdentity(`${nextRepository.owner}/${nextRepository.name}`)
+    ) {
+      throw new PrShepherdValidationError(
+        "aggregate iterate only supports PRs from one repository",
+      );
+    }
+    repository = nextRepository;
+    if (!numbers.includes(prNumber)) numbers.push(prNumber);
+  }
+  const { pr: _pr, prs: _prs, stack: _stack, ...options } = input;
+  return "prs" in input
+    ? { ...options, prNumbers: numbers, targetRepository: repository }
+    : { ...options, stackPrNumber: numbers[0], targetRepository: repository };
+}
+
+function validateIterateSelectors(input: IterateInput): void {
+  const selectorCount = ["pr", "prs", "stack"].filter((key) => key in input).length;
+  if (selectorCount > 1) {
+    throw new PrShepherdValidationError(
+      "iterate pr, prs, and stack selectors are mutually exclusive",
+    );
+  }
 }
 
 function validateApplyInput(input: ApplyInput): void {

@@ -11,8 +11,6 @@ export function validateDefaultArgs(
   booleanFlags: ReadonlySet<string>,
   onError: (arg: string) => void,
 ): boolean {
-  let sawPr = false;
-
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i]!;
 
@@ -30,10 +28,7 @@ export function validateDefaultArgs(
 
     if (booleanFlags.has(arg)) continue;
 
-    if (parsePrNumber(arg) !== null && !sawPr) {
-      sawPr = true;
-      continue;
-    }
+    if (parsePrNumber(arg) !== null) continue;
 
     onError(arg);
     return false;

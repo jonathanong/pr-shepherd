@@ -29,6 +29,7 @@ describe("default poll invocation helpers", () => {
     expect(isDefaultPollInvocation("--interval=60s")).toBe(true);
     expect(isDefaultPollInvocation("--timeout=4.5m")).toBe(true);
     expect(isDefaultPollInvocation("--debounce=1m")).toBe(true);
+    expect(isDefaultPollInvocation("--stack=42")).toBe(true);
     expect(isDefaultPollInvocation("resolve")).toBe(false);
   });
 
@@ -63,8 +64,9 @@ describe("default poll invocation helpers", () => {
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("Unknown subcommand"));
   });
 
-  it("rejects duplicate PR-like positionals and unknown args", () => {
-    expect(validateDefaultPollArgs(["42", "43"])).toBe(false);
+  it("accepts multiple PRs and rejects unknown args", () => {
+    expect(validateDefaultPollArgs(["42", "43"])).toBe(true);
+    expect(validateDefaultPollArgs(["--stack", "42"])).toBe(true);
     expect(validateDefaultPollArgs(["--unknown"])).toBe(false);
   });
 });

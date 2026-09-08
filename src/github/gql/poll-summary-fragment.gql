@@ -1,0 +1,198 @@
+fragment PollSummaryPr on PullRequest {
+  number
+  title
+  url
+  state
+  isDraft
+  viewerCanUpdate
+  headRefName
+  headRefOid
+  baseRefName
+  mergeable
+  mergeStateStatus
+  reviewDecision
+  reviewRequests(last: 50) {
+    nodes {
+      requestedReviewer {
+        __typename
+        ... on User {
+          login
+        }
+        ... on Bot {
+          login
+        }
+        ... on Mannequin {
+          login
+        }
+      }
+    }
+  }
+  latestReviews(last: 50) {
+    nodes {
+      state
+      author {
+        __typename
+        login
+      }
+    }
+  }
+  isInMergeQueue
+  mergeQueueEntry {
+    headCommit {
+      statusCheckRollup {
+        contexts(last: 100) {
+          totalCount
+          pageInfo {
+            hasPreviousPage
+          }
+          nodes {
+            __typename
+            ... on CheckRun {
+              id
+              name
+              status
+              conclusion
+              detailsUrl
+              checkSuite {
+                workflowRun {
+                  databaseId
+                  event
+                  workflow {
+                    databaseId
+                    name
+                  }
+                }
+              }
+            }
+            ... on StatusContext {
+              context
+              state
+            }
+          }
+        }
+      }
+    }
+  }
+  stack {
+    number
+    size
+    baseRefName
+  }
+  stackEntry {
+    position
+  }
+  comments(last: 100) {
+    totalCount
+    pageInfo {
+      hasPreviousPage
+    }
+    nodes {
+      id
+      body
+      isMinimized
+      url
+      authorAssociation
+      author {
+        __typename
+        login
+      }
+    }
+  }
+  reviews(last: 100) {
+    totalCount
+    pageInfo {
+      hasPreviousPage
+    }
+    nodes {
+      id
+      body
+      state
+      isMinimized
+      authorAssociation
+      author {
+        __typename
+        login
+      }
+    }
+  }
+  reviewThreads(last: 20) {
+    totalCount
+    pageInfo {
+      hasPreviousPage
+    }
+    nodes {
+      id
+      isResolved
+      isOutdated
+      path
+      rootComments: comments(first: 1) {
+        nodes {
+          id
+          body
+          url
+          viewerDidAuthor
+          authorAssociation
+          author {
+            __typename
+            login
+          }
+        }
+      }
+      comments(last: 5) {
+        totalCount
+        pageInfo {
+          hasPreviousPage
+        }
+        nodes {
+          id
+          body
+          url
+          authorAssociation
+          viewerDidAuthor
+          author {
+            __typename
+            login
+          }
+        }
+      }
+    }
+  }
+  commits(last: 1) {
+    nodes {
+      commit {
+        statusCheckRollup {
+          contexts(last: 100) {
+            totalCount
+            pageInfo {
+              hasPreviousPage
+            }
+            nodes {
+              __typename
+              ... on CheckRun {
+                id
+                name
+                status
+                conclusion
+                detailsUrl
+                checkSuite {
+                  workflowRun {
+                    databaseId
+                    event
+                    workflow {
+                      databaseId
+                      name
+                    }
+                  }
+                }
+              }
+              ... on StatusContext {
+                context
+                state
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -67,3 +67,8 @@ export function isRepositoryQualifiedPrReference(pr: unknown): pr is string {
   if (typeof pr !== "string") return false;
   return parsePrReference(pr)?.repository !== undefined;
 }
+
+/** GitHub owner and repository names are case-insensitive. */
+export function normalizeRepositoryIdentity(repository: string): string {
+  return repository.toLowerCase();
+}

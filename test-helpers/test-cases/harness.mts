@@ -38,6 +38,7 @@ vi.mock("node:child_process", () => ({
 }));
 
 vi.mock("../../src/github/batch.mts", () => ({ fetchPrBatch: vi.fn() }));
+vi.mock("../../src/github/poll-summary.mts", () => ({ fetchPollSummary: vi.fn() }));
 vi.mock("../../src/state/pr-fingerprint.mts", () => ({
   loadPrFingerprint: vi.fn().mockResolvedValue(null),
   storePrFingerprint: vi.fn().mockResolvedValue(undefined),
@@ -94,6 +95,7 @@ vi.mock("../../src/state/bot-cr-seen.mts", async (importOriginal) => {
 
 import { main } from "../../src/cli-parser.mts";
 import { fetchPrBatch } from "../../src/github/batch.mts";
+import { fetchPollSummary } from "../../src/github/poll-summary.mts";
 import { getMergeableState } from "../../src/github/client.mts";
 import { triageFailingChecks, fetchStartupFailureChecks } from "../../src/checks/triage.mts";
 import { fetchCheckRunAnnotations } from "../../src/github/check-annotations.mts";
@@ -109,6 +111,7 @@ import { readFixAttempts, writeFixAttempts } from "../../src/state/fix-attempts.
 import { readBotCrSeenState, writeBotCrSeenState } from "../../src/state/bot-cr-seen.mts";
 
 const mockFetchPrBatch = vi.mocked(fetchPrBatch);
+const mockFetchPollSummary = vi.mocked(fetchPollSummary);
 const mockGetMergeableState = vi.mocked(getMergeableState);
 const mockTriageFailingChecks = vi.mocked(triageFailingChecks);
 const mockFetchStartupFailureChecks = vi.mocked(fetchStartupFailureChecks);
@@ -130,6 +133,12 @@ const mockWriteBotCrSeenState = vi.mocked(writeBotCrSeenState);
 // ---------------------------------------------------------------------------
 
 export interface Fixture {
+  /** Selects the aggregate bare-poll fixture path instead of singular iterate. */
+  mode?: "aggregate";
+  /** Return value of fetchPollSummary() for aggregate fixtures. */
+  aggregateSummary?: { selection: Record<string, unknown>; prs: unknown[] };
+  /** Expected aggregate result reason. */
+  expectedReason?: "actionable" | "all_terminal" | "waiting" | "timeout";
   /** Fields merged on top of DEFAULT_BATCH. */
   batchData?: Record<string, unknown>;
   /** Return value of getMergeableState() for UNKNOWN/READY refresh. */
@@ -349,6 +358,7 @@ export function applyFixture(fixture: Fixture): void {
       headRefOid: typeof batchData.headRefOid === "string" ? batchData.headRefOid : "abc123",
     }),
   });
+  if (fixture.aggregateSummary) mockFetchPollSummary.mockResolvedValue(fixture.aggregateSummary);
 
   const mergeableFallback = fixture.mergeableFallback ?? {
     mergeable: "MERGEABLE",
@@ -456,7 +466,10 @@ async function runMain(args: string[]): Promise<{ out: string; exitCode: number 
 }
 
 export async function captureRun(fixture: Fixture): Promise<RunResult> {
-  const args = ["iterate", "42", ...(fixture.args ?? [])];
+  const args =
+    fixture.mode === "aggregate"
+      ? (fixture.args ?? ["42", "43", "--timeout", "0s"])
+      : ["iterate", "42", ...(fixture.args ?? [])];
   const { out: textOut, exitCode } = await runMain(args);
   const { out: jsonOut, exitCode: jsonExitCode } = await runMain([...args, "--format=json"]);
   return { textOut, jsonOut, exitCode, jsonExitCode };

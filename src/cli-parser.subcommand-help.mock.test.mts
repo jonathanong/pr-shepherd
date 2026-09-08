@@ -108,7 +108,7 @@ describe("default poll path (pr 123 --help)", () => {
   it("prints poll usage to stdout and exits 0 for '123 --help'", async () => {
     await main(["node", "shepherd", "123", "--help"]);
     const out = getStdout();
-    expect(out).toContain("Usage:\n  pr-shepherd [PR] [poll-flags] [iterate-flags]");
+    expect(out).toContain("Usage:\n  pr-shepherd [PR ...] [poll-flags] [iterate-flags]");
     expect(out).not.toContain("[PR] [PR]");
     expect(out).toContain("Poll flags:");
     expect(out).toContain("--interval");
@@ -130,7 +130,7 @@ describe("default poll path (pr 123 --help)", () => {
   it("prints poll usage to stdout and exits 0 for '123 -h'", async () => {
     await main(["node", "shepherd", "123", "-h"]);
     const out = getStdout();
-    expect(out).toContain("Usage:\n  pr-shepherd [PR] [poll-flags] [iterate-flags]");
+    expect(out).toContain("Usage:\n  pr-shepherd [PR ...] [poll-flags] [iterate-flags]");
     expect(out).not.toContain("[PR] [PR]");
     expect(out).toContain("Poll flags:");
     expect(out).toContain("--interval");

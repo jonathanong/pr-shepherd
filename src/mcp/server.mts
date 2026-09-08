@@ -11,11 +11,17 @@ import {
   type BuildSuggestionPatchesInput,
   type CreatePrShepherdOptions,
   type IterateInput,
+  type AggregateIterateInput,
+  type SingleIterateInput,
   PartialApplyError,
   type PrShepherd,
   PrShepherdValidationError,
 } from "../api.mts";
-import { isRepositoryQualifiedPrReference } from "../pr-reference.mts";
+import {
+  isRepositoryQualifiedPrReference,
+  normalizeRepositoryIdentity,
+  parsePrReference,
+} from "../pr-reference.mts";
 import { formatJournalResult } from "../cli/journal-formatter.mts";
 import {
   formatCommitSuggestionResult,
@@ -25,6 +31,8 @@ import {
   formatMutateResult,
   projectIterateLean,
 } from "../cli/formatters.mts";
+import { formatPollSummaryResult } from "../cli/poll-summary-formatter.mts";
+import type { IterateResult, PollSummaryResult } from "../types.mts";
 import { formatCliError, serializeGitHubRequestErrorDetails } from "../cli/error-format.mts";
 import { errorToExitCode, EXIT } from "../exit-codes.mts";
 
@@ -42,21 +50,41 @@ const pr = z
   );
 const ids = z.array(z.string().min(1)).optional();
 
-const iterateInputSchema = z.object({
-  pr,
-  readyDelaySeconds: z.number().nonnegative().optional(),
-  stallTimeoutSeconds: z.number().nonnegative().optional(),
-  noAutoMarkReady: z.boolean().optional(),
-  merge: z.boolean().optional(),
-  noAutoCancelActionable: z
-    .boolean()
-    .optional()
-    .describe("Deprecated no-op; Shepherd never cancels workflow runs."),
-  neverCancelRuns: z
-    .array(z.string())
-    .optional()
-    .describe("Deprecated per-call no-op retained for compatibility."),
-});
+const iterateInputSchema = z
+  .object({
+    pr: pr.optional(),
+    prs: z.array(pr).min(1).optional(),
+    stack: pr.optional(),
+    readyDelaySeconds: z.number().nonnegative().optional(),
+    stallTimeoutSeconds: z.number().nonnegative().optional(),
+    noAutoMarkReady: z.boolean().optional(),
+    merge: z.boolean().optional(),
+    noAutoCancelActionable: z
+      .boolean()
+      .optional()
+      .describe("Deprecated no-op; Shepherd never cancels workflow runs."),
+    neverCancelRuns: z
+      .array(z.string())
+      .optional()
+      .describe("Deprecated per-call no-op retained for compatibility."),
+  })
+  .refine(
+    (input) =>
+      [input.pr, input.prs, input.stack].filter((value) => value !== undefined).length === 1,
+    {
+      message: "exactly one of pr, prs, or stack is required",
+    },
+  )
+  .refine(
+    (input) =>
+      !input.prs ||
+      new Set(
+        input.prs.map((ref) =>
+          normalizeRepositoryIdentity(parsePrReference(ref)?.repository ?? ""),
+        ),
+      ).size === 1,
+    { message: "all prs must belong to the same repository" },
+  );
 
 const reviewMutationsOperationSchema = z.object({
   type: z.literal("review_mutations"),
@@ -124,7 +152,8 @@ export function createPrShepherdMcpServer(
   server.registerTool(
     "iterate",
     {
-      description: "Inspect the specified pull request and return the next Shepherd state.",
+      description:
+        "Inspect one pull request, an explicit same-repository set, or a native stack and return one Shepherd tick.",
       inputSchema: iterateInputSchema,
       annotations: {
         readOnlyHint: false,
@@ -140,9 +169,13 @@ export function createPrShepherdMcpServer(
           input.readyDelaySeconds === undefined ? undefined : `${input.readyDelaySeconds}s`,
       };
       return runTool(
-        () => shepherd.iterate(requireRepositoryQualifiedPr(input) as IterateInput),
-        (result) => formatIterateResult(result, opts),
-        (result) => projectIterateLean(result, opts),
+        () => runIterateSelector(shepherd, requireRepositoryQualifiedIterate(input)),
+        (result: IterateResult | PollSummaryResult) =>
+          isPollSummary(result)
+            ? formatPollSummaryResult(result)
+            : formatIterateResult(result, opts),
+        (result: IterateResult | PollSummaryResult) =>
+          isPollSummary(result) ? result : projectIterateLean(result, opts),
       );
     },
   );
@@ -212,6 +245,42 @@ export function createPrShepherdMcpServer(
   );
 
   return server;
+}
+
+function runIterateSelector(
+  shepherd: PrShepherd,
+  input: IterateInput,
+): Promise<IterateResult | PollSummaryResult> {
+  return "prs" in input || "stack" in input
+    ? shepherd.iterate(input as AggregateIterateInput)
+    : shepherd.iterate(input as SingleIterateInput);
+}
+
+function requireRepositoryQualifiedIterate(input: {
+  pr?: unknown;
+  prs?: unknown;
+  stack?: unknown;
+}): IterateInput {
+  if ([input.pr, input.prs, input.stack].filter((value) => value !== undefined).length !== 1) {
+    throw new PrShepherdValidationError("exactly one of pr, prs, or stack is required");
+  }
+  const refs = Array.isArray(input.prs) ? input.prs : [input.pr ?? input.stack];
+  if (refs.length === 0 || refs.some((ref) => !isRepositoryQualifiedPrReference(ref))) {
+    throw new PrShepherdValidationError(QUALIFIED_PR_ERROR);
+  }
+  const repositories = new Set(
+    refs.map((ref) =>
+      normalizeRepositoryIdentity(parsePrReference(ref as string)?.repository ?? ""),
+    ),
+  );
+  if (repositories.size !== 1) {
+    throw new PrShepherdValidationError("all prs must belong to the same repository");
+  }
+  return input as IterateInput;
+}
+
+function isPollSummary(result: IterateResult | PollSummaryResult): result is PollSummaryResult {
+  return "mode" in result && result.mode === "summary";
 }
 
 function requireRepositoryQualifiedPr<Input extends { pr?: unknown }>(

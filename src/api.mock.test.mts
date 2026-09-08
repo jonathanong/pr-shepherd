@@ -9,6 +9,7 @@ const {
   mockRunMarkFilesAsViewed,
   mockRunResolveMutate,
   mockGetRepoInfo,
+  mockRunPollSummary,
 } = vi.hoisted(() => ({
   mockRunCommitSuggestion: vi.fn(),
   mockRunSuggestionPatches: vi.fn(),
@@ -17,6 +18,7 @@ const {
   mockRunMarkFilesAsViewed: vi.fn(),
   mockRunResolveMutate: vi.fn(),
   mockGetRepoInfo: vi.fn(),
+  mockRunPollSummary: vi.fn(),
 }));
 
 vi.mock("./commands/commit-suggestion.mts", () => ({
@@ -26,6 +28,7 @@ vi.mock("./commands/suggestion-patches.mts", () => ({
   runSuggestionPatches: mockRunSuggestionPatches,
 }));
 vi.mock("./commands/iterate/index.mts", () => ({ runIterate: mockRunIterate }));
+vi.mock("./commands/poll-summary.mts", () => ({ runPollSummary: mockRunPollSummary }));
 vi.mock("./commands/journal/index.mts", () => ({ runJournal: mockRunJournal }));
 vi.mock("./commands/mark-files-as-viewed.mts", () => ({
   runMarkFilesAsViewed: mockRunMarkFilesAsViewed,
@@ -33,7 +36,12 @@ vi.mock("./commands/mark-files-as-viewed.mts", () => ({
 vi.mock("./commands/resolve-mutate.mts", () => ({ runResolveMutate: mockRunResolveMutate }));
 vi.mock("./github/client.mts", () => ({ getRepoInfo: mockGetRepoInfo }));
 
-import { createPrShepherd, PartialApplyError, PrShepherdValidationError } from "./api.mts";
+import {
+  createPrShepherd,
+  type IterateInput,
+  PartialApplyError,
+  PrShepherdValidationError,
+} from "./api.mts";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -71,6 +79,68 @@ describe("public API", () => {
         format: "json",
       }),
     );
+  });
+
+  it("routes plural and native-stack iterate inputs to one read-only summary tick", async () => {
+    mockRunPollSummary.mockResolvedValue({ mode: "summary", prs: [] });
+    const shepherd = createPrShepherd();
+
+    await shepherd.iterate({ prs: ["openai/pr-shepherd#42", "openai/pr-shepherd#43"] });
+    expect(mockRunPollSummary).toHaveBeenLastCalledWith({
+      prNumbers: [42, 43],
+      targetRepository: { owner: "openai", name: "pr-shepherd" },
+    });
+
+    await shepherd.iterate({ stack: "openai/pr-shepherd#43", merge: true });
+    expect(mockRunPollSummary).toHaveBeenLastCalledWith({
+      stackPrNumber: 43,
+      targetRepository: { owner: "openai", name: "pr-shepherd" },
+      merge: true,
+    });
+    expect(mockRunIterate).not.toHaveBeenCalled();
+  });
+
+  it("rejects cross-repository aggregate iterate input", async () => {
+    const shepherd = createPrShepherd();
+    await expect(
+      shepherd.iterate({ prs: ["openai/pr-shepherd#42", "other/widgets#43"] }),
+    ).rejects.toThrow("one repository");
+    expect(mockRunPollSummary).not.toHaveBeenCalled();
+  });
+
+  it("accepts aggregate repository references with different casing", async () => {
+    const shepherd = createPrShepherd();
+    await shepherd.iterate({ prs: ["OpenAI/Pr-Shepherd#42", "openai/pr-shepherd#43"] });
+    expect(mockRunPollSummary).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumbers: [42, 43] }),
+    );
+  });
+
+  it("rejects conflicting runtime selectors", async () => {
+    const shepherd = createPrShepherd();
+    await expect(shepherd.iterate({ pr: 42, prs: [43] } as never)).rejects.toThrow(
+      "mutually exclusive",
+    );
+    await expect(shepherd.iterate({ prs: [42], stack: 43 } as never)).rejects.toThrow(
+      "mutually exclusive",
+    );
+    expect(mockRunPollSummary).not.toHaveBeenCalled();
+    expect(mockRunIterate).not.toHaveBeenCalled();
+  });
+
+  it("rejects empty and malformed aggregate selectors", async () => {
+    const shepherd = createPrShepherd();
+    await expect(shepherd.iterate({ prs: [] })).rejects.toThrow("at least one");
+    await expect(shepherd.iterate({ prs: ["bad"] })).rejects.toThrow("Invalid PR reference");
+    expect(mockGetRepoInfo).not.toHaveBeenCalled();
+    expect(mockRunPollSummary).not.toHaveBeenCalled();
+  });
+
+  it("accepts a caller variable typed as the iterate selector union", async () => {
+    const shepherd = createPrShepherd();
+    const input: IterateInput = { prs: [42, 43] };
+    await shepherd.iterate(input);
+    expect(mockRunPollSummary).toHaveBeenCalled();
   });
 
   it("accepts a fork owner/repo#number shorthand without consulting the checkout repository", async () => {
