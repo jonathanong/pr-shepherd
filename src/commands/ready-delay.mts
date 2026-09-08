@@ -41,6 +41,7 @@ export async function updateReadyDelay(
   readyDelaySeconds: number,
   owner: string,
   repo: string,
+  options: { retainElapsed?: boolean } = {},
 ): Promise<ReadyDelayState> {
   const markerPath = readySincePath(prNumber, owner, repo);
 
@@ -74,7 +75,7 @@ export async function updateReadyDelay(
   const remaining = readyDelaySeconds - elapsed;
 
   if (remaining <= 0) {
-    await safeUnlink(markerPath);
+    if (!options.retainElapsed) await safeUnlink(markerPath);
     return { isReady: true, shouldCancel: true, remainingSeconds: 0 };
   }
 

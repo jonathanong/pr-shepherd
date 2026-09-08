@@ -60,6 +60,11 @@ function formatItem(item: PollSummaryItem): string {
     : "";
   const reviewDecision = item.reviewDecision ? ` · reviewDecision \`${item.reviewDecision}\`` : "";
   const stateFlags = flags ? ` · flags \`${flags}\`` : "";
+  const blockingReviewer = item.blockingReviewerInProgress
+    ? " · blocking reviewer `in progress`"
+    : "";
+  const readyDelay =
+    item.remainingSeconds !== undefined ? ` · ready delay \`${item.remainingSeconds}s\`` : "";
   const checks = item.checks;
   const review = item.review;
   const incomplete = [checks?.incomplete ? "checks" : null, review?.incomplete ? "review" : null]
@@ -68,7 +73,7 @@ function formatItem(item: PollSummaryItem): string {
   const incompleteText = incomplete ? `, incomplete: ${incomplete}` : "";
   return [
     `- [PR #${item.pr}: ${escapeMarkdownText(item.title)}](${item.url}) [${item.action.toUpperCase()}]`,
-    `  - state \`${item.state}\` · mergeable \`${item.mergeable}\` · merge \`${item.mergeStateStatus}\`${reviewDecision}${stateFlags}${stack}`,
+    `  - state \`${item.state}\` · mergeable \`${item.mergeable}\` · merge \`${item.mergeStateStatus}\`${reviewDecision}${stateFlags}${blockingReviewer}${readyDelay}${stack}`,
     `  - head \`${item.headRefName}\` at \`${item.headRefOid}\` · base \`${item.baseRefName}\``,
     ...(checks ? [`  - checks: ${formatCounts(checks, incompleteText)}`] : []),
     ...(review

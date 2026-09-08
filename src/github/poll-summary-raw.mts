@@ -8,6 +8,8 @@ interface RawSummaryComment {
   body: string;
   isMinimized: boolean;
   viewerDidAuthor?: boolean;
+  authorAssociation?: string;
+  url?: string;
   author: RawAuthor | null;
 }
 
@@ -20,11 +22,17 @@ interface SummaryConnection<T> {
 type RawCheckContext =
   | {
       __typename: "CheckRun";
+      id?: string;
       name: string;
       status: string;
       conclusion: string | null;
+      detailsUrl?: string;
       checkSuite: {
-        workflowRun: { event: string; workflow?: { name: string } | null } | null;
+        workflowRun: {
+          databaseId?: string | number;
+          event: string;
+          workflow?: { name: string; databaseId: string | number } | null;
+        } | null;
       } | null;
     }
   | { __typename: "StatusContext"; context: string; state: string };
@@ -46,6 +54,8 @@ export interface RawSummaryPr {
   mergeable: string;
   mergeStateStatus: string;
   reviewDecision: string | null;
+  reviewRequests?: { nodes: Array<{ requestedReviewer: RawAuthor | null }> };
+  latestReviews?: { nodes: Array<{ state: string; author: RawAuthor | null }> };
   isInMergeQueue: boolean;
   mergeQueueEntry: { headCommit: { statusCheckRollup: RawCheckRollup | null } | null } | null;
   stack: { number: number; size: number; baseRefName: string } | null;
@@ -56,6 +66,8 @@ export interface RawSummaryPr {
     id: string;
     isResolved: boolean;
     isOutdated: boolean;
+    path: string | null;
+    rootComments?: { nodes: RawSummaryComment[] };
     comments: SummaryConnection<RawSummaryComment>;
   }>;
   commits: {
@@ -68,11 +80,14 @@ export interface RawSummaryPr {
 }
 
 export interface RawExplicitResponse {
-  repository: Record<string, RawSummaryPr | null> | null;
+  repository:
+    | ({ viewerCanAdminister: boolean } & Record<string, RawSummaryPr | boolean | null>)
+    | null;
 }
 
 export interface RawStackResponse {
   repository: {
+    viewerCanAdminister: boolean;
     pullRequest: {
       stack: {
         id: string;

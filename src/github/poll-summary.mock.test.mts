@@ -170,7 +170,7 @@ describe("fetchPollSummary", () => {
     expect(mockGraphql.mock.calls[1]![1]).toMatchObject({ after: "next" });
   });
 
-  it("routes incomplete bounded slices to the authoritative one-PR worker", async () => {
+  it("surfaces incomplete bounded slices without making overflow permanently actionable", async () => {
     mockGraphql.mockResolvedValue({
       data: {
         repository: {
@@ -183,8 +183,8 @@ describe("fetchPollSummary", () => {
     });
     const result = await fetchPollSummary({ prNumbers: [42] }, repo);
     expect(result.prs[0]).toMatchObject({
-      action: "fix_code",
-      reasons: ["incomplete-summary-data"],
+      action: "wait",
+      reasons: ["ready-delay"],
       review: { incomplete: true },
     });
   });

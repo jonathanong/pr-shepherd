@@ -37,7 +37,7 @@ describe("routePollSummary", () => {
     [{ state: "CLOSED" }, {}, {}, {}, "cancel", "closed"],
     [{ mergeable: "CONFLICTING" }, {}, {}, {}, "fix_code", "merge-conflicts"],
     [{}, { failing: 1 }, {}, {}, "fix_code", "failing-checks"],
-    [{}, { incomplete: true }, {}, {}, "fix_code", "incomplete-summary-data"],
+    [{}, { incomplete: true }, {}, {}, "cancel", "appears-ready"],
     [{ mergeable: "UNKNOWN" }, {}, {}, {}, "wait", "pending-or-unknown"],
     [{ mergeStateStatus: "BEHIND" }, {}, {}, { merge: true }, "wait", "pending-or-unknown"],
     [{}, {}, { actionable: 1 }, {}, "fix_code", "review-work"],
@@ -67,7 +67,7 @@ describe("routePollSummary", () => {
       "escalate",
       "mark-ready-authorization-required",
     ],
-    [{}, {}, {}, {}, "fix_code", "no-complete-checks"],
+    [{}, {}, {}, {}, "cancel", "appears-ready"],
     [{}, { passing: 1 }, {}, { merge: true }, "merge", "appears-ready"],
     [
       { isInMergeQueue: true },

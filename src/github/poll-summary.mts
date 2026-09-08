@@ -26,22 +26,30 @@ export async function fetchPollSummary(
     throw new ShepherdError("Aggregate poll requires at least two PRs or --stack <PR>", EXIT.USAGE);
   }
   const raw: RawSummaryPr[] = [];
+  let viewerCanAdminister = false;
   for (let offset = 0; offset < requested.length; offset += MAX_EXPLICIT_PRS_PER_QUERY) {
     const chunk = requested.slice(offset, offset + MAX_EXPLICIT_PRS_PER_QUERY);
-    raw.push(...(await fetchExplicitChunk(chunk, repo)));
+    const fetched = await fetchExplicitChunk(chunk, repo);
+    viewerCanAdminister = fetched.viewerCanAdminister;
+    raw.push(...fetched.prs);
   }
   return {
     selection: { kind: "prs", requested },
-    prs: await Promise.all(raw.map((pr) => summarizePollSummaryPr(pr, repo, opts))),
+    prs: await Promise.all(
+      raw.map((pr) => summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister)),
+    ),
   };
 }
 
-async function fetchExplicitChunk(prs: number[], repo: RepoInfo): Promise<RawSummaryPr[]> {
+async function fetchExplicitChunk(
+  prs: number[],
+  repo: RepoInfo,
+): Promise<{ prs: RawSummaryPr[]; viewerCanAdminister: boolean }> {
   const declarations = prs.map((_, index) => `$pr${index}: Int!`).join(", ");
   const aliases = prs
     .map((_, index) => `pr${index}: pullRequest(number: $pr${index}) { ...PollSummaryPr }`)
     .join("\n");
-  const query = `${POLL_SUMMARY_FRAGMENT}\nquery PollSummary($owner: String!, $repo: String!, ${declarations}) {\n  _shepherdRateLimit: rateLimit { cost limit nodeCount remaining resetAt used }\n  repository(owner: $owner, name: $repo) {\n    ${aliases}\n  }\n}`;
+  const query = `${POLL_SUMMARY_FRAGMENT}\nquery PollSummary($owner: String!, $repo: String!, ${declarations}) {\n  _shepherdRateLimit: rateLimit { cost limit nodeCount remaining resetAt used }\n  repository(owner: $owner, name: $repo) {\n    viewerCanAdminister\n    ${aliases}\n  }\n}`;
   const variables = Object.fromEntries(prs.map((pr, index) => [`pr${index}`, pr]));
   const result = await graphqlWithRateLimit<RawExplicitResponse>(query, {
     owner: repo.owner,
@@ -49,11 +57,12 @@ async function fetchExplicitChunk(prs: number[], repo: RepoInfo): Promise<RawSum
     ...variables,
   });
   if (!result.data.repository) throw missingRepository(repo);
-  return prs.map((pr, index) => {
+  const rawPrs = prs.map((pr, index) => {
     const raw = result.data.repository![`pr${index}`] as RawSummaryPr | null;
     if (!raw) throw new ShepherdError(`PR #${pr} not found`, EXIT.UNAVAILABLE);
     return raw;
   });
+  return { prs: rawPrs, viewerCanAdminister: result.data.repository.viewerCanAdminister };
 }
 
 async function fetchStackSummary(
@@ -65,6 +74,7 @@ async function fetchStackSummary(
   let stackId: string | null = null;
   let stackNumber = 0;
   let stackSize = 0;
+  let viewerCanAdminister = false;
   const entries: Array<{ position: number; pullRequest: RawSummaryPr }> = [];
   do {
     const response = (await graphqlWithRateLimit<RawStackResponse>(POLL_STACK_SUMMARY_QUERY, {
@@ -75,6 +85,7 @@ async function fetchStackSummary(
     })) as { data: RawStackResponse };
     const repository: RawStackResponse["repository"] = response.data.repository;
     if (!repository) throw missingRepository(repo);
+    viewerCanAdminister = repository.viewerCanAdminister;
     if (!repository.pullRequest) {
       throw new ShepherdError(`PR #${anchor} not found`, EXIT.UNAVAILABLE);
     }
@@ -129,7 +140,9 @@ async function fetchStackSummary(
   return {
     selection: { kind: "stack", anchor, stackNumber, stackSize },
     prs: await Promise.all(
-      ordered.map((entry) => summarizePollSummaryPr(entry.pullRequest, repo, opts)),
+      ordered.map((entry) =>
+        summarizePollSummaryPr(entry.pullRequest, repo, opts, viewerCanAdminister),
+      ),
     ),
   };
 }

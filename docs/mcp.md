@@ -186,6 +186,8 @@ Supply exactly one of `pr`, `prs`, or `stack`. `prs` is a non-empty list of qual
 from one repository; `stack` is one qualified anchor whose complete native GitHub stack is selected.
 Aggregate selectors return one compact, read-only summary tick. Markdown and `structuredContent`
 surface equivalent per-PR raw state, bounded check/review counts, routing hints, and `pollCommand`s.
+The compact tick reuses singular check/review classification and maintains local ready-delay state;
+bounded overflow is surfaced as incomplete context without becoming a permanent action by itself.
 
 For a single-PR selector, Markdown `content` is the CLI's default (lean) rendering and `structuredContent` is the matching lean JSON projection of the `IterateResult` — not the raw result object. This projection omits fields that are the trivial default and adds `readyDelayOverride` when `readyDelaySeconds` was supplied. For every action except `fix_code`, it also adds a computed top-level `instructions` array; for `fix_code`, the equivalent steps are under `fix.instructions` instead. For aggregate `prs` or `stack` selectors, `structuredContent` is the raw `PollSummaryResult` and Markdown is produced from that same result. Action semantics, instruction text, and the full field contract live in [actions.md](actions.md).
 

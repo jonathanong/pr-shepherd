@@ -11,6 +11,31 @@ fragment PollSummaryPr on PullRequest {
   mergeable
   mergeStateStatus
   reviewDecision
+  reviewRequests(last: 50) {
+    nodes {
+      requestedReviewer {
+        __typename
+        ... on User {
+          login
+        }
+        ... on Bot {
+          login
+        }
+        ... on Mannequin {
+          login
+        }
+      }
+    }
+  }
+  latestReviews(last: 50) {
+    nodes {
+      state
+      author {
+        __typename
+        login
+      }
+    }
+  }
   isInMergeQueue
   mergeQueueEntry {
     headCommit {
@@ -23,13 +48,17 @@ fragment PollSummaryPr on PullRequest {
           nodes {
             __typename
             ... on CheckRun {
+              id
               name
               status
               conclusion
+              detailsUrl
               checkSuite {
                 workflowRun {
+                  databaseId
                   event
                   workflow {
+                    databaseId
                     name
                   }
                 }
@@ -61,6 +90,12 @@ fragment PollSummaryPr on PullRequest {
       id
       body
       isMinimized
+      url
+      authorAssociation
+      author {
+        __typename
+        login
+      }
     }
   }
   reviews(last: 100) {
@@ -73,6 +108,7 @@ fragment PollSummaryPr on PullRequest {
       body
       state
       isMinimized
+      authorAssociation
       author {
         __typename
         login
@@ -88,13 +124,30 @@ fragment PollSummaryPr on PullRequest {
       id
       isResolved
       isOutdated
+      path
+      rootComments: comments(first: 1) {
+        nodes {
+          id
+          body
+          url
+          viewerDidAuthor
+          authorAssociation
+          author {
+            __typename
+            login
+          }
+        }
+      }
       comments(last: 5) {
         totalCount
         pageInfo {
           hasPreviousPage
         }
         nodes {
+          id
           body
+          url
+          authorAssociation
           viewerDidAuthor
           author {
             __typename
@@ -116,13 +169,17 @@ fragment PollSummaryPr on PullRequest {
             nodes {
               __typename
               ... on CheckRun {
+                id
                 name
                 status
                 conclusion
+                detailsUrl
                 checkSuite {
                   workflowRun {
+                    databaseId
                     event
                     workflow {
+                      databaseId
                       name
                     }
                   }

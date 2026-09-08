@@ -102,12 +102,19 @@ Static documents live in [`src/github/gql/`](../src/github/gql/) and are loaded 
 | `SuggestionThreads`    | `suggestion-threads.gql`                      | `build-suggestion-patches`                                                                        | yes                      |
 | `GetPrHeadSha`         | `get-pr-head-sha.gql`                         | `--require-sha` poll (`resolve.shaPoll`, default 2s × 10)                                         | yes                      |
 | `PrNumberByBranch`     | `pr-number-by-branch.gql`                     | No PR number passed (avoid this — pass the number)                                                | yes                      |
-| `GetPrBody`            | `get-pr-body.gql`                             | Journal apply, before the body mutation                                                           | yes                      |
-| `UpdatePrBody`         | `update-pr-body.gql`                          | Journal apply                                                                                     | no (mutation)            |
-| `MarkPrReady`          | `mark-pr-ready.gql`                           | `mark_ready` when `viewerCanUpdate`                                                               | no (mutation)            |
-| `PullRequestFiles`     | inline in `mark-files-as-viewed.mts`          | `apply files`                                                                                     | yes                      |
-| `BulkApply`            | runtime aliases in `comments/resolve.mts`     | reply / resolve / minimize / dismiss, chunks of 10                                                | no (mutation)            |
-| `markFileAsViewed`     | runtime aliases, chunks of 10                 | `apply files`                                                                                     | no (mutation)            |
+
+The poll-summary documents include raw workflow/run identities so compact check counts use the same
+ignored, protected-run, event, and superseded-run classifier as full iteration. They also include
+review provenance, latest decisive review state, reviewer requests, and repository administration
+capability for classification-rule, bot-review, thread-root, and draft blocking-review routing.
+Bounded connection overflow is reported as incomplete context; a null status-check rollup is a valid
+empty check set.
+| `GetPrBody` | `get-pr-body.gql` | Journal apply, before the body mutation | yes |
+| `UpdatePrBody` | `update-pr-body.gql` | Journal apply | no (mutation) |
+| `MarkPrReady` | `mark-pr-ready.gql` | `mark_ready` when `viewerCanUpdate` | no (mutation) |
+| `PullRequestFiles` | inline in `mark-files-as-viewed.mts` | `apply files` | yes |
+| `BulkApply` | runtime aliases in `comments/resolve.mts` | reply / resolve / minimize / dismiss, chunks of 10 | no (mutation) |
+| `markFileAsViewed` | runtime aliases, chunks of 10 | `apply files` | no (mutation) |
 
 ## Per-tick budget
 

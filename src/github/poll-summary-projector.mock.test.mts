@@ -161,10 +161,9 @@ describe("summarizePollSummaryPr", () => {
     );
   });
 
-  it("marks a missing check rollup incomplete and preserves stack state", async () => {
+  it("treats a missing check rollup as an empty set and preserves stack state", async () => {
     const item = await summarizePollSummaryPr(raw(), repo, {});
     expect(item).toMatchObject({
-      checks: { incomplete: true },
       stack: { number: 7, position: 1, size: 2 },
       isInMergeQueue: true,
       reviewDecision: "CHANGES_REQUESTED",
@@ -192,5 +191,31 @@ describe("summarizePollSummaryPr", () => {
       {},
     );
     expect(item.review).toEqual({ reviews: 1 });
+  });
+
+  it("keeps a draft waiting while a configured reviewer is pending", async () => {
+    const item = await summarizePollSummaryPr(
+      raw({
+        isDraft: true,
+        isInMergeQueue: false,
+        stack: null,
+        stackEntry: null,
+        reviewRequests: { nodes: [{ requestedReviewer: null }] },
+        latestReviews: {
+          nodes: [
+            { state: "PENDING", author: null },
+            { state: "PENDING", author: { login: "copilot-pull-request-reviewer" } },
+          ],
+        },
+      }),
+      repo,
+      {},
+    );
+
+    expect(item).toMatchObject({
+      action: "wait",
+      reasons: ["blocking-reviewer-in-progress"],
+      blockingReviewerInProgress: true,
+    });
   });
 });

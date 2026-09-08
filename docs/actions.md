@@ -18,10 +18,10 @@ timeout expires; `--until-terminal` also returns a crossed quota warning with th
 instructions as singular polling. Completed rows do not stop polling while another row remains `WAIT`. Stack entries
 are fetched completely and ordered bottom-to-top. Each row surfaces the same fields in Markdown and
 JSON: repository, title/URL, raw PR/merge/review/head/base/stack state, bounded check and review
-counts (including ignored checks and active merge-queue commit checks) plus incomplete flags, and a conservative action with reasons. Each actionable row also has
+counts (including ignored and superseded checks and active merge-queue commit checks) plus incomplete flags, and a conservative action with reasons. Null check rollups are valid empty sets; bounded connection overflow remains visible as `incomplete` but does not permanently force an actionable row. Check routing reuses the full iterate classifier, and review counts honor classification rules, decisive approvals, bot-dismiss authorization, root-thread authorship, and seen markers. Draft rows wait while a configured blocking reviewer is requested or pending. Clean rows share the configured ready-delay and become terminal after it elapses, so rerunning an aggregate after a completed single-PR worker does not redispatch that row forever. Each actionable row also has
 an exact repository-qualified single-PR `pollCommand`. One final `## Instructions` section directs the caller to process independent
 actionable rows and rerun the aggregate selector. Aggregate API and MCP calls return one summary tick
-without recurrence. The summary path never mutates GitHub or writes seen markers; the selected
+without recurrence. The summary path never mutates GitHub or writes seen markers; it only maintains local ready-delay state so clean completion survives aggregate reruns. The selected
 single-PR commands remain authoritative for state changes and full review context.
 
 Command examples call `pr-shepherd` directly everywhere a follow-up command is emitted.

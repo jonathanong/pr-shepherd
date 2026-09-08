@@ -9,6 +9,7 @@ export interface PollSummaryChecks {
   skipped?: number;
   filtered?: number;
   ignored?: number;
+  superseded?: number;
   incomplete?: true;
 }
 
@@ -44,6 +45,8 @@ export interface PollSummaryItem {
   baseRefName: string;
   isDraft?: true;
   isInMergeQueue?: true;
+  blockingReviewerInProgress?: true;
+  remainingSeconds?: number;
   checks?: PollSummaryChecks;
   review?: PollSummaryReview;
   stack?: PollSummaryStack;
