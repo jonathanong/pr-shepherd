@@ -261,4 +261,7 @@ async function handleResolve(
       ? `${JSON.stringify(result, null, 2)}\n`
       : `${formatMutateResult(result)}\n`,
   );
+  if (result.errors.length > 0) {
+    process.exitCode = result.rateLimit ? EXIT.TEMPFAIL : EXIT.UNAVAILABLE;
+  }
 }
