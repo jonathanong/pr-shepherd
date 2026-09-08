@@ -148,11 +148,8 @@ describe("buildFixInstructions", () => {
     expect(text).toContain("commit any remaining changes and push to the PR head branch");
     // CLI no longer prescribes rebase mechanics — that is the caller's convention.
     expect(text).not.toContain("rebase onto");
-    // $HEAD_SHA/$DISMISS_MESSAGE substitution stays in the CLI (unlike dismiss-ID
-    // retention and the ID-exclusion rules, which moved to the skill's
-    // "Review-mutation mechanics" playbook) — the printed command is not independently
-    // runnable without it. This fixture has no replyThreadIds, so the marker-routing
-    // explanation (also CLI-side — see the buildResolveCommandInstruction docblock) is absent.
+    // Placeholder substitution stays CLI-side because the command is invalid without it.
+    // ID routing is already encoded; only dismiss-ID retention needs the skill pointer.
     expect(text).toContain("If you did not change code, replace `$HEAD_SHA`");
     expect(text).toContain("Replace `$DISMISS_MESSAGE` with one sentence");
     expect(instructions.at(-2)).toBe(

@@ -72,7 +72,7 @@ Conversations Resolved: No [Not Required]
 2. Apply every warranted review fix in each file referenced above.
 3. Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for read-only inspection rules.
 4. If you changed code, commit any remaining changes and push to the PR head branch, then run review mutations using the pushed commit SHA and iterate immediately with the same options. If you did not change code, do not commit and continue.
-5. Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an earlier Shepherd reply: a marked thread that is still being resolved is emitted resolve-only when authorized.
+5. Substitute any command placeholders and run the generated review mutations.
 6. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, commit and push to the PR head branch first, then replace `$HEAD_SHA` with the pushed commit SHA.
 7. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
 8. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.

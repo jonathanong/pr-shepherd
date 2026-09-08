@@ -132,7 +132,7 @@ export function buildFixInstructions(
 
   if (resolutionOnlyThreads.length > 0) {
     instructions.push(
-      'Review the threads under `## Review threads to resolve` before running mutations. Use the generated commands as shown — see "Review-mutation routing" in the pr-shepherd skill for which flag applies to which ID.',
+      "Review the threads under `## Review threads to resolve` before running the generated mutations.",
     );
   }
 

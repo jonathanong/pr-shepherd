@@ -33,6 +33,5 @@ After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-
 
 ## Instructions
 
-1. Pause automated polling and ask the user how to handle this escalation.
-2. If directed to complete the pending review mutations, substitute any `$HEAD_SHA` with the current pushed PR-head SHA and any `$DISMISS_MESSAGE` with one specific sentence, then run the commands shown above.
-3. After completing the directed recovery, rerun Shepherd with the same options.
+1. Stop polling. Ask the user whether to run the pending review commands shown above.
+2. If yes, replace any `$HEAD_SHA` with the full 40-character pushed PR-head SHA and any `$DISMISS_MESSAGE` with a one-sentence disposition, run every pending command, then rerun Shepherd with the same options.

@@ -58,9 +58,8 @@ export function buildSimpleIterateInstructions(
       if (!pending)
         return ["Stop — human direction is required before automated polling can resume."];
       return [
-        "Pause automated polling and ask the user how to handle this escalation.",
-        "If directed to complete the pending review mutations, substitute any `$HEAD_SHA` with the current pushed PR-head SHA and any `$DISMISS_MESSAGE` with one specific sentence, then run the commands shown above.",
-        "After completing the directed recovery, rerun Shepherd with the same options.",
+        "Stop polling. Ask the user whether to run the pending review commands shown above.",
+        "If yes, replace any `$HEAD_SHA` with the full 40-character pushed PR-head SHA and any `$DISMISS_MESSAGE` with a one-sentence disposition, run every pending command, then rerun Shepherd with the same options.",
       ];
     }
   }

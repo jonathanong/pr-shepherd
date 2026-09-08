@@ -51,7 +51,7 @@ annotations, or CI log excerpts.
 - The command builds from the fetched PR head and accepts a clean local descendant only when the complete ordered patch stream passes `git apply --check`.
 - If the command refuses because a suggestion is unsafe or no longer applies, inspect the current source, the displayed replacement block, and reviewer intent before editing manually. Do not apply a stale numeric range blindly or retry unchanged input.
 - A returned patch was checked against the then-current worktree. If it later fails, re-inspect the worktree because it changed after validation.
-- Keep the generated thread IDs and flag placement unchanged. Viewer-authored human feedback may intentionally appear in both reply and resolve flags; unmarked other-human feedback remains reply-only. Marker-ended other-human feedback is already acknowledged and has no generated mutation.
+- Use the generated thread IDs and flag placement returned with the patch command.
 
 ### CI failure triage
 
@@ -77,15 +77,10 @@ When several bullets share one runId (matrix jobs from the same run), the `rerun
 
 Applies to every `apply review:` / `resolve-only:` command the CLI prints. Covers only what stays safe if you run the printed command **unmodified** — `$HEAD_SHA`/`$DISMISS_MESSAGE` substitution remains a separate CLI-printed step because the command is unsafe by default without those placeholders.
 
-The CLI only includes IDs whose per-object GitHub viewer capability and semantic routing authorize the corresponding generated action. Run generated commands unchanged: an omitted automation ID is not a prohibition, but do not add it to that generated command. A separate, user-directed `apply review` request may supply any reply, resolve, minimize, or dismiss IDs; it forwards them without Shepherd author, capability, or current-state filtering, and GitHub's per-operation response is authoritative. Denied or unverifiable generated mutations remain one-look skips that Shepherd suppresses until the item is edited. Location is not required for generated reply/resolve mutations; unauthorized threads without a path or line remain one-look skips.
+The CLI only includes IDs whose per-object GitHub viewer capability and semantic routing authorize the corresponding generated action. Generated commands are pre-populated; omission is not a prohibition. A separate, user-directed `apply review` request may supply any reply, resolve, minimize, or dismiss IDs; it forwards them without Shepherd author, capability, or current-state filtering, and GitHub's per-operation response is authoritative.
 
-- Run every generated `apply review:` / `resolve-only:` command even when no code change is warranted. The command records the agent's disposition of the included review items; skipping it leaves authorized threads active and can eventually trigger `fix-thrash`.
-- Do not add first-look-only or check-annotation IDs to a generated command — its flags are pre-populated by the CLI. This restriction does not apply to a separate user-directed `apply review` request.
+- When `## Instructions` says to run a generated `apply review:` / `resolve-only:` command, run it even when no code change is warranted. An `[ESCALATE]` instruction may require user direction first. The command records the agent's disposition of the included review items; skipping it leaves authorized threads active and can eventually trigger `fix-thrash`.
 - Keep every existing `--dismiss-review-ids` ID the CLI already included. Each is a bot or non-human review that must be dismissed; omitting one leaves the PR in `CHANGES_REQUESTED`.
-
-### Review-mutation routing
-
-For threads under both `## Review threads` and `## Review threads to resolve`, evaluate every thread before running mutations. Keep unmarked bot/non-human and viewer-authored IDs in both `--reply-thread-ids` and `--resolve-thread-ids`, including when the feedback is advisory, already satisfied, or otherwise warrants no code change: the reply runs before the resolve. Unmarked other-human IDs use `--reply-thread-ids` only unless the CLI also put them in `--resolve-thread-ids`. When the latest comment begins `<!-- pr-shepherd -->`, it is an established Shepherd reply—not merely a same-account comment. A marked thread that is still being resolved is resolve-only for retry. Do not add omitted IDs or move IDs between flags in a generated command.
 
 ### Shepherd Journal
 
