@@ -57,24 +57,13 @@ export function buildRepeatedWorkflowBranchRecoveryInstructions(
  *
  * - `$HEAD_SHA`/`$DISMISS_MESSAGE` substitution: without it, the printed command has an
  *   empty `--message`/invalid `--require-sha` and `apply review` rejects the mutation.
- * Marker-based self-reply routing is already reflected in the generated IDs. The instruction
- * below makes that behavior explicit so an authenticated viewer's unmarked human feedback is
- * not mistaken for an automated reply merely because the GitHub login matches.
- *
  * Contrast with what *does* stay in the skill's "Review-mutation mechanics" playbook —
- * dismiss-ID retention and the first-look/annotation ID-exclusion rules. Those only matter
- * if the caller *edits* the printed command (removes an ID, or adds one back); the printed
- * command run unmodified is already correct for them. The pointer below is load-bearing:
- * without it, nothing in CLI output tells the agent that playbook exists.
+ * dismiss-ID retention. The pointer below is load-bearing: without it, nothing in CLI output
+ * tells the agent that playbook exists.
  */
 export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): string[] {
   if (!resolveCommand.hasMutations) return [];
   const instructions: string[] = [];
-  if ((resolveCommand.replyThreadIds?.length ?? 0) > 0) {
-    instructions.push(
-      "Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked thread that is still being resolved is emitted resolve-only, not for another reply.",
-    );
-  }
   if (resolveCommand.requiresHeadSha) {
     instructions.push(
       "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, commit and push to the PR head branch first, then replace `$HEAD_SHA` with the pushed commit SHA.",

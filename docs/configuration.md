@@ -92,7 +92,7 @@ actions:
 | ------------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `botUsernames`                       | Known code-review bot logins              | GitHub logins treated as bots for repeat unresolved-thread visibility even when GitHub reports them as `User` or `Unknown`                                  |
 | `ignoreChecks`                       | `[]`                                      | Case-insensitive glob patterns for check/status context names Shepherd should ignore completely                                                             |
-| `iterate.fixAttemptsPerThread`       | `3`                                       | Max fix attempts per surfaced unresolved thread body before `escalate`                                                                                      |
+| `iterate.fixAttemptsPerThread`       | `3`                                       | Caller-visible `FIX_CODE` deliveries allowed for one unchanged unresolved thread body before the following tick escalates                                   |
 | `iterate.stallTimeoutMinutes`        | `60`                                      | Minutes the loop may repeat the same action without progress, or CI may stay pending without starting, before `escalate` with `stall-timeout`; `0` disables |
 | `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination).                                                                      |
 | `iterate.minimizeComments`           | `"all"`                                   | Which non-human GitHub author classes to minimize for PR comments and review summaries: `all`, `bots`, or `none`; humans are never minimized.               |
@@ -143,7 +143,7 @@ The pattern is matched against Shepherd's normalized check name (`CheckRun.name`
 
 ### `iterate.fixAttemptsPerThread` — default `3`
 
-Maximum number of times shepherd dispatches the `fix_code` action for the same surfaced review thread body without it being resolved or changed. Once a thread body hits this count, shepherd escalates to the `escalate` action instead of retrying.
+Maximum number of caller-visible `fix_code` results that may return the same surfaced review thread body without it being resolved or changed. Each result repeats the pending review commands. After the configured number of results has been delivered, the next unchanged tick escalates and retains those commands. Internal polling/debounce ticks do not count.
 
 The counter is keyed by the thread transcript hash. If the author edits or replies in the thread, the hash changes and the per-thread counter resets. Threads suppressed by seen markers do not increment this counter.
 

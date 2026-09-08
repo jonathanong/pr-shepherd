@@ -19,7 +19,8 @@ Run 'pr-shepherd apply <review|files|journal> --help' for command-specific detai
 
   "apply review": `pr-shepherd apply review
 
-Apply GitHub review-state mutations after fixes.
+Apply user-directed GitHub review-state mutations after fixes. Supplied IDs are forwarded to GitHub;
+GitHub accepts or rejects each mutation.
 
 Usage:
   pr-shepherd apply review [PR] --reply-thread-ids A,B --message MSG
@@ -29,10 +30,9 @@ Usage:
 
 Flags:
   --resolve-thread-ids <ids>      Comma-separated review thread IDs (PRRT_*) to resolve.
-                                  Human-authored thread IDs are skipped; use --reply-thread-ids.
-  --reply-thread-ids <ids>        Comma-separated human review thread IDs to reply to.
+  --reply-thread-ids <ids>        Comma-separated review thread IDs to reply to.
   --minimize-comment-ids <ids>    Comma-separated issue/review comment IDs to minimize.
-  --dismiss-review-ids <ids>      Comma-separated CHANGES_REQUESTED review IDs to dismiss.
+  --dismiss-review-ids <ids>      Comma-separated review IDs to dismiss.
   --message <text>                Reply/dismiss message. Required with reply or dismiss IDs.
   --require-sha <sha>             Wait for this full 40-character lowercase PR head SHA.
   --format text|json              Output format. Default: text.
@@ -134,7 +134,8 @@ Use --dry-run to preview paths without removing them.
 
   resolve: `pr-shepherd resolve
 
-Apply GitHub review-state mutations after fixes.
+Deprecated compatibility alias for user-directed GitHub review-state mutations. Supplied IDs are forwarded to GitHub;
+GitHub accepts or rejects each mutation.
 
 Usage:
   pr-shepherd resolve [PR] --reply-thread-ids A,B --message MSG
@@ -144,11 +145,10 @@ Usage:
 
 Flags:
   --resolve-thread-ids <ids>      Comma-separated review thread IDs (PRRT_*) to resolve.
-                                  Human-authored thread IDs are skipped; use --reply-thread-ids.
                                   Note: comment IDs (PRRC_*) from gh api are not thread IDs and will fail.
-  --reply-thread-ids <ids>        Comma-separated human review thread IDs to reply to.
+  --reply-thread-ids <ids>        Comma-separated review thread IDs to reply to.
   --minimize-comment-ids <ids>    Comma-separated issue/review comment IDs to minimize.
-  --dismiss-review-ids <ids>      Comma-separated CHANGES_REQUESTED review IDs to dismiss.
+  --dismiss-review-ids <ids>      Comma-separated review IDs to dismiss.
   --message <text>                Reply/dismiss message. Required with --reply-thread-ids
                                   or --dismiss-review-ids.
   --require-sha <sha>             Wait until GitHub reports this PR head SHA before mutating.

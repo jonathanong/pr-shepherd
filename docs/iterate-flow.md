@@ -173,7 +173,7 @@ Exit codes: `0`/`10`–`15` is `IterateResult` PR state; see [exit-codes.md](exi
 | 3       | `hasActionableWork`, but only non-CI work while queued (`--merge`, in queue, `!workWhileQueued`) | `wait` (4.5, with `deferredWork`) | 10        |
 | 3 check | Only checks without autonomous follow-up                                                         | `escalate`                        | 13        |
 | 3 stall | Same fingerprint for ≥ `stallTimeoutMinutes`                                                     | `escalate`                        | 13        |
-| 3 esc.  | Same thread hit `fixAttemptsPerThread` times                                                     | `escalate`                        | 13        |
+| 3 esc.  | Same thread remains after `fixAttemptsPerThread` returned `FIX_CODE` results                     | `escalate` with pending commands  | 13        |
 | 4       | READY + isDraft + !blockingBotReview                                                             | `mark_ready`                      | 11        |
 | 4.5     | Auto-merge or merge queue active                                                                 | `wait`                            | 10        |
 | 5       | Fallthrough                                                                                      | `wait`                            | 10        |

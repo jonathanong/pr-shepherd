@@ -155,17 +155,13 @@ describe("buildResolveCommandInstruction", () => {
     ]);
   });
 
-  it("puts the marker-routing explanation first when replyThreadIds is non-empty", () => {
-    // The generated command already excludes marker-ended replies. Keep the explanation
-    // CLI-side so callers know author equality is not the self-reply signal and must not
-    // rewrite the generated viewer-authored reply-and-resolve pairing.
+  it("does not repeat routing policy when replyThreadIds is non-empty", () => {
     expect(buildResolveCommandInstruction(resolveCommand({ replyThreadIds: ["PRRT_1"] }))).toEqual([
-      "Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked thread that is still being resolved is emitted resolve-only, not for another reply.",
       'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',
     ]);
   });
 
-  it("omits the marker-routing explanation when replyThreadIds is empty", () => {
+  it("omits routing policy when replyThreadIds is empty", () => {
     const instructions = buildResolveCommandInstruction(resolveCommand({}));
     expect(instructions.some((i) => i.includes("remove any `--reply-thread-ids` entry"))).toBe(
       false,
@@ -182,7 +178,6 @@ describe("buildResolveCommandInstruction", () => {
         }),
       ),
     ).toEqual([
-      "Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an established Shepherd reply; a marked thread that is still being resolved is emitted resolve-only, not for another reply.",
       "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, commit and push to the PR head branch first, then replace `$HEAD_SHA` with the pushed commit SHA.",
       "Replace `$DISMISS_MESSAGE` with one sentence describing what changed.",
       'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',

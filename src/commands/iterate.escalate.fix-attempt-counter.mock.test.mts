@@ -35,7 +35,7 @@ const THREAD = {
 
 describe("runIterate — escalate (fix-thrash)", () => {
   it("increments attempt count for unchanged thread body and writes body hash", async () => {
-    // Use a different stored SHA so isNewSha=true and the increment fires.
+    // A caller-visible tick increments the unchanged body count.
     mockReadFixAttempts.mockResolvedValue({
       headSha: "old-sha",
       threadAttempts: { "thread-1": 1 },
@@ -128,5 +128,66 @@ describe("runIterate — escalate (fix-thrash)", () => {
     const [, written] = mockWriteFixAttempts.mock.calls[0]!;
     expect(written.threadAttempts["thread-1"]).toBe(1);
     expect(written.threadBodyHashes?.["thread-1"]).toBe(hashBody("new body"));
+  });
+
+  it("does not count or escalate an internal persistSeen=false tick", async () => {
+    mockReadFixAttempts.mockResolvedValue({
+      headSha: "abc123",
+      threadAttempts: { "thread-1": 3 },
+      threadBodyHashes: { "thread-1": hashBody("Fix this") },
+    });
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        threads: {
+          actionable: [THREAD],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts({ persistSeen: false }));
+
+    expect(result.action).toBe("fix_code");
+    expect(mockWriteFixAttempts).not.toHaveBeenCalled();
+  });
+
+  it("does not count a tick that escalates before returning FIX_CODE", async () => {
+    mockReadFixAttempts.mockResolvedValue({
+      headSha: "abc123",
+      threadAttempts: { "thread-1": 1 },
+      threadBodyHashes: { "thread-1": hashBody("Fix this") },
+    });
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        baseBranch: "",
+        status: "UNRESOLVED_COMMENTS",
+        threads: {
+          actionable: [THREAD],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("escalate");
+    expect(mockWriteFixAttempts).not.toHaveBeenCalled();
   });
 });

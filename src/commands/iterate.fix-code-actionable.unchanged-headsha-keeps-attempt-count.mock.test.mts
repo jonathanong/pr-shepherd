@@ -10,11 +10,12 @@ import {
   mockWriteFixAttempts,
 } from "../../test-helpers/commands/iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
+import { hashBody } from "../state/seen-comments.mts";
 
 registerIterateHooks();
 
 describe("runIterate — fix_code (actionable threads)", () => {
-  it("does not increment fix-attempt counter when headSha is unchanged (no push detected)", async () => {
+  it("increments the delivery count when HEAD is unchanged", async () => {
     const thread = {
       id: "thread-1",
       isResolved: false,
@@ -46,14 +47,16 @@ describe("runIterate — fix_code (actionable threads)", () => {
       shouldCancel: false,
       remainingSeconds: 600,
     });
-    // Stored state has the same sha as the current HEAD → no push detected
-    mockReadFixAttempts.mockResolvedValue({ headSha: "abc123", threadAttempts: { "thread-1": 2 } });
+    mockReadFixAttempts.mockResolvedValue({
+      headSha: "abc123",
+      threadAttempts: { "thread-1": 2 },
+      threadBodyHashes: { "thread-1": hashBody(thread.body) },
+    });
 
     await runIterate(makeOpts());
 
     const written = mockWriteFixAttempts.mock.calls[0]?.[1];
-    // Counter must NOT increment because sha is unchanged
-    expect(written?.threadAttempts?.["thread-1"]).toBe(2);
+    expect(written?.threadAttempts?.["thread-1"]).toBe(3);
   });
   it("includes Shepherd Journal instruction when there are actionable threads", async () => {
     const thread = {

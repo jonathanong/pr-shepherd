@@ -18,10 +18,15 @@ Could not determine the PR's base branch (GraphQL batch returned an empty base b
   > Please fix the import order.
 
 
+## Pending review commands
+
+- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_base --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
+
 ---
 
 After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-shepherd https://github.com/owner/repo/pull/42` to resume.
 
 ## Instructions
 
-1. Stop — human direction is required before automated polling can resume.
+1. Stop polling. Ask the user whether to run the pending review commands shown above.
+2. If yes, replace any `$HEAD_SHA` with the full 40-character pushed PR-head SHA and any `$DISMISS_MESSAGE` with a one-sentence disposition, run every pending command, then rerun Shepherd with the same options.

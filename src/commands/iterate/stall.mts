@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { readStallState, writeStallState } from "../../state/iterate-stall.mts";
 import { toAgentThread, toAgentComment, toAgentStalledCheck } from "../../reporters/agent.mts";
 import {
@@ -14,6 +15,33 @@ import type {
   IterateResultBase,
   ShepherdReport,
 } from "../../types.mts";
+
+function pendingReviewCommandsFromResult(
+  result: IterateResult,
+): EscalateDetails["pendingReviewCommands"] | undefined {
+  if (result.action !== "fix_code") return undefined;
+  const pending = {
+    ...(result.fix.resolveOnlyCommand?.hasMutations && {
+      resolveOnlyCommand: result.fix.resolveOnlyCommand,
+    }),
+    ...(result.fix.resolveCommand.hasMutations && { resolveCommand: result.fix.resolveCommand }),
+  };
+  return Object.keys(pending).length > 0 ? pending : undefined;
+}
+
+function surfacedSummariesFromResult(
+  result: IterateResult,
+): Pick<EscalateDetails, "firstLookSummaries" | "editedSummaries"> {
+  if (result.action !== "fix_code") return {};
+  return {
+    ...(result.fix.firstLookSummaries.length > 0 && {
+      firstLookSummaries: result.fix.firstLookSummaries,
+    }),
+    ...(result.fix.editedSummaries.length > 0 && {
+      editedSummaries: result.fix.editedSummaries,
+    }),
+  };
+}
 
 function computeStallFingerprint(
   action: string,
@@ -79,6 +107,7 @@ export async function applyStallGuard(
     action: prospectiveResult.action,
   });
   if (stalledChecks.length > 0) {
+    const pending = pendingReviewCommandsFromResult(prospectiveResult);
     const stalledDuration = formatDurationApprox(
       Math.max(...stalledChecks.map((c) => c.ageSeconds)),
     );
@@ -87,7 +116,9 @@ export async function applyStallGuard(
       unresolvedThreads: [],
       ambiguousComments: [],
       changesRequestedReviews: [],
+      ...surfacedSummariesFromResult(prospectiveResult),
       stalledChecks,
+      ...(pending && { pendingReviewCommands: pending }),
       suggestion: buildEscalateSuggestion(["stall-timeout"], stalledDuration),
     };
     return {
@@ -120,6 +151,7 @@ export async function applyStallGuard(
       await writeStallState(stallKey, { fingerprint, firstSeenAt: nowSeconds });
     } else if (ageSeconds >= stallTimeoutSeconds) {
       const stalledDuration = formatDurationApprox(ageSeconds);
+      const pending = pendingReviewCommandsFromResult(prospectiveResult);
       const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
         triggers: ["stall-timeout"],
         unresolvedThreads: [...report.threads.actionable, ...report.threads.resolutionOnly].map(
@@ -127,6 +159,8 @@ export async function applyStallGuard(
         ),
         ambiguousComments: report.comments.actionable.map(toAgentComment),
         changesRequestedReviews: report.changesRequestedReviews,
+        ...surfacedSummariesFromResult(prospectiveResult),
+        ...(pending && { pendingReviewCommands: pending }),
         suggestion: buildEscalateSuggestion(["stall-timeout"], stalledDuration),
       };
       return {

@@ -22,6 +22,14 @@ Bot CHANGES_REQUESTED review(s) remained undismissed past the stall window (revi
   > 1. **Missing input validation.** The `processPayment` function at `src/payments.mts:42` does not validate the amount field before passing it to the charge API.
   > 2. **Race condition.** `src/queue.mts:88` reads and writes the job counter without a lock.
 
+- review `PRR_bot_new` (@claude · Bot):
+
+  > A newer changes-requested review that must be displayed before its retained dismissal runs.
+
+
+## Pending review commands
+
+- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --message "$DISMISS_MESSAGE" --dismiss-review-ids PRR_bot_overdue,PRR_bot_new --require-sha "$HEAD_SHA"`
 
 ---
 
@@ -29,4 +37,5 @@ After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-
 
 ## Instructions
 
-1. Stop — human direction is required before automated polling can resume.
+1. Stop polling. Ask the user whether to run the pending review commands shown above.
+2. If yes, replace any `$HEAD_SHA` with the full 40-character pushed PR-head SHA and any `$DISMISS_MESSAGE` with a one-sentence disposition, run every pending command, then rerun Shepherd with the same options.

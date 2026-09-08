@@ -45,7 +45,7 @@ describe("runResolveMutate — viewer-authored human threads", () => {
     expect(result.skippedHumanResolves).toBeUndefined();
   });
 
-  it("skips an unmarked viewer-authored human resolve when no reply is paired", async () => {
+  it("forwards an unmarked viewer-authored human resolve without a paired reply", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
         reviewThreads: [
@@ -67,9 +67,9 @@ describe("runResolveMutate — viewer-authored human threads", () => {
     expect(mockApplyResolveOptions).toHaveBeenCalledWith(
       42,
       { owner: "owner", name: "repo" },
-      expect.objectContaining({ resolveThreadIds: [] }),
+      expect.objectContaining({ resolveThreadIds: ["t-viewer"] }),
     );
-    expect(result.skippedHumanResolves).toEqual(["t-viewer"]);
+    expect(result.skippedHumanResolves).toBeUndefined();
   });
 
   it("allows a marker-ended viewer-authored human resolve without another reply", async () => {

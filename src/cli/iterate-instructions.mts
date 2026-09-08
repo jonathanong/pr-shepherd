@@ -53,8 +53,15 @@ export function buildSimpleIterateInstructions(
     }
     case "cancel":
       return ["Stop — the PR loop is complete. No further polling is needed."];
-    case "escalate":
-      return ["Stop — human direction is required before automated polling can resume."];
+    case "escalate": {
+      const pending = result.escalate.pendingReviewCommands;
+      if (!pending)
+        return ["Stop — human direction is required before automated polling can resume."];
+      return [
+        "Stop polling. Ask the user whether to run the pending review commands shown above.",
+        "If yes, replace any `$HEAD_SHA` with the full 40-character pushed PR-head SHA and any `$DISMISS_MESSAGE` with a one-sentence disposition, run every pending command, then rerun Shepherd with the same options.",
+      ];
+    }
   }
 }
 

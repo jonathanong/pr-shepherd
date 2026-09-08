@@ -2,6 +2,7 @@
 import type { AgentCheck, EscalateDetails, EscalateTrigger, ReviewThread } from "../../types.mts";
 import { loadConfig } from "../../config/load.mts";
 import { inlineCode } from "../../util/markdown.mts";
+import { renderResolveCommand } from "./render.mts";
 
 interface EscalateCheck {
   triggers: EscalateTrigger[];
@@ -158,6 +159,8 @@ export function buildEscalateHumanMessage(
     escalate.unresolvedThreads.length > 0 ||
     escalate.changesRequestedReviews.length > 0 ||
     escalate.ambiguousComments.length > 0 ||
+    (escalate.firstLookSummaries?.length ?? 0) > 0 ||
+    (escalate.editedSummaries?.length ?? 0) > 0 ||
     (escalate.checks?.length ?? 0) > 0 ||
     (escalate.stalledChecks?.length ?? 0) > 0;
   if (hasItems) {
@@ -191,6 +194,18 @@ export function buildEscalateHumanMessage(
       lines.push("");
       for (const bodyLine of r.body.split("\n")) lines.push(`  > ${bodyLine}`);
       lines.push("");
+    }
+    for (const [heading, summaries] of [
+      ["Review summaries (first look)", escalate.firstLookSummaries ?? []],
+      ["Review summaries (edited since first look)", escalate.editedSummaries ?? []],
+    ] as const) {
+      if (summaries.length === 0) continue;
+      lines.push(`### ${heading}`, "");
+      for (const summary of summaries) {
+        lines.push(`- review \`${summary.id}\` (${renderEscalateAuthor(summary)}):`, "");
+        for (const bodyLine of summary.body.split("\n")) lines.push(`  > ${bodyLine}`);
+        lines.push("");
+      }
     }
     for (const c of escalate.ambiguousComments) {
       lines.push(`- comment \`${c.id}\` (${renderEscalateAuthor(c)}):`);
@@ -238,7 +253,18 @@ export function buildEscalateHumanMessage(
     lines.push("## Fix attempts");
     lines.push("");
     for (const a of escalate.thrashHistory) {
-      lines.push(`- thread \`${a.threadId}\` attempted ${a.attempts} times`);
+      lines.push(`- thread \`${a.threadId}\` pending commands returned ${a.attempts} times`);
+    }
+  }
+
+  const pending = escalate.pendingReviewCommands;
+  if (pending?.resolveOnlyCommand?.hasMutations || pending?.resolveCommand?.hasMutations) {
+    lines.push("", "## Pending review commands", "");
+    if (pending.resolveOnlyCommand?.hasMutations) {
+      lines.push(`- resolve-only: \`${renderResolveCommand(pending.resolveOnlyCommand)}\``);
+    }
+    if (pending.resolveCommand?.hasMutations) {
+      lines.push(`- apply review: \`${renderResolveCommand(pending.resolveCommand)}\``);
     }
   }
 
@@ -275,7 +301,8 @@ export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: st
     return `Could not determine the PR's base branch${reason} — automated rebases are paused because branch safety is unclear. Run the rebase manually against the PR's real target branch.`;
   }
   if (triggers.includes("fix-thrash")) {
-    return "Same thread(s) reached the automated attempt limit — treat this as a manual handoff. Apply the fix by hand.";
+    const attempts = loadConfig().iterate.fixAttemptsPerThread;
+    return `The same thread(s) remain unresolved after their pending review commands were returned for ${attempts} FIX_CODE ticks. Automated iteration is paused for a manual decision.`;
   }
   if (triggers.includes("bot-cr-not-dismissed")) {
     const ids = detail ? ` (review IDs: ${detail})` : "";

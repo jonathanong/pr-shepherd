@@ -1,9 +1,8 @@
 /**
  * Persistent attempt counter for the iterate escalation guard.
  *
- * Tracks how many times each review thread has been dispatched to the fix_code
- * handler without being resolved. Counts are reset automatically when the HEAD
- * commit SHA changes (i.e. a new push landed).
+ * Tracks how many caller-visible times each review thread has been dispatched to
+ * the fix_code handler without being resolved. Body edits reset the count.
  *
  * State lives in `$TMPDIR/pr-shepherd-state/<owner>-<repo>/<pr>/fix-attempts.json`.
  */
@@ -18,7 +17,7 @@ import { resolvePrStatePath } from "./base.mts";
 // ---------------------------------------------------------------------------
 
 export interface FixAttemptsState {
-  /** HEAD SHA at the time the counts were last written. Reset key. */
+  /** HEAD SHA at the time the counts were last written, retained for observability/compatibility. */
   headSha: string;
   /** Map from thread ID → number of fix_code dispatches that included this thread. */
   threadAttempts: Record<string, number>;

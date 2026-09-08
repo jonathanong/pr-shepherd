@@ -72,7 +72,7 @@ Conversations Resolved: No [Not Required]
 2. Apply every warranted review fix in each file referenced above.
 3. Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for read-only inspection rules.
 4. If you changed code, commit any remaining changes and push to the PR head branch, then run review mutations using the pushed commit SHA and iterate immediately with the same options. If you did not change code, do not commit and continue.
-5. Run the generated thread IDs unchanged. A latest comment beginning `<!-- pr-shepherd -->` is an earlier Shepherd reply: a marked thread that is still being resolved is emitted resolve-only when authorized.
+5. Substitute any command placeholders and run the generated review mutations.
 6. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, commit and push to the PR head branch first, then replace `$HEAD_SHA` with the pushed commit SHA.
 7. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
 8. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.
@@ -92,7 +92,7 @@ This system is opinionated and works best with PRs that use required status chec
 - Draft PRs can be marked ready automatically when clean; disable with `actions.autoMarkReady: false` or `--no-auto-mark-ready`.
 - With `--merge`, actionable review threads/comments/reviews/summaries are held back (`WAIT`, with raw deferred-work counts) while a PR sits in the merge queue, since a Shepherd-initiated push would eject it; set `actions.workWhileQueued: true` to act on them immediately instead. Failing checks and merge conflicts are never deferred.
 - The CLI never performs git mutations itself — it only emits commit/push instructions for the agent to run. Push access to the PR head is a usage precondition; GitHub viewer fields do not create a separate push-authorization handoff.
-- Generated iterate mutations and automatic actions are capability-aware and omit unauthorized commands. Explicit `apply` operations honor the caller's intent and surface GitHub's result; semantic human-content protections still apply.
+- Generated iterate mutations and automatic actions are capability-aware and omit unauthorized commands. Explicit `apply` operations forward the caller's requested IDs without iterate's author or capability policy and surface GitHub's result.
 - `build_suggestion_patches` turns one or more ordered GitHub suggestion threads into checked patches and commit metadata, but never edits the working tree or git history. Local HEAD may be ahead when the live PR head is its ancestor.
 
 ## Usage

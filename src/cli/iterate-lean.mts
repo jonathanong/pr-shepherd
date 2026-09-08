@@ -172,6 +172,14 @@ export function projectIterateLean(
           ...(result.escalate.changesRequestedReviews.length > 0 && {
             changesRequestedReviews: result.escalate.changesRequestedReviews,
           }),
+          ...(result.escalate.firstLookSummaries &&
+            result.escalate.firstLookSummaries.length > 0 && {
+              firstLookSummaries: result.escalate.firstLookSummaries,
+            }),
+          ...(result.escalate.editedSummaries &&
+            result.escalate.editedSummaries.length > 0 && {
+              editedSummaries: result.escalate.editedSummaries,
+            }),
           ...(result.escalate.checks &&
             result.escalate.checks.length > 0 && {
               checks: result.escalate.checks,
@@ -194,6 +202,9 @@ export function projectIterateLean(
             result.escalate.authorization.length > 0 && {
               authorization: result.escalate.authorization,
             }),
+          ...(result.escalate.pendingReviewCommands && {
+            pendingReviewCommands: result.escalate.pendingReviewCommands,
+          }),
           suggestion: result.escalate.suggestion,
           humanMessage: result.escalate.humanMessage,
         },

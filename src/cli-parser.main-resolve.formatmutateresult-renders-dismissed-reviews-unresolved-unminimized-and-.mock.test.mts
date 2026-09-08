@@ -37,6 +37,7 @@ describe("main — resolve", () => {
     expect(out).toContain("Not resolved due to rate limit (1): t-1");
     expect(out).toContain("Not minimized due to rate limit (1): c-1");
     expect(out).toContain("Not dismissed due to rate limit (1): r-2");
+    expect(process.exitCode ?? 0).toBe(0);
   });
   it("formatMutateResult renders skipped dismissals", async () => {
     mockRunResolveMutate.mockResolvedValue({
@@ -75,6 +76,7 @@ describe("main — resolve", () => {
     await main(["node", "shepherd", "resolve", "42", "--resolve-thread-ids", "t-1"]);
 
     expect(getStdout()).toContain("Errors:\n  t-1: nope");
+    expect(process.exitCode).toBe(69);
   });
   it("resolve mutate --format=json includes rate-limit stop and pending IDs", async () => {
     mockRunResolveMutate.mockResolvedValue({
@@ -103,5 +105,6 @@ describe("main — resolve", () => {
     };
     expect(parsed.rateLimit.message).toBe("secondary rate limit");
     expect(parsed.unresolvedThreads).toEqual(["t-2"]);
+    expect(process.exitCode).toBe(75);
   });
 });

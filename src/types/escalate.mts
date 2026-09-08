@@ -1,4 +1,5 @@
 import type { AgentCheck, AgentComment, AgentThread } from "./report.mts";
+import type { ResolveCommand } from "./iterate.mts";
 import type { CheckStatus, Review } from "./github.mts";
 import type { MergeQueueRemovalStatus, StackStatus } from "./merge-requirements.mts";
 
@@ -30,10 +31,19 @@ export interface EscalateDetails {
   unresolvedThreads: AgentThread[];
   ambiguousComments: AgentComment[];
   changesRequestedReviews: Review[];
+  /** First-look review summaries that must be shown before any pending minimization. */
+  firstLookSummaries?: Review[];
+  /** Previously seen review summaries whose edited bodies must be shown again. */
+  editedSummaries?: Review[];
   /** Failing checks whose next step requires human attention. */
   checks?: AgentCheck[];
   stalledChecks?: AgentStalledCheck[];
   thrashHistory?: Array<{ threadId: string; attempts: number }>;
+  /** Review mutations generated for this tick, retained so an escalation cannot strand them. */
+  pendingReviewCommands?: {
+    resolveOnlyCommand?: ResolveCommand;
+    resolveCommand?: ResolveCommand;
+  };
   suggestion: string;
   humanMessage: string;
   mergeQueueRemoval?: MergeQueueRemovalStatus;

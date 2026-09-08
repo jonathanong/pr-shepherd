@@ -84,16 +84,16 @@ the same thing they do everywhere else on the system. Emitted by every
 subcommand, not just `iterate` — this range is uniform across `apply`,
 `build-suggestion-patches`, its deprecated singular adapter, and the `admin` commands too.
 
-| Code | Name             | When                                                                                                                                                                                                                   |
-| ---- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 64   | `EX_USAGE`       | Bad or unknown flag, unknown subcommand, missing required argument, invalid `--format`, malformed duration                                                                                                             |
-| 65   | `EX_DATAERR`     | Malformed caller data: `--require-sha` not a 40-char lowercase hex SHA, `PRRC_*` comment IDs passed to `--minimize-comment-ids`, an unparseable `owner/repo` string                                                    |
-| 66   | `EX_NOINPUT`     | `apply journal --file` path could not be read (including `--file -` for stdin), or `journal extract --body-file` could not safely read a regular POSIX body file                                                       |
-| 69   | `EX_UNAVAILABLE` | A precondition is unmet: no open PR for the current branch; a suggestion thread is resolved, outdated, minimized, unanchored, unsafe, or not applyable to the local descendant; or GitHub returned an unclassified 4xx |
-| 70   | `EX_SOFTWARE`    | Unexpected or unclassified internal failure — the fallback when nothing more specific applies                                                                                                                          |
-| 75   | `EX_TEMPFAIL`    | A **retryable** GitHub failure: HTTP 429, any 5xx, a `Retry-After` header, an exhausted rate limit, or a GraphQL `INTERNAL` engine crash (HTTP 200 with `data: null`)                                                  |
-| 77   | `EX_NOPERM`      | GitHub 401/403 that is not a rate-limit signal — missing token or insufficient PAT scopes                                                                                                                              |
-| 78   | `EX_CONFIG`      | Reserved for `.pr-shepherdrc.yml` validation failures. **Not currently emitted** — see below.                                                                                                                          |
+| Code | Name             | When                                                                                                                                                                                                                                                                                |
+| ---- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 64   | `EX_USAGE`       | Bad or unknown flag, unknown subcommand, missing required argument, invalid `--format`, malformed duration                                                                                                                                                                          |
+| 65   | `EX_DATAERR`     | Malformed caller data: `--require-sha` not a 40-char lowercase hex SHA, `PRRC_*` comment IDs passed to `--minimize-comment-ids`, an unparseable `owner/repo` string                                                                                                                 |
+| 66   | `EX_NOINPUT`     | `apply journal --file` path could not be read (including `--file -` for stdin), or `journal extract --body-file` could not safely read a regular POSIX body file                                                                                                                    |
+| 69   | `EX_UNAVAILABLE` | A precondition is unmet: no open PR for the current branch; a suggestion thread is resolved, outdated, minimized, unanchored, unsafe, or not applyable to the local descendant; GitHub returned an unclassified 4xx; or an explicit review mutation returned a non-rate-limit error |
+| 70   | `EX_SOFTWARE`    | Unexpected or unclassified internal failure — the fallback when nothing more specific applies                                                                                                                                                                                       |
+| 75   | `EX_TEMPFAIL`    | A **retryable** GitHub failure: HTTP 429, any 5xx, a `Retry-After` header, an exhausted rate limit, or a GraphQL `INTERNAL` engine crash (HTTP 200 with `data: null`)                                                                                                               |
+| 77   | `EX_NOPERM`      | GitHub 401/403 that is not a rate-limit signal — missing token or insufficient PAT scopes                                                                                                                                                                                           |
+| 78   | `EX_CONFIG`      | Reserved for `.pr-shepherdrc.yml` validation failures. **Not currently emitted** — see below.                                                                                                                                                                                       |
 
 **Reading 75 vs. 77 vs. 69:** these are the highest-value split in the error
 range for a calling agent or script. `75` means back off and retry (GitHub is
@@ -150,6 +150,8 @@ is reserved in case config validation becomes fatal.
 0/10–19** — those codes are specific to `IterateResult`.
 These commands exit `0` on success and a `sysexits.h` code on failure. See
 each command's `--help` for which codes it can realistically hit.
+`apply review` still prints its complete result when one or more operations fail, then exits `69`
+for ordinary mutation errors or `75` when the result reports a rate-limit stop.
 
 ## `--help` / `-h`
 
