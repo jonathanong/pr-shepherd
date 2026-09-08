@@ -17,10 +17,15 @@ export interface ResolveResult {
   minimizedComments: string[];
   dismissedReviews: string[];
   errors: string[];
+  /** @deprecated Direct apply forwards every supplied dismissal ID to GitHub. */
   skippedDismissals?: string[];
+  /** @deprecated Direct apply no longer applies author policy. */
   skippedHumanResolves?: string[];
+  /** @deprecated Direct apply no longer applies author policy. */
   skippedHumanMinimizes?: string[];
+  /** @deprecated Direct apply no longer applies author policy. */
   skippedHumanDismissals?: string[];
+  /** @deprecated Direct apply forwards every supplied reply ID to GitHub. */
   skippedNonHumanReplies?: string[];
   /** @deprecated Direct apply requests now rely on GitHub's mutation response. */
   skippedUnauthorizedReplies?: string[];
@@ -81,9 +86,6 @@ export async function applyResolveOptions(
   const replyThreadIds = dedupeIds(opts.replyThreadIds ?? []);
   const minimizeCommentIds = opts.minimizeCommentIds ?? [];
   const dismissReviewIds = dedupeIds(opts.dismissReviewIds ?? []);
-  const minimizeCommentIdSet = new Set(minimizeCommentIds);
-  const filteredDismissReviewIds = dismissReviewIds.filter((id) => !minimizeCommentIdSet.has(id));
-  const overlappingDismissIds = dismissReviewIds.filter((id) => minimizeCommentIdSet.has(id));
 
   const result: ResolveResult = {
     repliedThreads: [],
@@ -93,14 +95,7 @@ export async function applyResolveOptions(
     errors: [],
   };
 
-  if (overlappingDismissIds.length > 0) {
-    result.skippedDismissals = [];
-    for (const id of overlappingDismissIds) {
-      result.skippedDismissals.push(id);
-    }
-  }
-
-  if ((filteredDismissReviewIds.length > 0 || replyThreadIds.length > 0) && !opts.dismissMessage) {
+  if ((dismissReviewIds.length > 0 || replyThreadIds.length > 0) && !opts.dismissMessage) {
     throw new Error("--message is required when replying to threads or dismissing reviews");
   }
 
@@ -114,7 +109,7 @@ export async function applyResolveOptions(
     replyThreadIds,
     resolveThreadIds,
     minimizeCommentIds,
-    filteredDismissReviewIds,
+    dismissReviewIds,
     opts.dismissMessage ?? "",
     result,
   );

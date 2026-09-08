@@ -37,6 +37,7 @@ import type {
   IterateResult,
   IterateResultBase,
   Review,
+  ResolveCommand,
   ShepherdReport,
 } from "../../types.mts";
 import type { NormalizedBotUsernames } from "../../comments/authors.mts";
@@ -79,8 +80,8 @@ function checkRequiresHumanFollowUp(check: AgentCheck): boolean {
 
 function nextFixAttempts(
   stored: FixAttemptsState | null,
-  headSha: string,
   threads: ShepherdReport["threads"]["actionable"],
+  countAttempt: boolean,
 ): Pick<FixAttemptsState, "threadAttempts" | "threadBodyHashes"> {
   const threadAttempts: Record<string, number> = stored ? { ...stored.threadAttempts } : {};
   const threadBodyHashes: Record<string, string> = stored?.threadBodyHashes
@@ -89,12 +90,37 @@ function nextFixAttempts(
   for (const t of threads) {
     const bodyHash = hashBody(threadTranscriptBody(t));
     const previousHash = threadBodyHashes[t.id];
-    if (stored?.headSha === headSha && (previousHash === undefined || previousHash === bodyHash))
-      continue;
+    if (!countAttempt) continue;
     threadAttempts[t.id] = previousHash === bodyHash ? (threadAttempts[t.id] ?? 0) + 1 : 1;
     threadBodyHashes[t.id] = bodyHash;
   }
   return { threadAttempts, threadBodyHashes };
+}
+
+function previousFixAttempts(
+  stored: FixAttemptsState | null,
+  threads: ShepherdReport["threads"]["actionable"],
+): Record<string, number> {
+  if (!stored?.threadBodyHashes) return {};
+  const attempts: Record<string, number> = {};
+  for (const thread of threads) {
+    const bodyHash = hashBody(threadTranscriptBody(thread));
+    if (stored.threadBodyHashes[thread.id] === bodyHash) {
+      attempts[thread.id] = stored.threadAttempts[thread.id] ?? 0;
+    }
+  }
+  return attempts;
+}
+
+function pendingReviewCommands(
+  resolveCommand: ResolveCommand,
+  resolveOnlyCommand?: ResolveCommand,
+): EscalateDetails["pendingReviewCommands"] | undefined {
+  const pending = {
+    ...(resolveOnlyCommand?.hasMutations && { resolveOnlyCommand }),
+    ...(resolveCommand.hasMutations && { resolveCommand }),
+  };
+  return Object.keys(pending).length > 0 ? pending : undefined;
 }
 
 export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateResult> {
@@ -156,11 +182,50 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   );
   const protectedRuns: [] = [];
   const stored = await readFixAttempts({ owner: repoOwner, repo: repoName, pr: prNumber });
+  const countFixCodeAttempt = opts.persistSeen !== false;
+  const priorThreadAttempts = previousFixAttempts(stored, retryableActionableThreads);
   const { threadAttempts, threadBodyHashes } = nextFixAttempts(
     stored,
-    headSha,
     retryableActionableThreads,
+    countFixCodeAttempt,
   );
+
+  const resolutionOnlyThreadsForWork = report.threads.resolutionOnly.filter(
+    (thread) =>
+      !skippedThreadIds.has(thread.id) &&
+      ((thread.path !== null && thread.line !== null) ||
+        threadHasAuthorizedMutation(thread, replyIdSet, resolveIdSet)),
+  );
+  const actionableChangesRequestedReviews = report.changesRequestedReviews.filter(
+    (review) =>
+      review.staleReview !== true ||
+      !isHumanAuthor(review) ||
+      isConfiguredBotAuthor(review, botUsernames),
+  );
+  const changesRequestedReviewsForWork = actionableChangesRequestedReviews.filter(
+    (review) => !unauthorizedDismissals.some((candidate) => candidate.id === review.id),
+  );
+  const buildReviewCommands = (checks: AgentCheck[]) =>
+    buildResolveCommand(
+      report.threads.actionable
+        .filter((thread) =>
+          mutationActionableThreads.some((candidate) => candidate.id === thread.id),
+        )
+        .map(toAgentThread),
+      resolutionOnlyThreadsForWork,
+      [
+        ...(report.comments.minimizeIds ?? report.comments.actionable.map((comment) => comment.id)),
+        ...reviewSummaryIds,
+      ],
+      changesRequestedReviewsForWork,
+      checks,
+      prReference,
+      botUsernames,
+      ruleAutoResolveThreadIds,
+      report.viewerAuthorization,
+      allThreads,
+      resolveOtherHumanThreads,
+    );
 
   const botCrReviews = report.changesRequestedReviews.filter(
     (r) =>
@@ -180,6 +245,10 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   if (staleBotCrIds.length > 0) {
     const staleSet = new Set(staleBotCrIds);
     const staleReviews = botCrReviews.filter((r) => staleSet.has(r.id));
+    const { resolveCommand, resolveOnlyCommand } = buildReviewCommands(
+      toAgentChecks(failingChecks),
+    );
+    const pending = pendingReviewCommands(resolveCommand, resolveOnlyCommand);
     const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: ["bot-cr-not-dismissed"],
       unresolvedThreads: [...report.threads.actionable, ...report.threads.resolutionOnly].map(
@@ -187,6 +256,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       ),
       ambiguousComments: report.comments.actionable.map(toAgentComment),
       changesRequestedReviews: staleReviews,
+      ...(pending && { pendingReviewCommands: pending }),
       suggestion: buildEscalateSuggestion(["bot-cr-not-dismissed"], staleBotCrIds.join(", ")),
     };
     return {
@@ -201,8 +271,14 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     };
   }
 
-  const escalateTriggers = checkEscalateTriggers(retryableActionableThreads, threadAttempts);
+  const escalateTriggers = countFixCodeAttempt
+    ? checkEscalateTriggers(retryableActionableThreads, priorThreadAttempts)
+    : { triggers: [], thrashHistory: undefined };
   if (escalateTriggers.triggers.length > 0) {
+    const { resolveCommand, resolveOnlyCommand } = buildReviewCommands(
+      toAgentChecks(failingChecks),
+    );
+    const pending = pendingReviewCommands(resolveCommand, resolveOnlyCommand);
     const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: escalateTriggers.triggers,
       unresolvedThreads: [...report.threads.actionable, ...report.threads.resolutionOnly].map(
@@ -211,6 +287,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       ambiguousComments: report.comments.actionable.map(toAgentComment),
       changesRequestedReviews: report.changesRequestedReviews,
       thrashHistory: escalateTriggers.thrashHistory,
+      ...(pending && { pendingReviewCommands: pending }),
       suggestion: buildEscalateSuggestion(escalateTriggers.triggers),
     };
     return {
@@ -224,10 +301,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       },
     };
   }
-  await writeFixAttempts(
-    { owner: repoOwner, repo: repoName, pr: prNumber },
-    { headSha, threadAttempts, threadBodyHashes },
-  );
   // GitHub does not expose a per-run viewer capability for cancellation, so Shepherd never
   // issues or recommends a cancellation regardless of repository role. A rerun is different:
   // GitHub's Actions rerun API requires actions:write, which rides with WRITE+ repo access, so
@@ -280,22 +353,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     ...toAgentChecks(annotatedExtra).map((c) => ({ ...c, annotationOnly: true as const })),
   ];
   const { changesRequestedReviews } = report;
-  const actionableChangesRequestedReviews = changesRequestedReviews.filter(
-    (review) =>
-      review.staleReview !== true ||
-      !isHumanAuthor(review) ||
-      isConfiguredBotAuthor(review, botUsernames),
-  );
-  const skippedDismissalIds = new Set(unauthorizedDismissals.map((review) => review.id));
-  const changesRequestedReviewsForWork = actionableChangesRequestedReviews.filter(
-    (review) => !skippedDismissalIds.has(review.id),
-  );
-  const resolutionOnlyThreadsForWork = resolutionOnlyThreads.filter(
-    (thread) =>
-      !skippedThreadIds.has(thread.id) &&
-      ((thread.path !== null && thread.line !== null) ||
-        threadHasAuthorizedMutation(thread, replyIdSet, resolveIdSet)),
-  );
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
   const isBehind = report.mergeStatus.status === "BEHIND";
   const { behindBaseHint } = loadConfig().iterate;
@@ -304,7 +361,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   // unnecessary cancellation.
   const inProgressRunIds: string[] = [];
   const commentMinimizeIds = report.comments.minimizeIds ?? actionableComments.map((c) => c.id);
-  const allCommentIds = [...commentMinimizeIds, ...reviewSummaryIds];
   const belongsToActiveWorkflowRun = (check: AgentCheck): boolean =>
     check.runId !== null && inProgressWorkflowRunIds.has(check.runId);
   const manualFollowUpChecks = failingAgentChecks.filter(
@@ -332,6 +388,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       (check) => belongsToActiveWorkflowRun(check) || !checkRequiresHumanFollowUp(check),
     );
   if (manualFollowUpChecks.length > 0 && !hasAutonomousWork) {
+    const { resolveCommand, resolveOnlyCommand } = buildReviewCommands(failingAgentChecks);
+    const pending = pendingReviewCommands(resolveCommand, resolveOnlyCommand);
     const checkSuggestion =
       exhaustedAttempts.length > 0
         ? `GitHub reports a later workflow attempt (${exhaustedAttempts
@@ -346,6 +404,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       ambiguousComments: [],
       changesRequestedReviews,
       checks: manualFollowUpChecks,
+      ...(pending && { pendingReviewCommands: pending }),
       suggestion: checkSuggestion,
     };
     return {
@@ -361,21 +420,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   }
   // Push access to the PR head branch is a usage precondition. Build review mutations for
   // conflict ticks normally so the caller can push and complete the same fix_code cycle.
-  const mutationActionableIds = new Set(mutationActionableThreads.map((thread) => thread.id));
-  const mutationAgentThreads = threads.filter((thread) => mutationActionableIds.has(thread.id));
-  const { resolveCommand, resolveOnlyCommand } = buildResolveCommand(
-    mutationAgentThreads,
-    resolutionOnlyThreadsForWork,
-    allCommentIds,
-    changesRequestedReviewsForWork,
-    failingAgentChecks,
-    prReference,
-    botUsernames,
-    ruleAutoResolveThreadIds,
-    report.viewerAuthorization,
-    allThreads,
-    resolveOtherHumanThreads,
-  );
+  const { resolveCommand, resolveOnlyCommand } = buildReviewCommands(failingAgentChecks);
   // Safety: if the base branch is unknown, escalate when a push is plausible — the agent
   // would need the correct base to rebase safely. This is a conservative guard, not a
   // prediction that the agent *will* push. Located resolution-only threads retain that guard;
@@ -392,11 +437,13 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     actionableComments.length > 0 ||
     locatedResolutionOnlyThreadsForWork.length > 0;
   if (baseLookup.isFallback && pushIsPlausible) {
+    const pending = pendingReviewCommands(resolveCommand, resolveOnlyCommand);
     const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: ["base-branch-unknown"],
       unresolvedThreads: [...threads, ...resolutionOnlyThreads.map(toAgentThread)],
       ambiguousComments: actionableComments,
       changesRequestedReviews,
+      ...(pending && { pendingReviewCommands: pending }),
       suggestion: buildEscalateSuggestion(["base-branch-unknown"], baseLookup.failureReason),
     };
     return {
@@ -469,6 +516,10 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     reviewSummaryIds,
   );
   if (result.action === "fix_code" && opts.persistSeen !== false) {
+    await writeFixAttempts(
+      { owner: repoOwner, repo: repoName, pr: prNumber },
+      { headSha, threadAttempts, threadBodyHashes },
+    );
     await Promise.allSettled(
       result.fix.checks.flatMap((ch) =>
         (ch.annotations ?? []).map((a) => markSeen(stallKey, a.id, annotationMarkerBody(a))),

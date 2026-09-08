@@ -112,35 +112,34 @@ describe("applyResolveOptions — mutations", () => {
     expect(doc).toContain("r-1");
     expect(doc).toContain("addressed in follow-up");
   });
-  it("ignores dismiss IDs that are already in minimize-comment-ids", async () => {
+  it("forwards dismiss IDs that are also supplied for minimization", async () => {
     const result = await applyResolveOptions(1, REPO, {
       minimizeCommentIds: ["PRR_1"],
       dismissReviewIds: ["PRR_1", "PRR_2"],
       dismissMessage: "addressed in follow-up",
     });
 
-    expect(result.dismissedReviews).toEqual(["PRR_2"]);
-    expect(result.skippedDismissals).toEqual(["PRR_1"]);
+    expect(result.dismissedReviews).toEqual(["PRR_1", "PRR_2"]);
+    expect(result.skippedDismissals).toBeUndefined();
     expect(result.errors).toEqual([]);
     const doc = mockGraphql.mock.calls[0]?.[0] as string;
     expect(doc).toContain(
       'm0: minimizeComment(input: { subjectId: "PRR_1", classifier: RESOLVED })',
     );
     expect(doc).toContain(
-      'd0: dismissPullRequestReview(input: { pullRequestReviewId: "PRR_2", message: "addressed in follow-up" })',
+      'd0: dismissPullRequestReview(input: { pullRequestReviewId: "PRR_1", message: "addressed in follow-up" })',
     );
-    expect(doc).not.toContain(
-      'd0: dismissPullRequestReview(input: { pullRequestReviewId: "PRR_1",',
+    expect(doc).toContain(
+      'd1: dismissPullRequestReview(input: { pullRequestReviewId: "PRR_2", message: "addressed in follow-up" })',
     );
   });
-  it("does not require --message when all dismiss IDs are also minimize IDs", async () => {
-    const result = await applyResolveOptions(1, REPO, {
-      minimizeCommentIds: ["PRR_1"],
-      dismissReviewIds: ["PRR_1"],
-    });
-    expect(result.dismissedReviews).toEqual([]);
-    expect(result.skippedDismissals).toEqual(["PRR_1"]);
-    expect(result.errors).toEqual([]);
+  it("requires a message when a supplied dismiss ID is also minimized", async () => {
+    await expect(
+      applyResolveOptions(1, REPO, {
+        minimizeCommentIds: ["PRR_1"],
+        dismissReviewIds: ["PRR_1"],
+      }),
+    ).rejects.toThrow("--message is required");
   });
   it("returns actionable guidance when GitHub rejects dismissing a COMMENTED review", async () => {
     mockGraphql.mockResolvedValueOnce({

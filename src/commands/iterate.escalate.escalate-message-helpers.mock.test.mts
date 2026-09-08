@@ -75,7 +75,7 @@ describe("escalate message helpers", () => {
 
     expect(message).toContain("(no location)");
     expect(message).toContain("review `r1`");
-    expect(message).toContain("attempted 3 times");
+    expect(message).toContain("pending commands returned 3 times");
     expect(buildEscalateSuggestion(["stall-timeout"], "1 minute")).toContain("1 minute —");
     expect(buildEscalateSuggestion(["stall-timeout"])).toContain("60 minutes —");
     expect(buildEscalateSuggestion(["base-branch-unknown"])).toContain("base branch");

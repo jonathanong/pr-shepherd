@@ -1,5 +1,6 @@
 import type { IterateResult } from "../types.mts";
 import { renderMergeCommand } from "../commands/iterate/merge.mts";
+import { buildResolveCommandInstruction } from "../commands/iterate/check-instructions.mts";
 import { inlineCode } from "../util/markdown.mts";
 import { buildQuotaAwareContinuation } from "../quota-warning.mts";
 
@@ -53,8 +54,26 @@ export function buildSimpleIterateInstructions(
     }
     case "cancel":
       return ["Stop — the PR loop is complete. No further polling is needed."];
-    case "escalate":
-      return ["Stop — human direction is required before automated polling can resume."];
+    case "escalate": {
+      const pending = result.escalate.pendingReviewCommands;
+      if (!pending)
+        return ["Stop — human direction is required before automated polling can resume."];
+      const instructions = [
+        "Stop — human direction is required before automated polling can resume.",
+      ];
+      if (pending?.resolveOnlyCommand?.hasMutations) {
+        instructions.push(
+          "After human direction permits review cleanup, run the `resolve-only:` command shown above.",
+        );
+      }
+      if (pending?.resolveCommand?.hasMutations) {
+        instructions.push(...buildResolveCommandInstruction(pending.resolveCommand));
+      }
+      instructions.push(
+        "After completing the human-directed recovery and any pending review commands, rerun the Shepherd command with the same options.",
+      );
+      return instructions;
+    }
   }
 }
 

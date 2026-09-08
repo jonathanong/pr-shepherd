@@ -35,6 +35,28 @@ describe("iterate instruction polling contract", () => {
     expect(textInstructions(result)).toEqual(jsonInstructions(result));
   });
 
+  it("keeps pending escalation review commands self-contained and format-parity safe", () => {
+    const result = makeIterateResult("escalate");
+    if (result.action !== "escalate") throw new Error("expected escalate fixture");
+    result.escalate.pendingReviewCommands = {
+      resolveCommand: {
+        argv: ["pr-shepherd", "apply", "review", "42", "--message", "$DISMISS_MESSAGE"],
+        requiresHeadSha: true,
+        requiresDismissMessage: true,
+        hasMutations: true,
+        replyThreadIds: ["thread-1"],
+      },
+    };
+
+    const text = textInstructions(result);
+    expect(text).toEqual(jsonInstructions(result));
+    expect(text[0]).toContain("Stop — human direction is required");
+    expect(text.join(" ")).toContain("$HEAD_SHA");
+    expect(text.join(" ")).toContain("$DISMISS_MESSAGE");
+    expect(text.join(" ")).toContain("apply review");
+    expect(text.at(-1)).toContain("human-directed recovery");
+  });
+
   it("renders a low-quota warning with transport-aware continuation in text and JSON", () => {
     const result: IterateResult = {
       ...makeIterateResult("wait"),

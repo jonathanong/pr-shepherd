@@ -6,7 +6,7 @@
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `authorization-required`      | Shepherd is about to automatically mark a draft ready and `viewerCanUpdate !== true`. Explicit merge/enqueue requests are attempted and surface GitHub's actual error instead.                                                                       |
 | `check-follow-up-unavailable` | At least one remaining failing check has no autonomous follow-up, and no other autonomous work remains in the tick.                                                                                                                                  |
-| `fix-thrash`                  | A retryable, located review thread reaches `iterate.fixAttemptsPerThread` attempts across distinct pushed HEADs while its body remains unchanged.                                                                                                    |
+| `fix-thrash`                  | A retryable, located review thread remains unchanged and unresolved after appearing in `iterate.fixAttemptsPerThread` caller-visible `FIX_CODE` results; the following unchanged tick escalates.                                                     |
 | `bot-cr-not-dismissed`        | An authorized bot/non-human `CHANGES_REQUESTED` dismissal was emitted, but the same review body remains undismissed for at least the enabled stall timeout.                                                                                          |
 | `base-branch-unknown`         | The GraphQL base branch is empty or unsafe and the current tick has work that could require a push, so Shepherd cannot name a safe rebase target.                                                                                                    |
 | `merge-queue-removed`         | Merge mode is enabled, GitHub reports a queue removal, the head has not changed since removal, no queue/auto-merge state remains, and no earlier branch found an actionable failure or concrete fix.                                                 |
@@ -38,9 +38,11 @@ A failing external check with `runId === null` and a non-empty `detailsUrl` stay
 
 ### `fix-thrash`
 
-The thread must be retryable: it has a non-null path and line and every required review mutation is authorized. Attempts advance across distinct pushed HEADs while the thread body hash is unchanged. Editing the body resets that thread's attempt count.
+The thread must be retryable: it has a non-null path and line and every required review mutation is authorized. Attempts advance only when a `FIX_CODE` result containing that thread is returned to the caller; internal poll/debounce ticks do not count. Editing the body resets that thread's attempt count. The configured number of `FIX_CODE` results all include the pending review commands, and the following unchanged tick escalates with those commands retained under `pendingReviewCommands`.
 
 Active threads without a source location do not count toward `fix-thrash`. Unauthorized review mutations are surfaced once, then suppressed. Authorized reply/resolve mutations still run by thread ID when GitHub has cleared the path or line, without counting toward `fix-thrash`.
+
+Any escalation produced from a tick that has automatically selected review mutations retains all non-empty `resolve-only` and `apply review` commands. This includes review work accompanying `fix-thrash`, `bot-cr-not-dismissed`, `base-branch-unknown`, and a stall conversion. The escalation still pauses automated polling; the commands remain available for the human-directed recovery.
 
 ### `bot-cr-not-dismissed`
 

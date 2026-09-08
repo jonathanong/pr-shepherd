@@ -9,8 +9,8 @@
         "path": "src/auth.ts",
         "line": 88,
         "startLine": null,
-        "author": "reviewer",
-        "authorType": "User",
+        "author": "coderabbitai",
+        "authorType": "Bot",
         "body": "This authentication logic is too complex, please simplify.",
         "url": "https://github.com/owner/repo/pull/42#discussion_r10",
         "createdAtUnix": 1715700000
@@ -30,7 +30,7 @@
   "fixAttempts": {
     "headSha": "oldhash123",
     "threadAttempts": {
-      "PRRT_thrash": 2
+      "PRRT_thrash": 3
     },
     "threadBodyHashes": {
       "PRRT_thrash": "aa97f5d40ebed9f1"

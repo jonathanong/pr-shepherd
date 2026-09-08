@@ -15,6 +15,19 @@ import type {
   ShepherdReport,
 } from "../../types.mts";
 
+function pendingReviewCommandsFromResult(
+  result: IterateResult,
+): EscalateDetails["pendingReviewCommands"] | undefined {
+  if (result.action !== "fix_code") return undefined;
+  const pending = {
+    ...(result.fix.resolveOnlyCommand?.hasMutations && {
+      resolveOnlyCommand: result.fix.resolveOnlyCommand,
+    }),
+    ...(result.fix.resolveCommand.hasMutations && { resolveCommand: result.fix.resolveCommand }),
+  };
+  return Object.keys(pending).length > 0 ? pending : undefined;
+}
+
 function computeStallFingerprint(
   action: string,
   headSha: string,
@@ -79,6 +92,7 @@ export async function applyStallGuard(
     action: prospectiveResult.action,
   });
   if (stalledChecks.length > 0) {
+    const pending = pendingReviewCommandsFromResult(prospectiveResult);
     const stalledDuration = formatDurationApprox(
       Math.max(...stalledChecks.map((c) => c.ageSeconds)),
     );
@@ -88,6 +102,7 @@ export async function applyStallGuard(
       ambiguousComments: [],
       changesRequestedReviews: [],
       stalledChecks,
+      ...(pending && { pendingReviewCommands: pending }),
       suggestion: buildEscalateSuggestion(["stall-timeout"], stalledDuration),
     };
     return {
@@ -120,6 +135,7 @@ export async function applyStallGuard(
       await writeStallState(stallKey, { fingerprint, firstSeenAt: nowSeconds });
     } else if (ageSeconds >= stallTimeoutSeconds) {
       const stalledDuration = formatDurationApprox(ageSeconds);
+      const pending = pendingReviewCommandsFromResult(prospectiveResult);
       const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
         triggers: ["stall-timeout"],
         unresolvedThreads: [...report.threads.actionable, ...report.threads.resolutionOnly].map(
@@ -127,6 +143,7 @@ export async function applyStallGuard(
         ),
         ambiguousComments: report.comments.actionable.map(toAgentComment),
         changesRequestedReviews: report.changesRequestedReviews,
+        ...(pending && { pendingReviewCommands: pending }),
         suggestion: buildEscalateSuggestion(["stall-timeout"], stalledDuration),
       };
       return {

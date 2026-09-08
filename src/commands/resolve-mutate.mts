@@ -1,19 +1,11 @@
 import { getRepoInfo, getCurrentPrNumber } from "../github/client.mts";
 import { applyResolveOptions } from "../comments/resolve.mts";
 import { fetchPrBatch } from "../github/batch.mts";
-import { loadConfig } from "../config/load.mts";
-import {
-  isConfiguredBotAuthor,
-  isHumanAuthor,
-  isViewerAuthoredHuman,
-  normalizeBotUsernames,
-} from "../comments/authors.mts";
-import { shouldResolveOtherHumanThread } from "./iterate/thread-mutation-routing.mts";
 import { markReplySeen } from "../state/seen-comments.mts";
 import { threadTranscriptBody } from "../threads/transcript.mts";
-import { addPrShepherdMarker, threadEndedByShepherd } from "../comments/marker.mts";
+import { addPrShepherdMarker } from "../comments/marker.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
-import type { ResolveOptions } from "../types.mts";
+import type { ResolveOptions, ReviewThread } from "../types.mts";
 import type { ResolveCommandOptions } from "./resolve.mts";
 
 /** @deprecated Hidden implementation for `resolve`; use `apply review`. */
@@ -28,93 +20,34 @@ export async function runResolveMutate(
       EXIT.UNAVAILABLE,
     );
   }
-  const { data } = await fetchPrBatch(prNumber, repo, { paginateApprovedReviews: true });
-  const config = loadConfig();
-  const botUsernames = normalizeBotUsernames(config.botUsernames);
-  const threadById = new Map(data.reviewThreads.map((t) => [t.id, t]));
-  const humanThreadIds = new Set(
-    data.reviewThreads
-      .filter((t) => isHumanAuthor(t) && !isConfiguredBotAuthor(t, botUsernames))
-      .map((t) => t.id),
-  );
-  const humanCommentIds = new Set(
-    data.comments
-      .filter((c) => isHumanAuthor(c) && !isConfiguredBotAuthor(c, botUsernames))
-      .map((c) => c.id),
-  );
-  const humanReviewIds = new Set(
-    [...data.reviewSummaries, ...data.approvedReviews, ...data.changesRequestedReviews]
-      .filter((r) => isHumanAuthor(r) && !isConfiguredBotAuthor(r, botUsernames))
-      .map((r) => r.id),
-  );
-  // Iterate uses viewer capability fields while deciding which commands to
-  // print. Once a caller explicitly runs apply, GitHub's mutation response is
-  // authoritative and this path must not second-guess that intent.
-  const requestedReplyIds = new Set(opts.replyThreadIds ?? []);
-  const policy = config.iterate?.resolveOtherHumanThreads ?? "none";
-  const allowedHumanResolveIds = new Set(
-    data.reviewThreads
-      .filter((thread) => {
-        if (!humanThreadIds.has(thread.id)) return false;
-        const paired = requestedReplyIds.has(thread.id) || threadEndedByShepherd(thread);
-        if (!paired) return false;
-        if (isViewerAuthoredHuman(thread, botUsernames)) return true;
-        return shouldResolveOtherHumanThread(thread, policy);
-      })
-      .map((thread) => thread.id),
-  );
-  const resolveThreadIds = (opts.resolveThreadIds ?? []).filter(
-    (id) => !humanThreadIds.has(id) || allowedHumanResolveIds.has(id),
-  );
-  const skippedHumanResolves = (opts.resolveThreadIds ?? []).filter(
-    (id) => humanThreadIds.has(id) && !allowedHumanResolveIds.has(id),
-  );
-  const knownThreadIds = new Set(data.reviewThreads.map((thread) => thread.id));
-  const replyThreadIds = opts.replyThreadIds?.filter((id) => knownThreadIds.has(id));
-  const skippedNonHumanReplies = (opts.replyThreadIds ?? []).filter(
-    (id) => !knownThreadIds.has(id),
-  );
-  const minimizeCommentIds = (opts.minimizeCommentIds ?? []).filter(
-    (id) => !humanCommentIds.has(id) && !humanReviewIds.has(id),
-  );
-  const skippedHumanMinimizes = (opts.minimizeCommentIds ?? []).filter(
-    (id) => humanCommentIds.has(id) || humanReviewIds.has(id),
-  );
-  const dismissReviewIds = (opts.dismissReviewIds ?? []).filter(
-    (id) =>
-      !humanReviewIds.has(id) && data.changesRequestedReviews.some((review) => review.id === id),
-  );
-  const skippedHumanDismissals = (opts.dismissReviewIds ?? []).filter((id) =>
-    humanReviewIds.has(id),
-  );
-  const skippedIneligibleDismissals = (opts.dismissReviewIds ?? []).filter(
-    (id) => !humanReviewIds.has(id) && !dismissReviewIds.includes(id),
-  );
-  const hasMutation =
-    resolveThreadIds.length > 0 ||
-    (replyThreadIds?.length ?? 0) > 0 ||
-    minimizeCommentIds.length > 0 ||
-    dismissReviewIds.length > 0;
-
-  const result = await applyResolveOptions(prNumber, repo, {
-    resolveThreadIds,
-    replyThreadIds,
-    minimizeCommentIds,
-    dismissReviewIds,
-    dismissMessage: opts.dismissMessage,
-    requireSha: hasMutation ? opts.requireSha : undefined,
-  });
-  if (skippedHumanResolves.length > 0) result.skippedHumanResolves = skippedHumanResolves;
-  if (skippedHumanMinimizes.length > 0) result.skippedHumanMinimizes = skippedHumanMinimizes;
-  if (skippedHumanDismissals.length > 0) result.skippedHumanDismissals = skippedHumanDismissals;
-  if (skippedNonHumanReplies.length > 0) result.skippedNonHumanReplies = skippedNonHumanReplies;
-  if (skippedIneligibleDismissals.length > 0) {
-    result.skippedDismissals = [
-      ...(result.skippedDismissals ?? []),
-      ...skippedIneligibleDismissals,
-    ];
+  // Fetch only to retain the pre-reply transcript for successful-reply seen
+  // markers. It never determines which user-supplied IDs are sent to GitHub.
+  let threadById: Map<string, ReviewThread> | undefined;
+  if (opts.replyThreadIds?.length) {
+    try {
+      threadById = new Map(
+        (
+          await fetchPrBatch(prNumber, repo, { paginateApprovedReviews: true })
+        ).data.reviewThreads.map((thread) => [thread.id, thread]),
+      );
+    } catch {
+      // Seen-marker bookkeeping is best-effort. A failed read must not block
+      // the explicit mutation request; GitHub's mutation response is authoritative.
+    }
   }
-  if (opts.dismissMessage) {
+
+  // Iterate capability-checks and routes its generated commands. Direct apply
+  // requests are user-directed: forward every supplied ID unchanged and let
+  // GitHub report whether each requested mutation is permitted or applicable.
+  const result = await applyResolveOptions(prNumber, repo, {
+    resolveThreadIds: opts.resolveThreadIds,
+    replyThreadIds: opts.replyThreadIds,
+    minimizeCommentIds: opts.minimizeCommentIds,
+    dismissReviewIds: opts.dismissReviewIds,
+    dismissMessage: opts.dismissMessage,
+    requireSha: opts.requireSha,
+  });
+  if (opts.dismissMessage && threadById) {
     const markedMessage = addPrShepherdMarker(opts.dismissMessage);
     await Promise.all(
       result.repliedThreads.map((id) => {

@@ -53,7 +53,7 @@ tick and return `PollSummaryResult`; they do not mark review items seen or perfo
 They do maintain local ready-delay state so a clean row stays complete across aggregate reruns. The
 caller owns recurrence and follows each actionable row's repository-qualified `pollCommand`.
 
-`apply` runs `operations` in list order after validating every operation. Types: `review_mutations`, `mark_files_viewed`, `append_journal`. `mark_files_viewed` performs the requested `markFileAsViewed` mutations and surfaces GitHub's per-file results. Direct review and journal operations honor explicit caller intent; review operations still enforce semantic human-content protections, and GitHub is authoritative for authorization and other mutation errors. Replies and dismissals require `message`. `requireSha` must be a full 40-character lowercase hex SHA.
+`apply` runs `operations` in list order after validating every operation. Types: `review_mutations`, `mark_files_viewed`, `append_journal`. `mark_files_viewed` performs the requested `markFileAsViewed` mutations and surfaces GitHub's per-file results. Direct review operations forward explicitly supplied IDs without iterate's author, capability, or current-state policy; direct journal operations likewise honor explicit caller intent. GitHub is authoritative for authorization and mutation validity. Replies and dismissals require `message`. `requireSha` must be a full 40-character lowercase hex SHA.
 
 Validation failures throw `PrShepherdValidationError` before any GitHub mutation. If a later apply operation fails after earlier ones succeeded, Shepherd throws `PartialApplyError` with `failedIndex` and `completed`.
 

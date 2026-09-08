@@ -23,6 +23,10 @@ Bot CHANGES_REQUESTED review(s) remained undismissed past the stall window (revi
   > 2. **Race condition.** `src/queue.mts:88` reads and writes the job counter without a lock.
 
 
+## Pending review commands
+
+- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --message "$DISMISS_MESSAGE" --dismiss-review-ids PRR_bot_overdue --require-sha "$HEAD_SHA"`
+
 ---
 
 After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-shepherd https://github.com/owner/repo/pull/42` to resume.
@@ -30,3 +34,7 @@ After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-
 ## Instructions
 
 1. Stop — human direction is required before automated polling can resume.
+2. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, commit and push to the PR head branch first, then replace `$HEAD_SHA` with the pushed commit SHA.
+3. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
+4. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.
+5. After completing the human-directed recovery and any pending review commands, rerun the Shepherd command with the same options.

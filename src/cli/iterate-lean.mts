@@ -194,6 +194,9 @@ export function projectIterateLean(
             result.escalate.authorization.length > 0 && {
               authorization: result.escalate.authorization,
             }),
+          ...(result.escalate.pendingReviewCommands && {
+            pendingReviewCommands: result.escalate.pendingReviewCommands,
+          }),
           suggestion: result.escalate.suggestion,
           humanMessage: result.escalate.humanMessage,
         },

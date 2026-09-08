@@ -9,8 +9,6 @@ import { shouldResolveOtherHumanThread } from "../../comments/thread-resolve-pol
 import type { ResolveOtherHumanThreads } from "../../config/load.mts";
 import type { AgentThread, ReviewThread } from "../../types.mts";
 
-export { shouldResolveOtherHumanThread };
-
 export type RoutableThread = AgentThread | ReviewThread;
 
 function dedupeIds(ids: string[]): string[] {
@@ -69,7 +67,7 @@ export function buildThreadMutationRouting(
       .map((thread) => thread.id),
   );
   const pairedResolveIdSet = new Set(pairedResolveThreadIds);
-  // Rule-matched threads bypass author routing; resolve-mutate retains the human-author guard.
+  // Rule-matched threads bypass the generated-command author routing.
   const standaloneResolveThreadIds = dedupeIds([
     ...threads
       .filter(
