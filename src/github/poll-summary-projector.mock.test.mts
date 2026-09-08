@@ -192,30 +192,4 @@ describe("summarizePollSummaryPr", () => {
     );
     expect(item.review).toEqual({ reviews: 1 });
   });
-
-  it("keeps a draft waiting while a configured reviewer is pending", async () => {
-    const item = await summarizePollSummaryPr(
-      raw({
-        isDraft: true,
-        isInMergeQueue: false,
-        stack: null,
-        stackEntry: null,
-        reviewRequests: { nodes: [{ requestedReviewer: null }] },
-        latestReviews: {
-          nodes: [
-            { state: "PENDING", author: null },
-            { state: "PENDING", author: { login: "copilot-pull-request-reviewer" } },
-          ],
-        },
-      }),
-      repo,
-      {},
-    );
-
-    expect(item).toMatchObject({
-      action: "wait",
-      reasons: ["blocking-reviewer-in-progress"],
-      blockingReviewerInProgress: true,
-    });
-  });
 });

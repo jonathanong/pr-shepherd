@@ -36,6 +36,15 @@ function waitingRow(): PollSummaryItem {
   };
 }
 
+function terminalRow(): PollSummaryItem {
+  return {
+    ...waitingRow(),
+    action: "cancel",
+    reasons: ["merged"],
+    state: "MERGED",
+  };
+}
+
 beforeEach(() => vi.clearAllMocks());
 
 it("returns an aggregate until-terminal wait when a quota warning is crossed", async () => {
@@ -78,4 +87,43 @@ it("returns an aggregate until-terminal wait when a quota warning is crossed", a
     }),
   ).resolves.toMatchObject({ reason: "waiting", quotaWarning });
   expect(vi.mocked(sleep)).not.toHaveBeenCalled();
+});
+
+it("includes a quota warning crossed on the terminal tick", async () => {
+  const quotaWarning = {
+    resource: "graphql" as const,
+    thresholdPercent: 20,
+    remaining: 900,
+    limit: 5_000,
+    resetAt: 2_000_000_000,
+    pollIntervalMinutes: 5,
+    pollTimeoutMinutes: 15,
+  };
+  mockSummarizeApiTelemetry.mockReturnValue({
+    graphql: {
+      resource: "graphql",
+      requestCount: 1,
+      measuredQueryCost: 1,
+      unmeasuredRequestCount: 0,
+      nodeCount: 10,
+      remaining: 900,
+      limit: 5_000,
+      resetAt: 2_000_000_000,
+    },
+  });
+  mockEvaluateQuotaWarning.mockResolvedValue(quotaWarning);
+  vi.mocked(fetchPollSummary).mockResolvedValue({
+    selection: { kind: "prs", requested: [42] },
+    prs: [terminalRow()],
+  });
+
+  await expect(
+    runAggregatePoll({
+      prNumbers: [42],
+      targetRepository: { owner: "acme", name: "widgets" },
+      intervalSeconds: 60,
+      timeoutSeconds: 0,
+      debounceSeconds: 0,
+    }),
+  ).resolves.toMatchObject({ reason: "all_terminal", quotaWarning });
 });

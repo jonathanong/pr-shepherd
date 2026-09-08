@@ -10,7 +10,6 @@ import type { PollSummaryCommandOptions, PollSummaryResult } from "../types.mts"
 
 const MAX_TIMER_MS = 2 ** 31 - 1;
 const TIMER_DRIFT_TOLERANCE_MS = 500;
-
 export interface AggregatePollCommandOptions extends PollSummaryCommandOptions {
   intervalSeconds: number;
   timeoutSeconds: number;
@@ -18,13 +17,10 @@ export interface AggregatePollCommandOptions extends PollSummaryCommandOptions {
   quietStatus?: boolean;
   untilTerminal?: boolean;
 }
-
-/** One read-only aggregate tick for API/MCP callers. */
 export function runPollSummary(opts: PollSummaryCommandOptions): Promise<PollSummaryResult> {
   return withApiTelemetryScope(async () => attachUsage(await runPollSummaryCore(opts)));
 }
 
-/** CLI recurrence for explicit multi-PR and native-stack selectors. */
 export function runAggregatePoll(opts: AggregatePollCommandOptions): Promise<PollSummaryResult> {
   return withApiTelemetryScope(() => runAggregatePollCore(opts));
 }
@@ -69,7 +65,13 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
           prNumbers: last.prs.map((item) => item.pr),
         });
         if (explicit.prs.every((item) => item.action === "cancel")) {
-          return attachUsage({ ...explicit, reason: "all_terminal" });
+          const warning = await aggregateQuotaWarning(explicit, quotaBands, opts.intervalSeconds);
+          if (warning) pendingQuotaWarning = warning;
+          return attachUsage({
+            ...explicit,
+            reason: "all_terminal",
+            ...(pendingQuotaWarning && { quotaWarning: pendingQuotaWarning }),
+          });
         }
       }
       const retryMs = opts.untilTerminal ? pollGraphQlRetryAfterMs(error) : null;
@@ -86,9 +88,15 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
       ["escalate", "merge", "mark_ready"].includes(item.action),
     );
     const hasFix = last.prs.some((item) => item.action === "fix_code");
-    if (allTerminal) return attachUsage({ ...last, reason: "all_terminal" });
     const warning = await aggregateQuotaWarning(last, quotaBands, opts.intervalSeconds);
     if (warning) pendingQuotaWarning = warning;
+    if (allTerminal) {
+      return attachUsage({
+        ...last,
+        reason: "all_terminal",
+        ...(pendingQuotaWarning && { quotaWarning: pendingQuotaWarning }),
+      });
+    }
     if (immediate) {
       return attachUsage({
         ...last,

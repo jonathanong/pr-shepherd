@@ -88,6 +88,7 @@ function formatCounts(counts: object, suffix: string): string {
   const plural: Record<string, string> = { inProgress: "in progress" };
   const singular: Record<string, string> = {
     comments: "comment",
+    inProgress: "in progress",
     reviews: "review",
     threads: "thread",
   };
@@ -102,5 +103,10 @@ function formatCounts(counts: object, suffix: string): string {
 }
 
 function escapeMarkdownText(value: string): string {
-  return value.replace(/[\r\n]+/g, " ").replace(/([\\[\]])/g, "\\$1");
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/[\r\n]+/g, " ")
+    .replace(/([\\[\]])/g, "\\$1");
 }

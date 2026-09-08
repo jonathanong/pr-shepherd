@@ -63,6 +63,14 @@ describe("formatPollSummaryResult", () => {
     expect(text).toContain("pollCommand: `npx pr-shepherd");
   });
 
+  it("renders singular in-progress counts and escapes title HTML", () => {
+    const text = formatPollSummaryResult(
+      result(row({ title: "A <script> & B", checks: { inProgress: 1 } }), "all_terminal"),
+    );
+    expect(text).toContain("A &lt;script&gt; &amp; B");
+    expect(text).toContain("checks: 1 in progress");
+  });
+
   it("renders aggregate quota warning guidance", () => {
     const text = formatPollSummaryResult({
       ...result(row({ action: "wait", reasons: ["pending-or-unknown"] }), "waiting"),
