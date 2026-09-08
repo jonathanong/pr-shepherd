@@ -23,9 +23,15 @@ type RawCheckContext =
       name: string;
       status: string;
       conclusion: string | null;
-      checkSuite: { workflowRun: { event: string } | null } | null;
+      checkSuite: {
+        workflowRun: { event: string; workflow?: { name: string } | null } | null;
+      } | null;
     }
-  | { __typename: "StatusContext"; state: string };
+  | { __typename: "StatusContext"; context: string; state: string };
+
+interface RawCheckRollup {
+  contexts: SummaryConnection<RawCheckContext>;
+}
 
 export interface RawSummaryPr {
   number: number;
@@ -41,6 +47,7 @@ export interface RawSummaryPr {
   mergeStateStatus: string;
   reviewDecision: string | null;
   isInMergeQueue: boolean;
+  mergeQueueEntry: { headCommit: { statusCheckRollup: RawCheckRollup | null } | null } | null;
   stack: { number: number; size: number; baseRefName: string } | null;
   stackEntry: { position: number } | null;
   comments: SummaryConnection<RawSummaryComment>;
@@ -54,10 +61,7 @@ export interface RawSummaryPr {
   commits: {
     nodes: Array<{
       commit: {
-        statusCheckRollup: {
-          state: string | null;
-          contexts: SummaryConnection<RawCheckContext>;
-        } | null;
+        statusCheckRollup: RawCheckRollup | null;
       };
     }>;
   };

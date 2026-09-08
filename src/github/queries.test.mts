@@ -62,6 +62,9 @@ describe("queries — GQL constants load at import time", () => {
     expect(POLL_SUMMARY_FRAGMENT).toContain("fragment PollSummaryPr on PullRequest");
     expect(POLL_STACK_SUMMARY_QUERY).toContain("entries(first: 50, after: $after)");
     expect(POLL_STACK_SUMMARY_QUERY).toContain("...PollSummaryPr");
+    expect(POLL_SUMMARY_FRAGMENT).toContain("mergeQueueEntry");
+    expect(POLL_SUMMARY_FRAGMENT).toContain("headCommit");
+    expect(POLL_SUMMARY_FRAGMENT).toContain("name");
   });
 
   it("keeps merge-queue metadata in BatchPr without nested queue check trees", () => {

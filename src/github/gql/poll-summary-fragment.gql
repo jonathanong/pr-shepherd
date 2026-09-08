@@ -12,6 +12,38 @@ fragment PollSummaryPr on PullRequest {
   mergeStateStatus
   reviewDecision
   isInMergeQueue
+  mergeQueueEntry {
+    headCommit {
+      statusCheckRollup {
+        contexts(last: 100) {
+          totalCount
+          pageInfo {
+            hasPreviousPage
+          }
+          nodes {
+            __typename
+            ... on CheckRun {
+              name
+              status
+              conclusion
+              checkSuite {
+                workflowRun {
+                  event
+                  workflow {
+                    name
+                  }
+                }
+              }
+            }
+            ... on StatusContext {
+              context
+              state
+            }
+          }
+        }
+      }
+    }
+  }
   stack {
     number
     size
@@ -84,15 +116,20 @@ fragment PollSummaryPr on PullRequest {
             nodes {
               __typename
               ... on CheckRun {
+                name
                 status
                 conclusion
                 checkSuite {
                   workflowRun {
                     event
+                    workflow {
+                      name
+                    }
                   }
                 }
               }
               ... on StatusContext {
+                context
                 state
               }
             }

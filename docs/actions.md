@@ -14,10 +14,11 @@ The shipped skill invokes `pr-shepherd [PR] --until-terminal`. That command cont
 
 Explicit multi-PR and `--stack` selectors use a separate compact, read-only summary path. A CLI
 aggregate returns when any row has an agent-facing action, every row is terminal, or its bounded
-timeout expires; completed rows do not stop polling while another row remains `WAIT`. Stack entries
+timeout expires; `--until-terminal` also returns a crossed quota warning with the same cadence
+instructions as singular polling. Completed rows do not stop polling while another row remains `WAIT`. Stack entries
 are fetched completely and ordered bottom-to-top. Each row surfaces the same fields in Markdown and
 JSON: repository, title/URL, raw PR/merge/review/head/base/stack state, bounded check and review
-counts plus incomplete flags, and a conservative action with reasons. Each actionable row also has
+counts (including ignored checks and active merge-queue commit checks) plus incomplete flags, and a conservative action with reasons. Each actionable row also has
 an exact repository-qualified single-PR `pollCommand`. One final `## Instructions` section directs the caller to process independent
 actionable rows and rerun the aggregate selector. Aggregate API and MCP calls return one summary tick
 without recurrence. The summary path never mutates GitHub or writes seen markers; the selected

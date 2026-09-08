@@ -14,6 +14,7 @@ import type {
 import type { RepoInfo } from "./client.mts";
 import type { RawAuthor, RawSummaryPr } from "./poll-summary-raw.mts";
 import { normalizePollSummaryState, routePollSummary } from "./poll-summary-route.mts";
+import picomatch from "picomatch";
 
 const THREAD_COMMENT_SEPARATOR = "\n\n--- thread comment ---\n\n";
 
@@ -61,13 +62,36 @@ export async function summarizePollSummaryPr(
 }
 
 function summarizeChecks(raw: RawSummaryPr): PollSummaryChecks {
-  const rollup = raw.commits.nodes[0]?.commit.statusCheckRollup;
-  if (!rollup) {
+  const headRollup = raw.commits.nodes[0]?.commit.statusCheckRollup;
+  const queueRollup = raw.mergeQueueEntry?.headCommit?.statusCheckRollup;
+  if (!headRollup && !queueRollup) {
     return { incomplete: true };
   }
-  const counts = { passing: 0, failing: 0, inProgress: 0, skipped: 0, filtered: 0 };
-  const relevantEvents = new Set(loadConfig().checks.ciTriggerEvents);
-  for (const context of rollup.contexts.nodes) {
+  const counts = {
+    passing: 0,
+    failing: 0,
+    inProgress: 0,
+    skipped: 0,
+    filtered: 0,
+    ignored: 0,
+  };
+  const config = loadConfig();
+  const relevantEvents = new Set([...config.checks.ciTriggerEvents, "merge_group"]);
+  const isIgnored = picomatch(config.ignoreChecks, { nocase: true });
+  const isProtected = picomatch(config.actions.neverCancelRuns, { nocase: true });
+  const rollups = [headRollup, queueRollup].filter(
+    (rollup) => rollup !== null && rollup !== undefined,
+  );
+  for (const context of rollups.flatMap((rollup) => rollup.contexts.nodes)) {
+    const name = context.__typename === "CheckRun" ? context.name : context.context;
+    const workflowName =
+      context.__typename === "CheckRun"
+        ? context.checkSuite?.workflowRun?.workflow?.name
+        : undefined;
+    if (isIgnored(name) && !isProtected(name) && !(workflowName && isProtected(workflowName))) {
+      counts.ignored += 1;
+      continue;
+    }
     if (context.__typename === "CheckRun") {
       const event = context.checkSuite?.workflowRun?.event;
       if (event && !relevantEvents.has(event)) counts.filtered += 1;
@@ -83,7 +107,9 @@ function summarizeChecks(raw: RawSummaryPr): PollSummaryChecks {
   const summary: PollSummaryChecks = Object.fromEntries(
     Object.entries(counts).filter(([, count]) => count > 0),
   );
-  if (rollup.contexts.pageInfo.hasPreviousPage) summary.incomplete = true;
+  if (rollups.some((rollup) => rollup.contexts.pageInfo.hasPreviousPage)) {
+    summary.incomplete = true;
+  }
   return summary;
 }
 

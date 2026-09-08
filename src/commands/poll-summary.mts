@@ -5,6 +5,7 @@ import { withApiTelemetryScope, summarizeApiTelemetry } from "../github/api-tele
 import { fetchPollSummary } from "../github/poll-summary.mts";
 import { sleep } from "../util/sleep.mts";
 import { graphqlQuotaPollIntervalMs, pollGraphQlRetryAfterMs } from "./poll-quota.mts";
+import { evaluateWorktreeGraphqlQuotaWarning } from "../state/graphql-quota-warnings.mts";
 import type { PollSummaryCommandOptions, PollSummaryResult } from "../types.mts";
 
 const MAX_TIMER_MS = 2 ** 31 - 1;
@@ -53,6 +54,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
   let last: PollSummaryResult | undefined;
   let lastStatusSignature: string | null = null;
   let rateLimitRetries = 0;
+  let pendingQuotaWarning: PollSummaryResult["quotaWarning"];
 
   while (true) {
     tick += 1;
@@ -85,14 +87,35 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
     );
     const hasFix = last.prs.some((item) => item.action === "fix_code");
     if (allTerminal) return attachUsage({ ...last, reason: "all_terminal" });
-    if (immediate) return attachUsage({ ...last, reason: "actionable" });
+    const warning = await aggregateQuotaWarning(last, quotaBands, opts.intervalSeconds);
+    if (warning) pendingQuotaWarning = warning;
+    if (immediate) {
+      return attachUsage({
+        ...last,
+        reason: "actionable",
+        ...(pendingQuotaWarning && { quotaWarning: pendingQuotaWarning }),
+      });
+    }
 
     if (hasFix) {
-      if (debounceMs === 0) return attachUsage({ ...last, reason: "actionable" });
+      if (debounceMs === 0)
+        return attachUsage({
+          ...last,
+          reason: "actionable",
+          ...(pendingQuotaWarning && { quotaWarning: pendingQuotaWarning }),
+        });
       debounceUntil ??= Date.now() + debounceMs;
-      if (Date.now() >= debounceUntil) return attachUsage({ ...last, reason: "actionable" });
+      if (Date.now() >= debounceUntil)
+        return attachUsage({
+          ...last,
+          reason: "actionable",
+          ...(pendingQuotaWarning && { quotaWarning: pendingQuotaWarning }),
+        });
     } else {
       debounceUntil = null;
+      if (opts.untilTerminal && pendingQuotaWarning) {
+        return attachUsage({ ...last, quotaWarning: pendingQuotaWarning });
+      }
     }
 
     const elapsedMs = Date.now() - start;
@@ -121,6 +144,25 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
     lastStatusSignature = statusSignature;
     await sleep(sleepMs);
   }
+}
+
+async function aggregateQuotaWarning(
+  result: PollSummaryResult,
+  bands: ReturnType<typeof loadConfig>["watch"]["graphqlQuotaWarnings"],
+  intervalSeconds: number,
+): Promise<PollSummaryResult["quotaWarning"]> {
+  const usage = summarizeApiTelemetry()?.graphql;
+  const [owner, repo] = result.repo.split("/");
+  if (!usage || !owner || !repo) return undefined;
+  return evaluateWorktreeGraphqlQuotaWarning(
+    { owner, repo },
+    bands.map((band) => ({
+      ...band,
+      pollIntervalMinutes: Math.max(band.pollIntervalMinutes, intervalSeconds / 60),
+    })),
+    usage,
+    true,
+  );
 }
 
 function summaryStatusSignature(result: PollSummaryResult): string {

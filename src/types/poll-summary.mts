@@ -1,4 +1,4 @@
-import type { ApiUsage } from "./api-usage.mts";
+import type { ApiUsage, GraphqlQuotaWarning } from "./api-usage.mts";
 import type { MergeableState, MergeStateStatus, ReviewDecision } from "./github.mts";
 import type { ShepherdAction } from "./iterate.mts";
 
@@ -8,6 +8,7 @@ export interface PollSummaryChecks {
   inProgress?: number;
   skipped?: number;
   filtered?: number;
+  ignored?: number;
   incomplete?: true;
 }
 
@@ -60,6 +61,7 @@ export interface PollSummaryResult {
   reason: "actionable" | "all_terminal" | "waiting" | "timeout";
   prs: PollSummaryItem[];
   apiUsage?: ApiUsage;
+  quotaWarning?: GraphqlQuotaWarning;
 }
 
 export interface PollSummaryCommandOptions {

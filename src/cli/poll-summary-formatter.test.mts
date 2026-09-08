@@ -63,6 +63,41 @@ describe("formatPollSummaryResult", () => {
     expect(text).toContain("pollCommand: `npx pr-shepherd");
   });
 
+  it("renders aggregate quota warning guidance", () => {
+    const text = formatPollSummaryResult({
+      ...result(row({ action: "wait", reasons: ["pending-or-unknown"] }), "waiting"),
+      quotaWarning: {
+        resource: "graphql",
+        thresholdPercent: 20,
+        remaining: 900,
+        limit: 5_000,
+        resetAt: 2_000_000_000,
+        pollIntervalMinutes: 5,
+        pollTimeoutMinutes: 15,
+      },
+    });
+    expect(text).toContain("## GitHub API quota warning");
+    expect(text).toContain("This aggregate selection is non-terminal");
+    expect(text).toContain("--interval 5m");
+  });
+
+  it("retains actionable row instructions when a quota warning is present", () => {
+    const text = formatPollSummaryResult({
+      ...result(row({ action: "fix_code", reasons: ["failing-checks"] }), "actionable"),
+      quotaWarning: {
+        resource: "graphql",
+        thresholdPercent: 20,
+        remaining: 900,
+        limit: 5_000,
+        resetAt: 2_000_000_000,
+        pollIntervalMinutes: 5,
+        pollTimeoutMinutes: 15,
+      },
+    });
+    expect(text).toContain("Choose each non-WAIT, non-CANCEL row");
+    expect(text).toContain("3. After selected work completes");
+  });
+
   it("tells one-shot and timed-out callers to recheck", () => {
     expect(formatPollSummaryResult(result(row({ action: "wait" }), "waiting"))).toContain(
       "Run this aggregate selector again",

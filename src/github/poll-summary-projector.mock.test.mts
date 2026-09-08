@@ -25,6 +25,7 @@ function raw(overrides: Record<string, unknown> = {}): RawSummaryPr {
     mergeStateStatus: "CLEAN",
     reviewDecision: "CHANGES_REQUESTED",
     isInMergeQueue: true,
+    mergeQueueEntry: null,
     stack: { number: 7, size: 2, baseRefName: "main" },
     stackEntry: { position: 1 },
     comments: { totalCount: 0, pageInfo: { hasPreviousPage: false }, nodes: [] },

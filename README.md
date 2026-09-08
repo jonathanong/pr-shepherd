@@ -140,7 +140,9 @@ pr-shepherd --stack 43                 # summarize every PR in a native GitHub s
 ```
 
 Multi-PR and `--stack` polling use compact, read-only GraphQL summaries. They return when any row
-needs agent work, all rows are terminal, or the bounded timeout expires. Each actionable row includes
+needs agent work, all rows are terminal, the bounded timeout expires, or `--until-terminal` crosses
+a configured GraphQL quota-warning band. Check counts honor `ignoreChecks` and include active
+merge-queue commit checks. Each actionable row includes
 an exact single-PR `pollCommand`; run independent actionable rows, then invoke the aggregate selector again.
 Stack rows are ordered bottom-to-top. API and MCP aggregate calls perform one summary tick and leave
 recurrence to the caller.
