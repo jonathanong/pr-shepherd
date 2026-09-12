@@ -51,6 +51,40 @@ const b = byName(B);
   }
 }
 
+// Matching case NAMES are not enough. The normal form of an eval edit changes a
+// fixture, prompt, rubric, weight or run count without renaming the case, which
+// leaves the keys identical while the two runs are no longer the same experiment.
+// Fingerprint what each case actually ran — prompt text plus the full grader
+// spec — and require it to match. Both fields are already recorded per case in
+// aggregate-result.json, so this needs no cooperation from the runner.
+{
+  const fingerprint = (c) =>
+    JSON.stringify({
+      prompt: c.promptMarkdown ?? "",
+      runs: c.runsPerCase ?? null,
+      maxTurns: c.maxTurns ?? null,
+      timeout: c.timeoutSeconds ?? null,
+      graders: (c.graders ?? [])
+        .map((g) => ({ name: g.name, type: g.type, weight: g.weight, config: g.config }))
+        .sort((x, y) => (x.name < y.name ? -1 : x.name > y.name ? 1 : 0)),
+    });
+
+  const drifted = Object.keys(a).filter((n) => fingerprint(a[n]) !== fingerprint(b[n]));
+  if (drifted.length) {
+    console.error(
+      `✗ ${drifted.length} case(s) differ in prompt, graders or run config between\n` +
+        `  the two result sets; refusing to compare.`,
+    );
+    for (const n of drifted.slice(0, 12)) console.error(`  ${n}`);
+    if (drifted.length > 12) console.error(`  … and ${drifted.length - 12} more`);
+    console.error(
+      `\nThese aggregates came from different revisions of the suite, so their\n` +
+        `deltas are not comparable. Re-run both tiers against the current cases.`,
+    );
+    process.exit(1);
+  }
+}
+
 // Refuse aggregates whose graders failed to execute. A judge call that throws —
 // a session limit is the observed case — is scored 0, which is indistinguishable
 // from a model that answered badly and can manufacture a large fake Δ. Without
