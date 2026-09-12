@@ -6,4 +6,4 @@ flags: i
 weight: 0.5
 ---
 
---reply-thread-ids\s+PRRT_multi
+--reply-thread-ids\s+PRRT_multi(?![A-Za-z0-9_-])

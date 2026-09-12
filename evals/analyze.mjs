@@ -13,7 +13,7 @@
 // the adjusted mean is reported with its denominator stated.
 
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 const dirs = process.argv.slice(2);
 if (dirs.length !== 2) {
@@ -23,7 +23,10 @@ if (dirs.length !== 2) {
 
 const load = (d) => JSON.parse(readFileSync(join(d, "aggregate-result.json"), "utf8"));
 const [A, B] = dirs.map(load);
-const label = (d) => d.replace(/.*\//, "");
+// basename, not a trailing-segment regex: a directory argument ending in "/" is
+// valid for load() but would leave the regex form returning an empty label, so the
+// header and summary would silently lose the tier name.
+const label = (d) => basename(d.replace(/[/\\]+$/, "")) || d;
 const [LA, LB] = dirs.map(label);
 
 const byName = (r) => Object.fromEntries(r.cases.map((c) => [c.name, c]));
@@ -65,8 +68,7 @@ console.log("-".repeat(76));
 
 for (const name of Object.keys(a)) {
   const ca = a[name];
-  const cb = b[name];
-  if (!cb) continue;
+  const cb = b[name]; // guaranteed present: mismatched case sets exited above
   const cell = (c) =>
     `${withS(c).toFixed(2)}  ${withoutS(c).toFixed(2)}  ${fmt(delta(c))}`.padEnd(20);
   const flag = isCeiling(ca) && isCeiling(cb) ? " (ceiling both)" : "";
@@ -115,7 +117,7 @@ for (const [L, R] of [
   console.log(
     `${L.padEnd(8)} mean Δ ${fmt(meanAll)} over ${cases.length} cases · ` +
       `mean Δ ${fmt(meanNC)} over ${nonCeiling.length} non-ceiling · ` +
-      `skill fired ${fired}/${total} (${Math.round((100 * fired) / total)}%) · ` +
+      `skill fired ${fired}/${total} (${total ? Math.round((100 * fired) / total) + "%" : "n/a"}) · ` +
       `$${R.costUsd.toFixed(2)}`,
   );
   console.log(

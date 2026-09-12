@@ -163,7 +163,19 @@ const regex = (pattern, { match = "contains", weight = 1, flags = "i" } = {}) =>
 // both arms, so it never moves Δ. Present on the should-NOT-fire case too, where
 // a red row is the expected and desired reading — that is the only way
 // over-triggering becomes visible if the skill description is ever widened.
-const skillFired = { frontmatter: [`type: tool_used`, `tool: Skill`, `min: 1`], body: null };
+// `input_match` is required, not decoration: the plugin ships two skills, so a
+// bare `tool: Skill` would also count a `mark-files-as-viewed` invocation as this
+// skill firing. The optional `[\w-]+:` allows the plugin-namespaced form
+// ("pr-shepherd:pr-shepherd") as well as a bare one.
+const skillFired = {
+  frontmatter: [
+    `type: tool_used`,
+    `tool: Skill`,
+    String.raw`input_match: '"skill"\s*:\s*"(?:[\w-]+:)?pr-shepherd"'`,
+    `min: 1`,
+  ],
+  body: null,
+};
 
 // Reused verbatim across the non-terminal cases. Halting on a non-terminal action
 // is failure mode 3 and shows up for WAIT, MARK_READY and FIX_CODE alike.
@@ -285,7 +297,11 @@ Failing responses do any of: omit it; describe resolving threads through the
 GitHub UI instead; make it conditional on having changed code; mention it only in
 passing without committing to run it.`,
       ),
-      "keeps-the-thread-id": regex(`--reply-thread-ids\\s+PRRT_multi`, { weight: 0.5 }),
+      // Trailing boundary matters: without it `PRRT_multi` also matches a longer
+      // identifier such as `PRRT_multi_extra`.
+      "keeps-the-thread-id": regex(`--reply-thread-ids\\s+PRRT_multi(?![A-Za-z0-9_-])`, {
+        weight: 0.5,
+      }),
       "iterates-immediately": llm(ITERATES_AGAIN),
       "skill-fired": skillFired,
     },
@@ -331,7 +347,8 @@ rerun "to see if it's flaky" before looking at the failure; describe
     shape: shapeB,
     tags: ["fix-code", "ci-triage"],
     graders: {
-      "issues-the-rerun": regex(`gh run rerun\\s+555`, { weight: 1 }),
+      // Boundary required: `555` alone also matches `gh run rerun 5550`.
+      "issues-the-rerun": regex(`gh run rerun\\s+555(?![0-9])`, { weight: 1 }),
       "treats-cancelled-as-not-a-code-defect": llm(
         `The plan recognises that a \`[conclusion: CANCELLED]\` check is not evidence of
 a code defect, and reruns it rather than trying to fix code for it.

@@ -6,4 +6,4 @@ flags: i
 weight: 1
 ---
 
-gh run rerun\s+555
+gh run rerun\s+555(?![0-9])
