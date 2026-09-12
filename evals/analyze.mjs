@@ -85,6 +85,30 @@ const b = byName(B);
   }
 }
 
+// The case fingerprint above covers the suite but says nothing about the plugin,
+// which is the treatment. Compare what each run recorded about the plugin under
+// test so a version change between tiers cannot be presented as a model-tier
+// difference.
+//
+// Residual gap, deliberately not papered over: `suite.plugins` carries name,
+// version and path, not a source hash, so an edit to SKILL.md that does not bump
+// the version is invisible here. Run the tiers back to back, and re-run both
+// after touching the skill.
+{
+  const plugins = (R) =>
+    JSON.stringify(
+      (R.suite?.plugins ?? []).map((p) => `${p.name}@${p.version}`).sort(),
+    );
+  const pa = plugins(A);
+  const pb = plugins(B);
+  if (pa !== pb) {
+    console.error(`✗ the two result sets evaluated different plugin versions; refusing.`);
+    console.error(`  ${LA}: ${pa}`);
+    console.error(`  ${LB}: ${pb}`);
+    process.exit(1);
+  }
+}
+
 // Refuse aggregates whose graders failed to execute. A judge call that throws —
 // a session limit is the observed case — is scored 0, which is indistinguishable
 // from a model that answered badly and can manufacture a large fake Δ. Without

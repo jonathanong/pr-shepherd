@@ -103,8 +103,12 @@ knowledge.
 
 A second, separable problem: the skill fired in only **19/36** with-arm runs
 (53%), all-or-nothing per case — it never fired on `05`, `06`, `07`, `08` or
-`09`. On those five the "with" arm is literally a baseline run, which
-mechanically forces Δ=0 and accounts for much of the +0.02.
+`09`. On those five the "with" arm received no treatment, so the *expected*
+effect there is zero. Note this is an expectation, not a mechanism: the two arms
+are still separate stochastic runs and can score differently by chance, so the
+trigger misses explain the small aggregate Δ only in expectation. Establishing
+the attribution properly would need paired runs or an uncertainty estimate,
+neither of which this suite produces at `runs: 3`.
 
 > Do **not** read the raw split "fired → mean 0.29 / did not fire → mean 0.59" as
 > the skill harming haiku. It is confounded by difficulty: the non-firing cases
