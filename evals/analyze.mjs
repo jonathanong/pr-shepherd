@@ -13,7 +13,10 @@
 // the adjusted mean is reported with its denominator stated.
 
 import { readFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 
 const dirs = process.argv.slice(2);
 if (dirs.length !== 2) {
@@ -85,6 +88,50 @@ const b = byName(B);
   }
 }
 
+// The judge is part of the experiment. If one tier is run without the documented
+// `--judge-model opus`, its rubric verdicts come from a different — and possibly
+// self-preferring — grader, so the two tiers' deltas are not comparable.
+{
+  const ja = A.suite?.judgeModel ?? "(unrecorded)";
+  const jb = B.suite?.judgeModel ?? "(unrecorded)";
+  if (ja !== jb) {
+    console.error(`✗ the two result sets were graded by different judges; refusing.`);
+    console.error(`  ${LA}: ${ja}`);
+    console.error(`  ${LB}: ${jb}`);
+    console.error(`\nRe-run one tier with the same --judge-model as the other.`);
+    process.exit(1);
+  }
+}
+
+// An interrupted run can record fewer executions than `runsPerCase` without
+// attaching a per-run error. The suite fingerprint proves both tiers were
+// *configured* for the same run count, not that those runs completed, so the
+// precomputed means would silently rest on unequal sample sizes.
+{
+  const short = [];
+  for (const [L, R] of [
+    [LA, A],
+    [LB, B],
+  ]) {
+    if (R.partial) short.push(`  ${L}: aggregate is flagged partial`);
+    for (const c of R.cases) {
+      const want = c.runsPerCase;
+      if (!want) continue;
+      for (const [arm, runs] of Object.entries(c.arms ?? {})) {
+        if (runs.length !== want) {
+          short.push(`  ${L} · ${c.name} [${arm}]: ${runs.length} of ${want} runs`);
+        }
+      }
+    }
+  }
+  if (short.length) {
+    console.error(`✗ incomplete result set(s); refusing to compare.`);
+    console.error(short.slice(0, 12).join("\n"));
+    if (short.length > 12) console.error(`  … and ${short.length - 12} more`);
+    process.exit(1);
+  }
+}
+
 // The case fingerprint above covers the suite but says nothing about the plugin,
 // which is the treatment. Compare what each run recorded about the plugin under
 // test so a version change between tiers cannot be presented as a model-tier
@@ -147,6 +194,26 @@ const b = byName(B);
   }
 }
 
+// Classify should-NOT-fire cases from the `neg` tag in their prompt frontmatter,
+// not from the slug. A negative case added or renamed without the literal "-neg-"
+// substring would otherwise be counted as a fire case: its skill activations
+// would inflate the ordinary trigger rate while the over-trigger metric stayed
+// empty, defeating the suite's only out-of-domain activation signal.
+//
+// `aggregate-result.json` does not persist tags, so read them from the case
+// directory it records. Results whose directory has since been renamed or removed
+// fall back to the slug pattern.
+const negByTag = (c) => {
+  try {
+    const fm = readFileSync(join(REPO_ROOT, c.dir, "prompt.md"), "utf8").split("---")[1] ?? "";
+    const tags = /^tags:\s*\[(.*)\]\s*$/m.exec(fm);
+    if (tags) return tags[1].split(",").some((t) => t.trim() === "neg");
+  } catch {
+    // fall through to the slug heuristic
+  }
+  return /(^|-)neg-/.test(c.name);
+};
+
 const delta = (c) => (c.aggregates.delta ?? c.aggregates.score - c.aggregates.scoreWithout);
 const withS = (c) => c.aggregates.score;
 const withoutS = (c) => c.aggregates.scoreWithout;
@@ -190,7 +257,7 @@ for (const [L, R] of [
   // description could start activating on unrelated questions while every score
   // and the fire-case trigger rate still look healthy. The over-trigger rate is
   // the suite's only signal for that.
-  const isNeg = (c) => /(^|-)neg-/.test(c.name);
+  const isNeg = (c) => negByTag(c);
   let fired = 0;
   let total = 0;
   let over = 0;
