@@ -51,6 +51,44 @@ const b = byName(B);
   }
 }
 
+// Refuse aggregates whose graders failed to execute. A judge call that throws —
+// a session limit is the observed case — is scored 0, which is indistinguishable
+// from a model that answered badly and can manufacture a large fake Δ. Without
+// this check the operator has to know to grep the JSON by hand before trusting
+// any number.
+{
+  const broken = [];
+  for (const [L, R] of [
+    [LA, A],
+    [LB, B],
+  ]) {
+    for (const c of R.cases) {
+      for (const [arm, runs] of Object.entries(c.arms ?? {})) {
+        for (const run of runs) {
+          const threw = (run.graders ?? []).filter((g) =>
+            /grader threw|judge call failed/i.test(g.explanation ?? ""),
+          );
+          if (run.error || threw.length) {
+            broken.push(
+              `  ${L} · ${c.name} [${arm}]: ${run.error ?? `${threw.length} grader(s) threw`}`,
+            );
+          }
+        }
+      }
+    }
+  }
+  if (broken.length) {
+    console.error(`✗ ${broken.length} run(s) did not execute cleanly; refusing to compare.`);
+    console.error(broken.slice(0, 12).join("\n"));
+    if (broken.length > 12) console.error(`  … and ${broken.length - 12} more`);
+    console.error(
+      `\nA grader that threw is scored 0, which is indistinguishable from a bad\n` +
+        `answer and can manufacture a large fake Δ. Re-run the affected tier.`,
+    );
+    process.exit(1);
+  }
+}
+
 const delta = (c) => (c.aggregates.delta ?? c.aggregates.score - c.aggregates.scoreWithout);
 const withS = (c) => c.aggregates.score;
 const withoutS = (c) => c.aggregates.scoreWithout;

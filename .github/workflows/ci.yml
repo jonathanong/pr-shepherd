@@ -32,8 +32,12 @@ jobs:
       - name: Eval cases are in sync with their snapshots
         run: |
           node evals/generate.mjs
-          git diff --exit-code -- evals/ \
-            || { echo "::error::evals/ is stale - run 'node evals/generate.mjs' and commit the result"; exit 1; }
+          # `git diff` alone ignores untracked files, so a generated-but-uncommitted
+          # case directory would pass while the committed suite stays incomplete.
+          # Staging first makes additions, deletions and modifications all visible.
+          git add -A -- evals/
+          git diff --cached --exit-code -- evals/ \
+            || { echo "::error::evals/ is out of sync - run 'node evals/generate.mjs' and commit the result"; exit 1; }
       - run: npm run test:coverage
       - name: Upload test results to Codecov
         if: ${{ always() && !cancelled() }}

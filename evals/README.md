@@ -42,8 +42,17 @@ eval prompt stale. 12 fire cases plus one should-NOT-fire over-trigger guard.
 
 Each case targets a distinct rule that the CLI output deliberately does *not*
 contain — it only points at it (`See "CI failure triage" in the pr-shepherd
-skill`). Both arms get identical text; the only difference is whether the skill's
-`## Playbooks` are in context, so Δ isolates what the playbooks add.
+skill`). Both arms get identical text; the only difference is whether the skill is
+in context.
+
+**Δ measures the whole skill, not the `## Playbooks` section.** When the skill
+fires, the agent receives all of `SKILL.md` — the dispatcher introduction and
+steps 1-4 as well as the playbooks. Some rules under test are stated in those
+non-playbook sections: the CI-watcher prohibition and "only `[ESCALATE]` hands
+work to a human" both live in the dispatcher intro, and they are exactly what
+cases `01` and `02` measure. Isolating the playbooks alone would need a third arm
+carrying a playbook-stripped copy of the skill; until that exists, read every Δ
+here as the effect of loading the skill.
 
 | Case | Fixture | Rule under test |
 |---|---|---|

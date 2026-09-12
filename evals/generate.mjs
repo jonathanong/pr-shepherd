@@ -24,10 +24,16 @@
 // snapshot suite, so the eval prompts cannot drift from what the CLI emits.
 //
 // Both ablation arms receive identical fixture text. The only difference is
-// whether the skill's `## Playbooks` are in context, so Δ isolates exactly what
-// the playbooks add. The fixtures reference those playbooks by name ("See
-// 'CI failure triage' in the pr-shepherd skill") without restating the rule —
-// that dangling reference is the seam under test.
+// whether the skill is loaded, so Δ is the effect of the WHOLE skill — not of
+// the `## Playbooks` section alone. A firing skill puts all of SKILL.md in
+// context, and several rules under test (the CI-watcher prohibition, "only
+// ESCALATE hands work to a human") are stated in the dispatcher introduction
+// rather than the playbooks. Isolating the playbooks would need a third arm
+// carrying a playbook-stripped copy of the skill.
+//
+// The fixtures reference those rules by name ("See 'CI failure triage' in the
+// pr-shepherd skill") without restating them — that dangling reference is the
+// seam under test.
 //
 // ---------------------------------------------------------------------------
 // Calibrated against a pilot run and against real transcripts
