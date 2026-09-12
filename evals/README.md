@@ -36,9 +36,9 @@ added. **Vary only `--model`.**
 
 **13 cases**, each embedding a real recorded CLI output from
 `test-cases/snapshots/<name>/output.text.md`, read verbatim at generation time.
-Those files are regression-tested by the repo's own snapshot suite, so eval
-prompts cannot drift from what the CLI emits. 12 fire cases plus one
-should-NOT-fire over-trigger guard.
+Those snapshots are regression-tested by the repo's own suite, and CI regenerates
+the cases and fails on any diff, so a snapshot change cannot leave a committed
+eval prompt stale. 12 fire cases plus one should-NOT-fire over-trigger guard.
 
 Each case targets a distinct rule that the CLI output deliberately does *not*
 contain — it only points at it (`See "CI failure triage" in the pr-shepherd
@@ -268,8 +268,13 @@ failed three judge calls and scored them 0, manufacturing a fake +1.00. Check fo
    dimension. Today the ambient `CLAUDE_EFFORT` is silently ignored by child runs,
    so a suite that means to test a low-reasoning configuration is quietly testing
    the default one.
-6. **Raise `runs` on the four stable cases** if tighter intervals are wanted.
+6. **Watch the over-trigger rate, not just Δ.** `analyze.mjs` reports a
+   should-NOT-fire rate separately, because a widened skill `description` can
+   start activating on unrelated GitHub questions while every score and the
+   fire-case trigger rate still look healthy — the negative case's own grader
+   passes whenever the answer is correct, and `skill-fired` is display-only.
+7. **Raise `runs` on the four stable cases** if tighter intervals are wanted.
    `runs: 3` leaves enough variance that only large Δ is trustworthy.
-7. **Wire into CI** — run the sonnet@low tier on PRs that touch
+8. **Wire the eval run itself into CI** — run the sonnet@low tier on PRs that touch
    `plugins/pr-shepherd/skills/**`, where a `description` or playbook edit can
    silently change trigger rate or routing.

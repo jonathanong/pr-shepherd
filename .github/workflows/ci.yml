@@ -29,6 +29,11 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck
+      - name: Eval cases are in sync with their snapshots
+        run: |
+          node evals/generate.mjs
+          git diff --exit-code -- evals/ \
+            || { echo "::error::evals/ is stale - run 'node evals/generate.mjs' and commit the result"; exit 1; }
       - run: npm run test:coverage
       - name: Upload test results to Codecov
         if: ${{ always() && !cancelled() }}

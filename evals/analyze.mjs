@@ -30,6 +30,24 @@ const byName = (r) => Object.fromEntries(r.cases.map((c) => [c.name, c]));
 const a = byName(A);
 const b = byName(B);
 
+// Refuse to compare aggregates from different suite revisions. Silently skipping
+// a case that exists in only one side would still leave each tier's mean computed
+// over its own full case list, producing two numbers that look comparable but are
+// not — and hiding the removed or failed case entirely.
+{
+  const ka = Object.keys(a);
+  const kb = Object.keys(b);
+  const onlyA = ka.filter((n) => !(n in b));
+  const onlyB = kb.filter((n) => !(n in a));
+  if (onlyA.length || onlyB.length) {
+    console.error(`✗ the two result sets contain different cases; refusing to compare.`);
+    if (onlyA.length) console.error(`  only in ${LA}: ${onlyA.join(", ")}`);
+    if (onlyB.length) console.error(`  only in ${LB}: ${onlyB.join(", ")}`);
+    console.error(`\nRe-run both tiers against the same generated suite.`);
+    process.exit(1);
+  }
+}
+
 const delta = (c) => (c.aggregates.delta ?? c.aggregates.score - c.aggregates.scoreWithout);
 const withS = (c) => c.aggregates.score;
 const withoutS = (c) => c.aggregates.scoreWithout;
@@ -68,23 +86,41 @@ for (const [L, R] of [
     ? nonCeiling.reduce((s, c) => s + delta(c), 0) / nonCeiling.length
     : 0;
 
+  // Trigger rate is counted over fire cases only. The should-NOT-fire cases are
+  // counted separately below, NOT discarded: their LLM grader passes whenever the
+  // answer is correct, and `skill-fired` is display-only, so a widened skill
+  // description could start activating on unrelated questions while every score
+  // and the fire-case trigger rate still look healthy. The over-trigger rate is
+  // the suite's only signal for that.
+  const isNeg = (c) => /(^|-)neg-/.test(c.name);
   let fired = 0;
   let total = 0;
+  let over = 0;
+  let overTotal = 0;
   for (const c of cases) {
-    if (c.name.startsWith("13-neg")) continue; // should-NOT-fire: a miss is desired
     for (const run of c.arms.with) {
       const g = run.graders.find((g) => g.name === "skill-fired");
       if (!g) continue;
-      total++;
-      if (g.passed) fired++;
+      if (isNeg(c)) {
+        overTotal++;
+        if (g.passed) over++; // fired when it should not have
+      } else {
+        total++;
+        if (g.passed) fired++;
+      }
     }
   }
 
+  const overPct = overTotal ? Math.round((100 * over) / overTotal) : 0;
   console.log(
     `${L.padEnd(8)} mean Δ ${fmt(meanAll)} over ${cases.length} cases · ` +
       `mean Δ ${fmt(meanNC)} over ${nonCeiling.length} non-ceiling · ` +
       `skill fired ${fired}/${total} (${Math.round((100 * fired) / total)}%) · ` +
       `$${R.costUsd.toFixed(2)}`,
+  );
+  console.log(
+    `${"".padEnd(8)} over-trigger ${over}/${overTotal} (${overPct}%) on should-NOT-fire cases` +
+      (over ? "  ⚠ the skill is activating on out-of-domain prompts" : ""),
   );
 }
 

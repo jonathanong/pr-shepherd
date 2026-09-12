@@ -61,7 +61,14 @@
 //   - Unsubstituted `$HEAD_SHA` / `$DISMISS_MESSAGE` never reached an executed
 //     command. Zero instances across all three tools.
 
-import { mkdirSync, readFileSync, writeFileSync, rmSync, existsSync } from "node:fs";
+import {
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+  rmSync,
+  existsSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -681,5 +688,27 @@ function writeCase(spec) {
   console.log(`${spec.slug.padEnd(34)} ${String(n).padStart(2)} graders  ${spec.fixture ?? "(no fixture)"}`);
 }
 
+// Prune case directories that are no longer in CASES. Without this, renaming or
+// removing a case leaves its old directory on disk, where `claude plugin eval .`
+// still discovers and runs it — so the suite silently executes more cases than
+// this generator and the README describe. Renumbering the suite during
+// development hit exactly that, twice.
+function pruneStaleCases(keep) {
+  const wanted = new Set(keep);
+  const stale = readdirSync(EVALS_DIR, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && /^\d{2}-/.test(e.name) && !wanted.has(e.name))
+    .map((e) => e.name);
+
+  for (const name of stale) {
+    rmSync(join(EVALS_DIR, name), { recursive: true, force: true });
+    console.log(`${"pruned stale case".padEnd(34)}    ${name}`);
+  }
+  return stale.length;
+}
+
 for (const spec of CASES) writeCase(spec);
-console.log(`\n${CASES.length} cases written to ${EVALS_DIR}`);
+const pruned = pruneStaleCases(CASES.map((c) => c.slug));
+console.log(
+  `\n${CASES.length} cases written to ${EVALS_DIR}` +
+    (pruned ? ` · ${pruned} stale case director${pruned === 1 ? "y" : "ies"} pruned` : ""),
+);
