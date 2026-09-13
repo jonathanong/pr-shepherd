@@ -1,5 +1,6 @@
 import { buildQuotaAwareContinuation } from "../quota-warning.mts";
 import type { PollSummaryItem, PollSummaryResult, ShepherdAction } from "../types.mts";
+import { explicitInstructions } from "./poll-summary-explicit-instructions.mts";
 
 /** Keep aggregate JSON, Markdown, and MCP instructions on one projection. */
 export function withPollSummaryInstructions(
@@ -38,6 +39,20 @@ function planStack(
   const open = result.prs.filter((item) => item.state === "OPEN");
   if (open.length === 0) {
     return { action: "cancel", instructions: ["1. Stop — every selected PR is terminal."] };
+  }
+
+  const lastOpenPosition = positionOf(result, open.at(-1)!.pr);
+  const closedBelowOpen = result.prs.find(
+    (item) => item.state === "CLOSED" && positionOf(result, item.pr) < lastOpenPosition,
+  );
+  if (closedBelowOpen) {
+    return {
+      action: "escalate",
+      instructions: [
+        `1. PR #${closedBelowOpen.pr} is closed without merging below an open stack layer. Stop stack merge and rebase operations here; the closed dependency must be restored or the higher branches rebuilt on a valid base.`,
+        "2. Ask the stack owner which recovery path to take, then rerun the same aggregate `--stack` selector after the stack is repaired.",
+      ],
+    };
   }
 
   const gap = result.stackAncestry?.[0];
@@ -95,8 +110,9 @@ function rebaseWholeStack(
   return {
     action: "fix_code",
     instructions: [
-      `1. GitHub reports PR #${behind.pr} is behind its base \`${behind.baseRefName}\`. From a clean checkout of \`${result.repo}\`, rebase the native stack from its trunk with \`gh stack rebase\`.`,
-      "2. Resolve any conflicts, push the updated stack with `gh stack push`, and rerun the same aggregate `--stack` selector.",
+      `1. GitHub reports PR #${behind.pr} is behind its base \`${behind.baseRefName}\`. From a clean checkout of \`${result.repo}\`, check out its stack branch \`${behind.headRefName}\`.`,
+      "2. Rebase that native stack from its trunk with `gh stack rebase`, resolving any conflicts.",
+      "3. Push the updated stack with `gh stack push` and rerun the same aggregate `--stack` selector.",
     ],
   };
 }
@@ -159,31 +175,4 @@ function waitingStack(result: PollSummaryResult): {
     action: "wait",
     instructions: ["1. Recheck this native stack after the lowest open layer changes state."],
   };
-}
-
-function explicitInstructions(result: PollSummaryResult): string[] {
-  if (result.reason === "all_terminal") return ["1. Stop — every selected PR is terminal."];
-  if (result.quotaWarning && result.reason !== "actionable") {
-    return [
-      buildQuotaAwareContinuation(
-        result.quotaWarning,
-        "1. This aggregate selection is non-terminal. Before continuing,",
-      ),
-    ];
-  }
-  if (result.reason === "waiting" || result.reason === "timeout") {
-    return ["1. Run this aggregate selector again when the caller is ready to recheck."];
-  }
-  const instructions = [
-    "1. Choose each non-WAIT, non-CANCEL row that can proceed independently and run or delegate its exact `pollCommand`.",
-    "2. Follow each selected one-PR poll's `## Instructions` until it returns `CANCEL` or `ESCALATE`.",
-    "3. Run this aggregate poll again after selected work completes; one row's `ESCALATE` does not stop work on other rows.",
-  ];
-  if (result.quotaWarning) {
-    instructions[2] = buildQuotaAwareContinuation(
-      result.quotaWarning,
-      "3. After selected work completes,",
-    );
-  }
-  return instructions;
 }

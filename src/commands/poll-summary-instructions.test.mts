@@ -124,6 +124,24 @@ describe("native-stack instructions", () => {
     );
     expect(result.nextAction).toBe("fix_code");
     expect(result.instructions?.join("\n")).toContain("gh stack rebase");
+    expect(result.instructions?.[0]).toContain("check out its stack branch `layer-1`");
+  });
+
+  it("blocks a merge when a closed dependency lies between open layers", () => {
+    const result = withPollSummaryInstructions(
+      stack(
+        [
+          row(1, 1, "merge"),
+          row(2, 2, "cancel", { state: "CLOSED", reasons: ["closed"] }),
+          row(3, 3, "merge"),
+        ],
+        false,
+      ),
+      true,
+    );
+    expect(result.nextAction).toBe("escalate");
+    expect(result.instructions?.join("\n")).toContain("PR #2 is closed without merging");
+    expect(result.instructions?.join("\n")).not.toContain("gh stack merge");
   });
 
   it("adds quota-aware continuation after actionable stack work", () => {

@@ -77,7 +77,7 @@ export async function summarizePollSummaryPr(
     ...(Object.keys(review).length > 0 && { review }),
     ...(stack && { stack }),
     ...(!["wait", "cancel"].includes(action) &&
-      !(raw.stack && action === "merge") && {
+      !(opts.stackPrNumber !== undefined && raw.stack && action === "merge") && {
         pollCommand: buildPollCommand(repoName, raw.number, opts),
       }),
   };

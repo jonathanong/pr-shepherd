@@ -22,6 +22,8 @@ counts (including ignored and superseded checks and active merge-queue commit ch
 without recurrence. The summary path never mutates GitHub or writes seen markers; it only maintains local ready-delay state so clean completion survives aggregate reruns. The selected
 single-PR commands remain authoritative for explicit-set state changes and full review context;
 native stacks follow their ordered stack instructions.
+An explicit PR set containing a native-stack member still routes that row to an authoritative
+one-PR poll and includes its `pollCommand`.
 
 For a native stack, aggregate also compares each open child's raw `baseRefOid` with the
 immediately lower stack entry's `headRefOid` when both entries are open. GitHub can report both rows `CLEAN` and
@@ -38,8 +40,12 @@ aggregate command remains read-only; these are caller instructions, not GitHub o
 performed by Shepherd. Aggregate JSON/MCP carries the raw ancestry rows, `nextAction`, and the
 same numbered instructions that Markdown renders.
 If the lowest open layer is `BEHIND` its base, the stack action directs the caller to
-run `gh stack rebase` from a clean checkout, resolve conflicts, push with `gh stack push`,
+check out that layer's stack branch from a clean checkout, run `gh stack rebase`, resolve conflicts, push with `gh stack push`,
 and rerun the aggregate selector before working on higher layers.
+If a lower layer is closed without merging while a higher layer remains open, the stack
+action is `ESCALATE`: no higher merge or rebase is suggested until the dependency is restored
+or the higher branches are rebuilt on a valid base. An all-terminal stack containing a closed
+layer retains the closed exit code (`14`).
 
 Command examples call `pr-shepherd` directly everywhere a follow-up command is emitted.
 

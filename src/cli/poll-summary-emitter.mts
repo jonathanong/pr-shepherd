@@ -13,6 +13,12 @@ export function emitPollSummaryResult(
 }
 
 function pollSummaryExitCode(result: PollSummaryResult): number {
+  if (
+    result.nextAction === "cancel" &&
+    result.prs.some((item) => item.reasons.includes("closed"))
+  ) {
+    return EXIT.CLOSED;
+  }
   if (result.nextAction) {
     const stackExitCode: Partial<Record<ShepherdAction, number>> = {
       escalate: EXIT.ESCALATE,

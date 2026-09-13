@@ -33,6 +33,15 @@ afterEach(() => {
 });
 
 describe("emitPollSummaryResult", () => {
+  it("preserves the closed exit code for a terminal native stack", () => {
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const value = result("cancel", ["closed"]);
+    value.selection = { kind: "stack", anchor: 42, stackNumber: 7, stackSize: 1 };
+    value.nextAction = "cancel";
+    emitPollSummaryResult(value, { format: "text" });
+    expect(process.exitCode).toBe(14);
+  });
+
   it.each([
     ["escalate", 13, undefined],
     ["fix_code", 12, undefined],

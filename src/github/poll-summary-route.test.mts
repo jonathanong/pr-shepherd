@@ -77,7 +77,22 @@ describe("routePollSummary", () => {
       "wait",
       "already-in-merge-queue",
     ],
-    [{ stack: { number: 1 } }, { passing: 1 }, {}, { merge: true }, "merge", "appears-ready"],
+    [
+      { stack: { number: 1 } },
+      { passing: 1 },
+      {},
+      { merge: true },
+      "fix_code",
+      "authoritative-poll-required",
+    ],
+    [
+      { stack: { number: 1 } },
+      { passing: 1 },
+      {},
+      { merge: true, stackPrNumber: 42 },
+      "merge",
+      "appears-ready",
+    ],
   ] as const)("routes %# conservatively", (rawOverrides, checks, review, opts, action, reason) => {
     expect(route(rawOverrides, checks, review, opts)).toEqual({ action, reasons: [reason] });
   });
