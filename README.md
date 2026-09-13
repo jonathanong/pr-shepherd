@@ -286,6 +286,8 @@ Environment variables:
 
 See [docs/configuration.md](docs/configuration.md) for the full reference.
 
+For guided noise reduction, use the plugin's `reduce-pr-noise` skill. It loads focused guidance for bot-comment classifiers or settings only when relevant; see [docs/skills.md](docs/skills.md).
+
 ### Classification rules
 
 Drop `.ts` / `.mts` / `.mjs` / `.js` files under `.pr-shepherd/classification/` to suppress and/or auto-resolve specific bot comments — useful for silencing repetitive noise like rate-limit notices from `gemini-code-assist` or "Reviews paused" from `coderabbitai`.
