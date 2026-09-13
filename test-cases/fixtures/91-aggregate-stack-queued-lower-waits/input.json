@@ -1,0 +1,61 @@
+{
+  "mode": "aggregate",
+  "description": "With --merge, a queued lower stack layer blocks a ready higher layer and defers an upstack ancestry repair until the queue changes state.",
+  "args": [
+    "--stack",
+    "https://github.com/owner/repo/pull/202",
+    "--merge",
+    "--timeout",
+    "1s",
+    "--interval",
+    "2s"
+  ],
+  "expectedReason": "timeout",
+  "expectedExitCode": 10,
+  "aggregateSummary": {
+    "selection": { "kind": "stack", "anchor": 202, "stackNumber": 12, "stackSize": 2 },
+    "stackAncestry": [
+      {
+        "parentPr": 201,
+        "parentHeadRefName": "feature-base",
+        "parentHeadRefOid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "childPr": 202,
+        "childBaseRefName": "feature-base",
+        "childBaseRefOid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ],
+    "prs": [
+      {
+        "pr": 201,
+        "repo": "owner/repo",
+        "title": "Base layer queued",
+        "url": "https://github.com/owner/repo/pull/201",
+        "action": "wait",
+        "reasons": ["already-in-merge-queue"],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "feature-base",
+        "headRefOid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "baseRefName": "main",
+        "isInMergeQueue": true,
+        "stack": { "number": 12, "size": 2, "position": 1, "baseRefName": "main" }
+      },
+      {
+        "pr": 202,
+        "repo": "owner/repo",
+        "title": "Ready upper layer",
+        "url": "https://github.com/owner/repo/pull/202",
+        "action": "merge",
+        "reasons": ["appears-ready"],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "feature-upper",
+        "headRefOid": "cccccccccccccccccccccccccccccccccccccccc",
+        "baseRefName": "feature-base",
+        "stack": { "number": 12, "size": 2, "position": 2, "baseRefName": "main" }
+      }
+    ]
+  }
+}
