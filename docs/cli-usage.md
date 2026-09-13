@@ -51,9 +51,17 @@ Explicit PR sets and native stacks use a compact read-only summary rather than r
 stateful one-PR iterator for every row. Aggregate polling continues while all non-terminal rows are
 `WAIT`; it returns when a row needs work, every row is terminal, or timeout expires. Its Markdown,
 JSON, API, and MCP result contains one row per PR with raw state, bounded check/review counts, a
-conservative action routing hint and reasons. Each actionable row includes an exact one-PR
-`pollCommand`. Follow independently actionable commands, then run the aggregate selector again. Aggregate mode never writes seen
-markers or performs GitHub mutations.
+conservative action routing hint and reasons. Explicit PR sets include an exact one-PR
+`pollCommand` for each actionable row, which callers may handle independently. Native stacks use
+the returned stack-level instructions in bottom-to-top order; a stack `MERGE` row deliberately
+omits a one-PR command. A native stack also compares every open child's base commit with its direct
+parent's current head. A mismatch is reported under `Stack ancestry` / `stackAncestry` even when
+GitHub calls both PRs `CLEAN`: without `--merge`, the returned `FIX_CODE` instructions use
+`gh stack rebase --upstack --no-trunk` and `gh stack push` from the parent stack branch; with
+`--merge`, run the emitted `gh stack merge --squash <lower-pr>` command for ready lower layers,
+rerun the aggregate selector, then repair any remaining stale child. Aggregate mode never writes
+seen markers or performs GitHub mutations; its JSON/MCP result returns the raw ancestry mismatch,
+`nextAction`, and numbered caller instructions.
 
 The polling flags are `--interval`, `--timeout`, `--debounce`, `--quiet-status`, `--no-quiet-status`, and `--until-terminal`. Their defaults come from `poll.intervalSeconds` (built-in 60), `poll.timeoutSeconds` (270), `poll.debounceSeconds` (60), and `poll.quietStatus` (`false`) in `.pr-shepherdrc.yml`; explicit flags override configuration. Each ordinary `WAIT` tick writes an explicit still-running line to stderr unless quiet status is enabled; the final action remains the only stdout result. `--debounce` (`0` disables) is a settle window after the first `FIX_CODE`. Iterate flags are `--ready-delay`, `--stall-timeout`, `--merge`, `--no-auto-mark-ready`, `--format`, and `--verbose`. The legacy `--no-auto-cancel-actionable` flag remains accepted as a no-op. Durations accept `s`, `m`, and `h`; bare polling durations are seconds and bare iterate durations are minutes.
 

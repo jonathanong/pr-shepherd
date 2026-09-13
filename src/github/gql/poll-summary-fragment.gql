@@ -8,6 +8,7 @@ fragment PollSummaryPr on PullRequest {
   headRefName
   headRefOid
   baseRefName
+  baseRefOid
   mergeable
   mergeStateStatus
   reviewDecision

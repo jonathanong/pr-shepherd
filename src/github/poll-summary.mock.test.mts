@@ -23,6 +23,7 @@ function rawPr(number: number, overrides: Record<string, unknown> = {}) {
     headRefName: `feature-${number}`,
     headRefOid: String(number).padStart(40, "0"),
     baseRefName: "main",
+    baseRefOid: "main-sha",
     mergeable: "MERGEABLE",
     mergeStateStatus: "CLEAN",
     reviewDecision: null,
@@ -135,7 +136,15 @@ describe("fetchPollSummary", () => {
                 ...stack,
                 entries: {
                   pageInfo: { hasNextPage: true, endCursor: "next" },
-                  nodes: [{ position: 2, pullRequest: rawPr(44) }],
+                  nodes: [
+                    {
+                      position: 2,
+                      pullRequest: rawPr(44, {
+                        baseRefName: "feature-43",
+                        baseRefOid: String(43).padStart(40, "0"),
+                      }),
+                    },
+                  ],
                 },
               },
             },

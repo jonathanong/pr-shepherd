@@ -18,11 +18,34 @@ timeout expires; `--until-terminal` also returns a crossed quota warning with th
 instructions as singular polling. Completed rows do not stop polling while another row remains `WAIT`. Stack entries
 are fetched completely and ordered bottom-to-top. Each row surfaces the same fields in Markdown and
 JSON: repository, title/URL, raw PR/merge/review/head/base/stack state, bounded check and review
-counts (including ignored and superseded checks and active merge-queue commit checks) plus incomplete flags, and a conservative action with reasons. Null check rollups are valid empty sets; bounded connection overflow remains visible as `incomplete` but does not permanently force an actionable row. Check routing reuses the full iterate classifier, and review counts honor classification rules, decisive approvals, bot-dismiss authorization, root-thread authorship, and seen markers. Draft rows wait while a configured blocking reviewer is requested or pending. Clean rows share the configured ready-delay and become terminal after it elapses, so rerunning an aggregate after a completed single-PR worker does not redispatch that row forever. Each actionable row also has
-an exact repository-qualified single-PR `pollCommand`. One final `## Instructions` section directs the caller to process independent
-actionable rows and rerun the aggregate selector. Aggregate API and MCP calls return one summary tick
+counts (including ignored and superseded checks and active merge-queue commit checks) plus incomplete flags, and a conservative action with reasons. Null check rollups are valid empty sets; bounded connection overflow remains visible as `incomplete` but does not permanently force an actionable row. Check routing reuses the full iterate classifier, and review counts honor classification rules, decisive approvals, bot-dismiss authorization, root-thread authorship, and seen markers. Draft rows wait while a configured blocking reviewer is requested or pending. Clean rows share the configured ready-delay and become terminal after it elapses, so rerunning an aggregate after a completed single-PR worker does not redispatch that row forever. For explicit PR sets, each actionable row has an exact repository-qualified single-PR `pollCommand`, and the final `## Instructions` section directs the caller to process independent actionable rows and rerun the aggregate selector. Native-stack rows instead use one ordered stack-level instruction sequence; a stack `MERGE` row intentionally omits a one-PR command so the caller merges the ready lower layers bottom-to-top. Aggregate API and MCP calls return one summary tick
 without recurrence. The summary path never mutates GitHub or writes seen markers; it only maintains local ready-delay state so clean completion survives aggregate reruns. The selected
-single-PR commands remain authoritative for state changes and full review context.
+single-PR commands remain authoritative for explicit-set state changes and full review context;
+native stacks follow their ordered stack instructions.
+An explicit PR set containing a native-stack member still routes that row to an authoritative
+one-PR poll and includes its `pollCommand`.
+
+For a native stack, aggregate also compares each open child's raw `baseRefOid` with the
+immediately lower stack entry's `headRefOid` when both entries are open. GitHub can report both rows `CLEAN` and
+`MERGEABLE` while those OIDs differ: the child was based on an earlier parent head and cannot
+carry the parent's later work. The summary emits each mismatch in `stackAncestry` (JSON) /
+`## Stack ancestry` (Markdown), including both PR numbers, ref names, and OIDs. It then provides
+one stack-level `nextAction` and numbered `instructions`. Without `--merge`, the action is
+`FIX_CODE`: from a clean checkout, check out the parent stack branch, run
+`gh stack rebase --upstack --no-trunk`, resolve conflicts, and run `gh stack push` before
+rerunning the aggregate selector. With `--merge`, a contiguous ready lower stack takes priority:
+run the emitted `gh stack merge --squash <lower-pr>` command, wait for GitHub to update the
+remaining branches, rerun the selector, then rebase the stale child if the mismatch remains. The
+aggregate command remains read-only; these are caller instructions, not GitHub or git mutations
+performed by Shepherd. Aggregate JSON/MCP carries the raw ancestry rows, `nextAction`, and the
+same numbered instructions that Markdown renders.
+If the lowest open layer is `BEHIND` its base, the stack action directs the caller to
+check out that layer's stack branch from a clean checkout, run `gh stack rebase`, resolve conflicts, push with `gh stack push`,
+and rerun the aggregate selector before working on higher layers.
+If a lower layer is closed without merging while a higher layer remains open, the stack
+action is `ESCALATE`: no higher merge or rebase is suggested until the dependency is restored
+or the higher branches are rebuilt on a valid base. An all-terminal stack containing a closed
+layer retains the closed exit code (`14`).
 
 Command examples call `pr-shepherd` directly everywhere a follow-up command is emitted.
 

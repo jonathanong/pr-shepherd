@@ -49,8 +49,11 @@ export function routePollSummary(
   if (opts.merge && raw.isInMergeQueue) {
     return { action: "wait", reasons: ["already-in-merge-queue"] };
   }
-  if (opts.merge && raw.stack) {
+  if (opts.merge && raw.stack && opts.stackPrNumber === undefined) {
     return { action: "fix_code", reasons: ["authoritative-poll-required"] };
+  }
+  if (opts.merge && raw.stack) {
+    return { action: "merge", reasons: ["appears-ready"] };
   }
   if (opts.merge && !raw.stack) return { action: "merge", reasons: ["appears-ready"] };
   return { action: "cancel", reasons: ["appears-ready"] };

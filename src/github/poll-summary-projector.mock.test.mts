@@ -21,6 +21,7 @@ function raw(overrides: Record<string, unknown> = {}): RawSummaryPr {
     headRefName: "widgets",
     headRefOid: "a".repeat(40),
     baseRefName: "main",
+    baseRefOid: "b".repeat(40),
     mergeable: "MERGEABLE",
     mergeStateStatus: "CLEAN",
     reviewDecision: "CHANGES_REQUESTED",

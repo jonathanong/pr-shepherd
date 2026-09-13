@@ -45,6 +45,7 @@ it("omits ignored failures and includes merge-queue checks", async () => {
     headRefName: "widgets",
     headRefOid: "a".repeat(40),
     baseRefName: "main",
+    baseRefOid: "b".repeat(40),
     mergeable: "MERGEABLE",
     mergeStateStatus: "CLEAN",
     reviewDecision: null,
