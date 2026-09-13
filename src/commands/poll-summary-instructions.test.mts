@@ -49,6 +49,16 @@ function stack(prs: PollSummaryItem[], mismatched = true): PollSummaryResult {
 }
 
 describe("native-stack instructions", () => {
+  const quotaWarning = {
+    resource: "graphql" as const,
+    thresholdPercent: 20,
+    remaining: 100,
+    limit: 1000,
+    resetAt: 2_000_000_000,
+    pollIntervalMinutes: 10,
+    pollTimeoutMinutes: 20,
+  };
+
   it("repairs a CLEAN upper layer when merge mode is off", () => {
     const result = withPollSummaryInstructions(
       stack([row(1, 1, "cancel"), row(2, 2, "cancel"), row(3, 3, "wait")]),
@@ -114,5 +124,35 @@ describe("native-stack instructions", () => {
     );
     expect(result.nextAction).toBe("fix_code");
     expect(result.instructions?.join("\n")).toContain("gh stack rebase");
+  });
+
+  it("adds quota-aware continuation after actionable stack work", () => {
+    const result = withPollSummaryInstructions(
+      { ...stack([row(1, 1, "cancel"), row(2, 2, "cancel"), row(3, 3, "wait")]), quotaWarning },
+      false,
+    );
+    expect(result.nextAction).toBe("fix_code");
+    expect(result.instructions?.at(-1)).toContain("After completing the stack action");
+  });
+
+  it("paces a waiting stack when GitHub reports a quota warning", () => {
+    const result = withPollSummaryInstructions(
+      {
+        ...stack([row(1, 1, "wait"), row(2, 2, "wait"), row(3, 3, "wait")], false),
+        quotaWarning,
+      },
+      false,
+    );
+    expect(result.nextAction).toBe("wait");
+    expect(result.instructions?.[0]).toContain("Before continuing");
+  });
+
+  it("escalates an actionable layer when no one-PR command is available", () => {
+    const result = withPollSummaryInstructions(
+      stack([row(1, 1, "fix_code"), row(2, 2, "wait"), row(3, 3, "wait")], false),
+      false,
+    );
+    expect(result.nextAction).toBe("escalate");
+    expect(result.instructions?.[0]).toContain("no one-PR poll command");
   });
 });
