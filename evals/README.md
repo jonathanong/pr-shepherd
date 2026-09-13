@@ -92,7 +92,49 @@ The top two are the highest-frequency real failures in the transcript corpus
 
 Four cases held a consistent positive Δ across four independent runs (sonnet and
 opus, two rounds each): `01`, `02`, `05`, `10`. Those are the load-bearing
-results; the rest move inside run-to-run noise at `runs: 3`.
+results; the rest move inside run-to-run noise at `runs: 3`. A fifth run
+(below) put a number on that noise — **±0.44 on a single case** — so read every
+Δ in this table except `01` and `02` as indicative only.
+
+### Replication after a sibling skill landed — and the noise floor it exposed
+
+`#426` added a second skill (`reduce-pr-noise`) to the same plugin without a
+version bump, which is the case `analyze.mjs`'s plugin guard cannot see. The
+suite was re-run at sonnet@low against `main` to check whether the sibling steals
+activations from `pr-shepherd`. It does not: under a **strictly narrower**
+`skill-fired` grader (the post-review version, which matches `pr-shepherd`
+specifically rather than any skill) the new run counted **32/36** activations
+against the older run's **31/36** under the broader matcher. No activation theft
+is detectable, and the measurement errs in the conservative direction. Over-trigger
+stayed **0/3**.
+
+**The stored `sonnet-low` aggregate predates the current graders.** `analyze.mjs`
+refuses to compare it: `skill-fired` changed in all 13 cases (display-only, no
+score effect) and the scored graders `keeps-the-thread-id` (`03`) and
+`issues-the-rerun` (`05`) changed too. Those two cases are genuinely
+incomparable; the remaining eleven are not.
+
+The accidental value of the re-run is a **measurement-noise control**. Nothing
+about the *without* arm changed between the two runs — no plugin either time,
+same prompts, same opus judge — so its per-case movement is pure noise:
+
+| | `01` | `02` | `11` | `09` | `13` | `08` | `12` | `04` | `06` | `10` | `07` |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| without-arm move | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | +0.13 | +0.17 | −0.17 | +0.20 | +0.33 | **−0.44** |
+
+A single case swings **±0.44 at `runs: 3` with zero treatment change**; mean
+|move| is 0.13 over 11 cases. That calibrates every other number here:
+
+- mean Δ **+0.28 → +0.23** between the two runs is *noise*, not a movement.
+- `02`'s Δ +1.00 → +0.67 is noise. `07`'s Δ 0.00 → +0.22 is noise — `07` is the
+  noisiest case in the suite and should not be cited from a single round.
+- **`01` and `02` are the only clean signal.** Their without-arm is pinned at
+  **0.00** in both runs while the with-arm holds 0.83 / 0.67. A floor that does
+  not move under resampling is the robust result — and they are the same two
+  cases that dominate the real-traffic failure corpus.
+
+Practical consequence: do not add tiers to tighten this. The limiting factor is
+`runs: 3`, not baseline validity. Raise `runs` on `01`, `02`, `05`, `10`.
 
 ### haiku @ max — mean Δ **+0.02**. Out of range.
 
@@ -286,8 +328,22 @@ failed three judge calls and scored them 0, manufacturing a fake +1.00. Check fo
    start activating on unrelated GitHub questions while every score and the
    fire-case trigger rate still look healthy — the negative case's own grader
    passes whenever the answer is correct, and `skill-fired` is display-only.
-7. **Raise `runs` on the four stable cases** if tighter intervals are wanted.
-   `runs: 3` leaves enough variance that only large Δ is trustworthy.
-8. **Wire the eval run itself into CI** — run the sonnet@low tier on PRs that touch
+7. **Raise `runs` on the four stable cases.** No longer optional: the without-arm
+   noise control measured a **±0.44** single-case swing at `runs: 3` with no
+   treatment change at all. Only `01` and `02` — whose baseline is pinned at 0.00
+   — survive that band cleanly. Raising `runs` on `01`, `02`, `05`, `10` buys more
+   than any additional model tier would.
+8. **Split `analyze.mjs`'s case fingerprint into scored vs display-only.** A
+   display-only grader such as `skill-fired` cannot affect a score, so its drift
+   should suppress the trigger-rate line and warn, not refuse the whole Δ
+   comparison. The run records carry `scored` and `withOnly` per grader, so this
+   needs no new data. It would not have unblocked the `#426` comparison — `03`
+   and `05` had genuine scored drift — but it would have named 2 incomparable
+   cases instead of 13. If per-case exclusion is added on top, recompute both
+   means over the same surviving subset and print the denominator.
+9. **Hash the plugin source in the guard.** `#426` added a whole skill at the
+   same `0.50.0` version, so the `name@version` check passed on a changed
+   treatment. The comment at the guard already admits this gap; close it.
+10. **Wire the eval run itself into CI** — run the sonnet@low tier on PRs that touch
    `plugins/pr-shepherd/skills/**`, where a `description` or playbook edit can
    silently change trigger rate or routing.
