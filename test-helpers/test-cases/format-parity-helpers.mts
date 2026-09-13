@@ -111,7 +111,10 @@ export const CONDITIONAL_LOSSY_PATHS: ConditionalLossyPath[] = [
       container !== null &&
       "title" in container &&
       typeof container.title === "string" &&
-      /[&<>\[\]\\]/.test(container.title),
+      (/[&<>]/.test(container.title) ||
+        container.title.includes("[") ||
+        container.title.includes("]") ||
+        container.title.includes("\\")),
   },
   {
     path: "fix.changesRequestedReviews[].body",
