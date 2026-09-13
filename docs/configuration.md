@@ -91,7 +91,7 @@ actions:
 | Key                                  | Default                                   | Purpose                                                                                                                                                     |
 | ------------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `botUsernames`                       | Known code-review bot logins              | GitHub logins treated as bots for repeat unresolved-thread visibility even when GitHub reports them as `User` or `Unknown`                                  |
-| `ignoreChecks`                       | `[]`                                      | Case-insensitive glob patterns for check/status context names Shepherd should ignore completely                                                             |
+| `ignoreChecks`                       | `[]`                                      | Case-insensitive globs that exclude check/status contexts from CI decisions and details while retaining their names in the ignored rollup                   |
 | `iterate.fixAttemptsPerThread`       | `3`                                       | Caller-visible `FIX_CODE` deliveries allowed for one unchanged unresolved thread body before the following tick escalates                                   |
 | `iterate.stallTimeoutMinutes`        | `60`                                      | Minutes the loop may repeat the same action without progress, or CI may stay pending without starting, before `escalate` with `stall-timeout`; `0` disables |
 | `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination).                                                                      |
@@ -125,7 +125,7 @@ Matching is case-insensitive and treats a trailing `[bot]` suffix as equivalent 
 
 ## `ignoreChecks`
 
-Top-level list of case-insensitive glob patterns for GitHub check/status context names Shepherd should ignore completely. Ignored checks are removed before CI classification, so they do not affect readiness, summaries, triage, stall detection, JSON output, or text output.
+Top-level list of case-insensitive glob patterns for GitHub check/status context names Shepherd should ignore for CI decisions. Ignored checks do not affect readiness, detailed check summaries, triage, or stall detection. Their names remain in the `ignoredNames` JSON field and the `**ignored**` text rollup.
 
 For GitHub Actions check runs, `actions.neverCancelRuns` takes precedence over `ignoreChecks` when it matches the workflow name or raw check name for the same run. Use this when a protected long-running workflow has child job names that would otherwise match `ignoreChecks`.
 
