@@ -1,7 +1,9 @@
 import type { GraphqlQuotaWarningBand } from "../config/load.mts";
+import { evaluateWorktreeGraphqlQuotaWarning } from "../state/graphql-quota-warnings.mts";
+import { summarizeApiTelemetry } from "../github/api-telemetry.mts";
 import { GitHubRequestError } from "../github/errors.mts";
 import { isRateLimitMessage } from "../comments/rate-limit.mts";
-import type { GraphqlApiUsage } from "../types.mts";
+import type { GraphqlApiUsage, PollSummaryResult } from "../types.mts";
 
 const GRAPHQL_RETRY_AFTER_DEFAULT_MS = 60_000;
 
@@ -44,4 +46,23 @@ export function pollGraphQlRetryAfterMs(err: unknown): number | null {
     return Math.max(err.rateLimit.resetAt * 1000 - Date.now(), 0);
   }
   return GRAPHQL_RETRY_AFTER_DEFAULT_MS;
+}
+
+export async function aggregateQuotaWarning(
+  result: PollSummaryResult,
+  bands: GraphqlQuotaWarningBand[],
+  intervalSeconds: number,
+): Promise<PollSummaryResult["quotaWarning"]> {
+  const usage = summarizeApiTelemetry()?.graphql;
+  const [owner, repo] = result.repo.split("/");
+  if (!usage || !owner || !repo) return undefined;
+  return evaluateWorktreeGraphqlQuotaWarning(
+    { owner, repo },
+    bands.map((band) => ({
+      ...band,
+      pollIntervalMinutes: Math.max(band.pollIntervalMinutes, intervalSeconds / 60),
+    })),
+    usage,
+    true,
+  );
 }

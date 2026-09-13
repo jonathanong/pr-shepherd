@@ -50,6 +50,7 @@ export interface RawSummaryPr {
   viewerCanUpdate: boolean;
   headRefName: string;
   headRefOid: string;
+  baseRefOid: string;
   baseRefName: string;
   mergeable: string;
   mergeStateStatus: string;

@@ -50,7 +50,7 @@ export function routePollSummary(
     return { action: "wait", reasons: ["already-in-merge-queue"] };
   }
   if (opts.merge && raw.stack) {
-    return { action: "fix_code", reasons: ["authoritative-poll-required"] };
+    return { action: "merge", reasons: ["appears-ready"] };
   }
   if (opts.merge && !raw.stack) return { action: "merge", reasons: ["appears-ready"] };
   return { action: "cancel", reasons: ["appears-ready"] };

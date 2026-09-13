@@ -105,13 +105,13 @@ export interface ConditionalLossyPath {
 export const CONDITIONAL_LOSSY_PATHS: ConditionalLossyPath[] = [
   {
     path: "prs[].title",
-    description: "aggregate Markdown safely HTML-escapes externally supplied PR title text",
+    description: "aggregate Markdown safely escapes externally supplied PR title text",
     isExempt: (container) =>
       typeof container === "object" &&
       container !== null &&
       "title" in container &&
       typeof container.title === "string" &&
-      /[&<>]/.test(container.title),
+      /[&<>\[\]\\]/.test(container.title),
   },
   {
     path: "fix.changesRequestedReviews[].body",

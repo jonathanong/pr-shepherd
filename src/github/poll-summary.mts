@@ -3,6 +3,7 @@ import type {
   PollSummaryCommandOptions,
   PollSummaryItem,
   PollSummarySelection,
+  PollSummaryStackAncestry,
 } from "../types.mts";
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
 import { GitHubRequestError } from "./errors.mts";
@@ -14,6 +15,7 @@ const MAX_EXPLICIT_PRS_PER_QUERY = 50;
 export interface FetchedPollSummary {
   selection: PollSummarySelection;
   prs: PollSummaryItem[];
+  stackAncestry?: PollSummaryStackAncestry[];
 }
 
 export async function fetchPollSummary(
@@ -137,6 +139,23 @@ async function fetchStackSummary(
     );
   }
   const ordered = [...unique.values()].sort((left, right) => left.position - right.position);
+  const stackAncestry: NonNullable<FetchedPollSummary["stackAncestry"]> = [];
+  for (let index = 1; index < ordered.length; index++) {
+    const parent = ordered[index - 1].pullRequest;
+    const child = ordered[index].pullRequest;
+    if (parent.state !== "OPEN" || child.state !== "OPEN") continue;
+    if (child.baseRefName === parent.headRefName && child.baseRefOid === parent.headRefOid) {
+      continue;
+    }
+    stackAncestry.push({
+      parentPr: parent.number,
+      parentHeadRefName: parent.headRefName,
+      parentHeadRefOid: parent.headRefOid,
+      childPr: child.number,
+      childBaseRefName: child.baseRefName,
+      childBaseRefOid: child.baseRefOid,
+    });
+  }
   return {
     selection: { kind: "stack", anchor, stackNumber, stackSize },
     prs: await Promise.all(
@@ -144,6 +163,7 @@ async function fetchStackSummary(
         summarizePollSummaryPr(entry.pullRequest, repo, opts, viewerCanAdminister),
       ),
     ),
+    ...(stackAncestry.length > 0 && { stackAncestry }),
   };
 }
 

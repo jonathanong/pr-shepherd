@@ -2,7 +2,7 @@
 name: pr-shepherd
 description: 'Create or iterate a GitHub pull request with pr-shepherd (MCP or CLI). Use for requests like "make a PR and use pr-shepherd", "iterate PR #123", or "run pr-shepherd until this PR is ready".'
 user-invocable: true
-argument-hint: "[PR number or URL] [--merge]"
+argument-hint: "[PR number or URL | --stack PR] [--merge]"
 allowed-tools: ["MCP", "Bash", "Read", "Grep", "Glob", "Edit", "Write"]
 ---
 
@@ -18,7 +18,7 @@ If the requested PR does not exist yet, review and commit the in-scope changes, 
 
 ## Arguments: $ARGUMENTS
 
-1. Parse optional PR numbers, repository-qualified `owner/repo#N` references, or GitHub PR URLs and an optional `--merge` flag from `$ARGUMENTS`; alternatively parse one `--stack PR` selector. Otherwise let pr-shepherd infer the current branch PR. Reject any remaining argument. Follow the target repository's local `AGENTS.md` and `CLAUDE.md` standards while making changes.
+1. Parse optional PR numbers, repository-qualified `owner/repo#N` references, or GitHub PR URLs and an optional `--merge` flag from `$ARGUMENTS`; alternatively parse one `--stack PR` selector. When the user asks to shepherd a stack and supplies an anchor PR without a literal `--stack`, use that PR as the `--stack` selector. Otherwise let pr-shepherd infer the current branch PR. Reject any remaining argument. Follow the target repository's local `AGENTS.md` and `CLAUDE.md` standards while making changes.
 
 2. For the CLI, convert supplied `owner/repo#N` references to `https://github.com/owner/repo/pull/N`; otherwise pass supplied URLs or bare numbers unchanged, then run `pr-shepherd [PR ...] --until-terminal`, or `pr-shepherd --stack PR --until-terminal` for a stack, omitting `[PR ...]` when none was supplied and appending `--merge` when requested. This command keeps ordinary `[WAIT]` and `[MARK_READY]` ticks inside the same invocation; aggregate selectors return when any row needs work or all rows are terminal. It also returns for a quota warning or an emitted `[MERGE]` command, which is non-terminal and must run before the next invocation. A qualified reference may name a fork or upstream repository: it is the GitHub target, while the current checkout continues to supply local git/config/rules context. Do not run `pr-shepherd iterate`. If the CLI is unavailable and the `iterate` MCP tool is available, first repository-qualify every supplied reference with its GitHub URL or `owner/repo#N`; resolve bare numbers through `gh pr view <number> --json url --jq .url`, and resolve an omitted target with `gh pr view --json url --jq .url`. If that does not produce the required qualified selector, stop and report that MCP cannot safely determine it. Otherwise call `iterate` with `pr`, `prs`, or `stack` as selected, plus `merge: true` when `--merge` was supplied, and print its full result.
 

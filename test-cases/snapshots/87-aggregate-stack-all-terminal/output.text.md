@@ -1,6 +1,6 @@
 # Poll summary [ALL_TERMINAL]
 
-**repo** `owner/repo` · **selection** stack #7 anchored at PR #44 (2 PRs) · **mode** `summary`
+**repo** `owner/repo` · **selection** stack #7 anchored at PR #44 (2 PRs) · **mode** `summary` · **next action** `cancel`
 
 ## Pull requests
 

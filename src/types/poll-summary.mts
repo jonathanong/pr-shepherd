@@ -21,6 +21,16 @@ export interface PollSummaryReview {
   incomplete?: true;
 }
 
+/** The two GitHub refs at an adjacent, still-open stack boundary. */
+export interface PollSummaryStackAncestry {
+  parentPr: number;
+  parentHeadRefName: string;
+  parentHeadRefOid: string;
+  childPr: number;
+  childBaseRefName: string;
+  childBaseRefOid: string;
+}
+
 interface PollSummaryStack {
   number: number;
   size: number;
@@ -63,6 +73,11 @@ export interface PollSummaryResult {
   selection: PollSummarySelection;
   reason: "actionable" | "all_terminal" | "waiting" | "timeout";
   prs: PollSummaryItem[];
+  /** Present only for native-stack boundaries whose recorded refs differ. */
+  stackAncestry?: PollSummaryStackAncestry[];
+  /** The next stack-level transition, which may differ from an individual row's hint. */
+  nextAction?: ShepherdAction;
+  instructions?: string[];
   apiUsage?: ApiUsage;
   quotaWarning?: GraphqlQuotaWarning;
 }

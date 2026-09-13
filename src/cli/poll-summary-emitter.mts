@@ -13,6 +13,17 @@ export function emitPollSummaryResult(
 }
 
 function pollSummaryExitCode(result: PollSummaryResult): number {
+  if (result.nextAction) {
+    const stackExitCode: Partial<Record<ShepherdAction, number>> = {
+      escalate: EXIT.ESCALATE,
+      fix_code: EXIT.FIX_CODE,
+      merge: EXIT.MERGE,
+      mark_ready: EXIT.MARK_READY,
+      wait: EXIT.WAIT,
+      cancel: EXIT.OK,
+    };
+    return stackExitCode[result.nextAction] ?? EXIT.OK;
+  }
   const actions = new Set<ShepherdAction>(result.prs.map((item) => item.action));
   if (actions.has("escalate")) return EXIT.ESCALATE;
   if (actions.has("fix_code")) return EXIT.FIX_CODE;
