@@ -10,7 +10,7 @@
   - checks: 2 passing, 1 failing, 1 superseded, incomplete
   - review: 1 comment, 1 actionable, incomplete
   - reasons: `failing-checks`
-  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/42 --until-terminal`
+  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/42 --until-terminal --quiet-status`
 - [PR #43: Draft follow-up](https://github.com/owner/repo/pull/43) [WAIT]
   - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · flags `draft` · blocking reviewer `in progress`
   - head `follow-up` at `bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb` · base `fix-ci`

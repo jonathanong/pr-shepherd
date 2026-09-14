@@ -44,7 +44,7 @@ poll:
   intervalSeconds: 120 # default delay between WAIT ticks
   timeoutSeconds: 270 # default bounded WAIT timeout; ignored by --until-terminal
   debounceSeconds: 60 # settle window after first FIX_CODE; 0 disables
-  quietStatus: false # unchanged WAIT snapshots remain visible by default
+  quietStatus: true # unchanged WAIT snapshots are hidden by default
 
 watch:
   readyDelayMinutes: 10 # settle window after PR first becomes READY
@@ -101,7 +101,7 @@ actions:
 | `poll.intervalSeconds`               | `60`                                      | Default delay between `WAIT` ticks; overridden by `--interval`                                                                                              |
 | `poll.timeoutSeconds`                | `270`                                     | Default wall-clock cap for bounded `WAIT` polling; overridden by `--timeout` and ignored by `--until-terminal`                                              |
 | `poll.debounceSeconds`               | `60`                                      | Default settle window after the first `FIX_CODE`; overridden by `--debounce`; `0` disables                                                                  |
-| `poll.quietStatus`                   | `false`                                   | Whether unchanged `WAIT` snapshots are hidden by default; overridden by `--quiet-status` or `--no-quiet-status`                                             |
+| `poll.quietStatus`                   | `true`                                    | Whether unchanged `WAIT` snapshots are hidden by default; overridden by `--quiet-status` or `--no-quiet-status`                                             |
 | `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                                                                                   |
 | `watch.graphqlQuotaWarnings`         | `30% → 2x, 20% → 5x, 10% → 10x`           | One-time per-worktree GraphQL quota warnings and the minimum poll intervals the poll dispatcher applies; `[]` disables                                      |
 | `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                                                            |
@@ -217,10 +217,10 @@ poll:
   intervalSeconds: 120
   timeoutSeconds: 270
   debounceSeconds: 60
-  quietStatus: false
+  quietStatus: true
 ```
 
-`intervalSeconds` and `timeoutSeconds` must be positive finite numbers. `debounceSeconds` must be a non-negative finite number; `0` disables the post-`FIX_CODE` settle window. `quietStatus` defaults to `false`, preserving the ordinary status line for every `WAIT` tick. Use `--quiet-status` to hide unchanged snapshots for one invocation or `--no-quiet-status` to override a configured `true` value.
+`intervalSeconds` and `timeoutSeconds` must be positive finite numbers. `debounceSeconds` must be a non-negative finite number; `0` disables the post-`FIX_CODE` settle window. `quietStatus` defaults to `true`, hiding unchanged `WAIT` snapshots. Use `--no-quiet-status` to print every tick or `--quiet-status` to override a configured `false` value.
 
 These settings affect `pr-shepherd [PR]` and `pr-shepherd poll`. Single-tick `iterate` and MCP calls do not poll. `--until-terminal` ignores the bounded timeout, as it does when the timeout comes from `--timeout`.
 

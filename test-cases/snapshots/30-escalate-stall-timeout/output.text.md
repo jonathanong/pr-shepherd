@@ -4,7 +4,7 @@
 **summary** 0 passing, 1 inProgress
 Approvals: None [Not Required]
 Conversations Resolved: Yes [Not Required]
-**activity** 0 commits · 0 review rounds · active: `CI / build`
+**activity** active: `CI / build`
 
 ⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required
 

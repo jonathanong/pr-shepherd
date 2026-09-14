@@ -5,7 +5,7 @@ const DEFAULT_POLL = {
   intervalSeconds: 60,
   timeoutSeconds: 270,
   debounceSeconds: 60,
-  quietStatus: false,
+  quietStatus: true,
 };
 
 describe("loadConfig — poll defaults", () => {

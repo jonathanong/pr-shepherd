@@ -3,6 +3,7 @@ import {
   mockRunIterate,
   makeWaitResult,
   makeCancelResult,
+  makeFixCodeResult,
   registerPollHooks,
 } from "../../test-helpers/commands/poll.test-support.mts";
 import { runPoll } from "./poll.mts";
@@ -38,6 +39,27 @@ describe("runPoll — quiet status", () => {
       expect(written).toContain("2 commits");
       expect(written).toContain("2 review rounds");
       expect(written).not.toContain(".");
+    } finally {
+      stderrSpy.mockRestore();
+    }
+  });
+
+  it("suppresses FIX_CODE debounce progress when quietStatus is true", async () => {
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      mockRunIterate.mockResolvedValue(makeFixCodeResult());
+      const pollPromise = runPoll({
+        prNumber: 42,
+        format: "text",
+        intervalSeconds: 60,
+        timeoutSeconds: 300,
+        debounceSeconds: 60,
+        quietStatus: true,
+      });
+      await vi.advanceTimersByTimeAsync(60_000);
+      await pollPromise;
+      const written = stderrSpy.mock.calls.map((args) => String(args[0])).join("");
+      expect(written).not.toContain("debounce");
     } finally {
       stderrSpy.mockRestore();
     }

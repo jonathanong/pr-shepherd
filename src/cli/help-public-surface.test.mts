@@ -29,6 +29,9 @@ describe("public CLI help surface", () => {
     expect(USAGE["mark-files-as-viewed"]).toContain("marking selected PR files as viewed");
     expect(USAGE.top).toContain("--merge");
     expect(USAGE.top).toContain("15  MERGE");
+    expect(USAGE.top).toContain("Unchanged WAIT snapshots are hidden by default");
+    expect(USAGE.top).toContain("--quiet-status");
+    expect(USAGE.top).toContain("--no-quiet-status");
   });
 
   it("resolves nested help pages without doing command I/O", () => {

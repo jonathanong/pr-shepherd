@@ -127,7 +127,8 @@ The CLI remains useful for shell workflows. Its canonical polling form is:
 ```sh
 pr-shepherd 42                         # poll until non-WAIT or timeout
 pr-shepherd 42 --interval 60s --timeout 270s
-pr-shepherd 42 --quiet-status          # print only changed WAIT status snapshots
+pr-shepherd 42 --quiet-status          # print only changed WAIT status snapshots (the default)
+pr-shepherd 42 --no-quiet-status       # print every WAIT status snapshot
 pr-shepherd 42 --until-terminal        # continue through WAIT/MARK_READY until work or terminal state
 pr-shepherd 42 --debounce 5m           # wait 5m after first FIX_CODE, then return one batched tick
 pr-shepherd 42 --ready-delay 15m
@@ -154,7 +155,7 @@ them with the emitted `gh stack` commands; with `--merge`, finish the contiguous
 layers with the emitted `gh stack merge --squash` command, recheck, then repair the child. API and
 MCP aggregate calls perform one summary tick and leave recurrence to the caller.
 
-Polling defaults can be set under `poll` in `.pr-shepherdrc.yml`: `intervalSeconds`, `timeoutSeconds`, `debounceSeconds`, and `quietStatus`. Explicit flags override configuration, including `--no-quiet-status` when a shared config enables quiet output. Quiet status remains off by default.
+Polling defaults can be set under `poll` in `.pr-shepherdrc.yml`: `intervalSeconds`, `timeoutSeconds`, `debounceSeconds`, and `quietStatus`. Explicit flags override configuration, including `--no-quiet-status` when a shared config enables quiet output. Quiet status is on by default.
 
 ### Apply Review And Journal Changes, Or Select Files
 

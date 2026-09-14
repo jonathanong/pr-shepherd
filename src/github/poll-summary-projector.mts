@@ -98,7 +98,7 @@ function detectBlockingReviewer(raw: RawSummaryPr): boolean {
 }
 
 function buildPollCommand(repo: string, pr: number, opts: PollSummaryCommandOptions): string {
-  const args = [formatPrUrl(repo, pr), "--until-terminal"];
+  const args = [formatPrUrl(repo, pr), "--until-terminal", "--quiet-status"];
   if (opts.merge) args.push("--merge");
   if (opts.readyDelaySeconds !== undefined)
     args.push("--ready-delay", `${opts.readyDelaySeconds}s`);

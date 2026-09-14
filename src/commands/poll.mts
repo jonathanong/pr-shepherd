@@ -106,7 +106,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       if (lastResult.action === "fix_code" && debounceSeconds > 0 && !pastDebounce) {
         debounceUntil ??= Date.now() + debounceMs;
         const remainingMs = Math.max(debounceUntil - Date.now(), 0);
-        writeDebounceProgress(tick, Date.now() - start, remainingMs);
+        writeDebounceProgress(tick, Date.now() - start, remainingMs, quietStatus);
         await sleep(Math.min(intervalMs, remainingMs));
         continue;
       }
@@ -173,7 +173,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       debounceUntil ??= Date.now() + debounceMs;
       const remainingMs = debounceUntil - Date.now();
       if (remainingMs > 0) {
-        writeDebounceProgress(tick, Date.now() - start, remainingMs);
+        writeDebounceProgress(tick, Date.now() - start, remainingMs, quietStatus);
         await sleep(Math.min(intervalMs, remainingMs));
       }
       continue;

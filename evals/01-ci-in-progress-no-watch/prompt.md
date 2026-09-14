@@ -30,7 +30,7 @@ here is what it returned. Take it from there.
 **summary** 0 passing, 1 inProgress
 Approvals: None [Not Required]
 Conversations Resolved: Yes [Not Required]
-**activity** 0 commits · 0 review rounds · active: `CI / build`
+**activity** active: `CI / build`
 
 WAIT: 0 passing, 1 in-progress — active checks: CI / build
 

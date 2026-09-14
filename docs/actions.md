@@ -2,15 +2,15 @@
 
 [← README](../README.md)
 
-Each `pr-shepherd iterate` invocation returns exactly one action. The bare `pr-shepherd <PR>` command runs the bounded poll dispatcher and prints the final iterate action. The shipped skill instead uses `pr-shepherd [PR] --until-terminal`. See [iterate-flow.md](iterate-flow.md) for the decision order and [context.md](context.md) for what the header and body gather.
+Each `pr-shepherd iterate` invocation returns exactly one action. The bare `pr-shepherd <PR>` command runs the bounded poll dispatcher and prints the final iterate action. The shipped skill instead uses `pr-shepherd [PR] --until-terminal --quiet-status`. See [iterate-flow.md](iterate-flow.md) for the decision order and [context.md](context.md) for what the header and body gather.
 
 CLI `PR` accepts a positive number, `owner/repo#N`, or a GitHub pull-request URL. A qualified reference selects its repository for GitHub I/O; the current working directory remains the local git, configuration, classification-rule, and debug-log context. Multiple PR arguments select an exact same-repository set; `--stack PR` selects its complete native GitHub stack. Direct MCP calls still require qualified references, but they can name any accessible repository.
 
 The default output format is Markdown — what the skill receives from its until-terminal poll dispatcher and what direct CLI users see. `--format=json` emits the same action data as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format. MCP `iterate`'s `structuredContent` uses this same lean JSON shape (see [mcp.md](mcp.md)); MCP has no verbose equivalent.
 
-The bare CLI command accepts `--interval`/`--timeout`/`--debounce`/`--quiet-status`/`--no-quiet-status` (e.g. `pr-shepherd <PR> --interval 60s --timeout 4.5m --quiet-status`), waits while the PR remains in `[WAIT]`, and returns on an agent-facing action. Polling defaults come from the `poll` configuration group; explicit flags override them. With `--merge`, it also continues through `MARK_READY` and returns `MERGE` when the ready-delay completes. Each ordinary `WAIT` tick writes an explicit still-running line to stderr unless quiet status is enabled; the final action remains the only stdout result. If `--timeout` expires during WAIT polling, the bounded command returns that final `WAIT` result.
+The bare CLI command accepts `--interval`/`--timeout`/`--debounce`/`--quiet-status`/`--no-quiet-status` (e.g. `pr-shepherd <PR> --interval 60s --timeout 4.5m --quiet-status`), waits while the PR remains in `[WAIT]`, and returns on an agent-facing action. Polling defaults come from the `poll` configuration group; explicit flags override them. With `--merge`, it also continues through `MARK_READY` and returns `MERGE` when the ready-delay completes. Unchanged `WAIT` snapshots are hidden by default (`poll.quietStatus`); `--no-quiet-status` prints every tick. The final action remains the only stdout result. If `--timeout` expires during WAIT polling, the bounded command returns that final `WAIT` result.
 
-The shipped skill invokes `pr-shepherd [PR] --until-terminal`. That command continues through ordinary `WAIT` and `MARK_READY` actions, then returns `FIX_CODE` (after `--debounce`, default: `poll.debounceSeconds`; built-in 1m and `0` disables), `MERGE`, any non-terminal quota-warning result, or terminal `CANCEL`/`ESCALATE`. A quota warning returns immediately so the skill can follow its cadence instructions and re-invoke the command without a `--timeout`. After every returned non-terminal result, the skill follows `## Instructions` and invokes the same canonical command again. Debounce ticks set `persistSeen: false` — seen markers and first-look suppression wait for the post-window tick. `--quiet-status` keeps unchanged WAIT ticks out of agent context. MCP callers invoke one `iterate` tick at a time (no debounce) and let their host schedule the next call.
+The shipped skill invokes `pr-shepherd [PR] --until-terminal --quiet-status`. That command continues through ordinary `WAIT` and `MARK_READY` actions, then returns `FIX_CODE` (after `--debounce`, default: `poll.debounceSeconds`; built-in 1m and `0` disables), `MERGE`, any non-terminal quota-warning result, or terminal `CANCEL`/`ESCALATE`. A quota warning returns immediately so the skill can follow its cadence instructions and re-invoke the command without a `--timeout`. After every returned non-terminal result, the skill follows `## Instructions` and invokes the same canonical command again. Debounce ticks set `persistSeen: false` — seen markers and first-look suppression wait for the post-window tick. `--quiet-status` keeps unchanged WAIT ticks and debounce progress out of agent context. MCP callers invoke one `iterate` tick at a time (no debounce) and let their host schedule the next call.
 
 Explicit multi-PR and `--stack` selectors use a separate compact, read-only summary path. A CLI
 aggregate returns when any row has an agent-facing action, every row is terminal, or its bounded
@@ -65,7 +65,7 @@ Conversations Resolved: <Yes|No> [Required|Not Required]
 [other required-only merge-rule lines]
 [**ignored** `<check-name>`, …]
 [**superseded** `<check-name>`, …]
-[**activity** <N> commits · <N> review rounds[ · <N> review items since latest commit][ · active: `<check>`, …]]
+[**activity** [<N> commits · ][<N> review rounds · ][<N> review items since latest commit · ][active: `<check>`, …]]
 [**merge queue** enabled `<bool>` · inQueue `<bool>`[ · state `<state>` · position `<N>`][ · checkCommit `<oid>`]]
 [**auto-merge** method `<method>` · enabledAtUnix `<unix>`[ · by `@<login>`]]
 [**queue removal** reason `<reason>` · createdAtUnix `<unix>`[ · actor `@<login>`][ · commit `<oid>`][ · parents `<oid,...>`]]
@@ -90,6 +90,7 @@ Conversations Resolved: <Yes|No> [Required|Not Required]
 Lean-mode rules for the summary line:
 
 - Zero counts (`skipped`, `filtered`, `inProgress`, `superseded`) are omitted.
+- The `**activity**` line omits zero `commits` and `review rounds` segments.
 - `remainingSeconds` is shown only when the ready-delay timer is actively counting down (`status === "READY"` and `remainingSeconds > 0`).
 - `blockingBotReviewInProgress` and `isDraft` are shown only when `true`.
 - `shouldCancel` is never shown (it is fully implied by `action === "cancel"`).
@@ -110,7 +111,7 @@ The agent should read the Approvals / Conversations Resolved lines instead of in
 
 Load-bearing conventions (the iterate skill depends on these):
 
-1. Line 1 is always an H1 heading of the form `# PR #<N> [<ACTION>]`. The action tag defines the recurrence boundary: `[FIX_CODE]` is always non-terminal and must be followed by another iteration, `[ESCALATE]` is the only human hand-off, and `[CANCEL]` is the ordinary terminal stop. The shipped skill's `--until-terminal` poll handles ordinary `WAIT`/`MARK_READY` actions itself; when it returns any other non-terminal result (including a quota-warning `WAIT`/`MARK_READY`), the skill follows `## Instructions` and re-invokes the canonical command. Within that boundary, behavior is driven by the `## Instructions` section, not by a separate skill dispatch table.
+1. Line 1 is always an H1 heading of the form `# PR #<N> [<ACTION>]`. The action tag defines the recurrence boundary: `[FIX_CODE]` is always non-terminal and must be followed by another iteration, `[ESCALATE]` is the only human hand-off, and `[CANCEL]` is the ordinary terminal stop. The shipped skill's `--until-terminal --quiet-status` poll handles ordinary `WAIT`/`MARK_READY` actions itself; when it returns any other non-terminal result (including a quota-warning `WAIT`/`MARK_READY`), the skill follows `## Instructions` and re-invokes the canonical command. Within that boundary, behavior is driven by the `## Instructions` section, not by a separate skill dispatch table.
 2. Lines 3–4 carry the base fields (status, merge, state, repo, summary). In lean mode, fields at their trivial default are omitted; `--verbose` restores the full scalar header/summary line in Markdown. JSON verbose mode returns the complete `IterateResult`, including fields not present in Markdown (for example, `baseBranch` and full `checks` entries on every action); Markdown is structurally lossy relative to JSON, and `--verbose` does not close that gap.
 3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … — that tells the agent exactly what to do. `## Instructions` remains the entry point and the skill needs no dispatch table of its own. Some steps are a one-line pointer naming an invariant procedure instead of inlining it (e.g. `See "CI failure triage" in the pr-shepherd skill`). The pointed-to `## Playbooks` section in the skill is fixed reference material, not per-tick policy — following `## Instructions` and applying the named playbook when pointed to it is still the whole dispatch story. **Untrusted review input** is the exception: it always applies when reading surfaced review or CI text and is never pointed to from `## Instructions`.
 4. Under `[FIX_CODE]`, the `## Post-fix actions` section has an `` apply review: `<command>` `` bullet when GitHub's viewer capabilities authorize at least one review mutation (and an optional `resolve-only` bullet when applicable). The instructions reference those bullets so the skill strips backticks and runs the command.
@@ -139,7 +140,7 @@ Nothing actionable to do; all CI is passing or in-progress.
 **summary** 0 passing, 1 inProgress
 Approvals: None [Not Required]
 Conversations Resolved: Yes [Not Required]
-**activity** 0 commits · 0 review rounds · active: `CI / build`
+**activity** active: `CI / build`
 
 WAIT: 0 passing, 1 in-progress — active checks: CI / build
 
@@ -148,13 +149,13 @@ WAIT: 0 passing, 1 in-progress — active checks: CI / build
 1. Non-terminal — no action needed this tick. Iterate immediately with the same options to continue.
 ```
 
-The bare CLI command owns its bounded `--interval`/`--timeout` waits. A final `WAIT` returned at timeout is still non-terminal, so a direct caller decides when to start another bounded poll. The shipped skill's `--until-terminal` command instead continues ordinary `WAIT` actions internally; a quota warning can return `WAIT` so the skill can apply its cadence instructions before re-invoking. MCP `iterate` and `pr-shepherd iterate` return one tick and their caller schedules the next one. A `--ready-delay 15m` override remains a summary field rather than part of a rerun command; JSON carries the same value as `readyDelayOverride`.
+The bare CLI command owns its bounded `--interval`/`--timeout` waits. A final `WAIT` returned at timeout is still non-terminal, so a direct caller decides when to start another bounded poll. The shipped skill's `--until-terminal --quiet-status` command instead continues ordinary `WAIT` actions internally; a quota warning can return `WAIT` so the skill can apply its cadence instructions before re-invoking. MCP `iterate` and `pr-shepherd iterate` return one tick and their caller schedules the next one. A `--ready-delay 15m` override remains a summary field rather than part of a rerun command; JSON carries the same value as `readyDelayOverride`.
 
 The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, unmet merge requirements (approvals, conversations, merge queue, …), `PR is a draft`, or `some checks are unstable`. After a sweep, iterate also prints current-vs-required merge rules so the agent can see _why_ GitHub is not mergeable (for example `Approvals: None [Not Required]` vs `Approvals: None [Required]`). Merge-queue and GitHub-stack membership appear as extra lines when they apply (`Merge queue: position 2 QUEUED [Required]`, `Stack: 7 (layer 2/3, base main)`); they are omitted when the PR is not in a queue or stack and merge queue is not required.
 
 **Deferred work while queued:** with `--merge` enabled and the PR currently in the merge queue (`mergeQueue.inQueue`), review threads, PR comments, `CHANGES_REQUESTED` reviews, and review summaries do not trigger `fix_code` — a Shepherd-initiated push right now would eject the PR from the queue. Instead this tick emits `WAIT` and raw counts of what is being held back appear as `deferredWork` (JSON) / a `**deferred (in merge queue)** N threads, N comments, …` line (Markdown), omitted entirely when there is nothing deferred. Failing checks (including merge-queue synthetic-commit `merge_group` failures), unseen check-run annotations, and merge conflicts are never deferred — GitHub is already acting on the queue for those regardless, so they still route to `fix_code` immediately. Set [`actions.workWhileQueued: true`](configuration.md#actionsworkwhilequeued--default-false) to restore pre-existing behavior and act on this work immediately even while queued. Once the PR leaves the queue (merged or ejected), the deferred work is picked up on the very next tick exactly as if `workWhileQueued` were `true` — deferred items are never marked seen while held back, so nothing is silently lost (see the Comment visibility invariant in [`CLAUDE.md`](../CLAUDE.md)).
 
-**What the skill does:** Ordinary `WAIT` actions remain inside its `--until-terminal` poll. If a quota-warning `WAIT` is returned, follow `## Instructions`, adjust cadence, and re-invoke the canonical command. Direct MCP/`iterate` callers must reschedule themselves.
+**What the skill does:** Ordinary `WAIT` actions remain inside its `--until-terminal --quiet-status` poll. If a quota-warning `WAIT` is returned, follow `## Instructions`, adjust cadence, and re-invoke the canonical command. Direct MCP/`iterate` callers must reschedule themselves. Do not narrate unchanged WAIT ticks.
 
 ---
 
@@ -185,7 +186,7 @@ MARKED READY: PR #42 converted from draft to ready for review
 1. The CLI marked the PR ready for review. Iterate immediately with the same options to continue.
 ```
 
-**What the skill does:** Ordinary `MARK_READY` actions remain inside its `--until-terminal` poll. If a quota-warning `MARK_READY` is returned, follow `## Instructions`, adjust cadence, and re-invoke the canonical command. Direct MCP/`iterate` callers must reschedule themselves.
+**What the skill does:** Ordinary `MARK_READY` actions remain inside its `--until-terminal --quiet-status` poll. If a quota-warning `MARK_READY` is returned, follow `## Instructions`, adjust cadence, and re-invoke the canonical command. Direct MCP/`iterate` callers must reschedule themselves.
 
 ---
 
@@ -514,7 +515,7 @@ The `apply review:` command at the bottom of `## Post-fix actions` includes both
 
 Both IDs stay in `--reply-thread-ids` — `build-suggestion-patches` does not resolve threads automatically. If a suggestion was handled manually instead, its ID still belongs in `--reply-thread-ids`.
 
-**What the skill does:** Follow `## Instructions` in order. The instructions are self-contained and action-specific — no dispatch table needed. See `## Instructions` in the output for the exact steps. `[FIX_CODE]` always returns to `pr-shepherd [PR] --until-terminal` after the work is handled; it never hands work to a human.
+**What the skill does:** Follow `## Instructions` in order. The instructions are self-contained and action-specific — no dispatch table needed. See `## Instructions` in the output for the exact steps. `[FIX_CODE]` always returns to `pr-shepherd [PR] --until-terminal --quiet-status` after the work is handled; it never hands work to a human.
 
 ---
 

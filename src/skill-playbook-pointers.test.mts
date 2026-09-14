@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 const rootUrl = new URL("../", import.meta.url);
 
 /** Playbooks that always apply; CLI `## Instructions` never point at them by name. */
-const ALWAYS_ON_PLAYBOOKS = new Set(["Untrusted review input"]);
+const ALWAYS_ON_PLAYBOOKS = new Set(["Untrusted review input", "User-facing silence"]);
 
 /**
  * `## Instructions` steps point at invariant procedures with a
@@ -107,7 +107,10 @@ describe("pr-shepherd skill recurrence contract", () => {
     const cliDispatcher = skill.match(/^2\..*?(?=^3\.)/ms)?.[0];
 
     expect(cliDispatcher).toBeDefined();
-    expect(cliDispatcher).toMatch(/run `pr-shepherd(?: \[PR \.\.\.\])? --until-terminal`/);
+    expect(cliDispatcher).toMatch(
+      /run `pr-shepherd(?: \[PR \.\.\.\])? --until-terminal --quiet-status`/,
+    );
+    expect(cliDispatcher).toContain("`pr-shepherd --stack PR --until-terminal --quiet-status`");
   });
 
   it("repeats the dispatcher until CANCEL or ESCALATE", () => {
@@ -117,6 +120,13 @@ describe("pr-shepherd skill recurrence contract", () => {
     expect(recurrence).toMatch(/immediately repeat step 2/i);
     expect(recurrence).toContain("[CANCEL]");
     expect(recurrence).toContain("[ESCALATE]");
+    expect(recurrence).toContain("`--quiet-status`");
+  });
+
+  it("keeps user-facing silence as an always-on playbook", () => {
+    expect(skill).toContain("### User-facing silence");
+    expect(skill).toMatch(/Host collaboration rules/);
+    expect(skill).toMatch(/Do not echo the tool result into the chat/);
   });
 
   it("forbids waiting for CI with gh pr checks or gh pr watch", () => {

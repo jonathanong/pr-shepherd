@@ -173,7 +173,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
       }
     }
     const statusSignature = summaryStatusSignature(last);
-    if (!opts.quietStatus || hasFix || statusSignature !== lastStatusSignature) {
+    if (!opts.quietStatus || statusSignature !== lastStatusSignature) {
       process.stderr.write(
         `[aggregate poll tick ${tick} / +${Math.round(elapsedMs / 1000)}s] ${last.prs
           .map((item) => `#${item.pr} ${item.action.toUpperCase()}`)

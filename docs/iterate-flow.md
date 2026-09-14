@@ -8,7 +8,7 @@
 
 ```mermaid
 flowchart TD
-  U(["pr-shepherd skill"]) --> POLL["pr-shepherd [PR]<br/>--until-terminal"]
+  U(["pr-shepherd skill"]) --> POLL["pr-shepherd [PR]<br/>--until-terminal --quiet-status"]
 
   POLL --> S1["1. runCheck<br/>batch GraphQL<br/>classify + deriveMergeStatus"]
 
@@ -47,7 +47,7 @@ flowchart TD
   RERUN --> POLL
 ```
 
-The shipped skill runs `pr-shepherd [PR] --until-terminal`, not `pr-shepherd iterate`. That until-terminal poll continues through ordinary `WAIT` and `MARK_READY` actions; it returns agent-facing `FIX_CODE` (after its `--debounce` settle window), `MERGE`, and any non-terminal quota-warning result, plus terminal `CANCEL` or `ESCALATE`. After following a returned result's `## Instructions`, the skill re-invokes the same command unless it received `CANCEL` or `ESCALATE`. The bare `pr-shepherd [PR]` command remains bounded for direct CLI users. MCP `iterate` has no debounce and returns one tick; its caller owns recurrence.
+The shipped skill runs `pr-shepherd [PR] --until-terminal --quiet-status`, not `pr-shepherd iterate`. That until-terminal poll continues through ordinary `WAIT` and `MARK_READY` actions; it returns agent-facing `FIX_CODE` (after its `--debounce` settle window), `MERGE`, and any non-terminal quota-warning result, plus terminal `CANCEL` or `ESCALATE`. After following a returned result's `## Instructions`, the skill re-invokes the same command unless it received `CANCEL` or `ESCALATE`. The bare `pr-shepherd [PR]` command remains bounded for direct CLI users. MCP `iterate` has no debounce and returns one tick; its caller owns recurrence.
 
 ## Steps
 

@@ -31,7 +31,9 @@ describe("main — positional poll output", () => {
     await vi.advanceTimersByTimeAsync(0);
 
     expect(getStdout()).toBe("");
-    expect(getStderr()).toContain("[poll tick 1 / +0s] WAIT — still running; next tick in 30s");
+    expect(getStderr()).toContain(
+      "[poll tick 1 / +0s] WAIT IN_PROGRESS/BLOCKED/NO_REVIEW_DECISION · 1 commits — sleeping 30s",
+    );
 
     await vi.advanceTimersByTimeAsync(30_000);
     await promise;
@@ -65,7 +67,9 @@ describe("main — positional poll output", () => {
     expect(output.action).toBe("cancel");
     expect(output.instructions).toHaveLength(1);
     expect(getStdout()).not.toContain("still running");
-    expect(getStderr()).toContain("WAIT — still running; next tick in 30s");
+    expect(getStderr()).toContain(
+      "WAIT IN_PROGRESS/BLOCKED/NO_REVIEW_DECISION · 1 commits — sleeping 30s",
+    );
     expect(process.exitCode).toBe(EXIT.OK);
   });
 

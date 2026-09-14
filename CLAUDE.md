@@ -177,8 +177,7 @@ Skills (`plugins/pr-shepherd/skills/*/SKILL.md`) and `/loop` prompts should be t
 1. Parse arguments.
 2. Short-circuit trivial cases (e.g. merged PR).
 3. Invoke the CLI.
-4. Print the full output.
-5. Follow the output's own `## Instructions` section exactly.
+4. Follow the output's own `## Instructions` section exactly. Do not echo the tool result into the chat unless the user asked or a step requires a user-facing question.
 
 The canonical example is `plugins/pr-shepherd/skills/pr-shepherd/SKILL.md` — pure dispatcher for its numbered steps, plus an appended `## Playbooks` section (see the invariant-procedure exception below). The dispatch logic itself carries no policy.
 

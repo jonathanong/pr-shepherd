@@ -24,7 +24,7 @@
   - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · ready delay `300s` · stack `514` position `5/5` base `main`
   - head `codex/github-ingress` at `17378b0a7d22a11dcf96ace7a3e56b8da64ea74f` · base `codex/github-ingress-foundation`
   - reasons: `ready-delay`
-  - pollCommand: `pr-shepherd https://github.com/jonathanong/auto-harness/pull/518 --until-terminal --merge`
+  - pollCommand: `pr-shepherd https://github.com/jonathanong/auto-harness/pull/518 --until-terminal --quiet-status --merge`
 
 ## Stack ancestry
 

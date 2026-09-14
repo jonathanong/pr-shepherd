@@ -5,7 +5,7 @@
 Approvals: None [Not Required]
 Conversations Resolved: Yes [Not Required]
 **superseded** `CI / build`
-**activity** 0 commits · 0 review rounds · active: `CI / tests`
+**activity** active: `CI / tests`
 
 WAIT: 0 passing, 1 in-progress — active checks: CI / tests
 

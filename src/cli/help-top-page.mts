@@ -49,7 +49,7 @@ Polling flags:
   --interval <duration>          Delay between WAIT ticks. Bare number = seconds. Default: poll.intervalSeconds (built-in 60s).
   --timeout <duration>           Poll wall-clock cap for WAIT ticks. Bare number = seconds. Default: poll.timeoutSeconds (built-in 4.5m).
   --debounce <duration>          Settle window after first FIX_CODE before returning. Bare number = seconds. Default: poll.debounceSeconds (built-in 60s). 0 disables.
-  --quiet-status                 Print only changed WAIT snapshots. Overrides poll.quietStatus.
+  --quiet-status                 Print only changed WAIT snapshots. Default; overrides poll.quietStatus.
   --no-quiet-status              Print every WAIT snapshot. Overrides poll.quietStatus.
   --until-terminal               Continue through WAIT/MARK_READY until FIX_CODE/CANCEL/ESCALATE.
 
@@ -71,5 +71,6 @@ Exit codes: 0 done, 10-19 PR state, 64-78 shepherd failed (sysexits.h).
 See docs/exit-codes.md for the full sysexits.h error-code table.
 
 Duration examples: 30s, 4.5m, 1h. A bare number uses each flag's default unit (see above); decimals are allowed with an explicit unit (4.5m).
+Unchanged WAIT snapshots are hidden by default; --no-quiet-status prints every tick.
 
 Run 'pr-shepherd <command> --help' for command-specific details.`;

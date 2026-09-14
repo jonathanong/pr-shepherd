@@ -8,15 +8,9 @@ export function formatActivityLine(result: IterateResult): string | null {
     reviewItemsSinceLatestCommit: [],
   };
   const hasActiveChecks = (result.inProgressChecks?.length ?? 0) > 0;
-  if (
-    activity.commitCount === 0 &&
-    activity.reviewRoundCount === 0 &&
-    activity.reviewItemsSinceLatestCommit.length === 0 &&
-    !hasActiveChecks
-  ) {
-    return null;
-  }
-  const parts = [`${activity.commitCount} commits`, `${activity.reviewRoundCount} review rounds`];
+  const parts: string[] = [];
+  if (activity.commitCount > 0) parts.push(`${activity.commitCount} commits`);
+  if (activity.reviewRoundCount > 0) parts.push(`${activity.reviewRoundCount} review rounds`);
   if (activity.reviewItemsSinceLatestCommit.length > 0) {
     parts.push(`${activity.reviewItemsSinceLatestCommit.length} review items since latest commit`);
   }
@@ -28,5 +22,6 @@ export function formatActivityLine(result: IterateResult): string | null {
         .join(", ")}`,
     );
   }
+  if (parts.length === 0) return null;
   return `**activity** ${parts.join(" · ")}`;
 }

@@ -37,7 +37,7 @@ function row(pr: number, action: PollSummaryItem["action"]): PollSummaryItem {
     baseRefName: "main",
     checks: { passing: 1, failing: 0, inProgress: 0, skipped: 0, filtered: 0 },
     review: { comments: 0, reviews: 0, threads: 0, actionable: 0 },
-    pollCommand: `npx pr-shepherd https://github.com/acme/widgets/pull/${pr} --until-terminal`,
+    pollCommand: `npx pr-shepherd https://github.com/acme/widgets/pull/${pr} --until-terminal --quiet-status`,
   };
 }
 

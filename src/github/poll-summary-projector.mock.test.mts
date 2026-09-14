@@ -158,7 +158,7 @@ describe("summarizePollSummaryPr", () => {
       review: { comments: 1, reviews: 3, threads: 2, actionable: 5, incomplete: true },
     });
     expect(item.pollCommand).toContain(
-      "pr-shepherd https://github.com/acme/widgets/pull/42 --until-terminal --merge --ready-delay 5s --stall-timeout 10s --no-auto-mark-ready",
+      "pr-shepherd https://github.com/acme/widgets/pull/42 --until-terminal --quiet-status --merge --ready-delay 5s --stall-timeout 10s --no-auto-mark-ready",
     );
   });
 

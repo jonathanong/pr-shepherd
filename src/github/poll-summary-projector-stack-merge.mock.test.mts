@@ -42,5 +42,5 @@ it("keeps the authoritative one-PR command for a stack member in an explicit mer
   );
   expect(item.action).toBe("fix_code");
   expect(item.reasons).toContain("authoritative-poll-required");
-  expect(item.pollCommand).toContain("--until-terminal --merge");
+  expect(item.pollCommand).toContain("--until-terminal --quiet-status --merge");
 });

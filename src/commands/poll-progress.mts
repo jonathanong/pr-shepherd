@@ -70,7 +70,13 @@ export function writeWaitProgress(opts: {
   return signature;
 }
 
-export function writeDebounceProgress(tick: number, elapsedMs: number, remainingMs: number): void {
+export function writeDebounceProgress(
+  tick: number,
+  elapsedMs: number,
+  remainingMs: number,
+  quietStatus = false,
+): void {
+  if (quietStatus) return;
   const elapsedSeconds = Math.round(elapsedMs / 1000);
   const remainingSeconds = Math.round(remainingMs / 1000);
   process.stderr.write(

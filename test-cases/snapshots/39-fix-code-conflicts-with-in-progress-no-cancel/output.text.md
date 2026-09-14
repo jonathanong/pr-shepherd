@@ -4,7 +4,7 @@
 **summary** 0 passing, 1 inProgress · **branch** conflicts with PR base `main`
 Approvals: None [Not Required]
 Conversations Resolved: Yes [Not Required]
-**activity** 0 commits · 0 review rounds · active: `CI / tests`
+**activity** active: `CI / tests`
 
 ## Post-fix actions
 
