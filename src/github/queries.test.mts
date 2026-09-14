@@ -65,6 +65,10 @@ describe("queries — GQL constants load at import time", () => {
     expect(POLL_SUMMARY_FRAGMENT).toContain("mergeQueueEntry");
     expect(POLL_SUMMARY_FRAGMENT).toContain("headCommit");
     expect(POLL_SUMMARY_FRAGMENT).toContain("name");
+    expect(POLL_SUMMARY_FRAGMENT).toContain("title");
+    expect(POLL_SUMMARY_FRAGMENT).toContain("summary");
+    expect(POLL_SUMMARY_FRAGMENT).toContain("description");
+    expect(POLL_SUMMARY_FRAGMENT).toContain("targetUrl");
   });
 
   it("keeps merge-queue metadata in BatchPr without nested queue check trees", () => {

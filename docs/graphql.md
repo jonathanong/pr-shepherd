@@ -103,8 +103,9 @@ Static documents live in [`src/github/gql/`](../src/github/gql/) and are loaded 
 | `GetPrHeadSha`         | `get-pr-head-sha.gql`                         | `--require-sha` poll (`resolve.shaPoll`, default 2s × 10)                                         | yes                      |
 | `PrNumberByBranch`     | `pr-number-by-branch.gql`                     | No PR number passed (avoid this — pass the number)                                                | yes                      |
 
-The poll-summary documents include raw workflow/run identities so compact check counts use the same
-ignored, protected-run, event, and superseded-run classifier as full iteration. They also include
+The poll-summary documents include raw workflow/run identities and check summaries so compact check
+counts use the same ignored (including built-in CodSpeed / Codecov missing-base-report), protected-run,
+event, and superseded-run classifier as full iteration. They also include
 review provenance, latest decisive review state, reviewer requests, and repository administration
 capability for classification-rule, bot-review, thread-root, and draft blocking-review routing.
 Bounded connection overflow is reported as incomplete context; a null status-check rollup is a valid

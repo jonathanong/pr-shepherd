@@ -27,6 +27,8 @@ type RawCheckContext =
       status: string;
       conclusion: string | null;
       detailsUrl?: string;
+      title?: string | null;
+      summary?: string | null;
       checkSuite: {
         workflowRun: {
           databaseId?: string | number;
@@ -35,7 +37,13 @@ type RawCheckContext =
         } | null;
       } | null;
     }
-  | { __typename: "StatusContext"; context: string; state: string };
+  | {
+      __typename: "StatusContext";
+      context: string;
+      state: string;
+      description?: string | null;
+      targetUrl?: string | null;
+    };
 
 interface RawCheckRollup {
   contexts: SummaryConnection<RawCheckContext>;

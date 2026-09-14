@@ -91,7 +91,7 @@ actions:
 | Key                                  | Default                                   | Purpose                                                                                                                                                     |
 | ------------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `botUsernames`                       | Known code-review bot logins              | GitHub logins treated as bots for repeat unresolved-thread visibility even when GitHub reports them as `User` or `Unknown`                                  |
-| `ignoreChecks`                       | `[]`                                      | Case-insensitive globs that exclude check/status contexts from CI decisions and details while retaining their names in the ignored rollup                   |
+| `ignoreChecks`                       | `[]`                                      | Case-insensitive globs that exclude check/status contexts from CI decisions; combined with built-in CodSpeed and Codecov missing-base-report ignores        |
 | `iterate.fixAttemptsPerThread`       | `3`                                       | Caller-visible `FIX_CODE` deliveries allowed for one unchanged unresolved thread body before the following tick escalates                                   |
 | `iterate.stallTimeoutMinutes`        | `60`                                      | Minutes the loop may repeat the same action without progress, or CI may stay pending without starting, before `escalate` with `stall-timeout`; `0` disables |
 | `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination).                                                                      |
@@ -126,6 +126,13 @@ Matching is case-insensitive and treats a trailing `[bot]` suffix as equivalent 
 ## `ignoreChecks`
 
 Top-level list of case-insensitive glob patterns for GitHub check/status context names Shepherd should ignore for CI decisions. Ignored checks do not affect readiness, detailed check summaries, triage, or stall detection. Their names remain in the `ignoredNames` JSON field and the `**ignored**` text rollup.
+
+Shepherd also ignores, without configuration:
+
+- **CodSpeed** — any check whose name, workflow name, details URL, or summary contains `codspeed` (case-insensitive). Performance reports from the CodSpeed GitHub app are not PR-code defects for Shepherd to fix.
+- **Codecov missing base report** — a Codecov check whose title, summary, or description is `No coverage information found on base report`. That is a missing base upload, not a coverage regression. Other Codecov failures (patch/project coverage targets) still block.
+
+`actions.neverCancelRuns` can keep a matching Actions run visible despite these built-in rules, the same way it does for `ignoreChecks`.
 
 For GitHub Actions check runs, `actions.neverCancelRuns` takes precedence over `ignoreChecks` when it matches the workflow name or raw check name for the same run. Use this when a protected long-running workflow has child job names that would otherwise match `ignoreChecks`.
 

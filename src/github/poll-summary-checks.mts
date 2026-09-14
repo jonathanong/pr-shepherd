@@ -1,5 +1,6 @@
 import { classifyChecks } from "../checks/classify.mts";
 import type { CheckRun, PollSummaryChecks } from "../types.mts";
+import { extractCheckRunSummary, mapStatusContextState } from "./batch-parser-helpers.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 
 export function summarizePollSummaryChecks(raw: RawSummaryPr): PollSummaryChecks {
@@ -10,26 +11,22 @@ export function summarizePollSummaryChecks(raw: RawSummaryPr): PollSummaryChecks
   const checks = rollups.flatMap((rollup, rollupIndex) =>
     rollup.contexts.nodes.map((context): CheckRun => {
       if (context.__typename === "StatusContext") {
+        const { status, conclusion } = mapStatusContextState(context.state);
+        const summary = context.description?.trim() || undefined;
         return {
           name: context.context,
-          status:
-            context.state === "PENDING" || context.state === "EXPECTED"
-              ? "IN_PROGRESS"
-              : "COMPLETED",
-          conclusion:
-            context.state === "SUCCESS"
-              ? "SUCCESS"
-              : context.state === "FAILURE" || context.state === "ERROR"
-                ? "FAILURE"
-                : null,
+          status,
+          conclusion,
           source: "status_context",
-          detailsUrl: "",
+          detailsUrl: context.targetUrl ?? "",
           event: null,
           runId: null,
           ...(rollupIndex === 1 && { scope: "merge_group" as const }),
+          ...(summary !== undefined && { summary }),
         };
       }
       const run = context.checkSuite?.workflowRun;
+      const summary = extractCheckRunSummary(context.title, context.summary);
       return {
         id: context.id,
         name: context.name,
@@ -44,6 +41,7 @@ export function summarizePollSummaryChecks(raw: RawSummaryPr): PollSummaryChecks
           workflowId: String(run.workflow.databaseId),
         }),
         ...(rollupIndex === 1 && { scope: "merge_group" as const }),
+        ...(summary !== undefined && { summary }),
       };
     }),
   );

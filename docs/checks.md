@@ -32,12 +32,12 @@ Each check run is assigned a `CheckCategory`:
 | `superseded`    | `conclusion === 'CANCELLED'` and a newer run of the same GitHub Actions workflow exists on the same commit (concurrency-group eviction) — see below                |
 | `in_progress`   | `status` in `{IN_PROGRESS, QUEUED, WAITING, PENDING, REQUESTED}`                                                                                                   |
 | `skipped`       | `conclusion` in `{SKIPPED, NEUTRAL}` — reported but do not block readiness                                                                                         |
-| `ignored`       | Matches `ignoreChecks`, unless the same Actions run is protected by `actions.neverCancelRuns`                                                                      |
+| `ignored`       | Matches `ignoreChecks` or a built-in ignore rule (CodSpeed; Codecov missing-base-report), unless the same Actions run is protected by `actions.neverCancelRuns`    |
 | `filtered`      | Triggered by a non-PR event (see event filter below)                                                                                                               |
 
 ### Ignore/protection precedence
 
-`ignoreChecks` matches the raw check name (`CheckRun.name` or `StatusContext.context`) and removes matching checks from the CI verdict. For backward compatibility, the legacy cancellation-named `actions.neverCancelRuns` key takes precedence when it matches the workflow name or check name for that run. It only keeps matching checks visible and blocking readiness; Shepherd never cancels workflow runs.
+`ignoreChecks` matches the raw check name (`CheckRun.name` or `StatusContext.context`) and removes matching checks from the CI verdict. Built-in rules also ignore CodSpeed checks (name, workflow name, details URL, or summary containing `codspeed`) and Codecov conclusions whose title/summary/description is `No coverage information found on base report`. Those Codecov misses are a missing base upload, not a coverage regression on the PR; other Codecov failures still block. For backward compatibility, the legacy cancellation-named `actions.neverCancelRuns` key takes precedence when it matches the workflow name or check name for that run. It only keeps matching checks visible and blocking readiness; Shepherd never cancels workflow runs.
 
 `actions.neverCancelRuns` does not bypass the event filter. A protected workflow triggered by `workflow_dispatch`, `push`, or another non-PR event still needs that event listed in `checks.ciTriggerEvents` if it should count toward readiness.
 
@@ -76,7 +76,7 @@ Returns:
 - `anyInProgress` — true if any non-filtered, non-superseded check is in the `in_progress` category
 - `allPassed` — true if no failing and no in-progress relevant checks
 - `filteredNames` — names of filtered checks
-- `ignoredNames` — names of checks suppressed by `ignoreChecks`
+- `ignoredNames` — names of checks suppressed by `ignoreChecks` or built-in ignore rules
 - `supersededNames` — names of `CANCELLED` checks reclassified as `superseded`
 
 ## Stage 2: Triage (`checks/triage.mts`)
@@ -106,7 +106,7 @@ Checks with `conclusion === "CANCELLED"` fetch job metadata only to recover `run
 | `ignored`                | Ignored checks that still carry unseen annotations; omitted when empty                                                        |
 | `filteredNames`          | Names of filtered checks (for reporter display)                                                                               |
 | `blockedByFilteredCheck` | True when BLOCKED state is caused by a filtered check                                                                         |
-| `ignoredNames`           | Names of checks suppressed by `ignoreChecks`; omitted when empty                                                              |
+| `ignoredNames`           | Names of checks suppressed by `ignoreChecks` or built-in ignore rules; omitted when empty                                     |
 | `supersededNames`        | Names of `CANCELLED` checks reclassified as `superseded`; omitted when empty                                                  |
 
 Pending CI checks also carry raw timing when GitHub exposes it:

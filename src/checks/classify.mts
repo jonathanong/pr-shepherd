@@ -7,7 +7,10 @@
  *      to PR readiness.
  *   2. Drop checks with `conclusion == SKIPPED` or `conclusion == NEUTRAL` from the
  *      pass/fail tally. Report them as "skipped" for transparency but don't block on them.
- *   3. Reclassify `CANCELLED` checks as "superseded" (non-blocking) when a newer run of
+ *   3. Ignore CodSpeed checks and Codecov "No coverage information found on base report"
+ *      conclusions (plus any `ignoreChecks` globs), unless `actions.neverCancelRuns`
+ *      protects that Actions run.
+ *   4. Reclassify `CANCELLED` checks as "superseded" (non-blocking) when a newer run of
  *      the same workflow exists on the same commit — this is GitHub's concurrency-group
  *      eviction behavior, not a real failure. GitHub branch protection itself resolves
  *      required status checks by latest-run-per-name and merges past these; mirroring
@@ -16,6 +19,7 @@
 
 import type { CheckRun, ClassifiedCheck } from "../types.mts";
 import { loadConfig } from "../config/load.mts";
+import { isBuiltinIgnoredCheck } from "./builtin-ignore.mts";
 import { buildSupersededIndices } from "./superseded.mts";
 import picomatch from "picomatch";
 
@@ -39,7 +43,7 @@ export function classifyChecks(
   const protectedRunIds = buildProtectedRunIds(checks, isProtected);
   const supersededIndices = buildSupersededIndices(checks);
   return checks.map((c, index) => {
-    if (isIgnored(c.name) && !isProtectedCheck(c, protectedRunIds)) {
+    if ((isIgnored(c.name) || isBuiltinIgnoredCheck(c)) && !isProtectedCheck(c, protectedRunIds)) {
       return { ...c, category: "ignored" as const };
     }
     const classified = classify(c, relevantEvents);
@@ -124,7 +128,7 @@ export interface CiVerdict {
   anyFailing: boolean;
   /** Names of checks that were filtered out (triggered by non-PR events). */
   filteredNames: string[];
-  /** Names of checks suppressed by the user's ignoreChecks config. */
+  /** Names of checks suppressed by ignoreChecks or built-in ignore rules. */
   ignoredNames: string[];
   /** Names of CANCELLED checks superseded by a newer run of the same workflow (concurrency-group eviction). */
   supersededNames: string[];

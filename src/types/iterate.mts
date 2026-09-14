@@ -60,7 +60,7 @@ export interface IterateResultBase {
    */
   checks: RelevantCheck[];
   inProgressChecks?: ActiveCheck[];
-  ignoredNames?: string[]; // Suppressed by ignoreChecks config; omitted when empty.
+  ignoredNames?: string[]; // Suppressed by ignoreChecks or built-in ignore rules; omitted when empty.
   supersededNames?: string[]; // CANCELLED, superseded by a newer same-workflow run; omitted when empty.
   activity?: PrActivitySummary;
   mergeQueue?: import("./merge-queue.mts").MergeQueueReport;

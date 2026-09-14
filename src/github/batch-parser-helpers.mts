@@ -67,7 +67,7 @@ export function mapCheckRunNode(
   };
 }
 
-function extractCheckRunSummary(
+export function extractCheckRunSummary(
   title: string | null | undefined,
   summary: string | null | undefined,
 ): string | undefined {
