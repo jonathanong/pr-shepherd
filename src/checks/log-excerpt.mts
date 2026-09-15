@@ -26,7 +26,10 @@ export function buildLogExcerpt(raw: string): string | undefined {
 
   const aggregateExcerpt = buildAggregateJobResultsExcerpt(lines);
   if (aggregateExcerpt !== undefined) return aggregateExcerpt;
-  if (isolated.isolated) return truncateTail(lines.join("\n"));
+  if (isolated.isolated) {
+    const errorIndex = findLogExcerptAnchor(lines);
+    return truncateTail(lines.join("\n"), errorIndex === -1 ? undefined : lines[errorIndex]);
+  }
   return boundFallbackExcerpt(lines);
 }
 
@@ -164,16 +167,17 @@ function truncateAnchoredExcerpt(lines: string[], anchorIndex: number): string {
   return truncateLogExcerpt(`${TRUNCATED_MARK}\n${lines.slice(anchorIndex).join("\n")}`);
 }
 
-function truncateTail(text: string): string {
+function truncateTail(text: string, keep?: string): string {
   if (text.length <= LOG_EXCERPT_MAX_CHARS) return text;
-  const budget = LOG_EXCERPT_MAX_CHARS - `${TRUNCATED_MARK}\n`.length;
-  const slice = text.slice(-budget);
+  const head = `${TRUNCATED_MARK}\n`;
+  const slice = text.slice(-(LOG_EXCERPT_MAX_CHARS - head.length));
   const nl = slice.indexOf("\n");
-  return `${TRUNCATED_MARK}\n${nl === -1 ? slice : slice.slice(nl + 1)}`;
+  const tail = `${head}${nl === -1 ? slice : slice.slice(nl + 1)}`;
+  if (!keep || tail.includes(keep)) return tail;
+  const from = text.lastIndexOf(keep);
+  return from === -1 ? tail : truncateLogExcerpt(`${head}${text.slice(from)}`);
 }
 
-// User-configured via `checks.ignoreLogLines` — empty by default. Applied after
-// step isolation so structural group markers are not stripped by a project pattern.
 function compileIgnoreLogLinePatterns(): RegExp[] {
   return loadConfig().checks.ignoreLogLines.map((pattern) => new RegExp(pattern));
 }

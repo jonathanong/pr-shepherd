@@ -82,6 +82,21 @@ describe("buildLogExcerpt — fallback and aggregate", () => {
     expect(buildLogExcerpt("hello\nworld")).toBe("hello\nworld");
   });
 
+  it("keeps the error line when a failed step has more than 4000 characters after it", () => {
+    const excerpt = buildLogExcerpt(
+      log([
+        "##[group]Run tests",
+        "##[endgroup]",
+        "##[error]boom",
+        `${"stack after error ".repeat(400)}`,
+      ]),
+    );
+
+    expect(excerpt).toContain("##[error]boom");
+    expect(excerpt).toContain("[truncated]");
+    expect(excerpt!.startsWith("[truncated]\n")).toBe(true);
+  });
+
   it("still condenses Job results when they sit in a grouped failed step", () => {
     const excerpt = buildLogExcerpt(
       log([
