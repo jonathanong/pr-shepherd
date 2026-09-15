@@ -108,7 +108,8 @@ describe("triageFailingChecks — logExcerpt", () => {
         makeTextResponse(`setup line
 useful context before failure
 One or more required jobs failed or were cancelled
-cleanup after failure`),
+cleanup after failure
+Cleaning up orphan processes`),
       );
 
     const [result] = await triageFailingChecks([makeCheck({ name: "tests" })], REPO);
@@ -116,6 +117,7 @@ cleanup after failure`),
     expect(result!.logExcerpt).toContain("useful context before failure");
     expect(result!.logExcerpt).toContain("One or more required jobs failed or were cancelled");
     expect(result!.logExcerpt).toContain("cleanup after failure");
+    expect(result!.logExcerpt).not.toContain("Cleaning up orphan processes");
   });
 
   it("preserves the anchor line when the selected excerpt is truncated", async () => {
@@ -163,5 +165,34 @@ ${"cleanup after failure ".repeat(500)}`),
 
     expect(result?.logExcerpt).toContain("Job results: { not json }");
     expect(result?.logExcerpt).toContain("##[error]Process completed with exit code 1.");
+  });
+
+  it("isolates the first failed step when the job log uses GitHub group markers", async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        makeJobsResponse([
+          {
+            id: 80724572207,
+            name: "tests",
+            conclusion: "failure",
+            steps: [{ name: "Check benchmark results", number: 1, conclusion: "failure" }],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        makeTextResponse(`##[group]Run if [[ "$BUILD_RESULT" != "success" ]]; then
+echo "Benchmark build or execution failed."
+shell: /usr/bin/bash -e {0}
+##[endgroup]
+Benchmark build or execution failed.
+##[error]Process completed with exit code 1.
+Cleaning up orphan processes`),
+      );
+
+    const [result] = await triageFailingChecks([makeCheck({ name: "tests" })], REPO);
+
+    expect(result?.logExcerpt).toBe(
+      "Benchmark build or execution failed.\n##[error]Process completed with exit code 1.",
+    );
   });
 });
