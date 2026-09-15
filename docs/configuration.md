@@ -276,7 +276,7 @@ Common additions:
 
 ### `checks.ignoreLogLines` — default `[]`
 
-Regex patterns (source strings) matched against each raw CI log line after ANSI/timestamp/group-marker cleanup, before Shepherd picks a bounded excerpt around the failure. A matching line is dropped from `## Failing checks` log excerpts and consequently is not available for check-annotation deduplication either. Empty by default — Shepherd ships no built-in noise patterns, since what counts as noise is specific to each project's CI toolchain (test runner, build system).
+Regex patterns (source strings) matched against each raw CI log line after ANSI/timestamp cleanup and first-failed-step isolation (run-command group and post-step cleanup already dropped; remaining group markers stripped). A matching line is dropped from `## Failing checks` log excerpts and consequently is not available for check-annotation deduplication either. Empty by default — Shepherd ships no built-in noise patterns, since what counts as noise is specific to each project's CI toolchain (test runner, build system).
 
 ```yaml
 checks:
