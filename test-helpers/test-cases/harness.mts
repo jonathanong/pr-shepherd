@@ -148,7 +148,7 @@ function rawSummaryForBatch(batchData: Record<string, any>): any {
     reviewDecision: batchData.reviewDecision,
     reviewRequests: { nodes: [] },
     latestReviews: { nodes: [] },
-    isInMergeQueue: false,
+    isInMergeQueue: batchData.isInMergeQueue === true,
     mergeQueueAdditions: null,
     mergeQueueRemovals: null,
     mergeQueueEntry: null,

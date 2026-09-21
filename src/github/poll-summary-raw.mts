@@ -27,6 +27,7 @@ type RawCheckContext =
       status: string;
       conclusion: string | null;
       detailsUrl?: string;
+      annotations?: { totalCount: number };
       checkSuite: {
         workflowRun: {
           databaseId?: string | number;

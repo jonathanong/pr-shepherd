@@ -102,6 +102,9 @@ fragment PollSummaryPr on PullRequest {
               status
               conclusion
               detailsUrl
+              annotations(first: 1) {
+                totalCount
+              }
               checkSuite {
                 workflowRun {
                   databaseId
@@ -223,6 +226,9 @@ fragment PollSummaryPr on PullRequest {
                 status
                 conclusion
                 detailsUrl
+                annotations(first: 1) {
+                  totalCount
+                }
                 checkSuite {
                   workflowRun {
                     databaseId

@@ -88,6 +88,27 @@ describe("native-stack reconciliation", () => {
     });
   });
 
+  it("rejects a receipt-bearing row without native-stack metadata", () => {
+    const result = withPollSummaryInstructions(
+      stack([row(1, 1, { readyReceipt: true, stack: undefined })]),
+      false,
+    );
+    expect(result).toMatchObject({ nextAction: "fix_code", stackMergeable: false });
+    expect(result.prs[0]).toMatchObject({ action: "fix_code" });
+  });
+
+  it.each([
+    { mergeable: "CONFLICTING", mergeStateStatus: "BLOCKED" },
+    { mergeable: "UNKNOWN", mergeStateStatus: "DIRTY" },
+  ] as const)("rejects a stale queued receipt on hard conflict: %o", (override) => {
+    const result = withPollSummaryInstructions(
+      stack([row(1, 1, { readyReceipt: true, isInMergeQueue: true, ...override })]),
+      true,
+    );
+    expect(result).toMatchObject({ nextAction: "fix_code", stackMergeable: false });
+    expect(result.prs[0]).toMatchObject({ action: "fix_code" });
+  });
+
   it("reprojects an effective queued CANCEL as WAIT without --merge", () => {
     const result = withPollSummaryInstructions(
       stack([

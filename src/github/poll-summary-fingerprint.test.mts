@@ -92,4 +92,39 @@ describe("fingerprintRawSummaryPr", () => {
       fingerprintRawSummaryPr(raw()),
     );
   });
+
+  it("invalidates when a completed check gains an annotation", () => {
+    const withAnnotationCount = (totalCount: number): RawSummaryPr =>
+      raw({
+        commits: {
+          nodes: [
+            {
+              commit: {
+                statusCheckRollup: {
+                  contexts: {
+                    totalCount: 1,
+                    pageInfo: { hasPreviousPage: false },
+                    nodes: [
+                      {
+                        __typename: "CheckRun",
+                        id: "check-1",
+                        name: "analysis",
+                        status: "COMPLETED",
+                        conclusion: "SKIPPED",
+                        annotations: { totalCount },
+                        checkSuite: null,
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      });
+
+    expect(fingerprintRawSummaryPr(withAnnotationCount(1))).not.toBe(
+      fingerprintRawSummaryPr(withAnnotationCount(0)),
+    );
+  });
 });

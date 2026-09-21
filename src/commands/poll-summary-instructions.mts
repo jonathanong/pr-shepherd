@@ -260,9 +260,12 @@ function appendAutonomousInstructions(instructions: string[], candidates: PollSu
 function isReady(item: PollSummaryItem): boolean {
   return (
     item.state === "OPEN" &&
+    item.stack !== undefined &&
     item.readyReceipt === true &&
     !item.isDraft &&
     !item.queueRemoval &&
+    item.mergeable !== "CONFLICTING" &&
+    item.mergeStateStatus !== "DIRTY" &&
     (item.isInMergeQueue || item.mergeable === "MERGEABLE") &&
     (item.isInMergeQueue ||
       !["DIRTY", "BEHIND", "UNKNOWN", "BLOCKED", "HAS_HOOKS"].includes(item.mergeStateStatus)) &&

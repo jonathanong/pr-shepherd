@@ -42,6 +42,15 @@ function row(pr: number, action: PollSummaryItem["action"]): PollSummaryItem {
   };
 }
 
+function queuedStackRow(pr: number): PollSummaryItem {
+  return {
+    ...row(pr, "wait"),
+    readyReceipt: true,
+    isInMergeQueue: true,
+    stack: { number: 1, size: 2, position: pr - 41, baseRefName: "main" },
+  };
+}
+
 const opts = {
   prNumbers: [42, 43],
   targetRepository: { owner: "acme", name: "widgets" },
@@ -176,10 +185,7 @@ describe("aggregate poll recurrence", () => {
     mockFetch
       .mockResolvedValueOnce({
         selection: { kind: "stack", anchor: 43, stackNumber: 1, stackSize: 2 },
-        prs: [
-          { ...row(42, "wait"), readyReceipt: true, isInMergeQueue: true },
-          { ...row(43, "wait"), readyReceipt: true, isInMergeQueue: true },
-        ],
+        prs: [queuedStackRow(42), queuedStackRow(43)],
       })
       .mockRejectedValueOnce(
         new ShepherdError("PR #43 is not part of a native GitHub stack", EXIT.UNAVAILABLE),
@@ -205,10 +211,7 @@ describe("aggregate poll recurrence", () => {
     mockFetch
       .mockResolvedValueOnce({
         selection: { kind: "stack", anchor: 43, stackNumber: 1, stackSize: 2 },
-        prs: [
-          { ...row(42, "wait"), readyReceipt: true, isInMergeQueue: true },
-          { ...row(43, "wait"), readyReceipt: true, isInMergeQueue: true },
-        ],
+        prs: [queuedStackRow(42), queuedStackRow(43)],
       })
       .mockRejectedValueOnce(
         new ShepherdError("PR #43 is not part of a native GitHub stack", EXIT.UNAVAILABLE),
@@ -239,10 +242,7 @@ describe("aggregate poll recurrence", () => {
     mockFetch
       .mockResolvedValueOnce({
         selection: { kind: "stack", anchor: 43, stackNumber: 1, stackSize: 2 },
-        prs: [
-          { ...row(42, "wait"), readyReceipt: true, isInMergeQueue: true },
-          { ...row(43, "wait"), readyReceipt: true, isInMergeQueue: true },
-        ],
+        prs: [queuedStackRow(42), queuedStackRow(43)],
       })
       .mockRejectedValueOnce(
         new ShepherdError("PR #43 is not part of a native GitHub stack", EXIT.UNAVAILABLE),

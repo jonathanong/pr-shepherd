@@ -62,6 +62,34 @@ function queueCheck(state: string): RawSummaryPr["mergeQueueEntry"] {
   };
 }
 
+function sourceCheck(annotationCount: number): RawSummaryPr["commits"] {
+  return {
+    nodes: [
+      {
+        commit: {
+          statusCheckRollup: {
+            contexts: {
+              totalCount: 1,
+              pageInfo: { hasPreviousPage: false },
+              nodes: [
+                {
+                  __typename: "CheckRun",
+                  id: "check-1",
+                  name: "analysis",
+                  status: "COMPLETED",
+                  conclusion: "SKIPPED",
+                  annotations: { totalCount: annotationCount },
+                  checkSuite: null,
+                },
+              ],
+            },
+          },
+        },
+      },
+    ],
+  };
+}
+
 beforeEach(() => {
   vi.mocked(readReadyReceipt).mockReset();
   vi.mocked(readReadyReceipt).mockResolvedValue({
@@ -145,6 +173,19 @@ describe("queued READY receipt projection", () => {
     expect(item.checks?.failing).toBe(1);
   });
 
+  it.each([
+    { mergeable: "CONFLICTING", mergeStateStatus: "BLOCKED" },
+    { mergeable: "UNKNOWN", mergeStateStatus: "DIRTY" },
+  ])("invalidates a queued receipt on hard conflict: %o", async (override) => {
+    const item = await summarizePollSummaryPr(
+      raw({ isInMergeQueue: true, mergeQueueEntry: queueCheck("PENDING"), ...override }),
+      repo,
+      { stackPrNumber: 42, merge: true },
+    );
+    expect(item.readyReceipt).toBeUndefined();
+    expect(item.action).toBe("fix_code");
+  });
+
   it("invalidates on changed review evidence even while queued", async () => {
     const item = await summarizePollSummaryPr(
       raw({
@@ -155,6 +196,34 @@ describe("queued READY receipt projection", () => {
       repo,
       { stackPrNumber: 42, merge: true },
     );
+    expect(item.readyReceipt).toBeUndefined();
+  });
+
+  it("invalidates when a completed source check gains an annotation", async () => {
+    const before = raw({ commits: sourceCheck(0) });
+    vi.mocked(readReadyReceipt).mockResolvedValue({
+      version: 1,
+      owner: repo.owner,
+      repo: repo.name,
+      pr: 42,
+      headRefOid: head,
+      baseRefOid: base,
+      status: "READY",
+      isDraft: false,
+      readinessFingerprint: fingerprintRawSummaryPr(before)!,
+      recordedAtUnix: 1,
+    });
+
+    const item = await summarizePollSummaryPr(
+      raw({
+        isInMergeQueue: true,
+        mergeQueueEntry: queueCheck("PENDING"),
+        commits: sourceCheck(1),
+      }),
+      repo,
+      { stackPrNumber: 42, merge: true },
+    );
+
     expect(item.readyReceipt).toBeUndefined();
   });
 

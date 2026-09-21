@@ -91,6 +91,23 @@ describe("queued readiness", () => {
     ).toBe(false);
   });
 
+  it.each([
+    { mergeable: "CONFLICTING", mergeStateStatus: "BLOCKED" },
+    { mergeable: "UNKNOWN", mergeStateStatus: "DIRTY" },
+  ])("rejects a queued hard conflict: %o", (override) => {
+    const snapshot = raw("SUCCESS", "PENDING", override);
+    expect(
+      isCurrentSummaryReady(
+        snapshot,
+        summarizePollSummaryChecks(snapshot),
+        {},
+        {
+          allowQueuedProgress: true,
+        },
+      ),
+    ).toBe(false);
+  });
+
   it.each(["BLOCKED", "HAS_HOOKS"] as const)(
     "does not retain a READY receipt outside the queue while merge state is %s",
     (mergeStateStatus) => {

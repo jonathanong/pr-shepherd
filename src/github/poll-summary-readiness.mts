@@ -22,6 +22,8 @@ export function isCurrentSummaryReady(
     review.incomplete !== true &&
     raw.state === "OPEN" &&
     !raw.isDraft &&
+    raw.mergeable !== "CONFLICTING" &&
+    raw.mergeStateStatus !== "DIRTY" &&
     (queued || raw.mergeable === "MERGEABLE") &&
     (queued ||
       !["DIRTY", "BEHIND", "UNKNOWN", "BLOCKED", "HAS_HOOKS"].includes(raw.mergeStateStatus)) &&
