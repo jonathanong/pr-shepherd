@@ -1,9 +1,9 @@
 {
   "mode": "aggregate",
-  "description": "Live GitHub stack #514: #507 and #508 are merged, #510 and #511 are clean, but #518 is CLEAN while its base still points at #511's old head. Without --merge, aggregate guidance repairs the stale child ancestry before polling it again.",
+  "description": "Live GitHub stack #514: #507 and #508 are merged, #510 and #511 are clean, but #518 is CLEAN while its base still points at #511's old head. Aggregate reports the stale child as an explicit human handoff and never prescribes the repair.",
   "args": ["--stack", "https://github.com/jonathanong/auto-harness/pull/518", "--debounce", "0s"],
   "expectedReason": "actionable",
-  "expectedExitCode": 12,
+  "expectedExitCode": 13,
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 518, "stackNumber": 514, "stackSize": 5 },
     "stackAncestry": [

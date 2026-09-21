@@ -120,7 +120,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
         : last.prs.every((item) => item.action === "cancel");
     const immediate =
       last.selection.kind === "stack"
-        ? ["escalate", "merge", "mark_ready"].includes(last.nextAction ?? "wait")
+        ? last.nextAction === "escalate" && last.reason !== "waiting"
         : last.prs.some((item) => ["escalate", "merge", "mark_ready"].includes(item.action));
     const hasFix =
       last.selection.kind === "stack"
@@ -212,8 +212,12 @@ function isMissingStack(error: unknown): boolean {
 
 function attachUsage(result: PollSummaryResult, mergeRequested?: boolean): PollSummaryResult {
   const apiUsage = summarizeApiTelemetry();
-  return withPollSummaryInstructions(
-    apiUsage ? { ...result, apiUsage } : result,
-    mergeRequested === true,
-  );
+  const enriched = apiUsage ? { ...result, apiUsage } : result;
+  // A disappeared native stack is an aggregate-level terminal handoff. Keep
+  // that explicit escalation intact even when the one-PR fallback contains
+  // open orphan rows that would otherwise be re-planned as fix_code.
+  if (enriched.selection.kind === "stack" && enriched.nextAction === "escalate") {
+    return enriched;
+  }
+  return withPollSummaryInstructions(enriched, mergeRequested === true);
 }

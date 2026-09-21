@@ -3,6 +3,7 @@
   "args": ["--merge"],
   "batchData": {
     "stack": { "number": 7, "size": 3, "position": 2, "baseRefName": "stack/7/1" },
+    "baseRefOid": "base123",
     "checks": [
       {
         "name": "CI / tests",

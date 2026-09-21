@@ -1,6 +1,6 @@
 # Poll summary [TIMEOUT]
 
-**repo** `owner/repo` · **selection** stack #36 anchored at PR #352 (2 PRs) · **mode** `summary` · **stack mergeable** `true` · **next action** `fix_code`
+**repo** `owner/repo` · **selection** stack #36 anchored at PR #352 (2 PRs) · **mode** `summary` · **stack mergeable** `true` · **next action** `escalate`
 
 ## Pull requests
 

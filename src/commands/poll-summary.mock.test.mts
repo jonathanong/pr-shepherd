@@ -234,4 +234,39 @@ describe("aggregate poll recurrence", () => {
       selection: { kind: "stack" },
     });
   });
+
+  it("preserves disappeared-stack escalation when the fallback has an open orphan", async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        selection: { kind: "stack", anchor: 43, stackNumber: 1, stackSize: 2 },
+        prs: [
+          { ...row(42, "wait"), readyReceipt: true, isInMergeQueue: true },
+          { ...row(43, "wait"), readyReceipt: true, isInMergeQueue: true },
+        ],
+      })
+      .mockRejectedValueOnce(
+        new ShepherdError("PR #43 is not part of a native GitHub stack", EXIT.UNAVAILABLE),
+      )
+      .mockResolvedValueOnce({
+        selection: { kind: "prs", requested: [42, 43] },
+        prs: [{ ...row(42, "wait"), state: "OPEN" }, row(43, "cancel")],
+      });
+
+    const result = await runAggregatePoll({
+      ...opts,
+      prNumbers: [],
+      stackPrNumber: 43,
+      merge: true,
+      timeoutSeconds: 60,
+      untilTerminal: true,
+    });
+    expect(result).toMatchObject({
+      reason: "actionable",
+      nextAction: "escalate",
+      stackMergeable: false,
+      selection: { kind: "stack" },
+    });
+    expect(result.prs[0]?.state).toBe("OPEN");
+    expect(result.instructions?.[0]).toContain("disappeared");
+  });
 });

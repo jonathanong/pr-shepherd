@@ -53,18 +53,18 @@ complete, or timeout expires. Its Markdown, JSON, API, and MCP result contains o
 raw state, bounded check/review counts, and routing context. Explicit PR sets include an exact
 one-PR `pollCommand` for each actionable row, which callers may handle independently.
 
-For a native stack, `stackMergeable` is true only when every open layer has a current one-PR
-Shepherd READY receipt and open ancestry is linear. The first unready lower layer causes each higher
-open layer to carry `blockedByPr`; the returned `FIX_CODE` instructions name the affected one-PR
-Shepherd commands. Review and CI work can proceed concurrently on separate layers, but an upper
-draft must remain draft until every lower layer has a READY receipt. Aggregate mode never writes seen
-markers or performs GitHub mutations, and it does not issue aggregate rebase or push instructions. A
-closed-unmerged dependency is an `ESCALATE` handoff.
+For a native stack, `--stack` is reconciliation-only and its aggregate action is only `CANCEL` or
+`ESCALATE`. It never performs GitHub mutations or emits `gh stack merge`, rebase, or push commands.
+When any layer is draft, lacks a current one-PR READY receipt, conflicts, fails checks, remains
+pending, or has stale ancestry, the result is `ESCALATE` and its instructions name the affected
+one-PR Shepherd sessions. The first unready lower layer causes each higher open layer to carry
+`blockedByPr`; review and CI work can proceed concurrently on independent layers, but an upper draft
+must remain draft until every lower layer has a READY receipt. A closed-unmerged dependency is also
+an `ESCALATE` handoff.
 
-With `--merge`, only a fully verified stack receives an emitted `gh stack merge <stack-number>`
-submission. A queued stack remains non-terminal: rerun the same selector until every layer is
-merged, or route an ejected layer to its one-PR session. JSON/MCP includes the same raw ancestry,
-`stackMergeable`, `nextAction`, and instructions that Markdown renders.
+With `--stack --merge`, a fully verified stack returns `ESCALATE` to the stack owner for the merge
+decision. Shepherd does not submit the stack or emit an aggregate merge command. JSON/MCP includes
+the same raw ancestry, routing context, `nextAction`, and instructions that Markdown renders.
 
 The polling flags are `--interval`, `--timeout`, `--debounce`, `--quiet-status`, `--no-quiet-status`, and `--until-terminal`. Their defaults come from `poll.intervalSeconds` (built-in 60), `poll.timeoutSeconds` (270), `poll.debounceSeconds` (60), and `poll.quietStatus` (`false`) in `.pr-shepherdrc.yml`; explicit flags override configuration. Each ordinary `WAIT` tick writes an explicit still-running line to stderr unless quiet status is enabled; the final action remains the only stdout result. `--debounce` (`0` disables) is a settle window after the first `FIX_CODE`. Iterate flags are `--ready-delay`, `--stall-timeout`, `--merge`, `--no-auto-mark-ready`, `--format`, and `--verbose`. The legacy `--no-auto-cancel-actionable` flag remains accepted as a no-op. Durations accept `s`, `m`, and `h`; bare polling durations are seconds and bare iterate durations are minutes.
 

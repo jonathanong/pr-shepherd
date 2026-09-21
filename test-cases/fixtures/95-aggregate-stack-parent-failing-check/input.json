@@ -2,7 +2,7 @@
   "description": "A failing check on the lowest layer prevents a READY-receipted upper layer from being reported mergeable and preserves the lower check evidence.",
   "mode": "aggregate",
   "args": ["--stack", "https://github.com/owner/repo/pull/322", "--debounce", "0s"],
-  "expectedExitCode": 12,
+  "expectedExitCode": 13,
   "expectedReason": "actionable",
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 322, "stackNumber": 33, "stackSize": 2 },

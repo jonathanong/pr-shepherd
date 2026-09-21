@@ -1,6 +1,6 @@
 # Poll summary [ACTIONABLE]
 
-**repo** `owner/repo` · **selection** stack #35 anchored at PR #342 (2 PRs) · **mode** `summary` · **stack mergeable** `true` · **next action** `fix_code`
+**repo** `owner/repo` · **selection** stack #35 anchored at PR #342 (2 PRs) · **mode** `summary` · **stack mergeable** `true` · **next action** `escalate`
 
 ## Pull requests
 
@@ -15,6 +15,5 @@
 
 ## Instructions
 
-1. Verify the checkout targets `owner/repo` and stack #35 still ends at PR #342.
-2. Submit the entire stack with `gh stack merge 35 --yes --merge`. If GitHub uses a merge queue, it chooses the method.
-3. If GitHub rejects the submission, use its exact error to shepherd each affected PR and do not repeat the unchanged command; otherwise rerun this same `--stack --merge` selector until every layer is merged or an explicit human escalation is reported.
+1. Stack #35 in `owner/repo` is mergeable through PR #342; this aggregate selector will not mutate it.
+2. Hand off the native-stack merge to the stack owner. After a merge attempt, rerun this same `--stack --merge` selector to reconcile every layer; shepherd any layer that GitHub rejects or ejects.

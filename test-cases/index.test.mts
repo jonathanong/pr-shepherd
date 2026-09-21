@@ -57,10 +57,18 @@ for (const name of listFixtureNames()) {
         action?: string;
         mode?: string;
         reason?: string;
+        nextAction?: string;
+        selection?: { kind?: string };
       };
       if (fixture.mode === "aggregate") {
         expect(json.mode).toBe("summary");
         expect(json.reason).toBe(fixture.expectedReason);
+        if (json.selection?.kind === "stack") {
+          expect(
+            json.nextAction,
+            "native stacks have terminal-or-human aggregate actions",
+          ).toBeOneOf(["cancel", "escalate"]);
+        }
       } else {
         expect(json.action, `fixture name must match the emitted action`).toBe(
           actionFromFixtureName(name),

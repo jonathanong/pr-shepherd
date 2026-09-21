@@ -15,6 +15,7 @@ import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import { summarizePollSummaryChecks } from "./poll-summary-checks.mts";
 import { summarizePollSummaryReview } from "./poll-summary-review.mts";
 import { fingerprintRawSummaryPr } from "./poll-summary-fingerprint.mts";
+import { currentQueueRemovalEvent } from "./poll-summary-queue-removal.mts";
 import { isCurrentSummaryReady } from "./poll-summary-readiness.mts";
 import { normalizePollSummaryState, routePollSummary } from "./poll-summary-route.mts";
 export async function summarizePollSummaryPr(
@@ -28,7 +29,7 @@ export async function summarizePollSummaryPr(
   const checks = summarizePollSummaryChecks(raw);
   const review = await summarizePollSummaryReview(raw, seen, viewerCanAdminister);
   const blockingReviewerInProgress = detectBlockingReviewer(raw);
-  let queueRemoval = currentQueueRemoval(raw);
+  const removalEvent = currentQueueRemovalEvent(raw);
   let { action, reasons } = routePollSummary(raw, checks, review, opts);
   let remainingSeconds: number | undefined;
   if (raw.isDraft && blockingReviewerInProgress && action === "mark_ready") {
@@ -65,9 +66,6 @@ export async function summarizePollSummaryPr(
   const receipt = fingerprint
     ? await readReadyReceipt({ owner: repo.owner, repo: repo.name, pr: raw.number })
     : null;
-  if (queueRemoval && receipt && receipt.recordedAtUnix > queueRemoval.createdAtUnix) {
-    queueRemoval = undefined;
-  }
   const currentReady = isCurrentSummaryReady(raw, checks, review, {
     allowQueuedProgress: opts.stackPrNumber !== undefined && raw.isInMergeQueue,
   });
@@ -80,6 +78,12 @@ export async function summarizePollSummaryPr(
       status: currentReady ? "READY" : "PENDING",
       isDraft: raw.isDraft,
     });
+  const queueRemoval =
+    removalEvent?.id && readyReceipt && receipt?.acknowledgedQueueRemovalId === removalEvent.id
+      ? undefined
+      : removalEvent
+        ? projectQueueRemoval(removalEvent)
+        : undefined;
   return {
     pr: raw.number,
     repo: repoName,
@@ -113,15 +117,11 @@ export async function summarizePollSummaryPr(
   };
 }
 
-function currentQueueRemoval(raw: RawSummaryPr): PollSummaryItem["queueRemoval"] {
-  const removal = raw.mergeQueueRemovals?.nodes[0];
-  if (!removal) return undefined;
+function projectQueueRemoval(
+  removal: NonNullable<ReturnType<typeof currentQueueRemovalEvent>>,
+): PollSummaryItem["queueRemoval"] {
   const removalTime = Date.parse(removal.createdAt);
-  if (!Number.isFinite(removalTime)) return undefined;
-  const addition = raw.mergeQueueAdditions?.nodes[0];
-  if (addition && Date.parse(addition.createdAt) > removalTime) return undefined;
-  const parents = removal.beforeCommit?.parents?.nodes.map((parent) => parent.oid);
-  if (!parents?.includes(raw.headRefOid)) return undefined;
+  const parents = removal.beforeCommit?.parents?.nodes.map((parent) => parent.oid) ?? [];
   return {
     reason: removal.reason,
     createdAtUnix: Math.floor(removalTime / 1000),

@@ -28,15 +28,19 @@ preserves raw row state, then adds `blockedByPr` to an upper open layer when a l
 that receipt. A lower draft, conflict, failure, pending state, review item, missing receipt, or stale
 ancestry therefore prevents an upper layer from advancing even when GitHub calls it `CLEAN`. Review
 and CI sessions may run concurrently on separate layers, but an upper draft cannot transition to
-ready until every lower layer has its READY receipt. The stack returns `FIX_CODE` with exact one-PR
-commands for unready layers and requires the caller to rerun the same selector after those sessions.
-It never emits aggregate rebase or push instructions. A closed-unmerged or otherwise unverified
-layer returns the human-only `ESCALATE` handoff; terminal `CANCEL` requires every layer to be merged.
+ready until every lower layer has its READY receipt. The stack returns only `CANCEL` or `ESCALATE`:
+`ESCALATE` routes unready layers to exact one-PR Shepherd commands and asks the caller to rerun the
+same selector afterward; `CANCEL` means every open layer is READY (or every layer is merged).
+It never emits aggregate rebase, push, or merge commands. A closed-unmerged or otherwise unverified
+layer is a human-only `ESCALATE` handoff.
 
-When `--merge` is requested, a stack is submitted only after it is `stackMergeable`, using one
-whole-stack command. It never submits a ready prefix. If GitHub puts any layer in a merge queue, the
-summary remains non-terminal and instructs the caller to rerun the same `--stack --merge` selector
+When `--merge` is requested and all open layers are `stackMergeable`, the read-only summary returns
+`ESCALATE` to hand the native-stack merge to its owner; it does not submit even a ready prefix. If
+GitHub puts any layer in a merge queue, the summary returns `ESCALATE` with a recheck instruction
 until every layer is merged; an ejected layer is routed back to its one-PR session.
+An ejection remains actionable until a current one-PR READY receipt explicitly acknowledges that
+exact removal event; local timestamps are not treated as proof. Close/reopen and draft/ready
+lifecycle transitions also invalidate older receipts even when the PR returns to the same commit.
 An explicit PR set containing a native-stack member still routes that row to an authoritative
 one-PR poll and includes its `pollCommand`.
 
@@ -202,7 +206,7 @@ Emits an exact GitHub CLI command; Shepherd does not execute or wrap the merge o
 
 Configured `merge.commandArgs` apply only to ordinary auto-merge commands. Every emitted command pins the expected PR head.
 
-**Native stacks:** When GitHub's batch query reports the PR is part of a native stack, Shepherd builds neither command mode above, for any stack position including position 1. `--auto` is rejected server-side on stacked PRs, and the plain-merge fallback would land a mid-stack PR into its still-unmerged parent branch instead of the stack's trunk ref. Shepherd returns `ESCALATE` (`stacked-pr`) naming the PR's position, stack size, and base ref instead of emitting an unsafe command — see [`stacked-pr`](escalations.md#stacked-pr). Reconcile and, when requested, submit it through `pr-shepherd --stack <PR> --merge`; that path verifies every layer's READY receipt and emits only a whole-stack merge command. This is a normal escalation, not an exception to "Shepherd does not execute or wrap the merge operation": declining to plan a command is still not executing one. A stacked PR never reaches this action's command-emitting path.
+**Native stacks:** When GitHub's batch query reports the PR is part of a native stack, Shepherd builds neither command mode above, for any stack position including position 1. `--auto` is rejected server-side on stacked PRs, and the plain-merge fallback would land a mid-stack PR into its still-unmerged parent branch instead of the stack's trunk ref. Shepherd returns `ESCALATE` (`stacked-pr`) naming the PR's position, stack size, and base ref instead of emitting an unsafe command — see [`stacked-pr`](escalations.md#stacked-pr). Before that one-PR escalation, Shepherd persists the fresh READY receipt required by aggregate stack reconciliation; if the fresh snapshot or receipt cannot be persisted, it returns `WAIT` and does not claim the stack is ready. Reconcile through `pr-shepherd --stack <PR>`; its `--merge` mode remains read-only and explicitly escalates a verified mergeable stack to the owner for submission. This is a normal escalation, not an exception to "Shepherd does not execute or wrap the merge operation": declining to plan a command is still not executing one. A stacked PR never reaches this action's command-emitting path.
 
 **Exit code:** 15.
 

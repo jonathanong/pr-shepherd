@@ -12,6 +12,7 @@ export function fingerprintRawSummaryPr(raw: RawSummaryPr): string | null {
   const evidence = {
     number: raw.number,
     state: raw.state,
+    lifecycleEvents: raw.lifecycleEvents,
     isDraft: raw.isDraft,
     headRefOid: raw.headRefOid,
     baseRefOid: raw.baseRefOid,

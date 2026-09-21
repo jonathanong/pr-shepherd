@@ -1,8 +1,8 @@
 {
-  "description": "Merge intent submits only the complete native stack after every open layer has a READY receipt; it never emits a partial-stack merge command.",
+  "description": "Merge intent hands a fully READY native stack to its owner; aggregate verifies eligibility but never emits or executes a stack merge command.",
   "mode": "aggregate",
   "args": ["--stack", "https://github.com/owner/repo/pull/342", "--merge", "--debounce", "0s"],
-  "expectedExitCode": 12,
+  "expectedExitCode": 13,
   "expectedReason": "actionable",
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 342, "stackNumber": 35, "stackSize": 2 },

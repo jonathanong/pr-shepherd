@@ -25,6 +25,7 @@ import { withIterateApiUsage } from "./run.mts";
 import { fetchRawSummaryPr } from "../../github/poll-summary.mts";
 import { summarizePollSummaryPr } from "../../github/poll-summary-projector.mts";
 import { fingerprintRawSummaryPr } from "../../github/poll-summary-fingerprint.mts";
+import { currentQueueRemovalEvent } from "../../github/poll-summary-queue-removal.mts";
 import { isCurrentSummaryReady } from "../../github/poll-summary-readiness.mts";
 import {
   clearReadyReceipt,
@@ -123,8 +124,16 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
   const activeMerge = Boolean(
     opts.merge && (report.mergeQueue?.inQueue || report.mergeQueue?.autoMergeRequest),
   );
+  const staleAncestry = await findStaleNativeStackAncestry(report, {
+    owner: repoOwner,
+    name: repoName,
+  });
   const isCleanReadyState =
-    report.status === "READY" && !report.mergeStatus.isDraft && !hasActionableWork && !activeMerge;
+    report.status === "READY" &&
+    !report.mergeStatus.isDraft &&
+    !hasActionableWork &&
+    !activeMerge &&
+    staleAncestry === null;
   const readyState = await updateReadyDelay(
     report.pr,
     isCleanReadyState,
@@ -193,10 +202,6 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
   });
   if (mergeStateResult) return mergeStateResult;
 
-  const staleAncestry = await findStaleNativeStackAncestry(report, {
-    owner: repoOwner,
-    name: repoName,
-  });
   if (staleAncestry) {
     return handleFixCode({
       base,
@@ -235,8 +240,6 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
 
   if (readyState.shouldCancel && !report.mergeStatus.isDraft) {
     await clearStallState(stallKey);
-    const mergeResult = buildReadyMergeOutcome(opts.merge, true, base, report);
-    if (mergeResult) return mergeResult;
     const needsStackReceipt = report.mergeStatus.mergeRequirements?.stack !== undefined;
     const receiptWritten = needsStackReceipt
       ? await recordReadyReceipt({ owner: repoOwner, repo: repoName, pr: report.pr }, report)
@@ -250,6 +253,8 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
         log: `WAIT: PR #${base.pr} reached ready-delay but its stack readiness receipt could not be persisted`,
       };
     }
+    const mergeResult = buildReadyMergeOutcome(opts.merge, true, base, report);
+    if (mergeResult) return mergeResult;
     const cancelNote = blockedCancelNote(base);
     return {
       ...base,
@@ -300,6 +305,7 @@ async function recordReadyReceipt(
       { stackPrNumber: report.pr },
     );
     if (!isCurrentSummaryReady(raw, summary.checks ?? {}, summary.review ?? {})) return false;
+    const removalEvent = currentQueueRemovalEvent(raw);
     await writeReadyReceipt({
       version: 1,
       ...key,
@@ -308,6 +314,9 @@ async function recordReadyReceipt(
       status: "READY",
       isDraft: false,
       readinessFingerprint: fingerprint,
+      ...(removalEvent?.id && {
+        acknowledgedQueueRemovalId: removalEvent.id,
+      }),
       recordedAtUnix: Math.floor(Date.now() / 1000),
     });
     return true;
@@ -326,13 +335,17 @@ async function invalidateStaleReadyReceipt(
 ): Promise<void> {
   const receipt = await readReadyReceipt(key);
   if (!receipt) return;
+  const retainQueuedReceipt =
+    report.mergeQueue?.inQueue === true &&
+    report.mergeStatus.state === "OPEN" &&
+    !report.mergeStatus.isDraft &&
+    Boolean(report.headSha && report.baseRefOid);
   if (
-    report.status !== "READY" ||
     report.mergeStatus.state !== "OPEN" ||
     report.mergeStatus.isDraft ||
-    hasActionableWork ||
     !report.headSha ||
-    !report.baseRefOid
+    !report.baseRefOid ||
+    (!retainQueuedReceipt && (report.status !== "READY" || hasActionableWork))
   ) {
     await clearReadyReceipt(key);
     return;

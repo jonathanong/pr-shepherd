@@ -1,5 +1,26 @@
 /* eslint-disable max-lines */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+const { mockFetchRawSummaryPr, mockFingerprintRawSummaryPr, mockSummarizePollSummaryPr } =
+  vi.hoisted(() => ({
+    mockFetchRawSummaryPr: vi.fn(),
+    mockFingerprintRawSummaryPr: vi.fn(),
+    mockSummarizePollSummaryPr: vi.fn(),
+  }));
+vi.mock("../../src/github/poll-summary.mts", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  fetchRawSummaryPr: mockFetchRawSummaryPr,
+}));
+vi.mock("../../src/github/poll-summary-fingerprint.mts", () => ({
+  fingerprintRawSummaryPr: mockFingerprintRawSummaryPr,
+}));
+vi.mock("../../src/github/poll-summary-projector.mts", () => ({
+  summarizePollSummaryPr: mockSummarizePollSummaryPr,
+}));
+vi.mock("../../src/state/ready-receipts.mts", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  writeReadyReceipt: vi.fn().mockResolvedValue(undefined),
+}));
 import {
   makeOpts,
   makeReport,
@@ -62,6 +83,7 @@ function mockStackedReady(
     makeReport({
       status: "READY",
       headSha,
+      baseRefOid: "base-1",
       nodeId: "PR_node",
       mergeStatus: stackedReadyMergeStatus(stack),
     }),
@@ -71,6 +93,14 @@ function mockStackedReady(
     shouldCancel: true,
     remainingSeconds: 0,
   });
+  mockFetchRawSummaryPr.mockResolvedValue({
+    state: "OPEN",
+    isDraft: false,
+    headRefOid: headSha,
+    baseRefOid: "base-1",
+  });
+  mockFingerprintRawSummaryPr.mockReturnValue("fixture-fingerprint");
+  mockSummarizePollSummaryPr.mockResolvedValue({ checks: {}, review: {} });
 }
 
 /** Asserts a stacked PR was escalated with the given layer's details instead of planning a merge. */
@@ -346,13 +376,12 @@ describe("runIterate — merge", () => {
     expectStackedEscalate(result, { position: 2, size: 3, number: 7, base: "stack/7/1" });
   });
 
-  it("waits for a stacked readiness receipt when merge mode is not enabled", async () => {
+  it("cancels after persisting a stacked readiness receipt when merge mode is not enabled", async () => {
     mockStackedReady("abc123", { number: 7, size: 3, position: 1, baseRefName: "main" });
 
     const result = await runIterate(makeOpts({ merge: false }));
 
-    expect(result.action).toBe("wait");
-    expect(result).toMatchObject({ log: expect.stringContaining("readiness receipt") });
+    expect(result.action).toBe("cancel");
   });
 
   it("does not escalate an old ejection after the PR head was updated", async () => {

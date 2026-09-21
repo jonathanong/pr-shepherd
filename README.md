@@ -144,18 +144,17 @@ needed, every selected PR is complete, the bounded timeout expires, or `--until-
 configured GraphQL quota-warning band. Explicit PR sets give each actionable row an exact single-PR
 `pollCommand`, so independent rows can proceed before the next aggregate poll.
 
-Native-stack rows are ordered bottom-to-top. `stackMergeable` is true only when every open layer has
-a current one-PR Shepherd READY receipt and adjacent open layers have linear ancestry. A draft,
-conflicting, failing, pending, or unreceipted lower layer marks every higher open layer with
-`blockedByPr`. Review and CI sessions on different layers may proceed concurrently, but an upper
-draft cannot transition to ready until every lower layer has its READY receipt. The aggregate selector
-does not emit rebase or push instructions. A closed-unmerged dependency is an explicit human
-escalation.
+Native-stack rows are ordered bottom-to-top. `--stack` is reconciliation-only and returns only
+`CANCEL` or `ESCALATE`; it never emits `gh stack merge`, rebase, push, or other mutation commands.
+If any layer is draft, not READY, conflicting, failing, pending, stale, or otherwise not mergeable,
+the result is `ESCALATE` with one-PR Shepherd instructions for the affected layers. A draft or other
+unready lower layer marks every higher open layer with `blockedByPr`; review and CI sessions on
+independent layers may proceed concurrently, but an upper draft cannot transition to ready until
+every lower layer has its READY receipt. A closed-unmerged dependency is also an explicit escalation.
 
-With `--merge`, Shepherd submits only the entire verified native stack, never a ready prefix. If
-GitHub puts it in a merge queue, rerun the same `--stack --merge` selector until every layer is
-merged or an ejected layer needs its one-PR session. API and MCP aggregate calls perform one summary
-tick and leave recurrence to the caller.
+With `--stack --merge`, a fully reconciled and READY stack returns `ESCALATE` to the stack owner for
+the merge decision. Shepherd does not submit the stack or emit a merge command. API and MCP
+aggregate calls perform one summary tick and leave recurrence to the caller.
 
 Polling defaults can be set under `poll` in `.pr-shepherdrc.yml`: `intervalSeconds`, `timeoutSeconds`, `debounceSeconds`, and `quietStatus`. Explicit flags override configuration, including `--no-quiet-status` when a shared config enables quiet output. Quiet status remains off by default.
 

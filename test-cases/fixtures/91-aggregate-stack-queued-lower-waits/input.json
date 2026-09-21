@@ -1,6 +1,6 @@
 {
   "mode": "aggregate",
-  "description": "With --merge, a queued lower stack layer blocks a ready higher layer and defers an upstack ancestry repair until the queue changes state.",
+  "description": "With --merge, a queued stack remains a human handoff until the stack owner reconciles the queue; aggregate does not mutate it.",
   "args": [
     "--stack",
     "https://github.com/owner/repo/pull/202",
@@ -11,7 +11,7 @@
     "2s"
   ],
   "expectedReason": "timeout",
-  "expectedExitCode": 12,
+  "expectedExitCode": 13,
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 202, "stackNumber": 12, "stackSize": 2 },
     "prs": [

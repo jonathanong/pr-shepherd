@@ -47,6 +47,9 @@ export interface RawSummaryPr {
   url: string;
   state: string;
   updatedAt?: string;
+  lifecycleEvents?: {
+    nodes: Array<{ __typename: string; createdAt: string }>;
+  } | null;
   isDraft: boolean;
   viewerCanUpdate: boolean;
   headRefName: string;
@@ -62,6 +65,7 @@ export interface RawSummaryPr {
   mergeQueueAdditions?: { nodes: Array<{ createdAt: string }> } | null;
   mergeQueueRemovals?: {
     nodes: Array<{
+      id?: string;
       reason: string | null;
       createdAt: string;
       actor: { login: string } | null;

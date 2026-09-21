@@ -1,5 +1,3 @@
-import { loadConfig } from "../config/load.mts";
-import { findMergeStrategies } from "../config/merge-command-args.mts";
 import { buildQuotaAwareContinuation } from "../quota-warning.mts";
 import type { PollSummaryItem, PollSummaryResult, ShepherdAction } from "../types.mts";
 import { explicitInstructions } from "./poll-summary-explicit-instructions.mts";
@@ -13,9 +11,7 @@ export function withPollSummaryInstructions(
     return { ...result, instructions: explicitInstructions(result) };
   }
 
-  const prs = [...result.prs].sort(
-    (left, right) => (left.stack?.position ?? 0) - (right.stack?.position ?? 0),
-  );
+  const prs = [...result.prs].sort((left, right) => position(left) - position(right));
   const staleChildren = new Set(result.stackAncestry?.map((gap) => gap.childPr) ?? []);
   const firstUnready = prs.find(
     (item) => item.state === "OPEN" && (!isReady(item) || staleChildren.has(item.pr)),
@@ -47,7 +43,10 @@ export function withPollSummaryInstructions(
   const projected = { ...result, prs: blocked };
   const planned = planStack(projected, mergeRequested);
   const instructions = [...planned.instructions];
-  if (result.quotaWarning && planned.action === "fix_code" && !planned.waiting) {
+  if (
+    result.quotaWarning &&
+    instructions.some((instruction) => instruction.includes("rerun this same"))
+  ) {
     instructions.push(
       buildQuotaAwareContinuation(
         result.quotaWarning,
@@ -72,7 +71,7 @@ export function withPollSummaryInstructions(
 }
 
 interface StackPlan {
-  action: Extract<ShepherdAction, "fix_code" | "cancel" | "escalate">;
+  action: Extract<ShepherdAction, "cancel" | "escalate">;
   stackMergeable: boolean;
   waiting?: boolean;
   instructions: string[];
@@ -143,7 +142,7 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
     instructions.push(
       `${instructions.length + 1}. After the selected one-PR sessions, rerun this same \`--stack\` selector.`,
     );
-    return { action: "fix_code", stackMergeable: false, instructions };
+    return { action: "escalate", stackMergeable: false, instructions };
   }
 
   if (!mergeRequested) {
@@ -158,7 +157,7 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
 
   if (open.some((item) => item.isInMergeQueue)) {
     return {
-      action: "fix_code",
+      action: "escalate",
       stackMergeable: true,
       waiting: true,
       instructions: [
@@ -167,15 +166,13 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
     };
   }
 
-  const strategy = findMergeStrategies(loadConfig().merge?.commandArgs ?? [])[0] ?? "merge";
   const stackNumber = result.selection.kind === "stack" ? result.selection.stackNumber : 0;
   return {
-    action: "fix_code",
+    action: "escalate",
     stackMergeable: true,
     instructions: [
-      `1. Verify the checkout targets \`${result.repo}\` and stack #${stackNumber} still ends at PR #${open.at(-1)!.pr}.`,
-      `2. Submit the entire stack with \`gh stack merge ${stackNumber} --yes --${strategy}\`. If GitHub uses a merge queue, it chooses the method.`,
-      "3. If GitHub rejects the submission, use its exact error to shepherd each affected PR and do not repeat the unchanged command; otherwise rerun this same `--stack --merge` selector until every layer is merged or an explicit human escalation is reported.",
+      `1. Stack #${stackNumber} in \`${result.repo}\` is mergeable through PR #${open.at(-1)!.pr}; this aggregate selector will not mutate it.`,
+      "2. Hand off the native-stack merge to the stack owner. After a merge attempt, rerun this same `--stack --merge` selector to reconcile every layer; shepherd any layer that GitHub rejects or ejects.",
     ],
   };
 }

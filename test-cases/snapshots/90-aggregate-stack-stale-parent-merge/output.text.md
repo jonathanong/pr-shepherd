@@ -1,6 +1,6 @@
 # Poll summary [ACTIONABLE]
 
-**repo** `jonathanong/auto-harness` · **selection** stack #514 anchored at PR #518 (5 PRs) · **mode** `summary` · **stack mergeable** `false` · **next action** `fix_code`
+**repo** `jonathanong/auto-harness` · **selection** stack #514 anchored at PR #518 (5 PRs) · **mode** `summary` · **stack mergeable** `false` · **next action** `escalate`
 
 ## Pull requests
 

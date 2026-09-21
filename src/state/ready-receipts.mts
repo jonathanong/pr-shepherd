@@ -19,6 +19,8 @@ export interface ReadyReceipt {
   isDraft: false;
   /** Canonical representation of the readiness inputs observed by Shepherd. */
   readinessFingerprint: string;
+  /** Exact merge-queue removal observed by the one-PR session, if any. */
+  acknowledgedQueueRemovalId?: string;
   recordedAtUnix: number;
 }
 
@@ -111,6 +113,9 @@ function isReadyReceipt(value: unknown): value is ReadyReceipt {
     candidate.isDraft === false &&
     typeof candidate.readinessFingerprint === "string" &&
     candidate.readinessFingerprint.length > 0 &&
+    (candidate.acknowledgedQueueRemovalId === undefined ||
+      (typeof candidate.acknowledgedQueueRemovalId === "string" &&
+        candidate.acknowledgedQueueRemovalId.length > 0)) &&
     typeof candidate.recordedAtUnix === "number" &&
     Number.isFinite(candidate.recordedAtUnix)
   );

@@ -71,6 +71,22 @@ describe("fingerprintRawSummaryPr", () => {
     ["new review", { reviews: { ...empty, totalCount: 1 } }],
     ["new thread", { reviewThreads: { ...empty, totalCount: 1 } }],
     ["changed CI", { commits: { nodes: [{ commit: { statusCheckRollup: null } }] } }],
+    [
+      "close and reopen",
+      {
+        lifecycleEvents: {
+          nodes: [{ __typename: "ReopenedEvent", createdAt: "2026-09-20T11:00:00Z" }],
+        },
+      },
+    ],
+    [
+      "draft and ready again",
+      {
+        lifecycleEvents: {
+          nodes: [{ __typename: "ReadyForReviewEvent", createdAt: "2026-09-20T11:00:00Z" }],
+        },
+      },
+    ],
   ])("invalidates on %s", (_name, change) => {
     expect(fingerprintRawSummaryPr(raw(change as Partial<RawSummaryPr>))).not.toBe(
       fingerprintRawSummaryPr(raw()),

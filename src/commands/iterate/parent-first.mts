@@ -21,9 +21,17 @@ export async function parentBlocksMarkReady(
     const child = summary.prs.find((item) => item.pr === report.pr);
     const lowerLayers = summary.prs
       .filter((item) => (item.stack?.position ?? Number.MAX_SAFE_INTEGER) < stack.position)
-      .sort((left, right) => (left.stack?.position ?? 0) - (right.stack?.position ?? 0));
+      .sort(
+        (left, right) =>
+          (left.stack?.position ?? Number.MAX_SAFE_INTEGER) -
+          (right.stack?.position ?? Number.MAX_SAFE_INTEGER),
+      );
     if (!child || child.state !== "OPEN" || lowerLayers.length !== stack.position - 1) return true;
-    if (summary.stackAncestry?.some((gap) => gap.childPr === report.pr)) return true;
+    // Any stale boundary up through the child means at least one lower layer
+    // is no longer the base it was reviewed against. Ignore gaps above this
+    // child because they do not affect its immediate promotion boundary.
+    const checkedLayers = new Set([report.pr, ...lowerLayers.map((item) => item.pr)]);
+    if (summary.stackAncestry?.some((gap) => checkedLayers.has(gap.childPr))) return true;
     for (const parent of lowerLayers) {
       // A merged parent is already satisfied; GitHub may have retargeted the
       // child to the trunk as part of the merge.

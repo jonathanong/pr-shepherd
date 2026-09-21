@@ -213,6 +213,86 @@ describe("runIterate — cancel", () => {
     );
   });
 
+  it("writes the receipt before escalating a ready stacked merge request", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        headSha: "head-1",
+        baseRefOid: "base-1",
+        mergeStatus: { ...makeReport().mergeStatus, mergeRequirements: stackRequirements() },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+
+    const result = await runIterate(makeOpts({ merge: true }));
+
+    expect(mockWriteReadyReceipt).toHaveBeenCalledTimes(1);
+    expect(result.action).toBe("escalate");
+  });
+
+  it("does not escalate a stacked merge request when its receipt cannot be persisted", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        headSha: "head-1",
+        baseRefOid: "base-1",
+        mergeStatus: { ...makeReport().mergeStatus, mergeRequirements: stackRequirements() },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+    mockFetchRawSummaryPr.mockRejectedValue(new Error("summary unavailable"));
+
+    const result = await runIterate(makeOpts({ merge: true }));
+
+    expect(result).toMatchObject({ action: "wait", shouldCancel: false });
+    expect(result.action).not.toBe("escalate");
+  });
+
+  it("acknowledges a current queue removal in the fresh receipt", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        headSha: "head-1",
+        baseRefOid: "base-1",
+        mergeStatus: { ...makeReport().mergeStatus, mergeRequirements: stackRequirements() },
+      }),
+    );
+    mockFetchRawSummaryPr.mockResolvedValue({
+      ...rawReadySnapshot,
+      isInMergeQueue: false,
+      mergeQueueRemovals: {
+        nodes: [
+          {
+            id: "removal-1",
+            createdAt: "2026-09-20T10:00:00Z",
+            reason: "FAILED",
+            actor: null,
+            beforeCommit: { oid: "queue-1", parents: { nodes: [{ oid: "head-1" }] } },
+          },
+        ],
+      },
+    });
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+
+    await runIterate(makeOpts());
+
+    expect(mockWriteReadyReceipt).toHaveBeenCalledWith(
+      expect.objectContaining({ acknowledgedQueueRemovalId: "removal-1" }),
+    );
+  });
+
   it("keeps a non-stack cancel without receipt I/O", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ status: "READY", headSha: "head-1" }));
     mockUpdateReadyDelay.mockResolvedValue({
@@ -252,6 +332,26 @@ describe("runIterate — cancel", () => {
       shouldCancel: false,
       log: expect.stringContaining("readiness receipt"),
     });
+  });
+
+  it("fails closed before fetching when the current stack report lacks its base OID", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        headSha: "head-1",
+        mergeStatus: { ...makeReport().mergeStatus, mergeRequirements: stackRequirements() },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result).toMatchObject({ action: "wait", shouldCancel: false });
+    expect(mockFetchRawSummaryPr).not.toHaveBeenCalled();
   });
 
   it("fails closed when the fresh stack snapshot has no fingerprint", async () => {
@@ -317,6 +417,31 @@ describe("runIterate — cancel", () => {
 
     expect(mockClearReadyReceipt).toHaveBeenCalledWith({ owner: "owner", repo: "repo", pr: 42 });
     expect(mockFetchRawSummaryPr).not.toHaveBeenCalled();
+  });
+
+  it("retains a matching receipt while merge-group work keeps a PR queued", async () => {
+    mockReadReadyReceipt.mockResolvedValue(existingReceipt);
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "PENDING",
+        headSha: "head-1",
+        baseRefOid: "base-1",
+        comments: { actionable: [], firstLook: [], minimizeIds: ["comment-1"] },
+        mergeQueue: { enabled: true, inQueue: true },
+        mergeStatus: { ...makeReport().mergeStatus, mergeRequirements: stackRequirements() },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    await runIterate(makeOpts({ merge: true }));
+
+    expect(mockFetchRawSummaryPr).toHaveBeenCalled();
+    expect(mockIsReadyReceiptCurrent).toHaveBeenCalled();
+    expect(mockClearReadyReceipt).not.toHaveBeenCalled();
   });
 
   it("clears a receipt when the fresh fingerprint no longer matches", async () => {
@@ -428,5 +553,46 @@ describe("runIterate — cancel", () => {
       expect(result.fix.instructions.join("\n")).toContain("gh stack rebase --upstack --no-trunk");
       expect(result.fix.instructions.join("\n")).toContain("gh stack push");
     }
+  });
+
+  it("resets the ready timer before routing a stale stack boundary", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        headSha: "head-1",
+        baseRefOid: "base-1",
+        mergeStatus: {
+          ...makeReport().mergeStatus,
+          mergeRequirements: {
+            ...stackRequirements(),
+            stack: { number: 7, size: 3, position: 2, baseRefName: "feature-parent" },
+          },
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+    mockFetchPollSummary.mockResolvedValue({
+      prs: [],
+      stackAncestry: [
+        {
+          parentPr: 41,
+          parentHeadRefName: "feature-parent",
+          parentHeadRefOid: "parent-current",
+          childPr: 42,
+          childBaseRefName: "feature-parent",
+          childBaseRefOid: "parent-old",
+        },
+      ],
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo");
+    expect(result.action).toBe("fix_code");
+    expect(result.action).not.toBe("cancel");
   });
 });

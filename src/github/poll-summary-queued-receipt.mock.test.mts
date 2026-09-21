@@ -120,7 +120,7 @@ describe("queued READY receipt projection", () => {
     expect(item.readyReceipt).toBeUndefined();
   });
 
-  it("does not route a removal that predates a newer one-PR READY receipt", async () => {
+  it("suppresses only the exact queue removal acknowledged by a current receipt", async () => {
     vi.mocked(readReadyReceipt).mockResolvedValue({
       version: 1,
       owner: repo.owner,
@@ -131,13 +131,16 @@ describe("queued READY receipt projection", () => {
       status: "READY",
       isDraft: false,
       readinessFingerprint: fingerprintRawSummaryPr(raw())!,
-      recordedAtUnix: 2_000_000_000,
+      acknowledgedQueueRemovalId: "removal-1",
+      // Timestamp order is deliberately irrelevant; clocks can disagree.
+      recordedAtUnix: 1,
     });
     const item = await summarizePollSummaryPr(
       raw({
         mergeQueueRemovals: {
           nodes: [
             {
+              id: "removal-1",
               reason: "CI_FAILURE",
               createdAt: "2026-09-20T10:10:00Z",
               actor: { login: "github-merge-queue" },
@@ -155,5 +158,38 @@ describe("queued READY receipt projection", () => {
 
     expect(item).toMatchObject({ readyReceipt: true });
     expect(item.queueRemoval).toBeUndefined();
+  });
+
+  it("does not suppress an unacknowledged removal based on receipt time", async () => {
+    vi.mocked(readReadyReceipt).mockResolvedValue({
+      version: 1,
+      owner: repo.owner,
+      repo: repo.name,
+      pr: 42,
+      headRefOid: head,
+      baseRefOid: base,
+      status: "READY",
+      isDraft: false,
+      readinessFingerprint: fingerprintRawSummaryPr(raw())!,
+      recordedAtUnix: 2_000_000_000,
+    });
+    const item = await summarizePollSummaryPr(
+      raw({
+        mergeQueueRemovals: {
+          nodes: [
+            {
+              id: "removal-2",
+              reason: "CI_FAILURE",
+              createdAt: "2026-09-20T10:10:00Z",
+              actor: null,
+              beforeCommit: { oid: "q".repeat(40), parents: { nodes: [{ oid: head }] } },
+            },
+          ],
+        },
+      }),
+      repo,
+      { stackPrNumber: 42, merge: true },
+    );
+    expect(item.queueRemoval?.reason).toBe("CI_FAILURE");
   });
 });

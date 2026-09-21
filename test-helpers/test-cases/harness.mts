@@ -38,7 +38,18 @@ vi.mock("node:child_process", () => ({
 }));
 
 vi.mock("../../src/github/batch.mts", () => ({ fetchPrBatch: vi.fn() }));
-vi.mock("../../src/github/poll-summary.mts", () => ({ fetchPollSummary: vi.fn() }));
+const { mockFetchPollSummaryValue, mockFetchRawSummaryPr } = vi.hoisted(() => ({
+  mockFetchPollSummaryValue: vi.fn(),
+  mockFetchRawSummaryPr: vi.fn(),
+}));
+vi.mock("../../src/github/poll-summary.mts", () => ({
+  fetchPollSummary: mockFetchPollSummaryValue,
+  fetchRawSummaryPr: mockFetchRawSummaryPr,
+}));
+vi.mock("../../src/state/ready-receipts.mts", async (importOriginal) => ({
+  ...(await importOriginal()),
+  writeReadyReceipt: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("../../src/state/pr-fingerprint.mts", () => ({
   loadPrFingerprint: vi.fn().mockResolvedValue(null),
   storePrFingerprint: vi.fn().mockResolvedValue(undefined),
@@ -127,6 +138,41 @@ const mockReadFixAttempts = vi.mocked(readFixAttempts);
 const mockWriteFixAttempts = vi.mocked(writeFixAttempts);
 const mockReadBotCrSeenState = vi.mocked(readBotCrSeenState);
 const mockWriteBotCrSeenState = vi.mocked(writeBotCrSeenState);
+
+function rawSummaryForBatch(batchData: Record<string, any>): any {
+  const stack = batchData.stack;
+  return {
+    number: batchData.number,
+    title: "Fixture PR",
+    url: "https://github.com/owner/repo/pull/42",
+    state: batchData.state,
+    updatedAt: "2026-09-20T12:00:00Z",
+    lifecycleEvents: null,
+    isDraft: batchData.isDraft,
+    viewerCanUpdate: true,
+    headRefName: batchData.headRefName,
+    headRefOid: batchData.headRefOid,
+    baseRefOid: batchData.baseRefOid ?? "base123",
+    baseRefName: batchData.baseRefName,
+    mergeable: batchData.mergeable,
+    mergeStateStatus: batchData.mergeStateStatus,
+    reviewDecision: batchData.reviewDecision,
+    reviewRequests: { nodes: [] },
+    latestReviews: { nodes: [] },
+    isInMergeQueue: false,
+    mergeQueueAdditions: null,
+    mergeQueueRemovals: null,
+    mergeQueueEntry: null,
+    stack: stack
+      ? { number: stack.number, size: stack.size, baseRefName: stack.baseRefName }
+      : null,
+    stackEntry: stack ? { position: stack.position } : null,
+    comments: { totalCount: 0, pageInfo: { hasPreviousPage: false }, nodes: [] },
+    reviews: { totalCount: 0, pageInfo: { hasPreviousPage: false }, nodes: [] },
+    reviewThreads: { totalCount: 0, pageInfo: { hasPreviousPage: false }, nodes: [] },
+    commits: { nodes: [] },
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Fixture type
@@ -358,6 +404,7 @@ export function applyFixture(fixture: Fixture): void {
       headRefOid: typeof batchData.headRefOid === "string" ? batchData.headRefOid : "abc123",
     }),
   });
+  mockFetchRawSummaryPr.mockResolvedValue(rawSummaryForBatch(batchData));
   if (fixture.aggregateSummary) mockFetchPollSummary.mockResolvedValue(fixture.aggregateSummary);
 
   const mergeableFallback = fixture.mergeableFallback ?? {

@@ -42,6 +42,18 @@ describe("ready receipts", () => {
     await expect(readReadyReceipt(key)).resolves.toEqual(receipt);
   });
 
+  it("round-trips an exact queue-removal acknowledgment", async () => {
+    const acknowledged = { ...receipt, acknowledgedQueueRemovalId: "removal-1" };
+    await writeReadyReceipt(acknowledged);
+    await expect(readReadyReceipt(key)).resolves.toEqual(acknowledged);
+  });
+
+  it("rejects an empty queue-removal acknowledgment", async () => {
+    await expect(writeReadyReceipt({ ...receipt, acknowledgedQueueRemovalId: "" })).rejects.toThrow(
+      "Invalid ready receipt",
+    );
+  });
+
   it("returns null for malformed or mismatched receipts", async () => {
     await writeReadyReceipt(receipt);
 

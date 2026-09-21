@@ -2,7 +2,7 @@
   "description": "A draft parent prevents every upper native-stack layer from being stack-mergeable until its own one-PR Shepherd session produces a READY receipt.",
   "mode": "aggregate",
   "args": ["--stack", "https://github.com/owner/repo/pull/302", "--debounce", "0s"],
-  "expectedExitCode": 12,
+  "expectedExitCode": 13,
   "expectedReason": "actionable",
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 302, "stackNumber": 31, "stackSize": 2 },

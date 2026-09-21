@@ -53,12 +53,23 @@ describe("native-stack reconciliation", () => {
   it("requires one-PR completion receipts, not apparently clean GitHub rows", () => {
     const result = withPollSummaryInstructions(stack([row(1, 1), row(2, 2), row(3, 3)]), false);
     expect(result).toMatchObject({
-      nextAction: "fix_code",
+      nextAction: "escalate",
       stackMergeable: false,
       reason: "actionable",
     });
     expect(result.instructions?.join("\n")).toContain("PR #1");
     expect(result.instructions?.join("\n")).toContain("PR #3");
+  });
+
+  it("sorts rows without stack positions after positioned layers", () => {
+    const result = withPollSummaryInstructions(
+      stack([
+        row(3, 3, { readyReceipt: true }),
+        row(1, 1, { stack: undefined, readyReceipt: true }),
+      ]),
+      false,
+    );
+    expect(result.prs.map((item) => item.pr)).toEqual([3, 1]);
   });
 
   it("reports a ready linear stack only after every open layer has a receipt", () => {
@@ -86,7 +97,7 @@ describe("native-stack reconciliation", () => {
       ]),
       false,
     );
-    expect(result).toMatchObject({ nextAction: "fix_code", stackMergeable: false });
+    expect(result).toMatchObject({ nextAction: "escalate", stackMergeable: false });
     expect(result.prs[1]?.blockedByPr).toBe(1);
     expect(result.prs[2]?.blockedByPr).toBe(1);
     expect(result.instructions?.join("\n")).toContain("PR #1");
@@ -120,7 +131,7 @@ describe("native-stack reconciliation", () => {
       ]),
       false,
     );
-    expect(result.nextAction).toBe("fix_code");
+    expect(result.nextAction).toBe("escalate");
     expect(result.prs[2]?.blockedByPr).toBe(1);
     expect(result.instructions?.join("\n")).not.toContain("gh stack rebase");
   });
@@ -137,12 +148,12 @@ describe("native-stack reconciliation", () => {
       ),
       false,
     );
-    expect(result.nextAction).toBe("fix_code");
+    expect(result.nextAction).toBe("escalate");
     expect(result.instructions?.join("\n")).toContain("PR #3");
     expect(result.instructions?.join("\n")).not.toContain("gh stack push");
   });
 
-  it("offers only a full-stack merge after all receipts", () => {
+  it("hands off a fully ready stack merge to its owner", () => {
     const result = withPollSummaryInstructions(
       stack([
         row(1, 1, { readyReceipt: true }),
@@ -151,8 +162,9 @@ describe("native-stack reconciliation", () => {
       ]),
       true,
     );
-    expect(result).toMatchObject({ nextAction: "fix_code", stackMergeable: true });
-    expect(result.instructions?.join("\n")).toContain("gh stack merge 9 --yes --merge");
+    expect(result).toMatchObject({ nextAction: "escalate", stackMergeable: true });
+    expect(result.instructions?.join("\n")).toContain("stack owner");
+    expect(result.instructions?.join("\n")).not.toContain("gh stack merge");
   });
 
   it("keeps a queued stack nonterminal until every layer merges", () => {
@@ -165,7 +177,7 @@ describe("native-stack reconciliation", () => {
       true,
     );
     expect(result).toMatchObject({
-      nextAction: "fix_code",
+      nextAction: "escalate",
       reason: "waiting",
       stackMergeable: true,
     });
@@ -203,11 +215,11 @@ describe("native-stack reconciliation", () => {
       ]),
       false,
     );
-    expect(result.nextAction).toBe("fix_code");
+    expect(result.nextAction).toBe("escalate");
     expect(result.instructions?.join("\n")).toContain("PR #3");
   });
 
-  it("adds quota-aware continuation to an actionable stack handoff", () => {
+  it("does not convert a quota warning into a third stack nextAction", () => {
     const result = withPollSummaryInstructions(
       {
         ...stack([row(1, 1), row(2, 2, { readyReceipt: true }), row(3, 3, { readyReceipt: true })]),
@@ -223,8 +235,8 @@ describe("native-stack reconciliation", () => {
       },
       false,
     );
-    expect(result.nextAction).toBe("fix_code");
-    expect(result.instructions?.at(-1)).toContain("After completing the stack action");
+    expect(result.nextAction).toBe("escalate");
+    expect(result.nextAction).not.toBe("fix_code");
   });
 
   it("escalates an unready layer when no one-PR command is available", () => {
