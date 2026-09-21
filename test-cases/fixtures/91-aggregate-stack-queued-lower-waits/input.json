@@ -1,17 +1,17 @@
 {
   "mode": "aggregate",
-  "description": "With --merge, a queued stack remains a human handoff until the stack owner reconciles the queue; aggregate does not mutate it.",
+  "description": "Without --merge, a queued stack remains non-terminal until every layer merges or GitHub ejects one; aggregate reprojects queued CANCEL rows as WAIT.",
   "args": [
     "--stack",
     "https://github.com/owner/repo/pull/202",
-    "--merge",
     "--timeout",
     "1s",
     "--interval",
     "2s"
   ],
   "expectedReason": "timeout",
-  "expectedExitCode": 13,
+  "expectedExitCode": 10,
+  "expectedNextAction": "wait",
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 202, "stackNumber": 12, "stackSize": 2 },
     "prs": [
@@ -20,8 +20,8 @@
         "repo": "owner/repo",
         "title": "Base layer queued",
         "url": "https://github.com/owner/repo/pull/201",
-        "action": "wait",
-        "reasons": ["already-in-merge-queue"],
+        "action": "cancel",
+        "reasons": ["appears-ready"],
         "state": "OPEN",
         "mergeable": "MERGEABLE",
         "mergeStateStatus": "CLEAN",
@@ -37,7 +37,7 @@
         "repo": "owner/repo",
         "title": "Ready upper layer",
         "url": "https://github.com/owner/repo/pull/202",
-        "action": "merge",
+        "action": "cancel",
         "reasons": ["appears-ready"],
         "state": "OPEN",
         "mergeable": "MERGEABLE",

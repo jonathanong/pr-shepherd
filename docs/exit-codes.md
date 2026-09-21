@@ -44,16 +44,16 @@ invocation) once a report was fetched successfully. The code names the
 
 Explicit multi-PR polling uses the highest-priority row outcome: `escalate`, `fix_code`, `merge`,
 `mark_ready`, `wait`, closed-only `cancel`, then successful terminal `cancel`. Native `--stack`
-reconciliation instead returns only `cancel` (0) or `escalate` (13); its `ESCALATE` instructions
-may route unready layers to autonomous one-PR Shepherd sessions or request a human merge decision.
-The full row list remains in the output regardless of the aggregate action.
+reconciliation returns `fix_code` (12) for autonomous one-PR work, `wait` (10) for queue progress,
+`cancel` (0) for completed readiness, and `escalate` (13) only for a human decision. The full row
+list remains in the output regardless of the aggregate action.
 
 | Code | Action       | Meaning                                            |
 | ---- | ------------ | -------------------------------------------------- |
 | 10   | `wait`       | Nothing to do yet; CI still in progress            |
 | 11   | `mark_ready` | Draft PR was converted to ready for review         |
 | 12   | `fix_code`   | Agent work required — see the printed instructions |
-| 13   | `escalate`   | Handoff required; follow the printed instructions  |
+| 13   | `escalate`   | Human attention required                           |
 | 14   | `cancel`     | PR closed without merging (`reason: "closed"`)     |
 | 15   | `merge`      | Run the emitted merge or merge-queue command       |
 
@@ -70,9 +70,8 @@ continues on the next tick. `poll` stops on it by default; pass
 
 `fix_code` (12) is always non-terminal. Complete the printed work, then repeat
 the current CLI mode with its flags (or schedule another MCP `iterate` tick).
-When no autonomous check follow-up remains, singular Shepherd returns `escalate` (13)
-instead and hands work to a human. Native-stack aggregate `escalate` also covers the
-reconciliation handoff to one-PR sessions; its instructions specify which kind of handoff applies.
+When no autonomous check follow-up remains, Shepherd returns `escalate` (13)
+instead; only that action hands work to a human.
 
 Codes 10–19 are chosen so they sit strictly above the small single-digit
 range and strictly below the `sysexits.h` block that starts at 64 — there is

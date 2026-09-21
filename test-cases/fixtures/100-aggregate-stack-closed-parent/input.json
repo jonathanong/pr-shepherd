@@ -3,6 +3,7 @@
   "mode": "aggregate",
   "args": ["--stack", "https://github.com/owner/repo/pull/372", "--debounce", "0s"],
   "expectedExitCode": 13,
+  "expectedNextAction": "escalate",
   "expectedReason": "actionable",
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 372, "stackNumber": 38, "stackSize": 2 },

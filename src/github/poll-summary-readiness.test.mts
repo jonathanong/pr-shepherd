@@ -15,7 +15,11 @@ function rollup(state: string) {
   };
 }
 
-function raw(sourceState: string | null, queueState: string | null): RawSummaryPr {
+function raw(
+  sourceState: string | null,
+  queueState: string | null,
+  overrides: Partial<RawSummaryPr> = {},
+): RawSummaryPr {
   return {
     number: 42,
     title: "PR",
@@ -40,6 +44,7 @@ function raw(sourceState: string | null, queueState: string | null): RawSummaryP
     commits: {
       nodes: [{ commit: { statusCheckRollup: sourceState ? rollup(sourceState) : null } }],
     },
+    ...overrides,
   };
 }
 
@@ -84,5 +89,26 @@ describe("queued readiness", () => {
         },
       ),
     ).toBe(false);
+  });
+
+  it.each(["BLOCKED", "HAS_HOOKS"] as const)(
+    "does not retain a READY receipt outside the queue while merge state is %s",
+    (mergeStateStatus) => {
+      const snapshot = raw("SUCCESS", null, {
+        isInMergeQueue: false,
+        mergeable: "MERGEABLE",
+        mergeStateStatus,
+      });
+      expect(isCurrentSummaryReady(snapshot, summarizePollSummaryChecks(snapshot), {})).toBe(false);
+    },
+  );
+
+  it("does not retain a READY receipt outside the queue while mergeability is UNKNOWN", () => {
+    const snapshot = raw("SUCCESS", null, {
+      isInMergeQueue: false,
+      mergeable: "UNKNOWN",
+      mergeStateStatus: "CLEAN",
+    });
+    expect(isCurrentSummaryReady(snapshot, summarizePollSummaryChecks(snapshot), {})).toBe(false);
   });
 });

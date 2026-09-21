@@ -4,10 +4,10 @@
 
 ## Pull requests
 
-- [PR #371: Closed foundation](https://github.com/owner/repo/pull/371) [CANCEL]
+- [PR #371: Closed foundation](https://github.com/owner/repo/pull/371) [ESCALATE]
   - state `CLOSED` · mergeable `UNKNOWN` · merge `UNKNOWN` · stack `38` position `1/2` base `main`
   - head `foundation` at `1111111111111111111111111111111111111111` · base `main`
-  - reasons: `closed`
+  - reasons: `closed`, `closed-unmerged-dependency`
 - [PR #372: Open child](https://github.com/owner/repo/pull/372) [CANCEL]
   - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `38` position `2/2` base `main`
   - head `child` at `1222222222222222222222222222222222222222` · base `foundation`

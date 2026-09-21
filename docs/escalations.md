@@ -1,10 +1,11 @@
 # Escalation boundary
 
-`ESCALATE` is Shepherd's explicit handoff action. For a singular PR it hands the pull request to a
-human and uses the closed trigger union below. Native-stack aggregate reconciliation also uses
-`ESCALATE` as its routing result: it directs the agent to shepherd each unready layer in a one-PR
-session, or hands a fully READY `--stack --merge` result to the stack owner. Aggregate mode never
-performs a mutation or emits an aggregate merge command.
+`ESCALATE` is Shepherd's explicit human-handoff action. For a singular PR it uses the closed trigger
+union below. Native-stack aggregate reconciliation remains read-only: autonomous unready layers
+return `FIX_CODE`, queued stacks return `WAIT`, and terminal READY or merged stacks return `CANCEL`.
+Aggregate `ESCALATE` is reserved for closed or unverified topology, or for handing a fully READY
+`--stack --merge` result to the stack owner. Aggregate mode never performs a mutation or emits an
+aggregate merge command.
 
 | Trigger                       | Exact condition                                                                                                                                                                                                                                      |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -80,13 +81,13 @@ Failing queue CI is actionable and therefore stays `FIX_CODE`; it does not trigg
 
 Merge mode is enabled, the clean READY state has lasted for the configured ready-delay — the same trigger as [`## merge`](actions.md#merge), which this escalation replaces — and the batch query's `stack` field is present. This applies uniformly to **every** stack position, including position 1: `--auto` is rejected server-side on any stacked PR regardless of position, and letting position 1 fall through to an ordinary merge would corrupt the remaining layers' stack metadata. A mid-stack PR's GraphQL base branch is its still-unmerged parent branch, so the plain `gh pr merge` fallback used for non-stacked PRs would silently land it there instead of the stack's trunk ref.
 
-Shepherd does not emit any merge command for a single stacked PR — see [`## merge`](actions.md#merge) for the invariant this preserves. The escalation names the PR's position, stack size, and base ref in a `## GitHub stack` section and directs the caller to `pr-shepherd --stack <pr> --merge`. That selector reconciles every open layer's READY receipt and linear ancestry, then returns only `CANCEL` or `ESCALATE`; it never performs a mutation or proposes a partial-stack merge.
+Shepherd does not emit any merge command for a single stacked PR — see [`## merge`](actions.md#merge) for the invariant this preserves. The escalation names the PR's position, stack size, and base ref in a `## GitHub stack` section and directs the caller to `pr-shepherd --stack <pr> --merge`. That selector reconciles every open layer's READY receipt and linear ancestry, then returns `FIX_CODE` for autonomous unready work, `WAIT` for a queued stack, `CANCEL` for terminal READY or merged state, and `ESCALATE` only for a human decision. It never performs a mutation or proposes a partial-stack merge.
 
-For aggregate `--stack` polling, `ESCALATE` has two routing forms. If any layer is not ready, the
-instructions identify the affected one-PR Shepherd sessions; an unready lower layer blocks every
-upper layer from becoming ready, while independent review and CI sessions may proceed concurrently.
-If `--stack --merge` finds every layer fully READY and linear, it escalates to the stack owner for
-the merge decision. Shepherd does not emit `gh stack merge` or any other aggregate mutation command.
+For aggregate `--stack` polling, an unready lower layer blocks every upper layer from becoming ready,
+while independent review and CI sessions may proceed concurrently. Closed or unverified topology
+returns `ESCALATE` for human direction. If `--stack --merge` finds every layer fully READY and
+linear, it returns `ESCALATE` to the stack owner for the merge decision. Shepherd does not emit
+`gh stack merge` or any other aggregate mutation command.
 
 **Detection caveat:** GitHub's stack field is a public-preview API and can be absent even for a genuinely stacked PR — for example when Stacked PRs are disabled on the repository. An absent `stack` field is therefore not proof the PR isn't stacked; it only means Shepherd has no signal either way. Shepherd has no other reliable signal to distinguish an ordinary feature branch from an undetectable stacked PR (comparing the base branch to the repository's default branch false-positives on any PR that targets a non-default branch for ordinary reasons), so it does not attempt to infer stackedness beyond this field. This is a known gap, not a silently accepted risk: absence of the field only means the ordinary merge path proceeds, it does not confirm the PR is safe to merge with a plain `gh pr merge --auto`.
 

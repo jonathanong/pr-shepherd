@@ -1,0 +1,33 @@
+{
+  "description": "A human-only escalation in one stack layer ends the aggregate session, while independent FIX_CODE and WAIT row evidence remains surfaced for follow-up one-PR Shepherd sessions.",
+  "mode": "aggregate",
+  "args": ["--stack", "https://github.com/owner/repo/pull/403", "--debounce", "0s"],
+  "expectedExitCode": 13,
+  "expectedNextAction": "escalate",
+  "expectedReason": "actionable",
+  "aggregateSummary": {
+    "selection": { "kind": "stack", "anchor": 403, "stackNumber": 40, "stackSize": 3 },
+    "prs": [
+      {
+        "pr": 401, "repo": "owner/repo", "title": "Human handoff", "url": "https://github.com/owner/repo/pull/401",
+        "action": "escalate", "reasons": ["mark-ready-authorization-required"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "foundation", "headRefOid": "4011111111111111111111111111111111111111", "baseRefName": "main", "isDraft": true,
+        "stack": { "number": 40, "size": 3, "position": 1, "baseRefName": "main" }
+      },
+      {
+        "pr": 402, "repo": "owner/repo", "title": "Independent review work", "url": "https://github.com/owner/repo/pull/402",
+        "action": "fix_code", "reasons": ["review-work"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "review-work", "headRefOid": "4022222222222222222222222222222222222222", "baseRefName": "foundation",
+        "stack": { "number": 40, "size": 3, "position": 2, "baseRefName": "main" },
+        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/402 --until-terminal"
+      },
+      {
+        "pr": 403, "repo": "owner/repo", "title": "Pending CI", "url": "https://github.com/owner/repo/pull/403",
+        "action": "wait", "reasons": ["pending-or-unknown"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "BLOCKED",
+        "headRefName": "pending-ci", "headRefOid": "4033333333333333333333333333333333333333", "baseRefName": "review-work",
+        "checks": { "inProgress": 1 }, "stack": { "number": 40, "size": 3, "position": 3, "baseRefName": "main" },
+        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/403 --until-terminal"
+      }
+    ]
+  }
+}

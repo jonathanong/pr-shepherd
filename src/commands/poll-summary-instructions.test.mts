@@ -53,7 +53,7 @@ describe("native-stack reconciliation", () => {
   it("requires one-PR completion receipts, not apparently clean GitHub rows", () => {
     const result = withPollSummaryInstructions(stack([row(1, 1), row(2, 2), row(3, 3)]), false);
     expect(result).toMatchObject({
-      nextAction: "escalate",
+      nextAction: "fix_code",
       stackMergeable: false,
       reason: "actionable",
     });
@@ -88,6 +88,30 @@ describe("native-stack reconciliation", () => {
     });
   });
 
+  it("reprojects an effective queued CANCEL as WAIT without --merge", () => {
+    const result = withPollSummaryInstructions(
+      stack([
+        row(1, 1, { action: "cancel", readyReceipt: true, isInMergeQueue: true }),
+        row(2, 2, { action: "cancel", readyReceipt: true, isInMergeQueue: true }),
+      ]),
+      false,
+    );
+    expect(result).toMatchObject({ nextAction: "wait", stackMergeable: true });
+    expect(result.prs.map((item) => item.action)).toEqual(["wait", "wait"]);
+  });
+
+  it.each([
+    ["a one-PR WAIT action", { action: "wait", reasons: ["waiting"], readyReceipt: true }],
+    ["UNKNOWN raw mergeability", { mergeable: "UNKNOWN", readyReceipt: true }],
+  ] satisfies Array<[string, Partial<PollSummaryItem>]>)(
+    "never returns CANCEL for %s outside the queue",
+    (_name, changes) => {
+      const result = withPollSummaryInstructions(stack([row(1, 1, changes)]), false);
+      expect(result.nextAction).toBe("fix_code");
+      expect(result.nextAction).not.toBe("cancel");
+    },
+  );
+
   it("blocks every upper layer above a draft parent and routes all unready sessions", () => {
     const result = withPollSummaryInstructions(
       stack([
@@ -97,7 +121,7 @@ describe("native-stack reconciliation", () => {
       ]),
       false,
     );
-    expect(result).toMatchObject({ nextAction: "escalate", stackMergeable: false });
+    expect(result).toMatchObject({ nextAction: "fix_code", stackMergeable: false });
     expect(result.prs[1]?.blockedByPr).toBe(1);
     expect(result.prs[2]?.blockedByPr).toBe(1);
     expect(result.instructions?.join("\n")).toContain("PR #1");
@@ -131,9 +155,71 @@ describe("native-stack reconciliation", () => {
       ]),
       false,
     );
-    expect(result.nextAction).toBe("escalate");
+    expect(result.nextAction).toBe("fix_code");
     expect(result.prs[2]?.blockedByPr).toBe(1);
     expect(result.instructions?.join("\n")).not.toContain("gh stack rebase");
+  });
+
+  it.each([
+    ["BLOCKED", {}],
+    ["HAS_HOOKS", {}],
+    ["pending CI", { checks: { inProgress: 1 } }],
+  ] as const)("does not accept a READY receipt while the lower layer has %s", (_state, changes) => {
+    const result = withPollSummaryInstructions(
+      stack([
+        row(1, 1, {
+          readyReceipt: true,
+          ...(typeof _state === "string" &&
+            _state !== "pending CI" && { mergeStateStatus: _state }),
+          ...changes,
+        }),
+        row(2, 2, { readyReceipt: true }),
+      ]),
+      false,
+    );
+    expect(result).toMatchObject({ nextAction: "fix_code", stackMergeable: false });
+    expect(result.prs[0]?.action).toBe("fix_code");
+    expect(result.instructions?.join("\n")).toContain("PR #1");
+  });
+
+  it("lets a row ESCALATE dominate while retaining another row's autonomous work", () => {
+    const result = withPollSummaryInstructions(
+      stack([
+        row(1, 1, {
+          action: "escalate",
+          reasons: ["mark-ready-authorization-required"],
+          isDraft: true,
+          pollCommand: undefined,
+        }),
+        row(2, 2, {
+          action: "fix_code",
+          reasons: ["review-work"],
+        }),
+      ]),
+      false,
+    );
+    expect(result).toMatchObject({ nextAction: "escalate", stackMergeable: false });
+    expect(result.instructions?.join("\n")).toContain("PR #1");
+    expect(result.instructions?.join("\n")).toContain("PR #2");
+  });
+
+  it("keeps available one-PR routes when a human decision and a missing command coexist", () => {
+    const result = withPollSummaryInstructions(
+      stack([
+        row(1, 1, {
+          action: "escalate",
+          reasons: ["mark-ready-authorization-required"],
+          isDraft: true,
+        }),
+        row(2, 2, { action: "fix_code", pollCommand: undefined }),
+        row(3, 3, { action: "fix_code" }),
+      ]),
+      false,
+    );
+    expect(result.nextAction).toBe("escalate");
+    expect(result.instructions?.join("\n")).toContain("pull/3 --until-terminal");
+    expect(result.instructions?.join("\n")).toContain("PR #2 needs a one-PR session");
+    expect(result.instructions?.join("\n")).toContain("PR #1 requires human action");
   });
 
   it("routes stale ancestry to a one-PR session", () => {
@@ -148,7 +234,7 @@ describe("native-stack reconciliation", () => {
       ),
       false,
     );
-    expect(result.nextAction).toBe("escalate");
+    expect(result.nextAction).toBe("fix_code");
     expect(result.instructions?.join("\n")).toContain("PR #3");
     expect(result.instructions?.join("\n")).not.toContain("gh stack push");
   });
@@ -177,7 +263,7 @@ describe("native-stack reconciliation", () => {
       true,
     );
     expect(result).toMatchObject({
-      nextAction: "escalate",
+      nextAction: "wait",
       reason: "waiting",
       stackMergeable: true,
     });
@@ -198,7 +284,10 @@ describe("native-stack reconciliation", () => {
   });
 
   it.each([
-    ["all terminal", [row(1, 1, { state: "MERGED" }), row(2, 2, { state: "UNKNOWN" })]],
+    [
+      "a merged row followed by an unknown state",
+      [row(1, 1, { state: "MERGED" }), row(2, 2, { state: "UNKNOWN" })],
+    ],
     ["below an open layer", [row(1, 1, { state: "UNKNOWN" }), row(2, 2, { readyReceipt: true })]],
   ] as const)("escalates an unverified state %s", (_case, prs) => {
     const result = withPollSummaryInstructions(stack([...prs]), true);
@@ -215,7 +304,7 @@ describe("native-stack reconciliation", () => {
       ]),
       false,
     );
-    expect(result.nextAction).toBe("escalate");
+    expect(result.nextAction).toBe("fix_code");
     expect(result.instructions?.join("\n")).toContain("PR #3");
   });
 
@@ -235,8 +324,8 @@ describe("native-stack reconciliation", () => {
       },
       false,
     );
-    expect(result.nextAction).toBe("escalate");
-    expect(result.nextAction).not.toBe("fix_code");
+    expect(result.nextAction).toBe("fix_code");
+    expect(result.nextAction).not.toBe("escalate");
   });
 
   it("escalates an unready layer when no one-PR command is available", () => {
@@ -245,6 +334,6 @@ describe("native-stack reconciliation", () => {
       false,
     );
     expect(result).toMatchObject({ nextAction: "escalate", stackMergeable: false });
-    expect(result.instructions?.[0]).toContain("could not produce its command");
+    expect(result.instructions?.join("\n")).toContain("could not produce its command");
   });
 });

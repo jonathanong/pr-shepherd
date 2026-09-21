@@ -15,4 +15,4 @@
 
 ## Instructions
 
-1. Stop — every open stack layer completed Shepherd READY and ancestry is linear.
+1. Stop — every stack layer is terminal or fully READY.

@@ -28,16 +28,23 @@ preserves raw row state, then adds `blockedByPr` to an upper open layer when a l
 that receipt. A lower draft, conflict, failure, pending state, review item, missing receipt, or stale
 ancestry therefore prevents an upper layer from advancing even when GitHub calls it `CLEAN`. Review
 and CI sessions may run concurrently on separate layers, but an upper draft cannot transition to
-ready until every lower layer has its READY receipt. The stack returns only `CANCEL` or `ESCALATE`:
-`ESCALATE` routes unready layers to exact one-PR Shepherd commands and asks the caller to rerun the
-same selector afterward; `CANCEL` means every open layer is READY (or every layer is merged).
-It never emits aggregate rebase, push, or merge commands. A closed-unmerged or otherwise unverified
-layer is a human-only `ESCALATE` handoff.
+ready until every lower layer has its READY receipt. An unready stack returns `FIX_CODE` with exact
+one-PR Shepherd commands and asks the caller to rerun the same selector after those sessions.
+`CANCEL` is terminal only when every open layer is READY (or every layer is merged). Aggregate mode
+never emits rebase, push, or merge commands. `ESCALATE` is reserved for a human decision, such as a
+closed-unmerged or otherwise unverified dependency. An effective per-PR `ESCALATE` makes the stack
+`ESCALATE`, but instructions still include autonomous one-PR sessions for other layers. A closed
+dependency and a stale-but-otherwise-ready child are first reprojected to effective `ESCALATE` and
+`FIX_CODE` respectively, so an all-`CANCEL` stack truly has no remaining layer work.
+A clean draft whose automatic mark-ready transition is disabled requires a human readiness decision;
+drafts with actionable review or CI still route that autonomous work first through bounded one-PR
+sessions.
 
 When `--merge` is requested and all open layers are `stackMergeable`, the read-only summary returns
 `ESCALATE` to hand the native-stack merge to its owner; it does not submit even a ready prefix. If
-GitHub puts any layer in a merge queue, the summary returns `ESCALATE` with a recheck instruction
-until every layer is merged; an ejected layer is routed back to its one-PR session.
+GitHub puts any layer in a merge queue, the summary remains `WAIT` during queue progress and asks
+the caller to recheck until every layer is merged; an ejected layer is routed back to its one-PR
+session.
 An ejection remains actionable until a current one-PR READY receipt explicitly acknowledges that
 exact removal event; local timestamps are not treated as proof. Close/reopen and draft/ready
 lifecycle transitions also invalidate older receipts even when the PR returns to the same commit.

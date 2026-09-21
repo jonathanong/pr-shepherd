@@ -22,8 +22,9 @@ export function isCurrentSummaryReady(
     review.incomplete !== true &&
     raw.state === "OPEN" &&
     !raw.isDraft &&
-    (queued || raw.mergeable !== "CONFLICTING") &&
-    (queued || !["DIRTY", "BEHIND", "UNKNOWN"].includes(raw.mergeStateStatus)) &&
+    (queued || raw.mergeable === "MERGEABLE") &&
+    (queued ||
+      !["DIRTY", "BEHIND", "UNKNOWN", "BLOCKED", "HAS_HOOKS"].includes(raw.mergeStateStatus)) &&
     (checks.failing ?? 0) === 0 &&
     (sourceChecks.failing ?? 0) === 0 &&
     (sourceChecks.inProgress ?? 0) === 0 &&

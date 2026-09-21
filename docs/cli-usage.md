@@ -53,14 +53,14 @@ complete, or timeout expires. Its Markdown, JSON, API, and MCP result contains o
 raw state, bounded check/review counts, and routing context. Explicit PR sets include an exact
 one-PR `pollCommand` for each actionable row, which callers may handle independently.
 
-For a native stack, `--stack` is reconciliation-only and its aggregate action is only `CANCEL` or
-`ESCALATE`. It never performs GitHub mutations or emits `gh stack merge`, rebase, or push commands.
-When any layer is draft, lacks a current one-PR READY receipt, conflicts, fails checks, remains
-pending, or has stale ancestry, the result is `ESCALATE` and its instructions name the affected
-one-PR Shepherd sessions. The first unready lower layer causes each higher open layer to carry
-`blockedByPr`; review and CI work can proceed concurrently on independent layers, but an upper draft
-must remain draft until every lower layer has a READY receipt. A closed-unmerged dependency is also
-an `ESCALATE` handoff.
+For a native stack, `--stack` is reconciliation-only and never performs GitHub mutations or emits
+`gh stack merge`, rebase, or push commands. When any layer is draft, lacks a current one-PR READY
+receipt, conflicts, fails checks, remains pending, or has stale ancestry, the result is `FIX_CODE`
+and its instructions name the affected one-PR Shepherd sessions. The first unready lower layer
+causes each higher open layer to carry `blockedByPr`; review and CI work can proceed concurrently on
+independent layers, but an upper draft must remain draft until every lower layer has a READY receipt.
+A queued stack returns `WAIT`; a terminal READY or fully merged stack returns `CANCEL`. Closed or
+unverified topology returns `ESCALATE` for human direction.
 
 With `--stack --merge`, a fully verified stack returns `ESCALATE` to the stack owner for the merge
 decision. Shepherd does not submit the stack or emit an aggregate merge command. JSON/MCP includes

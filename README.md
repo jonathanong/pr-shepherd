@@ -144,13 +144,14 @@ needed, every selected PR is complete, the bounded timeout expires, or `--until-
 configured GraphQL quota-warning band. Explicit PR sets give each actionable row an exact single-PR
 `pollCommand`, so independent rows can proceed before the next aggregate poll.
 
-Native-stack rows are ordered bottom-to-top. `--stack` is reconciliation-only and returns only
-`CANCEL` or `ESCALATE`; it never emits `gh stack merge`, rebase, push, or other mutation commands.
-If any layer is draft, not READY, conflicting, failing, pending, stale, or otherwise not mergeable,
-the result is `ESCALATE` with one-PR Shepherd instructions for the affected layers. A draft or other
-unready lower layer marks every higher open layer with `blockedByPr`; review and CI sessions on
-independent layers may proceed concurrently, but an upper draft cannot transition to ready until
-every lower layer has its READY receipt. A closed-unmerged dependency is also an explicit escalation.
+Native-stack rows are ordered bottom-to-top. `--stack` is reconciliation-only and never emits
+`gh stack merge`, rebase, push, or other mutation commands. An unready layer (draft, missing a READY
+receipt, conflicting, failing, or stale) returns `FIX_CODE` with one-PR Shepherd instructions for
+the affected layers. A draft or other unready lower layer marks every higher open layer with
+`blockedByPr`; review and CI sessions on independent layers may proceed concurrently, but an upper
+draft cannot transition to ready until every lower layer has its READY receipt. A queued stack
+returns `WAIT`. A terminal READY or fully merged stack returns `CANCEL`. Closed or unverified
+topology returns `ESCALATE` for human direction.
 
 With `--stack --merge`, a fully reconciled and READY stack returns `ESCALATE` to the stack owner for
 the merge decision. Shepherd does not submit the stack or emit a merge command. API and MCP

@@ -43,7 +43,10 @@ import {
   makeOpts,
   makeReport,
   mockRunCheck,
+  mockClearStallState,
+  mockReadStallState,
   mockUpdateReadyDelay,
+  mockWriteStallState,
 } from "../../test-helpers/commands/iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
 
@@ -52,6 +55,8 @@ registerIterateHooks();
 const rawReadySnapshot = {
   state: "OPEN",
   isDraft: false,
+  mergeable: "MERGEABLE",
+  mergeStateStatus: "CLEAN",
   headRefOid: "head-1",
   baseRefOid: "base-1",
 };
@@ -375,6 +380,45 @@ describe("runIterate — cancel", () => {
     expect(result).toMatchObject({ action: "wait", shouldCancel: false });
     expect(mockSummarizePollSummaryPr).not.toHaveBeenCalled();
     expect(mockWriteReadyReceipt).not.toHaveBeenCalled();
+  });
+
+  it("keeps receipt failures in the stall guard until the timeout", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        headSha: "head-1",
+        baseRefOid: "base-1",
+        mergeStatus: { ...makeReport().mergeStatus, mergeRequirements: stackRequirements() },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+    mockFetchRawSummaryPr.mockRejectedValue(new Error("summary unavailable"));
+    mockReadStallState.mockResolvedValue(null);
+
+    const first = await runIterate(makeOpts({ stallTimeoutSeconds: 600 }));
+
+    expect(first).toMatchObject({ action: "wait", shouldCancel: false });
+    expect(mockClearReadyReceipt).not.toHaveBeenCalled();
+    expect(mockWriteStallState).toHaveBeenCalledOnce();
+    const fingerprint = (mockWriteStallState.mock.calls[0]![1] as { fingerprint: string })
+      .fingerprint;
+
+    mockReadStallState.mockResolvedValue({
+      fingerprint,
+      firstSeenAt: Math.floor(Date.now() / 1000) - 601,
+    });
+
+    const second = await runIterate(makeOpts({ stallTimeoutSeconds: 600 }));
+
+    expect(second.action).toBe("escalate");
+    if (second.action === "escalate") {
+      expect(second.escalate.triggers).toContain("stall-timeout");
+    }
+    expect(mockClearStallState).not.toHaveBeenCalled();
   });
 
   it("does not write a receipt when fresh compact evidence has failing checks", async () => {

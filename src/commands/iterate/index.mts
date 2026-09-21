@@ -239,20 +239,30 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
   if (markReadyResult) return markReadyResult;
 
   if (readyState.shouldCancel && !report.mergeStatus.isDraft) {
-    await clearStallState(stallKey);
     const needsStackReceipt = report.mergeStatus.mergeRequirements?.stack !== undefined;
     const receiptWritten = needsStackReceipt
       ? await recordReadyReceipt({ owner: repoOwner, repo: repoName, pr: report.pr }, report)
       : true;
     if (!receiptWritten) {
-      return {
+      const receiptWait: IterateResult = {
         ...base,
         action: "wait",
         shouldCancel: false,
         remainingSeconds: readyDelaySeconds,
         log: `WAIT: PR #${base.pr} reached ready-delay but its stack readiness receipt could not be persisted`,
       };
+      return applyStallGuard(
+        stallKey,
+        stallTimeoutSeconds,
+        headSha,
+        base,
+        prNumber,
+        receiptWait,
+        report,
+        reviewSummaryIds,
+      );
     }
+    await clearStallState(stallKey);
     const mergeResult = buildReadyMergeOutcome(opts.merge, true, base, report);
     if (mergeResult) return mergeResult;
     const cancelNote = blockedCancelNote(base);

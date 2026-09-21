@@ -185,6 +185,8 @@ export interface Fixture {
   aggregateSummary?: { selection: Record<string, unknown>; prs: unknown[] };
   /** Expected aggregate result reason. */
   expectedReason?: "actionable" | "all_terminal" | "waiting" | "timeout";
+  /** Expected stack-level transition for aggregate native-stack fixtures. */
+  expectedNextAction?: string;
   /** Fields merged on top of DEFAULT_BATCH. */
   batchData?: Record<string, unknown>;
   /** Return value of getMergeableState() for UNKNOWN/READY refresh. */

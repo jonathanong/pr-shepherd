@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { buildQuotaAwareContinuation } from "../quota-warning.mts";
 import type { PollSummaryItem, PollSummaryResult, ShepherdAction } from "../types.mts";
 import { explicitInstructions } from "./poll-summary-explicit-instructions.mts";
@@ -32,21 +33,57 @@ export function withPollSummaryInstructions(
                 (item.pollCommand.includes("--no-auto-mark-ready") ? "" : " --no-auto-mark-ready"),
             }),
         }
-      : item.state === "OPEN" && !isReady(item) && ["cancel", "merge"].includes(item.action)
+      : item.state === "OPEN" &&
+          (!isReady(item) || staleChildren.has(item.pr)) &&
+          ["cancel", "merge"].includes(item.action)
         ? {
             ...item,
             action: "fix_code" as const,
-            reasons: [...item.reasons, "ready-receipt-required"],
+            reasons: [
+              ...item.reasons,
+              staleChildren.has(item.pr) ? "stale-ancestry" : "ready-receipt-required",
+            ],
           }
-        : item,
+        : item.state === "OPEN" &&
+            item.action === "wait" &&
+            item.reasons.includes("draft-auto-mark-ready-disabled")
+          ? {
+              ...item,
+              action: "escalate" as const,
+              reasons: [...item.reasons, "mark-ready-human-required"],
+            }
+          : item,
   );
-  const projected = { ...result, prs: blocked };
+  const projected = {
+    ...result,
+    prs: blocked.map((item) => {
+      if (item.state === "OPEN" && item.isInMergeQueue && item.action === "cancel") {
+        return {
+          ...item,
+          action: "wait" as const,
+          reasons: [...item.reasons, "already-in-merge-queue"],
+        };
+      }
+      if (item.state === "CLOSED" && closedDependency(blocked, item.pr)) {
+        return {
+          ...item,
+          action: "escalate" as const,
+          reasons: [...item.reasons, "closed-unmerged-dependency"],
+        };
+      }
+      if (item.state !== "OPEN" && item.state !== "MERGED") {
+        return {
+          ...item,
+          action: "escalate" as const,
+          reasons: [...item.reasons, "unverified-stack-state"],
+        };
+      }
+      return item;
+    }),
+  };
   const planned = planStack(projected, mergeRequested);
   const instructions = [...planned.instructions];
-  if (
-    result.quotaWarning &&
-    instructions.some((instruction) => instruction.includes("rerun this same"))
-  ) {
+  if (result.quotaWarning && planned.action === "fix_code") {
     instructions.push(
       buildQuotaAwareContinuation(
         result.quotaWarning,
@@ -71,7 +108,7 @@ export function withPollSummaryInstructions(
 }
 
 interface StackPlan {
-  action: Extract<ShepherdAction, "cancel" | "escalate">;
+  action: Extract<ShepherdAction, "fix_code" | "wait" | "cancel" | "escalate">;
   stackMergeable: boolean;
   waiting?: boolean;
   instructions: string[];
@@ -80,30 +117,49 @@ interface StackPlan {
 function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPlan {
   const open = result.prs.filter((item) => item.state === "OPEN");
   const lastOpen = open.at(-1);
-  const closedDependency = result.prs.find(
+  const closedDependencyPr = result.prs.find(
     (item) => item.state === "CLOSED" && lastOpen && position(item) < position(lastOpen),
   );
-  if (closedDependency) {
-    return {
-      action: "escalate",
-      stackMergeable: false,
-      instructions: [
-        `1. PR #${closedDependency.pr} was closed without merging below an open layer. Stop and ask the stack owner whether to restore that dependency or rebuild the upper branches.`,
-      ],
-    };
-  }
   const unverifiedLayer = result.prs.find(
     (item) => item.state !== "OPEN" && item.state !== "MERGED",
   );
-  if (unverifiedLayer) {
-    return {
-      action: "escalate",
-      stackMergeable: false,
-      instructions: [
-        `1. PR #${unverifiedLayer.pr} has state \`${unverifiedLayer.state}\` rather than open or merged. Stop and ask the stack owner to reconcile this layer before declaring the stack complete.`,
-      ],
-    };
+  const gaps = result.stackAncestry ?? [];
+  const stackMergeable = gaps.length === 0 && open.every(isReady);
+  const candidates = open.filter(
+    (item) => !isReady(item) || gaps.some((gap) => gap.childPr === item.pr),
+  );
+  const autonomousCandidates = candidates.filter((item) => item.action !== "escalate");
+  const runnableCandidates = autonomousCandidates.filter((item) => item.pollCommand);
+  const missingCommands = autonomousCandidates.filter((item) => !item.pollCommand);
+  const escalated = result.prs.filter((item) => item.action === "escalate");
+
+  if (closedDependencyPr || unverifiedLayer || escalated.length > 0) {
+    const instructions: string[] = [];
+    appendAutonomousInstructions(instructions, runnableCandidates);
+    if (closedDependencyPr) {
+      instructions.push(
+        `${instructions.length + 1}. PR #${closedDependencyPr.pr} was closed without merging below an open layer. Stop and ask the stack owner whether to restore that dependency or rebuild the upper branches.`,
+      );
+    }
+    if (unverifiedLayer && unverifiedLayer.pr !== closedDependencyPr?.pr) {
+      instructions.push(
+        `${instructions.length + 1}. PR #${unverifiedLayer.pr} has state \`${unverifiedLayer.state}\` rather than open or merged. Stop and ask the stack owner to reconcile this layer before declaring the stack complete.`,
+      );
+    }
+    for (const item of escalated) {
+      if (item.pr === closedDependencyPr?.pr || item.pr === unverifiedLayer?.pr) continue;
+      instructions.push(
+        `${instructions.length + 1}. PR #${item.pr} requires human action (${item.reasons.join(", ")}). Complete that decision before declaring the stack ready.`,
+      );
+    }
+    for (const item of missingCommands) {
+      instructions.push(
+        `${instructions.length + 1}. PR #${item.pr} needs a one-PR session, but Shepherd could not produce its command. Ask for direction.`,
+      );
+    }
+    return { action: "escalate", stackMergeable: false, instructions };
   }
+
   if (open.length === 0) {
     return {
       action: "cancel",
@@ -112,57 +168,61 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
     };
   }
 
-  const gaps = result.stackAncestry ?? [];
-  const stackMergeable = gaps.length === 0 && open.every(isReady);
   if (!stackMergeable) {
-    const candidates = open.filter(
-      (item) => !isReady(item) || gaps.some((gap) => gap.childPr === item.pr),
-    );
-    const withoutCommand = candidates.find((item) => !item.pollCommand);
-    if (withoutCommand) {
+    if (missingCommands.length > 0) {
+      const instructions: string[] = [];
+      appendAutonomousInstructions(instructions, runnableCandidates);
+      for (const item of missingCommands) {
+        instructions.push(
+          `${instructions.length + 1}. PR #${item.pr} needs a one-PR session, but Shepherd could not produce its command. Stop and ask for direction.`,
+        );
+      }
       return {
         action: "escalate",
         stackMergeable: false,
-        instructions: [
-          `1. PR #${withoutCommand.pr} needs a one-PR session, but Shepherd could not produce its command. Stop and ask for direction.`,
-        ],
+        instructions,
       };
     }
-    const instructions = [
-      "1. Start or delegate the relevant one-PR sessions below; review and CI work on separate layers can proceed concurrently.",
-      ...candidates.map((item, index) =>
-        item.pollCommand
-          ? `${index + 2}. Run \`${item.pollCommand}\` for PR #${item.pr}${item.blockedByPr ? ` (stack-blocked by PR #${item.blockedByPr})` : ""}${item.queueRemoval ? `; GitHub removed it from the merge queue (${item.queueRemoval.reason ?? "unknown reason"})` : ""}.`
-          : `${index + 2}. PR #${item.pr} needs a one-PR Shepherd session, but no command was available.`,
-      ),
-    ];
-    instructions.push(
-      `${instructions.length + 1}. Keep upper draft PRs in draft until every lower layer has completed Shepherd READY.`,
-    );
+    const instructions: string[] = [];
+    appendAutonomousInstructions(instructions, autonomousCandidates);
     instructions.push(
       `${instructions.length + 1}. After the selected one-PR sessions, rerun this same \`--stack\` selector.`,
     );
-    return { action: "escalate", stackMergeable: false, instructions };
-  }
-
-  if (!mergeRequested) {
-    return {
-      action: "cancel",
-      stackMergeable: true,
-      instructions: [
-        "1. Stop — every open stack layer completed Shepherd READY and ancestry is linear.",
-      ],
-    };
+    return { action: "fix_code", stackMergeable: false, instructions };
   }
 
   if (open.some((item) => item.isInMergeQueue)) {
     return {
-      action: "escalate",
+      action: "wait",
       stackMergeable: true,
       waiting: true,
       instructions: [
         "1. The stack is in the merge queue. Recheck at the configured polling cadence; finish only after every layer is merged, and route any ejected layer to its one-PR session.",
       ],
+    };
+  }
+
+  if (!mergeRequested && result.prs.every((item) => item.action === "cancel")) {
+    return {
+      action: "cancel",
+      stackMergeable: true,
+      instructions: ["1. Stop — every stack layer is terminal or fully READY."],
+    };
+  }
+
+  if (!mergeRequested) {
+    const instructions: string[] = [];
+    appendAutonomousInstructions(
+      instructions,
+      open.filter((item) => item.action !== "cancel"),
+    );
+    instructions.push(
+      `${instructions.length + 1}. After the selected one-PR sessions, rerun this same \`--stack\` selector.`,
+    );
+    return {
+      action: "fix_code",
+      stackMergeable,
+      instructions,
     };
   }
 
@@ -177,14 +237,43 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
   };
 }
 
+function closedDependency(items: PollSummaryItem[], pr: number): boolean {
+  const open = items.filter((item) => item.state === "OPEN");
+  const lastOpen = open.at(-1);
+  return Boolean(
+    lastOpen &&
+    items.some(
+      (item) => item.pr === pr && item.state === "CLOSED" && position(item) < position(lastOpen),
+    ),
+  );
+}
+
+function appendAutonomousInstructions(instructions: string[], candidates: PollSummaryItem[]): void {
+  if (candidates.length === 0) return;
+  instructions.push(
+    `${instructions.length + 1}. Start or delegate the relevant one-PR sessions below; review and CI work on separate layers can proceed concurrently.`,
+  );
+  for (const item of candidates) {
+    instructions.push(
+      item.pollCommand
+        ? `${instructions.length + 1}. Run \`${item.pollCommand}\` for PR #${item.pr}${item.blockedByPr ? ` (stack-blocked by PR #${item.blockedByPr})` : ""}${item.queueRemoval ? `; GitHub removed it from the merge queue (${item.queueRemoval.reason ?? "unknown reason"})` : ""}.`
+        : `${instructions.length + 1}. PR #${item.pr} needs a one-PR Shepherd session, but no command was available.`,
+    );
+  }
+  instructions.push(
+    `${instructions.length + 1}. Keep upper draft PRs in draft until every lower layer has completed Shepherd READY.`,
+  );
+}
+
 function isReady(item: PollSummaryItem): boolean {
   return (
     item.state === "OPEN" &&
     item.readyReceipt === true &&
     !item.isDraft &&
     !item.queueRemoval &&
-    (item.isInMergeQueue || item.mergeable !== "CONFLICTING") &&
-    (item.isInMergeQueue || !["DIRTY", "BEHIND", "UNKNOWN"].includes(item.mergeStateStatus)) &&
+    (item.isInMergeQueue || item.mergeable === "MERGEABLE") &&
+    (item.isInMergeQueue ||
+      !["DIRTY", "BEHIND", "UNKNOWN", "BLOCKED", "HAS_HOOKS"].includes(item.mergeStateStatus)) &&
     (item.checks?.failing ?? 0) === 0 &&
     (item.isInMergeQueue || (item.checks?.inProgress ?? 0) === 0) &&
     (item.review?.actionable ?? 0) === 0

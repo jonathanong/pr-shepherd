@@ -127,10 +127,9 @@ describe("pr-shepherd skill recurrence contract", () => {
     expect(skill).not.toContain("once it completes");
   });
 
-  it("keeps singular ESCALATE human-only while dispatching stack handoffs", () => {
+  it("reserves human hand-off for ESCALATE", () => {
     expect(skill).toContain("`[FIX_CODE]` is always non-terminal");
-    expect(skill).toMatch(/if it routes layers to one-PR sessions and says to rerun the selector/i);
-    expect(skill).toMatch(/if it asks for a human decision, stop/i);
+    expect(skill).toMatch(/only `\[ESCALATE\]` hands work to a human/i);
     expect(skill).not.toContain("instructions require a human handoff");
   });
 

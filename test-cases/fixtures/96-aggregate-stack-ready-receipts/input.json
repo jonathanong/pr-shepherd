@@ -4,6 +4,7 @@
   "args": ["--stack", "https://github.com/owner/repo/pull/332"],
   "expectedExitCode": 0,
   "expectedReason": "all_terminal",
+  "expectedNextAction": "cancel",
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 332, "stackNumber": 34, "stackSize": 2 },
     "prs": [

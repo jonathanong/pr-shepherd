@@ -1,14 +1,14 @@
 # Poll summary [TIMEOUT]
 
-**repo** `owner/repo` · **selection** stack #12 anchored at PR #202 (2 PRs) · **mode** `summary` · **stack mergeable** `true` · **next action** `escalate`
+**repo** `owner/repo` · **selection** stack #12 anchored at PR #202 (2 PRs) · **mode** `summary` · **stack mergeable** `true` · **next action** `wait`
 
 ## Pull requests
 
 - [PR #201: Base layer queued](https://github.com/owner/repo/pull/201) [WAIT]
   - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · flags `queued` · Shepherd READY completion `verified` · stack `12` position `1/2` base `main`
   - head `feature-base` at `bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb` · base `main`
-  - reasons: `already-in-merge-queue`
-- [PR #202: Ready upper layer](https://github.com/owner/repo/pull/202) [MERGE]
+  - reasons: `appears-ready`, `already-in-merge-queue`
+- [PR #202: Ready upper layer](https://github.com/owner/repo/pull/202) [CANCEL]
   - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `12` position `2/2` base `main`
   - head `feature-upper` at `cccccccccccccccccccccccccccccccccccccccc` · base `feature-base`
   - reasons: `appears-ready`

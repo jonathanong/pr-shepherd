@@ -111,7 +111,7 @@ export async function summarizePollSummaryPr(
     (!["wait", "cancel"].includes(action) &&
       !(opts.stackPrNumber !== undefined && raw.stack && action === "merge"))
       ? {
-          pollCommand: buildPollCommand(repoName, raw.number, opts),
+          pollCommand: buildPollCommand(repoName, raw.number, raw.isDraft, opts),
         }
       : {}),
   };
@@ -145,14 +145,24 @@ function detectBlockingReviewer(raw: RawSummaryPr): boolean {
   );
 }
 
-function buildPollCommand(repo: string, pr: number, opts: PollSummaryCommandOptions): string {
-  const args = [formatPrUrl(repo, pr), "--until-terminal"];
+function buildPollCommand(
+  repo: string,
+  pr: number,
+  isDraft: boolean,
+  opts: PollSummaryCommandOptions,
+): string {
+  const autoMarkReadyDisabled =
+    opts.noAutoMarkReady || loadConfig().actions.autoMarkReady === false;
+  const boundedDraft = isDraft && autoMarkReadyDisabled;
+  const args = boundedDraft
+    ? [formatPrUrl(repo, pr), "--timeout", "1s", "--debounce", "0s", "--no-auto-mark-ready"]
+    : [formatPrUrl(repo, pr), "--until-terminal"];
   if (opts.merge && opts.stackPrNumber === undefined) args.push("--merge");
   if (opts.readyDelaySeconds !== undefined)
     args.push("--ready-delay", `${opts.readyDelaySeconds}s`);
   if (opts.stallTimeoutSeconds !== undefined) {
     args.push("--stall-timeout", `${opts.stallTimeoutSeconds}s`);
   }
-  if (opts.noAutoMarkReady) args.push("--no-auto-mark-ready");
+  if (opts.noAutoMarkReady && !boundedDraft) args.push("--no-auto-mark-ready");
   return buildPrShepherdCommand(args).text;
 }

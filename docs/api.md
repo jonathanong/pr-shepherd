@@ -50,12 +50,13 @@ For a singular programmatic API call, `pr` is an optional positive number, repos
 `iterate` also accepts exactly one aggregate selector: non-empty `prs` or `stack`. Every selected
 reference must resolve to one repository. Aggregate calls perform one compact, read-only summary
 tick and return `PollSummaryResult`; they do not mark review items seen, maintain ready-delay state,
-or perform GitHub mutations. Native-stack aggregate actions are limited to `CANCEL` and `ESCALATE`.
-An unready layer produces an `ESCALATE` routing result with one-PR Shepherd instructions; `blockedByPr`
-identifies the lowest unready ancestor of an upper layer. With `--stack --merge`, a fully READY and
-linear stack produces an `ESCALATE` handoff to the stack owner for the merge decision. Aggregate
-selectors never emit or perform `gh stack merge`, rebase, push, or other mutation commands. The
-caller owns recurrence and follows the returned one-PR routing instructions.
+or perform GitHub mutations. Native-stack aggregate actions are `FIX_CODE` for autonomous unready
+layers, `WAIT` for queued stacks, and `CANCEL` for terminal READY or merged state. An unready layer
+produces one-PR Shepherd instructions; `blockedByPr` identifies the lowest unready ancestor of an
+upper layer. Closed or unverified topology produces `ESCALATE` for human direction. With `--stack
+--merge`, a fully READY and linear stack produces `ESCALATE` handoff to the stack owner for the
+merge decision. Aggregate selectors never emit or perform `gh stack merge`, rebase, push, or other
+mutation commands. The caller owns recurrence and follows the returned one-PR routing instructions.
 
 `apply` runs `operations` in list order after validating every operation. Types: `review_mutations`, `mark_files_viewed`, `append_journal`. `mark_files_viewed` performs the requested `markFileAsViewed` mutations and surfaces GitHub's per-file results. Direct review operations forward explicitly supplied IDs without iterate's author, capability, or current-state policy; direct journal operations likewise honor explicit caller intent. GitHub is authoritative for authorization and mutation validity. Replies and dismissals require `message`. `requireSha` must be a full 40-character lowercase hex SHA.
 

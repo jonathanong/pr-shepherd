@@ -1,8 +1,9 @@
 {
-  "description": "A stale child ancestry boundary remains non-mergeable and is escalated to the stack owner without aggregate rebase instructions.",
+  "description": "A stale child ancestry boundary remains non-mergeable and is routed to its one-PR session without aggregate rebase instructions.",
   "mode": "aggregate",
   "args": ["--stack", "https://github.com/owner/repo/pull/362", "--debounce", "0s"],
-  "expectedExitCode": 13,
+  "expectedExitCode": 12,
+  "expectedNextAction": "fix_code",
   "expectedReason": "actionable",
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 362, "stackNumber": 37, "stackSize": 2 },

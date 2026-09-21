@@ -96,6 +96,8 @@ function mockStackedReady(
   mockFetchRawSummaryPr.mockResolvedValue({
     state: "OPEN",
     isDraft: false,
+    mergeable: "MERGEABLE",
+    mergeStateStatus: "CLEAN",
     headRefOid: headSha,
     baseRefOid: "base-1",
   });
