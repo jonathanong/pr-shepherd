@@ -398,6 +398,7 @@ export async function runCheck(
     ...(batchData.viewerAuthorization && { viewerAuthorization: batchData.viewerAuthorization }),
     status,
     baseBranch: batchData.baseRefName,
+    ...(batchData.baseRefOid && { baseRefOid: batchData.baseRefOid }),
     mergeStatus,
     checks: {
       passing: merged.passing,

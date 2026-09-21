@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../state/seen-comments.mts", async (importOriginal) => {
@@ -192,5 +193,58 @@ describe("summarizePollSummaryPr", () => {
       {},
     );
     expect(item.review).toEqual({ reviews: 1 });
+  });
+
+  it("surfaces a current merge-queue removal with its raw reason and actor", async () => {
+    const item = await summarizePollSummaryPr(
+      raw({
+        isInMergeQueue: false,
+        mergeQueueAdditions: { nodes: [{ createdAt: "2026-09-20T10:00:00Z" }] },
+        mergeQueueRemovals: {
+          nodes: [
+            {
+              reason: "CI_FAILURE",
+              createdAt: "2026-09-20T10:10:00Z",
+              actor: { login: "github-merge-queue" },
+              beforeCommit: {
+                oid: "q".repeat(40),
+                parents: { nodes: [{ oid: "a".repeat(40) }] },
+              },
+            },
+          ],
+        },
+      }),
+      repo,
+      { stackPrNumber: 42, merge: true },
+    );
+    expect(item.queueRemoval).toMatchObject({
+      reason: "CI_FAILURE",
+      actor: "github-merge-queue",
+      beforeCommitParentOids: ["a".repeat(40)],
+    });
+  });
+
+  it("does not route an old removal after a newer queue addition", async () => {
+    const item = await summarizePollSummaryPr(
+      raw({
+        mergeQueueAdditions: { nodes: [{ createdAt: "2026-09-20T10:20:00Z" }] },
+        mergeQueueRemovals: {
+          nodes: [
+            {
+              reason: "CI_FAILURE",
+              createdAt: "2026-09-20T10:10:00Z",
+              actor: null,
+              beforeCommit: {
+                oid: "q".repeat(40),
+                parents: { nodes: [{ oid: "a".repeat(40) }] },
+              },
+            },
+          ],
+        },
+      }),
+      repo,
+      { stackPrNumber: 42, merge: true },
+    );
+    expect(item.queueRemoval).toBeUndefined();
   });
 });

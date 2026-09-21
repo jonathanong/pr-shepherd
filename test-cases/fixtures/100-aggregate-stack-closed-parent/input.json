@@ -1,0 +1,24 @@
+{
+  "description": "A closed-unmerged dependency below an open child is a human-only escalation, never an aggregate repair or merge instruction.",
+  "mode": "aggregate",
+  "args": ["--stack", "https://github.com/owner/repo/pull/372", "--debounce", "0s"],
+  "expectedExitCode": 13,
+  "expectedReason": "actionable",
+  "aggregateSummary": {
+    "selection": { "kind": "stack", "anchor": 372, "stackNumber": 38, "stackSize": 2 },
+    "prs": [
+      {
+        "pr": 371, "repo": "owner/repo", "title": "Closed foundation", "url": "https://github.com/owner/repo/pull/371",
+        "action": "cancel", "reasons": ["closed"], "state": "CLOSED", "mergeable": "UNKNOWN", "mergeStateStatus": "UNKNOWN",
+        "headRefName": "foundation", "headRefOid": "1111111111111111111111111111111111111111", "baseRefName": "main",
+        "stack": { "number": 38, "size": 2, "position": 1, "baseRefName": "main" }
+      },
+      {
+        "pr": 372, "repo": "owner/repo", "title": "Open child", "url": "https://github.com/owner/repo/pull/372",
+        "action": "cancel", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "child", "headRefOid": "1222222222222222222222222222222222222222", "baseRefName": "foundation", "readyReceipt": true,
+        "stack": { "number": 38, "size": 2, "position": 2, "baseRefName": "main" }
+      }
+    ]
+  }
+}

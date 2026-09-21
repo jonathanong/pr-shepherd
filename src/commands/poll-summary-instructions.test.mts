@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, expect, it } from "vitest";
 import type { PollSummaryItem, PollSummaryResult } from "../types.mts";
 import { withPollSummaryInstructions } from "./poll-summary-instructions.mts";
@@ -5,7 +6,6 @@ import { withPollSummaryInstructions } from "./poll-summary-instructions.mts";
 function row(
   pr: number,
   position: number,
-  action: PollSummaryItem["action"],
   overrides: Partial<PollSummaryItem> = {},
 ): PollSummaryItem {
   return {
@@ -13,8 +13,8 @@ function row(
     repo: "acme/widgets",
     title: `Layer ${pr}`,
     url: `https://github.com/acme/widgets/pull/${pr}`,
-    action,
-    reasons: [action],
+    action: "cancel",
+    reasons: ["appears-ready"],
     state: "OPEN",
     mergeable: "MERGEABLE",
     mergeStateStatus: "CLEAN",
@@ -22,18 +22,19 @@ function row(
     headRefOid: String(pr).padStart(40, "0"),
     baseRefName: position === 1 ? "main" : `layer-${pr - 1}`,
     stack: { number: 9, size: 3, position, baseRefName: "main" },
+    pollCommand: `pr-shepherd https://github.com/acme/widgets/pull/${pr} --until-terminal`,
     ...overrides,
   };
 }
 
-function stack(prs: PollSummaryItem[], mismatched = true): PollSummaryResult {
+function stack(prs: PollSummaryItem[], gap = false): PollSummaryResult {
   return {
     mode: "summary",
     repo: "acme/widgets",
     selection: { kind: "stack", anchor: 3, stackNumber: 9, stackSize: 3 },
     reason: "actionable",
     prs,
-    ...(mismatched && {
+    ...(gap && {
       stackAncestry: [
         {
           parentPr: 2,
@@ -48,129 +49,161 @@ function stack(prs: PollSummaryItem[], mismatched = true): PollSummaryResult {
   };
 }
 
-describe("native-stack instructions", () => {
-  const quotaWarning = {
-    resource: "graphql" as const,
-    thresholdPercent: 20,
-    remaining: 100,
-    limit: 1000,
-    resetAt: 2_000_000_000,
-    pollIntervalMinutes: 10,
-    pollTimeoutMinutes: 20,
-  };
-
-  it("repairs a CLEAN upper layer when merge mode is off", () => {
-    const result = withPollSummaryInstructions(
-      stack([row(1, 1, "cancel"), row(2, 2, "cancel"), row(3, 3, "wait")]),
-      false,
-    );
-    expect(result.reason).toBe("actionable");
-    expect(result.nextAction).toBe("fix_code");
-    expect(result.instructions?.join("\n")).toContain("gh stack rebase --upstack --no-trunk");
-    expect(result.instructions?.join("\n")).toContain("gh stack push");
+describe("native-stack reconciliation", () => {
+  it("requires one-PR completion receipts, not apparently clean GitHub rows", () => {
+    const result = withPollSummaryInstructions(stack([row(1, 1), row(2, 2), row(3, 3)]), false);
+    expect(result).toMatchObject({
+      nextAction: "fix_code",
+      stackMergeable: false,
+      reason: "actionable",
+    });
+    expect(result.instructions?.join("\n")).toContain("PR #1");
+    expect(result.instructions?.join("\n")).toContain("PR #3");
   });
 
-  it("merges only the ready contiguous lower group before fixing the upper layer", () => {
-    const result = withPollSummaryInstructions(
-      stack([row(1, 1, "merge"), row(2, 2, "merge"), row(3, 3, "merge")]),
-      true,
-    );
-    expect(result.nextAction).toBe("merge");
-    expect(result.instructions?.[0]).toContain("gh stack merge --squash 2");
-    expect(result.instructions?.[0]).toContain("leaves higher layers open");
-    expect(result.instructions?.[0]).not.toContain("--squash 3");
-  });
-
-  it("handles lower-layer review work before restacking", () => {
+  it("reports a ready linear stack only after every open layer has a receipt", () => {
     const result = withPollSummaryInstructions(
       stack([
-        row(1, 1, "fix_code", { pollCommand: "pr-shepherd 1 --until-terminal" }),
-        row(2, 2, "cancel"),
-        row(3, 3, "wait"),
+        row(1, 1, { readyReceipt: true }),
+        row(2, 2, { readyReceipt: true }),
+        row(3, 3, { readyReceipt: true }),
+      ]),
+      false,
+    );
+    expect(result).toMatchObject({
+      nextAction: "cancel",
+      stackMergeable: true,
+      reason: "all_terminal",
+    });
+  });
+
+  it("blocks every upper layer above a draft parent and routes all unready sessions", () => {
+    const result = withPollSummaryInstructions(
+      stack([
+        row(1, 1, { isDraft: true, action: "mark_ready" }),
+        row(2, 2, { readyReceipt: true }),
+        row(3, 3, { action: "fix_code", reasons: ["review-work"] }),
+      ]),
+      false,
+    );
+    expect(result).toMatchObject({ nextAction: "fix_code", stackMergeable: false });
+    expect(result.prs[1]?.blockedByPr).toBe(1);
+    expect(result.prs[2]?.blockedByPr).toBe(1);
+    expect(result.instructions?.join("\n")).toContain("PR #1");
+    expect(result.instructions?.join("\n")).toContain("PR #3");
+  });
+
+  it("keeps a blocked upper draft session bounded and forbids auto-mark-ready", () => {
+    const result = withPollSummaryInstructions(
+      stack([
+        row(1, 1, { isDraft: true, action: "mark_ready" }),
+        row(2, 2, { isDraft: true, action: "mark_ready" }),
+        row(3, 3, { readyReceipt: true }),
+      ]),
+      false,
+    );
+    expect(result.prs[1]?.pollCommand).toContain("--timeout 1s --debounce 0s --no-auto-mark-ready");
+    expect(result.prs[1]?.pollCommand).not.toContain("--until-terminal");
+  });
+
+  it("does not mistake a conflicting lower layer for a ready stack", () => {
+    const result = withPollSummaryInstructions(
+      stack([
+        row(1, 1, {
+          action: "fix_code",
+          reasons: ["merge-conflicts"],
+          mergeable: "CONFLICTING",
+          mergeStateStatus: "DIRTY",
+        }),
+        row(2, 2, { readyReceipt: true }),
+        row(3, 3, { readyReceipt: true }),
       ]),
       false,
     );
     expect(result.nextAction).toBe("fix_code");
-    expect(result.instructions?.[0]).toContain("PR #1");
-    expect(result.instructions?.[0]).toContain("pr-shepherd 1 --until-terminal");
+    expect(result.prs[2]?.blockedByPr).toBe(1);
     expect(result.instructions?.join("\n")).not.toContain("gh stack rebase");
   });
 
-  it("stops only after every open layer is ready and ancestry is linear", () => {
-    const result = withPollSummaryInstructions(
-      stack([row(1, 1, "cancel"), row(2, 2, "cancel"), row(3, 3, "cancel")], false),
-      false,
-    );
-    expect(result.nextAction).toBe("cancel");
-    expect(result.reason).toBe("all_terminal");
-  });
-
-  it("does not merge past a waiting lower layer", () => {
-    const result = withPollSummaryInstructions(
-      stack([row(1, 1, "wait"), row(2, 2, "merge"), row(3, 3, "merge")]),
-      true,
-    );
-    expect(result.nextAction).toBe("wait");
-    expect(result.reason).toBe("waiting");
-  });
-
-  it("repairs a bottom layer behind the stack base instead of waiting forever", () => {
-    const result = withPollSummaryInstructions(
-      stack(
-        [row(1, 1, "wait", { mergeStateStatus: "BEHIND" }), row(2, 2, "wait"), row(3, 3, "wait")],
-        false,
-      ),
-      true,
-    );
-    expect(result.nextAction).toBe("fix_code");
-    expect(result.instructions?.join("\n")).toContain("gh stack rebase");
-    expect(result.instructions?.[0]).toContain("check out its stack branch `layer-1`");
-  });
-
-  it("blocks a merge when a closed dependency lies between open layers", () => {
+  it("routes stale ancestry to a one-PR session", () => {
     const result = withPollSummaryInstructions(
       stack(
         [
-          row(1, 1, "merge"),
-          row(2, 2, "cancel", { state: "CLOSED", reasons: ["closed"] }),
-          row(3, 3, "merge"),
+          row(1, 1, { readyReceipt: true }),
+          row(2, 2, { readyReceipt: true }),
+          row(3, 3, { readyReceipt: true }),
         ],
-        false,
+        true,
       ),
-      true,
-    );
-    expect(result.nextAction).toBe("escalate");
-    expect(result.instructions?.join("\n")).toContain("PR #2 is closed without merging");
-    expect(result.instructions?.join("\n")).not.toContain("gh stack merge");
-  });
-
-  it("adds quota-aware continuation after actionable stack work", () => {
-    const result = withPollSummaryInstructions(
-      { ...stack([row(1, 1, "cancel"), row(2, 2, "cancel"), row(3, 3, "wait")]), quotaWarning },
       false,
     );
     expect(result.nextAction).toBe("fix_code");
-    expect(result.instructions?.at(-1)).toContain("After completing the stack action");
+    expect(result.instructions?.join("\n")).toContain("PR #3");
+    expect(result.instructions?.join("\n")).not.toContain("gh stack push");
   });
 
-  it("paces a waiting stack when GitHub reports a quota warning", () => {
+  it("offers only a full-stack merge after all receipts", () => {
     const result = withPollSummaryInstructions(
-      {
-        ...stack([row(1, 1, "wait"), row(2, 2, "wait"), row(3, 3, "wait")], false),
-        quotaWarning,
-      },
-      false,
+      stack([
+        row(1, 1, { readyReceipt: true }),
+        row(2, 2, { readyReceipt: true }),
+        row(3, 3, { readyReceipt: true }),
+      ]),
+      true,
     );
-    expect(result.nextAction).toBe("wait");
-    expect(result.instructions?.[0]).toContain("Before continuing");
+    expect(result).toMatchObject({ nextAction: "fix_code", stackMergeable: true });
+    expect(result.instructions?.join("\n")).toContain("gh stack merge 9 --yes --merge");
   });
 
-  it("escalates an actionable layer when no one-PR command is available", () => {
+  it("keeps a queued stack nonterminal until every layer merges", () => {
     const result = withPollSummaryInstructions(
-      stack([row(1, 1, "fix_code"), row(2, 2, "wait"), row(3, 3, "wait")], false),
+      stack([
+        row(1, 1, { readyReceipt: true, isInMergeQueue: true }),
+        row(2, 2, { readyReceipt: true, isInMergeQueue: true }),
+        row(3, 3, { readyReceipt: true, isInMergeQueue: true }),
+      ]),
+      true,
+    );
+    expect(result).toMatchObject({
+      nextAction: "fix_code",
+      reason: "waiting",
+      stackMergeable: true,
+    });
+    expect(result.instructions?.join("\n")).not.toContain("gh stack merge");
+  });
+
+  it("escalates a closed dependency rather than merging past it", () => {
+    const result = withPollSummaryInstructions(
+      stack([
+        row(1, 1, { readyReceipt: true }),
+        row(2, 2, { state: "CLOSED", action: "cancel", reasons: ["closed"] }),
+        row(3, 3, { readyReceipt: true }),
+      ]),
+      true,
+    );
+    expect(result).toMatchObject({ nextAction: "escalate", stackMergeable: false });
+    expect(result.instructions?.join("\n")).not.toContain("gh stack merge");
+  });
+
+  it.each([
+    ["all terminal", [row(1, 1, { state: "MERGED" }), row(2, 2, { state: "UNKNOWN" })]],
+    ["below an open layer", [row(1, 1, { state: "UNKNOWN" }), row(2, 2, { readyReceipt: true })]],
+  ] as const)("escalates an unverified state %s", (_case, prs) => {
+    const result = withPollSummaryInstructions(stack([...prs]), true);
+    expect(result).toMatchObject({ nextAction: "escalate", stackMergeable: false });
+    expect(result.instructions?.join("\n")).toContain("state `UNKNOWN`");
+  });
+
+  it("does not accept an incomplete handoff after only the parent finishes", () => {
+    const result = withPollSummaryInstructions(
+      stack([
+        row(1, 1, { readyReceipt: true }),
+        row(2, 2, { readyReceipt: true }),
+        row(3, 3, { isDraft: true, action: "mark_ready" }),
+      ]),
       false,
     );
-    expect(result.nextAction).toBe("escalate");
-    expect(result.instructions?.[0]).toContain("no one-PR poll command");
+    expect(result.nextAction).toBe("fix_code");
+    expect(result.instructions?.join("\n")).toContain("PR #3");
   });
 });

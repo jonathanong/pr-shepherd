@@ -35,6 +35,14 @@ the exact bare-poll `args`. Their directory name need not encode a singular acti
 rows can mix actions; the runner instead pins `mode: "summary"`, `reason`, exit-code parity, and both
 snapshots. Use these fixtures for parser-to-formatter coverage of explicit PR sets and native stacks.
 
+For native-stack fixtures, model the stack in bottom-to-top order. A clean raw GitHub row alone is
+not ready: set `readyReceipt: true` only when its one-PR Shepherd session has completed READY after
+the ready delay. Assert `stackMergeable`, `blockedByPr`, and exact one-PR handoff commands in the
+snapshots. Cover the full lifecycle: an unready parent blocks upper layers, all receipts and linear
+ancestry reconcile successfully, `--merge` submits the complete stack only, and a queue remains
+non-terminal until every layer is merged. Do not assert aggregate rebase/push instructions: they are
+intentionally absent.
+
 Fixture numbers are not unique today (`42`, `43`, `46`, `47` each have more than
 one entry, and `36` is skipped) — this is harmless (directories are addressed
 by full name, not by number) but pick an unused number for new fixtures rather

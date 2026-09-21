@@ -1,5 +1,6 @@
 import type { ApiUsage, GraphqlQuotaWarning } from "./api-usage.mts";
 import type { MergeableState, MergeStateStatus, ReviewDecision } from "./github.mts";
+import type { MergeQueueRemovalStatus } from "./merge-requirements.mts";
 import type { ShepherdAction } from "./iterate.mts";
 
 export interface PollSummaryChecks {
@@ -55,12 +56,17 @@ export interface PollSummaryItem {
   baseRefName: string;
   isDraft?: true;
   isInMergeQueue?: true;
+  queueRemoval?: MergeQueueRemovalStatus;
   blockingReviewerInProgress?: true;
   remainingSeconds?: number;
   checks?: PollSummaryChecks;
   review?: PollSummaryReview;
   stack?: PollSummaryStack;
   pollCommand?: string;
+  /** A current one-PR READY-after-delay completion was verified. */
+  readyReceipt?: true;
+  /** Lowest unready ancestor that prevents this layer from being stack-mergeable. */
+  blockedByPr?: number;
 }
 
 export type PollSummarySelection =
@@ -77,6 +83,8 @@ export interface PollSummaryResult {
   stackAncestry?: PollSummaryStackAncestry[];
   /** The next stack-level transition, which may differ from an individual row's hint. */
   nextAction?: ShepherdAction;
+  /** Whether every open layer is independently ready and stack ancestry is linear. */
+  stackMergeable?: boolean;
   instructions?: string[];
   apiUsage?: ApiUsage;
   quotaWarning?: GraphqlQuotaWarning;

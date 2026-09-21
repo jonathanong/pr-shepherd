@@ -10,7 +10,7 @@ export function formatPollSummaryResult(result: PollSummaryResult): string {
   const lines = [
     `# Poll summary [${result.reason.toUpperCase()}]`,
     "",
-    `**repo** \`${result.repo}\` · **selection** ${selection} · **mode** \`${result.mode}\`${result.nextAction ? ` · **next action** \`${result.nextAction}\`` : ""}`,
+    `**repo** \`${result.repo}\` · **selection** ${selection} · **mode** \`${result.mode}\`${result.stackMergeable !== undefined ? ` · **stack mergeable** \`${result.stackMergeable}\`` : ""}${result.nextAction ? ` · **next action** \`${result.nextAction}\`` : ""}`,
     "",
     "## Pull requests",
     "",
@@ -48,17 +48,24 @@ function formatItem(item: PollSummaryItem): string {
     : "";
   const readyDelay =
     item.remainingSeconds !== undefined ? ` · ready delay \`${item.remainingSeconds}s\`` : "";
+  const readyReceipt = item.readyReceipt ? " · Shepherd READY completion `verified`" : "";
+  const blockedBy = item.blockedByPr ? ` · stack blocked by PR #${item.blockedByPr}` : "";
   const checks = item.checks;
   const review = item.review;
   return [
     `- [PR #${item.pr}: ${escapeMarkdownText(item.title)}](${item.url}) [${item.action.toUpperCase()}]`,
-    `  - state \`${item.state}\` · mergeable \`${item.mergeable}\` · merge \`${item.mergeStateStatus}\`${reviewDecision}${stateFlags}${blockingReviewer}${readyDelay}${stack}`,
+    `  - state \`${item.state}\` · mergeable \`${item.mergeable}\` · merge \`${item.mergeStateStatus}\`${reviewDecision}${stateFlags}${blockingReviewer}${readyDelay}${readyReceipt}${blockedBy}${stack}`,
     `  - head \`${item.headRefName}\` at \`${item.headRefOid}\` · base \`${item.baseRefName}\``,
     ...(checks
       ? [`  - checks: ${formatCounts(checks, checks.incomplete ? ", incomplete" : "")}`]
       : []),
     ...(review
       ? [`  - review: ${formatCounts(review, review.incomplete ? ", incomplete" : "")}`]
+      : []),
+    ...(item.queueRemoval
+      ? [
+          `  - queue removal: reason \`${item.queueRemoval.reason ?? "UNKNOWN"}\` · at \`${item.queueRemoval.createdAtUnix}\`${item.queueRemoval.actor ? ` · actor \`@${item.queueRemoval.actor}\`` : ""}${item.queueRemoval.beforeCommitOid ? ` · commit \`${item.queueRemoval.beforeCommitOid}\`` : ""}${item.queueRemoval.beforeCommitParentOids?.length ? ` · parents \`${item.queueRemoval.beforeCommitParentOids.join(",")}\`` : ""}`,
+        ]
       : []),
     `  - reasons: ${item.reasons.map((reason) => `\`${reason}\``).join(", ")}`,
     ...(item.pollCommand ? [`  - pollCommand: \`${item.pollCommand}\``] : []),

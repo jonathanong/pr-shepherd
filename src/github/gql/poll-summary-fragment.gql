@@ -3,6 +3,7 @@ fragment PollSummaryPr on PullRequest {
   title
   url
   state
+  updatedAt
   isDraft
   viewerCanUpdate
   headRefName
@@ -38,6 +39,32 @@ fragment PollSummaryPr on PullRequest {
     }
   }
   isInMergeQueue
+  mergeQueueAdditions: timelineItems(last: 1, itemTypes: [ADDED_TO_MERGE_QUEUE_EVENT]) {
+    nodes {
+      ... on AddedToMergeQueueEvent {
+        createdAt
+      }
+    }
+  }
+  mergeQueueRemovals: timelineItems(last: 1, itemTypes: [REMOVED_FROM_MERGE_QUEUE_EVENT]) {
+    nodes {
+      ... on RemovedFromMergeQueueEvent {
+        reason
+        createdAt
+        actor {
+          login
+        }
+        beforeCommit {
+          oid
+          parents(first: 100) {
+            nodes {
+              oid
+            }
+          }
+        }
+      }
+    }
+  }
   mergeQueueEntry {
     headCommit {
       statusCheckRollup {

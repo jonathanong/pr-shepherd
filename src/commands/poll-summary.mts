@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { loadConfig } from "../config/load.mts";
 import { ShepherdError } from "../exit-codes.mts";
 import { getRepoInfo } from "../github/client.mts";
@@ -73,18 +74,36 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
           stackPrNumber: undefined,
           prNumbers: last.prs.map((item) => item.pr),
         });
-        if (explicit.prs.every((item) => item.action === "cancel")) {
+        if (explicit.prs.every((item) => item.state === "MERGED")) {
           const warning = await aggregateQuotaWarning(explicit, quotaBands, opts.intervalSeconds);
           if (warning) pendingQuotaWarning = warning;
           return attachUsage(
             {
               ...explicit,
+              selection: last.selection,
               reason: "all_terminal",
+              nextAction: "cancel",
+              stackMergeable: true,
+              instructions: ["1. Stop — every stack layer is merged."],
               ...(pendingQuotaWarning && { quotaWarning: pendingQuotaWarning }),
             },
             opts.merge,
           );
         }
+        return attachUsage(
+          {
+            ...explicit,
+            selection: last.selection,
+            reason: "actionable",
+            nextAction: "escalate",
+            stackMergeable: false,
+            instructions: [
+              `1. Native stack #${last.selection.stackNumber} disappeared before every tracked layer merged. Stop and ask the stack owner to reconcile the remaining PRs; do not claim the stack is complete.`,
+            ],
+            ...(pendingQuotaWarning && { quotaWarning: pendingQuotaWarning }),
+          },
+          opts.merge,
+        );
       }
       const retryMs = opts.untilTerminal ? pollGraphQlRetryAfterMs(error) : null;
       if (retryMs === null || rateLimitRetries >= 1) throw error;
@@ -105,7 +124,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
         : last.prs.some((item) => ["escalate", "merge", "mark_ready"].includes(item.action));
     const hasFix =
       last.selection.kind === "stack"
-        ? last.nextAction === "fix_code"
+        ? last.nextAction === "fix_code" && last.reason !== "waiting"
         : last.prs.some((item) => item.action === "fix_code");
     const warning = await aggregateQuotaWarning(last, quotaBands, opts.intervalSeconds);
     if (warning) pendingQuotaWarning = warning;

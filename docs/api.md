@@ -49,9 +49,11 @@ For a singular programmatic API call, `pr` is an optional positive number, repos
 
 `iterate` also accepts exactly one aggregate selector: non-empty `prs` or `stack`. Every selected
 reference must resolve to one repository. Aggregate calls perform one compact, read-only summary
-tick and return `PollSummaryResult`; they do not mark review items seen or perform GitHub mutations.
-They do maintain local ready-delay state so a clean row stays complete across aggregate reruns. The
-caller owns recurrence and follows each actionable row's repository-qualified `pollCommand`.
+tick and return `PollSummaryResult`; they do not mark review items seen, maintain ready-delay state,
+or perform GitHub mutations. For native stacks, `stackMergeable` requires a current one-PR Shepherd
+READY receipt for every open layer plus linear ancestry. `blockedByPr` identifies the lowest unready
+ancestor of an upper layer. The caller owns recurrence and follows emitted one-PR commands or the
+whole-stack merge handoff.
 
 `apply` runs `operations` in list order after validating every operation. Types: `review_mutations`, `mark_files_viewed`, `append_journal`. `mark_files_viewed` performs the requested `markFileAsViewed` mutations and surfaces GitHub's per-file results. Direct review operations forward explicitly supplied IDs without iterate's author, capability, or current-state policy; direct journal operations likewise honor explicit caller intent. GitHub is authoritative for authorization and mutation validity. Replies and dismissals require `message`. `requireSha` must be a full 40-character lowercase hex SHA.
 

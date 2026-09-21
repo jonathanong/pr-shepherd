@@ -11,19 +11,9 @@
     "2s"
   ],
   "expectedReason": "timeout",
-  "expectedExitCode": 10,
+  "expectedExitCode": 12,
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 202, "stackNumber": 12, "stackSize": 2 },
-    "stackAncestry": [
-      {
-        "parentPr": 201,
-        "parentHeadRefName": "feature-base",
-        "parentHeadRefOid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        "childPr": 202,
-        "childBaseRefName": "feature-base",
-        "childBaseRefOid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-      }
-    ],
     "prs": [
       {
         "pr": 201,
@@ -39,6 +29,7 @@
         "headRefOid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         "baseRefName": "main",
         "isInMergeQueue": true,
+        "readyReceipt": true,
         "stack": { "number": 12, "size": 2, "position": 1, "baseRefName": "main" }
       },
       {
@@ -54,6 +45,7 @@
         "headRefName": "feature-upper",
         "headRefOid": "cccccccccccccccccccccccccccccccccccccccc",
         "baseRefName": "feature-base",
+        "readyReceipt": true,
         "stack": { "number": 12, "size": 2, "position": 2, "baseRefName": "main" }
       }
     ]

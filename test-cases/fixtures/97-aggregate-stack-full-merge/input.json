@@ -1,0 +1,24 @@
+{
+  "description": "Merge intent submits only the complete native stack after every open layer has a READY receipt; it never emits a partial-stack merge command.",
+  "mode": "aggregate",
+  "args": ["--stack", "https://github.com/owner/repo/pull/342", "--merge", "--debounce", "0s"],
+  "expectedExitCode": 12,
+  "expectedReason": "actionable",
+  "aggregateSummary": {
+    "selection": { "kind": "stack", "anchor": 342, "stackNumber": 35, "stackSize": 2 },
+    "prs": [
+      {
+        "pr": 341, "repo": "owner/repo", "title": "Verified foundation", "url": "https://github.com/owner/repo/pull/341",
+        "action": "merge", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "foundation", "headRefOid": "e111111111111111111111111111111111111111", "baseRefName": "main", "readyReceipt": true,
+        "stack": { "number": 35, "size": 2, "position": 1, "baseRefName": "main" }
+      },
+      {
+        "pr": 342, "repo": "owner/repo", "title": "Verified child", "url": "https://github.com/owner/repo/pull/342",
+        "action": "merge", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "child", "headRefOid": "e222222222222222222222222222222222222222", "baseRefName": "foundation", "readyReceipt": true,
+        "stack": { "number": 35, "size": 2, "position": 2, "baseRefName": "main" }
+      }
+    ]
+  }
+}

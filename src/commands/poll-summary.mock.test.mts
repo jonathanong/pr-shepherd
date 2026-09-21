@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../github/poll-summary.mts", () => ({ fetchPollSummary: vi.fn() }));
@@ -175,7 +176,10 @@ describe("aggregate poll recurrence", () => {
     mockFetch
       .mockResolvedValueOnce({
         selection: { kind: "stack", anchor: 43, stackNumber: 1, stackSize: 2 },
-        prs: [row(42, "wait"), row(43, "wait")],
+        prs: [
+          { ...row(42, "wait"), readyReceipt: true, isInMergeQueue: true },
+          { ...row(43, "wait"), readyReceipt: true, isInMergeQueue: true },
+        ],
       })
       .mockRejectedValueOnce(
         new ShepherdError("PR #43 is not part of a native GitHub stack", EXIT.UNAVAILABLE),
@@ -190,9 +194,44 @@ describe("aggregate poll recurrence", () => {
         ...opts,
         prNumbers: [],
         stackPrNumber: 43,
+        merge: true,
         timeoutSeconds: 60,
         untilTerminal: true,
       }),
     ).resolves.toMatchObject({ reason: "all_terminal" });
+  });
+
+  it("escalates a disappeared stack when any tracked layer has not merged", async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        selection: { kind: "stack", anchor: 43, stackNumber: 1, stackSize: 2 },
+        prs: [
+          { ...row(42, "wait"), readyReceipt: true, isInMergeQueue: true },
+          { ...row(43, "wait"), readyReceipt: true, isInMergeQueue: true },
+        ],
+      })
+      .mockRejectedValueOnce(
+        new ShepherdError("PR #43 is not part of a native GitHub stack", EXIT.UNAVAILABLE),
+      )
+      .mockResolvedValueOnce({
+        selection: { kind: "prs", requested: [42, 43] },
+        prs: [row(42, "cancel"), { ...row(43, "cancel"), state: "CLOSED" }],
+      });
+
+    const result = await runAggregatePoll({
+      ...opts,
+      prNumbers: [],
+      stackPrNumber: 43,
+      merge: true,
+      timeoutSeconds: 60,
+      untilTerminal: true,
+    });
+    expect(result.prs.map((item) => item.state)).toEqual(["MERGED", "CLOSED"]);
+    expect(result).toMatchObject({
+      reason: "actionable",
+      nextAction: "escalate",
+      stackMergeable: false,
+      selection: { kind: "stack" },
+    });
   });
 });

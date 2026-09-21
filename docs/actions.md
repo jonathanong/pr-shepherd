@@ -13,39 +13,42 @@ The bare CLI command accepts `--interval`/`--timeout`/`--debounce`/`--quiet-stat
 The shipped skill invokes `pr-shepherd [PR] --until-terminal`. That command continues through ordinary `WAIT` and `MARK_READY` actions, then returns `FIX_CODE` (after `--debounce`, default: `poll.debounceSeconds`; built-in 1m and `0` disables), `MERGE`, any non-terminal quota-warning result, or terminal `CANCEL`/`ESCALATE`. A quota warning returns immediately so the skill can follow its cadence instructions and re-invoke the command without a `--timeout`. After every returned non-terminal result, the skill follows `## Instructions` and invokes the same canonical command again. Debounce ticks set `persistSeen: false` — seen markers and first-look suppression wait for the post-window tick. `--quiet-status` keeps unchanged WAIT ticks out of agent context. MCP callers invoke one `iterate` tick at a time (no debounce) and let their host schedule the next call.
 
 Explicit multi-PR and `--stack` selectors use a separate compact, read-only summary path. A CLI
-aggregate returns when any row has an agent-facing action, every row is terminal, or its bounded
-timeout expires; `--until-terminal` also returns a crossed quota warning with the same cadence
-instructions as singular polling. Completed rows do not stop polling while another row remains `WAIT`. Stack entries
-are fetched completely and ordered bottom-to-top. Each row surfaces the same fields in Markdown and
-JSON: repository, title/URL, raw PR/merge/review/head/base/stack state, bounded check and review
-counts (including ignored and superseded checks and active merge-queue commit checks) plus incomplete flags, and a conservative action with reasons. Null check rollups are valid empty sets; bounded connection overflow remains visible as `incomplete` but does not permanently force an actionable row. Check routing reuses the full iterate classifier, and review counts honor classification rules, decisive approvals, bot-dismiss authorization, root-thread authorship, and seen markers. Draft rows wait while a configured blocking reviewer is requested or pending. Clean rows share the configured ready-delay and become terminal after it elapses, so rerunning an aggregate after a completed single-PR worker does not redispatch that row forever. For explicit PR sets, each actionable row has an exact repository-qualified single-PR `pollCommand`, and the final `## Instructions` section directs the caller to process independent actionable rows and rerun the aggregate selector. Native-stack rows instead use one ordered stack-level instruction sequence; a stack `MERGE` row intentionally omits a one-PR command so the caller merges the ready lower layers bottom-to-top. Aggregate API and MCP calls return one summary tick
-without recurrence. The summary path never mutates GitHub or writes seen markers; it only maintains local ready-delay state so clean completion survives aggregate reruns. The selected
-single-PR commands remain authoritative for explicit-set state changes and full review context;
-native stacks follow their ordered stack instructions.
+aggregate returns when work is needed, every selected PR is complete, or its bounded timeout expires;
+`--until-terminal` also returns a crossed quota warning with the same cadence instructions as
+singular polling. Stack entries are fetched completely and ordered bottom-to-top. Each row surfaces
+the same fields in Markdown and JSON: repository, title/URL, raw PR/merge/review/head/base/stack
+state, bounded check and review counts (including ignored and superseded checks and active
+merge-queue commit checks), and incomplete flags. Aggregate API and MCP calls return one summary
+tick without recurrence. The summary path never mutates GitHub, writes seen markers, or maintains
+ready-delay state; one-PR sessions remain authoritative for those mutations and full review context.
+
+For a native stack, `stackMergeable` is true only when every open layer has a current one-PR Shepherd
+READY receipt (`readyReceipt: true`) and every adjacent open boundary is linear. The aggregate view
+preserves raw row state, then adds `blockedByPr` to an upper open layer when a lower open layer lacks
+that receipt. A lower draft, conflict, failure, pending state, review item, missing receipt, or stale
+ancestry therefore prevents an upper layer from advancing even when GitHub calls it `CLEAN`. Review
+and CI sessions may run concurrently on separate layers, but an upper draft cannot transition to
+ready until every lower layer has its READY receipt. The stack returns `FIX_CODE` with exact one-PR
+commands for unready layers and requires the caller to rerun the same selector after those sessions.
+It never emits aggregate rebase or push instructions. A closed-unmerged or otherwise unverified
+layer returns the human-only `ESCALATE` handoff; terminal `CANCEL` requires every layer to be merged.
+
+When `--merge` is requested, a stack is submitted only after it is `stackMergeable`, using one
+whole-stack command. It never submits a ready prefix. If GitHub puts any layer in a merge queue, the
+summary remains non-terminal and instructs the caller to rerun the same `--stack --merge` selector
+until every layer is merged; an ejected layer is routed back to its one-PR session.
 An explicit PR set containing a native-stack member still routes that row to an authoritative
 one-PR poll and includes its `pollCommand`.
 
-For a native stack, aggregate also compares each open child's raw `baseRefOid` with the
-immediately lower stack entry's `headRefOid` when both entries are open. GitHub can report both rows `CLEAN` and
-`MERGEABLE` while those OIDs differ: the child was based on an earlier parent head and cannot
-carry the parent's later work. The summary emits each mismatch in `stackAncestry` (JSON) /
-`## Stack ancestry` (Markdown), including both PR numbers, ref names, and OIDs. It then provides
-one stack-level `nextAction` and numbered `instructions`. Without `--merge`, the action is
-`FIX_CODE`: from a clean checkout, check out the parent stack branch, run
-`gh stack rebase --upstack --no-trunk`, resolve conflicts, and run `gh stack push` before
-rerunning the aggregate selector. With `--merge`, a contiguous ready lower stack takes priority:
-run the emitted `gh stack merge --squash <lower-pr>` command, wait for GitHub to update the
-remaining branches, rerun the selector, then rebase the stale child if the mismatch remains. The
-aggregate command remains read-only; these are caller instructions, not GitHub or git mutations
-performed by Shepherd. Aggregate JSON/MCP carries the raw ancestry rows, `nextAction`, and the
-same numbered instructions that Markdown renders.
-If the lowest open layer is `BEHIND` its base, the stack action directs the caller to
-check out that layer's stack branch from a clean checkout, run `gh stack rebase`, resolve conflicts, push with `gh stack push`,
-and rerun the aggregate selector before working on higher layers.
-If a lower layer is closed without merging while a higher layer remains open, the stack
-action is `ESCALATE`: no higher merge or rebase is suggested until the dependency is restored
-or the higher branches are rebuilt on a valid base. An all-terminal stack containing a closed
-layer retains the closed exit code (`14`).
+For a native stack, aggregate compares each open child's raw `baseRefOid` with the immediately lower
+stack entry's `headRefOid` when both entries are open. GitHub can report both rows `CLEAN` and
+`MERGEABLE` while those OIDs differ: the child was based on an earlier parent head and cannot carry
+the parent's later work. The summary emits each mismatch in `stackAncestry` (JSON) / `## Stack
+ancestry` (Markdown), including both PR numbers, ref names, and OIDs. The mismatch makes
+`stackMergeable` false and routes the child through its one-PR Shepherd session; aggregate does not
+prescribe the git repair. Aggregate JSON/MCP carries the raw ancestry rows, `stackMergeable`,
+`nextAction`, and the same numbered instructions that Markdown renders. An all-terminal stack with
+a closed layer is an `ESCALATE`, not a successful completion.
 
 Command examples call `pr-shepherd` directly everywhere a follow-up command is emitted.
 
@@ -199,7 +202,7 @@ Emits an exact GitHub CLI command; Shepherd does not execute or wrap the merge o
 
 Configured `merge.commandArgs` apply only to ordinary auto-merge commands. Every emitted command pins the expected PR head.
 
-**Native stacks:** When GitHub's batch query reports the PR is part of a native stack, Shepherd builds neither command mode above, for any stack position including position 1. `--auto` is rejected server-side on stacked PRs, and the plain-merge fallback would land a mid-stack PR into its still-unmerged parent branch instead of the stack's trunk ref. Shepherd returns `ESCALATE` (`stacked-pr`) naming the PR's position, stack size, and base ref instead of emitting an unsafe command — see [`stacked-pr`](escalations.md#stacked-pr). This is a normal escalation, not an exception to "Shepherd does not execute or wrap the merge operation": declining to plan a command is still not executing one. A stacked PR never reaches this action's command-emitting path.
+**Native stacks:** When GitHub's batch query reports the PR is part of a native stack, Shepherd builds neither command mode above, for any stack position including position 1. `--auto` is rejected server-side on stacked PRs, and the plain-merge fallback would land a mid-stack PR into its still-unmerged parent branch instead of the stack's trunk ref. Shepherd returns `ESCALATE` (`stacked-pr`) naming the PR's position, stack size, and base ref instead of emitting an unsafe command — see [`stacked-pr`](escalations.md#stacked-pr). Reconcile and, when requested, submit it through `pr-shepherd --stack <PR> --merge`; that path verifies every layer's READY receipt and emits only a whole-stack merge command. This is a normal escalation, not an exception to "Shepherd does not execute or wrap the merge operation": declining to plan a command is still not executing one. A stacked PR never reaches this action's command-emitting path.
 
 **Exit code:** 15.
 
@@ -244,7 +247,7 @@ Stops the iterate loop — no further iterations needed.
 
 **Trigger:** Either the PR is merged or closed (`state !== "OPEN"`), or `--merge` is not enabled and the ready-delay timer elapsed after the current sweep still verifies the PR as a READY state. Candidate READY reports get a fresh mergeability read before the timer can complete, so newly detected conflicts route to `fix_code` instead of `cancel`.
 
-**CLI side-effects:** Deletes any stale `ready-since.txt` marker when the PR is merged/closed or when ready-delay elapses.
+**CLI side-effects:** Deletes any stale `ready-since.txt` marker when the PR is merged/closed or when ready-delay elapses. On an open native-stack PR, a fresh compact summary must still confirm READY, non-draft status, current head/base OIDs, and no actionable review or CI before Shepherd persists its READY receipt and returns `CANCEL`; an unreadable snapshot or failed receipt write remains `WAIT`. A later one-PR tick invalidates the receipt when that evidence changes. Aggregate `--stack` uses these receipts but never creates them.
 
 **Exit code:** 0 for `reason: "merged"` or `reason: "ready-delay-elapsed"` — these are shepherd's two "finished cleanly" outcomes. 14 for `reason: "closed"` (closed without merging). See [exit-codes.md](exit-codes.md).
 
@@ -279,7 +282,7 @@ A `ready-delay-elapsed` cancel carries the same `**merge queue** …` header lin
 
 Actionable work exists — whether it requires code edits or only resolution is up to the agent.
 
-**Trigger:** Any of: unresolved inline review threads, resolution-only inline review threads, actionable PR-level comments, `CHANGES_REQUESTED` reviews, a failing CI check with autonomous follow-up, a later-attempt workflow failure while the branch is behind its PR base, unseen check-run annotations on non-passing checks, merge conflicts (`mergeStatus.status === "CONFLICTS"`), or pending first-look review summary IDs to minimize. Failing checks of all types (timeout, cancelled, startup failure, actionable) enter check handling. The agent uses the included failed step, summary, and bounded log excerpt; when no nonblank log excerpt is included, or the check is CANCELLED/STARTUP_FAILURE, Shepherd emits a rerun recommendation (`[rerun authorized]` tag plus a `rerun:` command) when all of the following hold:
+**Trigger:** Any of: unresolved inline review threads, resolution-only inline review threads, actionable PR-level comments, `CHANGES_REQUESTED` reviews, a failing CI check with autonomous follow-up, a later-attempt workflow failure while the branch is behind its PR base, unseen check-run annotations on non-passing checks, merge conflicts (`mergeStatus.status === "CONFLICTS"`), a verified stale native-stack boundary for this PR, or pending first-look review summary IDs to minimize. The stale-boundary path returns observed parent and child OIDs and an ordered one-PR repair procedure, followed by the ordinary `FIX_CODE` continuation; aggregate `--stack` never performs that repair. Failing checks of all types (timeout, cancelled, startup failure, actionable) enter check handling. The agent uses the included failed step, summary, and bounded log excerpt; when no nonblank log excerpt is included, or the check is CANCELLED/STARTUP_FAILURE, Shepherd emits a rerun recommendation (`[rerun authorized]` tag plus a `rerun:` command) when all of the following hold:
 
 - the viewer's repository role grants Actions rerun capability (`repositoryPermission` is `WRITE`/`MAINTAIN`/`ADMIN` — this confirms the account's role, not the granular scope of whatever credential actually executes `gh`; an unauthorized rerun simply fails when run, the same residual risk as any other CLI-recommended git/gh mutation);
 - GitHub reports `run_attempt === 1`; later attempts have consumed Shepherd's single rerun allowance, and unavailable attempt metadata is denied conservatively;
@@ -531,7 +534,7 @@ Ambiguous state that requires human judgement — iteration stops and surfaces d
 - **`authorization-required`** — automatic mark-ready was selected for a draft PR but `viewerCanUpdate` was denied or unverifiable. Explicit merge/enqueue, review, journal, and file-view requests surface GitHub's actual mutation result instead. Review replies, thread resolutions, bot-review dismissals, and pushes never use this trigger. Markdown renders the denied operation under an `## Authorization` heading (`- mark-ready: <nodeId> — GitHub denied the action or did not expose a confirming capability`).
 - **`check-follow-up-unavailable`** — no other autonomous work remains, and every failing check either is a later workflow attempt after Shepherd's single rerun allowance was consumed, requires a human-only action (`ACTION_REQUIRED`), is `CANCELLED`/`STARTUP_FAILURE` without an authorized rerun, is a GitHub Actions failure with no nonblank included log excerpt and no authorized rerun, or is truly bare (no run ID and no non-empty details URL). A later attempt hands off even when a log excerpt exists; the escalation preserves that evidence. A non-empty external details URL is actionable and never triggers this escalation by itself. `escalate.checks[]` preserves the raw check details for the human.
 - **`merge-queue-removed`** — the latest queue removal is newer than the latest enqueue and no queue-commit failure or other actionable work gives the agent concrete remediation. Failing queue CI stays `FIX_CODE`. The result includes GitHub's raw reason, actor, timestamp, and queue commit for the human decision, rendered under a `## Merge queue removal` heading (`- reason:`, `- actor:`, `- createdAtUnix:`, `- queue commit:`).
-- **`stacked-pr`** — merge mode is enabled, the clean READY state has lasted for the configured ready-delay, and GitHub's batch query reports the PR is part of a native stack, at any position including position 1. Preempts `[MERGE]`: see [`## merge`](#merge) for why. The result names the PR's position, stack size, and base ref under a `## GitHub stack` heading, and suggests the GitHub stack UI or `gh stack merge --squash <pr>` instead of an ordinary merge command.
+- **`stacked-pr`** — merge mode is enabled, the clean READY state has lasted for the configured ready-delay, and GitHub's batch query reports the PR is part of a native stack, at any position including position 1. Preempts `[MERGE]`: see [`## merge`](#merge) for why. The result names the PR's position, stack size, and base ref under a `## GitHub stack` heading and routes the caller to the complete native-stack selector instead of an ordinary merge command.
 
 The closed eight-trigger list and full predicates are in [`docs/escalations.md`](escalations.md).
 

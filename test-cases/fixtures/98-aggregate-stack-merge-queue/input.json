@@ -1,0 +1,24 @@
+{
+  "description": "After whole-stack submission, a merge-queued stack remains non-terminal until every layer is merged; an upper READY receipt does not complete the handoff.",
+  "mode": "aggregate",
+  "args": ["--stack", "https://github.com/owner/repo/pull/352", "--merge", "--timeout", "1s", "--interval", "2s"],
+  "expectedExitCode": 12,
+  "expectedReason": "timeout",
+  "aggregateSummary": {
+    "selection": { "kind": "stack", "anchor": 352, "stackNumber": 36, "stackSize": 2 },
+    "prs": [
+      {
+        "pr": 351, "repo": "owner/repo", "title": "Queued foundation", "url": "https://github.com/owner/repo/pull/351",
+        "action": "wait", "reasons": ["already-in-merge-queue"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "foundation", "headRefOid": "f111111111111111111111111111111111111111", "baseRefName": "main", "readyReceipt": true, "isInMergeQueue": true,
+        "stack": { "number": 36, "size": 2, "position": 1, "baseRefName": "main" }
+      },
+      {
+        "pr": 352, "repo": "owner/repo", "title": "Queued child", "url": "https://github.com/owner/repo/pull/352",
+        "action": "wait", "reasons": ["already-in-merge-queue"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "child", "headRefOid": "f222222222222222222222222222222222222222", "baseRefName": "foundation", "readyReceipt": true, "isInMergeQueue": true,
+        "stack": { "number": 36, "size": 2, "position": 2, "baseRefName": "main" }
+      }
+    ]
+  }
+}

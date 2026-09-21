@@ -346,12 +346,13 @@ describe("runIterate — merge", () => {
     expectStackedEscalate(result, { position: 2, size: 3, number: 7, base: "stack/7/1" });
   });
 
-  it("falls through to cancel for a stacked PR when merge mode is not enabled", async () => {
+  it("waits for a stacked readiness receipt when merge mode is not enabled", async () => {
     mockStackedReady("abc123", { number: 7, size: 3, position: 1, baseRefName: "main" });
 
     const result = await runIterate(makeOpts({ merge: false }));
 
-    expect(result.action).toBe("cancel");
+    expect(result.action).toBe("wait");
+    expect(result).toMatchObject({ log: expect.stringContaining("readiness receipt") });
   });
 
   it("does not escalate an old ejection after the PR head was updated", async () => {

@@ -30,6 +30,7 @@
         "headRefName": "codex/github-app-docs",
         "headRefOid": "e90a5b99c42e8d7d26dc1ac28f954411f7ef79cb",
         "baseRefName": "main",
+        "readyReceipt": true,
         "stack": { "number": 514, "size": 5, "position": 1, "baseRefName": "main" }
       },
       {
@@ -60,6 +61,7 @@
         "headRefName": "codex/webhook-platform",
         "headRefOid": "ccbb8fdfc8317f11b0b35c5e3bc1aad6a4d83e4d",
         "baseRefName": "main",
+        "readyReceipt": true,
         "stack": { "number": 514, "size": 5, "position": 3, "baseRefName": "main" }
       },
       {
@@ -75,6 +77,7 @@
         "headRefName": "codex/github-ingress-foundation",
         "headRefOid": "b94436d2ddf60c55948b953610b16b34cff7b4da",
         "baseRefName": "codex/webhook-platform",
+        "readyReceipt": true,
         "stack": { "number": 514, "size": 5, "position": 4, "baseRefName": "main" }
       },
       {

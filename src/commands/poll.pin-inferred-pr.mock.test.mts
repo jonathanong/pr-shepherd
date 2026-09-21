@@ -46,6 +46,9 @@ describe("runPoll — pins an inferred PR after the first tick", () => {
     });
 
     await vi.advanceTimersByTimeAsync(30_000);
+    // The first tick now performs receipt-state I/O before scheduling the
+    // interval; advance again if that I/O completed after the first jump.
+    await vi.advanceTimersByTimeAsync(30_000);
     const result = await pollPromise;
 
     expect(mockGetCurrentPrNumber).toHaveBeenCalledTimes(1);

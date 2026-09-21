@@ -1,0 +1,24 @@
+{
+  "description": "A linear stack becomes successfully reconciled only after each open layer has a current one-PR Shepherd READY receipt.",
+  "mode": "aggregate",
+  "args": ["--stack", "https://github.com/owner/repo/pull/332"],
+  "expectedExitCode": 0,
+  "expectedReason": "all_terminal",
+  "aggregateSummary": {
+    "selection": { "kind": "stack", "anchor": 332, "stackNumber": 34, "stackSize": 2 },
+    "prs": [
+      {
+        "pr": 331, "repo": "owner/repo", "title": "Verified foundation", "url": "https://github.com/owner/repo/pull/331",
+        "action": "cancel", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "foundation", "headRefOid": "d111111111111111111111111111111111111111", "baseRefName": "main", "readyReceipt": true,
+        "stack": { "number": 34, "size": 2, "position": 1, "baseRefName": "main" }
+      },
+      {
+        "pr": 332, "repo": "owner/repo", "title": "Verified child", "url": "https://github.com/owner/repo/pull/332",
+        "action": "cancel", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "child", "headRefOid": "d222222222222222222222222222222222222222", "baseRefName": "foundation", "readyReceipt": true,
+        "stack": { "number": 34, "size": 2, "position": 2, "baseRefName": "main" }
+      }
+    ]
+  }
+}

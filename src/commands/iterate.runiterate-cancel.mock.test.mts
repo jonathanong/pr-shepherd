@@ -73,4 +73,23 @@ describe("runIterate — cancel", () => {
       expect(result.fix.resolveCommand.hasMutations).toBe(true);
     }
   });
+
+  it("does not cancel a draft when auto mark-ready is disabled", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        mergeStatus: { ...makeReport().mergeStatus, isDraft: true, status: "DRAFT" },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
+
+    expect(result.action).toBe("wait");
+    expect(result.shouldCancel).toBe(false);
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo");
+  });
 });

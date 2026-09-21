@@ -46,6 +46,7 @@ export interface RawSummaryPr {
   title: string;
   url: string;
   state: string;
+  updatedAt?: string;
   isDraft: boolean;
   viewerCanUpdate: boolean;
   headRefName: string;
@@ -58,6 +59,15 @@ export interface RawSummaryPr {
   reviewRequests?: { nodes: Array<{ requestedReviewer: RawAuthor | null }> };
   latestReviews?: { nodes: Array<{ state: string; author: RawAuthor | null }> };
   isInMergeQueue: boolean;
+  mergeQueueAdditions?: { nodes: Array<{ createdAt: string }> } | null;
+  mergeQueueRemovals?: {
+    nodes: Array<{
+      reason: string | null;
+      createdAt: string;
+      actor: { login: string } | null;
+      beforeCommit: { oid: string; parents: { nodes: Array<{ oid: string }> } | null } | null;
+    }>;
+  } | null;
   mergeQueueEntry: { headCommit: { statusCheckRollup: RawCheckRollup | null } | null } | null;
   stack: { number: number; size: number; baseRefName: string } | null;
   stackEntry: { position: number } | null;

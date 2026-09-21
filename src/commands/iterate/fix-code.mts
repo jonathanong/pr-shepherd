@@ -57,6 +57,8 @@ interface HandleFixCodeContext {
   surfacedApprovals: Review[];
   botUsernames: NormalizedBotUsernames;
   ruleAutoResolveThreadIds?: string[];
+  /** Verified stack-repair guidance, when ancestry is stale. */
+  repairInstructions?: string[];
 }
 
 function checkRequiresHumanFollowUp(check: AgentCheck): boolean {
@@ -140,6 +142,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     surfacedApprovals,
     botUsernames,
     ruleAutoResolveThreadIds,
+    repairInstructions,
   } = ctx;
   const prReference = formatPrUrl(report.repo, prNumber);
   const failingChecks = report.checks.failing;
@@ -487,6 +490,9 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     report.viewerAuthorization?.viewerCanUpdate === true,
     exhaustedAttempts.length > 0,
   );
+  if (repairInstructions && repairInstructions.length > 0) {
+    instructions.unshift(...repairInstructions);
+  }
   const prospectiveResult = {
     ...base,
     baseBranch: baseLookup.branch,

@@ -139,20 +139,23 @@ pr-shepherd 42 43 44                   # summarize an explicit same-repository s
 pr-shepherd --stack 43                 # summarize every PR in a native GitHub stack
 ```
 
-Multi-PR and `--stack` polling use compact, read-only GraphQL summaries. They return when any row
-needs agent work, all rows are terminal, the bounded timeout expires, or `--until-terminal` crosses
-a configured GraphQL quota-warning band. Check counts use the same ignored, protected-run,
-superseded-run, and event rules as singular iteration and include active merge-queue commit checks.
-Bounded review/check overflow remains visible without permanently forcing work, and clean rows use
-the configured ready-delay before becoming terminal. Explicit PR sets give each actionable row an
-exact single-PR `pollCommand`, so independent rows can proceed before the next aggregate poll.
-Stack rows are ordered bottom-to-top and follow the one ordered stack instruction block instead.
-The summary also checks that every open child was based on
-its direct parent's current head. A stale child/parent OID pair is actionable even when GitHub
-reports both PRs clean: without `--merge`, rebase the upstack branches from their parent and push
-them with the emitted `gh stack` commands; with `--merge`, finish the contiguous ready lower
-layers with the emitted `gh stack merge --squash` command, recheck, then repair the child. API and
-MCP aggregate calls perform one summary tick and leave recurrence to the caller.
+Multi-PR and `--stack` polling use compact, read-only GraphQL summaries. They return when work is
+needed, every selected PR is complete, the bounded timeout expires, or `--until-terminal` crosses a
+configured GraphQL quota-warning band. Explicit PR sets give each actionable row an exact single-PR
+`pollCommand`, so independent rows can proceed before the next aggregate poll.
+
+Native-stack rows are ordered bottom-to-top. `stackMergeable` is true only when every open layer has
+a current one-PR Shepherd READY receipt and adjacent open layers have linear ancestry. A draft,
+conflicting, failing, pending, or unreceipted lower layer marks every higher open layer with
+`blockedByPr`. Review and CI sessions on different layers may proceed concurrently, but an upper
+draft cannot transition to ready until every lower layer has its READY receipt. The aggregate selector
+does not emit rebase or push instructions. A closed-unmerged dependency is an explicit human
+escalation.
+
+With `--merge`, Shepherd submits only the entire verified native stack, never a ready prefix. If
+GitHub puts it in a merge queue, rerun the same `--stack --merge` selector until every layer is
+merged or an ejected layer needs its one-PR session. API and MCP aggregate calls perform one summary
+tick and leave recurrence to the caller.
 
 Polling defaults can be set under `poll` in `.pr-shepherdrc.yml`: `intervalSeconds`, `timeoutSeconds`, `debounceSeconds`, and `quietStatus`. Explicit flags override configuration, including `--no-quiet-status` when a shared config enables quiet output. Quiet status remains off by default.
 
