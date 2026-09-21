@@ -119,4 +119,41 @@ describe("queued READY receipt projection", () => {
     );
     expect(item.readyReceipt).toBeUndefined();
   });
+
+  it("does not route a removal that predates a newer one-PR READY receipt", async () => {
+    vi.mocked(readReadyReceipt).mockResolvedValue({
+      version: 1,
+      owner: repo.owner,
+      repo: repo.name,
+      pr: 42,
+      headRefOid: head,
+      baseRefOid: base,
+      status: "READY",
+      isDraft: false,
+      readinessFingerprint: fingerprintRawSummaryPr(raw())!,
+      recordedAtUnix: 2_000_000_000,
+    });
+    const item = await summarizePollSummaryPr(
+      raw({
+        mergeQueueRemovals: {
+          nodes: [
+            {
+              reason: "CI_FAILURE",
+              createdAt: "2026-09-20T10:10:00Z",
+              actor: { login: "github-merge-queue" },
+              beforeCommit: {
+                oid: "q".repeat(40),
+                parents: { nodes: [{ oid: head }] },
+              },
+            },
+          ],
+        },
+      }),
+      repo,
+      { stackPrNumber: 42, merge: true },
+    );
+
+    expect(item).toMatchObject({ readyReceipt: true });
+    expect(item.queueRemoval).toBeUndefined();
+  });
 });

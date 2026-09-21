@@ -133,11 +133,13 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     repoName,
   );
 
-  await invalidateStaleReadyReceipt(
-    { owner: repoOwner, repo: repoName, pr: report.pr },
-    report,
-    hasActionableWork,
-  );
+  if (report.mergeStatus.mergeRequirements?.stack) {
+    await invalidateStaleReadyReceipt(
+      { owner: repoOwner, repo: repoName, pr: report.pr },
+      report,
+      hasActionableWork,
+    );
+  }
 
   const base = buildIterateBase(report, readyState);
 
@@ -235,11 +237,11 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     await clearStallState(stallKey);
     const mergeResult = buildReadyMergeOutcome(opts.merge, true, base, report);
     if (mergeResult) return mergeResult;
-    const receiptWritten = await recordReadyReceipt(
-      { owner: repoOwner, repo: repoName, pr: report.pr },
-      report,
-    );
-    if (!receiptWritten && report.mergeStatus.mergeRequirements?.stack) {
+    const needsStackReceipt = report.mergeStatus.mergeRequirements?.stack !== undefined;
+    const receiptWritten = needsStackReceipt
+      ? await recordReadyReceipt({ owner: repoOwner, repo: repoName, pr: report.pr }, report)
+      : true;
+    if (!receiptWritten) {
       return {
         ...base,
         action: "wait",

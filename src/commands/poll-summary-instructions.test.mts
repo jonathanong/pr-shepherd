@@ -206,4 +206,33 @@ describe("native-stack reconciliation", () => {
     expect(result.nextAction).toBe("fix_code");
     expect(result.instructions?.join("\n")).toContain("PR #3");
   });
+
+  it("adds quota-aware continuation to an actionable stack handoff", () => {
+    const result = withPollSummaryInstructions(
+      {
+        ...stack([row(1, 1), row(2, 2, { readyReceipt: true }), row(3, 3, { readyReceipt: true })]),
+        quotaWarning: {
+          resource: "graphql",
+          thresholdPercent: 20,
+          remaining: 100,
+          limit: 1000,
+          resetAt: 2_000_000_000,
+          pollIntervalMinutes: 10,
+          pollTimeoutMinutes: 20,
+        },
+      },
+      false,
+    );
+    expect(result.nextAction).toBe("fix_code");
+    expect(result.instructions?.at(-1)).toContain("After completing the stack action");
+  });
+
+  it("escalates an unready layer when no one-PR command is available", () => {
+    const result = withPollSummaryInstructions(
+      stack([row(1, 1, { pollCommand: undefined }), row(2, 2), row(3, 3)]),
+      false,
+    );
+    expect(result).toMatchObject({ nextAction: "escalate", stackMergeable: false });
+    expect(result.instructions?.[0]).toContain("could not produce its command");
+  });
 });
