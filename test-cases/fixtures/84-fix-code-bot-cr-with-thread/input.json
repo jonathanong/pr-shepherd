@@ -1,0 +1,53 @@
+{
+  "description": "An overdue authorized bot review does not force escalation when review-thread work is still actionable; the agent receives the combined reply and dismissal command.",
+  "batchData": {
+    "mergeStateStatus": "BLOCKED",
+    "reviewDecision": "CHANGES_REQUESTED",
+    "changesRequestedReviews": [
+      {
+        "id": "PRR_bot_overdue_84",
+        "author": "claude",
+        "authorType": "Bot",
+        "body": "## Summary\n\nHere are some blockers I found:\n\n1. **Missing input validation.** The `processPayment` function at `src/payments.mts:42` does not validate the amount field before passing it to the charge API."
+      }
+    ],
+    "reviewThreads": [
+      {
+        "id": "PRRT_thrash_84",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/auth.ts",
+        "line": 88,
+        "startLine": null,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "This authentication logic is too complex, please simplify.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r10",
+        "createdAtUnix": 1715700000
+      }
+    ]
+  },
+  "seenMap": {
+    "PRR_bot_overdue_84": {
+      "seenAt": 1715798100,
+      "bodyHash": "eb8f2478a94d999d"
+    }
+  },
+  "fixAttempts": {
+    "headSha": "oldhash123",
+    "threadAttempts": {
+      "PRRT_thrash_84": 2
+    },
+    "threadBodyHashes": {
+      "PRRT_thrash_84": "aa97f5d40ebed9f1"
+    }
+  },
+  "stallTimeoutMinutes": 30,
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

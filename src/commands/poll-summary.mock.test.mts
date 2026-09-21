@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../github/poll-summary.mts", () => ({ fetchPollSummary: vi.fn() }));
@@ -41,6 +42,15 @@ function row(pr: number, action: PollSummaryItem["action"]): PollSummaryItem {
   };
 }
 
+function queuedStackRow(pr: number): PollSummaryItem {
+  return {
+    ...row(pr, "wait"),
+    readyReceipt: true,
+    isInMergeQueue: true,
+    stack: { number: 1, size: 2, position: pr - 41, baseRefName: "main" },
+  };
+}
+
 const opts = {
   prNumbers: [42, 43],
   targetRepository: { owner: "acme", name: "widgets" },
@@ -80,6 +90,54 @@ describe("aggregate poll recurrence", () => {
     });
 
     await expect(runAggregatePoll(opts)).resolves.toMatchObject({ reason: "actionable" });
+  });
+
+  it("returns stack SHEPHERD immediately when debounce is disabled", async () => {
+    mockFetch.mockResolvedValue({
+      selection: { kind: "stack", anchor: 43, stackNumber: 1, stackSize: 2 },
+      prs: [
+        { ...row(42, "fix_code"), stack: { number: 1, size: 2, position: 1, baseRefName: "main" } },
+        { ...row(43, "fix_code"), stack: { number: 1, size: 2, position: 2, baseRefName: "main" } },
+      ],
+    });
+
+    await expect(
+      runAggregatePoll({
+        ...opts,
+        prNumbers: [],
+        stackPrNumber: 43,
+        debounceSeconds: 0,
+        untilTerminal: true,
+      }),
+    ).resolves.toMatchObject({ reason: "actionable", nextAction: "shepherd" });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("debounces stack SHEPHERD until the configured window elapses", async () => {
+    let now = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    mockSleep.mockImplementation(async (milliseconds) => {
+      now += milliseconds;
+    });
+    mockFetch.mockResolvedValue({
+      selection: { kind: "stack", anchor: 43, stackNumber: 1, stackSize: 2 },
+      prs: [
+        { ...row(42, "fix_code"), stack: { number: 1, size: 2, position: 1, baseRefName: "main" } },
+        { ...row(43, "fix_code"), stack: { number: 1, size: 2, position: 2, baseRefName: "main" } },
+      ],
+    });
+
+    await expect(
+      runAggregatePoll({
+        ...opts,
+        prNumbers: [],
+        stackPrNumber: 43,
+        debounceSeconds: 60,
+        untilTerminal: true,
+      }),
+    ).resolves.toMatchObject({ reason: "actionable", nextAction: "shepherd" });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(mockSleep).toHaveBeenCalledWith(60_000);
   });
 
   it("returns immediate mark-ready work without debouncing", async () => {
@@ -175,7 +233,7 @@ describe("aggregate poll recurrence", () => {
     mockFetch
       .mockResolvedValueOnce({
         selection: { kind: "stack", anchor: 43, stackNumber: 1, stackSize: 2 },
-        prs: [row(42, "wait"), row(43, "wait")],
+        prs: [queuedStackRow(42), queuedStackRow(43)],
       })
       .mockRejectedValueOnce(
         new ShepherdError("PR #43 is not part of a native GitHub stack", EXIT.UNAVAILABLE),
@@ -190,9 +248,73 @@ describe("aggregate poll recurrence", () => {
         ...opts,
         prNumbers: [],
         stackPrNumber: 43,
+        merge: true,
         timeoutSeconds: 60,
         untilTerminal: true,
       }),
     ).resolves.toMatchObject({ reason: "all_terminal" });
+  });
+
+  it("escalates a disappeared stack when any tracked layer has not merged", async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        selection: { kind: "stack", anchor: 43, stackNumber: 1, stackSize: 2 },
+        prs: [queuedStackRow(42), queuedStackRow(43)],
+      })
+      .mockRejectedValueOnce(
+        new ShepherdError("PR #43 is not part of a native GitHub stack", EXIT.UNAVAILABLE),
+      )
+      .mockResolvedValueOnce({
+        selection: { kind: "prs", requested: [42, 43] },
+        prs: [row(42, "cancel"), { ...row(43, "cancel"), state: "CLOSED" }],
+      });
+
+    const result = await runAggregatePoll({
+      ...opts,
+      prNumbers: [],
+      stackPrNumber: 43,
+      merge: true,
+      timeoutSeconds: 60,
+      untilTerminal: true,
+    });
+    expect(result.prs.map((item) => item.state)).toEqual(["MERGED", "CLOSED"]);
+    expect(result).toMatchObject({
+      reason: "actionable",
+      nextAction: "escalate",
+      stackMergeable: false,
+      selection: { kind: "stack" },
+    });
+  });
+
+  it("preserves disappeared-stack escalation when the fallback has an open orphan", async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        selection: { kind: "stack", anchor: 43, stackNumber: 1, stackSize: 2 },
+        prs: [queuedStackRow(42), queuedStackRow(43)],
+      })
+      .mockRejectedValueOnce(
+        new ShepherdError("PR #43 is not part of a native GitHub stack", EXIT.UNAVAILABLE),
+      )
+      .mockResolvedValueOnce({
+        selection: { kind: "prs", requested: [42, 43] },
+        prs: [{ ...row(42, "wait"), state: "OPEN" }, row(43, "cancel")],
+      });
+
+    const result = await runAggregatePoll({
+      ...opts,
+      prNumbers: [],
+      stackPrNumber: 43,
+      merge: true,
+      timeoutSeconds: 60,
+      untilTerminal: true,
+    });
+    expect(result).toMatchObject({
+      reason: "actionable",
+      nextAction: "escalate",
+      stackMergeable: false,
+      selection: { kind: "stack" },
+    });
+    expect(result.prs[0]?.state).toBe("OPEN");
+    expect(result.instructions?.[0]).toContain("disappeared");
   });
 });

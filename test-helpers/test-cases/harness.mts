@@ -38,7 +38,18 @@ vi.mock("node:child_process", () => ({
 }));
 
 vi.mock("../../src/github/batch.mts", () => ({ fetchPrBatch: vi.fn() }));
-vi.mock("../../src/github/poll-summary.mts", () => ({ fetchPollSummary: vi.fn() }));
+const { mockFetchPollSummaryValue, mockFetchRawSummaryPr } = vi.hoisted(() => ({
+  mockFetchPollSummaryValue: vi.fn(),
+  mockFetchRawSummaryPr: vi.fn(),
+}));
+vi.mock("../../src/github/poll-summary.mts", () => ({
+  fetchPollSummary: mockFetchPollSummaryValue,
+  fetchRawSummaryPr: mockFetchRawSummaryPr,
+}));
+vi.mock("../../src/state/ready-receipts.mts", async (importOriginal) => ({
+  ...(await importOriginal()),
+  writeReadyReceipt: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("../../src/state/pr-fingerprint.mts", () => ({
   loadPrFingerprint: vi.fn().mockResolvedValue(null),
   storePrFingerprint: vi.fn().mockResolvedValue(undefined),
@@ -80,14 +91,6 @@ vi.mock("../../src/state/fix-attempts.mts", () => ({
   readFixAttempts: vi.fn().mockResolvedValue(null),
   writeFixAttempts: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("../../src/state/bot-cr-seen.mts", async (importOriginal) => {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    readBotCrSeenState: vi.fn().mockResolvedValue(null),
-    writeBotCrSeenState: vi.fn().mockResolvedValue(undefined),
-  };
-});
 
 // ---------------------------------------------------------------------------
 // Imports (after mocks)
@@ -108,7 +111,6 @@ import {
   clearStallState,
 } from "../../src/state/iterate-stall.mts";
 import { readFixAttempts, writeFixAttempts } from "../../src/state/fix-attempts.mts";
-import { readBotCrSeenState, writeBotCrSeenState } from "../../src/state/bot-cr-seen.mts";
 
 const mockFetchPrBatch = vi.mocked(fetchPrBatch);
 const mockFetchPollSummary = vi.mocked(fetchPollSummary);
@@ -125,8 +127,41 @@ const mockWriteStallState = vi.mocked(writeStallState);
 const mockClearStallState = vi.mocked(clearStallState);
 const mockReadFixAttempts = vi.mocked(readFixAttempts);
 const mockWriteFixAttempts = vi.mocked(writeFixAttempts);
-const mockReadBotCrSeenState = vi.mocked(readBotCrSeenState);
-const mockWriteBotCrSeenState = vi.mocked(writeBotCrSeenState);
+
+function rawSummaryForBatch(batchData: Record<string, any>): any {
+  const stack = batchData.stack;
+  return {
+    number: batchData.number,
+    title: "Fixture PR",
+    url: "https://github.com/owner/repo/pull/42",
+    state: batchData.state,
+    updatedAt: "2026-09-20T12:00:00Z",
+    lifecycleEvents: null,
+    isDraft: batchData.isDraft,
+    viewerCanUpdate: true,
+    headRefName: batchData.headRefName,
+    headRefOid: batchData.headRefOid,
+    baseRefOid: batchData.baseRefOid ?? "base123",
+    baseRefName: batchData.baseRefName,
+    mergeable: batchData.mergeable,
+    mergeStateStatus: batchData.mergeStateStatus,
+    reviewDecision: batchData.reviewDecision,
+    reviewRequests: { nodes: [] },
+    latestReviews: { nodes: [] },
+    isInMergeQueue: batchData.isInMergeQueue === true,
+    mergeQueueAdditions: null,
+    mergeQueueRemovals: null,
+    mergeQueueEntry: null,
+    stack: stack
+      ? { number: stack.number, size: stack.size, baseRefName: stack.baseRefName }
+      : null,
+    stackEntry: stack ? { position: stack.position } : null,
+    comments: { totalCount: 0, pageInfo: { hasPreviousPage: false }, nodes: [] },
+    reviews: { totalCount: 0, pageInfo: { hasPreviousPage: false }, nodes: [] },
+    reviewThreads: { totalCount: 0, pageInfo: { hasPreviousPage: false }, nodes: [] },
+    commits: { nodes: [] },
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Fixture type
@@ -139,6 +174,8 @@ export interface Fixture {
   aggregateSummary?: { selection: Record<string, unknown>; prs: unknown[] };
   /** Expected aggregate result reason. */
   expectedReason?: "actionable" | "all_terminal" | "waiting" | "timeout";
+  /** Expected stack-level transition for aggregate native-stack fixtures. */
+  expectedNextAction?: string;
   /** Fields merged on top of DEFAULT_BATCH. */
   batchData?: Record<string, unknown>;
   /** Return value of getMergeableState() for UNKNOWN/READY refresh. */
@@ -168,13 +205,6 @@ export interface Fixture {
     headSha: string;
     threadAttempts: Record<string, number>;
     threadBodyHashes?: Record<string, string>;
-  };
-  /**
-   * Return value of readBotCrSeenState(). Pre-seed bot CR first-seen
-   * timestamps to exercise the `bot-cr-not-dismissed` escalate trigger.
-   */
-  botCrSeen?: {
-    reviews: Record<string, { firstSeenAt: number; bodyHash: string }>;
   };
   /** If true, REST cancel calls return HTTP 409. */
   cancelRunsFail?: boolean;
@@ -358,6 +388,7 @@ export function applyFixture(fixture: Fixture): void {
       headRefOid: typeof batchData.headRefOid === "string" ? batchData.headRefOid : "abc123",
     }),
   });
+  mockFetchRawSummaryPr.mockResolvedValue(rawSummaryForBatch(batchData));
   if (fixture.aggregateSummary) mockFetchPollSummary.mockResolvedValue(fixture.aggregateSummary);
 
   const mergeableFallback = fixture.mergeableFallback ?? {
@@ -400,9 +431,6 @@ export function applyFixture(fixture: Fixture): void {
 
   mockReadFixAttempts.mockResolvedValue(fixture.fixAttempts ?? null);
   mockWriteFixAttempts.mockResolvedValue(undefined);
-
-  mockReadBotCrSeenState.mockResolvedValue(fixture.botCrSeen ?? null);
-  mockWriteBotCrSeenState.mockResolvedValue(undefined);
 
   if (fixture.cancelRunsFail) {
     mockFetch.mockImplementation((url) => {

@@ -36,7 +36,10 @@ Each tick returns exactly one action:
 - `FIX_CODE` — agent work is required; complete it, push when needed, then continue polling. Push access to the PR head branch is a usage precondition.
 - `MERGE` — run the emitted head-pinned auto-merge or queue command. Ordinary merges include a plain-merge fallback; queue merges include a GraphQL enqueue fallback. GitHub is authoritative for the result and reports any authorization failure.
 - `CANCEL` — stop polling because the PR merged, closed, or completed its ready-delay.
-- `ESCALATE` — stop polling until a human provides direction.
+- `ESCALATE` — stop polling until a human provides direction. Native stacks reach this only after their autonomous one-PR sessions are exhausted.
+
+Native-stack summaries additionally use stack-level `SHEPHERD`: run the listed one-PR sessions,
+then recheck the stack. It is not a per-PR `FIX_CODE` action.
 
 Example shape:
 
@@ -79,7 +82,7 @@ Conversations Resolved: No [Not Required]
 9. `[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run review mutations using the pushed commit SHA and iterate immediately with the same options; without code changes, complete the authorized review mutations and iterate immediately.
 ```
 
-See [docs/actions.md](docs/actions.md) for the complete output contract and [docs/escalations.md](docs/escalations.md) for the exact finite human-handoff boundary. Iterate/poll PR outcomes use exit codes `0` and `10`–`15`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).
+See [docs/actions.md](docs/actions.md) for the complete output contract and [docs/escalations.md](docs/escalations.md) for the exact finite human-handoff boundary. Iterate/poll PR outcomes use exit codes `0` and `10`–`16`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).
 
 ## Workflow Assumptions
 
@@ -129,7 +132,7 @@ pr-shepherd 42                         # poll until non-WAIT or timeout
 pr-shepherd 42 --interval 60s --timeout 270s
 pr-shepherd 42 --quiet-status          # print only changed WAIT status snapshots
 pr-shepherd 42 --until-terminal        # continue through WAIT/MARK_READY until work or terminal state
-pr-shepherd 42 --debounce 5m           # wait 5m after first FIX_CODE, then return one batched tick
+pr-shepherd 42 --debounce 5m           # wait 5m after first FIX_CODE or stack SHEPHERD, then return one batched tick
 pr-shepherd 42 --ready-delay 15m
 pr-shepherd 42 --merge                  # request head-pinned auto-merge/queue; GitHub reports the result
 pr-shepherd iterate 42                 # single tick
@@ -139,20 +142,25 @@ pr-shepherd 42 43 44                   # summarize an explicit same-repository s
 pr-shepherd --stack 43                 # summarize every PR in a native GitHub stack
 ```
 
-Multi-PR and `--stack` polling use compact, read-only GraphQL summaries. They return when any row
-needs agent work, all rows are terminal, the bounded timeout expires, or `--until-terminal` crosses
-a configured GraphQL quota-warning band. Check counts use the same ignored, protected-run,
-superseded-run, and event rules as singular iteration and include active merge-queue commit checks.
-Bounded review/check overflow remains visible without permanently forcing work, and clean rows use
-the configured ready-delay before becoming terminal. Explicit PR sets give each actionable row an
-exact single-PR `pollCommand`, so independent rows can proceed before the next aggregate poll.
-Stack rows are ordered bottom-to-top and follow the one ordered stack instruction block instead.
-The summary also checks that every open child was based on
-its direct parent's current head. A stale child/parent OID pair is actionable even when GitHub
-reports both PRs clean: without `--merge`, rebase the upstack branches from their parent and push
-them with the emitted `gh stack` commands; with `--merge`, finish the contiguous ready lower
-layers with the emitted `gh stack merge --squash` command, recheck, then repair the child. API and
-MCP aggregate calls perform one summary tick and leave recurrence to the caller.
+Multi-PR and `--stack` polling use compact, read-only GraphQL summaries. They return when work is
+needed, every selected PR is complete, the bounded timeout expires, or `--until-terminal` crosses a
+configured GraphQL quota-warning band. Explicit PR sets give each actionable row an exact single-PR
+`pollCommand`, so independent rows can proceed before the next aggregate poll.
+
+Native-stack rows are ordered bottom-to-top. `--stack` never performs a mutation itself; only
+`--stack --merge` can emit a complete-stack merge command for the agent. An unready layer (draft, missing a READY
+receipt, conflicting, failing, or stale) returns stack-level `SHEPHERD` with one-PR Shepherd instructions for
+the affected layers. A draft or other unready lower layer marks every higher open layer with
+`blockedByPr`; review and CI sessions on independent layers may proceed concurrently, but an upper
+draft cannot transition to ready until every lower layer has its READY receipt. A queued stack
+returns `WAIT`. A terminal READY or fully merged stack returns `CANCEL`. Closed or unverified
+topology returns `ESCALATE` for human direction after any other shepherdable PRs are handled;
+until then, `SHEPHERD` remains the immediate action and lists the human blockers too.
+
+With `--stack --merge`, a fully reconciled and READY stack returns `MERGE` with a `gh stack merge`
+command for the agent to run, checking and installing the optional `github/gh-stack` extension first
+when necessary. It then rechecks until every layer merges and returns `CANCEL`. API and MCP
+aggregate calls perform one summary tick and leave recurrence to the caller.
 
 Polling defaults can be set under `poll` in `.pr-shepherdrc.yml`: `intervalSeconds`, `timeoutSeconds`, `debounceSeconds`, and `quietStatus`. Explicit flags override configuration, including `--no-quiet-status` when a shared config enables quiet output. Quiet status remains off by default.
 

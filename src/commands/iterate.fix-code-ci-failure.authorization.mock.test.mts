@@ -130,7 +130,7 @@ describe("fix_code — GitHub Actions authorization", () => {
     expect(result.fix.instructions.join("\n")).not.toContain("no authorized follow-up action");
   });
 
-  it("escalates instead of recommending a second rerun after attempt 1 was consumed", async () => {
+  it("keeps a later failed attempt with a log excerpt actionable without another rerun", async () => {
     mockRunCheck.mockResolvedValue(
       failingCheckReport({
         checks: checkSet([
@@ -141,14 +141,12 @@ describe("fix_code — GitHub Actions authorization", () => {
 
     const result = await runIterate(makeOpts());
 
-    expectCheckFollowUpUnavailable(result);
-    if (result.action !== "escalate") return;
-    expect(result.escalate.checks?.[0]).toMatchObject({ runAttempt: 2 });
-    expect(result.escalate.checks?.[0]?.logExcerpt).toContain("queue request timed out");
-    expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
-    expect(result.escalate.suggestion).toContain("single rerun allowance is exhausted");
-    expect(result.escalate.humanMessage).toContain("[attempt: 2]");
-    expect(result.escalate.humanMessage).not.toContain("gh run rerun");
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.checks[0]).toMatchObject({ runAttempt: 2 });
+    expect(result.fix.checks[0]?.logExcerpt).toContain("queue request timed out");
+    expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
+    expect(result.fix.instructions.join("\n")).not.toContain("gh run rerun");
   });
 
   it("denies reruns conservatively when GitHub omits run-attempt metadata", async () => {

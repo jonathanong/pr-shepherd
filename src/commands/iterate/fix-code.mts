@@ -4,11 +4,6 @@ import {
   writeFixAttempts,
   type FixAttemptsState,
 } from "../../state/fix-attempts.mts";
-import {
-  readBotCrSeenState,
-  writeBotCrSeenState,
-  updateBotCrSeenState,
-} from "../../state/bot-cr-seen.mts";
 import { toAgentThread, toAgentComment, toAgentChecks } from "../../reporters/agent.mts";
 import { hashBody, markSeen } from "../../state/seen-comments.mts";
 import {
@@ -57,20 +52,22 @@ interface HandleFixCodeContext {
   surfacedApprovals: Review[];
   botUsernames: NormalizedBotUsernames;
   ruleAutoResolveThreadIds?: string[];
+  /** Verified stack-repair guidance, when ancestry is stale. */
+  repairInstructions?: string[];
 }
 
 function checkRequiresHumanFollowUp(check: AgentCheck): boolean {
   if (check.rerunCommand) return false;
-  // Once GitHub advances beyond the original attempt, Shepherd's one autonomous rerun has
-  // already been consumed. Hand the repeated failure off even when logs are available; the
-  // human still receives that evidence in the escalation payload.
-  if (check.runAttempt !== undefined && check.runAttempt > 1) return true;
   if (
     check.conclusion === "ACTION_REQUIRED" ||
     check.conclusion === "CANCELLED" ||
     check.conclusion === "STARTUP_FAILURE"
   )
     return true;
+  // A later attempt cannot be rerun automatically, but its included log can still
+  // identify a code or configuration fix for the agent. Only a later failure with
+  // no actionable evidence needs a human handoff.
+  if (check.runAttempt !== undefined && check.runAttempt > 1) return !check.logExcerpt?.trim();
   // An external check's direct URL is actionable evidence: the agent can inspect the
   // provider and/or reproduce the reported failure locally. Only a truly bare check
   // has no autonomous investigation path.
@@ -140,6 +137,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     surfacedApprovals,
     botUsernames,
     ruleAutoResolveThreadIds,
+    repairInstructions,
   } = ctx;
   const prReference = formatPrUrl(report.repo, prNumber);
   const failingChecks = report.checks.failing;
@@ -226,50 +224,6 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       allThreads,
       resolveOtherHumanThreads,
     );
-
-  const botCrReviews = report.changesRequestedReviews.filter(
-    (r) =>
-      (!isHumanAuthor(r) || isConfiguredBotAuthor(r, botUsernames)) &&
-      report.viewerAuthorization?.viewerCanAdminister === true,
-  );
-  const botCrStateKey = { owner: repoOwner, repo: repoName, pr: prNumber };
-  const previousBotCrState = await readBotCrSeenState(botCrStateKey);
-  const nowSeconds = Math.floor(Date.now() / 1000);
-  const { next: nextBotCrState, staleIds: staleBotCrIds } = updateBotCrSeenState(
-    previousBotCrState,
-    botCrReviews,
-    nowSeconds,
-    stallTimeoutSeconds,
-  );
-  await writeBotCrSeenState(botCrStateKey, nextBotCrState);
-  if (staleBotCrIds.length > 0) {
-    const { resolveCommand, resolveOnlyCommand } = buildReviewCommands(
-      toAgentChecks(failingChecks),
-    );
-    const pending = pendingReviewCommands(resolveCommand, resolveOnlyCommand);
-    const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
-      triggers: ["bot-cr-not-dismissed"],
-      unresolvedThreads: [...report.threads.actionable, ...report.threads.resolutionOnly].map(
-        toAgentThread,
-      ),
-      ambiguousComments: report.comments.actionable.map(toAgentComment),
-      changesRequestedReviews: report.changesRequestedReviews,
-      ...(firstLookSummaries.length > 0 && { firstLookSummaries }),
-      ...(editedSummaries.length > 0 && { editedSummaries }),
-      ...(pending && { pendingReviewCommands: pending }),
-      suggestion: buildEscalateSuggestion(["bot-cr-not-dismissed"], staleBotCrIds.join(", ")),
-    };
-    return {
-      ...base,
-      action: "escalate",
-      escalate: {
-        ...escalateBase,
-        humanMessage: buildEscalateHumanMessage(escalateBase, prReference, {
-          merge: opts.merge,
-        }),
-      },
-    };
-  }
 
   const escalateTriggers = countFixCodeAttempt
     ? checkEscalateTriggers(retryableActionableThreads, priorThreadAttempts)
@@ -368,10 +322,13 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const manualFollowUpChecks = failingAgentChecks.filter(
     (check) => !belongsToActiveWorkflowRun(check) && checkRequiresHumanFollowUp(check),
   );
-  const exhaustedAttempts = manualFollowUpChecks.filter(
+  const exhaustedAttempts = failingAgentChecks.filter(
     (check) => check.runAttempt !== undefined && check.runAttempt > 1,
   );
-  const hasBehindBaseRecovery = isBehind && exhaustedAttempts.length > 0;
+  const manualExhaustedAttempts = exhaustedAttempts.filter((check) =>
+    manualFollowUpChecks.includes(check),
+  );
+  const hasBehindBaseRecovery = isBehind && manualExhaustedAttempts.length > 0;
   const hasAutonomousWork =
     hasConflicts ||
     hasBehindBaseRecovery ||
@@ -393,8 +350,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     const { resolveCommand, resolveOnlyCommand } = buildReviewCommands(failingAgentChecks);
     const pending = pendingReviewCommands(resolveCommand, resolveOnlyCommand);
     const checkSuggestion =
-      exhaustedAttempts.length > 0
-        ? `GitHub reports a later workflow attempt (${exhaustedAttempts
+      manualExhaustedAttempts.length > 0
+        ? `GitHub reports a later workflow attempt (${manualExhaustedAttempts
             .map((check) => `${check.runId ?? check.name}: attempt ${check.runAttempt}`)
             .join(
               ", ",
@@ -487,6 +444,9 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     report.viewerAuthorization?.viewerCanUpdate === true,
     exhaustedAttempts.length > 0,
   );
+  if (repairInstructions && repairInstructions.length > 0) {
+    instructions.unshift(...repairInstructions);
+  }
   const prospectiveResult = {
     ...base,
     baseBranch: baseLookup.branch,

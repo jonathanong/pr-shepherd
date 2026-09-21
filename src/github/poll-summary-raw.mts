@@ -27,6 +27,7 @@ type RawCheckContext =
       status: string;
       conclusion: string | null;
       detailsUrl?: string;
+      annotations?: { totalCount: number };
       checkSuite: {
         workflowRun: {
           databaseId?: string | number;
@@ -46,6 +47,10 @@ export interface RawSummaryPr {
   title: string;
   url: string;
   state: string;
+  updatedAt?: string;
+  lifecycleEvents?: {
+    nodes: Array<{ __typename: string; createdAt: string }>;
+  } | null;
   isDraft: boolean;
   viewerCanUpdate: boolean;
   headRefName: string;
@@ -58,6 +63,16 @@ export interface RawSummaryPr {
   reviewRequests?: { nodes: Array<{ requestedReviewer: RawAuthor | null }> };
   latestReviews?: { nodes: Array<{ state: string; author: RawAuthor | null }> };
   isInMergeQueue: boolean;
+  mergeQueueAdditions?: { nodes: Array<{ createdAt: string }> } | null;
+  mergeQueueRemovals?: {
+    nodes: Array<{
+      id?: string;
+      reason: string | null;
+      createdAt: string;
+      actor: { login: string } | null;
+      beforeCommit: { oid: string; parents: { nodes: Array<{ oid: string }> } | null } | null;
+    }>;
+  } | null;
   mergeQueueEntry: { headCommit: { statusCheckRollup: RawCheckRollup | null } | null } | null;
   stack: { number: number; size: number; baseRefName: string } | null;
   stackEntry: { position: number } | null;

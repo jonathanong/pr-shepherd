@@ -3,6 +3,7 @@ import { updateReadyDelay } from "../commands/ready-delay.mts";
 import { formatPrUrl } from "../pr-reference.mts";
 import { buildPrShepherdCommand } from "../cli/runner.mts";
 import { loadSeenMap } from "../state/seen-comments.mts";
+import { isReadyReceiptCurrent, readReadyReceipt } from "../state/ready-receipts.mts";
 import type {
   MergeStateStatus,
   PollSummaryCommandOptions,
@@ -13,6 +14,9 @@ import type { RepoInfo } from "./client.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import { summarizePollSummaryChecks } from "./poll-summary-checks.mts";
 import { summarizePollSummaryReview } from "./poll-summary-review.mts";
+import { fingerprintRawSummaryPr } from "./poll-summary-fingerprint.mts";
+import { currentQueueRemovalEvent } from "./poll-summary-queue-removal.mts";
+import { isCurrentSummaryReady } from "./poll-summary-readiness.mts";
 import { normalizePollSummaryState, routePollSummary } from "./poll-summary-route.mts";
 export async function summarizePollSummaryPr(
   raw: RawSummaryPr,
@@ -25,6 +29,7 @@ export async function summarizePollSummaryPr(
   const checks = summarizePollSummaryChecks(raw);
   const review = await summarizePollSummaryReview(raw, seen, viewerCanAdminister);
   const blockingReviewerInProgress = detectBlockingReviewer(raw);
+  const removalEvent = currentQueueRemovalEvent(raw);
   let { action, reasons } = routePollSummary(raw, checks, review, opts);
   let remainingSeconds: number | undefined;
   if (raw.isDraft && blockingReviewerInProgress && action === "mark_ready") {
@@ -32,20 +37,22 @@ export async function summarizePollSummaryPr(
     reasons = ["blocking-reviewer-in-progress"];
   }
   const appearsReady = reasons.includes("appears-ready");
-  const readyDelaySeconds =
-    opts.readyDelaySeconds ?? (loadConfig().watch?.readyDelayMinutes ?? 10) * 60;
-  const readyState = await updateReadyDelay(
-    raw.number,
-    appearsReady,
-    readyDelaySeconds,
-    repo.owner,
-    repo.name,
-    { retainElapsed: true },
-  );
-  if (appearsReady && !readyState.shouldCancel) {
-    action = "wait";
-    reasons = ["ready-delay"];
-    remainingSeconds = readyState.remainingSeconds;
+  if (opts.stackPrNumber === undefined) {
+    const readyDelaySeconds =
+      opts.readyDelaySeconds ?? (loadConfig().watch?.readyDelayMinutes ?? 10) * 60;
+    const readyState = await updateReadyDelay(
+      raw.number,
+      appearsReady,
+      readyDelaySeconds,
+      repo.owner,
+      repo.name,
+      { retainElapsed: true },
+    );
+    if (appearsReady && !readyState.shouldCancel) {
+      action = "wait";
+      reasons = ["ready-delay"];
+      remainingSeconds = readyState.remainingSeconds;
+    }
   }
   const stack = raw.stack
     ? {
@@ -55,6 +62,35 @@ export async function summarizePollSummaryPr(
         baseRefName: raw.stack.baseRefName,
       }
     : undefined;
+  const fingerprint = opts.stackPrNumber !== undefined ? fingerprintRawSummaryPr(raw) : null;
+  const receipt = fingerprint
+    ? await readReadyReceipt({ owner: repo.owner, repo: repo.name, pr: raw.number })
+    : null;
+  // A queued PR's target branch can advance as earlier queue entries merge.
+  // Keep the pre-enqueue base binding for the receipt comparison while the
+  // merge group itself supplies the current mergeability evidence.
+  const receiptFingerprint =
+    raw.isInMergeQueue && receipt
+      ? fingerprintRawSummaryPr({ ...raw, baseRefOid: receipt.baseRefOid })
+      : fingerprint;
+  const currentReady = isCurrentSummaryReady(raw, checks, review, {
+    allowQueuedProgress: opts.stackPrNumber !== undefined && raw.isInMergeQueue,
+  });
+  const readyReceipt =
+    receiptFingerprint !== null &&
+    isReadyReceiptCurrent(receipt, {
+      headRefOid: raw.headRefOid,
+      baseRefOid: raw.isInMergeQueue && receipt ? receipt.baseRefOid : raw.baseRefOid,
+      readinessFingerprint: receiptFingerprint,
+      status: currentReady ? "READY" : "PENDING",
+      isDraft: raw.isDraft,
+    });
+  const queueRemoval =
+    removalEvent?.id && readyReceipt && receipt?.acknowledgedQueueRemovalId === removalEvent.id
+      ? undefined
+      : removalEvent
+        ? projectQueueRemoval(removalEvent)
+        : undefined;
   return {
     pr: raw.number,
     repo: repoName,
@@ -71,15 +107,34 @@ export async function summarizePollSummaryPr(
     baseRefName: raw.baseRefName,
     ...(raw.isDraft && { isDraft: true as const }),
     ...(raw.isInMergeQueue && { isInMergeQueue: true as const }),
+    ...(queueRemoval && { queueRemoval }),
     ...(blockingReviewerInProgress && { blockingReviewerInProgress: true as const }),
     ...(remainingSeconds !== undefined && { remainingSeconds }),
     ...(Object.keys(checks).length > 0 && { checks }),
     ...(Object.keys(review).length > 0 && { review }),
     ...(stack && { stack }),
-    ...(!["wait", "cancel"].includes(action) &&
-      !(opts.stackPrNumber !== undefined && raw.stack && action === "merge") && {
-        pollCommand: buildPollCommand(repoName, raw.number, opts),
-      }),
+    ...(readyReceipt && { readyReceipt: true as const }),
+    ...((opts.stackPrNumber !== undefined && raw.state === "OPEN") ||
+    (!["wait", "cancel"].includes(action) &&
+      !(opts.stackPrNumber !== undefined && raw.stack && action === "merge"))
+      ? {
+          pollCommand: buildPollCommand(repoName, raw.number, raw.isDraft, opts),
+        }
+      : {}),
+  };
+}
+
+function projectQueueRemoval(
+  removal: NonNullable<ReturnType<typeof currentQueueRemovalEvent>>,
+): PollSummaryItem["queueRemoval"] {
+  const removalTime = Date.parse(removal.createdAt);
+  const parents = removal.beforeCommit?.parents?.nodes.map((parent) => parent.oid) ?? [];
+  return {
+    reason: removal.reason,
+    createdAtUnix: Math.floor(removalTime / 1000),
+    ...(removal.actor?.login && { actor: removal.actor.login }),
+    ...(removal.beforeCommit?.oid && { beforeCommitOid: removal.beforeCommit.oid }),
+    beforeCommitParentOids: parents,
   };
 }
 
@@ -97,14 +152,24 @@ function detectBlockingReviewer(raw: RawSummaryPr): boolean {
   );
 }
 
-function buildPollCommand(repo: string, pr: number, opts: PollSummaryCommandOptions): string {
-  const args = [formatPrUrl(repo, pr), "--until-terminal"];
-  if (opts.merge) args.push("--merge");
+function buildPollCommand(
+  repo: string,
+  pr: number,
+  isDraft: boolean,
+  opts: PollSummaryCommandOptions,
+): string {
+  const autoMarkReadyDisabled =
+    opts.noAutoMarkReady || loadConfig().actions.autoMarkReady === false;
+  const boundedDraft = isDraft && autoMarkReadyDisabled;
+  const args = boundedDraft
+    ? [formatPrUrl(repo, pr), "--timeout", "1s", "--debounce", "0s", "--no-auto-mark-ready"]
+    : [formatPrUrl(repo, pr), "--until-terminal"];
+  if (opts.merge && opts.stackPrNumber === undefined) args.push("--merge");
   if (opts.readyDelaySeconds !== undefined)
     args.push("--ready-delay", `${opts.readyDelaySeconds}s`);
   if (opts.stallTimeoutSeconds !== undefined) {
     args.push("--stall-timeout", `${opts.stallTimeoutSeconds}s`);
   }
-  if (opts.noAutoMarkReady) args.push("--no-auto-mark-ready");
+  if (opts.noAutoMarkReady && !boundedDraft) args.push("--no-auto-mark-ready");
   return buildPrShepherdCommand(args).text;
 }

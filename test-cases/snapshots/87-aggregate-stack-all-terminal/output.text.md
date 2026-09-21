@@ -1,6 +1,6 @@
 # Poll summary [ALL_TERMINAL]
 
-**repo** `owner/repo` · **selection** stack #7 anchored at PR #44 (2 PRs) · **mode** `summary` · **next action** `cancel`
+**repo** `owner/repo` · **selection** stack #7 anchored at PR #44 (2 PRs) · **mode** `summary` · **stack mergeable** `true` · **next action** `cancel`
 
 ## Pull requests
 
@@ -15,4 +15,4 @@
 
 ## Instructions
 
-1. Stop — every selected PR is terminal.
+1. Stop — every stack layer is merged.

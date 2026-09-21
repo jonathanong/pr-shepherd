@@ -1,17 +1,21 @@
 # Escalation boundary
 
-`ESCALATE` is the only Shepherd action that hands the pull request to a human. The trigger type is a closed union with exactly eight values. If none of the eight conditions below is true, Shepherd must not return `ESCALATE`.
+`ESCALATE` is Shepherd's explicit human-handoff action. For a singular PR it uses the closed trigger
+union below. Native-stack aggregate reconciliation remains read-only: autonomous unready layers
+return stack-level `SHEPHERD`, queued stacks return `WAIT`, and terminal READY or merged stacks return `CANCEL`.
+Aggregate `ESCALATE` is reserved for genuine human decisions such as closed or unverified topology,
+after no autonomous one-PR Shepherd session remains.
+Aggregate mode never performs a mutation; a fully READY `--stack --merge` result emits an agent-run
+whole-stack merge command.
 
-| Trigger                       | Exact condition                                                                                                                                                                                                                                      |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `authorization-required`      | Shepherd is about to automatically mark a draft ready and `viewerCanUpdate !== true`. Explicit merge/enqueue requests are attempted and surface GitHub's actual error instead.                                                                       |
-| `check-follow-up-unavailable` | At least one remaining failing check has no autonomous follow-up, and no other autonomous work remains in the tick.                                                                                                                                  |
-| `fix-thrash`                  | A retryable, located review thread remains unchanged and unresolved after appearing in `iterate.fixAttemptsPerThread` caller-visible `FIX_CODE` results; the following unchanged tick escalates.                                                     |
-| `bot-cr-not-dismissed`        | An authorized bot/non-human `CHANGES_REQUESTED` dismissal was emitted, but the same review body remains undismissed for at least the enabled stall timeout.                                                                                          |
-| `base-branch-unknown`         | The GraphQL base branch is empty or unsafe and the current tick has work that could require a push, so Shepherd cannot name a safe rebase target.                                                                                                    |
-| `merge-queue-removed`         | Merge mode is enabled, GitHub reports a queue removal, the head has not changed since removal, no queue/auto-merge state remains, and no earlier branch found an actionable failure or concrete fix.                                                 |
-| `stacked-pr`                  | Merge mode is enabled, the clean READY state has lasted for the configured ready-delay (the same gate as [`## merge`](actions.md#merge)), and GitHub's batch query reports the PR is part of a native stack (at any position, including position 1). |
-| `stall-timeout`               | An enabled timeout expires for CI that never starts or for an unchanged `WAIT`/`FIX_CODE` state fingerprint.                                                                                                                                         |
+| Trigger                       | Exact condition                                                                                                                                                                                      |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `authorization-required`      | Shepherd is about to automatically mark a draft ready and `viewerCanUpdate !== true`. Explicit merge/enqueue requests are attempted and surface GitHub's actual error instead.                       |
+| `check-follow-up-unavailable` | At least one remaining failing check has no autonomous follow-up, and no other autonomous work remains in the tick.                                                                                  |
+| `fix-thrash`                  | A retryable, located review thread remains unchanged and unresolved after appearing in `iterate.fixAttemptsPerThread` caller-visible `FIX_CODE` results; the following unchanged tick escalates.     |
+| `base-branch-unknown`         | The GraphQL base branch is empty or unsafe and the current tick has work that could require a push, so Shepherd cannot name a safe rebase target.                                                    |
+| `merge-queue-removed`         | Merge mode is enabled, GitHub reports a queue removal, the head has not changed since removal, no queue/auto-merge state remains, and no earlier branch found an actionable failure or concrete fix. |
+| `stall-timeout`               | An enabled timeout expires for CI that never starts or for an unchanged `WAIT`/`FIX_CODE` state fingerprint.                                                                                         |
 
 ## Complete predicates
 
@@ -27,7 +31,7 @@ Denied or unverifiable generated review replies, thread resolutions, bot-review 
 
 At least one remaining failing check has no `rerunCommand` and is one of:
 
-- a GitHub Actions check whose `runAttempt` is greater than 1, meaning Shepherd's single rerun allowance is exhausted (this is a handoff even when a log excerpt exists, unless a behind/conflicting branch still provides a branch-refresh path);
+- a GitHub Actions check whose `runAttempt` is greater than 1 and has no nonblank included log excerpt, meaning Shepherd's single rerun allowance is exhausted with no usable failure evidence (unless a behind/conflicting branch still provides a branch-refresh path);
 - `ACTION_REQUIRED`, `CANCELLED`, or `STARTUP_FAILURE`;
 - a check with `runId === null` and an empty or whitespace-only `detailsUrl`; or
 - a check with a non-null run ID but no nonblank included `logExcerpt`.
@@ -42,19 +46,7 @@ The thread must be retryable: it has a non-null path and line and every required
 
 Active threads without a source location do not count toward `fix-thrash`. Unauthorized review mutations are surfaced once, then suppressed. Authorized reply/resolve mutations still run by thread ID when GitHub has cleared the path or line, without counting toward `fix-thrash`.
 
-Any escalation produced from a tick that has automatically selected review mutations retains all non-empty `resolve-only` and `apply review` commands. This includes review work accompanying `fix-thrash`, `bot-cr-not-dismissed`, `base-branch-unknown`, and a stall conversion. The escalation still pauses automated polling; the commands remain available for the human-directed recovery.
-
-### `bot-cr-not-dismissed`
-
-All of the following are true:
-
-- the current review is bot/non-human `CHANGES_REQUESTED`;
-- `viewerCanAdminister === true`, so Shepherd emitted an authorized `--dismiss-review-ids` mutation;
-- the current body hash matches the stored observation;
-- `stallTimeoutSeconds > 0`; and
-- the unchanged age reaches the configured stall timeout.
-
-A new review ID or edited body starts a fresh timer. A successful dismissal removes the tracked entry. If dismissal is unauthorized or unverifiable, Shepherd surfaces the review once and skips it; that review cannot trigger `bot-cr-not-dismissed`.
+Any escalation produced from a tick that has automatically selected review mutations retains all non-empty `resolve-only` and `apply review` commands. This includes review work accompanying `fix-thrash`, `base-branch-unknown`, and a stall conversion. The escalation still pauses automated polling; the commands remain available for the human-directed recovery. Authorized bot `CHANGES_REQUESTED` dismissals remain repeatable `FIX_CODE` work, even after the stall window; the agent runs the emitted command without a human handoff.
 
 ### `base-branch-unknown`
 
@@ -72,11 +64,18 @@ All of the following are true:
 
 Failing queue CI is actionable and therefore stays `FIX_CODE`; it does not trigger `merge-queue-removed`. The escalation preserves GitHub's raw removal reason, actor, timestamp, queue commit, and parent OIDs when available.
 
-### `stacked-pr`
+### Native-stack merge routing
 
-Merge mode is enabled, the clean READY state has lasted for the configured ready-delay — the same trigger as [`## merge`](actions.md#merge), which this escalation replaces — and the batch query's `stack` field is present. This applies uniformly to **every** stack position, including position 1: `--auto` is rejected server-side on any stacked PR regardless of position, and letting position 1 fall through to an ordinary merge would corrupt the remaining layers' stack metadata. A mid-stack PR's GraphQL base branch is its still-unmerged parent branch, so the plain `gh pr merge` fallback used for non-stacked PRs would silently land it there instead of the stack's trunk ref.
+Native-stack membership is not an escalation. When a one-PR `--merge` poll reaches its ready delay, it writes the layer's READY receipt and returns non-terminal `FIX_CODE` with `pr-shepherd --stack <PR URL> --until-terminal --merge`. This applies at every position, including position 1: `--auto` is rejected server-side on stacked PRs, and a plain `gh pr merge` fallback would land a mid-stack layer into its still-unmerged parent rather than the stack trunk.
 
-Shepherd does not emit any merge command for a stacked PR — see [`## merge`](actions.md#merge) for the invariant this preserves. The escalation names the PR's position, stack size, and base ref in a `## GitHub stack` section, and suggests merging from the GitHub stack UI or running `gh stack merge --squash <pr>` — never the bare, selector-less form, which is a dangerous TUI that can land the whole stack.
+The aggregate selector reconciles every open layer's READY receipt and linear ancestry, then returns stack-level `SHEPHERD` for autonomous unready work, `WAIT` for a queued stack, `MERGE` with a whole-stack command when every layer is READY, `CANCEL` after every layer merges, and `ESCALATE` only for a genuine human decision after autonomous sessions are exhausted. It never performs a mutation or proposes a partial-stack merge.
+
+For aggregate `--stack` polling, an unready lower layer blocks every upper layer from becoming ready,
+while independent review and CI sessions may proceed concurrently. Closed or unverified topology
+is surfaced during `SHEPHERD` when another layer can still proceed; otherwise it returns `ESCALATE`
+for human direction. If `--stack --merge` finds every layer fully READY and
+linear, it returns `MERGE` with `GH_REPO=<owner/repo> gh stack merge --yes --squash <stack-number>`
+for the agent to run; rerun the same selector until all layers merge and it returns `CANCEL`.
 
 **Detection caveat:** GitHub's stack field is a public-preview API and can be absent even for a genuinely stacked PR — for example when Stacked PRs are disabled on the repository. An absent `stack` field is therefore not proof the PR isn't stacked; it only means Shepherd has no signal either way. Shepherd has no other reliable signal to distinguish an ordinary feature branch from an undetectable stacked PR (comparing the base branch to the repository's default branch false-positives on any PR that targets a non-default branch for ordinary reasons), so it does not attempt to infer stackedness beyond this field. This is a known gap, not a silently accepted risk: absence of the field only means the ordinary merge path proceeds, it does not confirm the PR is safe to merge with a plain `gh pr merge --auto`.
 
@@ -92,6 +91,8 @@ A changed fingerprint resets the timer. Disabling the timeout refreshes state an
 ## Non-escalating outcomes
 
 - `FIX_CODE` is always non-terminal: perform the emitted work and iterate immediately.
+- Stack-level `SHEPHERD` is always non-terminal: complete the listed one-PR sessions and reselect
+  the stack before any remaining human handoff.
 - Closed or merged PRs return `CANCEL`, not `ESCALATE`.
 - Ordinary non-force pushes do not produce `authorization-required`.
 - Missing-location threads and unauthorized review mutations are surfaced/logged once and skipped.

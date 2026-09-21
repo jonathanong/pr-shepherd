@@ -186,8 +186,10 @@ Supply exactly one of `pr`, `prs`, or `stack`. `prs` is a non-empty list of qual
 from one repository; `stack` is one qualified anchor whose complete native GitHub stack is selected.
 Aggregate selectors return one compact, read-only summary tick. Markdown and `structuredContent`
 surface equivalent per-PR raw state, bounded check/review counts, routing hints, and `pollCommand`s.
-The compact tick reuses singular check/review classification and maintains local ready-delay state;
-bounded overflow is surfaced as incomplete context without becoming a permanent action by itself.
+For native stacks they also surface `stackMergeable`, `readyReceipt`, `blockedByPr`, and raw ancestry
+mismatches. The compact tick reuses singular check/review classification but does not maintain
+ready-delay state; bounded overflow is surfaced as incomplete context without becoming a permanent
+action by itself.
 
 For a single-PR selector, Markdown `content` is the CLI's default (lean) rendering and `structuredContent` is the matching lean JSON projection of the `IterateResult` — not the raw result object. This projection omits fields that are the trivial default and adds `readyDelayOverride` when `readyDelaySeconds` was supplied. For every action except `fix_code`, it also adds a computed top-level `instructions` array; for `fix_code`, the equivalent steps are under `fix.instructions` instead. For aggregate `prs` or `stack` selectors, `structuredContent` is the raw `PollSummaryResult` and Markdown is produced from that same result. Action semantics, instruction text, and the full field contract live in [actions.md](actions.md).
 
@@ -251,7 +253,7 @@ A poll tool that blocks or sleeps across ticks would risk hitting this ceiling o
 3. For `WAIT` or `MARK_READY`, call `iterate` again when the host is ready to recheck. Do not wait for CI with `gh pr checks`, `gh pr watch`, `gh run watch`, or equivalent GitHub MCP check waiters; fetching check logs is fine.
 4. For `FIX_CODE`, finish the code/review work, then call `iterate` immediately. Do not wait for CI to finish first.
 5. For `MERGE`, run the returned command (and only the conditionally documented fallback), then call `iterate` immediately.
-6. Stop on `CANCEL` or `ESCALATE`.
+6. Stop on `CANCEL` or `ESCALATE`. For a native-stack selector, `SHEPHERD` means run the listed one-PR sessions and select the stack again; human blockers may already be visible, but the selector returns `ESCALATE` only after autonomous shepherding is exhausted.
 
 The shell command `pr-shepherd [PR]` is the bounded poll dispatcher. It is not an MCP tool. See [skills.md](skills.md).
 

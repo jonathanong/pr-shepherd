@@ -18,14 +18,6 @@
       "bodyHash": "c9f6707b09399420"
     }
   },
-  "botCrSeen": {
-    "reviews": {
-      "PRR_bot_stale": {
-        "firstSeenAt": 1715799940,
-        "bodyHash": "c9f6707b09399420"
-      }
-    }
-  },
   "readyDelayState": {
     "isReady": false,
     "shouldCancel": false,

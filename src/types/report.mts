@@ -52,6 +52,8 @@ export interface ShepherdReport {
   status: ShepherdStatus;
   /** PR base branch from the GraphQL batch. */
   baseBranch: string;
+  /** Git OID of the base branch tip observed with this report, when available. */
+  baseRefOid?: string;
   mergeStatus: MergeStatusResult;
   checks: {
     passing: ClassifiedCheck[];

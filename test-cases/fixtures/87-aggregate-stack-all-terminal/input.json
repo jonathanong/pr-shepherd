@@ -4,6 +4,7 @@
   "args": ["--stack", "44"],
   "expectedReason": "all_terminal",
   "expectedExitCode": 0,
+  "expectedNextAction": "cancel",
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 44, "stackNumber": 7, "stackSize": 2 },
     "prs": [

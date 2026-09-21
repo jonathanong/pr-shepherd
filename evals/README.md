@@ -61,8 +61,8 @@ here as the effect of loading the skill.
 | `03-multi-category-fix` | `54` | Four categories at once, none dropped |
 | `04-real-failure-no-blind-rerun` | `61` | `[rerun authorized]` is not a recommendation |
 | `05-cancelled-must-rerun` | `14` | `CANCELLED` *must* rerun (mirror of 04) |
-| `06-escalate-stop-and-ask` | `60` | `ESCALATE` is terminal — stop and ask |
-| `07-escalate-beats-available-work` | `84` | Escalation beats visible work |
+| `06-fix-code-dismiss-stale-bot` | `60` | Authorized stale bot dismissals stay autonomous |
+| `07-fix-code-bot-and-thread` | `84` | Preserve both review-thread and bot-review work |
 | `08-mergeability-diagnosis` | `32` | `[Not Required]` is not a blocker |
 | `09-cancel-terminal-beats-work` | `82` | Merged PR needs nothing |
 | `10-external-check-no-handoff` | `12` | External URL is not an escalation trigger |
@@ -74,7 +74,7 @@ here as the effect of loading the skill.
 dropped — it is flat against sonnet and is more useful in the judge seat. Effort
 was varied at both tiers and had no effect; see below.
 
-## Results
+## Historical results (before the 06/07 behavior change)
 
 ### sonnet @ low — mean Δ **+0.28** over 13 cases, **+0.41** over 9 non-ceiling
 

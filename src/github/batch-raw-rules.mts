@@ -72,6 +72,7 @@ interface RawRuleParameters {
 }
 
 export interface RawBaseRef {
+  target?: { oid: string } | null;
   branchProtectionRule: RawBranchProtectionRule | null;
   rules: { pageInfo?: { hasNextPage: boolean }; nodes: RawRepositoryRule[] } | null;
 }

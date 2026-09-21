@@ -43,6 +43,12 @@ export async function fetchPollSummary(
   };
 }
 
+/** Fresh, read-only snapshot used to bind a one-PR READY receipt to stack routing. */
+export async function fetchRawSummaryPr(pr: number, repo: RepoInfo): Promise<RawSummaryPr> {
+  const fetched = await fetchExplicitChunk([pr], repo);
+  return fetched.prs[0]!;
+}
+
 async function fetchExplicitChunk(
   prs: number[],
   repo: RepoInfo,

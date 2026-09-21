@@ -1,0 +1,24 @@
+{
+  "description": "Same clean/ready/elapsed state as 64, but the PR is a mid-stack member of a native GitHub stack (position 2 of 3, base is the unmerged parent branch). The singular poll records its READY receipt and returns a nonterminal aggregate-stack route; the agent runs that route to reconcile every layer before the aggregate flow emits a safe whole-stack merge command.",
+  "args": ["--merge"],
+  "batchData": {
+    "stack": { "number": 7, "size": 3, "position": 2, "baseRefName": "stack/7/1" },
+    "baseRefOid": "base123",
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": true,
+    "shouldCancel": true,
+    "remainingSeconds": 0
+  },
+  "expectedExitCode": 12
+}

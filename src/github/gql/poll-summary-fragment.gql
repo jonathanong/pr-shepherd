@@ -3,6 +3,7 @@ fragment PollSummaryPr on PullRequest {
   title
   url
   state
+  updatedAt
   isDraft
   viewerCanUpdate
   headRefName
@@ -11,6 +12,26 @@ fragment PollSummaryPr on PullRequest {
   baseRefOid
   mergeable
   mergeStateStatus
+  lifecycleEvents: timelineItems(
+    last: 1
+    itemTypes: [CLOSED_EVENT, REOPENED_EVENT, CONVERT_TO_DRAFT_EVENT, READY_FOR_REVIEW_EVENT]
+  ) {
+    nodes {
+      __typename
+      ... on ClosedEvent {
+        createdAt
+      }
+      ... on ReopenedEvent {
+        createdAt
+      }
+      ... on ConvertToDraftEvent {
+        createdAt
+      }
+      ... on ReadyForReviewEvent {
+        createdAt
+      }
+    }
+  }
   reviewDecision
   reviewRequests(last: 50) {
     nodes {
@@ -38,6 +59,33 @@ fragment PollSummaryPr on PullRequest {
     }
   }
   isInMergeQueue
+  mergeQueueAdditions: timelineItems(last: 1, itemTypes: [ADDED_TO_MERGE_QUEUE_EVENT]) {
+    nodes {
+      ... on AddedToMergeQueueEvent {
+        createdAt
+      }
+    }
+  }
+  mergeQueueRemovals: timelineItems(last: 1, itemTypes: [REMOVED_FROM_MERGE_QUEUE_EVENT]) {
+    nodes {
+      ... on RemovedFromMergeQueueEvent {
+        id
+        reason
+        createdAt
+        actor {
+          login
+        }
+        beforeCommit {
+          oid
+          parents(first: 100) {
+            nodes {
+              oid
+            }
+          }
+        }
+      }
+    }
+  }
   mergeQueueEntry {
     headCommit {
       statusCheckRollup {
@@ -54,6 +102,9 @@ fragment PollSummaryPr on PullRequest {
               status
               conclusion
               detailsUrl
+              annotations(first: 1) {
+                totalCount
+              }
               checkSuite {
                 workflowRun {
                   databaseId
@@ -175,6 +226,9 @@ fragment PollSummaryPr on PullRequest {
                 status
                 conclusion
                 detailsUrl
+                annotations(first: 1) {
+                  totalCount
+                }
                 checkSuite {
                   workflowRun {
                     databaseId

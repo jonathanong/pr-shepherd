@@ -1,0 +1,25 @@
+{
+  "description": "Merge intent emits the complete native-stack merge command for the agent, then reconciliation continues until every layer merges.",
+  "mode": "aggregate",
+  "args": ["--stack", "https://github.com/owner/repo/pull/342", "--merge", "--debounce", "0s"],
+  "expectedExitCode": 15,
+  "expectedNextAction": "merge",
+  "expectedReason": "actionable",
+  "aggregateSummary": {
+    "selection": { "kind": "stack", "anchor": 342, "stackNumber": 35, "stackSize": 2 },
+    "prs": [
+      {
+        "pr": 341, "repo": "owner/repo", "title": "Verified foundation", "url": "https://github.com/owner/repo/pull/341",
+        "action": "merge", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "foundation", "headRefOid": "e111111111111111111111111111111111111111", "baseRefName": "main", "readyReceipt": true,
+        "stack": { "number": 35, "size": 2, "position": 1, "baseRefName": "main" }
+      },
+      {
+        "pr": 342, "repo": "owner/repo", "title": "Verified child", "url": "https://github.com/owner/repo/pull/342",
+        "action": "merge", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "child", "headRefOid": "e222222222222222222222222222222222222222", "baseRefName": "foundation", "readyReceipt": true,
+        "stack": { "number": 35, "size": 2, "position": 2, "baseRefName": "main" }
+      }
+    ]
+  }
+}

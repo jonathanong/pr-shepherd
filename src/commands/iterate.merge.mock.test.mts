@@ -1,5 +1,26 @@
 /* eslint-disable max-lines */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+const { mockFetchRawSummaryPr, mockFingerprintRawSummaryPr, mockSummarizePollSummaryPr } =
+  vi.hoisted(() => ({
+    mockFetchRawSummaryPr: vi.fn(),
+    mockFingerprintRawSummaryPr: vi.fn(),
+    mockSummarizePollSummaryPr: vi.fn(),
+  }));
+vi.mock("../../src/github/poll-summary.mts", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  fetchRawSummaryPr: mockFetchRawSummaryPr,
+}));
+vi.mock("../../src/github/poll-summary-fingerprint.mts", () => ({
+  fingerprintRawSummaryPr: mockFingerprintRawSummaryPr,
+}));
+vi.mock("../../src/github/poll-summary-projector.mts", () => ({
+  summarizePollSummaryPr: mockSummarizePollSummaryPr,
+}));
+vi.mock("../../src/state/ready-receipts.mts", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  writeReadyReceipt: vi.fn().mockResolvedValue(undefined),
+}));
 import {
   makeOpts,
   makeReport,
@@ -62,6 +83,7 @@ function mockStackedReady(
     makeReport({
       status: "READY",
       headSha,
+      baseRefOid: "base-1",
       nodeId: "PR_node",
       mergeStatus: stackedReadyMergeStatus(stack),
     }),
@@ -71,24 +93,35 @@ function mockStackedReady(
     shouldCancel: true,
     remainingSeconds: 0,
   });
+  mockFetchRawSummaryPr.mockResolvedValue({
+    state: "OPEN",
+    isDraft: false,
+    mergeable: "MERGEABLE",
+    mergeStateStatus: "CLEAN",
+    headRefOid: headSha,
+    baseRefOid: "base-1",
+  });
+  mockFingerprintRawSummaryPr.mockReturnValue("fixture-fingerprint");
+  mockSummarizePollSummaryPr.mockResolvedValue({ checks: {}, review: {} });
 }
 
-/** Asserts a stacked PR was escalated with the given layer's details instead of planning a merge. */
-function expectStackedEscalate(
+/** Asserts a stacked PR routes through aggregate reconciliation instead of an unsafe PR merge. */
+function expectStackedRoute(
   result: IterateResult,
   layer: { position: number; size: number; number: number; base: string },
 ) {
-  expect(result.action).toBe("escalate");
+  expect(result.action).toBe("fix_code");
   expect("merge" in result).toBe(false);
-  if (result.action === "escalate") {
-    expect(result.escalate.triggers).toEqual(["stacked-pr"]);
-    expect(result.escalate.humanMessage).toContain(
-      `layer: \`${layer.position}\` of \`${layer.size}\` in stack \`${layer.number}\``,
+  if (result.action === "fix_code") {
+    expect(result.fix.instructions).toContain(
+      `PR #42 is layer ${layer.position} of ${layer.size} in native stack #${layer.number}; do not run \`gh pr merge\` for this layer.`,
     );
-    expect(result.escalate.humanMessage).toContain(`stack base: \`${layer.base}\``);
-    expect(result.escalate.humanMessage).toContain("gh stack merge --squash 42");
+    expect(result.fix.instructions).toContain(
+      "Run `pr-shepherd --stack https://github.com/owner/repo/pull/42 --until-terminal --merge` to reconcile the complete stack and run its emitted whole-stack merge command.",
+    );
   }
   expect(JSON.stringify(result)).not.toContain("--auto");
+  expect(JSON.stringify(result)).not.toContain("humanMessage");
 }
 
 describe("runIterate — merge", () => {
@@ -330,23 +363,23 @@ describe("runIterate — merge", () => {
     }
   });
 
-  it("declines to plan a merge for a PR stacked at position 1, escalating instead", async () => {
+  it("routes a position-1 stacked PR to complete-stack reconciliation", async () => {
     mockStackedReady("abc123", { number: 7, size: 3, position: 1, baseRefName: "main" });
 
     const result = await runIterate(makeOpts({ merge: true }));
 
-    expectStackedEscalate(result, { position: 1, size: 3, number: 7, base: "main" });
+    expectStackedRoute(result, { position: 1, size: 3, number: 7, base: "main" });
   });
 
-  it("declines to plan a merge for a PR stacked mid-stack with an unmerged parent, escalating instead", async () => {
+  it("routes a mid-stack PR to complete-stack reconciliation", async () => {
     mockStackedReady("def456", { number: 7, size: 3, position: 2, baseRefName: "stack/7/1" });
 
     const result = await runIterate(makeOpts({ merge: true }));
 
-    expectStackedEscalate(result, { position: 2, size: 3, number: 7, base: "stack/7/1" });
+    expectStackedRoute(result, { position: 2, size: 3, number: 7, base: "stack/7/1" });
   });
 
-  it("falls through to cancel for a stacked PR when merge mode is not enabled", async () => {
+  it("cancels after persisting a stacked readiness receipt when merge mode is not enabled", async () => {
     mockStackedReady("abc123", { number: 7, size: 3, position: 1, baseRefName: "main" });
 
     const result = await runIterate(makeOpts({ merge: false }));

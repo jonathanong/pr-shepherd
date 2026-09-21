@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-Exit codes are the process-level counterpart of the action tag in [actions.md](actions.md). `0` and `10`–`15` mean Shepherd gathered context and chose an action; `64+` means the command itself failed before that.
+Exit codes are the process-level counterpart of the action tag in [actions.md](actions.md). `0` and `10`–`16` mean Shepherd gathered context and chose an action; `64+` means the command itself failed before that.
 
 ## The rule
 
@@ -42,9 +42,12 @@ Emitted by `iterate` and `poll` (including the default `pr-shepherd [PR]`
 invocation) once a report was fetched successfully. The code names the
 `action` field of the `IterateResult`.
 
-Aggregate polling uses the highest-priority row outcome: `escalate`, `fix_code`, `merge`,
-`mark_ready`, `wait`, closed-only `cancel`, then successful terminal `cancel`. The full row list
-remains in the output regardless of which one determines the process exit code.
+Explicit multi-PR polling uses the highest-priority row outcome: `escalate`, `fix_code`, `merge`,
+`mark_ready`, `wait`, closed-only `cancel`, then successful terminal `cancel`. Native `--stack`
+reconciliation returns `shepherd` (16) for autonomous one-PR work, `wait` (10) for queue progress,
+`cancel` (0) for completed readiness, and `escalate` (13) only when a human decision remains and
+no autonomous one-PR work is left. Human blockers are still surfaced on mixed `shepherd` ticks. The full row
+list remains in the output regardless of the aggregate action.
 
 | Code | Action       | Meaning                                            |
 | ---- | ------------ | -------------------------------------------------- |
@@ -54,12 +57,13 @@ remains in the output regardless of which one determines the process exit code.
 | 13   | `escalate`   | Human attention required                           |
 | 14   | `cancel`     | PR closed without merging (`reason: "closed"`)     |
 | 15   | `merge`      | Run the emitted merge or merge-queue command       |
+| 16   | `shepherd`   | Run the listed one-PR sessions, then recheck stack |
 
 **`wait` (10) is not an error, and it is not a signal to give up.** It means
 "nothing actionable right now" — including when `poll --timeout` gives up
 mid-wait and prints the last `wait` tick. A `set -e` shell script or CI step
 that only wants to know "is the PR fully done" should treat `wait` (10) the
-same way it treats `escalate`/`fix_code` (12/13): not finished yet. Only `0`
+same way it treats `escalate`/`fix_code`/`shepherd` (12/13/16): not finished yet. Only `0`
 means the PR reached a terminal, successful state.
 
 `mark_ready` (11) is also non-terminal — the PR is still open and iterating
@@ -68,8 +72,11 @@ continues on the next tick. `poll` stops on it by default; pass
 
 `fix_code` (12) is always non-terminal. Complete the printed work, then repeat
 the current CLI mode with its flags (or schedule another MCP `iterate` tick).
-When no autonomous check follow-up remains, Shepherd returns `escalate` (13)
-instead; only that action hands work to a human.
+Stack-level `shepherd` (16) is also non-terminal: complete the listed one-PR
+sessions and rerun the same `--stack` selector. A mixed stack may surface human
+blockers on this tick; it returns `escalate` only after no shepherdable session remains.
+When no autonomous follow-up remains and a human decision is still required,
+Shepherd returns `escalate` (13); only that action hands work to a human.
 
 Codes 10–19 are chosen so they sit strictly above the small single-digit
 range and strictly below the `sysexits.h` block that starts at 64 — there is

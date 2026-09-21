@@ -1,5 +1,6 @@
+/* eslint-disable max-lines */
 import { buildQuotaAwareContinuation } from "../quota-warning.mts";
-import type { PollSummaryItem, PollSummaryResult, ShepherdAction } from "../types.mts";
+import type { PollSummaryItem, PollSummaryResult, StackNextAction } from "../types.mts";
 import { explicitInstructions } from "./poll-summary-explicit-instructions.mts";
 
 /** Keep aggregate JSON, Markdown, and MCP instructions on one projection. */
@@ -11,17 +12,70 @@ export function withPollSummaryInstructions(
     return { ...result, instructions: explicitInstructions(result) };
   }
 
-  const planned = planStack(result, mergeRequested);
-  const reason =
-    planned.action === "cancel"
-      ? "all_terminal"
-      : planned.action === "wait"
-        ? result.reason === "timeout"
-          ? "timeout"
-          : "waiting"
-        : "actionable";
+  const prs = [...result.prs].sort((left, right) => position(left) - position(right));
+  const staleChildren = new Set(result.stackAncestry?.map((gap) => gap.childPr) ?? []);
+  const firstUnready = prs.find(
+    (item) => item.state === "OPEN" && (!isReady(item) || staleChildren.has(item.pr)),
+  );
+  const blocked = prs.map((item) =>
+    firstUnready && item.state === "OPEN" && position(item) > position(firstUnready)
+      ? {
+          ...item,
+          ...(["cancel", "mark_ready", "merge"].includes(item.action) && {
+            action: "wait" as const,
+            reasons: [...item.reasons, "lower-layer-not-ready"],
+          }),
+          blockedByPr: firstUnready.pr,
+          ...(item.isDraft &&
+            item.pollCommand && {
+              pollCommand:
+                item.pollCommand.replace(" --until-terminal", " --timeout 1s --debounce 0s") +
+                (item.pollCommand.includes("--no-auto-mark-ready") ? "" : " --no-auto-mark-ready"),
+            }),
+        }
+      : item.state === "OPEN" &&
+          (!isReady(item) || staleChildren.has(item.pr)) &&
+          ["cancel", "merge"].includes(item.action)
+        ? {
+            ...item,
+            action: "fix_code" as const,
+            reasons: [
+              ...item.reasons,
+              staleChildren.has(item.pr) ? "stale-ancestry" : "ready-receipt-required",
+            ],
+          }
+        : item,
+  );
+  const projected = {
+    ...result,
+    prs: blocked.map((item) => {
+      if (item.state === "OPEN" && item.isInMergeQueue && item.action === "cancel") {
+        return {
+          ...item,
+          action: "wait" as const,
+          reasons: [...item.reasons, "already-in-merge-queue"],
+        };
+      }
+      if (item.state === "CLOSED" && closedDependency(blocked, item.pr)) {
+        return {
+          ...item,
+          action: "escalate" as const,
+          reasons: [...item.reasons, "closed-unmerged-dependency"],
+        };
+      }
+      if (item.state !== "OPEN" && item.state !== "MERGED") {
+        return {
+          ...item,
+          action: "escalate" as const,
+          reasons: [...item.reasons, "unverified-stack-state"],
+        };
+      }
+      return item;
+    }),
+  };
+  const planned = planStack(projected, mergeRequested);
   const instructions = [...planned.instructions];
-  if (result.quotaWarning && planned.action !== "wait" && planned.action !== "cancel") {
+  if (result.quotaWarning && planned.action === "shepherd") {
     instructions.push(
       buildQuotaAwareContinuation(
         result.quotaWarning,
@@ -29,150 +83,210 @@ export function withPollSummaryInstructions(
       ),
     );
   }
-  return { ...result, reason, nextAction: planned.action, instructions };
+  return {
+    ...projected,
+    reason:
+      planned.action === "cancel"
+        ? "all_terminal"
+        : planned.waiting
+          ? result.reason === "timeout"
+            ? "timeout"
+            : "waiting"
+          : "actionable",
+    stackMergeable: planned.stackMergeable,
+    nextAction: planned.action,
+    instructions,
+  };
 }
 
-function planStack(
-  result: PollSummaryResult,
-  mergeRequested: boolean,
-): { action: ShepherdAction; instructions: string[] } {
+interface StackPlan {
+  action: StackNextAction;
+  stackMergeable: boolean;
+  waiting?: boolean;
+  instructions: string[];
+}
+
+function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPlan {
   const open = result.prs.filter((item) => item.state === "OPEN");
+  const lastOpen = open.at(-1);
+  const closedDependencyPr = result.prs.find(
+    (item) => item.state === "CLOSED" && lastOpen && position(item) < position(lastOpen),
+  );
+  const unverifiedLayer = result.prs.find(
+    (item) => item.state !== "OPEN" && item.state !== "MERGED",
+  );
+  const gaps = result.stackAncestry ?? [];
+  const stackMergeable = gaps.length === 0 && open.every(isReady);
+  const candidates = open.filter(
+    (item) => !isReady(item) || gaps.some((gap) => gap.childPr === item.pr),
+  );
+  const autonomousCandidates = candidates.filter((item) => item.action !== "escalate");
+  const runnableCandidates = autonomousCandidates.filter((item) => item.pollCommand);
+  const missingCommands = autonomousCandidates.filter((item) => !item.pollCommand);
+  const escalated = result.prs.filter((item) => item.action === "escalate");
+
+  if (closedDependencyPr || unverifiedLayer || escalated.length > 0) {
+    const instructions: string[] = [];
+    appendAutonomousInstructions(instructions, runnableCandidates);
+    const stop = runnableCandidates.length === 0;
+    if (closedDependencyPr) {
+      instructions.push(
+        `${instructions.length + 1}. PR #${closedDependencyPr.pr} was closed without merging below an open layer. ${stop ? "Stop and ask" : "After autonomous shepherding, ask"} the stack owner whether to restore that dependency or rebuild the upper branches.`,
+      );
+    }
+    if (unverifiedLayer && unverifiedLayer.pr !== closedDependencyPr?.pr) {
+      instructions.push(
+        `${instructions.length + 1}. PR #${unverifiedLayer.pr} has state \`${unverifiedLayer.state}\` rather than open or merged. ${stop ? "Stop and ask" : "After autonomous shepherding, ask"} the stack owner to reconcile this layer before declaring the stack complete.`,
+      );
+    }
+    for (const item of escalated) {
+      if (item.pr === closedDependencyPr?.pr || item.pr === unverifiedLayer?.pr) continue;
+      instructions.push(
+        `${instructions.length + 1}. PR #${item.pr} requires human action (${item.reasons.join(", ")}). ${stop ? "Stop for that decision." : "Keep shepherding other PRs before the handoff."}`,
+      );
+    }
+    for (const item of missingCommands) {
+      instructions.push(
+        `${instructions.length + 1}. PR #${item.pr} needs a one-PR session, but Shepherd could not produce its command. Ask for direction.`,
+      );
+    }
+    if (runnableCandidates.length > 0) {
+      instructions.push(
+        `${instructions.length + 1}. After the listed one-PR sessions, rerun this same \`--stack\` selector. Stop for the human handoff only when no autonomous shepherding remains.`,
+      );
+    }
+    return { action: stop ? "escalate" : "shepherd", stackMergeable: false, instructions };
+  }
+
   if (open.length === 0) {
-    return { action: "cancel", instructions: ["1. Stop — every selected PR is terminal."] };
-  }
-
-  const lastOpenPosition = positionOf(result, open.at(-1)!.pr);
-  const closedBelowOpen = result.prs.find(
-    (item) => item.state === "CLOSED" && positionOf(result, item.pr) < lastOpenPosition,
-  );
-  if (closedBelowOpen) {
-    return {
-      action: "escalate",
-      instructions: [
-        `1. PR #${closedBelowOpen.pr} is closed without merging below an open stack layer. Stop stack merge and rebase operations here; the closed dependency must be restored or the higher branches rebuilt on a valid base.`,
-        "2. Ask the stack owner which recovery path to take, then rerun the same aggregate `--stack` selector after the stack is repaired.",
-      ],
-    };
-  }
-
-  const gap = result.stackAncestry?.[0];
-  const firstOpen = open[0]!;
-  if (firstOpen.mergeStateStatus === "BEHIND") return rebaseWholeStack(result, firstOpen);
-  if (mergeRequested) {
-    const mergeTarget = readyLowerStackTarget(open, result.stackAncestry ?? []);
-    if (mergeTarget) {
-      const stackNumber = result.selection.kind === "stack" ? result.selection.stackNumber : 0;
-      return {
-        action: "merge",
-        instructions: [
-          `1. The contiguous ready lower stack ends at PR #${mergeTarget.pr}. Merge the native stack through that PR with \`gh stack merge --squash ${mergeTarget.pr}\`; verify that the selector names PR #${mergeTarget.pr} in stack #${stackNumber} before running it. This includes still-open lower layers and leaves higher layers open.`,
-          "2. After GitHub completes the stack merge and updates the remaining branches, rerun the same aggregate `--stack` selector. If an ancestry mismatch remains, follow the rebase instructions returned then.",
-        ],
-      };
-    }
-    if (firstOpen.action === "wait") {
-      return waitingStack(result);
-    }
-  }
-
-  const firstWork = open.find((item) =>
-    ["fix_code", "mark_ready", "escalate"].includes(item.action),
-  );
-  if (firstWork && (!gap || positionOf(result, firstWork.pr) <= positionOf(result, gap.childPr))) {
-    return pollOneLayer(firstWork);
-  }
-  if (gap) {
-    return {
-      action: "fix_code",
-      instructions: [
-        `1. PR #${gap.childPr} still records base \`${gap.childBaseRefName}\` at \`${gap.childBaseRefOid}\`, while parent PR #${gap.parentPr} now ends at \`${gap.parentHeadRefName}\` \`${gap.parentHeadRefOid}\`. From a clean checkout of \`${result.repo}\`, check out the parent stack branch \`${gap.parentHeadRefName}\`.`,
-        "2. Rebase the upstack branches onto that parent with `gh stack rebase --upstack --no-trunk`, resolve any conflicts, and push the rewritten branches with `gh stack push`.",
-        "3. Rerun the same aggregate `--stack` selector and follow the next returned action.",
-      ],
-    };
-  }
-  const behind = open.find((item) => item.mergeStateStatus === "BEHIND");
-  if (behind) return rebaseWholeStack(result, behind);
-  if (firstWork) return pollOneLayer(firstWork);
-  if (!mergeRequested && open.every((item) => item.action === "cancel")) {
     return {
       action: "cancel",
-      instructions: ["1. Stop — every open stack layer is ready and the stack is linear."],
+      stackMergeable: true,
+      instructions: ["1. Stop — every stack layer is merged."],
     };
   }
-  return waitingStack(result);
-}
 
-function rebaseWholeStack(
-  result: PollSummaryResult,
-  behind: PollSummaryItem,
-): { action: ShepherdAction; instructions: string[] } {
-  return {
-    action: "fix_code",
-    instructions: [
-      `1. GitHub reports PR #${behind.pr} is behind its base \`${behind.baseRefName}\`. From a clean checkout of \`${result.repo}\`, check out its stack branch \`${behind.headRefName}\`.`,
-      "2. Rebase that native stack from its trunk with `gh stack rebase`, resolving any conflicts.",
-      "3. Push the updated stack with `gh stack push` and rerun the same aggregate `--stack` selector.",
-    ],
-  };
-}
-
-function readyLowerStackTarget(
-  open: PollSummaryItem[],
-  gaps: NonNullable<PollSummaryResult["stackAncestry"]>,
-): PollSummaryItem | undefined {
-  const mismatchedChildren = new Set(gaps.map((gap) => gap.childPr));
-  let target: PollSummaryItem | undefined;
-  for (const item of open) {
-    if (mismatchedChildren.has(item.pr) || item.action !== "merge") break;
-    target = item;
+  if (!stackMergeable) {
+    if (missingCommands.length > 0) {
+      const instructions: string[] = [];
+      appendAutonomousInstructions(instructions, runnableCandidates);
+      for (const item of missingCommands) {
+        instructions.push(
+          `${instructions.length + 1}. PR #${item.pr} needs a one-PR session, but Shepherd could not produce its command. ${runnableCandidates.length === 0 ? "Stop and ask" : "After autonomous shepherding, ask"} for direction.`,
+        );
+      }
+      if (runnableCandidates.length > 0) {
+        instructions.push(
+          `${instructions.length + 1}. After the listed one-PR sessions, rerun this same \`--stack\` selector. Stop for the human handoff only when no autonomous shepherding remains.`,
+        );
+      }
+      return {
+        action: runnableCandidates.length > 0 ? "shepherd" : "escalate",
+        stackMergeable: false,
+        instructions,
+      };
+    }
+    const instructions: string[] = [];
+    appendAutonomousInstructions(instructions, autonomousCandidates);
+    instructions.push(
+      `${instructions.length + 1}. After the selected one-PR sessions, rerun this same \`--stack\` selector.`,
+    );
+    return { action: "shepherd", stackMergeable: false, instructions };
   }
-  return target;
-}
 
-function positionOf(result: PollSummaryResult, pr: number): number {
-  return result.prs.find((item) => item.pr === pr)?.stack?.position ?? Number.MAX_SAFE_INTEGER;
-}
-
-function pollOneLayer(item: PollSummaryItem): {
-  action: ShepherdAction;
-  instructions: string[];
-} {
-  if (!item.pollCommand) {
-    return {
-      action: "escalate",
-      instructions: [
-        `1. PR #${item.pr} needs attention, but GitHub returned no one-PR poll command.`,
-      ],
-    };
-  }
-  return {
-    action: item.action,
-    instructions: [
-      `1. Work on the lowest actionable layer, PR #${item.pr}: run \`${item.pollCommand}\`.`,
-      "2. Follow that one-PR poll's `## Instructions` until it returns `CANCEL` or `ESCALATE`.",
-      "3. Rerun the aggregate `--stack` selector before acting on a higher layer.",
-    ],
-  };
-}
-
-function waitingStack(result: PollSummaryResult): {
-  action: ShepherdAction;
-  instructions: string[];
-} {
-  if (result.quotaWarning) {
+  if (open.some((item) => item.isInMergeQueue)) {
     return {
       action: "wait",
+      stackMergeable: true,
+      waiting: true,
       instructions: [
-        buildQuotaAwareContinuation(
-          result.quotaWarning,
-          "1. This native stack is non-terminal. Before continuing,",
-        ),
+        "1. The stack is in the merge queue. Recheck at the configured polling cadence; finish only after every layer is merged, and route any ejected layer to its one-PR session.",
       ],
     };
   }
+
+  if (!mergeRequested && result.prs.every((item) => item.action === "cancel")) {
+    return {
+      action: "cancel",
+      stackMergeable: true,
+      instructions: ["1. Stop — every stack layer is terminal or fully READY."],
+    };
+  }
+
+  if (!mergeRequested) {
+    const instructions: string[] = [];
+    appendAutonomousInstructions(
+      instructions,
+      open.filter((item) => item.action !== "cancel"),
+    );
+    instructions.push(
+      `${instructions.length + 1}. After the selected one-PR sessions, rerun this same \`--stack\` selector.`,
+    );
+    return {
+      action: "shepherd",
+      stackMergeable,
+      instructions,
+    };
+  }
+
+  const stackNumber = result.selection.kind === "stack" ? result.selection.stackNumber : 0;
   return {
-    action: "wait",
-    instructions: ["1. Recheck this native stack after the lowest open layer changes state."],
+    action: "merge",
+    stackMergeable: true,
+    instructions: [
+      "1. Check `gh stack merge --help`. If the `gh-stack` extension is unavailable, run `gh extension install github/gh-stack`, then rerun this same `--stack --merge` selector before merging.",
+      `2. Stack #${stackNumber} in \`${result.repo}\` is mergeable through PR #${open.at(-1)!.pr}. Run \`GH_REPO=${result.repo} gh stack merge --yes --squash ${stackNumber}\` to merge the whole native stack or enqueue it when the base uses a merge queue.`,
+      "3. After the merge attempt, rerun this same `--stack --merge` selector until every layer is merged (`CANCEL`); shepherd any layer that GitHub rejects or ejects.",
+    ],
   };
+}
+
+function closedDependency(items: PollSummaryItem[], pr: number): boolean {
+  const open = items.filter((item) => item.state === "OPEN");
+  const lastOpen = open.at(-1);
+  return Boolean(
+    lastOpen &&
+    items.some(
+      (item) => item.pr === pr && item.state === "CLOSED" && position(item) < position(lastOpen),
+    ),
+  );
+}
+
+function appendAutonomousInstructions(instructions: string[], candidates: PollSummaryItem[]): void {
+  if (candidates.length === 0) return;
+  instructions.push(
+    `${instructions.length + 1}. Start or delegate the relevant one-PR sessions below; review and CI work on separate layers can proceed concurrently.`,
+  );
+  for (const item of candidates) {
+    instructions.push(
+      item.pollCommand
+        ? `${instructions.length + 1}. Run \`${item.pollCommand}\` for PR #${item.pr}${item.blockedByPr ? ` (stack-blocked by PR #${item.blockedByPr})` : ""}${item.queueRemoval ? `; GitHub removed it from the merge queue (${item.queueRemoval.reason ?? "unknown reason"})` : ""}.`
+        : `${instructions.length + 1}. PR #${item.pr} needs a one-PR Shepherd session, but no command was available.`,
+    );
+  }
+  instructions.push(
+    `${instructions.length + 1}. Keep upper draft PRs in draft until every lower layer has completed Shepherd READY.`,
+  );
+}
+
+function isReady(item: PollSummaryItem): boolean {
+  return (
+    item.state === "OPEN" &&
+    item.stack !== undefined &&
+    item.readyReceipt === true &&
+    !item.isDraft &&
+    !item.queueRemoval &&
+    item.mergeable !== "CONFLICTING" &&
+    item.mergeStateStatus !== "DIRTY" &&
+    (item.isInMergeQueue || item.mergeable === "MERGEABLE") &&
+    (item.isInMergeQueue ||
+      !["DIRTY", "BEHIND", "UNKNOWN", "BLOCKED", "HAS_HOOKS"].includes(item.mergeStateStatus)) &&
+    (item.checks?.failing ?? 0) === 0 &&
+    (item.isInMergeQueue || (item.checks?.inProgress ?? 0) === 0) &&
+    (item.review?.actionable ?? 0) === 0
+  );
+}
+
+function position(item: PollSummaryItem): number {
+  return item.stack?.position ?? Number.MAX_SAFE_INTEGER;
 }

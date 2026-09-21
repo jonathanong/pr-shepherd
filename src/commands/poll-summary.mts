@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { loadConfig } from "../config/load.mts";
 import { ShepherdError } from "../exit-codes.mts";
 import { getRepoInfo } from "../github/client.mts";
@@ -73,18 +74,36 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
           stackPrNumber: undefined,
           prNumbers: last.prs.map((item) => item.pr),
         });
-        if (explicit.prs.every((item) => item.action === "cancel")) {
+        if (explicit.prs.every((item) => item.state === "MERGED")) {
           const warning = await aggregateQuotaWarning(explicit, quotaBands, opts.intervalSeconds);
           if (warning) pendingQuotaWarning = warning;
           return attachUsage(
             {
               ...explicit,
+              selection: last.selection,
               reason: "all_terminal",
+              nextAction: "cancel",
+              stackMergeable: true,
+              instructions: ["1. Stop — every stack layer is merged."],
               ...(pendingQuotaWarning && { quotaWarning: pendingQuotaWarning }),
             },
             opts.merge,
           );
         }
+        return attachUsage(
+          {
+            ...explicit,
+            selection: last.selection,
+            reason: "actionable",
+            nextAction: "escalate",
+            stackMergeable: false,
+            instructions: [
+              `1. Native stack #${last.selection.stackNumber} disappeared before every tracked layer merged. Stop and ask the stack owner to reconcile the remaining PRs; do not claim the stack is complete.`,
+            ],
+            ...(pendingQuotaWarning && { quotaWarning: pendingQuotaWarning }),
+          },
+          opts.merge,
+        );
       }
       const retryMs = opts.untilTerminal ? pollGraphQlRetryAfterMs(error) : null;
       if (retryMs === null || rateLimitRetries >= 1) throw error;
@@ -101,11 +120,12 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
         : last.prs.every((item) => item.action === "cancel");
     const immediate =
       last.selection.kind === "stack"
-        ? ["escalate", "merge", "mark_ready"].includes(last.nextAction ?? "wait")
+        ? (last.nextAction === "escalate" || last.nextAction === "merge") &&
+          last.reason !== "waiting"
         : last.prs.some((item) => ["escalate", "merge", "mark_ready"].includes(item.action));
     const hasFix =
       last.selection.kind === "stack"
-        ? last.nextAction === "fix_code"
+        ? last.nextAction === "shepherd" && last.reason !== "waiting"
         : last.prs.some((item) => item.action === "fix_code");
     const warning = await aggregateQuotaWarning(last, quotaBands, opts.intervalSeconds);
     if (warning) pendingQuotaWarning = warning;
@@ -193,8 +213,12 @@ function isMissingStack(error: unknown): boolean {
 
 function attachUsage(result: PollSummaryResult, mergeRequested?: boolean): PollSummaryResult {
   const apiUsage = summarizeApiTelemetry();
-  return withPollSummaryInstructions(
-    apiUsage ? { ...result, apiUsage } : result,
-    mergeRequested === true,
-  );
+  const enriched = apiUsage ? { ...result, apiUsage } : result;
+  // A disappeared native stack is an aggregate-level terminal handoff. Keep
+  // that explicit escalation intact even when the one-PR fallback contains
+  // open orphan rows that would otherwise be re-planned as fix_code.
+  if (enriched.selection.kind === "stack" && enriched.nextAction === "escalate") {
+    return enriched;
+  }
+  return withPollSummaryInstructions(enriched, mergeRequested === true);
 }

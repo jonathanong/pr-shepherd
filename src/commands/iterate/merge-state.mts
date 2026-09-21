@@ -13,30 +13,45 @@ import { formatPrUrl } from "../../pr-reference.mts";
 
 type StallKey = { owner: string; repo: string; pr: number };
 
-/** A stacked PR's merge is human-only: `gh pr merge` targets the PR's own base, which for a
- * mid-stack layer is an unmerged parent branch, and auto-merge is unsupported on stacks. */
-function buildStackedEscalateResult(
+/**
+ * A one-PR poll cannot prove every native-stack layer is ready or linear. Route it through the
+ * aggregate stack selector, which does that reconciliation before emitting the whole-stack merge.
+ */
+function buildStackedRouteResult(
   base: IterateResultBase,
   report: ShepherdReport,
   stack: StackStatus,
 ): IterateResult {
-  const escalateBase = {
-    triggers: ["stacked-pr" as const],
-    unresolvedThreads: [],
-    ambiguousComments: [],
-    changesRequestedReviews: [],
-    stack,
-    suggestion: buildEscalateSuggestion(["stacked-pr"], String(report.pr)),
-  };
+  const prUrl = formatPrUrl(report.repo, report.pr);
   return {
     ...base,
-    action: "escalate",
-    escalate: {
-      ...escalateBase,
-      humanMessage: buildEscalateHumanMessage(escalateBase, formatPrUrl(report.repo, report.pr), {
-        merge: true,
-      }),
+    action: "fix_code",
+    fix: {
+      threads: [],
+      resolutionOnlyThreads: [],
+      actionableComments: [],
+      reviewSummaryIds: [],
+      firstLookSummaries: [],
+      editedSummaries: [],
+      surfacedApprovals: [],
+      checks: [],
+      changesRequestedReviews: [],
+      resolveCommand: {
+        argv: ["pr-shepherd", "apply", "review", prUrl],
+        requiresHeadSha: false,
+        requiresDismissMessage: false,
+        hasMutations: false,
+      },
+      instructions: [
+        `PR #${report.pr} is layer ${stack.position} of ${stack.size} in native stack #${stack.number}; do not run \`gh pr merge\` for this layer.`,
+        `Run \`pr-shepherd --stack ${prUrl} --until-terminal --merge\` to reconcile the complete stack and run its emitted whole-stack merge command.`,
+      ],
+      inProgressRunIds: [],
+      protectedRuns: [],
+      firstLookThreads: [],
+      firstLookComments: [],
     },
+    cancelled: [],
   };
 }
 
@@ -48,7 +63,7 @@ export function buildReadyMergeOutcome(
 ): IterateResult | null {
   if (!enabled || !readyElapsed || report.mergeStatus.isDraft) return null;
   const stack = report.mergeStatus.mergeRequirements?.stack;
-  if (stack) return buildStackedEscalateResult(base, report, stack);
+  if (stack) return buildStackedRouteResult(base, report, stack);
   const queue = Boolean(
     report.mergeStatus.mergeRequirements?.mergeQueue?.required ||
     report.mergeStatus.mergeRequirements?.mergeQueue?.enabled,

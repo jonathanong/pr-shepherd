@@ -57,10 +57,14 @@ for (const name of listFixtureNames()) {
         action?: string;
         mode?: string;
         reason?: string;
+        nextAction?: string;
       };
       if (fixture.mode === "aggregate") {
         expect(json.mode).toBe("summary");
         expect(json.reason).toBe(fixture.expectedReason);
+        if (fixture.expectedNextAction !== undefined) {
+          expect(json.nextAction).toBe(fixture.expectedNextAction);
+        }
       } else {
         expect(json.action, `fixture name must match the emitted action`).toBe(
           actionFromFixtureName(name),

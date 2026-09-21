@@ -1,11 +1,11 @@
 # Poll summary [ACTIONABLE]
 
-**repo** `jonathanong/auto-harness` · **selection** stack #514 anchored at PR #518 (5 PRs) · **mode** `summary` · **next action** `merge`
+**repo** `jonathanong/auto-harness` · **selection** stack #514 anchored at PR #518 (5 PRs) · **mode** `summary` · **stack mergeable** `false` · **next action** `shepherd`
 
 ## Pull requests
 
 - [PR #507: docs: clarify service account credential rotation](https://github.com/jonathanong/auto-harness/pull/507) [CANCEL]
-  - state `MERGED` · mergeable `UNKNOWN` · merge `UNKNOWN` · stack `514` position `1/5` base `main`
+  - state `MERGED` · mergeable `UNKNOWN` · merge `UNKNOWN` · Shepherd READY completion `verified` · stack `514` position `1/5` base `main`
   - head `codex/github-app-docs` at `e90a5b99c42e8d7d26dc1ac28f954411f7ef79cb` · base `main`
   - reasons: `merged`
 - [PR #508: feat(host): mint per-session GitHub App tokens](https://github.com/jonathanong/auto-harness/pull/508) [CANCEL]
@@ -13,11 +13,11 @@
   - head `codex/github-app-credentials` at `80ad5e9953451916b07440b4fc3675464c17ea06` · base `main`
   - reasons: `merged`
 - [PR #510: \[codex\] add verified custom webhook ingress](https://github.com/jonathanong/auto-harness/pull/510) [MERGE]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · stack `514` position `3/5` base `main`
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `514` position `3/5` base `main`
   - head `codex/webhook-platform` at `ccbb8fdfc8317f11b0b35c5e3bc1aad6a4d83e4d` · base `main`
   - reasons: `appears-ready`
 - [PR #511: \[codex\] add GitHub trigger and pull-ref foundation](https://github.com/jonathanong/auto-harness/pull/511) [MERGE]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · stack `514` position `4/5` base `main`
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `514` position `4/5` base `main`
   - head `codex/github-ingress-foundation` at `b94436d2ddf60c55948b953610b16b34cff7b4da` · base `codex/webhook-platform`
   - reasons: `appears-ready`
 - [PR #518: \[codex\] add GitHub App comment ingress](https://github.com/jonathanong/auto-harness/pull/518) [WAIT]
@@ -32,5 +32,7 @@
 
 ## Instructions
 
-1. The contiguous ready lower stack ends at PR #511. Merge the native stack through that PR with `gh stack merge --squash 511`; verify that the selector names PR #511 in stack #514 before running it. This includes still-open lower layers and leaves higher layers open.
-2. After GitHub completes the stack merge and updates the remaining branches, rerun the same aggregate `--stack` selector. If an ancestry mismatch remains, follow the rebase instructions returned then.
+1. Start or delegate the relevant one-PR sessions below; review and CI work on separate layers can proceed concurrently.
+2. Run `pr-shepherd https://github.com/jonathanong/auto-harness/pull/518 --until-terminal --merge` for PR #518.
+3. Keep upper draft PRs in draft until every lower layer has completed Shepherd READY.
+4. After the selected one-PR sessions, rerun this same `--stack` selector.

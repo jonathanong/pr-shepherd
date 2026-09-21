@@ -1,0 +1,26 @@
+{
+  "description": "A failing check on the lowest layer prevents a READY-receipted upper layer from being reported mergeable and preserves the lower check evidence.",
+  "mode": "aggregate",
+  "args": ["--stack", "https://github.com/owner/repo/pull/322", "--debounce", "0s"],
+  "expectedExitCode": 16,
+  "expectedNextAction": "shepherd",
+  "expectedReason": "actionable",
+  "aggregateSummary": {
+    "selection": { "kind": "stack", "anchor": 322, "stackNumber": 33, "stackSize": 2 },
+    "prs": [
+      {
+        "pr": 321, "repo": "owner/repo", "title": "CI failure", "url": "https://github.com/owner/repo/pull/321",
+        "action": "fix_code", "reasons": ["failing-checks"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "UNSTABLE",
+        "headRefName": "foundation", "headRefOid": "c111111111111111111111111111111111111111", "baseRefName": "main", "checks": { "passing": 1, "failing": 1 },
+        "stack": { "number": 33, "size": 2, "position": 1, "baseRefName": "main" },
+        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/321 --until-terminal"
+      },
+      {
+        "pr": 322, "repo": "owner/repo", "title": "Verified child", "url": "https://github.com/owner/repo/pull/322",
+        "action": "cancel", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "child", "headRefOid": "c222222222222222222222222222222222222222", "baseRefName": "foundation", "readyReceipt": true,
+        "stack": { "number": 33, "size": 2, "position": 2, "baseRefName": "main" }
+      }
+    ]
+  }
+}

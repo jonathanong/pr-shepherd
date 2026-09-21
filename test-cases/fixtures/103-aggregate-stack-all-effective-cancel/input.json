@@ -1,0 +1,31 @@
+{
+  "description": "Every open native-stack layer has a current READY receipt and an effective CANCEL action, so the aggregate stack may finish successfully.",
+  "mode": "aggregate",
+  "args": ["--stack", "https://github.com/owner/repo/pull/413"],
+  "expectedExitCode": 0,
+  "expectedNextAction": "cancel",
+  "expectedReason": "all_terminal",
+  "aggregateSummary": {
+    "selection": { "kind": "stack", "anchor": 413, "stackNumber": 41, "stackSize": 3 },
+    "prs": [
+      {
+        "pr": 411, "repo": "owner/repo", "title": "Verified base", "url": "https://github.com/owner/repo/pull/411",
+        "action": "cancel", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "base", "headRefOid": "4111111111111111111111111111111111111111", "baseRefName": "main", "readyReceipt": true,
+        "stack": { "number": 41, "size": 3, "position": 1, "baseRefName": "main" }
+      },
+      {
+        "pr": 412, "repo": "owner/repo", "title": "Verified middle", "url": "https://github.com/owner/repo/pull/412",
+        "action": "cancel", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "middle", "headRefOid": "4122222222222222222222222222222222222222", "baseRefName": "base", "readyReceipt": true,
+        "stack": { "number": 41, "size": 3, "position": 2, "baseRefName": "main" }
+      },
+      {
+        "pr": 413, "repo": "owner/repo", "title": "Verified tip", "url": "https://github.com/owner/repo/pull/413",
+        "action": "cancel", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "tip", "headRefOid": "4133333333333333333333333333333333333333", "baseRefName": "middle", "readyReceipt": true,
+        "stack": { "number": 41, "size": 3, "position": 3, "baseRefName": "main" }
+      }
+    ]
+  }
+}
