@@ -154,7 +154,8 @@ returns `WAIT`. A terminal READY or fully merged stack returns `CANCEL`. Closed 
 topology returns `ESCALATE` for human direction.
 
 With `--stack --merge`, a fully reconciled and READY stack returns `MERGE` with a `gh stack merge`
-command for the agent to run, then rechecks until every layer merges and returns `CANCEL`. API and MCP
+command for the agent to run, checking and installing the optional `github/gh-stack` extension first
+when necessary. It then rechecks until every layer merges and returns `CANCEL`. API and MCP
 aggregate calls perform one summary tick and leave recurrence to the caller.
 
 Polling defaults can be set under `poll` in `.pr-shepherdrc.yml`: `intervalSeconds`, `timeoutSeconds`, `debounceSeconds`, and `quietStatus`. Explicit flags override configuration, including `--no-quiet-status` when a shared config enables quiet output. Quiet status remains off by default.

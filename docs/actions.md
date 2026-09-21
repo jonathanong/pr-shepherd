@@ -42,7 +42,8 @@ not a human handoff; drafts with actionable review or CI also route that work th
 When `--merge` is requested and all open layers are `stackMergeable`, the read-only summary returns
 `MERGE` with `GH_REPO=<owner/repo> gh stack merge --yes --squash <stack-number>` for the agent to run;
 it does not submit a ready prefix. The caller reruns `--stack --merge` until every layer is merged and
-the result is `CANCEL`. If
+the result is `CANCEL`. The instructions first check whether the optional `github/gh-stack`
+extension is installed; if not, the agent installs it and reruns reconciliation before merging. If
 GitHub puts any layer in a merge queue, the summary remains `WAIT` during queue progress and asks
 the caller to recheck until every layer is merged; an ejected layer is routed back to its one-PR
 session.
@@ -52,7 +53,8 @@ lifecycle transitions also invalidate older receipts even when the PR returns to
 While a PR remains queued, an earlier queue entry advancing its target branch does not invalidate
 the receipt by itself: Shepherd still requires the same source head and review evidence and checks
 the current merge-group state. A hard `CONFLICTING` or `DIRTY` state invalidates readiness even in
-the queue. Outside the queue, a changed base invalidates the receipt. Compact check annotation
+the queue. A changed base branch name invalidates the receipt; outside the queue, a changed base
+commit also invalidates it. Compact check annotation
 counts are part of the receipt evidence, so a late annotation on a completed check sends the layer
 back through its one-PR session.
 An explicit PR set containing a native-stack member still routes that row to an authoritative

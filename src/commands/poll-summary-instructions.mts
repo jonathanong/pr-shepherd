@@ -223,8 +223,9 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
     action: "merge",
     stackMergeable: true,
     instructions: [
-      `1. Stack #${stackNumber} in \`${result.repo}\` is mergeable through PR #${open.at(-1)!.pr}. Run \`GH_REPO=${result.repo} gh stack merge --yes --squash ${stackNumber}\` to merge the whole native stack or enqueue it when the base uses a merge queue.`,
-      "2. After the merge attempt, rerun this same `--stack --merge` selector until every layer is merged (`CANCEL`); shepherd any layer that GitHub rejects or ejects.",
+      "1. Check `gh stack merge --help`. If the `gh-stack` extension is unavailable, run `gh extension install github/gh-stack`, then rerun this same `--stack --merge` selector before merging.",
+      `2. Stack #${stackNumber} in \`${result.repo}\` is mergeable through PR #${open.at(-1)!.pr}. Run \`GH_REPO=${result.repo} gh stack merge --yes --squash ${stackNumber}\` to merge the whole native stack or enqueue it when the base uses a merge queue.`,
+      "3. After the merge attempt, rerun this same `--stack --merge` selector until every layer is merged (`CANCEL`); shepherd any layer that GitHub rejects or ejects.",
     ],
   };
 }

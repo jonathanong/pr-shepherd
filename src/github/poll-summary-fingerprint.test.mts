@@ -65,6 +65,7 @@ describe("fingerprintRawSummaryPr", () => {
   it.each([
     ["new head", { headRefOid: "c".repeat(40) }],
     ["moved base", { baseRefOid: "d".repeat(40) }],
+    ["retargeted base at same commit", { baseRefName: "release" }],
     ["draft", { isDraft: true }],
     ["review withdrawn", { reviewDecision: "REVIEW_REQUIRED" }],
     ["new comment", { comments: { ...empty, totalCount: 1 } }],

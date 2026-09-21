@@ -16,6 +16,7 @@ export function fingerprintRawSummaryPr(raw: RawSummaryPr): string | null {
     isDraft: raw.isDraft,
     headRefOid: raw.headRefOid,
     baseRefOid: raw.baseRefOid,
+    baseRefName: raw.baseRefName,
     reviewDecision: raw.reviewDecision,
     reviewRequests: raw.reviewRequests,
     latestReviews: raw.latestReviews,
