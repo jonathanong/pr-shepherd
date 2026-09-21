@@ -120,7 +120,8 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
         : last.prs.every((item) => item.action === "cancel");
     const immediate =
       last.selection.kind === "stack"
-        ? last.nextAction === "escalate" && last.reason !== "waiting"
+        ? (last.nextAction === "escalate" || last.nextAction === "merge") &&
+          last.reason !== "waiting"
         : last.prs.some((item) => ["escalate", "merge", "mark_ready"].includes(item.action));
     const hasFix =
       last.selection.kind === "stack"

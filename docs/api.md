@@ -54,9 +54,10 @@ or perform GitHub mutations. Native-stack aggregate actions are `FIX_CODE` for a
 layers, `WAIT` for queued stacks, and `CANCEL` for terminal READY or merged state. An unready layer
 produces one-PR Shepherd instructions; `blockedByPr` identifies the lowest unready ancestor of an
 upper layer. Closed or unverified topology produces `ESCALATE` for human direction. With `--stack
---merge`, a fully READY and linear stack produces `ESCALATE` handoff to the stack owner for the
-merge decision. Aggregate selectors never emit or perform `gh stack merge`, rebase, push, or other
-mutation commands. The caller owns recurrence and follows the returned one-PR routing instructions.
+--merge`, a fully READY and linear stack produces `MERGE` with a `gh stack merge` command for the
+agent; after running it, the caller rechecks until all layers merge and the stack returns `CANCEL`.
+Aggregate selectors never perform mutations or emit rebase/push commands. The caller owns recurrence
+and follows the returned instructions.
 
 `apply` runs `operations` in list order after validating every operation. Types: `review_mutations`, `mark_files_viewed`, `append_journal`. `mark_files_viewed` performs the requested `markFileAsViewed` mutations and surfaces GitHub's per-file results. Direct review operations forward explicitly supplied IDs without iterate's author, capability, or current-state policy; direct journal operations likewise honor explicit caller intent. GitHub is authoritative for authorization and mutation validity. Replies and dismissals require `message`. `requireSha` must be a full 40-character lowercase hex SHA.
 

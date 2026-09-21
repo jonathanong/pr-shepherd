@@ -1,5 +1,5 @@
 {
-  "description": "Combines 60-escalate-bot-cr-not-dismissed (an authorized bot CHANGES_REQUESTED dismissal emitted but overdue past stallTimeoutMinutes) with 31-escalate-fix-thrash (a retryable thread that has already hit fixAttemptsPerThread). handleFixCode checks staleBotCrIds before checkEscalateTriggers (fix-thrash), so bot-cr-not-dismissed wins even though both conditions are independently satisfied.",
+  "description": "An overdue authorized bot review does not force escalation when review-thread work is still actionable; the agent receives the combined reply and dismissal command.",
   "batchData": {
     "mergeStateStatus": "BLOCKED",
     "reviewDecision": "CHANGES_REQUESTED",
@@ -34,14 +34,6 @@
       "bodyHash": "eb8f2478a94d999d"
     }
   },
-  "botCrSeen": {
-    "reviews": {
-      "PRR_bot_overdue_84": {
-        "firstSeenAt": 1715798100,
-        "bodyHash": "eb8f2478a94d999d"
-      }
-    }
-  },
   "fixAttempts": {
     "headSha": "oldhash123",
     "threadAttempts": {
@@ -57,5 +49,5 @@
     "shouldCancel": false,
     "remainingSeconds": 600
   },
-  "expectedExitCode": 13
+  "expectedExitCode": 12
 }

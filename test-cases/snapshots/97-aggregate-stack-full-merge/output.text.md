@@ -1,6 +1,6 @@
 # Poll summary [ACTIONABLE]
 
-**repo** `owner/repo` · **selection** stack #35 anchored at PR #342 (2 PRs) · **mode** `summary` · **stack mergeable** `true` · **next action** `escalate`
+**repo** `owner/repo` · **selection** stack #35 anchored at PR #342 (2 PRs) · **mode** `summary` · **stack mergeable** `true` · **next action** `merge`
 
 ## Pull requests
 
@@ -15,5 +15,5 @@
 
 ## Instructions
 
-1. Stack #35 in `owner/repo` is mergeable through PR #342; this aggregate selector will not mutate it.
-2. Hand off the native-stack merge to the stack owner. After a merge attempt, rerun this same `--stack --merge` selector to reconcile every layer; shepherd any layer that GitHub rejects or ejects.
+1. Stack #35 in `owner/repo` is mergeable through PR #342. Run `GH_REPO=owner/repo gh stack merge --yes --squash 35` to merge the whole native stack or enqueue it when the base uses a merge queue.
+2. After the merge attempt, rerun this same `--stack --merge` selector until every layer is merged (`CANCEL`); shepherd any layer that GitHub rejects or ejects.

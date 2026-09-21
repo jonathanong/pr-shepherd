@@ -1,5 +1,5 @@
 {
-  "description": "Same clean/ready/elapsed state as 64, but the PR is a mid-stack member of a native GitHub stack (position 2 of 3, base is the unmerged parent branch). buildReadyMergeOutcome reads mergeRequirements.stack and preempts the merge with a stacked-pr escalation naming the layer, stack size, and stack base instead of emitting any gh pr merge command.",
+  "description": "Same clean/ready/elapsed state as 64, but the PR is a mid-stack member of a native GitHub stack (position 2 of 3, base is the unmerged parent branch). The singular poll records its READY receipt and returns a nonterminal aggregate-stack route; the agent runs that route to reconcile every layer before the aggregate flow emits a safe whole-stack merge command.",
   "args": ["--merge"],
   "batchData": {
     "stack": { "number": 7, "size": 3, "position": 2, "baseRefName": "stack/7/1" },
@@ -20,5 +20,5 @@
     "shouldCancel": true,
     "remainingSeconds": 0
   },
-  "expectedExitCode": 13
+  "expectedExitCode": 12
 }

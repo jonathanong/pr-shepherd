@@ -44,15 +44,7 @@ export function withPollSummaryInstructions(
               staleChildren.has(item.pr) ? "stale-ancestry" : "ready-receipt-required",
             ],
           }
-        : item.state === "OPEN" &&
-            item.action === "wait" &&
-            item.reasons.includes("draft-auto-mark-ready-disabled")
-          ? {
-              ...item,
-              action: "escalate" as const,
-              reasons: [...item.reasons, "mark-ready-human-required"],
-            }
-          : item,
+        : item,
   );
   const projected = {
     ...result,
@@ -108,7 +100,7 @@ export function withPollSummaryInstructions(
 }
 
 interface StackPlan {
-  action: Extract<ShepherdAction, "fix_code" | "wait" | "cancel" | "escalate">;
+  action: Extract<ShepherdAction, "fix_code" | "wait" | "merge" | "cancel" | "escalate">;
   stackMergeable: boolean;
   waiting?: boolean;
   instructions: string[];
@@ -228,11 +220,11 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
 
   const stackNumber = result.selection.kind === "stack" ? result.selection.stackNumber : 0;
   return {
-    action: "escalate",
+    action: "merge",
     stackMergeable: true,
     instructions: [
-      `1. Stack #${stackNumber} in \`${result.repo}\` is mergeable through PR #${open.at(-1)!.pr}; this aggregate selector will not mutate it.`,
-      "2. Hand off the native-stack merge to the stack owner. After a merge attempt, rerun this same `--stack --merge` selector to reconcile every layer; shepherd any layer that GitHub rejects or ejects.",
+      `1. Stack #${stackNumber} in \`${result.repo}\` is mergeable through PR #${open.at(-1)!.pr}. Run \`GH_REPO=${result.repo} gh stack merge --yes --squash ${stackNumber}\` to merge the whole native stack or enqueue it when the base uses a merge queue.`,
+      "2. After the merge attempt, rerun this same `--stack --merge` selector until every layer is merged (`CANCEL`); shepherd any layer that GitHub rejects or ejects.",
     ],
   };
 }

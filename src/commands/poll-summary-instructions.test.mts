@@ -239,7 +239,7 @@ describe("native-stack reconciliation", () => {
     expect(result.instructions?.join("\n")).not.toContain("gh stack push");
   });
 
-  it("hands off a fully ready stack merge to its owner", () => {
+  it("routes a fully ready stack merge to an agent command and reconciles afterward", () => {
     const result = withPollSummaryInstructions(
       stack([
         row(1, 1, { readyReceipt: true }),
@@ -248,9 +248,43 @@ describe("native-stack reconciliation", () => {
       ]),
       true,
     );
-    expect(result).toMatchObject({ nextAction: "escalate", stackMergeable: true });
-    expect(result.instructions?.join("\n")).toContain("stack owner");
-    expect(result.instructions?.join("\n")).not.toContain("gh stack merge");
+    expect(result).toMatchObject({ nextAction: "merge", stackMergeable: true });
+    expect(result.instructions?.[0]).toContain(
+      "GH_REPO=acme/widgets gh stack merge --yes --squash 9",
+    );
+    expect(result.instructions?.join("\n")).toContain("rerun this same `--stack --merge`");
+  });
+
+  it("merges a verified one-layer stack and returns CANCEL only after that layer merges", () => {
+    const single = stack([
+      row(1, 1, {
+        readyReceipt: true,
+        stack: { number: 9, size: 1, position: 1, baseRefName: "main" },
+      }),
+    ]);
+    single.selection = { kind: "stack", anchor: 1, stackNumber: 9, stackSize: 1 };
+    const ready = withPollSummaryInstructions(single, true);
+    expect(ready).toMatchObject({ nextAction: "merge", stackMergeable: true });
+    expect(ready.instructions?.[0]).toContain(
+      "GH_REPO=acme/widgets gh stack merge --yes --squash 9",
+    );
+
+    const merged = withPollSummaryInstructions(
+      {
+        ...single,
+        prs: [
+          row(1, 1, {
+            state: "MERGED",
+            action: "cancel",
+            reasons: ["merged"],
+            stack: { number: 9, size: 1, position: 1, baseRefName: "main" },
+          }),
+        ],
+      },
+      true,
+    );
+    expect(merged).toMatchObject({ nextAction: "cancel", reason: "all_terminal" });
+    expect(merged.instructions?.join("\n")).not.toContain("gh stack merge");
   });
 
   it("keeps a queued stack nonterminal until every layer merges", () => {
@@ -306,6 +340,25 @@ describe("native-stack reconciliation", () => {
     );
     expect(result.nextAction).toBe("fix_code");
     expect(result.instructions?.join("\n")).toContain("PR #3");
+  });
+
+  it("routes a clean draft with auto-ready disabled without a human escalation", () => {
+    const result = withPollSummaryInstructions(
+      stack([
+        row(1, 1, {
+          action: "wait",
+          reasons: ["draft-auto-mark-ready-disabled"],
+          isDraft: true,
+          pollCommand:
+            "pr-shepherd https://github.com/acme/widgets/pull/1 --timeout 1s --debounce 0s --no-auto-mark-ready",
+        }),
+      ]),
+      true,
+    );
+    expect(result).toMatchObject({ nextAction: "fix_code", stackMergeable: false });
+    expect(result.prs[0]?.action).toBe("wait");
+    expect(result.instructions?.join("\n")).toContain("pull/1 --timeout 1s");
+    expect(result.instructions?.join("\n")).not.toContain("human action");
   });
 
   it("does not convert a quota warning into a third stack nextAction", () => {

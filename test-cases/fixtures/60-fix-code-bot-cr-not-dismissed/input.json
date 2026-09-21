@@ -1,5 +1,5 @@
 {
-  "description": "Bot CHANGES_REQUESTED review surfaced more than stallTimeoutMinutes ago (firstSeenAt is 1900 seconds before NOW, threshold is 1800s = 30 min). The agent never dismissed it. Iterate escalates with bot-cr-not-dismissed trigger.",
+  "description": "An authorized bot CHANGES_REQUESTED review stays autonomous FIX_CODE even after the stall window. The agent runs the generated dismissal command instead of asking a human.",
   "batchData": {
     "mergeStateStatus": "BLOCKED",
     "reviewDecision": "CHANGES_REQUESTED",
@@ -24,19 +24,11 @@
       "bodyHash": "c9f6707b09399420"
     }
   },
-  "botCrSeen": {
-    "reviews": {
-      "PRR_bot_overdue": {
-        "firstSeenAt": 1715798100,
-        "bodyHash": "c9f6707b09399420"
-      }
-    }
-  },
   "stallTimeoutMinutes": 30,
   "readyDelayState": {
     "isReady": false,
     "shouldCancel": false,
     "remainingSeconds": 600
   },
-  "expectedExitCode": 13
+  "expectedExitCode": 12
 }

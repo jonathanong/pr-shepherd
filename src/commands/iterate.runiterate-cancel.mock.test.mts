@@ -218,7 +218,7 @@ describe("runIterate — cancel", () => {
     );
   });
 
-  it("writes the receipt before escalating a ready stacked merge request", async () => {
+  it("writes the receipt before routing a ready stacked merge request", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "READY",
@@ -236,10 +236,15 @@ describe("runIterate — cancel", () => {
     const result = await runIterate(makeOpts({ merge: true }));
 
     expect(mockWriteReadyReceipt).toHaveBeenCalledTimes(1);
-    expect(result.action).toBe("escalate");
+    expect(result.action).toBe("fix_code");
+    if (result.action === "fix_code") {
+      expect(result.fix.instructions.join("\n")).toContain(
+        "pr-shepherd --stack https://github.com/owner/repo/pull/42 --until-terminal --merge",
+      );
+    }
   });
 
-  it("does not escalate a stacked merge request when its receipt cannot be persisted", async () => {
+  it("does not route a stacked merge request when its receipt cannot be persisted", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "READY",
@@ -258,7 +263,7 @@ describe("runIterate — cancel", () => {
     const result = await runIterate(makeOpts({ merge: true }));
 
     expect(result).toMatchObject({ action: "wait", shouldCancel: false });
-    expect(result.action).not.toBe("escalate");
+    expect(result.action).not.toBe("fix_code");
   });
 
   it("acknowledges a current queue removal in the fresh receipt", async () => {

@@ -144,8 +144,8 @@ needed, every selected PR is complete, the bounded timeout expires, or `--until-
 configured GraphQL quota-warning band. Explicit PR sets give each actionable row an exact single-PR
 `pollCommand`, so independent rows can proceed before the next aggregate poll.
 
-Native-stack rows are ordered bottom-to-top. `--stack` is reconciliation-only and never emits
-`gh stack merge`, rebase, push, or other mutation commands. An unready layer (draft, missing a READY
+Native-stack rows are ordered bottom-to-top. `--stack` never performs a mutation itself; only
+`--stack --merge` can emit a complete-stack merge command for the agent. An unready layer (draft, missing a READY
 receipt, conflicting, failing, or stale) returns `FIX_CODE` with one-PR Shepherd instructions for
 the affected layers. A draft or other unready lower layer marks every higher open layer with
 `blockedByPr`; review and CI sessions on independent layers may proceed concurrently, but an upper
@@ -153,8 +153,8 @@ draft cannot transition to ready until every lower layer has its READY receipt. 
 returns `WAIT`. A terminal READY or fully merged stack returns `CANCEL`. Closed or unverified
 topology returns `ESCALATE` for human direction.
 
-With `--stack --merge`, a fully reconciled and READY stack returns `ESCALATE` to the stack owner for
-the merge decision. Shepherd does not submit the stack or emit a merge command. API and MCP
+With `--stack --merge`, a fully reconciled and READY stack returns `MERGE` with a `gh stack merge`
+command for the agent to run, then rechecks until every layer merges and returns `CANCEL`. API and MCP
 aggregate calls perform one summary tick and leave recurrence to the caller.
 
 Polling defaults can be set under `poll` in `.pr-shepherdrc.yml`: `intervalSeconds`, `timeoutSeconds`, `debounceSeconds`, and `quietStatus`. Explicit flags override configuration, including `--no-quiet-status` when a shared config enables quiet output. Quiet status remains off by default.

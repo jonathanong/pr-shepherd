@@ -1,9 +1,9 @@
 {
-  "description": "Merge intent hands a fully READY native stack to its owner; aggregate verifies eligibility but never emits or executes a stack merge command.",
+  "description": "Merge intent emits the complete native-stack merge command for the agent, then reconciliation continues until every layer merges.",
   "mode": "aggregate",
   "args": ["--stack", "https://github.com/owner/repo/pull/342", "--merge", "--debounce", "0s"],
-  "expectedExitCode": 13,
-  "expectedNextAction": "escalate",
+  "expectedExitCode": 15,
+  "expectedNextAction": "merge",
   "expectedReason": "actionable",
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 342, "stackNumber": 35, "stackSize": 2 },

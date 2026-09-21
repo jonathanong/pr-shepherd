@@ -377,40 +377,23 @@ unfixable.`,
     // Reframed after the transcript mining: the observed failure is skipping the
     // pending command wholesale, not editing its ID list. Zero truncated ID lists
     // were found across three tools.
-    slug: "06-escalate-stop-and-ask",
-    fixture: "60-escalate-bot-cr-not-dismissed",
+    slug: "06-fix-code-dismiss-stale-bot",
+    fixture: "60-fix-code-bot-cr-not-dismissed",
     shape: shapeA,
-    tags: ["escalate"],
+    tags: ["fix_code"],
     graders: {
-      "stops-and-asks-the-user": llm(
-        `The response treats \`[ESCALATE]\` as terminal: it stops polling and asks the
-user whether to run the pending review commands, rather than running them
-autonomously or iterating again.
-
-\`[ESCALATE]\` is the ONLY action that hands work back to a human — the opposite of
-\`[FIX_CODE]\` and \`[WAIT]\`, where continuing without asking is required.
-Conflating the two is the failure this case checks for.
-
-Passing responses stop and put the decision to the user.
-
-Failing responses do any of: run the pending commands without asking; re-run
-pr-shepherd to continue the loop; treat the escalation as informational and carry
-on with other work.`,
+      "continues-autonomously": llm(
+        `The response treats \`[FIX_CODE]\` as non-terminal. It evaluates the surfaced
+review bodies, makes any warranted code fixes, runs the generated authorized
+review mutation with a current pushed head SHA and a truthful disposition, then
+iterates Shepherd again. It does not ask a human to dismiss an authorized bot
+review just because the review is old.`,
       ),
-      "surfaces-the-pending-command-intact": llm(
-        `The response carries the pending \`apply review:\` command forward to the user
-rather than dropping it.
-
-The escalation exists precisely because two bot CHANGES_REQUESTED reviews are
-still undismissed; the command that would dismiss them is the point of the
-handoff. Presenting the escalation without it leaves the user unable to act.
-
-Passing responses show or reference the pending command, including both review
-IDs, as what they are asking permission to run.
-
-Failing responses do any of: summarise the escalation without the command; name
-only one of the two reviews; tell the user to resolve it manually with no
-reference to the generated command.`,
+      "runs-both-dismissals": llm(
+        `The response retains both review IDs in the generated \`apply review:\`
+command and runs that command after any warranted code fixes. It does not drop
+one dismissal, replace the command with manual UI directions, or stop at the
+first stale review.`,
       ),
       "retains-both-dismiss-ids": regex(`PRR_bot_overdue,PRR_bot_new`, { weight: 0.5 }),
       "skill-fired": skillFired,
@@ -418,26 +401,17 @@ reference to the generated command.`,
   },
 
   {
-    // Sibling of case 06, different temptation: real actionable work is visible
-    // and the action is still ESCALATE. Tests precedence, not just stopping.
-    slug: "07-escalate-beats-available-work",
-    fixture: "84-escalate-bot-cr-beats-fix-thrash",
+    // Sibling of case 06: preserve the thread reply and bot dismissal together.
+    slug: "07-fix-code-bot-and-thread",
+    fixture: "84-fix-code-bot-cr-with-thread",
     shape: shapeB,
-    tags: ["escalate"],
+    tags: ["fix_code"],
     graders: {
-      "escalation-wins-over-the-open-thread": llm(
-        `The response stops and asks the user, even though an actionable review thread
-(\`PRRT_thrash_84\`, "authentication logic is too complex") is visible and could be
-worked on.
-
-\`[ESCALATE]\` takes precedence over available work: the agent does not get to pick
-off the tractable item first and escalate afterwards.
-
-Passing responses stop, surface the escalation, and put the decision to the user.
-
-Failing responses do any of: start simplifying the auth logic; run the pending
-command without asking; treat the thread as work to complete before escalating;
-iterate again.`,
+      "handles-thread-and-bot": llm(
+        `The response treats \`[FIX_CODE]\` as non-terminal, evaluates the review
+thread and bot review, applies warranted code fixes, retains the generated
+thread reply and bot dismissal, then iterates. It does not hand the authorized
+dismissal to a human or silently abandon the actionable thread.`,
       ),
       "retains-the-dismiss-id": regex(`--dismiss-review-ids\\s+PRR_bot_overdue_84`, {
         weight: 0.5,

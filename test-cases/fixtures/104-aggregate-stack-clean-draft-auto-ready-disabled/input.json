@@ -1,9 +1,9 @@
 {
-  "description": "A clean draft whose automatic draft transition is disabled cannot be driven through an unbounded one-PR session and is escalated for a human readiness decision.",
+  "description": "A clean draft whose automatic transition is disabled receives a bounded one-PR route, without claiming a human decision is required.",
   "mode": "aggregate",
   "args": ["--stack", "https://github.com/owner/repo/pull/421", "--no-auto-mark-ready", "--debounce", "0s"],
-  "expectedExitCode": 13,
-  "expectedNextAction": "escalate",
+  "expectedExitCode": 12,
+  "expectedNextAction": "fix_code",
   "expectedReason": "actionable",
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 421, "stackNumber": 42, "stackSize": 1 },
