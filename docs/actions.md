@@ -48,6 +48,9 @@ session.
 An ejection remains actionable until a current one-PR READY receipt explicitly acknowledges that
 exact removal event; local timestamps are not treated as proof. Close/reopen and draft/ready
 lifecycle transitions also invalidate older receipts even when the PR returns to the same commit.
+While a PR remains queued, an earlier queue entry advancing its target branch does not invalidate
+the receipt by itself: Shepherd still requires the same source head and review evidence and checks
+the current merge-group state. Outside the queue, a changed base invalidates the receipt.
 An explicit PR set containing a native-stack member still routes that row to an authoritative
 one-PR poll and includes its `pollCommand`.
 

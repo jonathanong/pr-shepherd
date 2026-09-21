@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../state/seen-comments.mts", async (importOriginal) => {
@@ -95,6 +96,43 @@ describe("queued READY receipt projection", () => {
       isInMergeQueue: true,
       checks: { inProgress: 1 },
     });
+  });
+
+  it("retains a queued receipt when an earlier queue entry advances the base", async () => {
+    const item = await summarizePollSummaryPr(
+      raw({
+        baseRefOid: "c".repeat(40),
+        isInMergeQueue: true,
+        mergeable: "UNKNOWN",
+        mergeStateStatus: "BLOCKED",
+        mergeQueueEntry: queueCheck("PENDING"),
+      }),
+      repo,
+      { stackPrNumber: 42, merge: true },
+    );
+    expect(item.readyReceipt).toBe(true);
+  });
+
+  it("rejects base advancement outside the queue", async () => {
+    const item = await summarizePollSummaryPr(raw({ baseRefOid: "c".repeat(40) }), repo, {
+      stackPrNumber: 42,
+      merge: true,
+    });
+    expect(item.readyReceipt).toBeUndefined();
+  });
+
+  it("rejects a changed queued source head despite base advancement", async () => {
+    const item = await summarizePollSummaryPr(
+      raw({
+        headRefOid: "d".repeat(40),
+        baseRefOid: "c".repeat(40),
+        isInMergeQueue: true,
+        mergeQueueEntry: queueCheck("PENDING"),
+      }),
+      repo,
+      { stackPrNumber: 42, merge: true },
+    );
+    expect(item.readyReceipt).toBeUndefined();
   });
 
   it("invalidates on a failing merge-group check", async () => {

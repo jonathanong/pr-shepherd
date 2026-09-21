@@ -1,7 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { join } from "node:path";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
+
+const { mockUnlink } = vi.hoisted(() => ({ mockUnlink: vi.fn() }));
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs/promises")>();
+  mockUnlink.mockImplementation(actual.unlink);
+  return { ...actual, unlink: mockUnlink };
+});
 import {
   clearReadyReceipt,
   isReadyReceiptCurrent,
@@ -96,5 +103,13 @@ describe("ready receipts", () => {
     await clearReadyReceipt(key);
 
     await expect(readReadyReceipt(key)).resolves.toBeNull();
+  });
+
+  it("fails closed when receipt removal is not permitted", async () => {
+    const unlinkError = Object.assign(new Error("permission denied"), { code: "EACCES" });
+    await writeReadyReceipt(receipt);
+    mockUnlink.mockRejectedValueOnce(unlinkError);
+
+    await expect(clearReadyReceipt(key)).rejects.toBe(unlinkError);
   });
 });

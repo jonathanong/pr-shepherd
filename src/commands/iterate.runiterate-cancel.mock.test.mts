@@ -488,6 +488,40 @@ describe("runIterate — cancel", () => {
     expect(mockClearReadyReceipt).not.toHaveBeenCalled();
   });
 
+  it("retains a queued receipt when a preceding queue entry advances the base", async () => {
+    mockReadReadyReceipt.mockResolvedValue(existingReceipt);
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "PENDING",
+        headSha: "head-1",
+        baseRefOid: "base-2",
+        mergeQueue: { enabled: true, inQueue: true },
+        mergeStatus: { ...makeReport().mergeStatus, mergeRequirements: stackRequirements() },
+      }),
+    );
+    mockFetchRawSummaryPr.mockResolvedValue({
+      ...rawReadySnapshot,
+      baseRefOid: "base-2",
+      isInMergeQueue: true,
+    });
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    await runIterate(makeOpts({ merge: true }));
+
+    expect(mockFingerprintRawSummaryPr).toHaveBeenCalledWith(
+      expect.objectContaining({ baseRefOid: "base-1", isInMergeQueue: true }),
+    );
+    expect(mockIsReadyReceiptCurrent).toHaveBeenCalledWith(
+      existingReceipt,
+      expect.objectContaining({ baseRefOid: "base-1" }),
+    );
+    expect(mockClearReadyReceipt).not.toHaveBeenCalled();
+  });
+
   it("clears a receipt when the fresh fingerprint no longer matches", async () => {
     mockReadReadyReceipt.mockResolvedValue(existingReceipt);
     mockRunCheck.mockResolvedValue(

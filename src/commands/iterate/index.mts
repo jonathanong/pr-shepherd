@@ -362,12 +362,18 @@ async function invalidateStaleReadyReceipt(
   }
   try {
     const raw = await fetchRawSummaryPr(report.pr, { owner: key.owner, name: key.repo });
-    const fingerprint = fingerprintRawSummaryPr(raw);
+    // Queue predecessors can advance the target branch without changing this
+    // PR's source. Compare against the receipt's base only while both fresh
+    // views still place the PR in the queue.
+    const queuedBaseAdvanced = retainQueuedReceipt && raw.isInMergeQueue;
+    const fingerprint = fingerprintRawSummaryPr(
+      queuedBaseAdvanced ? { ...raw, baseRefOid: receipt.baseRefOid } : raw,
+    );
     if (
       fingerprint === null ||
       !isReadyReceiptCurrent(receipt, {
         headRefOid: raw.headRefOid,
-        baseRefOid: raw.baseRefOid,
+        baseRefOid: queuedBaseAdvanced ? receipt.baseRefOid : raw.baseRefOid,
         readinessFingerprint: fingerprint,
         status: "READY",
         isDraft: raw.isDraft,

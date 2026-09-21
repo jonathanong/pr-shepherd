@@ -61,9 +61,21 @@ export async function writeReadyReceipt(receipt: ReadyReceipt): Promise<void> {
 export async function clearReadyReceipt(key: ReadyReceiptKey): Promise<void> {
   try {
     await unlink(receiptPath(key));
-  } catch {
-    // Missing receipts are already clear.
+  } catch (error) {
+    // Missing receipts are already clear. Any other failure must reach the
+    // caller so stale evidence cannot be silently retained as if it cleared.
+    if (isNodeErrorCode(error, "ENOENT")) return;
+    throw error;
   }
+}
+
+function isNodeErrorCode(error: unknown, code: string): boolean {
+  return (
+    error !== null &&
+    typeof error === "object" &&
+    "code" in error &&
+    (error as { code?: unknown }).code === code
+  );
 }
 
 /**

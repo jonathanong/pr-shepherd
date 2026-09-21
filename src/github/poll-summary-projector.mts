@@ -66,15 +66,22 @@ export async function summarizePollSummaryPr(
   const receipt = fingerprint
     ? await readReadyReceipt({ owner: repo.owner, repo: repo.name, pr: raw.number })
     : null;
+  // A queued PR's target branch can advance as earlier queue entries merge.
+  // Keep the pre-enqueue base binding for the receipt comparison while the
+  // merge group itself supplies the current mergeability evidence.
+  const receiptFingerprint =
+    raw.isInMergeQueue && receipt
+      ? fingerprintRawSummaryPr({ ...raw, baseRefOid: receipt.baseRefOid })
+      : fingerprint;
   const currentReady = isCurrentSummaryReady(raw, checks, review, {
     allowQueuedProgress: opts.stackPrNumber !== undefined && raw.isInMergeQueue,
   });
   const readyReceipt =
-    fingerprint !== null &&
+    receiptFingerprint !== null &&
     isReadyReceiptCurrent(receipt, {
       headRefOid: raw.headRefOid,
-      baseRefOid: raw.baseRefOid,
-      readinessFingerprint: fingerprint,
+      baseRefOid: raw.isInMergeQueue && receipt ? receipt.baseRefOid : raw.baseRefOid,
+      readinessFingerprint: receiptFingerprint,
       status: currentReady ? "READY" : "PENDING",
       isDraft: raw.isDraft,
     });

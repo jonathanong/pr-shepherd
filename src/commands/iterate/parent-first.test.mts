@@ -52,6 +52,10 @@ describe("parentBlocksMarkReady", () => {
     ["conflicting", { mergeable: "CONFLICTING" }],
     ["failing", { readyReceipt: undefined, action: "fix_code" }],
     ["parent still waiting", { readyReceipt: undefined, action: "wait" }],
+    [
+      "removed from the merge queue without a one-PR acknowledgement",
+      { queueRemoval: { reason: "CI_FAILURE", createdAtUnix: 1 } },
+    ],
   ])("blocks a child while parent is %s", async (_reason, parentChanges) => {
     mockFetchPollSummary.mockResolvedValue(
       summary({ prs: [{ ...summary().prs[0], ...parentChanges }, summary().prs[1]] }),

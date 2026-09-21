@@ -39,6 +39,11 @@ export async function parentBlocksMarkReady(
       if (parent.state !== "OPEN") return true;
       if (parent.isDraft || parent.mergeable === "CONFLICTING") return true;
       if (["DIRTY", "BEHIND", "UNKNOWN"].includes(parent.mergeStateStatus)) return true;
+      // A receipt only establishes readiness after a merge-queue removal once
+      // the one-PR session has observed and acknowledged that exact removal.
+      // The aggregate projection preserves an unacknowledged removal here, so
+      // do not let its otherwise-current receipt promote a child draft.
+      if (parent.queueRemoval) return true;
       // A parent that looks ready but has not completed its own one-PR receipt
       // is not sufficient evidence for a child draft transition.
       if (parent.readyReceipt !== true) return true;
