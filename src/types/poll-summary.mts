@@ -73,6 +73,9 @@ export type PollSummarySelection =
   | { kind: "prs"; requested: number[] }
   | { kind: "stack"; anchor: number; stackNumber: number; stackSize: number };
 
+/** Aggregate-only transition; one-PR actions remain unchanged. */
+export type StackNextAction = "shepherd" | "wait" | "merge" | "cancel" | "escalate";
+
 export interface PollSummaryResult {
   mode: "summary";
   repo: string;
@@ -81,8 +84,8 @@ export interface PollSummaryResult {
   prs: PollSummaryItem[];
   /** Present only for native-stack boundaries whose recorded refs differ. */
   stackAncestry?: PollSummaryStackAncestry[];
-  /** The next stack-level transition, which may differ from an individual row's hint. */
-  nextAction?: ShepherdAction;
+  /** Immediate stack transition; human blockers surface in rows while shepherdable work remains. */
+  nextAction?: StackNextAction;
   /** Whether every open layer is independently ready and stack ancestry is linear. */
   stackMergeable?: boolean;
   instructions?: string[];

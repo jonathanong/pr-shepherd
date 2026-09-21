@@ -3,8 +3,8 @@
   "description": "Live GitHub stack #514: #507 and #508 are merged, #510 and #511 are clean, but #518 is CLEAN while its base still points at #511's old head. Aggregate routes the stale child to its one-PR session and never prescribes the repair.",
   "args": ["--stack", "https://github.com/jonathanong/auto-harness/pull/518", "--debounce", "0s"],
   "expectedReason": "actionable",
-  "expectedExitCode": 12,
-  "expectedNextAction": "fix_code",
+  "expectedExitCode": 16,
+  "expectedNextAction": "shepherd",
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 518, "stackNumber": 514, "stackSize": 5 },
     "stackAncestry": [

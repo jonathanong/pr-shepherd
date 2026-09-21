@@ -23,7 +23,7 @@ Shepherd does two jobs: **gather all context for a PR**, then **emit one determi
 - `build_suggestion_patches` emits an ordered, apply-checked patch list plus per-patch commit metadata. It does not write patch files or mutate git.
 - Surfaces GitHub Actions failure context without recommending cancel/rerun operations, whose viewer authorization GitHub does not expose exactly.
 - Optional `mark_ready` for eligible draft PRs. Ready-delay then `CANCEL` from a clean ready state.
-- Process exit codes `0` / `10`–`15` for PR-state actions; `64`–`78` for command/GitHub failures. See [exit-codes.md](exit-codes.md).
+- Process exit codes `0` / `10`–`16` for PR-state actions; `64`–`78` for command/GitHub failures. See [exit-codes.md](exit-codes.md).
 
 ## Configuration
 

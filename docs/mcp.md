@@ -253,7 +253,7 @@ A poll tool that blocks or sleeps across ticks would risk hitting this ceiling o
 3. For `WAIT` or `MARK_READY`, call `iterate` again when the host is ready to recheck. Do not wait for CI with `gh pr checks`, `gh pr watch`, `gh run watch`, or equivalent GitHub MCP check waiters; fetching check logs is fine.
 4. For `FIX_CODE`, finish the code/review work, then call `iterate` immediately. Do not wait for CI to finish first.
 5. For `MERGE`, run the returned command (and only the conditionally documented fallback), then call `iterate` immediately.
-6. Stop on `CANCEL` or `ESCALATE`.
+6. Stop on `CANCEL` or `ESCALATE`. For a native-stack selector, `SHEPHERD` means run the listed one-PR sessions and select the stack again; human blockers may already be visible, but the selector returns `ESCALATE` only after autonomous shepherding is exhausted.
 
 The shell command `pr-shepherd [PR]` is the bounded poll dispatcher. It is not an MCP tool. See [skills.md](skills.md).
 

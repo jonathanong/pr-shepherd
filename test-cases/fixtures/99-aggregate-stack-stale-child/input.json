@@ -2,8 +2,8 @@
   "description": "A stale child ancestry boundary remains non-mergeable and is routed to its one-PR session without aggregate rebase instructions.",
   "mode": "aggregate",
   "args": ["--stack", "https://github.com/owner/repo/pull/362", "--debounce", "0s"],
-  "expectedExitCode": 12,
-  "expectedNextAction": "fix_code",
+  "expectedExitCode": 16,
+  "expectedNextAction": "shepherd",
   "expectedReason": "actionable",
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 362, "stackNumber": 37, "stackSize": 2 },

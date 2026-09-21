@@ -28,6 +28,8 @@ export const EXIT = Object.freeze({
   CLOSED: 14,
   /** Agent should run the emitted merge or queue command. */
   MERGE: 15,
+  /** Aggregate stack has PRs to shepherd through one-PR sessions. */
+  SHEPHERD: 16,
 
   /** Bad/unknown flag, unknown subcommand, missing required arg, invalid duration. */
   USAGE: 64,

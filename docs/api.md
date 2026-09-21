@@ -50,10 +50,11 @@ For a singular programmatic API call, `pr` is an optional positive number, repos
 `iterate` also accepts exactly one aggregate selector: non-empty `prs` or `stack`. Every selected
 reference must resolve to one repository. Aggregate calls perform one compact, read-only summary
 tick and return `PollSummaryResult`; they do not mark review items seen, maintain ready-delay state,
-or perform GitHub mutations. Native-stack aggregate actions are `FIX_CODE` for autonomous unready
-layers, `WAIT` for queued stacks, and `CANCEL` for terminal READY or merged state. An unready layer
+or perform GitHub mutations. Native-stack aggregate actions are stack-level `SHEPHERD` for autonomous
+unready layers, `WAIT` for queued stacks, and `CANCEL` for terminal READY or merged state. An unready layer
 produces one-PR Shepherd instructions; `blockedByPr` identifies the lowest unready ancestor of an
-upper layer. Closed or unverified topology produces `ESCALATE` for human direction. With `--stack
+upper layer. Closed or unverified topology produces `ESCALATE` for human direction only once no
+one-PR Shepherd session remains; a mixed state returns `SHEPHERD` and surfaces the human blocker. With `--stack
 --merge`, a fully READY and linear stack produces `MERGE` with a `gh stack merge` command for the
 agent; after running it, the caller rechecks until all layers merge and the stack returns `CANCEL`.
 Aggregate selectors never perform mutations or emit rebase/push commands. The caller owns recurrence

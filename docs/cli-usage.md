@@ -35,7 +35,7 @@ entry is opened without following symlinks and must resolve to a regular file in
 directory; symlinks, FIFOs, devices, unreadable paths, and missing files exit 66. Unsupported platforms
 fail closed with exit 66. A malformed or unrecognized journal remains a successful typed JSON result.
 
-`pr-shepherd [PR]` is the canonical bounded poll dispatcher. It repeats `iterate` while the action is `WAIT`, then prints the next agent-facing action. With `--merge`, it also continues through `MARK_READY` and emits `MERGE` when the ready-delay completes. A native-stack member instead returns non-terminal `FIX_CODE` with a complete `--stack <PR URL> --until-terminal --merge` route; the aggregate selector verifies every layer before emitting the whole-stack merge command. If `--timeout` expires during WAIT polling, poll returns that final `WAIT` result rather than a terminal action. `FIX_CODE` is delayed by `--debounce` (default: `poll.debounceSeconds`; built-in 1m): poll keeps iterating at `--interval` for that window, then returns one later tick. Use `iterate` when the caller owns recurrence.
+`pr-shepherd [PR]` is the canonical bounded poll dispatcher. It repeats `iterate` while the action is `WAIT`, then prints the next agent-facing action. With `--merge`, it also continues through `MARK_READY` and emits `MERGE` when the ready-delay completes. A native-stack member instead returns non-terminal `FIX_CODE` with a complete `--stack <PR URL> --until-terminal --merge` route; the aggregate selector verifies every layer before emitting the whole-stack merge command. If `--timeout` expires during WAIT polling, poll returns that final `WAIT` result rather than a terminal action. `FIX_CODE` and aggregate stack-level `SHEPHERD` are delayed by `--debounce` (default: `poll.debounceSeconds`; built-in 1m): poll keeps iterating at `--interval` for that window, then returns one later tick. Use `iterate` when the caller owns recurrence.
 
 ```sh
 pr-shepherd 42 --interval 60s --timeout 4.5m --quiet-status
@@ -55,18 +55,19 @@ one-PR `pollCommand` for each actionable row, which callers may handle independe
 
 For a native stack, `--stack` never performs GitHub mutations; only `--stack --merge` can emit a
 whole-stack merge command for the agent. It never emits rebase or push commands. When any layer is draft, lacks a current one-PR READY
-receipt, conflicts, fails checks, remains pending, or has stale ancestry, the result is `FIX_CODE`
+receipt, conflicts, fails checks, remains pending, or has stale ancestry, the result is `SHEPHERD`
 and its instructions name the affected one-PR Shepherd sessions. The first unready lower layer
 causes each higher open layer to carry `blockedByPr`; review and CI work can proceed concurrently on
 independent layers, but an upper draft must remain draft until every lower layer has a READY receipt.
 A queued stack returns `WAIT`; a terminal READY or fully merged stack returns `CANCEL`. Closed or
-unverified topology returns `ESCALATE` for human direction.
+unverified topology returns `ESCALATE` for human direction only after any other shepherdable layer
+has completed; mixed states return immediate `SHEPHERD` and surface the eventual human blocker.
 
 With `--stack --merge`, a fully verified stack returns `MERGE` with a `gh stack merge` command for
 the agent, then reconciliation continues until every layer merges and returns `CANCEL`. JSON/MCP includes
 the same raw ancestry, routing context, `nextAction`, and instructions that Markdown renders.
 
-The polling flags are `--interval`, `--timeout`, `--debounce`, `--quiet-status`, `--no-quiet-status`, and `--until-terminal`. Their defaults come from `poll.intervalSeconds` (built-in 60), `poll.timeoutSeconds` (270), `poll.debounceSeconds` (60), and `poll.quietStatus` (`false`) in `.pr-shepherdrc.yml`; explicit flags override configuration. Each ordinary `WAIT` tick writes an explicit still-running line to stderr unless quiet status is enabled; the final action remains the only stdout result. `--debounce` (`0` disables) is a settle window after the first `FIX_CODE`. Iterate flags are `--ready-delay`, `--stall-timeout`, `--merge`, `--no-auto-mark-ready`, `--format`, and `--verbose`. The legacy `--no-auto-cancel-actionable` flag remains accepted as a no-op. Durations accept `s`, `m`, and `h`; bare polling durations are seconds and bare iterate durations are minutes.
+The polling flags are `--interval`, `--timeout`, `--debounce`, `--quiet-status`, `--no-quiet-status`, and `--until-terminal`. Their defaults come from `poll.intervalSeconds` (built-in 60), `poll.timeoutSeconds` (270), `poll.debounceSeconds` (60), and `poll.quietStatus` (`false`) in `.pr-shepherdrc.yml`; explicit flags override configuration. Each ordinary `WAIT` tick writes an explicit still-running line to stderr unless quiet status is enabled; the final action remains the only stdout result. `--debounce` (`0` disables) is a settle window after the first `FIX_CODE` or stack-level `SHEPHERD`. Iterate flags are `--ready-delay`, `--stall-timeout`, `--merge`, `--no-auto-mark-ready`, `--format`, and `--verbose`. The legacy `--no-auto-cancel-actionable` flag remains accepted as a no-op. Durations accept `s`, `m`, and `h`; bare polling durations are seconds and bare iterate durations are minutes.
 
 `admin clean` removes local state and `admin log-file` prints the append-only debug log path. They are shell administration commands, not MCP tools.
 
@@ -97,4 +98,4 @@ MCP clients own polling recurrence. Do not call a long-running polling tool: cal
 
 `poll`, `resolve`, `build-suggestion-patch`, `commit-suggestion`, `mark-files-as-viewed`, `journal`, `clean`, and `log-file` are deprecated CLI aliases or adapters. Prefer MCP `iterate`, `apply`, and `build_suggestion_patches` for agent integrations.
 
-All CLI commands honor `--help`/`-h` before I/O. Iterate/poll PR outcomes use exit codes `0` and `10`–`15`; command, validation, and GitHub failures use `sysexits.h` codes. See [exit-codes.md](exit-codes.md).
+All CLI commands honor `--help`/`-h` before I/O. Iterate/poll PR outcomes use exit codes `0` and `10`–`16`; command, validation, and GitHub failures use `sysexits.h` codes. See [exit-codes.md](exit-codes.md).

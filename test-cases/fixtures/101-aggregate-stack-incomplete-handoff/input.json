@@ -2,8 +2,8 @@
   "description": "After a lower layer has a READY receipt, an upper layer without one remains a required one-PR handoff; aggregate success cannot stop early.",
   "mode": "aggregate",
   "args": ["--stack", "https://github.com/owner/repo/pull/382", "--debounce", "0s"],
-  "expectedExitCode": 12,
-  "expectedNextAction": "fix_code",
+  "expectedExitCode": 16,
+  "expectedNextAction": "shepherd",
   "expectedReason": "actionable",
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 382, "stackNumber": 39, "stackSize": 2 },

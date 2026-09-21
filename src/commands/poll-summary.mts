@@ -125,7 +125,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
         : last.prs.some((item) => ["escalate", "merge", "mark_ready"].includes(item.action));
     const hasFix =
       last.selection.kind === "stack"
-        ? last.nextAction === "fix_code" && last.reason !== "waiting"
+        ? last.nextAction === "shepherd" && last.reason !== "waiting"
         : last.prs.some((item) => item.action === "fix_code");
     const warning = await aggregateQuotaWarning(last, quotaBands, opts.intervalSeconds);
     if (warning) pendingQuotaWarning = warning;

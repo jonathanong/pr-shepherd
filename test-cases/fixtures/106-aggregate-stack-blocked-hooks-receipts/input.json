@@ -2,8 +2,8 @@
   "description": "READY receipts do not make outside-queue BLOCKED or HAS_HOOKS stack layers mergeable; each is routed back to its one-PR session.",
   "mode": "aggregate",
   "args": ["--stack", "https://github.com/owner/repo/pull/443", "--debounce", "0s"],
-  "expectedExitCode": 12,
-  "expectedNextAction": "fix_code",
+  "expectedExitCode": 16,
+  "expectedNextAction": "shepherd",
   "expectedReason": "actionable",
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 443, "stackNumber": 44, "stackSize": 3 },

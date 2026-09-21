@@ -2,8 +2,8 @@
   "description": "Disabling automatic draft readiness does not escalate a concrete CI failure: the failing draft remains a bounded one-PR FIX_CODE session.",
   "mode": "aggregate",
   "args": ["--stack", "https://github.com/owner/repo/pull/431", "--no-auto-mark-ready", "--debounce", "0s"],
-  "expectedExitCode": 12,
-  "expectedNextAction": "fix_code",
+  "expectedExitCode": 16,
+  "expectedNextAction": "shepherd",
   "expectedReason": "actionable",
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 431, "stackNumber": 43, "stackSize": 1 },

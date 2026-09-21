@@ -2,8 +2,8 @@
   "description": "A conflicting lower layer blocks a READY-receipted child; stack reconciliation routes only the parent to its authoritative one-PR session.",
   "mode": "aggregate",
   "args": ["--stack", "https://github.com/owner/repo/pull/312", "--debounce", "0s"],
-  "expectedExitCode": 12,
-  "expectedNextAction": "fix_code",
+  "expectedExitCode": 16,
+  "expectedNextAction": "shepherd",
   "expectedReason": "actionable",
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 312, "stackNumber": 32, "stackSize": 2 },

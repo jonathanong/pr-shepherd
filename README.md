@@ -36,7 +36,10 @@ Each tick returns exactly one action:
 - `FIX_CODE` — agent work is required; complete it, push when needed, then continue polling. Push access to the PR head branch is a usage precondition.
 - `MERGE` — run the emitted head-pinned auto-merge or queue command. Ordinary merges include a plain-merge fallback; queue merges include a GraphQL enqueue fallback. GitHub is authoritative for the result and reports any authorization failure.
 - `CANCEL` — stop polling because the PR merged, closed, or completed its ready-delay.
-- `ESCALATE` — stop polling until a human provides direction.
+- `ESCALATE` — stop polling until a human provides direction. Native stacks reach this only after their autonomous one-PR sessions are exhausted.
+
+Native-stack summaries additionally use stack-level `SHEPHERD`: run the listed one-PR sessions,
+then recheck the stack. It is not a per-PR `FIX_CODE` action.
 
 Example shape:
 
@@ -79,7 +82,7 @@ Conversations Resolved: No [Not Required]
 9. `[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run review mutations using the pushed commit SHA and iterate immediately with the same options; without code changes, complete the authorized review mutations and iterate immediately.
 ```
 
-See [docs/actions.md](docs/actions.md) for the complete output contract and [docs/escalations.md](docs/escalations.md) for the exact finite human-handoff boundary. Iterate/poll PR outcomes use exit codes `0` and `10`–`15`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).
+See [docs/actions.md](docs/actions.md) for the complete output contract and [docs/escalations.md](docs/escalations.md) for the exact finite human-handoff boundary. Iterate/poll PR outcomes use exit codes `0` and `10`–`16`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).
 
 ## Workflow Assumptions
 
@@ -129,7 +132,7 @@ pr-shepherd 42                         # poll until non-WAIT or timeout
 pr-shepherd 42 --interval 60s --timeout 270s
 pr-shepherd 42 --quiet-status          # print only changed WAIT status snapshots
 pr-shepherd 42 --until-terminal        # continue through WAIT/MARK_READY until work or terminal state
-pr-shepherd 42 --debounce 5m           # wait 5m after first FIX_CODE, then return one batched tick
+pr-shepherd 42 --debounce 5m           # wait 5m after first FIX_CODE or stack SHEPHERD, then return one batched tick
 pr-shepherd 42 --ready-delay 15m
 pr-shepherd 42 --merge                  # request head-pinned auto-merge/queue; GitHub reports the result
 pr-shepherd iterate 42                 # single tick
@@ -146,12 +149,13 @@ configured GraphQL quota-warning band. Explicit PR sets give each actionable row
 
 Native-stack rows are ordered bottom-to-top. `--stack` never performs a mutation itself; only
 `--stack --merge` can emit a complete-stack merge command for the agent. An unready layer (draft, missing a READY
-receipt, conflicting, failing, or stale) returns `FIX_CODE` with one-PR Shepherd instructions for
+receipt, conflicting, failing, or stale) returns stack-level `SHEPHERD` with one-PR Shepherd instructions for
 the affected layers. A draft or other unready lower layer marks every higher open layer with
 `blockedByPr`; review and CI sessions on independent layers may proceed concurrently, but an upper
 draft cannot transition to ready until every lower layer has its READY receipt. A queued stack
 returns `WAIT`. A terminal READY or fully merged stack returns `CANCEL`. Closed or unverified
-topology returns `ESCALATE` for human direction.
+topology returns `ESCALATE` for human direction after any other shepherdable PRs are handled;
+until then, `SHEPHERD` remains the immediate action and lists the human blockers too.
 
 With `--stack --merge`, a fully reconciled and READY stack returns `MERGE` with a `gh stack merge`
 command for the agent to run, checking and installing the optional `github/gh-stack` extension first

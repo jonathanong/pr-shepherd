@@ -3,8 +3,8 @@
   "description": "Live GitHub stack #514 with --merge: #507 and #508 are merged, but #518's CLEAN PR base is stale. Aggregate routes the stale child to its one-PR session and never merges a ready prefix or prescribes a rebase.",
   "args": ["--stack", "https://github.com/jonathanong/auto-harness/pull/518", "--debounce", "0s", "--merge"],
   "expectedReason": "actionable",
-  "expectedExitCode": 12,
-  "expectedNextAction": "fix_code",
+  "expectedExitCode": 16,
+  "expectedNextAction": "shepherd",
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 518, "stackNumber": 514, "stackSize": 5 },
     "stackAncestry": [

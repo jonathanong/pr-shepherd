@@ -92,6 +92,54 @@ describe("aggregate poll recurrence", () => {
     await expect(runAggregatePoll(opts)).resolves.toMatchObject({ reason: "actionable" });
   });
 
+  it("returns stack SHEPHERD immediately when debounce is disabled", async () => {
+    mockFetch.mockResolvedValue({
+      selection: { kind: "stack", anchor: 43, stackNumber: 1, stackSize: 2 },
+      prs: [
+        { ...row(42, "fix_code"), stack: { number: 1, size: 2, position: 1, baseRefName: "main" } },
+        { ...row(43, "fix_code"), stack: { number: 1, size: 2, position: 2, baseRefName: "main" } },
+      ],
+    });
+
+    await expect(
+      runAggregatePoll({
+        ...opts,
+        prNumbers: [],
+        stackPrNumber: 43,
+        debounceSeconds: 0,
+        untilTerminal: true,
+      }),
+    ).resolves.toMatchObject({ reason: "actionable", nextAction: "shepherd" });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("debounces stack SHEPHERD until the configured window elapses", async () => {
+    let now = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    mockSleep.mockImplementation(async (milliseconds) => {
+      now += milliseconds;
+    });
+    mockFetch.mockResolvedValue({
+      selection: { kind: "stack", anchor: 43, stackNumber: 1, stackSize: 2 },
+      prs: [
+        { ...row(42, "fix_code"), stack: { number: 1, size: 2, position: 1, baseRefName: "main" } },
+        { ...row(43, "fix_code"), stack: { number: 1, size: 2, position: 2, baseRefName: "main" } },
+      ],
+    });
+
+    await expect(
+      runAggregatePoll({
+        ...opts,
+        prNumbers: [],
+        stackPrNumber: 43,
+        debounceSeconds: 60,
+        untilTerminal: true,
+      }),
+    ).resolves.toMatchObject({ reason: "actionable", nextAction: "shepherd" });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(mockSleep).toHaveBeenCalledWith(60_000);
+  });
+
   it("returns immediate mark-ready work without debouncing", async () => {
     mockFetch.mockResolvedValue({
       selection: { kind: "prs", requested: [42] },

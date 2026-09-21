@@ -1,15 +1,24 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { PollSummaryItem, PollSummaryResult, ShepherdAction } from "../types.mts";
+import type {
+  PollSummaryItem,
+  PollSummaryResult,
+  ShepherdAction,
+  StackNextAction,
+} from "../types.mts";
 import { emitPollSummaryResult } from "./poll-summary-emitter.mts";
 
-function result(action: ShepherdAction, reasons: string[] = [action]): PollSummaryResult {
+function result(
+  action: ShepherdAction | StackNextAction,
+  reasons: string[] = [action],
+): PollSummaryResult {
+  const rowAction: ShepherdAction = action === "shepherd" ? "fix_code" : action;
   const row: PollSummaryItem = {
     pr: 42,
     repo: "acme/widgets",
     title: "Widgets",
     url: "https://github.com/acme/widgets/pull/42",
-    action,
+    action: rowAction,
     reasons,
     state: action === "cancel" ? "MERGED" : "OPEN",
     mergeable: "MERGEABLE",
@@ -44,6 +53,7 @@ describe("emitPollSummaryResult", () => {
 
   it.each([
     ["escalate", 13, undefined],
+    ["shepherd", 16, undefined],
     ["fix_code", 12, undefined],
     ["merge", 15, undefined],
     ["mark_ready", 11, undefined],
@@ -52,7 +62,12 @@ describe("emitPollSummaryResult", () => {
     ["cancel", 0, ["merged"]],
   ] as const)("maps %s to its aggregate exit code", (action, code, reasons) => {
     vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-    emitPollSummaryResult(result(action, reasons ? [...reasons] : undefined), { format: "text" });
+    const value = result(action, reasons ? [...reasons] : undefined);
+    if (action === "shepherd") {
+      value.selection = { kind: "stack", anchor: 42, stackNumber: 7, stackSize: 1 };
+      value.nextAction = "shepherd";
+    }
+    emitPollSummaryResult(value, { format: "text" });
     expect(process.exitCode).toBe(code);
   });
 

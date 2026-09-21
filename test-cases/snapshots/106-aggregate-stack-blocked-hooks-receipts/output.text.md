@@ -1,6 +1,6 @@
 # Poll summary [ACTIONABLE]
 
-**repo** `owner/repo` · **selection** stack #44 anchored at PR #443 (3 PRs) · **mode** `summary` · **stack mergeable** `false` · **next action** `fix_code`
+**repo** `owner/repo` · **selection** stack #44 anchored at PR #443 (3 PRs) · **mode** `summary` · **stack mergeable** `false` · **next action** `shepherd`
 
 ## Pull requests
 

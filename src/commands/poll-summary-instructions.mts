@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import { buildQuotaAwareContinuation } from "../quota-warning.mts";
-import type { PollSummaryItem, PollSummaryResult, ShepherdAction } from "../types.mts";
+import type { PollSummaryItem, PollSummaryResult, StackNextAction } from "../types.mts";
 import { explicitInstructions } from "./poll-summary-explicit-instructions.mts";
 
 /** Keep aggregate JSON, Markdown, and MCP instructions on one projection. */
@@ -75,7 +75,7 @@ export function withPollSummaryInstructions(
   };
   const planned = planStack(projected, mergeRequested);
   const instructions = [...planned.instructions];
-  if (result.quotaWarning && planned.action === "fix_code") {
+  if (result.quotaWarning && planned.action === "shepherd") {
     instructions.push(
       buildQuotaAwareContinuation(
         result.quotaWarning,
@@ -100,7 +100,7 @@ export function withPollSummaryInstructions(
 }
 
 interface StackPlan {
-  action: Extract<ShepherdAction, "fix_code" | "wait" | "merge" | "cancel" | "escalate">;
+  action: StackNextAction;
   stackMergeable: boolean;
   waiting?: boolean;
   instructions: string[];
@@ -128,20 +128,21 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
   if (closedDependencyPr || unverifiedLayer || escalated.length > 0) {
     const instructions: string[] = [];
     appendAutonomousInstructions(instructions, runnableCandidates);
+    const stop = runnableCandidates.length === 0;
     if (closedDependencyPr) {
       instructions.push(
-        `${instructions.length + 1}. PR #${closedDependencyPr.pr} was closed without merging below an open layer. Stop and ask the stack owner whether to restore that dependency or rebuild the upper branches.`,
+        `${instructions.length + 1}. PR #${closedDependencyPr.pr} was closed without merging below an open layer. ${stop ? "Stop and ask" : "After autonomous shepherding, ask"} the stack owner whether to restore that dependency or rebuild the upper branches.`,
       );
     }
     if (unverifiedLayer && unverifiedLayer.pr !== closedDependencyPr?.pr) {
       instructions.push(
-        `${instructions.length + 1}. PR #${unverifiedLayer.pr} has state \`${unverifiedLayer.state}\` rather than open or merged. Stop and ask the stack owner to reconcile this layer before declaring the stack complete.`,
+        `${instructions.length + 1}. PR #${unverifiedLayer.pr} has state \`${unverifiedLayer.state}\` rather than open or merged. ${stop ? "Stop and ask" : "After autonomous shepherding, ask"} the stack owner to reconcile this layer before declaring the stack complete.`,
       );
     }
     for (const item of escalated) {
       if (item.pr === closedDependencyPr?.pr || item.pr === unverifiedLayer?.pr) continue;
       instructions.push(
-        `${instructions.length + 1}. PR #${item.pr} requires human action (${item.reasons.join(", ")}). Complete that decision before declaring the stack ready.`,
+        `${instructions.length + 1}. PR #${item.pr} requires human action (${item.reasons.join(", ")}). ${stop ? "Stop for that decision." : "Keep shepherding other PRs before the handoff."}`,
       );
     }
     for (const item of missingCommands) {
@@ -149,7 +150,12 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
         `${instructions.length + 1}. PR #${item.pr} needs a one-PR session, but Shepherd could not produce its command. Ask for direction.`,
       );
     }
-    return { action: "escalate", stackMergeable: false, instructions };
+    if (runnableCandidates.length > 0) {
+      instructions.push(
+        `${instructions.length + 1}. After the listed one-PR sessions, rerun this same \`--stack\` selector. Stop for the human handoff only when no autonomous shepherding remains.`,
+      );
+    }
+    return { action: stop ? "escalate" : "shepherd", stackMergeable: false, instructions };
   }
 
   if (open.length === 0) {
@@ -166,11 +172,16 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
       appendAutonomousInstructions(instructions, runnableCandidates);
       for (const item of missingCommands) {
         instructions.push(
-          `${instructions.length + 1}. PR #${item.pr} needs a one-PR session, but Shepherd could not produce its command. Stop and ask for direction.`,
+          `${instructions.length + 1}. PR #${item.pr} needs a one-PR session, but Shepherd could not produce its command. ${runnableCandidates.length === 0 ? "Stop and ask" : "After autonomous shepherding, ask"} for direction.`,
+        );
+      }
+      if (runnableCandidates.length > 0) {
+        instructions.push(
+          `${instructions.length + 1}. After the listed one-PR sessions, rerun this same \`--stack\` selector. Stop for the human handoff only when no autonomous shepherding remains.`,
         );
       }
       return {
-        action: "escalate",
+        action: runnableCandidates.length > 0 ? "shepherd" : "escalate",
         stackMergeable: false,
         instructions,
       };
@@ -180,7 +191,7 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
     instructions.push(
       `${instructions.length + 1}. After the selected one-PR sessions, rerun this same \`--stack\` selector.`,
     );
-    return { action: "fix_code", stackMergeable: false, instructions };
+    return { action: "shepherd", stackMergeable: false, instructions };
   }
 
   if (open.some((item) => item.isInMergeQueue)) {
@@ -212,7 +223,7 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
       `${instructions.length + 1}. After the selected one-PR sessions, rerun this same \`--stack\` selector.`,
     );
     return {
-      action: "fix_code",
+      action: "shepherd",
       stackMergeable,
       instructions,
     };

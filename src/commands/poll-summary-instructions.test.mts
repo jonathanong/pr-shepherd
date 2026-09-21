@@ -53,7 +53,7 @@ describe("native-stack reconciliation", () => {
   it("requires one-PR completion receipts, not apparently clean GitHub rows", () => {
     const result = withPollSummaryInstructions(stack([row(1, 1), row(2, 2), row(3, 3)]), false);
     expect(result).toMatchObject({
-      nextAction: "fix_code",
+      nextAction: "shepherd",
       stackMergeable: false,
       reason: "actionable",
     });
@@ -93,7 +93,7 @@ describe("native-stack reconciliation", () => {
       stack([row(1, 1, { readyReceipt: true, stack: undefined })]),
       false,
     );
-    expect(result).toMatchObject({ nextAction: "fix_code", stackMergeable: false });
+    expect(result).toMatchObject({ nextAction: "shepherd", stackMergeable: false });
     expect(result.prs[0]).toMatchObject({ action: "fix_code" });
   });
 
@@ -105,7 +105,7 @@ describe("native-stack reconciliation", () => {
       stack([row(1, 1, { readyReceipt: true, isInMergeQueue: true, ...override })]),
       true,
     );
-    expect(result).toMatchObject({ nextAction: "fix_code", stackMergeable: false });
+    expect(result).toMatchObject({ nextAction: "shepherd", stackMergeable: false });
     expect(result.prs[0]).toMatchObject({ action: "fix_code" });
   });
 
@@ -128,7 +128,7 @@ describe("native-stack reconciliation", () => {
     "never returns CANCEL for %s outside the queue",
     (_name, changes) => {
       const result = withPollSummaryInstructions(stack([row(1, 1, changes)]), false);
-      expect(result.nextAction).toBe("fix_code");
+      expect(result.nextAction).toBe("shepherd");
       expect(result.nextAction).not.toBe("cancel");
     },
   );
@@ -142,7 +142,7 @@ describe("native-stack reconciliation", () => {
       ]),
       false,
     );
-    expect(result).toMatchObject({ nextAction: "fix_code", stackMergeable: false });
+    expect(result).toMatchObject({ nextAction: "shepherd", stackMergeable: false });
     expect(result.prs[1]?.blockedByPr).toBe(1);
     expect(result.prs[2]?.blockedByPr).toBe(1);
     expect(result.instructions?.join("\n")).toContain("PR #1");
@@ -176,7 +176,7 @@ describe("native-stack reconciliation", () => {
       ]),
       false,
     );
-    expect(result.nextAction).toBe("fix_code");
+    expect(result.nextAction).toBe("shepherd");
     expect(result.prs[2]?.blockedByPr).toBe(1);
     expect(result.instructions?.join("\n")).not.toContain("gh stack rebase");
   });
@@ -198,12 +198,12 @@ describe("native-stack reconciliation", () => {
       ]),
       false,
     );
-    expect(result).toMatchObject({ nextAction: "fix_code", stackMergeable: false });
+    expect(result).toMatchObject({ nextAction: "shepherd", stackMergeable: false });
     expect(result.prs[0]?.action).toBe("fix_code");
     expect(result.instructions?.join("\n")).toContain("PR #1");
   });
 
-  it("lets a row ESCALATE dominate while retaining another row's autonomous work", () => {
+  it("surfaces a row ESCALATE while shepherding another row's autonomous work", () => {
     const result = withPollSummaryInstructions(
       stack([
         row(1, 1, {
@@ -219,9 +219,30 @@ describe("native-stack reconciliation", () => {
       ]),
       false,
     );
-    expect(result).toMatchObject({ nextAction: "escalate", stackMergeable: false });
+    expect(result).toMatchObject({ nextAction: "shepherd", stackMergeable: false });
+    expect(result.prs.map((item) => item.action)).toEqual(["escalate", "fix_code"]);
     expect(result.instructions?.join("\n")).toContain("PR #1");
     expect(result.instructions?.join("\n")).toContain("PR #2");
+    expect(result.instructions?.join("\n")).toContain("rerun this same `--stack` selector");
+  });
+
+  it("keeps a pure human ESCALATE terminal when no autonomous session remains", () => {
+    const result = withPollSummaryInstructions(
+      stack([
+        row(1, 1, {
+          action: "escalate",
+          reasons: ["mark-ready-authorization-required"],
+          isDraft: true,
+          pollCommand: undefined,
+        }),
+        row(2, 2, { action: "cancel", readyReceipt: true }),
+      ]),
+      false,
+    );
+
+    expect(result.nextAction).toBe("escalate");
+    expect(result.instructions?.join("\n")).toContain("PR #1 requires human action");
+    expect(result.instructions?.join("\n")).not.toContain("rerun this same `--stack` selector");
   });
 
   it("keeps available one-PR routes when a human decision and a missing command coexist", () => {
@@ -237,10 +258,11 @@ describe("native-stack reconciliation", () => {
       ]),
       false,
     );
-    expect(result.nextAction).toBe("escalate");
+    expect(result.nextAction).toBe("shepherd");
     expect(result.instructions?.join("\n")).toContain("pull/3 --until-terminal");
     expect(result.instructions?.join("\n")).toContain("PR #2 needs a one-PR session");
     expect(result.instructions?.join("\n")).toContain("PR #1 requires human action");
+    expect(result.instructions?.join("\n")).toContain("rerun this same `--stack` selector");
   });
 
   it("routes stale ancestry to a one-PR session", () => {
@@ -255,7 +277,7 @@ describe("native-stack reconciliation", () => {
       ),
       false,
     );
-    expect(result.nextAction).toBe("fix_code");
+    expect(result.nextAction).toBe("shepherd");
     expect(result.instructions?.join("\n")).toContain("PR #3");
     expect(result.instructions?.join("\n")).not.toContain("gh stack push");
   });
@@ -361,7 +383,7 @@ describe("native-stack reconciliation", () => {
       ]),
       false,
     );
-    expect(result.nextAction).toBe("fix_code");
+    expect(result.nextAction).toBe("shepherd");
     expect(result.instructions?.join("\n")).toContain("PR #3");
   });
 
@@ -378,7 +400,7 @@ describe("native-stack reconciliation", () => {
       ]),
       true,
     );
-    expect(result).toMatchObject({ nextAction: "fix_code", stackMergeable: false });
+    expect(result).toMatchObject({ nextAction: "shepherd", stackMergeable: false });
     expect(result.prs[0]?.action).toBe("wait");
     expect(result.instructions?.join("\n")).toContain("pull/1 --timeout 1s");
     expect(result.instructions?.join("\n")).not.toContain("human action");
@@ -400,16 +422,31 @@ describe("native-stack reconciliation", () => {
       },
       false,
     );
-    expect(result.nextAction).toBe("fix_code");
+    expect(result.nextAction).toBe("shepherd");
     expect(result.nextAction).not.toBe("escalate");
   });
 
-  it("escalates an unready layer when no one-PR command is available", () => {
+  it("shepherds available sessions even when another unready layer has no command", () => {
     const result = withPollSummaryInstructions(
       stack([row(1, 1, { pollCommand: undefined }), row(2, 2), row(3, 3)]),
       false,
     );
+    expect(result).toMatchObject({ nextAction: "shepherd", stackMergeable: false });
+    expect(result.instructions?.join("\n")).toContain("could not produce its command");
+    expect(result.instructions?.join("\n")).toContain("pull/2 --until-terminal");
+  });
+
+  it("escalates when no unready layer has a one-PR command", () => {
+    const result = withPollSummaryInstructions(
+      stack([
+        row(1, 1, { pollCommand: undefined }),
+        row(2, 2, { pollCommand: undefined }),
+        row(3, 3, { pollCommand: undefined }),
+      ]),
+      false,
+    );
     expect(result).toMatchObject({ nextAction: "escalate", stackMergeable: false });
     expect(result.instructions?.join("\n")).toContain("could not produce its command");
+    expect(result.instructions?.join("\n")).not.toContain("rerun this same `--stack` selector");
   });
 });

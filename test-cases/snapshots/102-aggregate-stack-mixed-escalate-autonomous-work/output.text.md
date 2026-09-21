@@ -1,6 +1,6 @@
 # Poll summary [ACTIONABLE]
 
-**repo** `owner/repo` · **selection** stack #40 anchored at PR #403 (3 PRs) · **mode** `summary` · **stack mergeable** `false` · **next action** `escalate`
+**repo** `owner/repo` · **selection** stack #40 anchored at PR #403 (3 PRs) · **mode** `summary` · **stack mergeable** `false` · **next action** `shepherd`
 
 ## Pull requests
 
@@ -26,4 +26,5 @@
 2. Run `pr-shepherd https://github.com/owner/repo/pull/402 --until-terminal` for PR #402 (stack-blocked by PR #401).
 3. Run `pr-shepherd https://github.com/owner/repo/pull/403 --until-terminal` for PR #403 (stack-blocked by PR #401).
 4. Keep upper draft PRs in draft until every lower layer has completed Shepherd READY.
-5. PR #401 requires human action (mark-ready-authorization-required). Complete that decision before declaring the stack ready.
+5. PR #401 requires human action (mark-ready-authorization-required). Keep shepherding other PRs before the handoff.
+6. After the listed one-PR sessions, rerun this same `--stack` selector. Stop for the human handoff only when no autonomous shepherding remains.

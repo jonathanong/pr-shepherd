@@ -1,9 +1,9 @@
 {
-  "description": "A human-only escalation in one stack layer ends the aggregate session, while independent FIX_CODE and WAIT row evidence remains surfaced for follow-up one-PR Shepherd sessions.",
+  "description": "A human escalation coexists with independent FIX_CODE and WAIT row work; the aggregate dispatches Shepherd sessions first while retaining the human-action evidence for the next stack poll.",
   "mode": "aggregate",
   "args": ["--stack", "https://github.com/owner/repo/pull/403", "--debounce", "0s"],
-  "expectedExitCode": 13,
-  "expectedNextAction": "escalate",
+  "expectedExitCode": 16,
+  "expectedNextAction": "shepherd",
   "expectedReason": "actionable",
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 403, "stackNumber": 40, "stackSize": 3 },

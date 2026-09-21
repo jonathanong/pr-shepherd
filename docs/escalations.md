@@ -2,8 +2,9 @@
 
 `ESCALATE` is Shepherd's explicit human-handoff action. For a singular PR it uses the closed trigger
 union below. Native-stack aggregate reconciliation remains read-only: autonomous unready layers
-return `FIX_CODE`, queued stacks return `WAIT`, and terminal READY or merged stacks return `CANCEL`.
-Aggregate `ESCALATE` is reserved for genuine human decisions such as closed or unverified topology.
+return stack-level `SHEPHERD`, queued stacks return `WAIT`, and terminal READY or merged stacks return `CANCEL`.
+Aggregate `ESCALATE` is reserved for genuine human decisions such as closed or unverified topology,
+after no autonomous one-PR Shepherd session remains.
 Aggregate mode never performs a mutation; a fully READY `--stack --merge` result emits an agent-run
 whole-stack merge command.
 
@@ -67,11 +68,12 @@ Failing queue CI is actionable and therefore stays `FIX_CODE`; it does not trigg
 
 Native-stack membership is not an escalation. When a one-PR `--merge` poll reaches its ready delay, it writes the layer's READY receipt and returns non-terminal `FIX_CODE` with `pr-shepherd --stack <PR URL> --until-terminal --merge`. This applies at every position, including position 1: `--auto` is rejected server-side on stacked PRs, and a plain `gh pr merge` fallback would land a mid-stack layer into its still-unmerged parent rather than the stack trunk.
 
-The aggregate selector reconciles every open layer's READY receipt and linear ancestry, then returns `FIX_CODE` for autonomous unready work, `WAIT` for a queued stack, `MERGE` with a whole-stack command when every layer is READY, `CANCEL` after every layer merges, and `ESCALATE` only for a genuine human decision. It never performs a mutation or proposes a partial-stack merge.
+The aggregate selector reconciles every open layer's READY receipt and linear ancestry, then returns stack-level `SHEPHERD` for autonomous unready work, `WAIT` for a queued stack, `MERGE` with a whole-stack command when every layer is READY, `CANCEL` after every layer merges, and `ESCALATE` only for a genuine human decision after autonomous sessions are exhausted. It never performs a mutation or proposes a partial-stack merge.
 
 For aggregate `--stack` polling, an unready lower layer blocks every upper layer from becoming ready,
 while independent review and CI sessions may proceed concurrently. Closed or unverified topology
-returns `ESCALATE` for human direction. If `--stack --merge` finds every layer fully READY and
+is surfaced during `SHEPHERD` when another layer can still proceed; otherwise it returns `ESCALATE`
+for human direction. If `--stack --merge` finds every layer fully READY and
 linear, it returns `MERGE` with `GH_REPO=<owner/repo> gh stack merge --yes --squash <stack-number>`
 for the agent to run; rerun the same selector until all layers merge and it returns `CANCEL`.
 
@@ -89,6 +91,8 @@ A changed fingerprint resets the timer. Disabling the timeout refreshes state an
 ## Non-escalating outcomes
 
 - `FIX_CODE` is always non-terminal: perform the emitted work and iterate immediately.
+- Stack-level `SHEPHERD` is always non-terminal: complete the listed one-PR sessions and reselect
+  the stack before any remaining human handoff.
 - Closed or merged PRs return `CANCEL`, not `ESCALATE`.
 - Ordinary non-force pushes do not produce `authorization-required`.
 - Missing-location threads and unauthorized review mutations are surfaced/logged once and skipped.
