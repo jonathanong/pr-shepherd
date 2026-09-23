@@ -80,7 +80,9 @@ async function runConflictIterate(): Promise<ReturnType<typeof runIterate>> {
     remainingSeconds: 600,
   });
   const result = await runIterate(makeOpts());
-  expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo");
+  expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
+    retainElapsed: false,
+  });
   return result;
 }
 

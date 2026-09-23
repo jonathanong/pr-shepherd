@@ -24,7 +24,10 @@ vi.mock("node:child_process", () => ({
 }));
 
 vi.mock("../../src/commands/check.mts", () => ({ runCheck: vi.fn() }));
-vi.mock("../../src/commands/ready-delay.mts", () => ({ updateReadyDelay: vi.fn() }));
+vi.mock("../../src/commands/ready-delay.mts", () => ({
+  updateReadyDelay: vi.fn(),
+  clearReadyDelay: vi.fn(),
+}));
 vi.mock("../../src/github/client.mts", () => ({
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
 }));

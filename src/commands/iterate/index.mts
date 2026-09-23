@@ -1,15 +1,10 @@
 /* eslint-disable max-lines */
 import { runCheck } from "../check.mts";
-import { updateReadyDelay } from "../ready-delay.mts";
+import { clearReadyDelay, updateReadyDelay } from "../ready-delay.mts";
 import { getCurrentPrNumber } from "../../github/client.mts";
 import { loadConfig } from "../../config/load.mts";
 import { EXIT, ShepherdError } from "../../exit-codes.mts";
-import {
-  getCurrentHeadSha,
-  buildWaitLog,
-  buildTerminalCancelResult,
-  blockedCancelNote,
-} from "./helpers.mts";
+import { buildWaitLog, buildTerminalCancelResult, blockedCancelNote } from "./helpers.mts";
 import { classifyReviewSummaries } from "./classify.mts";
 import { applyStallGuard } from "./stall.mts";
 import { clearStallState } from "../../state/iterate-stall.mts";
@@ -134,15 +129,20 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     !hasActionableWork &&
     !activeMerge &&
     staleAncestry === null;
+  const needsStackReceipt = report.mergeStatus.mergeRequirements?.stack !== undefined;
+  // A native-stack layer keeps its elapsed marker until its READY receipt is
+  // written, so a failed receipt write retries next tick instead of restarting
+  // the whole delay.
   const readyState = await updateReadyDelay(
     report.pr,
     isCleanReadyState,
     readyDelaySeconds,
     repoOwner,
     repoName,
+    { retainElapsed: needsStackReceipt },
   );
 
-  if (report.mergeStatus.mergeRequirements?.stack) {
+  if (needsStackReceipt) {
     await invalidateStaleReadyReceipt(
       { owner: repoOwner, repo: repoName, pr: report.pr },
       report,
@@ -152,7 +152,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
 
   const base = buildIterateBase(report, readyState);
 
-  const headSha = (await getCurrentHeadSha()) ?? "unknown";
+  const headSha = report.headSha ?? "unknown";
 
   // Checks (including merge-queue synthetic-commit checks) and hard conflicts are signals
   // GitHub itself is already acting on — the queue will eject the PR for these regardless of
@@ -240,7 +240,6 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
   if (markReadyResult) return markReadyResult;
 
   if (readyState.shouldCancel && !report.mergeStatus.isDraft) {
-    const needsStackReceipt = report.mergeStatus.mergeRequirements?.stack !== undefined;
     const receiptWritten = needsStackReceipt
       ? await recordReadyReceipt({ owner: repoOwner, repo: repoName, pr: report.pr }, report)
       : true;
@@ -249,7 +248,6 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
         ...base,
         action: "wait",
         shouldCancel: false,
-        remainingSeconds: readyDelaySeconds,
         log: `WAIT: PR #${base.pr} reached ready-delay but its stack readiness receipt could not be persisted`,
       };
       return applyStallGuard(
@@ -263,6 +261,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
         reviewSummaryIds,
       );
     }
+    if (needsStackReceipt) await clearReadyDelay(report.pr, repoOwner, repoName);
     await clearStallState(stallKey);
     const mergeResult = buildReadyMergeOutcome(opts.merge, true, base, report);
     if (mergeResult) return mergeResult;

@@ -153,7 +153,7 @@ A draft native stack layer this session cannot promote carries `stackDraftHold`.
 
 Applied to ordinary `wait` and `fix_code` after those actions are chosen — not before actionable work, and not on active merge waits, stack drafts held by a named lower layer, `merge`, `cancel`, `mark_ready`, or `escalate`.
 
-Fingerprint: HEAD SHA, action, `status`, `mergeStateStatus`, `state`, `isDraft`, sorted failing-check names + conclusions, sorted actionable thread/comment/review IDs, sorted review-summary minimize IDs. Stored at `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/iterate-stall.json`.
+Fingerprint: PR head SHA from GitHub (not the local checkout), action, `status`, `mergeStateStatus`, `state`, `isDraft`, sorted failing-check names + conclusions, sorted actionable thread/comment/review IDs, sorted review-summary minimize IDs. Stored at `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/iterate-stall.json`.
 
 - Fingerprint matches and `now − firstSeenAt ≥ stallTimeoutSeconds` → `escalate` with trigger `stall-timeout`.
 - Fingerprint matches but within threshold → preserve `firstSeenAt`, keep the original action.

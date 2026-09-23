@@ -82,6 +82,15 @@ export async function updateReadyDelay(
   return { isReady: true, shouldCancel: false, remainingSeconds: remaining };
 }
 
+/** Delete the ready-delay marker once a retained elapsed delay has been consumed. */
+export async function clearReadyDelay(
+  prNumber: number,
+  owner: string,
+  repo: string,
+): Promise<void> {
+  await safeUnlink(readySincePath(prNumber, owner, repo));
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

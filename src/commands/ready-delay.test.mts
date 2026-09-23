@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { join } from "node:path";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { updateReadyDelay } from "./ready-delay.mts";
+import { clearReadyDelay, updateReadyDelay } from "./ready-delay.mts";
 
 const OWNER = "test-owner";
 const REPO = "test-repo";
@@ -70,6 +70,30 @@ describe("updateReadyDelay", () => {
     const second = await updateReadyDelay(PR, true, DELAY, OWNER, REPO);
     expect(second.shouldCancel).toBe(false);
     expect(second.remainingSeconds).toBeGreaterThan(0);
+  });
+
+  it("keeps a retained elapsed marker until clearReadyDelay consumes it", async () => {
+    const past = Math.floor(Date.now() / 1000) - DELAY - 5;
+    const { mkdir, writeFile } = await import("node:fs/promises");
+    await mkdir(join(stateDir, `${OWNER}-${REPO}`, String(PR)), { recursive: true });
+    await writeFile(
+      join(stateDir, `${OWNER}-${REPO}`, String(PR), "ready-since.txt"),
+      String(past),
+    );
+
+    const retain = { retainElapsed: true };
+    expect(await updateReadyDelay(PR, true, DELAY, OWNER, REPO, retain)).toMatchObject({
+      shouldCancel: true,
+    });
+    expect(await updateReadyDelay(PR, true, DELAY, OWNER, REPO, retain)).toMatchObject({
+      shouldCancel: true,
+    });
+
+    await clearReadyDelay(PR, OWNER, REPO);
+
+    const restarted = await updateReadyDelay(PR, true, DELAY, OWNER, REPO, retain);
+    expect(restarted.shouldCancel).toBe(false);
+    expect(restarted.remainingSeconds).toBe(DELAY);
   });
 
   it("resets the countdown when ready-since.txt contains a future timestamp (clock skew)", async () => {

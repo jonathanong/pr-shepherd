@@ -35,6 +35,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
         viewerPermission
       }
       baseRefName
+      baseRefOid
       isInMergeQueue
       ...PrMergePolicy
       autoMergeRequest {

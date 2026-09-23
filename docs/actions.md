@@ -57,7 +57,7 @@ While a PR remains queued, an earlier queue entry advancing its target branch do
 the receipt by itself: Shepherd still requires the same source head and review evidence and checks
 the current merge-group state. A hard `CONFLICTING` or `DIRTY` state invalidates readiness even in
 the queue. A changed base branch name invalidates the receipt; outside the queue, a changed base
-commit also invalidates it. Compact check annotation
+commit (the PR's recorded `baseRefOid`) also invalidates it. Compact check annotation
 counts are part of the receipt evidence, so a late annotation on a completed check sends the layer
 back through its one-PR session.
 An explicit PR set containing a native-stack member still routes that row to an authoritative
@@ -284,7 +284,7 @@ Stops the iterate loop — no further iterations needed.
 
 **Trigger:** Either the PR is merged or closed (`state !== "OPEN"`), or `--merge` is not enabled and the ready-delay timer elapsed after the current sweep still verifies the PR as a READY state. Candidate READY reports get a fresh mergeability read before the timer can complete, so newly detected conflicts route to `fix_code` instead of `cancel`.
 
-**CLI side-effects:** Deletes any stale `ready-since.txt` marker when the PR is merged/closed or when ready-delay elapses. On an open native-stack PR, a fresh compact summary must still confirm READY, non-draft status, current head/base OIDs, and no actionable review or CI before Shepherd persists its READY receipt and returns `CANCEL`; an unreadable snapshot or failed receipt write remains `WAIT`. A later one-PR tick invalidates the receipt when that evidence changes. Aggregate `--stack` uses these receipts but never creates them.
+**CLI side-effects:** Deletes any stale `ready-since.txt` marker when the PR is merged/closed or when ready-delay elapses. On an open native-stack PR, a fresh compact summary must still confirm READY, non-draft status, current head/base OIDs, and no actionable review or CI before Shepherd persists its READY receipt and returns `CANCEL`; the base OID on both sides is the base commit GitHub recorded for the PR, not the base branch's live tip. An unreadable snapshot or failed receipt write remains `WAIT` with `remainingSeconds` 0 and keeps the elapsed marker, so the next tick retries the receipt instead of restarting the ready-delay; the marker is deleted once the receipt is written. A receipt that keeps failing reaches the [stall timeout](escalations.md#stall-timeout). A later one-PR tick invalidates the receipt when that evidence changes. Aggregate `--stack` uses these receipts but never creates them.
 
 **Exit code:** 0 for `reason: "merged"` or `reason: "ready-delay-elapsed"` — these are shepherd's two "finished cleanly" outcomes. 14 for `reason: "closed"` (closed without merging). See [exit-codes.md](exit-codes.md).
 

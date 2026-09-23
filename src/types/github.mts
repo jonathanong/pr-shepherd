@@ -204,7 +204,7 @@ export interface BatchPrData extends BatchPrMergeFields {
   headRepoWithOwner: string | null;
   viewerAuthorization?: ViewerAuthorization;
   baseRefName: string;
-  /** Git OID of the base branch tip observed with this PR, when available. */
+  /** Base commit GitHub recorded for this PR (`PullRequest.baseRefOid`), not the branch's live tip. */
   baseRefOid?: string;
   reviewRequests: Array<{ login: string }>;
   latestReviews: Array<{ login: string; state: string }>;

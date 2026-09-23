@@ -81,7 +81,10 @@ vi.mock("../../src/state/seen-comments.mts", async (importOriginal) => {
     markSeen: vi.fn().mockResolvedValue(undefined),
   };
 });
-vi.mock("../../src/commands/ready-delay.mts", () => ({ updateReadyDelay: vi.fn() }));
+vi.mock("../../src/commands/ready-delay.mts", () => ({
+  updateReadyDelay: vi.fn(),
+  clearReadyDelay: vi.fn(),
+}));
 vi.mock("../../src/state/iterate-stall.mts", () => ({
   readStallState: vi.fn().mockResolvedValue(null),
   writeStallState: vi.fn().mockResolvedValue(undefined),

@@ -84,7 +84,7 @@ for the agent to run; rerun the same selector until all layers merge and it retu
 There are two paths:
 
 - CI-start path: the timeout is enabled, the prospective result is `WAIT`, and an external status context—or a `PENDING`, `QUEUED`, `REQUESTED`, or `WAITING` check run with no start time—remains unstarted for at least the threshold.
-- Stable-state path: the timeout is enabled, the prospective result is `WAIT` or `FIX_CODE`, the stored fingerprint is unchanged, its age is nonnegative, and that age reaches the threshold. The fingerprint covers the action, HEAD, PR/merge/draft state, failing and in-progress checks, actionable item IDs, and actionable annotations.
+- Stable-state path: the timeout is enabled, the prospective result is `WAIT` or `FIX_CODE`, the stored fingerprint is unchanged, its age is nonnegative, and that age reaches the threshold. The fingerprint covers the action, the PR head commit GitHub reports (not the local checkout's `HEAD`), PR/merge/draft state, failing and in-progress checks, actionable item IDs, and actionable annotations.
 
 A changed fingerprint resets the timer. Disabling the timeout refreshes state and never escalates. A native stack draft whose `WAIT` names the lower layer holding it ([held native stack drafts](actions.md#wait)) never reaches either path: its stall state is cleared on every such tick, so its timer restarts only after that lower layer releases it.
 
