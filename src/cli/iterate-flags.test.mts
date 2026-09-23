@@ -11,6 +11,7 @@ type PrShepherdConfig = ReturnType<typeof loadConfig>;
 
 function defaultConfig(): PrShepherdConfig {
   return {
+    cliCommand: ["pr-shepherd"],
     botUsernames: [],
     ignoreChecks: [],
     poll: { intervalSeconds: 60, timeoutSeconds: 270, debounceSeconds: 60, quietStatus: false },

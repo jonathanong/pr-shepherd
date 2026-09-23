@@ -14,6 +14,7 @@ registerHooks();
 describe("fix_code — legacy protected-run configuration", () => {
   it("does not emit cancellation metadata", async () => {
     mockLoadConfig.mockReturnValue({
+      cliCommand: ["pr-shepherd"],
       iterate: {
         fixAttemptsPerThread: 3,
         stallTimeoutMinutes: 60,

@@ -129,6 +129,7 @@ export function registerHooks(): void {
     vi.clearAllMocks();
     mockExecFile.mockResolvedValue({ stdout: "abc1234\n", stderr: "" });
     mockLoadConfig.mockReturnValue({
+      cliCommand: ["pr-shepherd"],
       iterate: {
         fixAttemptsPerThread: 3,
         stallTimeoutMinutes: 60,

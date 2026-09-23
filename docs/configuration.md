@@ -23,6 +23,11 @@ From the repo, the merged result keeps `ignoreChecks` and `stallTimeoutMinutes` 
 ## Example
 
 ```yaml
+cliCommand:
+  - pnpm
+  - exec
+  - pr-shepherd
+
 botUsernames:
   - chatgpt-connector
   - claude
@@ -90,6 +95,7 @@ actions:
 
 | Key                                  | Default                                   | Purpose                                                                                                                                                     |
 | ------------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cliCommand`                         | `["pr-shepherd"]`                         | Argv prefix for every `pr-shepherd` command Shepherd emits; set it when the CLI is a project dependency rather than a global install                        |
 | `botUsernames`                       | Known code-review bot logins              | GitHub logins treated as bots for repeat unresolved-thread visibility even when GitHub reports them as `User` or `Unknown`                                  |
 | `ignoreChecks`                       | `[]`                                      | Case-insensitive globs that exclude check/status contexts from CI decisions and details while retaining their names in the ignored rollup                   |
 | `iterate.fixAttemptsPerThread`       | `3`                                       | Caller-visible `FIX_CODE` deliveries allowed for one unchanged unresolved thread body before the following tick escalates                                   |
@@ -114,6 +120,19 @@ actions:
 | `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR reaches a clean ready state                                                                                               |
 | `actions.neverCancelRuns`            | `[]`                                      | Legacy cancellation-named patterns; matching checks remain visible despite `ignoreChecks`, but Shepherd never cancels runs                                  |
 | `actions.workWhileQueued`            | `false`                                   | When `true`, act on non-CI actionable work immediately even while the PR is in the merge queue, instead of deferring it until the PR leaves the queue       |
+
+## `cliCommand` — default `["pr-shepherd"]`
+
+Argv prefix for every `pr-shepherd` command Shepherd emits: follow-up `--stack` and per-PR session commands, `apply review` and `apply journal` mutations, and commit-suggestion commands, in Markdown, JSON, and MCP output alike. The default assumes `pr-shepherd` is on `PATH`. A repository that pins pr-shepherd as a dependency should set its package-manager launcher so agents run the pinned version instead of whatever global install `PATH` resolves first:
+
+```yaml
+cliCommand:
+  - pnpm
+  - exec
+  - pr-shepherd
+```
+
+The value must be a non-empty list of non-empty strings; any other value is rejected like every other invalid key. Shepherd shell-quotes each launcher argument when it renders command text.
 
 ## `botUsernames`
 

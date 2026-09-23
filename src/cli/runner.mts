@@ -1,10 +1,13 @@
+import { loadConfig } from "../config/load.mts";
+
 interface PrShepherdCommand {
   argv: string[];
   text: string;
 }
 
+/** Every emitted pr-shepherd command starts with the configured `cliCommand` launcher. */
 export function buildPrShepherdCommand(args: string[]): PrShepherdCommand {
-  const argv = ["pr-shepherd", ...args];
+  const argv = [...loadConfig().cliCommand, ...args];
   return { argv, text: renderShellCommand(argv) };
 }
 

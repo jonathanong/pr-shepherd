@@ -1,3 +1,5 @@
+import { buildPrShepherdCommand } from "../cli/runner.mts";
+
 export const SHEPHERD_JOURNAL_SECTION = "Shepherd Journal";
 export const SHEPHERD_JOURNAL_SECTION_PATTERN = /^##\s+Shepherd\s+Journal$/;
 export const SHEPHERD_JOURNAL_DETAILS_OPEN = "<details>";
@@ -17,5 +19,7 @@ export const SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE =
  * of being re-emitted every tick (see CLAUDE.md "Keep skills and loop prompts minimal").
  */
 export function buildShepherdJournalInstruction(prReference: string | number): string {
-  return `For any substantial decision or rejection, append \`- <decision>\` to Shepherd Journal with \`pr-shepherd apply journal ${prReference} '- <decision>'\`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.`;
+  // Single-quote the placeholder so a substituted decision stays literal in the shell.
+  const command = `${buildPrShepherdCommand(["apply", "journal", String(prReference)]).text} '- <decision>'`;
+  return `For any substantial decision or rejection, append \`- <decision>\` to Shepherd Journal with \`${command}\`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.`;
 }

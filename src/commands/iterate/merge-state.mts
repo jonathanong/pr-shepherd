@@ -10,6 +10,8 @@ import type { StackStatus } from "../../types/merge-requirements.mts";
 import { buildEscalateHumanMessage, buildEscalateSuggestion } from "./escalate.mts";
 import { buildMergeCommandPlan } from "./merge.mts";
 import { formatPrUrl } from "../../pr-reference.mts";
+import { buildPrShepherdCommand } from "../../cli/runner.mts";
+import { inlineCode } from "../../util/markdown.mts";
 
 type StallKey = { owner: string; repo: string; pr: number };
 
@@ -37,14 +39,14 @@ function buildStackedRouteResult(
       checks: [],
       changesRequestedReviews: [],
       resolveCommand: {
-        argv: ["pr-shepherd", "apply", "review", prUrl],
+        argv: buildPrShepherdCommand(["apply", "review", prUrl]).argv,
         requiresHeadSha: false,
         requiresDismissMessage: false,
         hasMutations: false,
       },
       instructions: [
         `PR #${report.pr} is layer ${stack.position} of ${stack.size} in native stack #${stack.number}; do not run \`gh pr merge\` for this layer.`,
-        `Run \`pr-shepherd --stack ${prUrl} --until-terminal --merge\` to reconcile the complete stack and run its emitted whole-stack merge command.`,
+        `Run ${inlineCode(buildPrShepherdCommand(["--stack", prUrl, "--until-terminal", "--merge"]).text)} to reconcile the complete stack and run its emitted whole-stack merge command.`,
       ],
       inProgressRunIds: [],
       protectedRuns: [],

@@ -271,6 +271,7 @@ Replace `<version>` with a published version. Full config-file examples, tool sc
 Create `.pr-shepherdrc.yml` in your project root, an ancestor directory, or `$HOME`. Every file on the walk is deep-merged; closer directories override farther ones.
 
 ```yaml
+cliCommand: [pnpm, exec, pr-shepherd] # launcher for emitted commands; defaults to [pr-shepherd]
 ignoreChecks:
   - "Kilo Code Review"
 iterate:

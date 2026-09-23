@@ -22,8 +22,10 @@ vi.mock("../../src/state/ready-receipts.mts", async (importOriginal) => ({
   writeReadyReceipt: vi.fn().mockResolvedValue(undefined),
 }));
 import {
+  defaultConfig,
   makeOpts,
   makeReport,
+  mockLoadConfig,
   mockRunCheck,
   mockUpdateReadyDelay,
   registerIterateHooks,
@@ -377,6 +379,30 @@ describe("runIterate — merge", () => {
     const result = await runIterate(makeOpts({ merge: true }));
 
     expectStackedRoute(result, { position: 2, size: 3, number: 7, base: "stack/7/1" });
+  });
+
+  it("routes stacked reconciliation through the configured launcher", async () => {
+    mockLoadConfig.mockReturnValue({
+      ...defaultConfig(),
+      cliCommand: ["pnpm", "exec", "pr-shepherd"],
+    });
+    mockStackedReady("abc123", { number: 7, size: 3, position: 1, baseRefName: "main" });
+
+    const result = await runIterate(makeOpts({ merge: true }));
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.resolveCommand.argv).toEqual([
+      "pnpm",
+      "exec",
+      "pr-shepherd",
+      "apply",
+      "review",
+      "https://github.com/owner/repo/pull/42",
+    ]);
+    expect(result.fix.instructions).toContain(
+      "Run `pnpm exec pr-shepherd --stack https://github.com/owner/repo/pull/42 --until-terminal --merge` to reconcile the complete stack and run its emitted whole-stack merge command.",
+    );
   });
 
   it("cancels after persisting a stacked readiness receipt when merge mode is not enabled", async () => {

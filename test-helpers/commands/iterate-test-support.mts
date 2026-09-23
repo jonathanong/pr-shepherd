@@ -216,6 +216,7 @@ function makeReview(id: string, author: string, body: string): Review {
 
 function defaultConfig() {
   return {
+    cliCommand: ["pr-shepherd"],
     botUsernames: ["coderabbitai"],
     ignoreChecks: [],
     iterate: {

@@ -30,6 +30,8 @@ interface PollConfig {
 export interface PrShepherdConfig {
   /** Optional user classification configuration; preserved for rule consumers. */
   classify?: unknown;
+  /** Argv prefix for every pr-shepherd command Shepherd emits, e.g. `["pnpm", "exec", "pr-shepherd"]`. */
+  cliCommand: string[];
   /** GitHub logins that should be treated as bots even when GitHub reports User/Unknown. */
   botUsernames: string[];
   /** Case-insensitive glob patterns for check/status context names Shepherd should ignore. */
@@ -190,6 +192,17 @@ function parseResolveOtherHumanThreads(value: unknown): ResolveOtherHumanThreads
   throw new Error(
     `Invalid config: iterate.resolveOtherHumanThreads must be one of "none", "outdated", or "always", got ${JSON.stringify(value)}`,
   );
+}
+
+function parseCliCommand(value: unknown): string[] {
+  if (
+    !Array.isArray(value) ||
+    value.length === 0 ||
+    !value.every((arg) => typeof arg === "string" && arg.trim() !== "")
+  ) {
+    throw new Error("Invalid config: cliCommand must be a non-empty array of non-empty strings");
+  }
+  return value;
 }
 
 function parseBotUsernames(value: unknown): string[] {
@@ -388,6 +401,7 @@ function parseGraphqlQuotaWarnings(
 
 const KNOWN_CONFIG_KEYS = new Set([
   "classify",
+  "cliCommand",
   "botUsernames",
   "ignoreChecks",
   "iterate",
@@ -454,6 +468,7 @@ const rawDefaults = builtins as unknown as Record<string, unknown>;
 
 function parseConfig(value: Record<string, unknown>, normalizeMergeArgs = true): PrShepherdConfig {
   const config = value as unknown as PrShepherdConfig;
+  config.cliCommand = parseCliCommand(config.cliCommand);
   config.botUsernames = parseBotUsernames(config.botUsernames);
   config.ignoreChecks = parseIgnoreChecks(config.ignoreChecks);
   config.actions.neverCancelRuns = parseNeverCancelRuns(config.actions.neverCancelRuns);

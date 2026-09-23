@@ -27,6 +27,7 @@ const rollup = (name: string, conclusion: string) => ({
 
 beforeEach(() => {
   mockLoadConfig.mockReturnValue({
+    cliCommand: ["pr-shepherd"],
     botUsernames: [],
     ignoreChecks: ["ignored *"],
     checks: { ciTriggerEvents: ["pull_request"] },
