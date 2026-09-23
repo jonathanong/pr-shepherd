@@ -10,7 +10,9 @@ import {
   buildRepeatedWorkflowBranchRecoveryInstructions,
 } from "./check-instructions.mts";
 
-const upperLayer = { number: 7, size: 3, position: 2, baseRefName: "feature-parent" };
+// A native stack reports its trunk as `baseRefName`; an upper layer's parent is its PR base.
+const upperLayer = { number: 7, size: 3, position: 2, baseRefName: "main" };
+const upperPr = { number: 42, baseBranch: "feature-parent" };
 
 describe("native stack rebase instructions", () => {
   it("rebases an upper layer from its parent without trunk", () => {
@@ -26,13 +28,13 @@ describe("native stack rebase instructions", () => {
   });
 
   it("chooses the rebase start from the layer position and skips non-stack PRs", () => {
-    expect(buildNativeStackConflictRebase("acme/widgets", 42, upperLayer)).toContain(
-      "check out the parent stack branch `feature-parent`",
-    );
+    const upperRebase = buildNativeStackConflictRebase("acme/widgets", upperPr, upperLayer);
+    expect(upperRebase).toContain("check out the parent stack branch `feature-parent`");
+    expect(upperRebase).not.toContain("`main`");
     expect(
-      buildNativeStackConflictRebase("acme/widgets", 42, { ...upperLayer, position: 1 }),
+      buildNativeStackConflictRebase("acme/widgets", upperPr, { ...upperLayer, position: 1 }),
     ).toContain("check out the head branch of PR #42");
-    expect(buildNativeStackConflictRebase("acme/widgets", 42, undefined)).toBeUndefined();
+    expect(buildNativeStackConflictRebase("acme/widgets", upperPr, undefined)).toBeUndefined();
   });
 
   it("keeps the single-branch conflict wording outside a stack", () => {
@@ -48,7 +50,7 @@ describe("native stack rebase instructions", () => {
   });
 
   it("routes repeated-workflow conflict recovery and completion through the stack", () => {
-    const rebase = buildNativeStackConflictRebase("acme/widgets", 42, upperLayer);
+    const rebase = buildNativeStackConflictRebase("acme/widgets", upperPr, upperLayer);
     expect(
       buildRepeatedWorkflowBranchRecoveryInstructions(
         "feature-parent",

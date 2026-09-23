@@ -23,9 +23,13 @@ const openRequirements = {
   conversationsResolved: { resolved: true, unresolvedCount: 0, required: false },
 };
 
-async function runStackConflict(stack: StackStatus): Promise<string[]> {
+// A native stack reports its trunk as `baseRefName`; an upper layer's parent is its PR base.
+const trunkStack = { number: 7, size: 3, baseRefName: "main" };
+
+async function runStackConflict(stack: StackStatus, baseBranch = "main"): Promise<string[]> {
   mockRunCheck.mockResolvedValue(
     makeReport({
+      baseBranch,
       status: "FAILING",
       mergeStatus: {
         status: "CONFLICTS",
@@ -53,12 +57,7 @@ describe("runIterate — fix_code (native stack merge conflicts)", () => {
   it("rebases an upper layer from its parent stack branch and pushes the whole stack", async () => {
     mockFetchPollSummary.mockResolvedValue({ prs: [] });
 
-    const instructions = await runStackConflict({
-      number: 7,
-      size: 3,
-      position: 2,
-      baseRefName: "feature-parent",
-    });
+    const instructions = await runStackConflict({ ...trunkStack, position: 2 }, "feature-parent");
 
     expect(instructions).toContain(
       "The branch has merge conflicts (see `**branch**` above). From a clean checkout of `owner/repo`, check out the parent stack branch `feature-parent` and run `gh stack rebase --upstack --no-trunk`; if it stops on a conflict, resolve it and run `gh stack rebase --continue`.",
@@ -70,17 +69,13 @@ describe("runIterate — fix_code (native stack merge conflicts)", () => {
       "`[FIX_CODE]` is non-terminal: resolve the conflicts, commit, push the rewritten stack with `gh stack push`, then iterate immediately with the same options.",
     );
     const joined = instructions.join("\n");
+    expect(joined).not.toContain("check out the parent stack branch `main`");
     expect(joined).not.toContain("Resolve them before committing.");
     expect(joined).not.toContain("push to the PR head branch");
   });
 
   it("rebases the whole stack onto trunk when the bottom layer conflicts", async () => {
-    const instructions = await runStackConflict({
-      number: 7,
-      size: 3,
-      position: 1,
-      baseRefName: "main",
-    });
+    const instructions = await runStackConflict({ ...trunkStack, position: 1 });
 
     expect(instructions).toContain(
       "The branch has merge conflicts (see `**branch**` above). From a clean checkout of `owner/repo`, check out the head branch of PR #42 and run `gh stack rebase`; if it stops on a conflict, resolve it and run `gh stack rebase --continue`.",
@@ -104,12 +99,7 @@ describe("runIterate — fix_code (native stack merge conflicts)", () => {
       ],
     });
 
-    const instructions = await runStackConflict({
-      number: 7,
-      size: 3,
-      position: 2,
-      baseRefName: "feature-parent",
-    });
+    const instructions = await runStackConflict({ ...trunkStack, position: 2 }, "feature-parent");
 
     const joined = instructions.join("\n");
     expect(joined.match(/gh stack rebase --upstack --no-trunk/g)).toHaveLength(1);

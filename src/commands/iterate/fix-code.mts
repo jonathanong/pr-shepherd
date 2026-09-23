@@ -426,7 +426,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const stackConflictRebase = hasConflicts
     ? buildNativeStackConflictRebase(
         report.repo,
-        prNumber,
+        { number: prNumber, baseBranch: baseLookup.branch },
         report.mergeStatus.mergeRequirements?.stack,
       )
     : undefined;

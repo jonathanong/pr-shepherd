@@ -24,16 +24,19 @@ export function buildNativeStackRebaseInstruction(
   return `From a clean checkout of \`${repo}\`, ${checkout} and run \`${command}\`; if it stops on a conflict, resolve it and run \`gh stack rebase --continue\`.`;
 }
 
-/** The stack-aware conflict repair for a native stack layer; undefined outside a stack. */
+/**
+ * The stack-aware conflict repair for a native stack layer; undefined outside a stack.
+ * An upper layer's parent is its own PR base branch — `stack.baseRefName` is the stack's trunk.
+ */
 export function buildNativeStackConflictRebase(
   repo: string,
-  pr: number,
+  pr: { number: number; baseBranch: string },
   stack: StackStatus | undefined,
 ): string | undefined {
   if (!stack) return undefined;
   return buildNativeStackRebaseInstruction(
     repo,
-    stack.position > 1 ? { parentBranch: stack.baseRefName } : { bottomPr: pr },
+    stack.position > 1 ? { parentBranch: pr.baseBranch } : { bottomPr: pr.number },
   );
 }
 
