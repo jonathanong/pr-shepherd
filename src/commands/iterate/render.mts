@@ -24,6 +24,7 @@ import {
 import { isFailingAgentCheck } from "../../checks/conclusions.mts";
 import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
 import { partitionFixThreads, reviewSectionRefs } from "./fix-instruction-threads.mts";
+import { buildConflictInstruction, buildConflictPushInstruction } from "./native-stack-rebase.mts";
 
 /** Render a resolve command as a shell snippet. Appends `--require-sha "$HEAD_SHA"` when set. */
 export function renderResolveCommand(rc: ResolveCommand): string {
@@ -53,6 +54,7 @@ export function buildFixInstructions(
   isBehind = false,
   viewerCanUpdate = false,
   hasExhaustedWorkflowRerun = false,
+  stackConflictRebase?: string, // native stack layers rebase with gh-stack, not branch by branch
 ): string[] {
   const instructions: string[] = [];
   const { locatedThreads, unlocatedMutatedThreads, unlocatedThreads } = partitionFixThreads(
@@ -63,10 +65,12 @@ export function buildFixInstructions(
 
   const failingChecks = checks.filter((c) => isFailingAgentCheck(c));
   const repeatedWorkflowBranchRecoveryInstructions =
-    buildRepeatedWorkflowBranchRecoveryInstructions(baseBranch, hasExhaustedWorkflowRerun, {
-      isBehind,
-      hasConflicts,
-    });
+    buildRepeatedWorkflowBranchRecoveryInstructions(
+      baseBranch,
+      hasExhaustedWorkflowRerun,
+      { isBehind, hasConflicts },
+      stackConflictRebase,
+    );
   const hasRepeatedWorkflowBranchRecovery = repeatedWorkflowBranchRecoveryInstructions.length > 0;
   const hasAnnotations = checks.some((c) => (c.annotations?.length ?? 0) > 0);
   const hasNonConflictHints =
@@ -91,9 +95,7 @@ export function buildFixInstructions(
     instructions.push(`Review each item ${sectionRef} and decide whether it needs a code change.`);
   }
   if (hasConflicts && !hasRepeatedWorkflowBranchRecovery) {
-    instructions.push(
-      "The branch has merge conflicts (see `**branch**` above). Resolve them before committing.",
-    );
+    instructions.push(buildConflictInstruction(stackConflictRebase));
   }
 
   const firstLookTotal = firstLookThreads.length + firstLookComments.length;
@@ -160,9 +162,7 @@ export function buildFixInstructions(
     resolveCommand.hasMutations || resolveOnlyCommand?.hasMutations === true;
   const mutationSuffix = hasReviewMutations ? " before review mutations" : "";
   if (hasConflicts) {
-    instructions.push(
-      `Commit any remaining conflict-resolution changes and push to the PR head branch${mutationSuffix}.`,
-    );
+    instructions.push(buildConflictPushInstruction(stackConflictRebase, mutationSuffix));
   } else if (hasRepeatedWorkflowBranchRecovery) {
     instructions.push("Push the updated PR head branch before iterating immediately.");
   } else if (hasNonConflictHints) {
@@ -187,7 +187,12 @@ export function buildFixInstructions(
 
   instructions.push(
     ...buildResolveCommandInstruction(resolveCommand),
-    buildFixCompletionInstruction(failingChecks, hasConflicts, resolveCommand.requiresHeadSha),
+    buildFixCompletionInstruction(
+      failingChecks,
+      hasConflicts,
+      resolveCommand.requiresHeadSha,
+      stackConflictRebase !== undefined,
+    ),
   );
   return instructions;
 }

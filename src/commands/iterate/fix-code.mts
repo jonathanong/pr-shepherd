@@ -18,6 +18,7 @@ import {
   threadHasAuthorizedMutation,
 } from "./thread-mutation-routing.mts";
 import { buildFixInstructions } from "./render.mts";
+import { buildNativeStackConflictRebase } from "./native-stack-rebase.mts";
 import { applyStallGuard } from "./stall.mts";
 import { annotationMarkerBody, checksWithActionableAnnotations } from "../check-annotations.mts";
 import { threadTranscriptBody } from "../../threads/transcript.mts";
@@ -422,6 +423,13 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   }
   const firstLookThreads = report.threads.firstLook;
   const firstLookComments = report.comments.firstLook;
+  const stackConflictRebase = hasConflicts
+    ? buildNativeStackConflictRebase(
+        report.repo,
+        prNumber,
+        report.mergeStatus.mergeRequirements?.stack,
+      )
+    : undefined;
   const instructions = buildFixInstructions(
     threads,
     actionableComments,
@@ -443,6 +451,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     isBehind,
     report.viewerAuthorization?.viewerCanUpdate === true,
     exhaustedAttempts.length > 0,
+    stackConflictRebase,
   );
   if (repairInstructions && repairInstructions.length > 0) {
     instructions.unshift(...repairInstructions);

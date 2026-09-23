@@ -36,6 +36,7 @@ export function buildRepeatedWorkflowBranchRecoveryInstructions(
   baseBranch: string,
   hasExhaustedWorkflowRerun: boolean,
   branch: { isBehind: boolean; hasConflicts: boolean },
+  stackConflictRebase?: string,
 ): string[] {
   if (!hasExhaustedWorkflowRerun || (!branch.isBehind && !branch.hasConflicts)) return [];
 
@@ -45,7 +46,8 @@ export function buildRepeatedWorkflowBranchRecoveryInstructions(
   ];
   instructions.push(
     branch.hasConflicts
-      ? `Rebase or otherwise update the PR branch from \`${baseBranch}\` according to repository conventions, resolving conflicts as part of that update.`
+      ? (stackConflictRebase ??
+          `Rebase or otherwise update the PR branch from \`${baseBranch}\` according to repository conventions, resolving conflicts as part of that update.`)
       : `Rebase or otherwise update the PR branch from \`${baseBranch}\` according to repository conventions.`,
   );
   return instructions;
@@ -109,9 +111,10 @@ export function buildFixCompletionInstruction(
   checks: AgentCheck[],
   hasConflicts = false,
   hasShaGatedReviewMutations = false,
+  isNativeStackLayer = false,
 ): string {
   if (hasConflicts)
-    return "`[FIX_CODE]` is non-terminal: resolve the conflicts, commit, push to the PR head branch, then iterate immediately with the same options.";
+    return `\`[FIX_CODE]\` is non-terminal: resolve the conflicts, commit, ${isNativeStackLayer ? "push the rewritten stack with `gh stack push`" : "push to the PR head branch"}, then iterate immediately with the same options.`;
   if (hasShaGatedReviewMutations) {
     return "`[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run the review mutations using the pushed commit SHA and iterate immediately with the same options; if you did not change code, complete the authorized review mutations and iterate immediately with the same options.";
   }

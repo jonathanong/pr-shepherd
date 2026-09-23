@@ -76,8 +76,8 @@ describe("verified stale-boundary guidance", () => {
 
     expect(instructions).toEqual([
       "PR #42 records base `feature-parent` at `parent-old`, but its open parent PR #41 currently ends at `feature-parent` `parent-current`.",
-      "From a clean checkout of `acme/widgets`, check out the parent stack branch `feature-parent`.",
-      "Run `gh stack rebase --upstack --no-trunk`, resolve any conflicts, and push the rewritten stack with `gh stack push`.",
+      "From a clean checkout of `acme/widgets`, check out the parent stack branch `feature-parent` and run `gh stack rebase --upstack --no-trunk`; if it stops on a conflict, resolve it and run `gh stack rebase --continue`.",
+      "Push the rewritten stack with `gh stack push`.",
     ]);
   });
 });

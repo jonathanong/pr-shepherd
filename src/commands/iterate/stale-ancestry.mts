@@ -2,6 +2,7 @@ import { fetchPollSummary } from "../../github/poll-summary.mts";
 import type { RepoInfo } from "../../github/client.mts";
 import type { PollSummaryStackAncestry } from "../../types.mts";
 import type { ShepherdReport } from "../../types/report.mts";
+import { buildNativeStackRebaseInstruction } from "./native-stack-rebase.mts";
 
 /**
  * A verified stale boundary for the PR being shepherded.
@@ -51,7 +52,9 @@ function buildStaleNativeStackAncestryInstructions(
 ): string[] {
   return [
     `PR #${ancestry.childPr} records base \`${ancestry.childBaseRefName}\` at \`${ancestry.childBaseRefOid}\`, but its open parent PR #${ancestry.parentPr} currently ends at \`${ancestry.parentHeadRefName}\` \`${ancestry.parentHeadRefOid}\`.`,
-    `From a clean checkout of \`${repo.owner}/${repo.name}\`, check out the parent stack branch \`${ancestry.parentHeadRefName}\`.`,
-    "Run `gh stack rebase --upstack --no-trunk`, resolve any conflicts, and push the rewritten stack with `gh stack push`.",
+    buildNativeStackRebaseInstruction(`${repo.owner}/${repo.name}`, {
+      parentBranch: ancestry.parentHeadRefName,
+    }),
+    "Push the rewritten stack with `gh stack push`.",
   ];
 }
