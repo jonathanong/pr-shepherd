@@ -54,10 +54,10 @@ Poll flags:
   --stack PR                    Select all entries in PR's native GitHub stack, bottom to top.
   --interval <duration>          Sleep between WAIT ticks. Bare number = seconds. Default: poll.intervalSeconds (built-in 60s).
   --timeout <duration>           Maximum wall-clock wait for WAIT ticks. Bare number = seconds. Default: poll.timeoutSeconds (built-in 4.5m).
-  --debounce <duration>          Settle window after first FIX_CODE before returning. Bare number = seconds. Default: poll.debounceSeconds (built-in 60s). 0 disables.
+  --debounce <duration>          Settle window after first FIX_CODE or stack SHEPHERD before returning. Bare number = seconds. Default: poll.debounceSeconds (built-in 60s). 0 disables.
   --quiet-status                 Print only changed WAIT snapshots. Overrides poll.quietStatus.
   --no-quiet-status              Print every WAIT snapshot. Overrides poll.quietStatus.
-  --until-terminal               Continue through WAIT/MARK_READY until FIX_CODE/CANCEL/ESCALATE.
+  --until-terminal               Continue through WAIT/MARK_READY until FIX_CODE/MERGE/CANCEL/ESCALATE or stack SHEPHERD.
 
 Forwarded iterate flags:
   --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Example: 15m.
@@ -84,6 +84,7 @@ Exit codes: same as iterate (the final tick's action/reason decides the code).
   13  ESCALATE
   14  CANCEL (closed without merging)
   15  MERGE
+  16  SHEPHERD (--stack only: run the listed one-PR sessions, then rerun the selector)
   A command/validation/GitHub failure exits with a sysexits.h code instead (see docs/exit-codes.md).`;
 
 /** Public help page for the default PR polling invocation. */

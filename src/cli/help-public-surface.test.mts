@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EXIT } from "../exit-codes.mts";
 import { helpKeyForArgs, USAGE } from "./help.mts";
 
 describe("public CLI help surface", () => {
@@ -29,6 +30,22 @@ describe("public CLI help surface", () => {
     expect(USAGE["mark-files-as-viewed"]).toContain("marking selected PR files as viewed");
     expect(USAGE.top).toContain("--merge");
     expect(USAGE.top).toContain("15  MERGE");
+  });
+
+  it("lists every PR-state exit code on the top-level and poll pages", () => {
+    const prStateCodes = Object.values(EXIT).filter((code) => code < 20);
+    for (const page of [USAGE.top, USAGE.poll, USAGE.default]) {
+      const exitBlock = page.slice(page.indexOf("Exit codes:"));
+      for (const code of prStateCodes) {
+        expect(exitBlock).toMatch(new RegExp(`^ {2}${code} +[A-Z_]+`, "m"));
+      }
+    }
+    for (const page of [USAGE.top, USAGE.poll]) {
+      expect(page).toContain("until FIX_CODE/MERGE/CANCEL/ESCALATE or stack SHEPHERD.");
+      expect(page).toContain(
+        "Settle window after first FIX_CODE or stack SHEPHERD before returning.",
+      );
+    }
   });
 
   it("resolves nested help pages without doing command I/O", () => {
