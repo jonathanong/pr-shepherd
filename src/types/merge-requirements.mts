@@ -45,6 +45,12 @@ export interface StackStatus {
   baseRefName: string;
 }
 
+/**
+ * Why a native stack layer stays in draft on a WAIT tick. Repeating the same one-PR
+ * session cannot advance it, so the caller returns to the stack selector.
+ */
+export type StackDraftHold = "auto-mark-ready-disabled" | "lower-layer-not-ready";
+
 /** Extra batch-PR fields for merge-queue, stacks, and folded branch rules. */
 export interface BatchPrMergeFields {
   branchRules?: BranchRules;

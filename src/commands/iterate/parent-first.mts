@@ -1,6 +1,6 @@
 import { fetchPollSummary } from "../../github/poll-summary.mts";
 import type { RepoInfo } from "../../github/client.mts";
-import type { ShepherdReport } from "../../types.mts";
+import type { ShepherdReport, StackDraftHold } from "../../types.mts";
 
 /**
  * Draft children may only be converted after their immediate parent has
@@ -53,4 +53,19 @@ export async function parentBlocksMarkReady(
     // Never convert a child draft based on an unverifiable parent.
     return true;
   }
+}
+
+/**
+ * A native stack draft this one-PR session cannot promote: automatic mark-ready is
+ * off, or a lower layer has not reached its own ready receipt. Undefined when the
+ * session can still advance the PR by iterating.
+ */
+export function stackDraftHold(
+  report: ShepherdReport,
+  autoMarkReady: boolean,
+  blockedByParent: boolean,
+): StackDraftHold | undefined {
+  if (!report.mergeStatus.mergeRequirements?.stack || !report.mergeStatus.isDraft) return undefined;
+  if (!autoMarkReady) return "auto-mark-ready-disabled";
+  return blockedByParent ? "lower-layer-not-ready" : undefined;
 }

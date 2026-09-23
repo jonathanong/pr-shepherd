@@ -1,13 +1,22 @@
-import type { IterateResult } from "../types.mts";
+import type { IterateResult, StackDraftHold } from "../types.mts";
 import { renderMergeCommand } from "../commands/iterate/merge.mts";
 import { inlineCode } from "../util/markdown.mts";
 import { buildQuotaAwareContinuation } from "../quota-warning.mts";
+import { formatPrUrl } from "../pr-reference.mts";
+import { buildPrShepherdCommand } from "./runner.mts";
+
+const STACK_DRAFT_HOLD_REASONS: Record<StackDraftHold, string> = {
+  "auto-mark-ready-disabled": "automatic mark-ready is disabled for this session",
+  "lower-layer-not-ready": "a lower stack layer has no current Shepherd READY receipt",
+};
 
 export function buildSimpleIterateInstructions(
   result: Exclude<IterateResult, { action: "fix_code" }>,
 ): string[] {
   switch (result.action) {
     case "wait":
+      if (result.stackDraftHold)
+        return [buildStackDraftHoldInstruction(result, result.stackDraftHold)];
       if (result.quotaWarning) {
         return [
           buildQuotaAwareContinuation(
@@ -63,6 +72,25 @@ export function buildSimpleIterateInstructions(
       ];
     }
   }
+}
+
+/**
+ * A held stack draft cannot advance by repeating its one-PR session, so hand control back
+ * to the stack selector instead of asking for another immediate iteration.
+ */
+function buildStackDraftHoldInstruction(
+  result: Extract<IterateResult, { action: "wait" }>,
+  hold: StackDraftHold,
+): string {
+  const stackCommand = buildPrShepherdCommand([
+    "--stack",
+    formatPrUrl(result.repo, result.pr),
+    "--until-terminal",
+  ]).text;
+  const instruction = `PR #${result.pr} stays in draft because ${STACK_DRAFT_HOLD_REASONS[hold]}, so repeating this one-PR session cannot advance it. If a \`--stack\` selector listed this session, finish that selector's remaining steps and rerun it with its original flags; otherwise run ${inlineCode(stackCommand)}, adding \`--merge\` when merging was requested.`;
+  return result.quotaWarning
+    ? buildQuotaAwareContinuation(result.quotaWarning, instruction)
+    : instruction;
 }
 
 export function adaptIterateLog(log: string): string {

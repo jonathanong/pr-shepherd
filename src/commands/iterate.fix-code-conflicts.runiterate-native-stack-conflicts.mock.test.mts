@@ -18,6 +18,11 @@ import type { StackStatus } from "../types.mts";
 
 registerIterateHooks();
 
+const openRequirements = {
+  approvals: { current: 0, requiredCount: 0 },
+  conversationsResolved: { resolved: true, unresolvedCount: 0, required: false },
+};
+
 async function runStackConflict(stack: StackStatus): Promise<string[]> {
   mockRunCheck.mockResolvedValue(
     makeReport({
@@ -30,7 +35,7 @@ async function runStackConflict(stack: StackStatus): Promise<string[]> {
         reviewDecision: null,
         blockingBotReviewInProgress: false,
         mergeStateStatus: "DIRTY",
-        mergeRequirements: { stack },
+        mergeRequirements: { ...openRequirements, stack },
       },
     }),
   );

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type {
   AgentThread,
   AgentComment,
@@ -17,7 +18,7 @@ import type {
   ReviewThread,
   ShepherdMergeStatus,
 } from "./github.mts";
-import type { MergeRequirements } from "./merge-requirements.mts";
+import type { MergeRequirements, StackDraftHold } from "./merge-requirements.mts";
 import type { EscalateDetails } from "./escalate.mts";
 import type { MergeCommandPlan } from "./merge-action.mts";
 import type { ProtectedRun } from "./protected-run.mts";
@@ -73,6 +74,7 @@ interface IterateResultWait extends IterateResultBase {
   action: "wait";
   log: string;
   deferredWork?: import("./merge-queue.mts").IterateDeferredWork;
+  stackDraftHold?: StackDraftHold;
 }
 
 export type CancelReason = "merged" | "closed" | "ready-delay-elapsed";

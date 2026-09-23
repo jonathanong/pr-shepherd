@@ -33,7 +33,7 @@ import {
   readReadyReceipt,
   writeReadyReceipt,
 } from "../../state/ready-receipts.mts";
-import { parentBlocksMarkReady } from "./parent-first.mts";
+import { parentBlocksMarkReady, stackDraftHold } from "./parent-first.mts";
 import { findStaleNativeStackAncestry } from "./stale-ancestry.mts";
 
 export function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
@@ -231,8 +231,9 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     ? await parentBlocksMarkReady(report, { owner: repoOwner, name: repoName })
     : false;
 
+  const autoMarkReady = !opts.noAutoMarkReady && config.actions.autoMarkReady;
   const markReadyResult = await markReadyIfAuthorized(
-    canMarkReady && !blockedByParent && !opts.noAutoMarkReady && config.actions.autoMarkReady,
+    canMarkReady && !blockedByParent && autoMarkReady,
     base,
     report,
   );
@@ -274,13 +275,19 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     };
   }
 
+  const hold = stackDraftHold(report, autoMarkReady, blockedByParent);
   return applyStallGuard(
     stallKey,
     stallTimeoutSeconds,
     headSha,
     base,
     prNumber,
-    { ...base, action: "wait" as const, log: buildWaitLog(base) } as IterateResult,
+    {
+      ...base,
+      action: "wait" as const,
+      log: buildWaitLog(base),
+      ...(hold && { stackDraftHold: hold }),
+    } as IterateResult,
     report,
     reviewSummaryIds,
   );

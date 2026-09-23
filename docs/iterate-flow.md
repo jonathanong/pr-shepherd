@@ -143,6 +143,8 @@ An active auto-merge request or merge-queue entry emits `wait` after actionable 
 
 **Fallthrough:** nothing actionable, no terminal state, no ready-delay elapsed, not marking ready.
 
+A draft native stack layer this session cannot promote carries `stackDraftHold`: `auto-mark-ready-disabled` when `--no-auto-mark-ready` or `actions.autoMarkReady: false` applies, otherwise `lower-layer-not-ready` when step 4's parent-first check blocked a `READY` draft. Its instructions return to the `--stack` selector instead of asking for another immediate one-PR iteration.
+
 **Emits:** `action: 'wait'`. Stall guard runs on this path.
 
 ---
