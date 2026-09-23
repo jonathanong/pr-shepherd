@@ -2,6 +2,7 @@
 import { buildQuotaAwareContinuation } from "../quota-warning.mts";
 import type { PollSummaryItem, PollSummaryResult, StackNextAction } from "../types.mts";
 import { explicitInstructions } from "./poll-summary-explicit-instructions.mts";
+import { stackLayerBlockReason } from "./stack-layer-readiness.mts";
 
 /** Keep aggregate JSON, Markdown, and MCP instructions on one projection. */
 export function withPollSummaryInstructions(
@@ -270,21 +271,7 @@ function appendAutonomousInstructions(instructions: string[], candidates: PollSu
 }
 
 function isReady(item: PollSummaryItem): boolean {
-  return (
-    item.state === "OPEN" &&
-    item.stack !== undefined &&
-    item.readyReceipt === true &&
-    !item.isDraft &&
-    !item.queueRemoval &&
-    item.mergeable !== "CONFLICTING" &&
-    item.mergeStateStatus !== "DIRTY" &&
-    (item.isInMergeQueue || item.mergeable === "MERGEABLE") &&
-    (item.isInMergeQueue ||
-      !["DIRTY", "BEHIND", "UNKNOWN", "BLOCKED", "HAS_HOOKS"].includes(item.mergeStateStatus)) &&
-    (item.checks?.failing ?? 0) === 0 &&
-    (item.isInMergeQueue || (item.checks?.inProgress ?? 0) === 0) &&
-    (item.review?.actionable ?? 0) === 0
-  );
+  return item.stack !== undefined && stackLayerBlockReason(item) === undefined;
 }
 
 function position(item: PollSummaryItem): number {

@@ -45,11 +45,34 @@ export interface StackStatus {
   baseRefName: string;
 }
 
+/** Why an open native stack layer does not yet let the layers above it advance. */
+export type StackLayerBlockReason =
+  | "closed"
+  | "draft"
+  | "conflicting"
+  | "queue-removal"
+  | "failing-checks"
+  | "review-work"
+  | "checks-in-progress"
+  | "merge-state"
+  | "no-ready-receipt"
+  | "stale-ancestry";
+
+/** The lowest native stack layer that keeps an upper draft from being marked ready. */
+export interface StackLowerLayerBlock {
+  pr: number;
+  reason: StackLayerBlockReason;
+}
+
 /**
  * Why a native stack layer stays in draft on a WAIT tick. Repeating the same one-PR
- * session cannot advance it, so the caller returns to the stack selector.
+ * session cannot advance it, so the caller returns to the stack selector. A named
+ * `lowerLayer` is the layer to advance first; without one, the lower layers could not
+ * be verified.
  */
-export type StackDraftHold = "auto-mark-ready-disabled" | "lower-layer-not-ready";
+export type StackDraftHold =
+  | { kind: "lower-layer-not-ready"; lowerLayer?: StackLowerLayerBlock }
+  | { kind: "auto-mark-ready-disabled" };
 
 /** Extra batch-PR fields for merge-queue, stacks, and folded branch rules. */
 export interface BatchPrMergeFields {

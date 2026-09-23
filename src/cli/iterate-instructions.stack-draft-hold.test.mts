@@ -4,6 +4,9 @@ import type { IterateResult, StackDraftHold } from "../types.mts";
 import { formatIterateResult } from "./iterate-formatter.mts";
 import { projectIterateLean } from "./iterate-lean.mts";
 
+const handoff =
+  "a `--stack` selector listed this session, finish that selector's remaining steps and rerun it with its original flags; otherwise run `pr-shepherd --stack https://github.com/owner/repo/pull/42 --until-terminal`, adding `--merge` when merging was requested.";
+
 function heldWait(stackDraftHold: StackDraftHold): IterateResult {
   const wait = makeIterateResult("wait");
   if (wait.action !== "wait") throw new Error("expected wait fixture");
@@ -15,24 +18,38 @@ function textInstructions(result: IterateResult): string[] {
   return section.split("\n").map((line) => line.replace(/^\d+\. /, ""));
 }
 
+function leanInstructions(result: IterateResult): string[] {
+  const lean = projectIterateLean(result) as { stackDraftHold?: unknown; instructions: string[] };
+  expect(lean.stackDraftHold).toEqual(result.action === "wait" && result.stackDraftHold);
+  expect(textInstructions(result)).toEqual(lean.instructions);
+  return lean.instructions;
+}
+
 describe("held native stack draft WAIT instructions", () => {
   it.each([
-    ["auto-mark-ready-disabled", "automatic mark-ready is disabled for this session"],
-    ["lower-layer-not-ready", "a lower stack layer has no current Shepherd READY receipt"],
-  ] as const)("returns a %s hold to the stack selector", (hold, reason) => {
-    const result = heldWait(hold);
-    const lean = projectIterateLean(result) as { stackDraftHold?: string; instructions: string[] };
+    ["draft", "is still a draft"],
+    ["no-ready-receipt", "has no current Shepherd READY receipt"],
+    ["stale-ancestry", "is not rebased onto its parent layer's current head"],
+  ] as const)("points a layer held by a %s lower layer at that layer", (reason, text) => {
+    const result = heldWait({ kind: "lower-layer-not-ready", lowerLayer: { pr: 41, reason } });
 
-    expect(lean.stackDraftHold).toBe(hold);
-    expect(textInstructions(result)).toEqual(lean.instructions);
-    expect(lean.instructions).toEqual([
-      `PR #42 stays in draft because ${reason}, so repeating this one-PR session cannot advance it. If a \`--stack\` selector listed this session, finish that selector's remaining steps and rerun it with its original flags; otherwise run \`pr-shepherd --stack https://github.com/owner/repo/pull/42 --until-terminal\`, adding \`--merge\` when merging was requested.`,
+    expect(leanInstructions(result)).toEqual([
+      `PR #42 stays in draft because lower stack layer PR #41 ${text}, so repeating this one-PR session cannot advance it. Advance PR #41 first: if ${handoff}`,
+    ]);
+  });
+
+  it.each([
+    [{ kind: "auto-mark-ready-disabled" }, "automatic mark-ready is disabled for this session"],
+    [{ kind: "lower-layer-not-ready" }, "its lower stack layers could not be verified"],
+  ] as const)("returns an unattributed %j hold to the stack selector", (hold, reason) => {
+    expect(leanInstructions(heldWait(hold))).toEqual([
+      `PR #42 stays in draft because ${reason}, so repeating this one-PR session cannot advance it. If ${handoff}`,
     ]);
   });
 
   it("keeps the stack handoff ahead of quota-aware cadence advice", () => {
     const result: IterateResult = {
-      ...heldWait("auto-mark-ready-disabled"),
+      ...heldWait({ kind: "lower-layer-not-ready", lowerLayer: { pr: 41, reason: "draft" } }),
       quotaWarning: {
         resource: "graphql",
         thresholdPercent: 20,
@@ -45,7 +62,7 @@ describe("held native stack draft WAIT instructions", () => {
     };
 
     const [instruction] = textInstructions(result);
-    expect(instruction).toMatch(/^PR #42 stays in draft because automatic mark-ready is disabled/);
+    expect(instruction).toMatch(/^PR #42 stays in draft because lower stack layer PR #41/);
     expect(instruction).toContain("no more often than every 5 minutes");
     expect(instruction).not.toContain("Non-terminal — no action needed this tick");
   });

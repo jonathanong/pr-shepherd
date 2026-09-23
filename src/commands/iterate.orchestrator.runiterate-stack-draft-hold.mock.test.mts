@@ -11,8 +11,10 @@ import {
   defaultConfig,
   makeOpts,
   makeReport,
+  mockClearStallState,
   mockFetch,
   mockLoadConfig,
+  mockReadStallState,
   mockRunCheck,
   mockUpdateReadyDelay,
 } from "../../test-helpers/commands/iterate-test-support.mts";
@@ -28,6 +30,23 @@ const openRequirements = {
 
 const bottomLayer: StackStatus = { number: 7, size: 3, position: 1, baseRefName: "main" };
 const upperLayer: StackStatus = { number: 7, size: 3, position: 2, baseRefName: "feature-a" };
+const draftParentStack = {
+  prs: [
+    {
+      pr: 41,
+      state: "OPEN",
+      isDraft: true,
+      mergeable: "MERGEABLE",
+      mergeStateStatus: "CLEAN",
+      stack: bottomLayer,
+    },
+    { pr: 42, state: "OPEN", stack: upperLayer },
+  ],
+};
+const heldByDraftParent = {
+  kind: "lower-layer-not-ready",
+  lowerLayer: { pr: 41, reason: "draft" },
+};
 
 async function runDraft(
   stack: StackStatus | undefined,
@@ -62,9 +81,9 @@ async function runDraft(
 
 describe("runIterate — held native stack drafts", () => {
   it("holds a READY bottom-layer draft whose session disables automatic mark-ready", async () => {
-    await expect(runDraft(bottomLayer, { noAutoMarkReady: true })).resolves.toBe(
-      "auto-mark-ready-disabled",
-    );
+    await expect(runDraft(bottomLayer, { noAutoMarkReady: true })).resolves.toEqual({
+      kind: "auto-mark-ready-disabled",
+    });
     expect(mockFetchPollSummary).not.toHaveBeenCalled();
   });
 
@@ -74,27 +93,39 @@ describe("runIterate — held native stack drafts", () => {
       actions: { ...defaultConfig().actions, autoMarkReady: false },
     });
 
-    await expect(runDraft(bottomLayer, {}, "IN_PROGRESS")).resolves.toBe(
-      "auto-mark-ready-disabled",
+    await expect(runDraft(bottomLayer, {}, "IN_PROGRESS")).resolves.toEqual({
+      kind: "auto-mark-ready-disabled",
+    });
+  });
+
+  it("names the lower layer that holds a READY upper-layer draft", async () => {
+    mockFetchPollSummary.mockResolvedValue(draftParentStack);
+
+    await expect(runDraft(upperLayer)).resolves.toEqual(heldByDraftParent);
+  });
+
+  it("names the lower layer even when the session disables automatic mark-ready", async () => {
+    mockFetchPollSummary.mockResolvedValue(draftParentStack);
+
+    await expect(runDraft(upperLayer, { noAutoMarkReady: true })).resolves.toEqual(
+      heldByDraftParent,
     );
   });
 
-  it("holds a READY upper-layer draft while a lower layer lacks its READY receipt", async () => {
-    mockFetchPollSummary.mockResolvedValue({
-      prs: [
-        {
-          pr: 41,
-          state: "OPEN",
-          isDraft: true,
-          mergeable: "MERGEABLE",
-          mergeStateStatus: "CLEAN",
-          stack: bottomLayer,
-        },
-        { pr: 42, state: "OPEN", stack: upperLayer },
-      ],
-    });
+  it("does not stall a draft while a named lower layer holds it", async () => {
+    mockFetchPollSummary.mockResolvedValue(draftParentStack);
 
-    await expect(runDraft(upperLayer)).resolves.toBe("lower-layer-not-ready");
+    await runDraft(upperLayer);
+
+    expect(mockClearStallState).toHaveBeenCalledWith({ owner: "owner", repo: "repo", pr: 42 });
+    expect(mockReadStallState).not.toHaveBeenCalled();
+  });
+
+  it("keeps the stall guard when no lower layer can be named", async () => {
+    mockFetchPollSummary.mockRejectedValue(new Error("rate limited"));
+
+    await expect(runDraft(upperLayer)).resolves.toEqual({ kind: "lower-layer-not-ready" });
+    expect(mockReadStallState).toHaveBeenCalled();
   });
 
   it("keeps iterating a pending stack draft that can still be marked ready automatically", async () => {

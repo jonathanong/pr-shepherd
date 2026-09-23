@@ -143,15 +143,15 @@ An active auto-merge request or merge-queue entry emits `wait` after actionable 
 
 **Fallthrough:** nothing actionable, no terminal state, no ready-delay elapsed, not marking ready.
 
-A draft native stack layer this session cannot promote carries `stackDraftHold`: `auto-mark-ready-disabled` when `--no-auto-mark-ready` or `actions.autoMarkReady: false` applies, otherwise `lower-layer-not-ready` when step 4's parent-first check blocked a `READY` draft. Its instructions return to the `--stack` selector instead of asking for another immediate one-PR iteration.
+A draft native stack layer this session cannot promote carries `stackDraftHold`. When step 4's parent-first check names the lowest open lower layer that blocks a `READY` draft, the hold is `{ kind: 'lower-layer-not-ready', lowerLayer: { pr, reason } }`, whatever the session's mark-ready setting. The check and the aggregate `--stack` selector share one readiness predicate (`stackLayerBlockReason`), so both name the same layer. Otherwise the hold is `{ kind: 'auto-mark-ready-disabled' }` when `--no-auto-mark-ready` or `actions.autoMarkReady: false` applies, or `{ kind: 'lower-layer-not-ready' }` without `lowerLayer` when the stack read could not be attributed to a lower layer. Its instructions return to the `--stack` selector instead of asking for another immediate one-PR iteration, and a named lower layer is the one they tell the agent to advance first.
 
-**Emits:** `action: 'wait'`. Stall guard runs on this path.
+**Emits:** `action: 'wait'`. The stall guard runs on this path, except for a hold that names a lower layer: that layer's own session owns the progress, so the draft's stall state is cleared and `--until-terminal` or a bounded poll returns the hold after one tick instead of waiting it out.
 
 ---
 
 ### Stall guard
 
-Applied to ordinary `wait` and `fix_code` after those actions are chosen — not before actionable work, and not on active merge waits, `merge`, `cancel`, `mark_ready`, or `escalate`.
+Applied to ordinary `wait` and `fix_code` after those actions are chosen — not before actionable work, and not on active merge waits, stack drafts held by a named lower layer, `merge`, `cancel`, `mark_ready`, or `escalate`.
 
 Fingerprint: HEAD SHA, action, `status`, `mergeStateStatus`, `state`, `isDraft`, sorted failing-check names + conclusions, sorted actionable thread/comment/review IDs, sorted review-summary minimize IDs. Stored at `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/iterate-stall.json`.
 
