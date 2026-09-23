@@ -49,6 +49,7 @@ describe("fingerprintRawSummaryPr", () => {
       mergeQueueAdditions: { nodes: [{ createdAt: "2026-09-20T10:10:00Z" }] },
       mergeQueueEntry: {
         headCommit: {
+          oid: "f".repeat(40),
           statusCheckRollup: {
             contexts: {
               totalCount: 1,
@@ -71,7 +72,10 @@ describe("fingerprintRawSummaryPr", () => {
     ["new comment", { comments: { ...empty, totalCount: 1 } }],
     ["new review", { reviews: { ...empty, totalCount: 1 } }],
     ["new thread", { reviewThreads: { ...empty, totalCount: 1 } }],
-    ["changed CI", { commits: { nodes: [{ commit: { statusCheckRollup: null } }] } }],
+    [
+      "changed CI",
+      { commits: { nodes: [{ commit: { oid: "e".repeat(40), statusCheckRollup: null } }] } },
+    ],
     [
       "close and reopen",
       {
@@ -101,6 +105,7 @@ describe("fingerprintRawSummaryPr", () => {
           nodes: [
             {
               commit: {
+                oid: "e".repeat(40),
                 statusCheckRollup: {
                   contexts: {
                     totalCount: 1,

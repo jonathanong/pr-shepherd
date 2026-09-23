@@ -88,39 +88,10 @@ fragment PollSummaryPr on PullRequest {
   }
   mergeQueueEntry {
     headCommit {
+      oid
       statusCheckRollup {
         contexts(last: 100) {
-          totalCount
-          pageInfo {
-            hasPreviousPage
-          }
-          nodes {
-            __typename
-            ... on CheckRun {
-              id
-              name
-              status
-              conclusion
-              detailsUrl
-              annotations(first: 1) {
-                totalCount
-              }
-              checkSuite {
-                workflowRun {
-                  databaseId
-                  event
-                  workflow {
-                    databaseId
-                    name
-                  }
-                }
-              }
-            }
-            ... on StatusContext {
-              context
-              state
-            }
-          }
+          ...PollSummaryCheckContexts
         }
       }
     }
@@ -212,39 +183,10 @@ fragment PollSummaryPr on PullRequest {
   commits(last: 1) {
     nodes {
       commit {
+        oid
         statusCheckRollup {
           contexts(last: 100) {
-            totalCount
-            pageInfo {
-              hasPreviousPage
-            }
-            nodes {
-              __typename
-              ... on CheckRun {
-                id
-                name
-                status
-                conclusion
-                detailsUrl
-                annotations(first: 1) {
-                  totalCount
-                }
-                checkSuite {
-                  workflowRun {
-                    databaseId
-                    event
-                    workflow {
-                      databaseId
-                      name
-                    }
-                  }
-                }
-              }
-              ... on StatusContext {
-                context
-                state
-              }
-            }
+            ...PollSummaryCheckContexts
           }
         }
       }

@@ -38,8 +38,21 @@ type RawCheckContext =
     }
   | { __typename: "StatusContext"; context: string; state: string };
 
-interface RawCheckRollup {
-  contexts: SummaryConnection<RawCheckContext>;
+interface RawCheckContexts {
+  totalCount: number;
+  /** `startCursor` pages older contexts; hydration drops it so fingerprints never hash a cursor. */
+  pageInfo: { hasPreviousPage: boolean; startCursor?: string | null };
+  nodes: RawCheckContext[];
+}
+
+export interface RawCheckRollup {
+  contexts: RawCheckContexts;
+}
+
+/** A commit whose status contexts the compact summary reads. */
+export interface RawSummaryCommit {
+  oid: string;
+  statusCheckRollup: RawCheckRollup | null;
 }
 
 export interface RawSummaryPr {
@@ -73,7 +86,7 @@ export interface RawSummaryPr {
       beforeCommit: { oid: string; parents: { nodes: Array<{ oid: string }> } | null } | null;
     }>;
   } | null;
-  mergeQueueEntry: { headCommit: { statusCheckRollup: RawCheckRollup | null } | null } | null;
+  mergeQueueEntry: { headCommit: RawSummaryCommit | null } | null;
   stack: { number: number; size: number; baseRefName: string } | null;
   stackEntry: { position: number } | null;
   comments: SummaryConnection<RawSummaryComment>;
@@ -86,13 +99,7 @@ export interface RawSummaryPr {
     rootComments?: { nodes: RawSummaryComment[] };
     comments: SummaryConnection<RawSummaryComment>;
   }>;
-  commits: {
-    nodes: Array<{
-      commit: {
-        statusCheckRollup: RawCheckRollup | null;
-      };
-    }>;
-  };
+  commits: { nodes: Array<{ commit: RawSummaryCommit }> };
 }
 
 export interface RawExplicitResponse {

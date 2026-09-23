@@ -1,0 +1,34 @@
+fragment PollSummaryCheckContexts on StatusCheckRollupContextConnection {
+  totalCount
+  pageInfo {
+    hasPreviousPage
+    startCursor
+  }
+  nodes {
+    __typename
+    ... on CheckRun {
+      id
+      name
+      status
+      conclusion
+      detailsUrl
+      annotations(first: 1) {
+        totalCount
+      }
+      checkSuite {
+        workflowRun {
+          databaseId
+          event
+          workflow {
+            databaseId
+            name
+          }
+        }
+      }
+    }
+    ... on StatusContext {
+      context
+      state
+    }
+  }
+}

@@ -7,6 +7,7 @@ import type {
 } from "../types.mts";
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
 import { GitHubRequestError } from "./errors.mts";
+import { hydratePollSummaryChecks } from "./poll-summary-check-hydration.mts";
 import { summarizePollSummaryPr } from "./poll-summary-projector.mts";
 import type { RawExplicitResponse, RawStackResponse, RawSummaryPr } from "./poll-summary-raw.mts";
 import { POLL_STACK_SUMMARY_QUERY, POLL_SUMMARY_FRAGMENT } from "./queries.mts";
@@ -70,6 +71,7 @@ async function fetchExplicitChunk(
     if (!raw) throw new ShepherdError(`PR #${pr} not found`, EXIT.UNAVAILABLE);
     return raw;
   });
+  for (const raw of rawPrs) await hydratePollSummaryChecks(raw, repo);
   return { prs: rawPrs, viewerCanAdminister: result.data.repository.viewerCanAdminister };
 }
 
@@ -145,6 +147,7 @@ async function fetchStackSummary(
     );
   }
   const ordered = [...unique.values()].sort((left, right) => left.position - right.position);
+  for (const entry of ordered) await hydratePollSummaryChecks(entry.pullRequest, repo);
   const stackAncestry: NonNullable<FetchedPollSummary["stackAncestry"]> = [];
   for (let index = 1; index < ordered.length; index++) {
     const parent = ordered[index - 1].pullRequest;
