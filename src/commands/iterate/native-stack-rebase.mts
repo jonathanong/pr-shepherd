@@ -32,7 +32,9 @@ export function buildNativeStackRebaseInstruction(
 
 /**
  * The stack-aware conflict repair for a native stack layer; undefined outside a stack.
- * An upper layer's parent is its own PR base branch — `stack.baseRefName` is the stack's trunk.
+ * A layer whose PR targets the stack's trunk (`stack.baseRefName`) is the bottom open layer —
+ * position 1, or a higher layer GitHub retargeted after every layer below it merged. Any other
+ * layer is an upper layer whose parent is its own PR base branch.
  */
 export function buildNativeStackConflictRebase(
   repo: string,
@@ -43,7 +45,7 @@ export function buildNativeStackConflictRebase(
   return buildNativeStackRebaseInstruction(
     repo,
     stack.number,
-    stack.position > 1 ? { parentBranch: pr.baseBranch } : { bottomPr: pr.number },
+    pr.baseBranch === stack.baseRefName ? { bottomPr: pr.number } : { parentBranch: pr.baseBranch },
   );
 }
 

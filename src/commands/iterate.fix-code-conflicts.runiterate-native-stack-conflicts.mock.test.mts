@@ -84,6 +84,14 @@ describe("runIterate — fix_code (native stack merge conflicts)", () => {
     expect(mockFetchPollSummary).not.toHaveBeenCalled();
   });
 
+  it("rebases onto trunk from a higher layer once every layer below it merged", async () => {
+    const joined = (await runStackConflict({ ...trunkStack, position: 3 })).join("\n");
+
+    expect(joined).toContain("check out the head branch of PR #42 and run `gh stack rebase`;");
+    expect(joined).not.toContain("--no-trunk");
+    expect(joined).not.toContain("check out the parent stack branch `main`");
+  });
+
   it("routes a conflicting layer with a stale boundary through one stack rebase", async () => {
     mockFetchPollSummary.mockResolvedValue({
       prs: [],

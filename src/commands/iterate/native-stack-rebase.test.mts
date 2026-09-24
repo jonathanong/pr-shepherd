@@ -38,14 +38,24 @@ describe("native stack rebase instructions", () => {
     expect(upperRebase).not.toContain("gh stack checkout 42");
   });
 
-  it("chooses the rebase start from the layer position and skips non-stack PRs", () => {
+  it("chooses the rebase start from the layer's PR base and skips non-stack PRs", () => {
     const upperRebase = buildNativeStackConflictRebase("acme/widgets", upperPr, upperLayer);
     expect(upperRebase).toContain("check out the parent stack branch `feature-parent`");
     expect(upperRebase).not.toContain("`main`");
-    expect(
-      buildNativeStackConflictRebase("acme/widgets", upperPr, { ...upperLayer, position: 1 }),
-    ).toContain("check out the head branch of PR #42");
     expect(buildNativeStackConflictRebase("acme/widgets", upperPr, undefined)).toBeUndefined();
+  });
+
+  it.each([
+    ["the first layer", 1],
+    ["a layer retargeted onto trunk after the layers below it merged", 3],
+  ])("rebases %s onto trunk", (_case, position) => {
+    const rebase = buildNativeStackConflictRebase(
+      "acme/widgets",
+      { number: 42, baseBranch: "main" },
+      { ...upperLayer, position },
+    );
+    expect(rebase).toContain("check out the head branch of PR #42 and run `gh stack rebase`;");
+    expect(rebase).not.toContain("--no-trunk");
   });
 
   it("keeps the single-branch conflict wording outside a stack", () => {
