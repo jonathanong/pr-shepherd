@@ -103,6 +103,12 @@ export async function readStack<Pr extends StackMemberRefs>(
         EXIT.TEMPFAIL,
       );
     }
+    if (pageInfo.hasNextPage && pageInfo.endCursor === after) {
+      throw new ShepherdError(
+        "GitHub stack pagination returned a repeated end cursor",
+        EXIT.TEMPFAIL,
+      );
+    }
     after = pageInfo.hasNextPage ? pageInfo.endCursor : null;
   } while (after !== null);
 
