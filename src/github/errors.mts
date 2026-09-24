@@ -67,6 +67,14 @@ function classifyStatus(
   return EXIT.UNAVAILABLE;
 }
 
+/** HTTP 200 GraphQL response whose `repository` field resolved to null. */
+export function missingRepositoryError(repo: { owner: string; name: string }): GitHubRequestError {
+  return new GitHubRequestError(
+    `GitHub GraphQL response did not include repository ${repo.owner}/${repo.name} (not found or access denied)`,
+    { status: 200 },
+  );
+}
+
 export class GitHubRequestError extends ShepherdError {
   readonly status: number;
   readonly rateLimit?: RateLimitInfo;
