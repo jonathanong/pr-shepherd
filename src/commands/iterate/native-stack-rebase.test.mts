@@ -15,16 +15,27 @@ const upperLayer = { number: 7, size: 3, position: 2, baseRefName: "main" };
 const upperPr = { number: 42, baseBranch: "feature-parent" };
 
 describe("native stack rebase instructions", () => {
+  const prepare =
+    "From a clean checkout of `acme/widgets`, if `gh stack` does not track stack #7 locally, import it with `gh stack checkout 7`, then confirm every layer's local branch is at its PR's head commit — a stale local layer would overwrite that PR's newer commits on push.";
+
   it("rebases an upper layer from its parent without trunk", () => {
-    expect(buildNativeStackRebaseInstruction("acme/widgets", { parentBranch: "feature-a" })).toBe(
-      "From a clean checkout of `acme/widgets`, check out the parent stack branch `feature-a` and run `gh stack rebase --upstack --no-trunk`; if it stops on a conflict, resolve it and run `gh stack rebase --continue`.",
+    expect(
+      buildNativeStackRebaseInstruction("acme/widgets", 7, { parentBranch: "feature-a" }),
+    ).toBe(
+      `${prepare} Then check out the parent stack branch \`feature-a\` and run \`gh stack rebase --upstack --no-trunk\`; if it stops on a conflict, resolve it and run \`gh stack rebase --continue\`.`,
     );
   });
 
   it("rebases the whole stack onto trunk from the bottom layer", () => {
-    expect(buildNativeStackRebaseInstruction("acme/widgets", { bottomPr: 9 })).toBe(
-      "From a clean checkout of `acme/widgets`, check out the head branch of PR #9 and run `gh stack rebase`; if it stops on a conflict, resolve it and run `gh stack rebase --continue`.",
+    expect(buildNativeStackRebaseInstruction("acme/widgets", 7, { bottomPr: 9 })).toBe(
+      `${prepare} Then check out the head branch of PR #9 and run \`gh stack rebase\`; if it stops on a conflict, resolve it and run \`gh stack rebase --continue\`.`,
     );
+  });
+
+  it("imports the layer's stack by stack number, not PR number", () => {
+    const upperRebase = buildNativeStackConflictRebase("acme/widgets", upperPr, upperLayer);
+    expect(upperRebase).toContain("`gh stack checkout 7`");
+    expect(upperRebase).not.toContain("gh stack checkout 42");
   });
 
   it("chooses the rebase start from the layer position and skips non-stack PRs", () => {

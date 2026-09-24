@@ -60,7 +60,7 @@ describe("runIterate — fix_code (native stack merge conflicts)", () => {
     const instructions = await runStackConflict({ ...trunkStack, position: 2 }, "feature-parent");
 
     expect(instructions).toContain(
-      "The branch has merge conflicts (see `**branch**` above). From a clean checkout of `owner/repo`, check out the parent stack branch `feature-parent` and run `gh stack rebase --upstack --no-trunk`; if it stops on a conflict, resolve it and run `gh stack rebase --continue`.",
+      "The branch has merge conflicts (see `**branch**` above). From a clean checkout of `owner/repo`, if `gh stack` does not track stack #7 locally, import it with `gh stack checkout 7`, then confirm every layer's local branch is at its PR's head commit — a stale local layer would overwrite that PR's newer commits on push. Then check out the parent stack branch `feature-parent` and run `gh stack rebase --upstack --no-trunk`; if it stops on a conflict, resolve it and run `gh stack rebase --continue`.",
     );
     expect(instructions).toContain(
       "Commit any remaining changes on the PR head branch and push the rewritten stack with `gh stack push`.",
@@ -78,7 +78,7 @@ describe("runIterate — fix_code (native stack merge conflicts)", () => {
     const instructions = await runStackConflict({ ...trunkStack, position: 1 });
 
     expect(instructions).toContain(
-      "The branch has merge conflicts (see `**branch**` above). From a clean checkout of `owner/repo`, check out the head branch of PR #42 and run `gh stack rebase`; if it stops on a conflict, resolve it and run `gh stack rebase --continue`.",
+      "The branch has merge conflicts (see `**branch**` above). From a clean checkout of `owner/repo`, if `gh stack` does not track stack #7 locally, import it with `gh stack checkout 7`, then confirm every layer's local branch is at its PR's head commit — a stale local layer would overwrite that PR's newer commits on push. Then check out the head branch of PR #42 and run `gh stack rebase`; if it stops on a conflict, resolve it and run `gh stack rebase --continue`.",
     );
     expect(instructions.join("\n")).not.toContain("--no-trunk");
     expect(mockFetchPollSummary).not.toHaveBeenCalled();

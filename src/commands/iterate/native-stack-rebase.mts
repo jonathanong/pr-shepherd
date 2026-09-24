@@ -9,9 +9,14 @@ export type NativeStackRebaseStart = { parentBranch: string } | { bottomPr: numb
 /**
  * One gh-stack rebase step. A native stack layer must not be rebased or merged from its base
  * branch alone: that rewrites one branch and strands every layer above it.
+ *
+ * `gh stack` rebases the stack it tracks locally and `gh stack push` publishes those local
+ * layers, so the step first imports the stack by its number (a bare number resolves as a
+ * stack number before a PR number) and checks each local layer against its PR head.
  */
 export function buildNativeStackRebaseInstruction(
   repo: string,
+  stackNumber: number,
   start: NativeStackRebaseStart,
 ): string {
   const [checkout, command] =
@@ -21,7 +26,8 @@ export function buildNativeStackRebaseInstruction(
           "gh stack rebase --upstack --no-trunk",
         ]
       : [`check out the head branch of PR #${start.bottomPr}`, "gh stack rebase"];
-  return `From a clean checkout of \`${repo}\`, ${checkout} and run \`${command}\`; if it stops on a conflict, resolve it and run \`gh stack rebase --continue\`.`;
+  const prepare = `if \`gh stack\` does not track stack #${stackNumber} locally, import it with \`gh stack checkout ${stackNumber}\`, then confirm every layer's local branch is at its PR's head commit — a stale local layer would overwrite that PR's newer commits on push`;
+  return `From a clean checkout of \`${repo}\`, ${prepare}. Then ${checkout} and run \`${command}\`; if it stops on a conflict, resolve it and run \`gh stack rebase --continue\`.`;
 }
 
 /**
@@ -36,6 +42,7 @@ export function buildNativeStackConflictRebase(
   if (!stack) return undefined;
   return buildNativeStackRebaseInstruction(
     repo,
+    stack.number,
     stack.position > 1 ? { parentBranch: pr.baseBranch } : { bottomPr: pr.number },
   );
 }
