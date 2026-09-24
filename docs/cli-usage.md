@@ -64,10 +64,9 @@ unverified topology returns `ESCALATE` for human direction only after any other 
 has completed; mixed states return immediate `SHEPHERD` and surface the eventual human blocker.
 
 With `--stack --merge`, a READY bottom open layer that GitHub has retargeted onto the stack base
-returns `MERGE` with `gh stack merge <PR number> --yes --squash`, after Shepherd confirms no native
-stack shares that number; reconciliation continues layer by layer until every layer merges and
-returns `CANCEL`. See [actions.md](actions.md) for the `mergeSelector` outcomes. JSON/MCP includes
-the same raw ancestry, routing context, `nextAction`, and instructions that Markdown renders.
+returns `MERGE` with `gh stack merge <PR number> --yes --squash`; reconciliation continues layer by
+layer until every layer merges and returns `CANCEL`. JSON/MCP includes the same raw ancestry, routing
+context, `nextAction`, and instructions that Markdown renders.
 
 The polling flags are `--interval`, `--timeout`, `--debounce`, `--quiet-status`, `--no-quiet-status`, and `--until-terminal`. Their defaults come from `poll.intervalSeconds` (built-in 60), `poll.timeoutSeconds` (270), `poll.debounceSeconds` (60), and `poll.quietStatus` (`false`) in `.pr-shepherdrc.yml`; explicit flags override configuration. Each ordinary `WAIT` tick writes a stderr line naming what it is waiting on (the `WAIT` log's check counts and reason) unless quiet status is enabled; the final action remains the only stdout result. `--debounce` (`0` disables) is a settle window after the first `FIX_CODE` or stack-level `SHEPHERD`. Iterate flags are `--ready-delay`, `--stall-timeout`, `--merge`, `--no-auto-mark-ready`, `--format`, and `--verbose`. The legacy `--no-auto-cancel-actionable` flag remains accepted as a no-op. Durations accept `s`, `m`, and `h`; bare polling durations are seconds and bare iterate durations are minutes.
 

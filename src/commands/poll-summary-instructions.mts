@@ -6,8 +6,8 @@ import {
   appendAutonomousInstructions,
   isStackLayerReady,
   planBottomDrain,
+  retargetWaitPlan,
   stackPosition,
-  withheldMergePlan,
   type StackPlan,
 } from "./stack-drain.mts";
 
@@ -78,13 +78,6 @@ export function withPollSummaryInstructions(
           reasons: [...item.reasons, "unverified-stack-state"],
         };
       }
-      if (item.mergeSelector?.status === "stack-number" && item.action !== "escalate") {
-        return {
-          ...item,
-          action: "escalate" as const,
-          reasons: [...item.reasons, "pr-number-is-stack-number"],
-        };
-      }
       return item;
     }),
   };
@@ -152,9 +145,7 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
     for (const item of escalated) {
       if (item.pr === closedDependencyPr?.pr || item.pr === unverifiedLayer?.pr) continue;
       instructions.push(
-        item.reasons.includes("pr-number-is-stack-number")
-          ? `${instructions.length + 1}. \`gh stack merge ${item.pr}\` would select native stack #${item.pr} rather than PR #${item.pr}. ${stop ? "Stop and ask" : "After autonomous shepherding, ask"} the stack owner how to merge PR #${item.pr}.`
-          : `${instructions.length + 1}. PR #${item.pr} requires human action (${item.reasons.join(", ")}). ${stop ? "Stop for that decision." : "Keep shepherding other PRs before the handoff."}`,
+        `${instructions.length + 1}. PR #${item.pr} requires human action (${item.reasons.join(", ")}). ${stop ? "Stop for that decision." : "Keep shepherding other PRs before the handoff."}`,
       );
     }
     for (const item of missingCommands) {
@@ -241,7 +232,7 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
     };
   }
 
-  return withheldMergePlan(open[0]!);
+  return retargetWaitPlan(open[0]!);
 }
 
 function closedDependency(items: PollSummaryItem[], pr: number): boolean {

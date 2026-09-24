@@ -15,7 +15,7 @@ type StackLayer = PollSummaryItem & { stack: NonNullable<PollSummaryItem["stack"
  * merged, GitHub retargeted it onto the stack base, it holds a current READY
  * receipt, and no layer is already in the merge queue.
  */
-export function drainableBottom(result: PollSummaryResult): StackLayer | undefined {
+function drainableBottom(result: PollSummaryResult): StackLayer | undefined {
   const layers = [...result.prs].sort((left, right) => stackPosition(left) - stackPosition(right));
   const bottom = layers.find((item) => item.state !== "MERGED");
   if (!bottom || !isStackLayer(bottom) || bottom.state !== "OPEN") return undefined;
@@ -26,14 +26,18 @@ export function drainableBottom(result: PollSummaryResult): StackLayer | undefin
   return bottom;
 }
 
-/** Merge the ready bottom layer by PR number once no same-numbered stack can capture it. */
+/**
+ * Merge the ready bottom layer by PR number. `gh stack merge <n>` tries a stack
+ * number first, but stack numbers come from the repository's issue and pull
+ * request sequence, so a PR number never names a stack.
+ */
 export function planBottomDrain(
   result: PollSummaryResult,
   mergeRequested: boolean,
 ): StackPlan | undefined {
   if (!mergeRequested) return undefined;
   const bottom = drainableBottom(result);
-  if (bottom?.mergeSelector?.status !== "verified") return undefined;
+  if (!bottom) return undefined;
   const gaps = result.stackAncestry ?? [];
   const open = result.prs.filter((item) => item.state === "OPEN");
   const uppers = open.filter(
@@ -57,16 +61,18 @@ export function planBottomDrain(
 }
 
 /**
- * A merge-requested, fully ready stack whose bottom open layer cannot be named
- * safely yet: GitHub has not retargeted it, or its PR number was not proven
- * free of a same-numbered stack.
+ * A merge-requested, fully ready stack whose bottom open layer still targets
+ * the merged layer below it until GitHub retargets it onto the stack base.
  */
-export function withheldMergePlan(first: PollSummaryItem): StackPlan {
-  const instruction =
-    first.baseRefName === first.stack?.baseRefName
-      ? `1. Shepherd could not confirm that no native stack is numbered #${first.pr} (see its merge selector above), so it withholds the merge command. Recheck at the configured polling cadence.`
-      : `1. PR #${first.pr} still targets \`${first.baseRefName}\` rather than \`${first.stack?.baseRefName}\`; wait for GitHub to retarget it before merging. Recheck at the configured polling cadence.`;
-  return { action: "wait", stackMergeable: true, waiting: true, instructions: [instruction] };
+export function retargetWaitPlan(first: PollSummaryItem): StackPlan {
+  return {
+    action: "wait",
+    stackMergeable: true,
+    waiting: true,
+    instructions: [
+      `1. PR #${first.pr} still targets \`${first.baseRefName}\` rather than \`${first.stack?.baseRefName}\`; wait for GitHub to retarget it before merging. Recheck at the configured polling cadence.`,
+    ],
+  };
 }
 
 export function appendAutonomousInstructions(

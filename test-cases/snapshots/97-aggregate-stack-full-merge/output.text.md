@@ -5,17 +5,13 @@
 ## Pull requests
 
 - [PR #341: Verified foundation](https://github.com/owner/repo/pull/341) [MERGE]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · merge selector `verified` · stack `35` position `1/2` base `main`
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `35` position `1/2` base `main`
   - head `foundation` at `e111111111111111111111111111111111111111` · base `main`
   - reasons: `appears-ready`
 - [PR #342: Verified child](https://github.com/owner/repo/pull/342) [MERGE]
   - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `35` position `2/2` base `main`
   - head `child` at `e222222222222222222222222222222222222222` · base `foundation`
   - reasons: `appears-ready`
-
-## GitHub API usage
-
-- Credential source: `GH_TOKEN`
 
 ## Instructions
 

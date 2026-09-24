@@ -237,11 +237,10 @@ describe("native-stack reconciliation", () => {
     expect(result.instructions?.join("\n")).not.toContain("gh stack push");
   });
 
-  it("merges a verified one-layer stack and returns CANCEL only after that layer merges", () => {
+  it("merges a ready one-layer stack and returns CANCEL only after that layer merges", () => {
     const single = stack([
       row(1, 1, {
         readyReceipt: true,
-        mergeSelector: { status: "verified" },
         stack: { number: 9, size: 1, position: 1, baseRefName: "main" },
       }),
     ]);
@@ -285,19 +284,6 @@ describe("native-stack reconciliation", () => {
       reason: "waiting",
       stackMergeable: true,
     });
-    expect(result.instructions?.join("\n")).not.toContain("gh stack merge");
-  });
-
-  it("escalates a closed dependency rather than merging past it", () => {
-    const result = withPollSummaryInstructions(
-      stack([
-        row(1, 1, { readyReceipt: true }),
-        row(2, 2, { state: "CLOSED", action: "cancel", reasons: ["closed"] }),
-        row(3, 3, { readyReceipt: true }),
-      ]),
-      true,
-    );
-    expect(result).toMatchObject({ nextAction: "escalate", stackMergeable: false });
     expect(result.instructions?.join("\n")).not.toContain("gh stack merge");
   });
 

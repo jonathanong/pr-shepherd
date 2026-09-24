@@ -76,9 +76,7 @@ is surfaced during `SHEPHERD` when another layer can still proceed; otherwise it
 for human direction. If `--stack --merge` finds the lowest open layer READY and
 retargeted onto the stack base, it returns `MERGE` with
 `GH_REPO=<owner/repo> gh stack merge <PR number> --yes --squash` for the agent to run; rerun the same
-selector until all layers merge and it returns `CANCEL`. `gh stack merge` reads a bare number as a
-stack number first, so a PR number that also names a native stack escalates that row as
-`pr-number-is-stack-number` instead of emitting the command.
+selector until all layers merge and it returns `CANCEL`.
 
 **Detection caveat:** GitHub's stack field is a public-preview API and can be absent even for a genuinely stacked PR — for example when Stacked PRs are disabled on the repository. An absent `stack` field is therefore not proof the PR isn't stacked; it only means Shepherd has no signal either way. Shepherd has no other reliable signal to distinguish an ordinary feature branch from an undetectable stacked PR (comparing the base branch to the repository's default branch false-positives on any PR that targets a non-default branch for ordinary reasons), so it does not attempt to infer stackedness beyond this field. This is a known gap, not a silently accepted risk: absence of the field only means the ordinary merge path proceeds, it does not confirm the PR is safe to merge with a plain `gh pr merge --auto`.
 

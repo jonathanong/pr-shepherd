@@ -186,8 +186,8 @@ Supply exactly one of `pr`, `prs`, or `stack`. `prs` is a non-empty list of qual
 from one repository; `stack` is one qualified anchor whose complete native GitHub stack is selected.
 Aggregate selectors return one compact, read-only summary tick. Markdown and `structuredContent`
 surface equivalent per-PR raw state, bounded check/review counts, routing hints, and `pollCommand`s.
-For native stacks they also surface `stackMergeable`, `readyReceipt`, `blockedByPr`, raw ancestry
-mismatches, and, with merge intent, the bottom layer's `mergeSelector` check. The compact tick reuses singular check/review classification but does not maintain
+For native stacks they also surface `stackMergeable`, `readyReceipt`, `blockedByPr`, and raw ancestry
+mismatches. The compact tick reuses singular check/review classification but does not maintain
 ready-delay state; bounded overflow is surfaced as incomplete context without becoming a permanent
 action by itself.
 

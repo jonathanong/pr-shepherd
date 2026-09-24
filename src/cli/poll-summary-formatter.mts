@@ -50,14 +50,11 @@ function formatItem(item: PollSummaryItem): string {
     item.remainingSeconds !== undefined ? ` · ready delay \`${item.remainingSeconds}s\`` : "";
   const readyReceipt = item.readyReceipt ? " · Shepherd READY completion `verified`" : "";
   const blockedBy = item.blockedByPr ? ` · stack blocked by PR #${item.blockedByPr}` : "";
-  const mergeSelector = item.mergeSelector
-    ? ` · merge selector \`${item.mergeSelector.status}\`${item.mergeSelector.status === "unverified" ? ` (${escapeMarkdownText(item.mergeSelector.error)})` : ""}`
-    : "";
   const checks = item.checks;
   const review = item.review;
   return [
     `- [PR #${item.pr}: ${escapeMarkdownText(item.title)}](${item.url}) [${item.action.toUpperCase()}]`,
-    `  - state \`${item.state}\` · mergeable \`${item.mergeable}\` · merge \`${item.mergeStateStatus}\`${reviewDecision}${stateFlags}${blockingReviewer}${readyDelay}${readyReceipt}${mergeSelector}${blockedBy}${stack}`,
+    `  - state \`${item.state}\` · mergeable \`${item.mergeable}\` · merge \`${item.mergeStateStatus}\`${reviewDecision}${stateFlags}${blockingReviewer}${readyDelay}${readyReceipt}${blockedBy}${stack}`,
     `  - head \`${item.headRefName}\` at \`${item.headRefOid}\` · base \`${item.baseRefName}\``,
     ...(checks
       ? [`  - checks: ${formatCounts(checks, checks.incomplete ? ", incomplete" : "")}`]

@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { row, stack } from "../../test-helpers/commands/poll-summary-stack.test-support.mts";
 import { withPollSummaryInstructions } from "./poll-summary-instructions.mts";
-import { drainableBottom } from "./stack-drain.mts";
+import { planBottomDrain } from "./stack-drain.mts";
 
-const verified = { mergeSelector: { status: "verified" } } as const;
 const ready = { readyReceipt: true } as const;
 
 function text(result: { instructions?: string[] }): string {
@@ -13,7 +12,7 @@ function text(result: { instructions?: string[] }): string {
 describe("bottom-layer stack drain", () => {
   it("merges only the bottom PR by number when every layer is ready", () => {
     const result = withPollSummaryInstructions(
-      stack([row(1, 1, { ...ready, ...verified }), row(2, 2, ready), row(3, 3, ready)]),
+      stack([row(1, 1, ready), row(2, 2, ready), row(3, 3, ready)]),
       true,
     );
     expect(result).toMatchObject({ nextAction: "merge", stackMergeable: true });
@@ -27,7 +26,7 @@ describe("bottom-layer stack drain", () => {
 
   it("merges a ready bottom while shepherding unready upper layers", () => {
     const result = withPollSummaryInstructions(
-      stack([row(1, 1, { ...ready, ...verified }), row(2, 2), row(3, 3, { isDraft: true })]),
+      stack([row(1, 1, ready), row(2, 2), row(3, 3, { isDraft: true })]),
       true,
     );
     expect(result).toMatchObject({ nextAction: "merge", stackMergeable: false });
@@ -39,10 +38,7 @@ describe("bottom-layer stack drain", () => {
 
   it("merges a ready bottom beneath an escalated upper layer", () => {
     const result = withPollSummaryInstructions(
-      stack([
-        row(1, 1, { ...ready, ...verified }),
-        row(2, 2, { action: "escalate", reasons: ["fix-thrash"] }),
-      ]),
+      stack([row(1, 1, ready), row(2, 2, { action: "escalate", reasons: ["fix-thrash"] })]),
       true,
     );
     expect(result.nextAction).toBe("merge");
@@ -54,7 +50,7 @@ describe("bottom-layer stack drain", () => {
     const result = withPollSummaryInstructions(
       stack([
         row(1, 1, { state: "MERGED", reasons: ["merged"] }),
-        row(2, 2, { ...ready, ...verified, baseRefName: "main" }),
+        row(2, 2, { ...ready, baseRefName: "main" }),
         row(3, 3),
       ]),
       true,
@@ -70,7 +66,7 @@ describe("bottom-layer stack drain", () => {
     const result = withPollSummaryInstructions(
       stack([
         row(1, 1, { state: "MERGED", reasons: ["merged"] }),
-        row(2, 2, { ...ready, ...verified }),
+        row(2, 2, ready),
         row(3, 3, ready),
       ]),
       true,
@@ -83,7 +79,7 @@ describe("bottom-layer stack drain", () => {
   it("merges a ready bottom beneath a layer that closed without merging", () => {
     const result = withPollSummaryInstructions(
       stack([
-        row(1, 1, { ...ready, ...verified }),
+        row(1, 1, ready),
         row(2, 2, { state: "CLOSED", reasons: ["closed"] }),
         row(3, 3, ready),
       ]),
@@ -98,7 +94,7 @@ describe("bottom-layer stack drain", () => {
     const result = withPollSummaryInstructions(
       stack([
         row(1, 1, { state: "CLOSED", reasons: ["closed"] }),
-        row(2, 2, { ...ready, ...verified, baseRefName: "main" }),
+        row(2, 2, { ...ready, baseRefName: "main" }),
         row(3, 3, ready),
       ]),
       true,
@@ -113,7 +109,7 @@ describe("bottom-layer stack drain", () => {
         [
           row(1, 1, { state: "MERGED", reasons: ["merged"] }),
           row(2, 2, { state: "MERGED", reasons: ["merged"] }),
-          row(3, 3, { ...ready, ...verified, baseRefName: "main" }),
+          row(3, 3, { ...ready, baseRefName: "main" }),
         ],
         true,
       ),
@@ -126,7 +122,7 @@ describe("bottom-layer stack drain", () => {
 
   it("does not merge again while a layer is in the merge queue", () => {
     const result = withPollSummaryInstructions(
-      stack([row(1, 1, { ...ready, ...verified, isInMergeQueue: true }), row(2, 2), row(3, 3)]),
+      stack([row(1, 1, { ...ready, isInMergeQueue: true }), row(2, 2), row(3, 3)]),
       true,
     );
     expect(result.nextAction).toBe("shepherd");
@@ -134,41 +130,9 @@ describe("bottom-layer stack drain", () => {
     expect(text(result)).not.toContain("gh stack merge");
   });
 
-  it.each([
-    ["was not checked", undefined],
-    ["lookup failed", { status: "unverified", error: "GitHub REST GET failed: 502" }],
-  ] as const)("withholds the merge command when the PR number %s", (_case, mergeSelector) => {
-    const bottom = row(1, 1, { ...ready, ...(mergeSelector && { mergeSelector }) });
-    const result = withPollSummaryInstructions(stack([bottom, row(2, 2, ready)]), true);
-    expect(result).toMatchObject({ nextAction: "wait", reason: "waiting" });
-    expect(text(result)).toContain("no native stack is numbered #1 (see its merge selector above)");
-    expect(text(result)).not.toContain("502");
-    expect(text(result)).not.toContain("gh stack merge");
-  });
-
-  it("escalates when the bottom PR number also names a native stack", () => {
-    const input = stack([
-      row(1, 1, { ...ready, mergeSelector: { status: "stack-number" } }),
-      row(2, 2, ready),
-    ]);
-    const result = withPollSummaryInstructions(input, true);
-    expect(result).toMatchObject({ nextAction: "escalate", stackMergeable: false });
-    expect(result.prs[0]).toMatchObject({
-      action: "escalate",
-      reasons: ["appears-ready", "pr-number-is-stack-number"],
-    });
-    expect(text(result)).toContain(
-      "`gh stack merge 1` would select native stack #1 rather than PR #1",
-    );
-    expect(withPollSummaryInstructions(result, true).prs[0]?.reasons).toEqual([
-      "appears-ready",
-      "pr-number-is-stack-number",
-    ]);
-  });
-
   it("never prints a merge command without merge intent", () => {
     const result = withPollSummaryInstructions(
-      stack([row(1, 1, { ...ready, ...verified }), row(2, 2), row(3, 3)]),
+      stack([row(1, 1, ready), row(2, 2), row(3, 3)]),
       false,
     );
     expect(result.nextAction).toBe("shepherd");
@@ -176,16 +140,17 @@ describe("bottom-layer stack drain", () => {
   });
 });
 
-describe("drainableBottom", () => {
+describe("planBottomDrain", () => {
   it("selects the lowest open layer regardless of row order", () => {
-    const bottom = drainableBottom(
+    const plan = planBottomDrain(
       stack([
         row(3, 3),
         row(2, 2, { ...ready, baseRefName: "main" }),
         row(1, 1, { state: "MERGED" }),
       ]),
+      true,
     );
-    expect(bottom?.pr).toBe(2);
+    expect(plan?.instructions[0]).toContain("gh stack merge 2 --yes --squash");
   });
 
   it.each([
@@ -195,6 +160,6 @@ describe("drainableBottom", () => {
     ["a queued upper layer", [row(1, 1, ready), row(2, 2, { ...ready, isInMergeQueue: true })]],
     ["no open layer", [row(1, 1, { state: "MERGED" })]],
   ] as const)("returns nothing for %s", (_case, prs) => {
-    expect(drainableBottom(stack([...prs]))).toBeUndefined();
+    expect(planBottomDrain(stack([...prs]), true)).toBeUndefined();
   });
 });

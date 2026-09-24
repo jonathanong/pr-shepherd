@@ -159,11 +159,8 @@ until then, `SHEPHERD` remains the immediate action and lists the human blockers
 
 With `--stack --merge`, a READY bottom open layer that GitHub has retargeted onto the stack base
 returns `MERGE` with `gh stack merge <PR number> --yes --squash`, which merges or enqueues that layer
-alone; unready upper layers keep their one-PR sessions alongside it. Because `gh stack merge` reads a
-bare number as a stack number first, Shepherd first confirms no native stack has that number: a
-collision returns `ESCALATE`, and a failed lookup withholds the command and keeps polling. After each
-merge, GitHub retargets the next layer, so the rerun drains the stack layer by layer until it
-returns `CANCEL`. API and MCP aggregate calls perform one summary tick and leave recurrence to the
+alone; unready upper layers keep their one-PR sessions alongside it. After each merge, GitHub
+retargets the next layer, so the rerun drains the stack layer by layer until it returns `CANCEL`. API and MCP aggregate calls perform one summary tick and leave recurrence to the
 caller.
 
 Polling defaults can be set under `poll` in `.pr-shepherdrc.yml`: `intervalSeconds`, `timeoutSeconds`, `debounceSeconds`, and `quietStatus`. Explicit flags override configuration, including `--no-quiet-status` when a shared config enables quiet output. Quiet status remains off by default.

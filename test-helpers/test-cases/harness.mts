@@ -179,11 +179,6 @@ export interface Fixture {
   expectedReason?: "actionable" | "all_terminal" | "waiting" | "timeout";
   /** Expected stack-level transition for aggregate native-stack fixtures. */
   expectedNextAction?: string;
-  /**
-   * Status of REST `GET /repos/{owner}/{repo}/stacks/{n}`, the `--merge` check that the bottom
-   * layer's PR number does not also name a native stack. Defaults to 404 (no such stack).
-   */
-  stackLookupStatus?: 200 | 403 | 404;
   /** Fields merged on top of DEFAULT_BATCH. */
   batchData?: Record<string, unknown>;
   /** Return value of getMergeableState() for UNKNOWN/READY refresh. */
@@ -467,27 +462,6 @@ export function applyFixture(fixture: Fixture): void {
       text: () => Promise.resolve('{"data":{}}'),
     });
   }
-  const fetchRest = mockFetch.getMockImplementation()!;
-  mockFetch.mockImplementation((url, init) =>
-    /\/repos\/[^/]+\/[^/]+\/stacks\/\d+$/.test(String(url))
-      ? Promise.resolve(stackLookupResponse(fixture.stackLookupStatus ?? 404))
-      : fetchRest(url, init),
-  );
-}
-
-function stackLookupResponse(status: 200 | 403 | 404) {
-  const body = JSON.stringify(
-    status === 200
-      ? { number: 1, open: true }
-      : { message: status === 404 ? "Not Found" : "Forbidden" },
-  );
-  return {
-    ok: status === 200,
-    status,
-    headers: new Headers({ "content-type": "application/json" }),
-    json: () => Promise.resolve(JSON.parse(body)),
-    text: () => Promise.resolve(body),
-  };
 }
 
 // ---------------------------------------------------------------------------

@@ -4,7 +4,6 @@ import { ShepherdError } from "../exit-codes.mts";
 import { getRepoInfo } from "../github/client.mts";
 import { withApiTelemetryScope, summarizeApiTelemetry } from "../github/api-telemetry.mts";
 import { fetchPollSummary } from "../github/poll-summary.mts";
-import { checkStackMergeSelector } from "../github/stack-merge-selector.mts";
 import { sleep } from "../util/sleep.mts";
 import {
   aggregateQuotaWarning,
@@ -14,7 +13,6 @@ import {
 import type { PollSummaryCommandOptions, PollSummaryResult } from "../types.mts";
 import { withPollSummaryInstructions } from "./poll-summary-instructions.mts";
 import { summaryStatusSignature } from "./poll-summary-signature.mts";
-import { drainableBottom } from "./stack-drain.mts";
 
 const MAX_TIMER_MS = 2 ** 31 - 1;
 const TIMER_DRIFT_TOLERANCE_MS = 500;
@@ -38,32 +36,17 @@ async function runPollSummaryCore(opts: PollSummaryCommandOptions): Promise<Poll
   const fetched = await fetchPollSummary(opts, repo);
   const allTerminal = fetched.prs.every((item) => item.action === "cancel");
   const actionable = fetched.prs.some((item) => item.action !== "wait" && item.action !== "cancel");
-  const summary: PollSummaryResult = {
-    mode: "summary",
-    repo: `${repo.owner}/${repo.name}`,
-    selection: fetched.selection,
-    reason: allTerminal ? "all_terminal" : actionable ? "actionable" : "waiting",
-    prs: fetched.prs,
-    ...(fetched.stackAncestry?.length && { stackAncestry: fetched.stackAncestry }),
-  };
   return withPollSummaryInstructions(
-    opts.merge === true ? await withMergeSelector(summary, repo) : summary,
+    {
+      mode: "summary",
+      repo: `${repo.owner}/${repo.name}`,
+      selection: fetched.selection,
+      reason: allTerminal ? "all_terminal" : actionable ? "actionable" : "waiting",
+      prs: fetched.prs,
+      ...(fetched.stackAncestry?.length && { stackAncestry: fetched.stackAncestry }),
+    },
     opts.merge === true,
   );
-}
-
-/** Check a stack's bottom PR number only when a merge command could name it. */
-async function withMergeSelector(
-  result: PollSummaryResult,
-  repo: { owner: string; name: string },
-): Promise<PollSummaryResult> {
-  const bottom = result.selection.kind === "stack" ? drainableBottom(result) : undefined;
-  if (!bottom) return result;
-  const mergeSelector = await checkStackMergeSelector(bottom.pr, repo);
-  return {
-    ...result,
-    prs: result.prs.map((item) => (item.pr === bottom.pr ? { ...item, mergeSelector } : item)),
-  };
 }
 
 async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<PollSummaryResult> {

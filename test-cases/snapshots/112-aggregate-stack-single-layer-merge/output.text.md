@@ -5,13 +5,9 @@
 ## Pull requests
 
 - [PR #501: Verified single layer](https://github.com/owner/repo/pull/501) [MERGE]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · merge selector `verified` · stack `50` position `1/1` base `main`
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `50` position `1/1` base `main`
   - head `single` at `5011111111111111111111111111111111111111` · base `main`
   - reasons: `appears-ready`
-
-## GitHub API usage
-
-- Credential source: `GH_TOKEN`
 
 ## Instructions
 

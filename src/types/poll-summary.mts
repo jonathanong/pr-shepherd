@@ -67,19 +67,7 @@ export interface PollSummaryItem {
   readyReceipt?: true;
   /** Lowest unready ancestor that prevents this layer from being stack-mergeable. */
   blockedByPr?: number;
-  /** Whether `gh stack merge <pr>` would select this PR rather than a same-numbered stack. */
-  mergeSelector?: StackMergeSelector;
 }
-
-/**
- * `gh stack merge <n>` resolves a bare number as a stack number before a PR
- * number, so a PR merge command is safe only after confirming that no native
- * stack uses the same number.
- */
-export type StackMergeSelector =
-  | { status: "verified" }
-  | { status: "stack-number" }
-  | { status: "unverified"; error: string };
 
 export type PollSummarySelection =
   | { kind: "prs"; requested: number[] }

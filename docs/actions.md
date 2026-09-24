@@ -47,10 +47,9 @@ GitHub has retargeted it onto the stack base, the read-only summary returns `MER
 `GH_REPO=<owner/repo> gh stack merge <PR number> --yes --squash` for the agent to run. That merges or
 enqueues the bottom layer alone, even when upper layers still need one-PR sessions (listed in the same
 instructions) or a human decision. `gh stack merge` reads a bare number as a stack number before a PR
-number, so Shepherd first looks up a native stack with that number and records the outcome as the
-bottom row's `mergeSelector` (`verified`, `stack-number`, or `unverified` with the lookup error). Only
-`verified` emits the command; `stack-number` escalates that row (`pr-number-is-stack-number`), and
-`unverified` withholds the command as `WAIT` until a later poll. If `gh stack` is an unknown command,
+number, but native stack numbers come from the repository's issue and pull request sequence
+(observed; GitHub does not document it), so a PR number never names a stack. If `gh stack` is an
+unknown command,
 the instructions install `github/gh-stack` first. After each merge GitHub retargets the next layer, so
 the caller reruns `--stack --merge` until every layer is merged and the result is `CANCEL`. If
 GitHub puts any layer in a merge queue, the summary remains `WAIT` during queue progress and asks

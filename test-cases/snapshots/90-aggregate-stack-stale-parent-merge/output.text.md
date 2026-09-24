@@ -13,7 +13,7 @@
   - head `codex/github-app-credentials` at `80ad5e9953451916b07440b4fc3675464c17ea06` · base `main`
   - reasons: `merged`
 - [PR #510: \[codex\] add verified custom webhook ingress](https://github.com/jonathanong/auto-harness/pull/510) [MERGE]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · merge selector `verified` · stack `514` position `3/5` base `main`
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `514` position `3/5` base `main`
   - head `codex/webhook-platform` at `ccbb8fdfc8317f11b0b35c5e3bc1aad6a4d83e4d` · base `main`
   - reasons: `appears-ready`
 - [PR #511: \[codex\] add GitHub trigger and pull-ref foundation](https://github.com/jonathanong/auto-harness/pull/511) [MERGE]
@@ -29,10 +29,6 @@
 ## Stack ancestry
 
 - PR #518 base `codex/github-ingress-foundation` at `31259f721bca9ed99b534b8cfb82367bcaf737bc` differs from parent PR #511 head `codex/github-ingress-foundation` at `b94436d2ddf60c55948b953610b16b34cff7b4da`.
-
-## GitHub API usage
-
-- Credential source: `GH_TOKEN`
 
 ## Instructions
 
