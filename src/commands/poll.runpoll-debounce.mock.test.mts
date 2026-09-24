@@ -202,7 +202,7 @@ describe("runPoll — FIX_CODE debounce", () => {
     await vi.advanceTimersByTimeAsync(60_000);
     await pollPromise;
     expect(stderrSpy.mock.calls.map((args: unknown[]) => String(args[0])).join("")).toContain(
-      "[poll tick 1 / +0s] WAIT — still running; next tick in 30s\n" +
+      "[poll tick 1 / +0s] WAIT — 2 passing, 1 in-progress; next tick in 30s\n" +
         "[poll tick 2 / +30s] FIX_CODE — debounce 60s remaining\n",
     );
   });

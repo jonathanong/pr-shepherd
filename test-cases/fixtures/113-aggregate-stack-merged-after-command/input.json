@@ -1,5 +1,5 @@
 {
-  "description": "After the agent-run stack merge, a fully merged stack returns terminal CANCEL even with --merge still set.",
+  "description": "After the agent-run bottom-layer merge, a fully merged stack returns terminal CANCEL even with --merge still set.",
   "mode": "aggregate",
   "args": ["--stack", "https://github.com/owner/repo/pull/501", "--merge", "--debounce", "0s"],
   "expectedExitCode": 0,

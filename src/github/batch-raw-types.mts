@@ -28,6 +28,8 @@ export interface RawPr extends RawPrMergeFields {
   headRefName: string;
   headRepository: { nameWithOwner: string; viewerPermission: string | null } | null;
   baseRefName: string;
+  /** `PullRequest.baseRefOid`: the base commit GitHub recorded for this PR, not the branch's live tip. */
+  baseRefOid?: string;
   baseRef: import("./batch-raw-rules.mts").RawBaseRef | null;
   reviewRequests: {
     nodes: Array<{

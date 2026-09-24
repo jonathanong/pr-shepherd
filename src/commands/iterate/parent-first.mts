@@ -1,6 +1,18 @@
 import { fetchPollSummary } from "../../github/poll-summary.mts";
 import type { RepoInfo } from "../../github/client.mts";
-import type { ShepherdReport } from "../../types.mts";
+import type {
+  IterateResult,
+  ShepherdReport,
+  StackDraftHold,
+  StackLowerLayerBlock,
+} from "../../types.mts";
+import { stackLayerBlockReason } from "../stack-layer-readiness.mts";
+
+/**
+ * What keeps a draft child from being marked ready: the lowest blocking lower layer,
+ * or a stack read that could not attribute the block to one.
+ */
+export type ParentMarkReadyBlock = StackLowerLayerBlock | "unverifiable";
 
 /**
  * Draft children may only be converted after their immediate parent has
@@ -8,13 +20,13 @@ import type { ShepherdReport } from "../../types.mts";
  * still linear.  A failed or incomplete stack read blocks this mutation but
  * does not block ordinary review/CI work in the caller.
  */
-export async function parentBlocksMarkReady(
+export async function findParentMarkReadyBlock(
   report: ShepherdReport,
   repo: RepoInfo,
-): Promise<boolean> {
+): Promise<ParentMarkReadyBlock | undefined> {
   const stack = report.mergeStatus.mergeRequirements?.stack;
-  if (!stack || stack.position === 1) return false;
-  if (stack.position < 1) return true;
+  if (!stack || stack.position === 1) return undefined;
+  if (stack.position < 1) return "unverifiable";
 
   try {
     const summary = await fetchPollSummary({ stackPrNumber: report.pr }, repo);
@@ -26,31 +38,52 @@ export async function parentBlocksMarkReady(
           (left.stack?.position ?? Number.MAX_SAFE_INTEGER) -
           (right.stack?.position ?? Number.MAX_SAFE_INTEGER),
       );
-    if (!child || child.state !== "OPEN" || lowerLayers.length !== stack.position - 1) return true;
-    // Any stale boundary up through the child means at least one lower layer
-    // is no longer the base it was reviewed against. Ignore gaps above this
-    // child because they do not affect its immediate promotion boundary.
-    const checkedLayers = new Set([report.pr, ...lowerLayers.map((item) => item.pr)]);
-    if (summary.stackAncestry?.some((gap) => checkedLayers.has(gap.childPr))) return true;
-    for (const parent of lowerLayers) {
-      // A merged parent is already satisfied; GitHub may have retargeted the
-      // child to the trunk as part of the merge.
-      if (parent.state === "MERGED") continue;
-      if (parent.state !== "OPEN") return true;
-      if (parent.isDraft || parent.mergeable === "CONFLICTING") return true;
-      if (["DIRTY", "BEHIND", "UNKNOWN"].includes(parent.mergeStateStatus)) return true;
-      // A receipt only establishes readiness after a merge-queue removal once
-      // the one-PR session has observed and acknowledged that exact removal.
-      // The aggregate projection preserves an unacknowledged removal here, so
-      // do not let its otherwise-current receipt promote a child draft.
-      if (parent.queueRemoval) return true;
-      // A parent that looks ready but has not completed its own one-PR receipt
-      // is not sufficient evidence for a child draft transition.
-      if (parent.readyReceipt !== true) return true;
+    if (!child || child.state !== "OPEN" || lowerLayers.length !== stack.position - 1)
+      return "unverifiable";
+    // A stale boundary means that layer is no longer based on the parent it was
+    // reviewed against. Gaps above this child do not affect its promotion boundary.
+    const staleChildren = new Set(summary.stackAncestry?.map((gap) => gap.childPr));
+    for (const layer of lowerLayers) {
+      // A merged layer is already satisfied; GitHub may have retargeted the
+      // layer above it to the trunk as part of the merge.
+      if (layer.state === "MERGED") continue;
+      const reason = staleChildren.has(layer.pr) ? "stale-ancestry" : stackLayerBlockReason(layer);
+      if (reason) return { pr: layer.pr, reason };
     }
-    return false;
+    // This layer's own stale boundary belongs to its own session's repair; the
+    // earlier stale-ancestry read missed it, so this snapshot is unsettled.
+    return staleChildren.has(report.pr) ? "unverifiable" : undefined;
   } catch {
     // Never convert a child draft based on an unverifiable parent.
-    return true;
+    return "unverifiable";
   }
+}
+
+/**
+ * A native stack draft this one-PR session cannot promote: a lower layer blocks it, or
+ * automatic mark-ready is off. Undefined when the session can still advance the PR by
+ * iterating.
+ */
+export function stackDraftHold(
+  report: ShepherdReport,
+  autoMarkReady: boolean,
+  parentBlock: ParentMarkReadyBlock | undefined,
+): StackDraftHold | undefined {
+  if (!report.mergeStatus.mergeRequirements?.stack || !report.mergeStatus.isDraft) return undefined;
+  // A named lower layer outranks the session flag: even with automatic
+  // mark-ready enabled, this draft cannot advance until that layer does.
+  if (parentBlock && parentBlock !== "unverifiable")
+    return { kind: "lower-layer-not-ready", lowerLayer: parentBlock };
+  if (!autoMarkReady) return { kind: "auto-mark-ready-disabled" };
+  return parentBlock ? { kind: "lower-layer-not-ready" } : undefined;
+}
+
+/**
+ * The lower layer a held draft waits on. That layer's own session owns this draft's
+ * progress, so the draft neither stalls nor keeps polling while it waits.
+ */
+export function heldByLowerLayer(result: IterateResult): StackLowerLayerBlock | undefined {
+  return result.action === "wait" && result.stackDraftHold?.kind === "lower-layer-not-ready"
+    ? result.stackDraftHold.lowerLayer
+    : undefined;
 }

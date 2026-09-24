@@ -31,7 +31,9 @@ describe("main — positional poll output", () => {
     await vi.advanceTimersByTimeAsync(0);
 
     expect(getStdout()).toBe("");
-    expect(getStderr()).toContain("[poll tick 1 / +0s] WAIT — still running; next tick in 30s");
+    expect(getStderr()).toContain(
+      "[poll tick 1 / +0s] WAIT — 0 passing, 1 in-progress; next tick in 30s",
+    );
 
     await vi.advanceTimersByTimeAsync(30_000);
     await promise;
@@ -39,7 +41,7 @@ describe("main — positional poll output", () => {
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
     expect(getStdout()).toContain("[CANCEL]");
     expect(getStdout()).toContain("## Instructions");
-    expect(getStdout()).not.toContain("still running");
+    expect(getStdout()).not.toContain("next tick in");
     expect(process.exitCode).toBe(EXIT.OK);
   });
 
@@ -64,8 +66,8 @@ describe("main — positional poll output", () => {
     const output = JSON.parse(getStdout()) as { action: string; instructions: string[] };
     expect(output.action).toBe("cancel");
     expect(output.instructions).toHaveLength(1);
-    expect(getStdout()).not.toContain("still running");
-    expect(getStderr()).toContain("WAIT — still running; next tick in 30s");
+    expect(getStdout()).not.toContain("next tick in");
+    expect(getStderr()).toContain("WAIT — 0 passing, 1 in-progress; next tick in 30s");
     expect(process.exitCode).toBe(EXIT.OK);
   });
 

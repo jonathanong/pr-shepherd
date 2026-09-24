@@ -1,6 +1,6 @@
 # Poll summary [ACTIONABLE]
 
-**repo** `jonathanong/auto-harness` · **selection** stack #514 anchored at PR #518 (5 PRs) · **mode** `summary` · **stack mergeable** `false` · **next action** `shepherd`
+**repo** `jonathanong/auto-harness` · **selection** stack #514 anchored at PR #518 (5 PRs) · **mode** `summary` · **stack mergeable** `false` · **next action** `merge`
 
 ## Pull requests
 
@@ -32,7 +32,8 @@
 
 ## Instructions
 
-1. Start or delegate the relevant one-PR sessions below; review and CI work on separate layers can proceed concurrently.
-2. Run `pr-shepherd https://github.com/jonathanong/auto-harness/pull/518 --until-terminal --merge` for PR #518.
-3. Keep upper draft PRs in draft until every lower layer has completed Shepherd READY.
-4. After the selected one-PR sessions, rerun this same `--stack` selector.
+1. PR #510 is the bottom open layer of stack #514 in `jonathanong/auto-harness` and is ready. Run `GH_REPO=jonathanong/auto-harness gh stack merge 510 --yes --squash` to merge that layer alone, or to enqueue it when the base uses a merge queue. If `gh stack` is an unknown command, run `gh extension install github/gh-stack` first.
+2. Start or delegate the relevant one-PR sessions below; review and CI work on separate layers can proceed concurrently.
+3. Run `pr-shepherd https://github.com/jonathanong/auto-harness/pull/518 --until-terminal --merge` for PR #518.
+4. Keep upper draft PRs in draft until every lower layer has completed Shepherd READY.
+5. After the merge attempt, rerun this same `--stack --merge` selector; GitHub retargets the next layer onto `main`. Shepherd any layer that GitHub rejects or ejects.

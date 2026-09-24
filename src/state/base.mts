@@ -1,10 +1,34 @@
-import { join } from "node:path";
+import { execFileSync } from "node:child_process";
+import { isAbsolute, join } from "node:path";
 import { tmpdir } from "node:os";
 import { SAFE_PR_NUMBER, SAFE_SEGMENT } from "../util/path-segment.mts";
 
+/** Read once per process; null when the platform or `getconf` offers no per-user temp dir. */
+let darwinUserTempDir: string | null | undefined;
+
+/**
+ * macOS's per-user temp dir, read from `confstr(_CS_DARWIN_USER_TEMP_DIR)` rather than
+ * `TMPDIR`. Sandboxed agent shells point `TMPDIR` at their own directory, so the same user's
+ * sandboxed CLI, unsandboxed CLI, and MCP server would otherwise keep separate state.
+ */
+function readDarwinUserTempDir(): string | null {
+  if (process.platform !== "darwin") return null;
+  try {
+    const dir = execFileSync("/usr/bin/getconf", ["DARWIN_USER_TEMP_DIR"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    return isAbsolute(dir) ? dir : null;
+  } catch {
+    return null;
+  }
+}
+
 export function resolveStateBase(): string {
   const envDir = process.env["PR_SHEPHERD_STATE_DIR"];
-  return envDir ? envDir : join(tmpdir(), "pr-shepherd-state");
+  if (envDir) return envDir;
+  if (darwinUserTempDir === undefined) darwinUserTempDir = readDarwinUserTempDir();
+  return join(darwinUserTempDir ?? tmpdir(), "pr-shepherd-state");
 }
 
 /**

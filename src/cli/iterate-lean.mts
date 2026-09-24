@@ -84,6 +84,7 @@ export function projectIterateLean(
       return {
         ...base,
         ...(result.deferredWork && { deferredWork: result.deferredWork }),
+        ...(result.stackDraftHold && { stackDraftHold: result.stackDraftHold }),
         log: adaptIterateLog(result.log),
         instructions: simpleInstructions(result),
       };

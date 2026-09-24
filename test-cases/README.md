@@ -39,9 +39,9 @@ For native-stack fixtures, model the stack in bottom-to-top order. A clean raw G
 not ready: set `readyReceipt: true` only when its one-PR Shepherd session has completed READY after
 the ready delay. Assert `stackMergeable`, `blockedByPr`, and exact one-PR handoff commands in the
 snapshots. Cover the full lifecycle: an unready parent blocks upper layers, all receipts and linear
-ancestry reconcile successfully, `--merge` submits the complete stack only, and a queue remains
-non-terminal until every layer is merged. Do not assert aggregate rebase/push instructions: they are
-intentionally absent.
+ancestry reconcile successfully, `--merge` merges only the READY bottom layer by PR number, and a
+queue remains non-terminal until every layer is merged. Do not assert aggregate rebase/push
+instructions: they are intentionally absent.
 
 Fixture numbers are not unique today (`42`, `43`, `46`, `47` each have more than
 one entry, and `36` is skipped) — this is harmless (directories are addressed
@@ -82,12 +82,12 @@ bug in practice:
      first look" path.
    - `{ seenAt }` with **no** `bodyHash` → legacy marker, treated
      conservatively as unchanged, never re-surfaced.
-   The hash is `sha256(body).slice(0, 16)` (`src/state/seen-comments.mts:
-   hashBody`). For an inline review thread, `body` is
-   `threadTranscriptBody(thread)` — which is just `thread.body` when the
-   thread has no `comments[]` array, and the joined transcript when it does.
-   Compute it yourself rather than guessing:
-   `node -e "console.log(require('crypto').createHash('sha256').update(BODY,'utf8').digest('hex').slice(0,16))"`.
+     The hash is `sha256(body).slice(0, 16)` (`src/state/seen-comments.mts:
+hashBody`). For an inline review thread, `body` is
+     `threadTranscriptBody(thread)` — which is just `thread.body` when the
+     thread has no `comments[]` array, and the joined transcript when it does.
+     Compute it yourself rather than guessing:
+     `node -e "console.log(require('crypto').createHash('sha256').update(BODY,'utf8').digest('hex').slice(0,16))"`.
 
 5. **`stallTimeoutMinutes` (the fixture shortcut) and `config.iterate.*`
    compose**, but only because the harness deep-merges them — don't assume a

@@ -1,5 +1,5 @@
 {
-  "description": "Merge intent emits the complete native-stack merge command for the agent, then reconciliation continues until every layer merges.",
+  "description": "Merge intent on a fully ready stack emits a merge command for the bottom layer alone, by PR number, then reconciliation continues layer by layer until every layer merges.",
   "mode": "aggregate",
   "args": ["--stack", "https://github.com/owner/repo/pull/342", "--merge", "--debounce", "0s"],
   "expectedExitCode": 15,

@@ -23,6 +23,11 @@ From the repo, the merged result keeps `ignoreChecks` and `stallTimeoutMinutes` 
 ## Example
 
 ```yaml
+cliCommand:
+  - pnpm
+  - exec
+  - pr-shepherd
+
 botUsernames:
   - chatgpt-connector
   - claude
@@ -90,6 +95,7 @@ actions:
 
 | Key                                  | Default                                   | Purpose                                                                                                                                                     |
 | ------------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cliCommand`                         | `["pr-shepherd"]`                         | Argv prefix for every `pr-shepherd` command Shepherd emits; set it when the CLI is a project dependency rather than a global install                        |
 | `botUsernames`                       | Known code-review bot logins              | GitHub logins treated as bots for repeat unresolved-thread visibility even when GitHub reports them as `User` or `Unknown`                                  |
 | `ignoreChecks`                       | `[]`                                      | Case-insensitive globs that exclude check/status contexts from CI decisions and details while retaining their names in the ignored rollup                   |
 | `iterate.fixAttemptsPerThread`       | `3`                                       | Caller-visible `FIX_CODE` deliveries allowed for one unchanged unresolved thread body before the following tick escalates                                   |
@@ -114,6 +120,19 @@ actions:
 | `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR reaches a clean ready state                                                                                               |
 | `actions.neverCancelRuns`            | `[]`                                      | Legacy cancellation-named patterns; matching checks remain visible despite `ignoreChecks`, but Shepherd never cancels runs                                  |
 | `actions.workWhileQueued`            | `false`                                   | When `true`, act on non-CI actionable work immediately even while the PR is in the merge queue, instead of deferring it until the PR leaves the queue       |
+
+## `cliCommand` — default `["pr-shepherd"]`
+
+Argv prefix for every `pr-shepherd` command Shepherd emits: follow-up `--stack` and per-PR session commands, `apply review` and `apply journal` mutations, and commit-suggestion commands, in Markdown, JSON, and MCP output alike. The default assumes `pr-shepherd` is on `PATH`. A repository that pins pr-shepherd as a dependency should set its package-manager launcher so agents run the pinned version instead of whatever global install `PATH` resolves first:
+
+```yaml
+cliCommand:
+  - pnpm
+  - exec
+  - pr-shepherd
+```
+
+The value must be a non-empty list of non-empty strings; any other value is rejected like every other invalid key. Shepherd shell-quotes each launcher argument when it renders command text.
 
 ## `botUsernames`
 
@@ -294,7 +313,7 @@ An invalid regex anywhere in the list falls back to the previous/default config 
 
 `merge.commandArgs` is appended only to ordinary auto/direct `gh pr merge` commands emitted by `--merge`. Shepherd rejects the PR selector, `--repo`/`-R`, auto-mode controls (`--auto`/`--disable-auto`), `--match-head-commit`, privilege bypass via `--admin`, help flags (`--help`/`-h`), and file-reading body options (`--body-file`/`-F`), including attached short-option values. Select at most one of `--merge`/`-m`, `--squash`/`-s`, or `--rebase`/`-r`; boolean assignments such as `--squash=true` and safe short boolean bundles such as `-sd` are recognized. If none is configured, Shepherd adds `--merge`. Queue commands omit every configured option because the queue controls the merge method and does not accept branch deletion.
 
-There is no config key to opt out of stack detection: when GitHub's batch query reports the PR is part of a native stack, a ready singular `--merge` poll returns non-terminal `FIX_CODE` directing the agent to the verified `--stack <PR URL> --until-terminal --merge` flow, so `merge.commandArgs` is never consulted for that PR. Native `--stack` selectors do not perform mutations: unready layers return stack-level `SHEPHERD` with one-PR routing, queued stacks return `WAIT`, and terminal READY or merged stacks return `CANCEL`. Closed or unverified topology returns `ESCALATE` for human direction only once no shepherdable layer remains; mixed states return `SHEPHERD` and retain the human blocker in the rows and instructions. A fully READY `--stack --merge` result returns `MERGE` with an agent-run whole-stack command, then `CANCEL` only after every layer merges. See [merge-status.md](merge-status.md#merge-requirements) and [escalations.md#native-stack-merge-routing](escalations.md#native-stack-merge-routing).
+There is no config key to opt out of stack detection: when GitHub's batch query reports the PR is part of a native stack, a ready singular `--merge` poll returns non-terminal `FIX_CODE` directing the agent to the verified `--stack <PR URL> --until-terminal --merge` flow, so `merge.commandArgs` is never consulted for that PR. Native `--stack` selectors do not perform mutations: unready layers return stack-level `SHEPHERD` with one-PR routing, queued stacks return `WAIT`, and terminal READY or merged stacks return `CANCEL`. Closed or unverified topology returns `ESCALATE` for human direction only once no shepherdable layer remains; mixed states return `SHEPHERD` and retain the human blocker in the rows and instructions. A `--stack --merge` result whose bottom open layer is READY returns `MERGE` with an agent-run command for that layer, then `CANCEL` only after every layer merges. See [merge-status.md](merge-status.md#merge-requirements) and [escalations.md#native-stack-merge-routing](escalations.md#native-stack-merge-routing).
 
 ---
 
@@ -353,9 +372,9 @@ actions:
 
 ## Environment variables
 
-| Variable                                                     | Effect                                                                                                                                                                                                                |
-| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PR_SHEPHERD_STATE_DIR`                                      | Override the loop-state base directory (default `$TMPDIR/pr-shepherd-state`)                                                                                                                                          |
-| `PR_SHEPHERD_LOG_DISABLED`                                   | Set to `1` to disable the per-worktree debug log                                                                                                                                                                      |
-| `PR_SHEPHERD_LOG_MAX_BODY`                                   | Max characters of each logged HTTP body (default `262144`). Larger bodies are truncated.                                                                                                                              |
-| `GH_TOKEN` / `GITHUB_TOKEN` / `GITHUB_PERSONAL_ACCESS_TOKEN` | GitHub auth token. Resolution order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` fallback (requires `gh` CLI) → `GITHUB_PERSONAL_ACCESS_TOKEN`. See [authentication.md](authentication.md) for required PAT access. |
+| Variable                                                     | Effect                                                                                                                                                                                                                                      |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PR_SHEPHERD_STATE_DIR`                                      | Override the loop-state base directory. Default: `pr-shepherd-state` in the macOS per-user temp dir (`getconf DARWIN_USER_TEMP_DIR`) rather than `$TMPDIR`, so sandboxed and unsandboxed runs share state; `os.tmpdir()` on other platforms |
+| `PR_SHEPHERD_LOG_DISABLED`                                   | Set to `1` to disable the per-worktree debug log                                                                                                                                                                                            |
+| `PR_SHEPHERD_LOG_MAX_BODY`                                   | Max characters of each logged HTTP body (default `262144`). Larger bodies are truncated.                                                                                                                                                    |
+| `GH_TOKEN` / `GITHUB_TOKEN` / `GITHUB_PERSONAL_ACCESS_TOKEN` | GitHub auth token. Resolution order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` fallback (requires `gh` CLI) → `GITHUB_PERSONAL_ACCESS_TOKEN`. See [authentication.md](authentication.md) for required PAT access.                       |

@@ -2,6 +2,7 @@ import { readStackTopology, stackAncestryGaps } from "../../github/stack-read.mt
 import type { RepoInfo } from "../../github/client.mts";
 import type { PollSummaryStackAncestry } from "../../types.mts";
 import type { ShepherdReport } from "../../types/report.mts";
+import { buildNativeStackRebaseInstruction } from "./native-stack-rebase.mts";
 
 /**
  * A verified stale boundary for the PR being shepherded.
@@ -35,7 +36,7 @@ export async function findStaleNativeStackAncestry(
     if (!ancestry) return null;
     return {
       ...ancestry,
-      instructions: buildStaleNativeStackAncestryInstructions(repo, ancestry),
+      instructions: buildStaleNativeStackAncestryInstructions(repo, stack.number, ancestry),
     };
   } catch {
     // A stale repair is safe only when both OIDs were observed together. Let
@@ -47,11 +48,14 @@ export async function findStaleNativeStackAncestry(
 /** Build the one-PR repair guidance after a stale boundary was verified. */
 function buildStaleNativeStackAncestryInstructions(
   repo: RepoInfo,
+  stackNumber: number,
   ancestry: PollSummaryStackAncestry,
 ): string[] {
   return [
     `PR #${ancestry.childPr} records base \`${ancestry.childBaseRefName}\` at \`${ancestry.childBaseRefOid}\`, but its open parent PR #${ancestry.parentPr} currently ends at \`${ancestry.parentHeadRefName}\` \`${ancestry.parentHeadRefOid}\`.`,
-    `From a clean checkout of \`${repo.owner}/${repo.name}\`, check out the parent stack branch \`${ancestry.parentHeadRefName}\`.`,
-    "Run `gh stack rebase --upstack --no-trunk`, resolve any conflicts, and push the rewritten stack with `gh stack push`.",
+    buildNativeStackRebaseInstruction(`${repo.owner}/${repo.name}`, stackNumber, {
+      parentBranch: ancestry.parentHeadRefName,
+    }),
+    "Push the rewritten stack with `gh stack push`.",
   ];
 }

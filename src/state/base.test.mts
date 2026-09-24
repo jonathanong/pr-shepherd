@@ -1,8 +1,8 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolvePrStatePath, resolveStateBase } from "./base.mts";
 
+// The default (no override) location is covered in base.user-temp-dir.mock.test.mts.
 describe("resolveStateBase", () => {
   const saved = process.env["PR_SHEPHERD_STATE_DIR"];
   afterEach(() => {
@@ -13,11 +13,6 @@ describe("resolveStateBase", () => {
     }
   });
 
-  it("returns default when env var not set", () => {
-    delete process.env["PR_SHEPHERD_STATE_DIR"];
-    expect(resolveStateBase()).toBe(join(tmpdir(), "pr-shepherd-state"));
-  });
-
   it("returns env var value when set", () => {
     process.env["PR_SHEPHERD_STATE_DIR"] = "/custom/state";
     expect(resolveStateBase()).toBe("/custom/state");
@@ -26,11 +21,6 @@ describe("resolveStateBase", () => {
   it("is idempotent for the same env", () => {
     process.env["PR_SHEPHERD_STATE_DIR"] = "/custom/state";
     expect(resolveStateBase()).toBe(resolveStateBase());
-  });
-
-  it("returns default when env var is set to empty string", () => {
-    process.env["PR_SHEPHERD_STATE_DIR"] = "";
-    expect(resolveStateBase()).toBe(join(tmpdir(), "pr-shepherd-state"));
   });
 });
 

@@ -8,7 +8,7 @@ CLI `PR` accepts a positive number, `owner/repo#N`, or a GitHub pull-request URL
 
 The default output format is Markdown — what the skill receives from its until-terminal poll dispatcher and what direct CLI users see. `--format=json` emits the same action data as a single JSON object for scripting. Every example below shows what the agent actually sees in the default (lean) format. MCP `iterate`'s `structuredContent` uses this same lean JSON shape (see [mcp.md](mcp.md)); MCP has no verbose equivalent.
 
-The bare CLI command accepts `--interval`/`--timeout`/`--debounce`/`--quiet-status`/`--no-quiet-status` (e.g. `pr-shepherd <PR> --interval 60s --timeout 4.5m --quiet-status`), waits while the PR remains in `[WAIT]`, and returns on an agent-facing action. Polling defaults come from the `poll` configuration group; explicit flags override them. With `--merge`, it also continues through `MARK_READY` and returns `MERGE` when the ready-delay completes. Each ordinary `WAIT` tick writes an explicit still-running line to stderr unless quiet status is enabled; the final action remains the only stdout result. If `--timeout` expires during WAIT polling, the bounded command returns that final `WAIT` result.
+The bare CLI command accepts `--interval`/`--timeout`/`--debounce`/`--quiet-status`/`--no-quiet-status` (e.g. `pr-shepherd <PR> --interval 60s --timeout 4.5m --quiet-status`), waits while the PR remains in `[WAIT]`, and returns on an agent-facing action. Polling defaults come from the `poll` configuration group; explicit flags override them. With `--merge`, it also continues through `MARK_READY` and returns `MERGE` when the ready-delay completes. Each ordinary `WAIT` tick writes a stderr line naming what it is waiting on (the `WAIT` log's check counts and reason) unless quiet status is enabled; the final action remains the only stdout result. If `--timeout` expires during WAIT polling, the bounded command returns that final `WAIT` result.
 
 The shipped skill invokes `pr-shepherd [PR] --until-terminal`. That command continues through ordinary `WAIT` and `MARK_READY` actions, then returns `FIX_CODE` or stack-level `SHEPHERD` (after `--debounce`, default: `poll.debounceSeconds`; built-in 1m and `0` disables), `MERGE`, any non-terminal quota-warning result, or terminal `CANCEL`/`ESCALATE`. A quota warning returns immediately so the skill can follow its cadence instructions and re-invoke the command without a `--timeout`. After every returned non-terminal result, the skill follows `## Instructions` and invokes the same canonical command again. Debounce ticks set `persistSeen: false` — seen markers and first-look suppression wait for the post-window tick. `--quiet-status` keeps unchanged WAIT ticks out of agent context. MCP callers invoke one `iterate` tick at a time (no debounce) and let their host schedule the next call.
 
@@ -42,11 +42,16 @@ dependency and a stale-but-otherwise-ready child are first reprojected to effect
 A clean draft whose automatic mark-ready transition is disabled receives a bounded one-PR session,
 not a human handoff; drafts with actionable review or CI also route that work through one-PR sessions.
 
-When `--merge` is requested and all open layers are `stackMergeable`, the read-only summary returns
-`MERGE` with `GH_REPO=<owner/repo> gh stack merge --yes --squash <stack-number>` for the agent to run;
-it does not submit a ready prefix. The caller reruns `--stack --merge` until every layer is merged and
-the result is `CANCEL`. The instructions first check whether the optional `github/gh-stack`
-extension is installed; if not, the agent installs it and reruns reconciliation before merging. If
+When `--merge` is requested, the lowest open layer is READY, every layer below it has merged, and
+GitHub has retargeted it onto the stack base, the read-only summary returns `MERGE` with
+`GH_REPO=<owner/repo> gh stack merge <PR number> --yes --squash` for the agent to run. That merges or
+enqueues the bottom layer alone, even when upper layers still need one-PR sessions (listed in the same
+instructions) or a human decision. `gh stack merge` reads a bare number as a stack number before a PR
+number, but native stack numbers come from the repository's issue and pull request sequence
+(observed; GitHub does not document it), so a PR number never names a stack. If `gh stack` is an
+unknown command,
+the instructions install `github/gh-stack` first. After each merge GitHub retargets the next layer, so
+the caller reruns `--stack --merge` until every layer is merged and the result is `CANCEL`. If
 GitHub puts any layer in a merge queue, the summary remains `WAIT` during queue progress and asks
 the caller to recheck until every layer is merged; an ejected layer is routed back to its one-PR
 session.
@@ -57,7 +62,7 @@ While a PR remains queued, an earlier queue entry advancing its target branch do
 the receipt by itself: Shepherd still requires the same source head and review evidence and checks
 the current merge-group state. A hard `CONFLICTING` or `DIRTY` state invalidates readiness even in
 the queue. A changed base branch name invalidates the receipt; outside the queue, a changed base
-commit also invalidates it. Compact check annotation
+commit (the PR's recorded `baseRefOid`) also invalidates it. Compact check annotation
 counts are part of the receipt evidence, so a late annotation on a completed check sends the layer
 back through its one-PR session.
 An explicit PR set containing a native-stack member still routes that row to an authoritative
@@ -73,7 +78,7 @@ prescribe the git repair. Aggregate JSON/MCP carries the raw ancestry rows, `sta
 `nextAction`, and the same numbered instructions that Markdown renders. An all-terminal stack with
 a closed layer is an `ESCALATE`, not a successful completion.
 
-Command examples call `pr-shepherd` directly everywhere a follow-up command is emitted.
+Command examples show the default `pr-shepherd` launcher. Every emitted follow-up command starts with the configured [`cliCommand`](configuration.md#clicommand--default-pr-shepherd) argv instead, such as `pnpm exec pr-shepherd`.
 
 Pass `--verbose` to get more debug state. In JSON mode, the output starts from the full `IterateResult` shape (all fields, including `baseBranch`, `checks`, `shouldCancel`, and command-scoped `apiUsage`) and then applies the same instruction projection as lean JSON: non-`fix_code` actions get a top-level `instructions` array, and `fix.instructions` may be rewritten. In Markdown mode, `--verbose` restores the full header summary line and adds `## GitHub API usage`, including credential source labels, request counts, the latest authoritative quota state by resource, and exact measured GraphQL query cost. GraphQL mutations remain counted as unmeasured because GitHub exposes `rateLimit` only on the query root. Markdown is structurally different from JSON and does not guarantee field-for-field parity for unrelated action fields. Lean mode is the default because most fields are `false`/`0`/`[]` on a typical healthy tick and add context noise without value.
 
@@ -180,6 +185,20 @@ The body line (`WAIT: …`) varies with the merge state — `branch is behind ba
 
 **Deferred work while queued:** with `--merge` enabled and the PR currently in the merge queue (`mergeQueue.inQueue`), review threads, PR comments, `CHANGES_REQUESTED` reviews, and review summaries do not trigger `fix_code` — a Shepherd-initiated push right now would eject the PR from the queue. Instead this tick emits `WAIT` and raw counts of what is being held back appear as `deferredWork` (JSON) / a `**deferred (in merge queue)** N threads, N comments, …` line (Markdown), omitted entirely when there is nothing deferred. Failing checks (including merge-queue synthetic-commit `merge_group` failures), unseen check-run annotations, and merge conflicts are never deferred — GitHub is already acting on the queue for those regardless, so they still route to `fix_code` immediately. Set [`actions.workWhileQueued: true`](configuration.md#actionsworkwhilequeued--default-false) to restore pre-existing behavior and act on this work immediately even while queued. Once the PR leaves the queue (merged or ejected), the deferred work is picked up on the very next tick exactly as if `workWhileQueued` were `true` — deferred items are never marked seen while held back, so nothing is silently lost (see the Comment visibility invariant in [`CLAUDE.md`](../CLAUDE.md)).
 
+**Held native stack drafts:** a draft native stack layer that this one-PR session cannot promote carries `stackDraftHold` in JSON:
+
+- `{ "kind": "lower-layer-not-ready", "lowerLayer": { "pr": 41, "reason": "draft" } }` — a `READY` upper draft whose lowest open lower layer is not yet ready. `reason` is one of `closed`, `draft`, `conflicting`, `queue-removal`, `failing-checks`, `review-work`, `checks-in-progress`, `merge-state`, `no-ready-receipt`, or `stale-ancestry`. The aggregate `--stack` selector uses the same readiness rules for `blockedByPr`, so both name the same layer. A named lower layer takes precedence over a disabled mark-ready setting.
+- `{ "kind": "auto-mark-ready-disabled" }` — the session or configuration disables automatic mark-ready, as in the stack selector's bounded draft probes.
+- `{ "kind": "lower-layer-not-ready" }` — the lower layers could not be read or attributed, so the draft stays held without naming one.
+
+Repeating the same one-PR session cannot advance a held draft, so the single instruction replaces "iterate immediately" with a stack handoff (quota cadence advice is appended when a warning applies). A named lower layer is the one to advance first:
+
+```markdown
+1. PR #42 stays in draft because lower stack layer PR #41 is still a draft, so repeating this one-PR session cannot advance it. Advance PR #41 first: if a `--stack` selector listed this session, finish that selector's remaining steps and rerun it with its original flags; otherwise run `pr-shepherd --stack https://github.com/owner/repo/pull/42 --until-terminal`, adding `--merge` when merging was requested.
+```
+
+A hold that names a lower layer never reaches `stall-timeout`: the lower layer's own session owns the progress, so Shepherd clears the draft's stall state and the poll returns the hold after one tick instead of waiting it out. The other holds keep the ordinary poll loop and stall guard.
+
 **What the skill does:** Ordinary `WAIT` actions remain inside its `--until-terminal` poll. If a quota-warning `WAIT` is returned, follow `## Instructions`, adjust cadence, and re-invoke the canonical command. Direct MCP/`iterate` callers must reschedule themselves.
 
 ---
@@ -225,7 +244,7 @@ Emits an exact GitHub CLI command; Shepherd does not execute or wrap the merge o
 
 Configured `merge.commandArgs` apply only to ordinary auto-merge commands. Every emitted command pins the expected PR head.
 
-**Native stacks:** When GitHub's batch query reports the PR is part of a native stack, Shepherd builds neither ordinary command mode above, for any stack position including position 1. `--auto` is rejected server-side on stacked PRs, and the plain-merge fallback would land a mid-stack PR into its still-unmerged parent branch instead of the stack's trunk ref. After persisting its fresh READY receipt, the one-PR poll returns non-terminal `FIX_CODE` with `pr-shepherd --stack <PR URL> --until-terminal --merge`. That selector reconciles every layer's READY receipt and linear ancestry before returning the whole-stack `MERGE` command; it then rechecks until every layer merges and returns `CANCEL`. If the fresh snapshot or receipt cannot be persisted, the one-PR poll returns `WAIT` and does not claim the stack is ready.
+**Native stacks:** When GitHub's batch query reports the PR is part of a native stack, Shepherd builds neither ordinary command mode above, for any stack position including position 1. `--auto` is rejected server-side on stacked PRs, and the plain-merge fallback would land a mid-stack PR into its still-unmerged parent branch instead of the stack's trunk ref. After persisting its fresh READY receipt, the one-PR poll returns non-terminal `FIX_CODE` with `pr-shepherd --stack <PR URL> --until-terminal --merge`. That selector reconciles each layer's READY receipt and linear ancestry and returns a bottom-layer `MERGE` command whenever the lowest open layer can merge alone; it then rechecks until every layer merges and returns `CANCEL`. If the fresh snapshot or receipt cannot be persisted, the one-PR poll returns `WAIT` and does not claim the stack is ready.
 
 **Exit code:** 15.
 
@@ -270,7 +289,7 @@ Stops the iterate loop — no further iterations needed.
 
 **Trigger:** Either the PR is merged or closed (`state !== "OPEN"`), or `--merge` is not enabled and the ready-delay timer elapsed after the current sweep still verifies the PR as a READY state. Candidate READY reports get a fresh mergeability read before the timer can complete, so newly detected conflicts route to `fix_code` instead of `cancel`.
 
-**CLI side-effects:** Deletes any stale `ready-since.txt` marker when the PR is merged/closed or when ready-delay elapses. On an open native-stack PR, a fresh compact summary must still confirm READY, non-draft status, current head/base OIDs, and no actionable review or CI before Shepherd persists its READY receipt and returns `CANCEL`; an unreadable snapshot or failed receipt write remains `WAIT`. A later one-PR tick invalidates the receipt when that evidence changes. Aggregate `--stack` uses these receipts but never creates them.
+**CLI side-effects:** Deletes any stale `ready-since.txt` marker when the PR is merged/closed or when ready-delay elapses. On an open native-stack PR, a fresh compact summary must still confirm READY, non-draft status, current head/base OIDs, and no actionable review or CI before Shepherd persists its READY receipt and returns `CANCEL`; the base OID on both sides is the base commit GitHub recorded for the PR, not the base branch's live tip. An unreadable snapshot or failed receipt write remains `WAIT` with `remainingSeconds` 0 and keeps the elapsed marker, so the next tick retries the receipt instead of restarting the ready-delay; the marker is deleted once the receipt is written. A receipt that keeps failing reaches the [stall timeout](escalations.md#stall-timeout). A later one-PR tick invalidates the receipt when that evidence changes; while it stays current, re-polling the layer completes its ready-delay immediately instead of restarting it. Aggregate `--stack` uses these receipts but never creates them.
 
 **Exit code:** 0 for `reason: "merged"` or `reason: "ready-delay-elapsed"` — these are shepherd's two "finished cleanly" outcomes. 14 for `reason: "closed"` (closed without merging). See [exit-codes.md](exit-codes.md).
 
@@ -305,7 +324,7 @@ A `ready-delay-elapsed` cancel carries the same `**merge queue** …` header lin
 
 Actionable work exists — whether it requires code edits or only resolution is up to the agent.
 
-**Trigger:** Any of: unresolved inline review threads, resolution-only inline review threads, actionable PR-level comments, `CHANGES_REQUESTED` reviews, a failing CI check with autonomous follow-up, a later-attempt workflow failure while the branch is behind its PR base, unseen check-run annotations on non-passing checks, merge conflicts (`mergeStatus.status === "CONFLICTS"`), a verified stale native-stack boundary for this PR, or pending first-look review summary IDs to minimize. The stale-boundary path returns observed parent and child OIDs and an ordered one-PR repair procedure, followed by the ordinary `FIX_CODE` continuation; aggregate `--stack` never performs that repair. Failing checks of all types (timeout, cancelled, startup failure, actionable) enter check handling. The agent uses the included failed step, summary, and bounded log excerpt; when no nonblank log excerpt is included, or the check is CANCELLED/STARTUP_FAILURE, Shepherd emits a rerun recommendation (`[rerun authorized]` tag plus a `rerun:` command) when all of the following hold:
+**Trigger:** Any of: unresolved inline review threads, resolution-only inline review threads, actionable PR-level comments, `CHANGES_REQUESTED` reviews, a failing CI check with autonomous follow-up, a later-attempt workflow failure while the branch is behind its PR base, unseen check-run annotations on non-passing checks, merge conflicts (`mergeStatus.status === "CONFLICTS"`), a verified stale native-stack boundary for this PR, or pending first-look review summary IDs to minimize. The stale-boundary path returns observed parent and child OIDs and an ordered one-PR repair procedure, followed by the ordinary `FIX_CODE` continuation; aggregate `--stack` never performs that repair. Merge conflicts on a native stack layer replace the generic conflict pointer with a gh-stack rebase from a clean checkout — first `gh stack checkout <stack number>` when `gh stack` does not track the stack locally, plus a check that every local layer is at its PR head, then `gh stack rebase --upstack --no-trunk` from the parent stack branch (the layer's own PR base branch, not the stack's trunk) for an upper layer, or a whole-stack `gh stack rebase` from the bottom open layer (whose PR base is the stack's trunk, including a higher layer retargeted after the layers below it merged), continuing with `gh stack rebase --continue` after each resolved conflict — and the push and completion steps push the rewritten stack with `gh stack push` instead of the PR head branch alone. Failing checks of all types (timeout, cancelled, startup failure, actionable) enter check handling. The agent uses the included failed step, summary, and bounded log excerpt; when no nonblank log excerpt is included, or the check is CANCELLED/STARTUP_FAILURE, Shepherd emits a rerun recommendation (`[rerun authorized]` tag plus a `rerun:` command) when all of the following hold:
 
 - the viewer's repository role grants Actions rerun capability (`repositoryPermission` is `WRITE`/`MAINTAIN`/`ADMIN` — this confirms the account's role, not the granular scope of whatever credential actually executes `gh`; an unauthorized rerun simply fails when run, the same residual risk as any other CLI-recommended git/gh mutation);
 - GitHub reports `run_attempt === 1`; later attempts have consumed Shepherd's single rerun allowance, and unavailable attempt metadata is denied conservatively;
@@ -361,7 +380,7 @@ The CLI surfaces the raw `**branch**` state on the summary line and leaves rebas
 
 When `mergeStatus` is `"BEHIND"` and [`iterate.behindBaseHint`](configuration.md#iteratebehindbasehint--default-) is configured (empty by default), an extra instruction appears immediately before commit/push finalization: `` `The branch is behind PR base branch `<base>`. <hint> before pushing.` ``. The CLI still never chooses the mechanics; it only echoes the configured hint.
 
-When a later workflow attempt is still failing and the branch is `BEHIND` or `CONFLICTS`, `## Instructions` names the actual PR base branch and tells the caller to inspect it for an existing fix before choosing a remediation. A second step tells the caller to rebase or otherwise update from that base according to repository conventions; conflict output includes conflict resolution as part of that update. Behind-branch output then explicitly requires pushing the updated PR head before iterating. Configured `iterate.behindBaseHint` text remains an additional repository-specific pointer.
+When a later workflow attempt is still failing and the branch is `BEHIND` or `CONFLICTS`, `## Instructions` names the actual PR base branch and tells the caller to inspect it for an existing fix before choosing a remediation. A second step tells the caller to rebase or otherwise update from that base according to repository conventions; conflict output includes conflict resolution as part of that update. Behind-branch output then explicitly requires pushing the updated PR head before iterating. On a native stack layer, whether behind or conflicting, the update step is the gh-stack rebase described above for merge conflicts, and the push and SHA-gated completion steps push the rewritten stack with `gh stack push`: updating one layer from its base strands every layer above it. Configured `iterate.behindBaseHint` text remains an additional repository-specific pointer.
 
 When one or more threads carry a `[suggestion]` marker, `## Instructions` adds one triage step pointing at the retrieve/apply command; the refusal and drift mechanics are invariant text that lives in the pr-shepherd skill's "Suggestion patches" playbook instead of being spelled out per tick:
 

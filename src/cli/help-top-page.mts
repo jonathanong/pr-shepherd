@@ -48,10 +48,10 @@ Iterate flags:
 Polling flags:
   --interval <duration>          Delay between WAIT ticks. Bare number = seconds. Default: poll.intervalSeconds (built-in 60s).
   --timeout <duration>           Poll wall-clock cap for WAIT ticks. Bare number = seconds. Default: poll.timeoutSeconds (built-in 4.5m).
-  --debounce <duration>          Settle window after first FIX_CODE before returning. Bare number = seconds. Default: poll.debounceSeconds (built-in 60s). 0 disables.
+  --debounce <duration>          Settle window after first FIX_CODE or stack SHEPHERD before returning. Bare number = seconds. Default: poll.debounceSeconds (built-in 60s). 0 disables.
   --quiet-status                 Print only changed WAIT snapshots. Overrides poll.quietStatus.
   --no-quiet-status              Print every WAIT snapshot. Overrides poll.quietStatus.
-  --until-terminal               Continue through WAIT/MARK_READY until FIX_CODE/CANCEL/ESCALATE.
+  --until-terminal               Continue through WAIT/MARK_READY until FIX_CODE/MERGE/CANCEL/ESCALATE or stack SHEPHERD.
 
 Clean variants:
   pr [number]          Remove state for one PR. Defaults to current branch PR.
@@ -68,6 +68,7 @@ Exit codes: 0 done, 10-19 PR state, 64-78 shepherd failed (sysexits.h).
   13  ESCALATE
   14  CANCEL (closed without merging)
   15  MERGE
+  16  SHEPHERD (--stack only: run the listed one-PR sessions, then rerun the selector)
 See docs/exit-codes.md for the full sysexits.h error-code table.
 
 Duration examples: 30s, 4.5m, 1h. A bare number uses each flag's default unit (see above); decimals are allowed with an explicit unit (4.5m).

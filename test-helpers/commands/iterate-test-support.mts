@@ -23,7 +23,10 @@ vi.mock("node:child_process", () => ({
 }));
 
 vi.mock("../../src/commands/check.mts", () => ({ runCheck: vi.fn() }));
-vi.mock("../../src/commands/ready-delay.mts", () => ({ updateReadyDelay: vi.fn() }));
+vi.mock("../../src/commands/ready-delay.mts", () => ({
+  updateReadyDelay: vi.fn(),
+  clearReadyDelay: vi.fn(),
+}));
 vi.mock("../../src/github/client.mts", () => ({
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
 }));
@@ -51,7 +54,7 @@ const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../../src/config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
 import { runCheck } from "../../src/commands/check.mts";
-import { updateReadyDelay } from "../../src/commands/ready-delay.mts";
+import { clearReadyDelay, updateReadyDelay } from "../../src/commands/ready-delay.mts";
 import { getCurrentPrNumber } from "../../src/github/client.mts";
 import { autoMinimizeComments } from "../../src/comments/resolve.mts";
 import { readFixAttempts, writeFixAttempts } from "../../src/state/fix-attempts.mts";
@@ -65,15 +68,12 @@ import {
   buildEscalateSuggestion,
   checkEscalateTriggers,
 } from "../../src/commands/iterate/escalate.mts";
-import {
-  buildRelevantChecks,
-  buildWaitLog,
-  getCurrentHeadSha,
-} from "../../src/commands/iterate/helpers.mts";
+import { buildRelevantChecks, buildWaitLog } from "../../src/commands/iterate/helpers.mts";
 import type { IterateCommandOptions, Review, ShepherdReport } from "../../src/types.mts";
 
 const mockRunCheck = vi.mocked(runCheck);
 const mockUpdateReadyDelay = vi.mocked(updateReadyDelay);
+const mockClearReadyDelay = vi.mocked(clearReadyDelay);
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockAutoMinimizeComments = vi.mocked(autoMinimizeComments);
 const mockReadFixAttempts = vi.mocked(readFixAttempts);
@@ -216,6 +216,7 @@ function makeReview(id: string, author: string, body: string): Review {
 
 function defaultConfig() {
   return {
+    cliCommand: ["pr-shepherd"],
     botUsernames: ["coderabbitai"],
     ignoreChecks: [],
     iterate: {
@@ -282,11 +283,11 @@ export {
   buildWaitLog,
   checkEscalateTriggers,
   defaultConfig,
-  getCurrentHeadSha,
   makeOpts,
   makeReport,
   makeReview,
   mockAutoMinimizeComments,
+  mockClearReadyDelay,
   mockExecFile,
   mockFetch,
   mockGetCurrentPrNumber,

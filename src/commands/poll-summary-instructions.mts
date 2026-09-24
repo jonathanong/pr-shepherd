@@ -1,7 +1,17 @@
 /* eslint-disable max-lines */
 import { buildQuotaAwareContinuation } from "../quota-warning.mts";
-import type { PollSummaryItem, PollSummaryResult, StackNextAction } from "../types.mts";
+import type { PollSummaryItem, PollSummaryResult } from "../types.mts";
 import { explicitInstructions } from "./poll-summary-explicit-instructions.mts";
+import {
+  appendAutonomousInstructions,
+  appendHumanHandoffInstructions,
+  findHumanHandoffs,
+  isStackLayerReady,
+  planBottomDrain,
+  retargetWaitPlan,
+  stackPosition,
+  type StackPlan,
+} from "./stack-drain.mts";
 
 /** Keep aggregate JSON, Markdown, and MCP instructions on one projection. */
 export function withPollSummaryInstructions(
@@ -12,13 +22,13 @@ export function withPollSummaryInstructions(
     return { ...result, instructions: explicitInstructions(result) };
   }
 
-  const prs = [...result.prs].sort((left, right) => position(left) - position(right));
+  const prs = [...result.prs].sort((left, right) => stackPosition(left) - stackPosition(right));
   const staleChildren = new Set(result.stackAncestry?.map((gap) => gap.childPr) ?? []);
   const firstUnready = prs.find(
-    (item) => item.state === "OPEN" && (!isReady(item) || staleChildren.has(item.pr)),
+    (item) => item.state === "OPEN" && (!isStackLayerReady(item) || staleChildren.has(item.pr)),
   );
   const blocked = prs.map((item) =>
-    firstUnready && item.state === "OPEN" && position(item) > position(firstUnready)
+    firstUnready && item.state === "OPEN" && stackPosition(item) > stackPosition(firstUnready)
       ? {
           ...item,
           ...(["cancel", "mark_ready", "merge"].includes(item.action) && {
@@ -34,7 +44,7 @@ export function withPollSummaryInstructions(
             }),
         }
       : item.state === "OPEN" &&
-          (!isReady(item) || staleChildren.has(item.pr)) &&
+          (!isStackLayerReady(item) || staleChildren.has(item.pr)) &&
           ["cancel", "merge"].includes(item.action)
         ? {
             ...item,
@@ -99,52 +109,25 @@ export function withPollSummaryInstructions(
   };
 }
 
-interface StackPlan {
-  action: StackNextAction;
-  stackMergeable: boolean;
-  waiting?: boolean;
-  instructions: string[];
-}
-
 function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPlan {
   const open = result.prs.filter((item) => item.state === "OPEN");
-  const lastOpen = open.at(-1);
-  const closedDependencyPr = result.prs.find(
-    (item) => item.state === "CLOSED" && lastOpen && position(item) < position(lastOpen),
-  );
-  const unverifiedLayer = result.prs.find(
-    (item) => item.state !== "OPEN" && item.state !== "MERGED",
-  );
   const gaps = result.stackAncestry ?? [];
-  const stackMergeable = gaps.length === 0 && open.every(isReady);
+  const stackMergeable = gaps.length === 0 && open.every(isStackLayerReady);
   const candidates = open.filter(
-    (item) => !isReady(item) || gaps.some((gap) => gap.childPr === item.pr),
+    (item) => !isStackLayerReady(item) || gaps.some((gap) => gap.childPr === item.pr),
   );
   const autonomousCandidates = candidates.filter((item) => item.action !== "escalate");
   const runnableCandidates = autonomousCandidates.filter((item) => item.pollCommand);
   const missingCommands = autonomousCandidates.filter((item) => !item.pollCommand);
-  const escalated = result.prs.filter((item) => item.action === "escalate");
+  const drain = planBottomDrain(result, mergeRequested);
+  if (drain) return drain;
 
-  if (closedDependencyPr || unverifiedLayer || escalated.length > 0) {
+  const handoffs = findHumanHandoffs(result);
+  if (handoffs) {
     const instructions: string[] = [];
     appendAutonomousInstructions(instructions, runnableCandidates);
     const stop = runnableCandidates.length === 0;
-    if (closedDependencyPr) {
-      instructions.push(
-        `${instructions.length + 1}. PR #${closedDependencyPr.pr} was closed without merging below an open layer. ${stop ? "Stop and ask" : "After autonomous shepherding, ask"} the stack owner whether to restore that dependency or rebuild the upper branches.`,
-      );
-    }
-    if (unverifiedLayer && unverifiedLayer.pr !== closedDependencyPr?.pr) {
-      instructions.push(
-        `${instructions.length + 1}. PR #${unverifiedLayer.pr} has state \`${unverifiedLayer.state}\` rather than open or merged. ${stop ? "Stop and ask" : "After autonomous shepherding, ask"} the stack owner to reconcile this layer before declaring the stack complete.`,
-      );
-    }
-    for (const item of escalated) {
-      if (item.pr === closedDependencyPr?.pr || item.pr === unverifiedLayer?.pr) continue;
-      instructions.push(
-        `${instructions.length + 1}. PR #${item.pr} requires human action (${item.reasons.join(", ")}). ${stop ? "Stop for that decision." : "Keep shepherding other PRs before the handoff."}`,
-      );
-    }
+    appendHumanHandoffInstructions(instructions, handoffs, stop);
     for (const item of missingCommands) {
       instructions.push(
         `${instructions.length + 1}. PR #${item.pr} needs a one-PR session, but Shepherd could not produce its command. Ask for direction.`,
@@ -229,16 +212,7 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
     };
   }
 
-  const stackNumber = result.selection.kind === "stack" ? result.selection.stackNumber : 0;
-  return {
-    action: "merge",
-    stackMergeable: true,
-    instructions: [
-      "1. Check `gh stack merge --help`. If the `gh-stack` extension is unavailable, run `gh extension install github/gh-stack`, then rerun this same `--stack --merge` selector before merging.",
-      `2. Stack #${stackNumber} in \`${result.repo}\` is mergeable through PR #${open.at(-1)!.pr}. Run \`GH_REPO=${result.repo} gh stack merge --yes --squash ${stackNumber}\` to merge the whole native stack or enqueue it when the base uses a merge queue.`,
-      "3. After the merge attempt, rerun this same `--stack --merge` selector until every layer is merged (`CANCEL`); shepherd any layer that GitHub rejects or ejects.",
-    ],
-  };
+  return retargetWaitPlan(open[0]!);
 }
 
 function closedDependency(items: PollSummaryItem[], pr: number): boolean {
@@ -247,46 +221,8 @@ function closedDependency(items: PollSummaryItem[], pr: number): boolean {
   return Boolean(
     lastOpen &&
     items.some(
-      (item) => item.pr === pr && item.state === "CLOSED" && position(item) < position(lastOpen),
+      (item) =>
+        item.pr === pr && item.state === "CLOSED" && stackPosition(item) < stackPosition(lastOpen),
     ),
   );
-}
-
-function appendAutonomousInstructions(instructions: string[], candidates: PollSummaryItem[]): void {
-  if (candidates.length === 0) return;
-  instructions.push(
-    `${instructions.length + 1}. Start or delegate the relevant one-PR sessions below; review and CI work on separate layers can proceed concurrently.`,
-  );
-  for (const item of candidates) {
-    instructions.push(
-      item.pollCommand
-        ? `${instructions.length + 1}. Run \`${item.pollCommand}\` for PR #${item.pr}${item.blockedByPr ? ` (stack-blocked by PR #${item.blockedByPr})` : ""}${item.queueRemoval ? `; GitHub removed it from the merge queue (${item.queueRemoval.reason ?? "unknown reason"})` : ""}.`
-        : `${instructions.length + 1}. PR #${item.pr} needs a one-PR Shepherd session, but no command was available.`,
-    );
-  }
-  instructions.push(
-    `${instructions.length + 1}. Keep upper draft PRs in draft until every lower layer has completed Shepherd READY.`,
-  );
-}
-
-function isReady(item: PollSummaryItem): boolean {
-  return (
-    item.state === "OPEN" &&
-    item.stack !== undefined &&
-    item.readyReceipt === true &&
-    !item.isDraft &&
-    !item.queueRemoval &&
-    item.mergeable !== "CONFLICTING" &&
-    item.mergeStateStatus !== "DIRTY" &&
-    (item.isInMergeQueue || item.mergeable === "MERGEABLE") &&
-    (item.isInMergeQueue ||
-      !["DIRTY", "BEHIND", "UNKNOWN", "BLOCKED", "HAS_HOOKS"].includes(item.mergeStateStatus)) &&
-    (item.checks?.failing ?? 0) === 0 &&
-    (item.isInMergeQueue || (item.checks?.inProgress ?? 0) === 0) &&
-    (item.review?.actionable ?? 0) === 0
-  );
-}
-
-function position(item: PollSummaryItem): number {
-  return item.stack?.position ?? Number.MAX_SAFE_INTEGER;
 }

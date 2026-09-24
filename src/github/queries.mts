@@ -25,8 +25,16 @@ export const BATCH_PR_PAGE_QUERY = gql("batch-pr-page.gql");
 /** Cheap PR fingerprint used to skip an unchanged BatchPr snapshot. */
 export const PR_FINGERPRINT_QUERY = withSharedFragments(gql("pr-fingerprint.gql"));
 
+const POLL_SUMMARY_CHECK_CONTEXTS_FRAGMENT = gql("poll-summary-check-contexts.gql");
+
 /** Compact per-PR fields shared by explicit-list and native-stack summary queries. */
-export const POLL_SUMMARY_FRAGMENT = gql("poll-summary-fragment.gql");
+export const POLL_SUMMARY_FRAGMENT = `${POLL_SUMMARY_CHECK_CONTEXTS_FRAGMENT}\n${gql("poll-summary-fragment.gql")}`;
+
+/**
+ * Pages older status contexts for one commit with the same node selection as
+ * the compact summary, so hydrated and first-page nodes fingerprint alike.
+ */
+export const POLL_SUMMARY_CHECK_PAGE_QUERY = `${POLL_SUMMARY_CHECK_CONTEXTS_FRAGMENT}\n${gql("poll-summary-check-page.gql")}`;
 
 /** Discovers and summarizes every entry in one native GitHub pull-request stack. */
 export const POLL_STACK_SUMMARY_QUERY = `${POLL_SUMMARY_FRAGMENT}\n${gql("poll-stack-summary.gql")}`;

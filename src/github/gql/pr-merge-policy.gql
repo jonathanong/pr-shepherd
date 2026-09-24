@@ -1,9 +1,6 @@
 fragment PrMergePolicy on PullRequest {
   isMergeQueueEnabled
   baseRef {
-    target {
-      oid
-    }
     branchProtectionRule {
       requiresApprovingReviews
       requiredApprovingReviewCount

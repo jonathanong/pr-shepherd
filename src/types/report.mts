@@ -52,7 +52,7 @@ export interface ShepherdReport {
   status: ShepherdStatus;
   /** PR base branch from the GraphQL batch. */
   baseBranch: string;
-  /** Git OID of the base branch tip observed with this report, when available. */
+  /** Base commit GitHub recorded for this PR (`PullRequest.baseRefOid`), not the branch's live tip. */
   baseRefOid?: string;
   mergeStatus: MergeStatusResult;
   checks: {

@@ -1,5 +1,3 @@
-import { execFile as execFileCb } from "node:child_process";
-import { promisify } from "node:util";
 import type {
   ActiveCheck,
   IterateResult,
@@ -8,10 +6,7 @@ import type {
   RelevantCheck,
   ShepherdReport,
 } from "../../types.mts";
-import { getExecutionCwd } from "../../execution-context.mts";
 import { blockedReasonFromRequirements } from "../../merge-status/requirements-format.mts";
-
-const execFile = promisify(execFileCb);
 
 export function buildSummary(report: ShepherdReport): IterateResultSummary {
   return {
@@ -117,17 +112,6 @@ export function buildActiveChecks(report: ShepherdReport): ActiveCheck[] {
     ...(c.scope !== undefined && { scope: c.scope }),
     ...(c.commitOid !== undefined && { commitOid: c.commitOid }),
   }));
-}
-
-export async function getCurrentHeadSha(): Promise<string | null> {
-  try {
-    const { stdout } = await execFile("git", ["rev-parse", "HEAD"], {
-      cwd: getExecutionCwd(),
-    });
-    return stdout.trim();
-  } catch {
-    return null;
-  }
 }
 
 export function buildWaitLog(base: IterateResultBase): string {

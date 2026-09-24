@@ -41,6 +41,7 @@ function draft(): RawSummaryPr {
 describe("draft stack poll commands", () => {
   beforeEach(() => {
     mockLoadConfig.mockReturnValue({
+      cliCommand: ["pr-shepherd"],
       actions: { autoMarkReady: true, workWhileQueued: false },
       botUsernames: [],
       ignoreChecks: [],
@@ -53,6 +54,7 @@ describe("draft stack poll commands", () => {
     ["configuration disables auto mark-ready", false, {}],
   ] as const)("bounds the one-PR handoff when %s", async (_case, autoMarkReady, opts) => {
     mockLoadConfig.mockReturnValue({
+      cliCommand: ["pr-shepherd"],
       actions: { autoMarkReady, workWhileQueued: false },
       botUsernames: [],
       ignoreChecks: [],

@@ -71,13 +71,14 @@ The shipped skill runs `pr-shepherd [PR] --until-terminal`, not `pr-shepherd ite
 
 ### 2. Ready-delay
 
-**What:** `updateReadyDelay(pr, isCleanReadyState, readyDelaySeconds, owner, repo)` reads/writes `ready-since.txt`.
+**What:** `updateReadyDelay(pr, isCleanReadyState, readyDelaySeconds, owner, repo, options)` reads/writes `ready-since.txt`.
 
 A clean ready state means `status === "READY"`, `hasActionableWork` is false, and no active auto-merge or merge-queue state is being handled. That includes BLOCKED/UNSTABLE states where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending).
 
 - On the first clean ready sweep: creates the file with the current timestamp.
 - On subsequent clean ready sweeps: checks if `now − readySince >= readyDelaySeconds`. If so, `shouldCancel: true`.
 - On any unclean sweep: deletes the file (resets the countdown). This includes non-READY status, failing CI, conflicts, unresolved comments, review-summary minimization, and first-look items.
+- On a native-stack layer whose READY receipt is still current (same head, base, and readiness evidence): the receipt already proves the delay elapsed, so a clean sweep returns `shouldCancel: true` without a marker (`alreadyElapsed`). Re-polling a READY layer therefore does not restart its countdown. When the head, base, or evidence moved, the receipt is cleared first and the countdown restarts.
 
 Before a READY sweep reaches this step, `runCheck` performs one fresh REST mergeability read unless the UNKNOWN fallback already did so. If the refreshed mergeability reports `CONFLICTING`/`DIRTY`, the sweep becomes `FAILING`/`CONFLICTS`, resets the marker, and routes to `fix_code`.
 
@@ -90,6 +91,7 @@ Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/ready-since.txt` (Unix 
 | First clean ready sweep                     | Created with current timestamp       |
 | Subsequent clean ready sweep (delay active) | Read; `remainingSeconds` decremented |
 | Clean ready state, delay elapsed            | `shouldCancel: true`; file deleted   |
+| Clean stack layer with a current receipt    | `shouldCancel: true`; no file needed |
 | Non-READY, or READY with actionable work    | Deleted (countdown resets)           |
 | PR merged/closed (step 1.5)                 | Deleted before `cancel`              |
 
@@ -113,7 +115,7 @@ Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/ready-since.txt` (Unix 
 
 All failing checks — including timeout, cancelled, startup-failure, flaky failures, and `merge_group` checks from the active/latest queue commit — route here. Queue checks are classified separately from PR-head checks so supersession never crosses commit boundaries. The `fix` payload carries `conclusion` for each failing check; `workflowName`, `jobName`, `failedStep`, and `logExcerpt` are populated only when triage runs (not for cancelled or startup-failure checks).
 
-CONFLICTS is included so merge conflicts and review comments can be handled in one tick. Iterate surfaces raw `**branch**` state; it does not tell the caller how to rebase.
+CONFLICTS is included so merge conflicts and review comments can be handled in one tick. Iterate surfaces raw `**branch**` state; it does not tell the caller how to rebase a standalone PR. A native stack layer (`mergeRequirements.stack`) is the exception, because updating one layer from its base branch strands every layer above it. Both stack rebases first import the stack with `gh stack checkout <mergeRequirements.stack.number>` when `gh stack` does not track it locally — the stack number, not the PR number — and confirm every local layer is at its PR head, because `gh stack push` publishes each local layer. Then an upper layer gets the parent-branch `gh stack rebase --upstack --no-trunk` sequence from its own PR base branch — not the stack's trunk `mergeRequirements.stack.baseRefName` — (the same one the stale-boundary repair uses), the bottom open layer — the one whose PR base is that trunk, including a higher layer GitHub retargeted after the layers below it merged — gets a whole-stack `gh stack rebase`, and the push and completion steps push the rewritten stack with `gh stack push` instead of the PR head branch alone. A behind layer whose workflow rerun already failed gets the same stack rebase and `gh stack push` in its repeated-workflow branch recovery.
 
 **Deferred while queued:** with `--merge` enabled, the PR currently in the merge queue, and `actions.workWhileQueued` not `true`, everything in the bullet list above **except** `checks.failing` and `mergeStatus.status === 'CONFLICTS'` (and check-run annotations) does not count toward this step — a Shepherd-initiated push right now would eject the PR from the queue. That work falls through to step 4.5 instead, which reports it as `deferredWork` counts on the `wait` result. Checks and conflicts are never deferred; they always route here regardless of queue state.
 
@@ -143,15 +145,17 @@ An active auto-merge request or merge-queue entry emits `wait` after actionable 
 
 **Fallthrough:** nothing actionable, no terminal state, no ready-delay elapsed, not marking ready.
 
-**Emits:** `action: 'wait'`. Stall guard runs on this path.
+A draft native stack layer this session cannot promote carries `stackDraftHold`. When step 4's parent-first check names the lowest open lower layer that blocks a `READY` draft, the hold is `{ kind: 'lower-layer-not-ready', lowerLayer: { pr, reason } }`, whatever the session's mark-ready setting. The check and the aggregate `--stack` selector share one readiness predicate (`stackLayerBlockReason`), so both name the same layer. Otherwise the hold is `{ kind: 'auto-mark-ready-disabled' }` when `--no-auto-mark-ready` or `actions.autoMarkReady: false` applies, or `{ kind: 'lower-layer-not-ready' }` without `lowerLayer` when the stack read could not be attributed to a lower layer. Its instructions return to the `--stack` selector instead of asking for another immediate one-PR iteration, and a named lower layer is the one they tell the agent to advance first.
+
+**Emits:** `action: 'wait'`. The stall guard runs on this path, except for a hold that names a lower layer: that layer's own session owns the progress, so the draft's stall state is cleared and `--until-terminal` or a bounded poll returns the hold after one tick instead of waiting it out.
 
 ---
 
 ### Stall guard
 
-Applied to ordinary `wait` and `fix_code` after those actions are chosen — not before actionable work, and not on active merge waits, `merge`, `cancel`, `mark_ready`, or `escalate`.
+Applied to ordinary `wait` and `fix_code` after those actions are chosen — not before actionable work, and not on active merge waits, stack drafts held by a named lower layer, `merge`, `cancel`, `mark_ready`, or `escalate`.
 
-Fingerprint: HEAD SHA, action, `status`, `mergeStateStatus`, `state`, `isDraft`, sorted failing-check names + conclusions, sorted actionable thread/comment/review IDs, sorted review-summary minimize IDs. Stored at `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/iterate-stall.json`.
+Fingerprint: PR head SHA from GitHub (not the local checkout), action, `status`, `mergeStateStatus`, `state`, `isDraft`, sorted failing-check names + conclusions, sorted actionable thread/comment/review IDs, sorted review-summary minimize IDs. Stored at `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/iterate-stall.json`.
 
 - Fingerprint matches and `now − firstSeenAt ≥ stallTimeoutSeconds` → `escalate` with trigger `stall-timeout`.
 - Fingerprint matches but within threshold → preserve `firstSeenAt`, keep the original action.

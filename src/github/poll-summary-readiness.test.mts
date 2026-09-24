@@ -35,14 +35,26 @@ function raw(
     mergeStateStatus: "BLOCKED",
     reviewDecision: "APPROVED",
     isInMergeQueue: true,
-    mergeQueueEntry: { headCommit: { statusCheckRollup: queueState ? rollup(queueState) : null } },
+    mergeQueueEntry: {
+      headCommit: {
+        oid: "f".repeat(40),
+        statusCheckRollup: queueState ? rollup(queueState) : null,
+      },
+    },
     stack: null,
     stackEntry: null,
     comments: empty,
     reviews: empty,
     reviewThreads: empty,
     commits: {
-      nodes: [{ commit: { statusCheckRollup: sourceState ? rollup(sourceState) : null } }],
+      nodes: [
+        {
+          commit: {
+            oid: "e".repeat(40),
+            statusCheckRollup: sourceState ? rollup(sourceState) : null,
+          },
+        },
+      ],
     },
     ...overrides,
   };

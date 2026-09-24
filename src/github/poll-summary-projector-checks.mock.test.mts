@@ -27,6 +27,7 @@ const rollup = (name: string, conclusion: string) => ({
 
 beforeEach(() => {
   mockLoadConfig.mockReturnValue({
+    cliCommand: ["pr-shepherd"],
     botUsernames: [],
     ignoreChecks: ["ignored *"],
     checks: { ciTriggerEvents: ["pull_request"] },
@@ -50,13 +51,19 @@ it("omits ignored failures and includes merge-queue checks", async () => {
     mergeStateStatus: "CLEAN",
     reviewDecision: null,
     isInMergeQueue: true,
-    mergeQueueEntry: { headCommit: { statusCheckRollup: rollup("queue tests", "FAILURE") } },
+    mergeQueueEntry: {
+      headCommit: { oid: "f".repeat(40), statusCheckRollup: rollup("queue tests", "FAILURE") },
+    },
     stack: null,
     stackEntry: null,
     comments: { totalCount: 0, pageInfo: { hasPreviousPage: false }, nodes: [] },
     reviews: { totalCount: 0, pageInfo: { hasPreviousPage: false }, nodes: [] },
     reviewThreads: { totalCount: 0, pageInfo: { hasPreviousPage: false }, nodes: [] },
-    commits: { nodes: [{ commit: { statusCheckRollup: rollup("ignored lint", "FAILURE") } }] },
+    commits: {
+      nodes: [
+        { commit: { oid: "e".repeat(40), statusCheckRollup: rollup("ignored lint", "FAILURE") } },
+      ],
+    },
   } as RawSummaryPr;
 
   const item = await summarizePollSummaryPr(

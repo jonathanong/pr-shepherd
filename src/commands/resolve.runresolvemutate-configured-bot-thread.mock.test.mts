@@ -16,6 +16,7 @@ registerHooks();
 describe("runResolveMutate — configured bot threads", () => {
   it("treats configured bot thread authors as non-human for mutations", async () => {
     mockLoadConfig.mockReturnValue({
+      cliCommand: ["pr-shepherd"],
       botUsernames: ["coderabbitai"],
       ignoreChecks: [],
       poll: { intervalSeconds: 60, timeoutSeconds: 270, debounceSeconds: 60, quietStatus: false },

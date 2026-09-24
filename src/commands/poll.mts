@@ -1,4 +1,5 @@
 import { runIterate } from "./iterate/index.mts";
+import { heldByLowerLayer } from "./iterate/parent-first.mts";
 import type { IterateCommandOptions, IterateResult } from "../types.mts";
 import { sleep } from "../util/sleep.mts";
 import { withPollApiUsage } from "./poll-run.mts";
@@ -118,7 +119,8 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       }
       break;
     }
-    if (lastResult.action === "wait" && !pastDebounce) {
+    // A held draft waits on another layer's session, so hand it straight back.
+    if (lastResult.action === "wait" && !pastDebounce && !heldByLowerLayer(lastResult)) {
       if (pendingQuotaWarning === undefined) debounceUntil = null;
       const elapsedMs = Date.now() - start;
       const sleepMs = graphqlQuotaPollIntervalMs(

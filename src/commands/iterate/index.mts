@@ -1,15 +1,10 @@
 /* eslint-disable max-lines */
 import { runCheck } from "../check.mts";
-import { updateReadyDelay } from "../ready-delay.mts";
+import { clearReadyDelay, updateReadyDelay } from "../ready-delay.mts";
 import { getCurrentPrNumber } from "../../github/client.mts";
 import { loadConfig } from "../../config/load.mts";
 import { EXIT, ShepherdError } from "../../exit-codes.mts";
-import {
-  getCurrentHeadSha,
-  buildWaitLog,
-  buildTerminalCancelResult,
-  blockedCancelNote,
-} from "./helpers.mts";
+import { buildWaitLog, buildTerminalCancelResult, blockedCancelNote } from "./helpers.mts";
 import { classifyReviewSummaries } from "./classify.mts";
 import { applyStallGuard } from "./stall.mts";
 import { clearStallState } from "../../state/iterate-stall.mts";
@@ -33,7 +28,7 @@ import {
   readReadyReceipt,
   writeReadyReceipt,
 } from "../../state/ready-receipts.mts";
-import { parentBlocksMarkReady } from "./parent-first.mts";
+import { findParentMarkReadyBlock, heldByLowerLayer, stackDraftHold } from "./parent-first.mts";
 import { findStaleNativeStackAncestry } from "./stale-ancestry.mts";
 
 export function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
@@ -134,25 +129,30 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     !hasActionableWork &&
     !activeMerge &&
     staleAncestry === null;
+  const needsStackReceipt = report.mergeStatus.mergeRequirements?.stack !== undefined;
+  const receiptCurrent =
+    needsStackReceipt &&
+    (await revalidateReadyReceipt(
+      { owner: repoOwner, repo: repoName, pr: report.pr },
+      report,
+      hasActionableWork,
+    ));
+  // A native-stack layer keeps its elapsed marker until its READY receipt is
+  // written, so a failed receipt write retries next tick instead of restarting
+  // the whole delay. A receipt that is still current already proves the delay
+  // elapsed for this exact head, base, and readiness evidence.
   const readyState = await updateReadyDelay(
     report.pr,
     isCleanReadyState,
     readyDelaySeconds,
     repoOwner,
     repoName,
+    { retainElapsed: needsStackReceipt, alreadyElapsed: receiptCurrent },
   );
-
-  if (report.mergeStatus.mergeRequirements?.stack) {
-    await invalidateStaleReadyReceipt(
-      { owner: repoOwner, repo: repoName, pr: report.pr },
-      report,
-      hasActionableWork,
-    );
-  }
 
   const base = buildIterateBase(report, readyState);
 
-  const headSha = (await getCurrentHeadSha()) ?? "unknown";
+  const headSha = report.headSha ?? "unknown";
 
   // Checks (including merge-queue synthetic-commit checks) and hard conflicts are signals
   // GitHub itself is already acting on — the queue will eject the PR for these regardless of
@@ -227,28 +227,28 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     report.status === "READY" &&
     report.mergeStatus.isDraft &&
     !report.mergeStatus.blockingBotReviewInProgress;
-  const blockedByParent = canMarkReady
-    ? await parentBlocksMarkReady(report, { owner: repoOwner, name: repoName })
-    : false;
+  const parentBlock = canMarkReady
+    ? await findParentMarkReadyBlock(report, { owner: repoOwner, name: repoName })
+    : undefined;
 
+  const autoMarkReady = !opts.noAutoMarkReady && config.actions.autoMarkReady;
   const markReadyResult = await markReadyIfAuthorized(
-    canMarkReady && !blockedByParent && !opts.noAutoMarkReady && config.actions.autoMarkReady,
+    canMarkReady && !parentBlock && autoMarkReady,
     base,
     report,
   );
   if (markReadyResult) return markReadyResult;
 
   if (readyState.shouldCancel && !report.mergeStatus.isDraft) {
-    const needsStackReceipt = report.mergeStatus.mergeRequirements?.stack !== undefined;
-    const receiptWritten = needsStackReceipt
-      ? await recordReadyReceipt({ owner: repoOwner, repo: repoName, pr: report.pr }, report)
-      : true;
+    const receiptWritten =
+      !needsStackReceipt ||
+      receiptCurrent ||
+      (await recordReadyReceipt({ owner: repoOwner, repo: repoName, pr: report.pr }, report));
     if (!receiptWritten) {
       const receiptWait: IterateResult = {
         ...base,
         action: "wait",
         shouldCancel: false,
-        remainingSeconds: readyDelaySeconds,
         log: `WAIT: PR #${base.pr} reached ready-delay but its stack readiness receipt could not be persisted`,
       };
       return applyStallGuard(
@@ -262,6 +262,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
         reviewSummaryIds,
       );
     }
+    if (needsStackReceipt) await clearReadyDelay(report.pr, repoOwner, repoName);
     await clearStallState(stallKey);
     const mergeResult = buildReadyMergeOutcome(opts.merge, true, base, report);
     if (mergeResult) return mergeResult;
@@ -274,13 +275,26 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     };
   }
 
+  const hold = stackDraftHold(report, autoMarkReady, parentBlock);
+  const wait = {
+    ...base,
+    action: "wait" as const,
+    log: buildWaitLog(base),
+    ...(hold && { stackDraftHold: hold }),
+  } as IterateResult;
+  // The lower layer's own session owns progress here, so this draft cannot
+  // stall; its stall clock restarts once that layer releases it.
+  if (heldByLowerLayer(wait)) {
+    await clearStallState(stallKey);
+    return wait;
+  }
   return applyStallGuard(
     stallKey,
     stallTimeoutSeconds,
     headSha,
     base,
     prNumber,
-    { ...base, action: "wait" as const, log: buildWaitLog(base) } as IterateResult,
+    wait,
     report,
     reviewSummaryIds,
   );
@@ -338,13 +352,14 @@ async function recordReadyReceipt(
   }
 }
 
-async function invalidateStaleReadyReceipt(
+/** Clear a stale READY receipt; return whether a current receipt remains. */
+async function revalidateReadyReceipt(
   key: { owner: string; repo: string; pr: number },
   report: Awaited<ReturnType<typeof runCheck>>,
   hasActionableWork: boolean,
-): Promise<void> {
+): Promise<boolean> {
   const receipt = await readReadyReceipt(key);
-  if (!receipt) return;
+  if (!receipt) return false;
   const retainQueuedReceipt =
     report.mergeQueue?.inQueue === true &&
     report.mergeStatus.state === "OPEN" &&
@@ -358,7 +373,7 @@ async function invalidateStaleReadyReceipt(
     (!retainQueuedReceipt && (report.status !== "READY" || hasActionableWork))
   ) {
     await clearReadyReceipt(key);
-    return;
+    return false;
   }
   try {
     const raw = await fetchRawSummaryPr(report.pr, { owner: key.owner, name: key.repo });
@@ -380,9 +395,12 @@ async function invalidateStaleReadyReceipt(
       })
     ) {
       await clearReadyReceipt(key);
+      return false;
     }
+    return true;
   } catch {
     // Fail closed: an unreadable current snapshot cannot validate old evidence.
     await clearReadyReceipt(key);
+    return false;
   }
 }

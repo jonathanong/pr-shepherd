@@ -56,17 +56,19 @@ pr-shepherd <PR> --format=json
 
 **Cause:** A stale `ready-since.txt` from a previous run. The timestamp is old enough to trigger `shouldCancel`.
 
-**Fix:** Delete the ready-since file:
+**Fix:** Delete the ready-since file. From the PR's checkout, list the PR's state files without deleting anything:
 
 ```bash
-rm $TMPDIR/pr-shepherd-state/<owner>-<repo>/<pr>/ready-since.txt
+pr-shepherd admin clean current --dry-run
 ```
 
-Replace `<owner>-<repo>` and `<pr>` with actual values. Example:
+Then remove the `ready-since.txt` path it prints. Example:
 
 ```bash
-rm $TMPDIR/pr-shepherd-state/acme-myrepo/42/ready-since.txt
+rm /var/folders/ab/xyz/T/pr-shepherd-state/acme-myrepo/42/ready-since.txt
 ```
+
+The state directory is `$PR_SHEPHERD_STATE_DIR` when set; see [configuration.md](configuration.md#environment-variables) for the default.
 
 ---
 

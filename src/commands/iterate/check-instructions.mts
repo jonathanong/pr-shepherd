@@ -36,6 +36,7 @@ export function buildRepeatedWorkflowBranchRecoveryInstructions(
   baseBranch: string,
   hasExhaustedWorkflowRerun: boolean,
   branch: { isBehind: boolean; hasConflicts: boolean },
+  stackRebase?: string,
 ): string[] {
   if (!hasExhaustedWorkflowRerun || (!branch.isBehind && !branch.hasConflicts)) return [];
 
@@ -44,9 +45,10 @@ export function buildRepeatedWorkflowBranchRecoveryInstructions(
     `The workflow rerun still fails while the branch ${state} PR base branch \`${baseBranch}\`. Inspect the current base branch for an existing fix before choosing a remediation.`,
   ];
   instructions.push(
-    branch.hasConflicts
-      ? `Rebase or otherwise update the PR branch from \`${baseBranch}\` according to repository conventions, resolving conflicts as part of that update.`
-      : `Rebase or otherwise update the PR branch from \`${baseBranch}\` according to repository conventions.`,
+    stackRebase ??
+      (branch.hasConflicts
+        ? `Rebase or otherwise update the PR branch from \`${baseBranch}\` according to repository conventions, resolving conflicts as part of that update.`
+        : `Rebase or otherwise update the PR branch from \`${baseBranch}\` according to repository conventions.`),
   );
   return instructions;
 }
@@ -109,11 +111,15 @@ export function buildFixCompletionInstruction(
   checks: AgentCheck[],
   hasConflicts = false,
   hasShaGatedReviewMutations = false,
+  pushesRewrittenStack = false,
 ): string {
+  const push = pushesRewrittenStack
+    ? "push the rewritten stack with `gh stack push`"
+    : "push to the PR head branch";
   if (hasConflicts)
-    return "`[FIX_CODE]` is non-terminal: resolve the conflicts, commit, push to the PR head branch, then iterate immediately with the same options.";
+    return `\`[FIX_CODE]\` is non-terminal: resolve the conflicts, commit, ${push}, then iterate immediately with the same options.`;
   if (hasShaGatedReviewMutations) {
-    return "`[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run the review mutations using the pushed commit SHA and iterate immediately with the same options; if you did not change code, complete the authorized review mutations and iterate immediately with the same options.";
+    return `\`[FIX_CODE]\` is non-terminal: if you changed code, commit and ${push}, then run the review mutations using the pushed commit SHA and iterate immediately with the same options; if you did not change code, complete the authorized review mutations and iterate immediately with the same options.`;
   }
   if (checks.some((check) => check.rerunCommand)) {
     return "`[FIX_CODE]` is non-terminal. Run any warranted reruns for `[rerun authorized]` checks (or apply code fixes for real failures), then iterate immediately with the same options to continue.";

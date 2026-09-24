@@ -10,6 +10,7 @@ import {
   REVIEW_THREAD_COMMENTS_QUERY,
   SUGGESTION_THREADS_QUERY,
   PR_FINGERPRINT_QUERY,
+  POLL_SUMMARY_CHECK_PAGE_QUERY,
   POLL_SUMMARY_FRAGMENT,
   POLL_STACK_SUMMARY_QUERY,
   POLL_STACK_TOPOLOGY_QUERY,
@@ -72,6 +73,14 @@ describe("queries — GQL constants load at import time", () => {
     expect(POLL_SUMMARY_FRAGMENT).toContain("name");
   });
 
+  it("pages older summary status contexts with the summary's own node selection", () => {
+    const fragment = "fragment PollSummaryCheckContexts on StatusCheckRollupContextConnection";
+    expect(POLL_SUMMARY_FRAGMENT).toContain(fragment);
+    expect(POLL_SUMMARY_FRAGMENT).toContain("...PollSummaryCheckContexts");
+    expect(POLL_SUMMARY_CHECK_PAGE_QUERY).toContain(fragment);
+    expect(POLL_SUMMARY_CHECK_PAGE_QUERY).toContain("contexts(last: 100, before: $before)");
+  });
+
   it("keeps merge-queue metadata in BatchPr without nested queue check trees", () => {
     expect(BATCH_PR_QUERY).toContain("isInMergeQueue");
     expect(BATCH_PR_QUERY).toContain("mergeQueueEntry");
@@ -112,6 +121,7 @@ describe("queries — GQL constants load at import time", () => {
       SUGGESTION_THREADS_QUERY,
       PR_FINGERPRINT_QUERY,
       POLL_STACK_SUMMARY_QUERY,
+      POLL_SUMMARY_CHECK_PAGE_QUERY,
       POLL_STACK_TOPOLOGY_QUERY,
     ]) {
       expect(query).toContain("_shepherdRateLimit: rateLimit");

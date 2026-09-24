@@ -51,6 +51,7 @@ function raw(overrides: Partial<RawSummaryPr> = {}): RawSummaryPr {
 function queueCheck(state: string): RawSummaryPr["mergeQueueEntry"] {
   return {
     headCommit: {
+      oid: "f".repeat(40),
       statusCheckRollup: {
         contexts: {
           totalCount: 1,
@@ -67,6 +68,7 @@ function sourceCheck(annotationCount: number): RawSummaryPr["commits"] {
     nodes: [
       {
         commit: {
+          oid: "e".repeat(40),
           statusCheckRollup: {
             contexts: {
               totalCount: 1,

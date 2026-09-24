@@ -95,6 +95,7 @@ Static documents live in [`src/github/gql/`](../src/github/gql/) and are loaded 
 | `PollSummary`          | dynamic aliases + `poll-summary-fragment.gql` | Explicit multi-PR summary, in chunks of 50                                                                                  | yes                      |
 | `PollStackTopology`    | `poll-stack-topology.gql`                     | Every iterate tick of a non-root native-stack layer (stale-ancestry check), and before `PollStackSummary`; link fields only | yes                      |
 | `PollStackSummary`     | `poll-stack-summary.gql`                      | `--stack` summary and a READY draft child's parent-first check; entry pages sized to the stack (`first: min(size, 50)`)     | yes                      |
+| `PollSummaryCheckPage` | `poll-summary-check-page.gql`                 | A summary PR's head or merge-queue commit with more than 100 status contexts, per older page                                | yes                      |
 | `PrFingerprint`        | `pr-fingerprint.gql`                          | Every iterate tick after the first stored fingerprint, to decide whether the full batch is needed                           | yes                      |
 | `BatchPrPage`          | `batch-pr-page.gql`                           | Extra connection pages; combined cursors                                                                                    | yes                      |
 | `ReviewThreadComments` | `review-thread-comments.gql`                  | A thread whose nested `comments` connection has another page                                                                | yes                      |
@@ -103,19 +104,26 @@ Static documents live in [`src/github/gql/`](../src/github/gql/) and are loaded 
 | `SuggestionThreads`    | `suggestion-threads.gql`                      | `build-suggestion-patches`                                                                                                  | yes                      |
 | `GetPrHeadSha`         | `get-pr-head-sha.gql`                         | `--require-sha` poll (`resolve.shaPoll`, default 2s × 10)                                                                   | yes                      |
 | `PrNumberByBranch`     | `pr-number-by-branch.gql`                     | No PR number passed (avoid this — pass the number)                                                                          | yes                      |
+| `GetPrBody`            | `get-pr-body.gql`                             | Journal apply, before the body mutation                                                                                     | yes                      |
+| `UpdatePrBody`         | `update-pr-body.gql`                          | Journal apply                                                                                                               | no (mutation)            |
+| `MarkPrReady`          | `mark-pr-ready.gql`                           | `mark_ready` when `viewerCanUpdate`                                                                                         | no (mutation)            |
+| `PullRequestFiles`     | inline in `mark-files-as-viewed.mts`          | `apply files`                                                                                                               | yes                      |
+| `BulkApply`            | runtime aliases in `comments/resolve.mts`     | reply / resolve / minimize / dismiss, chunks of 10                                                                          | no (mutation)            |
+| `markFileAsViewed`     | runtime aliases, chunks of 10                 | `apply files`                                                                                                               | no (mutation)            |
 
 The poll-summary documents include raw workflow/run identities so compact check counts use the same
 ignored, protected-run, event, and superseded-run classifier as full iteration. They also include
 review provenance, latest decisive review state, reviewer requests, and repository administration
 capability for classification-rule, bot-review, thread-root, and draft blocking-review routing.
-Bounded connection overflow is reported as incomplete context; a null status-check rollup is a valid
-empty check set.
-| `GetPrBody` | `get-pr-body.gql` | Journal apply, before the body mutation | yes |
-| `UpdatePrBody` | `update-pr-body.gql` | Journal apply | no (mutation) |
-| `MarkPrReady` | `mark-pr-ready.gql` | `mark_ready` when `viewerCanUpdate` | no (mutation) |
-| `PullRequestFiles` | inline in `mark-files-as-viewed.mts` | `apply files` | yes |
-| `BulkApply` | runtime aliases in `comments/resolve.mts` | reply / resolve / minimize / dismiss, chunks of 10 | no (mutation) |
-| `markFileAsViewed` | runtime aliases, chunks of 10 | `apply files` | no (mutation) |
+
+Status contexts are not capped: the summary reads the newest 100 per commit, and
+`PollSummaryCheckPage` pages older ones by the commit's `oid` with the same node selection (the
+shared `poll-summary-check-contexts.gql` fragment) until the list matches `totalCount`. Both summary
+paths hydrate before anything fingerprints the PR and drop the page cursor, so a one-PR READY
+receipt and an aggregate stack read hash the same evidence. A page that answers for another object,
+loses its rollup, or leaves the count short keeps the checks incomplete, which fails readiness
+closed. Other bounded connection overflow is reported as incomplete context; a null status-check
+rollup is a valid empty check set.
 
 ## Per-tick budget
 

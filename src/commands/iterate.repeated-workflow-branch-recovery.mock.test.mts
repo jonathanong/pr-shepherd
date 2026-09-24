@@ -6,7 +6,7 @@ import {
   registerIterateHooks,
 } from "../../test-helpers/commands/iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
-import type { MergeStatusResult, TriagedCheck } from "../types.mts";
+import type { MergeStatusResult, StackStatus, TriagedCheck } from "../types.mts";
 
 registerIterateHooks();
 
@@ -57,8 +57,20 @@ function repeatedFailureReport(status: "BEHIND" | "CONFLICTS", baseBranch: strin
   });
 }
 
-async function runBranchRecovery(status: "BEHIND" | "CONFLICTS", baseBranch: string) {
-  mockRunCheck.mockResolvedValue(repeatedFailureReport(status, baseBranch));
+async function runBranchRecovery(
+  status: "BEHIND" | "CONFLICTS",
+  baseBranch: string,
+  stack?: StackStatus,
+) {
+  const report = repeatedFailureReport(status, baseBranch);
+  if (stack) {
+    report.mergeStatus.mergeRequirements = {
+      approvals: { current: 0, requiredCount: 0 },
+      conversationsResolved: { resolved: true, unresolvedCount: 0, required: false },
+      stack,
+    };
+  }
+  mockRunCheck.mockResolvedValue(report);
 
   const result = await runIterate(makeOpts());
 
@@ -79,6 +91,24 @@ describe("runIterate — repeated workflow branch recovery", () => {
       "Rebase or otherwise update the PR branch from `release/next` according to repository conventions.",
     );
     expect(instructions).toContain("Push the updated PR head branch before iterating immediately.");
+  });
+
+  it("rebases the whole native stack when a behind bottom layer keeps failing", async () => {
+    const instructions = await runBranchRecovery("BEHIND", "main", {
+      number: 7,
+      size: 3,
+      position: 1,
+      baseRefName: "main",
+    });
+
+    const joined = instructions.join("\n");
+    expect(joined).toContain("import it with `gh stack checkout 7`");
+    expect(joined).toContain("check out the head branch of PR #42 and run `gh stack rebase`;");
+    expect(instructions).toContain(
+      "Commit any remaining changes on the PR head branch and push the rewritten stack with `gh stack push`.",
+    );
+    expect(joined).not.toContain("Rebase or otherwise update the PR branch");
+    expect(joined).not.toContain("Push the updated PR head branch");
   });
 
   it("checks the base branch while resolving conflicts", async () => {

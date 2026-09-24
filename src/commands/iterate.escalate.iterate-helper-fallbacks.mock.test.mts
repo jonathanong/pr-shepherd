@@ -2,9 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   registerIterateHooks,
   makeReport,
-  mockExecFile,
 } from "../../test-helpers/commands/iterate-test-support.mts";
-import { buildRelevantChecks, buildWaitLog, getCurrentHeadSha } from "./iterate/helpers.mts";
+import { buildRelevantChecks, buildWaitLog } from "./iterate/helpers.mts";
 
 registerIterateHooks();
 
@@ -13,11 +12,6 @@ registerIterateHooks();
 // ---------------------------------------------------------------------------
 
 describe("iterate helper fallbacks", () => {
-  it("returns null when current HEAD cannot be read", async () => {
-    mockExecFile.mockRejectedValueOnce(new Error("not a git repo"));
-    await expect(getCurrentHeadSha()).resolves.toBeNull();
-  });
-
   it("covers relevant-check filtering and wait-log branches", () => {
     const report = makeReport({
       checks: {

@@ -4,7 +4,7 @@
  * Tracks how many caller-visible times each review thread has been dispatched to
  * the fix_code handler without being resolved. Body edits reset the count.
  *
- * State lives in `$TMPDIR/pr-shepherd-state/<owner>-<repo>/<pr>/fix-attempts.json`.
+ * State lives in `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/fix-attempts.json`.
  */
 
 import { readFile, writeFile, rename, unlink, mkdir } from "node:fs/promises";

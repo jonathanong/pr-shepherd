@@ -184,7 +184,7 @@ export function parseRawPr(
         null,
     },
     baseRefName: raw.baseRefName,
-    ...(raw.baseRef?.target?.oid && { baseRefOid: raw.baseRef.target.oid }),
+    ...(raw.baseRefOid && { baseRefOid: raw.baseRefOid }),
     reviewRequests,
     latestReviews,
     reviewThreads,

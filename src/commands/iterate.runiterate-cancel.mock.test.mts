@@ -49,6 +49,7 @@ import {
   makeOpts,
   makeReport,
   mockRunCheck,
+  mockClearReadyDelay,
   mockClearStallState,
   mockReadStallState,
   mockUpdateReadyDelay,
@@ -174,7 +175,10 @@ describe("runIterate — cancel", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo");
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
+      retainElapsed: false,
+      alreadyElapsed: false,
+    });
     expect(result.action).toBe("fix_code");
     expect(result.shouldCancel).toBe(false);
   });
@@ -193,7 +197,10 @@ describe("runIterate — cancel", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo");
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
+      retainElapsed: false,
+      alreadyElapsed: false,
+    });
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       expect(result.fix.reviewSummaryIds).toHaveLength(0);
@@ -217,7 +224,10 @@ describe("runIterate — cancel", () => {
 
     expect(result.action).toBe("wait");
     expect(result.shouldCancel).toBe(false);
-    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo");
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
+      retainElapsed: false,
+      alreadyElapsed: false,
+    });
   });
 
   it("writes a receipt only after a fresh matching READY snapshot", async () => {
@@ -254,6 +264,11 @@ describe("runIterate — cancel", () => {
         readinessFingerprint: "fingerprint-1",
       }),
     );
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, true, 600, "owner", "repo", {
+      retainElapsed: true,
+      alreadyElapsed: false,
+    });
+    expect(mockClearReadyDelay).toHaveBeenCalledWith(42, "owner", "repo");
   });
 
   it("writes the receipt before routing a ready stacked merge request", async () => {
@@ -355,6 +370,7 @@ describe("runIterate — cancel", () => {
     expect(mockClearReadyReceipt).not.toHaveBeenCalled();
     expect(mockFetchRawSummaryPr).not.toHaveBeenCalled();
     expect(mockWriteReadyReceipt).not.toHaveBeenCalled();
+    expect(mockClearReadyDelay).not.toHaveBeenCalled();
   });
 
   it("fails closed to WAIT when a stack receipt cannot be persisted", async () => {
@@ -375,11 +391,15 @@ describe("runIterate — cancel", () => {
 
     const result = await runIterate(makeOpts());
 
+    // The elapsed marker stays, so the next tick retries the receipt at once
+    // instead of restarting the whole ready-delay.
     expect(result).toMatchObject({
       action: "wait",
       shouldCancel: false,
+      remainingSeconds: 0,
       log: expect.stringContaining("readiness receipt"),
     });
+    expect(mockClearReadyDelay).not.toHaveBeenCalled();
   });
 
   it("fails closed before fetching when the current stack report lacks its base OID", async () => {
@@ -688,7 +708,10 @@ describe("runIterate — cancel", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo");
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
+      retainElapsed: true,
+      alreadyElapsed: false,
+    });
     expect(result.action).toBe("fix_code");
     expect(result.action).not.toBe("cancel");
   });

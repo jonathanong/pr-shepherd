@@ -7,6 +7,7 @@ import type {
 } from "../types.mts";
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
 import { missingRepositoryError } from "./errors.mts";
+import { hydratePollSummaryChecks } from "./poll-summary-check-hydration.mts";
 import { summarizePollSummaryPr } from "./poll-summary-projector.mts";
 import type { RawExplicitResponse, RawSummaryPr } from "./poll-summary-raw.mts";
 import { POLL_STACK_SUMMARY_QUERY, POLL_SUMMARY_FRAGMENT } from "./queries.mts";
@@ -76,6 +77,7 @@ async function fetchExplicitChunk(
     if (!raw) throw new ShepherdError(`PR #${pr} not found`, EXIT.UNAVAILABLE);
     return raw;
   });
+  for (const raw of rawPrs) await hydratePollSummaryChecks(raw, repo);
   return { prs: rawPrs, viewerCanAdminister: result.data.repository.viewerCanAdminister };
 }
 
@@ -95,6 +97,7 @@ async function fetchStackSummary(
     repo,
     { first: Math.min(topology.stackSize, MAX_STACK_ENTRIES_PER_PAGE) },
   );
+  for (const pr of ordered) await hydratePollSummaryChecks(pr, repo);
   const stackAncestry = stackAncestryGaps(ordered);
   return {
     selection: { kind: "stack", anchor, stackNumber, stackSize },
