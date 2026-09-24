@@ -2,8 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { findStaleNativeStackAncestry } from "./stale-ancestry.mts";
 import type { ShepherdReport } from "../../types/report.mts";
 
-const mockFetchPollSummary = vi.hoisted(() => vi.fn());
-vi.mock("../../github/poll-summary.mts", () => ({ fetchPollSummary: mockFetchPollSummary }));
+const mockReadStackTopology = vi.hoisted(() => vi.fn());
+vi.mock("../../github/stack-read.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../github/stack-read.mts")>()),
+  readStackTopology: mockReadStackTopology,
+}));
 
 const repo = { owner: "acme", name: "widgets" };
 const childReport = {
@@ -21,21 +24,43 @@ const gap = {
   childBaseRefOid: "parent-old",
 };
 
+function member(number: number, head: string, base: string, baseRefOid: string) {
+  return {
+    number,
+    state: "OPEN",
+    headRefName: head,
+    headRefOid: `${head}-current`,
+    baseRefName: base,
+    baseRefOid,
+  };
+}
+
+/** Parent #41, child #42, top #43; override one member's recorded base OID. */
+function topology(childBaseRefOid: string, topBaseRefOid = "feature-child-current") {
+  return {
+    stackNumber: 7,
+    stackSize: 3,
+    viewerCanAdminister: false,
+    ordered: [
+      { ...member(41, "feature-parent", "main", "main-base"), headRefOid: "parent-current" },
+      member(42, "feature-child", "feature-parent", childBaseRefOid),
+      member(43, "feature-top", "feature-child", topBaseRefOid),
+    ],
+  };
+}
+
 beforeEach(() => vi.clearAllMocks());
 
 describe("findStaleNativeStackAncestry", () => {
   it("returns only a verified gap for the shepherded child", async () => {
-    mockFetchPollSummary.mockResolvedValue({
-      stackAncestry: [gap],
-      prs: [],
-    });
+    mockReadStackTopology.mockResolvedValue(topology("parent-old"));
 
     const result = await findStaleNativeStackAncestry(childReport, repo);
 
     expect(result).toMatchObject(gap);
     expect(result?.instructions.join("\n")).toContain("gh stack rebase --upstack --no-trunk");
     expect(result?.instructions.join("\n")).toContain("gh stack push");
-    expect(mockFetchPollSummary).toHaveBeenCalledWith({ stackPrNumber: 42 }, repo);
+    expect(mockReadStackTopology).toHaveBeenCalledWith(42, repo);
   });
 
   it.each([
@@ -48,22 +73,19 @@ describe("findStaleNativeStackAncestry", () => {
     } as ShepherdReport;
 
     await expect(findStaleNativeStackAncestry(report, repo)).resolves.toBeNull();
-    expect(mockFetchPollSummary).not.toHaveBeenCalled();
+    expect(mockReadStackTopology).not.toHaveBeenCalled();
   });
 
   it("does not route a current boundary or another child to repair", async () => {
-    mockFetchPollSummary.mockResolvedValue({
-      stackAncestry: [{ ...gap, childPr: 43 }],
-      prs: [],
-    });
+    mockReadStackTopology.mockResolvedValue(topology("parent-current", "feature-child-old"));
     await expect(findStaleNativeStackAncestry(childReport, repo)).resolves.toBeNull();
 
-    mockFetchPollSummary.mockResolvedValue({ prs: [] });
+    mockReadStackTopology.mockResolvedValue(topology("parent-current"));
     await expect(findStaleNativeStackAncestry(childReport, repo)).resolves.toBeNull();
   });
 
   it("fails closed when the stack snapshot cannot be read", async () => {
-    mockFetchPollSummary.mockRejectedValue(new Error("rate limited"));
+    mockReadStackTopology.mockRejectedValue(new Error("rate limited"));
 
     await expect(findStaleNativeStackAncestry(childReport, repo)).resolves.toBeNull();
   });
@@ -71,7 +93,7 @@ describe("findStaleNativeStackAncestry", () => {
 
 describe("verified stale-boundary guidance", () => {
   it("includes the observed refs and safe repair sequence", async () => {
-    mockFetchPollSummary.mockResolvedValue({ stackAncestry: [gap], prs: [] });
+    mockReadStackTopology.mockResolvedValue(topology("parent-old"));
     const instructions = (await findStaleNativeStackAncestry(childReport, repo))?.instructions;
 
     expect(instructions).toEqual([

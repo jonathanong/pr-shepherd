@@ -1,10 +1,4 @@
-query PollStackSummary(
-  $owner: String!
-  $repo: String!
-  $anchor: Int!
-  $first: Int!
-  $after: String
-) {
+query PollStackTopology($owner: String!, $repo: String!, $anchor: Int!, $after: String) {
   _shepherdRateLimit: rateLimit {
     cost
     limit
@@ -21,7 +15,7 @@ query PollStackSummary(
         number
         size
         baseRefName
-        entries(first: $first, after: $after) {
+        entries(first: 50, after: $after) {
           pageInfo {
             hasNextPage
             endCursor
@@ -29,7 +23,12 @@ query PollStackSummary(
           nodes {
             position
             pullRequest {
-              ...PollSummaryPr
+              number
+              state
+              headRefName
+              headRefOid
+              baseRefName
+              baseRefOid
             }
           }
         }

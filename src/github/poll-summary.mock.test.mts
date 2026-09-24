@@ -125,60 +125,6 @@ describe("fetchPollSummary", () => {
     expect(mockGraphql.mock.calls[1]![0]).not.toContain("$pr1: Int!");
   });
 
-  it("paginates a native stack and sorts every member bottom-to-top", async () => {
-    const stack = { id: "STACK", number: 7, size: 2, baseRefName: "main" };
-    mockGraphql
-      .mockResolvedValueOnce({
-        data: {
-          repository: {
-            pullRequest: {
-              stack: {
-                ...stack,
-                entries: {
-                  pageInfo: { hasNextPage: true, endCursor: "next" },
-                  nodes: [
-                    {
-                      position: 2,
-                      pullRequest: rawPr(44, {
-                        baseRefName: "feature-43",
-                        baseRefOid: String(43).padStart(40, "0"),
-                      }),
-                    },
-                  ],
-                },
-              },
-            },
-          },
-        },
-      })
-      .mockResolvedValueOnce({
-        data: {
-          repository: {
-            pullRequest: {
-              stack: {
-                ...stack,
-                entries: {
-                  pageInfo: { hasNextPage: false, endCursor: null },
-                  nodes: [{ position: 1, pullRequest: rawPr(43) }],
-                },
-              },
-            },
-          },
-        },
-      });
-
-    const result = await fetchPollSummary({ stackPrNumber: 44 }, repo);
-
-    expect(result.selection).toEqual({
-      kind: "stack",
-      anchor: 44,
-      stackNumber: 7,
-      stackSize: 2,
-    });
-    expect(result.prs.map((item) => item.pr)).toEqual([43, 44]);
-    expect(mockGraphql.mock.calls[1]![1]).toMatchObject({ after: "next" });
-  });
-
   it("surfaces incomplete bounded slices without making overflow permanently actionable", async () => {
     mockGraphql.mockResolvedValue({
       data: {

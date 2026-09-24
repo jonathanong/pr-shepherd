@@ -1,4 +1,4 @@
-import { fetchPollSummary } from "../../github/poll-summary.mts";
+import { readStackTopology, stackAncestryGaps } from "../../github/stack-read.mts";
 import type { RepoInfo } from "../../github/client.mts";
 import type { PollSummaryStackAncestry } from "../../types.mts";
 import type { ShepherdReport } from "../../types/report.mts";
@@ -6,7 +6,7 @@ import type { ShepherdReport } from "../../types/report.mts";
 /**
  * A verified stale boundary for the PR being shepherded.
  *
- * The aggregate stack read is authoritative for this check: it compares the
+ * The stack topology read is authoritative for this check: it compares the
  * child's recorded base OID with the current head OID of its immediate open
  * parent. GitHub can report both PRs CLEAN while this boundary is stale.
  */
@@ -30,8 +30,8 @@ export async function findStaleNativeStackAncestry(
   if (!stack || stack.position <= 1) return null;
 
   try {
-    const summary = await fetchPollSummary({ stackPrNumber: report.pr }, repo);
-    const ancestry = summary.stackAncestry?.find((gap) => gap.childPr === report.pr);
+    const topology = await readStackTopology(report.pr, repo);
+    const ancestry = stackAncestryGaps(topology.ordered).find((gap) => gap.childPr === report.pr);
     if (!ancestry) return null;
     return {
       ...ancestry,
