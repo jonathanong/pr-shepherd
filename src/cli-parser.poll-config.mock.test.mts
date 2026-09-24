@@ -77,7 +77,7 @@ describe("main — configured poll defaults", () => {
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
     const stderr = stderrSpy.mock.calls.map((call: unknown[]) => String(call[0])).join("");
     expect(stderr).toContain("sleeping 2s");
-    expect(stderr).not.toContain("still running");
+    expect(stderr).not.toContain("next tick in");
   });
 
   it("lets explicit duration flags override configured defaults", async () => {
@@ -125,7 +125,7 @@ describe("main — configured poll defaults", () => {
     await promise;
 
     expect(stderrSpy.mock.calls.map((call: unknown[]) => String(call[0])).join("")).toContain(
-      "still running; next tick in 1s",
+      "WAIT — 0 passing, 1 in-progress; next tick in 1s",
     );
   });
 

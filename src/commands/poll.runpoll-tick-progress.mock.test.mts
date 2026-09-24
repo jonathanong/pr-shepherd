@@ -50,8 +50,8 @@ describe("runPoll — tick progress logging", () => {
 
       const written = stderrSpy.mock.calls.map((args) => String(args[0])).join("");
       expect(written).toBe(
-        "[poll tick 1 / +0s] WAIT — still running; next tick in 30s\n" +
-          "[poll tick 2 / +30s] WAIT — still running; next tick in 30s\n",
+        "[poll tick 1 / +0s] WAIT — 2 passing, 1 in-progress; next tick in 30s\n" +
+          "[poll tick 2 / +30s] WAIT — 2 passing, 1 in-progress; next tick in 30s\n",
       );
     }),
   );
@@ -72,7 +72,9 @@ describe("runPoll — tick progress logging", () => {
       await pollPromise;
 
       const written = stderrSpy.mock.calls.map((args) => String(args[0])).join("");
-      expect(written).toBe("[poll tick 1 / +0s] WAIT — still running; next tick in 30s\n");
+      expect(written).toBe(
+        "[poll tick 1 / +0s] WAIT — 2 passing, 1 in-progress; next tick in 30s\n",
+      );
     }),
   );
 
@@ -92,8 +94,35 @@ describe("runPoll — tick progress logging", () => {
       await vi.advanceTimersByTimeAsync(30_000);
       await pollPromise;
 
-      expect(stderrSpy.mock.calls.some((args) => String(args[0]).includes("[poll tick"))).toBe(
-        true,
+      const written = stderrSpy.mock.calls.map((args) => String(args[0])).join("");
+      expect(written).toContain(
+        "[poll tick 1 / +0s] WAIT — 2 passing, 1 in-progress — sleeping 30s\n",
+      );
+    }),
+  );
+
+  it(
+    "names the reason the tick is waiting",
+    withStderrTTY(false, async (stderrSpy) => {
+      mockRunIterate
+        .mockResolvedValueOnce(
+          makeWaitResult({ log: "WAIT: 3 passing, 0 in-progress — PR is a draft" }),
+        )
+        .mockResolvedValue(makeCancelResult());
+
+      const pollPromise = runPoll({
+        prNumber: 42,
+        format: "text",
+        intervalSeconds: 30,
+        timeoutSeconds: 300,
+      });
+
+      await vi.advanceTimersByTimeAsync(30_000);
+      await pollPromise;
+
+      const written = stderrSpy.mock.calls.map((args) => String(args[0])).join("");
+      expect(written).toBe(
+        "[poll tick 1 / +0s] WAIT — 3 passing, 0 in-progress — PR is a draft; next tick in 30s\n",
       );
     }),
   );
@@ -114,7 +143,9 @@ describe("runPoll — tick progress logging", () => {
       await pollPromise;
 
       const lastWrite = String(stderrSpy.mock.calls[stderrSpy.mock.calls.length - 1]?.[0] ?? "");
-      expect(lastWrite).toBe("[poll tick 1 / +0s] WAIT — still running; next tick in 30s\n");
+      expect(lastWrite).toBe(
+        "[poll tick 1 / +0s] WAIT — 2 passing, 1 in-progress; next tick in 30s\n",
+      );
     }),
   );
 

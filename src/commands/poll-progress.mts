@@ -1,10 +1,16 @@
 import type { IterateResult } from "../types.mts";
 
+type WaitResult = Extract<IterateResult, { action: "wait" }>;
+
 function writeTickProgress(tick: number, elapsedSeconds: number, detail: string): void {
   process.stderr.write(`[poll tick ${tick} / +${elapsedSeconds}s] WAIT — ${detail}\n`);
 }
 
-function waitSignature(result: IterateResult): string {
+function waitReason(result: WaitResult): string {
+  return result.log.replace(/^WAIT: /, "");
+}
+
+function waitSignature(result: WaitResult): string {
   const activity = result.activity ?? {
     commitCount: 0,
     reviewRoundCount: 0,
@@ -28,7 +34,7 @@ function writeQuietStatus(
   tick: number,
   elapsedSeconds: number,
   sleepSeconds: number,
-  result: IterateResult,
+  result: WaitResult,
 ): void {
   const activeChecks = result.inProgressChecks ?? [];
   const activeCheckText = activeChecks.map((c) => `${c.name} (${c.status})`).join(", ");
@@ -48,7 +54,7 @@ export function writeWaitProgress(opts: {
   tick: number;
   elapsedMs: number;
   sleepMs: number;
-  result: IterateResult;
+  result: WaitResult;
   quietStatus: boolean;
   verbose: boolean;
   lastWaitSignature: string | null;
@@ -56,10 +62,13 @@ export function writeWaitProgress(opts: {
   const elapsedSeconds = Math.round(opts.elapsedMs / 1000);
   const sleepSeconds = Math.round(opts.sleepMs / 1000);
   if (!opts.quietStatus) {
+    const reason = waitReason(opts.result);
     writeTickProgress(
       opts.tick,
       elapsedSeconds,
-      opts.verbose ? `sleeping ${sleepSeconds}s` : `still running; next tick in ${sleepSeconds}s`,
+      opts.verbose
+        ? `${reason} — sleeping ${sleepSeconds}s`
+        : `${reason}; next tick in ${sleepSeconds}s`,
     );
     return opts.lastWaitSignature;
   }
