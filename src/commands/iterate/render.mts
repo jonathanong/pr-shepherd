@@ -24,7 +24,7 @@ import {
 import { isFailingAgentCheck } from "../../checks/conclusions.mts";
 import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
 import { partitionFixThreads, reviewSectionRefs } from "./fix-instruction-threads.mts";
-import { buildConflictInstruction, buildConflictPushInstruction } from "./native-stack-rebase.mts";
+import { buildBranchPushInstruction, buildConflictInstruction } from "./native-stack-rebase.mts";
 
 /** Render a resolve command as a shell snippet. Appends `--require-sha "$HEAD_SHA"` when set. */
 export function renderResolveCommand(rc: ResolveCommand): string {
@@ -54,7 +54,7 @@ export function buildFixInstructions(
   isBehind = false,
   viewerCanUpdate = false,
   hasExhaustedWorkflowRerun = false,
-  stackConflictRebase?: string, // native stack layers rebase with gh-stack, not branch by branch
+  stackRebase?: string, // native stack layers rebase with gh-stack, not branch by branch
 ): string[] {
   const instructions: string[] = [];
   const { locatedThreads, unlocatedMutatedThreads, unlocatedThreads } = partitionFixThreads(
@@ -69,7 +69,7 @@ export function buildFixInstructions(
       baseBranch,
       hasExhaustedWorkflowRerun,
       { isBehind, hasConflicts },
-      stackConflictRebase,
+      stackRebase,
     );
   const hasRepeatedWorkflowBranchRecovery = repeatedWorkflowBranchRecoveryInstructions.length > 0;
   const hasAnnotations = checks.some((c) => (c.annotations?.length ?? 0) > 0);
@@ -95,7 +95,7 @@ export function buildFixInstructions(
     instructions.push(`Review each item ${sectionRef} and decide whether it needs a code change.`);
   }
   if (hasConflicts && !hasRepeatedWorkflowBranchRecovery) {
-    instructions.push(buildConflictInstruction(stackConflictRebase));
+    instructions.push(buildConflictInstruction(stackRebase));
   }
 
   const firstLookTotal = firstLookThreads.length + firstLookComments.length;
@@ -161,10 +161,8 @@ export function buildFixInstructions(
   const hasReviewMutations =
     resolveCommand.hasMutations || resolveOnlyCommand?.hasMutations === true;
   const mutationSuffix = hasReviewMutations ? " before review mutations" : "";
-  if (hasConflicts) {
-    instructions.push(buildConflictPushInstruction(stackConflictRebase, mutationSuffix));
-  } else if (hasRepeatedWorkflowBranchRecovery) {
-    instructions.push("Push the updated PR head branch before iterating immediately.");
+  if (hasConflicts || hasRepeatedWorkflowBranchRecovery) {
+    instructions.push(buildBranchPushInstruction(stackRebase, hasConflicts, mutationSuffix));
   } else if (hasNonConflictHints) {
     instructions.push(
       "If you changed code, commit any remaining changes and push to the PR head branch, then run the remaining review mutations using the pushed commit SHA and iterate immediately with the same options. If you did not change code, do not commit and continue with the remaining steps.",
@@ -191,7 +189,7 @@ export function buildFixInstructions(
       failingChecks,
       hasConflicts,
       resolveCommand.requiresHeadSha,
-      stackConflictRebase !== undefined,
+      stackRebase !== undefined,
     ),
   );
   return instructions;

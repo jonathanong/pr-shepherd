@@ -4,6 +4,8 @@ import type { PollSummaryItem, PollSummaryResult } from "../types.mts";
 import { explicitInstructions } from "./poll-summary-explicit-instructions.mts";
 import {
   appendAutonomousInstructions,
+  appendHumanHandoffInstructions,
+  findHumanHandoffs,
   isStackLayerReady,
   planBottomDrain,
   retargetWaitPlan,
@@ -109,13 +111,6 @@ export function withPollSummaryInstructions(
 
 function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPlan {
   const open = result.prs.filter((item) => item.state === "OPEN");
-  const lastOpen = open.at(-1);
-  const closedDependencyPr = result.prs.find(
-    (item) => item.state === "CLOSED" && lastOpen && stackPosition(item) < stackPosition(lastOpen),
-  );
-  const unverifiedLayer = result.prs.find(
-    (item) => item.state !== "OPEN" && item.state !== "MERGED",
-  );
   const gaps = result.stackAncestry ?? [];
   const stackMergeable = gaps.length === 0 && open.every(isStackLayerReady);
   const candidates = open.filter(
@@ -124,30 +119,15 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
   const autonomousCandidates = candidates.filter((item) => item.action !== "escalate");
   const runnableCandidates = autonomousCandidates.filter((item) => item.pollCommand);
   const missingCommands = autonomousCandidates.filter((item) => !item.pollCommand);
-  const escalated = result.prs.filter((item) => item.action === "escalate");
   const drain = planBottomDrain(result, mergeRequested);
   if (drain) return drain;
 
-  if (closedDependencyPr || unverifiedLayer || escalated.length > 0) {
+  const handoffs = findHumanHandoffs(result);
+  if (handoffs) {
     const instructions: string[] = [];
     appendAutonomousInstructions(instructions, runnableCandidates);
     const stop = runnableCandidates.length === 0;
-    if (closedDependencyPr) {
-      instructions.push(
-        `${instructions.length + 1}. PR #${closedDependencyPr.pr} was closed without merging below an open layer. ${stop ? "Stop and ask" : "After autonomous shepherding, ask"} the stack owner whether to restore that dependency or rebuild the upper branches.`,
-      );
-    }
-    if (unverifiedLayer && unverifiedLayer.pr !== closedDependencyPr?.pr) {
-      instructions.push(
-        `${instructions.length + 1}. PR #${unverifiedLayer.pr} has state \`${unverifiedLayer.state}\` rather than open or merged. ${stop ? "Stop and ask" : "After autonomous shepherding, ask"} the stack owner to reconcile this layer before declaring the stack complete.`,
-      );
-    }
-    for (const item of escalated) {
-      if (item.pr === closedDependencyPr?.pr || item.pr === unverifiedLayer?.pr) continue;
-      instructions.push(
-        `${instructions.length + 1}. PR #${item.pr} requires human action (${item.reasons.join(", ")}). ${stop ? "Stop for that decision." : "Keep shepherding other PRs before the handoff."}`,
-      );
-    }
+    appendHumanHandoffInstructions(instructions, handoffs, stop);
     for (const item of missingCommands) {
       instructions.push(
         `${instructions.length + 1}. PR #${item.pr} needs a one-PR session, but Shepherd could not produce its command. Ask for direction.`,

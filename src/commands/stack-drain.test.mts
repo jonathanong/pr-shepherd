@@ -44,6 +44,9 @@ describe("bottom-layer stack drain", () => {
     expect(result.nextAction).toBe("merge");
     expect(result.instructions?.[0]).toContain("gh stack merge 1 --yes --squash");
     expect(text(result)).not.toContain("pull/2 --until-terminal");
+    expect(text(result)).toContain(
+      "PR #2 requires human action (fix-thrash). Keep shepherding other PRs before the handoff.",
+    );
   });
 
   it("merges the retargeted bottom once the layers below it merged", () => {
@@ -88,6 +91,10 @@ describe("bottom-layer stack drain", () => {
     expect(result.nextAction).toBe("merge");
     expect(result.prs[1]?.reasons).toContain("closed-unmerged-dependency");
     expect(result.instructions?.[0]).toContain("gh stack merge 1 --yes --squash");
+    expect(text(result)).toContain(
+      "PR #2 was closed without merging below an open layer. After autonomous shepherding, ask the stack owner",
+    );
+    expect(text(result)).not.toContain("PR #2 requires human action");
   });
 
   it("does not merge above a layer that closed without merging", () => {

@@ -31,12 +31,13 @@ export function buildNativeStackRebaseInstruction(
 }
 
 /**
- * The stack-aware conflict repair for a native stack layer; undefined outside a stack.
+ * The stack-aware branch update for a native stack layer (a conflict, or a behind branch whose
+ * workflow keeps failing); undefined outside a stack.
  * A layer whose PR targets the stack's trunk (`stack.baseRefName`) is the bottom open layer —
  * position 1, or a higher layer GitHub retargeted after every layer below it merged. Any other
  * layer is an upper layer whose parent is its own PR base branch.
  */
-export function buildNativeStackConflictRebase(
+export function buildNativeStackLayerRebase(
   repo: string,
   pr: { number: number; baseBranch: string },
   stack: StackStatus | undefined,
@@ -55,12 +56,15 @@ export function buildConflictInstruction(stackRebase: string | undefined): strin
   return stackRebase ? `${pointer} ${stackRebase}` : `${pointer} Resolve them before committing.`;
 }
 
-/** Push the conflict resolution: one branch, or the whole rewritten native stack. */
-export function buildConflictPushInstruction(
+/** Push a conflict resolution or branch refresh: one branch, or the whole rewritten native stack. */
+export function buildBranchPushInstruction(
   stackRebase: string | undefined,
+  hasConflicts: boolean,
   mutationSuffix: string,
 ): string {
-  return stackRebase
-    ? `Commit any remaining changes on the PR head branch and push the rewritten stack with \`gh stack push\`${mutationSuffix}.`
-    : `Commit any remaining conflict-resolution changes and push to the PR head branch${mutationSuffix}.`;
+  if (stackRebase)
+    return `Commit any remaining changes on the PR head branch and push the rewritten stack with \`gh stack push\`${mutationSuffix}.`;
+  return hasConflicts
+    ? `Commit any remaining conflict-resolution changes and push to the PR head branch${mutationSuffix}.`
+    : "Push the updated PR head branch before iterating immediately.";
 }
