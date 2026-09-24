@@ -8,6 +8,7 @@ const {
   mockFingerprintRawSummaryPr,
   mockIsReadyReceiptCurrent,
   mockReadReadyReceipt,
+  mockReadStackTopology,
   mockSummarizePollSummaryPr,
   mockWriteReadyReceipt,
 } = vi.hoisted(() => ({
@@ -17,6 +18,7 @@ const {
   mockFingerprintRawSummaryPr: vi.fn(),
   mockIsReadyReceiptCurrent: vi.fn(),
   mockReadReadyReceipt: vi.fn(),
+  mockReadStackTopology: vi.fn(),
   mockSummarizePollSummaryPr: vi.fn(),
   mockWriteReadyReceipt: vi.fn(),
 }));
@@ -25,6 +27,10 @@ vi.mock("../../src/github/poll-summary.mts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/github/poll-summary.mts")>()),
   fetchPollSummary: mockFetchPollSummary,
   fetchRawSummaryPr: mockFetchRawSummaryPr,
+}));
+vi.mock("../../src/github/stack-read.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/github/stack-read.mts")>()),
+  readStackTopology: mockReadStackTopology,
 }));
 vi.mock("../../src/github/poll-summary-fingerprint.mts", () => ({
   fingerprintRawSummaryPr: mockFingerprintRawSummaryPr,
@@ -52,6 +58,36 @@ import {
 import { runIterate } from "./iterate/index.mts";
 
 registerIterateHooks();
+
+/**
+ * Three-layer stack topology around PR #42. The parent head is always
+ * `parent-current`; `childBaseRefOid` is the base PR #42 recorded.
+ */
+function stackTopology(childBaseRefOid: string) {
+  const member = (
+    number: number,
+    headRefName: string,
+    baseRefName: string,
+    baseRefOid: string,
+  ) => ({
+    number,
+    state: "OPEN",
+    headRefName,
+    headRefOid: headRefName === "feature-parent" ? "parent-current" : `${headRefName}-head`,
+    baseRefName,
+    baseRefOid,
+  });
+  return {
+    stackNumber: 7,
+    stackSize: 3,
+    viewerCanAdminister: false,
+    ordered: [
+      member(41, "feature-parent", "main", "main-base"),
+      member(42, "feature-child", "feature-parent", childBaseRefOid),
+      member(43, "feature-top", "feature-child", "feature-child-head"),
+    ],
+  };
+}
 
 const rawReadySnapshot = {
   state: "OPEN",
@@ -89,10 +125,12 @@ beforeEach(() => {
   mockFingerprintRawSummaryPr.mockReset();
   mockIsReadyReceiptCurrent.mockReset();
   mockReadReadyReceipt.mockReset();
+  mockReadStackTopology.mockReset();
   mockSummarizePollSummaryPr.mockReset();
   mockWriteReadyReceipt.mockReset();
   mockReadReadyReceipt.mockResolvedValue(null);
   mockFetchPollSummary.mockResolvedValue({ prs: [], stackAncestry: [] });
+  mockReadStackTopology.mockResolvedValue(stackTopology("parent-current"));
   mockFetchRawSummaryPr.mockResolvedValue(rawReadySnapshot);
   mockFingerprintRawSummaryPr.mockReturnValue("fingerprint-1");
   mockIsReadyReceiptCurrent.mockReturnValue(true);
@@ -635,19 +673,7 @@ describe("runIterate — cancel", () => {
       shouldCancel: false,
       remainingSeconds: 600,
     });
-    mockFetchPollSummary.mockResolvedValue({
-      prs: [],
-      stackAncestry: [
-        {
-          parentPr: 41,
-          parentHeadRefName: "feature-parent",
-          parentHeadRefOid: "parent-current",
-          childPr: 42,
-          childBaseRefName: "feature-parent",
-          childBaseRefOid: "parent-old",
-        },
-      ],
-    });
+    mockReadStackTopology.mockResolvedValue(stackTopology("parent-old"));
 
     const result = await runIterate(makeOpts());
 
@@ -678,19 +704,7 @@ describe("runIterate — cancel", () => {
       shouldCancel: true,
       remainingSeconds: 0,
     });
-    mockFetchPollSummary.mockResolvedValue({
-      prs: [],
-      stackAncestry: [
-        {
-          parentPr: 41,
-          parentHeadRefName: "feature-parent",
-          parentHeadRefOid: "parent-current",
-          childPr: 42,
-          childBaseRefName: "feature-parent",
-          childBaseRefOid: "parent-old",
-        },
-      ],
-    });
+    mockReadStackTopology.mockResolvedValue(stackTopology("parent-old"));
 
     const result = await runIterate(makeOpts());
 

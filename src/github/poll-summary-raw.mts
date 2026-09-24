@@ -107,21 +107,3 @@ export interface RawExplicitResponse {
     | ({ viewerCanAdminister: boolean } & Record<string, RawSummaryPr | boolean | null>)
     | null;
 }
-
-export interface RawStackResponse {
-  repository: {
-    viewerCanAdminister: boolean;
-    pullRequest: {
-      stack: {
-        id: string;
-        number: number;
-        size: number;
-        baseRefName: string;
-        entries: {
-          pageInfo: { hasNextPage: boolean; endCursor: string | null };
-          nodes: Array<{ position: number; pullRequest: RawSummaryPr | null }>;
-        };
-      } | null;
-    } | null;
-  } | null;
-}

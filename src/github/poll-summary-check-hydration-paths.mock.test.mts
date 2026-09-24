@@ -81,7 +81,8 @@ function respond(query: string, variables: Record<string, unknown> = {}) {
       },
     };
   }
-  if (query.includes("query PollStackSummary")) {
+  // The topology read precedes the summary read; both see the same one-entry stack.
+  if (query.includes("query PollStackTopology") || query.includes("query PollStackSummary")) {
     const entries = {
       pageInfo: { hasNextPage: false, endCursor: null },
       nodes: [{ position: 1, pullRequest: rawPr("stack-cursor") }],

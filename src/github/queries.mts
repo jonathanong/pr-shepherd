@@ -39,6 +39,9 @@ export const POLL_SUMMARY_CHECK_PAGE_QUERY = `${POLL_SUMMARY_CHECK_CONTEXTS_FRAG
 /** Discovers and summarizes every entry in one native GitHub pull-request stack. */
 export const POLL_STACK_SUMMARY_QUERY = `${POLL_SUMMARY_FRAGMENT}\n${gql("poll-stack-summary.gql")}`;
 
+/** Reads only native-stack membership and the refs that link adjacent entries. */
+export const POLL_STACK_TOPOLOGY_QUERY = gql("poll-stack-topology.gql");
+
 /** PR head fields plus a single review thread for `commit-suggestion`. */
 export const SUGGESTION_THREADS_QUERY = gql("suggestion-threads.gql");
 

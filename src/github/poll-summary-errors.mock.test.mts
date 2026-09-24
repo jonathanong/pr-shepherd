@@ -69,6 +69,18 @@ describe("poll summary fail-closed reads", () => {
       ),
       "did not include an end cursor",
     ],
+    [
+      response(
+        stack({
+          size: 2,
+          entries: {
+            pageInfo: { hasNextPage: true, endCursor: "next" },
+            nodes: [{ position: 1, pullRequest: { number: 42 } }],
+          },
+        }),
+      ),
+      "repeated end cursor",
+    ],
     [response(stack({ size: 2 })), "incomplete stack membership"],
   ])("rejects incomplete stack response %#", async (value, message) => {
     mockGraphql.mockResolvedValue(value);

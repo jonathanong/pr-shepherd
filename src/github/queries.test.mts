@@ -13,6 +13,7 @@ import {
   POLL_SUMMARY_CHECK_PAGE_QUERY,
   POLL_SUMMARY_FRAGMENT,
   POLL_STACK_SUMMARY_QUERY,
+  POLL_STACK_TOPOLOGY_QUERY,
 } from "./queries.mts";
 
 describe("queries — GQL constants load at import time", () => {
@@ -61,8 +62,12 @@ describe("queries — GQL constants load at import time", () => {
 
   it("loads compact aggregate and native-stack summary documents", () => {
     expect(POLL_SUMMARY_FRAGMENT).toContain("fragment PollSummaryPr on PullRequest");
-    expect(POLL_STACK_SUMMARY_QUERY).toContain("entries(first: 50, after: $after)");
+    expect(POLL_STACK_SUMMARY_QUERY).toContain("entries(first: $first, after: $after)");
     expect(POLL_STACK_SUMMARY_QUERY).toContain("...PollSummaryPr");
+    expect(POLL_STACK_TOPOLOGY_QUERY).toContain("entries(first: 50, after: $after)");
+    expect(POLL_STACK_TOPOLOGY_QUERY).toContain("baseRefOid");
+    expect(POLL_STACK_TOPOLOGY_QUERY).not.toContain("PollSummaryPr");
+    expect(POLL_STACK_TOPOLOGY_QUERY).not.toContain("statusCheckRollup");
     expect(POLL_SUMMARY_FRAGMENT).toContain("mergeQueueEntry");
     expect(POLL_SUMMARY_FRAGMENT).toContain("headCommit");
     expect(POLL_SUMMARY_FRAGMENT).toContain("name");
@@ -117,6 +122,7 @@ describe("queries — GQL constants load at import time", () => {
       PR_FINGERPRINT_QUERY,
       POLL_STACK_SUMMARY_QUERY,
       POLL_SUMMARY_CHECK_PAGE_QUERY,
+      POLL_STACK_TOPOLOGY_QUERY,
     ]) {
       expect(query).toContain("_shepherdRateLimit: rateLimit");
       expect(query).toContain("nodeCount");
