@@ -199,7 +199,7 @@ Unsupported platforms fail closed with that same exit code.
 
 ### Clean Local State
 
-`pr-shepherd` stores seen markers, fix-attempt counters, stall fingerprints, ready-delay markers, and logs under `$PR_SHEPHERD_STATE_DIR` (default `$TMPDIR/pr-shepherd-state`).
+`pr-shepherd` stores seen markers, fix-attempt counters, stall fingerprints, ready-delay markers, and logs under `$PR_SHEPHERD_STATE_DIR` (default: `pr-shepherd-state` in the per-user temp dir; see [configuration](docs/configuration.md#environment-variables)).
 
 ```sh
 pr-shepherd admin clean current
