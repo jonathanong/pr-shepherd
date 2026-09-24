@@ -180,6 +180,12 @@ Fingerprint skip is also refused — the tick runs `BatchPr` — when any of the
 
 **Why:** Some useful failure context, such as aggregate `needs` job results, is only present in job logs and not in GraphQL check-run fields or check annotations. Shepherd fetches `GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs` and includes the first failed step's visible output (run-command group and post-step cleanup omitted) in the failing-check output. This supplement is best-effort: if the log request fails or the log is empty, the field is omitted. Extra jobs-list pages stop if remaining is 0.
 
+### Stack merge selector
+
+**When:** `--stack --merge` is about to name a READY bottom layer in `gh stack merge <PR number>`.
+
+**Why:** `gh stack merge` resolves a bare number as a stack number before a PR number, and GraphQL has no stack-by-number lookup. Shepherd reads `GET /repos/{owner}/{repo}/stacks/{PR number}`: `404` verifies the PR number, `200` escalates the collision, and any other failure withholds the merge command until a later poll. It runs at most once per aggregate tick, only for that bottom layer.
+
 ### Suggestion threads query
 
 **When:** `build-suggestion-patches` needs PR head fields and an ordered set of review threads.

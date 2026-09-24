@@ -41,7 +41,7 @@ export async function updateReadyDelay(
   readyDelaySeconds: number,
   owner: string,
   repo: string,
-  options: { retainElapsed?: boolean } = {},
+  options: { retainElapsed?: boolean; alreadyElapsed?: boolean } = {},
 ): Promise<ReadyDelayState> {
   const markerPath = readySincePath(prNumber, owner, repo);
 
@@ -49,6 +49,13 @@ export async function updateReadyDelay(
     // Reset the timer.
     await safeUnlink(markerPath);
     return { isReady: false, shouldCancel: false, remainingSeconds: readyDelaySeconds };
+  }
+
+  // Durable evidence (a current stack READY receipt) already proves the delay
+  // elapsed for this exact state, so a re-poll must not start a fresh timer.
+  if (options.alreadyElapsed) {
+    if (!options.retainElapsed) await safeUnlink(markerPath);
+    return { isReady: true, shouldCancel: true, remainingSeconds: 0 };
   }
 
   // PR is READY — check or create the marker.

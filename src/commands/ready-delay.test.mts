@@ -96,6 +96,35 @@ describe("updateReadyDelay", () => {
     expect(restarted.remainingSeconds).toBe(DELAY);
   });
 
+  it("cancels without starting a timer when durable evidence proves the delay elapsed", async () => {
+    const { access } = await import("node:fs/promises");
+    const markerPath = join(stateDir, `${OWNER}-${REPO}`, String(PR), "ready-since.txt");
+    const elapsed = { retainElapsed: true, alreadyElapsed: true };
+
+    expect(await updateReadyDelay(PR, true, DELAY, OWNER, REPO, elapsed)).toEqual({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+    await expect(access(markerPath)).rejects.toThrow();
+  });
+
+  it("drops an unretained marker when durable evidence proves the delay elapsed", async () => {
+    const { access } = await import("node:fs/promises");
+    const markerPath = join(stateDir, `${OWNER}-${REPO}`, String(PR), "ready-since.txt");
+    await updateReadyDelay(PR, true, DELAY, OWNER, REPO);
+    await access(markerPath);
+
+    const state = await updateReadyDelay(PR, true, DELAY, OWNER, REPO, { alreadyElapsed: true });
+    expect(state.shouldCancel).toBe(true);
+    await expect(access(markerPath)).rejects.toThrow();
+  });
+
+  it("ignores elapsed evidence while the PR is not ready", async () => {
+    const state = await updateReadyDelay(PR, false, DELAY, OWNER, REPO, { alreadyElapsed: true });
+    expect(state).toEqual({ isReady: false, shouldCancel: false, remainingSeconds: DELAY });
+  });
+
   it("resets the countdown when ready-since.txt contains a future timestamp (clock skew)", async () => {
     // Write a marker far in the future (simulating clock skew or manual corruption).
     const future = Math.floor(Date.now() / 1000) + 9999;

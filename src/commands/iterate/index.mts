@@ -130,25 +130,25 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     !activeMerge &&
     staleAncestry === null;
   const needsStackReceipt = report.mergeStatus.mergeRequirements?.stack !== undefined;
+  const receiptCurrent =
+    needsStackReceipt &&
+    (await revalidateReadyReceipt(
+      { owner: repoOwner, repo: repoName, pr: report.pr },
+      report,
+      hasActionableWork,
+    ));
   // A native-stack layer keeps its elapsed marker until its READY receipt is
   // written, so a failed receipt write retries next tick instead of restarting
-  // the whole delay.
+  // the whole delay. A receipt that is still current already proves the delay
+  // elapsed for this exact head, base, and readiness evidence.
   const readyState = await updateReadyDelay(
     report.pr,
     isCleanReadyState,
     readyDelaySeconds,
     repoOwner,
     repoName,
-    { retainElapsed: needsStackReceipt },
+    { retainElapsed: needsStackReceipt, alreadyElapsed: receiptCurrent },
   );
-
-  if (needsStackReceipt) {
-    await invalidateStaleReadyReceipt(
-      { owner: repoOwner, repo: repoName, pr: report.pr },
-      report,
-      hasActionableWork,
-    );
-  }
 
   const base = buildIterateBase(report, readyState);
 
@@ -240,9 +240,10 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
   if (markReadyResult) return markReadyResult;
 
   if (readyState.shouldCancel && !report.mergeStatus.isDraft) {
-    const receiptWritten = needsStackReceipt
-      ? await recordReadyReceipt({ owner: repoOwner, repo: repoName, pr: report.pr }, report)
-      : true;
+    const receiptWritten =
+      !needsStackReceipt ||
+      receiptCurrent ||
+      (await recordReadyReceipt({ owner: repoOwner, repo: repoName, pr: report.pr }, report));
     if (!receiptWritten) {
       const receiptWait: IterateResult = {
         ...base,
@@ -351,13 +352,14 @@ async function recordReadyReceipt(
   }
 }
 
-async function invalidateStaleReadyReceipt(
+/** Clear a stale READY receipt; return whether a current receipt remains. */
+async function revalidateReadyReceipt(
   key: { owner: string; repo: string; pr: number },
   report: Awaited<ReturnType<typeof runCheck>>,
   hasActionableWork: boolean,
-): Promise<void> {
+): Promise<boolean> {
   const receipt = await readReadyReceipt(key);
-  if (!receipt) return;
+  if (!receipt) return false;
   const retainQueuedReceipt =
     report.mergeQueue?.inQueue === true &&
     report.mergeStatus.state === "OPEN" &&
@@ -371,7 +373,7 @@ async function invalidateStaleReadyReceipt(
     (!retainQueuedReceipt && (report.status !== "READY" || hasActionableWork))
   ) {
     await clearReadyReceipt(key);
-    return;
+    return false;
   }
   try {
     const raw = await fetchRawSummaryPr(report.pr, { owner: key.owner, name: key.repo });
@@ -393,9 +395,12 @@ async function invalidateStaleReadyReceipt(
       })
     ) {
       await clearReadyReceipt(key);
+      return false;
     }
+    return true;
   } catch {
     // Fail closed: an unreadable current snapshot cannot validate old evidence.
     await clearReadyReceipt(key);
+    return false;
   }
 }

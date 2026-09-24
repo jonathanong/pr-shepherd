@@ -39,8 +39,10 @@ For native-stack fixtures, model the stack in bottom-to-top order. A clean raw G
 not ready: set `readyReceipt: true` only when its one-PR Shepherd session has completed READY after
 the ready delay. Assert `stackMergeable`, `blockedByPr`, and exact one-PR handoff commands in the
 snapshots. Cover the full lifecycle: an unready parent blocks upper layers, all receipts and linear
-ancestry reconcile successfully, `--merge` submits the complete stack only, and a queue remains
-non-terminal until every layer is merged. Do not assert aggregate rebase/push instructions: they are
+ancestry reconcile successfully, `--merge` merges only the READY bottom layer by PR number, and a
+queue remains non-terminal until every layer is merged. `stackLookupStatus` (default `404`) sets the
+REST status of the stack-number lookup that guards that PR number: `200` models a same-numbered
+native stack and `403` a failed lookup. Do not assert aggregate rebase/push instructions: they are
 intentionally absent.
 
 Fixture numbers are not unique today (`42`, `43`, `46`, `47` each have more than

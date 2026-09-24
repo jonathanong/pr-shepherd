@@ -119,7 +119,7 @@ function expectStackedRoute(
       `PR #42 is layer ${layer.position} of ${layer.size} in native stack #${layer.number}; do not run \`gh pr merge\` for this layer.`,
     );
     expect(result.fix.instructions).toContain(
-      "Run `pr-shepherd --stack https://github.com/owner/repo/pull/42 --until-terminal --merge` to reconcile the complete stack and run its emitted whole-stack merge command.",
+      "Run `pr-shepherd --stack https://github.com/owner/repo/pull/42 --until-terminal --merge` to reconcile the stack and run each bottom-layer merge command it emits.",
     );
   }
   expect(JSON.stringify(result)).not.toContain("--auto");
@@ -401,7 +401,7 @@ describe("runIterate — merge", () => {
       "https://github.com/owner/repo/pull/42",
     ]);
     expect(result.fix.instructions).toContain(
-      "Run `pnpm exec pr-shepherd --stack https://github.com/owner/repo/pull/42 --until-terminal --merge` to reconcile the complete stack and run its emitted whole-stack merge command.",
+      "Run `pnpm exec pr-shepherd --stack https://github.com/owner/repo/pull/42 --until-terminal --merge` to reconcile the stack and run each bottom-layer merge command it emits.",
     );
   });
 

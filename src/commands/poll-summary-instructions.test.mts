@@ -1,53 +1,8 @@
 /* eslint-disable max-lines */
 import { describe, expect, it } from "vitest";
-import type { PollSummaryItem, PollSummaryResult } from "../types.mts";
+import { row, stack } from "../../test-helpers/commands/poll-summary-stack.test-support.mts";
+import type { PollSummaryItem } from "../types.mts";
 import { withPollSummaryInstructions } from "./poll-summary-instructions.mts";
-
-function row(
-  pr: number,
-  position: number,
-  overrides: Partial<PollSummaryItem> = {},
-): PollSummaryItem {
-  return {
-    pr,
-    repo: "acme/widgets",
-    title: `Layer ${pr}`,
-    url: `https://github.com/acme/widgets/pull/${pr}`,
-    action: "cancel",
-    reasons: ["appears-ready"],
-    state: "OPEN",
-    mergeable: "MERGEABLE",
-    mergeStateStatus: "CLEAN",
-    headRefName: `layer-${pr}`,
-    headRefOid: String(pr).padStart(40, "0"),
-    baseRefName: position === 1 ? "main" : `layer-${pr - 1}`,
-    stack: { number: 9, size: 3, position, baseRefName: "main" },
-    pollCommand: `pr-shepherd https://github.com/acme/widgets/pull/${pr} --until-terminal`,
-    ...overrides,
-  };
-}
-
-function stack(prs: PollSummaryItem[], gap = false): PollSummaryResult {
-  return {
-    mode: "summary",
-    repo: "acme/widgets",
-    selection: { kind: "stack", anchor: 3, stackNumber: 9, stackSize: 3 },
-    reason: "actionable",
-    prs,
-    ...(gap && {
-      stackAncestry: [
-        {
-          parentPr: 2,
-          parentHeadRefName: "layer-2",
-          parentHeadRefOid: "b".repeat(40),
-          childPr: 3,
-          childBaseRefName: "layer-2",
-          childBaseRefOid: "a".repeat(40),
-        },
-      ],
-    }),
-  };
-}
 
 describe("native-stack reconciliation", () => {
   it("requires one-PR completion receipts, not apparently clean GitHub rows", () => {
@@ -282,27 +237,11 @@ describe("native-stack reconciliation", () => {
     expect(result.instructions?.join("\n")).not.toContain("gh stack push");
   });
 
-  it("routes a fully ready stack merge to an agent command and reconciles afterward", () => {
-    const result = withPollSummaryInstructions(
-      stack([
-        row(1, 1, { readyReceipt: true }),
-        row(2, 2, { readyReceipt: true }),
-        row(3, 3, { readyReceipt: true }),
-      ]),
-      true,
-    );
-    expect(result).toMatchObject({ nextAction: "merge", stackMergeable: true });
-    expect(result.instructions?.[0]).toContain("gh extension install github/gh-stack");
-    expect(result.instructions?.[1]).toContain(
-      "GH_REPO=acme/widgets gh stack merge --yes --squash 9",
-    );
-    expect(result.instructions?.join("\n")).toContain("rerun this same `--stack --merge`");
-  });
-
   it("merges a verified one-layer stack and returns CANCEL only after that layer merges", () => {
     const single = stack([
       row(1, 1, {
         readyReceipt: true,
+        mergeSelector: { status: "verified" },
         stack: { number: 9, size: 1, position: 1, baseRefName: "main" },
       }),
     ]);
@@ -310,8 +249,8 @@ describe("native-stack reconciliation", () => {
     const ready = withPollSummaryInstructions(single, true);
     expect(ready).toMatchObject({ nextAction: "merge", stackMergeable: true });
     expect(ready.instructions?.[0]).toContain("gh extension install github/gh-stack");
-    expect(ready.instructions?.[1]).toContain(
-      "GH_REPO=acme/widgets gh stack merge --yes --squash 9",
+    expect(ready.instructions?.[0]).toContain(
+      "GH_REPO=acme/widgets gh stack merge 1 --yes --squash",
     );
 
     const merged = withPollSummaryInstructions(

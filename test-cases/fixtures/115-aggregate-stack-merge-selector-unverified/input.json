@@ -1,0 +1,38 @@
+{
+  "description": "When the stack-number lookup fails, a ready bottom layer withholds the merge command and waits for the next poll instead of guessing.",
+  "mode": "aggregate",
+  "args": [
+    "--stack",
+    "https://github.com/owner/repo/pull/501",
+    "--merge",
+    "--timeout",
+    "1s",
+    "--interval",
+    "2s"
+  ],
+  "stackLookupStatus": 403,
+  "expectedExitCode": 10,
+  "expectedNextAction": "wait",
+  "expectedReason": "timeout",
+  "aggregateSummary": {
+    "selection": { "kind": "stack", "anchor": 501, "stackNumber": 50, "stackSize": 1 },
+    "prs": [
+      {
+        "pr": 501,
+        "repo": "owner/repo",
+        "title": "Unverified single layer",
+        "url": "https://github.com/owner/repo/pull/501",
+        "action": "merge",
+        "reasons": ["appears-ready"],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "single",
+        "headRefOid": "5011111111111111111111111111111111111111",
+        "baseRefName": "main",
+        "readyReceipt": true,
+        "stack": { "number": 50, "size": 1, "position": 1, "baseRefName": "main" }
+      }
+    ]
+  }
+}

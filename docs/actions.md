@@ -42,11 +42,17 @@ dependency and a stale-but-otherwise-ready child are first reprojected to effect
 A clean draft whose automatic mark-ready transition is disabled receives a bounded one-PR session,
 not a human handoff; drafts with actionable review or CI also route that work through one-PR sessions.
 
-When `--merge` is requested and all open layers are `stackMergeable`, the read-only summary returns
-`MERGE` with `GH_REPO=<owner/repo> gh stack merge --yes --squash <stack-number>` for the agent to run;
-it does not submit a ready prefix. The caller reruns `--stack --merge` until every layer is merged and
-the result is `CANCEL`. The instructions first check whether the optional `github/gh-stack`
-extension is installed; if not, the agent installs it and reruns reconciliation before merging. If
+When `--merge` is requested, the lowest open layer is READY, every layer below it has merged, and
+GitHub has retargeted it onto the stack base, the read-only summary returns `MERGE` with
+`GH_REPO=<owner/repo> gh stack merge <PR number> --yes --squash` for the agent to run. That merges or
+enqueues the bottom layer alone, even when upper layers still need one-PR sessions (listed in the same
+instructions) or a human decision. `gh stack merge` reads a bare number as a stack number before a PR
+number, so Shepherd first looks up a native stack with that number and records the outcome as the
+bottom row's `mergeSelector` (`verified`, `stack-number`, or `unverified` with the lookup error). Only
+`verified` emits the command; `stack-number` escalates that row (`pr-number-is-stack-number`), and
+`unverified` withholds the command as `WAIT` until a later poll. If `gh stack` is an unknown command,
+the instructions install `github/gh-stack` first. After each merge GitHub retargets the next layer, so
+the caller reruns `--stack --merge` until every layer is merged and the result is `CANCEL`. If
 GitHub puts any layer in a merge queue, the summary remains `WAIT` during queue progress and asks
 the caller to recheck until every layer is merged; an ejected layer is routed back to its one-PR
 session.
@@ -239,7 +245,7 @@ Emits an exact GitHub CLI command; Shepherd does not execute or wrap the merge o
 
 Configured `merge.commandArgs` apply only to ordinary auto-merge commands. Every emitted command pins the expected PR head.
 
-**Native stacks:** When GitHub's batch query reports the PR is part of a native stack, Shepherd builds neither ordinary command mode above, for any stack position including position 1. `--auto` is rejected server-side on stacked PRs, and the plain-merge fallback would land a mid-stack PR into its still-unmerged parent branch instead of the stack's trunk ref. After persisting its fresh READY receipt, the one-PR poll returns non-terminal `FIX_CODE` with `pr-shepherd --stack <PR URL> --until-terminal --merge`. That selector reconciles every layer's READY receipt and linear ancestry before returning the whole-stack `MERGE` command; it then rechecks until every layer merges and returns `CANCEL`. If the fresh snapshot or receipt cannot be persisted, the one-PR poll returns `WAIT` and does not claim the stack is ready.
+**Native stacks:** When GitHub's batch query reports the PR is part of a native stack, Shepherd builds neither ordinary command mode above, for any stack position including position 1. `--auto` is rejected server-side on stacked PRs, and the plain-merge fallback would land a mid-stack PR into its still-unmerged parent branch instead of the stack's trunk ref. After persisting its fresh READY receipt, the one-PR poll returns non-terminal `FIX_CODE` with `pr-shepherd --stack <PR URL> --until-terminal --merge`. That selector reconciles each layer's READY receipt and linear ancestry and returns a bottom-layer `MERGE` command whenever the lowest open layer can merge alone; it then rechecks until every layer merges and returns `CANCEL`. If the fresh snapshot or receipt cannot be persisted, the one-PR poll returns `WAIT` and does not claim the stack is ready.
 
 **Exit code:** 15.
 
@@ -284,7 +290,7 @@ Stops the iterate loop — no further iterations needed.
 
 **Trigger:** Either the PR is merged or closed (`state !== "OPEN"`), or `--merge` is not enabled and the ready-delay timer elapsed after the current sweep still verifies the PR as a READY state. Candidate READY reports get a fresh mergeability read before the timer can complete, so newly detected conflicts route to `fix_code` instead of `cancel`.
 
-**CLI side-effects:** Deletes any stale `ready-since.txt` marker when the PR is merged/closed or when ready-delay elapses. On an open native-stack PR, a fresh compact summary must still confirm READY, non-draft status, current head/base OIDs, and no actionable review or CI before Shepherd persists its READY receipt and returns `CANCEL`; the base OID on both sides is the base commit GitHub recorded for the PR, not the base branch's live tip. An unreadable snapshot or failed receipt write remains `WAIT` with `remainingSeconds` 0 and keeps the elapsed marker, so the next tick retries the receipt instead of restarting the ready-delay; the marker is deleted once the receipt is written. A receipt that keeps failing reaches the [stall timeout](escalations.md#stall-timeout). A later one-PR tick invalidates the receipt when that evidence changes. Aggregate `--stack` uses these receipts but never creates them.
+**CLI side-effects:** Deletes any stale `ready-since.txt` marker when the PR is merged/closed or when ready-delay elapses. On an open native-stack PR, a fresh compact summary must still confirm READY, non-draft status, current head/base OIDs, and no actionable review or CI before Shepherd persists its READY receipt and returns `CANCEL`; the base OID on both sides is the base commit GitHub recorded for the PR, not the base branch's live tip. An unreadable snapshot or failed receipt write remains `WAIT` with `remainingSeconds` 0 and keeps the elapsed marker, so the next tick retries the receipt instead of restarting the ready-delay; the marker is deleted once the receipt is written. A receipt that keeps failing reaches the [stall timeout](escalations.md#stall-timeout). A later one-PR tick invalidates the receipt when that evidence changes; while it stays current, re-polling the layer completes its ready-delay immediately instead of restarting it. Aggregate `--stack` uses these receipts but never creates them.
 
 **Exit code:** 0 for `reason: "merged"` or `reason: "ready-delay-elapsed"` — these are shepherd's two "finished cleanly" outcomes. 14 for `reason: "closed"` (closed without merging). See [exit-codes.md](exit-codes.md).
 

@@ -5,8 +5,8 @@ union below. Native-stack aggregate reconciliation remains read-only: autonomous
 return stack-level `SHEPHERD`, queued stacks return `WAIT`, and terminal READY or merged stacks return `CANCEL`.
 Aggregate `ESCALATE` is reserved for genuine human decisions such as closed or unverified topology,
 after no autonomous one-PR Shepherd session remains.
-Aggregate mode never performs a mutation; a fully READY `--stack --merge` result emits an agent-run
-whole-stack merge command.
+Aggregate mode never performs a mutation; a `--stack --merge` result with a READY bottom layer emits
+an agent-run merge command for that layer.
 
 | Trigger                       | Exact condition                                                                                                                                                                                      |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -68,14 +68,17 @@ Failing queue CI is actionable and therefore stays `FIX_CODE`; it does not trigg
 
 Native-stack membership is not an escalation. When a one-PR `--merge` poll reaches its ready delay, it writes the layer's READY receipt and returns non-terminal `FIX_CODE` with `pr-shepherd --stack <PR URL> --until-terminal --merge`. This applies at every position, including position 1: `--auto` is rejected server-side on stacked PRs, and a plain `gh pr merge` fallback would land a mid-stack layer into its still-unmerged parent rather than the stack trunk.
 
-The aggregate selector reconciles every open layer's READY receipt and linear ancestry, then returns stack-level `SHEPHERD` for autonomous unready work, `WAIT` for a queued stack, `MERGE` with a whole-stack command when every layer is READY, `CANCEL` after every layer merges, and `ESCALATE` only for a genuine human decision after autonomous sessions are exhausted. It never performs a mutation or proposes a partial-stack merge.
+The aggregate selector reconciles every open layer's READY receipt and linear ancestry, then returns stack-level `SHEPHERD` for autonomous unready work, `WAIT` for a queued stack, `MERGE` with a bottom-layer command when the lowest open layer is READY, `CANCEL` after every layer merges, and `ESCALATE` only for a genuine human decision after autonomous sessions are exhausted. It never performs a mutation, and it never names a layer above the lowest open one.
 
 For aggregate `--stack` polling, an unready lower layer blocks every upper layer from becoming ready,
 while independent review and CI sessions may proceed concurrently. Closed or unverified topology
 is surfaced during `SHEPHERD` when another layer can still proceed; otherwise it returns `ESCALATE`
-for human direction. If `--stack --merge` finds every layer fully READY and
-linear, it returns `MERGE` with `GH_REPO=<owner/repo> gh stack merge --yes --squash <stack-number>`
-for the agent to run; rerun the same selector until all layers merge and it returns `CANCEL`.
+for human direction. If `--stack --merge` finds the lowest open layer READY and
+retargeted onto the stack base, it returns `MERGE` with
+`GH_REPO=<owner/repo> gh stack merge <PR number> --yes --squash` for the agent to run; rerun the same
+selector until all layers merge and it returns `CANCEL`. `gh stack merge` reads a bare number as a
+stack number first, so a PR number that also names a native stack escalates that row as
+`pr-number-is-stack-number` instead of emitting the command.
 
 **Detection caveat:** GitHub's stack field is a public-preview API and can be absent even for a genuinely stacked PR — for example when Stacked PRs are disabled on the repository. An absent `stack` field is therefore not proof the PR isn't stacked; it only means Shepherd has no signal either way. Shepherd has no other reliable signal to distinguish an ordinary feature branch from an undetectable stacked PR (comparing the base branch to the repository's default branch false-positives on any PR that targets a non-default branch for ordinary reasons), so it does not attempt to infer stackedness beyond this field. This is a known gap, not a silently accepted risk: absence of the field only means the ordinary merge path proceeds, it does not confirm the PR is safe to merge with a plain `gh pr merge --auto`.
 

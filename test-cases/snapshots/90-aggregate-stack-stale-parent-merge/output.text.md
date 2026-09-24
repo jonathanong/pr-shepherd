@@ -1,6 +1,6 @@
 # Poll summary [ACTIONABLE]
 
-**repo** `jonathanong/auto-harness` · **selection** stack #514 anchored at PR #518 (5 PRs) · **mode** `summary` · **stack mergeable** `false` · **next action** `shepherd`
+**repo** `jonathanong/auto-harness` · **selection** stack #514 anchored at PR #518 (5 PRs) · **mode** `summary` · **stack mergeable** `false` · **next action** `merge`
 
 ## Pull requests
 
@@ -13,7 +13,7 @@
   - head `codex/github-app-credentials` at `80ad5e9953451916b07440b4fc3675464c17ea06` · base `main`
   - reasons: `merged`
 - [PR #510: \[codex\] add verified custom webhook ingress](https://github.com/jonathanong/auto-harness/pull/510) [MERGE]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `514` position `3/5` base `main`
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · merge selector `verified` · stack `514` position `3/5` base `main`
   - head `codex/webhook-platform` at `ccbb8fdfc8317f11b0b35c5e3bc1aad6a4d83e4d` · base `main`
   - reasons: `appears-ready`
 - [PR #511: \[codex\] add GitHub trigger and pull-ref foundation](https://github.com/jonathanong/auto-harness/pull/511) [MERGE]
@@ -30,9 +30,14 @@
 
 - PR #518 base `codex/github-ingress-foundation` at `31259f721bca9ed99b534b8cfb82367bcaf737bc` differs from parent PR #511 head `codex/github-ingress-foundation` at `b94436d2ddf60c55948b953610b16b34cff7b4da`.
 
+## GitHub API usage
+
+- Credential source: `GH_TOKEN`
+
 ## Instructions
 
-1. Start or delegate the relevant one-PR sessions below; review and CI work on separate layers can proceed concurrently.
-2. Run `pr-shepherd https://github.com/jonathanong/auto-harness/pull/518 --until-terminal --merge` for PR #518.
-3. Keep upper draft PRs in draft until every lower layer has completed Shepherd READY.
-4. After the selected one-PR sessions, rerun this same `--stack` selector.
+1. PR #510 is the bottom open layer of stack #514 in `jonathanong/auto-harness` and is ready. Run `GH_REPO=jonathanong/auto-harness gh stack merge 510 --yes --squash` to merge that layer alone, or to enqueue it when the base uses a merge queue. If `gh stack` is an unknown command, run `gh extension install github/gh-stack` first.
+2. Start or delegate the relevant one-PR sessions below; review and CI work on separate layers can proceed concurrently.
+3. Run `pr-shepherd https://github.com/jonathanong/auto-harness/pull/518 --until-terminal --merge` for PR #518.
+4. Keep upper draft PRs in draft until every lower layer has completed Shepherd READY.
+5. After the merge attempt, rerun this same `--stack --merge` selector; GitHub retargets the next layer onto `main`. Shepherd any layer that GitHub rejects or ejects.

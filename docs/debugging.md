@@ -86,7 +86,7 @@ The state directory is `$PR_SHEPHERD_STATE_DIR` when set; see [configuration.md]
 
 **Symptom:** Shepherd errors with `API rate limit exceeded` or `secondary rate limit`.
 
-**Cause:** GitHub maintains separate primary resources, including GraphQL and REST `core`. Shepherd's normal PR snapshot is GraphQL; Actions jobs/logs and the mergeability fallback are the permitted REST paths. Exhausting one resource does not imply that the other is exhausted.
+**Cause:** GitHub maintains separate primary resources, including GraphQL and REST `core`. Shepherd's normal PR snapshot is GraphQL; Actions jobs/logs, the mergeability fallback, and the `--stack --merge` stack-number lookup are the permitted REST paths. Exhausting one resource does not imply that the other is exhausted.
 
 **Fix options:**
 

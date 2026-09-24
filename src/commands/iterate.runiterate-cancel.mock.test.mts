@@ -139,6 +139,7 @@ describe("runIterate — cancel", () => {
 
     expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
       retainElapsed: false,
+      alreadyElapsed: false,
     });
     expect(result.action).toBe("fix_code");
     expect(result.shouldCancel).toBe(false);
@@ -160,6 +161,7 @@ describe("runIterate — cancel", () => {
 
     expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
       retainElapsed: false,
+      alreadyElapsed: false,
     });
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
@@ -186,6 +188,7 @@ describe("runIterate — cancel", () => {
     expect(result.shouldCancel).toBe(false);
     expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
       retainElapsed: false,
+      alreadyElapsed: false,
     });
   });
 
@@ -225,6 +228,7 @@ describe("runIterate — cancel", () => {
     );
     expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, true, 600, "owner", "repo", {
       retainElapsed: true,
+      alreadyElapsed: false,
     });
     expect(mockClearReadyDelay).toHaveBeenCalledWith(42, "owner", "repo");
   });
@@ -692,6 +696,7 @@ describe("runIterate — cancel", () => {
 
     expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
       retainElapsed: true,
+      alreadyElapsed: false,
     });
     expect(result.action).toBe("fix_code");
     expect(result.action).not.toBe("cancel");

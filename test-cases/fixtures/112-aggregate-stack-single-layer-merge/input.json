@@ -1,5 +1,5 @@
 {
-  "description": "A one-layer native stack with a verified READY receipt emits the agent-run whole-stack merge command under --merge.",
+  "description": "A one-layer native stack with a verified READY receipt emits the agent-run bottom-layer merge command under --merge.",
   "mode": "aggregate",
   "args": ["--stack", "https://github.com/owner/repo/pull/501", "--merge", "--debounce", "0s"],
   "expectedExitCode": 15,

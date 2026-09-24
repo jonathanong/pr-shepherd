@@ -148,7 +148,7 @@ configured GraphQL quota-warning band. Explicit PR sets give each actionable row
 `pollCommand`, so independent rows can proceed before the next aggregate poll.
 
 Native-stack rows are ordered bottom-to-top. `--stack` never performs a mutation itself; only
-`--stack --merge` can emit a complete-stack merge command for the agent. An unready layer (draft, missing a READY
+`--stack --merge` can emit a bottom-layer merge command for the agent. An unready layer (draft, missing a READY
 receipt, conflicting, failing, or stale) returns stack-level `SHEPHERD` with one-PR Shepherd instructions for
 the affected layers. A draft or other unready lower layer marks every higher open layer with
 `blockedByPr`; review and CI sessions on independent layers may proceed concurrently, but an upper
@@ -157,10 +157,14 @@ returns `WAIT`. A terminal READY or fully merged stack returns `CANCEL`. Closed 
 topology returns `ESCALATE` for human direction after any other shepherdable PRs are handled;
 until then, `SHEPHERD` remains the immediate action and lists the human blockers too.
 
-With `--stack --merge`, a fully reconciled and READY stack returns `MERGE` with a `gh stack merge`
-command for the agent to run, checking and installing the optional `github/gh-stack` extension first
-when necessary. It then rechecks until every layer merges and returns `CANCEL`. API and MCP
-aggregate calls perform one summary tick and leave recurrence to the caller.
+With `--stack --merge`, a READY bottom open layer that GitHub has retargeted onto the stack base
+returns `MERGE` with `gh stack merge <PR number> --yes --squash`, which merges or enqueues that layer
+alone; unready upper layers keep their one-PR sessions alongside it. Because `gh stack merge` reads a
+bare number as a stack number first, Shepherd first confirms no native stack has that number: a
+collision returns `ESCALATE`, and a failed lookup withholds the command and keeps polling. After each
+merge, GitHub retargets the next layer, so the rerun drains the stack layer by layer until it
+returns `CANCEL`. API and MCP aggregate calls perform one summary tick and leave recurrence to the
+caller.
 
 Polling defaults can be set under `poll` in `.pr-shepherdrc.yml`: `intervalSeconds`, `timeoutSeconds`, `debounceSeconds`, and `quietStatus`. Explicit flags override configuration, including `--no-quiet-status` when a shared config enables quiet output. Quiet status remains off by default.
 

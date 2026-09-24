@@ -71,13 +71,14 @@ The shipped skill runs `pr-shepherd [PR] --until-terminal`, not `pr-shepherd ite
 
 ### 2. Ready-delay
 
-**What:** `updateReadyDelay(pr, isCleanReadyState, readyDelaySeconds, owner, repo)` reads/writes `ready-since.txt`.
+**What:** `updateReadyDelay(pr, isCleanReadyState, readyDelaySeconds, owner, repo, options)` reads/writes `ready-since.txt`.
 
 A clean ready state means `status === "READY"`, `hasActionableWork` is false, and no active auto-merge or merge-queue state is being handled. That includes BLOCKED/UNSTABLE states where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending).
 
 - On the first clean ready sweep: creates the file with the current timestamp.
 - On subsequent clean ready sweeps: checks if `now − readySince >= readyDelaySeconds`. If so, `shouldCancel: true`.
 - On any unclean sweep: deletes the file (resets the countdown). This includes non-READY status, failing CI, conflicts, unresolved comments, review-summary minimization, and first-look items.
+- On a native-stack layer whose READY receipt is still current (same head, base, and readiness evidence): the receipt already proves the delay elapsed, so a clean sweep returns `shouldCancel: true` without a marker (`alreadyElapsed`). Re-polling a READY layer therefore does not restart its countdown. When the head, base, or evidence moved, the receipt is cleared first and the countdown restarts.
 
 Before a READY sweep reaches this step, `runCheck` performs one fresh REST mergeability read unless the UNKNOWN fallback already did so. If the refreshed mergeability reports `CONFLICTING`/`DIRTY`, the sweep becomes `FAILING`/`CONFLICTS`, resets the marker, and routes to `fix_code`.
 
@@ -90,6 +91,7 @@ Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/ready-since.txt` (Unix 
 | First clean ready sweep                     | Created with current timestamp       |
 | Subsequent clean ready sweep (delay active) | Read; `remainingSeconds` decremented |
 | Clean ready state, delay elapsed            | `shouldCancel: true`; file deleted   |
+| Clean stack layer with a current receipt    | `shouldCancel: true`; no file needed |
 | Non-READY, or READY with actionable work    | Deleted (countdown resets)           |
 | PR merged/closed (step 1.5)                 | Deleted before `cancel`              |
 

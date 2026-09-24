@@ -35,8 +35,9 @@ All GitHub I/O uses GraphQL by default. The only permitted REST call sites are:
 - **Actions jobs/logs** (`src/checks/triage.mts`) — GitHub's GraphQL schema does not expose job-level data or log downloads.
 - **Cancel workflow run** (`src/commands/iterate/helpers.mts`) — no `cancelWorkflowRun` GraphQL mutation exists.
 - **`getMergeableState` fallback** (`src/github/client.mts`) — REST `GET /pulls/{n}` triggers GitHub's lazy mergeability computation when GraphQL returns `UNKNOWN`.
+- **Stack merge selector** (`src/github/stack-merge-selector.mts`) — REST `GET /repos/{owner}/{repo}/stacks/{n}` confirms no native stack shares a bottom layer's PR number before `--stack --merge` emits `gh stack merge <PR number>`, which resolves a bare number as a stack first. GraphQL has no stack-by-number lookup.
 
-Any new `rest()` call outside these three cases must be justified against this list. GraphQL is preferred for all read paths; mutations that GitHub exposes via GraphQL must use GraphQL.
+Any new `rest()` call outside these four cases must be justified against this list. GraphQL is preferred for all read paths; mutations that GitHub exposes via GraphQL must use GraphQL.
 
 ## Git operations
 

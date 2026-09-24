@@ -106,6 +106,18 @@ describe("formatPollSummaryResult", () => {
     expect(text).toContain("3. After selected work completes");
   });
 
+  it.each([
+    [{ status: "verified" }, "merge selector `verified`"],
+    [{ status: "stack-number" }, "merge selector `stack-number`"],
+    [
+      { status: "unverified", error: "lookup <failed>" },
+      "merge selector `unverified` (lookup &lt;failed&gt;)",
+    ],
+  ] as const)("renders the stack merge selector check %o", (mergeSelector, expected) => {
+    const text = formatPollSummaryResult(result(row({ mergeSelector }), "all_terminal"));
+    expect(text).toContain(`MERGED\` · mergeable \`UNKNOWN\` · merge \`UNKNOWN\` · ${expected}`);
+  });
+
   it("tells one-shot and timed-out callers to recheck", () => {
     expect(formatPollSummaryResult(result(row({ action: "wait" }), "waiting"))).toContain(
       "Run this aggregate selector again",
