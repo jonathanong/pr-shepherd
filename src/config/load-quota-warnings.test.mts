@@ -56,7 +56,7 @@ describe("loadConfig — GraphQL quota warnings", () => {
 
   it("rejects a factor calculation that overflows", async () => {
     writeRc(
-      "poll:\n  intervalSeconds: 1e308\nwatch:\n  graphqlQuotaWarnings:\n    - remainingPercent: 30\n      pollIntervalFactor: 1e308\n",
+      "poll:\n  intervalSeconds: 60\nwatch:\n  graphqlQuotaWarnings:\n    - remainingPercent: 30\n      pollIntervalFactor: 1e308\n",
     );
     const loadConfig = await freshLoadConfig();
     expect(loadConfig().watch.graphqlQuotaWarnings).toEqual([

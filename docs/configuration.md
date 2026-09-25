@@ -46,7 +46,8 @@ iterate:
   resolveOtherHumanThreads: none # none | outdated | always
 
 poll:
-  intervalSeconds: 120 # default delay between WAIT ticks
+  intervalSeconds: 120 # single-PR delay between WAIT ticks
+  stackIntervalFactor: 2 # stack and multi-PR polls sleep intervalSeconds times this
   timeoutSeconds: 270 # default bounded WAIT timeout; ignored by --until-terminal
   debounceSeconds: 60 # settle window after first FIX_CODE; 0 disables
   quietStatus: false # unchanged WAIT snapshots remain visible by default
@@ -104,7 +105,8 @@ actions:
 | `iterate.minimizeComments`           | `"all"`                                   | Which non-human GitHub author classes to minimize for PR comments and review summaries: `all`, `bots`, or `none`; humans are never minimized.               |
 | `iterate.behindBaseHint`             | `""`                                      | One-liner shown on the `fix_code` push step when the branch is behind its base; empty omits the hint entirely                                               |
 | `iterate.resolveOtherHumanThreads`   | `"none"`                                  | When to resolve other-human inline threads after a reply: `none` (reply-only), `outdated` (also resolve when GitHub reports outdated), or `always`          |
-| `poll.intervalSeconds`               | `60`                                      | Default delay between `WAIT` ticks; overridden by `--interval`                                                                                              |
+| `poll.intervalSeconds`               | `60`                                      | Default delay between `WAIT` ticks for one PR; overridden by `--interval`                                                                                   |
+| `poll.stackIntervalFactor`           | `2`                                       | Multiplier for --stack and multi-PR sleeps (`intervalSeconds` × this). `--interval` overrides it and is not multiplied                                      |
 | `poll.timeoutSeconds`                | `270`                                     | Default wall-clock cap for bounded `WAIT` polling; overridden by `--timeout` and ignored by `--until-terminal`                                              |
 | `poll.debounceSeconds`               | `60`                                      | Default settle window after the first `FIX_CODE`; overridden by `--debounce`; `0` disables                                                                  |
 | `poll.quietStatus`                   | `false`                                   | Whether unchanged `WAIT` snapshots are hidden by default; overridden by `--quiet-status` or `--no-quiet-status`                                             |
@@ -236,12 +238,15 @@ Configures defaults for the polling CLI. Explicit command-line flags take preced
 ```yaml
 poll:
   intervalSeconds: 120
+  stackIntervalFactor: 2
   timeoutSeconds: 270
   debounceSeconds: 60
   quietStatus: false
 ```
 
-`intervalSeconds` and `timeoutSeconds` must be positive finite numbers. `debounceSeconds` must be a non-negative finite number; `0` disables the post-`FIX_CODE` settle window. `quietStatus` defaults to `false`, preserving the ordinary status line for every `WAIT` tick. Use `--quiet-status` to hide unchanged snapshots for one invocation or `--no-quiet-status` to override a configured `true` value.
+`intervalSeconds` and `timeoutSeconds` must be positive finite numbers. `stackIntervalFactor` must be a finite number greater than or equal to 1 (built-in `2`). Their product, converted to milliseconds, must be finite and at most 2147483647 (the largest timer delay); a larger product is invalid and the whole config falls back to the built-in defaults. `debounceSeconds` must be a non-negative finite number; `0` disables the post-`FIX_CODE` settle window. `quietStatus` defaults to `false`, preserving the ordinary status line for every `WAIT` tick. Use `--quiet-status` to hide unchanged snapshots for one invocation or `--no-quiet-status` to override a configured `true` value.
+
+One PR, including `--until-terminal`, sleeps `intervalSeconds` or the explicit `--interval`. A stack or multi-PR poll sleeps `intervalSeconds * stackIntervalFactor` when `--interval` is omitted. The flag is that invocation's interval and is not multiplied again. The product stays a positive finite number of seconds and is not rounded. Quota-warning bands stay multiples of configured `intervalSeconds` only, so the stack factor does not compound into them. The dispatcher sleeps the slower of the effective interval and the active band: with the built-in defaults a stack sleeps 120s until a tighter band is slower than that.
 
 These settings affect `pr-shepherd [PR]` and `pr-shepherd poll`. Single-tick `iterate` and MCP calls do not poll. `--until-terminal` ignores the bounded timeout, as it does when the timeout comes from `--timeout`.
 
@@ -263,7 +268,7 @@ The defaults are 30% → 2x, 20% → 5x, and 10% → 10x. With the built-in 60-s
 
 Shepherd evaluates the authoritative GraphQL response headers without making an extra rate-limit request. When a band is crossed, the next non-terminal agent-visible result includes the raw quota state and transport-specific continuation guidance. Bounded CLI guidance uses a timeout twice the recommended interval; MCP and single-tick callers are told how long to wait before the next call.
 
-The poll dispatcher (`pr-shepherd [PR]`, including `--until-terminal`) also **applies** the matching band on every `WAIT` / `MARK_READY` sleep: `max(effective interval, resolved band interval)`, where the effective interval is the explicit `--interval` or its configured default and the active band is the crossed entry with the lowest `remainingPercent`. A slower explicit interval is preserved in both sleep behavior and warning instructions. The throttle runs even after the one-shot warning has already been claimed for the window. Single-tick `iterate` and MCP `iterate` do not sleep — those callers own recurrence and only see the warning text. GraphQL `Retry-After` on `--until-terminal` retries the tick once and honors an explicit header in full. See [graphql.md](graphql.md).
+For normal cadence waits, the poll dispatcher (`pr-shepherd [PR]`, including `--until-terminal`, and aggregate `--stack` / multi-PR polls) applies the matching band: `max(effective interval, resolved band interval)`. A post-`FIX_CODE` or stack `SHEPHERD` debounce wait uses the remaining debounce window and is not quota-band adjusted. The effective interval is the explicit `--interval` when that flag is set; otherwise it is `poll.intervalSeconds` for one PR and `poll.intervalSeconds * poll.stackIntervalFactor` for a stack or multi-PR poll. Bands stay factored from configured `poll.intervalSeconds` only — not from `--interval` and not from the stack factor — so those multipliers do not compound. With the built-in defaults a stack therefore sleeps 120s until a tighter band is slower than that (the 30% band is also 120s; 20% and 10% are 5 and 10 minutes). The active band is the crossed entry with the lowest `remainingPercent`. A slower explicit interval is preserved in both sleep behavior and warning instructions. The throttle runs even after the one-shot warning has already been claimed for the window. Single-tick `iterate` and MCP `iterate` do not sleep — those callers own recurrence and only see the warning text. GraphQL `Retry-After` on `--until-terminal` retries the tick once and honors an explicit header in full. See [graphql.md](graphql.md).
 
 Each band warns once per worktree and quota window. A new window is detected when GitHub's used count falls, remaining count rises, or GitHub advances the reset timestamp after the prior reset deadline has passed. A reset-time adjustment before the prior deadline does not re-arm warnings. If the first observed response is already below multiple bands, Shepherd emits only the lowest applicable band and records the higher bands as crossed.
 

@@ -166,7 +166,7 @@ above it. Layers above the prefix keep their one-PR sessions. After the merge, G
 the next layer, so the rerun continues until the stack returns `CANCEL`. API and MCP aggregate
 calls perform one summary tick and leave recurrence to the caller.
 
-Polling defaults can be set under `poll` in `.pr-shepherdrc.yml`: `intervalSeconds`, `timeoutSeconds`, `debounceSeconds`, and `quietStatus`. Explicit flags override configuration, including `--no-quiet-status` when a shared config enables quiet output. Quiet status remains off by default.
+Polling defaults can be set under `poll` in `.pr-shepherdrc.yml`: `intervalSeconds` (built-in 60 for one PR), `stackIntervalFactor` (built-in 2, so `--stack` and multi-PR polls wait 120s), `timeoutSeconds`, `debounceSeconds`, and `quietStatus`. Explicit `--interval` overrides either period for that invocation and is not multiplied. Other explicit flags override configuration, including `--no-quiet-status` when a shared config enables quiet output. Quiet status remains off by default. Quota-warning bands stay multiples of `intervalSeconds`; the dispatcher sleeps the slower of the effective interval and the active band, so a default stack waits 120s until a tighter band is slower than that.
 
 ### Apply Review And Journal Changes, Or Select Files
 

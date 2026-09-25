@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const { pollConfig } = vi.hoisted(() => ({
   pollConfig: {
     intervalSeconds: 60,
+    stackIntervalFactor: 2,
     timeoutSeconds: 270,
     debounceSeconds: 60,
     quietStatus: false,
@@ -42,6 +43,7 @@ beforeEach(() => {
   process.exitCode = undefined;
   Object.assign(pollConfig, {
     intervalSeconds: 60,
+    stackIntervalFactor: 2,
     timeoutSeconds: 270,
     debounceSeconds: 60,
     quietStatus: false,
