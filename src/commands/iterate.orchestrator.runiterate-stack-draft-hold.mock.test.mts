@@ -82,15 +82,13 @@ describe("runIterate — held native stack drafts", () => {
     expect(mockFetchPollSummary).not.toHaveBeenCalled();
   });
 
-  it("holds a pending stack draft when the configuration disables automatic mark-ready", async () => {
+  it("does not hold a pending stack draft when automatic mark-ready is disabled", async () => {
     mockLoadConfig.mockReturnValue({
       ...defaultConfig(),
       actions: { ...defaultConfig().actions, autoMarkReady: false },
     });
 
-    await expect(runDraft(bottomLayer, {}, "IN_PROGRESS")).resolves.toEqual({
-      kind: "auto-mark-ready-disabled",
-    });
+    await expect(runDraft(bottomLayer, {}, "IN_PROGRESS")).resolves.toBeUndefined();
   });
 
   it("marks a READY upper-layer draft ready without reading lower layers", async () => {

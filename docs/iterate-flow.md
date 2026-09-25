@@ -149,7 +149,7 @@ An active auto-merge request or merge-queue entry emits `wait` after actionable 
 
 **Fallthrough:** nothing actionable, no terminal state, no ready-delay elapsed, not marking ready.
 
-A draft native stack layer is marked ready by its own session as soon as that layer is clean. It does not wait for lower layers. The hold is `{ kind: 'auto-mark-ready-disabled' }` when `--no-auto-mark-ready` or `actions.autoMarkReady: false` applies. Its instructions return to the `--stack` selector instead of asking for another immediate one-PR iteration.
+A draft native stack layer is marked ready by its own session as soon as that layer is clean. It does not wait for lower layers. The hold is `{ kind: 'auto-mark-ready-disabled' }` when the draft is clean (`READY`, and no blocking bot review is in progress) and `--no-auto-mark-ready` or `actions.autoMarkReady: false` applies. Its instructions return to the `--stack` selector instead of asking for another immediate one-PR iteration.
 
 **Emits:** `action: 'wait'`. The stall guard runs on this path.
 
@@ -157,7 +157,7 @@ A draft native stack layer is marked ready by its own session as soon as that la
 
 ### Stall guard
 
-Applied to ordinary `wait` and `fix_code` after those actions are chosen — not before actionable work, and not on active merge waits, stack drafts held by a named lower layer, `merge`, `cancel`, `mark_ready`, or `escalate`.
+Applied to ordinary `wait` and `fix_code` after those actions are chosen — not before actionable work, and not on active merge waits, `merge`, `cancel`, `mark_ready`, or `escalate`. A disabled mark-ready hold is an ordinary wait and uses this guard.
 
 Fingerprint: PR head SHA from GitHub (not the local checkout), action, `status`, `mergeStateStatus`, `state`, `isDraft`, sorted failing-check names + conclusions, sorted actionable thread/comment/review IDs, sorted review-summary minimize IDs. Stored at `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/iterate-stall.json`.
 

@@ -2,10 +2,19 @@ import { describe, expect, it } from "vitest";
 import { stackDraftHold } from "./parent-first.mts";
 import type { ShepherdReport } from "../../types.mts";
 
-function report(stack: boolean, isDraft = true): ShepherdReport {
+function report(
+  stack: boolean,
+  options: {
+    isDraft?: boolean;
+    status?: "READY" | "IN_PROGRESS";
+    blockingBotReviewInProgress?: boolean;
+  } = {},
+): ShepherdReport {
   return {
+    status: options.status ?? "READY",
     mergeStatus: {
-      isDraft,
+      isDraft: options.isDraft ?? true,
+      blockingBotReviewInProgress: options.blockingBotReviewInProgress,
       ...(stack && {
         mergeRequirements: {
           approvals: { current: 0, requiredCount: 0 },
@@ -28,5 +37,15 @@ describe("stackDraftHold", () => {
 
   it("does not hold a pull request outside a native stack", () => {
     expect(stackDraftHold(report(false), false)).toBeUndefined();
+  });
+
+  it("does not hold a stack draft that is not ready yet", () => {
+    expect(stackDraftHold(report(true, { status: "IN_PROGRESS" }), false)).toBeUndefined();
+  });
+
+  it("does not hold a ready stack draft while a blocking bot review is in progress", () => {
+    expect(
+      stackDraftHold(report(true, { blockingBotReviewInProgress: true }), false),
+    ).toBeUndefined();
   });
 });
