@@ -3,7 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GitHubRequestError } from "../../github/errors.mts";
-import { writeCheckBlocker, type CheckBlockerRef } from "../../state/check-blockers.mts";
+import {
+  readCheckBlockers,
+  writeCheckBlocker,
+  type CheckBlockerRef,
+} from "../../state/check-blockers.mts";
 import { pollRateLimitRetryAfterMs } from "../poll-quota.mts";
 
 const { mockGraphql } = vi.hoisted(() => ({ mockGraphql: vi.fn() }));
@@ -98,6 +102,18 @@ describe("resolveCheckBlockerGate", () => {
     expect(await resolveCheckBlockerGate(key, [{ name: "lint" }])).toBeNull();
     expect(stderr.mock.calls.map((call) => String(call[0])).join("")).toContain("boom");
     stderr.mockRestore();
+  });
+
+  it("clears a released blocker once the branch is current and keeps it while behind", async () => {
+    await writeCheckBlocker(key, { checkName: "lint", blocker: pull, recordedAt: 1 });
+    mockGraphql.mockResolvedValue(pullData("MERGED", true));
+    const behind = await resolveCheckBlockerGate(key, [{ name: "lint" }], "BEHIND");
+    expect(behind?.releasedNames.has("lint")).toBe(true);
+    expect(await readCheckBlockers(key)).toHaveLength(1);
+
+    const current = await resolveCheckBlockerGate(key, [{ name: "lint" }], "CLEAN");
+    expect(current).toBeNull();
+    expect(await readCheckBlockers(key)).toEqual([]);
   });
 
   it("propagates a rate-limit error", async () => {

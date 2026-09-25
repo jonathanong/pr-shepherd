@@ -36,12 +36,26 @@ function failing(name: string, runId: string): TriagedCheck {
   };
 }
 
-function prepare(checks: TriagedCheck[], blocker: CheckBlockerRef, checkName: string) {
+function prepare(
+  checks: TriagedCheck[],
+  blocker: CheckBlockerRef,
+  checkName: string,
+  mergeStateStatus = "CLEAN",
+) {
   mockReadCheckBlockers.mockResolvedValue([{ checkName, blocker, recordedAt: 1700000000 }]);
   mockRunCheck.mockResolvedValue(
     makeReport({
       repo: "acme/widgets",
       status: "FAILING",
+      mergeStatus: {
+        status: mergeStateStatus as "CLEAN",
+        state: "OPEN",
+        isDraft: false,
+        mergeable: "MERGEABLE",
+        reviewDecision: "APPROVED",
+        blockingBotReviewInProgress: false,
+        mergeStateStatus: mergeStateStatus as "CLEAN",
+      },
       checks: {
         passing: [],
         failing: checks,
@@ -96,7 +110,7 @@ describe("check blockers during iterate", () => {
     ["merged pull", pull, { repository: { pullRequest: { state: "MERGED", merged: true } } }],
     ["closed issue", issue, { repository: { issue: { state: "CLOSED" } } }],
   ] as const)("tells the agent to update the branch after a %s", async (_label, blocker, body) => {
-    await prepare([failing("backend-tests (1)", "123")], blocker, "backend-tests (1)");
+    await prepare([failing("backend-tests (1)", "123")], blocker, "backend-tests (1)", "BEHIND");
     mockGraphql.mockResolvedValue({ data: body });
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("fix_code");
@@ -107,6 +121,19 @@ describe("check blockers during iterate", () => {
     expect(instructions).not.toContain("rerun:");
     expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
     expect(formatIterateResult(result)).not.toContain("rerun:");
+  });
+
+  it("treats a released blocker as a normal failure once the branch is current", async () => {
+    await prepare([failing("backend-tests (1)", "123")], pull, "backend-tests (1)", "CLEAN");
+    mockGraphql.mockResolvedValue({
+      data: { repository: { pullRequest: { state: "MERGED", merged: true } } },
+    });
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    const instructions = result.fix.instructions.join("\n");
+    expect(instructions).not.toContain("gh pr update-branch");
+    expect(result.fix.checks[0]?.rerunCommand).toContain("gh run rerun 123");
   });
 
   it("propagates a lookup rate limit and keeps other lookup errors visible", async () => {

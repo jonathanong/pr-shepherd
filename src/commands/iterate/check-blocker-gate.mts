@@ -1,6 +1,7 @@
 import { graphql } from "../../github/client.mts";
 import { pollRateLimitRetryAfterMs } from "../poll-quota.mts";
 import {
+  clearCheckBlocker,
   formatCheckBlockerRef,
   readCheckBlockers,
   type CheckBlockerRef,
@@ -43,9 +44,13 @@ interface StateKey {
  * failing check, skips GitHub. Rate-limit errors propagate; other lookup
  * failures leave that check as a normal failure.
  */
+/** Behind or conflicting branches still need the update-branch instruction. */
+const KEEP_RELEASED_STATUS = new Set(["BEHIND", "CONFLICTS", "DIRTY", "UNKNOWN"]);
+
 export async function resolveCheckBlockerGate(
   key: StateKey,
   failing: readonly { name: string }[],
+  mergeStatus?: string,
 ): Promise<CheckBlockerGate | null> {
   const records = await readCheckBlockers(key);
   if (records.length === 0 || failing.length === 0) return null;
@@ -74,7 +79,13 @@ export async function resolveCheckBlockerGate(
         openBlockers.push(label);
       }
     } else if (status === "released") {
-      releasedNames.add(record.checkName);
+      if (mergeStatus !== undefined && !KEEP_RELEASED_STATUS.has(mergeStatus)) {
+        // The branch is already current, so update-branch would no-op and a
+        // later unrelated failure must be a normal check again.
+        await clearCheckBlocker(key, record.checkName);
+      } else {
+        releasedNames.add(record.checkName);
+      }
     }
   }
   if (deferredNames.size === 0 && releasedNames.size === 0) return null;

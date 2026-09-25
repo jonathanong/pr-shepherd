@@ -81,6 +81,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
   const blockerGate = await resolveCheckBlockerGate(
     { owner: repoOwner, repo: repoName, pr: prNumber },
     report.checks.failing,
+    report.mergeStatus.status,
   );
   const deferredNames = blockerGate?.deferredNames;
   const reportForWork =
