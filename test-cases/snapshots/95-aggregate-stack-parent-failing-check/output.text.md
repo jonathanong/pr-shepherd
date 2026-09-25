@@ -10,14 +10,13 @@
   - checks: 1 passing, 1 failing
   - reasons: `failing-checks`
   - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/321 --until-terminal`
-- [PR #322: Verified child](https://github.com/owner/repo/pull/322) [WAIT]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack blocked by PR #321 · stack `33` position `2/2` base `main`
+- [PR #322: Verified child](https://github.com/owner/repo/pull/322) [CANCEL]
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `33` position `2/2` base `main`
   - head `child` at `c222222222222222222222222222222222222222` · base `foundation`
-  - reasons: `appears-ready`, `lower-layer-not-ready`
+  - reasons: `appears-ready`
 
 ## Instructions
 
 1. Start or delegate the relevant one-PR sessions below; review and CI work on separate layers can proceed concurrently.
 2. Run `pr-shepherd https://github.com/owner/repo/pull/321 --until-terminal` for PR #321.
-3. Keep upper draft PRs in draft until every lower layer has completed Shepherd READY.
-4. After the selected one-PR sessions, rerun this same `--stack` selector.
+3. After the selected one-PR sessions, rerun this same `--stack` selector.

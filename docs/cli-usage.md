@@ -53,26 +53,26 @@ complete, or timeout expires. Its Markdown, JSON, API, and MCP result contains o
 raw state, bounded check/review counts, and routing context. Explicit PR sets include an exact
 one-PR `pollCommand` for each actionable row, which callers may handle independently.
 
-For a native stack, `--stack` never performs GitHub mutations; only `--stack --merge` can emit a
-bottom-layer merge command for the agent. It never emits rebase or push commands. When any layer is draft, lacks a current one-PR READY
-receipt, conflicts, fails checks, remains pending, or has stale ancestry, the result is `SHEPHERD`
-and its instructions name the affected one-PR Shepherd sessions. The first unready lower layer
-causes each higher open layer to carry `blockedByPr`; review and CI work can proceed concurrently on
-independent layers, but an upper draft must remain draft until every lower layer has a READY receipt.
-With automatic mark-ready disabled, draft layers get bounded probe commands (`pollProbe`), and
-the agent marks a clean, unblocked draft ready with `gh pr ready` after its probe confirms the
-disabled setting is the only hold;
-see [actions.md](actions.md). A queued stack, or one whose remaining layers can only wait on CI,
-merge state, a blocking review, or a lower layer, returns `WAIT` until that state stays unchanged past
-`--stall-timeout`, which returns `ESCALATE` with `stall-timeout`; a terminal READY or fully merged
-stack returns `CANCEL`. Closed or
+For a native stack, `--stack` never performs GitHub mutations. It never emits rebase or push
+commands. When any layer is draft, lacks a current one-PR READY receipt, conflicts, fails checks,
+remains pending, or has stale ancestry, the result is `SHEPHERD` and its instructions name a
+one-PR session for every such layer at once. A clean draft is marked ready by its own session
+without waiting for lower layers. With automatic mark-ready disabled, draft layers get bounded
+probe commands (`pollProbe`), and the agent marks a clean draft ready with `gh pr ready` after
+its probe confirms the disabled setting is the only hold; see [actions.md](actions.md). A queued
+stack, or one whose remaining layers can only wait on CI, merge state, or a blocking review,
+returns `WAIT` until that state stays unchanged past `--stall-timeout`, which returns `ESCALATE`
+with `stall-timeout`; a terminal READY or fully merged stack returns `CANCEL`. Closed or
 unverified topology returns `ESCALATE` for human direction only after any other shepherdable layer
 has completed; mixed states return immediate `SHEPHERD` and surface the eventual human blocker.
 
-With `--stack --merge`, a READY bottom open layer that GitHub has retargeted onto the stack base
-returns `MERGE` with `gh stack merge <PR number> --yes --squash`; reconciliation continues layer by
-layer until every layer merges and returns `CANCEL`. JSON/MCP includes the same raw ancestry, routing
-context, `nextAction`, and instructions that Markdown renders.
+With `--stack --merge`, the highest open layer whose open lower layers are all READY, once the
+bottom open layer targets the stack base, returns `MERGE` with `gh stack merge <PR number>
+--yes --squash`. That command lands the named layer and every unmerged layer below it. A merge
+queue queues that prefix together and evaluates each layer from the bottom; a failure ejects that
+layer and the layers above it. Reconciliation continues until every layer merges and returns
+`CANCEL`. JSON/MCP includes the same raw ancestry, routing context, `nextAction`, and instructions
+that Markdown renders.
 
 The polling flags are `--interval`, `--timeout`, `--debounce`, `--quiet-status`, `--no-quiet-status`, and `--until-terminal`. Their defaults come from `poll.intervalSeconds` (built-in 60), `poll.timeoutSeconds` (270), `poll.debounceSeconds` (60), and `poll.quietStatus` (`false`) in `.pr-shepherdrc.yml`; explicit flags override configuration. Each ordinary `WAIT` tick writes a stderr line naming what it is waiting on (the `WAIT` log's check counts and reason) unless quiet status is enabled; the final action remains the only stdout result. `--debounce` (`0` disables) is a settle window after the first `FIX_CODE` or stack-level `SHEPHERD`. Iterate flags are `--ready-delay`, `--stall-timeout`, `--merge`, `--no-auto-mark-ready`, `--format`, and `--verbose`. The legacy `--no-auto-cancel-actionable` flag remains accepted as a no-op. Durations accept `s`, `m`, and `h`; bare polling durations are seconds and bare iterate durations are minutes.
 

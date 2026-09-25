@@ -5,8 +5,8 @@ union below. Native-stack aggregate reconciliation remains read-only: autonomous
 return stack-level `SHEPHERD`, queued stacks return `WAIT`, and terminal READY or merged stacks return `CANCEL`.
 Aggregate `ESCALATE` is reserved for genuine human decisions such as closed or unverified topology,
 after no autonomous one-PR Shepherd session remains.
-Aggregate mode never performs a mutation; a `--stack --merge` result with a READY bottom layer emits
-an agent-run merge command for that layer.
+Aggregate mode never performs a mutation; a `--stack --merge` result emits an agent-run
+`gh stack merge` command for the highest ready prefix.
 
 | Trigger                       | Exact condition                                                                                                                                                                                      |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -69,15 +69,9 @@ Failing queue CI is actionable and therefore stays `FIX_CODE`; it does not trigg
 
 Native-stack membership is not an escalation. When a one-PR `--merge` poll reaches its ready delay, it writes the layer's READY receipt and returns non-terminal `FIX_CODE` with `pr-shepherd --stack <PR URL> --until-terminal --merge`. This applies at every position, including position 1: `--auto` is rejected server-side on stacked PRs, and a plain `gh pr merge` fallback would land a mid-stack layer into its still-unmerged parent rather than the stack trunk.
 
-The aggregate selector reconciles every open layer's READY receipt and linear ancestry, then returns stack-level `SHEPHERD` for autonomous unready work, `WAIT` for a queued stack, `MERGE` with a bottom-layer command when the lowest open layer is READY, `CANCEL` after every layer merges, and `ESCALATE` only for a genuine human decision after autonomous sessions are exhausted. It never performs a mutation, and it never names a layer above the lowest open one.
+The aggregate selector reconciles every open layer's READY receipt and linear ancestry, then returns stack-level `SHEPHERD` for every layer that still has work, `WAIT` when every remaining layer can only wait or the stack is queued, `MERGE` with `gh stack merge` for the highest ready prefix when `--merge` is set, `CANCEL` once every open layer is READY without `--merge` or after every layer merges, and `ESCALATE` only for a genuine human decision after autonomous sessions are exhausted. It never performs a mutation.
 
-For aggregate `--stack` polling, an unready lower layer blocks every upper layer from becoming ready,
-while independent review and CI sessions may proceed concurrently. Closed or unverified topology
-is surfaced during `SHEPHERD` when another layer can still proceed; otherwise it returns `ESCALATE`
-for human direction. If `--stack --merge` finds the lowest open layer READY and
-retargeted onto the stack base, it returns `MERGE` with
-`GH_REPO=<owner/repo> gh stack merge <PR number> --yes --squash` for the agent to run; rerun the same
-selector until all layers merge and it returns `CANCEL`.
+For aggregate `--stack` polling, a clean draft is marked ready by its own session without waiting for lower layers. Closed or unverified topology is surfaced during `SHEPHERD` when another layer can still proceed; otherwise it returns `ESCALATE` for human direction. If `--stack --merge` finds a ready prefix whose bottom open layer targets the stack base, it returns `MERGE` with `GH_REPO=<owner/repo> gh stack merge <PR number> --yes --squash` for that highest ready layer; rerun the same selector until every layer merges and it returns `CANCEL`.
 
 **Detection caveat:** GitHub's stack field is a public-preview API and can be absent even for a genuinely stacked PR — for example when Stacked PRs are disabled on the repository. An absent `stack` field is therefore not proof the PR isn't stacked; it only means Shepherd has no signal either way. Shepherd has no other reliable signal to distinguish an ordinary feature branch from an undetectable stacked PR (comparing the base branch to the repository's default branch false-positives on any PR that targets a non-default branch for ordinary reasons), so it does not attempt to infer stackedness beyond this field. This is a known gap, not a silently accepted risk: absence of the field only means the ordinary merge path proceeds, it does not confirm the PR is safe to merge with a plain `gh pr merge --auto`.
 
@@ -88,9 +82,9 @@ There are two paths:
 - CI-start path: the timeout is enabled, the prospective result is `WAIT`, and an external status context—or a `PENDING`, `QUEUED`, `REQUESTED`, or `WAITING` check run with no start time—remains unstarted for at least the threshold.
 - Stable-state path: the timeout is enabled, the prospective result is `WAIT` or `FIX_CODE`, the stored fingerprint is unchanged, its age is nonnegative, and that age reaches the threshold. The fingerprint covers the action, the PR head commit GitHub reports (not the local checkout's `HEAD`), PR/merge/draft state, failing and in-progress checks, actionable item IDs, and actionable annotations.
 
-A changed fingerprint resets the timer. Disabling the timeout refreshes state and never escalates. A native stack draft whose `WAIT` names the lower layer holding it ([held native stack drafts](actions.md#wait)) never reaches either path: its stall state is cleared on every such tick, so its timer restarts only after that lower layer releases it.
+A changed fingerprint resets the timer. Disabling the timeout refreshes state and never escalates. A native-stack draft whose wait is the disabled mark-ready hold uses this same guard.
 
-A `--stack` selection has a third path. When every remaining layer's bounded probe can only report waiting ([the idle `WAIT`](actions.md#shepherd-actions)), no one-PR session runs, so the selector keeps its own timer in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/stack-<number>/stack-stall.json`. It fingerprints the summary status plus each layer's head commit, draft state, READY receipt, reasons, and `blockedByPr`. Every aggregate tick shares that timer, whether it comes from `--until-terminal`, a bounded poll, or MCP. A changed fingerprint resets it, and any other stack plan or a disabled timeout clears it. Once an unchanged idle `WAIT` reaches the threshold, the selector returns `ESCALATE` with a `stall-timeout` instruction that names each waiting layer and why it waits.
+A `--stack` selection has a third path. When every remaining layer's bounded probe can only report waiting ([the idle `WAIT`](actions.md#shepherd-actions)), no one-PR session runs, so the selector keeps its own timer in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/stack-<number>/stack-stall.json`. It fingerprints the summary status plus each layer's head commit, draft state, READY receipt, reasons. Every aggregate tick shares that timer, whether it comes from `--until-terminal`, a bounded poll, or MCP. A changed fingerprint resets it, and any other stack plan or a disabled timeout clears it. Once an unchanged idle `WAIT` reaches the threshold, the selector returns `ESCALATE` with a `stall-timeout` instruction that names each waiting layer and why it waits.
 
 ### `stall-state-unavailable`
 

@@ -1,23 +1,10 @@
-import type { IterateResult, StackDraftHold, StackLayerBlockReason } from "../types.mts";
+import type { IterateResult, StackDraftHold } from "../types.mts";
 import { renderMergeCommand } from "../commands/iterate/merge.mts";
 import { inlineCode } from "../util/markdown.mts";
 import { buildQuotaAwareContinuation } from "../quota-warning.mts";
 import { formatPrUrl } from "../pr-reference.mts";
 import { AUTO_MARK_READY_DISABLED_HOLD } from "../commands/stack-work.mts";
 import { buildPrShepherdCommand } from "./runner.mts";
-
-const STACK_LAYER_BLOCK_REASONS: Record<StackLayerBlockReason, string> = {
-  closed: "was closed without merging",
-  draft: "is still a draft",
-  conflicting: "has merge conflicts",
-  "queue-removal": "has an unacknowledged merge-queue removal",
-  "failing-checks": "has failing checks",
-  "review-work": "has unresolved review work",
-  "checks-in-progress": "has checks in progress",
-  "merge-state": "is not in a mergeable state",
-  "no-ready-receipt": "has no current Shepherd READY receipt",
-  "stale-ancestry": "is not rebased onto its parent layer's current head",
-};
 
 export function buildSimpleIterateInstructions(
   result: Exclude<IterateResult, { action: "fix_code" }>,
@@ -96,20 +83,13 @@ function buildStackDraftHoldInstruction(
     formatPrUrl(result.repo, result.pr),
     "--until-terminal",
   ]).text;
-  const lowerLayer = hold.kind === "lower-layer-not-ready" ? hold.lowerLayer : undefined;
   const handoff = `a \`--stack\` selector listed this session, finish that selector's remaining steps and rerun it with its original flags; otherwise run ${inlineCode(stackCommand)}, adding \`--merge\` when merging was requested.`;
-  const instruction = lowerLayer
-    ? `PR #${result.pr} stays in draft because lower stack layer PR #${lowerLayer.pr} ${STACK_LAYER_BLOCK_REASONS[lowerLayer.reason]}, so repeating this one-PR session cannot advance it. Advance PR #${lowerLayer.pr} first: if ${handoff}`
-    : `PR #${result.pr} stays in draft because ${holdReason(hold)}, so repeating this one-PR session cannot advance it. If ${handoff}`;
+  const reason =
+    hold.kind === "auto-mark-ready-disabled" ? AUTO_MARK_READY_DISABLED_HOLD : hold.kind;
+  const instruction = `PR #${result.pr} stays in draft because ${reason}, so repeating this one-PR session cannot advance it. If ${handoff}`;
   return result.quotaWarning
     ? buildQuotaAwareContinuation(result.quotaWarning, instruction)
     : instruction;
-}
-
-function holdReason(hold: StackDraftHold): string {
-  return hold.kind === "auto-mark-ready-disabled"
-    ? AUTO_MARK_READY_DISABLED_HOLD
-    : "its lower stack layers could not be verified";
 }
 
 export function adaptIterateLog(log: string): string {

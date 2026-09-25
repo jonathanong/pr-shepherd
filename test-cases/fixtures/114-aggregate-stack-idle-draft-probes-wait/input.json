@@ -1,18 +1,20 @@
 {
-  "description": "When every remaining layer is a disabled draft whose bounded probe could only report waiting, the selector waits at the polling cadence instead of repeating one-PR sessions that cannot change the stack.",
+  "description": "A clean upper draft is marked ready by the agent while a lower draft is still waiting on CI. The lower probe stays idle; the upper draft is not held.",
   "mode": "aggregate",
   "args": [
     "--stack",
     "https://github.com/owner/repo/pull/442",
     "--no-auto-mark-ready",
+    "--debounce",
+    "0s",
     "--timeout",
     "1s",
     "--interval",
     "2s"
   ],
-  "expectedReason": "timeout",
-  "expectedExitCode": 10,
-  "expectedNextAction": "wait",
+  "expectedReason": "actionable",
+  "expectedExitCode": 16,
+  "expectedNextAction": "shepherd",
   "aggregateSummary": {
     "selection": {
       "kind": "stack",

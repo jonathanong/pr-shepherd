@@ -26,30 +26,15 @@ function leanInstructions(result: IterateResult): string[] {
 }
 
 describe("held native stack draft WAIT instructions", () => {
-  it.each([
-    ["draft", "is still a draft"],
-    ["no-ready-receipt", "has no current Shepherd READY receipt"],
-    ["stale-ancestry", "is not rebased onto its parent layer's current head"],
-  ] as const)("points a layer held by a %s lower layer at that layer", (reason, text) => {
-    const result = heldWait({ kind: "lower-layer-not-ready", lowerLayer: { pr: 41, reason } });
-
-    expect(leanInstructions(result)).toEqual([
-      `PR #42 stays in draft because lower stack layer PR #41 ${text}, so repeating this one-PR session cannot advance it. Advance PR #41 first: if ${handoff}`,
-    ]);
-  });
-
-  it.each([
-    [{ kind: "auto-mark-ready-disabled" }, "automatic mark-ready is disabled for this session"],
-    [{ kind: "lower-layer-not-ready" }, "its lower stack layers could not be verified"],
-  ] as const)("returns an unattributed %j hold to the stack selector", (hold, reason) => {
-    expect(leanInstructions(heldWait(hold))).toEqual([
-      `PR #42 stays in draft because ${reason}, so repeating this one-PR session cannot advance it. If ${handoff}`,
+  it("returns a disabled mark-ready hold to the stack selector", () => {
+    expect(leanInstructions(heldWait({ kind: "auto-mark-ready-disabled" }))).toEqual([
+      `PR #42 stays in draft because automatic mark-ready is disabled for this session, so repeating this one-PR session cannot advance it. If ${handoff}`,
     ]);
   });
 
   it("keeps the stack handoff ahead of quota-aware cadence advice", () => {
     const result: IterateResult = {
-      ...heldWait({ kind: "lower-layer-not-ready", lowerLayer: { pr: 41, reason: "draft" } }),
+      ...heldWait({ kind: "auto-mark-ready-disabled" }),
       quotaWarning: {
         resource: "graphql",
         thresholdPercent: 20,
@@ -62,7 +47,7 @@ describe("held native stack draft WAIT instructions", () => {
     };
 
     const [instruction] = textInstructions(result);
-    expect(instruction).toMatch(/^PR #42 stays in draft because lower stack layer PR #41/);
+    expect(instruction).toMatch(/^PR #42 stays in draft because automatic mark-ready is disabled/);
     expect(instruction).toContain("no more often than every 5 minutes");
     expect(instruction).not.toContain("Non-terminal — no action needed this tick");
   });

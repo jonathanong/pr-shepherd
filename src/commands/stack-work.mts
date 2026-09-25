@@ -20,9 +20,9 @@ export interface StackWork {
 
 /**
  * Split autonomous stack candidates by what the agent can do for each. A bounded probe cannot
- * mark a draft ready, so rerunning it for a waiting layer cannot change the stack. A clean draft
- * that no lower layer blocks becomes an agent ready-for-review step instead. A stale-ancestry
- * child keeps its session, which returns the ancestry repair.
+ * mark a draft ready, so rerunning it for a waiting layer cannot change the stack. A probed wait
+ * kept in draft only by the disabled mark-ready setting is the agent's ready-for-review step.
+ * A stale-ancestry child keeps its session, which returns the ancestry repair.
  */
 export function splitStackWork(
   candidates: PollSummaryItem[],
@@ -32,10 +32,7 @@ export function splitStackWork(
   for (const item of candidates) {
     if (!isProbed(item) || item.action !== "wait" || staleChildren.has(item.pr)) {
       work.sessions.push(item);
-    } else if (
-      item.blockedByPr === undefined &&
-      item.reasons.includes("draft-auto-mark-ready-disabled")
-    ) {
+    } else if (item.reasons.includes("draft-auto-mark-ready-disabled")) {
       work.markReady.push(item);
     } else {
       work.idle.push(item);
@@ -46,7 +43,7 @@ export function splitStackWork(
 
 /**
  * The poll loop leaves a disabled draft's ready transition to the agent. The bounded probe runs
- * first because only the one-PR session reads the full review context and current lower layers.
+ * first because only the one-PR session reads the full review context.
  */
 export function appendMarkReadyInstructions(instructions: string[], layers: ProbedLayer[]): void {
   for (const item of layers) {

@@ -29,19 +29,18 @@ beforeEach(() => {
   mockSleep.mockImplementation(async (ms) => {
     vi.setSystemTime(Date.now() + ms);
   });
-  // Stack #9: the bottom draft waits on CI and blocks the draft above it.
+  // Stack #9: both drafts wait on CI, so the selector can only wait.
   mockFetch.mockResolvedValue({
     selection: { kind: "stack", anchor: 2, stackNumber: 9, stackSize: 2 },
-    prs: [
-      row(1, 1, {
+    prs: [1, 2].map((pr) =>
+      row(pr, pr, {
         isDraft: true,
         action: "wait",
         reasons: ["pending-or-unknown"],
-        pollCommand: "pr-shepherd https://github.com/acme/widgets/pull/1 --timeout 1s",
+        pollCommand: `pr-shepherd https://github.com/acme/widgets/pull/${pr} --timeout 1s`,
         pollProbe: true,
       }),
-      row(2, 2, { isDraft: true }),
-    ],
+    ),
   });
 });
 
@@ -70,6 +69,8 @@ describe("aggregate stack stall guard", () => {
     vi.setSystemTime(Date.now() + loadConfig().iterate.stallTimeoutMinutes * 60 * 1000);
     const result = await runPollSummary(opts);
     expect(result.nextAction).toBe("escalate");
-    expect(result.instructions?.[0]).toContain("PR #2 (stack-blocked by PR #1)");
+    expect(result.instructions?.[0]).toContain(
+      "PR #1 (pending-or-unknown); PR #2 (pending-or-unknown)",
+    );
   });
 });

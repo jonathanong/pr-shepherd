@@ -8,7 +8,7 @@ import {
   findHumanHandoffs,
   idleWaitPlan,
   isStackLayerReady,
-  planBottomDrain,
+  planPrefixDrain,
   retargetWaitPlan,
   stackPosition,
   type StackPlan,
@@ -34,29 +34,14 @@ export function planPollSummary(
 
   const prs = [...result.prs].sort((left, right) => stackPosition(left) - stackPosition(right));
   const staleChildren = new Set(result.stackAncestry?.map((gap) => gap.childPr) ?? []);
-  const firstUnready = prs.find(
-    (item) => item.state === "OPEN" && (!isStackLayerReady(item) || staleChildren.has(item.pr)),
-  );
-  const blocked = prs.map((item) =>
-    firstUnready && item.state === "OPEN" && stackPosition(item) > stackPosition(firstUnready)
-      ? {
-          ...item,
-          ...(["cancel", "mark_ready", "merge"].includes(item.action) && {
-            action: "wait" as const,
-            reasons: [...item.reasons, "lower-layer-not-ready"],
-          }),
-          blockedByPr: firstUnready.pr,
-          ...(item.isDraft &&
-            item.pollCommand && {
-              pollCommand:
-                item.pollCommand.replace(" --until-terminal", " --timeout 1s --debounce 0s") +
-                (item.pollCommand.includes("--no-auto-mark-ready") ? "" : " --no-auto-mark-ready"),
-              pollProbe: true as const,
-            }),
-        }
-      : item.state === "OPEN" &&
-          (!isStackLayerReady(item) || staleChildren.has(item.pr)) &&
-          ["cancel", "merge"].includes(item.action)
+  const projected = {
+    ...result,
+    prs: prs.map((item) => {
+      const needsOwnSession =
+        item.state === "OPEN" &&
+        (!isStackLayerReady(item) || staleChildren.has(item.pr)) &&
+        ["cancel", "merge"].includes(item.action);
+      const layer = needsOwnSession
         ? {
             ...item,
             action: "fix_code" as const,
@@ -65,33 +50,29 @@ export function planPollSummary(
               staleChildren.has(item.pr) ? "stale-ancestry" : "ready-receipt-required",
             ],
           }
-        : item,
-  );
-  const projected = {
-    ...result,
-    prs: blocked.map((item) => {
-      if (item.state === "OPEN" && item.isInMergeQueue && item.action === "cancel") {
+        : item;
+      if (layer.state === "OPEN" && layer.isInMergeQueue && layer.action === "cancel") {
         return {
-          ...item,
+          ...layer,
           action: "wait" as const,
-          reasons: [...item.reasons, "already-in-merge-queue"],
+          reasons: [...layer.reasons, "already-in-merge-queue"],
         };
       }
-      if (item.state === "CLOSED" && closedDependency(blocked, item.pr)) {
+      if (layer.state === "CLOSED" && closedDependency(prs, layer.pr)) {
         return {
-          ...item,
+          ...layer,
           action: "escalate" as const,
-          reasons: [...item.reasons, "closed-unmerged-dependency"],
+          reasons: [...layer.reasons, "closed-unmerged-dependency"],
         };
       }
-      if (item.state !== "OPEN" && item.state !== "MERGED") {
+      if (layer.state !== "OPEN" && layer.state !== "MERGED") {
         return {
-          ...item,
+          ...layer,
           action: "escalate" as const,
-          reasons: [...item.reasons, "unverified-stack-state"],
+          reasons: [...layer.reasons, "unverified-stack-state"],
         };
       }
-      return item;
+      return layer;
     }),
   };
   const planned = planStack(projected, mergeRequested);
@@ -138,7 +119,7 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
   const runnableCandidates = work.sessions.filter((item) => item.pollCommand);
   const missingCommands = work.sessions.filter((item) => !item.pollCommand);
   const agentWork = runnableCandidates.length > 0 || work.markReady.length > 0;
-  const drain = planBottomDrain(result, mergeRequested);
+  const drain = planPrefixDrain(result, mergeRequested);
   if (drain) return drain;
 
   const handoffs = findHumanHandoffs(result);

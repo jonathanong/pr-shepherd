@@ -28,7 +28,7 @@ import {
   readReadyReceipt,
   writeReadyReceipt,
 } from "../../state/ready-receipts.mts";
-import { findParentMarkReadyBlock, heldByLowerLayer, stackDraftHold } from "./parent-first.mts";
+import { stackDraftHold } from "./parent-first.mts";
 import { findStaleNativeStackAncestry } from "./stale-ancestry.mts";
 
 export function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
@@ -224,16 +224,8 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     report.status === "READY" &&
     report.mergeStatus.isDraft &&
     !report.mergeStatus.blockingBotReviewInProgress;
-  const parentBlock = canMarkReady
-    ? await findParentMarkReadyBlock(report, { owner: repoOwner, name: repoName })
-    : undefined;
-
   const autoMarkReady = !opts.noAutoMarkReady && config.actions.autoMarkReady;
-  const markReadyResult = await markReadyIfAuthorized(
-    canMarkReady && !parentBlock && autoMarkReady,
-    base,
-    report,
-  );
+  const markReadyResult = await markReadyIfAuthorized(canMarkReady && autoMarkReady, base, report);
   if (markReadyResult) return markReadyResult;
 
   if (readyState.shouldCancel && !report.mergeStatus.isDraft) {
@@ -272,19 +264,13 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     };
   }
 
-  const hold = stackDraftHold(report, autoMarkReady, parentBlock);
+  const hold = stackDraftHold(report, autoMarkReady);
   const wait = {
     ...base,
     action: "wait" as const,
     log: buildWaitLog(base),
     ...(hold && { stackDraftHold: hold }),
   } as IterateResult;
-  // The lower layer's own session owns progress here, so this draft cannot
-  // stall; its stall clock restarts once that layer releases it.
-  if (heldByLowerLayer(wait)) {
-    await clearStallState(stallKey);
-    return wait;
-  }
   return applyStallGuard(
     stallKey,
     stallTimeoutSeconds,

@@ -25,12 +25,11 @@ Its only local state is a `--stack` selection's [stall timer](escalations.md#sta
 
 For a native stack, `stackMergeable` is true only when every open layer has a current one-PR Shepherd
 READY receipt (`readyReceipt: true`) and every adjacent open boundary is linear. The aggregate view
-preserves raw row state, then adds `blockedByPr` to an upper open layer when a lower open layer lacks
-that receipt. A lower draft, conflict, failure, pending state, review item, missing receipt, or stale
-ancestry therefore prevents an upper layer from advancing even when GitHub calls it `CLEAN`. Review
-and CI sessions may run concurrently on separate layers, but an upper draft cannot transition to
-ready until every lower layer has its READY receipt. An unready stack returns stack-level `SHEPHERD` with exact
-one-PR Shepherd commands and asks the caller to rerun the same selector after those sessions.
+preserves each layer's own row state. A draft is marked ready by its own session as soon as that
+layer is clean; it does not wait for a lower layer's receipt. Review and CI sessions for every
+layer that still has work are listed on the same tick. An unready stack returns stack-level
+`SHEPHERD` with exact one-PR Shepherd commands and asks the caller to rerun the same selector
+after those sessions.
 `CANCEL` is terminal only when every open layer is READY without merge intent (or every layer is merged). Aggregate mode
 never performs mutations or emits rebase/push commands. `ESCALATE` is reserved for a human decision, such as a
 closed-unmerged or otherwise unverified dependency, once no autonomous one-PR session remains.
@@ -43,32 +42,36 @@ dependency and a stale-but-otherwise-ready child are first reprojected to effect
 
 When `--no-auto-mark-ready` or `actions.autoMarkReady: false` applies, each draft layer's
 `pollCommand` is a bounded probe (`--timeout 1s --debounce 0s --no-auto-mark-ready`, flagged
-`pollProbe: true`) that surfaces and routes review and CI work but never promotes the draft; an
-upper draft held by `blockedByPr` gets the same probe. A probe whose row still has work is listed
-as a one-PR session. A clean draft that no lower layer blocks becomes the agent's ready-for-review
-step: run the probe first. Only when it returns `[WAIT]` held by the disabled setting (the
-`auto-mark-ready-disabled` hold below) is the draft still clean with no lower blocker, so the agent
-runs `gh pr ready <N> -R <owner/repo>`; otherwise it completes the probe's instructions and leaves
-the draft for the next round. Neither the poll loop
-nor a human performs that transition. Because the agent does, such a draft escalates with
-`mark-ready-authorization-required` when its `viewerCanUpdate` is not `true`, and it waits with
-`blocking-reviewer-in-progress` while a configured blocking reviewer is pending. Rerunning a probe
-that can only report waiting — on CI, merge state, a blocking review, or a lower layer — cannot
-change the stack. When no other agent work remains, the selector returns `ESCALATE` for any human
-handoff, or otherwise `WAIT` with reason `waiting`, which `--until-terminal` rechecks at its polling
-cadence and a bounded poll returns at timeout. Because nothing reruns those probes, their own stall
-guards cannot fire, so the selector keeps a stack-level timer: once that `WAIT` stays unchanged for
-the stall timeout, it returns `ESCALATE` with `stall-timeout` naming each waiting layer
+`pollProbe: true`) that surfaces and routes review and CI work but never promotes the draft. A
+probe whose row still has work is listed as a one-PR session. A clean draft becomes the agent's
+ready-for-review step: run the probe first. Only when it returns `[WAIT]` held by the disabled
+setting (the `auto-mark-ready-disabled` hold below) is the draft still clean, so the agent runs
+`gh pr ready <N> -R <owner/repo>`; otherwise it completes the probe's instructions and leaves the
+draft for the next round. Neither the poll loop nor a human performs that transition. Because the
+agent does, such a draft escalates with `mark-ready-authorization-required` when its
+`viewerCanUpdate` is not `true`, and it waits with `blocking-reviewer-in-progress` while a
+configured blocking reviewer is pending. Rerunning a probe that can only report waiting — on CI,
+merge state, or a blocking review — cannot change the stack. When no other agent work remains, the
+selector returns `ESCALATE` for any human handoff, or otherwise `WAIT` with reason `waiting`, which
+`--until-terminal` rechecks at its polling cadence and a bounded poll returns at timeout. Because
+nothing reruns those probes, their own stall guards cannot fire, so the selector keeps a
+stack-level timer: once that `WAIT` stays unchanged for the stall timeout, it returns `ESCALATE`
+with `stall-timeout` naming each waiting layer
 ([`stall-timeout`](escalations.md#stall-timeout)). If that timer cannot be read or written, the
 same tick returns `ESCALATE` with `stall-state-unavailable` and the filesystem error, so an
 unwritable state directory cannot keep the idle wait polling
 ([`stall-state-unavailable`](escalations.md#stall-state-unavailable)).
 
-When `--merge` is requested, the lowest open layer is READY, every layer below it has merged, and
-GitHub has retargeted it onto the stack base, the read-only summary returns `MERGE` with
-`GH_REPO=<owner/repo> gh stack merge <PR number> --yes --squash` for the agent to run. That merges or
-enqueues the bottom layer alone, even when upper layers still need one-PR sessions (listed in the same
-instructions) or a human decision. `gh stack merge` reads a bare number as a stack number before a PR
+When `--merge` is requested, the selector finds the highest open layer such that it and every open
+layer below it have a current READY receipt, the bottom open layer targets the stack base, and the
+prefix has no stale ancestry, queued layer, escalation, or closed-unmerged layer. The summary
+returns `MERGE` with `GH_REPO=<owner/repo> gh stack merge <that PR number> --yes --squash`.
+`gh stack merge <PR>` lands that pull request and every unmerged pull request below it in one
+operation ([GitHub's stacked PR merge](https://github.github.com/gh-stack/introduction/overview/)).
+A direct merge is atomic. When the base branch uses a merge queue, the prefix is queued together
+and each layer is evaluated from the bottom; a failure ejects that layer and the layers above it,
+while layers that already merged stay merged. Layers above the prefix keep their one-PR sessions
+in the same instructions. `gh stack merge` reads a bare number as a stack number before a PR
 number, but native stack numbers come from the repository's issue and pull request sequence
 (observed; GitHub does not document it), so a PR number never names a stack. If `gh stack` is an
 unknown command,
@@ -207,19 +210,15 @@ The body line (`WAIT: …`) varies with the merge state — `branch is behind ba
 
 **Deferred work while queued:** with `--merge` enabled and the PR currently in the merge queue (`mergeQueue.inQueue`), review threads, PR comments, `CHANGES_REQUESTED` reviews, and review summaries do not trigger `fix_code` — a Shepherd-initiated push right now would eject the PR from the queue. Instead this tick emits `WAIT` and raw counts of what is being held back appear as `deferredWork` (JSON) / a `**deferred (in merge queue)** N threads, N comments, …` line (Markdown), omitted entirely when there is nothing deferred. Failing checks (including merge-queue synthetic-commit `merge_group` failures), unseen check-run annotations, and merge conflicts are never deferred — GitHub is already acting on the queue for those regardless, so they still route to `fix_code` immediately. Set [`actions.workWhileQueued: true`](configuration.md#actionsworkwhilequeued--default-false) to restore pre-existing behavior and act on this work immediately even while queued. Once the PR leaves the queue (merged or ejected), the deferred work is picked up on the very next tick exactly as if `workWhileQueued` were `true` — deferred items are never marked seen while held back, so nothing is silently lost (see the Comment visibility invariant in [`CLAUDE.md`](../CLAUDE.md)).
 
-**Held native stack drafts:** a draft native stack layer that this one-PR session cannot promote carries `stackDraftHold` in JSON:
+**Disabled mark-ready on a native stack draft:** a draft native stack layer whose session will not mark it ready carries `stackDraftHold` in JSON:
 
-- `{ "kind": "lower-layer-not-ready", "lowerLayer": { "pr": 41, "reason": "draft" } }` — a `READY` upper draft whose lowest open lower layer is not yet ready. `reason` is one of `closed`, `draft`, `conflicting`, `queue-removal`, `failing-checks`, `review-work`, `checks-in-progress`, `merge-state`, `no-ready-receipt`, or `stale-ancestry`. The aggregate `--stack` selector uses the same readiness rules for `blockedByPr`, so both name the same layer. Any lower-layer hold, named or not, takes precedence over a disabled mark-ready setting.
-- `{ "kind": "auto-mark-ready-disabled" }` — the session or configuration disables automatic mark-ready, as in the stack selector's bounded draft probes. Only this `READY` hold confirms the `--stack` selector's ready-for-review step for the agent.
-- `{ "kind": "lower-layer-not-ready" }` — the lower layers could not be read or attributed, so the draft stays held without naming one.
+- `{ "kind": "auto-mark-ready-disabled" }` — the session or configuration disables automatic mark-ready, as in the stack selector's bounded draft probes. This `READY` hold confirms the `--stack` selector's ready-for-review step for the agent.
 
-Repeating the same one-PR session cannot advance a held draft, so the single instruction replaces "iterate immediately" with a stack handoff (quota cadence advice is appended when a warning applies). A named lower layer is the one to advance first:
+A clean draft is marked ready by its own session even when lower layers are still in progress. Repeating the disabled-hold session cannot mark the draft ready, so the single instruction replaces "iterate immediately" with a stack handoff (quota cadence advice is appended when a warning applies). The hold keeps the ordinary poll loop and stall guard.
 
 ```markdown
-1. PR #42 stays in draft because lower stack layer PR #41 is still a draft, so repeating this one-PR session cannot advance it. Advance PR #41 first: if a `--stack` selector listed this session, finish that selector's remaining steps and rerun it with its original flags; otherwise run `pr-shepherd --stack https://github.com/owner/repo/pull/42 --until-terminal`, adding `--merge` when merging was requested.
+1. PR #42 stays in draft because automatic mark-ready is disabled for this session, so repeating this one-PR session cannot advance it. If a `--stack` selector listed this session, finish that selector's remaining steps and rerun it with its original flags; otherwise run `pr-shepherd --stack https://github.com/owner/repo/pull/42 --until-terminal`, adding `--merge` when merging was requested.
 ```
-
-A hold that names a lower layer never reaches `stall-timeout`: the lower layer's own session owns the progress, so Shepherd clears the draft's stall state and the poll returns the hold after one tick instead of waiting it out. The other holds keep the ordinary poll loop and stall guard.
 
 **What the skill does:** Ordinary `WAIT` actions remain inside its `--until-terminal` poll. If a quota-warning `WAIT` is returned, follow `## Instructions`, adjust cadence, and re-invoke the canonical command. Direct MCP/`iterate` callers must reschedule themselves.
 
@@ -266,7 +265,7 @@ Emits an exact GitHub CLI command; Shepherd does not execute or wrap the merge o
 
 Configured `merge.commandArgs` apply only to ordinary auto-merge commands. Every emitted command pins the expected PR head.
 
-**Native stacks:** When GitHub's batch query reports the PR is part of a native stack, Shepherd builds neither ordinary command mode above, for any stack position including position 1. `--auto` is rejected server-side on stacked PRs, and the plain-merge fallback would land a mid-stack PR into its still-unmerged parent branch instead of the stack's trunk ref. After persisting its fresh READY receipt, the one-PR poll returns non-terminal `FIX_CODE` with `pr-shepherd --stack <PR URL> --until-terminal --merge`. That selector reconciles each layer's READY receipt and linear ancestry and returns a bottom-layer `MERGE` command whenever the lowest open layer can merge alone; it then rechecks until every layer merges and returns `CANCEL`. If the fresh snapshot or receipt cannot be persisted, the one-PR poll returns `WAIT` and does not claim the stack is ready.
+**Native stacks:** When GitHub's batch query reports the PR is part of a native stack, Shepherd builds neither ordinary command mode above, for any stack position including position 1. `--auto` is rejected server-side on stacked PRs, and the plain-merge fallback would land a mid-stack PR into its still-unmerged parent branch instead of the stack's trunk ref. After persisting its fresh READY receipt, the one-PR poll returns non-terminal `FIX_CODE` with `pr-shepherd --stack <PR URL> --until-terminal --merge`. That selector reconciles each layer's READY receipt and linear ancestry and returns `MERGE` for the highest open layer whose open lower layers are all ready; it then rechecks until every layer merges and returns `CANCEL`. If the fresh snapshot or receipt cannot be persisted, the one-PR poll returns `WAIT` and does not claim the stack is ready.
 
 **Exit code:** 15.
 

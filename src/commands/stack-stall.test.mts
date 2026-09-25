@@ -24,7 +24,13 @@ function idleStack(overrides: Partial<PollSummaryItem> = {}) {
         pollProbe: true,
         ...overrides,
       }),
-      row(2, 2, { isDraft: true }),
+      row(2, 2, {
+        isDraft: true,
+        action: "wait",
+        reasons: ["pending-or-unknown"],
+        pollCommand: "pr-shepherd https://github.com/acme/widgets/pull/2 --timeout 1s",
+        pollProbe: true,
+      }),
     ]),
     false,
   );
@@ -60,7 +66,7 @@ describe("applyStackStallGuard", () => {
       nextAction: "escalate",
       stackMergeable: false,
       instructions: [
-        "1. `stall-timeout`: the stack has not changed for 10 minutes while no one-PR session could advance it: PR #1 (pending-or-unknown); PR #2 (stack-blocked by PR #1). Stop and ask a human to unblock the waiting layers.",
+        "1. `stall-timeout`: the stack has not changed for 10 minutes while no one-PR session could advance it: PR #1 (pending-or-unknown); PR #2 (pending-or-unknown). Stop and ask a human to unblock the waiting layers.",
       ],
     });
   });

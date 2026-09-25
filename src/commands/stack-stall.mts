@@ -72,7 +72,6 @@ function stackStallFingerprint(result: PollSummaryResult): string {
       isDraft: item.isDraft,
       readyReceipt: item.readyReceipt,
       reasons: item.reasons,
-      blockedByPr: item.blockedByPr,
     })),
   });
 }
