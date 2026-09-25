@@ -63,7 +63,8 @@ With automatic mark-ready disabled, draft layers get bounded probe commands (`po
 the agent marks a clean, unblocked draft ready with `gh pr ready` after its probe confirms the
 disabled setting is the only hold;
 see [actions.md](actions.md). A queued stack, or one whose remaining layers can only wait on CI,
-merge state, a blocking review, or a lower layer, returns `WAIT`; a terminal READY or fully merged
+merge state, a blocking review, or a lower layer, returns `WAIT` until that state stays unchanged past
+`--stall-timeout`, which returns `ESCALATE` with `stall-timeout`; a terminal READY or fully merged
 stack returns `CANCEL`. Closed or
 unverified topology returns `ESCALATE` for human direction only after any other shepherdable layer
 has completed; mixed states return immediate `SHEPHERD` and surface the eventual human blocker.

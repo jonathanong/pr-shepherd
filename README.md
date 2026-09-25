@@ -154,7 +154,7 @@ the affected layers. A draft or other unready lower layer marks every higher ope
 `blockedByPr`; review and CI sessions on independent layers may proceed concurrently, but an upper
 draft cannot transition to ready until every lower layer has its READY receipt. With automatic
 mark-ready disabled, the instructions ask the agent to mark a clean, unblocked draft layer ready. A
-queued stack, or one whose remaining layers can only wait, returns `WAIT`. A terminal READY or fully merged stack returns `CANCEL`. Closed or unverified
+queued stack, or one whose remaining layers can only wait, returns `WAIT`; an idle `WAIT` that stays unchanged past the stall timeout returns `ESCALATE` with `stall-timeout`. A terminal READY or fully merged stack returns `CANCEL`. Closed or unverified
 topology returns `ESCALATE` for human direction after any other shepherdable PRs are handled;
 until then, `SHEPHERD` remains the immediate action and lists the human blockers too.
 

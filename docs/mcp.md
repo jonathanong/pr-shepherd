@@ -176,7 +176,7 @@ Hosts namespace tool names with the server name (`pr-shepherd__iterate` in Grok,
 | `prs`                    | qualified PR array              | selector | Non-empty explicit set from one repository.             |
 | `stack`                  | GitHub PR URL or `owner/repo#N` | selector | Anchor selecting its complete native GitHub stack.      |
 | `readyDelaySeconds`      | non-negative number             | no       | Override the ready-delay window.                        |
-| `stallTimeoutSeconds`    | non-negative number             | no       | Override the stall timeout.                             |
+| `stallTimeoutSeconds`    | non-negative number             | no       | Override the one-PR or `stack` stall timeout.           |
 | `noAutoMarkReady`        | boolean                         | no       | Disable automatic draft → ready.                        |
 | `noAutoCancelActionable` | boolean                         | no       | Deprecated no-op; Shepherd never cancels workflow runs. |
 | `merge`                  | boolean                         | no       | Shepherd to readiness and emit merge/queue commands.    |
