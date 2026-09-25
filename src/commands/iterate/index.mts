@@ -381,8 +381,14 @@ async function revalidateReadyReceipt(
     const fingerprint = fingerprintRawSummaryPr(
       queuedBaseAdvanced ? { ...raw, baseRefOid: receipt.baseRefOid } : raw,
     );
+    // The fresh snapshot must name the commits this tick evaluated, or the
+    // receipt would vouch for a head or base the report never saw.
+    const sameCommits =
+      raw.headRefOid === report.headSha &&
+      (queuedBaseAdvanced || raw.baseRefOid === report.baseRefOid);
     if (
       fingerprint === null ||
+      !sameCommits ||
       !isReadyReceiptCurrent(receipt, {
         headRefOid: raw.headRefOid,
         baseRefOid: queuedBaseAdvanced ? receipt.baseRefOid : raw.baseRefOid,

@@ -106,6 +106,29 @@ describe("runIterate — one-PR READY receipt", () => {
     expect(mockClearReadyDelay).toHaveBeenCalledWith(42, "owner", "repo");
   });
 
+  it.each([
+    ["head", { headRefOid: "head-2" }],
+    ["base", { baseRefOid: "base-2" }],
+  ])("rejects a receipt when the fresh snapshot names another %s", async (_name, moved) => {
+    mockRunCheck.mockResolvedValue(onePrReport());
+    mockFetchRawSummaryPr.mockResolvedValue({
+      state: "OPEN",
+      isDraft: false,
+      headRefOid: "head-1",
+      baseRefOid: "base-1",
+      ...moved,
+    });
+
+    const result = await runIterate(makeOpts({ merge: true }));
+
+    expect(result.action).toBe("wait");
+    expect(mockClearReadyReceipt).toHaveBeenCalledWith(key);
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, true, 600, "owner", "repo", {
+      headSha: "head-1",
+      alreadyElapsed: false,
+    });
+  });
+
   it("keeps the countdown and the receipt while a hidden comment is acknowledged", async () => {
     mockRunCheck.mockResolvedValue(
       onePrReport({ comments: { actionable: [], firstLook: [hiddenNotice] } }),
