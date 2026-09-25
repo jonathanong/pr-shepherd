@@ -35,7 +35,11 @@ export async function handlePoll(args: string[]): Promise<void> {
     hasFlag(extra, "--interval"),
   );
   if (intervalSuffix === null) return;
-  const intervalSeconds = parseDurationToSeconds(intervalSuffix ?? "", cfg.poll.intervalSeconds);
+  let intervalSeconds = parseDurationToSeconds(intervalSuffix ?? "", cfg.poll.intervalSeconds);
+  // `--interval` is the invocation interval. Only an omitted flag is scaled, and only for aggregates.
+  if (isAggregate && intervalSuffix === undefined) {
+    intervalSeconds *= cfg.poll.stackIntervalFactor;
+  }
 
   const timeoutStr = getFlag(extra, "--timeout");
   const timeoutSuffix = validateSecondsDurationFlag(

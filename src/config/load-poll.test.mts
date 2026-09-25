@@ -3,6 +3,7 @@ import { freshLoadConfig, writeRc } from "../../test-helpers/config/load-test-su
 
 const DEFAULT_POLL = {
   intervalSeconds: 60,
+  stackIntervalFactor: 2,
   timeoutSeconds: 270,
   debounceSeconds: 60,
   quietStatus: false,
@@ -43,5 +44,38 @@ describe("loadConfig — poll defaults", () => {
     writeRc("poll:\n  debounceSeconds: 0\n");
     const loadConfig = await freshLoadConfig();
     expect(loadConfig().poll.debounceSeconds).toBe(0);
+  });
+
+  it("keeps the default factor when an rc sets only intervalSeconds", async () => {
+    writeRc("poll:\n  intervalSeconds: 90\n");
+    const loadConfig = await freshLoadConfig();
+    expect(loadConfig().poll.intervalSeconds).toBe(90);
+    expect(loadConfig().poll.stackIntervalFactor).toBe(2);
+  });
+
+  it.each([
+    ["custom", "3", 3],
+    ["fractional", "1.5", 1.5],
+    ["minimum", "1", 1],
+  ])("accepts a %s stackIntervalFactor", async (_label, yaml, expected) => {
+    writeRc(`poll:\n  stackIntervalFactor: ${yaml}\n`);
+    const loadConfig = await freshLoadConfig();
+    expect(loadConfig().poll.stackIntervalFactor).toBe(expected);
+  });
+
+  it.each([
+    ["zero", "0"],
+    ["negative", "-2"],
+    ["non-finite", "!!float .nan"],
+    ["infinite", "!!float .inf"],
+  ])("rejects a %s stackIntervalFactor", async (_label, yaml) => {
+    writeRc(`poll:\n  stackIntervalFactor: ${yaml}\n`);
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const loadConfig = await freshLoadConfig();
+
+    expect(loadConfig().poll).toEqual(DEFAULT_POLL);
+    expect(stderrSpy.mock.calls.map((call) => call[0]).join("")).toContain(
+      "Invalid config: poll.stackIntervalFactor must be a finite number greater than or equal to 1",
+    );
   });
 });

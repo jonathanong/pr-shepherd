@@ -22,6 +22,8 @@ export interface GraphqlQuotaWarningBand {
 
 interface PollConfig {
   intervalSeconds: number;
+  /** Multiplier for aggregate polls when `--interval` is omitted. Finite and at least 1. */
+  stackIntervalFactor: number;
   timeoutSeconds: number;
   debounceSeconds: number;
   quietStatus: boolean;
@@ -288,13 +290,23 @@ function parsePollConfig(value: unknown): PollConfig {
   const intervalSeconds = parsePollDuration(record["intervalSeconds"], "intervalSeconds");
   const timeoutSeconds = parsePollDuration(record["timeoutSeconds"], "timeoutSeconds");
   const debounceSeconds = parsePollDuration(record["debounceSeconds"], "debounceSeconds", true);
+  const stackIntervalFactor = parseStackIntervalFactor(record["stackIntervalFactor"]);
   const quietStatus = record["quietStatus"];
   if (typeof quietStatus !== "boolean") {
     throw new Error(
       `Invalid config: poll.quietStatus must be a boolean, got ${JSON.stringify(quietStatus)}`,
     );
   }
-  return { intervalSeconds, timeoutSeconds, debounceSeconds, quietStatus };
+  return { intervalSeconds, stackIntervalFactor, timeoutSeconds, debounceSeconds, quietStatus };
+}
+
+function parseStackIntervalFactor(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 1) {
+    throw new Error(
+      `Invalid config: poll.stackIntervalFactor must be a finite number greater than or equal to 1, got ${JSON.stringify(value)}`,
+    );
+  }
+  return value;
 }
 
 function parsePollDuration(value: unknown, key: string, allowZero = false): number {
@@ -422,7 +434,13 @@ const KNOWN_NESTED_KEYS: Record<string, ReadonlySet<string>> = {
     "behindBaseHint",
     "resolveOtherHumanThreads",
   ]),
-  poll: new Set(["intervalSeconds", "timeoutSeconds", "debounceSeconds", "quietStatus"]),
+  poll: new Set([
+    "intervalSeconds",
+    "stackIntervalFactor",
+    "timeoutSeconds",
+    "debounceSeconds",
+    "quietStatus",
+  ]),
   watch: new Set(["readyDelayMinutes", "graphqlQuotaWarnings"]),
   resolve: new Set(["shaPoll"]),
   checks: new Set(["ciTriggerEvents", "ignoreLogLines"]),
