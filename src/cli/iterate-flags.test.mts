@@ -14,7 +14,13 @@ function defaultConfig(): PrShepherdConfig {
     cliCommand: ["pr-shepherd"],
     botUsernames: [],
     ignoreChecks: [],
-    poll: { intervalSeconds: 60, timeoutSeconds: 270, debounceSeconds: 60, quietStatus: false },
+    poll: {
+      intervalSeconds: 60,
+      stackIntervalFactor: 2,
+      timeoutSeconds: 270,
+      debounceSeconds: 60,
+      quietStatus: false,
+    },
     watch: { readyDelayMinutes: 10, graphqlQuotaWarnings: [] },
     iterate: {
       fixAttemptsPerThread: 3,

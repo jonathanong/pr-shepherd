@@ -1,0 +1,41 @@
+query CheckRunAnnotationsBatch($ids: [ID!]!) {
+  _shepherdRateLimit: rateLimit {
+    cost
+    limit
+    nodeCount
+    remaining
+    resetAt
+    used
+  }
+  nodes(ids: $ids) {
+    id
+    __typename
+    ... on CheckRun {
+      annotations(first: 100) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          fullDatabaseId
+          path
+          annotationLevel
+          title
+          message
+          rawDetails
+          blobUrl
+          location {
+            start {
+              line
+              column
+            }
+            end {
+              line
+              column
+            }
+          }
+        }
+      }
+    }
+  }
+}
