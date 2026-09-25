@@ -76,10 +76,7 @@ describe("updateReadyDelay", () => {
     const past = Math.floor(Date.now() / 1000) - DELAY - 5;
     const { mkdir, writeFile } = await import("node:fs/promises");
     await mkdir(join(stateDir, OWNER, REPO, String(PR)), { recursive: true });
-    await writeFile(
-      join(stateDir, OWNER, REPO, String(PR), "ready-since.txt"),
-      String(past),
-    );
+    await writeFile(join(stateDir, OWNER, REPO, String(PR), "ready-since.txt"), String(past));
 
     const retain = { retainElapsed: true };
     expect(await updateReadyDelay(PR, true, DELAY, OWNER, REPO, retain)).toMatchObject({
