@@ -57,11 +57,13 @@ async function graphqlInner<T>(
   );
   const t0 = performance.now();
   let authSource = "unknown";
+  let credentialFingerprint: string | undefined;
 
   const { res, attempt, retryT0 } = await requestWithTokenRetry(
     async () => {
       const auth = await makeAuthHeaders();
       authSource = auth.source;
+      credentialFingerprint = auth.fingerprint;
       return fetch(url, {
         method: "POST",
         headers: auth.headers,
@@ -78,6 +80,7 @@ async function graphqlInner<T>(
         response,
         durationMs,
         authSource,
+        credentialFingerprint,
       }),
   );
 
@@ -106,6 +109,7 @@ async function graphqlInner<T>(
       kind: "GraphQL",
       method: "POST",
       authSource,
+      credentialFingerprint,
       rateLimit: headerRateLimit ?? undefined,
     });
     throw new GitHubRequestError(
@@ -143,6 +147,7 @@ async function graphqlInner<T>(
       kind: "GraphQL",
       method: "POST",
       authSource,
+      credentialFingerprint,
       rateLimit: headerRateLimit ?? undefined,
     });
     throw new GitHubRequestError(`GitHub GraphQL response was not valid JSON${detail}`, {
@@ -176,6 +181,7 @@ async function graphqlInner<T>(
     kind: "GraphQL",
     method: "POST",
     authSource,
+    credentialFingerprint,
     rateLimit: rateLimit ?? undefined,
   });
 

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
@@ -25,6 +26,11 @@ export function hasCachedToken(): boolean {
 export function clearTokenCache(): void {
   _token = undefined;
   _tokenSource = undefined;
+}
+
+/** Truncated SHA-256. Callers persist this instead of the token or its full hash. */
+export function credentialFingerprint(token: string): string {
+  return createHash("sha256").update(token).digest("hex").slice(0, 16);
 }
 
 async function resolveToken(): Promise<{ token: string; source: AuthSource }> {
@@ -75,10 +81,12 @@ async function resolveToken(): Promise<{ token: string; source: AuthSource }> {
 export async function makeAuthHeaders(extra?: Record<string, string>): Promise<{
   headers: Record<string, string>;
   source: AuthSource;
+  fingerprint: string;
 }> {
   const { token, source } = await resolveToken();
   return {
     source,
+    fingerprint: credentialFingerprint(token),
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: "application/vnd.github+json",

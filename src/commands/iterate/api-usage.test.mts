@@ -12,6 +12,7 @@ const { mockLoadConfig, mockSummarizeApiTelemetry, mockEvaluateQuotaWarning } = 
 vi.mock("../../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 vi.mock("../../github/api-telemetry.mts", () => ({
   summarizeApiTelemetry: mockSummarizeApiTelemetry,
+  withGraphqlCredentialFingerprint: <T,>(sample: T) => sample,
 }));
 vi.mock("../../state/graphql-quota-warnings.mts", () => ({
   evaluateWorktreeGraphqlQuotaWarning: mockEvaluateQuotaWarning,

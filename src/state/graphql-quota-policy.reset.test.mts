@@ -46,7 +46,7 @@ describe("evaluateGraphqlQuotaWarning reset detection", () => {
     expect(freshWindow.state.rearmEpoch).toBe(1);
   });
 
-  it("re-arms on a remaining increase when the prior sample omitted used", () => {
+  it("keeps the newer remaining when a later sample reports more remaining and no used", () => {
     const prior: GraphqlQuotaWarningState = {
       resource: "graphql",
       limit: 5000,
@@ -54,11 +54,12 @@ describe("evaluateGraphqlQuotaWarning reset detection", () => {
       resetAt: 1_700_000_000,
       warnedThresholds: [30, 20, 10],
     };
-    const freshWindow = evaluateGraphqlQuotaWarning(bands, sample(1400, 3600), prior);
+    const stale = evaluateGraphqlQuotaWarning(bands, sample(1400, 3600), prior);
 
-    expect(freshWindow.warning?.thresholdPercent).toBe(30);
-    expect(freshWindow.state.warnedThresholds).toEqual([30]);
-    expect(freshWindow.state.rearmEpoch).toBe(1);
+    expect(stale.warning).toBeUndefined();
+    expect(stale.state.lastRemaining).toBe(500);
+    expect(stale.state.warnedThresholds).toEqual([30, 20, 10]);
+    expect(stale.state.rearmEpoch).toBe(0);
   });
 
   it("advances the re-arm epoch on a same-window credential switch so a claim from the prior epoch cannot suppress it", () => {
@@ -70,14 +71,20 @@ describe("evaluateGraphqlQuotaWarning reset detection", () => {
       resetAt: 1_700_000_000,
       warnedThresholds: [30],
       rearmEpoch: 1,
+      credentialFingerprint: "a".repeat(16),
     };
-    // resetAt is unchanged, but used dropped (a different credential
-    // sharing the same hourly window) — the policy re-arms without a
-    // window rollover.
-    const rearmed = evaluateGraphqlQuotaWarning(bands, sample(1400, 3600), prior);
+    const rearmed = evaluateGraphqlQuotaWarning(
+      bands,
+      {
+        ...sample(1400, 3600),
+        credentialFingerprint: "b".repeat(16),
+      },
+      prior,
+    );
 
     expect(rearmed.warning?.thresholdPercent).toBe(30);
     expect(rearmed.state.rearmEpoch).toBe(2);
+    expect(rearmed.state.credentialFingerprint).toBe("b".repeat(16));
   });
 
   it("does not re-arm for a resetAt-only adjustment", () => {

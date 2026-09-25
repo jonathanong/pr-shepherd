@@ -11,6 +11,7 @@ export function recordIntermediateResponse(opts: {
   response: Response;
   durationMs: number;
   authSource: string;
+  credentialFingerprint?: string;
 }): void {
   const rateLimit = parseRateLimit(opts.response.headers) ?? undefined;
   const retryAfterSeconds = parseRetryAfter(opts.response.headers);
@@ -26,6 +27,9 @@ export function recordIntermediateResponse(opts: {
     kind: opts.kind === "GraphQL" ? "GraphQL" : "REST",
     method: opts.method,
     authSource: opts.authSource,
+    ...(opts.credentialFingerprint !== undefined && {
+      credentialFingerprint: opts.credentialFingerprint,
+    }),
     rateLimit,
   });
 }

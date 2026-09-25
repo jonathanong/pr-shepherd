@@ -1,3 +1,6 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { beforeEach, expect, it, vi } from "vitest";
 
 const { mockSummarizeApiTelemetry, mockEvaluateQuotaWarning } = vi.hoisted(() => ({
@@ -7,6 +10,7 @@ const { mockSummarizeApiTelemetry, mockEvaluateQuotaWarning } = vi.hoisted(() =>
 vi.mock("../github/api-telemetry.mts", () => ({
   withApiTelemetryScope: vi.fn((callback: () => unknown) => callback()),
   summarizeApiTelemetry: mockSummarizeApiTelemetry,
+  withGraphqlCredentialFingerprint: <T,>(sample: T) => sample,
 }));
 vi.mock("../state/graphql-quota-warnings.mts", () => ({
   evaluateWorktreeGraphqlQuotaWarning: mockEvaluateQuotaWarning,
@@ -126,4 +130,62 @@ it("includes a quota warning crossed on the terminal tick", async () => {
       debounceSeconds: 0,
     }),
   ).resolves.toMatchObject({ reason: "all_terminal", quotaWarning });
+});
+
+it("does not add a second quota warning for a stale sample in the same window", async () => {
+  const actual = await vi.importActual<typeof import("../state/graphql-quota-warnings.mts")>(
+    "../state/graphql-quota-warnings.mts",
+  );
+  mockEvaluateQuotaWarning.mockImplementation(
+    (...args: Parameters<typeof actual.evaluateWorktreeGraphqlQuotaWarning>) =>
+      actual.evaluateWorktreeGraphqlQuotaWarning(...args),
+  );
+  const stateDir = await mkdtemp(join(tmpdir(), "pr-shepherd-quota-poll-"));
+  const previousStateDir = process.env["PR_SHEPHERD_STATE_DIR"];
+  process.env["PR_SHEPHERD_STATE_DIR"] = stateDir;
+  const usage = (used: number, remaining: number) => ({
+    credentialSources: ["gh"],
+    graphql: {
+      resource: "graphql",
+      requestCount: 1,
+      measuredQueryCost: 1,
+      unmeasuredRequestCount: 0,
+      nodeCount: 1,
+      limit: 5_000,
+      used,
+      remaining,
+      resetAt: 1_700_000_000,
+    },
+  });
+  const poll = {
+    prNumbers: [42],
+    targetRepository: { owner: "acme", name: "widgets" },
+    intervalSeconds: 60,
+    timeoutSeconds: 0,
+    debounceSeconds: 0,
+    untilTerminal: true,
+  };
+  try {
+    mockSummarizeApiTelemetry.mockReturnValue(usage(3800, 1200));
+    vi.mocked(fetchPollSummary).mockResolvedValue({
+      selection: { kind: "prs", requested: [42] },
+      prs: [waitingRow()],
+    });
+    await expect(runAggregatePoll(poll)).resolves.toMatchObject({
+      quotaWarning: { thresholdPercent: 30 },
+    });
+
+    mockSummarizeApiTelemetry.mockReturnValue(usage(3790, 1210));
+    vi.mocked(fetchPollSummary).mockResolvedValue({
+      selection: { kind: "prs", requested: [42] },
+      prs: [terminalRow()],
+    });
+    const second = await runAggregatePoll({ ...poll, untilTerminal: false });
+    expect(second.quotaWarning).toBeUndefined();
+    expect(second.reason).toBe("all_terminal");
+  } finally {
+    if (previousStateDir === undefined) delete process.env["PR_SHEPHERD_STATE_DIR"];
+    else process.env["PR_SHEPHERD_STATE_DIR"] = previousStateDir;
+    await rm(stateDir, { recursive: true, force: true });
+  }
 });

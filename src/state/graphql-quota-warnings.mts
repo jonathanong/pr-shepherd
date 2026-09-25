@@ -96,6 +96,7 @@ async function readState(path: string): Promise<GraphqlQuotaWarningState | null>
     ) {
       return null;
     }
+    if (typeof parsed.credentialFingerprint !== "string") delete parsed.credentialFingerprint;
     return parsed;
   } catch {
     return null;

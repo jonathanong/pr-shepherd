@@ -14,6 +14,8 @@ export interface GraphqlApiUsage extends ApiResourceUsage {
   unmeasuredRequestCount: number;
   /** Exact sum reported by rateLimit.nodeCount for measured GraphQL queries. */
   nodeCount: number;
+  /** Truncated SHA-256 of the credential. Quota state only; summarized usage omits it. */
+  credentialFingerprint?: string;
 }
 
 export interface ApiUsage {

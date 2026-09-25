@@ -10,6 +10,7 @@ export interface TelemetryAggregate {
     unmeasuredRequestCount: number;
     nodeCount: number;
     rateLimit?: RateLimitInfo;
+    credentialFingerprint?: string;
   };
   rest: Map<string, { requestCount: number; rateLimit?: RateLimitInfo }>;
 }
@@ -47,10 +48,7 @@ export function aggregateEvents(events: SequencedApiTelemetryEvent[]): Telemetry
       else aggregate.graphql.measuredQueryCost += event.rateLimit.cost;
       aggregate.graphql.nodeCount += event.rateLimit?.nodeCount ?? 0;
       if (event.rateLimit !== undefined) {
-        aggregate.graphql.rateLimit = selectAuthoritativeRateLimit(
-          aggregate.graphql.rateLimit,
-          event.rateLimit,
-        );
+        adoptGraphqlRateLimit(aggregate.graphql, event.rateLimit, event.credentialFingerprint);
       }
       continue;
     }
@@ -78,9 +76,10 @@ export function mergeAggregate(target: TelemetryAggregate, source: TelemetryAggr
   target.graphql.unmeasuredRequestCount += source.graphql.unmeasuredRequestCount;
   target.graphql.nodeCount += source.graphql.nodeCount;
   if (source.graphql.rateLimit !== undefined) {
-    target.graphql.rateLimit = selectAuthoritativeRateLimit(
-      target.graphql.rateLimit,
+    adoptGraphqlRateLimit(
+      target.graphql,
       source.graphql.rateLimit,
+      source.graphql.credentialFingerprint,
     );
   }
   for (const [resource, sourceGroup] of source.rest) {
@@ -101,6 +100,16 @@ export function aggregateStore(active: TelemetryStore): TelemetryAggregate {
   mergeAggregate(all, active.compacted);
   mergeAggregate(all, aggregateEvents(active.events));
   return all;
+}
+
+function adoptGraphqlRateLimit(
+  graphql: TelemetryAggregate["graphql"],
+  candidate: RateLimitInfo,
+  fingerprint: string | undefined,
+): void {
+  const next = selectAuthoritativeRateLimit(graphql.rateLimit, candidate);
+  if (next !== graphql.rateLimit) graphql.credentialFingerprint = fingerprint;
+  graphql.rateLimit = next;
 }
 
 function selectAuthoritativeRateLimit(

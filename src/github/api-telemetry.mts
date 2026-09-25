@@ -16,6 +16,8 @@ export interface ApiTelemetryEvent {
   kind: "GraphQL" | "REST";
   method: string;
   authSource: string;
+  /** Truncated SHA-256 of the credential that produced this request. */
+  credentialFingerprint?: string;
   rateLimit?: RateLimitInfo;
 }
 
@@ -95,6 +97,19 @@ export function mergeGraphqlRateLimit(
     ...(payload !== null && Number.isFinite(payload.cost) && { cost: payload.cost }),
     ...(payload !== null && Number.isFinite(payload.nodeCount) && { nodeCount: payload.nodeCount }),
   };
+}
+
+/** Fingerprint of the credential that owns the authoritative GraphQL rate-limit sample. */
+function graphqlQuotaCredentialFingerprint(): string | undefined {
+  const active = store();
+  if (active === undefined) return undefined;
+  return aggregateStore(active).graphql.credentialFingerprint;
+}
+
+/** Attach the credential fingerprint without adding it when this command has none. */
+export function withGraphqlCredentialFingerprint<T extends object>(sample: T): T {
+  const credentialFingerprint = graphqlQuotaCredentialFingerprint();
+  return credentialFingerprint === undefined ? sample : { ...sample, credentialFingerprint };
 }
 
 export function summarizeApiTelemetry(): ApiUsage | undefined {
