@@ -11,8 +11,9 @@ import {
   pollGraphQlRetryAfterMs,
 } from "./poll-quota.mts";
 import type { PollSummaryCommandOptions, PollSummaryResult } from "../types.mts";
-import { withPollSummaryInstructions } from "./poll-summary-instructions.mts";
+import { planPollSummary, withPollSummaryInstructions } from "./poll-summary-instructions.mts";
 import { summaryStatusSignature } from "./poll-summary-signature.mts";
+import { applyStackStallGuard } from "./stack-stall.mts";
 
 const MAX_TIMER_MS = 2 ** 31 - 1;
 const TIMER_DRIFT_TOLERANCE_MS = 500;
@@ -36,7 +37,7 @@ async function runPollSummaryCore(opts: PollSummaryCommandOptions): Promise<Poll
   const fetched = await fetchPollSummary(opts, repo);
   const allTerminal = fetched.prs.every((item) => item.action === "cancel");
   const actionable = fetched.prs.some((item) => item.action !== "wait" && item.action !== "cancel");
-  return withPollSummaryInstructions(
+  const planned = planPollSummary(
     {
       mode: "summary",
       repo: `${repo.owner}/${repo.name}`,
@@ -46,6 +47,11 @@ async function runPollSummaryCore(opts: PollSummaryCommandOptions): Promise<Poll
       ...(fetched.stackAncestry?.length && { stackAncestry: fetched.stackAncestry }),
     },
     opts.merge === true,
+  );
+  return applyStackStallGuard(
+    planned,
+    repo,
+    opts.stallTimeoutSeconds ?? loadConfig().iterate.stallTimeoutMinutes * 60,
   );
 }
 

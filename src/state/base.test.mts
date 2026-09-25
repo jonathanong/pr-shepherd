@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { join } from "node:path";
-import { resolvePrStatePath, resolveStateBase } from "./base.mts";
+import { resolvePrStatePath, resolveStackStatePath, resolveStateBase } from "./base.mts";
 
 // The default (no override) location is covered in base.user-temp-dir.mock.test.mts.
 describe("resolveStateBase", () => {
@@ -68,6 +68,33 @@ describe("resolvePrStatePath", () => {
   it("rejects an unsafe extra path part", () => {
     expect(() => resolvePrStatePath({ owner: "o", repo: "r", pr: 1 }, "a/b")).toThrow(
       "Invalid state key segment",
+    );
+  });
+});
+
+describe("resolveStackStatePath", () => {
+  const saved = process.env["PR_SHEPHERD_STATE_DIR"];
+  afterEach(() => {
+    if (saved === undefined) {
+      delete process.env["PR_SHEPHERD_STATE_DIR"];
+    } else {
+      process.env["PR_SHEPHERD_STATE_DIR"] = saved;
+    }
+  });
+
+  it("keeps a stack directory beside the per-PR directories", () => {
+    process.env["PR_SHEPHERD_STATE_DIR"] = "/custom/state";
+    expect(resolveStackStatePath({ owner: "acme", repo: "widgets", stack: 7 }, "stall.json")).toBe(
+      join("/custom/state", "acme-widgets", "stack-7", "stall.json"),
+    );
+  });
+
+  it.each([
+    ["zero", 0],
+    ["traversal string", "../../etc" as unknown as number],
+  ])("rejects stack %s", (_label, stack) => {
+    expect(() => resolveStackStatePath({ owner: "owner", repo: "repo", stack })).toThrow(
+      'Invalid state key segment "stack"',
     );
   });
 });

@@ -21,6 +21,7 @@ state, bounded check and review counts (including ignored and superseded checks 
 merge-queue commit checks), and incomplete flags. Aggregate API and MCP calls return one summary
 tick without recurrence. The summary path never mutates GitHub, writes seen markers, or maintains
 ready-delay state; one-PR sessions remain authoritative for those mutations and full review context.
+Its only local state is a `--stack` selection's [stall timer](escalations.md#stall-timeout).
 
 For a native stack, `stackMergeable` is true only when every open layer has a current one-PR Shepherd
 READY receipt (`readyReceipt: true`) and every adjacent open boundary is linear. The aggregate view
@@ -55,7 +56,10 @@ nor a human performs that transition. Because the agent does, such a draft escal
 that can only report waiting — on CI, merge state, a blocking review, or a lower layer — cannot
 change the stack. When no other agent work remains, the selector returns `ESCALATE` for any human
 handoff, or otherwise `WAIT` with reason `waiting`, which `--until-terminal` rechecks at its polling
-cadence and a bounded poll returns at timeout.
+cadence and a bounded poll returns at timeout. Because nothing reruns those probes, their own stall
+guards cannot fire, so the selector keeps a stack-level timer: once that `WAIT` stays unchanged for
+the stall timeout, it returns `ESCALATE` with `stall-timeout` naming each waiting layer
+([`stall-timeout`](escalations.md#stall-timeout)).
 
 When `--merge` is requested, the lowest open layer is READY, every layer below it has merged, and
 GitHub has retargeted it onto the stack base, the read-only summary returns `MERGE` with

@@ -6,6 +6,8 @@ export interface StackPlan {
   action: StackNextAction;
   stackMergeable: boolean;
   waiting?: boolean;
+  /** Set only by {@link idleWaitPlan}: the layers whose one-PR probes could only report waiting. */
+  idle?: PollSummaryItem[];
   instructions: string[];
 }
 
@@ -85,18 +87,24 @@ export function retargetWaitPlan(first: PollSummaryItem): StackPlan {
 
 /** Every remaining layer only waits: on CI or merge state, or on a lower layer that does. */
 export function idleWaitPlan(idle: PollSummaryItem[]): StackPlan {
-  const layers = idle.map(
-    (item) =>
-      `PR #${item.pr} (${item.blockedByPr ? `stack-blocked by PR #${item.blockedByPr}` : item.reasons.join(", ")})`,
-  );
   return {
     action: "wait",
     stackMergeable: false,
     waiting: true,
+    idle,
     instructions: [
-      `1. No one-PR session can advance the stack yet: ${layers.join("; ")}. Recheck at the configured polling cadence.`,
+      `1. No one-PR session can advance the stack yet: ${describeIdleLayers(idle)}. Recheck at the configured polling cadence.`,
     ],
   };
+}
+
+export function describeIdleLayers(idle: PollSummaryItem[]): string {
+  return idle
+    .map(
+      (item) =>
+        `PR #${item.pr} (${item.blockedByPr ? `stack-blocked by PR #${item.blockedByPr}` : item.reasons.join(", ")})`,
+    )
+    .join("; ");
 }
 
 export function appendAutonomousInstructions(

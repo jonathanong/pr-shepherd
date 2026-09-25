@@ -39,20 +39,43 @@ export function resolvePrStatePath(
   key: { owner: string; repo: string; pr: number },
   ...parts: string[]
 ): string {
+  return resolveRepoStatePath(key, numberSegment("pr", key.pr), parts);
+}
+
+/**
+ * `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/stack-<number>/...parts`, beside the per-PR directories.
+ * Owner, repo, stack number, and each extra part must be a safe path segment.
+ */
+export function resolveStackStatePath(
+  key: { owner: string; repo: string; stack: number },
+  ...parts: string[]
+): string {
+  return resolveRepoStatePath(key, `stack-${numberSegment("stack", key.stack)}`, parts);
+}
+
+function numberSegment(name: string, value: number): string {
+  const segment = String(value);
+  if (!SAFE_PR_NUMBER.test(segment)) {
+    throw new Error(`Invalid state key segment "${name}": ${value}`);
+  }
+  return segment;
+}
+
+function resolveRepoStatePath(
+  key: { owner: string; repo: string },
+  entry: string,
+  parts: string[],
+): string {
   if (!SAFE_SEGMENT.test(key.owner)) {
     throw new Error(`Invalid state key segment "owner": ${key.owner}`);
   }
   if (!SAFE_SEGMENT.test(key.repo)) {
     throw new Error(`Invalid state key segment "repo": ${key.repo}`);
   }
-  const pr = String(key.pr);
-  if (!SAFE_PR_NUMBER.test(pr)) {
-    throw new Error(`Invalid state key segment "pr": ${key.pr}`);
-  }
   for (const part of parts) {
     if (!SAFE_SEGMENT.test(part)) {
       throw new Error(`Invalid state key segment: ${part}`);
     }
   }
-  return join(resolveStateBase(), `${key.owner}-${key.repo}`, pr, ...parts);
+  return join(resolveStateBase(), `${key.owner}-${key.repo}`, entry, ...parts);
 }

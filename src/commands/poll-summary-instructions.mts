@@ -20,8 +20,16 @@ export function withPollSummaryInstructions(
   result: PollSummaryResult,
   mergeRequested: boolean,
 ): PollSummaryResult {
+  return planPollSummary(result, mergeRequested).result;
+}
+
+/** The projected summary, plus the idle layers when the stack plan can only wait on them. */
+export function planPollSummary(
+  result: PollSummaryResult,
+  mergeRequested: boolean,
+): { result: PollSummaryResult; idle?: PollSummaryItem[] } {
   if (result.selection.kind !== "stack") {
-    return { ...result, instructions: explicitInstructions(result) };
+    return { result: { ...result, instructions: explicitInstructions(result) } };
   }
 
   const prs = [...result.prs].sort((left, right) => stackPosition(left) - stackPosition(right));
@@ -97,18 +105,21 @@ export function withPollSummaryInstructions(
     );
   }
   return {
-    ...projected,
-    reason:
-      planned.action === "cancel"
-        ? "all_terminal"
-        : planned.waiting
-          ? result.reason === "timeout"
-            ? "timeout"
-            : "waiting"
-          : "actionable",
-    stackMergeable: planned.stackMergeable,
-    nextAction: planned.action,
-    instructions,
+    result: {
+      ...projected,
+      reason:
+        planned.action === "cancel"
+          ? "all_terminal"
+          : planned.waiting
+            ? result.reason === "timeout"
+              ? "timeout"
+              : "waiting"
+            : "actionable",
+      stackMergeable: planned.stackMergeable,
+      nextAction: planned.action,
+      instructions,
+    },
+    ...(planned.idle && { idle: planned.idle }),
   };
 }
 
