@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { GitHubRequestError } from "../github/errors.mts";
+import { exhaustedPrimaryLimitDelayMs } from "./poll-rate-limit-delay.mts";
 import { pollRateLimitRetryAfterMs, quotaPollIntervalMs } from "./poll-quota.mts";
 
 const BANDS = [
@@ -68,6 +69,8 @@ describe("quotaPollIntervalMs", () => {
 });
 
 describe("pollRateLimitRetryAfterMs", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it("returns null for non-rate-limit errors", () => {
     expect(pollRateLimitRetryAfterMs(new Error("boom"))).toBeNull();
     expect(
@@ -104,22 +107,31 @@ describe("pollRateLimitRetryAfterMs", () => {
     ).toEqual({ ms: 0, resource: "secondary" });
   });
 
-  it("reports graphql when a GraphQL primary limit is exhausted", () => {
-    const resetAt = Math.floor(Date.now() / 1000) + 180;
+  it("adds a 5s margin and resetAt % 5 seconds when a primary limit is exhausted", () => {
+    const now = 1_700_000_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    const resetAt = 1_700_000_183;
     const retry = pollRateLimitRetryAfterMs(
       new GitHubRequestError("API rate limit exceeded", {
         status: 403,
         rateLimit: { resource: "graphql", remaining: 0, limit: 5000, resetAt },
       }),
     );
-    expect(retry?.resource).toBe("graphql");
-    expect(retry?.ms).toBeGreaterThan(170_000);
-    expect(retry?.remaining).toBe(0);
-    expect(retry?.limit).toBe(5000);
+    expect(retry).toEqual({
+      resource: "graphql",
+      remaining: 0,
+      limit: 5000,
+      resetAt,
+      ms: Math.max(resetAt * 1000 - now, 0) + 5000 + (resetAt % 5) * 1000,
+    });
+    expect(retry?.ms).toBe(exhaustedPrimaryLimitDelayMs(resetAt, now));
+    expect(resetAt % 5).not.toBe(0);
   });
 
   it("reports core for a REST 403 with remaining 0", () => {
-    const resetAt = Math.floor(Date.now() / 1000) + 180;
+    const now = 1_700_000_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    const resetAt = 1_700_000_180;
     const retry = pollRateLimitRetryAfterMs(
       new GitHubRequestError("API rate limit exceeded", {
         status: 403,
@@ -127,12 +139,14 @@ describe("pollRateLimitRetryAfterMs", () => {
       }),
     );
     expect(retry?.resource).toBe("core");
-    expect(retry?.ms).toBeGreaterThan(170_000);
     expect(retry?.resetAt).toBe(resetAt);
+    expect(retry?.ms).toBe(exhaustedPrimaryLimitDelayMs(resetAt, now));
   });
 
   it("waits until resetAt when remaining is 0 without a rate-limit message", () => {
-    const resetAt = Math.floor(Date.now() / 1000) + 180;
+    const now = 1_700_000_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    const resetAt = 1_700_000_180;
     const retry = pollRateLimitRetryAfterMs(
       new GitHubRequestError("forbidden", {
         status: 403,
@@ -140,10 +154,12 @@ describe("pollRateLimitRetryAfterMs", () => {
       }),
     );
     expect(retry?.resource).toBe("graphql");
-    expect(retry?.ms).toBeGreaterThan(170_000);
+    expect(retry?.ms).toBe(exhaustedPrimaryLimitDelayMs(resetAt, now));
   });
 
-  it("does not wait on an already-elapsed resetAt", () => {
+  it("still adds the margin when resetAt is already in the past", () => {
+    const now = 1_700_000_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now);
     expect(
       pollRateLimitRetryAfterMs(
         new GitHubRequestError("forbidden", {
@@ -151,6 +167,7 @@ describe("pollRateLimitRetryAfterMs", () => {
           rateLimit: { remaining: 0, limit: 5000, resetAt: 0 },
         }),
       )?.ms,
-    ).toBe(0);
+    ).toBe(exhaustedPrimaryLimitDelayMs(0, now));
+    expect(exhaustedPrimaryLimitDelayMs(0, now)).toBe(5_000);
   });
 });

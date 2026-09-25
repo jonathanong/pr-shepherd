@@ -205,7 +205,8 @@ Fingerprint skip is also refused — the tick runs `BatchPr` — when any of the
 - The **poll dispatcher** (`pr-shepherd [PR]`, including `--until-terminal`) also **applies** those bands: `WAIT` / `MARK_READY` sleeps use `max(effective interval, active band interval)` from the latest `apiUsage.graphql` remaining percent, every tick, even after the one-shot warning has already been claimed. Factors always use the configured base rather than an explicit flag, preventing compounding; a slower explicit interval remains in force. The active band is the crossed entry with the lowest `remainingPercent`, matching `quotaWarning`. Single-tick `iterate` and MCP `iterate` stay advisory — those callers own recurrence.
 - Unchanged ticks skip `BatchPr` when the fingerprint matches, CheckSuites are complete, and REST mergeability still agrees with the cached report, including reports whose mergeability was previously filled in by REST.
 - `BatchPr` loads the newest 20 review threads on the first page. GitHub prices the nested `comments` connection as one request per thread on that page, so 20 costs less than 100 on every full snapshot. Older threads still arrive on the slim page query.
-- `--until-terminal` retries a tick once after a GraphQL 429 / secondary-limit `Retry-After` instead of exiting 75 immediately. An explicit `Retry-After` header is honored in full. Single-tick iterate still fails with 75.
+- `--until-terminal` keeps polling while a rate limit is the only failure. An exhausted primary limit (`remaining` 0, GraphQL or REST core) sleeps until `resetAt`, then 5 seconds, then `resetAt % 5` extra seconds, so the retry does not land on the reset instant. An explicit `Retry-After` is still honored in full. A secondary limit without `Retry-After` still waits 60 seconds. A later `resetAt` starts that wait over and clears the no-progress count. An unchanged or missing `resetAt` backs off 15s, then 30s, then 60s. On the fifth of those no-progress attempts the command writes one stderr line naming the resource and reset time and exits 75. A successful tick clears that budget. Bounded polls and single-tick `iterate` still fail with 75 on the first rate-limit error.
+- When that sleep is longer than `--interval` and the exhausted resource is not REST core, the wait is split into `--interval` chunks. Between chunks Shepherd sends one REST `GET /repos/{owner}/{repo}/pulls/{n}` — GraphQL is exhausted, and REST core is a separate budget, so this read can still see a merge or close. A merged or closed PR returns `CANCEL` without waiting out the reset. A REST core limit on that GET skips further probes for the rest of the sleep and does not throw. `--stack` / multi-PR polls probe each tracked open layer and return the all-terminal `CANCEL` only when every tracked layer is merged or closed. A partial merge keeps sleeping.
 
 ### How to read spend
 
@@ -228,7 +229,7 @@ Landed in this spec’s matching code:
 - Poll applies quota-band intervals (not only prints them).
 - Fingerprint skip on unchanged ticks.
 - Merge-queue check trees are follow-up-only.
-- `--until-terminal` honors GraphQL `Retry-After` once.
+- `--until-terminal` waits out a rate-limit reset (with a short margin) instead of exiting 75 on the first retry, and notices a merge or close during a long sleep via one REST pull read when REST core is available.
 - `BatchPr` review threads start at 20.
 
 Further work, if spend is still high:

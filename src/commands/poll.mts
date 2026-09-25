@@ -3,11 +3,9 @@ import type { IterateCommandOptions, IterateResult } from "../types.mts";
 import { sleep } from "../util/sleep.mts";
 import { withPollApiUsage } from "./poll-run.mts";
 import { loadConfig } from "../config/load.mts";
-import {
-  formatRateLimitRetryLine,
-  pollRateLimitRetryAfterMs,
-  quotaPollIntervalMs,
-} from "./poll-quota.mts";
+import { quotaPollIntervalMs } from "./poll-quota.mts";
+import { onePrCancelFromPulls, onePrRateLimitTargets } from "./poll-rate-limit-cancel.mts";
+import { createUntilTerminalRateLimitRetry } from "./poll-rate-limit-wait.mts";
 import { writeDebounceProgress, writeWaitProgress } from "./poll-progress.mts";
 
 export interface PollCommandOptions extends IterateCommandOptions {
@@ -54,7 +52,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
   // Pin the PR resolved by the first tick; branch inference only matches OPEN PRs.
   let prNumber = opts.prNumber;
   let debounceUntil: number | null = null;
-  let rateLimitRetries = 0;
+  const rateLimitRetry = createUntilTerminalRateLimitRetry();
   while (true) {
     tick += 1;
     const pastDebounce = debounceUntil !== null && Date.now() >= debounceUntil;
@@ -75,25 +73,27 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
         quotaWarningMinimumPollIntervalMinutes: intervalSeconds / 60,
       });
     const runTick = async (fingerprintCache: boolean): Promise<IterateResult> => {
-      try {
-        const result = await iterateTick(fingerprintCache);
-        rateLimitRetries = 0;
-        return result;
-      } catch (err) {
-        const retry = untilTerminal ? pollRateLimitRetryAfterMs(err) : null;
-        if (retry === null || rateLimitRetries >= 1) throw err;
-        rateLimitRetries += 1;
-        process.stderr.write(
-          formatRateLimitRetryLine(
-            `poll tick ${tick}`,
-            Math.round((Date.now() - start) / 1000),
-            retry,
-          ),
-        );
-        await sleep(retry.ms);
-        const result = await iterateTick(fingerprintCache);
-        rateLimitRetries = 0;
-        return result;
+      while (true) {
+        try {
+          const result = await iterateTick(fingerprintCache);
+          rateLimitRetry.reset();
+          return result;
+        } catch (err) {
+          const early = await rateLimitRetry.wait(err, {
+            untilTerminal,
+            intervalMs,
+            tickLabel: `poll tick ${tick}`,
+            startedAt: start,
+            targets: onePrRateLimitTargets(
+              iterateOpts.targetRepository,
+              prNumber,
+              lastResult?.repo,
+            ),
+            onAllTerminal: (pulls) =>
+              onePrCancelFromPulls(iterateOpts.targetRepository, lastResult?.repo, pulls),
+          });
+          if (early) return early;
+        }
       }
     };
     lastResult = await runTick(allowCache);

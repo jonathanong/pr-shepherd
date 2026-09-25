@@ -5,12 +5,9 @@ import { getRepoInfo } from "../github/client.mts";
 import { withApiTelemetryScope, summarizeApiTelemetry } from "../github/api-telemetry.mts";
 import { fetchPollSummary } from "../github/poll-summary.mts";
 import { sleep } from "../util/sleep.mts";
-import {
-  aggregateQuotaWarning,
-  formatRateLimitRetryLine,
-  pollRateLimitRetryAfterMs,
-  quotaPollIntervalMs,
-} from "./poll-quota.mts";
+import { aggregateQuotaWarning, quotaPollIntervalMs } from "./poll-quota.mts";
+import { aggregateCancelFromPulls, aggregateRateLimitTargets } from "./poll-rate-limit-cancel.mts";
+import { createUntilTerminalRateLimitRetry } from "./poll-rate-limit-wait.mts";
 import type { PollSummaryCommandOptions, PollSummaryResult } from "../types.mts";
 import { planPollSummary, withPollSummaryInstructions } from "./poll-summary-instructions.mts";
 import { summaryStatusSignature } from "./poll-summary-signature.mts";
@@ -66,14 +63,14 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
   let debounceUntil: number | null = null;
   let last: PollSummaryResult | undefined;
   let lastStatusSignature: string | null = null;
-  let rateLimitRetries = 0;
+  const rateLimitRetry = createUntilTerminalRateLimitRetry();
   let pendingQuotaWarning: PollSummaryResult["quotaWarning"];
 
   while (true) {
     tick += 1;
     try {
       last = await runPollSummaryCore(opts);
-      rateLimitRetries = 0;
+      rateLimitRetry.reset();
     } catch (error) {
       if (last?.selection.kind === "stack" && isMissingStack(error)) {
         const explicit = await runPollSummaryCore({
@@ -112,17 +109,20 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
           opts.merge,
         );
       }
-      const retry = opts.untilTerminal ? pollRateLimitRetryAfterMs(error) : null;
-      if (retry === null || rateLimitRetries >= 1) throw error;
-      rateLimitRetries += 1;
-      process.stderr.write(
-        formatRateLimitRetryLine(
-          `aggregate poll tick ${tick}`,
-          Math.round((Date.now() - start) / 1000),
-          retry,
-        ),
-      );
-      await sleep(retry.ms);
+      const early = await rateLimitRetry.wait(error, {
+        untilTerminal: opts.untilTerminal === true,
+        intervalMs,
+        tickLabel: `aggregate poll tick ${tick}`,
+        startedAt: start,
+        targets: aggregateRateLimitTargets(last, opts.targetRepository, opts.prNumbers),
+        onAllTerminal: (pulls) => aggregateCancelFromPulls(last, opts.targetRepository, pulls),
+      });
+      if (early) {
+        return presentProbedCancel(
+          pendingQuotaWarning ? { ...early, quotaWarning: pendingQuotaWarning } : early,
+          opts.merge,
+        );
+      }
       continue;
     }
     const allTerminal =
@@ -209,6 +209,22 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
     lastStatusSignature = statusSignature;
     await sleep(sleepMs);
   }
+}
+
+function presentProbedCancel(
+  result: PollSummaryResult,
+  merge: boolean | undefined,
+): PollSummaryResult {
+  const planned = attachUsage({ ...result, reason: "all_terminal" }, merge);
+  if (planned.selection.kind !== "stack" || planned.nextAction === "cancel") return planned;
+  return {
+    ...planned,
+    prs: result.prs,
+    reason: "all_terminal",
+    nextAction: "cancel",
+    stackMergeable: true,
+    instructions: ["1. Stop — every stack layer is terminal."],
+  };
 }
 
 function isMissingStack(error: unknown): boolean {
