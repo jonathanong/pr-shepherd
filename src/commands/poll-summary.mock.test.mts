@@ -6,6 +6,7 @@ vi.mock("../github/client.mts", () => ({ getRepoInfo: vi.fn() }));
 vi.mock("../github/api-telemetry.mts", () => ({
   withApiTelemetryScope: vi.fn((callback: () => unknown) => callback()),
   summarizeApiTelemetry: vi.fn(() => undefined),
+  withGraphqlCredentialFingerprint: <T,>(sample: T) => sample,
 }));
 vi.mock("../util/sleep.mts", () => ({ sleep: vi.fn() }));
 

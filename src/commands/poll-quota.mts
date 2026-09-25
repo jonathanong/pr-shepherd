@@ -1,6 +1,9 @@
 import type { GraphqlQuotaWarningBand } from "../config/load.mts";
 import { evaluateWorktreeGraphqlQuotaWarning } from "../state/graphql-quota-warnings.mts";
-import { summarizeApiTelemetry } from "../github/api-telemetry.mts";
+import {
+  summarizeApiTelemetry,
+  withGraphqlCredentialFingerprint,
+} from "../github/api-telemetry.mts";
 import { GitHubRequestError } from "../github/errors.mts";
 import { isRateLimitMessage } from "../comments/rate-limit.mts";
 import type { GraphqlApiUsage, PollSummaryResult } from "../types.mts";
@@ -62,7 +65,7 @@ export async function aggregateQuotaWarning(
       ...band,
       pollIntervalMinutes: Math.max(band.pollIntervalMinutes, intervalSeconds / 60),
     })),
-    usage,
+    withGraphqlCredentialFingerprint(usage),
     true,
   );
 }

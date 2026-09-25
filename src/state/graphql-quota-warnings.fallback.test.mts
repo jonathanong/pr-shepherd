@@ -119,16 +119,23 @@ describe("quota warning fallback branches", () => {
         resetAt: 1_700_000_000,
         warnedThresholds: [30],
         rearmEpoch: 1,
+        credentialFingerprint: "a".repeat(16),
       }),
       "utf8",
     );
 
-    // Same resetAt, but usage dropped (e.g. a switch to another credential
-    // sharing the same hourly window) — the policy re-arms into epoch 2,
-    // which claims a distinct filename and must still surface the warning.
-    // Evaluate before resetAt so the sweep leaves the epoch-1 fixture alone.
+    // Same resetAt, but a different credential fingerprint — the policy
+    // re-arms into epoch 2, which claims a distinct filename and must still
+    // surface the warning. Evaluate before resetAt so the sweep leaves the
+    // epoch-1 fixture alone.
     await expect(
-      evaluateWorktreeGraphqlQuotaWarning(repoKey, bands, sample(1400), true, 1_699_999_999),
+      evaluateWorktreeGraphqlQuotaWarning(
+        repoKey,
+        bands,
+        { ...sample(1400), credentialFingerprint: "b".repeat(16) },
+        true,
+        1_699_999_999,
+      ),
     ).resolves.toMatchObject({ thresholdPercent: 30 });
 
     const claims = await readdir(claimsDir);

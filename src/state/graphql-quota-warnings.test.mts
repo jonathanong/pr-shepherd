@@ -1,10 +1,9 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GraphqlApiUsage } from "../types.mts";
 import { evaluateWorktreeGraphqlQuotaWarning } from "./graphql-quota-warnings.mts";
-import { evaluateGraphqlQuotaWarning } from "./graphql-quota-policy.mts";
 
 const testState = vi.hoisted(() => ({ base: "" }));
 const fsState = vi.hoisted(() => ({ delay: false, didDelay: false, fail: false }));
@@ -168,33 +167,29 @@ describe("evaluateWorktreeGraphqlQuotaWarning", () => {
     expect([next?.thresholdPercent, lowest?.thresholdPercent]).toEqual([20, 10]);
     await expect(readFile(statePath(), "utf8")).resolves.toMatch(/"warnedThresholds":\[30,20,10\]/);
   });
-});
-describe("evaluateGraphqlQuotaWarning", () => {
-  it("emits the current band and marks skipped higher bands as crossed", () => {
-    const result = evaluateGraphqlQuotaWarning(bands, sample(1250), null);
-    expect(result.warning).toMatchObject({
-      thresholdPercent: 30,
-      pollIntervalMinutes: 2,
-      pollTimeoutMinutes: 4,
-      remaining: 1250,
-      limit: 5000,
-    });
-    expect(result.state.warnedThresholds).toEqual([30]);
-  });
 
-  it("emits only the lowest applicable band on a first observation", () => {
-    const result = evaluateGraphqlQuotaWarning(bands, sample(250), null);
-    expect(result.warning?.thresholdPercent).toBe(10);
-    expect(result.warning?.pollIntervalMinutes).toBe(10);
-    expect(result.state.warnedThresholds).toEqual([30, 20, 10]);
-  });
+  it("warns once when a newer sample is saved before an older one", async () => {
+    const newer = await evaluateWorktreeGraphqlQuotaWarning(
+      repoKey,
+      bands,
+      sample(1200, 3800),
+      true,
+      1_699_999_000,
+    );
+    const older = await evaluateWorktreeGraphqlQuotaWarning(
+      repoKey,
+      bands,
+      sample(1210, 3790),
+      true,
+      1_699_999_000,
+    );
 
-  it("warns once per band and advances at the next crossing", () => {
-    const first = evaluateGraphqlQuotaWarning(bands, sample(1400), null);
-    const repeat = evaluateGraphqlQuotaWarning(bands, sample(1300), first.state);
-    const next = evaluateGraphqlQuotaWarning(bands, sample(900), repeat.state);
-    expect(first.warning?.thresholdPercent).toBe(30);
-    expect(repeat.warning).toBeUndefined();
-    expect(next.warning?.thresholdPercent).toBe(20);
+    expect(newer?.thresholdPercent).toBe(30);
+    expect(older).toBeUndefined();
+    expect(JSON.parse(await readFile(statePath(), "utf8")).lastUsed).toBe(3800);
+    const claims = await readdir(`${statePath()}.claims`);
+    expect(claims.filter((name) => name.startsWith("1700000000-5000-30-"))).toEqual([
+      "1700000000-5000-30-1.json",
+    ]);
   });
 });

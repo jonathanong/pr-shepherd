@@ -1,5 +1,8 @@
 import { loadConfig } from "../../config/load.mts";
-import { summarizeApiTelemetry } from "../../github/api-telemetry.mts";
+import {
+  summarizeApiTelemetry,
+  withGraphqlCredentialFingerprint,
+} from "../../github/api-telemetry.mts";
 import { evaluateWorktreeGraphqlQuotaWarning } from "../../state/graphql-quota-warnings.mts";
 import type { IterateResult } from "../../types.mts";
 import { buildQuotaAwareContinuation } from "../../quota-warning.mts";
@@ -28,7 +31,7 @@ export async function attachApiUsage(
       quotaWarning = await evaluateWorktreeGraphqlQuotaWarning(
         { owner, repo },
         bands,
-        apiUsage.graphql,
+        withGraphqlCredentialFingerprint(apiUsage.graphql),
         persistWarning,
       );
     }
